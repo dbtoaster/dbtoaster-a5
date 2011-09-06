@@ -49,8 +49,7 @@ The definition of dual graphs~\eqref{def:dualgraph} came from the dual of hyperg
 \subsection{Generalization for inequalities and nested queries}
 \label{sec:generalization}
 In the previous section we have presented the notions of graph and hyper graph models for queries which only contain equal joins. In those models we can not have any inequalities or any nested queries. But in this section we want to generalize those models for these two case. We consider each inequalities as an imaginary relation between two variables. Imaginary here means that we don't need to materialize it. Thus, in hyper graph representation each inequality $a\theta b$ is a hyper edge on $a$ and $b$. In dual graph modelling it is a vertex which is connected to other vertices which have the same variables as the inequality's operator.\par
-For the nested queries, we can also consider them as a imaginary relation. A sub query is an assignment. Lets suppose that we have an sub query $t\gets q$ where $q$ represents the sub query body and $t$ is the name of the variable which is given to it for the representation. This is the same as the alpha5 notation in DBToaster\cite{1}. The imaginary relation for the nested query contains $t$ and all the participating variables in the body of $q$. In this way we preserve the meanings of these variables, they are related to each other like an ordinary relation. Thus, in hyper graph model we have an hyper edge for the sub query and in the dual model we have a vertex for it.\par
-
+For the nested queries, we can also consider them as a imaginary relation. A sub query is an assignment. Lets suppose that we have an sub query $t\gets q$ where $q$ represents the sub query body and $t$ is the name of the variable which is given to it for the representation. This is the same as the alpha5 notation in DBToaster\cite{1}. The imaginary relation for the nested query contains $t$ and all the participating variables in the body of $q$. In this way we preserve the meanings of these variables, they are related to each other like an ordinary relation. Thus, in hyper graph model we have an hyper edge for the sub query and in the dual model we have a vertex for it. We use $R\in t$ to denote weather or not $R$ has appeared on the right hand side of assignment operator for $t$. \\\par
 When talking about inequalities, the hyper edge between the variables that compose the inequality is a simple edge like in a normal graph. When having $a\theta b$ we can replace it with $F(\theta,a,b)$, where $F$ is a imaginary relation. 
 
 For example, we have the following query:
@@ -83,7 +82,9 @@ A hypertree decomposition of a conjunctive query $Q$ is a hypretree $\textless T
 \end{definition}
 The width of the hypertree decomposition $\textless T,\chi,\lambda\textgreater$ is $\max_{p\in vertices(T)}|\lambda(p)|$. The hypertree-width $hw(Q)$ of $Q$ is the minimum width over all its hypertree decompositions.\par
 Let fix a given query  as $Q$. Suppose for $Q$  we have its hypertree decomposition $HT_{Q}$. 
-Condition \ref{connectedness} is called the connectedness property. The most important property of hypertree is that we can compute the query according to its structure in polynomial time. In fact the order of evaluating $Q$ in hypertree $HT$ is $O((||Q||+||HT||)r^{k})$ \cite{1}. $||Q||$ denotes the size of $Q$ and $||HT||$ is the size of its hypertree decomposition, $r$ is the maximum relation size over the relations in the database and $k$ is the hypertree width. \par
+Condition \ref{connectedness} is called the connectedness property. 
+With aforementioned generalizations for inequalities and nested queries, the connectedness property does not hold anymore, fortunately none of our results depends on it. 
+The most important property of hypertree is that we can compute the query according to its structure in polynomial time. In fact the order of evaluating $Q$ in hypertree $HT$ is $O((||Q||+||HT||)r^{k})$ \cite{1}. $||Q||$ denotes the size of $Q$ and $||HT||$ is the size of its hypertree decomposition, $r$ is the maximum relation size over the relations in the database and $k$ is the hypertree width. \par
 
 For example for query $Q'$ we have:
 \begin{align}
@@ -208,7 +209,7 @@ If we want to find a hypertree decomposition using the dual graph, for each node
 For hypergraph model we can do the same process, but here we select a set of vertices which are the variables and contract them together.
 \section{Algorithms}
 In this section we present an algorithm for computing  $\Delta$ of a hypertree of a query with respect to a relation.
-Suppose we want to compute $\Delta_{\pm R}{HT_{Q}}$. As we had in Theorem~\ref{thm:2} for the worst case we can assume that every node contains relation $R$ (i.e. \ref{fig3}).
+Suppose we want to compute $\Delta_{\pm R}{HT_{Q}}$. As we had in Theorem~\ref{thm:2} for the worst case we can assume that every node contains relation $R$ (i.e. \ref{fig3}) or has a variable which represents a subquery that contains $R$.
 \begin{figure}[htbp]
 \begin{center}
 \usetikzlibrary{fit}
@@ -258,12 +259,12 @@ Suppose we want to compute $\Delta_{\pm R}{HT_{Q}}$. As we had in Theorem~\ref{t
 \begin{algorithm}[H]
 \caption{Computing $\Delta_{\pm R}(v)$} 
 \label{alg1}
-\textbf{Input:} node $v$ as the root of $JT_{Q}$ and relation $R$ as the $\Delta$ variable.\\
+\textbf{Input:} node $v$ as the root of $HT_{Q}$ and relation $R$ as the $\Delta$ variable.\\
 \textbf{Output:} Calculus expression for $\Delta_{R}$ for node $v$
 \begin{algorithmic}[1]
-\STATE $J\gets \emptyset$
+\STATE $J\gets $ all relations and variables in $v$
 \FORALL{Child $i$ of node $v$}
-\IF{ the subtree rooted at $i$ has any node labeled by $R$}
+\IF{ $T_{i}$ has any node labeled by $R$ or a $t$ for which $R\in t$}
 \STATE Computes the $\Delta_{R}$ of $i$ recursively and store it in $\Delta[i]$ if it is not already computed.
 \STATE add $i$ to $J$
 \ENDIF
@@ -277,7 +278,7 @@ Suppose we want to compute $\Delta_{\pm R}{HT_{Q}}$. As we had in Theorem~\ref{t
 \begin{algorithm}[H]
 \caption{ComputeChain$(J)$} 
 \label{alg2}
-\textbf{Input:} A set of sibling nodes of $JT_{Q}$ as $J$ and relation $R$ as the $\Delta$ variable.\\
+\textbf{Input:} A set of sibling nodes of $HT_{Q}$ as $J$ and relation $R$ as the $\Delta$ variable.\\
 \textbf{Output:} Calculus expression for $\Delta_{R}$ for input nodes\\
 \begin{algorithmic}[1]
 \IF{$|J|=1$}
@@ -291,8 +292,10 @@ Suppose we want to compute $\Delta_{\pm R}{HT_{Q}}$. As we had in Theorem~\ref{t
 \RETURN $(exp,join)$
 \end{algorithmic}
 \end{algorithm}
-
-This algorithm needs to compute the delta of each element just one time. If we want to compute the $\Delta$ of a node with branching factor $k$ it needs $2^{k}-1$ different joint operation($\Join$) which is exponential in the worst case. But we can use a simple trick here. For the node we can first consider $\Delta$ of $k-1$ children and store it somewhere then with this value we can merge the $k$th one. With Algorithm~\ref{alg2} we can compute the $\Delta$ in $O(n)$.
+Algorithm~\ref{alg1} computes the $\Delta_{\pm R}$ of any hypertree. At each node $v$ we check if the subtree rooted at $v$ contains any node with label $R$ or any variables as a subquery which the subquery contains $R$. In either of these two cases we compute the $\Delta_{\pm R}$ of the subtree, otherwise its $\Delta_{\pm R}$ is zero. \\
+The computation is straightforward. For computing the delta of each node $v$, we first compute the delta of its children recursively  and then $v$ itself. This is done in Algorithm~\ref{alg1}. 
+\par
+The algorithm needs to compute the delta of each node just one time. If we want to compute the delta of a node with branching factor $k$ it needs $2^{k}-1$ different joint operation($\Join$) which is exponential in the worst case. But we can use a simple trick here. For the node we can first consider $\Delta_{\pm R}$ of $k-1$ children and store it somewhere then with this value we can merge the $k$th one. With Algorithm~\ref{alg2} we can compute the $\Delta_{\pm R}$ in $O(n)$.
 %\section{Relation between hypertrees and parse trees}
 %In this section we 
 
@@ -319,11 +322,11 @@ However this expression can be modified so that inequalities will appear only be
 \label{form}\sum(R\cdot(t\gets\sum[(S.b=R.b)\cdot S.c])\cdot(R.a<t))
 \end{align}
 
-Considering the representation of a hyper graph we can represent the connections between the variables of the previous example. In a hyper graph the vertexes will be the variables and the edges will represent the relations between these vertexes. Taking into account the previous example we will have the following:
+Considering the representation of a hyper graph, we can represent the connections between the variables of the previous example. In a hyper graph the vertices are the variables and the edges represent the relations between these vertices. Taking into account the previous example we have the following types:
 \begin{enumerate}
-\item relation R - which will have the variables $a$ and $b$
-\item the inequality $\theta$ - which will connect variable $a$ with variable $t$
-\item the assignment $\gets$ - which will connect variable $t$ with variable $b$, because $t\gets q1$ with bound variable $b$
+\item relation R: which has the variables $a$ and $b$
+\item the inequality $\theta$: which connects variable $a$ with variable $t$
+\item the assignment $\gets$: which connects variable $t$ with variable $b$, because $t\gets q_{1}$ with bound variable $b$
 \end{enumerate}
 \begin{align}
 \label{hyper}
@@ -343,7 +346,7 @@ Considering the representation of a hyper graph we can represent the connections
 \end{picture}
 \end{align}
 
-Figure \ref{hyper} will represent a hype graph representation of the connections between the variables that appear in the formulae \ref{form}. We will make a cut through the hyper graph along the variables a and t. After this cut we can construct a tree which will resemble very much a parse tree.
+Figure \ref{hyper} represents a hype graph representation of the connections between the variables that appear in the formulae \ref{form}. We make a cut through the hyper graph along the variables $a$ and $t$. After this cut we can construct a tree which resembles very much a parse tree.
 
 \begin{figure}[htbp]
 \begin{center}
@@ -354,7 +357,7 @@ Figure \ref{hyper} will represent a hype graph representation of the connections
     level 1/.style={scale=1.0, fill=red,
     level distance=30pt, sibling distance=150pt},
     level 2/.style={ scale=1.0,
-    level distance=30pt, sibling distance=70pt},
+    level distance=30pt, sibling distance=90pt},
     level 3/.style={ scale=0.7,
     level distance=60pt, sibling distance=120pt}] 
     \tikzstyle{every node}=[rectangle,draw,fill=red!20]
@@ -362,14 +365,14 @@ Figure \ref{hyper} will represent a hype graph representation of the connections
         child { 
             	node[rectangle,draw,fill=red!20] {$a,t,b$}
         		child { 
-        			node[rectangle,draw,fill=red!20] {$a,b$ - $R$}
+        			node[rectangle,draw,fill=red!20] {$a,b\coloneqq R$}
 				}
 				child{
-      				node[rectangle,draw,fill=red!20] {$t,b$ - $t\gets m_q[][b]$}
+      				node[rectangle,draw,fill=red!20] {$t,b\coloneqq t\gets m_q[][b]$}
 				}
 	}
 	child {
-	node[rectangle,draw,fill=red!20] {$a,t$ - $\theta$}
+	node[rectangle,draw,fill=red!20] {$a,t\coloneqq\theta$}
 	}
     ;
 \end{tikzpicture}
@@ -377,10 +380,9 @@ Figure \ref{hyper} will represent a hype graph representation of the connections
 \caption{A decomposition of the query \ref{form}}
 \label{figtree}
 \end{figure}
+As you can see the decomposition of the example query is a parse tree, which will have as leaves the connections between the variables of the query. When talking about variables $t$ and $b$, these variables participate in the assignment of the value of the subquery to the variable $t$. The result offered by the subquery will be influenced by the value of $b$ from relation $R$. Therefore we can substitute the subquery with a data structure which keeps the values for each different $b$: we substitute it with a map, which is a function defined on the domain of variable $b$ and which offers results for each value of $b: m_q[][b]\coloneqq\sum[(S.b=R.b)\cdot S.c]$.
 
-As you can see the decomposition of the example query is a parse tree, which will have as leaves the connections between the variables of the query. When talking about variables $t$ and $b$, these variables participate in the assignment of the value of the sub query to the variable $t$. The result offered by the sub query will be influenced by the value of $b$ from relation $R$. Therefore we can substitute the sub query with a data structure which will keep the values for each different $b$: we will substitute it with a map, which is function defined on the domain of variable $b$ and which offers results for each value of $b$: $m_q[][b]\mbox{:-}\sum[(S.b=R.b)\cdot S.c]$.
-
-The sub query can also be further down decomposed:
+The subquery can also be further down decomposed:
 \begin{align}
 \label{hyper1}
 \setlength{\unitlength}{1mm}
@@ -391,9 +393,7 @@ The sub query can also be further down decomposed:
 \put(27,30){$S$}
 \end{picture}
 \end{align}
-In the hyper graph \ref{hyper1} we will have just a simple relation. However in a more general case the sub queries can be more complicated.
-
-Another method of obtaining a decomposition of a query is by using the dual graph of the hyper tree. We know that a dual graph will be graph which has as vertices the relations and as edges the variables that make the connection between those relations. Going back to the example~\ref{query:nest}, we can represent that query as follows:
+In the hyper graph \ref{hyper1} we have just a simple relation. However in a more general case the sub queries can be more complicated. Another method of obtaining a decomposition of a query is by using the dual graph of the hypertree. We know that a dual graph will be graph which has as vertices the relations and as edges the variables that make the connection between those relations. Going back to the example~\ref{query:nest}, we can represent that query as follows:
 
 \begin{align}
 \label{hyper3}
@@ -414,11 +414,11 @@ Another method of obtaining a decomposition of a query is by using the dual grap
 \end{picture}
 \end{align}
 
-We have treated the inequality as a relation and therefore put it on the dual graph representation as a vertex, as well for the assignment operator. However the vertex representing the assignment operator will be connected with relation $R$ and relation $S$ through the variable $b$. The variable $b$ from relation $R$ will influence the result of the sub query, because of the $equal$ between relation $R$ and $S$: $R.b=S.b$.
+We have treated the inequality as a relation and therefore put it on the dual graph representation as a vertex, as well for the assignment operator. However the vertex representing the assignment operator is connected with relation $R$ and relation $S$ through the variable $b$. The variable $b$ from relation $R$ influences the result of the subquery, because of the $equal$ between relation $R$ and $S$: $R.b=S.b$.
 
 Having this representation we can make cuts through relations and therefore we can obtain a tree decomposition of the query. Each node of the tree is represented by relations and the edges are the connections between relations that are mapped to different nodes.
 
-Having this example and the extensions of hyper edges in section xxx, we can say that the ideas for performing the tree decomposition, even when havin inequalities and assignments, will work in the general case. 
+Having this example and the extensions of hyper edges in section \ref{sec:generalization}, we can say that the ideas for performing the tree decomposition, even when having inequalities and assignments, will work in the general case. 
 
 \begin{thebibliography}{9}
 \bibitem{2} C. Koch, \emph{Incremental Query Evaluation in a Ring of Databases},  preprint (2011).
