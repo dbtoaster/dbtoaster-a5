@@ -60,7 +60,7 @@
 
 
 \abstract{
-This paper presents issues related to my first semester project in the Prof. Koch's DATA lab.\\
+This paper presents issues related to my semester project in the Prof. Koch's DATA lab.\\
 }
 
 
@@ -97,7 +97,7 @@ Next section present system overview and requirements, in the context of \M3 pro
 \section{System overview \& requirements}
 \vspace{2mm}
 
-A user would like efficiency of C programs, while declarative nature of \SQL. All data will be stored in main memory in order to achieve better performance. The gap will be shrink by introducing \M3 compiler which will compile \OLAP database updates to C language constructs \cite{DBToasterCompiler09}. \M3 compiler will generate triggers to cover all \OLAP database updates in the system. Only insert and delete triggers are generated, since updates on tuples could be implemented as series of deletes followed by appropriate inserts. A trigger is coupled with trigger arguments, which are variable/value pairs used for representing parameters from particular \OLAP update. In further text \OLAP update and trigger instantiation will be used interchangeably.
+A user would like efficiency of C programs, while declarative nature of \SQL. All data will be stored in main memory in order to achieve better performance. The gap will be shrink by introducing \M3 compiler which will compile \OLAP database updates to C language constructs \cite{DBToasterCompiler09}. \M3 compiler will generate triggers to cover all \OLAP database updates in the system. Only insert and delete triggers are generated, since updates on tuples could be implemented as series of deletes followed by appropriate inserts. A trigger is coupled with trigger arguments, which are variable/value pairs used for representing parameters from particular \OLAP update. In the further text \OLAP update and trigger instantiation will be used interchangeably.
 
 \begin{example} \em
 \label{ex:simpleTrigger}
@@ -114,7 +114,7 @@ ON +R(10,20){
 \end{verbatim}
 \end{example}
 
-\textbf{Data structures.} The only data structures used by transition programs are maps. A map contains a unique name and a pair \{key, value\}. Multikeyed pairs are supported as well. A map reference contains only map name and key(s). A map collection consists of a unique map name and the pairs from whole map domain.
+\textbf{Data structures.} The only data structures used by transition programs are maps. A map contains a unique name and a pair \{key, value\}. Multikeyed pairs are supported as well. A map reference contains only map name and key(s). A map collection consists of a unique map name and the pairs from whole map domain. In comparison with SQL, maps refers to tables or intermediate results, while a key represents a column of a table.
 
 A trigger consists of multiple statements which perform operations on maps. An \M3 program reads from the right-hand side maps, and write to the left-hand side map of the statement. The map name and the trigger arguments specifies map to be accessed. If a variable used in a statement in a trigger is not defined in the trigger arguments, whole map domain participates in the statement. On the right-hand side of the statement the only allowed operation is *, while between left and right side only += is permitted. Each statement adds a \textit{delta} to the left-hand side map. If there is need for adding multiple terms, it could be adjusted by utilizing multiple statements with the same left-hand side map. Both read and write are permitted to perform on non-existing maps. In that case, it is assumed initial value was zero.
 
@@ -156,7 +156,7 @@ There exist three types of dependencies corresponding to different statements \t
  \item \texttt{Write-Write}: Both \texttt{STMT1} and \texttt{STMT2} update the same map
 \end{itemize}
 
-Write-Write dependency violation may occur even within a single \OLAP update. Write-Read and Read-Write dependencies within the same \OLAP update could not be violated since, according to \M3 program guaranties, no map read will return the value from the current \OLAP update. Therefore, we imply logical order between statements, based on Timestamps of the \OLAP update a statement belongs to. In case of a single update stream, Timestamp (TS) is a implicitly defined unique serial number of a \OLAP update in that update stream. For multiple update streams, some Total Order has to be introduced. We could introduce any total order as long as all \OLAP updates inside one update stream preserve original order. To conduct unique global TS, we may combine a TS from particular update stream with ID of the update stream. The update stream ID may be generated utilizing the Standard Renaming Technique \cite{Welch04}.
+Write-Write dependency violation may occur even within a single \OLAP update. Write-Read and Read-Write dependencies within the same \OLAP update could not be violated since, according to \M3 program guaranties, no map read will return the value from the current \OLAP update. Therefore, we imply logical order between statements, based on Timestamps of the \OLAP update a statement belongs to. In case of a single update stream, Timestamp (TS) is a implicitly defined unique serial number of a \OLAP update in that update stream. For multiple update streams, some Total Order has to be introduced. Although \OLAP updates within single update stream may be reorered producing the correct final result, reciding from this order may result in more work to provide consistency, as we will see later. The Total Order among all the \OLAP updates is achieved by expanding TS with update stream ID, thus forming <TS, update-stream-id> pairs. TS preserves order of \OLAP updates arrived from a single update stream, while update-stream-id breaks ties among \OLAP updates with the same TS. The update stream ID may be generated statically or by utilizing the Standard Renaming Technique \cite{Welch04}.
 
 Consider an example shown in Figure~\ref{fig:streamWR}. For the introduced total order, a Write-Read dependency exists on m2[1] between the second statement in the first \OLAP update and the first statement in the second \OLAP update.
 
@@ -273,7 +273,7 @@ However, it is typically not possible to generate a partitioning of the data tha
 
 Figure~\ref{fig:pushPull} presents both Destination-computation and Source-computation approaches.
 
-A set of messages issued by a switch for destination-computation approach is illustrated in Figure~\ref{fig:msgs}. FETCH messages are sent to DW Nodes that contain the right-hand side maps. In further text such DW Node will be denoted as the DW Read Node, by role they play in current statement. The DW Read Node will send PUSH message containing the data read to the DW Node that contain the left-hand side map. In further text such DW Node will be denoted as the DW Write Node, again, by role they play in current statement. Same DW Node may be the DW Write Node for one statement and the DW Read Node for some other statement. The DW Write Node will be aware of the map update to perform by receiving PUT message from a switch. For each statement, there is exactly one PUT message (since only one map can be the left-hand side) and one or more FETCH/PUSH messages (since there may exist multiple source nodes).
+A set of messages issued by a switch for destination-computation approach is illustrated in Figure~\ref{fig:msgs}. FETCH messages are sent to DW Nodes that contain the right-hand side maps. In the further text such DW Node will be denoted as the DW Read Node, by role they play in current statement. The DW Read Node will send PUSH message containing the data read to the DW Node that contain the left-hand side map. In the further text such DW Node will be denoted as the DW Write Node, again, by role they play in current statement. Same DW Node may be the DW Write Node for one statement and the DW Read Node for some other statement. The DW Write Node will be aware of the map update to perform by receiving PUT message from a switch. For each statement, there is exactly one PUT message (since only one map can be the left-hand side) and one or more FETCH/PUSH messages (since there may exist multiple source nodes).
 
 \begin{figure}
 \begin{center}
@@ -327,9 +327,9 @@ If we assume partitioning is static, information about map distribution could be
 \label{Corrective}
 In this subsection, steps taken upon dependency violation is presented. 
 
-As already mentioned, Introduced Total Order may not reflect \EXORD. A DW Node may first receive a message from a switch with a greater TS and potentially violate dependencies. A DW Node itself cannot be aware whether some \OLAP update will arrive later due to processing on a slow switch and/or network delays, or will never arrive since it is irrelevant to our DW Node (no maps stored in our DW Node in particular TS). 
+As already mentioned, Introduced Total Order may not reflect \EXORD. A statement on a DW Node sees only the effects of prior statements, though it may not see all of them, thus potentially violatiting dependencies. A DW Node itself cannot be aware whether some \OLAP update will arrive later due to processing on a slow switch and/or network delays, or will never arrive since it is irrelevant to our DW Node (no maps stored in our DW Node in particular TS).
 
-Generally, our system always uses an optimistic approach, continue whenever possible, and if some dependencies are violated, employ the \textit{corrective update} mechanism. Since increasing number of switches and/or update streams yields more messages in the system, there is higher probability for delays and reordering of messages, violated data dependencies and finally, corrective update messages.
+Our system uses an optimistic approach, continue whenever possible, and if some dependencies are violated, employ the \textit{corrective update} mechanism. Since our computation is based on delta processing, work done speculatively need not be thrown away entirely. Rather, any work done can be revised though deltas, to the final desired outcome. However, out-of-order events are expected to occur infrequently. Furthermore, such events are likely to interfere only a handful of prior updates, for example a write on one map followed by an out-of-order read on a different map does not cause a problem. Since increasing number of switches and/or update streams yields more messages in the system, there is higher probability for delays and reordering of messages, violated data dependencies and finally, corrective update messages.
 
 Our system could recognize dependency violation by combining information about maps sent and received along with their TS. For that purpose, we will take a look at a simple statement mw+=mr. Assume the DW Read Node contains mr, while the DW Write Node contains mw. All information about sent map are presented in the mr(TSx, TSy) notation. There are three types of dependencies, we will tackle them separately:
 
@@ -362,7 +362,7 @@ At the time of processing of corrective update message on the DW Write Node, the
 \begin{enumerate}[(1)]
  \item Update all the mr in the ReceiveLog which logically succeeds TSx.
 
- \item For each map update performed on current DW Write Node that logically succeeds TSx, if mr was used as the right-hand side map, apply map update to each affected pair \{mw, TSy\} in the WriteLog structure. In order to support this, DW Node log all \OLAP updates (TS, trigger and trigger arguments) in which it performed any write operation in the {OperationLog}. The result of a multiplication between the delta on the arrived map and the values of all the remaining right-hand side maps from the ReceiveLog, is added to affected mw. If the delta is applied to a pair \{mw, TSy\}, it has to be applied to each mw in the WriteLog structure succeeding TSy. This is due to implicit Write-Read dependencies between any two += operations with the same left-hand side map.
+ \item For each map update performed on current DW Write Node that logically succeeds TSx, if mr was used as the right-hand side map, apply map update to each affected pair \{mw, TSy\} in the WriteLog structure. In order to support this, DW Node log all \OLAP updates (TS, trigger and trigger arguments) in which it performed any read/write operation in the \textit{OperationLog}. The result of a multiplication between the delta on the arrived map and the values of all the remaining right-hand side maps from the ReceiveLog, is added to affected mw. If the delta is applied to a pair \{mw, TSy\}, it has to be applied to each mw in the WriteLog structure succeeding TSy. This is due to implicit Write-Read dependencies between any two += operations with the same left-hand side map.
 
  \item Corrective updates could be recursive, since the DW Write Node could propagate incorrect mw further to the DW Write Nodes that used mw as the right-hand side map. For each map reference in the SendLog concerning mw which logically succeeds TSy, corrective update mechanism is applied recursively, but on the \{mw, TSy\} pair.
 \end{enumerate}
@@ -450,7 +450,7 @@ Each switch will compute the minimum TS received from corresponding DW Nodes and
 
 Our system will provide mechanism to avoid a single switch issues EPOCH END messages all the time. This is easily achieved by a token-passing system and ordering switches. Only the switch with the token can switch epochs. It waits for the duration of one period, switches, and then passes the token to the next switch.
 
-The Log structures grow over time. To prevent unbounded memory usage, we may employ the same background task we used for consistent views to periodically truncate, or garbage collect the entries in each Log structure. The WriteLog and the SendLog are truncated at this point, and all writes before this point is coalesced into a single entry. The entries from the ReceiveLog which precedes the consistent image TS may be safely deleted. They must not be deleted earlier, since before EPOCH END the corresponding corrective updates may arrive.
+The Log structures grow over time. To prevent unbounded memory usage, we may employ the same background task we used for consistent views to periodically truncate, or garbage collect the entries in each Log structure. The WriteLog and the SendLog are truncated at this point, and all writes before this point is coalesced into a single entry. The entries from the ReceiveLog which precedes the consistent image TS may be safely deleted. They must not be deleted earlier, since before EPOCH END the corresponding corrective updates may arrive. However, there is an exception from this rule. The ReceiveLog entry may be deleted just after executing a statement if only one map is on the rhs. Nevertheless, for 3 or more joins in the original sql query, there will be multiple maps on the rhs.
 
 Still, a DW Node may run out of memory before the switch with a token switched epochs. In order to avoid this, the DW Node may request end of current EPOCH by sending an EPOCH END REQUEST message to a switch.
 
@@ -548,7 +548,7 @@ Using these modifications of data flow dependencies, partitioning and co-cluster
 
 Switch \OLAP update partitioning and data partitioning are dependent on each other. If for a longer period of time different \OLAP updates occur more frequently, both could be dynamically repartitioned. However, the operation is costly and should be applied very carefully.
 
-\textbf{Redundancy.} Future work will also address using redundant nodes for dealing with node failures. 
+\textbf{Redundancy.} Future work will also address using redundant nodes for dealing with node failures. This will also increase availability in the system.
 
 \section{Conclusion}
 \label{sec:Conclusion}
