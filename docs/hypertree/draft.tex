@@ -31,12 +31,12 @@ One important class for which we have polynomial algorithms is \emph{Acyclic Que
 
 We use $var(Q)$ to show the set of variables in query $Q$ and $relations(Q)$ denotes the set of relations in query $Q$.
 \begin{definition}
-\label{def:primalgraph}
-The primal graph of query $Q$ is a graph $G(V,E)$. where $V=vars(Q)$ and for all relations $A$ and for all $a,b\in vars(A)$ we add an edge between $a$ and $b$. $E=\{(a,b)|\exists A: a\in vars(A)\land b\in vars(A)\}$
-\end{definition}
-\begin{definition}
 \label{def:hypergraph} 
 The hyper graph of query $Q$ is a hyper graph $G(V,E)$ where $V=var(Q)$ and for each relation $A$ we add an hyper edge among all $var(A)$.
+\end{definition}
+\begin{definition}
+\label{def:primalgraph}
+The primal graph of query $Q$ is a graph $G(V,E)$. where $V=vars(Q)$ and for all relations $A$ and for all $a,b\in vars(A)$ we add an edge between $a$ and $b$. $E=\{(a,b)|\exists A: a\in vars(A)\land b\in vars(A)\}$
 \end{definition}
 When the primal graph of a query is acyclic then we can call it the \emph{Join Tree}. As previously stated we can evaluate a query in polynomial time when we have its join tree. Although we rarely encounter acyclic queries, in many cases we can decompose the primal graph into a tree. For example we can use a tree decomposition algorithm on the primal graph to obtain a tree. After decomposing the query, some nodes will have more than one relation, thus, the maximum number of relations in any node is called tree width. 
 Decomposing a graph into a tree is an NP-Complete problem, but if we know the tree width is constant, then there is a polynomial time algorithm for that. \par
@@ -49,7 +49,7 @@ The definition of dual graphs~\eqref{def:dualgraph} came from the dual of hyperg
 \subsection{Generalization for inequalities and nested queries}
 \label{sec:generalization}
 In the previous section we have presented the notions of graph and hyper graph models for queries which only contain equal joins. In those models we can not have any inequalities or any nested queries. But in this section we want to generalize those models for these two case. We consider each inequalities as an imaginary relation between two variables. Imaginary here means that we don't need to materialize it. Thus, in hyper graph representation each inequality $a\theta b$ is a hyper edge on $a$ and $b$. In dual graph modelling it is a vertex which is connected to other vertices which have the same variables as the inequality's operator.\\\par
-Join trees 
+
 For the nested queries, we can also consider them as a imaginary relation. A sub query is an assignment. Lets suppose that we have an sub query $t\gets q$ where $q$ represents the sub query body and $t$ is the name of the variable which is given to it for the representation. This is the same as the alpha5 notation in DBToaster\cite{1}. The imaginary relation for the nested query contains $t$ and all the participating variables in the body of $q$. In this way we preserve the meanings of these variables, they are related to each other like an ordinary relation. Thus, in hyper graph model we have an hyper edge for the sub query and in the dual model we have a vertex for it. We use $R\in t$ to denote weather or not $R$ has appeared on the right hand side of assignment operator for $t$. \\\par
 When talking about inequalities, the hyper edge between the variables that compose the inequality is a simple edge like in a normal graph. When having $a\theta b$ we can replace it with $F(\theta,a,b)$, where $F$ is a imaginary relation. 
 
@@ -137,6 +137,11 @@ Q': &a(S,X,X',C,F)\land b(S,Y,Y',C',F')\land c(C,C',Z)\land d(X,Z)\land e(Y,Z)\n
 \label{fig:hypertree}
 \end{figure}
 A hypertree of query $Q'$ is  shown in Figure~\ref{fig:hypertree}. The hypertree width is 2 in this case. 
+\subsection{Unions and Hypertrees}
+The hypertree model is basically useful for representing only equal joins. In section \ref{sec:generalization} we extended it for inequalities and nested query. In order to represent any AGCA expressions(i.e. SQL expressions) with this model, we need to represents unions also. \par
+One naive idea for representing the query is to distribute joins over unions. For example if we have $(R+S)\Join T$ we can rewrite it as $R\Join T+S\Join T$. But this method may result in exponential number of terms. As converting any CNF to DNF formula may produce exponential number of terms. For example for $(S_{1}+R_{1})\Join\cdots\Join(S_{n}+R_{n})$ we need exactly $2^{n}$ different union terms, although the original query had $n$ terms. 
+This method can be useful if we have a limited number of unions. \\\par
+Another method is to use the parse tree of the query. First we have to parse the input query as DBToaster does it, and then remove the union nodes. Each connected component is a part of the given query and for it we can compute its hypertree representation. These hypertrees are connected together by the union nodes. In this way the hypertree width of the whole query is not increased, it can be proved  by induction on the depth of parse tree. At any union node we have two children. Each of them has its own hypertree width. The hypertree width of the union node is the maximum of these two hypertree width. Thus, the hypertree width of the whole parse tree is the maximum of the hypertree width of all connected component.
 \subsection{Number of different nodes or trees is polynomial}
 In \cite{2} they defined AGCA(which is stands for AGgregation CAlculus). For each query they defined a delta for it which is a query again. They introduce \emph{delta queries} for incrementally view maintenance. Let $u$ denote a change(un insertion or deletion) to database $D$. Applying $u$ to the database $D$ is shown by $D+u$. Here ``+'' denotes a function which applies $u$ into $D$. A delta query $\Delta Q$ expresses the change to the result of query $Q$ as database $D$ is updated to $D+u$. We also used theirs notation to for $\Delta_{u}(Q)$ or $\Delta_{\pm R(\vec{t})}Q$ to denote the delta-query for such an update.
 
