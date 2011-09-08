@@ -128,7 +128,9 @@ We might also change corrective update mechanism totally. Previously, on each ma
 
 In the old design, on each PUT message we examined the SendLog for each destination. Since the SendLog consists of pairs \{map, destination, TS\}, this will take in total O(N) time, where is N total number of the nodes in the system. Upon arrival of a corrective update message on the destination, all the previously executed statements are glanced over to check if this corrective update influence them. In the new design, we examine the OperationLog on each PUSH message arriving, thus much more frequently. Each PUSH message is potentially a corrective update message for previously executed statements on that node. In order to be more efficient, for each map that a DW Node ever receives, the system may preserve a list of maps on the DW Node depending on it, thereby effectively trading-off the SendLog structure for this new list.
 
-Note that we do not want to express all the maps through a single map, since this will negate all the incremental effects DBToaster offered us. Sending all the deltas in a PUSH message is not expected to increase drastically number of messages in the network, since all the deltas are expected to fit into a single IP package. However, experiments must support this claim.
+Sending all the deltas in a PUSH message is not expected to increase drastically number of messages in the network, since all the deltas are expected to fit into a single IP package. However, experiments must support this claim.
+
+Note that we do not want to express all the maps through a single map, since this will negate all the incremental effects DBToaster offered us. In addition, that does not rule out the need for corrective update or similar mechanism.
 
 \begin{example} \em
 \label{ex:M3Program}

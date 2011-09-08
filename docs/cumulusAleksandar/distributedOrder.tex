@@ -186,11 +186,11 @@ We assume that these trigger instantiations may arrive from different switches, 
 
 It is also very interesting that the author in~\cite{Birman06} in chapter 17.3 claims that he ''has never encountered a real-world application in which global total order is needed``.
 
-Although the overhead for preserving global total order in atomic multicast is high when there is many overlapping destinations, situations in Example~\ref{ex:transitiveCyclic} are not expected to appear very frequently. In a case when trigger instantiations issued at the approximately same time are not causally ordered, observed order on nodes may differ from each other, as long as it still provides a unique causal shuffle.
+Although the overhead for preserving global total order in atomic multicast is high when there is many overlapping destinations, situations in Example~\ref{ex:transitiveCyclic} are not expected to appear very frequently. 
 
 \begin{example} \em
 \label{ex:allowedCyclic}
-In some cases even local total order is too restrictive.
+In a case when trigger instantiations issued at the approximately same time are not causally ordered, total order on nodes may differ from each other, as long as it still provides a unique causal shuffle. In this example, even local total order is too restrictive:
 \begin{verbatim}
 ON +R(A){
    m1[A]+=m0;
@@ -204,7 +204,7 @@ If on the node containing m1[1] arrives trigger TSs in order TS1, TS2, and on th
 Now we will compare the Optimistic approach versus the multicast primitive:
 \begin{enumerate}[(1)]
  \item Using multicast primitive guarantee correct execution with less machinery, no ReadLog and OperationLog required anymore. Furthermore, corrective updates (including recursive ones) never occur.
- \item When multicast primitive is used, there is no possibility for trigger instantiation cycles. The Optimistic approach introduces a global total order before even before processing trigger instantiations, but apply corrective updates only if causal relations are broken within this global order. Cycles are a way to violate causal relations.
+ \item When multicast primitive is used, there is no possibility for trigger instantiation cycles. By avoiding dependency cycles, there is no way to violate causal relations. The Optimistic approach introduces a global total order before even before processing trigger instantiations, but apply corrective updates only if causal relations are broken within this global order.
  \item In the Optimistic approach, due to different speed/load on different switches/nodes, it is entirely possible that some triggers occurred at distant point in time, thus not violating atomicity, need to be reordered by executing corrective updates. 
  \item A huge disadvantage of the multicast primitive is high overhead. However, it is to be hoped that latency will be constant during execution if destinations' overlapping is not very frequent.
 \end{enumerate}

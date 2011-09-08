@@ -192,6 +192,8 @@ equivalent to: S.A = R.B and S.B = R.C
 
 As with rs.sql, enough condition for preserving atomicity is S.A = R.B, which can be preserved in the same way as in rs.sql.
 
+It is interesting to observe that GROUP BY do not change Conditions of the approapriate query without GROUP BY. To be more precise, more conditions are added, but they will not influence enough conditions for avoiding cycles. By adding GROUP BY we decrease amount of conflicts due to the fact that we will have more fine grained partitioning of maps.
+
 \subsection{sum.sql}
 \textbf{Query.} This query is actually:
 \begin{verbatim}
@@ -291,7 +293,7 @@ Another important property of M3 programs is that a map always use exactly the s
 
 \textbf{Condition loops.} There are two different types of loops in conditions. First one is in the cycle (5) and the cycle can be broken by avoiding non-loop condition R.B = S.A. Second one is in the cycle (1), and it contains loops in all condition terms. We will denote such loop as hard-loops.
 
-The hard-loops are harder to partition. In the cycle (1), trigger partitioning solution imply that all R and T triggers are processed through the same input point, while map partitioning implies that all the m2 and m4 maps have to be put on the the node. It is interesting to note that hard-loop occurs only between tables not adjacent in the WHERE clause (sharing the same variables in joins in Cumulus algebra). Loop unrolling can also be done in runtime, causing some overhead, but further research is necessary on this topic.
+The hard-loops are harder to partition. In the cycle (1), trigger partitioning solution imply that all R and T triggers are processed through the same input point, while map partitioning implies that all the m2 and m4 maps have to be put on the the node. It is interesting to note that hard-loop occurs only between tables not adjacent in the WHERE clause (sharing the same variables in joins in DBToaster algebra). Loop unrolling can also be done in runtime, causing some overhead, but further research is necessary on this topic.
 
 Now we will show that all 3-cycles are avoided if 2-cycles are avoided. In order to have 3-cycle either S->T or T->S has to exist, but this is not possible since the S.B = T.A situations are avoided even for 2-cycles. It can be inferred that all the higher-level cycles are avoided if 2-cycles are avoided.
 
@@ -300,17 +302,52 @@ We will present several solutions:
 \item The easiest solution is to process only one trigger type at the time, since there is no dependencies within trigger except Write-Write (a map is either on the lhs or on the rhs all over the trigger).
 \item Process R and T simultaneously from multiple input points (even more than 2) by putting m2 and m4 on a single node, while S must be done alone in the system. Or R and S (S and T) can be done together by trigger partitioning presented for rs.sql, thus executing T (R) alone in the system. In TPCH benchmarks we can prioritize some tables which are more frequently updated. In most cases, only few relations are updated (such as CUSTOMER, LINEITEM), while the others (such as NATION, etc.) are rarely updated.
 
-When update events from 2 triggers are processed at the same time, avoiding the conditions from WHERE clause referring to join between two relevant tables is enough for eluding 2-cycles. This is also shown on rs2joint.sql, where there are two conditions for join between R and S: R.A=S.A AND R.B=S.B.
+When update events from 2 triggers are processed at the same time, avoiding the conditions from WHERE clause referring to join between two relevant tables is enough for eluding 2-cycles. This is also shown on rs2joint.sql (not presented in this paper), where there are two conditions for join between R and S: R.A=S.A AND R.B=S.B.
 
 \item An optimization of the previous approach is to keep track of currently processing trigger parameters, and let S in the system only if there are no conflicts. This is not scalable, since input points have to communicate with nodes and among themselves about completed update events.
 \item Update events R and T can be processed on arbitrary input points, as long as m2 and m4 are on a single node and S is sent from two input points. For example, if R(1,4) is sent thought IP1 and T(2,9) is sent through IP2, then S(4,2) is sent through both switches.
 
-We will prove that this approach is not working. Due to our-of-order execution, it is entirely possible that the node containing m5 first see S from the second input point before R update event from the first input point, and the node containing m3 sees R before any S update event. Thus, different nodes see a conflicting order, thus breaking the atomicity. It is even impossible to build a blocking solution for the problem, since m5 cannot be aware whether a R update event is late or does not exist at all.
+We will prove that this approach is not working, even with waiting for both S messages to arrive. Assume that through IP1 order of messages is S (denoted later as S1), R, while through IP2 only S(denoted later as S2) is processed. Due to out-of-order execution, it is entirely possible that m3 sees S2, S1, R, assuming S, R order, while m5 sees S1, R, S2, assuming R, S order. Thus, different nodes see a conflicting order, thus breaking the atomicity. It is even impossible to build a blocking solution for the problem, since m5 cannot be aware of order of message arrival on m3. We can build similar non-working scenario for the approach when message is processed when received form only one input point.
 
 \item The first cycle can be avoided by putting m2 and m4 on a single node, the following four can be avoided by handling R.B = S.A as in rs.sql, while the last four cycles are avoided by putting m5 and m6 on the same node where m2 and m4 are. This is not very scalable since all the m2, m4, m5 and m6 maps are stored on a single node.
 \end{enumerate}
 
 Since we are distinguishing between different trigger types, self joins are not supported. Second solution seems promising.
+
+\subsection{rstgb.sql}
+\textbf{Query.} This query is actually:
+\begin{verbatim}
+SELECT R.A, sum(A*D) FROM R,S,T 
+WHERE R.B=S.B AND S.C=T.C GROUP BY R.A.
+\end{verbatim}
+
+\textbf{M3 program.} A simplification of generated M3 paired with dependencies is presented here:
+\begin{verbatim}
+    ON +R[A; B]: 
+R.1 m1[A]  += A * m4[B]
+R.2 m2[A; C] += A * m5[B; C]
+R.3 m3[A; B] += A
+
+    ON +S[A; B]: 
+S.1 m1[C] += m3[C; A] * m6[B]
+S.2 m2[C; B] += m3[C; A]
+S.3 m4[A] += m6[B]
+S.4 m5[A; B] += 1
+
+    ON +T[A; B]: 
+T.1 m1[C] += m2[C; A] * B
+T.2 m4[D] += B * m5[D; A]
+T.3 m6[A] += B
+\end{verbatim}
+
+An example of 2-cycle is
+\begin{verbatim}
+ R->T: R.2 T.1, m2
+ T->R: T.2 R.1, m4
+ Condition: R.(A,C) = T.(C,A) and T.D = R.B 
+ equivalent to R.A=T.C and R.C=T.A and T.D=R.B(hard-loop)
+\end{verbatim}
+This is even more complex than the first cycle in the rst.sql. However, 2-cycles between R-S and S-T can be avoided by preserving the same conditions as for rst.sql (Again, group by stricly relaxes condition for atomicity).
 
 \subsection{tpch3.sql}
 \textbf{Query.} This query is actually:
@@ -329,6 +366,7 @@ WHERE  CUSTOMER.mktsegment = 'BUILDING'
 GROUP BY ORDERS.orderkey, 
   ORDERS.orderdate, ORDERS.shippriority.
 \end{verbatim}
+The original TPCH3 query contains ORDER BY, but this is not relevant here since we are updating maps, not returning the result.
 
 \newpage
 \textbf{M3 program.} A simplification of generated M3 is presented here:
@@ -447,42 +485,8 @@ As before, by avoiding cycles, dependencies between update events in any directi
 
 Compilation of this query laster for 12 hours, but generated program is tedious for analysis. The previous conclusions still hold here.
 
-\subsection{rstgb.sql}
-\textbf{Query.} This query is actually:
-\begin{verbatim}
-SELECT R.A, sum(A*D) FROM R,S,T 
-WHERE R.B=S.B AND S.C=T.C GROUP BY R.A.
-\end{verbatim}
-
-\textbf{M3 program.} A simplification of generated M3 paired with dependencies is presented here:
-\begin{verbatim}
-    ON +R[A; B]: 
-R.1 m1[A]  += A * m4[B]
-R.2 m2[A; C] += A * m5[B; C]
-R.3 m3[A; B] += A
-
-    ON +S[A; B]: 
-S.1 m1[C] += m3[C; A] * m6[B]
-S.2 m2[C; B] += m3[C; A]
-S.3 m4[A] += m6[B]
-S.4 m5[A; B] += 1
-
-    ON +T[A; B]: 
-T.1 m1[C] += m2[C; A] * B
-T.2 m4[D] += B * m5[D; A]
-T.3 m6[A] += B
-\end{verbatim}
-
-An example of 2-cycle is
-\begin{verbatim}
- R->T: R.2 T.1, m2
- T->R: T.2 R.1, m4
- Condition: R.(A,C) = T.(C,A) and T.D = R.B 
- equivalent to R.A=T.C and R.C=T.A and T.D=R.B(hard-loop)
-\end{verbatim}
-This is even more complex than the first cycle in the rst.sql.
-
-The queries from experiments section of sigmod10-spread are too complex (3 joins, as in rst.sql). Since 4clique.sql is self-join, it is not supported.
+\subsection{More queries.}
+The queries from experiments section of sigmod10-spread consist of joins of 3 tables, which can be solved in the same manner as rst.sql. Since 4clique.sql is self-join, it is not supported.
 
 \section{General conclusions}
 \vspace{2mm}
@@ -494,9 +498,9 @@ M3 programs generated by DBToaster has additional characteristic: any serial ord
 
 Introducing a global total order alleviated with corrective updates is a way of breaking these trigger cycles, thus preserving atomicity. There are alternatives, trigger and map partitioning. Trigger partitioning breaks cycles on the source (input point) by processing event updates belonging to the same cycle through a single input point. A cycle exists over all the triggers, disallowing for simple partitioning trigger by name. However, we saw that cycles can sometimes be broken by using both name and parameters for trigger partitioning. Map partitioning breaks cycles on a destination by coalescing maps belonging to the same cycle on the same node.
 
-If the M3 program do not contain loop variables, conditions for forming a cycle are essentially the WHERE clause from the SQL query. Thus, we can apply map and trigger partitioning directly on these WHERE clauses expressions.
+If an M3 program do not contain loop variables, conditions for forming a cycle are essentially the WHERE clause from the SQL query. The same holds if M3 program contains loops on level of two tables which appears together in WHERE clause. Thus, we can apply map and trigger partitioning directly on these WHERE clauses expressions.
 
-Even if we decide to use the corrective update mechanism, by using information about cycle, a partitioning scheme which decreases chances for corrective updates may be built.
+Even if we decide to use the corrective update mechanism, by using information about cycles and dependencies, a partitioning scheme which decreases chances for corrective updates may be built.
 
 %{
 %\bibliographystyle{ieeetr}
