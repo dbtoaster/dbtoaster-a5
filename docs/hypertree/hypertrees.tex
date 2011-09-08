@@ -285,17 +285,19 @@ For computing $\Delta_{\pm R}{HT_{Q}}$, the worst case is when every node contai
 \caption{ComputeChain$(J)$} 
 \label{alg2}
 \textbf{Input:} A set of sibling nodes of $HT_{Q}$ as $J$ and relation $R$ as the $\Delta$ variable.\\
-\textbf{Output:} Calculus expression for $\Delta_{R}$ for input nodes\\
+\textbf{Output:} Calculus expression for $\Delta_{R}$ for input nodes and creates a node in its parse tree\\
 \begin{algorithmic}[1]
 \IF{$|J|=1$}
 \STATE $expr\gets \Delta_{R}(J_{1})$ \COMMENT{$J_{1}$ is the first element of $J$}
 \STATE $join\gets J_{1}$
+%\STATE $node\gets$ node representing $\Delta_{R}(J_{1})$
 \ELSE
 \STATE $rest\gets ComputeChain(J\setminus J_{1})$
 \STATE $join\gets J_{1}\Join rest.join$
 \STATE $expr\gets rest.expr\Join \Delta(J_{1})+\Delta(J_{1})\Join rest.join+J_{1}\Join rest.expr$ \label{line:joinrule}
+%\STATE $node\gets$ a union node with children $\{rest.expr\Join \Delta(J_{1}),\Delta(J_{1})\Join rest.join,J_{1}\Join rest.expr\}$
 \ENDIF
-\RETURN $(exp,join)$
+\RETURN $(exp,join,node)$
 \end{algorithmic}
 \end{algorithm}
 Algorithm~\ref{alg1} computes the $\Delta_{\pm R}$ of any hypertree. At each node $v$ we check if the subtree rooted at $v$ contains any node with label $R$ or any variables as a subquery which the subquery contains $R$. In either of these two cases we compute the $\Delta_{\pm R}$ of the subtree, otherwise its $\Delta_{\pm R}$ is zero. \\
@@ -305,7 +307,7 @@ The algorithm needs to compute the delta of each node just one time. If we want 
 As an example, suppose we want to compute the delta of hypertree given in Figure~\ref{fig:hypertree} with respect to $j$. Let us call the hypertree as $HT$. We call Algorithm~\ref{alg1} for the root node which is $v_{1}$. First we compute the delta of $v_{1}$, itself, and then we call the algorithm on $v_{2}$, since $T_{v_{2}}$ contains $j$. The delta of $v_{2}$ is 0 since it does not contain relation $j$. Then we recursively compute the deltas for $v_{3}$ and $v_{6}$. Having $\Delta_{\pm j}(v_{3}), \Delta_{\pm j}(v_{6})$ and $\Delta_{\pm j}(v_{2})$ we can compute $\Delta_{\pm j}(T_{v_{2}})$ by the rules which is given in \cite{2} and is implemented in line~\ref{line:joinrule} of algorithm~\ref{alg2}.
 \subsection{Number of different nodes or trees is polynomial}
 \label{sec:theorem1}
-In this section we suppose that a hypretree decomposition for a query is given as $HT_{Q}$. We can apply Algorithm~\ref{alg1} to $HT_{Q}$ and obtain a parse tree. Here we say a parse tree instead of a hypertree because the structure which we obtain as the output of Algorithm~\ref{alg1} contains unions. With what we have explained in section~\ref{sec:unionsand} we can eliminate unions, thus without loss of generality we can consider that the output of the algorithm is a set of hypertrees. For each sequence of delta if applies on a hypertree we have a set of hypertrees(Since we split the nodes on unions). What we are interested is the total number of nodes in all hypertrees which are created by consecutive execution of Algorithm~\ref{alg1}.  
+In this section we suppose that a hypretree decomposition for a query is given as $HT_{Q}$. We can apply Algorithm~\ref{alg1} to $HT_{Q}$ and obtain a set of hypertrees. Here we say a set of hypertrees because the structure which we obtain as the output of Algorithm~\ref{alg1} contains unions. With what we have explained in section~\ref{sec:unionsand} we can eliminate unions, thus without loss of generality we can consider that the output of the algorithm is a set of hypertrees. For each sequence of delta if applies on a hypertree we have a set of hypertrees(Since we split the nodes on unions). What we are interested is the total number of nodes in all hypertrees which are created by consecutive execution of Algorithm~\ref{alg1}.  
 \begin{theorem}
 \label{thm:1}
 The number of all nodes in all possible hypertrees is polynomial in terms of the number of relation, for any given hypertree decomposition if the hypertree width is fixed. 
@@ -319,7 +321,6 @@ Thus, for counting the number of all nodes in all hypertrees for all sequences o
 \sum_{i=1}^{k}{\binom{n}{i}}<(n+1)^{k}
 \end{equation}
 which is polynomial for a fixed $k$, since all of these hypertrees may contain some nodes up to $k$ different relations. 
-
 \end{proof}
 
 \section{Nested queries}
