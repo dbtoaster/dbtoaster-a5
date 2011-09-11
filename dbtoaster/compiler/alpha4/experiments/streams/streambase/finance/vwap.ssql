@@ -1,0 +1,93 @@
+/* Repetitive VWAP query implementation.
+ *
+ * @author Yanif Ahmad
+ */
+
+CREATE SCHEMA OrderbookEntry
+(timestamp double, orderId int, brokerId int, volume double, price double);
+
+CREATE INPUT STREAM InsertBids OrderbookEntry;
+CREATE INPUT STREAM DeleteBids OrderbookEntry;
+
+CREATE STREAM BidsInserted OrderbookEntry;
+CREATE STREAM BidsDeleted OrderbookEntry;
+
+CREATE MEMORY TABLE Bids OrderbookEntry
+PRIMARY KEY (timestamp, orderId, brokerId);
+
+INSERT INTO Bids SELECT * FROM InsertBids
+RETURNING InsertBids.* INTO BidsInserted;
+
+DELETE FROM Bids USING DeleteBids
+WHERE DeleteBids.timestamp = Bids.timestamp
+  AND DeleteBids.orderId = Bids.orderId
+  AND DeleteBids.brokerId = Bids.brokerId
+RETURNING DeleteBids.* INTO BidsDeleted;
+
+/* TODO: use a lock set to serialize invoke query, otherwise the counter will have a race condition */
+
+/* Track changes to Bids */
+CREATE STREAM InvokeQuery AS BidsInserted UNION BidsDeleted;
+
+/* Define a sequence variable to use for barriering */
+CREATE STREAM InvokeSeq (cnt int);
+DECLARE counter int DEFAULT 0;
+UPDATE counter FROM (SELECT cnt FROM InvokeSeq);
+SELECT counter+1 as cnt FROM InvokeQuery INTO InvokeSeq;
+
+/* Compute the total Bids volume */
+CREATE STREAM BidsVolume AS
+SELECT cnt, sum(Bids.price * Bids.volume) as totalvol
+FROM InvokeSeq as Q, Bids;
+
+/* For a given total, turn the Bids relation into a stream,
+   i.e. perform a scan over Bids. This is the outer loop of a
+   correlated subquery.
+*/
+CREATE STREAM CurrentBids AS
+SELECT V.cnt, V.totalvol, Bids.*
+FROM BidsVolume as V, Bids;
+
+/* Perform the correlated subquery, via a nested loops join with
+   the above CurrentBids stream, and the Bids table.
+   Each tuple in CurrentBids has been decorated with the total volume,
+   and compares this to an aggregate applied over the Bids table.
+   Subsequently we use a windowed aggregate to compute the VWAP
+   over the outer Bids relation's tuples which we turned into a stream.
+   The use of a monotonically increasing counter per query invocation
+   ensures that the windowed aggregate is performed over only those
+   tuples corresponding to a single modification to Bids.
+ */
+CREATE OUTPUT STREAM Vwap AS
+SELECT now() as t, sum(pv) as vwap
+FROM
+  (SELECT S.cnt, S.price*S.volume as pv FROM
+    (SELECT b1.cnt, b1.totalvol, b1.price, b1.volume,
+            sum(b2.volume) as subvol
+     FROM CurrentBids AS b1, Bids AS b2
+     WHERE b2.price > b1.price) AS S
+   WHERE S.totalvol > S.subvol)[SIZE 1 ADVANCE 1 ON cnt] AS S2;
+
+
+/* Load data. */
+CREATE STREAM IBFileEvents;
+
+APPLY JAVA "com.streambase.sb.adapter.csvreader.CSVReader"
+  (FileName="InsertBids.dbtdat", Delimiter=",", StartEventPort="true",
+   Schema=(timestamp double, orderId int, brokerId int, volume double, price double))
+  INTO InsertBids, IBFileEvents;
+  
+/* Log outputs */
+APPLY JAVA "com.streambase.sb.adapter.csvwriter.CSVWriter"
+  (FileName="Vwap.dbtdat", IfFileDoesntExist="Create new file")
+  FROM Vwap;
+
+/* Track data file open and close for timing */
+CREATE OUTPUT STREAM TimedIBFileEvents AS
+SELECT now() as t, * FROM IBFileEvents;
+
+/* Log data file events */
+APPLY JAVA  "com.streambase.sb.adapter.csvwriter.CSVWriter"
+  (FileName="IB.file", IfFileDoesntExist="Create new file")
+  FROM TimedIBFileEvents;
+  
