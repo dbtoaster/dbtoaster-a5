@@ -4,6 +4,7 @@ require 'getoptlong'
 
 $dbt_path = "#{File.dirname(File.dirname(File.dirname($0)))}"
 $dbt = "#{$dbt_path}/dbtoaster"
+$ocamlrunparam = "b,l=10M"
 
 raise "DBToaster is not compiled" unless (File.exists? $dbt_path)
 
@@ -122,7 +123,8 @@ class GenericUnitTest
     @qpath = qdat[:path];
     @expected = qdat[:answer];
     @result = Hash.new;
-    @compiler_flags = qdat[:compiler_flags];
+    @compiler_flags =
+      (qdat.has_key? :compiler_flags) ? qdat[:compiler_flags] : [];
   end
     
   def query
@@ -175,7 +177,9 @@ end
 class CppUnitTest < GenericUnitTest
   def run
     unless $skip_compile then
-      compile_cmd = (dbt_base_cmd + [
+      compile_cmd = 
+        "OCAMLRUNPARAM='#{$ocamlrunparam}';" +
+        (dbt_base_cmd + [
         "-l","cpp",
         "-o","#{$dbt_path}/bin/#{@qname}.cpp",
         "-c","#{$dbt_path}/bin/#{@qname}"
@@ -235,7 +239,8 @@ end
 
 class InterpreterUnitTest < GenericUnitTest
   def run
-    IO.popen("#{dbt_base_cmd.join(" ")} -r 2>&1", "r") do |qin|
+    IO.popen("OCAMLRUNPARAM='#{$ocamlrunparam}';"+
+             "#{dbt_base_cmd.join(" ")} -r 2>&1", "r") do |qin|
       output = qin.readlines.join("")
       if /Processing time: ([0-9]+\.?[0-9]*)/ =~ output
         then @runtime = $1.to_f
