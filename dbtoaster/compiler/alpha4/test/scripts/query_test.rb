@@ -36,6 +36,12 @@ $queries = {
     :type => :singleton,
     :answer => 0
   },
+  "ssb4" => {
+    :path => "test/sql/tpch/ssb4.sql",
+    :type => :singleton,
+    :answer => 0,
+    :compiler_flags => ["-d", "disable-deletes"]
+  },
   "vwap" => {
     :path => "test/sql/finance/vwap.sql",
     :type => :singleton,
@@ -116,6 +122,7 @@ class GenericUnitTest
     @qpath = qdat[:path];
     @expected = qdat[:answer];
     @result = Hash.new;
+    @compiler_flags = qdat[:compiler_flags];
   end
     
   def query
@@ -135,7 +142,7 @@ class GenericUnitTest
   end
   
   def dbt_base_cmd
-    [ $dbt, @qpath, "--depth", $depth ] + @opts +
+    [ $dbt, @qpath, "--depth", $depth ] + @opts + @compiler_flags +
       ($debug_flags.map { |f| ["-d", f]}.flatten(1))
   end
   
