@@ -227,6 +227,7 @@ test: top
 	@$(DEBUG_APP) test/unit/CompilerTest.ml
 	@$(DEBUG_APP) test/unit/compiler.ml
 	@$(DEBUG_APP) test/unit/m3_ex.ml
+#	@$(DEBUG_APP) test/unit/extract.ml
 #	@$(DEBUG_APP) test/unit/k3_ocaml.ml
 #	@$(DEBUG_APP) test/unit/k3_ocaml_rst.ml
 #	@$(DEBUG_APP) test/unit/k3_ocaml_vwap.ml
@@ -243,11 +244,17 @@ test: top
 #	@$(DEBUG_APP) test/examples/TpchQ22.ml
 #	@$(DEBUG_APP) test/examples/VwapTest.ml
 
+test/sql/pg_trigs/%: test/sql/pg_trigs/%.sql
+	psql dbtoaster -f $<
+
+test/sql/pg_trigs/%.sql: test/sql/pg_trigs/%.sql.in
+	cat $< | sed 's:@@PATH@@:'`pwd`':' > $@
+
 cpp_test: dbtoaster
 	test/scripts/query_test.rb -a -t cpp
 
 ok_test: top
-	@$(DEBUG_APP) test/unit/unroly.ml
+	@$(DEBUG_APP) test/unit/ssb4_debug.ml
 
 ## SQL compilation Tests
 test/sql/%: test/sql/%.sql dbtoaster
