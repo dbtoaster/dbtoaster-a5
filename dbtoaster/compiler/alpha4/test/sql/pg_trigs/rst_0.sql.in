@@ -1,0 +1,34 @@
+CREATE TEMPORARY TABLE R_TMP(A bigint, B bigint);
+CREATE TEMPORARY TABLE S_TMP(B bigint, C bigint);
+CREATE TEMPORARY TABLE T_TMP(C bigint, D bigint);
+
+CREATE TEMPORARY TABLE results_tmp(sum_a_d bigint);
+
+CREATE FUNCTION update_results() RETURNS trigger AS $$
+  BEGIN
+    DELETE FROM results_tmp;
+    INSERT INTO results_tmp 
+      SELECT sum(A*D) FROM R_TMP,S_TMP,T_TMP 
+      WHERE R_TMP.B=S_TMP.B AND S_TMP.C=T_TMP.C;
+    RETURN NEW;
+  END
+$$ LANGUAGE plpgsql;
+
+CREATE TRIGGER update_results_r BEFORE INSERT ON R_TMP
+  FOR EACH ROW EXECUTE PROCEDURE update_results();
+
+CREATE TRIGGER update_results_s BEFORE INSERT ON S_TMP
+  FOR EACH ROW EXECUTE PROCEDURE update_results();
+
+CREATE TRIGGER update_results_t BEFORE INSERT ON T_TMP
+  FOR EACH ROW EXECUTE PROCEDURE update_results();
+
+\timing
+COPY R_TMP FROM '@@PATH@@/test/data/r.dat' WITH DELIMITER ',';
+COPY S_TMP FROM '@@PATH@@/test/data/s.dat' WITH DELIMITER ',';
+COPY T_TMP FROM '@@PATH@@/test/data/t.dat' WITH DELIMITER ',';
+\timing
+
+SELECT * FROM results_tmp;
+
+DROP FUNCTION update_results() CASCADE;

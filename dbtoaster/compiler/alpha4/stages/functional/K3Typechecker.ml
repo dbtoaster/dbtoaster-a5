@@ -1,5 +1,6 @@
 open M3
 open K3.SR
+open Util
 
 (***************************
  * Typechecking:
@@ -92,6 +93,16 @@ open K3.SR
  *)
 
 (* Helpers *)
+let expr_error (expr:K3.SR.expr_t) (msg:string) = (
+   Debug.print "K3-TYPECHECK-DETAIL" (fun () -> msg ^"\n\n"^ (code_of_expr expr));
+   failwith msg
+)
+let type_error (t:K3.SR.type_t) (msg:string) = (
+   Debug.print "K3-TYPECHECK-DETAIL" (fun () -> msg ^"\n\n"^ (string_of_type t));
+   failwith msg
+)
+let sch_error (sch) (msg:string) = type_error (TTuple(List.map snd sch)) msg
+
 let find_vars v e =
     let aux _ accll e =
       let acc = List.flatten (List.flatten accll) in
@@ -114,17 +125,18 @@ let type_as_schema t = match t with TTuple(t_l) -> t_l | _ -> [t]
 
 (* Type flattening helpers *)
 let is_flat t = match t with | TFloat | TInt -> true | _ -> false
-let flat t = if is_flat t then t else failwith "invalid flat expression"
+let flat t = if is_flat t then t else type_error t "invalid flat expression"
 
 let promote t1 t2 = match t1,t2 with
     | (TFloat, TInt) | (TInt, TFloat) -> TFloat
     | (TInt, TInt) -> TInt
-    | (x,y) -> if x = y then x else failwith "could not promote types"
+    | (x,y) -> if x = y then x 
+               else type_error (TTuple[x;y]) "could not promote types"
 
 (* returns t2 if it can safely be considered t1 (i.e. t1 < t2 in the type
  * lattice) otherwise fails *)
 let valid_promote t1 t2 = if (promote t1 t2) <> t1
-    then failwith "potential loss of precision" else t2
+    then type_error (TTuple[t1;t2]) "potential loss of precision" else t2
 
 let unify_types l = List.fold_left promote (List.hd l) (List.tl l) 
 
@@ -148,7 +160,7 @@ let rebuild_mvf rt tll : type_t =
 let tc_schema sch =
     let t_l = List.map snd sch in
     let invalid = List.mem TUnit t_l in
-    if invalid then failwith "invalid schema" else t_l
+    if invalid then (sch_error sch "invalid schema") else t_l
 
 (* checks if an the types of expression list match a schema *) 
 let tc_schema_exprs sch t_l =
@@ -156,12 +168,12 @@ let tc_schema_exprs sch t_l =
     if List.for_all (fun x->x)
         (List.map2 (fun t (_,t2) -> (promote t t2) = t2) t_l sch)
     then sch_t
-    else failwith "invalid expression list schema"
+    else sch_error sch "invalid expression list schema"
 
 (* checks two operands of a binop *)
 let tc_op t1 t2 =
     match t1, t2 with
-    | (TUnit,_) | (_,TUnit) -> failwith "invalid operands"
+    | (TUnit,_) | (_,TUnit) -> type_error (TTuple[t1;t2]) "invalid operands"
     | (a,b) -> promote (flat a) (flat b)
 
 (* checks function declarations, ensuring consistent usage of arg in body *)
@@ -172,7 +184,7 @@ let tc_fn_arg ae e : type_t list =
         else let found_t = unify_types (List.map snd vars) in
         try valid_promote found_t v_t
         with Failure _ ->
-            failwith ("arg "^v^"type is not consistent w/ body")
+            type_error v_t ("arg "^v^"type is not consistent w/ body")
     in begin match ae with
     | AVar(v,v_t) -> [aux (v,v_t)]
     | ATuple(args) -> List.map aux args
@@ -181,23 +193,28 @@ let tc_fn_arg ae e : type_t list =
 (* Map/Aggregate helpers *)
 
 let tc_single_rv tl = match tl with
-    | [TUnit] -> failwith "invalid collection operation: unit return type found"
-    | [x] -> x
-    | [] -> failwith "invalid collection operation: no return value type found"
-    | _ -> failwith "invalid collection operation: multiple rv types found"
+    | [TUnit] -> type_error (TTuple(tl)) 
+                    "invalid collection operation: unit return type found"
+    | [x]     -> x
+    | []      -> type_error (TTuple(tl)) 
+                    "invalid collection operation: no return value type found"
+    | _       -> type_error (TTuple(tl)) 
+                    "invalid collection operation: multiple rv types found"
 
 let tc_multiple_rv tl = match tl with
-    | [TUnit] -> failwith "invalid collection operation: unit return type found"
-    | [x] -> x
-    | [] -> failwith "invalid collection operation: no return value type found"
-    | _ -> TTuple(tl) 
+    | [TUnit] -> type_error (TTuple(tl)) 
+                    "invalid collection operation: unit return type found"
+    | [x]     -> x
+    | []      -> type_error (TTuple(tl)) 
+                    "invalid collection operation: no return value type found"
+    | _       -> TTuple(tl) 
 
 let tc_compose_collection expected_rt_opt compose_rt g_rt f_rtl =
     begin match expected_rt_opt with
     | None ->
         begin match g_rt with
         | Collection _ -> compose_rt g_rt f_rtl
-        | _ -> failwith "invalid collection composition"
+        | _ -> type_error g_rt "invalid collection composition"
         end 
     | Some(t) ->
         begin match g_rt, f_rtl with
@@ -241,7 +258,9 @@ let tc_fn_app_suffix (rt_f : type_t list -> type_t) fn_tll sch_tl : type_t =
     in
     if valid_suffix then
         List.fold_left (fun acc_t tl -> Fn(tl,acc_t)) (rt_f rt) ret_fn_a_t
-    else failwith "invalid schema function application"        
+    else type_error (TTuple[TTuple(List.map (fun x -> TTuple(x)) fn_tll); 
+                            TTuple(sch_tl)]) 
+                    "invalid schema function application"        
 
 (* check apply-to-each, of a fn: fn_tl on a value : t
  * -- supports tuple binding, i.e.
@@ -255,7 +274,8 @@ let tc_fn_app_each (rt_f : type_t list -> type_t) fn_tll t : type_t =
         tc_fn_app_suffix rt_f fn_tll (type_as_schema c_t)
     | _ ->
         (*tc_fn_app_suffix rt_f fn_tll [t]*)
-        failwith "invalid apply-to-each, expected a collection"
+        type_error (TTuple[TTuple(List.map (fun x -> TTuple(x)) fn_tll); t]) 
+                   "invalid apply-to-each, expected a collection"
 
 (* lifting helper. given a fn, g : t, linearizes g, yields (f ret rest) *)
 let lift_fn (lift_f : type_t list -> type_t list list -> 'a) 
@@ -334,6 +354,7 @@ let tc_pcop f m_t k_t =
 
 
 let rec typecheck_expr e : type_t =
+   try
     let recur = typecheck_expr in
     match e with
     | Const        c ->
@@ -444,7 +465,7 @@ let rec typecheck_expr e : type_t =
         (* TODO: almost the same as map typechecking... lift *)
         let (fn_t, c_t) = recur fn_e, recur ce in
         let fn_tl = linearize_mvf fn_t in
-        let tc_iter_rt = tc_compose_collection (Some [TUnit]) (fun _ _ -> TUnit)
+        let tc_iter_rt = tc_compose_collection (Some([TUnit])) (fun _ _ -> TUnit)
         in begin match c_t with
         | TUnit -> failwith "invalid iterate collection"
         | Fn _ -> tc_compose_fn tc_iter_rt fn_tl c_t
@@ -611,3 +632,8 @@ let rec typecheck_expr e : type_t =
         | _ -> failwith "externals not yet supported"
         end
     *)
+   with Failure x -> 
+      Debug.print "K3-TYPECHECK-DETAIL" (fun () -> 
+         "--------- Expression trace ----------\n"^(code_of_expr e)
+      );
+      failwith x
