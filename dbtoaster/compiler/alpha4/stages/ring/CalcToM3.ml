@@ -693,7 +693,13 @@ module M3InProgress = struct
     let (triggers_as_m3, (std_todos, rel_todos)) = 
       List.fold_left (fun (tlist,old_todos) 
                           (delete, reln, relvars, (params,bsvars), expr) ->
-        
+        (Debug.print "LOG-M3-STMTS" (fun () -> 
+            "ON "^(if delete then "-" else "+")^reln^
+            (list_to_string Calculus.string_of_var relvars)^"=> "^
+            (fst (decode_map_term (snd map_ref)))^
+            (list_to_string Calculus.string_of_var params)^
+            " += "^(Calculus.string_of_term expr)
+        ));
         (* eliminates loop vars by substituting unified map params *) 
         let sub_map_params (map_definition, map_term, map_bindings) params =
           let (map_name, map_vars) = (decode_map_term map_term) in
