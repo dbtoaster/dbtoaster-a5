@@ -207,21 +207,27 @@ let rec compile ?(dup_elim = ref StringMap.empty)
       print_endline ("Bug: Compiling two distinct maps with the same name: "^mapn^
                 "\n"^(Calculus.term_as_string map_definition)^
                 "\n"^(Calculus.term_as_string (StringMap.find mapn !dup_elim)));
-      failwith ("Bug: Compiling two distinct maps with the same name: "^mapn^
-                "\n"^(Calculus.term_as_string map_definition)^
-                "\n"^(Calculus.term_as_string (StringMap.find mapn !dup_elim))))
+      failwith ("Bug: Compiling two distinct maps with the same name: "^mapn))
   else
   (
     Debug.print "LOG-COMPILES" (fun () -> "Compiling: " ^ 
                     (Calculus.term_as_string map_term)^" := "^
                     (Calculus.term_as_string map_definition));
+
+  let (next_top_down_depth, go_deeper) = 
+    match top_down_depth with 
+    | None -> (None, true)
+    | Some(i) -> if i <= 1 then (Some(0), false) else ((Some(i-1)),true)
+  in
+  
   let (bigsum_vars, bsrw_theta, bsrw_term) =
-    (* 
-    Calculus.bigsum_rewriting
-      bs_rewrite_mode (Calculus.roly_poly map_definition) map_params (mapn^"_")
-    *)
-    Calculus.preaggregate
-      bs_rewrite_mode (Calculus.roly_poly map_definition) map_params (mapn^"_")
+    if go_deeper then 
+      Calculus.preaggregate bs_rewrite_mode 
+                            (Calculus.roly_poly map_definition) 
+                            map_params 
+                            (mapn^"_")
+    else
+      ([], [], (Calculus.roly_poly map_definition))
   in
 
   Debug.print "LOG-PREAGG" (fun () ->
@@ -240,11 +246,6 @@ let rec compile ?(dup_elim = ref StringMap.empty)
     (Calculus.term_as_string (Calculus.roly_poly map_definition))^
     "\n    =>\n    "^(Calculus.term_as_string bsrw_term));
 
-  let (next_top_down_depth, go_deeper) = 
-    match top_down_depth with 
-    | None -> (None, true)
-    | Some(i) -> if i <= 1 then (None, false) else ((Some(i-1)),true)
-  in
   let cdfr (delete, reln, relsch) =
      compile_delta_for_rel go_deeper
                            reln relsch delete map_term bigsum_vars
