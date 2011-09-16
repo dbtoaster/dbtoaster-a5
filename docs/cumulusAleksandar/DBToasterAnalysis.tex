@@ -165,7 +165,7 @@ In this paper, as a major contribution, we propose two different solution for pr
 
 \textbf{The trigger partitioning solution.} The solution is to partition update events on their conflict parameter (S on B and R on B). All the update events with the same conflict parameter's range have to be processed through a single input point.
 
-\textbf{The map partitioning solution.} The solution is to partition maps in such a way so that the nodes containing m2 and m3 do not see update events in different order. The same ranges of m2 and m3 maps have to be stored on the same physical node.
+\textbf{The map partitioning solution.} The solution is to partition maps in such a way so that the nodes containing m2 and m3 do not see update events in different order. The same ranges of m2 and m3 maps have to be stored on the same physical node. Note that the maps within the same map collection cannot see different orders. For example, there may exist R and S event with the same m2[H], but it has to be on a single node. If m2 maps do not have common key, there is no dependencies among them at all.
 
 Both solutions are possible due to non-existence of loop variables in the M3 program.
 
@@ -221,6 +221,8 @@ m1[B] += A
 \end{verbatim}
 
 There is no possibility for creation of cycles in this example.
+
+
 
 \subsection{rst.sql}
 \textbf{Query.} This query is actually:
@@ -303,10 +305,14 @@ Now we will show that all 3-cycles are avoided if 2-cycles are avoided. In order
 
 We will present several solutions:
 \begin{enumerate}
-\item The easiest solution is to process only one trigger type at the time, since there is no dependencies within trigger except Write-Write (a map is either on the lhs or on the rhs all over the trigger).
+\item The easiest solution is to process only one trigger type at the time, since there is no dependencies within trigger except Write-Write (a map is either on the lhs or on the rhs all over the trigger). We can do one trigger at a time only if the original query is not self join (no same map on the lhs and rhs when all trigger instantiations are unrolled).
 \item Process R and T simultaneously from multiple input points (even more than 2) by putting m2 and m4 on a single node, while S must be done alone in the system. Or R and S (S and T) can be done together by trigger partitioning presented for rs.sql, thus executing T (R) alone in the system. In TPCH benchmarks we can prioritize some tables which are more frequently updated. In most cases, only few relations are updated (such as CUSTOMER, LINEITEM), while the others (such as NATION, etc.) are rarely updated.
 
 When update events from 2 triggers are processed at the same time, avoiding the conditions from WHERE clause referring to join between two relevant tables is enough for eluding 2-cycles. This is also shown on rs2joint.sql (not presented in this paper), where there are two conditions for join between R and S: R.A=S.A AND R.B=S.B. However, this only holds for AND, while for OR this is not possible.
+
+For example, if we have WHERE R.A=S.A OR R.A = S.B and events in order R(1), R(2), S(1, 2), two R events may go through different input poins and S event cannot go through both of them. It is interesting that R.A=S.A AND R.A=T.A will work since each event type can be partitioned at exactly one argument.
+
+This approach offers a trade-off between latency and througput of incoming events.
 
 \item An optimization of the previous approach is to keep track of currently processing trigger parameters, and let S in the system only if there are no conflicts. This is not scalable, since input points have to communicate with nodes and among themselves about completed update events.
 \item Update events R and T can be processed on arbitrary input points, as long as m2 and m4 are on a single node and S is sent from two input points. For example, if R(1,4) is sent thought IP1 and T(2,9) is sent through IP2, then S(4,2) is sent through both switches.
@@ -493,6 +499,21 @@ Compilation of this query laster for 12 hours, but generated program is tedious 
 
 \subsection{More queries.}
 The queries from experiments section of sigmod10-spread consist of joins of 3 tables, which can be solved in the same manner as rst.sql. Since 4clique.sql is self-join, it is not supported.
+
+\subsection{sameA.sql}
+\textbf{Query.} This query is actually:
+\begin{verbatim}
+SELECT sum(R1.A) FROM R R1, R R2 WHERE R1.A=R2.A.
+\end{verbatim}
+
+\textbf{M3 program.} A simplification of generated M3 is presented here:
+\begin{verbatim}
+ON +R[A; B]: 
+ m1 += m2[A] + m2[A] + A
+ m2[A] += A
+\end{verbatim}
+
+Self joins may be supported in very restricted cases, such as this one. If we do map or trigger partitioning over m2, we will not have dependencies at all. This will not work for R1.A = R1.B in condition because we have to partition R triggers based on 2 arguments which we saw it is impossible. For example, R(5,1) R(4,2) are going through different input points, and then (1,4) arrives which needs to go through both of them. Inequalities still remain the problem, while more than 2 joins can be solved only if only one field is used for joining (R1.A = R2.A = R3.A =...).
 
 \section{General conclusions}
 \vspace{2mm}

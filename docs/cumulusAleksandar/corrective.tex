@@ -39,7 +39,7 @@
 \newtheorem{proviso}[theorem]{Proviso}
 
 
-\title{Corrective update mechanism}
+\title{Cumulus: Decentralized Data-Parallel Online Aggregation by Message Passing}
 
 
 %\numberofauthors{1}
@@ -53,27 +53,46 @@
 \def\OLAP{OLAP\xspace}
 \def\OLTP{OLTP\xspace}
 \def\M3{M3\xspace}
-\def\EXORD{actual OLAP update execution order\xspace}
+\def\EXORD{actual update execution order\xspace}
+
+\hyphenation{decla-rative me-mory speci-fies signigi-cantly atomi-cally}
 
 \begin{document}
 \maketitle
 
 
 \abstract{
-This paper presents issues related to my semester project in the Prof. Koch's DATA lab.\\
+We present Cumulus, a distributed data-parallel online aggregation system.
+Cumulus compiles a set of SQL aggregation queries
+down to a message-passing program that incrementally maintains
+the query results by simple and highly efficient local modifications.
+Surprisingly, our message passing programs
+perform only a {\em constant}\/ amount of work
+for each tuple inserted or deleted and each
+aggregate value to be maintained.
+Our message-passing protocol allows for massive parallelization.
+
+The Cumulus runtime system is a distributed key-value store for
+aggregate-group-by query results that implements our message passing protocol
+for incremental result maintenance. 
+Cumulus uses the resources of the cloud to leverage parallelism 
+and keep its store in main memory.
+We ensure serializability without synchronization.
+Cumulus is able to perform the incremental maintenance of
+large views under considerable update loads in realtime.\\
 }
 
 
-\keywords{Incremental View Maintenance, \OLAP updates, Parallelization}
+\keywords{Incremental View Maintenance, updates, Parallelization}
 
 
 \section{Introduction}
 \vspace{2mm}
 
-Recent years have seen the beginning of a paradigm shift in data management research from incrementally improving decades-old database technology to questioning established architectures  and creating fundamentally different, more lightweight systems that are often domain-specific (e.g.,
+Recent years have seen the beginning of a paradigm shift in data management research from incrementally improving decade-old database technology to questioning established architectures  and creating fundamentally different, more lightweight systems that are often domain-specific (e.g.,
 \cite{DBLP:conf/vldb/StonebrakerMAHHH07,DBLP:journals/pvldb/KallmanKNPRZJMSZHA08}).
 
-Part of the impetus for this change was given by potential users such as scientists and the builders of large-scale Web sites and services such as Google, Amazon, and Ebay, who have a need for data management systems but have found current databases not to scale to their needs. One can observe a trend to disregard database contributions in these communities \cite{dbcolumn, DBLP:conf/sigmod/PavloPRADMS09}, and to build lightweight systems based on robust technologies mostly pioneered by the operating systems and distributed systems communities, such as large scale file systems, key-value stores, and map-reduce \cite{DBLP:journals/cacm/DeanG08, DBLP:journals/tocs/ChangDGHWBCFG08}. Further impetus has resulted from the current need to develop data management technology for multicore and cloud computing.
+Part of the impetus for this change was given by potential users such as scientists and the builders of large-scale Web sites and services such as Google, Amazon, and Ebay, who have a need for data management systems but have found current databases not to scale. One can observe a trend to disregard database contributions in these communities \cite{dbcolumn, DBLP:conf/sigmod/PavloPRADMS09}, and to build lightweight systems based on robust technologies, mostly pioneered by the operating systems and distributed systems communities, such as large scale file systems, key-value stores, and map-reduce \cite{DBLP:journals/cacm/DeanG08, DBLP:journals/tocs/ChangDGHWBCFG08}. Further impetus has resulted from the current need to develop data management technology for multicore and cloud computing.
 
 There is a recent tendency among pundits outside the database community to contest the need for powerful queries, and to think of distributed key-value stores (maps) -- with only the power to look up data by keys -- as (much more efficient) database query engines. However, expressive query languages such as SQL continue to act as an important intermediary between users and more complex data-processing tasks. 
 
@@ -81,27 +100,27 @@ This paper brings SQL expressiveness along with efficiency od distributed key-va
 
 In most traditional database query processors, the basic building blocks of queries are large-grained operators such as joins. Conversely, a large class of SQL aggregation queries can be compiled down to very simple, extremely efficient message passing C++ programs that incrementally maintain materialized views of the queries. Using Incremental View Maintenance \cite{Lee01}, the complexity of query response times can be substantially reduced. Yet, by applying incremental view maintenance recursively, the complexity of query response times is trimmed down to constant time, for a limited set of queries.
 
-These message passing programs keep a hierarchy of map data structures (which may be served out of a key-value store) up to date. They can share computation in the case that multiple aggregation queries (e.g., a data cube \cite{datacube}) need to be maintained.  Most importantly, though, these message passing programs can be massively parallelized to the degree that the updating of each single result aggregate value can be done in constant time on normal off-the-shelf computers\footnote{Note that since there are usually many more aggregate values to maintain than there are processors,
+These \M3 message passing programs keep a hierarchy of map data structures (which may be served out of a key-value store) up to date. They can share computation in the case that multiple aggregation queries (e.g., a data cube \cite{datacube}) need to be maintained.  Most importantly, though, these message passing programs can be massively parallelized to the degree that the updating of each single result aggregate value can be done in constant time on normal off-the-shelf computers\footnote{Note that since there are usually many more aggregate values to maintain than there are processors,
 this does not mean that each update is processed in constant time.}. This is proven in the Koch's Algebra paper \cite{KochAlgebra10}, in the case when polynomial amount of hardware and space is available.
 
 \M3 programs are interpreted within our runtime system, Cumulus. The Cumulus is a thin execution layer that lives above generic key-value stores and implements the message passing protocol. It can efficiently process a wide range of incremental view queries. The query results are stored in the distributed key-value store itself, as ordinary data.
 
-Cumulus is a multiversion timestamp-based concurrency control system running in a shared-nothing main-memory environment. The data is distributed among processing nodes, and an user may submit an \OLAP update just as the data was local. Out-of-order execution of updates are fully supported, and if there are violated dependencies, additional messages, called corrective update messages, are sent.
+Cumulus is a multiversion timestamp-based concurrency control system running in a shared-nothing main-memory environment. The maps are distributed among processing nodes, and a user may submit an update just as the data was local. Out-of-order execution of updates are fully supported, and if there are violated dependencies, additional messages, called corrective update messages, are sent.
 
 Cumulus is built around a novel hybrid consistency execution framework. Like most cloud data management systems, Cumulus achieves low latencies by retreating to the realm of eventual consistency. However, unlike most eventual consistency systems, Cumulus' runtime periodically generates consistent snapshots as a side effect of its normal operation. The result is a system that can be employed side-by-side by both applications that require low latency and applications that require strong consistency.
 
 We believe that our contribution constitutes an important step towards achieving the apparent contradiction in terms of executing complex aggregation queries on updateable data using a little more than a distributed key-value store.
 
-Next section present system overview and requirements, in the context of \M3 programs generated by DBToaster. Section~\ref{sec:sysdesign} presents the the message passing protocol guiding reader through existing data dependencies and logical components in the system, further explaining consistency achieved and possible optimizations. In Section~\ref{sec:Experiments} the experiments performed and their results are explained, while Section~\ref{sec:Related} contains related work. Section~\ref{sec:Future} presents possible future improvements of the system, while Section~\ref{sec:Conclusion} coalesces all the ideas grasped from the work.
+The next section present system overview and requirements, in the context of \M3 programs generated by DBToaster. Section~\ref{sec:sysdesign} presents the message passing protocol guiding reader through existing data dependencies and logical components in the system, further explaining consistency achieved and possible optimizations. In Section~\ref{sec:Experiments}, the experiments performed and its results are explained, while Section~\ref{sec:Related} contains related work. Section~\ref{sec:Future} presents possible future improvements of the system, while Section~\ref{sec:Conclusion} coalesces all the ideas grasped from the work.
 
 \section{System overview \& requirements}
 \vspace{2mm}
 
-A user would like efficiency of C programs, while declarative nature of \SQL. All data will be stored in main memory in order to achieve better performance. The gap will be shrink by introducing \M3 compiler which will compile \OLAP database updates to C language constructs \cite{DBToasterCompiler09}. \M3 compiler will generate triggers to cover all \OLAP database updates in the system. Only insert and delete triggers are generated, since updates on tuples could be implemented as series of deletes followed by appropriate inserts. A trigger is coupled with trigger arguments, which are variable/value pairs used for representing parameters from particular \OLAP update. In the further text \OLAP update and trigger instantiation will be used interchangeably.
+A user would like efficiency of C programs, while declarative nature of \SQL. The gap will be shrunk by introducing \M3 compiler which compiles updates to C language constructs \cite{DBToasterCompiler09}. \M3 compiler will generate \M3 trigger program to cover all the updates in the system. An update (event) refers to an incremental change of a relation, i.e. an insert or delete. A tuple modification is implemented as a delete followed by an insert. A trigger is coupled with arguments, which represent tuple fields necessary for an update. Cumulus takes a compiled program as the input, and on each update arrival executes a trigger program with the corresponding arguments.
 
 \begin{example} \em
 \label{ex:simpleTrigger}
-An insert trigger and its possible instantiation (\OLAP update):
+An insert trigger and its possible instantiation (update):
 \begin{verbatim}
 ON +R(A,B){
    m1+=m2[A];
@@ -113,27 +132,29 @@ ON +R(10,20){
 } 
 \end{verbatim}
 \end{example}
+The corresponding delete trigger is the same, except there is always a multiplication with -1 on the right hand side.
 
-\textbf{Data structures.} The only data structures used by transition programs are maps. A map contains a unique name and a pair \{key, value\}. Multikeyed pairs are supported as well. A map reference contains only map name and key(s). A map collection consists of a unique map name and the pairs from whole map domain. In comparison with SQL, maps refers to tables or intermediate results, while a key represents a column of a table.
+\textbf{Data structures.} The only data structures used by transition programs are maps. A map contains a unique name and a pair \{key, value\}. Multikeyed pairs are supported as well. A map reference contains only a map name and a key(s). A map collection consists of a map name and the key/value pairs from the whole domain of keys. In comparison with the classical database containers, a map refers to a relation or an intermediate result, whereas a key(s) represents a position in a relation.
 
-A trigger consists of multiple statements which perform operations on maps. An \M3 program reads from the right-hand side maps, and write to the left-hand side map of the statement. The map name and the trigger arguments specifies map to be accessed. If a variable used in a statement in a trigger is not defined in the trigger arguments, whole map domain participates in the statement. On the right-hand side of the statement the only allowed operation is *, while between left and right side only += is permitted. Each statement adds a \textit{delta} to the left-hand side map. If there is need for adding multiple terms, it could be adjusted by utilizing multiple statements with the same left-hand side map. Both read and write are permitted to perform on non-existing maps. In that case, it is assumed initial value was zero.
+A trigger consists of multiple statements which perform operations on maps. An \M3 program reads maps from the right-hand side, and writes to the left-hand side map of the statement. The map name and the trigger arguments specifies a map to be accessed. If a variable used in a statement in a trigger is not defined in the trigger arguments, the whole map domain participates in the statement. On the right-hand side of the statement, the only allowed operation is multiplication, while between left and right side only += is permitted. Thus, each statement adds a \textit{delta} to the left-hand side map. Initially, map collections are empty. If a read or write operation is performed on a non-initialized map, zero is assumed.
 
 DBToaster generates only acyclic map data dependencies flow graph \M3 programs. In runtime, execution of \M3 programs must provide the following guaranties:
 \begin{itemize}
- \item \OLAP updates execute atomically with respect to each other. The effect has to be the same as whole \OLAP update sequence was processed sequentially.
- \item Statements within same \OLAP update use right-hand side maps from the state of the system right before current \OLAP update start executing.
+ \item \OLAP updates execute atomically with respect to each other. The effect has to be the same as whole update sequence was processed sequentially.
+ \item Statements within same update use right-hand side maps from the state of the system right before current update start executing.
 \end{itemize}
 
-Update stream (i.e. ticker feeds, sensors, static files, relational databases, or even other \M3 programs) will continuously inject triggers instantiated with arguments. The aim of our system is to process those \OLAP updates and add deltas to the appropriate maps.
+Update stream (i.e. ticker feeds, sensors, static files, relational databases, or even other \M3 programs) will continuously inject events (triggers instantiated with arguments). The aim of our system is to process those updates and add deltas to the appropriate maps.
 
-Since there is large amount of data, maps should be distributed among many processing nodes. The only way processing nodes could communicate is via sending and receiving messages. In order to achieve constant execution time complexity and support embarrassing parallelism, which is our goal, a designed protocol of sending/receiving messages has to avoid complex map locking schemes and support map updates that do not interact with each other to proceed simultaneously.
+As there is a large amount of data, maps should be distributed among many processing nodes. The only way processing nodes could communicate is via sending and receiving messages. In order to achieve constant execution time complexity and support embarrassing parallelism, the protocol for sending/receiving messages has to avoid complex map locking schemes and support simultaneos map updates.
 
-Also, our system has to be tolerant to reordering of messages which occurs in large networks. We assume the network supports pairwise in-order delivery, but different processing nodes may observe different order of messages arrived from the multiple processing nodes. Our system may only rely on the property that every sent message will eventually arrive on its destination; messages could not be lost in the network.
+Also, our system has to be tolerant to reordering of messages which occurs in large networks. We assume the network supports pairwise in-order delivery, but different processing nodes may observe different order of messages arrived from the multiple processing nodes. Our system may only rely on the property that every sent message will eventually arrive to its destination; messages cannot be lost in the network.
 
 Delay is another network characteristic which may significantly degrade overall performance. Only one message sent to all other nodes in a 10.000 processing node system will effect in delay for several seconds. Therefore, it is extremely important to build protocol based on the lowest possible number of exchanged messages.
  
 Different queries will have different materialized view and will operate on different maps, supporting parallelism inherently. Our goal is to parallelize \OLAP updates relevant to one complex \SQL query a user is interested in. That way, not just throughput, but also latency could enhance.
 
+All data will be stored in main memory in order to achieve better performance. 
 We generally assume that the data is persistent in the \OLTP databases.
 However, our system is also able to
 log update streams and replay it from the
@@ -149,22 +170,22 @@ for faster recovery, but this is currently not done.
 \subsection{Data Dependencies}
 In this section, we will present types of dependencies, and how they could be violated, while Section~\ref{Corrective} presents the structures used for avoiding dependency violations.
 
-There exist three types of dependencies corresponding to different statements \texttt{STMT1} and \texttt{STMT2}:
+There exists three types of dependencies corresponding to different statements \texttt{STMT1} and \texttt{STMT2}:
 \begin{itemize}
  \item \texttt{Write-Read}: \texttt{STMT2} is later in an update stream and reads from a map that \texttt{STMT1} writes to
  \item \texttt{Read-Write}: \texttt{STMT2} is later in an update stream and writes to a map that \texttt{STMT1} reads from
  \item \texttt{Write-Write}: Both \texttt{STMT1} and \texttt{STMT2} update the same map
 \end{itemize}
 
-Write-Write dependency violation may occur even within a single \OLAP update. Write-Read and Read-Write dependencies within the same \OLAP update could not be violated since, according to \M3 program guaranties, no map read will return the value from the current \OLAP update. Therefore, we imply logical order between statements, based on Timestamps of the \OLAP update a statement belongs to. In case of a single update stream, Timestamp (TS) is a implicitly defined unique serial number of a \OLAP update in that update stream. For multiple update streams, some Total Order has to be introduced. Although \OLAP updates within single update stream may be reorered producing the correct final result, reciding from this order may result in more work to provide consistency, as we will see later. The Total Order among all the \OLAP updates is achieved by expanding TS with update stream ID, thus forming <TS, update-stream-id> pairs. TS preserves order of \OLAP updates arrived from a single update stream, while update-stream-id breaks ties among \OLAP updates with the same TS. The update stream ID may be generated statically or by utilizing the Standard Renaming Technique \cite{Welch04}.
+Write-Write dependency violation may occur even within a single update. Write-Read and Read-Write dependencies within the same update could not be violated because, according to \M3 program guaranties, no map read will return the value from the current update. Therefore, we imply logical order between statements, based on Timestamps of the update a statement belongs to. In case of a single update stream, Timestamp (TS) is a implicitly defined unique serial number of an update in that update stream. For multiple update streams, some total order has to be introduced. A total order among all the updates is achieved by expanding TS with update stream ID, thus forming <TS, update-stream-id> pairs. TS preserves order of updates arrived from a single update stream, while update-stream-id breaks ties among updates with the same TS. The update stream ID may be generated statically or by utilizing the Standard Renaming Technique \cite{Welch04}.
 
-Consider an example shown in Figure~\ref{fig:streamWR}. For the introduced total order, a Write-Read dependency exists on m2[1] between the second statement in the first \OLAP update and the first statement in the second \OLAP update.
+Consider an example shown in Figure~\ref{fig:streamWR}. For the Introduced Total Order, a Write-Read dependency exists on m2[1] between the second statement in the first update and the first statement in the second update.
 
 \begin{figure}
 \begin{center}
 
 \begin{tabular}{c|c|r}
-TS & \OLAP update & Statement\\
+TS & Update & Statement\\
 \hline
 1 & ON +R(1,4) & m1 += m2[1]    \\
   &            & m2[1] += m3[4] \\
@@ -184,7 +205,7 @@ TS & \OLAP update & Statement\\
 
 \begin{example} \em
 \label{ex:foreachTrigger}
-Consider the following insert triggers and a sequence of \OLAP updates:
+Consider the following insert triggers and a sequence of updates:
 \begin{verbatim}
 ON +R(A){
    m3[C]+=m1[A]*m2[C];
@@ -198,9 +219,9 @@ TS2: ON +S(2)
 \end{verbatim}
 \end{example}
 
-Since the variable C in the \texttt{+R(A)} trigger is not present in the trigger arguments, loop over whole m3 domain is implied. If statements from \texttt{+R(A)} and \texttt{+R(B)} are performed on different processing nodes, the \OLAP update from TS2 may complete before the \OLAP update from TS1 read m2[2] value. Thus, Read-Write dependencies are violated.
+Since the variable C in the \texttt{+R(A)} trigger is not present in the trigger arguments, loop over whole m3 domain is implied. If statements from \texttt{+R(A)} and \texttt{+R(B)} are performed on different processing nodes, the update from TS2 may complete before the update from TS1 read m2[2] value. Thus, Read-Write dependencies are violated.
 
-In addition, an \OLAP update should be processed atomically. The result of \OLAP update has to be same as all statements inside a \OLAP update were executed at the same point in the time. In other words, all \OLAP updates have to be executed in some total order.
+In addition, an update should be processed atomically. The result of update has to be the same as all statements inside an update were executed at the same point in the time. In other words, all updates have to be executed in some total order.
 
 \begin{example} \em
 \label{ex:mulInput}
@@ -212,28 +233,28 @@ ON +S(A){
 ON +T(B){
    m2[B]+=m1[B];
 }\end{verbatim}
-when next update sequence emerge:
+when the following update sequence emerges:
 \begin{verbatim}
  S(1)
  T(1)
 \end{verbatim}
 \end{example}
-Necessary conditions are:
+The necessary conditions are:
 \begin{itemize}
  \item For the update sequence, statements from \texttt{+S(A)} and \texttt{+T(A)} are performed on different processing nodes.
- \item Both \OLAP updates synchronously read map on the right side then synchronously write to map on the left side. 
+ \item Both updates synchronously read map on the right side then synchronously write to map on the left side. 
 \end{itemize}
 
-Note that atomicity can not be violated by writing to a single map since all the processing on a single processing node is done sequentially.
+Note that atomicity can not be violated by writing to a single map as all the processing on a single processing node is done sequentially.
 
-Even if atomicity is preserved, imposed total order may differ from \EXORD. For example, if imposed total order was \texttt{S(1), T(1)} and \EXORD was \texttt{T(1), S(1)}, both the Read-Write and the Write-Read dependencies are violated.
+Even if atomicity is preserved, Introduced Total Order may differ from \EXORD. For example, if Introduced Total Order was \texttt{S(1), T(1)} and \EXORD was \texttt{T(1), S(1)}, both the Read-Write and the Write-Read dependencies are violated.
 
 \subsection{System components}
 \label{Components}
 \vspace{2mm}
 
 Overall system architecture is presented in Figure~\ref{fig:architecture}. There are two logical components in the system.
-\textit{Switches} maintains information about map partitioning and, by sending messages, delegate map updates from update streams to a number of data storage and query processing nodes, or \textit{Data Warehouse (DW) Nodes}. The DW Nodes store maps and perform computations on them. The \textit{client} sends queries which will probe the system and return a requested set of maps. Separate messages have to be sent between a pair of processing nodes, since multicast is not efficient, and in cloud computing not supported at all.
+\textit{Switches} maintains information about map partitioning and, by sending messages, delegate map updates from update streams to a number of data storage and query processing nodes, or \textit{Data Warehouse (DW) Nodes}. The DW Nodes store maps and perform computations on them. The \textit{client} sends queries which will probe the system and return a requested set of maps. Separate messages have to be sent between a pair of processing nodes, as multicast is not efficient, and in cloud computing not supported at all. In the further text, by updates we assume events in the system, whereas map updates are always denoted fully.
 
 \begin{figure}
 \includegraphics[width=3in]{Architecture.pdf}
@@ -243,9 +264,9 @@ Overall system architecture is presented in Figure~\ref{fig:architecture}. There
 \vspace{-2mm}
 \end{figure}
 
-Using only one switch simplify system design since arriving \OLAP updates could be easily serialized. Single point entry in the system inherently generate order between \OLAP updates without using TS avoiding violation of data dependencies when introduced total order differs from \EXORD. On the other hand, single-switch system implies some serious performance limitations. Firstly, the switch will be bottleneck, so the system will not scale. Secondly, a single point of failure property will exist in the system by design. Therefore, our system will contain several switches, i.e. one switch per update stream.
+Due to the in-order delivery between any two nodes, using only one switch simplifies the system design as arriving updates are implicitly serialized. Thus, violations of data dependencies are sidestepped. On the other hand, single-switch system implies some serious performance limitations. Firstly, the switch will be bottleneck, so the system does not scale. Secondly, a single point of failure property will exist in the system by design. Therefore, our system will contain several switches, i.e. one switch per update stream.
 
-Each statement in a \OLAP update employs three classes of actors:
+Each statement in an update employs three classes of actors:
 \begin{itemize}
  \item Source nodes: The nodes hosting the right-hand side maps.
  \item Computation nodes: The nodes where statements are evaluated.
@@ -287,22 +308,22 @@ A set of messages issued by a switch for destination-computation approach is ill
 
 The content of the messages in the system will be shown on the first statement in Example~\ref{ex:simpleTrigger}. In order to reduce the network traffic to a minimum, a switch need not to send to a DW Node all the operations that will be applied on the maps. If each DW Node contains current \M3 program, a switch may send to a DW Write Node only a unique ID of the statement. The ID of the statement could simply be a line number in a file which contains all statements in \M3 program.
 
-The system could coalesce all messages with the same source, destination and TS into a single one. Multiple FETCH messages per TS may be sent only if there are multiple DW Read Nodes per \OLAP update, similarly, multiple PUT messages per TS may be sent only if there are multiple DW Write Nodes per \OLAP update. For all types of messages, since DW Nodes are aware of current \M3 program and its triggers, a unique ID of trigger, instead of a unique ID of statement, is sent. Thus, the message traffic is significantly reduced. In addition, single message per Timestamp forbids outside world to see Timestamp-inconsistent version of the map (i.e. two same left-hand side maps are updated withing single \OLAP update and result of the first one is visible to the outside world).
+The system could coalesce all messages with the same source, destination and TS into a single one. Multiple FETCH messages per TS may be sent only if there are multiple DW Read Nodes per update, similarly, multiple PUT messages per TS may be sent only if there are multiple DW Write Nodes per update. For all types of messages, since DW Nodes are aware of current \M3 program and its triggers, a unique ID of trigger, instead of a unique ID of statement, is sent. Thus, the message traffic is significantly reduced. In addition, single message per Timestamp forbids outside world to see Timestamp-inconsistent version of the map (i.e. two same left-hand side maps are updated withing single update and result of the first one is visible to the outside world).
 
 A switch will send a FETCH message to each DW Read Node containing some of the right-hand maps (in our example to a single DW Read Node containing m2[10]) with the following encapsulated information:
 \begin{itemize}
  \item Trigger ID
  \item Trigger arguments relevant to the DW Read Node
- \item TS of the \OLAP update
+ \item TS of the update
  \item A reference to a DW Write Node (in our example the DW Node containing m1)
 \end{itemize}
 
-A DW Read Node can extract information which maps to send from Trigger ID. A DW Read Node will check all the right-hand side maps from the \OLAP update, and send each of them which is stored on current DW Read Node in a single PUSH message to the all relevant DW Write Nodes.
+A DW Read Node can extract information which maps to send from Trigger ID. A DW Read Node will check all the right-hand side maps from the update, and send each of them which is stored on current DW Read Node in a single PUSH message to the all relevant DW Write Nodes.
 
 A DW Read Node sends a PUSH message to the DW Write Node with the following encapsulated information:
 \begin{itemize}
  \item Trigger ID
- \item TS of the \OLAP update
+ \item TS of the update
  \item A list of the right-hand side maps from the DW Read Node (in our example m2[10])
 \end{itemize}
 
@@ -310,24 +331,24 @@ A switch will send a PUT message to the DW Write Node with the following encapsu
 \begin{itemize}
  \item Trigger ID
  \item Trigger arguments relevant to the DW Write Node
- \item TS of the \OLAP update
+ \item TS of the update
 \end{itemize}
 
 A DW Write Node could match a PUSH message with a corresponding PUT message by TS. A DW Write Node could not complete processing a PUT message until the PUSH messages from all corresponding DW Read Nodes arrived. For each statement within a trigger, the DW Write Node will compute the right-hand side of a statement and add computed value to the left-hand side map. (Only ''+=`` operation could be applied to the left-hand side map). Note that even non-existing maps must be initialized to zero and sent; the DW Write Node needs to hear from all DW Read Nodes in order to proceed with its write.
 
-The DW Node utilizes the \textit{ReceiveLog} and a list of boolean flags per statement for matching PUT and PUSH messages. The ReceiveLog, consisting of pairs \{map, TS\}, is responsible for storing all maps from the PUSH messages. When a PUT message arrives, the DW Write Node will initialize the lists of boolean flags for each statement in the \OLAP update the PUT message refers to. Each arrived PUSH message will append ReceiveLog and set appropriate boolean flag for the corresponding PUT message. (It may happen to have multiple boolean flags across \OLAP update if the arrived map is appearing in multiple right-hand side maps.) If some PUSH message arrives before the corresponding PUT message, a list of boolean flags may be initialized, utilizing Trigger ID from the message. From arrival of the PUT message to the time when all necessary boolean flags are set, processing the PUT message is suspended, so other messages may arrive (including awaited PUSH messages). Until completing PUT message processing, no messages with higher TS is processed, in order to prevent data dependency violation.
+The DW Node utilizes the \textit{ReceiveLog} and a list of boolean flags per statement for matching PUT and PUSH messages. The ReceiveLog, consisting of pairs \{map, TS\}, is responsible for storing all maps from the PUSH messages. When a PUT message arrives, the DW Write Node will initialize the lists of boolean flags for each statement in the update the PUT message refers to. Each arrived PUSH message will append ReceiveLog and set appropriate boolean flag for the corresponding PUT message. (It may happen to have multiple boolean flags across update if the arrived map is appearing in multiple right-hand side maps.) If some PUSH message arrives before the corresponding PUT message, a list of boolean flags may be initialized, utilizing Trigger ID from the message. From arrival of the PUT message to the time when all necessary boolean flags are set, processing the PUT message is suspended, so other messages may arrive (including awaited PUSH messages). Until completing PUT message processing, no messages with higher TS is processed, in order to prevent data dependency violation.
 
 Upon all necessary boolean flags are set for a statement, map update is performed, using accumulator. Since the only operation on the right-hand side is multiplication, the accumulator will set its initial value to 1. Then, the value from accumulator is multiplied with each the right-hand side map, and again stored in accumulator, until all of them is processed. Finally, += operation between the left-hand side map and accumulator is performed.
 
 A client could obtain some query answer from our system by sending queries to a switch. A switch will issue a QUERY message encoded, among with TS and the reference to the switch a client is communicating with. After receiving the maps from the DW Nodes, the switch will submit them to the client. Alternatively, a client may access the DW Nodes directly, using a map partitioning information obtained from a switch.
 
-If we assume partitioning is static, information about map distribution could be sent to all DW Nodes before any \OLAP update arrived. Thus, the FETCH messages need not to contain relevant DW Write Node information, providing additional message traffic reduction.
+If we assume partitioning is static, information about map distribution could be sent to all DW Nodes before any update arrived. Thus, the FETCH messages need not to contain relevant DW Write Node information, providing additional message traffic reduction.
 
 \subsection{Corrective updates}
 \label{Corrective}
 In this subsection, steps taken upon dependency violation is presented. 
 
-As already mentioned, Introduced Total Order may not reflect \EXORD. A statement on a DW Node sees only the effects of prior statements, though it may not see all of them, thus potentially violatiting dependencies. A DW Node itself cannot be aware whether some \OLAP update will arrive later due to processing on a slow switch and/or network delays, or will never arrive since it is irrelevant to our DW Node (no maps stored in our DW Node in particular TS).
+As already mentioned, Introduced Total Order may not reflect \EXORD. A statement on a DW Node sees only the effects of prior statements, though it may not see all of them, thus potentially violatiting dependencies. A DW Node itself cannot be aware whether some update will arrive later due to processing on a slow switch and/or network delays, or will never arrive since it is irrelevant to our DW Node (no maps stored in our DW Node in particular TS).
 
 Our system uses an optimistic approach, continue whenever possible, and if some dependencies are violated, employ the \textit{corrective update} mechanism. Since our computation is based on delta processing, work done speculatively need not be thrown away entirely. Rather, any work done can be revised though deltas, to the final desired outcome. However, out-of-order events are expected to occur infrequently. Furthermore, such events are likely to interfere only a handful of prior updates, for example a write on one map followed by an out-of-order read on a different map does not cause a problem. Since increasing number of switches and/or update streams yields more messages in the system, there is higher probability for delays and reordering of messages, violated data dependencies and finally, corrective update messages.
 
@@ -336,7 +357,7 @@ Our system could recognize dependency violation by combining information about m
 \begin{itemize} 
  \item \texttt{Read-Write}:  If at the DW Write Node, after applying write in TSy, arrive a FETCH message referring to mw with TSz such that $z<y$, the DW Write Node will send some previous version of mw.
 
- \item \texttt{Write-Write}: If at the DW Write Node, after applying Write on TSy, arrive a PUT message referring to mw with TSz such that $z<y$, both versions of mw could still be needed, depending of future arrival of messages and their TS. Since there is only one PUT message per DW Write Node in a \OLAP update, Write-Write dependencies could not be violated within the single Timestamp.
+ \item \texttt{Write-Write}: If at the DW Write Node, after applying Write on TSy, arrive a PUT message referring to mw with TSz such that $z<y$, both versions of mw could still be needed, depending of future arrival of messages and their TS. Since there is only one PUT message per DW Write Node in an update, Write-Write dependencies could not be violated within the single Timestamp.
  
  \item \texttt{Write-Read}:  If at the DW Read Node, after sending mr, arrive a PUT message referring to mr with TSz such that $z<y$, Write-Read dependency is violated. At the time of sending mr, the DW Read Node can not be aware whether the sent map is consistent, or the PUT message with TSz will arrive later due to the network delays. Thus, the DW Read Node optimistically send the most recent version of the map prior to TSy. However, when the PUT message with TSz arrives, the DW Read Node has to send the delta applied to mr in TSz. The message containing the delta is denoted as the \textit{corrective update} message.
 
@@ -354,7 +375,7 @@ Corrective update message is similar to a PUSH message, but with different TS. I
  \item A delta of the right-hand side map (the delta of mr in our example)
 \end{itemize}
 
-Note that the PUSH message contains TSy, while TSx is utilized for corrective update messages. PUSH message refers to exactly one Timestamp on the DW Write Node, while corrective update has to be applied on each \OLAP update which logically succeeds TSx and use map from corrective update message.
+Note that the PUSH message contains TSy, while TSx is utilized for corrective update messages. PUSH message refers to exactly one Timestamp on the DW Write Node, while corrective update has to be applied on each update which logically succeeds TSx and use map from corrective update message.
 
 Upon arrival, all types of messages on a DW Node, including FETCH, PUSH, PUT and corrective messages, are stored in the same prioritized buffer by their TS. Thus, the frequency of corrective updates will be amortized.
 
@@ -371,7 +392,7 @@ The recursive mechanism will be more efficient if all mw maps on the local DW No
 
 Since corrective update refers to a map which already exist in the SendLog, the corrective updates will never create new entry in the SendLog. Furthermore, there is no need for maintaining complete history of maps in the SendLog, yet only to have highest TSy for each pair \{map reference, reference to DW Write Node\}. A value $y$ may only increase, and if for some arrived corrective update with TSz such that $z<y$, it will hold after $y$ increased. The SendLog structure do not store information about last map update for which corrective update was sent, yet for the highest TS of sent map.
 
-We will show now that corrective update mechanism terminates. A finite number of PUT messages will arrive out of order to a DW Read Node. On a DW Write Node, a finite number of corrective messages will arrive and a finite number of recursive corrective updates will be sent. Since data flow graphs are always acyclic, recursive corrective updates are bounded by the maximum path length in the data flow graph. Due to the fact that some total order was introduced, corrective updates will eventually terminate. Overall, this process terminates and all maps will eventually achieve correct value.
+We will show now that corrective update mechanism terminates. Due to the finite size of each event, a finite number of PUT messages will arrive out of order to a DW Read Node. On a DW Write Node, a finite number of corrective messages will arrive and a finite number of recursive corrective updates will be sent. Since data flow graphs are always acyclic, recursive corrective updates are bounded by the maximum path length in the data flow graph. The acyclicity comes from the fact that some total order was introduced, so a DW Node may send corrective update only to a DW Node which executed event with higher TS. Thus, corrective updates will eventually terminate and all the maps will eventually achieve correct value.
  
 On Figure~\ref{fig:correct}, an enhanced example of out of order execution is presented. Messages in the same line are simultaneous, and arrive before messages from next line. Their logical ordering is specified in parenthesis in the figure. The DW Read Node stores map mr, which is used as the right-hand side map in computations of mw on the DW Write Node. Both PUT and FETCH messages on the DW Read Node corresponds to mr, while PUT messages on the DW Write Node corresponds to mw. For the PUT messages on the DW Read Node there is no corresponding FETCH messages, since mr+=1. Assume PUT(TS10) on the DW Read Node comes before TS7 on both DW Nodes, as depicted in the figure. The WriteLog of the DW Read Node is employed, and the most recent mr with TS less than 7 is sent (in this case value from TS2). The same value will be sent for PUT(TS9). However, for PUT(TS11), mr value from TS10 will be sent. In our example PUT(TS6) may arrive later, so it is time to exploit the SendLog structure. Corrective update will be sent to all DW Nodes which demanded mr with TS greater than 6 (in this case including DW Write Node). Note that the DW Write Node could not be aware whether PUT(TS6) will arrive later, or it is irrelevant to the DW Write Node and will never arrive.
 
@@ -415,15 +436,15 @@ TS3: S(1)
 TS1: CorrectiveMessage(m2[1])
 \end{verbatim}
 \end{example}
-The delta is extracted from the corrective update message. Then, the \OLAP update from TS2 is examined, since m2[1] is on the right-hand side. The result of multiplication of the delta and the pair \{m3[1], TS2\} from the ReceiveLog is added to m1[1] in TS2, and TS3 as well due to implicit Write-Read dependency on m1[1]. The \OLAP update from TS3 is now glanced. Similarly, the result of multiplication of the delta and the pair\{m3[1], TS3\} from the ReceiveLog is added to m1[1] in TS3.
+The delta is extracted from the corrective update message. Then, the update from TS2 is examined, since m2[1] is on the right-hand side. The result of multiplication of the delta and the pair \{m3[1], TS2\} from the ReceiveLog is added to m1[1] in TS2, and TS3 as well due to implicit Write-Read dependency on m1[1]. The update from TS3 is now glanced. Similarly, the result of multiplication of the delta and the pair\{m3[1], TS3\} from the ReceiveLog is added to m1[1] in TS3.
 
-Now we will see that corrective update mechanism works the same way for atomicity violations. In Example \ref{ex:mulInput} assume m1 is stored on DW Node 1 and m2 is stored on DW Node 2 and introduced total order of \OLAP updates is \texttt{S(1), T(1)}. Figure~\ref{fig:Atomicity} depicts two cases, with and without violated atomicity, both exploiting corrective updates (shown in red). In Figure~\ref{fig:Atomicity}(a) a non-linearizable \OLAP update execution is presented. \OLAP updates which should go one after another are actually executed at approximately same time. DW Node 1 will send m1, last updated at TS0, to be used in TS2 on DW Node 2. DW Node 2 will send m2, last updated at TS0, to be used in TS1 on DW Node 1. Upon receiving a PUSH message from DW Node 2, DW Node 1 will realize m1 is changed at TS1, but version from TS0 was previously sent. Corrective update take place and delta(m1) is sent to DW Node 2. After executing corrective updates on DW Node 2, the effect will be the same as \OLAP updates were executed atomically in introduced total order. In Figure~\ref{fig:Atomicity}(b) violated order is presented. Actual \OLAP update execution order is \texttt{T(1), S(1)}. DW Node 1 will send m1 to be used in TS2 on DW Node 2. The most recent m1 is from TS0. Afterwards, DW Node 2 will send m2 to DW Node 1 to be used in TS1. The most recent m2 with TS less than 1 is from TS0. Now, DW Node 1 realizes it has to send corrective update to DW Node 2, since we now have m1 from TS1, and it is used on DW Node 2 in TS2. Note that in Figure~\ref{fig:Atomicity} both TS are shown above line due to better understanding of messages. Still, only the TS of the map last update is actually sent.
+Now we will see that corrective update mechanism works the same way for atomicity violations. In Example \ref{ex:mulInput} assume m1 is stored on DW Node 1 and m2 is stored on DW Node 2 and introduced total order of \OLAP updates is \texttt{S(1), T(1)}. Figure~\ref{fig:Atomicity} depicts two cases, with and without violated atomicity, both exploiting corrective updates (shown in red). In Figure~\ref{fig:Atomicity}(a) a non-linearizable update execution is presented. \OLAP updates which should go one after another are actually executed at approximately same time. DW Node 1 will send m1, last updated at TS0, to be used in TS2 on DW Node 2. DW Node 2 will send m2, last updated at TS0, to be used in TS1 on DW Node 1. Upon receiving a PUSH message from DW Node 2, DW Node 1 will realize m1 is changed at TS1, but version from TS0 was previously sent. Corrective update take place and delta(m1) is sent to DW Node 2. After executing corrective updates on DW Node 2, the effect will be the same as \OLAP updates were executed atomically in introduced total order. In Figure~\ref{fig:Atomicity}(b) violated order is presented. Actual update execution order is \texttt{T(1), S(1)}. DW Node 1 will send m1 to be used in TS2 on DW Node 2. The most recent m1 is from TS0. Afterwards, DW Node 2 will send m2 to DW Node 1 to be used in TS1. The most recent m2 with TS less than 1 is from TS0. Now, DW Node 1 realizes it has to send corrective update to DW Node 2, since we now have m1 from TS1, and it is used on DW Node 2 in TS2. Note that in Figure~\ref{fig:Atomicity} both TS are shown above line due to better understanding of messages. Still, only the TS of the map last update is actually sent.
 
 Two conclusions are inflicted:
 \begin{itemize}
- \item Corrective updates are always sent from DW Node which contains maps that should be written earlier in introduced Total Order.
+ \item Corrective updates are always sent from DW Node which contains maps that should be written earlier in Introduced Total Order.
 
- \item When the introduced total order differs from \EXORD, no matter whether atomicity is violated, corrective update mechanism works the same way. 
+ \item When the Introduced Total Order differs from \EXORD, no matter whether atomicity is violated, corrective update mechanism works the same way. 
 \end{itemize} 
 
 \begin{figure}
@@ -440,11 +461,11 @@ However, out-of-order events are expected to occur infrequently. Furthermore, su
 
 Our system maintains an eventually consistent version of all the maps. The value of the maps may not be consistent at any given moment, but the error is limited to values that have not fully propagated through system. In order to provide consistent version of all the maps, snapshots may be employed at certain points in time, without using a centralized point of synchronization.
 
-We already introduced total order, so our system may use a background task to periodically identify the furthest point in the update streams that has been fully propagated. For all the maps, the values set in the most recent TS which logically precedes furthest point TS will be used as consistent version. A periods between two consistent version of all the maps is denoted as \textit{epoch}.
+We already Introduced Total Order, so our system may use a background task to periodically identify the furthest point in the update streams that has been fully propagated. For all the maps, the values set in the most recent TS which logically precedes furthest point TS will be used as consistent version. A periods between two consistent version of all the maps is denoted as \textit{epoch}.
 
 Though identifying the furthest point is slow, it does not interfere with any processing nodes normal operations, and can be performed infrequently, for example once every few seconds. The process may begin by sending an EPOCH END from a switch to all other switches. All switches are aware of the DW Nodes they communicated with, so they will send an EPOCH END to each of them. Each DW Node has to provide the last processed TS, but corrective updates has to be taken into account. 
 
-DW Nodes must ensure that no further map deltas (corrective updates), regarding a \OLAP update which logically precedes the last processed TS, will be received after sending the furthest point TS. Using the data flow graph constructed from the WriteLog and the SendLog, a DW Node could determine the DW Nodes the deltas were sent to. Because this graph is acyclic, deltas could be flushed along it. The process will start from maps/DW Nodes which depends only on input, not on other maps/DW Nodes, and then it will propagate down the graph. After a DW Node ensures no further corrective updates will arrive, it sends EPOCH READY message to the switch containing the last processed TS. In addition, the same message is sent to all the DW Nodes it previously communicated with.
+DW Nodes must ensure that no further map deltas (corrective updates), regarding an update which logically precedes the last processed TS, will be received after sending the furthest point TS. Using the data flow graph constructed from the WriteLog and the SendLog, a DW Node could determine the DW Nodes the deltas were sent to. Because this graph is acyclic, deltas could be flushed along it. The process will start from maps/DW Nodes which depends only on input, not on other maps/DW Nodes, and then it will propagate down the graph. After a DW Node ensures no further corrective updates will arrive, it sends EPOCH READY message to the switch containing the last processed TS. In addition, the same message is sent to all the DW Nodes it previously communicated with.
 
 Each switch will compute the minimum TS received from corresponding DW Nodes and forward the TS within EPOCH READY to all other switches. After receiving EPOCH READY from all the other switches, a switch will compute minimum value among them. Once all the switches computed the minimum value, the switches split the work of broadcasting EPOCH COMMIT containing the minimum TS value across the cluster. Once a node receives an EPOCH COMMIT message, it will never again receive an event for a prior epoch.
 
@@ -473,7 +494,7 @@ The DW Write Node could not be aware whether it will receive something from DW R
  \item Optimistically continue and do corrective updates if the PUSH messages arrive. 
 \end{enumerate}
 
-If a switch sends multiple messages per \OLAP update, the optimization will not work since from multiple PUSH messages per DW Write Node/DW Read Node pair per TS only the first one will be sent. This can be worked around by expanding the SendLog with the map values. 
+If a switch sends multiple messages per update, the optimization will not work since from multiple PUSH messages per DW Write Node/DW Read Node pair per TS only the first one will be sent. This can be worked around by expanding the SendLog with the map values. 
 
 \textbf{FETCH Optimization.} It is possible to reduce size of a single FETCH message. If all DW Nodes contain information about map partitioning, a reference to a DW Write Node inside a FETCH message is redundant. However, the system has to inform all DW Nodes in case of map repartitioning.
 
@@ -498,11 +519,11 @@ If a switch sends multiple messages per \OLAP update, the optimization will not 
 \vspace{2mm}
 
 \subsection{Comparison to Transactional Memory}
-We will compare our system to a classical Transactional Memory. Here, transactions are implicit at a \OLAP update level. The order of transactions is defined with TS at the time of the entry in the system (reaching a switch). Our system will execute \OLAP updates optimistically and store different versions of the data in the WriteLog structure. Instead to aborting and redoing an \OLAP update, the system may perform the corrective update on the map, if Write-Read dependencies are violated. Since there is no aborts and multiversions are employed, unrecoverable schedules can not arise. Performing periodic garbage collection and consistent snapshot may be regarded as a commit.
+We will compare our system to a classical Transactional Memory. Here, transactions are implicit at an update level. The order of transactions is defined with TS at the time of the entry in the system (reaching a switch). Our system will execute updates optimistically and store different versions of the data in the WriteLog structure. Instead to aborting and redoing an update, the system may perform the corrective update on the map, if Write-Read dependencies are violated. Since there is no aborts and multiversions are employed, unrecoverable schedules can not arise. Performing periodic garbage collection and consistent snapshot may be regarded as a commit.
 
 A conflict arise if at least two \OLAP updates:
 \begin{enumerate}[(1)]
- \item Execute statements in order not specified via introduced Total Order, or their execution overlap in time, 
+ \item Execute statements in order not specified via Introduced Total Order, or their execution overlap in time, 
  \item Access same map and
  \item At least one of them performs write.
 \end{enumerate}
@@ -517,7 +538,7 @@ When dealing with any kind of a distributed system, opacity has to be kept in mi
 
 \textbf{Rounds.} We may force our total order by using rounds and enough timeouts between them. For example, after a particular write, reads depending on that write could be postponed for the next round. Still, there is no guaranty corrective updates will never occur, but it will be rare. However, this is hard to implement.
 
-\textbf{Timing assumptions.} Different heuristics can be applied in our system. If a \OLAP update with significantly lower TS than the DW Node is currently processing have not yet arrived, the DW Node could reasonable suppose it is irrelevant to our DW Node. This heuristic could be based on the estimated message travel time from a switch to a DW Node and the delta query level.
+\textbf{Timing assumptions.} Different heuristics can be applied in our system. If an update with significantly lower TS than the DW Node is currently processing have not yet arrived, the DW Node could reasonable suppose it is irrelevant to our DW Node. This heuristic could be based on the estimated message travel time from a switch to a DW Node and the delta query level.
 
 \textbf{Batching.} We only address single-tuple updates in this paper.
 Batching and set-at-a-time techniques have often been
@@ -540,13 +561,13 @@ Map collections can contain different number of pairs. Collocating corresponding
 
 Ideally, such decisions should be based on a combination of (1), (2) and data flow analysis. We will tackle data flow analysis separately for one and multiple update streams. We could modify data dependencies in the system by introducing different total order.
 
-In the case of one update stream, we can not modify introduced Total Order and TS. Analyzing an update stream in order to discover data dependencies is infeasible in the case \OLAP updates arrive one at a time in the system. By the time long enough sequence of triggers is collected, computations could already be finished.
+In the case of one update stream, we can not modify Introduced Total Order and TS. Analyzing an update stream in order to discover data dependencies is infeasible in the case \OLAP updates arrive one at a time in the system. By the time long enough sequence of triggers is collected, computations could already be finished.
 
-In the case of multiple update streams, we will first have to define term \textit{switch \OLAP update partitioning}. It refers to using particular algorithm for correlating \OLAP updates to switches and assigning TS to them. By appropriate switch \OLAP update partitioning, it is possible to make the introduced Total Order closer to the \EXORD. That way, dependent statements will execute in secluded points in time, enough to avoid data dependency violation. As a result, this will decrease corrective updates frequency. Still, order of \OLAP updates inside one update stream has to be preserved.
+In the case of multiple update streams, we will first have to define term \textit{switch update partitioning}. It refers to using particular algorithm for correlating updates to switches and assigning TS to them. By appropriate switch update partitioning, it is possible to make the Introduced Total Order closer to the \EXORD. That way, dependent statements will execute in secluded points in time, enough to avoid data dependency violation. As a result, this will decrease corrective updates frequency. Still, order of updates inside one update stream has to be preserved.
 
 Using these modifications of data flow dependencies, partitioning and co-clustering decisions can be made by solving a straightforward min-cut style optimization problem.
 
-Switch \OLAP update partitioning and data partitioning are dependent on each other. If for a longer period of time different \OLAP updates occur more frequently, both could be dynamically repartitioned. However, the operation is costly and should be applied very carefully.
+Switch update partitioning and data partitioning are dependent on each other. If for a longer period of time different updates occur more frequently, both could be dynamically repartitioned. However, the operation is costly and should be applied very carefully.
 
 \textbf{Redundancy.} Future work will also address using redundant nodes for dealing with node failures. This will also increase availability in the system.
 
