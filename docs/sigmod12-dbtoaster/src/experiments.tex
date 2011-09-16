@@ -38,14 +38,14 @@ These two optimization decisions are ideal for persistent processes that increme
 %% 
 %%\todo{??? - A 6 way join (with/without nesting?)}
 
-\section{Processing Performance}
+\subsection{Processing Performance}
 We first attempt to quantify the performance gains achieved by DBToaster.  Although DBToaster is the first (to the best of our knowledge) automated system capable of efficiently maintaining windowless views over streaming data, we establish a baseline for comparison in three ways: First, we compare DBToaster against Postgres, a commercial database engine (CDE for short), and two commercial stream processors (CSP1 and CSP2)\footnote{A third commercial stream processor was considered, but was unable to support our query workload.  \todo{details}}
 
 Second, we assess the effects of recursive compilation by using the DBToaster compiler to simulate a traditional incremental view maintenance implementation.  We limit the recursion depth in DBToaster: A depth of 0 corresponds to running the query in its entirety on every update, and a depth of 1 corresponds to traditional view maintenance techniques.  
 
 As an extension to the analysis of DBToaster's recursive compilation, we also analyze the benefits of DBToaster's compilation to machine code.  We produce a set of pl/SQL triggers that correspond directly to the evaluation of a DBToaster program and run them on Postgres and CDE.
 
-\subsection{Raw Performance}
+\tinysection{Raw Performance}
 Figures \ref{}, \ref{}, \ldots compare the relative performance of DBToaster, Postgres, CDE, and CSP.  Queries \todo{fill in} are not supported by CSP; CSP is omitted in these figures.  Each graph shows the cost of maintaining query results with respect to the frequency with which the results must be refreshed.  A refresh rate of 1 indicates that the query updates are refreshed after every update operation, while a refresh rate of 10 indicates a refresh after every 10 update operations.  The rightmost value on each graph represents they query results being computed only a single time.  Note that there is only one value presented for DBToaster, as it natively updates query results after each update.
 
 %We present several variants of both relational database engines: 
@@ -66,11 +66,11 @@ TPCH Query 17 is an example of an extremely simple nested aggregate query.  Alth
 
 TPCH Query 18 represents another worst-case scenario for incremental maintenance: a two-level nested query.  Although the parameters to each level of nested query are bound within the query itself (i.e., the resultant maps have only output variables), the nested inequalities create a large number of possible outcomes for an insertion.  Each insertion triggers a test to see if the inequality has gone from true to false, or visa versa.  Due to the multiple-levels of nesting, the total number of possible state changes is exponential in the nesting depth.  Despite this, performance of DBToaster on this query is only marginally slower than Postgres. \todo{Verify that the cost is largely the result of parsing... this query is very similar to Q3}.
 
-\todo{TPCH Query 22 -- the comparison results should be similar to 18.  Include this?}
+\todo{TPCH Query 22 -- the comparison results should be similar to 18.  Should we include them?}
 
 
 \todo{
-  - Group by version of TPCH3 (in particular, create a datastructure with the selection predicates (mktsegment/orderdate/shipdate) as input variables)
+  - Group by version of TPCH3 (in particular, create a datastructure with the selection predicates (mktsegment / orderdate / shipdate) as input variables)
   - Version of the TPCH adaptor that uses updates.
   - I'm not entirely sure we want to push the data warehousing angle (since we're still in memory).  Do we want to excuse this by claiming that we'll have on-disk options, implementing BDB-based storage, suggesting that 10GB-ish is a reasonable warehouse size, or referring to Cumulus?
   - TPCH results scaling with size
@@ -78,14 +78,14 @@ TPCH Query 18 represents another worst-case scenario for incremental maintenance
 }
 
 
-\subsection{Recursive Compilation}
+\tinysection{Recursive Compilation}
 We now establish the effectiveness of DBToaster's recursive compilation technique by isolating the compiled program from the environment in which it is evaluated.  The following experiments impose a limit on the recursion of DBToaster's compilation algorithm -- Only nodes in the materialization plan above a fixed depth are materialized and incrementally maintained.  The remaining nodes are re-computed on every access.  Compiling to a depth of 0 corresponds to a complete re-evaluation of the query after every insert.  Compiling to a depth of 1  corresponds to traditional incremental view maintenance techniques.  
 
 Figures \ref{}, \ref{}, \ref{} show the result of depth-limiting the compilation process across several runtime environments: DBToaster's native compiled runtime, Postgres pl/SQL triggers, and CDE's SQL-based trigger mechanism.
 
 \todo{Commentary}
 
-\section{Costs}
+\subsection{Costs}
 DBToaster's efficiency comes at the cost of increased memory usage and heightened compile times.  We now quantify these costs.  \todo{explanation of methodology}.  Figures \ref{}, \ldots show the peak memory used on our queries by each query processor: DBToaster, Postgres, CDE, and CSE.  Figure \ref{} shows the time taken by DBToaster to compile the query.  The results are  broken down by time spent in DBToaster \todo{break down by recursive compilation/code generation as well?} and time spent in the C++ compiler.
 
 \todo{Commentary/discussion: precompilation not generally a problem -- could maybe produce LLVM assembly directly to speed compilation}

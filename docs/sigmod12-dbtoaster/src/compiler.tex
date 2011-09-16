@@ -1,0 +1,36 @@
+Figure \ref{} illustrates the DBToaster compilation pipeline.  Before describing each stage in detail, we provide a high-level overview of the entire pipeline by means of a simple example:
+
+\begin{example}
+\label{ex:compiler:rst}
+We have a database with the schema: 
+\begin{verbatim}
+CREATE TABLE R(a int, b int); 
+CREATE TABLE S(b int, c int);
+CREATE TABLE T(d int, e int);
+\end{verbatim}
+
+We wish to maintain a view over the query:
+\begin{verbatim}
+SELECT SUM(R.a  * T.e)
+FROM R, S, T
+WHERE R.b = S.b AND S.c < T.d;
+\end{verbatim}
+\end{example}
+
+Prior to compilation, the SQL query is translated verbatim into the compiler's internal query representation.  This representation is closely related to the AGCA language presented in \cite{dbtoaster-pods}.  For brevity, the internal representation is omitted from this paper, and query terms in DBToaster's internal representation are presented as an equivalent SQL expression.  \todo{present Calculus in the appendix?  Is there an appendix?}
+
+\subsection{Building the Materialization Plan}
+The first stage in the compilation pipeline is the construction of a {\em materialization plan}, a representation of the operations and data structures required to maintain the query being compiled.  The materialization plan is constructed using two fundamental operations: {\bf delta} and {\bf extract}.  Delta identifies the set of query expressions required to incrementally maintain a data structure when one of the base relations changes.  Extract identifies the set of data structures required to evaluate a query expression.  We document these operations more extensively in Section \ref{sec:iprogram:mplan}. 
+
+A materialization plan is constructed by invoking delta to produce a series of maintenance queries, extract to produce a series of data structures required to evaluate those queries, delta to produce maintenance queries for those data structures, and so forth recursively\footnote{As discussed in \cite{dbtoaster-pods}, the delta operation can be constructed in such a way that guarantees termination of this recursive process.}.  
+
+Figure \ref{} shows the materialization plan for Example \ref{ex:compiler:rst}.  As illustrated in this figure, the structure of a materialization plan is a tree which mirrors the recursive invocation of delta and extract -- nodes correspond to data structures identified by extract, while edges correspond to maintenance operations identified by delta.  The materialization plan corresponds fundamentally to the operations that will be evaluated by the binary output by the compiler.  Also note that each data structure corresponds to a query -- data structures are effectively materialized views.  
+
+In some cases, it may be beneficial to evaluate a query using multiple data structures (as in Figure \ref{}.a).  As a consequence, note that each edge is tagged not only with the maintenance query, but also an expression describing how to use the data structure(s) involved.
+
+Furthermore, for some query expressions, there may be several different options for which data structures to use in evaluating the expression (as in Figure \ref{}.b).  To handle such cases, extract can emit (and correspondingly, each edge in the graph can have) several distinct {\em implementation} options for a given query expression.  
+
+After the materialization plan is constructed, a {\em Materialization Optimizer} analyzes the plan and identifies 
+
+\subsection{Building the Incremental Program}
+The second stage in the 

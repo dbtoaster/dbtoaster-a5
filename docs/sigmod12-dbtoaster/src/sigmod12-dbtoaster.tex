@@ -1,0 +1,67 @@
+\documentclass{sig-alternate}
+
+\usepackage{algorithmic}
+\usepackage{algorithm}
+\usepackage{amsmath,amssymb}
+\usepackage{stmaryrd}
+\usepackage{graphicx}
+\usepackage{color}
+
+\DeclareGraphicsRule{.tif}{png}{.png}{`convert #1 `dirname #1`/`basename #1 .tif`.png}
+
+\newcommand{\longversion}[1]{}
+\newcommand{\comment}[1]{}
+\newcommand{\tinysection}[1]{\vspace{0.5mm}\noindent{\bf #1.}}
+\newcommand{\tuple}[1]{{\langle#1\rangle}}
+\newcommand{\todo}[1]{\textcolor{red}{#1}}
+\newcommand{\note}[1]{\textcolor{blue}{#1}}
+
+\newtheorem{example}{Example}[section]
+
+\toappear{}
+
+\title{Implementing Agile Views}
+%\numberofauthors{3}
+\numberofauthors{1}
+\author{
+%\alignauthor
+%Yanif Ahmad\\
+%    \affaddr{Johns Hopkins University}
+%    %\affaddr{Baltimore, MD}
+%    \email{yanif@cs.jhu.edu}
+%\alignauthor
+%Oliver Kennedy\\
+%    %\affaddr{\'Ecole Polytechnique F\'ed\'erale de Lausanne} \\
+%    \affaddr{EPFL}
+%    %\affaddr{Lausanne, Switzerland}
+%    \email{oliver.kennedy@epfl.ch}
+%\alignauthor
+%Christoph Koch\\
+%    \affaddr{EPFL}
+%    % \affaddr{\'Ecole Polytechnique F\'ed\'erale de Lausanne} \\
+%    %\affaddr{Lausanne, Switzerland}
+%    \email{christoph.koch@epfl.ch}
+}
+
+\begin{document}
+\maketitle
+
+\section{Introduction}
+\input{introduction.tex}
+
+\section{Compiler Overview}
+\input{compiler.tex}
+
+\section{Incremental Programs}
+\input{iprogram.tex}
+
+\section{Functional Optimization}
+\input{functional.tex}
+
+\section{Experimental Results}
+\input{experiments.tex}
+
+\section{Conclusion}
+
+
+\end{document}  
