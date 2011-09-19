@@ -1,0 +1,161 @@
+CREATE SCHEMA OrdersSchema (
+  orderkey       int,
+  custkey        int,
+  orderstatus    string, -- text(1)
+  totalprice     double,
+  orderdate      string, -- date
+  orderpriority  string, -- text
+  clerk          string, -- text
+  shippriority   int,
+  comment        string  -- text
+);
+
+CREATE SCHEMA CustomerSchema (
+  custkey      int,
+  name         string, -- text
+  address      string, -- text
+  nationkey    int,
+  phone        string, -- text
+  acctbal      double,
+  mktsegment   string, -- text
+  comment      string  -- text
+);
+
+
+/* All possible TPCH input streams. Trim to your query. */
+
+CREATE INPUT STREAM InsertOrders   OrdersSchema;
+CREATE INPUT STREAM InsertCustomer CustomerSchema;
+
+CREATE INPUT STREAM DeleteOrders   OrdersSchema;
+CREATE INPUT STREAM DeleteCustomer CustomerSchema;
+
+
+/* Main memory TPCH tables */
+CREATE MEMORY TABLE Orders   OrdersSchema   PRIMARY KEY (orderkey);
+CREATE MEMORY TABLE Customer CustomerSchema PRIMARY KEY (custkey);
+
+
+/*
+ * Table change notification streams
+ */
+CREATE SCHEMA SOrdersSchema   (tid int, o  OrdersSchema);
+CREATE SCHEMA SCustomerSchema (tid int, c  CustomerSchema);
+ 
+/* Pre-update serialized streams */ 
+CREATE STREAM SInsertOrders   SOrdersSchema;
+CREATE STREAM SInsertCustomer SCustomerSchema;
+
+CREATE STREAM SDeleteOrders   SOrdersSchema;
+CREATE STREAM SDeleteCustomer SCustomerSchema;
+
+/* Post-update serialized streams */
+CREATE STREAM OrdersInserted   SOrdersSchema;
+CREATE STREAM CustomerInserted SCustomerSchema;
+
+CREATE STREAM OrdersDeleted    SOrdersSchema;
+CREATE STREAM CustomerDeleted  SCustomerSchema;
+
+
+/* Tuple identification across union of input streams */
+CREATE SCHEMA TaggedInputs (evt int, tag int, o Orders, c Customer);
+CREATE STREAM MultiplexedInputs TaggedInputs AS
+      SELECT 0 as evt, 2 as tag, Orders as o    FROM InsertOrders
+UNION SELECT 1 as evt, 2 as tag, Orders as o    FROM DeleteOrders
+UNION SELECT 0 as evt, 3 as tag, Customer as c  FROM InsertCustomer
+UNION SELECT 1 as evt, 3 as tag, Customer as c  FROM DeleteCustomer;
+
+/* Lockset for serial execution across updates and queries. */
+CREATE LOCKSET Lock (i int);
+CREATE STREAM InputLocked TaggedInputs;
+LOCK Lock ON 0 FROM MultiplexedInputs INTO InputLocked; 
+
+/* Counter for barriering */
+DECLARE Counter int DEFAULT 0;
+UPDATE Counter FROM (SELECT i FROM UpdateCounter) AS S
+RETURNING S.* => CREATE STREAM CounterUpdated;
+SELECT Counter+1 as i, InputLocked.* FROM InputLocked INTO UpdateCounter;
+
+
+/* Partition into serialized streams after locking */
+SELECT i as tid, o  FROM InputLocked WHERE evt = 0 AND tag = 2 INTO SInsertOrders;
+SELECT i as tid, c  FROM InputLocked WHERE evt = 0 AND tag = 3 INTO SInsertCustomer;
+
+SELECT i as tid, o  FROM InputLocked WHERE evt = 1 AND tag = 2 INTO SDeleteOrders;
+SELECT i as tid, c  FROM InputLocked WHERE evt = 1 AND tag = 3 INTO SDeleteCustomer;
+
+
+/* Maintain TPCH tables */
+INSERT INTO Orders SELECT o.* FROM SInsertOrders
+RETURNING SInsertOrders.* INTO OrdersInserted;
+
+INSERT INTO Customer SELECT c.* FROM SInsertCustomer
+RETURNING SInsertCustomer.* INTO CustomerInserted;
+
+DELETE FROM Orders USING SDeleteOrders
+WHERE SDeleteOrders.o.orderkey = Orders.orderkey
+RETURNING SDeleteOrders.* INTO OrdersDeleted;
+
+DELETE FROM Customer USING SDeleteCustomer
+WHERE SDeleteCustomer.c.custkey = Customer.custkey
+RETURNING SDeleteCustomer.* INTO CustomerDeleted;
+
+
+/* Query body. */
+
+CREATE STREAM TableChanged AS
+SELECT tid FROM  OrdersInserted UNION OrdersDeleted
+           UNION CustomerInserted UNION CustomerDeleted;
+
+
+CREATE STREAM Subquery1 AS
+SELECT tid, sum(c2.acctbal) as sumAB
+FROM TableChanged as T, Customer AS C2 WHERE C2.acctbal > 0;
+
+CREATE STREAM Subquery2 AS
+SELECT tid, sumAB, O.custkey, count() as cnt
+FROM Subquery1 as S, Orders as O
+GROUP BY O.custkey;
+
+CREATE STREAM LockedResult AS
+SELECT now() as t, nationkey, sum(result) as result FROM
+(SELECT S.tid, C1.nationkey, sum(C1.acctbal) as result
+ FROM Subquery2 AS S, Customer AS C1
+ WHERE S.custkey = C1.custkey
+ AND   C1.acctbal < S.sumAB 
+ AND   S.cnt = 0
+ GROUP BY C1.nationkey)[SIZE 1 ADVANCE 1 ON tid] AS S
+GROUP BY nationkey;
+
+CREATE STREAM Result (t timestamp, nationkey int, result double);
+UNLOCK Lock ON 0 FROM LockedResult INTO Result;
+
+
+/* Load data. */
+CREATE STREAM FileEvents;
+
+APPLY JAVA "com.streambase.sb.adapter.csvreader.CSVReader"
+  (FileName="orders.tbl", Delimiter="|", StartEventPort="true", Schema=Orders)
+  INTO InsertOrders, FileEvents;
+
+APPLY JAVA "com.streambase.sb.adapter.csvreader.CSVReader"
+  (FileName="customer.tbl", Delimiter="|", StartEventPort="true", Schema=Customer)
+  INTO InsertCustomer, FileEvents;
+
+/* TODO: deletions */
+
+/* Log outputs */
+APPLY JAVA "com.streambase.sb.adapter.csvwriter.CSVWriter"
+  (FileName="Query22.csv", IfFileDoesntExist="Create new file")
+  FROM Result;
+
+
+/* Track data file open and close for timing */
+CREATE OUTPUT STREAM TimedFileEvents AS
+SELECT now() as t, * FROM FileEvents;
+
+/* Log data file events */
+APPLY JAVA  "com.streambase.sb.adapter.csvwriter.CSVWriter"
+  (FileName="FileEvents.csv", IfFileDoesntExist="Create new file")
+  FROM TimedFileEvents;
+  

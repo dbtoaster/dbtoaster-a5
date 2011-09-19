@@ -1,0 +1,342 @@
+CREATE SCHEMA LineitemSchema (
+  orderkey       int,
+  partkey        int,
+  suppkey        int,
+  linenumber     int,
+  quantity       double,
+  extendedprice  double,
+  discount       double,
+  tax            double,
+  returnflag     string, -- text(1)
+  linestatus     string, -- text(1)
+  shipdate       string, -- date
+  commitdate     string, -- date
+  receiptdate    string, -- date
+  shipinstruct   string, -- text
+  shipmode       string, -- text
+  comment        string  -- text
+);
+
+CREATE SCHEMA OrdersSchema (
+  orderkey       int,
+  custkey        int,
+  orderstatus    string, -- text(1)
+  totalprice     double,
+  orderdate      string, -- date
+  orderpriority  string, -- text
+  clerk          string, -- text
+  shippriority   int,
+  comment        string  -- text
+);
+
+CREATE SCHEMA PartSchema (
+  partkey      int,
+  name         string, -- text
+  mfgr         string, -- text
+  brand        string, -- text
+  type         string, -- text
+  size         int,
+  container    string, -- text
+  retailprice  double,
+  comment      string  -- text
+);
+
+CREATE SCHEMA PartsuppSchema (
+  partkey      int,
+  suppkey      int,
+  availqty     int,
+  supplycost   double,
+  comment      string  -- text
+);
+
+CREATE SCHEMA CustomerSchema (
+  custkey      int,
+  name         string, -- text
+  address      string, -- text
+  nationkey    int,
+  phone        string, -- text
+  acctbal      double,
+  mktsegment   string, -- text
+  comment      string  -- text
+);
+
+CREATE SCHEMA SupplierSchema (
+  suppkey      int,
+  name         string, -- text
+  address      string, -- text
+  nationkey    int,
+  phone        string, -- text
+  acctbal      double,
+  comment      string  -- text
+);
+
+CREATE SCHEMA NationSchema (
+  nationkey    int,
+  name         string, -- text
+  regionkey    int,
+  comment      string  -- text
+);
+  
+CREATE SCHEMA RegionSchema (
+  regionkey    int,
+  name         string, -- text
+  comment      string  -- text
+);
+
+
+/* All possible TPCH input streams. Trim to your query. */
+
+CREATE INPUT STREAM InsertLineitem LineitemSchema;
+CREATE INPUT STREAM InsertOrders   OrdersSchema;
+CREATE INPUT STREAM InsertCustomer CustomerSchema;
+CREATE INPUT STREAM InsertSupplier SupplierSchema;
+CREATE INPUT STREAM InsertPart     PartSchema;
+CREATE INPUT STREAM InsertPartsupp PartsuppSchema;
+CREATE INPUT STREAM InsertNation   NationSchema;
+CREATE INPUT STREAM InsertRegion   RegionSchema;
+
+CREATE INPUT STREAM DeleteLineitem LineitemSchema;
+CREATE INPUT STREAM DeleteOrders   OrdersSchema;
+CREATE INPUT STREAM DeleteCustomer CustomerSchema;
+CREATE INPUT STREAM DeleteSupplier SupplierSchema;
+CREATE INPUT STREAM DeletePart     PartSchema;
+CREATE INPUT STREAM DeletePartsupp PartsuppSchema;
+CREATE INPUT STREAM DeleteNation   NationSchema;
+CREATE INPUT STREAM DeleteRegion   RegionSchema;
+
+
+/* Main memory TPCH tables */
+CREATE MEMORY TABLE Lineitem LineitemSchema PRIMARY KEY (orderkey, linenumber);
+CREATE MEMORY TABLE Orders   OrdersSchema   PRIMARY KEY (orderkey);
+CREATE MEMORY TABLE Customer CustomerSchema PRIMARY KEY (custkey);
+CREATE MEMORY TABLE Supplier SupplierSchema PRIMARY KEY (suppkey);
+CREATE MEMORY TABLE Part     PartSchema     PRIMARY KEY (partkey);
+CREATE MEMORY TABLE Partsupp PartsuppSchema PRIMARY KEY (partkey, suppkey);
+CREATE MEMORY TABLE Nation   NationSchema   PRIMARY KEY (nationkey);
+CREATE MEMORY TABLE Region   RegionSchema   PRIMARY KEY (regionkey);
+
+
+/*
+ * Table change notification streams
+ */
+CREATE SCHEMA SLineitemSchema (tid int, l  LineitemSchema);
+CREATE SCHEMA SOrdersSchema   (tid int, o  OrdersSchema);
+CREATE SCHEMA SCustomerSchema (tid int, c  CustomerSchema);
+CREATE SCHEMA SSupplierSchema (tid int, s  SupplierSchema);
+CREATE SCHEMA SPartSchema     (tid int, p  PartSchema);
+CREATE SCHEMA SPartsuppSchema (tid int, ps PartsuppSchema);
+CREATE SCHEMA SNationSchema   (tid int, n  NationSchema);
+CREATE SCHEMA SRegionSchema   (tid int, r  RegionSchema);
+ 
+/* Pre-update serialized streams */ 
+CREATE STREAM SInsertLineitem SLineitemSchema;
+CREATE STREAM SInsertOrders   SOrdersSchema;
+CREATE STREAM SInsertCustomer SCustomerSchema;
+CREATE STREAM SInsertSupplier SSupplierSchema;
+CREATE STREAM SInsertPart     SPartSchema;
+CREATE STREAM SInsertPartsupp SPartsuppSchema;
+CREATE STREAM SInsertNation   SNationSchema;
+CREATE STREAM SInsertRegion   SRegionSchema;
+
+CREATE STREAM SDeleteLineitem SLineitemSchema;
+CREATE STREAM SDeleteOrders   SOrdersSchema;
+CREATE STREAM SDeleteCustomer SCustomerSchema;
+CREATE STREAM SDeleteSupplier SSupplierSchema;
+CREATE STREAM SDeletePart     SPartSchema;
+CREATE STREAM SDeletePartsupp SPartsuppSchema;
+CREATE STREAM SDeleteNation   SNationSchema;
+CREATE STREAM SDeleteRegion   SRegionSchema;
+
+/* Post-update serialized streams */
+CREATE STREAM LineitemInserted SLineitemSchema;
+CREATE STREAM OrdersInserted   SOrdersSchema;
+CREATE STREAM CustomerInserted SCustomerSchema;
+CREATE STREAM SupplierInserted SSupplierSchema;
+CREATE STREAM PartInserted     SPartSchema;
+CREATE STREAM PartsuppInserted SPartsuppSchema;
+CREATE STREAM NationInserted   SNationSchema;
+CREATE STREAM RegionInserted   SRegionSchema;
+
+CREATE STREAM LineitemDeleted  SLineitemSchema;
+CREATE STREAM OrdersDeleted    SOrdersSchema;
+CREATE STREAM CustomerDeleted  SCustomerSchema;
+CREATE STREAM SupplierDeleted  SSupplierSchema;
+CREATE STREAM PartDeleted      SPartSchema;
+CREATE STREAM PartsuppDeleted  SPartsuppSchema;
+CREATE STREAM NationDeleted    SNationSchema;
+CREATE STREAM RegionDeleted    SRegionSchema;
+
+
+/* Tuple identification across union of input streams */
+CREATE SCHEMA TaggedInputs (
+  evt int, tag int,
+  l Lineitem, o Orders, c Customer, s Supplier,
+  p Part, ps Partsupp, n Nation, r Region
+);
+CREATE STREAM MultiplexedInputs TaggedInputs AS
+      SELECT 0 as evt, 1 as tag, Lineitem as l  FROM InsertLineitem
+UNION SELECT 1 as evt, 1 as tag, Lineitem as l  FROM DeleteLineitem
+UNION SELECT 0 as evt, 2 as tag, Orders as o    FROM InsertOrders
+UNION SELECT 1 as evt, 2 as tag, Orders as o    FROM DeleteOrders
+UNION SELECT 0 as evt, 3 as tag, Customer as c  FROM InsertCustomer
+UNION SELECT 1 as evt, 3 as tag, Customer as c  FROM DeleteCustomer
+UNION SELECT 0 as evt, 4 as tag, Supplier as s  FROM InsertSupplier
+UNION SELECT 1 as evt, 4 as tag, Supplier as s  FROM DeleteSupplier
+UNION SELECT 0 as evt, 5 as tag, Part as p      FROM InsertPart
+UNION SELECT 1 as evt, 5 as tag, Part as p      FROM DeletePart
+UNION SELECT 0 as evt, 6 as tag, Partsupp as ps FROM InsertPartsupp
+UNION SELECT 1 as evt, 6 as tag, Partsupp as ps FROM DeletePartsupp
+UNION SELECT 0 as evt, 7 as tag, Nation as n    FROM InsertNation
+UNION SELECT 1 as evt, 7 as tag, Nation as n    FROM DeleteNation
+UNION SELECT 0 as evt, 8 as tag, Region as r    FROM InsertRegion
+UNION SELECT 1 as evt, 8 as tag, Region as r    FROM DeleteRegion;
+
+/* Lockset for serial execution across updates and queries. */
+CREATE LOCKSET Lock (i int);
+CREATE STREAM InputLocked TaggedInputs;
+LOCK Lock ON 0 FROM MultiplexedInputs INTO InputLocked; 
+
+/* Counter for barriering */
+DECLARE Counter int DEFAULT 0;
+UPDATE Counter FROM (SELECT i FROM UpdateCounter) AS S
+RETURNING S.* => CREATE STREAM CounterUpdated;
+SELECT Counter+1 as i, InputLocked.* FROM InputLocked INTO UpdateCounter;
+
+
+/* Partition into serialized streams after locking */
+SELECT i as tid, l  FROM InputLocked WHERE evt = 0 AND tag = 1 INTO SInsertLineitem;
+SELECT i as tid, o  FROM InputLocked WHERE evt = 0 AND tag = 2 INTO SInsertOrders;
+SELECT i as tid, c  FROM InputLocked WHERE evt = 0 AND tag = 3 INTO SInsertCustomer;
+SELECT i as tid, s  FROM InputLocked WHERE evt = 0 AND tag = 4 INTO SInsertSupplier;
+SELECT i as tid, p  FROM InputLocked WHERE evt = 0 AND tag = 5 INTO SInsertPart;
+SELECT i as tid, ps FROM InputLocked WHERE evt = 0 AND tag = 6 INTO SInsertPartsupp;
+SELECT i as tid, n  FROM InputLocked WHERE evt = 0 AND tag = 7 INTO SInsertNation;
+SELECT i as tid, r  FROM InputLocked WHERE evt = 0 AND tag = 8 INTO SInsertRegion;
+
+SELECT i as tid, l  FROM InputLocked WHERE evt = 1 AND tag = 1 INTO SDeleteLineitem;
+SELECT i as tid, o  FROM InputLocked WHERE evt = 1 AND tag = 2 INTO SDeleteOrders;
+SELECT i as tid, c  FROM InputLocked WHERE evt = 1 AND tag = 3 INTO SDeleteCustomer;
+SELECT i as tid, s  FROM InputLocked WHERE evt = 1 AND tag = 4 INTO SDeleteSupplier;
+SELECT i as tid, p  FROM InputLocked WHERE evt = 1 AND tag = 5 INTO SDeletePart;
+SELECT i as tid, ps FROM InputLocked WHERE evt = 1 AND tag = 6 INTO SDeletePartsupp;
+SELECT i as tid, n  FROM InputLocked WHERE evt = 1 AND tag = 7 INTO SDeleteNation;
+SELECT i as tid, r  FROM InputLocked WHERE evt = 1 AND tag = 8 INTO SDeleteRegion;
+
+
+/* Maintain TPCH tables */
+INSERT INTO Lineitem SELECT l.* FROM SInsertLineitem
+RETURNING SInsertLineitem.* INTO LineitemInserted;
+
+INSERT INTO Orders SELECT o.* FROM SInsertOrders
+RETURNING SInsertOrders.* INTO OrdersInserted;
+
+INSERT INTO Customer SELECT c.* FROM SInsertCustomer
+RETURNING SInsertCustomer.* INTO CustomerInserted;
+
+INSERT INTO Supplier SELECT s.* FROM SInsertSupplier
+RETURNING SInsertSupplier.* INTO SupplierInserted;
+
+INSERT INTO Part SELECT p.* FROM SInsertPart
+RETURNING SInsertPart.* INTO PartInserted;
+
+INSERT INTO Partsupp SELECT ps.* FROM SInsertPartsupp
+RETURNING SInsertPartsupp.* INTO PartsuppInserted;
+
+INSERT INTO Nation SELECT n.* FROM SInsertNation
+RETURNING SInsertNation.* INTO NationInserted;
+
+INSERT INTO Region SELECT r.* FROM SInsertRegion
+RETURNING SInsertRegion.* INTO RegionInserted;
+
+DELETE FROM Lineitem USING SDeleteLineitem
+WHERE SDeleteLineitem.l.orderkey = Lineitem.orderkey
+  AND SDeleteLineitem.l.brokerId = Lineitem.linenumber
+RETURNING SDeleteLineitem.* INTO LineitemDeleted;
+
+DELETE FROM Orders USING SDeleteOrders
+WHERE SDeleteOrders.o.orderkey = Orders.orderkey
+RETURNING SDeleteOrders.* INTO OrdersDeleted;
+
+DELETE FROM Customer USING SDeleteCustomer
+WHERE SDeleteCustomer.c.custkey = Customer.custkey
+RETURNING SDeleteCustomer.* INTO CustomerDeleted;
+
+DELETE FROM Supplier USING SDeleteSupplier
+WHERE SDeleteSupplier.s.suppkey = Supplier.suppkey
+RETURNING SDeleteSupplier.* INTO SupplierDeleted;
+
+DELETE FROM Part USING SDeletePart
+WHERE SDeletePart.p.partkey = Part.partkey
+RETURNING SDeletePart.* INTO PartDeleted;
+
+DELETE FROM Partsupp USING SDeletePartsupp
+WHERE SDeletePartsupp.ps.partkey = Partsupp.partkey
+  AND SDeletePartsupp.ps.suppkey = Partsupp.suppkey
+RETURNING SDeletePartsupp.* INTO PartsuppDeleted;
+
+DELETE FROM Nation USING SDeleteNation
+WHERE SDeleteNation.n.nationkey = Nation.nationkey
+RETURNING SDeleteNation.* INTO NationDeleted;
+
+DELETE FROM Region USING SDeleteRegion
+WHERE SDeleteRegion.r.regionkey = Region.regionkey
+RETURNING SDeleteRegion.* INTO RegionDeleted;
+
+
+/* Query body goes here.
+ * TODO: query body must unlock!
+ */
+
+
+/* Load data. */
+CREATE STREAM FileEvents;
+
+APPLY JAVA "com.streambase.sb.adapter.csvreader.CSVReader"
+  (FileName="lineitem.tbl", Delimiter="|", StartEventPort="true", Schema=Lineitem)
+  INTO InsertLineitem, FileEvents;
+  
+APPLY JAVA "com.streambase.sb.adapter.csvreader.CSVReader"
+  (FileName="orders.tbl", Delimiter="|", StartEventPort="true", Schema=Orders)
+  INTO InsertOrders, FileEvents;
+
+APPLY JAVA "com.streambase.sb.adapter.csvreader.CSVReader"
+  (FileName="customer.tbl", Delimiter="|", StartEventPort="true", Schema=Customer)
+  INTO InsertCustomer, FileEvents;
+
+APPLY JAVA "com.streambase.sb.adapter.csvreader.CSVReader"
+  (FileName="supplier.tbl", Delimiter="|", StartEventPort="true", Schema=Supplier)
+  INTO InsertSupplier, FileEvents;
+
+APPLY JAVA "com.streambase.sb.adapter.csvreader.CSVReader"
+  (FileName="part.tbl", Delimiter="|", StartEventPort="true", Schema=Part)
+  INTO InsertPart, FileEvents;
+
+APPLY JAVA "com.streambase.sb.adapter.csvreader.CSVReader"
+  (FileName="partsupp.tbl", Delimiter="|", StartEventPort="true", Schema=Partsupp)
+  INTO InsertPartsupp, FileEvents;
+
+APPLY JAVA "com.streambase.sb.adapter.csvreader.CSVReader"
+  (FileName="nation.tbl", Delimiter="|", StartEventPort="true", Schema=Nation)
+  INTO InsertNation, FileEvents;
+
+APPLY JAVA "com.streambase.sb.adapter.csvreader.CSVReader"
+  (FileName="region.tbl", Delimiter="|", StartEventPort="true", Schema=Region)
+  INTO InsertRegion, FileEvents;
+
+/* TODO: deletions */
+
+/* Log outputs */
+APPLY JAVA "com.streambase.sb.adapter.csvwriter.CSVWriter"
+  (FileName="Result.csv", IfFileDoesntExist="Create new file")
+  FROM Result;
+
+
+/* Track data file open and close for timing */
+CREATE OUTPUT STREAM TimedFileEvents AS
+SELECT now() as t, * FROM FileEvents;
+
+/* Log data file events */
+APPLY JAVA  "com.streambase.sb.adapter.csvwriter.CSVWriter"
+  (FileName="FileEvents.csv", IfFileDoesntExist="Create new file")
+  FROM TimedFileEvents;
+  

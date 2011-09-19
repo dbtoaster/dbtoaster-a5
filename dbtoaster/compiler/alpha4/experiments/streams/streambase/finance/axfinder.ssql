@@ -1,17 +1,15 @@
-/* Repetitive VWAP query implementation.
- *
- * @author Yanif Ahmad
- */
-
 CREATE SCHEMA OrderbookEntry
 (timestamp double, orderId int, brokerId int, volume double, price double);
 
 /* Order book input streams. Trim to your needs */ 
 CREATE INPUT STREAM InsertBids OrderbookEntry;
 CREATE INPUT STREAM DeleteBids OrderbookEntry;
+CREATE INPUT STREAM InsertAsks OrderbookEntry;
+CREATE INPUT STREAM DeleteAsks OrderbookEntry;
 
 /* Main memory order book tables */
 CREATE MEMORY TABLE Bids OrderbookEntry PRIMARY KEY (timestamp, orderId, brokerId);
+CREATE MEMORY TABLE Asks OrderbookEntry PRIMARY KEY (timestamp, orderId, brokerId);
 
 /*
  * Table change notification streams
@@ -21,10 +19,14 @@ CREATE SCHEMA SOrderbookEntry (tid int, o OrderbookEntry);
 /* Pre-update serialized streams */
 CREATE STREAM SInsertBids SOrderbookEntry;
 CREATE STREAM SDeleteBids SOrderbookEntry;
+CREATE STREAM SInsertAsks SOrderbookEntry;
+CREATE STREAM SDeleteAsks SOrderbookEntry;
 
 /* Post-update serialized streams */
 CREATE STREAM BidsInserted SOrderbookEntry;
 CREATE STREAM BidsDeleted  SOrderbookEntry;
+CREATE STREAM AsksInserted SOrderbookEntry;
+CREATE STREAM AsksDeleted  SOrderbookEntry;
 
 
 /* Tuple identification across union of input streams 
@@ -34,7 +36,9 @@ CREATE STREAM BidsDeleted  SOrderbookEntry;
 CREATE SCHEMA TaggedInputs (evt int, tag int, o OrderbookEntry);
 CREATE STREAM MultiplexedInputs TaggedInputs AS
       SELECT 0 AS evt, 1 AS tag, OrderbookEntry(* AS *) AS o FROM InsertBids
-UNION SELECT 1 AS evt, 1 AS tag, OrderbookEntry(* AS *) AS o FROM DeleteBids;
+UNION SELECT 1 AS evt, 1 AS tag, OrderbookEntry(* AS *) AS o FROM DeleteBids
+UNION SELECT 0 AS evt, 2 AS tag, OrderbookEntry(* AS *) AS o FROM InsertAsks
+UNION SELECT 1 AS evt, 2 AS tag, OrderbookEntry(* AS *) AS o FROM DeleteAsks;
 
 /* Lockset for serial execution across updates and queries. */
 CREATE LOCKSET Lock (i int);
@@ -51,9 +55,11 @@ SELECT Counter+1 as i, InputLocked.* FROM InputLocked INTO UpdateCounter;
 /* Partition into serialized streams after locking */
 SELECT i as tid, o  FROM InputLocked WHERE evt = 0 AND tag = 1 INTO SInsertBids;
 SELECT i as tid, o  FROM InputLocked WHERE evt = 1 AND tag = 1 INTO SDeleteBids;
+SELECT i as tid, o  FROM InputLocked WHERE evt = 0 AND tag = 2 INTO SInsertAsks;
+SELECT i as tid, o  FROM InputLocked WHERE evt = 1 AND tag = 2 INTO SDeleteAsks;
 
 
-/* Maintain Bids table */
+/* Maintain Bids and Asks */
 INSERT INTO Bids SELECT o.* FROM SInsertBids
 RETURNING SInsertBids.* INTO BidsInserted;
 
@@ -63,44 +69,41 @@ WHERE SDeleteBids.o.timestamp = Bids.timestamp
   AND SDeleteBids.o.brokerId = Bids.brokerId
 RETURNING DeleteBids.* INTO BidsDeleted;
 
+INSERT INTO Asks SELECT o.* FROM SInsertAsks
+RETURNING SInsertAsks.* INTO AsksInserted;
+
+DELETE FROM Asks USING SDeleteAsks
+WHERE SDeleteAsks.o.timestamp = Asks.timestamp
+  AND SDeleteAsks.o.orderId = Asks.orderId
+  AND SDeleteAsks.o.brokerId = Asks.brokerId
+RETURNING SDeleteAsks.* INTO AsksDeleted;
+
 
 /* Track changes to Bids */
-CREATE STREAM BidsChanged AS BidsInserted UNION BidsDeleted;
+CREATE STREAM TableChanged AS
+SELECT tid FROM  BidsInserted UNION BidsDeleted
+           UNION AsksInserted UNION AsksDeleted;
 
-/* Compute the total Bids volume */
-CREATE STREAM BidsVolume AS
-SELECT B.tid, sum(Bids.volume) as sumBV FROM BidsChanged as B, Bids;
+/* Replay Bids and join with Asks */
+CREATE STREAM ReplayBids AS
+SELECT R.tid, B.brokerId, B.price, B.volume FROM TableChanged AS R, Bids AS B;
 
-/* For a given total, turn the Bids relation into a stream,
-   i.e. perform a scan over Bids. This is the outer loop of a
-   correlated subquery.
-*/
-CREATE STREAM CurrentBids AS
-SELECT BV.*, Bids.* FROM BidsVolume as BV, Bids;
-
-/* Perform the correlated subquery, via a nested loops join with
-   the above CurrentBids stream, and the Bids table.
-   Each tuple in CurrentBids has been decorated with the total volume,
-   and compares this to an aggregate applied over the Bids table.
-   Subsequently we use a windowed aggregate to compute the VWAP
-   over the outer Bids relation's tuples which we turned into a stream.
-   The use of a monotonically increasing counter per query invocation
-   ensures that the windowed aggregate is performed over only those
-   tuples corresponding to a single modification to Bids.
- */
-CREATE OUTPUT STREAM BidsResult AS
-SELECT now() as t, sum(pv) as vwap
-FROM
-  (SELECT tid, pv FROM
-    (SELECT b1.tid, b1.sumBV, b1.price*b1.volume as pv,
-            sum(b2.volume) as sumBV2
-     FROM CurrentBids AS b1, Bids AS b2
-     WHERE b2.price > b1.price) AS S
-   WHERE (0.25*sumBV) > sumBV2)[SIZE 1 ADVANCE 1 ON tid] AS S2;
+CREATE STREAM BidsResult AS
+SELECT brokerId, sum(diff) as axf FROM
+(SELECT B.tid, B.brokerId, sum(A.volume - B.volume) as diff
+ FROM ReplayBids AS B, Asks AS A
+  WHERE B.brokerId = A.brokerId
+    AND    ( (A.price + ((-1) * B.price) > 1000) OR
+             (B.price + ((-1) * A.price) > 1000) )
+ GROUP BY B.brokerId)[SIZE 1 ADVANCE 1 ON tid] as S
+GROUP BY brokerId;
 
 /* Unlock and output */
-CREATE STREAM Result (t timestamp, vwap double);
-UNLOCK Lock ON 0 FROM BidsResult INTO Result;
+CREATE STREAM LockedResult AS
+SELECT now() as t, axf FROM BidsResult UNION AsksResult;  
+
+CREATE STREAM Result (t timestamp, axf double);
+UNLOCK Lock ON 0 FROM LockedResult INTO Result;
 
 
 /* Load data. */
@@ -110,10 +113,15 @@ APPLY JAVA "com.streambase.sb.adapter.csvreader.CSVReader"
   (FileName="InsertBids.dbtdat", Delimiter=",", StartEventPort="true",
    Schema=(timestamp double, orderId int, brokerId int, volume double, price double))
   INTO InsertBids, FileEvents;
+  
+APPLY JAVA "com.streambase.sb.adapter.csvreader.CSVReader"
+  (FileName="InsertAsks.dbtdat", Delimiter=",", StartEventPort="true",
+   Schema=(timestamp double, orderId int, brokerId int, volume double, price double))
+  INTO InsertAsks, FileEvents;
 
 /* Log outputs */
 APPLY JAVA "com.streambase.sb.adapter.csvwriter.CSVWriter"
-  (FileName="Vwap.csv", IfFileDoesntExist="Create new file")
+  (FileName="Axfinder.csv", IfFileDoesntExist="Create new file")
   FROM Result;
 
 /* Track data file open and close for timing */
