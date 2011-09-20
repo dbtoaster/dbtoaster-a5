@@ -814,7 +814,10 @@ struct
         in
         let declared_type =
           try List.assoc v (fst !type_env)
-          with Not_found -> failwith ("no declaration found for "^v)
+          with Not_found -> 
+            print_endline ("no declaration found for "^v^" in: "^
+                           (Util.list_to_string fst (fst !type_env)));
+            failwith ("no declaration found for "^v)
         in
         begin match defined_type, declared_type with
         | false, _ -> failwith ("undefined type "^(sot t))
@@ -824,6 +827,8 @@ struct
             let override_t = promote_types declared_type t
             in None, Some(Var(override_t,(v,override_t)))
           with Failure _ ->
+            print_endline ("type mismatch for var \""^v^"\": "^
+                           (sot t)^" vs "^(sot declared_type)); 
             failwith ("type mismatch for var \""^v^"\": "^
                       (sot t)^" vs "^(sot declared_type))
           end

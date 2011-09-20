@@ -31,6 +31,8 @@ let rec compile_k3_expr e =
     | Leq(l,r)  -> compile_op leq_op l r 
 
     | IfThenElse0(cond,v) -> compile_op ifthenelse0_op cond v
+    
+    | Comment(c, cexp) -> rcr cexp
 
     | IfThenElse(p,t,e) -> ifthenelse ~expr:(debug e) (rcr p) (rcr t) (rcr e)
 

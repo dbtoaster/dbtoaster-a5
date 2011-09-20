@@ -15,8 +15,14 @@ type map_sig_t = M3.map_id_t * M3.var_id_t list * M3.var_id_t list
 (* TODO: types *)
 let args_of_vars vars = List.map (fun v -> v,TFloat) vars
 
-let bind_for_apply_each vt e = Lambda(ATuple(vt), e)
-let bind_for_aggregate vt (iv,it) e = AssocLambda(ATuple(vt),AVar(iv,it),e)
+let bind_for_apply_each vt_list e = 
+   match vt_list with 
+      | [var,vart] -> Lambda(AVar(var,vart), e)
+      | _     -> Lambda(ATuple(vt_list), e)
+let bind_for_aggregate vt_list (iv,it) e = 
+   match vt_list with 
+      | [var,vart] -> AssocLambda(AVar(var,vart),AVar(iv,it),e)
+      | _     -> AssocLambda(ATuple(vt),AVar(iv,it),e)
 
 let map_to_expr mapn ins outs =
   (* TODO: value types *)
@@ -410,15 +416,18 @@ let collection_stmt trig_args m3stmt : statement =
     let loop_in_aux (la,le) loop_fn_body =
         let patv = Util.ListAsSet.inter lhs_inv trig_args in
         let pat_ve = List.map (fun v -> (v,Var(v,TFloat))) patv in
-        let in_coll = if (List.length patv) = (List.length lhs_inv)
-            then Singleton(Lookup(collection, List.map snd pat_ve))
-            else
-                (*(print_endline ("looping over slices with trig args "^
-                  (String.concat "," lhs_inv)^" / "^(String.concat "," trig_args));*)
-                 Slice(collection, ins, pat_ve) in
-        let loop_fn =
-            bind_for_apply_each ((args_of_vars lhs_inv)@[la]) loop_fn_body
-        in Iterate(loop_fn, in_coll)
+        if (List.length patv) = (List.length lhs_inv)
+          then 
+            Apply(bind_for_apply_each [la] loop_fn_body,
+                  Lookup(collection, List.map snd pat_ve)
+            )
+          else
+            (*(print_endline ("looping over slices with trig args "^
+              (String.concat "," lhs_inv)^" / "^(String.concat "," trig_args));*)
+            Iterate(bind_for_apply_each ((args_of_vars lhs_inv)@[la]) 
+                                        loop_fn_body,
+                    Slice(collection, ins, pat_ve)
+            )
     in
     let loop_update_aux ins outs delta_slice =
         let ua,ue = fn_arg_expr "updated_v" TFloat in
@@ -472,7 +481,8 @@ let collection_stmt trig_args m3stmt : statement =
                 (map_value_update_expr collection in_el out_el rhs_expr)
         end
     in
-    (collection, statement_expr)
+    (collection, statement_expr) 
+      (*Comment(M3Common.code_of_stmt m3stmt, statement_expr))*)
 
 
 let collection_trig m3trig : trigger =

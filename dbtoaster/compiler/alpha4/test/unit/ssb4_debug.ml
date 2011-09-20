@@ -13,7 +13,10 @@ let pc_lookup_type = (K3.SR.Singleton((K3.SR.Lookup((K3.SR.PC("QUERY_1_1_pNATION
 Debug.log_unit_test "PC Lookup Type"
    K3.SR.string_of_type
    (K3Typechecker.typecheck_expr pc_lookup_type)
-   (Collection(Collection(TTuple[TFloat;TFloat;TFloat;TFloat;TFloat])))
+   (Collection(TTuple[
+      TFloat; 
+      Collection(TTuple[TFloat;TFloat;TFloat;TFloat;TFloat])
+   ]))
 ;;
 
 let buggy_stack = 

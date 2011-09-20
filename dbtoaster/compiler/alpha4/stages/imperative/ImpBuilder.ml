@@ -23,6 +23,7 @@
  *
  *)
 
+open Util
 open M3
 open K3.SR
 open Format
@@ -110,8 +111,9 @@ struct
 
    | Singleton -> "Singleton"
    | Combine -> "Combine"
-   | Lambda(_) -> "Lambda(...)"
-   | AssocLambda(_,_) -> "AssocLambda(_,_)" 
+   | Lambda(v) -> "Lambda("^(K.string_of_arg v)^")"
+   | AssocLambda(v1,v2) -> 
+      "AssocLambda("^(K.string_of_arg v1)^", "^(K.string_of_arg v2)^")"
    | Apply -> "Apply"
 
    | Block -> "Block"
@@ -135,6 +137,10 @@ struct
   let string_of_tag t = match t with
     | Undecorated e -> K.string_of_expr e
     | Decorated ir_tag -> string_of_ir_tag ir_tag
+  
+  let rec string_of_k3ir i = match i with
+    | Leaf(_, t) -> "["^(string_of_tag t)^"]"
+    | Node(_, n, t) -> (string_of_tag n)^(list_to_string string_of_k3ir t)
 end
 
 
@@ -241,13 +247,20 @@ struct
   let slice_of_map mapc keyse indices =
     begin match mapc with
     | Leaf(_, Undecorated(mape)) ->
-      let schema = match mape with
-        | K.InPC(_, ins, _) -> ins
-        | K.OutPC(_, outs, _) -> outs
-        | K.PC(_, _, outs, _) -> outs
-        | K.Lookup(K.PC(_, _, outs, _), _) -> outs
+      let (mapn, schema) = match mape with
+        | K.InPC(mapn, ins, _) -> (mapn, ins)
+        | K.OutPC(mapn, outs, _) -> (mapn, outs)
+        | K.PC(mapn, ins, _, _) -> (mapn, ins)
+        | K.Lookup(K.PC(mapn, _, outs, _), _) -> (mapn, outs)
         | _ -> failwith "invalid map for slicing"
       in
+      List.iter (fun x -> 
+         if x >= (List.length schema) then failwith (
+               "invalid slice index on "^mapn^".  slice schema: "^
+               (list_to_string string_of_int indices)^" out of "^
+               (list_to_string fst schema)
+            )
+      ) indices;
       let fields = List.combine
         (List.map (fun i -> fst (List.nth schema i)) indices) keyse
       in K.Slice(mape, schema, fields)
@@ -483,6 +496,7 @@ struct
           | _ -> true
         in op_ir ~decorated:decorated metadata If0 [sfst(); ssnd()] 
 
+      | K.Comment(_,cexp) -> sfst()
       | K.Block l      -> block_ir metadata (fst())
 
       | K.Iterate _    -> iterate_ir metadata [sfst(); ssnd()]
@@ -524,8 +538,12 @@ struct
           in if not(found) then raise Not_found else pos
         in
         let v_l, _ = List.split idk_l in
-        let idx_l = List.map (index (List.map (fun (x,y) -> x) sch)) v_l
-        in slice_ir metadata idx_l ([sfst()]@snd())
+        let idx_l = List.map (index (List.map (fun (x,y) -> x) sch)) v_l in
+        Debug.print "K3-DEBUG-SLICE" (fun () ->
+          "SLICE : "^(K.string_of_expr e)^" \nproduces list: "^
+          (list_to_string string_of_int idx_l)^"\n"
+        );
+           slice_ir metadata idx_l ([sfst()]@snd())
 
       | K.SingletonPC _ | K.OutPC _ | K.InPC _ | K.PC _ -> undecorated_ir metadata e
 
@@ -893,6 +911,9 @@ struct
         end
 
       | Apply ->
+        Debug.print "IMP-DEBUG-APPLY" (fun _ ->
+          string_of_k3ir ir
+        );
         let decls = match cimpo 1, cexpro 1 with
           | Some(i), None -> 
             if args_to_bind = [] then i

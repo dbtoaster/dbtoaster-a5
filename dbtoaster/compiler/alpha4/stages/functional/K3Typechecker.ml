@@ -430,6 +430,9 @@ let rec typecheck_expr e : type_t =
         (* Check ce1 is a singleton, return 'then' type *)
         ignore(flat (recur ce1)); recur ce2
 
+    | Comment(c, cexpr) ->
+        recur cexpr
+
     (* TODO: it is unsafe to lift functions above a condition,
      * how do we ensure expressions above this condition don't do it?
      * -- I don't think we can... *)
