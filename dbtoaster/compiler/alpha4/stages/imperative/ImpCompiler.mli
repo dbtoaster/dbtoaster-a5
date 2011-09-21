@@ -83,17 +83,44 @@ sig
     -> string list -> source_code_t * source_code_t
 end
 
+module CPPTarget : ImpTarget
+
 (* Imperative stage: supports compilation from a K3 program *)
 
 module type CompilerSig =
 sig
-  (* Similar interface to (M3|K3)Compiler.compile_query *)
+  val compile_triggers :
+    compiler_options ->
+    (string * Calculus.var_t list) list (* dbschema *)
+    -> K3.SR.program                    (* K3 program *)
+    -> (  SourceCode.source_code_t list * 
+          ( M3.pm_t * M3.rel_id_t * M3.var_t list *
+             ( CPPTarget.ext_type,
+               CPPTarget.ext_fn) Imperative.typed_imp_t
+          )
+       ) list * 
+       ( (string * string * string * (string * string) list) list )
+
   val compile_query_to_string :
     compiler_options ->
     (string * Calculus.var_t list) list (* dbschema *)
     -> K3.SR.program                    (* K3 program *)
     -> M3.relation_input_t list         (* sources *)
     -> string list -> string
+
+  val compile_imp :
+    compiler_options ->
+    (string * Calculus.var_t list) list (* dbschema *)
+    -> M3.map_type_t list * M3Common.Patterns.pattern_map *
+       ((  SourceCode.source_code_t list * 
+           ( M3.pm_t * M3.rel_id_t * M3.var_t list *
+              ( CPPTarget.ext_type,
+                CPPTarget.ext_fn) Imperative.typed_imp_t
+           )
+        ) list * 
+        ( (string * string * string * (string * string) list) list ))
+    -> M3.relation_input_t list         (* sources *)
+    -> string list -> Util.GenericIO.out_t -> unit
 
   val compile_query :
     compiler_options ->
@@ -102,6 +129,4 @@ sig
     -> M3.relation_input_t list         (* sources *)
     -> string list -> Util.GenericIO.out_t -> unit
 end
-
-module CPPTarget : ImpTarget
 module Compiler : CompilerSig

@@ -645,6 +645,16 @@ struct
       in
         app_name^skip_line^indented_app_invocation^"\n\n"^helptext
     )
+   ;;
+   module Global = struct
+      let arguments = ref StringMap.empty;;
+      let set_arguments new_arguments = arguments := new_arguments;;
+      let flag_vals      = flag_vals      !arguments;;
+      let flag_val       = flag_val       !arguments;;
+      let flag_val_force = flag_val_force !arguments;;
+      let flag_set       = flag_set       !arguments;;
+      let flag_bool      = flag_bool      !arguments;;
+   end
 end
 
 (* IndentedPrinting

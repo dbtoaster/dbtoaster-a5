@@ -48,12 +48,6 @@ let k3_for_script script_file =
 
 ;;
 
-let compiled_k3_for_script script_file = 
-   let (program,dbschema,sources) = compiled_m3_for_script script_file in
-      K3OC.compile_query_to_string dbschema (program,sources) ["QUERY"]
-
-;;
-
 let ocaml_compile_unit_test ?(libs=[])
                             ?(libdirs=["lib/ocaml";"util";"stages/maps";
                                        "stages/functional"])

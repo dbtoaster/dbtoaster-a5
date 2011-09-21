@@ -61,6 +61,10 @@
 *)
 
 open Util
+open Database
+module DB         = NamedM3Database
+module DBTRuntime = Runtime.Make(DB)
+
 
 (********* PARSE ARGUMENTS *********)
 
@@ -196,9 +200,17 @@ let language =
       | _          -> (give_up ("Unknown output language '"^a^"'"));;
 
 let output_file = match flag_val "OUTPUT" with
-  | None      -> stdout
-  | Some("-") -> stdout
-  | Some(f)   -> (open_out f);;
+  | None | Some("-") -> (fun () -> stdout)
+  | Some(f)          -> ExternalCompiler.set_source_file f; 
+                        (fun () -> open_out f);;
+
+match flag_val "COMPILE" with
+   | None    -> ()
+   | Some(a) -> ExternalCompiler.compile_to_file a;;
+
+List.iter (fun e ->
+   ExternalCompiler.set_env e (flag_vals e)
+) ["INCLUDE_HDR"; "INCLUDE_LIB"];;
 
 let adaptor_dir = flag_val "RUN ADAPTORS";;
 
@@ -241,7 +253,7 @@ Debug.print "CALCULUS" (fun () -> (query_list_to_calc_string queries));;
 
 if language == L_CALC then
   (
-    output_string output_file (query_list_to_calc_string queries);
+    output_string (output_file ()) (query_list_to_calc_string queries);
     exit 0
   )
 else ();;
@@ -258,7 +270,7 @@ else ();;
 
 if language == L_DELTA then
   (
-    output_string output_file ((
+    output_string (output_file ()) ((
       string_of_list "\n" (
         List.fold_left (fun accum (qlist,dbschema,qvars) ->
           List.fold_left (fun accum q ->
@@ -328,200 +340,179 @@ let m3_prog =
 
 Debug.print "M3" (fun () -> (M3Common.pretty_print_prog m3_prog));;
 
-(********* M3 OPTIMIZATIONS *********)
-
-(********* TRANSLATE M3 TO [language of your choosing] *********)
+(********* Use the M3 in place if appropriate *********)
 
 module M3OCamlCompiler = M3Compiler.Make(M3OCamlgen.CG);;
 module M3OCamlInterpreterCompiler = M3Compiler.Make(M3Interpreter.CG);;
 
-(* Oliver: The following compilers should really be 2 or 3 separate steps.
-   The driver should translate M3 -> K3, then invoke the K3 optimizer, and
-   finally as a separate step, invoke the appropriate K3 code generator.
-   Lumping it all into a single function creates a confusing flow that breaks
-   the usefulness of Driver as a roadmap to the compile process *)
+let dbschema = List.flatten (List.map (fun (_,x,_) -> x) queries)
+;;
 
-module K3InterpreterCompiler = K3Compiler.Make(K3Interpreter.K3CG);;
+match language with
+   | L_OCAML(OCG_M3) -> (
+      let compile = 
+         M3OCamlCompiler.compile_query 
+            dbschema 
+            (m3_prog, sources) 
+            !toplevel_queries
+      in
+         ExternalCompiler.OCaml.compile_and_output compile;
+         exit 0
+      )
+   | L_INTERPRETER(OCG_M3) -> (
+         StandardAdaptors.initialize ();
+         M3OCamlInterpreterCompiler.compile_query
+            dbschema
+            (m3_prog, sources)
+            !toplevel_queries
+            (GenericIO.O_FileDescriptor(output_file ()));
+         exit 0
+      )
+   | L_M3(prepared) -> (
+         output_string (output_file ()) (
+            if prepared
+            then
+               let (sch,trigs) = m3_prog in
+               let (ptrigs,pats) = M3Compiler.prepare_triggers trigs in
+                  M3Common.PreparedPrinting.pretty_print_prog (sch,ptrigs)
+            else
+               M3Common.pretty_print_prog m3_prog
+         );
+         exit 0
+      )
+   | _ -> ()
+;;
+
+(********* If we're up to this point, K3 is required *********)
+
+let k3_prog = K3Builder.m3_to_k3 m3_prog;;
+
+let output_k3_program (_,_,triggers) = 
+   let fd = (output_file ()) in
+      List.iter (fun (pm, rel, args, stmts) ->
+         output_string fd
+            ("\nON_"^(match pm with M3.Insert -> "insert"
+                                  | M3.Delete -> "delete")^
+             "_"^rel^"("^(Util.string_of_list "," args)^")\n");
+         List.iter (fun (_,e) -> 
+            output_string fd ((K3.SR.string_of_expr e)^"\n")
+         ) stmts
+      ) triggers
+   
+;;
+if language = L_K3(false) then (
+   output_k3_program k3_prog;
+   exit 0
+)
+;;
+
+(********* Apply K3 optimizations *********)
+let k3_optimizations = 
+(*   let parse_opt_flag s = match s with
+     | "CSE" | "cse" -> K3Optimizer.CSE
+     | "BREDUCE" | "breduce" -> K3Optimizer.Beta
+     | _ -> give_up ("invalid K3 optimization flag: "^s)
+   in
+     if opt then List.map parse_opt_flag (flag_vals "OPTFLAGS") else []
+*)
+  [K3Optimizer.CSE; K3Optimizer.Beta] 
+;;
+let k3_opt_prog = 
+   let (schema,patterns,k3_trigs) = k3_prog in
+      (  schema, patterns, 
+         List.map (fun (pm,rel,trig_args,stmtl) ->
+          (pm, rel, trig_args,
+            (List.map (fun (lhs,rhs) -> (
+                        lhs, 
+                        (K3Optimizer.optimize 
+                           ~optimizations:k3_optimizations 
+                           trig_args 
+                           rhs)
+                      ))
+                      stmtl)
+          )) k3_trigs
+      )
+;;
+
 module K3OCamlCompiler = K3Compiler.Make(K3OCamlgen.K3CG);;
 module K3PLSQLCompiler = K3Compiler.Make(K3Plsql.CG);;
+module K3InterpreterCompiler = K3Compiler.Make(K3Interpreter.K3CG);;
 
-module IC = ImpCompiler;;
+match language with
+   | L_K3(true) -> (
+         output_k3_program k3_opt_prog;
+         exit 0
+      )
+   | L_OCAML(OCG_K3) -> (
+         let compile = 
+            K3OCamlCompiler.compile_query
+               dbschema
+               (k3_opt_prog, sources)
+               !toplevel_queries
+         in
+            ExternalCompiler.OCaml.compile_and_output compile;
+            exit 0
+      )
+   | L_SQL(SL_PLSQL) -> (
+         K3PLSQLCompiler.compile_query 
+            dbschema
+            (k3_opt_prog, sources)
+            !toplevel_queries
+            (GenericIO.O_FileDescriptor(output_file ()));
+            exit 0
+      )
+         
+   | L_INTERPRETER(OCG_K3) -> (
+         StandardAdaptors.initialize ();
+         K3OCamlCompiler.compile_query
+            dbschema
+            (k3_opt_prog, sources)
+            !toplevel_queries
+            (GenericIO.O_FileDescriptor(output_file ()));
+            exit 0
+      )
+   | _ -> ()
+;;
 
-open Database
+(********* If we're up to this point, IMP is required *********)
 
-module DB         = NamedM3Database
-module DBTRuntime = Runtime.Make(DB)
-open DBTRuntime
+let ic_opts = {
+   ImpCompiler.desugar = (if language = L_IMP(false) then false else true);
+   ImpCompiler.profile = (if language = L_CPP(true)  then true  else false)
+};;
 
-let compile_function: ((string * Calculus.var_t list) list ->
-                       M3.prog_t * M3.relation_input_t list -> string list -> 
-                       Util.GenericIO.out_t -> unit) = 
-  match language with
-  | L_OCAML(OCG_M3) -> M3OCamlCompiler.compile_query
-  | L_OCAML(OCG_K3) -> K3OCamlCompiler.compile_query
-  | L_SQL(SL_PLSQL) -> K3PLSQLCompiler.compile_query 
-  | L_CPP(profiled)   ->
-      (fun dbschema (p, s) tlq f ->
-        let k3prog = K3Compiler.compile_query_to_program
-          ~optimizations:[K3Optimizer.CSE; K3Optimizer.Beta] p
-        in
-        let opts = {IC.desugar = true; IC.profile = profiled} in
-        IC.Compiler.compile_query opts dbschema k3prog s tlq f)
+let ic_prog = 
+   let (schema,patterns,_) = k3_opt_prog in
+   (  schema, patterns, 
+      ImpCompiler.Compiler.compile_triggers
+         ic_opts
+         dbschema
+         k3_opt_prog
+   )
+      
+;;
 
-  | L_IMP(desugar)  ->
-      (fun dbschema (p, s) tlq f ->
-        let k3prog = K3Compiler.compile_query_to_program
-          ~optimizations:[K3Optimizer.CSE; K3Optimizer.Beta] p
-        in
-        let opts = {IC.desugar = desugar; IC.profile = false} in
-        (print_endline
-          (IC.Compiler.compile_query_to_string opts dbschema k3prog s tlq)))
-  
-  | L_M3(prepared)  -> (fun dbschema (p, s) tlq f -> 
-      GenericIO.write f (fun fd -> 
-          output_string fd
-            (if prepared then
-              let sch,trigs = p in
-              let ptrigs,pats = M3Compiler.prepare_triggers (snd p)
-              in M3Common.PreparedPrinting.pretty_print_prog (sch,ptrigs)
-            else M3Common.pretty_print_prog p)))
-
-  | L_K3(opt)    -> (fun dbschema (p, s) tlq f ->
-      let parse_opt_flag s = match s with
-        | "CSE" | "cse" -> K3Optimizer.CSE
-        | "BREDUCE" | "breduce" -> K3Optimizer.Beta
-        | _ -> give_up ("invalid K3 optimization flag: "^s)
+match language with
+   | L_CPP(_) -> 
+      let compile = ImpCompiler.Compiler.compile_imp
+         ic_opts
+         dbschema
+         ic_prog
+         sources
+         !toplevel_queries
       in
-      let extra_opts =
-        if opt then List.map parse_opt_flag (flag_vals "OPTFLAGS") else []
-      in 
-      let triggers =
-        if opt then (K3Builder.m3_to_k3_opt ~optimizations:extra_opts p) 
-        else (K3Builder.m3_to_k3 p)
-      in
-         GenericIO.write f (fun fd -> 
-            List.iter (fun (pm, rel, args, stmts) ->
-               output_string fd
-                  ("\nON_"^(match pm with M3.Insert -> "insert"
-                                        | M3.Delete -> "delete")^
-                   "_"^rel^"("^(Util.string_of_list "," args)^")\n");
-               List.iter (fun (_,e) -> 
-                  output_string fd ((K3.SR.string_of_expr e)^"\n")
-               ) stmts
-            ) triggers
-         ))
- 
-  | L_INTERPRETER(mode) ->
-      let interpreter = (match mode with
-         | OCG_M3 -> M3OCamlInterpreterCompiler.compile_query
-         | OCG_K3 -> K3InterpreterCompiler.compile_query
-      ) in
-         (fun dbschema q tlq f ->
-           StandardAdaptors.initialize();
-           (interpreter dbschema q tlq f))
-  | L_NONE  -> (fun dbschema q tlq f -> ())
-  | _       -> failwith "Error: Asked to output unknown language"
-    (* Calc should have been outputted before M3 generation *)
+         ExternalCompiler.CPP.compile_and_output compile
+   | L_IMP(_) ->
+      let (_,_,trigs) = ic_prog in
+      let fd = (output_file ()) in
+         List.iter (fun (_,(_,_,_,imp)) ->
+            output_string fd ((ImpCompiler.CPPTarget.string_of_ext_imp imp)^
+                              "\n\n")
+         ) (fst trigs)
+   | L_NONE -> ()
+   | _ -> failwith ("Error: Asked to output unknown language: "^
+                    match (flag_val "LANGUAGE") with None -> "[none]" 
+                                                   | Some(a) -> a)
+
 ;;
 
-let dbschema = List.flatten (List.map (fun (_,x,_) -> x) queries);;
-let compile = compile_function dbschema (m3_prog, sources) !toplevel_queries;;
-
-if (not (flag_bool "COMPILE")) || (flag_bool "OUTPUT") then
-  (* If we've gotten a -c but no -o, don't output the intermediaries *)
-  compile (GenericIO.O_FileDescriptor(output_file))
-else ();;
-
-(********* COMPILE [language of your choosing] *********)
-
-let compile_ocaml in_file_name =
-  let ocaml_cc = "ocamlopt" in
-  let ocaml_lib_ext = ".cmxa" in
-  let dbt_lib_ext = ".cmx" in
-  let ocaml_libs = [ "unix"; "str" ] in
-  let dbt_lib_path = Filename.dirname (flag_val_force "$0") in
-  let dbt_includes = [ "util"; "stages"; "stages/maps"; "lib/ocaml";
-                       "stages/functional" ] in
-  let dbt_libs = [ "util/Util";
-                   "stages/maps/M3";
-                   "stages/maps/M3Common";
-                   "lib/ocaml/SliceableMap";
-                   "lib/ocaml/Values";
-                   "lib/ocaml/Database";
-                   "lib/ocaml/Sources";
-                   "lib/ocaml/StandardAdaptors";
-                   "lib/ocaml/Runtime" ] in
-    (* would nice to generate args dynamically off the makefile *)
-    Unix.execvp ocaml_cc 
-      ( Array.of_list (
-        [ ocaml_cc; "-ccopt"; "-O3"; "-nodynlink"; ] @
-        (if Debug.active "COMPILE-WITH-GDB" then [ "-g" ] else []) @
-        (List.flatten (List.map (fun x -> [ "-I" ; x ]) dbt_includes)) @
-        (List.map (fun x -> x^ocaml_lib_ext) ocaml_libs) @
-        (List.map (fun x -> dbt_lib_path^"/"^x^dbt_lib_ext) dbt_libs) @
-        ["-" ; in_file_name ; "-o" ; (flag_val_force "COMPILE") ]
-      ));;
-  
-let compile_ocaml_via_tmp () =
-  compile (GenericIO.O_TempFile("dbtoaster_", ".ml", compile_ocaml));;
-
-let compile_ocaml_from_output () =
-   match (flag_val "OUTPUT") with
-     | None      -> compile_ocaml_via_tmp ()
-     | Some("-") -> compile_ocaml_via_tmp ()
-     | Some(a)   -> compile_ocaml a
-;;
-
-let compile_flags  flag_name env_name =
-   (flag_vals flag_name) @
-   ( try (Str.split (Str.regexp ":") (Unix.getenv env_name)) 
-     with Not_found -> [] )
-;;
-
-let compile_cpp in_file_name =
-  let cpp_cc = "g++" in
-  let cpp_args = (
-      cpp_cc ::
-      (List.map (fun x->"-I"^x) (compile_flags "INCLUDE_HDR" "DBT_HDR")) @
-      (List.map (fun x->"-L"^x) (compile_flags "INCLUDE_LIB" "DBT_LIB")) @
-      (if Debug.active "COMPILE-WITH-PROFILE" then ["-pg"] else []) @
-      (if Debug.active "COMPILE-WITH-GDB" then ["-g"] else []) @
-      (if Debug.active "COMPILE-WITHOUT-OPT" then [] else ["-O3"]) @
-      [ "-I"; "." ;
-        "-lboost_program_options";
-        "-lboost_serialization";
-        "-lboost_system";
-        "-lboost_filesystem";
-        "-lboost_chrono";
-        in_file_name ;
-        "-o"; (flag_val_force "COMPILE")
-      ]
-   ) in
-      Debug.print "LOG-GCC" (fun () -> (string_of_list " " cpp_args));
-      Unix.execvp cpp_cc (Array.of_list cpp_args)
-;;
-let compile_cpp_via_tmp () =
-  compile (GenericIO.O_TempFile("dbtoaster_", ".cpp", compile_cpp));;
-
-let compile_cpp_from_output () =
-   match (flag_val "OUTPUT") with
-     | None      -> compile_cpp_via_tmp ()
-     | Some("-") -> compile_cpp_via_tmp ()
-     | Some(a)   -> compile_cpp a
-;;   
-
-
-if flag_bool "COMPILE" then
-  match language with
-  | L_OCAML(_) -> compile_ocaml_from_output ()
-  | L_SQL(SL_PLSQL) -> give_up "Compilation of PLSQL not implemented yet"
-  | L_CPP _ -> compile_cpp_from_output ()
-  | _       -> give_up ("No external compiler available for "^
-      ( match language with 
-          | L_SQL(SL_SQL) -> "sql"
-          | L_CALC -> "calculus"
-          | L_M3(_) -> "m3"
-          | L_INTERPRETER(_) -> "the interpreter"
-          | _ -> "this language"
-      ))
-else ()

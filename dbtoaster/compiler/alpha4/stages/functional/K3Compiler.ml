@@ -117,20 +117,14 @@ let compile_triggers trigs : code_t list =
         (List.map (fun (_,e) -> K3Optimizer.optimize args e) cs) 
       in trigger event rel args stmts)
     trigs
-
-let compile_query_to_code ?(disable_opt = false)
-                          (dbschema:(string * Calculus.var_t list) list)
-                          (((schema,m3prog) : M3.prog_t),
-                             (sources: M3.relation_input_t list))
-                          (toplevel_queries : string list): code_t =
-   let compile = 
-      if disable_opt then compile_triggers_noopt else compile_triggers
-   in
-   let m3ptrigs,patterns = M3Compiler.prepare_triggers m3prog in
-   let (_,_,trigs) = collection_prog (schema,m3ptrigs) patterns in
+    
+let compile_k3_to_code (dbschema:(string * Calculus.var_t list) list)
+                       (((schema,patterns,trigs) : K3.SR.program),
+                        (sources: M3.relation_input_t list))
+                       (toplevel_queries : string list): code_t =
    let trig_rels = Util.ListAsSet.no_duplicates
       (List.map (fun (_,rel,_,_) -> rel) trigs) in
-   let ctrigs = compile trigs in
+   let ctrigs = compile_triggers_noopt trigs in
    let sources_and_adaptors =
       List.fold_left (fun acc (s,f,rel,a) ->
          match (List.mem rel trig_rels, List.mem_assoc (s,f) acc) with
@@ -146,13 +140,15 @@ let compile_query_to_code ?(disable_opt = false)
    in
       (main dbschema schema patterns csource ctrigs toplevel_queries)
 
+;;
+
 let compile_query_to_string schema prog tlqs: string =
-  to_string (compile_query_to_code schema prog tlqs)
+  to_string (compile_k3_to_code schema prog tlqs)
 
 let compile_query schema prog tlqs (out : Util.GenericIO.out_t): unit =
   Util.GenericIO.write out 
     (fun out_file -> 
-       output (compile_query_to_code schema prog tlqs) out_file; 
+       output (compile_k3_to_code schema prog tlqs) out_file; 
        output_string out_file "\n")
 
 end

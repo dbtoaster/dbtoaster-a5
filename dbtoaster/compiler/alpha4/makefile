@@ -30,6 +30,7 @@ SOURCE = \
 	stages/imperative/ImpBuilder.ml \
 	stages/imperative/ImpCompiler.mli \
 	stages/imperative/ImpCompiler.ml \
+	stages/ExternalCompiler.ml \
 	lib/ocaml/SliceableMap.mli \
 	lib/ocaml/SliceableMap.ml \
 	lib/ocaml/Values.ml \

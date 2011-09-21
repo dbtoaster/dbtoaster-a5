@@ -117,26 +117,6 @@ sig
 end
 
 
-(* Imperative stage: supports compilation from a K3 program *)
-
-module type CompilerSig =
-sig
-  (* Similar interface to (M3|K3)Compiler.compile_query *)
-  val compile_query_to_string :
-    compiler_options ->
-    (string * Calculus.var_t list) list (* dbschema *)
-    -> K3.SR.program                    (* K3 program *)
-    -> M3.relation_input_t list         (* sources *)
-    -> string list -> string
-
-  val compile_query :
-    compiler_options ->
-    (string * Calculus.var_t list) list (* dbschema *)
-    -> K3.SR.program                    (* K3 program *)
-    -> M3.relation_input_t list         (* sources *)
-    -> string list -> Util.GenericIO.out_t -> unit
-end
-
 
 (* A C++ compiler target implementation *)
 module CPPTarget : ImpTarget =
@@ -2335,6 +2315,51 @@ end (* Typing *)
             
 end (* CPPTarget *)
 
+(* Imperative stage: supports compilation from a K3 program *)
+
+module type CompilerSig =
+sig
+  val compile_triggers :
+    compiler_options ->
+    (string * Calculus.var_t list) list (* dbschema *)
+    -> K3.SR.program                    (* K3 program *)
+    -> (  SourceCode.source_code_t list * 
+          ( M3.pm_t * M3.rel_id_t * M3.var_t list *
+             ( CPPTarget.ext_type,
+               CPPTarget.ext_fn) Imperative.typed_imp_t
+          )
+       ) list * 
+       ( (string * string * string * (string * string) list) list )
+
+  val compile_query_to_string :
+    compiler_options ->
+    (string * Calculus.var_t list) list (* dbschema *)
+    -> K3.SR.program                    (* K3 program *)
+    -> M3.relation_input_t list         (* sources *)
+    -> string list -> string
+
+  val compile_imp :
+    compiler_options ->
+    (string * Calculus.var_t list) list (* dbschema *)
+    -> M3.map_type_t list * M3Common.Patterns.pattern_map *
+       ((  SourceCode.source_code_t list * 
+           ( M3.pm_t * M3.rel_id_t * M3.var_t list *
+              ( CPPTarget.ext_type,
+                CPPTarget.ext_fn) Imperative.typed_imp_t
+           )
+        ) list * 
+        ( (string * string * string * (string * string) list) list ))
+    -> M3.relation_input_t list         (* sources *)
+    -> string list -> Util.GenericIO.out_t -> unit
+
+  val compile_query :
+    compiler_options ->
+    (string * Calculus.var_t list) list (* dbschema *)
+    -> K3.SR.program                    (* K3 program *)
+    -> M3.relation_input_t list         (* sources *)
+    -> string list -> Util.GenericIO.out_t -> unit
+end
+
 
 (* An imperative compiler implementation *)
 module Compiler : CompilerSig =
@@ -2349,16 +2374,19 @@ struct
   module IBC = ImpBuilder.Common
   
   let compile_triggers opts dbschema (schema,patterns,trigs) :
-    (source_code_t list * (ext_type type_t, ext_type, ext_fn) Program.trigger_t) list
+    (    source_code_t list * 
+         (ext_type type_t, ext_type, ext_fn) Program.trigger_t) list * 
+    (    (string * string * string * (string * string) list) list ) 
   =
+    let pm_name pm = match pm with M3.Insert -> "insert" 
+                                 | M3.Delete -> "delete" in
     let imp_type_of_calc_type t = match t with
       | Calculus.TInt -> Host K.TInt
       | Calculus.TLong -> failwith "Unsupport K3/Imp type: long"
       | Calculus.TDouble -> Host K.TFloat
       | Calculus.TString -> failwith "Unsupport K3/Imp type: string"
-    in
-    let stmt_cnt = ref 0 in
-    List.map (fun (evt,rel,args,k3stmts) ->
+    in (
+      (let stmt_cnt = ref 0 in List.map (fun (evt,rel,args,k3stmts) ->
         let arg_types = List.map2 (fun v1 v2 ->
             v1, imp_type_of_calc_type (snd v2)) args (List.assoc rel dbschema)
         in
@@ -2377,13 +2405,59 @@ struct
                  else profile_trigger !stmt_cnt dbschema t
         in stmt_cnt := !stmt_cnt + (List.length k3stmts); r)
       trigs
+      ),(
+      let cnt = ref(-1) in List.map (fun (evt,rel,_,stmts) ->
+        let trig_name = (pm_name evt)^"_"^rel in
+        let exec_ids = snd (List.fold_left (fun (i,acc) _ -> incr cnt;
+          let x = string_of_int !cnt
+          in i+1,acc@[x, trig_name^"_s"^(string_of_int i)]) (0,[]) stmts)
+        in ((rel^"id"), ((pm_name evt)^"_tuple"), ("unwrap_"^trig_name),
+            exec_ids)) 
+        trigs
+      )
+   )
 
   let compile_query_to_string opts dbschema k3prog sources tlqs =
     String.concat "\n\n"
       (List.map (fun (_,(_,_,_,imp)) -> string_of_ext_imp imp)
-        (compile_triggers opts dbschema k3prog))
+        (fst (compile_triggers opts dbschema k3prog)))
+
+  let compile_imp opts dbschema (schema,patterns,(triggers,trig_reg_info))
+                  sources tlqs chan =
+    
+    let map_decls = declare_maps_of_schema schema patterns in
+    let profiling = if opts.profile then declare_profiling schema else Lines([]) in
+    let flat_triggers = 
+      cscl (List.flatten (List.map (fun (t_decls,t) -> 
+             t_decls@(source_code_of_trigger dbschema t))
+             triggers))
+    in
+    let stream_ids, stream_id_decls = declare_streams dbschema in
+    let source_vars, source_and_adaptor_decls =
+      declare_sources_and_adaptors sources in 
+    let global_decls, main_fn =
+      declare_main opts stream_ids schema source_vars trig_reg_info tlqs
+    in
+    let program = ssc (cscl ~delim:"\n"
+      ([preamble opts; global_decls; map_decls; profiling; flat_triggers;
+        stream_id_decls; source_and_adaptor_decls; main_fn;]))
+    in
+      Util.GenericIO.write chan 
+        (fun out_file -> 
+           output_string out_file program; 
+           output_string out_file "\n"; flush out_file)
 
   let compile_query opts dbschema (schema,patterns,trigs) sources tlqs chan =
+    compile_imp 
+      opts 
+      dbschema 
+      (  schema,patterns,
+         compile_triggers opts dbschema (schema,patterns,trigs) )
+      sources
+      tlqs
+      chan
+  
+  (*
     let pm_name pm = match pm with M3.Insert -> "insert" | M3.Delete -> "delete" in
     let map_decls = declare_maps_of_schema schema patterns in
     let profiling = if opts.profile then declare_profiling schema else Lines([]) in
@@ -2414,4 +2488,5 @@ struct
         (fun out_file -> 
            output_string out_file program; 
            output_string out_file "\n"; flush out_file)
+   *)
 end
