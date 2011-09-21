@@ -72,6 +72,7 @@ module EC_CPP_Base : EC_Base = struct
            "-lboost_system";
            "-lboost_filesystem";
            "-lboost_chrono";
+           "-DFUSION_MAX_VECTOR_SIZE=50";
            in_file_name ;
            "-o"; !compile_fname
          ]
