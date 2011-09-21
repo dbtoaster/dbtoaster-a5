@@ -22,7 +22,7 @@ let bind_for_apply_each vt_list e =
 let bind_for_aggregate vt_list (iv,it) e = 
    match vt_list with 
       | [var,vart] -> AssocLambda(AVar(var,vart),AVar(iv,it),e)
-      | _     -> AssocLambda(ATuple(vt),AVar(iv,it),e)
+      | _     -> AssocLambda(ATuple(vt_list),AVar(iv,it),e)
 
 let map_to_expr mapn ins outs =
   (* TODO: value types *)
