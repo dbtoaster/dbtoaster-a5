@@ -901,7 +901,7 @@ struct
         | _ -> type_env 
     in
     let r_opt_pair =
-      fold_imp infer_imp infer_expr build_type_env_imp build_type_env_expr
+      fold_imp_traced infer_imp infer_expr build_type_env_imp build_type_env_expr
         (ref(init_env)) (None,None) untyped_imp
     in extract_imp r_opt_pair
     

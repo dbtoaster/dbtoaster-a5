@@ -1,3 +1,4 @@
+open Util
 open M3
 open K3.SR
 open Format
@@ -84,42 +85,62 @@ let metadata_of_imp_t (i : ('a, 'ext_type, 'ext_fn) imp_t) : 'a = match i with
 let type_of_expr_t (e: ('ext_type, 'ext_fn) typed_expr_t) = metadata_of_expr_t e
 let type_of_imp_t (i: ('ext_type, 'ext_fn) typed_imp_t) = metadata_of_imp_t i
 
+type ('a, 'ext_type, 'ext_fn) expr_trace = 
+   (('a, 'ext_type, 'ext_fn) expr_t -> string -> unit)
+type ('a, 'ext_type, 'ext_fn) imp_trace  = 
+   (('a, 'ext_type, 'ext_fn) imp_t -> string -> unit)
+type ('a, 'ext_type, 'ext_fn) all_trace =
+   ('a, 'ext_type, 'ext_fn) expr_trace * ('a, 'ext_type, 'ext_fn) imp_trace
+   
 (* Fold function *)
-let rec fold_expr (f:   'b -> 'c list -> ('a, 'ext_type, 'ext_fn) expr_t -> 'c)
+let rec fold_expr ?(trace:(('a, 'ext_type, 'ext_fn) all_trace option) = None)
+                  (f:   'b -> 'c list -> ('a, 'ext_type, 'ext_fn) expr_t -> 'c)
                   (pre: 'b ->            ('a, 'ext_type, 'ext_fn) expr_t -> 'b)
                   (acc: 'b) (init: 'c) (e : ('a, 'ext_type, 'ext_fn) expr_t) : 'c
 =
-  let nacc = pre acc e in
-  let app_e = f nacc in
-  let rcr = fold_expr f pre nacc init in
-  begin match e with
-    | Const _ -> app_e [init] e
-    | Var _ -> app_e [init] e
-    | Tuple (_,el) -> app_e (List.map rcr el) e
-    | Op (_,_,ce) -> app_e [rcr ce] e
-    | BinOp (_,_,le,re) -> app_e (List.map rcr [le; re]) e
-    | Fn (_,_,args) -> app_e (List.map rcr args) e  
-  end
-and fold_imp (f_imp :   'b -> 'c list -> ('a, 'ext_type, 'ext_fn) imp_t  -> 'c)
+  try
+     let nacc = pre acc e in
+     let app_e = f nacc in
+     let rcr = fold_expr ~trace:trace f pre nacc init in
+     begin match e with
+       | Const _ -> app_e [init] e
+       | Var _ -> app_e [init] e
+       | Tuple (_,el) -> app_e (List.map rcr el) e
+       | Op (_,_,ce) -> app_e [rcr ce] e
+       | BinOp (_,_,le,re) -> app_e (List.map rcr [le; re]) e
+       | Fn (_,_,args) -> app_e (List.map rcr args) e  
+     end
+   with Failure(msg) -> (
+      (match trace with None -> () | Some(f,_) -> f e msg);
+      failwith msg
+   )
+   
+and fold_imp ?(trace:(('a, 'ext_type, 'ext_fn) all_trace option) = None)
+             (f_imp :   'b -> 'c list -> ('a, 'ext_type, 'ext_fn) imp_t  -> 'c)
              (f_expr:   'b -> 'c list -> ('a, 'ext_type, 'ext_fn) expr_t -> 'c)
              (pre:      'b ->            ('a, 'ext_type, 'ext_fn) imp_t  -> 'b)
              (pre_expr: 'b ->            ('a, 'ext_type, 'ext_fn) expr_t -> 'b)
              (acc: 'b) (init: 'c) (i : ('a, 'ext_type, 'ext_fn) imp_t) : 'c
 =
-  let nacc = pre acc i in
-  let app_f = f_imp nacc in
-  let rcr_e = fold_expr f_expr pre_expr nacc init in
-  let rcr = fold_imp f_imp f_expr pre pre_expr nacc init in
-  begin match i with
-    | Expr (_,e) -> app_f [rcr_e e] i
-    | Block (_,l) -> app_f (List.map rcr l) i 
-    | Decl (_,(id,ty),Some(init)) -> app_f [rcr_e init] i
-    | Decl (_,(id,ty),None) -> app_f [] i
-    | For (_,((id,ty),f),s,b) ->
-      let rs = rcr_e s in app_f [rs; rcr b] i
-    | IfThenElse(_,p,t,e) ->
-      let rp = rcr_e p in app_f ([rp]@(List.map rcr [t;e])) i
-  end
+  try
+     let nacc = pre acc i in
+     let app_f = f_imp nacc in
+     let rcr_e = fold_expr ~trace:trace f_expr pre_expr nacc init in
+     let rcr = fold_imp ~trace:trace f_imp f_expr pre pre_expr nacc init in
+     begin match i with
+       | Expr (_,e) -> app_f [rcr_e e] i
+       | Block (_,l) -> app_f (List.map rcr l) i 
+       | Decl (_,(id,ty),Some(init)) -> app_f [rcr_e init] i
+       | Decl (_,(id,ty),None) -> app_f [] i
+       | For (_,((id,ty),f),s,b) ->
+         let rs = rcr_e s in app_f [rs; rcr b] i
+       | IfThenElse(_,p,t,e) ->
+         let rp = rcr_e p in app_f ([rp]@(List.map rcr [t;e])) i
+     end
+   with Failure(msg) -> (
+      (match trace with None -> () | Some(_,f) -> f i msg);
+      failwith msg
+   )
 
 (* AST stringification *)
 let string_of_op op = match op with
@@ -218,7 +239,16 @@ let string_of_imp string_of_meta string_of_ext_type string_of_ext_fn i =
   in pp_set_margin str_formatter 80;
      (*pp_set_max_indent str_formatter 40;*)
      flush_str_formatter (ignore (aux i))
-    
+
+let (fold_expr_traced,fold_imp_traced) = 
+   let trace_expr e msg = () in
+   let trace_imp i msg = Debug.print "IMPERATIVE-TRACEBACK" (fun () ->
+      "\n------- Traceback -------\n"^
+      (string_of_imp (fun _ -> "") (fun _ -> "") (fun _ -> "") i)
+   ) in (
+      (fun a b c -> fold_expr ~trace:(Some(trace_expr, trace_imp)) a b c),
+      (fun a b c -> fold_imp  ~trace:(Some(trace_expr, trace_imp)) a b c)
+   )
 
 let string_of_imp_noext (i : ('a, 'ext_type, 'ext_fn) imp_t) : string =
   string_of_imp

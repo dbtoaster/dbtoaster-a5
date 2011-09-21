@@ -64,16 +64,36 @@ val metadata_of_imp_t : ('a, 'ext_type, 'ext_fn) imp_t -> 'a
 val type_of_expr_t : ('ext_type, 'ext_fn) typed_expr_t -> 'ext_type type_t
 val type_of_imp_t : ('ext_type, 'ext_fn) typed_imp_t -> 'ext_type type_t
 
-val fold_expr : ('b -> 'c list -> ('a, 'ext_type, 'ext_fn) expr_t -> 'c) ->
+type ('a, 'ext_type, 'ext_fn) expr_trace = 
+   (('a, 'ext_type, 'ext_fn) expr_t -> string -> unit)
+type ('a, 'ext_type, 'ext_fn) imp_trace  = 
+   (('a, 'ext_type, 'ext_fn) imp_t -> string -> unit)
+type ('a, 'ext_type, 'ext_fn) all_trace =
+   ('a, 'ext_type, 'ext_fn) expr_trace * ('a, 'ext_type, 'ext_fn) imp_trace
+
+val fold_expr : ?trace:(('a, 'ext_type, 'ext_fn) all_trace) option ->
+                ('b -> 'c list -> ('a, 'ext_type, 'ext_fn) expr_t -> 'c) ->
                 ('b ->            ('a, 'ext_type, 'ext_fn) expr_t -> 'b) ->
                  'b -> 'c -> ('a, 'ext_type, 'ext_fn) expr_t -> 'c
 
-val fold_imp : ('b -> 'c list -> ('a, 'ext_type, 'ext_fn) imp_t  -> 'c) ->
+val fold_imp : ?trace:(('a, 'ext_type, 'ext_fn) all_trace) option ->
+               ('b -> 'c list -> ('a, 'ext_type, 'ext_fn) imp_t  -> 'c) ->
                ('b -> 'c list -> ('a, 'ext_type, 'ext_fn) expr_t -> 'c) ->
                ('b ->            ('a, 'ext_type, 'ext_fn) imp_t  -> 'b) ->
                ('b ->            ('a, 'ext_type, 'ext_fn) expr_t -> 'b) ->
                 'b -> 'c -> ('a, 'ext_type, 'ext_fn) imp_t -> 'c
 
+val fold_expr_traced :
+                ('b -> 'c list -> ('a, 'ext_type, 'ext_fn) expr_t -> 'c) ->
+                ('b ->            ('a, 'ext_type, 'ext_fn) expr_t -> 'b) ->
+                 'b -> 'c -> ('a, 'ext_type, 'ext_fn) expr_t -> 'c
+
+val fold_imp_traced : 
+               ('b -> 'c list -> ('a, 'ext_type, 'ext_fn) imp_t  -> 'c) ->
+               ('b -> 'c list -> ('a, 'ext_type, 'ext_fn) expr_t -> 'c) ->
+               ('b ->            ('a, 'ext_type, 'ext_fn) imp_t  -> 'b) ->
+               ('b ->            ('a, 'ext_type, 'ext_fn) expr_t -> 'b) ->
+                'b -> 'c -> ('a, 'ext_type, 'ext_fn) imp_t -> 'c
 
 (* AST stringification *)
 val string_of_imp :
