@@ -19,6 +19,7 @@ let buggy_apply_nesting =
           Var("current_slice",Collection(TTuple[TFloat ; TFloat ; TFloat ; TFloat]))),
         Var("existing_slice",Collection(TTuple[TFloat ; TFloat ; TFloat ; TFloat]))))
 ;;
+
 Debug.log_unit_test "Inner Apply Chaining"
    K3.SR.string_of_expr
    (K3Optimizer.inline_collection_functions

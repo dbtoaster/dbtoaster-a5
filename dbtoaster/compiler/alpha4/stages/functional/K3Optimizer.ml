@@ -387,7 +387,7 @@
  *        subbing as in the 3-way join.
  *)
 
-
+open Util
 open M3
 open K3.SR
 
@@ -605,18 +605,30 @@ let nested_map map_f = match map_f with
     | _ -> false
 
 let rec inline_collection_functions substitutions expr =
+  Debug.print "INLINE-COLLECTION-FUNCTIONS" (fun () ->
+    "---- Current substitutions ----\n"^
+    (list_to_string (fun ((v,t),subst) -> v^"<="^(code_of_expr subst)) 
+                    substitutions)^
+    "\n---- Current expression ----\n"^
+    (code_of_expr expr)^"\n"
+  );
   let recur = inline_collection_functions in
   let rebind subs vt arg =
-    let ns = if List.mem_assoc vt subs then List.remove_assoc vt subs else subs
+    let ns = 
+      if List.mem_assoc vt subs 
+      then List.remove_assoc vt subs 
+      else subs
     in (vt,arg)::ns
   in
   begin match expr with
   | Apply(Lambda(AVar(v, ((Collection _) as t)), body), arg) ->
-    descend_expr (recur (rebind substitutions (v,t) 
-                           (descend_expr (recur substitutions) arg))
-                 ) body
-  | Var(v,t) -> if List.mem_assoc (v,t) substitutions
-                then List.assoc (v,t) substitutions else expr
+    Debug.print "INLINE-COLLECTION-FUNCTIONS" (fun () -> "*** APPLY ***");
+    (recur (rebind substitutions (v,t) (recur substitutions arg))
+           body)
+  | Var(v,t) -> 
+    Debug.print "INLINE-COLLECTION-FUNCTIONS" (fun () -> "*** VAR ***");
+    if List.mem_assoc (v,t) substitutions
+    then List.assoc (v,t) substitutions else expr
   | _ -> descend_expr (recur substitutions) expr
   end
 
