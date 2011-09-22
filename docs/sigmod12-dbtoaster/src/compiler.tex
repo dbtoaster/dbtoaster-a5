@@ -11,16 +11,62 @@ CREATE TABLE T(d int, e int);
 
 We wish to maintain a view over the query:
 \begin{verbatim}
-SELECT SUM(R.a  * T.e)
-FROM R, S, T
-WHERE R.b = S.b AND S.c < T.d;
+q := SELECT SUM(R.a  * T.e)
+     FROM R, S, T
+     WHERE R.b = S.b AND S.c < T.d;
 \end{verbatim}
 \end{example}
 
-Prior to compilation, the SQL query is translated verbatim into the compiler's internal query representation.  This representation is closely related to the AGCA language presented in \cite{dbtoaster-pods}.  For brevity, the internal representation is omitted from this paper, and query terms in DBToaster's internal representation are presented as an equivalent SQL expression.  \todo{present Calculus in the appendix?  Is there an appendix?}
+Prior to compilation, the SQL query is translated verbatim into the compiler's internal query representation.  This representation is closely related to the AGCA language presented in \cite{dbtoaster-pods}.  For brevity, the internal representation is omitted from this paper, and query expressions in DBToaster's internal representation are presented in the form of an equivalent expression in SQL.  \todo{present Calculus in the appendix?  Is there an appendix?}
 
 \subsection{Building the Materialization Plan}
-The first stage in the compilation pipeline is the construction of a {\em materialization plan}, a representation of the operations and data structures required to maintain the query being compiled.  The materialization plan is constructed using two fundamental operations: {\bf delta} and {\bf extract}.  Delta identifies the set of query expressions required to incrementally maintain a data structure when one of the base relations changes.  Extract identifies the set of data structures required to evaluate a query expression.  We document these operations more extensively in Section \ref{sec:iprogram:mplan}. 
+The first stage in the compilation pipeline is a recursive compilation process that establishes a strategy for incrementally maintaining the query results -- a {\em materialization plan}.  This process is similar to the recursive compilation of \cite{dbtoaster-cidr,dbtoaster-pods}, and is described in detail in Section \ref{}.  The first step in the recursive compilation is the computation of the {\em delta of the query with respect an update to one of its relations}.  The delta expresses how the results of the query change when the delta's relation is updated.  
+
+\begin{example}
+For example, consider the delta of {\tt q} with respect to the insertion of tuple $\left< \alpha, \beta\right>$ into relation {\tt R}.  We write this as $\Delta_{{\tt R}(\alpha, \beta)}{\tt q :=}$
+\\ \\
+\noindent{\tt SELECT SUM(}$\alpha${\tt\ * T.e)\\
+FROM\ \ \ S, T\\
+WHERE\ \ }$\beta${\tt\ = S.b AND S.c < T.d;}
+\\ \\
+In this expression, the two parameters $\alpha$ and $\beta$ are assigned values from the tuple being inserted.  Note that the delta expression may be further simplified (using the distributivity of addition and multiplication) to: 
+\\ \\
+\noindent $\alpha${\tt\ * (SELECT SUM(T.e)\\
+\hspace*{8.8mm}FROM\ \ \ S, T\\
+\hspace*{8.8mm}WHERE\ \ }$\beta${\tt\ = S.b AND S.c < T.d);
+}
+\end{example}
+
+At runtime, an update to one of the base relations in the query triggers an update to a datastructure maintaining the query result.  The value of the update is computed by using the appropriate delta query; This process is virtually identical to the behavior of incremental view maintenance techniques\cite{cite?}.  
+
+However, the delta queries are queries in their own right -- the delta operation is closed under the compiler's internal representation.  As a consequence, it is possible to incrementally maintain the delta queries in the same way that the original query is incrementally maintained.  The compiler analyzes the delta query and identifies an incrementally maintainable datastructure that can be used to efficiently answer the query
+
+
+
+The compiler analyzes the delta query and identifies one or more strategies for instantiating a 
+
+ datastructures to incrementally maintain, or {\em materialize} it.
+
+
+ {\em materializing} it: 
+
+Because 
+
+
+
+The compiler takes advantage of the delta queries being in the same language by incre
+
+
+ by incrementally maintaining the delta queries as well as the original query.  The compiler analyzes the delta query and identifies one or more ways of {\em materializing}
+
+
+The first stage in the compilation pipeline is the construction of a {\em materialization plan}, a representation of the operations and data structures required to maintain the query being compiled.  
+
+
+ \cite{dbtoaster-cidr}, 
+
+
+The materialization plan is constructed using two fundamental operations: {\bf delta} and {\bf extract}.  Delta identifies the set of query expressions required to incrementally maintain a data structure when one of the base relations changes.  Extract identifies the set of data structures required to evaluate a query expression.  We document these operations more extensively in Section \ref{sec:iprogram:mplan}. 
 
 A materialization plan is constructed by invoking delta to produce a series of maintenance queries, extract to produce a series of data structures required to evaluate those queries, delta to produce maintenance queries for those data structures, and so forth recursively\footnote{As discussed in \cite{dbtoaster-pods}, the delta operation can be constructed in such a way that guarantees termination of this recursive process.}.  
 
