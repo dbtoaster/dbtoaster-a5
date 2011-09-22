@@ -571,8 +571,7 @@ let rec apply_bottom_up (aggsum_f: term_t -> relcalc_t -> term_t)
                                   (CalcRing.apply_to_leaves r_leaf_f r)
        |  _ -> TermRing.mk_val(lf)
    in
-   TermRing.apply_to_leaves t_leaf_f term
-
+   TermRing.apply_to_leaves t_leaf_f term               
 
 (* polynomials, recursively: in the end, +/union only occurs on the topmost
    level.
@@ -1126,26 +1125,32 @@ and extract_aggregates_from_term (aggressive: bool) (term: term_t) =
       (TermRing.fold List.flatten List.flatten (fun x->x) t_leaf_f term)
 
 
-(* Note: the substitution is bottom-up. This means we greedily replace
-   smallest subterms, rather than largest ones. This has to be kept in
-   mind if terms in aggsum_theta may mutually contain each other.
-
-   FIXME: substitute_in_term currently can only replace AggSum terms,
+(* FIXME: substitute_in_term currently can only replace AggSum terms,
    not general terms.
 *)
 let substitute_in_term (aggsum_theta: term_mapping_t)
-                       (term: term_t): term_t =
-   let aconstraint_f c t1 t2 =
-      CalcRing.mk_val(AtomicConstraint(c, t1, t2))
-   in
-   let aggsum_f f r =
-      let this = TermRing.mk_val(AggSum(f, r))
-      in
-      Util.Function.apply aggsum_theta this this
+                       (top_term: term_t): term_t =
+   let rec rcr_term term = 
+      TermRing.apply_to_leaves (fun lf ->
+         match lf with 
+         | AggSum(f, r) ->
          (* FIXME: we have to unify the variables of the
             externals to be matched. See also apply_term_mapping. *)
+            let this = TermRing.mk_val(AggSum(f, r)) in
+               if List.mem_assoc this aggsum_theta
+                  then List.assoc this aggsum_theta 
+                  else TermRing.mk_val (AggSum(rcr_term f, rcr_calc r))
+         | _ -> TermRing.mk_val lf
+      ) term
+   and    rcr_calc calc =
+      CalcRing.apply_to_leaves (fun lf ->
+         match lf with
+         | AtomicConstraint(c, t1, t2) ->
+            CalcRing.mk_val (AtomicConstraint(c, rcr_term t1, rcr_term t2))
+         | _ -> CalcRing.mk_val lf
+      ) calc
    in
-   apply_bottom_up aggsum_f aconstraint_f term
+      rcr_term top_term
 
 let mk_term_mapping (map_name_prefix: string)
                     (workload: (((var_t list) * term_t) list)):
