@@ -1,3 +1,4 @@
+open Util
 open M3
 open K3.SR
 
@@ -2397,7 +2398,9 @@ struct
             let i = imp_of_ir (var_type_env type_env) (ir_of_expr (snd s))
             in match i with
               | [x] -> x | _ -> Imperative.Block (None, i)
-          in infer_types type_env untyped_imp) k3stmts
+          in
+          Debug.print "UNTYPED-IMP" (fun () -> string_of_imp_noext untyped_imp);  
+          infer_types type_env untyped_imp) k3stmts
         in 
         let dsimp = Imperative.Block (Host TUnit, List.map dsi si_l) in
         let t = (evt,rel,args, dsimp) in

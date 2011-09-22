@@ -604,7 +604,7 @@ struct
       | _ -> List.flatten parts
     in fold_expr fold_f (fun x _ -> x) None [] expr
 
-  let inline_decls env imp =
+  let rec inline_decls env imp =
     let rec aux envacc dacc eacc i = match i with
       | Expr(None, BinOp(None, Assign, Var(None, ((id,_) as d)), e)) ->
         if not (List.mem_assoc d dacc) then envacc, dacc, eacc, [i]
@@ -621,7 +621,14 @@ struct
         let w,x,y,z = List.fold_left (fun (envacc,dacc,eacc,iacc) li ->
           let a,b,c,d = aux envacc dacc eacc li
           in a,b,c,(iacc@d)) (envacc,dacc,eacc,[]) l
-        in envacc, x, y, if z = [] then [] else [Block(None,z)]
+        in
+        let runb, lunb = List.partition (fun (d,_) -> List.mem d envacc) x in
+        let rinit, linit = List.partition (fun e -> match e with 
+          | Decl(_,d,_) -> List.mem d envacc
+          | _ -> failwith "invalid initialized declaration") y
+        in
+        let local_decls = List.map (fun (d,_) -> Decl(None, d, None)) lunb
+        in envacc, runb, rinit, [Block(None, local_decls@linit@z)]
 
       | Decl(None, d, None) -> envacc@[d], dacc@[d, envacc], eacc, []
       | _ -> envacc, dacc, eacc, [i]
@@ -645,6 +652,12 @@ struct
   let imp_of_ir (env : 'ext_type_t var_t list)
                  ir : ('a option, 'ext_type, 'ext_fn) imp_t list =
     let flat_ir = linearize_ir ir in
+
+    Debug.print "IMP-IR" (fun () ->
+      String.concat "\n" (List.map (fun (meta,(tag,c)) -> 
+        (sym_of_meta meta)^": "^(String.concat "," (List.map sym_of_meta c))^"\n"^
+        (sym_of_meta meta)^": "^(string_of_tag tag)) flat_ir));
+    
     let gc_op op = match op with
       | AK.Add -> Add | AK.Mult -> Mult | AK.Eq -> Eq | AK.Neq -> Neq
       | AK.Lt -> Lt | AK.Leq -> Leq | AK.If0 -> If0
@@ -740,7 +753,7 @@ struct
          * thus does not pass it on to any children. *)
         | Iterate | Map ->
           let fn_meta = match valid_sym_of_meta meta with
-            | None -> cmetai 0
+            | None -> push_lambda_meta (cmetai 0) (cmetai 0)
             | Some _ -> push_meta_valid meta (cmetai 0)
           in (fn_meta::(List.tl cmeta)),
              [arg_of_lambda (ctagi 0)], [None; decl_f false (cmetai 1)]
@@ -911,9 +924,7 @@ struct
         end
 
       | Apply ->
-        Debug.print "IMP-DEBUG-APPLY" (fun _ ->
-          string_of_k3ir ir
-        );
+        Debug.print "IMP-DEBUG-APPLY" (fun _ -> string_of_k3ir ir);
         let decls = match cimpo 1, cexpro 1 with
           | Some(i), None -> 
             if args_to_bind = [] then i
