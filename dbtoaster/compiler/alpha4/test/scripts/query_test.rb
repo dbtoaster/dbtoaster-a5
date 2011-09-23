@@ -32,11 +32,11 @@ $queries = {
     :answer => 18753367048934.0,
     :valid_opts => ["depth-1"]
   },
-  "rstar" => {
-    :path => "test/sql/simple/rstar.sql",
-    :type => :singleton,
-    :answer => 0
-  },
+#  "rstar" => {
+#    :path => "test/sql/simple/rstar.sql",
+#    :type => :singleton,
+#    :answer => 0
+#  },
   "ssb4" => {
     :path => "test/sql/tpch/ssb4.sql",
     :type => :singleton,
