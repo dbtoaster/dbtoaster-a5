@@ -45,6 +45,8 @@ WHERE  b.volume > 0.0001 * (SELECT SUM(b1.volume)
   AND  a.volume > 0.0001 * (SELECT SUM(a1.volume) 
                             FROM   asks a1);
 \end{verbatim}
+
+\todo{Back of napkin calculations/citation for expected update rate}
 \end{example}
 
 \begin{example}
@@ -63,6 +65,8 @@ WHERE       c.custkey = o.custkey
   AND    sn.nationkey = s.nationkey
 GROUP BY sn.regionkey, cn.regionkey, PART.type;
 \end{verbatim}
+
+\todo{Back of napkin calculations/citation for expected update rate}
 \end{example}
 
 \begin{example}
@@ -82,6 +86,8 @@ WHERE  (SELECT COUNT(*)
         AND s3.status = 1)
 GROUP BY t.priority;
 \end{verbatim}
+
+\todo{Back of napkin calculations/citation for expected update rate}
 \end{example}
 
 \subsection{Monitoring with Active Databases}
@@ -112,7 +118,11 @@ WHERE       c.custkey = o.custkey
 GROUP BY sn.regionkey, cn.regionkey, PART.type;
 \end{verbatim}
 
-Note that all columns from {\tt LINEITEM} have been replaced by the corresponding value being inserted.  The result of running this query is the delta to the original table.  The delta is then merged into the original query's materialized results -- group by terms are paired with like values from the original query, and the new sums are added to the corresponding old ones.  After merging in the delta, the materialized view correctly represents the results of the original query after the insertion into {\tt LINEITEM}.
+Note that all columns from the {\tt LINEITEM} table have been replaced by the corresponding value from the inserted tuple.  
+
+The result of running this query is the delta to the original table.  The delta is then merged into the original query's materialized results -- group by terms are paired with like values from the original query, and the new sums are added to the corresponding old ones.  
+
+After merging it with the delta, the materialized view correctly represents the results of the original query after the insertion into {\tt LINEITEM}.
 \end{example}
 
 Because the delta query is simpler, it can be evaluated more efficiently than the original, conceivably saving time on updates.  IVM functionality has been implemented into most commercial database systems, including the two we test.
@@ -153,8 +163,75 @@ Because the delta query is simpler, it can be evaluated more efficiently than th
 \caption{Performance results for Commercial DBMS 2 on Examples \ref{ex:dbfail:stock} (a), \ref{ex:dbfail:tpch} (b), and \ref{ex:dbfail:network} (c).}
 \end{figure*}
 
+Figures \ref{fig:dbfail:postgres}, \ref{fig:dbfail:CD1}, and \ref{fig:dbfail:CD2} show how the Postgres and two Commercial DBMSes (respectively) perform in each of the three example scenarios.  We consider three techniques for keeping a live view of the query result:
+\begin{itemize}
+\item {\bf Variable Refresh:} Periodically re-evaluate the query.  Note that in this implementation this results in the query not being monitored continually; The implementation can not detect trigger conditions which arise and disappear in between re-evaluations.
+\item {\bf Full Refresh:} Use triggers to initiate a full refresh of the query results after every update to a base relation.  
+\item {\bf Incremental Maintenance:} Use IVM to update the query results after every update to the base relation.  In the case of Postgres where IVM is not natively supported, we compute the delta query by hand and implement it via triggers.
+\end{itemize}
 
+\todo{Hardware overview goes here}.  Each graph shows the rate of updates supported by our configuration with respect to the frequency with which the query results are refreshed.  The Full Refresh and Incremental Maintenance implementations refresh the query results after every update, and are unaffected by the desired refresh rate.
+
+\todo{Rewrite this paragraph after we have results}
+Even with IVM techniques (which must be implemented by hand in some implementations), these systems can handle a maximum of \todo{fill in} updates per second to the base relations.  If users are willing resort to sampling as infrequently as once per one or ten seconds, it is possible to improve that to as much as \todo{fill in} or \todo{fill in} updates per second respectively.  Even with sampling, this is not sufficient to achieve the sorts of update rates required by our example applications.
 
 \subsection{Monitoring with Stream Processors}
+Database Management Systems -- even Active Databases -- are not designed for monitoring of rapidly changing data.  A more closely related area is the field of Stream Processing\cite{?}.  In a Stream Processing system, users define pipelines similar to traditional query plans, except that each edge in the plan is a continuous stream of data.  Selection and projection operators are evaluated immediately.  Window operators\cite{?} {\em temporarily} cache tuples appearing on a stream, and allow joins over the most recent set of tuples.
 
-\subsection{Analysis}
+Recently, most commercial stream processing systems have begun to support Complex Event Processing\cite{?}.  Essentially, the stream processor is extended with support for traditional relational tables, making it possible to implement joins between relational tables and streams.  
+
+\begin{figure*}
+\begin{center}
+\begin{tabular}{ccc}
+\includegraphics[width=2in]{../graphics-tmp/placeholder_stream_result} &
+\includegraphics[width=2in]{../graphics-tmp/placeholder_stream_result} &
+\includegraphics[width=2in]{../graphics-tmp/placeholder_stream_result} \\
+(a) & (b) & (c)
+\end{tabular}
+\end{center}
+\label{fig:dbfail:CSP1}
+\caption{Performance results for Commercial Stream Processor 1 on Examples \ref{ex:dbfail:stock} (a), \ref{ex:dbfail:tpch} (b), and \ref{ex:dbfail:network} (c).}
+\end{figure*}\begin{figure*}
+\begin{center}
+\begin{tabular}{ccc}
+\includegraphics[width=2in]{../graphics-tmp/placeholder_stream_result} &
+\includegraphics[width=2in]{../graphics-tmp/placeholder_stream_result} &
+\includegraphics[width=2in]{../graphics-tmp/placeholder_stream_result} \\
+(a) & (b) & (c)
+\end{tabular}
+\end{center}
+\label{fig:dbfail:CSP2}
+\caption{Performance results for Commercial Stream Processor 2 on Examples \ref{ex:dbfail:stock} (a), \ref{ex:dbfail:tpch} (b), and \ref{ex:dbfail:network} (c).}
+\end{figure*}
+
+Figures \ref{fig:dbfail:CSP1}, \ref{fig:dbfail:CSP2}, and \ref{fig:dbfail:CD2} show how two Commercial Stream Processing Systems perform in each of the three example scenarios.  We have also considered a third system, but were unable to implement these scenarios using it.
+
+We consider two implementations of each example in each stream processor: one based on a straight translation of the query into the stream processor's language (Full Refresh), and one based on a translation of the delta queries that would have been generated by IVM (Incremental Maintenance).
+
+\todo{Rewrite this paragraph after we have results}
+Even with IVM techniques (which must be implemented by hand in some implementations), these systems can handle a maximum of \todo{fill in} updates per second to the base relations.  This is, in part, the result of a need to lock the base relations before applying updates.  The CEP implementation in the stream processing systems we have analyzed is geared towards implementing tables as purely input or output sources -- persistent state used by the query is assumed to be relatively stable.  
+
+\begin{figure}
+\begin{center}
+\begin{tabular}{|l|c|c|c|}
+\hline
+{\bf Engine}   & {\bf 2.1} & {\bf 2.2} & {\bf 2.3} \\\hline
+{\bf Postgres} & 8 / 30    & 30 / 120  & 15 / 100 \\\hline
+{\bf CDBMS 1}  & 8 / 9     & 30 / 31   & 15 / 16  \\\hline
+{\bf CDBMS 2}  & 8 / 9     & 30 / 31   & 15 / 16  \\\hline
+{\bf CSP 1}    & 40 / 120  & 60 / 200  & 50 / 200 \\\hline
+{\bf CSP 2}    & 40 / 120  & 60 / 200  & 50 / 200 \\\hline
+\end{tabular}
+
+\todo{Update these numbers to be correct}
+\end{center}
+\label{fig:dbfail:locBakeoff}
+\caption{Lines of code required to implement each of the example scenarios (including schema definitions) in Postgres, the two commercial database systems (CDBMS 1,2), and the two commercial stream processors (CSP 1,2).  For each engine/scenario pair, both the number of lines to implement the query and it's IVM equivalent are shown (respectively).}
+\end{figure}
+
+Another metric that must be considered is implementation complexity.  Figure \ref{fig:dbfail:locBakeoff} shows the number of lines of code required to implement each query in each of these engines.  The use of persistent state in the commercial stream processor forces the user to explicitly manage several messy aspects of the computation (e.g., locking the tables before updating/reading them).  Furthermore, when implementing IVM in systems that do not support it (Postgres and the two stream processors), the delta queries must be computed by hand and explicitly defined, causing a further blowup in number of lines.
+
+\subsection{Implementation Challenges}
+\todo{Yanif's horror stories}
+
+\subsection{Other Related Work}
