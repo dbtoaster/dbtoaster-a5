@@ -13,8 +13,9 @@
 \newcommand{\comment}[1]{}
 \newcommand{\tinysection}[1]{\vspace{0.5mm}\noindent{\bf #1.}}
 \newcommand{\tuple}[1]{{\langle#1\rangle}}
-\newcommand{\todo}[1]{\textcolor{red}{#1}}
-\newcommand{\note}[1]{\textcolor{blue}{#1}}
+\newcommand{\todo}[1]{[\textcolor{red}{#1}]}
+\newcommand{\note}[1]{[\textcolor{blue}{#1}]}
+\newcommand{\dbtoaster}[0]{[ANONYMIZED]}
 
 \newtheorem{example}{Example}[section]
 
@@ -47,21 +48,27 @@
 \maketitle
 
 \section{Introduction}
+\label{sec:introduction}
 \input{introduction.tex}
 
 \section{Motivation and Related Work}
+\label{sec:dbfail}
 \input{dbfail.tex}
 
 \section{Compiler Overview}
+\label{sec:compiler}
 \input{compiler.tex}
 
 \section{Incremental Programs}
+\label{sec:iprogram}
 \input{iprogram.tex}
 
 \section{Functional Optimization}
+\label{sec:functional}
 \input{functional.tex}
 
 \section{Experimental Results}
+\label{sec:experiments}
 \input{experiments.tex}
 
 \section{Conclusion}
