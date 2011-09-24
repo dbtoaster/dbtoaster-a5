@@ -82,9 +82,10 @@ CREATE TABLE NATION (
   LINE DELIMITED nation;
 
 
- SELECT sn.name, 
+ SELECT sn.regionkey, 
+        cn.regionkey,
         PART.type,
-        SUM(extendedprice)
+        SUM(LINEITEM.quantity)
  FROM   CUSTOMER, ORDERS, LINEITEM, PART, SUPPLIER, NATION cn, NATION sn
  WHERE  CUSTOMER.custkey = ORDERS.custkey
    AND  ORDERS.orderkey = LINEITEM.orderkey
@@ -93,7 +94,5 @@ CREATE TABLE NATION (
  -- AND  ORDERS.orderdate >= DATE('1997-01-01')
  -- AND  ORDERS.orderdate <  DATE('1998-01-01')
    AND  cn.nationkey = CUSTOMER.nationkey
- -- AND  cn.regionkey = 1
    AND  sn.nationkey = SUPPLIER.nationkey
- -- AND  sn.regionkey = 1
- GROUP BY sn.name, PART.type
+ GROUP BY sn.regionkey, cn.regionkey, PART.type

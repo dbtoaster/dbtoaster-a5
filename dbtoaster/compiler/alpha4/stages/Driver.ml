@@ -229,11 +229,13 @@ let compile_depth =
 
 (********* TRANSLATE SQL TO RELCALC *********)
 
+Debug.print "LOG-DRIVER" (fun () -> "PARSING SQL");;
+
+Debug.exec "PARSE" (fun () -> Parsing.set_trace true);;
+
 let sql_file_to_calc f =
   let lexbuff = Lexing.from_channel (if f <> "-" then (open_in f) else stdin) in
   Sqlparser.dbtoasterSqlList Sqllexer.tokenize lexbuff;;
-
-Debug.exec "PARSE" (fun () -> Parsing.set_trace true);;
 
 let (queries, sources) = 
   let (queries, sources) = 
@@ -267,6 +269,9 @@ if language == L_SQL(SL_SQL) then
 else ();;
 
 (********* IF NEEDED, PRODUCE SEMICOMPILED CALC *********)
+
+
+Debug.print "LOG-DRIVER" (fun () -> "COMPILING DELTAS");;
 
 if language == L_DELTA then
   (
@@ -329,6 +334,8 @@ let calc_into_m3_inprogress qname (qlist,dbschema,qvars) m3ip =
         )
       ), sub_id+1 ) (m3ip,1) qlist
     )
+;;
+Debug.print "LOG-DRIVER" (fun () -> "FINALIZING M3");;
 
 let m3_prog = 
   let (m3_prog_in_prog,_) = 
@@ -383,6 +390,8 @@ match language with
    | _ -> ()
 ;;
 
+Debug.print "LOG-DRIVER" (fun () -> "BUILDING K3");;
+
 (********* If we're up to this point, K3 is required *********)
 
 let k3_prog = K3Builder.m3_to_k3 m3_prog;;
@@ -407,6 +416,9 @@ if language = L_K3(false) then (
 ;;
 
 (********* Apply K3 optimizations *********)
+
+Debug.print "LOG-DRIVER" (fun () -> "OPTIMIZING K3");;
+
 let k3_optimizations = 
 (*   let parse_opt_flag s = match s with
      | "CSE" | "cse" -> K3Optimizer.CSE
@@ -476,6 +488,8 @@ match language with
 
 (********* If we're up to this point, IMP is required *********)
 
+Debug.print "LOG-DRIVER" (fun () -> "BUILDING IMP");;
+
 let ic_opts = {
    ImpCompiler.desugar = (if language = L_IMP(false) then false else true);
    ImpCompiler.profile = (if language = L_CPP(true)  then true  else false)
@@ -491,6 +505,8 @@ let ic_prog =
    )
       
 ;;
+
+Debug.print "LOG-DRIVER" (fun () -> "BUILDING C++ AND COMPILING");;
 
 match language with
    | L_CPP(_) -> 

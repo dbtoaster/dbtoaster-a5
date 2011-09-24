@@ -701,6 +701,7 @@ let rec conservative_beta_reduction substitutions expr =
  *    bound variables, i.e. trigger vars and variables bound by lambdas.
  *)
 let rec lift_ifs bindings expr =
+   Debug.print "LOG-K3-OPT-LIFTIF" (fun () -> K3.SR.string_of_expr expr);
     let lift_branches e =
         let rec expand_children acc_branches rem_branches
                                 (branch : expr_t list) acc_branch : expr_t =
@@ -1360,17 +1361,26 @@ let rec lift_if0s expr =
 
 let optimize ?(optimizations=[]) trigger_vars expr =
   let apply_opts e =
-    lift_updates trigger_vars
-      (simplify_if_chains []
-        (simplify_collections (lift_ifs trigger_vars e)))
+      Debug.print "LOG-K3-OPT-DETAIL" (fun () -> "LIFT IFS");
+    let e1 = (lift_ifs trigger_vars e) in
+      Debug.print "LOG-K3-OPT-DETAIL" (fun () -> "SIMPLIFY COLLECTIONS");
+    let e2 = (simplify_collections e1) in
+      Debug.print "LOG-K3-OPT-DETAIL" (fun () -> "SIMPLIFY IF CHAINS");
+    let e3 = (simplify_if_chains [] e2) in
+      Debug.print "LOG-K3-OPT-DETAIL" (fun () -> "LIFT UPDATES");
+    let e4 = (lift_updates trigger_vars e3) in
+      e4
   in
   let rec fixpoint e =
     let new_e = apply_opts e in
     if e = new_e then e else fixpoint new_e    
   in 
+  Debug.print "LOG-K3-OPT" (fun () -> "INLINE COLLECTION FNS");
   let r = fixpoint (inline_collection_functions [] expr) in
+  Debug.print "LOG-K3-OPT" (fun () -> "BETA OTIMIZATIONS");
   let r1 = if List.mem Beta optimizations
-             then conservative_beta_reduction [] r else r
-  in if not(List.mem CSE optimizations)  then r1
+             then conservative_beta_reduction [] r else r in
+  Debug.print "LOG-K3-OPT" (fun () -> "CSE OPTIMIZATIONS");
+     if not(List.mem CSE optimizations)  then r1
      else (lift_if0s
             (fixpoint (lift_ifs trigger_vars (common_subexpression_elim r1))))
