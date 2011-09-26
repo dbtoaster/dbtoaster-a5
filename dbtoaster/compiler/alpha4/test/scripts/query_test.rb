@@ -4,7 +4,7 @@ require 'getoptlong'
 
 $dbt_path = "#{File.dirname(File.dirname(File.dirname($0)))}"
 $dbt = "#{$dbt_path}/dbtoaster"
-$ocamlrunparam = "b,l=10M"
+$ocamlrunparam = "b,l=20M"
 
 raise "DBToaster is not compiled" unless (File.exists? $dbt_path)
 
@@ -93,12 +93,13 @@ $queries = {
     :path => "test/sql/tpch/query18.sql",
     :type => :onelevel,
     :answer => results_file("test/results/tpch/query18.csv"),
-    :valid_opts => ["depth-1"]
+    :valid_opts => []
   },
-  "tpch18simple" => {
+  "tpch18real" => {
     :path => "test/sql/tpch/query18simple.sql",
-    :type => :singleton,
-    :answer => 6005.0
+    :type => :onelevel,
+    :answer => results_file("test/results/tpch/query18.csv"),
+    :valid_opts => ["depth-1"]
   },
   "tpch22" => {
     :path => "test/sql/tpch/query22.sql",
