@@ -187,10 +187,15 @@ $(GENERATED_HEADERS) : %.mli : %.ml
 dbtoaster_top: $(OBJ_DEPS) $(RUNTIME_OBJ_DEPS)
 	@echo Linking dbtoaster_top
 	@ocamlmktop $(OC_FLAGS) -o dbtoaster_top $(ML_OBJ)
+#
+#dbtoaster: $(OBJ_DEPS) stages/Driver.ml $(RUNTIME_OPT_DEPS)
+#	@echo Linking dbtoaster
+#	@ocamlc $(OC_FLAGS) -o dbtoaster $(ML_OBJ) stages/Driver.ml
 
-dbtoaster: $(OBJ_DEPS) stages/Driver.ml $(RUNTIME_OPT_DEPS)
+
+dbtoaster: $(OPT_DEPS) stages/Driver.ml $(RUNTIME_OPT_DEPS)
 	@echo Linking dbtoaster
-	@ocamlc $(OC_FLAGS) -o dbtoaster $(ML_OBJ) stages/Driver.ml
+	@ocamlopt $(OOPT_FLAGS) -o dbtoaster $(ML_OPT) stages/Driver.ml
 
 benchmark: $(OPT_DEPS)
 	ocamlopt $(OOPT_FLAGS) -o m3_ex $(ML_OPT) test/unit/m3_ex.ml
