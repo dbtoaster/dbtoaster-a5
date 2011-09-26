@@ -1104,7 +1104,7 @@ struct
         let fn_body = eadecls@sdecls@(match_ie 0 "invalid gb agg function"
           (fun i -> i@[mk_body (cdecli 0)]) (fun e -> [mk_body e]))
         in
-        let loop_body = imp_of_list (gb_body@pre_fn_body@fn_body) in
+        let loop_body = imp_of_list (gb_body@[Block(None, pre_fn_body@fn_body)]) in
         let pre, ce =
           match_ie 3 "invalid gb agg collection"
             (fun i -> i, (cdecli 3)) (fun e -> [], e) 

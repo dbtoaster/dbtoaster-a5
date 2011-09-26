@@ -1615,6 +1615,21 @@ end (* Typing *)
       fixpoint_sub_imp env (List.flatten next_subs) nimp 
 
 
+  let rec sub_decl_init elem elem_ty subbed_elem l =
+    let rcr = sub_decl_init elem elem_ty subbed_elem in
+    List.fold_left (fun (found,acc) i ->
+        if found then found,acc@[i] else
+        let nf,ni = match i with
+          | Decl(unit, (id,ty), Some(init)) ->
+            let n_init =
+              sub_expr_vars (Var(elem_ty,(elem, elem_ty))) subbed_elem init in
+            let nd = Decl(unit, (id,ty), Some(n_init))
+            in (id=elem), nd
+          | Block(m,l2) -> let r, nl2 = rcr l2 in r, Block(m,nl2)
+          | _ -> false, i
+        in (nf,acc@[ni]))
+      (false, []) l
+
   (* Given an expected loop element, and a replacement iterator, substitute
    * iterator dereferencing in place of the loop element in the body's
    * declarations. If the loop element's declaration should be forced, add 
@@ -1631,16 +1646,7 @@ end (* Typing *)
       match body with
       | Block (m,l) ->
         (* substitute in declaration initializers, until element is redefined *)
-        let r = snd (List.fold_left (fun (found,acc) i ->
-          if found then found,acc@[i] else
-          let nf,ni = match i with
-            | Decl(unit, (id,ty), Some(init)) ->
-              let n_init =
-                sub_expr_vars (Var(elem_ty,(elem, elem_ty))) subbed_elem init in
-              let nd = Decl(unit, (id,ty), Some(n_init)) in
-              (id=elem), nd
-            | _ -> false, i
-          in (nf,acc@[ni])) (false, []) l)
+        let r = snd (sub_decl_init elem elem_ty subbed_elem l)
         in Block(m,(elem_decls@r))
       | _ -> Block(type_of_imp_t body, elem_decls@[body]) 
     in

@@ -420,14 +420,15 @@ if language = L_K3(false) then (
 Debug.print "LOG-DRIVER" (fun () -> "OPTIMIZING K3");;
 
 let k3_optimizations = 
-(*   let parse_opt_flag s = match s with
+  let parse_opt_flag s = match s with
      | "CSE" | "cse" -> K3Optimizer.CSE
      | "BREDUCE" | "breduce" -> K3Optimizer.Beta
      | _ -> give_up ("invalid K3 optimization flag: "^s)
    in
-     if opt then List.map parse_opt_flag (flag_vals "OPTFLAGS") else []
-*)
-  [K3Optimizer.CSE; K3Optimizer.Beta] 
+   begin match (flag_vals "OPTFLAGS") with
+    | [] -> [K3Optimizer.CSE; K3Optimizer.Beta]
+    | x -> List.map parse_opt_flag x
+   end
 ;;
 let k3_opt_prog = 
    let (schema,patterns,k3_trigs) = k3_prog in

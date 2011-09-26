@@ -4,18 +4,21 @@ type map_sig_t = M3.map_id_t * M3.var_id_t list * M3.var_id_t list
 
 (* Construction from M3 *)
 val calc_to_singleton_expr :
-  map_sig_t list -> M3.Prepared.calc_t -> map_sig_t list * expr_t
+  M3.var_t list -> map_sig_t list -> M3.Prepared.calc_t -> map_sig_t list * expr_t
 
+(* trig args, map sig list, ... *)
 val op_to_expr :
-  map_sig_t list ->
+  M3.var_t list -> map_sig_t list ->
   (M3.var_t list -> expr_t -> expr_t -> expr_t) ->
   M3.Prepared.calc_t -> M3.Prepared.calc_t -> M3.Prepared.calc_t
   -> map_sig_t list * expr_t
 
+(* trig args, map sig list, calc -> map sig list * k3 expr *)
 val calc_to_expr : 
-  map_sig_t list -> M3.Prepared.calc_t -> map_sig_t list * expr_t
+  M3.var_t list -> map_sig_t list -> M3.Prepared.calc_t -> map_sig_t list * expr_t
 
-val m3rhs_to_expr : M3.var_t list -> M3.Prepared.aggecalc_t -> expr_t
+(* trig args, out vars, rhs aggecalc -> k3 expr *)
+val m3rhs_to_expr : M3.var_t list -> M3.var_t list -> M3.Prepared.aggecalc_t -> expr_t
 
 (* Incremental section *)
 val collection_stmt : M3.var_t list -> M3.Prepared.stmt_t -> statement
