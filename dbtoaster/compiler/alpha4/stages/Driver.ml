@@ -431,20 +431,22 @@ let k3_optimizations =
    end
 ;;
 let k3_opt_prog = 
-   let (schema,patterns,k3_trigs) = k3_prog in
-      (  schema, patterns, 
-         List.map (fun (pm,rel,trig_args,stmtl) ->
-          (pm, rel, trig_args,
-            (List.map (fun (lhs,rhs) -> (
-                        lhs, 
-                        (K3Optimizer.optimize 
-                           ~optimizations:k3_optimizations 
-                           trig_args 
-                           rhs)
-                      ))
-                      stmtl)
-          )) k3_trigs
-      )
+   if Debug.active "NO-K3-OPT" then k3_prog
+   else
+      let (schema,patterns,k3_trigs) = k3_prog in
+         (  schema, patterns, 
+            List.map (fun (pm,rel,trig_args,stmtl) ->
+             (pm, rel, trig_args,
+               (List.map (fun (lhs,rhs) -> (
+                           lhs, 
+                           (K3Optimizer.optimize 
+                              ~optimizations:k3_optimizations 
+                              trig_args 
+                              rhs)
+                         ))
+                         stmtl)
+             )) k3_trigs
+         )
 ;;
 
 module K3OCamlCompiler = K3Compiler.Make(K3OCamlgen.K3CG);;
@@ -477,7 +479,7 @@ match language with
          
    | L_INTERPRETER(OCG_K3) -> (
          StandardAdaptors.initialize ();
-         K3OCamlCompiler.compile_query
+         K3InterpreterCompiler.compile_query
             dbschema
             (k3_opt_prog, sources)
             !toplevel_queries
