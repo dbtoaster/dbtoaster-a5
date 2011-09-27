@@ -1238,9 +1238,11 @@ let extract_base_relations (workload: (var_t list * term_t) list) :
           let (term_rels, subbed_term) = 
               extract_from_one_term subterm in
           let unified_term = 
-            TermRing.mk_prod (subbed_term :: 
-              (List.map (fun rel -> TermRing.mk_val (External(rel)))
-                        onehop_cond_rels))
+            TermRing.mk_prod (
+               (List.map (fun rel -> TermRing.mk_val (External(rel)))
+                           onehop_cond_rels) @
+               [subbed_term]
+              )
           in
             (ListAsSet.union cond_rels term_rels, 
              if CalcRing.prod_list subbed_cond = [CalcRing.one] then

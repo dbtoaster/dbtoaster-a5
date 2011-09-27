@@ -21,7 +21,8 @@ $optimizations = {
   "runtime-bigsums"    => "-d runtime-bigsums",
   "dup-ivc"            => "-d dup-ivc",
   "factor-postprocess" => "-d factor-postprocess",
-#  "depth-1"            => "--depth 1",
+#  "depth-0"            => "--depth 0 -d dup-ivc",
+  "depth-1"            => "--depth 1 -d dup-ivc",
 #  "depth-2"            => "--depth 2"
 }
 
@@ -30,7 +31,7 @@ $queries = {
     :path => "test/sql/simple/rst.sql",
     :type => :singleton,
     :answer => 18753367048934.0,
-    :valid_opts => ["depth-1"]
+    :valid_opts => ["depth-0", "depth-1"]
   },
 #  "rstar" => {
 #    :path => "test/sql/simple/rstar.sql",
@@ -41,12 +42,14 @@ $queries = {
     :path => "test/sql/tpch/ssb4.sql",
     :type => :singleton,
     :answer => 0,
-    :compiler_flags => ["-d", "disable-deletes"]
+    :compiler_flags => ["-d", "disable-deletes", 
+                        "-d", "dup-ivc"]
   },
   "vwap" => {
     :path => "test/sql/finance/vwap.sql",
     :type => :singleton,
     :answer => 28916017900.0
+    :valid_opts => ["depth-0", "depth-1"]
   },
   "pricespread" => {
     :path => "test/sql/finance/pricespread.sql",
@@ -58,7 +61,7 @@ $queries = {
     :path => "test/sql/finance/missedtrades.sql",
     :type => :onelevel,
     :answer => results_file("test/results/missedtrades.csv"),
-    :valid_opts => ["dup-ivc"]
+    :valid_opts => ["dup-ivc", "depth-0", "depth-1"]
   },
   "axfinder" => {
     :path => "test/sql/finance/axfinder.sql",
@@ -70,7 +73,6 @@ $queries = {
     :path => "test/sql/tpch/query3.sql",
     :type => :onelevel,
     :answer => results_file("test/results/tpch/query3_100M.csv"),
-    :valid_opts => ["depth-1"]
   },
 #  "tpch5" => {
 #    :path => "test/sql/tpch/query5.sql",
@@ -81,7 +83,6 @@ $queries = {
     :path => "test/sql/tpch/query11a.sql",
     :type => :onelevel,
     :answer => results_file("test/results/tpch/query11_100M.csv"),
-    :valid_opts => ["depth-1"]
   },
   "tpch17" => {
     :path => "test/sql/tpch/query17.sql",
@@ -93,7 +94,7 @@ $queries = {
     :path => "test/sql/tpch/query18.sql",
     :type => :onelevel,
     :answer => results_file("test/results/tpch/query18.csv"),
-    :valid_opts => []
+    :valid_opts => ["depth-0", "depth-1"]
   },
   "tpch18real" => {
     :path => "test/sql/tpch/query18simple.sql",
@@ -109,6 +110,11 @@ $queries = {
   },
   "clusteravailable" => {
     :path => "test/sql/clusteravailable.sql",
+    :type => :onelevel,
+    :answer => results_file("test/results/clusteravailable.csv")
+  }
+  "clusteravailablenew" => {
+    :path => "test/sql/clusteravailable_priority.sql",
     :type => :onelevel,
     :answer => results_file("test/results/clusteravailable.csv")
   }

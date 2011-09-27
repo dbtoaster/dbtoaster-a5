@@ -177,6 +177,10 @@ let compile_delta_for_rel (produce_child_maps: bool)
      let (base_relations, terms_after_substitution) = 
        Calculus.extract_base_relations factorized_terms
      in
+       Debug.print "LOG-COMPILE-TRIGGERS" (fun () ->
+          String.concat "\n" (List.map (fun (p,t) ->
+              "Trigger delta w/ rel maps: "^(Calculus.term_as_string t)^"\n") 
+            terms_after_substitution));
        (List.map (fun (p,t) -> (delete, reln, tuple, (p, []), t)) 
           terms_after_substitution,
         List.map (fun (reln) -> 

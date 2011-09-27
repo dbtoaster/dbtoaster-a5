@@ -267,8 +267,7 @@ ok_test: top
 test/sql/%: test/sql/%.sql dbtoaster
 	./dbtoaster $< -c test/sql/$* -o test/sql/$*.cpp #-d compile-with-gdb
 
-DEFAULT_DBT_COMPILE = 
-	./dbtoaster -d log-gcc -d dup-ivc #-d compile-with-gdb
+DEFAULT_DBT_COMPILE = ./dbtoaster -d log-gcc -d dup-ivc #-d compile-with-gdb
 
 bin/%: test/sql/%.sql dbtoaster
 	$(DEFAULT_DBT_COMPILE) $< -c bin/$* -o bin/$*.cpp
