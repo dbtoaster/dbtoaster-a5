@@ -267,14 +267,17 @@ ok_test: top
 test/sql/%: test/sql/%.sql dbtoaster
 	./dbtoaster $< -c test/sql/$* -o test/sql/$*.cpp #-d compile-with-gdb
 
+DEFAULT_DBT_COMPILE = 
+	./dbtoaster -d log-gcc -d dup-ivc #-d compile-with-gdb
+
 bin/%: test/sql/%.sql dbtoaster
-	./dbtoaster $< -c bin/$* -o bin/$*.cpp -d log-gcc #-d compile-with-gdb
+	$(DEFAULT_DBT_COMPILE) $< -c bin/$* -o bin/$*.cpp
 bin/%: test/sql/simple/%.sql dbtoaster
-	./dbtoaster $< -c bin/$* -o bin/$*.cpp -d log-gcc #-d compile-with-gdb
+	$(DEFAULT_DBT_COMPILE) $< -c bin/$* -o bin/$*.cpp
 bin/%: test/sql/finance/%.sql dbtoaster
-	./dbtoaster $< -c bin/$* -o bin/$*.cpp -d log-gcc #-d compile-with-gdb
+	$(DEFAULT_DBT_COMPILE) $< -c bin/$* -o bin/$*.cpp
 bin/%: test/sql/tpch/%.sql dbtoaster
-	./dbtoaster $< -c bin/$* -o bin/$*.cpp -d log-gcc #-d compile-with-gdb
+	$(DEFAULT_DBT_COMPILE) $< -c bin/$* -o bin/$*.cpp
 
 
 ## Query execution tests
