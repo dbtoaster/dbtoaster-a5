@@ -48,7 +48,7 @@ $queries = {
   "vwap" => {
     :path => "test/sql/finance/vwap.sql",
     :type => :singleton,
-    :answer => 28916017900.0
+    :answer => 28916017900.0,
     :valid_opts => ["depth-0", "depth-1"]
   },
   "pricespread" => {
@@ -96,12 +96,12 @@ $queries = {
     :answer => results_file("test/results/tpch/query18.csv"),
     :valid_opts => ["depth-0", "depth-1"]
   },
-  "tpch18real" => {
-    :path => "test/sql/tpch/query18simple.sql",
-    :type => :onelevel,
-    :answer => results_file("test/results/tpch/query18.csv"),
-    :valid_opts => ["depth-1"]
-  },
+#  "tpch18real" => {
+#    :path => "test/sql/tpch/query18simple.sql",
+#    :type => :onelevel,
+#    :answer => results_file("test/results/tpch/query18.csv"),
+#    :valid_opts => ["depth-1"]
+#  },
   "tpch22" => {
     :path => "test/sql/tpch/query22.sql",
     :type => :onelevel,
@@ -112,7 +112,7 @@ $queries = {
     :path => "test/sql/clusteravailable.sql",
     :type => :onelevel,
     :answer => results_file("test/results/clusteravailable.csv")
-  }
+  },
   "clusteravailablenew" => {
     :path => "test/sql/clusteravailable_priority.sql",
     :type => :onelevel,

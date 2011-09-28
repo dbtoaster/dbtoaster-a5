@@ -225,51 +225,83 @@ let rec calc_to_singleton_expr trig_args metadata calc =
     | M3.IfThenElse0(c1, c2) -> bin_op (fun x y -> IfThenElse0(x,y)) c1 c2
   end
 
-and op_to_expr trig_args metadata op c c1 c2 =
-  let aux ecalc = (calc_schema ecalc, M3P.get_singleton ecalc) in
-  let (outv1, c1_sing) = aux c1 in
-  let (outv2, c2_sing) = aux c2 in
+and op_to_expr trig_args metadata (expected_sch1,expected_sch2) op c c1 c2 =
+  let aux ecalc expected_sch = 
+      (ListAsSet.inter (calc_schema ecalc) expected_sch, 
+       M3P.get_singleton ecalc) in
+  let (outv1, c1_sing) = aux c1 expected_sch1 in
+  let (outv2, c2_sing) = aux c2 expected_sch2 in
   let (schema, c_sing, c_prod) =
     calc_schema c, M3P.get_singleton c, M3P.get_product c
   in match (c_sing, c1_sing, c2_sing) with
     | (true, false, _) | (true, _, false) | (false, true, true) ->
             failwith "invalid parent singleton"
         
-    | (true, _, _) -> calc_to_singleton_expr trig_args metadata c
-
-    | (_, true, false) | (_, false, true) ->
+    | (true, _, _) -> 
+         Debug.print "TRACK-K3-SINGLETON" (fun () ->
+            (M3Common.PreparedPrinting.pretty_print_calc c)
+         );
+         let (meta,expr) = calc_to_singleton_expr trig_args metadata c
+         in ([],meta,expr)
+    | (false, true, false) | (false, false, true) ->
       (* TODO: types *)
-      let meta, ce = calc_to_expr trig_args metadata (if c1_sing then c2 else c1) in
-      let meta2, inline = calc_to_singleton_expr trig_args meta (if c1_sing then c1 else c2) in
-      let (v,v_t,l,r,cschema) =
-        if c1_sing then "v2",TFloat,inline,Var("v2",TFloat),outv2
-        else "v1",TFloat,Var("v1",TFloat),inline,outv1 in
+      Debug.print "TRACK-K3-SINGLETON" (fun () ->
+         (M3Common.PreparedPrinting.pretty_print_calc
+             (if c1_sing then c1 else c2))
+      );
+      let outsch, meta, ce = 
+         calc_to_expr trig_args metadata 
+                      (if c1_sing then expected_sch2 else expected_sch1)
+                      (if c1_sing then c2 else c1) in
+      let meta2, inline = 
+         calc_to_singleton_expr 
+                      trig_args 
+                      meta
+                      (if c1_sing then c1 else c2) in
+      let (v,v_t,l,r) =
+        if c1_sing then "v2",TFloat,inline,Var("v2",TFloat)
+        else "v1",TFloat,Var("v1",TFloat),inline in
+      let (op_sch, op_result) = (op schema l r) in
       let fn = bind_for_apply_each
-        trig_args ((args_of_vars cschema)@[v,v_t]) (op schema l r)
-      in meta2, Map(fn, ce)
+        trig_args ((args_of_vars outsch)@[v,v_t]) op_result
+      in (op_sch, meta2, Map(fn, ce))
         
-    | (_, false, false) ->
+    | (false, false, false) ->
       (* TODO: types *)
       (* Note: there is no difference to the nesting whether this op
        * is a product or a join *)
-      let meta, oute = calc_to_expr trig_args metadata c1 in
-      let meta2, ine = calc_to_expr trig_args meta c2 in
+      let sch1, meta, oute = calc_to_expr trig_args metadata expected_sch1 c1 in
+      let sch2, meta2, ine = calc_to_expr trig_args meta     expected_sch2 c2 in
       let (l,r) = (Var("v1",TFloat), Var("v2",TFloat)) in
+      let (op_sch, op_result) = (op schema l r) in
       let nested = bind_for_apply_each
-        trig_args ((args_of_vars outv2)@["v2",TFloat]) (op schema l r) in 
+        trig_args ((args_of_vars sch2)@["v2",TFloat]) op_result in 
       let inner = bind_for_apply_each
-        trig_args ((args_of_vars outv1)@["v1",TFloat]) (Map(nested, ine)) 
-      in meta2, Flatten(Map(inner, oute))
+        trig_args ((args_of_vars sch1)@["v1",TFloat]) (Map(nested, ine)) 
+      in op_sch, meta2, Flatten(Map(inner, oute))
 
-and calc_to_expr trig_args metadata calc =
+and calc_to_expr trig_args metadata expected_schema calc =
   let tuple op schema c1 c2 =
     (* TODO: schema types *)
-    Tuple((List.map (fun v -> (Var (v, TFloat))) schema)@[op c1 c2])
-  in  
-  let bin_op f c1 c2 = op_to_expr trig_args metadata (tuple f) calc c1 c2 in 
+    let outsch = (ListAsSet.inter expected_schema schema)
+    in if outsch = []
+       then [], (op c1 c2)
+       else outsch, 
+            Tuple((List.map (fun v -> (Var (v, TFloat))) outsch)@[op c1 c2])
+  in 
+  let bin_op f sch_pass_f c1 c2 = (
+    op_to_expr trig_args 
+               metadata 
+               (sch_pass_f expected_schema (calc_params c1) (calc_params c2))
+               (tuple f) 
+               calc c1 c2
+    ) in 
+  let passthrough t _   _   = (t,                     t                    ) in
+  let r_to_l      t _   ic2 = (ListAsSet.union t ic2, t                    ) in
+  let l_to_r      t ic1 _   = (t,                     ListAsSet.union t ic1) in
   begin match (M3P.get_calc calc) with
-    | M3.Const(i)   -> metadata, Const(i)
-    | M3.Var(x)     -> metadata, Var(x, TFloat) (* TODO: var type *)
+    | M3.Const(i)   -> [], metadata, Const(i)
+    | M3.Var(x)     -> [], metadata, Var(x, TFloat) (* TODO: var type *)
 
     | M3.MapAccess(mapn, inv, outv, init_aggecalc) ->
       (* TODO: schema, value types *)
@@ -286,18 +318,18 @@ and calc_to_expr trig_args metadata calc =
         let skip = List.mem (mapn, inv, outv) metadata
         in map_access_to_expr skip map_expr init_expr
              (M3P.get_singleton calc) singleton_init_code patv
-      in metadata@[mapn,inv,outv], r
+      in (outv,metadata@[mapn,inv,outv], r)
 
-    | M3.Add (c1, c2) -> bin_op (fun c1 c2 -> Add (c1,c2)) c1 c2 
-    | M3.Mult(c1, c2) -> bin_op (fun c1 c2 -> Mult(c1,c2)) c1 c2
-    | M3.Eq  (c1, c2) -> bin_op (fun c1 c2 -> Eq  (c1,c2)) c1 c2
-    | M3.Lt  (c1, c2) -> bin_op (fun c1 c2 -> Lt  (c1,c2)) c1 c2
-    | M3.Leq (c1, c2) -> bin_op (fun c1 c2 -> Leq (c1,c2)) c1 c2
+    | M3.Add (c1, c2) -> bin_op (fun c1 c2 -> Add (c1,c2)) passthrough c1 c2 
+    | M3.Mult(c1, c2) -> bin_op (fun c1 c2 -> Mult(c1,c2)) r_to_l      c1 c2
+    | M3.Eq  (c1, c2) -> bin_op (fun c1 c2 -> Eq  (c1,c2)) r_to_l      c1 c2
+    | M3.Lt  (c1, c2) -> bin_op (fun c1 c2 -> Lt  (c1,c2)) r_to_l      c1 c2
+    | M3.Leq (c1, c2) -> bin_op (fun c1 c2 -> Leq (c1,c2)) r_to_l      c1 c2
     | M3.IfThenElse0(c1, c2) ->
       let short_circuit_if = M3P.get_short_circuit calc in
       if short_circuit_if then
-        bin_op (fun c1 c2 -> IfThenElse0(c1,c2)) c1 c2
-      else bin_op (fun c2 c1 -> IfThenElse0(c1,c2)) c2 c1
+           bin_op (fun c1 c2 -> IfThenElse0(c1,c2)) passthrough c1 c2
+      else bin_op (fun c2 c1 -> IfThenElse0(c1,c2)) l_to_r      c2 c1
   end 
 
 and m3rhs_to_expr trig_args lhs_outv paggcalc : expr_t =
@@ -310,7 +342,7 @@ and m3rhs_to_expr trig_args lhs_outv paggcalc : expr_t =
     *)
     let init_val = Const(CFloat(0.0)) in
     let ecalc = M3P.get_ecalc paggcalc in
-    let rhs_outv, rhs_expr = calc_schema ecalc, snd (calc_to_expr trig_args [] ecalc) in
+    let rhs_outv, _, rhs_expr = (calc_to_expr trig_args [] lhs_outv ecalc) in
     let agg_fn = bind_for_aggregate trig_args 
         ((args_of_vars rhs_outv)@["v",TFloat]) ("accv",TFloat)
         (Add(Var("v", TFloat), Var("accv", TFloat)))

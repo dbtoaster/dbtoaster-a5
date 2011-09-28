@@ -197,6 +197,10 @@ dbtoaster: $(OPT_DEPS) stages/Driver.ml $(RUNTIME_OPT_DEPS)
 	@echo Linking dbtoaster
 	@ocamlopt $(OOPT_FLAGS) -o dbtoaster $(ML_OPT) stages/Driver.ml
 
+dbtoaster_noopt: $(OBJ_DEPS) stages/Driver.ml $(RUNTIME_OBJ_DEPS)
+	@echo Linking dbtoaster_noopt
+	@ocamlc $(OC_FLAGS) -o dbtoaster_noopt $(ML_OBJ) stages/Driver.ml
+
 benchmark: $(OPT_DEPS)
 	ocamlopt $(OOPT_FLAGS) -o m3_ex $(ML_OPT) test/unit/m3_ex.ml
 

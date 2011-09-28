@@ -639,4 +639,4 @@ let rec typecheck_expr e : type_t =
       Debug.print "K3-TYPECHECK-DETAIL" (fun () -> 
          "--------- Expression trace ----------\n"^(code_of_expr e)
       );
-      failwith x
+      failwith ("K3 Typecheck Error: "^x^"\n(use '-d k3-typecheck-detail' for more information)")

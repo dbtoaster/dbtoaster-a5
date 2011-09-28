@@ -1358,6 +1358,55 @@ let rec lift_if0s expr =
     | e -> e
   end
 
+(* Utility method -- recursively rewrites the defined expression to have a 
+   maximum tuple arity of less than 'max_width' *)
+(*let restrict_tuple_size (max_width: int) (expr:expr_t): (expr_t) =
+   let split_by_maxwidth top_list =
+      let rcr cnt list = 
+         if cnt <= 0 then
+            let (hd,tl) = rcr max_width in ([],hd::tl)
+         else
+            match list with
+            | []      -> ([],[])
+            | t::rest -> 
+               let (hd,tl) = split_at_n top (cnt-1) rest in (t::hd,tl)
+      in let (hd,tl) = rcr max_width top_list in
+         if List.length hd > 0 then hd::tl else tl
+   in
+   let rec rewrite_type (t:type_t) =
+      begin match t with
+         | TUnit | TFloat | TInt -> t
+         | TTuple(sub_t) ->
+            if List.length sub_t >= max_width then
+               rewrite_type (TTuple(List.map (fun x -> TTuple(x)) 
+                                             (split_by_maxwidth sub_t)))
+            else
+               TTuple(List.map rewrite_type sub_t)
+         | Collection(sub_t) -> Collection(rewrite_type sub_t)
+         | Fn(arg_t,ret_t) -> 
+            Fn(List.map rewrite_type arg_t, rewrite_type arg_t)
+      end
+   and     rewrite_expr (e:expr_t) (nested_vars:(id_t*expr_t) list) =
+      let rcr sub_e = rewrite_expr sub_e nested_vars in
+      begin match e with
+         | Const      -> e
+         | Var(vn,vt) -> 
+            if List.mem_assoc vn nested_vars 
+            then List.assoc vn nested_vars
+            else Var(vn, rewrite_type vt)
+         | Tuple(sub_e) ->
+            if List.length sub_e > max_width
+            then rcr (Tuple(List.map (fun x -> Tuple(x))
+                                     (split_by_maxwidth sub_e)))
+            else Tuple(List.map rcr sub_e)
+         | Project(tuple_e, terms) ->
+            let tuple_t = K3Typechecker.typecheck_expr tuple_e in
+      end
+
+======= Code in progress ======
+
+*)      
+
 
 let optimize ?(optimizations=[]) trigger_vars expr =
   let apply_opts e =
@@ -1384,3 +1433,7 @@ let optimize ?(optimizations=[]) trigger_vars expr =
      if not(List.mem CSE optimizations)  then r1
      else (lift_if0s
             (fixpoint (lift_ifs trigger_vars (common_subexpression_elim r1))))
+
+
+
+

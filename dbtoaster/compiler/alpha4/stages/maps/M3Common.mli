@@ -48,6 +48,8 @@ val replace_calc_lf_with_meta :
 (* Querying *)
   (* Output variables from maps in calculus expression *)
 val calc_schema : (('c,'a) M3.generic_calc_t) -> M3.var_t list;;
+  (* Input variables from maps in calculus expression *)
+val calc_params : (('c,'a) M3.generic_calc_t) -> M3.var_t list;;
   (* All variables used by a calculus expression *)
 val calc_vars   : (('c,'a) M3.generic_calc_t) -> M3.var_t list;;
 
