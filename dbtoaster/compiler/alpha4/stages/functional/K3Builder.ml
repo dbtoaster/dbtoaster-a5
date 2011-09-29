@@ -342,12 +342,14 @@ and m3rhs_to_expr trig_args lhs_outv paggcalc : expr_t =
     *)
     let init_val = Const(CFloat(0.0)) in
     let ecalc = M3P.get_ecalc paggcalc in
+    let doesnt_need_aggregate = 
+      ListAsSet.seteq (lhs_outv) (M3Common.calc_schema (fst paggcalc)) in
     let rhs_outv, _, rhs_expr = (calc_to_expr trig_args [] lhs_outv ecalc) in
     let agg_fn = bind_for_aggregate trig_args 
         ((args_of_vars rhs_outv)@["v",TFloat]) ("accv",TFloat)
         (Add(Var("v", TFloat), Var("accv", TFloat)))
     in
-    if (M3P.get_singleton ecalc) || (rhs_outv = lhs_outv) then rhs_expr
+    if (M3P.get_singleton ecalc) || (doesnt_need_aggregate) then rhs_expr
     else if M3P.get_full_agg (M3P.get_agg_meta paggcalc) then
         Aggregate (agg_fn, init_val, rhs_expr) 
     else
