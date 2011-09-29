@@ -494,7 +494,11 @@ struct
 
   let rec field_types_of_type t = match t with
     | Host(TTuple l) -> List.map (fun x -> Host x) l
-    | Target(Pair(Host(TTuple(l)),r)) -> (field_types_of_type (Host(TTuple(l))))@[r]  
+    | Target(Pair(Host(TTuple(l)),r)) -> 
+         (field_types_of_type (Host(TTuple(l))))@[r]  
+    | Target(Pair(Host(TFloat|TInt as l), r)) -> 
+         (* functionally a tuple of size 1 *)
+         [Host(l); r]
     | Target(StructDef(_, fields)) -> List.map snd fields
     | Target(EntryStructDef(_, fields)) -> List.map snd fields
     | _ -> failwith ("invalid composite type "^(string_of_type t))
@@ -958,6 +962,8 @@ end (* Typing *)
                 | Host(TTuple(l)) -> back (tuple_of_var id l)
                 | Target(Pair(Host(TTuple(l)),_)) ->
                   (tuple_of_var (id^".first") l), (id^".second") 
+                | Target(Pair(Host(TInt|TFloat as l),_)) ->
+                  [(id^".first")],(id^".second")
                 | _ -> failwith "invalid tuple collection append"
                 end 
               | _ -> failwith "invalid tuple collection append"
