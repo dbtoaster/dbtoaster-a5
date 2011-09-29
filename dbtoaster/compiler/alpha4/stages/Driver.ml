@@ -130,6 +130,7 @@ if flag_bool "HELP" then
         "m3:prep       Map Maintenance Message Code (prepared)\n"^
         "k3            Functional update triggers\n"^
         "k3:noopt      Functional update triggers without optimizations\n"^
+        "k3:noopt      Functional update triggers with IR tags\n"^
         "ocaml         OCaml source file (via K3)\n"^
         "ocaml:m3      OCaml source file (via M3)\n"^
         "ocaml:k3      OCaml source file (via K3)\n"^
@@ -159,6 +160,7 @@ type language_t =
    | L_DELTA
    | L_M3 of bool (* prepared? *)
    | L_K3 of bool (* optimized? *)
+   | L_K3IR
    | L_INTERPRETER of ocaml_codegen_t
    | L_OCAML of ocaml_codegen_t
    | L_IMP of bool (* desugar *)
@@ -185,6 +187,7 @@ let language =
       | "M3:PREP"  -> L_M3(true) 
       | "K3"       -> L_K3(true)
       | "K3:NOOPT" -> L_K3(false)
+      | "K3:IR"    -> L_K3IR
       | "IMP"      -> L_IMP(false)
       | "IMP:DESUGAR" -> L_IMP(true)
       | "SQL"      -> L_SQL(SL_SQL) (* Translates DBT-SQL + sources -> SQL  *)
@@ -457,6 +460,25 @@ match language with
    | L_K3(true) -> (
          output_k3_program k3_opt_prog;
          exit 0
+      )
+   | L_K3IR -> (
+         let fd = (output_file ()) in
+         let (_,_,triggers) = k3_opt_prog in
+            output_string fd (string_of_list0 "\n\n" (fun (pm,rel,vars,stmts) ->
+               "ON "^(if pm = M3.Insert then "+" else "-")^rel^
+               (list_to_string (fun x->x) vars)^": \n"^
+               (string_of_list0 "\n" (fun (_,stmt) ->
+                  let string_of_meta meta = 
+                     match meta with 
+                        | ImpBuilder.Common.TypedSym(None,_) -> "xxx"
+                        | ImpBuilder.Common.TypedSym(Some(sym),_) -> sym
+                  in
+                  let ir = ImpBuilder.DirectIRBuilder.ir_of_expr stmt in
+                     (ImpBuilder.AnnotatedK3.string_of_k3ir 
+                        ~string_of_meta:string_of_meta ir)
+               ) stmts)
+            ) triggers);
+            exit 0
       )
    | L_OCAML(OCG_K3) -> (
          let compile = 

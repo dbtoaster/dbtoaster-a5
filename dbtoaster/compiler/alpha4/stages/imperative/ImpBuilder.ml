@@ -138,9 +138,12 @@ struct
     | Undecorated e -> K.string_of_expr e
     | Decorated ir_tag -> string_of_ir_tag ir_tag
   
-  let rec string_of_k3ir i = match i with
-    | Leaf(_, t) -> "["^(string_of_tag t)^"]"
-    | Node(_, n, t) -> (string_of_tag n)^(list_to_string string_of_k3ir t)
+  let rec string_of_k3ir ?(string_of_meta = (fun _ -> "")) i = match i with
+    | Leaf(m, t)    -> "[{"^(string_of_meta m)^"}"^(string_of_tag t)^"]"
+    | Node(m, n, t) -> 
+      "{"^(string_of_meta m)^"}"^
+      (string_of_tag n)^
+      (list_to_string (string_of_k3ir ~string_of_meta:string_of_meta) t)
 end
 
 
