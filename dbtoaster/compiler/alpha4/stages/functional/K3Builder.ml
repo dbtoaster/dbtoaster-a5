@@ -289,16 +289,27 @@ and calc_to_expr trig_args metadata expected_schema calc =
        else outsch, 
             Tuple((List.map (fun v -> (Var (v, TFloat))) outsch)@[op c1 c2])
   in 
-  let bin_op f sch_pass_f c1 c2 = (
+  let bin_op f c1 c2 = (
     op_to_expr trig_args 
                metadata 
-               (sch_pass_f expected_schema (calc_params c1) (calc_params c2))
+               (* Figure out the expected schema for the left and right
+                  hand sides of the expressions.  This starts with the
+                  schema that the outer expression expects:
+                  For both, we have to add any join terms -- variables present
+                  on both sides of the expression.
+                  Then we also have to take any output variables from the lhs
+                  that are expected by the rhs and add them to the lhs expected
+                  schema. *)
+               (  let join_schema = ListAsSet.inter (calc_schema c1) 
+                                                    (calc_schema c2) in
+                  let common_schema = ListAsSet.union expected_schema 
+                                                      join_schema in
+                  let c2_in_schema = calc_params c2 in
+                     (  ListAsSet.union common_schema c2_in_schema, 
+                        common_schema ))
                (tuple f) 
                calc c1 c2
     ) in 
-  let passthrough t _   _   = (t,                     t                    ) in
-  let r_to_l      t _   ic2 = (ListAsSet.union t ic2, t                    ) in
-  let l_to_r      t ic1 _   = (t,                     ListAsSet.union t ic1) in
   begin match (M3P.get_calc calc) with
     | M3.Const(i)   -> [], metadata, Const(i)
     | M3.Var(x)     -> [], metadata, Var(x, TFloat) (* TODO: var type *)
@@ -320,16 +331,16 @@ and calc_to_expr trig_args metadata expected_schema calc =
              (M3P.get_singleton calc) singleton_init_code patv
       in (outv,metadata@[mapn,inv,outv], r)
 
-    | M3.Add (c1, c2) -> bin_op (fun c1 c2 -> Add (c1,c2)) passthrough c1 c2 
-    | M3.Mult(c1, c2) -> bin_op (fun c1 c2 -> Mult(c1,c2)) r_to_l      c1 c2
-    | M3.Eq  (c1, c2) -> bin_op (fun c1 c2 -> Eq  (c1,c2)) r_to_l      c1 c2
-    | M3.Lt  (c1, c2) -> bin_op (fun c1 c2 -> Lt  (c1,c2)) r_to_l      c1 c2
-    | M3.Leq (c1, c2) -> bin_op (fun c1 c2 -> Leq (c1,c2)) r_to_l      c1 c2
+    | M3.Add (c1, c2) -> bin_op (fun c1 c2 -> Add (c1,c2)) c1 c2 
+    | M3.Mult(c1, c2) -> bin_op (fun c1 c2 -> Mult(c1,c2)) c1 c2
+    | M3.Eq  (c1, c2) -> bin_op (fun c1 c2 -> Eq  (c1,c2)) c1 c2
+    | M3.Lt  (c1, c2) -> bin_op (fun c1 c2 -> Lt  (c1,c2)) c1 c2
+    | M3.Leq (c1, c2) -> bin_op (fun c1 c2 -> Leq (c1,c2)) c1 c2
     | M3.IfThenElse0(c1, c2) ->
       let short_circuit_if = M3P.get_short_circuit calc in
       if short_circuit_if then
-           bin_op (fun c1 c2 -> IfThenElse0(c1,c2)) passthrough c1 c2
-      else bin_op (fun c2 c1 -> IfThenElse0(c1,c2)) l_to_r      c2 c1
+           bin_op (fun c1 c2 -> IfThenElse0(c1,c2)) c1 c2
+      else bin_op (fun c2 c1 -> IfThenElse0(c1,c2)) c2 c1
   end 
 
 and m3rhs_to_expr trig_args lhs_outv paggcalc : expr_t =

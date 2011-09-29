@@ -470,8 +470,9 @@ match language with
                (string_of_list0 "\n" (fun (_,stmt) ->
                   let string_of_meta meta = 
                      match meta with 
-                        | ImpBuilder.Common.TypedSym(None,_) -> "xxx"
-                        | ImpBuilder.Common.TypedSym(Some(sym),_) -> sym
+                        | ImpBuilder.Common.TypedSym(None,(tsym,_)) -> tsym
+                        | ImpBuilder.Common.TypedSym(Some(sym),(tsym,_)) -> 
+                                                                sym^";"^tsym
                   in
                   let ir = ImpBuilder.DirectIRBuilder.ir_of_expr stmt in
                      (ImpBuilder.AnnotatedK3.string_of_k3ir 

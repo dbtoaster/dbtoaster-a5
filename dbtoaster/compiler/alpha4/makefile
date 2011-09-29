@@ -265,7 +265,7 @@ cpp_test: dbtoaster
 	test/scripts/query_test.rb -a -t cpp
 
 ok_test: top
-	@$(DEBUG_APP) test/unit/ssb4_debug.ml
+	@$(DEBUG_APP) test/unit/tpch17_debug.ml
 
 ## SQL compilation Tests
 test/sql/%: test/sql/%.sql dbtoaster
