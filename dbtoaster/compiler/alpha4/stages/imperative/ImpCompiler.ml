@@ -962,7 +962,7 @@ end (* Typing *)
                 | Host(TTuple(l)) -> back (tuple_of_var id l)
                 | Target(Pair(Host(TTuple(l)),_)) ->
                   (tuple_of_var (id^".first") l), (id^".second") 
-                | Target(Pair(Host(TInt|TFloat as l),_)) ->
+                | Target(Pair(Host(TInt|TFloat),_)) ->
                   [(id^".first")],(id^".second")
                 | _ -> failwith "invalid tuple collection append"
                 end 

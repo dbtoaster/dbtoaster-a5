@@ -283,7 +283,8 @@ and op_to_expr trig_args metadata (expected_sch1,expected_sch2) op c c1 c2 =
 and calc_to_expr trig_args metadata expected_schema calc =
   let tuple op schema c1 c2 =
     (* TODO: schema types *)
-    let outsch = (ListAsSet.inter expected_schema schema)
+    let outsch = if Debug.active "NO-NARROW-SCHEMAS" then schema
+                 else (ListAsSet.inter expected_schema schema)
     in if outsch = []
        then [], (op c1 c2)
        else outsch, 
