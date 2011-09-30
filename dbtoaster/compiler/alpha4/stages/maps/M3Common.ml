@@ -163,11 +163,11 @@ let calc_vars_aux mf vf : ((('c,'a) generic_calc_t) -> var_t list)
 let calc_schema (c:(('c,'a) generic_calc_t)) : var_t list
     = calc_vars_aux (fun inv outv -> outv) (fun v -> []) c
 
-let calc_params (c:(('c,'a) generic_calc_t)) : var_t list
-    = calc_vars_aux (fun inv outv -> inv) (fun v -> []) c
-
 let calc_vars (c:(('c,'a) generic_calc_t)) : var_t list
     = calc_vars_aux (fun inv outv -> inv@outv) (fun v -> [v]) c
+
+let calc_params (c:(('c,'a) generic_calc_t)) : var_t list
+    = ListAsSet.diff (calc_vars c) (calc_schema c)
 
 
 (******************* String Output *******************)

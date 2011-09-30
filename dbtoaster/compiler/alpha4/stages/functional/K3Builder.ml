@@ -310,6 +310,12 @@ and calc_to_expr trig_args metadata expected_schema calc =
                                                      join_schema)
                                     trig_args in
                   let c2_in_schema = calc_params c2 in
+                     Debug.print "BIN-OP-SCHEMA" (fun () -> 
+                        (M3Common.code_of_calc calc)^
+                        (list_to_string (fun x->x) common_schema)^"; "^
+                        (list_to_string (fun x->x) c2_in_schema)^
+                        (M3Common.code_of_calc c2)
+                     );
                      (  ListAsSet.union common_schema c2_in_schema, 
                         common_schema ))
                (tuple f) 
