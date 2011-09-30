@@ -13,7 +13,6 @@
  *    in the given target language.
 *)
 
-open Util
 open M3
 open M3Common
 open M3Common.Patterns
@@ -220,7 +219,6 @@ let prepare_triggers (triggers : trig_t list)
        * be extended to an n-way operator as documented below.
        *)
       let prepare_op_w_lhs (c2_stmt_lhs_vars : var_t list)
-                           (should_propagate: bool)
                            (build_op_f : M3P.calc_t -> M3P.calc_t -> M3P.pcalc_t)
                            (c1: calc_t) (c2: calc_t)
             : (M3P.calc_t * pattern_map)
@@ -229,9 +227,7 @@ let prepare_triggers (triggers : trig_t list)
          let _, operand_eps = List.fold_left
            (fun (acc_propagations, acc_ep) (c, c_lhs_vars, last) ->
              let (e, outv, pats) = 
-               prepare_operand c_lhs_vars c last 
-                               (if should_propagate then acc_propagations 
-                                                    else [])
+               prepare_operand c_lhs_vars c last acc_propagations
              in (acc_propagations@(M3P.get_extensions e),
                  acc_ep@[e,outv,pats,last])) 
            (theta_vars, [])
@@ -277,11 +273,11 @@ let prepare_triggers (triggers : trig_t list)
            let meta = (prepare(), [], true, false, false)
            in ((c, meta), empty_pattern_map())
 
-        | Add  (c1,c2)  -> prepare_op false (fun e1 e2 -> Add  (e1, e2)) c1 c2
-        | Mult (c1,c2)  -> prepare_op true  (fun e1 e2 -> Mult (e1, e2)) c1 c2
-        | Leq  (c1,c2)  -> prepare_op true  (fun e1 e2 -> Leq  (e1, e2)) c1 c2
-        | Eq   (c1,c2)  -> prepare_op true  (fun e1 e2 -> Eq   (e1, e2)) c1 c2
-        | Lt   (c1,c2)  -> prepare_op true  (fun e1 e2 -> Lt   (e1, e2)) c1 c2
+        | Add  (c1,c2)  -> prepare_op (fun e1 e2 -> Add  (e1, e2)) c1 c2
+        | Mult (c1,c2)  -> prepare_op (fun e1 e2 -> Mult (e1, e2)) c1 c2
+        | Leq  (c1,c2)  -> prepare_op (fun e1 e2 -> Leq  (e1, e2)) c1 c2
+        | Eq   (c1,c2)  -> prepare_op (fun e1 e2 -> Eq   (e1, e2)) c1 c2
+        | Lt   (c1,c2)  -> prepare_op (fun e1 e2 -> Lt   (e1, e2)) c1 c2
         
         | IfThenElse0 (c1,c2) ->
            (* if-expressions must explicitly override short-circuiting flag *)
@@ -307,7 +303,6 @@ let prepare_triggers (triggers : trig_t list)
            let ((nc,(id,ext,sing,prod,_)),pat) =
              prepare_op_w_lhs
                (Util.ListAsSet.union stmt_lhs_vars upl_prop)
-               true
                op_f l r in
            let new_if_meta = (id,ext,sing,prod,short_circuit)
            in ((nc, new_if_meta), pat)
@@ -321,13 +316,7 @@ let prepare_triggers (triggers : trig_t list)
            let singleton = 
               (List.length bound_inv) = (List.length inv) &&
               (List.length bound_outv) = (List.length outv) in 
-           Debug.print "LOG-MA-PREP" (fun () -> 
-              "Preparing "^(if singleton then "singleton" else "slice/scan")^
-              " of "^mapn^(M3Common.vars_to_string inv)
-                         ^(M3Common.vars_to_string outv)^
-              "; with "  ^(M3Common.vars_to_string bound_inv)
-                         ^(M3Common.vars_to_string bound_outv)
-           );
+           
            (* For recursive preparation of initial values:
             * 1. Both in and out vars of this map access are added to the
             *    initializers lhs_vars to ensure they are not detected as

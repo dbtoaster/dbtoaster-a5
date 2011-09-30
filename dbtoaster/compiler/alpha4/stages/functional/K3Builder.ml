@@ -300,11 +300,15 @@ and calc_to_expr trig_args metadata expected_schema calc =
                   on both sides of the expression.
                   Then we also have to take any output variables from the lhs
                   that are expected by the rhs and add them to the lhs expected
-                  schema. *)
+                  schema. 
+                  Finally, we take out all the trigger arguments
+                  *)
                (  let join_schema = ListAsSet.inter (calc_schema c1) 
                                                     (calc_schema c2) in
-                  let common_schema = ListAsSet.union expected_schema 
-                                                      join_schema in
+                  let common_schema = 
+                     ListAsSet.diff (ListAsSet.union expected_schema 
+                                                     join_schema)
+                                    trig_args in
                   let c2_in_schema = calc_params c2 in
                      (  ListAsSet.union common_schema c2_in_schema, 
                         common_schema ))
