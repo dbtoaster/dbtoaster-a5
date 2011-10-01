@@ -649,9 +649,15 @@ struct
     let trigger event rel trig_args stmt_block =
       Trigger (event, rel, (fun tuple db -> 
         let theta = Env.make trig_args (List.map value_of_const_t tuple), [] in
-          List.iter (fun cstmt -> match (get_eval cstmt) theta db with
+          List.iter (fun cstmt -> 
+            Debug.print "LOG-INTERPRETER-TRIGGERS" (fun () -> 
+               "Processing trigger "^rel);
+            match (get_eval cstmt) theta db with
             | Unit -> ()
-            | _ -> failwith "trigger returned non-unit") stmt_block))
+            | _ as d -> failwith 
+               ("trigger "^rel^" returned non-unit datum: "^
+                  (Values.K3Value.string_of_value d)
+               )) stmt_block))
 
     (* Sources, for now files only. *)
     type source_impl_t = FileSource.t

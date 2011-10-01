@@ -502,6 +502,19 @@ match language with
          
    | L_INTERPRETER(OCG_K3) -> (
          StandardAdaptors.initialize ();
+         let (_,_,trigs) = k3_opt_prog in
+            List.iter (fun (evt,rel,args,stmts) ->
+               List.iter (fun (_,stmt) ->
+                  let t = K3Typechecker.typecheck_expr stmt in 
+                     if t <> K3.SR.TUnit then (
+                        output_string stderr (
+                           "Trigger returns type '"^(K3.SR.string_of_type t)^
+                           "': "^(K3.SR.string_of_expr stmt)
+                        );
+                        failwith "Typing error"
+                     )
+               ) stmts
+            ) trigs;
          K3InterpreterCompiler.compile_query
             dbschema
             (k3_opt_prog, sources)

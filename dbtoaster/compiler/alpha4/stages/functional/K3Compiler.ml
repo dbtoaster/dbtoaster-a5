@@ -107,7 +107,7 @@ let rec compile_k3_expr e =
 
 let compile_triggers_noopt trigs : code_t list =
    List.map (fun (event, rel, args, cs) ->
-      let stmts = List.map compile_k3_expr (List.map fst cs) in
+      let stmts = List.map compile_k3_expr (List.map snd cs) in
          trigger event rel args stmts
    ) trigs
 
