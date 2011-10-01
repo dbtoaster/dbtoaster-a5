@@ -22,7 +22,7 @@ $optimizations = {
   "dup-ivc"            => "-d dup-ivc",
   "factor-postprocess" => "-d factor-postprocess",
 #  "depth-0"            => "--depth 0 -d dup-ivc",
-  "depth-1"            => "--depth 1 -d dup-ivc",
+#  "depth-1"            => "--depth 1 -d dup-ivc",
 #  "depth-2"            => "--depth 2"
 }
 
@@ -96,12 +96,12 @@ $queries = {
     :answer => results_file("test/results/tpch/query18.csv"),
     :valid_opts => ["depth-0", "depth-1"]
   },
-#  "tpch18real" => {
-#    :path => "test/sql/tpch/query18simple.sql",
-#    :type => :onelevel,
-#    :answer => results_file("test/results/tpch/query18.csv"),
-#    :valid_opts => ["depth-1"]
-#  },
+  "tpch18real" => {
+    :path => "test/sql/tpch/query18real.sql",
+    :type => :onelevel,
+    :answer => results_file("test/results/tpch/query18.csv"),
+    :valid_opts => ["depth-1"]
+  },
   "tpch22" => {
     :path => "test/sql/tpch/query22.sql",
     :type => :onelevel,
