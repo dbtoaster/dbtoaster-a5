@@ -44,6 +44,7 @@ end
 
 def compare_results(dbtoaster, postgres = correct_results)
   (dbtoaster.keys + postgres.keys).uniq.each do |k|
+  
     if dbtoaster[k].to_f != postgres[k].to_f then
       puts "============ Value Mismatch ============";
       puts "--- STATE ---";
@@ -83,6 +84,7 @@ def correct_results()
         end.
         delete_if { |i| i == ""; }.
         map { |row| [(k = row.clone), (k.pop)] }.
+        map { |k,v| [k.map {|i| i.to_i}, v] }.
         to_h
     end
   rel_files.each { |f| f.close! }
@@ -100,7 +102,10 @@ IO.popen(dbt_cmd, "r+") do |f|
         
       when /QUERY_1_1->/ then
         results = OcamlDB.new(line)["QUERY_1_1"];
-        results = {[] => results} unless results.is_a? Array;
+        results = {[] => results} unless results.is_a? Hash;
+        results = results.to_a.
+          map { |k,v| [k.map{|i| i.to_i}, v]}.
+          to_h
         compare_results(results)
         f.puts "\n";
     end

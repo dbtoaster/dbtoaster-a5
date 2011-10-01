@@ -20,7 +20,6 @@ class OcamlDB < Hash
       end
     end
     OcamlDB.parse_named_forest(tree.pop.pop, self);
-    p self;
   end
   
   def OcamlDB.parse_named_forest(elements, into = Hash.new)
