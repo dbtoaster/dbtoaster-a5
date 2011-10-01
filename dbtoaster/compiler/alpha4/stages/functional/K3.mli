@@ -59,6 +59,9 @@ sig
 	   | Project       of expr_t      * int list
         (* Project(aTuple, [indices])
            restriction: typeof(aTuple) = TTuple[*]
+           
+           ******* PROJECTION HAS NOT BEEN IMPLEMENTED *******
+           
            Pick out the elements of aTuple at the indicated indices
            returns:
               if sizeof(indices) = 1 then 
@@ -68,6 +71,19 @@ sig
         *)
 	
 	   (* Collection construction *)
+	   
+	   (************************************************************************
+	    Collections occur in two different forms: 
+	    Tuple collections
+	      type: Collection(Tuple([...]))
+	      The first n-1 elements of the tuple are treated as a unique key.  For
+	      any given key, the collection contains precisely one value (represented
+	      as the nth element of the tuple).
+	    Value collections
+	      type: Collection(...)
+	      A list of items.
+	    ************************************************************************)
+	   
 	   | Singleton     of expr_t
         (* Singleton(collectionElement)
            Create a 1-element collection defined by collectionElement

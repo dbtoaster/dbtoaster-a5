@@ -340,8 +340,25 @@ and calc_to_expr trig_args metadata expected_schema calc =
       let r =
         let skip = List.mem (mapn, inv, outv) metadata
         in map_access_to_expr skip map_expr init_expr
-             (M3P.get_singleton calc) singleton_init_code patv
-      in (outv,metadata@[mapn,inv,outv], r)
+             (M3P.get_singleton calc) singleton_init_code patv in
+      let retv = 
+         if (Debug.active "NO-PROJECTIONS") then outv
+         else ListAsSet.inter outv expected_schema in
+      let projected = 
+         if (ListAsSet.seteq retv outv)
+         then r else (
+            let agg_fn = bind_for_aggregate 
+               trig_args 
+               (args_of_vars (outv@["v"]))
+               ("accv",TFloat)
+               (Add(Var("v", TFloat), Var("accv", TFloat))) in
+            let gb_fn = bind_for_apply_each 
+               trig_args
+               (args_of_vars (outv@["v"]))
+               (Tuple(List.map (fun v -> Var(v, TFloat)) retv)) in
+            GroupByAggregate(agg_fn, (Const(M3.CFloat(0.))), gb_fn, r)
+      ) in
+         (retv,metadata@[mapn,inv,outv], projected)
 
     | M3.Add (c1, c2) -> bin_op (fun c1 c2 -> Add (c1,c2)) c1 c2 
     | M3.Mult(c1, c2) -> bin_op (fun c1 c2 -> Mult(c1,c2)) c1 c2
