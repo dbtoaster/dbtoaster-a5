@@ -220,6 +220,8 @@ let rec compile ?(dup_elim = ref StringMap.empty)
 
   let (next_top_down_depth, go_deeper) = 
     match top_down_depth with 
+    | Some(0) -> 
+      failwith "BUG: Compile recusing with a top-down-depth of 0"
     | None -> (None, true)
     | Some(i) -> if i <= 1 then (Some(0) , false) else ((Some(i-1)),true)
   in
@@ -289,3 +291,65 @@ let rec compile ?(dup_elim = ref StringMap.empty)
                      curr_accum)
            accum todos))
   )
+
+
+let nonincremental_program (db_schema: (string * (Calculus.var_t list)) list)
+                           ((map_definition, map_term): map_ref_t)
+                           (generate_code:'a output_translator_t)
+                           (accum:'a): 'a =
+  let (base_relations, new_value) = 
+    Calculus.extract_base_relations 
+      [ snd (Calculus.decode_map_term map_term), 
+        map_definition
+      ] in
+  let (fake_delta) = 
+    Calculus.make_term (
+      Calculus.RSum(
+        Calculus.RNeg(
+          Calculus.readable_term map_term
+        ) :: (List.map (fun (_,x) -> 
+          Calculus.readable_term x
+        ) new_value)
+      )
+    ) 
+  in
+  let accum_with_base_rels = 
+    List.fold_left (fun curr_accum rel ->
+      let rel_schema = List.assoc rel db_schema in
+      let rel_term = ( Calculus.base_relation_expr (rel,rel_schema),
+                       Calculus.map_term rel rel_schema ) in
+      generate_code db_schema
+                    rel_term
+                    ( List.fold_left (fun trig_accum delete ->
+                        ( delete,
+                          rel,
+                          rel_schema,
+                          (rel_schema, []),
+                          (Calculus.make_term (Calculus.RVal(
+                            Calculus.Const(
+                              Calculus.Int(if delete then -1 else 1)
+                          ))))
+                        ) :: trig_accum
+                      ) [] [true; false]
+                    )
+                    curr_accum
+    ) accum base_relations
+  in
+    generate_code db_schema
+                  (map_definition,map_term)
+                  ( List.fold_left (fun rel_trigs rel ->
+                      List.fold_left (fun insdel_trigs delete ->
+                        ( delete, 
+                          rel, 
+                          snd (List.fold_left (fun (i,accum) (_,t) ->
+                            (i+1, ("nonincremental_unused_var_"^
+                                   (string_of_int i), t) :: accum)
+                          ) (0, []) (List.assoc rel db_schema)),
+                          ( snd (Calculus.decode_map_term map_term),
+                            []),
+                          fake_delta
+                        ) :: insdel_trigs
+                      ) rel_trigs [true; false]
+                    ) [] (Calculus.term_relations map_definition)
+                  )
+                  accum_with_base_rels

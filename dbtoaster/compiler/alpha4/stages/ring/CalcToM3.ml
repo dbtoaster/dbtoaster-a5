@@ -669,7 +669,7 @@ module M3InProgress = struct
             else ref_map
           else StringMap.add map ref ref_map)
         mapped_map_terms refs
-      
+
   let rec compile 
               ?(top_down_depth = None)
               (schema:(string*(var_t list)) list)
@@ -712,7 +712,11 @@ module M3InProgress = struct
           (to_m3_map_access schema 
                             (sub_map_params map_ref_as_m3 params)) None in
         let (update, update_todos) =
-          to_m3 schema (readable_term expr) (get_map_refs accum) in
+          to_m3 schema 
+                (readable_term expr) 
+                (StringMap.add (fst (decode_map_term (snd map_ref)))
+                               (translate_map_ref map_ref)
+                               (get_map_refs accum)) in
         let todos = 
           ListExtras.flatten_list_pair [old_todos; init_todos; update_todos] in
         let update_trigger =
@@ -745,6 +749,16 @@ module M3InProgress = struct
           (fun old_accum todo -> compile schema todo old_accum)
           accum todos)
         (map_ref_as_m3, triggers_as_m3))
+   ;;
+  let nonincremental (schema:(string*(var_t list)) list)
+                     (map_ref:Compiler.map_ref_t)
+                     (accum:t) : t =
+      Compiler.nonincremental_program schema
+                                      map_ref
+                                      generate_m3
+                                      accum
+
 end
 
 let compile = M3InProgress.compile;;
+let nonincremental = M3InProgress.nonincremental

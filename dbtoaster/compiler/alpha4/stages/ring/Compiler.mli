@@ -32,6 +32,14 @@ val compile: ?dup_elim:Calculus.term_t Util.StringMap.t ref -> (* Ignore *)
              'a output_translator_t ->                (* Output Translator *)
              'a -> 'a                                 (* Output Accumulator *)
 
+(* For comparison purposes, we also offer the option of generating a 
+   non-incremental program as output (i.e., what should happen if you call
+   compile with ~top_down_depth:0). Please use this function instead. *)
+val nonincremental_program:
+             (string * (Calculus.var_t list)) list -> (* Schema (Rel*Vars) *)
+             map_ref_t ->                             (* Term to compile *)
+             'a output_translator_t ->                (* Output Translator *)
+             'a -> 'a                                 (* Output Accumulator *)
 
 (* Auxilliary compilation function. 
    You should not need to call this. *)

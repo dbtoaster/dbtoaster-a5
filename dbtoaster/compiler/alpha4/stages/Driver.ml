@@ -325,15 +325,24 @@ let calc_into_m3_inprogress qname (qlist,dbschema,qvars) m3ip =
         let subq_name = (qname^"_"^(string_of_int sub_id)) in
         (
           toplevel_queries := !toplevel_queries @ [subq_name];
-          CalcToM3.compile
-             ~top_down_depth:compile_depth
-             dbschema
-             (Calculus.make_term q,
-              Calculus.map_term 
-                (qname^"_"^(string_of_int sub_id))
-                qvars
-             )
-             accum
+          let map_ref =
+             ( Calculus.make_term q,
+               Calculus.map_term 
+                   (qname^"_"^(string_of_int sub_id))
+                   qvars
+             ) in
+          match compile_depth with
+            | Some(i) when i <= 0 -> 
+               CalcToM3.nonincremental
+                  dbschema
+                  map_ref
+                  accum
+            | _ -> 
+                CalcToM3.compile
+                   ~top_down_depth:compile_depth
+                   dbschema
+                   map_ref
+                   accum
         )
       ), sub_id+1 ) (m3ip,1) qlist
     )

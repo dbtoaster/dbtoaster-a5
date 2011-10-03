@@ -149,3 +149,5 @@ end
 val compile : ?top_down_depth:(int option) -> 
               (string*(Calculus.var_t list)) list ->
               Compiler.map_ref_t -> M3InProgress.t -> M3InProgress.t
+val nonincremental : (string*(Calculus.var_t list)) list ->
+                     Compiler.map_ref_t -> M3InProgress.t -> M3InProgress.t
