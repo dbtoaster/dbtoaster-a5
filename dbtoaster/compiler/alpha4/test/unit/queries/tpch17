@@ -1,0 +1,6 @@
+{
+  :path => "test/sql/tpch/query17.sql",
+  :type => :singleton,
+  :answer => 898778.73,
+  :valid_opts => ["depth-1"]
+}

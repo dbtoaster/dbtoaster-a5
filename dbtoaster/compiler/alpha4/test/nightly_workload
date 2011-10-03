@@ -1,0 +1,46 @@
+rst
+rst --depth 0 --compile-only
+rst --depth 1 --compile-only
+rst --depth 2 --compile-only
+ssb4 -d disable-deletes -d dup-ivc
+vwap
+vwap -d dup-ivc
+vwap -d dup-ivc --depth 0 --compile-only
+vwap -d dup-ivc --depth 1 --compile-only
+pricespread 
+pricespread -d dup-ivc
+pricespread -d dup-ivc --depth 0 --compile-only
+pricespread -d dup-ivc --depth 1 --compile-only
+missedtrades
+missedtrades -d dup-ivc
+missedtrades -d dup-ivc --depth 0 --compile-only
+missedtrades -d dup-ivc --depth 1 --compile-only
+axfinder 
+axfinder -d runtime-bigsums
+axfinder -d runtime-bigsums -dup-ivc
+axfinder -d runtime-bigsums -dup-ivc --depth 0 --compile-only
+axfinder -d runtime-bigsums -dup-ivc --depth 1 --compile-only
+tpch3
+tpch3 --depth 0 --compile-only -d projected-map-access
+tpch3 --depth 1 --compile-only -d projected-map-access
+tpch11
+tpch11 --depth 0 --compile-only -d projected-map-access
+tpch11 --depth 1 --compile-only -d projected-map-access
+tpch17
+tpch17 --depth 0 --compile-only -d projected-map-access
+tpch17 --depth 1 --compile-only -d projected-map-access
+tpch18
+tpch18 --depth 0 --compile-only -d projected-map-access
+tpch18 --depth 1 --compile-only -d projected-map-access
+tpch18short
+tpch18short --depth 0 --compile-only -d projected-map-access
+tpch18short --depth 1 --compile-only -d projected-map-access
+tpch22
+tpch22 --depth 0 --compile-only -d projected-map-access
+tpch22 --depth 1 --compile-only -d projected-map-access
+clusteravailable -d dup-ivc
+clusteravailable -d dup-ivc --depth 0 --compile-only -d projected-map-access
+clusteravailable -d dup-ivc --depth 1 --compile-only -d projected-map-access
+clusteravailablenew -d dup-ivc
+clusteravailablenew -d dup-ivc --depth 0 --compile-only
+clusteravailablenew -d dup-ivc --depth 1 --compile-only

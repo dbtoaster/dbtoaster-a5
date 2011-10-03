@@ -17,112 +17,19 @@ def results_file(path, delim = /,/)
     end.to_h
 end
 
-$optimizations = {
-  "runtime-bigsums"    => "-d runtime-bigsums",
-  "dup-ivc"            => "-d dup-ivc",
-  "factor-postprocess" => "-d factor-postprocess",
-#  "depth-0"            => "--depth 0 -d dup-ivc",
-#  "depth-1"            => "--depth 1 -d dup-ivc",
-#  "depth-2"            => "--depth 2"
-}
-
-$queries = {
-  "rst" => {
-    :path => "test/sql/simple/rst.sql",
-    :type => :singleton,
-    :answer => 18753367048934.0,
-    :valid_opts => ["depth-0", "depth-1"]
-  },
-#  "rstar" => {
-#    :path => "test/sql/simple/rstar.sql",
-#    :type => :singleton,
-#    :answer => 0
-#  },
-  "ssb4" => {
-    :path => "test/sql/tpch/ssb4.sql",
-    :type => :singleton,
-    :answer => 0,
-    :compiler_flags => ["-d", "disable-deletes", 
-                        "-d", "dup-ivc"]
-  },
-  "vwap" => {
-    :path => "test/sql/finance/vwap.sql",
-    :type => :singleton,
-    :answer => 28916017900.0,
-    :valid_opts => ["depth-0", "depth-1"]
-  },
-  "pricespread" => {
-    :path => "test/sql/finance/pricespread.sql",
-    :type => :singleton,
-    :answer => 76452380068302.0,
-    :valid_opts => ["dup-ivc"]
-  },
-  "missedtrades" => {
-    :path => "test/sql/finance/missedtrades.sql",
-    :type => :onelevel,
-    :answer => results_file("test/results/missedtrades.csv"),
-    :valid_opts => ["dup-ivc", "depth-0", "depth-1"]
-  },
-  "axfinder" => {
-    :path => "test/sql/finance/axfinder.sql",
-    :type => :onelevel,
-    :answer => results_file("test/results/axfinder.csv"),
-    :valid_opts => ["runtime-bigsums", "dup-ivc"]
-  },
-  "tpch3" => {
-    :path => "test/sql/tpch/query3.sql",
-    :type => :onelevel,
-    :answer => results_file("test/results/tpch/query3_100M.csv"),
-  },
-#  "tpch5" => {
-#    :path => "test/sql/tpch/query5.sql",
-#    :type => :onelevel,
-#    :answer => results_file("test/results/tpch/query11.csv")
-#  },
-  "tpch11" => {
-    :path => "test/sql/tpch/query11a.sql",
-    :type => :onelevel,
-    :answer => results_file("test/results/tpch/query11_100M.csv"),
-  },
-  "tpch17" => {
-    :path => "test/sql/tpch/query17.sql",
-    :type => :singleton,
-    :answer => 898778.73,
-    :valid_opts => ["depth-1"]
-  },
-  "tpch18" => {
-    :path => "test/sql/tpch/query18.sql",
-    :type => :onelevel,
-    :answer => results_file("test/results/tpch/query18.csv"),
-    :valid_opts => ["depth-0", "depth-1"]
-  },
-  "tpch18real" => {
-    :path => "test/sql/tpch/query18real.sql",
-    :type => :onelevel,
-    :answer => results_file("test/results/tpch/query18.csv"),
-    :valid_opts => ["depth-1"]
-  },
-  "tpch22" => {
-    :path => "test/sql/tpch/query22.sql",
-    :type => :onelevel,
-    :answer => results_file("test/results/tpch/query22_100M.csv"),
-    :valid_opts => ["depth-1"]
-  },
-  "clusteravailable" => {
-    :path => "test/sql/clusteravailable.sql",
-    :type => :onelevel,
-    :answer => results_file("test/results/clusteravailable.csv")
-  },
-  "clusteravailablenew" => {
-    :path => "test/sql/clusteravailable_priority.sql",
-    :type => :onelevel,
-    :answer => results_file("test/results/clusteravailable.csv")
-  }
-};
+$queries = 
+  Dir.entries("#{$dbt_path}/test/unit/queries").
+  delete_if {|f| f[0] == "."[0]}.
+  map do |file_path|
+    [ file_path, 
+      File.open("#{$dbt_path}/test/unit/queries/#{file_path}") do |f| 
+        eval(f.readlines.join(""), binding) 
+      end
+    ]
+  end.to_h
 
 class GenericUnitTest
   attr_reader :runtime, :opts;
-  attr_writer :opts;
 
   def query=(q, qdat = $queries[q])
     @qname = q;
@@ -151,7 +58,9 @@ class GenericUnitTest
   end
   
   def dbt_base_cmd
-    [ $dbt, @qpath, "--depth", $depth ] + @opts + @compiler_flags +
+    [ $dbt, @qpath ] +
+      (if $depth.nil? then [] else ["--depth", $depth ] end) + 
+      @compiler_flags +
       ($debug_flags.map { |f| ["-d", f]}.flatten(1))
   end
   
@@ -196,6 +105,7 @@ class CppUnitTest < GenericUnitTest
       print "(Compile: #{(Time.now - starttime).to_i}s) "
       $stdout.flush;
     end
+    return if $compile_only;
     starttime = Time.now;
     IO.popen("#{$dbt_path}/bin/#{@qname} -q", "r") do |qin|
       output = qin.readlines.map { |l| l.chomp }.join("")
@@ -247,12 +157,15 @@ end
 class InterpreterUnitTest < GenericUnitTest
   def run
     IO.popen("OCAMLRUNPARAM='#{$ocamlrunparam}';"+
-             "#{dbt_base_cmd.join(" ")} -r 2>&1", "r") do |qin|
+             "#{dbt_base_cmd.join(" ")}"+
+             (if $compile_only then " -l k3" else "" end)+
+             " -r 2>&1", "r") do |qin|
       output = qin.readlines.join("")
       if /Processing time: ([0-9]+\.?[0-9]*)/ =~ output
         then @runtime = $1.to_f
         else @runtime = "unknown"
       end
+      return if $compile_only;
       raise "Runtime Error" unless (/QUERY_1_1: (.*)$/ =~ output);
       output = $1
       case @qtype
@@ -294,35 +207,25 @@ end
 
 tests = [];
 $debug_flags = [];
-queries = nil;
 $skip_compile = false;
 $precision = 1e-4;
 $strict = false;
 $ret = 0;
-$depth = "-";
+$depth = nil;
 $verbose = false;
-test_optimizations = []
+$compile_only = false
 
 GetoptLong.new(
-  [ '-a', '--all',       GetoptLong::NO_ARGUMENT],
-  [ '-o',                GetoptLong::REQUIRED_ARGUMENT],
-  [ '--all-queries',     GetoptLong::NO_ARGUMENT],
-  [ '--all-opts',        GetoptLong::NO_ARGUMENT],
   [ '-t', '--test',      GetoptLong::REQUIRED_ARGUMENT],
   [ '--skip-compile',    GetoptLong::NO_ARGUMENT],
   [ '-p', '--precision', GetoptLong::REQUIRED_ARGUMENT],
   [ '-d',                GetoptLong::REQUIRED_ARGUMENT],
   [ '--depth',           GetoptLong::REQUIRED_ARGUMENT],
   [ '-v', '--verbose',   GetoptLong::NO_ARGUMENT],
-  [ '--strict',          GetoptLong::NO_ARGUMENT]
+  [ '--strict',          GetoptLong::NO_ARGUMENT],
+  [ '--compile-only',    GetoptLong::NO_ARGUMENT]
 ).each do |opt, arg|
   case opt
-    when '-a', '--all' then 
-      queries = $queries.keys
-      test_optimizations = $optimizations.keys
-    when '--all-queries' then queries = $queries.keys
-    when '--all-opts' then test_optimizations = $optimizations.keys
-    when '-o' then test_optimizations.push arg;
     when '--skip-compile' then $skip_compile = true;
     when '-p', '--precision' then $precision = 10 ** (-1 * arg.to_i);
     when '-t', '--test' then 
@@ -335,51 +238,57 @@ GetoptLong.new(
     when '--depth' then $depth = arg
     when '--strict' then $strict = true;
     when '-v', '--verbose' then $verbose = true;
+    when '--compile-only' then $compile_only = true;
   end
 end
 
 tests.uniq!
 tests = [CppUnitTest] if tests.empty?;
 
-queries = ARGV if queries.nil?
+queries = ARGV
 
 queries.each do |tquery| 
   if $queries.has_key? tquery then
     tests.each do |test_class|
-      $queries[tquery].
-        fetch(:valid_opts, []).
-        intersect(test_optimizations).
-        power_set.each do |test_opts|
-          t = test_class.new
-          opt_string = test_opts.empty? ? "" : 
-            " with optimization#{test_opts.s?} #{test_opts.join(", ")}"
-          print "Testing query '#{tquery}'#{opt_string} on the #{t.to_s}: "; 
-          STDOUT.flush;
-          t.query = tquery;
-          t.opts = test_opts.map { |opt| $optimizations.fetch(opt, "") };
-          begin 
-            t.run
-            if t.correct? then
-              puts "Success (#{t.runtime}s)."
-              puts(([["Key", "Expected", "Result", "Different?"], 
-                     ["", "", ""]] + t.results).tabulate) if $verbose;
-            else
-              puts "Failure: Result Mismatch"
-              puts(([["Key", "Expected", "Result", "Different?"], 
-                     ["", "", ""]] + t.results).tabulate);
-              $ret = -1;
-              exit -1 if $strict;
-            end
-          rescue Exception => e
-            puts "Failure: #{e}";
+      t = test_class.new
+      opt_terms = 
+        (if $debug_flags.empty? then [] 
+                                else [["debug flags",$debug_flags]] end)+
+        (if $depth.nil? then [] else [["depth", ["#{$depth}"]]] end)+
+        (if $compile_only then [["compilation", ["only"]]] else [] end)
+      opt_string =
+        if opt_terms.empty? then ""
+        else " with #{opt_terms.map{|k,tm|"#{k} #{tm.join(", ")}"}.join("; ")}"
+        end
+      print "Testing query '#{tquery}'#{opt_string} on the #{t.to_s}: ";
+      STDOUT.flush;
+      t.query = tquery
+      begin
+        t.run
+        unless $compile_only then
+          if t.correct? then
+            puts "Success (#{t.runtime}s)."
+            puts(([["Key", "Expected", "Result", "Different?"], 
+                   ["", "", ""]] + t.results).tabulate) if $verbose;
+          else
+            puts "Failure: Result Mismatch (#{t.runtime}s)."
+            puts(([["Key", "Expected", "Result", "Different?"], 
+                   ["", "", ""]] + t.results).tabulate);
             $ret = -1;
             exit -1 if $strict;
           end
+        else
+          puts "Success"
+        end
+      rescue Exception => e
+        puts "Failure: #{e}";
+        $ret = -1;
+        exit -1 if $strict;
       end
     end
   else
     puts "Unknown query #{tquery}"
   end
 end
-
+  
 exit $ret;

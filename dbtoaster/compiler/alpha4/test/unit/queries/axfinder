@@ -1,0 +1,6 @@
+{
+  :path => "test/sql/finance/axfinder.sql",
+  :type => :onelevel,
+  :answer => results_file("test/results/axfinder.csv"),
+  :valid_opts => ["runtime-bigsums", "dup-ivc"]
+}

@@ -1,0 +1,6 @@
+{
+  :path => "test/sql/simple/rst.sql",
+  :type => :singleton,
+  :answer => 18753367048934.0,
+  :valid_opts => ["depth-0", "depth-1"]
+}

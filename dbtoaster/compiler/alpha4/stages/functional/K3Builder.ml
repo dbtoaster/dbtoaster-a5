@@ -342,8 +342,9 @@ and calc_to_expr trig_args metadata expected_schema calc =
         in map_access_to_expr skip map_expr init_expr
              (M3P.get_singleton calc) singleton_init_code patv in
       let retv = 
-         if (Debug.active "NO-PROJECTIONS") then outv
-         else ListAsSet.inter outv expected_schema in
+         if (Debug.active "PROJECTED-MAP-ACCESS")
+         then ListAsSet.inter outv expected_schema
+         else outv in
       let projected = 
          if (ListAsSet.seteq retv outv)
          then r else (

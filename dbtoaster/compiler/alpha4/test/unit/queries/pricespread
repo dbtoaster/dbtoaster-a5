@@ -1,0 +1,6 @@
+{
+  :path => "test/sql/finance/pricespread.sql",
+  :type => :singleton,
+  :answer => 76452380068302.0,
+  :valid_opts => ["dup-ivc"]
+}

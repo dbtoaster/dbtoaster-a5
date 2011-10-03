@@ -1,0 +1,5 @@
+  {
+    :path => "test/sql/tpch/query11a.sql",
+    :type => :onelevel,
+    :answer => results_file("test/results/tpch/query11_100M.csv"),
+  }

@@ -1,0 +1,7 @@
+{
+  :path => "test/sql/tpch/ssb4.sql",
+  :type => :singleton,
+  :answer => 0,
+  :compiler_flags => ["-d", "disable-deletes", 
+                      "-d", "dup-ivc"]
+}
