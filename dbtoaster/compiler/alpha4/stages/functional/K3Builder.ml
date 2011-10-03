@@ -356,7 +356,9 @@ and calc_to_expr trig_args metadata expected_schema calc =
                trig_args
                (args_of_vars (outv@["v"]))
                (Tuple(List.map (fun v -> Var(v, TFloat)) retv)) in
-            GroupByAggregate(agg_fn, (Const(M3.CFloat(0.))), gb_fn, r)
+            if retv = [] 
+            then Aggregate(agg_fn, (Const(M3.CFloat(0.))), r)
+            else GroupByAggregate(agg_fn, (Const(M3.CFloat(0.))), gb_fn, r)
       ) in
          (retv,metadata@[mapn,inv,outv], projected)
 
