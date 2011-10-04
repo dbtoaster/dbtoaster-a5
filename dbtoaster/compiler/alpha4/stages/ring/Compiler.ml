@@ -220,10 +220,8 @@ let rec compile ?(dup_elim = ref StringMap.empty)
 
   let (next_top_down_depth, go_deeper) = 
     match top_down_depth with 
-    | Some(0) -> 
-      failwith "BUG: Compile recusing with a top-down-depth of 0"
     | None -> (None, true)
-    | Some(i) -> if i <= 1 then (Some(0) , false) else ((Some(i-1)),true)
+    | Some(i) -> if i <= 1 then (Some(1) , false) else ((Some(i-1)),true)
   in
   
   let (bigsum_vars, bsrw_theta, bsrw_term) =

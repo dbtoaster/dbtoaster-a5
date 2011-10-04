@@ -4,24 +4,6 @@ require 'net/smtp'
 
 query_cnt = Hash.new { |h,k| h[k] = 0 }
 
-$tests = [
-  {
-    :name  => "Compiler Internals",
-    :cmd   => "make test",
-    :short => "internals"
-  }
-] + File.open("test/nightly_workload") do |f|
-  f.readlines.map { |l| l.chomp }.delete_if { |l| l == "" }.
-    map do |l| 
-      shortname = "#{l.split(/ /)[0]}"
-      query_cnt[shortname] = qid = query_cnt[shortname] + 1;
-      {
-        :name  => "Query '#{shortname}' test #{qid} (C++)",
-        :cmd   => "test/scripts/query_test.rb #{l}",
-        :short => shortname
-      }
-    end
-end
 
 $log_targets = [
   {
@@ -187,6 +169,27 @@ loop do
   
   msg "Updating Repository"
   system('svn up');
+  
+  msg "Reloading Test Suite"
+  $tests = [
+    {
+      :name  => "Compiler Internals",
+      :cmd   => "make test",
+      :short => "internals"
+    }
+  ] + File.open("test/nightly_workload") do |f|
+    f.readlines.map { |l| l.chomp }.delete_if { |l| l == "" }.
+      map do |l| 
+        shortname = "#{l.split(/ /)[0]}"
+        query_cnt[shortname] = qid = query_cnt[shortname] + 1;
+        {
+          :name  => "Query '#{shortname}' test #{qid} (C++)",
+          :cmd   => "test/scripts/query_test.rb #{l}",
+          :short => shortname
+        }
+      end
+  end
+  
   msg "Compiling"
   system('make clean; make');
   msg "Running Tests"
