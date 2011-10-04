@@ -1,5 +1,9 @@
   {
     :path => "test/sql/clusteravailable_priority.sql",
     :type => :onelevel,
-    :answer => results_file("test/results/clusteravailable.csv")
+    :answer => {
+      [2.0] => 10,
+      [1.0] => 7,
+      [0.0] => 7
+    }
   }
