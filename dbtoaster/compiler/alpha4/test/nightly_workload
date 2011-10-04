@@ -20,24 +20,24 @@ axfinder -d runtime-bigsums
 axfinder -d runtime-bigsums -d dup-ivc
 axfinder -d runtime-bigsums -d dup-ivc --depth 0 --compile-only
 axfinder -d runtime-bigsums -d dup-ivc --depth 1 --compile-only
-tpch3
-tpch3 --depth 0 --compile-only -d projected-map-access
-tpch3 --depth 1 --compile-only -d projected-map-access
-tpch11
-tpch11 --depth 0 --compile-only -d projected-map-access
-tpch11 --depth 1 --compile-only -d projected-map-access
-tpch17
-tpch17 --depth 0 --compile-only -d projected-map-access
-tpch17 --depth 1 --compile-only -d projected-map-access
-tpch18
-tpch18 --depth 0 --compile-only -d projected-map-access
-tpch18 --depth 1 --compile-only -d projected-map-access
-tpch18short
-tpch18short --depth 0 --compile-only -d projected-map-access
-tpch18short --depth 1 --compile-only -d projected-map-access
-tpch22
-tpch22 --depth 0 --compile-only -d projected-map-access
-tpch22 --depth 1 --compile-only -d projected-map-access
+tpch3 -d dup-ivc
+tpch3 -d dup-ivc --depth 0 --compile-only -d projected-map-access
+tpch3 -d dup-ivc --depth 1 --compile-only -d projected-map-access
+tpch11 -d dup-ivc
+tpch11 -d dup-ivc --depth 0 --compile-only -d projected-map-access
+tpch11 -d dup-ivc --depth 1 --compile-only -d projected-map-access
+tpch17 -d dup-ivc
+tpch17 -d dup-ivc --depth 0 --compile-only -d projected-map-access
+tpch17 -d dup-ivc --depth 1 --compile-only -d projected-map-access
+tpch18 -d dup-ivc
+tpch18 -d dup-ivc --depth 0 --compile-only -d projected-map-access
+tpch18 -d dup-ivc --depth 1 --compile-only -d projected-map-access
+tpch18short -d dup-ivc
+tpch18short -d dup-ivc --depth 0 --compile-only -d projected-map-access
+tpch18short -d dup-ivc --depth 1 --compile-only -d projected-map-access
+tpch22 -d dup-ivc
+tpch22 -d dup-ivc --depth 0 --compile-only -d projected-map-access
+tpch22 -d dup-ivc --depth 1 --compile-only -d projected-map-access
 clusteravailable -d dup-ivc
 clusteravailable -d dup-ivc --depth 0 --compile-only -d projected-map-access
 clusteravailable -d dup-ivc --depth 1 --compile-only -d projected-map-access

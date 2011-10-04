@@ -12,6 +12,11 @@ type map_sig_t = M3.map_id_t * M3.var_id_t list * M3.var_id_t list
 
 (* Helpers *)
 
+let gb_accum_counter = ref 0
+let next_gb_accum_var () = 
+   gb_accum_counter := !gb_accum_counter + 1;
+   "accv_"^(string_of_int !gb_accum_counter)
+
 (* TODO: types *)
 let args_of_vars vars = List.map (fun v -> v,TFloat) vars
 
@@ -264,7 +269,9 @@ and op_to_expr trig_args metadata (expected_sch1,expected_sch2) op c c1 c2 =
       let (op_sch, op_result) = (op outsch l r) in
       let fn = bind_for_apply_each
         trig_args ((args_of_vars outsch)@[v,v_t]) op_result
-      in (op_sch, meta2, Map(fn, ce))
+      in 
+         if outsch = [] then (op_sch, meta2, Apply(fn,ce))
+         else                (op_sch, meta2, Map(fn, ce))
         
     | (false, false, false) ->
       (* TODO: types *)
@@ -275,11 +282,31 @@ and op_to_expr trig_args metadata (expected_sch1,expected_sch2) op c c1 c2 =
       let ret_schema = ListAsSet.union sch1 sch2 in
       let (l,r) = (Var("v1",TFloat), Var("v2",TFloat)) in
       let (op_sch, op_result) = (op ret_schema l r) in
-      let nested = bind_for_apply_each
-        trig_args ((args_of_vars sch2)@["v2",TFloat]) op_result in 
-      let inner = bind_for_apply_each
-        trig_args ((args_of_vars sch1)@["v1",TFloat]) (Map(nested, ine)) 
-      in op_sch, meta2, Flatten(Map(inner, oute))
+      let applied_expr = 
+         if (sch1 = []) && (sch2 = []) then
+            Apply(bind_for_apply_each trig_args ["v1",TFloat] (
+               Apply(bind_for_apply_each trig_args ["v2",TFloat] (
+                  op_result
+               ), ine)
+            ), oute)
+         else if (sch1 = []) || (sch2 = []) then
+            let (singleton_v,singleton_e,set_v,set_e) = 
+               if sch1 = [] 
+               then "v1",oute,(args_of_vars sch2)@["v2",TFloat],ine
+               else "v2",ine, (args_of_vars sch1)@["v1",TFloat],oute
+            in
+               Map(bind_for_apply_each trig_args set_v (
+                  Apply(bind_for_apply_each trig_args [singleton_v,TFloat] (
+                     op_result
+                  ), singleton_e)
+               ), set_e)
+         else
+            let nested = bind_for_apply_each
+              trig_args ((args_of_vars sch2)@["v2",TFloat]) op_result in 
+            let inner = bind_for_apply_each
+              trig_args ((args_of_vars sch1)@["v1",TFloat]) (Map(nested, ine)) 
+            in Flatten(Map(inner, oute))
+      in op_sch, meta2, applied_expr
 
 and calc_to_expr trig_args metadata expected_schema calc =
   let tuple op schema c1 c2 =
@@ -350,11 +377,12 @@ and calc_to_expr trig_args metadata expected_schema calc =
       if (ListAsSet.seteq retv outv)
          then (outv, new_metadata, r)
          else let projected = (
+            let accv = next_gb_accum_var () in
             let agg_fn = bind_for_aggregate 
                trig_args 
                (args_of_vars (outv@["v"]))
-               ("accv",TFloat)
-               (Add(Var("v", TFloat), Var("accv", TFloat))) in
+               (accv,TFloat)
+               (Add(Var("v", TFloat), Var(accv, TFloat))) in
             let gb_fn = bind_for_apply_each 
                trig_args
                (args_of_vars (outv@["v"]))
@@ -385,14 +413,13 @@ and m3rhs_to_expr trig_args lhs_outv paggcalc : expr_t =
     *)
     let init_val = Const(CFloat(0.0)) in
     let ecalc = M3P.get_ecalc paggcalc in
-    let doesnt_need_aggregate = 
-      ListAsSet.seteq (lhs_outv) (M3Common.calc_schema (fst paggcalc)) in
     let rhs_outv, _, rhs_expr = (calc_to_expr trig_args [] lhs_outv ecalc) in
+    let doesnt_need_aggregate = (ListAsSet.seteq rhs_outv lhs_outv) in
     let agg_fn = bind_for_aggregate trig_args 
         ((args_of_vars rhs_outv)@["v",TFloat]) ("accv",TFloat)
         (Add(Var("v", TFloat), Var("accv", TFloat)))
     in
-    if (M3P.get_singleton ecalc) then rhs_expr
+    if (M3P.get_singleton ecalc) || (rhs_outv = []) then rhs_expr
     else if doesnt_need_aggregate then (
       if rhs_outv = lhs_outv then rhs_expr
       else Map((bind_for_apply_each 

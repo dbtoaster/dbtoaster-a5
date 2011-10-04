@@ -298,7 +298,7 @@ let nonincremental_program (db_schema: (string * (Calculus.var_t list)) list)
   let (base_relations, new_value) = 
     Calculus.extract_base_relations 
       [ snd (Calculus.decode_map_term map_term), 
-        map_definition
+        (Calculus.roly_poly map_definition)
       ] in
   let (fake_delta) = 
     Calculus.make_term (
@@ -306,7 +306,11 @@ let nonincremental_program (db_schema: (string * (Calculus.var_t list)) list)
         Calculus.RNeg(
           Calculus.readable_term map_term
         ) :: (List.map (fun (_,x) -> 
-          Calculus.readable_term x
+          Calculus.readable_term (
+            Calculus.un_roly_poly (
+              Calculus.term_sum_list x
+            )
+          )
         ) new_value)
       )
     ) 

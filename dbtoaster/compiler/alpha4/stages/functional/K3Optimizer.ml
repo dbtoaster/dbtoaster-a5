@@ -478,8 +478,8 @@ let substitute (arg_to_sub, sub_expr) expr =
                 let h,b = back l in
                 let fields = push_down_ifs b
                 in (Block(h@[List.hd fields]))::(List.tl fields)
-               | _ -> failwith
-                        ("invalid tuple binding: "^(string_of_expr sub_expr))
+               | _ -> print_endline (string_of_expr sub_expr);
+                 failwith ("invalid tuple binding: "^(string_of_expr sub_expr))
             in List.map2 (fun (v,_) e -> (v,e)) vt_l (push_down_ifs sub_expr)
     in
     (* Remove vars from substitutions when descending through lambdas
@@ -621,7 +621,7 @@ let rec inline_collection_functions substitutions expr =
     in (vt,arg)::ns
   in
   begin match expr with
-  | Apply(Lambda(AVar(v, ((Collection _) as t)), body), arg) ->
+  | Apply(Lambda(AVar(v, (((Collection _) |TFloat|TInt) as t)), body), arg) ->
     Debug.print "INLINE-COLLECTION-FUNCTIONS" (fun () -> "*** APPLY ***");
     (recur (rebind substitutions (v,t) (recur substitutions arg))
            body)

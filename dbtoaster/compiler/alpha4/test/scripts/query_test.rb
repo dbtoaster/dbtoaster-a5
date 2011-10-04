@@ -61,7 +61,8 @@ class GenericUnitTest
     [ $dbt, @qpath ] +
       (if $depth.nil? then [] else ["--depth", $depth ] end) + 
       @compiler_flags +
-      ($debug_flags.map { |f| ["-d", f]}.flatten(1))
+      ($debug_flags.map { |f| ["-d", f]}.flatten(1)) +
+      ($opts.map { |f| ["-f", f]}.flatten(1))
   end
   
   def diff(e, r)
@@ -206,6 +207,7 @@ class InterpreterUnitTest < GenericUnitTest
 end
 
 tests = [];
+$opts = []; 
 $debug_flags = [];
 $skip_compile = false;
 $precision = 1e-4;
@@ -216,6 +218,7 @@ $verbose = false;
 $compile_only = false
 
 GetoptLong.new(
+  [ '-f',                GetoptLong::REQUIRED_ARGUMENT],
   [ '-t', '--test',      GetoptLong::REQUIRED_ARGUMENT],
   [ '--skip-compile',    GetoptLong::NO_ARGUMENT],
   [ '-p', '--precision', GetoptLong::REQUIRED_ARGUMENT],
@@ -226,6 +229,7 @@ GetoptLong.new(
   [ '--compile-only',    GetoptLong::NO_ARGUMENT]
 ).each do |opt, arg|
   case opt
+    when '-f' then $opts.push(arg)
     when '--skip-compile' then $skip_compile = true;
     when '-p', '--precision' then $precision = 10 ** (-1 * arg.to_i);
     when '-t', '--test' then 
@@ -254,6 +258,7 @@ queries.each do |tquery|
       opt_terms = 
         (if $debug_flags.empty? then [] 
                                 else [["debug flags",$debug_flags]] end)+
+        (if $opts.empty? then [] else [["optimizations",$opts]] end)+
         (if $depth.nil? then [] else [["depth", ["#{$depth}"]]] end)+
         (if $compile_only then [["compilation", ["only"]]] else [] end)
       opt_string =
