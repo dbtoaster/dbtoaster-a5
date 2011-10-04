@@ -345,9 +345,10 @@ and calc_to_expr trig_args metadata expected_schema calc =
          if (Debug.active "PROJECTED-MAP-ACCESS")
          then ListAsSet.inter outv expected_schema
          else outv in
-      let projected = 
-         if (ListAsSet.seteq retv outv)
-         then r else (
+      let new_metadata = metadata@[mapn,inv,outv] in
+      if (ListAsSet.seteq retv outv)
+         then (outv, new_metadata, r)
+         else let projected = (
             let agg_fn = bind_for_aggregate 
                trig_args 
                (args_of_vars (outv@["v"]))
@@ -360,9 +361,7 @@ and calc_to_expr trig_args metadata expected_schema calc =
             if retv = [] 
             then Aggregate(agg_fn, (Const(M3.CFloat(0.))), r)
             else GroupByAggregate(agg_fn, (Const(M3.CFloat(0.))), gb_fn, r)
-      ) in
-         (retv,metadata@[mapn,inv,outv], projected)
-
+         ) in (retv, new_metadata, projected)
     | M3.Add (c1, c2) -> bin_op (fun c1 c2 -> Add (c1,c2)) c1 c2 
     | M3.Mult(c1, c2) -> bin_op (fun c1 c2 -> Mult(c1,c2)) c1 c2
     | M3.Eq  (c1, c2) -> bin_op (fun c1 c2 -> Eq  (c1,c2)) c1 c2
@@ -392,7 +391,16 @@ and m3rhs_to_expr trig_args lhs_outv paggcalc : expr_t =
         ((args_of_vars rhs_outv)@["v",TFloat]) ("accv",TFloat)
         (Add(Var("v", TFloat), Var("accv", TFloat)))
     in
-    if (M3P.get_singleton ecalc) || (doesnt_need_aggregate) then rhs_expr
+    if (M3P.get_singleton ecalc) then rhs_expr
+    else if doesnt_need_aggregate then (
+      if rhs_outv = lhs_outv then rhs_expr
+      else Map((bind_for_apply_each 
+                  trig_args
+                  ((args_of_vars rhs_outv)@["v",TFloat])
+                  (Tuple(List.map (fun x -> Var(x,TFloat)) 
+                                  (lhs_outv@["v"])))
+               ), rhs_expr)
+    )
     else if M3P.get_full_agg (M3P.get_agg_meta paggcalc) then
         Aggregate (agg_fn, init_val, rhs_expr) 
     else
