@@ -17,9 +17,9 @@ missedtrades -d dup-ivc --depth 0 --compile-only
 missedtrades -d dup-ivc --depth 1 --compile-only
 axfinder 
 axfinder -d runtime-bigsums
-axfinder -d runtime-bigsums -dup-ivc
-axfinder -d runtime-bigsums -dup-ivc --depth 0 --compile-only
-axfinder -d runtime-bigsums -dup-ivc --depth 1 --compile-only
+axfinder -d runtime-bigsums -d dup-ivc
+axfinder -d runtime-bigsums -d dup-ivc --depth 0 --compile-only
+axfinder -d runtime-bigsums -d dup-ivc --depth 1 --compile-only
 tpch3
 tpch3 --depth 0 --compile-only -d projected-map-access
 tpch3 --depth 1 --compile-only -d projected-map-access

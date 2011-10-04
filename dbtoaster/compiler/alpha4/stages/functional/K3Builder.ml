@@ -261,7 +261,7 @@ and op_to_expr trig_args metadata (expected_sch1,expected_sch2) op c c1 c2 =
       let (v,v_t,l,r) =
         if c1_sing then "v2",TFloat,inline,Var("v2",TFloat)
         else "v1",TFloat,Var("v1",TFloat),inline in
-      let (op_sch, op_result) = (op schema l r) in
+      let (op_sch, op_result) = (op outsch l r) in
       let fn = bind_for_apply_each
         trig_args ((args_of_vars outsch)@[v,v_t]) op_result
       in (op_sch, meta2, Map(fn, ce))
@@ -272,8 +272,9 @@ and op_to_expr trig_args metadata (expected_sch1,expected_sch2) op c c1 c2 =
        * is a product or a join *)
       let sch1, meta, oute = calc_to_expr trig_args metadata expected_sch1 c1 in
       let sch2, meta2, ine = calc_to_expr trig_args meta     expected_sch2 c2 in
+      let ret_schema = ListAsSet.union sch1 sch2 in
       let (l,r) = (Var("v1",TFloat), Var("v2",TFloat)) in
-      let (op_sch, op_result) = (op schema l r) in
+      let (op_sch, op_result) = (op ret_schema l r) in
       let nested = bind_for_apply_each
         trig_args ((args_of_vars sch2)@["v2",TFloat]) op_result in 
       let inner = bind_for_apply_each
