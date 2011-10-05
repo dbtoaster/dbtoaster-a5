@@ -96,15 +96,15 @@ UNION SELECT 0 as evt, 3 as tag, Customer as c  FROM InsertCustomer
 UNION SELECT 1 as evt, 3 as tag, Customer as c  FROM DeleteCustomer;
 
 /* Lockset for serial execution across updates and queries. */
-CREATE LOCKSET Lock (i int);
+CREATE LOCKSET InputLock (i int);
 CREATE STREAM InputLocked TaggedInputs;
-LOCK Lock ON 0 FROM MultiplexedInputs INTO InputLocked; 
+LOCK InputLock ON 0 FROM MultiplexedInputs INTO InputLocked; 
 
 /* Counter for barriering */
 DECLARE Counter int DEFAULT 0;
-UPDATE Counter FROM (SELECT i FROM UpdateCounter) AS S
-RETURNING S.* => CREATE STREAM CounterUpdated;
-SELECT Counter+1 as i, InputLocked.* FROM InputLocked INTO UpdateCounter;
+CREATE STREAM UpdateCounter (i int);
+UPDATE Counter FROM (SELECT i FROM UpdateCounter);
+SELECT Counter+1 as i FROM InputLocked INTO UpdateCounter;
 
 
 /* Partition into serialized streams after locking */
@@ -172,16 +172,26 @@ FROM ReplayL1 AS L1, Orders as O
 WHERE L1.orderkey = O.orderkey
 GROUP BY O.custkey;
 
+CREATE STREAM ReplayOuter AS
+SELECT LO.tid, C.custkey, LO.sumQ*count() as sumQ
+FROM LjoinO AS LO, Customer AS C
+WHERE LO.custkey = C.custkey
+GROUP BY C.custkey;
+ 
+CREATE METRONOME OuterClock (t, 5);
+CREATE STREAM OuterGroups AS
+SELECT Counter+1 as tid, C.custkey, 0 as sumQ FROM OuterClock, Customer AS C
+GROUP BY C.custkey;
+
+CREATE STREAM OuterFlusher AS ReplayOuter UNION OuterGroups;
+
 CREATE STREAM LockedResult AS
-SELECT now() as t, custkey, sum(sumQ) as result FROM
-(SELECT LO.tid, C.custkey, LO.sumQ*count() as sumQ
- FROM LjoinO AS LO, Customer AS C
- WHERE LO.custkey = C.custkey
- GROUP BY C.custkey)[SIZE 1 ADVANCE 1 ON tid] AS S
+SELECT now() as t, custkey, sum(sumQ) as result
+FROM OuterFlusher[SIZE 1 ADVANCE 1 ON tid] AS S
 GROUP BY custkey;
 
 CREATE STREAM Result (t timestamp, custkey int, result double);
-UNLOCK Lock ON 0 FROM LockedResult INTO Result;
+UNLOCK InputLock ON 0 FROM LockedResult INTO Result;
 
 
 /* Load data. */

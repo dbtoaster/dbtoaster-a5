@@ -93,15 +93,15 @@ UNION SELECT 0 as evt, 3 as tag, Customer as c  FROM InsertCustomer
 UNION SELECT 1 as evt, 3 as tag, Customer as c  FROM DeleteCustomer;
 
 /* Lockset for serial execution across updates and queries. */
-CREATE LOCKSET Lock (i int);
+CREATE LOCKSET InputLock (i int);
 CREATE STREAM InputLocked TaggedInputs;
-LOCK Lock ON 0 FROM MultiplexedInputs INTO InputLocked; 
+LOCK InputLock ON 0 FROM MultiplexedInputs INTO InputLocked; 
 
 /* Counter for barriering */
 DECLARE Counter int DEFAULT 0;
-UPDATE Counter FROM (SELECT i FROM UpdateCounter) AS S
-RETURNING S.* => CREATE STREAM CounterUpdated;
-SELECT Counter+1 as i, InputLocked.* FROM InputLocked INTO UpdateCounter;
+CREATE STREAM UpdateCounter (i int);
+UPDATE Counter FROM (SELECT i FROM UpdateCounter);
+SELECT Counter+1 as i FROM InputLocked INTO UpdateCounter;
 
 
 /* Partition into serialized streams after locking */
@@ -154,14 +154,27 @@ WHERE L.l.orderkey = O.orderkey
 AND   O.orderdate < "1995-03-15"
 AND   L.l.shipdate > "1995-03-15";
 
-CREATE STREAM LineitemResult AS
-SELECT orderkey, orderdate, shippriority, sum(etomd) FROM
-  (SELECT LO.tid, LO.orderkey, LO.orderdate, LO.shippriority,
+CREATE STREAM LineitemJoin AS
+SELECT LO.tid, LO.orderkey, LO.orderdate, LO.shippriority,
           LO.etomd*count() as etomd
-   FROM  LjoinO AS LO, Customer AS C
-   WHERE LO.custkey = C.custkey
-   AND   C.mktsegment = "BUILDING")[SIZE 1 ADVANCE 1 ON tid] AS S
+FROM  LjoinO AS LO, Customer AS C
+WHERE LO.custkey = C.custkey
+AND   C.mktsegment = "BUILDING";
+   
+CREATE METRONOME LineitemClock (t, 5);
+
+CREATE STREAM LineitemGroups AS
+SELECT Counter+1 as tid, O.orderkey, O.orderdate, O.shippriority, 0 as etomd
+FROM LineitemClock, Orders as O
+GROUP BY O.orderkey, O.orderdate, O.shippriority;
+
+CREATE STREAM LineitemFlusher AS LineitemJoin UNION LineitemGroups;
+ 
+CREATE STREAM LineitemResult AS
+SELECT orderkey, orderdate, shippriority, sum(etomd) as etomd
+FROM LineitemFlusher[SIZE 1 ADVANCE 1 ON tid] AS S
 GROUP BY orderkey, orderdate, shippriority;
+
 
 -- stream O join L join C
 CREATE STREAM OjoinL AS
@@ -172,14 +185,27 @@ WHERE L.orderkey = O.o.orderkey
 AND   O.o.orderdate < "1995-03-15"
 AND   L.shipdate > "1995-03-15";
 
-CREATE STREAM OrdersResult AS
-SELECT orderkey, orderdate, shippriority, sum(etomd) FROM
-  (SELECT LO.tid, LO.orderkey, LO.orderdate, LO.shippriority,
+CREATE STREAM OrderJoin AS
+SELECT LO.tid, LO.orderkey, LO.orderdate, LO.shippriority,
           LO.etomd*count() as etomd
-   FROM  OjoinL AS LO, Customer AS C
-   WHERE LO.custkey = C.custkey
-   AND   C.mktsegment = "BUILDING")[SIZE 1 ADVANCE 1 ON tid] AS S
+FROM  OjoinL AS LO, Customer AS C
+WHERE LO.custkey = C.custkey
+AND   C.mktsegment = "BUILDING";
+   
+CREATE METRONOME OrderClock (t, 5);
+
+CREATE STREAM OrderGroups AS
+SELECT Counter+1 as tid, O.orderkey, O.orderdate, O.shippriority, 0 as etomd
+FROM OrderClock, Orders as O
+GROUP BY O.orderkey, O.orderdate, O.shippriority;
+
+CREATE STREAM OrderFlusher AS OrderJoin UNION OrderGroups;
+
+CREATE STREAM OrdersResult AS
+SELECT orderkey, orderdate, shippriority, sum(etomd) as etomd
+FROM OrderFlusher[SIZE 1 ADVANCE 1 ON tid] AS S
 GROUP BY orderkey, orderdate, shippriority;
+
 
 -- stream C join O join L
 CREATE STREAM CjoinO AS
@@ -190,21 +216,35 @@ AND   C.c.mktsegment = "BUILDING"
 AND   O.orderdate < "1995-03-15"
 GROUP BY O.orderkey, O.orderdate, O.shippriority;
 
-CREATE STREAM CustomerResult AS
-SELECT orderkey, orderdate, shippriority, sum(etomd) FROM
-  (SELECT CO.tid, CO.orderkey, CO.orderdate, CO.shippriority,
+CREATE STREAM CustomerJoin AS
+SELECT CO.tid, CO.orderkey, CO.orderdate, CO.shippriority,
           CO.numO*sum(L.extendedprice*(1-L.discount)) as etomd
-   FROM CjoinO as CO, Lineitem AS L
-   WHERE CO.orderkey = L.orderkey
-   AND   L.shipdate > "1995-03-15")[SIZE 1 ADVANCE 1 ON tid] AS S
+FROM CjoinO as CO, Lineitem AS L
+WHERE CO.orderkey = L.orderkey
+AND   L.shipdate > "1995-03-15";
+
+CREATE METRONOME CustomerClock (t, 5);
+
+CREATE STREAM CustomerGroups AS
+SELECT Counter+1 as tid, O.orderkey, O.orderdate, O.shippriority, 0 as etomd
+FROM CustomerClock, Orders as O
+GROUP BY O.orderkey, O.orderdate, O.shippriority;
+
+CREATE STREAM CustomerFlusher AS CustomerJoin UNION CustomerGroups;
+
+CREATE STREAM CustomerResult AS
+SELECT orderkey, orderdate, shippriority, sum(etomd) as etomd
+FROM CustomerFlusher[SIZE 1 ADVANCE 1 ON tid] AS S
 GROUP BY orderkey, orderdate, shippriority;
 
+
+-- Merge delta query results.
 CREATE STREAM LockedResult AS
 SELECT now() as t, * FROM LineitemResult UNION OrdersResult UNION CustomerResult;
 
 CREATE STREAM Result (t timestamp, orderkey int, orderdate string,
                       shippriority int, etomd double);
-UNLOCK Lock ON 0 FROM LockedResult INTO Result;
+UNLOCK InputLock ON 0 FROM LockedResult INTO Result;
 
 
 /* Load data. */

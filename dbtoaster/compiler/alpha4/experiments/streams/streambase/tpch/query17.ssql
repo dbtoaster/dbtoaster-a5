@@ -74,15 +74,15 @@ UNION SELECT 0 as evt, 5 as tag, Part as p      FROM InsertPart
 UNION SELECT 1 as evt, 5 as tag, Part as p      FROM DeletePart;
 
 /* Lockset for serial execution across updates and queries. */
-CREATE LOCKSET Lock (i int);
+CREATE LOCKSET InputLock (i int);
 CREATE STREAM InputLocked TaggedInputs;
-LOCK Lock ON 0 FROM MultiplexedInputs INTO InputLocked; 
+LOCK InputLock ON 0 FROM MultiplexedInputs INTO InputLocked; 
 
 /* Counter for barriering */
 DECLARE Counter int DEFAULT 0;
-UPDATE Counter FROM (SELECT i FROM UpdateCounter) AS S
-RETURNING S.* => CREATE STREAM CounterUpdated;
-SELECT Counter+1 as i, InputLocked.* FROM InputLocked INTO UpdateCounter;
+CREATE STREAM UpdateCounter (i int);
+UPDATE Counter FROM (SELECT i FROM UpdateCounter);
+SELECT Counter+1 as i FROM InputLocked INTO UpdateCounter;
 
 
 /* Partition into serialized streams after locking */
@@ -121,20 +121,31 @@ SELECT T.tid, P.partkey FROM TableChanged AS T, Part AS P;
 
 /* Subquery */
 CREATE STREAM Subquery1 AS
-SELECT P.partkey, sum(L2.quantity) as sumQ
+SELECT P.tid, P.partkey, sum(L2.quantity) as sumQ
 FROM ReplayPart as P, Lineitem AS L2
 WHERE P.partkey = L2.partkey;
 
+CREATE STREAM ReplayOuter AS
+SELECT P.tid, sum(L.extendedprice) as sumep
+FROM Subquery1 AS P, Lineitem AS L
+WHERE P.partkey = L.partkey
+AND   L.quantity < (0.005 * P.sumQ);
+
+CREATE METRONOME OuterClock (t, 5);
+CREATE STREAM OuterFlusher AS ReplayOuter UNION OuterClock;
+
+CREATE STREAM ValidOuter AS
+SELECT (if isnull(tid) then Counter+1 else tid) as tid,
+       (if isnull(sumep) then 0 else sumep) as sumep
+FROM OuterFlusher;
+ 
 /* Outer query */
 CREATE STREAM LockedResult AS
-SELECT now() as t, sum(result) as result
-FROM (SELECT sum(L.extendedprice) as result
-      FROM Subquery1 AS P, Lineitem AS L
-      WHERE P.partkey = L.partkey
-      AND   L.quantity < (0.005 * P.sumQ))[SIZE 1 ADVANCE 1 ON tid] AS S;
+SELECT now() as t, sum(sumep) as result
+FROM OuterFlusher[SIZE 1 ADVANCE 1 ON tid] AS S;
 
 CREATE STREAM Result (t timestamp, result double);
-UNLOCK Lock ON 0 FROM LockedResult INTO Result;
+UNLOCK InputLock ON 0 FROM LockedResult INTO Result;
  
 
 /* Load data. */

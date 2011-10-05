@@ -41,14 +41,14 @@ UNION SELECT 0 AS evt, 2 AS tag, OrderbookEntry(* AS *) AS o FROM InsertAsks
 UNION SELECT 1 AS evt, 2 AS tag, OrderbookEntry(* AS *) AS o FROM DeleteAsks;
 
 /* Lockset for serial execution across updates and queries. */
-CREATE LOCKSET Lock (i int);
+CREATE LOCKSET InputLock (i int);
 CREATE STREAM InputLocked TaggedInputs;
-LOCK Lock ON 0 FROM MultiplexedInputs INTO InputLocked; 
+LOCK InputLock ON 0 FROM MultiplexedInputs INTO InputLocked; 
 
 /* Counter for barriering */
 DECLARE Counter int DEFAULT 0;
-UPDATE Counter FROM (SELECT i FROM UpdateCounter) AS S
-RETURNING S.* => CREATE STREAM CounterUpdated;
+CREATE STREAM UpdateCounter (i int);
+UPDATE Counter FROM (SELECT i FROM UpdateCounter);
 SELECT Counter+1 as i, InputLocked.* FROM InputLocked INTO UpdateCounter;
 
 
@@ -86,16 +86,33 @@ SELECT tid FROM  BidsInserted UNION BidsDeleted
 
 /* Replay Bids and join with Asks */
 CREATE STREAM ReplayBids AS
-SELECT R.tid, B.brokerId, B.price, B.volume FROM TableChanged AS R, Bids AS B;
+SELECT TC.tid, B.brokerId, B.price, B.volume
+FROM TableChanged AS TC, Bids AS B;
 
+CREATE STREAM ReplayJoin AS
+SELECT B.tid, B.brokerId, sum(A.volume - B.volume) as diff
+FROM ReplayBids AS B, Asks AS A
+WHERE B.brokerId = A.brokerId
+AND    ( (A.price + ((-1) * B.price) > 1000) OR
+         (B.price + ((-1) * A.price) > 1000) )
+GROUP BY B.brokerId;
+
+/* TODO: check sufficiency of 5-second clock */
+CREATE METRONOME ReplayClock (t, 5);
+
+/* We need to flush all groups, thus must retrieve valid groups as part of
+ * the clock stream
+ */
+CREATE STREAM ReplayGroups AS
+SELECT Counter+1 as tid, B.brokerId, 0 as diff FROM ReplayClock, Bids AS B
+GROUP BY B.brokerId;
+
+CREATE STREAM ReplayFlusher AS ReplayJoin UNION ReplayGroups;
+
+/* Perform outer stream aggregation */
 CREATE STREAM BidsResult AS
-SELECT brokerId, sum(diff) as axf FROM
-(SELECT B.tid, B.brokerId, sum(A.volume - B.volume) as diff
- FROM ReplayBids AS B, Asks AS A
-  WHERE B.brokerId = A.brokerId
-    AND    ( (A.price + ((-1) * B.price) > 1000) OR
-             (B.price + ((-1) * A.price) > 1000) )
- GROUP BY B.brokerId)[SIZE 1 ADVANCE 1 ON tid] as S
+SELECT brokerId, sum(diff) as axf
+FROM ReplayFlusher[SIZE 1 ADVANCE 1 ON tid] as S
 GROUP BY brokerId;
 
 /* Unlock and output */
@@ -103,7 +120,7 @@ CREATE STREAM LockedResult AS
 SELECT now() as t, axf FROM BidsResult UNION AsksResult;  
 
 CREATE STREAM Result (t timestamp, axf double);
-UNLOCK Lock ON 0 FROM LockedResult INTO Result;
+UNLOCK InputLock ON 0 FROM LockedResult INTO Result;
 
 
 /* Load data. */

@@ -62,15 +62,15 @@ UNION SELECT 0 as evt, 6 as tag, Partsupp as ps FROM InsertPartsupp
 UNION SELECT 1 as evt, 6 as tag, Partsupp as ps FROM DeletePartsupp;
 
 /* Lockset for serial execution across updates and queries. */
-CREATE LOCKSET Lock (i int);
+CREATE LOCKSET InputLock (i int);
 CREATE STREAM InputLocked TaggedInputs;
-LOCK Lock ON 0 FROM MultiplexedInputs INTO InputLocked; 
+LOCK InputLock ON 0 FROM MultiplexedInputs INTO InputLocked; 
 
 /* Counter for barriering */
 DECLARE Counter int DEFAULT 0;
-UPDATE Counter FROM (SELECT i FROM UpdateCounter) AS S
-RETURNING S.* => CREATE STREAM CounterUpdated;
-SELECT Counter+1 as i, InputLocked.* FROM InputLocked INTO UpdateCounter;
+CREATE STREAM UpdateCounter (i int);
+UPDATE Counter FROM (SELECT i FROM UpdateCounter);
+SELECT Counter+1 as i FROM InputLocked INTO UpdateCounter;
 
 
 /* Partition into serialized streams after locking */
@@ -108,11 +108,22 @@ SELECT tid FROM  SupplierInserted UNION SupplierDeleted
 CREATE STREAM ReplayS AS
 SELECT tid, S.suppkey, count() as cnt FROM TableChanged, Supplier AS S;
 
+CREATE STREAM ReplaySPS AS
+SELECT S.tid, S.cnt*sum(PS.supplycost*PS.availqty) as sumSA
+FROM ReplayS AS S, Partsupp AS PS
+WHERE S.suppkey = PS.suppkey;
+   
+CREATE METRONOME SPSClock (t, 5);
+CREATE STREAM SPSFlusher AS ReplaySPS UNION SPSClock;
+
+CREATE STREAM ValidSPS AS
+SELECT (if isnull(tid) then Counter+1 else tid) as tid,
+       (if isnull(sumSA) then 0 else sumSA) as sumSA
+FROM SPSFlusher;
+
 CREATE STREAM ReplayHaving AS
-SELECT tid, sum(sumSA) as sumSA FROM
-  (SELECT S.cnt*sum(PS.supplycost*PS.availqty) as sumSA
-   FROM ReplayS AS S, Partsupp AS PS
-   WHERE S.suppkey = PS.suppkey)[SIZE 1 ADVANCE 1 ON tid] AS S
+SELECT tid, sum(sumSA) as sumSA
+FROM SPSFlusher[SIZE 1 ADVANCE 1 ON tid] AS S
 GROUP BY tid;
 
 CREATE STREAM ReplayOuterS AS
@@ -120,19 +131,33 @@ SELECT R.tid, R.sumSA, S.suppkey, count() as cnt
 FROM ReplayHaving as R, Supplier S
 GROUP BY S.suppkey;
 
+CREATE STREAM ReplayJoin AS
+SELECT S.tid, S.sumSA, PS.partkey,
+       cnt*sum(PS.supplycost*ps.availqty) as sumSA2
+FROM ReplayOuterS S, Partsupp PS
+WHERE S.suppkey = PS.suppkey
+GROUP BY PS.partkey;
+
+/* TODO: check interaction with SPSClock */
+CREATE METRONOME JoinClock (t, 5);
+
+/* Note: 0 value of sumSA, which is used for a having clause below. */
+CREATE STREAM ReplayGroups AS
+SELECT Counter+1 as tid, 0 as sumSA, PS.partkey, 0 as sumSA2
+FROM JoinClock, Partsupp PS
+GROUP BY PS.partkey;
+
+CREATE STREAM JoinFlusher AS ReplayJoin UNION ReplayGroups;
+
 CREATE STREAM LockedResult AS
 SELECT now() as t, partkey, sumSA2 as result FROM
   (SELECT partkey, sumSA, sum(sumSA2) as sumSA2 FROM
-    (SELECT S.tid, S.sumSA, PS.partkey,
-            cnt*sum(PS.supplycost*ps.availqty) as sumSA2
-     FROM ReplayOuterS S, Partsupp PS
-     WHERE S.suppkey = PS.suppkey
-     GROUP BY PS.partkey)[SIZE 1 ADVANCE 1 on TID] AS S
+    JoinFlusher[SIZE 1 ADVANCE 1 on TID] AS S
   GROUP BY partkey, sumSA)
 WHERE sumSA2 > sumSA; 
 
 CREATE STREAM Result (t timestamp, partkey int, result double);
-UNLOCK Lock on 0 FROM LockedResult INTO Result; 
+UNLOCK InputLock on 0 FROM LockedResult INTO Result; 
 
 
 /* Load data. */

@@ -7,11 +7,12 @@ CREATE SCHEMA OrderbookEntry
 (timestamp double, orderId int, brokerId int, volume double, price double);
 
 /* Order book input streams. Trim to your needs */ 
-CREATE INPUT STREAM InsertBids OrderbookEntry;
-CREATE INPUT STREAM DeleteBids OrderbookEntry;
+CREATE STREAM InsertBids OrderbookEntry;
+CREATE STREAM DeleteBids OrderbookEntry;
 
 /* Main memory order book tables */
 CREATE MEMORY TABLE Bids OrderbookEntry PRIMARY KEY (timestamp, orderId, brokerId);
+CREATE INDEX BidsByPrice ON Bids(price);
 
 /*
  * Table change notification streams
@@ -32,25 +33,25 @@ CREATE STREAM BidsDeleted  SOrderbookEntry;
  * use a merge on the order book entry's timestamp field.
  */
 CREATE SCHEMA TaggedInputs (evt int, tag int, o OrderbookEntry);
-CREATE STREAM MultiplexedInputs TaggedInputs AS
+CREATE STREAM MultiplexedInputs AS
       SELECT 0 AS evt, 1 AS tag, OrderbookEntry(* AS *) AS o FROM InsertBids
 UNION SELECT 1 AS evt, 1 AS tag, OrderbookEntry(* AS *) AS o FROM DeleteBids;
 
 /* Lockset for serial execution across updates and queries. */
-CREATE LOCKSET Lock (i int);
+CREATE LOCKSET InputLock (i int);
 CREATE STREAM InputLocked TaggedInputs;
-LOCK Lock ON 0 FROM MultiplexedInputs INTO InputLocked; 
+LOCK InputLock ON 0 FROM MultiplexedInputs INTO InputLocked; 
 
 /* Counter for barriering */
 DECLARE Counter int DEFAULT 0;
-UPDATE Counter FROM (SELECT i FROM UpdateCounter) AS S
-RETURNING S.* => CREATE STREAM CounterUpdated;
-SELECT Counter+1 as i, InputLocked.* FROM InputLocked INTO UpdateCounter;
+CREATE STREAM UpdateCounter (i int);
+UPDATE Counter FROM (SELECT i FROM UpdateCounter);
+SELECT Counter+1 as i FROM InputLocked INTO UpdateCounter;
 
 
 /* Partition into serialized streams after locking */
-SELECT i as tid, o  FROM InputLocked WHERE evt = 0 AND tag = 1 INTO SInsertBids;
-SELECT i as tid, o  FROM InputLocked WHERE evt = 1 AND tag = 1 INTO SDeleteBids;
+SELECT Counter as tid, o  FROM InputLocked WHERE evt = 0 AND tag = 1 INTO SInsertBids;
+SELECT Counter as tid, o  FROM InputLocked WHERE evt = 1 AND tag = 1 INTO SDeleteBids;
 
 
 /* Maintain Bids table */
@@ -61,11 +62,11 @@ DELETE FROM Bids USING SDeleteBids
 WHERE SDeleteBids.o.timestamp = Bids.timestamp
   AND SDeleteBids.o.orderId = Bids.orderId
   AND SDeleteBids.o.brokerId = Bids.brokerId
-RETURNING DeleteBids.* INTO BidsDeleted;
+RETURNING SDeleteBids.* INTO BidsDeleted;
 
 
 /* Track changes to Bids */
-CREATE STREAM BidsChanged AS BidsInserted UNION BidsDeleted;
+CREATE STREAM BidsChanged AS SELECT tid FROM BidsInserted UNION BidsDeleted;
 
 /* Compute the total Bids volume */
 CREATE STREAM BidsVolume AS
@@ -88,19 +89,35 @@ SELECT BV.*, Bids.* FROM BidsVolume as BV, Bids;
    ensures that the windowed aggregate is performed over only those
    tuples corresponding to a single modification to Bids.
  */
-CREATE OUTPUT STREAM BidsResult AS
+ 
+CREATE STREAM BidsSubquery AS
+SELECT tid, pv
+FROM (SELECT b1.tid, b1.sumBV, b1.price*b1.volume as pv,
+             sum(b2.volume) as sumBV2
+      FROM CurrentBids AS b1, Bids AS b2
+      WHERE b2.price > b1.price) AS S
+WHERE (0.25*sumBV) > sumBV2;
+
+/* Is a 5 second clock sufficient? It must be strictly greater than the time
+ * required to process the above subquery for any input, otherwise it will
+ * cause premature aggregation
+ */
+CREATE METRONOME BidsClock (t,5);
+CREATE STREAM BidsFlusher AS BidsSubquery UNION BidsClock;
+
+CREATE STREAM BidsValid AS
+SELECT (if isnull(tid) then Counter+1 else tid) as tid,
+       (if isnull(pv) then 0 else pv) as pv
+FROM BidsFlusher;
+
+/* Perform a final aggregation over the outer stream, having run the subquery */
+CREATE STREAM BidsResult AS
 SELECT now() as t, sum(pv) as vwap
-FROM
-  (SELECT tid, pv FROM
-    (SELECT b1.tid, b1.sumBV, b1.price*b1.volume as pv,
-            sum(b2.volume) as sumBV2
-     FROM CurrentBids AS b1, Bids AS b2
-     WHERE b2.price > b1.price) AS S
-   WHERE (0.25*sumBV) > sumBV2)[SIZE 1 ADVANCE 1 ON tid] AS S2;
+FROM BidsValid[SIZE 1 ADVANCE 1 ON tid] AS S2;
 
 /* Unlock and output */
 CREATE STREAM Result (t timestamp, vwap double);
-UNLOCK Lock ON 0 FROM BidsResult INTO Result;
+UNLOCK InputLock ON 0 FROM BidsResult INTO Result;
 
 
 /* Load data. */

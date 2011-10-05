@@ -41,15 +41,15 @@ UNION SELECT 0 AS evt, 2 AS tag, OrderbookEntry(* AS *) AS o FROM InsertAsks
 UNION SELECT 1 AS evt, 2 AS tag, OrderbookEntry(* AS *) AS o FROM DeleteAsks;
 
 /* Lockset for serial execution across updates and queries. */
-CREATE LOCKSET Lock (i int);
+CREATE LOCKSET InputLock (i int);
 CREATE STREAM InputLocked TaggedInputs;
-LOCK Lock ON 0 FROM MultiplexedInputs INTO InputLocked; 
+LOCK InputLock ON 0 FROM MultiplexedInputs INTO InputLocked; 
 
 /* Counter for barriering */
 DECLARE Counter int DEFAULT 0;
-UPDATE Counter FROM (SELECT i FROM UpdateCounter) AS S
-RETURNING S.* => CREATE STREAM CounterUpdated;
-SELECT Counter+1 as i, InputLocked.* FROM InputLocked INTO UpdateCounter;
+CREATE STREAM UpdateCounter (i int);
+UPDATE Counter FROM (SELECT i FROM UpdateCounter);
+SELECT Counter+1 as i FROM InputLocked INTO UpdateCounter;
 
 
 /* Partition into serialized streams after locking */
@@ -106,17 +106,33 @@ WHERE sumBV > sumBV2;
 CREATE STREAM ReplayBA AS
 SELECT B.*, A.price, A.volume FROM FilteredBids AS B, Asks AS A;
 
-CREATE STREAM BidsResult AS
-SELECT bbid as brokerId, sum(diff) as mt
+CREATE STREAM ReplayOuter AS
+SELECT tid, bbid, apv-bpv AS diff
 FROM
-(SELECT tid, bbid, apv-bpv AS diff FROM
    (SELECT A.tid, A.bbid, A.bpv, A.price*A.volume as apv,
            A.sumAV, sum(A2.volume) as sumAV2
     FROM ReplayBA as A, Asks A2
     WHERE A2.price > A.price) AS S
- WHERE sumAV > sumAV2)[SIZE 1 ADVANCE 1 ON tid] as S2
-GROUP BY bbid;
+WHERE sumAV > sumAV2;
 
+/* TODO: check whether 5 second flush is sufficient */
+CREATE METRONOME ReplayClock (t, 5);
+
+/* We need to flush all groups, thus must retrieve valid groups as part of
+ * the clock stream
+ */
+CREATE STREAM ReplayGroups AS
+SELECT Counter+1 as tid, B.brokerId as bbid, 0 as diff
+FROM ReplayClock, Bids AS B
+GROUP BY B.brokerId;
+
+CREATE STREAM ReplayFlusher AS ReplayOuter UNION ReplayGroups;
+ 
+/* Perform outer stream aggregation */
+CREATE STREAM BidsResult AS
+SELECT bbid as brokerId, sum(diff) as mt
+FROM ReplayFlusher[SIZE 1 ADVANCE 1 ON tid] as S2
+GROUP BY bbid;
 
 
 /* Unlock and output */
@@ -124,7 +140,7 @@ CREATE STREAM LockedResult AS
 SELECT now() as t, * FROM BidsResult UNION AsksResult;  
 
 CREATE STREAM Result (t timestamp, brokerId int, mt double);
-UNLOCK Lock 0 FROM LockedResult INTO Result;
+UNLOCK InputLock 0 FROM LockedResult INTO Result;
 
 
 /* Load data. */
