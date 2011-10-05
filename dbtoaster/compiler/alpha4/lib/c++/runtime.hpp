@@ -56,8 +56,6 @@ namespace dbtoaster {
           ("output-file,o", value<string>(), "output file")
           ("maps,m", value<vector<string> >(&output_maps), "output maps")
           ("query,q", "output query results")
-          ("hashes", "output all hash translations")
-
           // Statistics profiling parameters
           ("samplesize", value<unsigned int>(),
                "sample window size for trigger profiles")

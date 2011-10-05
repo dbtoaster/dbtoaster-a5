@@ -225,13 +225,10 @@ let rec compile ?(dup_elim = ref StringMap.empty)
   in
   
   let (bigsum_vars, bsrw_theta, bsrw_term) =
-    if go_deeper then 
       Calculus.preaggregate bs_rewrite_mode 
                             (Calculus.roly_poly map_definition) 
                             map_params 
                             (mapn^"_")
-    else
-      ([], [], (Calculus.roly_poly map_definition))
   in
 
   Debug.print "LOG-PREAGG" (fun () ->

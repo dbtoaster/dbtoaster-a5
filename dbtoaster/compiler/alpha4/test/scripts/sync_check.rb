@@ -76,9 +76,10 @@ def correct_results()
       psql.puts(pg_script);
       psql.close_write;
       results = psql.readlines
-#      p results;
+      p results;
       results.
-        delete_if { |row| not (row.include? "|") }.
+        delete_if { |row| (not (row.include? "|")) && 
+                          (row.to_i.to_s != row.chomp.sub(/^ */,"")) }.
         map do |row| 
           row.chomp.split(/ *\| */).map { |i| i.to_f }
         end.

@@ -22,13 +22,13 @@ axfinder -d runtime-bigsums -d dup-ivc --depth 0 --compile-only
 axfinder -d runtime-bigsums -d dup-ivc --depth 1 --compile-only
 tpch3 -d dup-ivc
 tpch3 -d dup-ivc --depth 0 --compile-only -d projected-map-access
-tpch3 -d dup-ivc --depth 1 --compile-only -d projected-map-access
+tpch3 -d dup-ivc --depth 1 -d projected-map-access
 tpch11 -d dup-ivc
 tpch11 -d dup-ivc --depth 0 --compile-only -d projected-map-access
-tpch11 -d dup-ivc --depth 1 --compile-only -d projected-map-access
+tpch11 -d dup-ivc --depth 1 -d projected-map-access
 tpch17 -d dup-ivc
 tpch17 -d dup-ivc --depth 0 --compile-only -d projected-map-access
-tpch17 -d dup-ivc --depth 1 --compile-only -d projected-map-access
+tpch17 -d dup-ivc --depth 1 -d projected-map-access
 tpch18 -d dup-ivc
 tpch18 -d dup-ivc --depth 0 --compile-only -d projected-map-access
 tpch18 -d dup-ivc --depth 1 --compile-only -d projected-map-access
