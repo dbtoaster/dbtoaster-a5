@@ -3,18 +3,18 @@ CREATE TABLE LINEITEM (
         partkey        int,
         suppkey        int,
         linenumber     int,
-        quantity       double,
+        quantity       int,
         extendedprice  double,
         discount       double,
         tax            double,
-        returnflag     double, -- text(1)
-        linestatus     double, -- text(1)
-        shipdate       double, -- date
-        commitdate     double, -- date
-        receiptdate    double, -- date
-        shipinstruct   double,
-        shipmode       double,
-        comment        double
+        returnflag     int, -- text(1)
+        linestatus     int, -- text(1)
+        shipdate       int, -- date
+        commitdate     int, -- date
+        receiptdate    int, -- date
+        shipinstruct   int, -- text
+        shipmode       int, -- text
+        comment        int  -- text
     )
   FROM FILE 'test/data/tpch/lineitem.tbl'
   LINE DELIMITED lineitem;
@@ -22,27 +22,27 @@ CREATE TABLE LINEITEM (
 CREATE TABLE ORDERS (
         orderkey       int,
         custkey        int,
-        orderstatus    double, -- text
+        orderstatus    int, -- text(1)
         totalprice     double,
-        orderdate      double, -- date
-        orderpriority  double,
-        clerk          double,
+        orderdate      int, -- date
+        orderpriority  int, -- text
+        clerk          int, -- text
         shippriority   int,
-        comment        double  -- text
+        comment        int  -- text
     )
   FROM FILE 'test/data/tpch/orders.tbl'
   LINE DELIMITED orders;
 
 CREATE TABLE PART (
         partkey      int,
-        name         double, -- text
-        mfgr         double, -- text
-        brand        double, -- text
-        type         double, -- text
+        name         int, -- text
+        mfgr         int, -- text
+        brand        int, -- text
+        type         int, -- text
         size         int,
-        container    double, -- text
+        container    int, -- text
         retailprice  double,
-        comment      double  -- text
+        comment      int  -- text
     )
   FROM FILE 'test/data/tpch/part.tbl'
   LINE DELIMITED part;
@@ -52,49 +52,49 @@ CREATE TABLE PARTSUPP (
         suppkey      int,
         availqty     int,
         supplycost   double,
-        comment      double  -- text
+        comment      int  -- text
     )
   FROM FILE 'test/data/tpch/partsupp.tbl'
   LINE DELIMITED partsupp;
 
 CREATE TABLE CUSTOMER (
         custkey      int,
-        name         double, -- text
-        address      double, -- text
+        name         int, -- text
+        address      int, -- text
         nationkey    int,
-        phone        double, -- text
+        phone        int, -- text
         acctbal      double,
-        mktsegment   double, -- text
-        comment      double  -- text
+        mktsegment   int, -- text
+        comment      int  -- text
     )
   FROM FILE 'test/data/tpch/customer.tbl'
   LINE DELIMITED customer;
 
 CREATE TABLE SUPPLIER (
         suppkey      int,
-        name         double, -- text
-        address      double, -- text
+        name         int, -- text
+        address      int, -- text
         nationkey    int,
-        phone        double, -- text
+        phone        int, -- text
         acctbal      double,
-        comment      double  -- text
+        comment      int  -- text
     )
   FROM FILE 'test/data/tpch/supplier.tbl'
   LINE DELIMITED supplier;
 
 CREATE TABLE NATION (
         nationkey    int,
-        name         double, -- text
+        name         int, -- text
         regionkey    int,
-        comment      double  -- text
+        comment      int  -- text
     )
   FROM FILE 'test/data/tpch/nation.tbl'
   LINE DELIMITED nation;
   
 CREATE TABLE REGION (
         regionkey    int,
-        name         double, -- text
-        comment      double  -- text
+        name         int, -- text
+        comment      int  -- text
     )
   FROM FILE 'test/data/tpch/region.tbl'
   LINE DELIMITED region;

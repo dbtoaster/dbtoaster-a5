@@ -1152,11 +1152,15 @@ end (* Typing *)
       in 
       [Lines ["void unwrap_"^trig_name^"(const event_data& e, "^
                 "shared_ptr<dbt_trigger_log> logger) {";
-              "  if ( logger && logger->sink_stream ) {";
-              "    (*(logger->sink_stream)) << setprecision(15) << "^
+              "  try {";
+              "    if ( logger && logger->sink_stream ) {";
+              "      (*(logger->sink_stream)) << setprecision(15) << "^
                      (String.concat " << \",\" << " evt_fields)^" << endl;";
+              "    }";
+              "    on_"^trig_name^"("^(String.concat "," evt_fields)^");";
+              "  } catch (boost::bad_any_cast& bc) {";
+              "    cout << \"bad cast on "^trig_name^": \" << bc.what() << endl;";
               "  }";
-              "  on_"^trig_name^"("^(String.concat "," evt_fields)^");";
               "}"; ""]]
     in trigger_fn@unwrapper
 
