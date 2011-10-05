@@ -124,7 +124,7 @@ CLEAN_OBJ = \
 	$(subst .ml,.cmi,$(OTHER_SOURCE)) $(subst .ml,.cmo,$(OTHER_SOURCE)) \
 	$(subst .ml,.cmx,$(OTHER_SOURCE)) $(subst .ml,.o,$(OTHER_SOURCE)) \
 	$(GENERATED_SOURCE) \
-	dbtoaster dbtoaster_top m3_ex vwap query
+	dbtoaster dbtoaster_top m3_ex vwap query test/scripts/cpp_hash
 
 INCLUDE_DIR = \
 	-I util/ \
@@ -206,6 +206,12 @@ benchmark: $(OPT_DEPS)
 
 ##############
 
+test/scripts/cpp_hash: lib/c++/compute_hashes.cpp
+	g++ -o $@ $< $(patsubst %, -I %, $(DBT_HDR))\
+	             $(patsubst %, -L %, $(DBT_LIB))
+
+##############
+
 test/sql/postgres/%: test/sql/postgres/%.sql 
 	sed "s/@@PATH@@/`pwd | sed 's/\//\\\\\//g'`/" test/sql/postgres/$*.sql > psqltmp.sql
 	psql -f psqltmp.sql
@@ -281,7 +287,6 @@ bin/%: test/sql/finance/%.sql dbtoaster
 	$(DEFAULT_DBT_COMPILE) $< -c bin/$* -o bin/$*.cpp
 bin/%: test/sql/tpch/%.sql dbtoaster
 	$(DEFAULT_DBT_COMPILE) $< -c bin/$* -o bin/$*.cpp
-
 
 ## Query execution tests
 vwaptest: $(OPT_DEPS)
