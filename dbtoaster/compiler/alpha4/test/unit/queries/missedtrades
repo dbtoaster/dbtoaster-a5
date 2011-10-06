@@ -1,7 +1,7 @@
 {
   :path => "test/sql/finance/missedtrades.sql",
   :type => :onelevel,
-#  :answer => results_file("test/results/missedtrades.csv"),
-  :answer => results_file("test/results/missedtrades_100.csv"),
+  :answer => results_file("test/results/missedtrades.csv"),
+#  :answer => results_file("test/results/missedtrades_100.csv"),
   :valid_opts => ["dup-ivc", "depth-0", "depth-1"]
 }
