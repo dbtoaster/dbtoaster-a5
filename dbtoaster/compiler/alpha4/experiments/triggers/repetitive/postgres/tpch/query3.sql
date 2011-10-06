@@ -20,7 +20,11 @@ CREATE OR REPLACE FUNCTION on_insert_customerf() RETURNS TRIGGER AS $on_insert_c
         item RESULTS%ROWTYPE;
     BEGIN
         FOR item IN
-            SELECT o.orderkey, o.orderdate, o.shippriority, sum(extendedprice * (1 - discount))
+            SELECT o.orderkey, o.orderdate, o.shippriority,
+                case when
+                    sum(extendedprice * (1 - discount)) is null then 0
+                    else sum(extendedprice * (1 - discount))
+                end
             FROM CUSTOMER c, LINEITEM l, ORDERS o
             WHERE c.mktsegment = 'BUILDING'
               AND o.custkey = c.custkey
@@ -50,7 +54,11 @@ CREATE OR REPLACE FUNCTION on_insert_lineitemf() RETURNS TRIGGER AS $on_insert_l
         item RESULTS%ROWTYPE;
     BEGIN
         FOR item IN
-            SELECT o.orderkey, o.orderdate, o.shippriority, sum(extendedprice * (1 - discount))
+            SELECT o.orderkey, o.orderdate, o.shippriority,
+                case when
+                    sum(extendedprice * (1 - discount)) is null then 0
+                    else sum(extendedprice * (1 - discount))
+                end
             FROM CUSTOMER c, LINEITEM l, ORDERS o
             WHERE c.mktsegment = 'BUILDING'
               AND o.custkey = c.custkey
@@ -80,7 +88,11 @@ CREATE OR REPLACE FUNCTION on_insert_ordersf() RETURNS TRIGGER AS $on_insert_ord
         item RESULTS%ROWTYPE;
     BEGIN
         FOR item IN
-            SELECT o.orderkey, o.orderdate, o.shippriority, sum(extendedprice * (1 - discount))
+            SELECT o.orderkey, o.orderdate, o.shippriority,
+                case when
+                    sum(extendedprice * (1 - discount)) is null then 0
+                    else sum(extendedprice * (1 - discount))
+                end
             FROM CUSTOMER c, LINEITEM l, ORDERS o
             WHERE c.mktsegment = 'BUILDING'
               AND o.custkey = c.custkey
