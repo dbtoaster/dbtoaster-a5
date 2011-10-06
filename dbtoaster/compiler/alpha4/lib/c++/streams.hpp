@@ -35,12 +35,25 @@ namespace dbtoaster {
       {}
     };
 
+    struct ordered {
+      virtual unsigned int order() = 0;
+    };
+
     // Adaptor and stream interfaces.
-    struct stream_adaptor
+    struct stream_adaptor : public ordered
     {
+      // All adaptors have an internal ordering for input stream synchronization.
+      unsigned int current_order;
+      stream_adaptor() : current_order(0) {}
+
+      // The default ordering function.
+      virtual unsigned int order() { return current_order; }
+
       // processes the data, adding all stream events generated to the list.
       virtual void process(const string& data,
                            shared_ptr<list<stream_event> > dest) = 0;
+
+      virtual void finalize(shared_ptr<list<stream_event> > dest) = 0;
     };
 
     // Framing
@@ -59,15 +72,115 @@ namespace dbtoaster {
       {}
     };
 
-    // Sources
-    struct source
-    {
-      frame_descriptor frame_info;
-      list<shared_ptr<stream_adaptor> > adaptors;
+    struct dynamic_poset {
+      typedef set<shared_ptr<ordered> > pset;
+      typedef map<unsigned int, shared_ptr<pset> > repr;
+      typedef repr::iterator iterator;
+      typedef pair<pset::iterator, pset::iterator> class_range;
+      repr poset;
 
-      source(frame_descriptor& f, list<shared_ptr<stream_adaptor> >& a)
-        : frame_info(f), adaptors(a)
-      {}
+      dynamic_poset() {}
+
+      dynamic_poset(pset& elements) {
+        for (pset::iterator it = elements.begin(); it != elements.end(); ++it) {
+          add_element(*it);
+        }
+      }
+
+      inline void clear() { poset.clear(); }
+      inline bool empty() { return poset.empty(); }
+      inline iterator find(unsigned int o) { return poset.find(o); }
+      inline iterator begin() { return poset.begin(); }
+      inline iterator end() { return poset.end(); }
+
+      // Returns the total number of elements in the poset.
+      size_t size() {
+        size_t r = 0;
+        for (iterator it = begin(); it != end(); ++it) {
+          r += it->second? it->second->size(): 0;
+        }
+        return r;
+      }
+
+      unsigned int order() { return poset.empty()? 0 : poset.begin()->first; }
+
+      shared_ptr<class_range> range(unsigned int order) {
+        shared_ptr<class_range> r;
+        iterator it = find(order);
+        if ( it == end() || !(it->second) ) return r;
+        r = shared_ptr<class_range>(new class_range(it->second->begin(), it->second->end()));
+        return r;
+      }
+
+      void add_element(shared_ptr<ordered> e) {
+        if ( !poset[e->order()] ) {
+          poset[e->order()] = shared_ptr<pset>(new pset());
+          poset[e->order()]->insert(e);
+        } else {
+          poset[e->order()]->insert(e);
+        }
+      }
+
+      void remove_element(shared_ptr<ordered> e) {
+        iterator it = find(e->order());
+        if ( it != end() ) it->second->erase(e);
+      }
+
+      // Helper to update an element's position, by removing it from a
+      // specific stage.
+      void remove_element(unsigned int order, shared_ptr<ordered> e) {
+        iterator it = poset.find(order);
+        if ( it != poset.end() ) it->second->erase(e);
+      }
+
+      void reorder_elements(unsigned int order) {
+        iterator it = find(order);
+        if ( it == end() ) return;
+        shared_ptr<pset> ps = it->second;
+        pset removals;
+
+        // Process adaptors, tracking those that have changed their position.
+        for(pset::iterator it = ps->begin(); it != ps->end(); ++it) {
+          if ( (*it) && (*it)->order() != order ) removals.insert(*it);
+        }
+
+        pset::iterator rm_it = removals.begin();
+        pset::iterator rm_end = removals.end();
+        for (; rm_it != rm_end; ++rm_it) {
+          // Re-add the adaptor at its new stage.
+          if ( (*rm_it)->order() > order ) add_element(*rm_it);
+          else if ( (*rm_it)->order() < order ) {
+            cout << "invalid adaptor order ... removing" << endl;
+          }
+          ps->erase(*rm_it);
+        }
+        if ( ps->empty() ) poset.erase(order);
+      }
+
+    };
+
+    // Sources
+    struct source : public ordered
+    {
+      typedef list<shared_ptr<stream_adaptor> > adaptor_list;
+      frame_descriptor frame_info;
+      dynamic_poset adaptors;
+
+      source(frame_descriptor& f, adaptor_list& a) : frame_info(f) {
+        for(adaptor_list::iterator it = a.begin(); it != a.end(); ++it) {
+          add_adaptor(*it);
+        }
+      }
+
+      unsigned int order() { return adaptors.order(); }
+
+      void add_adaptor(shared_ptr<stream_adaptor> a) {
+        adaptors.add_element(dynamic_pointer_cast<ordered>(a));
+      }
+
+      void remove_adaptor(unsigned int order, shared_ptr<stream_adaptor> a) {
+        adaptors.remove_element(order, dynamic_pointer_cast<ordered>(a));
+      }
 
       virtual void init_source() = 0;
       virtual bool has_inputs() = 0;
@@ -79,8 +192,7 @@ namespace dbtoaster {
       typedef stream<file_source> file_stream;
       shared_ptr<file_stream> source_stream;
       shared_ptr<string> buffer;
-      dbt_file_source(const string& path, frame_descriptor& f,
-                      list<shared_ptr<stream_adaptor> >& a)
+      dbt_file_source(const string& path, frame_descriptor& f, adaptor_list& a)
         : source(f,a)
       {
         source_stream = shared_ptr<file_stream>(new file_stream(path));
@@ -148,20 +260,65 @@ namespace dbtoaster {
         return r;
       }
 
+      // Process adaptors in the first stage, accumulating and returning
+      // stream events
+      void process_adaptors(string& data, shared_ptr<list<stream_event> >& r) {
+        unsigned int min_order = adaptors.order();
+        shared_ptr<dynamic_poset::class_range> range = adaptors.range(min_order);
+        if ( !range ) {
+          cout << "invalid min order at source with empty range" << endl;
+          return;
+        }
+
+        for(dynamic_poset::pset::iterator it = range->first;
+            it != range->second; ++it)
+        {
+          shared_ptr<stream_adaptor> adaptor =
+            dynamic_pointer_cast<stream_adaptor>(*it);
+          if ( adaptor ) adaptor->process(data, r);
+        }
+        adaptors.reorder_elements(min_order);
+      }
+
+      // Finalize all adaptors, accumulating stream events.
+      void finalize_adaptors(shared_ptr<list<stream_event> >& r) {
+        dynamic_poset::iterator it = adaptors.begin();
+        dynamic_poset::iterator end = adaptors.end();
+
+        for (; it != end; ++it)
+        {
+          if ( it->second ) {
+            for (dynamic_poset::pset::iterator a_it = it->second->begin();
+                 a_it != it->second->end(); ++a_it)
+            {
+              shared_ptr<stream_adaptor> a =
+                dynamic_pointer_cast<stream_adaptor>(*a_it);
+              if ( a ) a->finalize(r);
+            }
+          } else {
+            cout << "invalid adaptors poset class at position "
+                 << it->first << endl;
+          }
+        }
+
+        adaptors.clear();
+      }
+
       shared_ptr<list<stream_event> > next_inputs() {
         shared_ptr<list<stream_event> > r;
+        if ( adaptors.empty() ) return r;
         if ( has_inputs() ) {
           // get the next frame of data based on the frame type.
           shared_ptr<string> data = next_frame();
 
           if ( data ) {
             r = shared_ptr<list<stream_event> >(new list<stream_event>());
-            // process all adaptors, accumulating and returning stream events
-            for_each(adaptors.begin(), adaptors.end(),
-                bind(&stream_adaptor::process, *_1, *data, r));
+            process_adaptors(*data, r);
           }
         } else if ( source_stream->is_open() ) {
-            source_stream->close();
+          source_stream->close();
+          r = shared_ptr<list<stream_event> >(new list<stream_event>());
+          finalize_adaptors(r);
         }
         return r;
       }
@@ -169,49 +326,105 @@ namespace dbtoaster {
 
     struct stream_multiplexer
     {
-      set< shared_ptr<source> > inputs;
+      dynamic_poset inputs;
       shared_ptr<source> current;
-      int step, remaining;
+      unsigned int current_order;
+      int step, remaining, block;
 
-      stream_multiplexer(int seed, int st) : step(st), remaining(0) {
+      stream_multiplexer(int seed, int st)
+        : current_order(0), step(st), remaining(0), block(100)
+      {
         srandom(seed);
       }
 
-      stream_multiplexer(int seed, int st, set<shared_ptr<source> >& s) : inputs(s)
+      stream_multiplexer(int seed, int st, set<shared_ptr<source> >& s)
       {
         stream_multiplexer(seed, st);
+        set<shared_ptr<source> >::iterator it = s.begin();
+        set<shared_ptr<source> >::iterator end = s.end();
+        for(; it != end; ++it) add_source(*it);
+        current_order = inputs.order();
       }
 
-      void add_source(shared_ptr<source> s) { inputs.insert(s); }
+      void add_source(shared_ptr<source> s) {
+        inputs.add_element(dynamic_pointer_cast<ordered>(s));
+      }
 
-      void remove_source(shared_ptr<source> s) { inputs.erase(s); }
+      void remove_source(shared_ptr<source> s) {
+        inputs.remove_element(dynamic_pointer_cast<ordered>(s));
+      }
 
       void init_source() {
-        for_each(inputs.begin(), inputs.end(), bind(&source::init_source, *_1));
+        dynamic_poset::iterator it = inputs.begin();
+        dynamic_poset::iterator end = inputs.end();
+        for (; it != end; ++it) {
+          shared_ptr<dynamic_poset::class_range> r = inputs.range(it->first);
+          if ( r ) {
+            for (dynamic_poset::pset::iterator it = r->first; it != r->second; ++it) {
+              shared_ptr<source> s = dynamic_pointer_cast<source>(*it);
+              if ( s ) s->init_source();
+            }
+          } else {
+            cout << "invalid source poset class at position " << it->first << endl;
+          }
+        }
       }
 
       bool has_inputs() {
-        return inputs.end() !=
-          find_if(inputs.begin(), inputs.end(), bind(&source::has_inputs, *_1));
+        bool found = false;
+        dynamic_poset::iterator it = inputs.begin();
+        dynamic_poset::iterator end = inputs.end();
+        for (; it != end && !found; ++it) {
+          shared_ptr<dynamic_poset::class_range> r = inputs.range(it->first);
+          if ( r ) {
+            for (dynamic_poset::pset::iterator it = r->first;
+                 it != r->second && !found; ++it)
+            {
+              shared_ptr<source> s = dynamic_pointer_cast<source>(*it);
+              if ( s ) found = found || s->has_inputs();
+            }
+          } else {
+            cout << "invalid source poset class at position " << it->first << endl;
+          }
+        }
+        return found;
       }
 
-      shared_ptr<list<stream_event> > next_inputs() {
+      shared_ptr<list<stream_event> > next_inputs()
+      {
         shared_ptr<list<stream_event> > r;
         // pick a random stream until we find one that's not done,
         // and process its frame.
-        while ( !current || remaining == 0 ) {
-          size_t id = (size_t) (inputs.size() * (rand() / (RAND_MAX + 1.0)));
-          set<shared_ptr<source> >::iterator it = inputs.begin();
-          advance(it, id);
-          if ( !(*it)->has_inputs() ) inputs.erase(it);
-          else {
-            current = *it;
-            remaining = (int) (step > 0? step : (rand() / (RAND_MAX + 1.0)));
+        while ( !current || remaining <= 0 ) {
+          if ( inputs.order() < current_order ) {
+            cout << "non-monotonic source ordering "
+                 << inputs.order() << " vs " << current_order << endl;
+            break;
+          }
+
+          current_order = inputs.order();
+          dynamic_poset::iterator it = inputs.find(current_order);
+          if ( it->second ) {
+            size_t id = (size_t) (it->second->size() * (rand() / (RAND_MAX + 1.0)));
+            dynamic_poset::pset::iterator c_it = it->second->begin();
+            advance(c_it, id);
+            shared_ptr<source> c = dynamic_pointer_cast<source>(*c_it);
+            if ( !c || (c && !c->has_inputs()) ) {
+              it->second->erase(c_it);
+            } else {
+              current = c;
+              remaining = (int) (step > 0? step : block*(rand() / (RAND_MAX + 1.0)));
+            }
+          } else {
+            cout << "invalid poset class at position " << it->first << endl;
           }
         }
 
+        if ( !current ) return r;
+
         r = current->next_inputs();
         if ( r ) remaining -= r->size();
+        inputs.reorder_elements(current_order);
 
         // remove the stream if its done.
         if ( !current->has_inputs() ) {
