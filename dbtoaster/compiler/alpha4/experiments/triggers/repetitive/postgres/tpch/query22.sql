@@ -15,7 +15,11 @@ CREATE OR REPLACE FUNCTION on_insert_customerf() RETURNS TRIGGER AS $on_insert_c
         item RESULTS%ROWTYPE;
     BEGIN
         FOR item IN
-            SELECT c1.nationkey, sum(c1.acctbal)
+            SELECT c1.nationkey,
+                case when
+                    sum(c1.acctbal) is null then 0
+                    else sum(c1.acctbal)
+                end
             FROM CUSTOMER c1
             WHERE c1.acctbal < (
                 SELECT
@@ -53,7 +57,11 @@ CREATE OR REPLACE FUNCTION on_insert_ordersf() RETURNS TRIGGER AS $on_insert_ord
         item RESULTS%ROWTYPE;
     BEGIN
         FOR item IN
-            SELECT c1.nationkey, sum(c1.acctbal)
+            SELECT c1.nationkey,
+                case when
+                    sum(c1.acctbal) is null then 0
+                    else sum(c1.acctbal)
+                end
             FROM CUSTOMER c1
             WHERE c1.acctbal < (
                 SELECT
