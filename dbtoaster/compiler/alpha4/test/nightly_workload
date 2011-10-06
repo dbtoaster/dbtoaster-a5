@@ -1,12 +1,12 @@
 rst
 rst --depth 0 --compile-only
-rst --depth 1 --compile-only
-rst --depth 2 --compile-only
+rst --depth 1
+rst --depth 2
 ssb4 -d disable-deletes -d dup-ivc
 vwap
 vwap -d dup-ivc
 vwap -d dup-ivc --depth 0 --compile-only
-vwap -d dup-ivc --depth 1 --compile-only
+vwap -d dup-ivc --depth 1
 pricespread 
 pricespread -d dup-ivc
 pricespread -d dup-ivc --depth 0 --compile-only
@@ -20,6 +20,9 @@ axfinder -d runtime-bigsums
 axfinder -d runtime-bigsums -d dup-ivc
 axfinder -d runtime-bigsums -d dup-ivc --depth 0 --compile-only
 axfinder -d runtime-bigsums -d dup-ivc --depth 1 --compile-only
+brokerspread -d dup-ivc
+brokerspread -d dup-ivc --depth 0 --compile-only
+brokerspread -d dup-ivc --depth 1 --compile-only
 tpch3 -d dup-ivc
 tpch3 -d dup-ivc --depth 0 --compile-only -d projected-map-access
 tpch3 -d dup-ivc --depth 1 -d projected-map-access
@@ -28,19 +31,16 @@ tpch11 -d dup-ivc --depth 0 --compile-only -d projected-map-access
 tpch11 -d dup-ivc --depth 1 -d projected-map-access
 tpch17 -d dup-ivc
 tpch17 -d dup-ivc --depth 0 --compile-only -d projected-map-access
-tpch17 -d dup-ivc --depth 1 --compile-only -d projected-map-access
+tpch17 -d dup-ivc --depth 1 -d projected-map-access
 tpch18 -d dup-ivc
 tpch18 -d dup-ivc --depth 0 --compile-only -d projected-map-access
-tpch18 -d dup-ivc --depth 1 --compile-only -d projected-map-access
+tpch18 -d dup-ivc --depth 1 -d projected-map-access
 tpch18short -d dup-ivc
 tpch18short -d dup-ivc --depth 0 --compile-only -d projected-map-access
-tpch18short -d dup-ivc --depth 1 --compile-only -d projected-map-access
+tpch18short -d dup-ivc --depth 1 -d projected-map-access
 tpch22 -d dup-ivc
 tpch22 -d dup-ivc --depth 0 --compile-only -d projected-map-access
-tpch22 -d dup-ivc --depth 1 --compile-only -d projected-map-access
-clusteravailable -d dup-ivc
-clusteravailable -d dup-ivc --depth 0 --compile-only -d projected-map-access
-clusteravailable -d dup-ivc --depth 1 --compile-only -d projected-map-access
+tpch22 -d dup-ivc --depth 1 -d projected-map-access
 clusteravailablenew -d dup-ivc
 clusteravailablenew -d dup-ivc --depth 0 --compile-only
 clusteravailablenew -d dup-ivc --depth 1 --compile-only

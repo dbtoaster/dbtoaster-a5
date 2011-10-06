@@ -1,0 +1,5 @@
+{
+  :path => "test/sql/finance/brokerspread.sql",
+  :type => :onelevel,
+  :answer => results_file("test/results/brokerspread.csv"),
+}
