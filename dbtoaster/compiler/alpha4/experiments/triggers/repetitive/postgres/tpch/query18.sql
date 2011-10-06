@@ -18,14 +18,21 @@ CREATE OR REPLACE FUNCTION on_insert_customerf() RETURNS TRIGGER AS $on_insert_c
         item RESULTS%ROWTYPE;
     BEGIN
         FOR item IN
-            SELECT c.custkey, sum(l1.quantity)
+            SELECT c.custkey,
+                case when
+                    sum(l1.quantity) is null then 0
+                    else sum(l1.quantity)
+                end
             FROM   CUSTOMER C, LINEITEM l1, ORDERS o
             WHERE  1 <= (
                 SELECT SUM(1)
                 FROM LINEITEM l2
                 WHERE l1.orderkey = l2.orderkey
                 AND 100 < (
-                    SELECT sum(l3.quantity)
+                    SELECT case when
+                        sum(l3.quantity) is null then 0
+                        else sum(l3.quantity)
+                    end
                     FROM LINEITEM l3
                     WHERE l2.orderkey = l3.orderkey
                 )
@@ -52,14 +59,21 @@ CREATE OR REPLACE FUNCTION on_insert_lineitemf() RETURNS TRIGGER AS $on_insert_l
         item RESULTS%ROWTYPE;
     BEGIN
         FOR item IN
-            SELECT c.custkey, sum(l1.quantity)
+            SELECT c.custkey,
+                case when
+                    sum(l1.quantity) is null then 0
+                    else sum(l1.quantity)
+                end
             FROM   CUSTOMER C, LINEITEM l1, ORDERS o
             WHERE  1 <= (
                 SELECT SUM(1)
                 FROM LINEITEM l2
                 WHERE l1.orderkey = l2.orderkey
                 AND 100 < (
-                    SELECT sum(l3.quantity)
+                    SELECT case when
+                        sum(l3.quantity) is null then 0
+                        else sum(l3.quantity)
+                    end
                     FROM LINEITEM l3
                     WHERE l2.orderkey = l3.orderkey
                 )
@@ -86,14 +100,21 @@ CREATE OR REPLACE FUNCTION on_insert_ordersf() RETURNS TRIGGER AS $on_insert_ord
         item RESULTS%ROWTYPE;
     BEGIN
         FOR item IN
-            SELECT c.custkey, sum(l1.quantity)
+            SELECT c.custkey,
+                case when
+                    sum(l1.quantity) is null then 0
+                    else sum(l1.quantity)
+                end
             FROM   CUSTOMER C, LINEITEM l1, ORDERS o
             WHERE  1 <= (
                 SELECT SUM(1)
                 FROM LINEITEM l2
                 WHERE l1.orderkey = l2.orderkey
                 AND 100 < (
-                    SELECT sum(l3.quantity)
+                    SELECT case when
+                        sum(l3.quantity) is null then 0
+                        else sum(l3.quantity)
+                    end
                     FROM LINEITEM l3
                     WHERE l2.orderkey = l3.orderkey
                 )
