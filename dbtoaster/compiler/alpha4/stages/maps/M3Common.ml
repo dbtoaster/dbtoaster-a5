@@ -6,7 +6,7 @@ open M3;;
 let rec recurse_calc_with_meta 
     (op_f: 'c -> string -> 'b -> 'b -> 'b)
     (if_f: 'c -> 'b -> 'b -> 'b)
-    (ma_f: 'c -> ('c,'a) generic_mapacc_t -> 'b)
+    (ma_f: 'c -> bool -> ('c,'a) generic_mapacc_t -> 'b)
     (const_f: 'c -> const_t -> 'b)
     (var_f: 'c -> var_t -> 'b)
     (calc:('c,'a) generic_calc_t) : 'b = 
@@ -14,7 +14,7 @@ let rec recurse_calc_with_meta
     (recurse_calc_with_meta op_f if_f ma_f const_f var_f subexp) 
   in
   match (fst calc) with
-    | MapAccess(ma) -> ma_f (snd calc) ma
+    | MapAccess(ma,inline_agg) -> ma_f (snd calc) inline_agg ma
     | Add (c1, c2) -> op_f (snd calc) "+" (recurse c1) (recurse c2)
     | Mult(c1, c2) -> op_f (snd calc) "*" (recurse c1) (recurse c2)
     | Lt  (c1, c2) -> op_f (snd calc) "<" (recurse c1) (recurse c2)
@@ -53,14 +53,14 @@ let name_of_op (op:string) =
 
 let recurse_calc_lf 
       (join_f: 'b -> 'b -> 'b) 
-      (ma_f: ('c,'a) generic_mapacc_t -> 'b)
+      (ma_f: bool -> ('c,'a) generic_mapacc_t -> 'b)
       (const_f: const_t -> 'b)
       (var_f: var_t -> 'b)
       (calc:('c,'a) generic_calc_t) : 'b = 
   recurse_calc (fun _ a b -> join_f a b) join_f ma_f const_f var_f calc;;
 
 let replace_calc_lf_with_meta 
-      (ma_f: 'c -> ('c,'a) generic_mapacc_t -> ('c,'a) generic_calc_t)
+      (ma_f: 'c -> bool -> ('c,'a) generic_mapacc_t -> ('c,'a) generic_calc_t)
       (const_f: 'c -> const_t -> ('c,'a) generic_calc_t)
       (var_f: 'c -> var_t -> ('c,'a) generic_calc_t)
       (calc:('c,'a) generic_calc_t) : ('c,'a) generic_calc_t = 
@@ -68,12 +68,13 @@ let replace_calc_lf_with_meta
                          ma_f const_f var_f calc;;
 
 let replace_calc_lf 
-      (ma_f: ('c,'a) generic_mapacc_t -> ('c,'a) generic_calc_contents_t)
+      (ma_f: bool -> ('c,'a) generic_mapacc_t -> 
+             ('c,'a) generic_calc_contents_t)
       (const_f: const_t -> ('c,'a) generic_calc_contents_t)
       (var_f: var_t -> ('c,'a) generic_calc_contents_t)
       (calc:('c,'a) generic_calc_t) : ('c,'a) generic_calc_t = 
   replace_calc_lf_with_meta 
-    (fun meta p -> (ma_f p   , meta))
+    (fun meta inline_agg p -> (ma_f inline_agg p   , meta))
     (fun meta p -> (const_f p, meta))
     (fun meta p -> (var_f p  , meta))
     calc;;
@@ -91,7 +92,8 @@ let rename_maps (mapping:(map_id_t) StringMap.t)
   and aux_calc ((e,meta):('c,'a) generic_aggcalc_t): 
                (('c,'a) generic_aggcalc_t) = 
     ((replace_calc_lf 
-      (fun ma -> MapAccess(aux_ma ma)) (fun x->Const(x)) (fun x->Var(x)) e),
+      (fun inline_agg ma -> MapAccess(aux_ma ma, inline_agg)) 
+      (fun x->Const(x)) (fun x->Var(x)) e),
      meta)
   in
     (aux_ma stmt_defn, aux_calc stmt_calc, stmt_meta)
@@ -101,7 +103,7 @@ let rename_vars (src_vars:var_t list) (dst_vars:var_t list)
                 ((stmt_defn, stmt_calc, stmt_meta):('c,'a,'s) generic_stmt_t): 
                 ('c,'a,'s) generic_stmt_t =
   let rec var_unused_in_calc (var:var_t) : (('c,'a) generic_calc_t -> bool) =
-    recurse_calc_lf (&&) (var_unused_in_mapacc var)
+    recurse_calc_lf (&&) (fun _ ma -> var_unused_in_mapacc var ma)
                     (fun _ -> true) (fun x -> x <> var)
   and var_unused_in_mapacc var (_,ivars,ovars,icalc) =
     if List.exists (fun x -> x == var) ivars ||
@@ -142,7 +144,7 @@ let rename_vars (src_vars:var_t list) (dst_vars:var_t list)
                                  else var
   in
   let rec sub_exp ((e,meta):('c,'a) generic_aggcalc_t) = 
-    ( replace_calc_lf (fun ma -> MapAccess(sub_ma ma))
+    ( replace_calc_lf (fun inline_agg ma -> MapAccess(sub_ma ma, inline_agg))
                       (fun x->Const(x)) (fun x->Var(map_var x)) e,
       meta
     )
@@ -156,7 +158,7 @@ let rename_vars (src_vars:var_t list) (dst_vars:var_t list)
 (******************* Querying *******************)
 let calc_vars_aux mf vf : ((('c,'a) generic_calc_t) -> var_t list)
   = recurse_calc_lf Util.ListAsSet.union
-(*ma*)       (fun (_, inv, outv, _) -> mf inv outv)
+(*ma*)       (fun _ (_, inv, outv, _) -> mf inv outv)
 (*const*)    (fun _ -> [])
 (*var*)      (fun x -> vf x)
 
@@ -231,8 +233,19 @@ struct
             (IndentedPrinting.Parens(("IF ( ",""), c1)), c2
           ))
       )
-      (fun meta ma -> 
-        extend_with_meta MP.string_of_calcmeta meta (indented_map_access ma))
+      (fun meta inline_agg ma -> 
+        extend_with_meta MP.string_of_calcmeta meta (
+           if inline_agg then
+              let (_,_,outv,(init_calc,init_meta)) = ma in
+              IndentedPrinting.Node(("AGGSUM",")"),("","("),
+                 IndentedPrinting.Leaf(vars_to_string outv),
+                    extend_with_meta 
+                       MP.string_of_aggmeta init_meta
+                       (indented_calc init_calc)
+              )
+           else
+              indented_map_access ma
+      ))
       (fun meta c -> 
         extend_with_meta MP.string_of_calcmeta meta (indented_const c))
       (fun meta x -> 
@@ -294,7 +307,8 @@ and code_of_calc (calc:('c,'a) generic_calc_t): string =
   recurse_calc 
     (fun op l r -> "("^(name_of_op op)^"("^l^", "^r^"))")
     (fun l r -> "(IfThenElse0("^l^", "^r^"))")
-    (fun ma -> "(MapAccess"^(code_of_map_access ma)^")")
+    (fun inline_agg ma -> "(MapAccess"^(code_of_map_access ma)^","^
+                          (string_of_bool inline_agg)^")")
     (fun c -> 
       match c with
       | CFloat(f) -> "(Const(CFloat("^(string_of_float f)^")))"

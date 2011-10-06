@@ -17,7 +17,7 @@ and ('c, 'a) generic_calc_contents_t =
   | Mult        of ('c,'a) generic_calc_t * ('c,'a) generic_calc_t 
              (* if (cond != 0) then calc else 0 *)
   | IfThenElse0 of ('c,'a) generic_calc_t * ('c,'a) generic_calc_t 
-  | MapAccess   of ('c,'a) generic_mapacc_t
+  | MapAccess   of ('c,'a) generic_mapacc_t * bool
   | Const of const_t
   | Var   of var_t
              (* conditions: 1 if calc OP calc else 0 *)
@@ -69,7 +69,7 @@ let mk_lt l r = (Lt(l,r), ())
 let mk_leq l r = (Leq(l,r), ())
 let mk_eq l r = (Eq(l,r), ())
 let mk_if l r = (IfThenElse0(l,r), ())
-let mk_ma ma = (MapAccess(ma), ())
+let mk_ma inline_agg ma = (MapAccess(ma, inline_agg), ())
 let mk_c c = (Const(CFloat(c)), ())
 let mk_s s = (Const(CString(s)), ())
 let mk_v v = (Var(v), ())

@@ -6,8 +6,8 @@ val recurse_calc :
     (string -> 'b -> 'b -> 'b) ->
       (* condition -> term -> ret *)
     ('b -> 'b -> 'b) ->
-      (* map id -> ivars -> ovars -> init -> ret *)
-    (('c,'a) M3.generic_mapacc_t -> 'b) ->
+      (* inline_agg -> (map id * ivars * ovars *init) -> ret *)
+    (bool -> ('c,'a) M3.generic_mapacc_t -> 'b) ->
     (M3.const_t -> 'b) ->
     (M3.var_t -> 'b) ->
     (('c,'a) M3.generic_calc_t) -> 'b
@@ -17,30 +17,30 @@ val recurse_calc_with_meta :
     ('c -> string -> 'b -> 'b -> 'b) ->
       (* meta -> condition -> term -> ret *)
     ('c -> 'b -> 'b -> 'b) ->
-      (* meta -> map id -> ivars -> ovars -> init -> ret *)
-    ('c -> ('c,'a) M3.generic_mapacc_t -> 'b) ->
+      (* inline_agg -> meta -> (map id * ivars * ovars *init) -> ret *)
+    ('c -> bool -> ('c,'a) M3.generic_mapacc_t -> 'b) ->
     ('c -> M3.const_t -> 'b) ->
     ('c -> M3.var_t -> 'b) ->
     (('c,'a) M3.generic_calc_t) -> 'b
 
 val recurse_calc_lf :
     ('b -> 'b -> 'b) ->
-      (* map id -> ivars -> ovars -> init -> ret *)
-    (('c,'a) M3.generic_mapacc_t -> 'b) ->
+      (* inline_agg -> (map id * ivars * ovars *init) -> ret *)
+    (bool -> ('c,'a) M3.generic_mapacc_t -> 'b) ->
     (M3.const_t -> 'b) ->
     (M3.var_t -> 'b) ->
     (('c,'a) M3.generic_calc_t) -> 'b
 
 val replace_calc_lf :
-      (* map id -> ivars -> ovars -> init -> ret *)
-    (('c,'a) M3.generic_mapacc_t -> ('c,'a) M3.generic_calc_contents_t) ->
+      (* inline_agg -> (map id * ivars * ovars *init) -> ret *)
+    (bool->('c,'a) M3.generic_mapacc_t -> ('c,'a) M3.generic_calc_contents_t) ->
     (M3.const_t -> ('c,'a) M3.generic_calc_contents_t) ->
     (M3.var_t -> ('c,'a) M3.generic_calc_contents_t) ->
     (('c,'a) M3.generic_calc_t) -> ('c,'a) M3.generic_calc_t
 
 val replace_calc_lf_with_meta :
-      (* meta -> map id -> ivars -> ovars -> init -> ret *)
-    ('c -> ('c,'a) M3.generic_mapacc_t -> ('c,'a) M3.generic_calc_t) ->
+      (* meta -> inline_agg -> (map id * ivars * ovars *init) -> ret *)
+    ('c -> bool -> ('c,'a) M3.generic_mapacc_t -> ('c,'a) M3.generic_calc_t) ->
     ('c -> M3.const_t -> ('c,'a) M3.generic_calc_t) ->
     ('c -> M3.var_t -> ('c,'a) M3.generic_calc_t) ->
     (('c,'a) M3.generic_calc_t) -> ('c,'a) M3.generic_calc_t

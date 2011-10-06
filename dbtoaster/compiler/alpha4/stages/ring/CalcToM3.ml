@@ -9,7 +9,7 @@ type map_key_binding_t =
     Binding_Present of var_t
   | Binding_Not_Present
 type bindings_list_t = map_key_binding_t list
-type map_ref_t = (term_t * term_t * bindings_list_t) 
+type map_ref_t = (term_t * term_t * bindings_list_t * bool) 
 
 type m3_condition_or_none =
     EmptyCondition
@@ -73,7 +73,7 @@ let translate_var_type (calc_var:var_t): M3.var_type_t =
 let translate_schema (calc_schema:var_t list): M3.var_t list = 
   (List.map translate_var calc_schema)
 
-let translate_map_ref ((t, mt): Compiler.map_ref_t) : map_ref_t =
+let translate_map_ref ((t, mt, inline_agg): Compiler.map_ref_t) : map_ref_t =
   (t, mt, (
     let outer_term = (readable_term t) in 
     match (readable_term mt) with
@@ -86,10 +86,11 @@ let translate_map_ref ((t, mt): Compiler.map_ref_t) : map_ref_t =
           then Binding_Present(var)
           else Binding_Not_Present)
         vs
-    | _ -> failwith "LHS of a map definition is not an External()"))
+    | _ -> failwith "LHS of a map definition is not an External()"),
+    inline_agg)
 
 
-let rec to_m3_initializer (sch:(string * (var_t list))list) 
+let rec to_m3_initializer (sch:(string * (var_t list))list) (inline_agg:bool)
                           (map_def: term_t) (vars: var_t list) 
                           (map_prefix: string): (M3.calc_t * todo_list_t) =
   let nested_counter = ref(-1) in
@@ -108,7 +109,7 @@ let rec to_m3_initializer (sch:(string * (var_t list))list)
         in Util.ListAsSet.diff (relcalc_vars rc_r) (safe_vars rc_r [])
       in
       let nested_map_term = RVal(External(nested_mapn, in_params)) in
-      let nested_map_ref = (make_term t, make_term nested_map_term)
+      let nested_map_ref = (make_term t, make_term nested_map_term, inline_agg)
       in (nested_map_term, [nested_mapn, nested_map_ref])
 
     | RVal(_) -> (t, [])
@@ -149,7 +150,7 @@ let rec to_m3_initializer (sch:(string * (var_t list))list)
   in
   let rec extract_expression (tau_and_theta:readable_term_t):
                           ((readable_term_t * readable_term_t) * 
-                           (string * (term_t * term_t)) list) =
+                           (string * (term_t * term_t * bool)) list) =
     match tau_and_theta with
       | RVal(AggSum(t,p)) ->
          let mk_aggsum term calc =
@@ -187,7 +188,8 @@ let rec to_m3_initializer (sch:(string * (var_t list))list)
             else (((RVal(Const(Int 1))), (RSum(list))), [])
   in
   (* TODO: invoke simplify here *)
-  let rec init_for_expr (expr:readable_term_t): (M3.calc_t * todo_list_t) = 
+  let rec init_for_expr (expr:readable_term_t): 
+                        (M3.calc_t * todo_list_t) = 
      let auxl f l default: (M3.calc_t * todo_list_t) = 
        let (terms, todos) = 
          List.split (List.map init_for_expr l) 
@@ -226,7 +228,9 @@ let rec to_m3_initializer (sch:(string * (var_t list))list)
                          ListAsSet.inter inner_vars outer_vars))
          in
          let init_map_defn = RVal(AggSum(theta,RA_MultiNatJoin(phi))) in
-         let init_map_ref = (make_term init_map_defn, make_term init_map_term) in
+         let init_map_ref = (make_term init_map_defn, 
+                             make_term init_map_term,
+                             inline_agg) in
          let (translated_init,other_todos) =
            begin 
              Debug.print "DUMP-INITIALIZERS" (fun () -> 
@@ -317,7 +321,7 @@ and to_naive_m3_initializer (sch:(string * (var_t list))list)
                         match relv_opt with 
                         | Some(relv) -> 
                            M3.mk_prod
-                              (M3.mk_ma (
+                              (M3.mk_ma false ( (*don't inline base relations*)
                                  reln, 
                                  [], 
                                  (List.map translate_var relv), 
@@ -354,9 +358,9 @@ and split_vars (want_input_vars:bool) (vars:'a list) (bindings:bindings_list_t):
 
 and to_m3_map_access 
     (sch:(string * (var_t list)) list)
-    ((map_definition, map_term, bindings):map_ref_t)
+    ((map_definition, map_term, bindings, inline_agg):map_ref_t)
     (vars:var_t list option) :
-      M3.mapacc_t * todo_list_t =
+      M3.mapacc_t * bool * todo_list_t=
   let (mapn, basevars) = (decode_map_term map_term) in
   let mapvars = 
     match vars with
@@ -375,7 +379,7 @@ and to_m3_map_access
           might be a good idea to see if any of the initialzers can be further 
           decompiled or pruned away.  For now, a reasonable heuristic is to use
           the presence of input variables *)
-    if (List.length input_var_list) > 0
+    if ((List.length input_var_list) > 0) || (inline_agg)
     then
       to_naive_m3_initializer 
          sch
@@ -390,7 +394,7 @@ and to_m3_map_access
       (fst (List.split input_var_list)), 
       (fst (List.split output_var_list)), 
       (init_stmt, ())
-    ), todos)
+    ), inline_agg, todos)
 
 (********************************)
 
@@ -448,13 +452,13 @@ and to_m3
                ListExtras.flatten_list_pair [lhs_todos; rhs_todos])
        | External(mapn, map_vars)      -> 
           begin try
-              let (access_term, todos) = 
+              let (access_term, inline_agg, todos) = 
                 (to_m3_map_access 
                   sch
                   (StringMap.find mapn inner_bindings)
                   (Some(map_vars)))
               in
-                (M3.mk_ma access_term, todos)
+                (M3.mk_ma inline_agg access_term, todos)
           with Not_found -> 
               failwith ("Unable to find map '"^mapn^"' in {"^
                 (StringMap.fold 
@@ -529,13 +533,17 @@ module M3InProgress = struct
     
   let build ((curr_ins, curr_del, curr_mapping, curr_refs):t)   
             ((descriptor, triggers):insertion): t =
-    let (query_term, map_term, map_bindings) = descriptor in
+    let (query_term, map_term, map_bindings, inline_agg) = descriptor in
     let (map_name, map_vars) = decode_map_term map_term in
     let mapping = 
-      List.fold_left (fun result (cmp_term, cmp_map_term, cmp_bindings) ->
+      List.fold_left (fun result (cmp_term, cmp_map_term, cmp_bindings,
+                                  cmp_inline_agg) ->
         if result = NoMapping then
           let (cmp_name, cmp_vars) = decode_map_term cmp_map_term in
           try 
+            if(cmp_inline_agg <> inline_agg) then 
+              raise (TermsNotEquivalent("Mismatched agg inlining"))
+            else
             if (List.length map_vars) <> (List.length cmp_vars) then
               raise (TermsNotEquivalent("Mismatched parameter list sizes"))
             else
@@ -631,21 +639,31 @@ module M3InProgress = struct
           StringMap.empty)
   
   let get_maps ((_, _, mapping, maps):t) : M3.map_type_t list =
-    List.map (fun (map_name, (map_defn, map_term, map_bindings)) ->
+    let materialized_maps = 
+       List.filter (fun (map_name, (_,_,_,inline_agg)) -> not inline_agg) maps
+    in
+    List.map (fun (map_name, (map_defn, map_term, map_bindings, _)) ->
         let (_, map_vars) = decode_map_term map_term in
         (map_name, 
          List.map translate_var_type (split_vars true map_vars map_bindings),
-         List.map translate_var_type (split_vars false map_vars map_bindings)))
-      maps
+         List.map translate_var_type (split_vars false map_vars map_bindings)
+         ))
+      materialized_maps
   
-  let get_triggers ((ins, del, mapping, _):t) : M3.trig_t list =
+  let get_triggers ((ins, del, mapping, maps):t) : M3.trig_t list =
     let produce_triggers (pm:M3.pm_t) (tmap:trigger_map): M3.trig_t list =
-      List.map (fun (rel_name, (rel_vars, triggers)) ->
+      List.map (fun (rel_name, (rel_vars, statements)) ->
+         let materialized_statements =
+            List.filter (fun ((map_name,_,_,_),_,_) ->
+              let (_,_,_,inline_agg) = List.assoc map_name maps in
+                not inline_agg
+            ) statements
+         in
           (pm, rel_name, rel_vars, 
-            (List.map (fun trigger -> 
+            (List.map (fun statement -> 
               (M3Common.rename_maps 
-                (StringMap.map (fun (x,_,_)->x) mapping) trigger))
-              triggers)))
+                (StringMap.map (fun (x,_,_)->x) mapping) statement))
+              materialized_statements)))
         tmap
     in
       (produce_triggers M3.Insert ins) @ (produce_triggers M3.Delete del)
@@ -660,12 +678,15 @@ module M3InProgress = struct
       List.fold_left (fun ref_map (map, ref) ->
           if StringMap.mem map ref_map then
             if ((StringMap.find map ref_map) <> ref) then
-              let string_of_map (defn,term,_) = 
-                (term_as_string term)^" := "^(term_as_string defn)
+              let string_of_map (defn,term,_,inline_agg) = 
+                (term_as_string term)^" := "^
+                  (if inline_agg then "inline of " else "")^
+                  (term_as_string defn)
               in
-              failwith ("BUG: duplicate map\n"^
+              print_endline ("duplicate map\n"^
                         (string_of_map (StringMap.find map ref_map))^"\n"^
-                        (string_of_map ref))
+                        (string_of_map ref));
+              failwith ("BUG: duplicate map")
             else ref_map
           else StringMap.add map ref ref_map)
         mapped_map_terms refs
@@ -676,7 +697,8 @@ module M3InProgress = struct
               (map_ref:Compiler.map_ref_t)
               (accum:t) : t =
     let (_,_,_,maps) = accum in
-    if List.mem_assoc (fst (decode_map_term (snd map_ref))) maps
+    let (_,map_term,_) = map_ref in
+    if List.mem_assoc (fst (decode_map_term map_term)) maps
        then  accum
        else  Compiler.compile ~top_down_depth:top_down_depth
                               ModeOpenDomain
@@ -690,31 +712,34 @@ module M3InProgress = struct
                   (triggers: Compiler.trigger_definition_t list)
                   (accum: t): t =
     let map_ref_as_m3 = translate_map_ref map_ref in
+    let (_,term_for_map,_) = map_ref in
     let (triggers_as_m3, (std_todos, rel_todos)) = 
       List.fold_left (fun (tlist,old_todos) 
                           (delete, reln, relvars, (params,bsvars), expr) ->
         (Debug.print "LOG-M3-STMTS" (fun () -> 
             "ON "^(if delete then "-" else "+")^reln^
             (list_to_string Calculus.string_of_var relvars)^"=> "^
-            (fst (decode_map_term (snd map_ref)))^
+            (fst (decode_map_term term_for_map))^
             (list_to_string Calculus.string_of_var params)^
             " += "^(Calculus.string_of_term expr)
         ));
         (* eliminates loop vars by substituting unified map params *) 
-        let sub_map_params (map_definition, map_term, map_bindings) params =
-          let (map_name, map_vars) = (decode_map_term map_term) in
+        let sub_map_params (map_definition, term_for_map, map_bindings,
+                            inline_agg) params =
+          let (map_name, map_vars) = (decode_map_term term_for_map) in
           ((apply_variable_substitution_to_term
               (List.combine map_vars params) map_definition), 
             (Calculus.map_term map_name params), 
-            map_bindings)
+            map_bindings,
+            inline_agg)
         in
-        let (target_access, init_todos) = 
+        let (target_access, _, init_todos) = 
           (to_m3_map_access schema 
                             (sub_map_params map_ref_as_m3 params)) None in
         let (update, update_todos) =
           to_m3 schema 
                 (readable_term expr) 
-                (StringMap.add (fst (decode_map_term (snd map_ref)))
+                (StringMap.add (fst (decode_map_term term_for_map))
                                (translate_map_ref map_ref)
                                (get_map_refs accum)) in
         let todos = 
@@ -728,7 +753,7 @@ module M3InProgress = struct
           Debug.print "MAP-DELTAS" (fun () -> 
               "ON "^(if delete then "-" else "+")^reln^
               (list_to_string (fun (a,_)->a) relvars)^
-              ": "^(term_as_string (snd map_ref))^
+              ": "^(term_as_string term_for_map)^
               (list_to_string (fun (a,_)->a) params)^" += "^
               (term_as_string expr)^"\n   ->\n"^
               (M3Common.pretty_print_calc update)^"\n");
@@ -740,7 +765,8 @@ module M3InProgress = struct
     let todos = std_todos @ (ListAsSet.no_duplicates (List.map (fun reln ->
       (  make_term (RVal(AggSum((RVal(Const(Int(1)))), 
                                 (RA_Leaf(Rel(reln, List.assoc reln schema)))))),
-         (map_term reln (List.assoc reln schema))
+         (map_term reln (List.assoc reln schema)),
+         false
       )
     ) rel_todos))
     in

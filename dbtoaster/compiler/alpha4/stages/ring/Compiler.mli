@@ -5,8 +5,8 @@
    2) term: A Calculus term describing the map as seen by an external trigger.
       Use Calculus.decode_map_term to get it into a reasonable form; 
 *)
-(*               map_definition,    map_term, *)
-type map_ref_t = (Calculus.term_t * Calculus.term_t)
+(*               map_definition,    map_term,         map is inline agg *)
+type map_ref_t = (Calculus.term_t * Calculus.term_t * bool)
 
 type bound_vars_t = 
 (* params,               bigsum_vars *)

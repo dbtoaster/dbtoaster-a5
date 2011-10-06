@@ -12,10 +12,10 @@ type map_sig_t = M3.map_id_t * M3.var_id_t list * M3.var_id_t list
 
 (* Helpers *)
 
-let gb_accum_counter = ref 0
-let next_gb_accum_var () = 
-   gb_accum_counter := !gb_accum_counter + 1;
-   "accv_"^(string_of_int !gb_accum_counter)
+let accum_counter = ref 0
+let next_accum_var () = 
+   accum_counter := !accum_counter + 1;
+   "accv_"^(string_of_int !accum_counter)
 
 (* TODO: types *)
 let args_of_vars vars = List.map (fun v -> v,TFloat) vars
@@ -205,7 +205,7 @@ let rec calc_to_singleton_expr trig_args metadata calc =
     | M3.Const(i)   -> metadata, Const(i)
     | M3.Var(x)     -> metadata, Var(x, TFloat) (* TODO: var type *)
 
-    | M3.MapAccess(mapn, inv, outv, init_aggecalc) ->
+    | M3.MapAccess((mapn, inv, outv, init_aggecalc),inline_agg) ->
       (* Note: no need for lambda construction since all in vars are bound. *)
       (* TODO: schema+value types *)
       let s_l = List.map (List.map (fun v -> (v,TFloat))) [inv; outv] in
@@ -215,12 +215,16 @@ let rec calc_to_singleton_expr trig_args metadata calc =
         (M3P.get_full_agg (M3P.get_agg_meta init_aggecalc))
       in
       let init_expr = m3rhs_to_expr trig_args outv init_aggecalc in
-      let map_expr = map_to_expr mapn ins outs in
-      let new_metadata = metadata@[mapn, inv, outv] in
-      let r =
-        let skip = List.mem (mapn, inv, outv) metadata in
-        map_access_to_expr skip map_expr init_expr true singleton_init_code []
-      in new_metadata, r
+      if inline_agg then
+         (metadata, init_expr)
+      else
+         let map_expr = map_to_expr mapn ins outs in
+         let new_metadata = metadata@[mapn, inv, outv] in
+         let r =
+           let skip = List.mem (mapn, inv, outv) metadata in
+           map_access_to_expr skip map_expr init_expr true 
+                              singleton_init_code []
+         in new_metadata, r
 
     | M3.Add (c1, c2) -> bin_op (fun x y -> Add(x,y))  c1 c2 
     | M3.Mult(c1, c2) -> bin_op (fun x y -> Mult(x,y)) c1 c2
@@ -354,11 +358,14 @@ and calc_to_expr trig_args metadata expected_schema calc =
     | M3.Const(i)   -> [], metadata, Const(i)
     | M3.Var(x)     -> [], metadata, Var(x, TFloat) (* TODO: var type *)
 
-    | M3.MapAccess(mapn, inv, outv, init_aggecalc) ->
+    | M3.MapAccess((mapn, inv, outv, init_aggecalc),inline_agg) ->
       (* TODO: schema, value types *)
       let s_l = List.map (List.map (fun v -> (v,TFloat))) [inv; outv] in
       let (ins,outs) = (List.hd s_l, List.hd (List.tl s_l)) in
       let init_expr = m3rhs_to_expr trig_args outv init_aggecalc in
+      if inline_agg then
+         (outv, metadata, init_expr)
+      else
       let map_expr = map_to_expr mapn ins outs in
       let singleton_init_code = 
         (M3P.get_singleton (M3P.get_ecalc init_aggecalc)) ||
@@ -377,7 +384,7 @@ and calc_to_expr trig_args metadata expected_schema calc =
       if (ListAsSet.seteq retv outv)
          then (outv, new_metadata, r)
          else let projected = (
-            let accv = next_gb_accum_var () in
+            let accv = next_accum_var () in
             let agg_fn = bind_for_aggregate 
                trig_args 
                (args_of_vars (outv@["v"]))
@@ -415,9 +422,10 @@ and m3rhs_to_expr trig_args lhs_outv paggcalc : expr_t =
     let ecalc = M3P.get_ecalc paggcalc in
     let rhs_outv, _, rhs_expr = (calc_to_expr trig_args [] lhs_outv ecalc) in
     let doesnt_need_aggregate = (ListAsSet.seteq rhs_outv lhs_outv) in
+    let accv = next_accum_var () in
     let agg_fn = bind_for_aggregate trig_args 
-        ((args_of_vars rhs_outv)@["v",TFloat]) ("accv",TFloat)
-        (Add(Var("v", TFloat), Var("accv", TFloat)))
+        ((args_of_vars rhs_outv)@["v",TFloat]) (accv,TFloat)
+        (Add(Var("v", TFloat), Var(accv, TFloat)))
     in
     if (M3P.get_singleton ecalc) || (rhs_outv = []) then rhs_expr
     else if doesnt_need_aggregate then (

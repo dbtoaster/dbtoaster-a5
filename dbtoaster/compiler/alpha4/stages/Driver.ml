@@ -228,10 +228,8 @@ let compile_depth =
   match flag_val "COMPILE_DEPTH" with
   | None -> None
   | Some("-") -> None
-         (* Nested aggregation is done inline with limited compile depths *)
-  | Some(i) -> (Debug.activate "RUNTIME-BIGSUMS"; 
-                Some(int_of_string i));;
-
+  | Some(i) -> Some(int_of_string i)
+;;
 (********* TRANSLATE SQL TO RELCALC *********)
 
 Debug.print "LOG-DRIVER" (fun () -> "PARSING SQL");;
@@ -289,7 +287,8 @@ if language == L_DELTA then
               Calculus.ModeOpenDomain 
               dbschema
               (Calculus.make_term q,
-              Calculus.map_term "QUERY" qvars)
+              Calculus.map_term "QUERY" qvars,
+              false)
               Compiler.generate_unit_test_code
               accum)
             ) accum qlist
@@ -331,7 +330,8 @@ let calc_into_m3_inprogress qname (qlist,dbschema,qvars) m3ip =
              ( Calculus.make_term q,
                Calculus.map_term 
                    (qname^"_"^(string_of_int sub_id))
-                   qvars
+                   qvars,
+               false
              ) in
           match compile_depth with
             | Some(i) when i <= 0 -> 

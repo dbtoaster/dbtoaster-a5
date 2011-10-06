@@ -1,7 +1,7 @@
 open Util;;
 
 (*               map_definition,   map_term *)
-type map_ref_t = (Calculus.term_t * Calculus.term_t)
+type map_ref_t = (Calculus.term_t * Calculus.term_t * bool)
 
 type bound_vars_t = 
 (* params,               bigsum_vars *)
@@ -33,7 +33,7 @@ let mk_external (n: string) (vs: Calculus.var_t list) =
 
 let generate_unit_test_code
       (db_schema : (string * (Calculus.var_t list)) list)
-      ((map_definition, map_term) : map_ref_t)
+      ((map_definition, map_term, _) : map_ref_t)
       (trigger_defs : trigger_definition_t list)
       (accum: string list) : string list 
 =
@@ -195,7 +195,7 @@ let rec compile ?(dup_elim = ref StringMap.empty)
                 ?(top_down_depth = None)
                 (bs_rewrite_mode: Calculus.bs_rewrite_mode_t)
                 (db_schema: (string * (Calculus.var_t list)) list)
-                ((map_definition, map_term): map_ref_t)
+                ((map_definition, map_term, inline_agg): map_ref_t)
                 (generate_code:'a output_translator_t)
                 (accum:'a): 'a =
 
@@ -248,7 +248,7 @@ let rec compile ?(dup_elim = ref StringMap.empty)
     "\n    =>\n    "^(Calculus.term_as_string bsrw_term));
 
   let cdfr (delete, reln, relsch) =
-     compile_delta_for_rel go_deeper
+     compile_delta_for_rel (* go_deeper; maps are inline_agged *) true
                            reln relsch delete map_term bigsum_vars
                            bsrw_theta db_schema bsrw_term
   in
@@ -270,11 +270,18 @@ let rec compile ?(dup_elim = ref StringMap.empty)
       StringMap.add (fst (Calculus.decode_map_term map_term)) 
                     map_definition
                     !dup_elim);
-  let todos = ((List.flatten l2) @ bsrw_theta) 
+  let todos = (List.map (fun (defn,term) -> (defn,term,not go_deeper))
+                        ((List.flatten l2) @ bsrw_theta))
   in
+    Debug.print "LOG-COMPILER-TODOS" (fun () -> 
+      "TODO: "^(string_of_list0 ", " (fun (_,term,inline_agg) ->
+        (fst (Calculus.decode_map_term term))^
+             (if inline_agg then "(inline)" else "")
+        ) todos 
+      ));
     (generate_code (* We need to do this traversal DEPTH FIRST *)
       db_schema
-      (map_definition, map_term)
+      (map_definition, map_term, inline_agg)
       (List.flatten l1)
         (List.fold_left (fun curr_accum curr_map -> 
              compile ~dup_elim:dup_elim
@@ -289,7 +296,7 @@ let rec compile ?(dup_elim = ref StringMap.empty)
 
 
 let nonincremental_program (db_schema: (string * (Calculus.var_t list)) list)
-                           ((map_definition, map_term): map_ref_t)
+                           ((map_definition, map_term, _): map_ref_t)
                            (generate_code:'a output_translator_t)
                            (accum:'a): 'a =
   let (base_relations, new_value) = 
@@ -316,7 +323,8 @@ let nonincremental_program (db_schema: (string * (Calculus.var_t list)) list)
     List.fold_left (fun curr_accum rel ->
       let rel_schema = List.assoc rel db_schema in
       let rel_term = ( Calculus.base_relation_expr (rel,rel_schema),
-                       Calculus.map_term rel rel_schema ) in
+                       Calculus.map_term rel rel_schema,
+                       false ) in
       generate_code db_schema
                     rel_term
                     ( List.fold_left (fun trig_accum delete ->
@@ -335,7 +343,7 @@ let nonincremental_program (db_schema: (string * (Calculus.var_t list)) list)
     ) accum base_relations
   in
     generate_code db_schema
-                  (map_definition,map_term)
+                  (map_definition,map_term,false)
                   ( List.fold_left (fun rel_trigs rel ->
                       List.fold_left (fun insdel_trigs delete ->
                         ( delete, 

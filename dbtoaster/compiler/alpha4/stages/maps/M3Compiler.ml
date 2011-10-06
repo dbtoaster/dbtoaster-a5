@@ -29,7 +29,7 @@ module M3P = M3.Prepared
 let get_map_names (trigger : M3.trig_t) : map_id_t list =
    let get_names_from_stmt ((mapn,_,_,_),(c,_),_) =
       (recurse_calc_lf Util.ListAsSet.union
-         (fun (mapn, _, _, _) -> [mapn]) (fun _ -> []) (fun _ -> []) c)@[mapn]
+         (fun _ (mapn, _, _, _) -> [mapn]) (fun _ -> []) (fun _ -> []) c)@[mapn]
    in let (_,_,_,stmts) = trigger
    in Util.ListAsSet.no_duplicates
       (List.flatten (List.map get_names_from_stmt stmts))
@@ -86,7 +86,7 @@ let normalize_triggers (triggers : M3.trig_t list) =
          let aux v = if List.mem_assoc v arg_mappings 
                      then List.assoc v arg_mappings else v
          in replace_calc_lf
-         (fun (n,inv,outv,init) -> MapAccess(n,(List.map aux inv),(List.map aux outv),init))
+         (fun inline_agg (n,inv,outv,init) -> MapAccess((n,(List.map aux inv),(List.map aux outv),init), inline_agg ))
          (fun c -> Const(c))
          (fun v -> Var(aux v)) c
       in (pm,rel,args,
@@ -307,7 +307,7 @@ let prepare_triggers (triggers : trig_t list)
            let new_if_meta = (id,ext,sing,prod,short_circuit)
            in ((nc, new_if_meta), pat)
         
-        | MapAccess (mapn, inv, outv, init_calc) ->
+        | MapAccess ((mapn, inv, outv, init_calc),inline_agg) ->
            (* Determine slice or singleton.
             * singleton: fully bound out vars, note in vars must always be fully
             * bound here, since statement evaluation loops over the in tier *)
@@ -345,7 +345,7 @@ let prepare_triggers (triggers : trig_t list)
               (((M3P.get_calc init_ecalc), new_init_meta), new_init_agg_meta)
            in
            let new_incr_meta = (prepare(), [], singleton, false, false) in
-           let r = (MapAccess(mapn, inv, outv, new_init_aggecalc), new_incr_meta)
+           let r = ((MapAccess((mapn, inv, outv, new_init_aggecalc),inline_agg)), new_incr_meta)
            in (r, new_patterns)
       end
    in
@@ -469,7 +469,10 @@ let rec compile_pcalc patterns (incr_ecalc) : code_t =
    in
    let ccalc : code_t =
       match (M3P.get_calc incr_ecalc) with
-        | MapAccess(mapn, inv, outv, init_aggecalc) ->
+        | MapAccess((mapn, inv, outv, init_aggecalc),inline_agg) ->
+           if inline_agg then
+            failwith "M3 interpreter does not support depth-restricted compiles"
+           else
             let cinit = compile_pcalc2
                 patterns (M3P.get_agg_meta init_aggecalc) outv
                 (M3P.get_ecalc init_aggecalc) in

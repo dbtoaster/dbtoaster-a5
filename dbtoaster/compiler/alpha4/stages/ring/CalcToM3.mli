@@ -48,7 +48,7 @@ type map_key_binding_t =
     Binding_Present of Calculus.var_t
   | Binding_Not_Present
 type bindings_list_t = map_key_binding_t list
-type map_ref_t = (Calculus.term_t * Calculus.term_t * bindings_list_t) 
+type map_ref_t = (Calculus.term_t * Calculus.term_t * bindings_list_t * bool) 
 
 (* 
   Given a Calculus expression representing the contents of a particular map
@@ -58,7 +58,7 @@ type map_ref_t = (Calculus.term_t * Calculus.term_t * bindings_list_t)
   In the process of computing this expression, also identify which maps are 
   referenced inside the expression. (see todo_list_t, above)
 *)
-val to_m3_initializer: (string * Calculus.var_t list) list -> 
+val to_m3_initializer: (string * Calculus.var_t list) list -> bool ->
                        Calculus.term_t -> Calculus.var_t list -> string ->
                        (M3.calc_t * todo_list_t)
 
@@ -73,7 +73,7 @@ val to_m3_map_access:
   (string * Calculus.var_t list) list ->
   map_ref_t ->
   Calculus.var_t list option ->
-  (M3.mapacc_t * todo_list_t)
+  (M3.mapacc_t * bool * todo_list_t)
 
 (* 
   Given a Calculus expression representing a particular trigger, convert it to

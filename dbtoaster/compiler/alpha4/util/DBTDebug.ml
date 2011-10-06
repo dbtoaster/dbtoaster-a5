@@ -23,7 +23,8 @@ let compiled_m3_for_script script_file =
                   (CalcToM3.compile
                      dbschema 
                      ((Calculus.make_term q) ,
-                     (Calculus.map_term "QUERY" qvars))
+                     (Calculus.map_term "QUERY" qvars),
+                     false)
                      accum)
                )
                accum

@@ -47,7 +47,7 @@ and ('c, 'a) generic_calc_contents_t =
   | Mult        of ('c,'a) generic_calc_t * ('c,'a) generic_calc_t 
              (* if (cond != 0) then calc else 0 *)
   | IfThenElse0 of ('c,'a) generic_calc_t * ('c,'a) generic_calc_t 
-  | MapAccess   of ('c,'a) generic_mapacc_t
+  | MapAccess   of ('c,'a) generic_mapacc_t * bool
   | Const of const_t
   | Var   of var_t
              (* conditions: 1 if calc OP calc else 0 *)
@@ -133,7 +133,7 @@ val mk_lt : calc_t -> calc_t -> calc_t
 val mk_leq : calc_t -> calc_t -> calc_t 
 val mk_eq : calc_t -> calc_t -> calc_t 
 val mk_if : calc_t -> calc_t -> calc_t 
-val mk_ma : mapacc_t -> calc_t 
+val mk_ma : bool -> mapacc_t -> calc_t 
 val mk_c : float -> calc_t
 val mk_s : string -> calc_t
 val mk_v : string -> calc_t
