@@ -3,6 +3,12 @@ rst --depth 0 --compile-only
 rst --depth 1
 rst --depth 2
 ssb4 -d disable-deletes -d dup-ivc
+ssb4 -d disable-deletes -d dup-ivc --depth 1 -d projected-map-access
+ssb4 -d disable-deletes -d dup-ivc --depth 2 -d projected-map-access
+ssb4 -d disable-deletes -d dup-ivc --depth 3 -d projected-map-access
+ssb4 -d disable-deletes -d dup-ivc --depth 4 -d projected-map-access
+ssb4 -d disable-deletes -d dup-ivc --depth 5 -d projected-map-access
+ssb4 -d disable-deletes -d dup-ivc --depth 6 -d projected-map-access
 vwap
 vwap -d dup-ivc
 vwap -d dup-ivc --depth 0 --compile-only
@@ -18,29 +24,29 @@ missedtrades -d dup-ivc --depth 1 --compile-only
 axfinder 
 axfinder -d runtime-bigsums
 axfinder -d runtime-bigsums -d dup-ivc
-axfinder -d runtime-bigsums -d dup-ivc --depth 0 --compile-only
-axfinder -d runtime-bigsums -d dup-ivc --depth 1 --compile-only
+axfinder -d dup-ivc --depth 0 --compile-only
+axfinder -d dup-ivc --depth 1
 brokerspread -d dup-ivc
 brokerspread -d dup-ivc --depth 0 --compile-only
-brokerspread -d dup-ivc --depth 1 --compile-only
+brokerspread -d dup-ivc --depth 1
 tpch3 -d dup-ivc
-tpch3 -d dup-ivc --depth 0 --compile-only -d projected-map-access
-tpch3 -d dup-ivc --depth 1 -d projected-map-access
+tpch3 -d dup-ivc --depth 0 --compile-only
+tpch3 -d dup-ivc --depth 1
 tpch11 -d dup-ivc
-tpch11 -d dup-ivc --depth 0 --compile-only -d projected-map-access
-tpch11 -d dup-ivc --depth 1 -d projected-map-access
+tpch11 -d dup-ivc --depth 0 --compile-only
+tpch11 -d dup-ivc --depth 1
 tpch17 -d dup-ivc
-tpch17 -d dup-ivc --depth 0 --compile-only -d projected-map-access
-tpch17 -d dup-ivc --depth 1 -d projected-map-access
+tpch17 -d dup-ivc --depth 0 --compile-only
+tpch17 -d dup-ivc --depth 1
 tpch18 -d dup-ivc
-tpch18 -d dup-ivc --depth 0 --compile-only -d projected-map-access
-tpch18 -d dup-ivc --depth 1 -d projected-map-access
+tpch18 -d dup-ivc --depth 0 --compile-only
+tpch18 -d dup-ivc --depth 1
 tpch18short -d dup-ivc
-tpch18short -d dup-ivc --depth 0 --compile-only -d projected-map-access
-tpch18short -d dup-ivc --depth 1 -d projected-map-access
+tpch18short -d dup-ivc --depth 0 --compile-only
+tpch18short -d dup-ivc --depth 1
 tpch22 -d dup-ivc
-tpch22 -d dup-ivc --depth 0 --compile-only -d projected-map-access
-tpch22 -d dup-ivc --depth 1 -d projected-map-access
+tpch22 -d dup-ivc --depth 0 --compile-only
+tpch22 -d dup-ivc --depth 1
 clusteravailablenew -d dup-ivc
 clusteravailablenew -d dup-ivc --depth 0 --compile-only
 clusteravailablenew -d dup-ivc --depth 1 --compile-only

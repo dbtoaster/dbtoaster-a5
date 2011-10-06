@@ -96,8 +96,10 @@ end
 IO.popen(dbt_cmd, "r+") do |f|
   loop do
     line = f.gets;
+    exit 0 if line.nil?;
     puts line;
     case line
+      when nil then 
       when /^(\+|-)([a-zA-Z]+)\[([\-0-9.; ]*)\]/ then 
         update_rel($1, $2, $3.split(/; */).map {|i| i.to_f});
         
