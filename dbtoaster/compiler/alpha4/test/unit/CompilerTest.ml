@@ -148,7 +148,7 @@ in
 test_query "select sum(A) from R, S, T where R.B=S.B and S.C=T.C group by D"
 
 (Compiler.compile Calculus.ModeExtractFromCond
-   sch (m, (map_term "m" [("D", TInt)])) cg [])
+   sch (m, (map_term "m" [("D", TInt)]), false) cg [])
 
 (* There are a lot of terms here -- we do some simple duplicate elimination
    in the compiler, but that only catches maps with the same name.  The insert
@@ -228,7 +228,7 @@ test_query "select sum(A) from R, S, T where R.B=S.B and S.C=T.C group by D"
 let m = (make_term( RVal(AggSum(RVal(Const (Int 1)), relR)))) in
 test_query "select count( * ) from R group by B"
 (Compiler.compile Calculus.ModeExtractFromCond
-   sch (m, (map_term "m" [("B", TInt)])) cg [])
+   sch (m, (map_term "m" [("B", TInt)]), false) cg [])
 (["+R(mR_A, mR_B): m[mR_B] += 1";
   "-R(mR_A, mR_B): m[mR_B] += -1"]);;
 
@@ -241,7 +241,7 @@ let m =
 in
 test_query "select count( * ) from R, S where R.B=S.B group by C"
 (Compiler.compile Calculus.ModeExtractFromCond
-                 sch (m, (map_term "m" [("C", TInt)])) cg [])
+                 sch (m, (map_term "m" [("C", TInt)]), false) cg [])
 (["+R(mR_A, mR_B): foreach C do m[C] += m_pR1[mR_B, C]";
   "-R(mR_A, mR_B): foreach C do m[C] += (m_mR1[mR_B, C]*-1)";
   "+S(mS_B, mS_C): m[mS_C] += m_pS1[mS_B]";
@@ -265,7 +265,7 @@ let m =
 in
 test_query "select count( * ) from R, S where R.B = S.B group by B"
 (Compiler.compile Calculus.ModeExtractFromCond
-                 sch (m, (map_term "m" [("B", TInt)])) cg [])
+                 sch (m, (map_term "m" [("B", TInt)]), false) cg [])
 (["+R(mR_A, mR_B): m[mR_B] += m_pR1[mR_B]";
   "-R(mR_A, mR_B): m[mR_B] += (m_mR1[mR_B]*-1)";
   "+S(mS_B, mS_C): m[mS_B] += m_pS1[mS_B]";
@@ -288,7 +288,7 @@ let m =
 in
 test_query "select count( * ) from R, S where R.B = S.B group by B, C"
 (Compiler.compile Calculus.ModeExtractFromCond
-   sch (m, (map_term "m" [("B", TInt); ("C", TInt)])) cg [])
+   sch (m, (map_term "m" [("B", TInt); ("C", TInt)]), false) cg [])
 (["+R(mR_A, mR_B): foreach C do m[mR_B, C] += m_pR1[mR_B, C]";
   "-R(mR_A, mR_B): foreach C do m[mR_B, C] += (m_mR1[mR_B, C]*-1)";
   "+S(mS_B, mS_C): m[mS_B, mS_C] += m_pS1[mS_B]";
@@ -313,7 +313,7 @@ let m =
  RA_Leaf(Rel("R", [("y", TInt); ("z", TInt)]))
 ])))))
 in test_query "select count( * ) from R r1, R r2 where r1.B = r2.A" 
-(Compiler.compile Calculus.ModeExtractFromCond sch (m, mt) cg [])
+(Compiler.compile Calculus.ModeExtractFromCond sch (m, mt, false) cg [])
 (["+R(mR_A, mR_B): m[] += (m_pR1[mR_B]+m_pR2[mR_A]+(if mR_A=mR_B then 1 else 0))";
   "-R(mR_A, mR_B): m[] += ((if mR_A=mR_B then 1 else 0)+(-1*(m_mR1[mR_B]+m_mR2[mR_A])))";
   "+R(m_mR2R_A, m_mR2R_B): m_mR2[m_mR2R_B] += 1";
@@ -348,7 +348,7 @@ let m = (make_term( RVal(AggSum(RVal(Const (Int 1)),
       RA_Leaf(Rel("S", [("x", TInt); ("y", TInt)]))
    ])))))
 in test_query "select count( * ) from R, S where R.A=S.A and R.B=S.B"
-(Compiler.compile Calculus.ModeExtractFromCond sch (m, mt) cg [])
+(Compiler.compile Calculus.ModeExtractFromCond sch (m, mt, false) cg [])
 (["+R(mR_A, mR_B): m[] += m_pR1[mR_A, mR_B]";
   "-R(mR_A, mR_B): m[] += (m_mR1[mR_A, mR_B]*-1)";
   "+S(mS_B, mS_C): m[] += m_pS1[mS_B, mS_C]";
@@ -376,7 +376,7 @@ let m = (make_term(RVal(AggSum(RVal(Const (Int 1)),
 in
 test_query "select count( * ) from R where R.A < 5 and R.B = 'Bla'"
 (Compiler.compile Calculus.ModeExtractFromCond
-   sch (m, (map_term "q" [])) cg [])
+   sch (m, (map_term "q" []), false) cg [])
 (["+R(qR_A, qR_B): q[] += "^
     "((if qR_A<5 then 1 else 0)*(if qR_B='Bla' then 1 else 0))";
   "-R(qR_A, qR_B): q[] += "^
@@ -394,7 +394,7 @@ let m = (make_term(RVal(AggSum(RVal(Const(Int 1)),
 in
 test_query "if(0 < AggSum(1, R(A,B))) then 1 else 0"
 (Compiler.compile Calculus.ModeExtractFromCond
-   [("R", [("A", TInt); ("B", TInt)])] (m, mt) cg [])
+   [("R", [("A", TInt); ("B", TInt)])] (m, mt, false) cg [])
 (["+R(mR_A, mR_B): m[] += ((if 0<(m_pR1[]+1) and m_pR1[]<=0 then 1 else 0)+((if 0<m_pR1[] and (m_pR1[]+1)<=0 then 1 else 0)*-1))";
   "-R(mR_A, mR_B): m[] += ((if 0<(m_mR1[]+-1) and m_mR1[]<=0 then 1 else 0)+((if 0<m_mR1[] and (m_mR1[]+-1)<=0 then 1 else 0)*-1))";
   "+R(m_mR1R_A, m_mR1R_B): m_mR1[] += 1";
@@ -418,7 +418,7 @@ let m = make_term(RVal(AggSum(
     RA_MultiNatJoin([relR; relS])))) 
 in
 test_query "factorized query compilation test: select sum(a) from R,U"
-(Compiler.compile Calculus.ModeExtractFromCond sch (m, mt) cg [])
+(Compiler.compile Calculus.ModeExtractFromCond sch (m, mt, false) cg [])
 ([])
 ;;
 *)

@@ -12,13 +12,13 @@ let mk_vwap_delta_2 price_var volume_var : M3.stmt_t =
     ("QUERY_1_1",[],[],(mk_c 0.,())),
     ((mk_if 
       (mk_lt
-        (mk_ma ("QUERY_1_1__2",[price_var],[],(
+        (mk_ma false ("QUERY_1_1__2",[price_var],[],(
           (mk_if 
             (mk_lt (mk_v price_var) (mk_v "B2__PRICE"))
-            ((mk_ma ("QUERY_1_1__2_init",[],[price_var],(mk_c 0.,()))))
+            ((mk_ma false ("QUERY_1_1__2_init",[],[price_var],(mk_c 0.,()))))
           )
         ,())))
-        (mk_prod (mk_c 0.25) (mk_ma ("QUERY_1_1__3",[],[],(mk_c 0.,()))))
+        (mk_prod (mk_c 0.25) (mk_ma false ("QUERY_1_1__3",[],[],(mk_c 0.,()))))
       )
       (mk_v volume_var)
     ),()),

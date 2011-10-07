@@ -85,9 +85,9 @@ let prog1: prog_t =
    (Insert, "R", ["a"; "b"],
       [
       (("q", [], ["a"],       (mk_c 0.0,())),
-              (mk_ma ("q1", [], ["b"], (mk_c 0.0, ())),()),());
+              (mk_ma false ("q1", [], ["b"], (mk_c 0.0, ())),()),());
       (("q", [], ["x"],       (mk_v "x",())),
-              (mk_ma ("q2", [], ["x"; "a"], (mk_c 0.0, ())),()),());
+              (mk_ma false ("q2", [], ["x"; "a"], (mk_c 0.0, ())),()),());
       (("q", [], ["a"],       (mk_c 0.0,())),
               (mk_if (mk_eq (mk_v "b") (mk_v "a")) (mk_c 1.0),()),());
       (("q1", [], ["a"],      (mk_c 0.0,())), (mk_c 1.0,()),());
@@ -171,15 +171,15 @@ Debug.log_unit_test "Selfjoin Sum" (print_smap "q")
 *)
 
 let init_q x w = mk_if (mk_lt (mk_v "y") (mk_v "z"))
-   (mk_prod (mk_ma ("q3", [], [x; "y"], (mk_c 0.0,())))
-            (mk_ma ("q3", [], ["z"; w], (mk_c 0.0,()))))
+   (mk_prod (mk_ma false ("q3", [], [x; "y"], (mk_c 0.0,())))
+            (mk_ma false ("q3", [], ["z"; w], (mk_c 0.0,()))))
 ;;
 
 let init_q1 y w = mk_if (mk_lt (mk_v y) (mk_v "z"))
-                        (mk_ma ("q3", [], ["z"; w], (mk_c 0.0, ())));;
+                        (mk_ma false ("q3", [], ["z"; w], (mk_c 0.0, ())));;
 
 let init_q2 x z = mk_if (mk_lt (mk_v "y") (mk_v z))
-                        (mk_ma ("q3", [], [x; "y"], (mk_c 0.0, ())));;
+                        (mk_ma false ("q3", [], [x; "y"], (mk_c 0.0, ())));;
 
 
 let prog2: prog_t =
@@ -192,10 +192,10 @@ let prog2: prog_t =
    (Insert, "R", ["a"; "b"],
       [
       (("q", [], ["a"; "w"], (init_q "a" "w",())),
-         (mk_ma ("q1", ["b"], ["w"], (init_q1 "b" "w",())),()),());
+         (mk_ma false ("q1", ["b"], ["w"], (init_q1 "b" "w",())),()),());
 
       (("q", [], ["x"; "b"], (init_q "x" "b",())),
-         (mk_ma ("q2", ["a"], ["x"], (init_q2 "x" "a",())),()),());
+         (mk_ma false ("q2", ["a"], ["x"], (init_q2 "x" "a",())),()),());
 
       (("q", [], ["a"; "b"], (init_q "a" "b",())),
          (mk_if (mk_lt (mk_v "b") (mk_v "a")) (mk_c 1.0),()),());
