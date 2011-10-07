@@ -1,9 +1,11 @@
 prefs = { 
-  "servers" => 500,
-  "tasks"   => 1000,
+  "servers" => 50,
+  "tasks"   => 100,
   "s_per_t" => 10,
   "p_down"  => 0.25
 }
+
+$prefix = "casmall_"; #"ca_";
 
 servers = (0...prefs["servers"]).map do |s| 
   [s, (rand < prefs["p_down"]) ? 0 : 1];
@@ -27,7 +29,7 @@ assignments = tasks.map do |t,priority|
 end.flatten(1)
 
 def dump_table(t, name)
-  File.open("#{File.dirname $0}/../data/ca_#{name}.dat", "w+") do |f|
+  File.open("#{File.dirname $0}/../data/#{$prefix}#{name}.dat", "w+") do |f|
     f.write(t.map { |r| r.join(",") }.join("\n") + "\n");
     f.flush;
   end

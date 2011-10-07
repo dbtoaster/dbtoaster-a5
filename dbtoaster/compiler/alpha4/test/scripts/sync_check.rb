@@ -71,6 +71,7 @@ def correct_results()
     pg_script = pg_script.sub("@@#{rname.downcase}@@", f.path);
     f
   end
+  p pg_script;
   correct = 
     IO.popen("psql dbtoaster -t", "r+") do |psql|
       psql.puts(pg_script);

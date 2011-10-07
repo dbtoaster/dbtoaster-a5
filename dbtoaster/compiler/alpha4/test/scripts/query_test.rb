@@ -45,6 +45,15 @@ class GenericUnitTest
     File.open(@qpath).readlines.join("");
   end
   
+  def diff(e, r)
+    if (e == r)                            then "Same"
+    elsif e == nil                         then "Different"
+    elsif r == nil                         then "Different"
+    elsif ((e-r) / (e+r)).abs < $precision then "Close"
+    else                                        "Different"
+    end
+  end
+  
   def correct?
     case @qtype
       when :singleton then (diff(@expected, @result) != "Different")
@@ -63,15 +72,6 @@ class GenericUnitTest
       @compiler_flags +
       ($debug_flags.map { |f| ["-d", f]}.flatten(1)) +
       ($opts.map { |f| ["-f", f]}.flatten(1))
-  end
-  
-  def diff(e, r)
-    if (e == r)                            then "Same"
-    elsif e == nil                         then "Different"
-    elsif r == nil                         then "Different"
-    elsif ((e-r) / (e+r)).abs < $precision then "Close"
-    else                                        "Different"
-    end
   end
   
   def results
