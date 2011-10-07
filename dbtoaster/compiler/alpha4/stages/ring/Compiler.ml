@@ -304,21 +304,6 @@ let nonincremental_program (db_schema: (string * (Calculus.var_t list)) list)
       [ snd (Calculus.decode_map_term map_term), 
         (Calculus.roly_poly map_definition)
       ] in
-  let (fake_delta) = 
-    Calculus.make_term (
-      Calculus.RSum(
-        Calculus.RNeg(
-          Calculus.readable_term map_term
-        ) :: (List.map (fun (_,x) -> 
-          Calculus.readable_term (
-            Calculus.un_roly_poly (
-              Calculus.term_sum_list x
-            )
-          )
-        ) new_value)
-      )
-    ) 
-  in
   let accum_with_base_rels = 
     List.fold_left (fun curr_accum rel ->
       let rel_schema = List.assoc rel db_schema in
@@ -345,16 +330,24 @@ let nonincremental_program (db_schema: (string * (Calculus.var_t list)) list)
     generate_code db_schema
                   (map_definition,map_term,false)
                   ( List.fold_left (fun rel_trigs rel ->
+                      let dummy_rel_vars = 
+                        snd (List.fold_left (fun (i,accum) (_,t) ->
+                          (i+1, ("nonincremental_unused_var_"^
+                                 (string_of_int i), t) :: accum)
+                        ) (0, []) (List.assoc rel db_schema))
+                      in
                       List.fold_left (fun insdel_trigs delete ->
-                        ( delete, 
-                          rel, 
-                          snd (List.fold_left (fun (i,accum) (_,t) ->
-                            (i+1, ("nonincremental_unused_var_"^
-                                   (string_of_int i), t) :: accum)
-                          ) (0, []) (List.assoc rel db_schema)),
-                          ( snd (Calculus.decode_map_term map_term),
-                            []),
-                          fake_delta
+                        ( 
+                          delete, 
+                          rel, dummy_rel_vars,
+                          (snd (Calculus.decode_map_term map_term), []),
+                          (Calculus.term_list_sum (List.map snd new_value))
+                        ) :: (
+                          delete,
+                          rel, dummy_rel_vars,
+                          (snd (Calculus.decode_map_term map_term), []),
+                          (Calculus.make_term 
+                            (Calculus.RNeg(Calculus.readable_term map_term)))
                         ) :: insdel_trigs
                       ) rel_trigs [true; false]
                     ) [] (Calculus.term_relations map_definition)
