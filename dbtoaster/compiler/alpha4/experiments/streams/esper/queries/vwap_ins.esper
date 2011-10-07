@@ -3,15 +3,62 @@ create window Bids.win:keepall() as
 
 insert into Bids
   select timestamp, orderId, brokerId, price, volume from InsertBids;
-    
-/* This delete is left in for testing */
-on DeleteBids as old 
-  delete from Bids where Bids.orderId = old.orderId 
-                   and   Bids.timestamp = old.timestamp;
 
-on Bids 
-  select sum(b1.price*b1.volume) as vwap
-  from Bids as b1 
-  where (select sum(b3.volume) from Bids as b3) > 
-        (select sum(b2.volume) from Bids as b2 where b2.price > b1.price);
+create variable int current_update = 0;
 
+on Bids as b
+  insert into Subquery1
+  select current_update+1 as tid,
+         sum(b1.volume) as tv1
+  from Bids as b1;
+
+on Bids set current_update = current_update+1;
+
+insert into ReplayBids
+select b1.tid as tid, b1.tv1 as tv1,
+       b2.price as price, b2.volume as volume
+from Subquery1 as b1 unidirectional, Bids as b2;
+
+insert into Subquery2
+select b1.tid as tid, b1.tv1 as tv1,
+       b1.price as price, b1.volume as volume,
+       sum(b2.volume) as tv2
+from ReplayBids as b1 unidirectional, Bids as b2
+where b2.price > b1.price
+group by b1.tid, b1.tv1, b1.price, b1.volume;
+
+/* win.ext_timed performs online aggregation (i.e. cumulative aggregates),
+   since it produces a result on every event, rather than buffering until it
+   has seen a greater external timestamp.
+   We use a keepall window, adding all partials to it, and manually delete
+   partials as we see refinements. By tracking the size of the win.ext_timed
+   window, we have a monotonically increasing counter per window, and can
+   use this to determine when to produce a query result, and flush state.
+ */
+create window AggOuter.win:keepall() as (tid int, pv double, sz long);
+
+insert into AggOuter
+select tid, sum(price*volume) as pv, count(*) as sz
+from Subquery2.win:ext_timed(tid, 1 msec)
+where 0.25*tv1>tv2;
+
+/* We have a new invocation, produce results for any prior invocations before
+   deleting their partials.
+ */ 
+on AggOuter(sz=1) as e
+select w.tid as tid, e.tid as tid2, max(w.pv) as pv
+from AggOuter as w
+where w.tid < e.tid
+group by w.tid;
+
+/* We are starting a new invocation, delete results for prior ones.
+   This ensures that only the current invocation is active in AggOuter.
+ */
+on AggOuter(sz=1) as e delete from AggOuter as w where w.tid < e.tid;
+
+/* We have a new partial result for the current invocation,
+   delete prior partials for the current invocation. This ensures the query
+   produces a single aggregate result for a window.
+ */
+on AggOuter(sz>1) as e
+delete from AggOuter as w where w.tid = e.tid and w.sz < e.sz;

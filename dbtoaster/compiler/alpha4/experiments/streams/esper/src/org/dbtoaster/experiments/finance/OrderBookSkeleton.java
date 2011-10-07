@@ -207,8 +207,8 @@ public class OrderBookSkeleton extends CommonSkeleton {
     log.info("using script "+queryFile);
     epStmts = s.setupScript(queryFile);
     if ( !epStmts.isEmpty() ) {
-      GenericSubscriber subscriber = new GenericSubscriber(100);
-      epStmts.get(epStmts.size()-1).setSubscriber(subscriber);
+      GenericSubscriber subscriber = new GenericSubscriber(10);
+      epStmts.get(epStmts.size()-3).setSubscriber(subscriber);
     }
     
     if ( !(insertBidsFile == null && insertAsksFile == null 
@@ -228,7 +228,7 @@ public class OrderBookSkeleton extends CommonSkeleton {
 
       if ( deleteBidsFile != null ) {
         log.info("loading delete bids from "+deleteBidsFile);
-        sources.add(s.setupCSVSource(deleteBidsFile, "DelteBids", fieldOrder));
+        sources.add(s.setupCSVSource(deleteBidsFile, "DeleteBids", fieldOrder));
       }
       
       if ( deleteAsksFile != null ) {
