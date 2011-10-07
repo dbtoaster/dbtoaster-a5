@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 require "#{File.dirname($0)}/util.rb"
 require 'getoptlong'
+require 'tempfile'
 
 $dbt_path = "#{File.dirname(File.dirname(File.dirname($0)))}"
 $dbt = "#{$dbt_path}/dbtoaster"
@@ -34,8 +35,25 @@ class GenericUnitTest
   def query=(q, qdat = $queries[q])
     @qname = q;
     @qtype = qdat[:type];
-    @qpath = qdat[:path];
-    @expected = qdat[:answer];
+    
+    if $dataset.nil? then
+      @qpath = qdat[:path];
+      @expected = qdat[:answer];
+    else
+      df = Tempfile.new("#{q}_#{$dataset}")
+      File.open(qdat[:path]) do |qf|
+        qf.readlines.each do |l|
+          qdat[:datasets][$dataset][:subs].each do |pat,subst|
+            l = l.sub(pat,subst);
+          end
+          df.puts(l);
+        end
+      end
+      @qpath = df.path;
+      df.close;
+      @expected = qdat[:datasets][$dataset][:answer]
+    end
+    
     @result = Hash.new;
     @compiler_flags =
       (qdat.has_key? :compiler_flags) ? qdat[:compiler_flags] : [];
@@ -216,6 +234,7 @@ $ret = 0;
 $depth = nil;
 $verbose = false;
 $compile_only = false
+$dataset = nil;
 
 GetoptLong.new(
   [ '-f',                GetoptLong::REQUIRED_ARGUMENT],
@@ -226,7 +245,8 @@ GetoptLong.new(
   [ '--depth',           GetoptLong::REQUIRED_ARGUMENT],
   [ '-v', '--verbose',   GetoptLong::NO_ARGUMENT],
   [ '--strict',          GetoptLong::NO_ARGUMENT],
-  [ '--compile-only',    GetoptLong::NO_ARGUMENT]
+  [ '--compile-only',    GetoptLong::NO_ARGUMENT],
+  [ '--dataset',         GetoptLong::REQUIRED_ARGUMENT]
 ).each do |opt, arg|
   case opt
     when '-f' then $opts.push(arg)
@@ -243,6 +263,7 @@ GetoptLong.new(
     when '--strict' then $strict = true;
     when '-v', '--verbose' then $verbose = true;
     when '--compile-only' then $compile_only = true;
+    when '--dataset' then $dataset = arg;
   end
 end
 

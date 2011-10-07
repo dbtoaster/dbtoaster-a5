@@ -1,5 +1,4 @@
 rst
-rst --depth 0 --compile-only
 rst --depth 1
 rst --depth 2
 ssb4 -d disable-deletes -d dup-ivc
@@ -30,7 +29,7 @@ brokerspread -d dup-ivc
 brokerspread -d dup-ivc --depth 0 --compile-only
 brokerspread -d dup-ivc --depth 1
 tpch3 -d dup-ivc
-tpch3 -d dup-ivc --depth 0 --compile-only
+tpch3 -d dup-ivc --depth 0 --dataset tiny
 tpch3 -d dup-ivc --depth 1
 tpch11 -d dup-ivc
 tpch11 -d dup-ivc --depth 0 --compile-only
