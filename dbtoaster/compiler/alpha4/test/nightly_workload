@@ -39,7 +39,7 @@ tpch17 -d dup-ivc
 tpch17 -d dup-ivc --depth 0 --compile-only
 tpch17 -d dup-ivc --depth 1
 tpch18 -d dup-ivc
-tpch18 -d dup-ivc --depth 0 --compile-only
+tpch18 -d dup-ivc --depth 0 --compile-only -d projected-map-access
 tpch18 -d dup-ivc --depth 1
 tpch18short -d dup-ivc
 tpch18short -d dup-ivc --depth 0 --compile-only
