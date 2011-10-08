@@ -31,13 +31,20 @@ namespace dbtoaster {
 
       csv_adaptor(stream_id i) : id(i) {}
 
-      csv_adaptor(stream_id i, string sch) : id(i), schema(sch) {
+      csv_adaptor(stream_id i, string sch)
+        : id(i), schema(sch), type(insert_tuple)
+      {
         validate_schema();
       }
 
       csv_adaptor(stream_id i, int num_params,
                   const pair<string,string> params[]) : id(i)
       {
+        parse_params(params);
+        validate_schema();
+      }
+
+      void parse_params(const pair<string, string> params[]) {
         for (int i = 0; i< num_params; ++i) {
           string k = params[i].first;
           string v = params[i].second;
@@ -47,13 +54,15 @@ namespace dbtoaster {
           } else if ( k == "schema" ) {
             schema = parse_schema(v);
           } else if ( k == "eventtype" ) {
-            type = v == "insert"? insert_tuple : delete_tuple;
+             type = v == "insert"? insert_tuple : delete_tuple;
           }
+          // TODO: handle parameterized events, via 'triggers' key as seen
+          // in OCaml adaptors.
         }
-        validate_schema();
       }
 
-      string parse_schema(string s) {
+      virtual string parse_schema(string s)
+      {
         string r = "";
         split_iterator<string::iterator> end;
         for (split_iterator<string::iterator> it =
@@ -99,7 +108,11 @@ namespace dbtoaster {
         event_data tuple;
         string::const_iterator schema_it = schema.begin();
         bool valid = true;
-        bool insert = true;
+
+        // Default to the adaptor's event type, and override with an event
+        // field in the schema.
+        bool insert = type == insert_tuple;
+
         split_iterator<string::const_iterator> field_end;
         for (split_iterator<string::const_iterator> field_it =
                 make_split_iterator(data, first_finder(delimiter, is_equal()));
@@ -178,6 +191,28 @@ namespace dbtoaster {
     };
   }
 
+  // Replay adaptors are CSV adaptors prepended with an integer denoting the
+  // event type. The adaptor internally adjusts the schema, allowing it to
+  // be used with the same parameters as a standard CSV adaptor.
+  struct replay_adaptor : public csv_adaptor {
+    replay_adaptor(stream_id i) : csv_adaptor(i) {}
+
+    replay_adaptor(stream_id i, string sch) : csv_adaptor(i) {
+      type = insert_tuple;
+      schema = "e,"+sch;
+      validate_schema();
+    }
+
+    replay_adaptor(stream_id i, int num_params,
+                   const pair<string,string> params[])
+      : csv_adaptor(i,num_params,params)
+    {}
+
+    string parse_schema(string s) {
+      return csv_adaptor::parse_schema("event,"+s);
+    }
+  };
+
   namespace datasets {
 
     //////////////////////////////
@@ -243,6 +278,7 @@ namespace dbtoaster {
         shared_ptr<order_book> bids;
         shared_ptr<order_book> asks;
         bool deterministic;
+        bool insert_only;
 
 
         order_book_adaptor(stream_id sid, int nb, order_book_type t)
@@ -251,7 +287,7 @@ namespace dbtoaster {
           bids = shared_ptr<order_book>(new order_book());
           asks = shared_ptr<order_book>(new order_book());
           deterministic = false;
-          num_brokers = 10;
+          insert_only = false;
         }
 
         order_book_adaptor(stream_id sid, int num_params,
@@ -276,6 +312,8 @@ namespace dbtoaster {
             } else if ( k == "validate" ) { // Ignore.
             } else if ( k == "deterministic" ) {
               deterministic = (v == "yes");
+            } else if ( k == "insert-only" ) {
+              insert_only = true;
             } else {
               cerr << "Invalid order book param " << k << ", " << v << endl;
             }
@@ -374,7 +412,7 @@ namespace dbtoaster {
                   x_valid = false;
                 }
               }
-              if ( x_valid ) {
+              if ( x_valid && !insert_only ) {
                 event_data fields(5);
                 x(fields);
                 stream_event y(delete_tuple, id, fields);
@@ -435,8 +473,10 @@ namespace dbtoaster {
             if ( valid ) {
               event_data fields(5);
               r(fields);
-              stream_event e(t, id, fields);
-              dest->push_back(e);
+              if ( !(t == delete_tuple && insert_only) ) {
+                stream_event e(t, id, fields);
+                dest->push_back(e);
+              }
             }
         }
 

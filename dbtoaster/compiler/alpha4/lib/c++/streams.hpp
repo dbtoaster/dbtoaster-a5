@@ -20,7 +20,7 @@ namespace dbtoaster {
     using namespace boost::iostreams;
     using namespace boost::lambda;
 
-    enum stream_event_type { insert_tuple, delete_tuple };
+    enum stream_event_type { delete_tuple, insert_tuple };
 
     typedef int stream_id;
     typedef vector<boost::any> event_data;
@@ -440,12 +440,11 @@ namespace dbtoaster {
 
     struct dbt_trigger_log {
       typedef stream<file_sink> file_stream;
-      stream_event_type type;
       stream_id id;
       shared_ptr<file_stream> sink_stream;
+      bool log_event_type;
 
-      dbt_trigger_log(stream_id i, stream_event_type t, const path& fp)
-        : id(i), type(t)
+      dbt_trigger_log(stream_id i, const path& fp, bool le = false) : id(i)
       {
         sink_stream = shared_ptr<file_stream>(new file_stream(fp.c_str()));
         if ( !sink_stream ) {
@@ -453,6 +452,13 @@ namespace dbtoaster {
         } else {
           cout << "logging stream " << id << " to " << fp << endl;
         }
+        log_event_type = le;
+      }
+
+      bool has_sink() { return sink_stream; }
+
+      ostream& log_event(stream_event_type t) {
+        return ( log_event_type ? ((*sink_stream) << t << ",") : (*sink_stream) );
       }
     };
 
@@ -499,11 +505,21 @@ namespace dbtoaster {
 
       void add_logger(stream_id s, stream_event_type t, const path& fp) {
         trigger_id k = make_pair(s, t);
-        dispatch_table::iterator tr_it = triggers->find(k);
-        if ( tr_it != triggers->end() ) {
-          (*loggers)[k] =
-             shared_ptr<dbt_trigger_log>(new dbt_trigger_log(s,t,fp));
-        }
+        shared_ptr<dbt_trigger_log> log =
+          shared_ptr<dbt_trigger_log>(new dbt_trigger_log(s,fp));
+        add_logger(k, log);
+      }
+
+      // Add a logger as both an insert and delete logger.
+      void add_logger(stream_id s, const path& fp) {
+        shared_ptr<dbt_trigger_log> log =
+          shared_ptr<dbt_trigger_log>(new dbt_trigger_log(s,fp, true));
+
+        trigger_id k = make_pair(s, insert_tuple);
+        add_logger(k, log);
+
+        k = make_pair(s, delete_tuple);
+        add_logger(k, log);
       }
 
       void remove_logger(stream_id s, stream_event_type t) {
@@ -527,6 +543,13 @@ namespace dbtoaster {
                << " handler for stream " << tuple.id << endl;
         }
       }
+
+      private:
+      void add_logger(trigger_id& id, shared_ptr<dbt_trigger_log> log) {
+        dispatch_table::iterator tr_it = triggers->find(id);
+        if ( tr_it != triggers->end() ) (*loggers)[id] = log;
+      }
+
     };
 
     struct stream_registry {

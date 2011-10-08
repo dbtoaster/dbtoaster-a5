@@ -110,6 +110,7 @@ let preprocessors : (string * (string -> string list -> string list)) list =
  *    remaining fields.
  *) 
 (* TODO: better hashing function control *)
+(* TODO: handle "event" and "order" schema elements, as seen in C++ adaptors *)
 let build_tuple param_val =
    let types = Str.split (Str.regexp ",") param_val in
    let build_fns = 
@@ -143,7 +144,8 @@ let build_tuple param_val =
    let rec sub acc l off len =
       if len = 0 then acc
       else if off > 0 then sub acc (List.tl l) (off-1) len 
-      else sub (acc@[List.hd l]) (List.tl l) off (len-1) in
+      else sub (acc@[List.hd l]) (List.tl l) off (len-1)
+   in
    if num_fns = 1 then (fun fields -> List.map extend_fn fields)
    else 
    (fun fields ->
@@ -266,7 +268,7 @@ let orderbook_generator params =
       match c with 
          | CFloat(x) -> x | _ -> failwith "invalid float const" in 
    let required = ["book"] in
-   let optional = [("brokers", "0")] in
+   let optional = [("brokers", "0"); ("insert-only", "false")] in
    
    (* Get required params *)
    let valid = List.for_all (fun k -> List.mem_assoc k params) required in
@@ -294,6 +296,12 @@ let orderbook_generator params =
       else false
    in
    
+   let insert_only = 
+      if List.mem_assoc "insert-only" params then
+         bool_of_string (String.lowercase (List.assoc "insert-only" params))
+      else false
+   in
+
    let book_orders = Hashtbl.create 1000 in
    
    (* returns action, order_id, price vol pair if # brokers <= 0
@@ -345,13 +353,14 @@ let orderbook_generator params =
                (if num_brokers > 0 then [getbid old_tuple] else [])@nvp
          in
          (if (getv new_tuple) = CFloat(0.0)
-          then (Hashtbl.remove book_orders order_id; [delete old_tuple])
+          then (Hashtbl.remove book_orders order_id;
+                if insert_only then [] else [delete old_tuple])
           else (Hashtbl.replace book_orders order_id new_tuple;
-                [delete old_tuple; insert new_tuple]))
+                (if insert_only then [] else [delete old_tuple])@[insert new_tuple]))
 
        | (Some(old_tuple), "F") | (Some(old_tuple), "D") ->
           Hashtbl.remove book_orders order_id;
-          [delete old_tuple]
+          (if insert_only then [] else [delete old_tuple])
 
        | (_,"X") | (_,"C") | (_,"T") -> []
        | (_,_) -> failwith ("invalid orderbook message type "^action)
@@ -392,6 +401,8 @@ let supplier_params = csv_params "|" "int,hash,hash,int,hash,float,hash" "insert
 let nation_params   = csv_params "|" "int,hash,int,hash" "insert"
 let region_params   = csv_params "|" "int,hash,hash" "insert"
 
+(* TODO: handle "deletions" parameter for TPCH
+ * Requires a staged multiplexer. *)
 let tpch_generators = List.map (fun (n,(_,p)) -> (n, csv_generator_wrapper p))
   ([("lineitem", lineitem_params); ("orders", order_params);
     ("part", part_params);         ("partsupp", partsupp_params);

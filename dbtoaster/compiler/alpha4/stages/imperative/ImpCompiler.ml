@@ -1133,6 +1133,7 @@ end (* Typing *)
   let source_code_of_trigger dbschema (event,rel,args,stmts) =
     let pm_name pm =
       match pm with M3.Insert -> "insert" | M3.Delete -> "delete" in
+    let evt_type = (pm_name event)^"_tuple" in
     let trig_name = (pm_name event)^"_"^rel in
     let trig_types = List.map (fun v -> string_of_calc_type (snd v))
         (List.assoc rel dbschema) in
@@ -1153,8 +1154,8 @@ end (* Typing *)
       [Lines ["void unwrap_"^trig_name^"(const event_data& e, "^
                 "shared_ptr<dbt_trigger_log> logger) {";
               "  try {";
-              "    if ( logger && logger->sink_stream ) {";
-              "      (*(logger->sink_stream)) << setprecision(15) << "^
+              "    if ( logger && logger->has_sink() ) {";
+              "      (logger->log_event("^evt_type^")) << setprecision(15) << "^
                      (String.concat " << \",\" << " evt_fields)^" << endl;";
               "    }";
               "    on_"^trig_name^"("^(String.concat "," evt_fields)^");";
