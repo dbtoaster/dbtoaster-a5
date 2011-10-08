@@ -133,6 +133,15 @@ public class OrderBookSkeleton extends CommonSkeleton {
           describedAs( "query script" ).
           ofType( String.class );
         
+        acceptsAll( Arrays.asList("s", "sample") ).withRequiredArg().
+          describedAs( "output sample frequency" ).
+          ofType( Integer.class );
+
+        acceptsAll( Arrays.asList("r", "result") ).withRequiredArg().
+          required().
+          describedAs( "result query id (from the last)" ).
+          ofType ( Integer.class );
+
         acceptsAll( Arrays.asList("ib", "insertbids") ).withRequiredArg().
           describedAs( "insert bids file" ).
           ofType( String.class );
@@ -156,6 +165,8 @@ public class OrderBookSkeleton extends CommonSkeleton {
     };
     
     String queryFile = null;
+    int queryId = -1;
+    int sampleFreq = 10;
     
     String insertBidsFile = null;
     String insertAsksFile = null;
@@ -173,6 +184,11 @@ public class OrderBookSkeleton extends CommonSkeleton {
       }
       
       queryFile = (String) options.valueOf("q");
+      queryId = (Integer) options.valueOf("r");
+      
+      if ( options.has( "s" ) && options.valueOf("s") != null )
+        sampleFreq = (Integer) options.valueOf("s");
+
       if ( options.has("ib") && options.valueOf("ib") != null )
         insertBidsFile = (String) options.valueOf("ib");
       
@@ -207,8 +223,13 @@ public class OrderBookSkeleton extends CommonSkeleton {
     log.info("using script "+queryFile);
     epStmts = s.setupScript(queryFile);
     if ( !epStmts.isEmpty() ) {
-      GenericSubscriber subscriber = new GenericSubscriber(10);
-      epStmts.get(epStmts.size()-3).setSubscriber(subscriber);
+      if ( queryId <= 0 || queryId > epStmts.size() ) {
+        log.error("invalid query id: "+queryId);
+        System.exit(1);
+      }
+
+      GenericSubscriber subscriber = new GenericSubscriber(sampleFreq);
+      epStmts.get(epStmts.size()-queryId).setSubscriber(subscriber);
     }
     
     if ( !(insertBidsFile == null && insertAsksFile == null 

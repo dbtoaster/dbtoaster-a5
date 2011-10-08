@@ -1,0 +1,46 @@
+create window Bids.win:keepall() as 
+  (timestamp double, orderId int, brokerId int, price double, volume double);
+
+create window Asks.win:keepall() as 
+  (timestamp double, orderId int, brokerId int, price double, volume double);
+
+insert into Bids
+  select timestamp, orderId, brokerId, price, volume from InsertBids;
+
+on DeleteBids as e
+  delete from Bids as b
+  where b.timestamp = e.timestamp
+  and   b.orderId = e.orderId
+  and   b.brokerId = e.brokerId;
+
+insert into Asks
+  select timestamp, orderId, brokerId, price, volume from InsertAsks;
+
+on DeleteAsks as e
+  delete from Asks as a
+  where a.timestamp = e.timestamp
+  and   a.orderId = e.orderId
+  and   a.brokerId = e.brokerId;
+
+insert into TableChanged select 1 as bids, 1 as evt from InsertBids;
+insert into TableChanged select 1 as bids, 0 as evt from DeleteBids;
+insert into TableChanged select 0 as bids, 1 as evt from InsertAsks;
+insert into TableChanged select 0 as bids, 0 as evt from DeleteAsks;
+
+create variable int current_update = 0;
+on TableChanged set current_update = current_update+1;
+
+insert into Subquery1
+  select current_update+1 as tid, sum(b1.volume) as tbv
+  from TableChanged as t unidirectional, Bids as b1;
+
+insert into Subquery2
+  select S1.tid as tid, S1.tbv as tbv, sum(a1.volume) as tav
+  from Subquery1 as S1 unidirectional, Asks as a1
+  group by S1.tid, S1.tbv;
+
+select S2.tid as tid, sum(a.price+-1*b.price) as ps
+from   Subquery2 as S2 unidirectional, Bids as b, Asks as a
+where  ( b.volume>0.0001*tbv )
+and    ( a.volume>0.0001*tav )
+group by S2.tid;

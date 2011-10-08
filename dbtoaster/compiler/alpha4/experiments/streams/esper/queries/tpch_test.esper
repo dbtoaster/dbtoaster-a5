@@ -1,7 +1,0 @@
-create window Lineitem.win:keepall() as InsertLineitem;
-create window Orders.win:keepall() as InsertOrders;
-
-insert into Lineitem select * from InsertLineitem;
-insert into Orders select * from InsertOrders;
-
-select irstream sum(extendedprice), sum(totalprice) from Lineitem, Orders;

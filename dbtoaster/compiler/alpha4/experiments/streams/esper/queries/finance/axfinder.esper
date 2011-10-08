@@ -1,0 +1,39 @@
+create window Bids.win:keepall() as 
+  (timestamp double, orderId int, brokerId int, price double, volume double);
+
+create window Asks.win:keepall() as 
+  (timestamp double, orderId int, brokerId int, price double, volume double);
+
+insert into Bids
+  select timestamp, orderId, brokerId, price, volume from InsertBids;
+
+on DeleteBids as e
+  delete from Bids as b
+  where b.timestamp = e.timestamp
+  and   b.orderId = e.orderId
+  and   b.brokerId = e.brokerId;
+
+insert into Asks
+  select timestamp, orderId, brokerId, price, volume from InsertAsks;
+
+on DeleteAsks as e
+  delete from Asks as a
+  where a.timestamp = e.timestamp
+  and   a.orderId = e.orderId
+  and   a.brokerId = e.brokerId;
+
+insert into TableChanged select 1 as bids, 1 as evt from InsertBids;
+insert into TableChanged select 1 as bids, 0 as evt from DeleteBids;
+insert into TableChanged select 0 as bids, 1 as evt from InsertAsks;
+insert into TableChanged select 0 as bids, 0 as evt from DeleteAsks;
+
+create variable int current_update = 0;
+on TableChanged set current_update = current_update+1;
+
+select   current_update+1 as tid,
+         b.brokerId, sum(a.volume + -1 * b.volume) as axf
+from     TableChanged as T unidirectional, Bids as b, Asks as a
+where    b.brokerId = a.brokerId
+  and    ( (a.price + ((-1) * b.price) > 1000) OR
+           (b.price + ((-1) * a.price) > 1000) )
+group by b.brokerId;

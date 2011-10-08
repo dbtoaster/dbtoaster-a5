@@ -65,9 +65,9 @@ public class TPCHSkeleton extends CommonSkeleton {
     return config;
   }
 
-  static LinkedList<String> matchFileEvent(String fileName) {
+  static LinkedList<String> matchFileEvent(String baseDir, String fileName) {
     LinkedList<String> r = null;
-    File f = new File(fileName);
+    File f = new File(baseDir, fileName);
     if ( f.exists() ) {
       r = new LinkedList<String>();
       String baseName = f.getName();
@@ -90,13 +90,13 @@ public class TPCHSkeleton extends CommonSkeleton {
         r.add("InsertSupplier");
         r.addAll(Arrays.asList(supplierFields));
       }
-      else if ( baseName.contains("part") ) {
-        r.add("InsertPart");
-        r.addAll(Arrays.asList(partFields));
-      }
       else if ( baseName.contains("partsupp") ) {
         r.add("InsertPartsupp");
         r.addAll(Arrays.asList(partsuppFields));
+      }
+      else if ( baseName.contains("part") ) {
+        r.add("InsertPart");
+        r.addAll(Arrays.asList(partFields));
       }
       else if ( baseName.contains("nation") ) {
         r.add("InsertNation");
@@ -120,6 +120,20 @@ public class TPCHSkeleton extends CommonSkeleton {
           required().
           describedAs( "query script" ).
           ofType( String.class );
+
+        acceptsAll( Arrays.asList("b", "basedir") ).withRequiredArg().
+          describedAs( "dataset base directory" ).
+          ofType( String.class );
+        
+        acceptsAll( Arrays.asList("s", "sample") ).withRequiredArg().
+          describedAs( "output sample frequency" ).
+          ofType( Integer.class );
+
+        acceptsAll( Arrays.asList("r", "result") ).withRequiredArg().
+          required().
+          describedAs( "result query id (from the last)" ).
+          ofType ( Integer.class );
+
         acceptsAll( Arrays.asList("i","inputfile") ).withRequiredArg().
           required().
           describedAs( "input data files" ).
@@ -128,6 +142,10 @@ public class TPCHSkeleton extends CommonSkeleton {
     };    
 
     String queryFile = null;
+    String baseDir = System.getProperty("user.dir");
+    int queryId = -1;
+    int sampleFreq = 10;
+
     List<String> dataFiles = new LinkedList<String>();
 
     try {
@@ -138,6 +156,14 @@ public class TPCHSkeleton extends CommonSkeleton {
       }
       
       queryFile = (String) options.valueOf("q");
+      queryId = (Integer) options.valueOf("r");
+
+      if ( options.has( "s" ) && options.valueOf("s") != null )
+        sampleFreq = (Integer) options.valueOf("s");
+
+      if ( options.has( "b" ) && options.valueOf("b") != null )
+        baseDir = (String) options.valueOf("b");
+
       for (Object o : options.valuesOf("i") ) {
         if ( o instanceof String ) dataFiles.add((String) o);
         else log.warn("invalid option type: "+o.getClass().getName());
@@ -152,8 +178,8 @@ public class TPCHSkeleton extends CommonSkeleton {
     log.info("using script "+queryFile);
     epStmts = t.setupScript(queryFile);
     if ( !epStmts.isEmpty() ) {
-      GenericSubscriber subscriber = new GenericSubscriber(1);
-      epStmts.get(epStmts.size()-1).setSubscriber(subscriber);
+      GenericSubscriber subscriber = new GenericSubscriber(sampleFreq);
+      epStmts.get(epStmts.size()-queryId).setSubscriber(subscriber);
     }
 
     // Push data files.
@@ -161,7 +187,7 @@ public class TPCHSkeleton extends CommonSkeleton {
       List<CSVInputAdapter> sources = new LinkedList<CSVInputAdapter>();
 
       for (String f : dataFiles) {
-        LinkedList<String> evtAndFields = matchFileEvent(f);
+        LinkedList<String> evtAndFields = matchFileEvent(baseDir, f);
         if ( evtAndFields != null && !evtAndFields.isEmpty() ) {
           String evt = evtAndFields.pop();
           log.info("Found data for "+evt);

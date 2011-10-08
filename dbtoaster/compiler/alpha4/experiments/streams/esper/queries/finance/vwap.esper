@@ -1,31 +1,40 @@
 create window Bids.win:keepall() as 
-(timestamp double, orderId int, brokerId int, price double, volume double);
+  (timestamp double, orderId int, brokerId int, price double, volume double);
 
 insert into Bids
   select timestamp, orderId, brokerId, price, volume from InsertBids;
 
+on DeleteBids as e
+  delete from Bids as b
+  where b.timestamp = e.timestamp
+  and   b.orderId = e.orderId
+  and   b.brokerId = e.brokerId;
+
+insert into BidsChanged 
+  select timestamp, orderId, brokerId from InsertBids;
+
+insert into BidsChanged
+  select timestamp, orderId, brokerId from DeleteBids;
+
 create variable int current_update = 0;
+on BidsChanged set current_update = current_update+1;
 
-on Bids as b
-  insert into Subquery1
-  select current_update+1 as tid,
-         sum(b1.volume) as tv1
-  from Bids as b1;
-
-on Bids set current_update = current_update+1;
+insert into Subquery1
+  select current_update+1 as tid, sum(b1.volume) as tv1
+  from BidsChanged as e unidirectional, Bids as b1;
 
 insert into ReplayBids
-select b1.tid as tid, b1.tv1 as tv1,
-       b2.price as price, b2.volume as volume
-from Subquery1 as b1 unidirectional, Bids as b2;
+  select b1.tid as tid, b1.tv1 as tv1,
+         b2.price as price, b2.volume as volume
+  from Subquery1 as b1 unidirectional, Bids as b2;
 
 insert into Subquery2
-select b1.tid as tid, b1.tv1 as tv1,
-       b1.price as price, b1.volume as volume,
+  select b1.tid as tid, b1.tv1 as tv1,
+         b1.price as price, b1.volume as volume,
        sum(b2.volume) as tv2
-from ReplayBids as b1 unidirectional, Bids as b2
-where b2.price > b1.price
-group by b1.tid, b1.tv1, b1.price, b1.volume;
+  from ReplayBids as b1 unidirectional, Bids as b2
+  where b2.price > b1.price
+  group by b1.tid, b1.tv1, b1.price, b1.volume;
 
 /* win.ext_timed performs online aggregation (i.e. cumulative aggregates),
    since it produces a result on every event, rather than buffering until it
@@ -38,18 +47,18 @@ group by b1.tid, b1.tv1, b1.price, b1.volume;
 create window AggOuter.win:keepall() as (tid int, pv double, sz long);
 
 insert into AggOuter
-select tid, sum(price*volume) as pv, count(*) as sz
-from Subquery2.win:ext_timed(tid, 1 msec)
-where 0.25*tv1>tv2;
+  select tid, sum(price*volume) as pv, count(*) as sz
+  from Subquery2.win:ext_timed(tid, 1 msec)
+  where 0.25*tv1>tv2;
 
 /* We have a new invocation, produce results for any prior invocations before
    deleting their partials.
  */ 
 on AggOuter(sz=1) as e
-select w.tid as tid, e.tid as tid2, max(w.pv) as pv
-from AggOuter as w
-where w.tid < e.tid
-group by w.tid;
+  select w.tid as tid, e.tid as tid2, max(w.pv) as pv
+  from AggOuter as w
+  where w.tid < e.tid
+  group by w.tid;
 
 /* We are starting a new invocation, delete results for prior ones.
    This ensures that only the current invocation is active in AggOuter.
@@ -61,4 +70,5 @@ on AggOuter(sz=1) as e delete from AggOuter as w where w.tid < e.tid;
    produces a single aggregate result for a window.
  */
 on AggOuter(sz>1) as e
-delete from AggOuter as w where w.tid = e.tid and w.sz < e.sz;
+  delete from AggOuter as w
+  where w.tid = e.tid and w.sz < e.sz;
