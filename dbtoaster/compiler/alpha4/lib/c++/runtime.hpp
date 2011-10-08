@@ -53,7 +53,7 @@ namespace dbtoaster {
           ("log-dir", value<string>(), "logging directory")
           ("log-triggers,l",
             value<vector<string> >(&logged_streams), "log stream triggers")
-          ("unified,u", "unified logging")
+          ("unified,u", value<string>(), "unified logging [stream | global]")
           ("output-file,o", value<string>(), "output file")
           ("maps,m", value<vector<string> >(&output_maps), "output maps")
           ("query,q", "output query results")
@@ -151,7 +151,15 @@ namespace dbtoaster {
       }
 
       // Trigger logging.
-      bool unified() { return opt_map.count("unified"); }
+      bool global() {
+        return opt_map.count("unified")
+                 && opt_map["unified"].as<string>() == "global";
+      }
+
+      bool unified() {
+        return opt_map.count("unified")
+                 && opt_map["unified"].as<string>() == "stream";
+      }
 
       path get_log_file(string stream_name, stream_event_type t) {
         string ftype = (t == insert_tuple? "Insert" : "Delete");
@@ -163,15 +171,19 @@ namespace dbtoaster {
       }
 
       void log_dispatcher(stream_dispatcher& d, map<string, int>& stream_ids) {
-        vector<string>::iterator it = logged_streams.begin();
-        for (; it != logged_streams.end(); ++it) {
-          if ( stream_ids.find(*it) != stream_ids.end() ) {
-            int id = stream_ids[*it];
-            if ( unified() ) {
-              d.add_logger(id, get_log_file(*it));
-            } else {
-              d.add_logger(id, insert_tuple, get_log_file(*it, insert_tuple));
-              d.add_logger(id, delete_tuple, get_log_file(*it, delete_tuple));
+        if ( global() ) {
+          path global_file = get_log_file("", "Events", true);
+          d.add_logger(global_file);
+        } else {
+          vector<string>::iterator it = logged_streams.begin();
+          for (; it != logged_streams.end(); ++it) {
+            if ( stream_ids.find(*it) != stream_ids.end() ) {
+              int id = stream_ids[*it];
+              if ( unified() ) d.add_logger(id, get_log_file(*it));
+              else {
+                d.add_logger(id, insert_tuple, get_log_file(*it, insert_tuple));
+                d.add_logger(id, delete_tuple, get_log_file(*it, delete_tuple));
+              }
             }
           }
         }

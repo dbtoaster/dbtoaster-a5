@@ -40,11 +40,11 @@ namespace dbtoaster {
       csv_adaptor(stream_id i, int num_params,
                   const pair<string,string> params[]) : id(i)
       {
-        parse_params(params);
+        parse_params(num_params,params);
         validate_schema();
       }
 
-      void parse_params(const pair<string, string> params[]) {
+      void parse_params(int num_params, const pair<string, string> params[]) {
         for (int i = 0; i< num_params; ++i) {
           string k = params[i].first;
           string v = params[i].second;
@@ -189,29 +189,29 @@ namespace dbtoaster {
 
       void finalize(shared_ptr<list<stream_event> > dest) {}
     };
+
+    // Replay adaptors are CSV adaptors prepended with an integer denoting the
+    // event type. The adaptor internally adjusts the schema, allowing it to
+    // be used with the same parameters as a standard CSV adaptor.
+    struct replay_adaptor : public csv_adaptor {
+      replay_adaptor(stream_id i) : csv_adaptor(i) {}
+
+      replay_adaptor(stream_id i, string sch) : csv_adaptor(i) {
+        type = insert_tuple;
+        schema = "e,"+sch;
+        validate_schema();
+      }
+
+      replay_adaptor(stream_id i, int num_params,
+                     const pair<string,string> params[])
+        : csv_adaptor(i,num_params,params)
+      {}
+
+      string parse_schema(string s) {
+        return csv_adaptor::parse_schema("event,"+s);
+      }
+    };
   }
-
-  // Replay adaptors are CSV adaptors prepended with an integer denoting the
-  // event type. The adaptor internally adjusts the schema, allowing it to
-  // be used with the same parameters as a standard CSV adaptor.
-  struct replay_adaptor : public csv_adaptor {
-    replay_adaptor(stream_id i) : csv_adaptor(i) {}
-
-    replay_adaptor(stream_id i, string sch) : csv_adaptor(i) {
-      type = insert_tuple;
-      schema = "e,"+sch;
-      validate_schema();
-    }
-
-    replay_adaptor(stream_id i, int num_params,
-                   const pair<string,string> params[])
-      : csv_adaptor(i,num_params,params)
-    {}
-
-    string parse_schema(string s) {
-      return csv_adaptor::parse_schema("event,"+s);
-    }
-  };
 
   namespace datasets {
 

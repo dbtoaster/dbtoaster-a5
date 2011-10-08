@@ -442,23 +442,36 @@ namespace dbtoaster {
       typedef stream<file_sink> file_stream;
       stream_id id;
       shared_ptr<file_stream> sink_stream;
-      bool log_event_type;
+      bool log_stream_name, log_event_type;
 
-      dbt_trigger_log(stream_id i, const path& fp, bool le = false) : id(i)
+      dbt_trigger_log(const path& fp,
+                      stream_id s = -1, bool ln = false, bool le = false)
+        : id(s), log_stream_name(ln), log_event_type(le)
       {
-        sink_stream = shared_ptr<file_stream>(new file_stream(fp.c_str()));
-        if ( !sink_stream ) {
-          cerr << "failed to open file path " << fp << endl;
-        } else {
-          cout << "logging stream " << id << " to " << fp << endl;
-        }
-        log_event_type = le;
+          init_sink(fp);
       }
 
       bool has_sink() { return sink_stream; }
 
-      ostream& log_event(stream_event_type t) {
-        return ( log_event_type ? ((*sink_stream) << t << ",") : (*sink_stream) );
+      ostream& log_event(string stream_name, stream_event_type t) {
+        return
+          ( log_stream_name?
+            ( log_event_type ?
+               ((*sink_stream) << stream_name << "," << t << ",") :
+                (*sink_stream) << stream_name << "," )
+          : ( log_event_type ? ((*sink_stream) << t << ",") : (*sink_stream) ));
+      }
+
+    private:
+      void init_sink(const path& fp) {
+        sink_stream = shared_ptr<file_stream>(new file_stream(fp.c_str()));
+        if ( !sink_stream ) {
+           cerr << "failed to open file path " << fp << endl;
+        } else if (id < 0) {
+            cout << "logging to " << fp << endl;
+        } else {
+            cout << "logging stream " << id << " to " << fp << endl;
+        }
       }
     };
 
@@ -506,20 +519,32 @@ namespace dbtoaster {
       void add_logger(stream_id s, stream_event_type t, const path& fp) {
         trigger_id k = make_pair(s, t);
         shared_ptr<dbt_trigger_log> log =
-          shared_ptr<dbt_trigger_log>(new dbt_trigger_log(s,fp));
+          shared_ptr<dbt_trigger_log>(new dbt_trigger_log(fp,s));
         add_logger(k, log);
       }
 
       // Add a logger as both an insert and delete logger.
       void add_logger(stream_id s, const path& fp) {
         shared_ptr<dbt_trigger_log> log =
-          shared_ptr<dbt_trigger_log>(new dbt_trigger_log(s,fp, true));
+          shared_ptr<dbt_trigger_log>(new dbt_trigger_log(fp, s, false, true));
 
         trigger_id k = make_pair(s, insert_tuple);
         add_logger(k, log);
 
         k = make_pair(s, delete_tuple);
         add_logger(k, log);
+      }
+
+      // Add a singe logger for all streams.
+      // Requires all triggers to be added beforehand.
+      void add_logger(const path& fp) {
+        shared_ptr<dbt_trigger_log> log =
+          shared_ptr<dbt_trigger_log>(new dbt_trigger_log(fp, -1, true, true));
+
+        dispatch_table::iterator tr_it = triggers->begin();
+        for (; tr_it != triggers->end(); ++tr_it) {
+          add_logger(tr_it->first, log);
+        }
       }
 
       void remove_logger(stream_id s, stream_event_type t) {
@@ -545,7 +570,7 @@ namespace dbtoaster {
       }
 
       private:
-      void add_logger(trigger_id& id, shared_ptr<dbt_trigger_log> log) {
+      void add_logger(trigger_id id, shared_ptr<dbt_trigger_log> log) {
         dispatch_table::iterator tr_it = triggers->find(id);
         if ( tr_it != triggers->end() ) (*loggers)[id] = log;
       }

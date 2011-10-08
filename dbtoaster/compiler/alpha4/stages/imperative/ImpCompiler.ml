@@ -1131,6 +1131,7 @@ end (* Typing *)
     end
 
   let source_code_of_trigger dbschema (event,rel,args,stmts) =
+    let quote s = "\""^(String.escaped s)^"\"" in
     let pm_name pm =
       match pm with M3.Insert -> "insert" | M3.Delete -> "delete" in
     let evt_type = (pm_name event)^"_tuple" in
@@ -1155,7 +1156,8 @@ end (* Typing *)
                 "shared_ptr<dbt_trigger_log> logger) {";
               "  try {";
               "    if ( logger && logger->has_sink() ) {";
-              "      (logger->log_event("^evt_type^")) << setprecision(15) << "^
+              "      (logger->log_event("^(quote rel)^", "^evt_type^"))"^
+                    " << setprecision(15) << "^
                      (String.concat " << \",\" << " evt_fields)^" << endl;";
               "    }";
               "    on_"^trig_name^"("^(String.concat "," evt_fields)^");";
