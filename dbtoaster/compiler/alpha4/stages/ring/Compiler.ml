@@ -297,7 +297,8 @@ let rec compile ?(dup_elim = ref StringMap.empty)
 
 let nonincremental_program (db_schema: (string * (Calculus.var_t list)) list)
                            ((map_definition, map_term, _): map_ref_t)
-                           (generate_code:'a output_translator_t)
+                           (generate_insert_code:'a output_translator_t)
+                           (generate_delta_code:'a output_translator_t)
                            (accum:'a): 'a =
   let (base_relations, new_value) = 
     Calculus.extract_base_relations 
@@ -310,7 +311,7 @@ let nonincremental_program (db_schema: (string * (Calculus.var_t list)) list)
       let rel_term = ( Calculus.base_relation_expr (rel,rel_schema),
                        Calculus.map_term rel rel_schema,
                        false ) in
-      generate_code db_schema
+      generate_delta_code db_schema
                     rel_term
                     ( List.fold_left (fun trig_accum delete ->
                         ( delete,
@@ -327,7 +328,7 @@ let nonincremental_program (db_schema: (string * (Calculus.var_t list)) list)
                     curr_accum
     ) accum base_relations
   in
-    generate_code db_schema
+    generate_insert_code db_schema
                   (map_definition,map_term,false)
                   ( List.fold_left (fun rel_trigs rel ->
                       let dummy_rel_vars = 
@@ -342,12 +343,6 @@ let nonincremental_program (db_schema: (string * (Calculus.var_t list)) list)
                           rel, dummy_rel_vars,
                           (snd (Calculus.decode_map_term map_term), []),
                           (Calculus.term_list_sum (List.map snd new_value))
-                        ) :: (
-                          delete,
-                          rel, dummy_rel_vars,
-                          (snd (Calculus.decode_map_term map_term), []),
-                          (Calculus.make_term 
-                            (Calculus.RNeg(Calculus.readable_term map_term)))
                         ) :: insdel_trigs
                       ) rel_trigs [true; false]
                     ) [] (Calculus.term_relations map_definition)

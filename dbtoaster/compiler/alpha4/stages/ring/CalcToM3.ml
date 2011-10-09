@@ -654,7 +654,7 @@ module M3InProgress = struct
     let produce_triggers (pm:M3.pm_t) (tmap:trigger_map): M3.trig_t list =
       List.map (fun (rel_name, (rel_vars, statements)) ->
          let materialized_statements =
-            List.filter (fun ((map_name,_,_,_),_,_) ->
+            List.filter (fun ((map_name,_,_,_),_,_,_) ->
               let (_,_,_,inline_agg) = List.assoc map_name maps in
                 not inline_agg
             ) statements
@@ -707,7 +707,8 @@ module M3InProgress = struct
                               generate_m3
                               accum
     
-  and generate_m3 (schema: (string*(var_t list)) list)
+  and generate_m3 ?(stmt_mode = M3.Stmt_Update)
+                  (schema: (string*(var_t list)) list)
                   (map_ref: Compiler.map_ref_t)
                   (triggers: Compiler.trigger_definition_t list)
                   (accum: t): t =
@@ -720,8 +721,9 @@ module M3InProgress = struct
             "ON "^(if delete then "-" else "+")^reln^
             (list_to_string Calculus.string_of_var relvars)^"=> "^
             (fst (decode_map_term term_for_map))^
-            (list_to_string Calculus.string_of_var params)^
-            " += "^(Calculus.string_of_term expr)
+            (list_to_string Calculus.string_of_var params)^" "^
+            (M3Common.opstring_of_stmt_type stmt_mode)^" "^
+            (Calculus.string_of_term expr)
         ));
         (* eliminates loop vars by substituting unified map params *) 
         let sub_map_params (map_definition, term_for_map, map_bindings,
@@ -747,14 +749,15 @@ module M3InProgress = struct
         let update_trigger =
           ((if delete then M3.Delete else M3.Insert),
             reln, (translate_schema relvars),
-            [(target_access, (update,()), ())])
+            [(target_access, stmt_mode, (update,()), ())])
         in
           
           Debug.print "MAP-DELTAS" (fun () -> 
               "ON "^(if delete then "-" else "+")^reln^
               (list_to_string (fun (a,_)->a) relvars)^
               ": "^(term_as_string term_for_map)^
-              (list_to_string (fun (a,_)->a) params)^" += "^
+              (list_to_string (fun (a,_)->a) params)^" "^
+              (M3Common.opstring_of_stmt_type stmt_mode)^" "^
               (term_as_string expr)^"\n   ->\n"^
               (M3Common.pretty_print_calc update)^"\n");
           
@@ -781,7 +784,8 @@ module M3InProgress = struct
                      (accum:t) : t =
       Compiler.nonincremental_program schema
                                       map_ref
-                                      generate_m3
+                                      (generate_m3 ~stmt_mode:M3.Stmt_Replace)
+                                      (generate_m3 ~stmt_mode:M3.Stmt_Update)
                                       accum
 
 end

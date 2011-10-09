@@ -38,8 +38,6 @@ SOURCE = \
 	lib/ocaml/Sources.ml \
 	lib/ocaml/StandardAdaptors.ml \
 	lib/ocaml/Runtime.ml \
-	codegen/ocaml/M3Interpreter.ml \
-	codegen/ocaml/M3OCamlgen.ml \
 	codegen/ocaml/K3Interpreter.ml \
 	codegen/plsql/K3Plsql.ml \
 	codegen/ocaml/K3OCamlgen.ml

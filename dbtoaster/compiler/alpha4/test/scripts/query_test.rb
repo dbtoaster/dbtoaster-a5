@@ -281,7 +281,8 @@ queries.each do |tquery|
                                 else [["debug flags",$debug_flags]] end)+
         (if $opts.empty? then [] else [["optimizations",$opts]] end)+
         (if $depth.nil? then [] else [["depth", ["#{$depth}"]]] end)+
-        (if $compile_only then [["compilation", ["only"]]] else [] end)
+        (if $compile_only then [["compilation", ["only"]]] else [] end)+
+        (if $dataset.nil? then [] else [["dataset", [$dataset]]] end)
       opt_string =
         if opt_terms.empty? then ""
         else " with #{opt_terms.map{|k,tm|"#{k} #{tm.join(", ")}"}.join("; ")}"

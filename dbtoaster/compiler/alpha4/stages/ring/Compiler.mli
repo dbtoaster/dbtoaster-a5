@@ -39,6 +39,7 @@ val nonincremental_program:
              (string * (Calculus.var_t list)) list -> (* Schema (Rel*Vars) *)
              map_ref_t ->                             (* Term to compile *)
              'a output_translator_t ->                (* Output Translator *)
+             'a output_translator_t ->                (* Output Translator *)
              'a -> 'a                                 (* Output Accumulator *)
 
 (* Auxilliary compilation function. 

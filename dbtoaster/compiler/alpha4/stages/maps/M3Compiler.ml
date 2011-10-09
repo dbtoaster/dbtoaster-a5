@@ -27,7 +27,7 @@ module M3P = M3.Prepared
 
 (* returns all map names in an M3 trigger *)
 let get_map_names (trigger : M3.trig_t) : map_id_t list =
-   let get_names_from_stmt ((mapn,_,_,_),(c,_),_) =
+   let get_names_from_stmt ((mapn,_,_,_),_,(c,_),_) =
       (recurse_calc_lf Util.ListAsSet.union
          (fun _ (mapn, _, _, _) -> [mapn]) (fun _ -> []) (fun _ -> []) c)@[mapn]
    in let (_,_,_,stmts) = trigger
@@ -90,7 +90,7 @@ let normalize_triggers (triggers : M3.trig_t list) =
          (fun c -> Const(c))
          (fun v -> Var(aux v)) c
       in (pm,rel,args,
-          List.map (fun (m,(c,am),sm) -> (m,(substitute c,am),sm)) stmts)
+          List.map (fun (m,ty,(c,am),sm) -> (m,ty,(substitute c,am),sm)) stmts)
       end
    in List.map normalize triggers
 
@@ -352,7 +352,7 @@ let prepare_triggers (triggers : trig_t list)
 
    let prepare_stmt theta_vars (stmt : stmt_t) : (M3P.stmt_t * pattern_map) =
 
-      let ((lmapn, linv, loutv, init_calc), (incr_calc,_),_) = stmt in
+      let ((lmapn, linv, loutv, init_calc), stmt_type,(incr_calc,_),_) = stmt in
       let partition v1 v2 =
          (Util.ListAsSet.inter v1 v2, Util.ListAsSet.diff v1 v2) in
       let (bound_inv, loop_inv) = partition linv theta_vars in
@@ -393,7 +393,8 @@ let prepare_triggers (triggers : trig_t list)
        * of the slice corresponding to the delta, rather than the entire slice.
        *)
       let pstmtmeta = loop_inv, loop_outv in 
-      let pstmt = ((lmapn, linv, loutv, init_ca), incr_ca, pstmtmeta) in
+      let pstmt = 
+         ((lmapn, linv, loutv, init_ca), stmt_type, incr_ca, pstmtmeta) in
 
       let stmt_patterns =
         List.fold_left
@@ -553,7 +554,8 @@ and compile_pcalc2 patterns agg_meta lhs_outv ecalc : code_t =
  *    no bigsum vars, all out vars of map accesses are bound, and no in vars
  *    in any maps (otherwise there may be initial values). *)
 let compile_pstmt patterns
-   ((mapn, inv, outv, init_aggecalc), incr_aggecalc, _) init_ext : code_t =
+   ((mapn, inv, outv, init_aggecalc), _, incr_aggecalc, _) init_ext : 
+         code_t =
    let aux aggecalc : code_t = compile_pcalc2
      patterns (M3P.get_agg_meta aggecalc) outv (M3P.get_ecalc aggecalc) in
    let (cincr, cinit) = (aux incr_aggecalc, aux init_aggecalc) in
@@ -572,7 +574,7 @@ let compile_pstmt patterns
 
 
 let compile_pstmt_loop patterns trig_args pstmt : code_t =
-   let ((mapn, inv, outv, _), incr_aggecalc, stmt_meta) = pstmt in
+   let ((mapn, inv, outv, _), stmt_type, incr_aggecalc, stmt_meta) = pstmt in
    let patv = Util.ListAsSet.inter inv trig_args in
    let pat = List.map (index inv) patv in
    let direct = (List.length patv) = (List.length inv) in 
@@ -590,9 +592,9 @@ let compile_pstmt_loop patterns trig_args pstmt : code_t =
       (M3P.get_full_agg (M3P.get_agg_meta incr_aggecalc)) in
    if singleton_update then
       singleton_statement mapn inv outv
-         map_out_patterns inv_ext patv pat direct cstmt
+         map_out_patterns inv_ext patv pat direct stmt_type cstmt
    else
-      statement mapn inv outv inv_ext patv pat direct cstmt
+      statement mapn inv outv inv_ext patv pat direct stmt_type cstmt
 
 let compile_ptrig (ptrig, patterns) =
    let aux ptrig =

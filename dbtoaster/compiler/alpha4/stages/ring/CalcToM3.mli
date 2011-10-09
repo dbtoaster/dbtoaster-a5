@@ -140,7 +140,8 @@ module M3InProgress : sig
   (* generate_m3 can be passed in to Compiler.compile to produce 
      an M3ProgInProgress.t  Call finalize on it to get an M3.prog_t
   *) 
-  val generate_m3: (string*(Calculus.var_t list)) list ->
+  val generate_m3: ?stmt_mode:M3.stmt_type_t ->
+                   (string*(Calculus.var_t list)) list ->
                    Compiler.map_ref_t -> 
                    Compiler.trigger_definition_t list ->
                    t -> t

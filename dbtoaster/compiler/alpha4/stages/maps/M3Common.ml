@@ -81,7 +81,8 @@ let replace_calc_lf
 
 (******************* Batch Modification *******************)
 let rename_maps (mapping:(map_id_t) StringMap.t)
-                ((stmt_defn, stmt_calc, stmt_meta):('c,'a,'s) generic_stmt_t): 
+                ((stmt_defn, stmt_type, stmt_calc, stmt_meta):
+                     ('c,'a,'s) generic_stmt_t): 
                 (('c,'a,'s) generic_stmt_t) =
   let rec aux_ma ((mn,ivars,ovars,init):('c,'a) generic_mapacc_t) : 
                  ('c,'a) generic_mapacc_t =
@@ -96,11 +97,12 @@ let rename_maps (mapping:(map_id_t) StringMap.t)
       (fun x->Const(x)) (fun x->Var(x)) e),
      meta)
   in
-    (aux_ma stmt_defn, aux_calc stmt_calc, stmt_meta)
+    (aux_ma stmt_defn, stmt_type, aux_calc stmt_calc, stmt_meta)
 ;;
 
 let rename_vars (src_vars:var_t list) (dst_vars:var_t list) 
-                ((stmt_defn, stmt_calc, stmt_meta):('c,'a,'s) generic_stmt_t): 
+                ((stmt_defn, stmt_type, stmt_calc, stmt_meta):
+                     ('c,'a,'s) generic_stmt_t): 
                 ('c,'a,'s) generic_stmt_t =
   let rec var_unused_in_calc (var:var_t) : (('c,'a) generic_calc_t -> bool) =
     recurse_calc_lf (&&) (fun _ ma -> var_unused_in_mapacc var ma)
@@ -153,7 +155,7 @@ let rename_vars (src_vars:var_t list) (dst_vars:var_t list)
     (name, List.map map_var ivars, List.map map_var ovars, 
       sub_exp icalc)
   in 
-    (sub_ma stmt_defn, sub_exp stmt_calc, stmt_meta)
+    (sub_ma stmt_defn, stmt_type, sub_exp stmt_calc, stmt_meta)
 
 (******************* Querying *******************)
 let calc_vars_aux mf vf : ((('c,'a) generic_calc_t) -> var_t list)
@@ -251,12 +253,16 @@ struct
       (fun meta x -> 
         extend_with_meta MP.string_of_calcmeta meta (IndentedPrinting.Leaf(x)))
       calc
+  and opstring_of_stmt_type stmt_type = 
+    match stmt_type with 
+      | M3.Stmt_Update  -> "+="
+      | M3.Stmt_Replace -> ":="
   and indented_stmt 
-      ((mapacc, (delta_term,delta_meta), stmt_meta):
+      ((mapacc, stmt_type, (delta_term,delta_meta), stmt_meta):
         (MP.calcmeta_t,MP.aggmeta_t,MP.stmtmeta_t) generic_stmt_t) =
     extend_with_meta MP.string_of_stmtmeta stmt_meta
       (IndentedPrinting.Node(
-        ("",""),(" +="," "),
+        ("",""),(" "^(opstring_of_stmt_type stmt_type)," "),
         (indented_map_access mapacc), 
           (extend_with_meta MP.string_of_aggmeta delta_meta
             (indented_calc delta_term))
@@ -316,8 +322,13 @@ and code_of_calc (calc:('c,'a) generic_calc_t): string =
     )
     (fun v -> "(Var("^v^"))")
     calc
-let code_of_stmt ((mapacc,(calc,_),_):('c,'a,'sm) generic_stmt_t) : string =
-  "("^(code_of_map_access mapacc)^", "^(code_of_calc calc)^")"
+let code_of_stmt ((mapacc,stmt_type,(calc,_),_):('c,'a,'sm) generic_stmt_t) : 
+                 string =
+  let stmt_type_str = match stmt_type with
+    | Stmt_Update -> "Stmt_Update" | Stmt_Replace -> "Stmt_Replace"
+  in
+  "("^(code_of_map_access mapacc)^", "^stmt_type_str^", "^
+  (code_of_calc calc)^")"
 
 
 (******************* Patterns *******************)

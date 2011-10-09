@@ -180,7 +180,7 @@ loop do
   ] + File.open("test/nightly_workload") do |f|
     f.readlines.map { |l| l.chomp }.delete_if { |l| l == "" }.
       map do |l| 
-        shortname = "#{l.split(/ /)[0]}"
+        shortname = "#{l.sub(/^ */,"").split(/ /)[0]}"
         query_cnt[shortname] = qid = query_cnt[shortname] + 1;
         {
           :name  => "Query '#{shortname}' test #{qid} (C++)",

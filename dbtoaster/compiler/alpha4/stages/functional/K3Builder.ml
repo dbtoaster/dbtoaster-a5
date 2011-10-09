@@ -476,7 +476,8 @@ let collection_stmt trig_args m3stmt : statement =
     let vars_expr vars = List.map (fun v -> Var(v,TFloat)) vars in
     let fn_arg_expr v t = (v,t),Var(v,t) in
 
-    let ((mapn, lhs_inv, lhs_outv, init_aggcalc), incr_aggcalc, sm) = m3stmt in
+    let ((mapn, lhs_inv, lhs_outv, init_aggcalc), stmt_type, incr_aggcalc, sm) = 
+      m3stmt in
     let ((incr_expr, incr_single),(init_expr,init_single)) =
         let expr_l = List.map (fun aggcalc ->
             let calc = M3P.get_ecalc aggcalc in
@@ -579,19 +580,32 @@ let collection_stmt trig_args m3stmt : statement =
             trig_args ((args_of_vars lhs_outv)@[ua]) update_body
         in Iterate(loop_update_fn, delta_slice)
     in
-    let statement_expr =
+    let rhs_basic_merge collection_expr =
+      match stmt_type with
+         | M3.Stmt_Update -> Apply(update_expr, collection_expr)
+         | M3.Stmt_Replace -> incr_expr
+    in
+    let rhs_test_merge collection_expr =
+      match stmt_type with
+         | M3.Stmt_Update -> 
+            IfThenElse(Member(collection_expr, out_el),
+                       Apply(update_expr, Lookup(collection_expr, out_el)),
+                       sing_init_expr)
+         | M3.Stmt_Replace -> incr_expr
+    in
+    let statement_expr = 
         begin match lhs_inv, lhs_outv, incr_single with
         | ([],[],false) -> failwith "invalid slice update on a singleton map"
 
         | ([],[],_) ->
-            let rhs_expr = (Apply(update_expr, collection))
+            let rhs_expr = rhs_basic_merge collection
             in map_value_update_expr collection [] [] rhs_expr
 
         | (x,[],false) -> failwith "invalid slice update on a singleton out tier"
 
-        | (x,[],_) ->
+        | (x,[],true) ->
             let la,le = fn_arg_expr "existing_v" TFloat in
-            let rhs_expr = Apply(update_expr, le) 
+            let rhs_expr = rhs_basic_merge le
             in loop_in_aux (la,le)
                  (map_value_update_expr collection in_el [] rhs_expr) 
 
@@ -600,26 +614,23 @@ let collection_stmt trig_args m3stmt : statement =
              * since the rhs_expr is only the delta slice and not a full merge with
              * the current slice.
              *)
-            let rhs_expr = Apply(update_expr, collection)
+            let rhs_expr = rhs_basic_merge collection
             in loop_update_aux [] out_el rhs_expr
 
-        | ([],x,_) ->
-            let rhs_expr = 
-                IfThenElse(Member(collection, out_el),
-                Apply(update_expr, Lookup(collection, out_el)), sing_init_expr)
+        | ([],x,true) ->
+            let rhs_expr = rhs_test_merge collection
             in map_value_update_expr collection [] out_el rhs_expr
 
         | (x,y,false) ->
             (* Use a value update loop to persist the delta slice *)
             let la,le = fn_arg_expr "existing_slice" out_tier_t in
-            let rhs_expr = Apply(update_expr, le) in
+            let rhs_expr = rhs_basic_merge le in
             let update_body = loop_update_aux in_el out_el rhs_expr
             in loop_in_aux (la,le) update_body
 
-        | (x,y,_) ->
+        | (x,y,true) ->
             let la,le = fn_arg_expr "existing_slice" out_tier_t in
-            let rhs_expr = IfThenElse(Member(le, out_el),
-                Apply(update_expr, Lookup(le, out_el)), sing_init_expr)
+            let rhs_expr = rhs_test_merge le
             in loop_in_aux (la,le)
                 (map_value_update_expr collection in_el out_el rhs_expr)
         end

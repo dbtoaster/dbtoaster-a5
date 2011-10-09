@@ -140,7 +140,6 @@ if flag_bool "HELP" then
         "c++ | cpp     C++ source file\n"^
         "cpp:prof      C++ profiled source file\n"^
         "run           Run the query with the default interpreter (K3)\n"^
-        "run:m3        Run the query with the M3 interpreter\n"^
         "run:k3        Run the query with the K3 interpreter (default run)\n"
       );
     exit 0
@@ -363,31 +362,16 @@ Debug.print "M3" (fun () -> (M3Common.pretty_print_prog m3_prog));;
 
 (********* Use the M3 in place if appropriate *********)
 
-module M3OCamlCompiler = M3Compiler.Make(M3OCamlgen.CG);;
-module M3OCamlInterpreterCompiler = M3Compiler.Make(M3Interpreter.CG);;
 
 let dbschema = List.flatten (List.map (fun (_,x,_) -> x) queries)
 ;;
 
 match language with
    | L_OCAML(OCG_M3) -> (
-      let compile = 
-         M3OCamlCompiler.compile_query 
-            dbschema 
-            (m3_prog, sources) 
-            !toplevel_queries
-      in
-         ExternalCompiler.OCaml.compile_and_output compile;
-         exit 0
+         failwith "M3 Ocaml Code Generation no longer supported"
       )
    | L_INTERPRETER(OCG_M3) -> (
-         StandardAdaptors.initialize ();
-         M3OCamlInterpreterCompiler.compile_query
-            dbschema
-            (m3_prog, sources)
-            !toplevel_queries
-            (GenericIO.O_FileDescriptor(output_file ()));
-         exit 0
+         failwith "M3 Ocaml Interpreter no longer supported"
       )
    | L_M3(prepared) -> (
          output_string (output_file ()) (

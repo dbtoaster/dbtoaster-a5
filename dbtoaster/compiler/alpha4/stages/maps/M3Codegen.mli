@@ -140,16 +140,18 @@ sig
    (* Top-level M3 program structure *)
 
    (* lhs_mapn, lhs_inv, lhs_outv, map_out_patterns,
-    * lhs_ext, patv, pat, direct, singleton update code -> statement code *)
+    * lhs_ext, patv, pat, direct, stmt_type, 
+      singleton update code -> statement code *)
    val singleton_statement : string ->
       M3.var_t list -> M3.var_t list -> int list list ->
-      M3.var_t list -> M3.var_t list -> int list -> bool -> code_t -> code_t
+      M3.var_t list -> M3.var_t list -> int list -> bool -> M3.stmt_type_t ->
+      code_t -> code_t
 
-   (* lhs_mapn, lhs_inv, lhs_outv, lhs_ext, patv, pat, direct,
+   (* lhs_mapn, lhs_inv, lhs_outv, lhs_ext, patv, pat, direct, stmt_type, 
     * slice update code -> statement code *)
    val statement : string ->
       M3.var_t list -> M3.var_t list -> M3.var_t list -> M3.var_t list ->
-      int list -> bool -> code_t -> code_t
+      int list -> bool -> M3.stmt_type_t -> code_t -> code_t
 
    (* event, rel, trigger args, statement code block -> trigger code *)
    val trigger : M3.pm_t -> M3.rel_id_t -> M3.var_t list -> code_t list -> code_t

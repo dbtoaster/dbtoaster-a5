@@ -6,6 +6,7 @@ type var_type_t = VT_String | VT_Int | VT_Float
 type var_t = var_id_t (*  * var_type_t *)
 type map_id_t = string
 type pm_t = Insert | Delete
+type stmt_type_t = Stmt_Update | Stmt_Replace
 type rel_id_t = string
 (*                name       in_vars             out_vars *)
 type map_type_t = map_id_t * (var_type_t list) * (var_type_t list)
@@ -65,7 +66,7 @@ and ('c, 'a) generic_mapacc_t =
 
 (* left-hand side, increment *)
 type ('c, 'a, 'sm) generic_stmt_t = 
-  ('c, 'a) generic_mapacc_t * ('c, 'a) generic_aggcalc_t * 'sm
+  ('c, 'a) generic_mapacc_t * stmt_type_t * ('c, 'a) generic_aggcalc_t * 'sm
 
 (*
 The loop vars are implicit: the variables of the left-hand side minus
