@@ -464,11 +464,13 @@ struct
       Leaf(mk_meta "" (Host TInt), Undecorated(K.Const(CFloat(0.0)))) in
     let fold_f _ parts e =
       let meta e =
+        let error s =
+          print_endline ("could not typecheck:");
+          print_endline (string_of_expr e);
+          failwith ("failed to build imperative IR: "^s)
+        in
         try mk_meta (gensym()) (Host (T.typecheck_expr e))
-        with Failure _ ->
-          (print_endline ("could not typecheck:");
-           print_endline (string_of_expr e);
-           failwith "failed to build imperative IR")
+        with Failure s | Invalid_argument s -> error s
       in
       let metadata =  meta e in
       let fst () = List.hd parts in

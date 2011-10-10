@@ -29,7 +29,7 @@ namespace dbtoaster {
 
       shared_ptr<stream_event> saved_event;
 
-      csv_adaptor(stream_id i) : id(i) {}
+      csv_adaptor(stream_id i) : id(i), type(insert_tuple) {}
 
       csv_adaptor(stream_id i, string sch)
         : id(i), schema(sch), type(insert_tuple)
@@ -38,7 +38,8 @@ namespace dbtoaster {
       }
 
       csv_adaptor(stream_id i, int num_params,
-                  const pair<string,string> params[]) : id(i)
+                  const pair<string,string> params[])
+        : id(i), type(insert_tuple)
       {
         parse_params(num_params,params);
         validate_schema();

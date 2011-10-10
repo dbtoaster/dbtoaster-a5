@@ -87,8 +87,10 @@ let type_of_imp_t (i: ('ext_type, 'ext_fn) typed_imp_t) = metadata_of_imp_t i
 
 type ('a, 'ext_type, 'ext_fn) expr_trace = 
    (('a, 'ext_type, 'ext_fn) expr_t -> string -> unit)
+
 type ('a, 'ext_type, 'ext_fn) imp_trace  = 
    (('a, 'ext_type, 'ext_fn) imp_t -> string -> unit)
+
 type ('a, 'ext_type, 'ext_fn) all_trace =
    ('a, 'ext_type, 'ext_fn) expr_trace * ('a, 'ext_type, 'ext_fn) imp_trace
    

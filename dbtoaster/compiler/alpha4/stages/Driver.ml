@@ -130,7 +130,7 @@ if flag_bool "HELP" then
         "m3:prep       Map Maintenance Message Code (prepared)\n"^
         "k3            Functional update triggers\n"^
         "k3:noopt      Functional update triggers without optimizations\n"^
-        "k3:noopt      Functional update triggers with IR tags\n"^
+        "k3:ir         Functional update triggers with IR tags\n"^
         "ocaml         OCaml source file (via K3)\n"^
         "ocaml:m3      OCaml source file (via M3)\n"^
         "ocaml:k3      OCaml source file (via K3)\n"^
@@ -405,8 +405,20 @@ let output_k3_program (_,_,triggers) =
             output_string fd ((K3.SR.string_of_expr e)^"\n")
          ) stmts
       ) triggers
-   
+
+let output_k3_ds_program (_,dstrigs) = 
+   let fd = (output_file ()) in
+      List.iter (fun ((pm, rel, args), stmts) ->
+          output_string fd
+            ("\nON_"^(match pm with M3.Insert -> "insert"
+                                  | M3.Delete -> "delete")^
+             "_"^rel^"("^(Util.string_of_list "," args)^")\n");          
+          List.iter (fun e -> 
+            output_string fd ((K3.SR.string_of_expr e)^"\n"))
+            (List.flatten (List.map snd stmts)))
+        dstrigs
 ;;
+
 if language = L_K3(false) then (
    output_k3_program k3_prog;
    exit 0
@@ -417,34 +429,30 @@ if language = L_K3(false) then (
 
 Debug.print "LOG-DRIVER" (fun () -> "OPTIMIZING K3");;
 
-let k3_optimizations = 
+let enable_k3_ds, k3_opt_flags = 
   let parse_opt_flag s = match String.uppercase s with
      | "CSE" -> K3Optimizer.CSE
      | "BREDUCE" -> K3Optimizer.Beta
      | _ -> give_up ("invalid K3 optimization flag: "^s)
    in
    begin match (flag_vals "OPTFLAGS") with
-    | [] -> [K3Optimizer.CSE; K3Optimizer.Beta]
-    | x -> List.map parse_opt_flag x
+    | [] -> false, [K3Optimizer.CSE; K3Optimizer.Beta]
+    | x -> 
+      let y = List.map String.uppercase x
+      in (List.mem "HASHDS" y),
+         (List.map parse_opt_flag (List.filter ((<>) "HASHDS") y))
    end
 ;;
 let k3_opt_prog = 
-   if Debug.active "NO-K3-OPT" then k3_prog
-   else
-      let (schema,patterns,k3_trigs) = k3_prog in
-         (  schema, patterns, 
-            List.map (fun (pm,rel,trig_args,stmtl) ->
-             (pm, rel, trig_args,
-               (List.map (fun (lhs,rhs) -> (
-                           lhs, 
-                           (K3Optimizer.optimize 
-                              ~optimizations:k3_optimizations 
-                              trig_args 
-                              rhs)
-                         ))
-                         stmtl)
-             )) k3_trigs
-         )
+  if Debug.active "NO-K3-OPT" then k3_prog
+  else
+    let (schema,patterns,k3_trigs) = k3_prog in
+    let opt_trigs = List.map (fun (pm,rel,trig_args,stmtl) ->
+      (pm, rel, trig_args,
+       List.map (fun (lhs,rhs) ->
+           (lhs, K3Optimizer.optimize ~optimizations:k3_opt_flags trig_args rhs))
+         stmtl)) k3_trigs
+    in schema, patterns, opt_trigs
 ;;
 
 module K3OCamlCompiler = K3Compiler.Make(K3OCamlgen.K3CG);;
@@ -453,7 +461,11 @@ module K3InterpreterCompiler = K3Compiler.Make(K3Interpreter.K3CG);;
 
 match language with
    | L_K3(true) -> (
-         output_k3_program k3_opt_prog;
+         if enable_k3_ds then
+          let prog = 
+            K3Optimizer.optimize_with_datastructures dbschema k3_opt_prog
+          in output_k3_ds_program prog
+         else output_k3_program k3_opt_prog;
          exit 0
       )
    | L_K3IR -> (
@@ -529,15 +541,15 @@ let ic_opts = {
    ImpCompiler.profile = (if language = L_CPP(true)  then true  else false)
 };;
 
-let ic_prog = 
-   let (schema,patterns,_) = k3_opt_prog in
-   (  schema, patterns, 
-      ImpCompiler.Compiler.compile_triggers
-         ic_opts
-         dbschema
-         k3_opt_prog
-   )
-      
+let ic_prog =
+  let (schema,patterns,_) = k3_opt_prog in
+  let prog =  
+    if enable_k3_ds then
+      let k3_ds_prog =
+        K3Optimizer.optimize_with_datastructures dbschema k3_opt_prog
+      in ImpCompiler.Compiler.compile_ds_triggers ic_opts dbschema k3_ds_prog   
+    else ImpCompiler.Compiler.compile_triggers ic_opts dbschema k3_opt_prog
+  in schema, patterns, prog
 ;;
 
 Debug.print "LOG-DRIVER" (fun () -> "BUILDING C++ AND COMPILING");;

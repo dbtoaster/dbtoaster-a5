@@ -185,11 +185,10 @@ $(GENERATED_HEADERS) : %.mli : %.ml
 dbtoaster_top: $(OBJ_DEPS) $(RUNTIME_OBJ_DEPS)
 	@echo Linking dbtoaster_top
 	@ocamlmktop $(OC_FLAGS) -o dbtoaster_top $(ML_OBJ)
-#
+
 #dbtoaster: $(OBJ_DEPS) stages/Driver.ml $(RUNTIME_OPT_DEPS)
 #	@echo Linking dbtoaster
 #	@ocamlc $(OC_FLAGS) -o dbtoaster $(ML_OBJ) stages/Driver.ml
-
 
 dbtoaster: $(OPT_DEPS) stages/Driver.ml $(RUNTIME_OPT_DEPS)
 	@echo Linking dbtoaster

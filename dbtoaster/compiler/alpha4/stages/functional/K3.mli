@@ -56,6 +56,7 @@ sig
                   field of the tuple.
             returns:
                [TTuple[for(e in tupleContents){ typeof(e) }]]*)
+
 	   | Project       of expr_t      * int list
         (* Project(aTuple, [indices])
            restriction: typeof(aTuple) = TTuple[*]
@@ -89,6 +90,7 @@ sig
            Create a 1-element collection defined by collectionElement
            returns: 
               [Collection[typeof(collectionElement)]] *)
+
 	   | Combine       of expr_t      * expr_t 
 	     (* Combine(col1,col2)
 	        restriction: typeof(col1) = typeof(col2) = Collection[*]
@@ -105,6 +107,7 @@ sig
 	        returns: 
               [max(typeof(a), typeof(b)) (= TFloat if either is a TFloat)]
 	     *)
+
 	   | Mult          of expr_t      * expr_t
 	     (* Mult(a,b)
 	        restriction: typeof(a) = TFloat|TInt
@@ -113,6 +116,7 @@ sig
 	        returns: 
               [max(typeof(a), typeof(b))]
 	     *)
+
 	   | Eq            of expr_t      * expr_t
 	     (* Eq(a,b)
 	        restriction: typeof(a) = TFloat|TInt
@@ -121,6 +125,7 @@ sig
 	        returns:
               [TInt]
 	     *)
+
 	   | Neq           of expr_t      * expr_t
 	     (* Neq(a,b)
 	        restriction: typeof(a) = TFloat|TInt
@@ -129,6 +134,7 @@ sig
 	        returns:
               [TInt]
 	     *)
+
 	   | Lt            of expr_t      * expr_t
 	     (* Lt(a,b)
 	        restriction: typeof(a) = TFloat|TInt
@@ -137,6 +143,7 @@ sig
 	        returns:
               [TInt]
 	     *)
+
 	   | Leq           of expr_t      * expr_t
 	     (* Leq(a,b)
 	        restiction: typeof(a) = TFloat|TInt; typeof(b) = TFloat|TInt
@@ -144,6 +151,7 @@ sig
 	        returns:
               [TInt]
 	     *)
+
 	   | IfThenElse0   of expr_t      * expr_t
 	     (* IfThenElse0(condition,statement)
 	        restriction: typeof(condition) = TInt
@@ -162,6 +170,7 @@ sig
            returns:
              [typeof(expression)]
          *)
+
 	   | IfThenElse    of expr_t      * expr_t   * expr_t
 	     (* IfThenElse(condition,trueBranch,falseBranch)
 	        restriction: typeof(condition) = TInt
@@ -171,6 +180,7 @@ sig
 	        returns:
               [typeof(trueBranch) (= typeof(falseBranch))]
 	     *)
+
 	   | Block         of expr_t list 
 	     (* Block(expressions)
 	        restriction: Every element of expressions except the last one has
@@ -208,6 +218,7 @@ sig
 	        Create an associative function; As function above, can be used as
 	        a shorthand for Lambda(arg2,Lambda(arg1,body)).
 	     *)
+
 	   | Apply         of expr_t      * expr_t
 	     (* Apply(function,argument)
 	        restriction: typeof(function) = Fn[rest @ [arg], retType]
@@ -232,6 +243,7 @@ sig
 	        returns:
               [Collection[retType]]
 	     *)
+
 	   | Flatten          of expr_t 
 	     (* Flatten(collection)
 	        restriction: typeof(collection) = Collection(Collection(cType))
@@ -239,6 +251,7 @@ sig
 	        returns:
               [Collection[cType]]
 	     *)
+
 	   | Aggregate        of expr_t      * expr_t   * expr_t
 	     (* Aggregate(function, initial, collection)
 	        restriction: typeof(function) = Fn[[cType; aggType], aggType]
@@ -249,6 +262,7 @@ sig
 	        returns:
               [aggType]
 	     *)
+
 	   | GroupByAggregate of expr_t      * expr_t   * expr_t * expr_t
 	     (* GroupByAggregate(function,initial,classifier,collection)
 	        restriction: typeof(function) = Fn[[cType; aggType], aggType]
@@ -286,6 +300,7 @@ sig
             returns:
                [TInt]
          *)
+        
        | Lookup      of expr_t      * expr_t list
          (* Lookup(collection, [keyList])
             restriction: typeof(collection) = Collection[TTuple[cList]]
@@ -297,6 +312,7 @@ sig
             returns:
                typeof(cList[sizeof(cList)-1])
          *)
+        
        | Slice       of expr_t      * schema      * (id_t * expr_t) list
          (* Slice(collection, schema, [partialKey])
             restriction: typeof(collection) = Collection[schema]
@@ -320,6 +336,7 @@ sig
 	        returns: 
 	           [type]
 	     *)
+
 	   | OutPC         of coll_id_t   * schema   * type_t
 	     (* OutPC(name, schema, type)
 	        A reference to a persistent global collection optimized for slicing.
@@ -331,6 +348,7 @@ sig
 	        returns:
 	           [Collection[TTuple[schema@[type]]]]
 	     *)
+
 	   | InPC          of coll_id_t   * schema   * type_t
 	     (* InPC(name, schema, type)
 	        A reference to a persistent global collection optimized for 
@@ -343,6 +361,7 @@ sig
 	        returns:
 	           [Collection[TTuple[schema@[type]]]]
 	     *)
+
 	   | PC            of coll_id_t   * schema   * schema    * type_t
 	     (* PC(name, inSchema, outSchema, type)
 	        A reference to a persistent global collection consisting of an OutPC
@@ -370,6 +389,7 @@ sig
 	        returns:
 	           [TUnit]
 	     *)
+
 	   | PCValueUpdate of expr_t      * expr_t list * expr_t list * expr_t 
 	     (* PCValueUpdate(pcollection, inKey, outKey, value)
 	        restriction: pcollection is defined by SingletonPC, OutPC, InPC or PC

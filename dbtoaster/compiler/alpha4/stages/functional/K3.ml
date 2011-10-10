@@ -493,7 +493,11 @@ let string_of_expr e =
       ob(); ps s; ps "("; pid id; ps sch; 
                           ps (","^(string_of_type t)); ps ")"; cb() in
     match e with
-    | Const c -> ob(); ps ("Const(CFloat("^(string_of_const c)^"))"); cb()
+    | Const c -> 
+      let const_ts = match c with
+        | CFloat _ -> "CFloat"
+        | CString _ -> "CString" 
+      in ob(); ps ("Const("^const_ts^"("^(string_of_const c)^"))"); cb()
     | Var (id,t) -> ob(); ps "Var("; pid id; ps ","; 
                                      ps (string_of_type t); ps ")"; cb()
 
@@ -574,7 +578,11 @@ let rec code_of_expr e =
             "K3.SR.ATuple("^(vltostr vlist)^")"
    in
    match e with
-      | Const c -> "K3.SR.Const(M3.CFloat("^(string_of_const c)^"))"
+      | Const c -> 
+        let const_ts = match c with
+          | CFloat _ -> "CFloat"
+          | CString _ -> "CString" 
+        in "K3.SR.Const(M3."^const_ts^"("^(string_of_const c)^"))"
       | Var (id,t) -> "K3.SR.Var(\""^id^"\","^(ttostr t)^")"
       | Tuple e_l -> "K3.SR.Tuple("^(Util.list_to_string rcr e_l)^")"
       

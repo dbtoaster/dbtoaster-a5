@@ -56,7 +56,7 @@ namespace dbtoaster {
           ("unified,u", value<string>(), "unified logging [stream | global]")
           ("output-file,o", value<string>(), "output file")
           ("maps,m", value<vector<string> >(&output_maps), "output maps")
-          ("query,q", "output query results")
+
           // Statistics profiling parameters
           ("samplesize", value<unsigned int>(),
                "sample window size for trigger profiles")
@@ -125,12 +125,6 @@ namespace dbtoaster {
         setup_tracing(*opt_desc);
       }
       
-      void add_toplevel_query(string map_name){
-        if(opt_map.count("query") || (opt_map.count("q"))){
-          output_maps.push_back(map_name);
-        }
-      }
-
       bool help() {
         if ( opt_map.count("help") ) cout << *opt_desc << endl;
         return opt_map.count("help");
@@ -148,6 +142,10 @@ namespace dbtoaster {
       bool is_output_map(string map_name) {
         return find(output_maps.begin(), output_maps.end(), map_name)
                 != output_maps.end();
+      }
+
+      void add_output_map(string map_name){
+        output_maps.push_back(map_name);
       }
 
       // Trigger logging.

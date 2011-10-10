@@ -640,18 +640,13 @@ let collection_stmt trig_args m3stmt : statement =
 
 
 let collection_trig m3trig : trigger =
-    let (evt, rel, args, stmts) = m3trig in
-    let k3_stmts = List.map (collection_stmt args) stmts in
-      (evt, rel, args, 
-         (  if (Debug.active "RUNTIME-BIGSUMS") then
-               List.filter 
-                  (fun (c,_) -> match c with 
-                     PC(_,_,_,_) -> false | InPC(_,_,_) -> false | _ -> true 
-                  ) k3_stmts
-            else
-               k3_stmts
-         )
-      )
+  let (evt, rel, args, stmts) = m3trig in
+  let k3_stmts = List.map (collection_stmt args) stmts in
+    (evt, rel, args, 
+     if (Debug.active "RUNTIME-BIGSUMS") then
+       List.filter (fun (c,_) -> match c with 
+         PC(_,_,_,_) -> false | InPC(_,_,_) -> false | _ -> true) k3_stmts
+     else k3_stmts)
 
 let collection_prog m3prog patterns : program =
     let (schema, triggers) = m3prog in
@@ -664,11 +659,11 @@ let m3_to_k3 (schema,m3prog):(K3.SR.program) =
 let m3_to_k3_opt ?(optimizations=[]) (m3prog):(K3.SR.program) =
   let (schema,patterns,k3_trigs) = m3_to_k3 m3prog in
   let opt_k3_trigs = 
-     List.map (fun (pm,rel,trig_args,stmtl) ->
-       (pm, rel, trig_args,
-         (List.map (fun (lhs,rhs) ->
-            (lhs, (K3Optimizer.optimize ~optimizations:optimizations trig_args rhs)))
-           stmtl)))
-       k3_trigs
+    List.map (fun (pm,rel,trig_args,stmtl) ->
+      (pm, rel, trig_args,
+        (List.map (fun (lhs,rhs) ->
+           (lhs, K3Optimizer.optimize ~optimizations:optimizations trig_args rhs))
+          stmtl)))
+      k3_trigs
    in
       (schema,patterns,opt_k3_trigs)

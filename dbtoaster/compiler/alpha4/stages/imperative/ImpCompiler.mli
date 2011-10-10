@@ -65,8 +65,10 @@ sig
   (* TODO: all of these should accept a compiler options record as input *)
   val preamble : compiler_options -> source_code_t
 
+  (* map schemas -> patterns -> type declarations * instance declarations *) 
   val declare_maps_of_schema :
-    M3.map_type_t list -> M3Common.Patterns.pattern_map -> source_code_t
+    M3.map_type_t list -> M3Common.Patterns.pattern_map
+    -> source_code_t * ((ext_type, ext_fn) typed_imp_t) list
 
   val declare_streams :
     (string * Calculus.var_t list) list -> (string * int) list * source_code_t
@@ -89,17 +91,16 @@ module CPPTarget : ImpTarget
 
 module type CompilerSig =
 sig
+  type trigger_setup_t
+  type compiler_trig_t =
+    (CPPTarget.ext_type Imperative.type_t,
+     CPPTarget.ext_type, CPPTarget.ext_fn) Imperative.Program.trigger_t
+
   val compile_triggers :
     compiler_options ->
     (string * Calculus.var_t list) list (* dbschema *)
     -> K3.SR.program                    (* K3 program *)
-    -> (  SourceCode.source_code_t list * 
-          ( M3.pm_t * M3.rel_id_t * M3.var_t list *
-             ( CPPTarget.ext_type,
-               CPPTarget.ext_fn) Imperative.typed_imp_t
-          )
-       ) list * 
-       ( (string * string * string * (string * string) list) list )
+    -> (SourceCode.source_code_t list * compiler_trig_t) list * trigger_setup_t
 
   val compile_query_to_string :
     compiler_options ->
@@ -112,13 +113,7 @@ sig
     compiler_options ->
     (string * Calculus.var_t list) list (* dbschema *)
     -> M3.map_type_t list * M3Common.Patterns.pattern_map *
-       ((  SourceCode.source_code_t list * 
-           ( M3.pm_t * M3.rel_id_t * M3.var_t list *
-              ( CPPTarget.ext_type,
-                CPPTarget.ext_fn) Imperative.typed_imp_t
-           )
-        ) list * 
-        ( (string * string * string * (string * string) list) list ))
+       ((SourceCode.source_code_t list * compiler_trig_t) list * trigger_setup_t)
     -> M3.relation_input_t list         (* sources *)
     -> string list -> Util.GenericIO.out_t -> unit
 
@@ -128,5 +123,21 @@ sig
     -> K3.SR.program                    (* K3 program *)
     -> M3.relation_input_t list         (* sources *)
     -> string list -> Util.GenericIO.out_t -> unit
+    
+  (* DS program compilation *)
+  val compile_ds_triggers :
+    compiler_options ->
+    (string * Calculus.var_t list) list (* dbschema *)
+    -> K3Optimizer.ds_program           (* K3 datastructure program *)
+    -> (SourceCode.source_code_t list * compiler_trig_t) list * trigger_setup_t
+
+  val compile_ds_query :
+    compiler_options ->
+    (string * Calculus.var_t list) list (* dbschema *)
+    -> K3Optimizer.ds_program           (* K3 datastructure program *)
+    -> M3.relation_input_t list         (* sources *)
+    -> string list -> Util.GenericIO.out_t -> unit
+
 end
+
 module Compiler : CompilerSig
