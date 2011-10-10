@@ -126,8 +126,14 @@ class CppUnitTest < GenericUnitTest
     end
     return if $compile_only;
     starttime = Time.now;
-    IO.popen("#{$dbt_path}/bin/#{@qname} -q", "r") do |qin|
-      output = qin.readlines.map { |l| l.chomp }.join("")
+    IO.popen("#{$dbt_path}/bin/#{@qname} -q #{$executable_args.join(" ")}",
+             "r") do |qin|
+      output = "";
+      qin.each do |l|
+        l = l.chomp;
+        output += l;
+        puts l unless (/<QUERY_1_1[^>]*>/ =~ output);
+      end
       endtime = Time.now;
       @runtime = (endtime - starttime).to_f;
       if(/<QUERY_1_1[^>]*>(.*)<\/QUERY_1_1>/ =~ output) then
@@ -163,7 +169,7 @@ class CppUnitTest < GenericUnitTest
             end
           else nil
         end
-      else puts output; raise "Runtime Error"
+      else raise "Runtime Error"
       end;
     end
   end
@@ -235,6 +241,7 @@ $depth = nil;
 $verbose = false;
 $compile_only = false
 $dataset = nil;
+$executable_args = []
 
 GetoptLong.new(
   [ '-f',                GetoptLong::REQUIRED_ARGUMENT],
@@ -246,7 +253,8 @@ GetoptLong.new(
   [ '-v', '--verbose',   GetoptLong::NO_ARGUMENT],
   [ '--strict',          GetoptLong::NO_ARGUMENT],
   [ '--compile-only',    GetoptLong::NO_ARGUMENT],
-  [ '--dataset',         GetoptLong::REQUIRED_ARGUMENT]
+  [ '--dataset',         GetoptLong::REQUIRED_ARGUMENT],
+  [ '--trace',           GetoptLong::OPTIONAL_ARGUMENT]
 ).each do |opt, arg|
   case opt
     when '-f' then $opts.push(arg)
@@ -264,6 +272,10 @@ GetoptLong.new(
     when '-v', '--verbose' then $verbose = true;
     when '--compile-only' then $compile_only = true;
     when '--dataset' then $dataset = arg;
+    when '--trace' then $executable_args += ["-t", ".", "-s", 
+                                             if arg.nil? then "100" 
+                                                         else arg end ]
+        
   end
 end
 
@@ -282,7 +294,10 @@ queries.each do |tquery|
         (if $opts.empty? then [] else [["optimizations",$opts]] end)+
         (if $depth.nil? then [] else [["depth", ["#{$depth}"]]] end)+
         (if $compile_only then [["compilation", ["only"]]] else [] end)+
-        (if $dataset.nil? then [] else [["dataset", [$dataset]]] end)
+        (if $dataset.nil? then [] else [["dataset", [$dataset]]] end)+
+        (if $executable_args.empty? then [] 
+                                    else [["runtime args", 
+                                           [$executable_args.join(" ")]]] end)
       opt_string =
         if opt_terms.empty? then ""
         else " with #{opt_terms.map{|k,tm|"#{k} #{tm.join(", ")}"}.join("; ")}"
