@@ -126,7 +126,7 @@ class CppUnitTest < GenericUnitTest
     end
     return if $compile_only;
     starttime = Time.now;
-    IO.popen("#{$dbt_path}/bin/#{@qname} -q #{$executable_args.join(" ")}",
+    IO.popen("#{$dbt_path}/bin/#{@qname} #{$executable_args.join(" ")}",
              "r") do |qin|
       output = "";
       qin.each do |l|
