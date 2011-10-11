@@ -128,13 +128,9 @@ class CppUnitTest < GenericUnitTest
     starttime = Time.now;
     IO.popen("#{$dbt_path}/bin/#{@qname} #{$executable_args.join(" ")}",
              "r") do |qin|
-      output = "";
-      qin.each do |l|
-        l = l.chomp;
-        output += l;
-        puts l unless (/<QUERY_1_1[^>]*>/ =~ output);
-      end
+      output = qin.readlines;
       endtime = Time.now;
+      output = output.map { |l| l.chomp }.join("");
       @runtime = (endtime - starttime).to_f;
       if(/<QUERY_1_1[^>]*>(.*)<\/QUERY_1_1>/ =~ output) then
         output = $1;
