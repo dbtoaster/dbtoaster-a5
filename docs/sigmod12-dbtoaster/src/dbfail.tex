@@ -1,14 +1,20 @@
 \subsection{The Challenges of Monitoring}
-Consider the following examples of commonplace automated tasks in three different application domains:
+Consider the following examples of automated tasks that might be found in one of three different application domains:
 \begin{enumerate}
 \item An automated stock market trading system monitors the distribution of buy and sell orders of a particular stock to identify the best time and price for its own orders.
 \item A corporate data warehouse monitors the current status of its production facilities, warehoused inventory and active demand for its products in order to preemptively identify supply chain problems.
-\item A compute cluster monitors its current status overnight to alert a network administrator when some of its hardware fails, but only if the chance of computations being disrupted by further failures exceeds a given threshold.
+\item A compute cluster monitors its current status overnight to alert a network administrator when some of its hardware fails, but only if a distributed task running on the cluster is at risk of becoming unavailable.
 \end{enumerate}
 
-The core challenge in automating each of these tasks is the instantiation of a system for {\em monitoring} the state of the world from the application domain's perspective, be it a stock market, data warehouse, or compute cluster, etc\ldots.  This is a fundamentally data-management challenge: As the state of the world changes, the monitoring system must update it's own internal view of that state accordingly -- each order placed for a given stock can potentially affect the automated trading system's behavior.  
+These are only a few examples of application domains where automated realtime {\em monitoring} systems are necessary.  Monitoring plays a prominent role in a broad range of domains including regulatory compliance\cite{basel2}, fraud detection\cite{ibmfico}, advertising\cite{agarwal2010forecasting}, big-data science\cite{hey2009fourth}, disaster prediction\cite{scholz1973earthquake}, machine learning\cite{olesen2008real}, and many more.  Unfortunately, although many commonalities exist between these domains, automated monitoring systems are still implemented entirely by hand on a per-domain basis.
 
-In spite of this, the challenges associated with monitoring rapidly changing, but otherwise persistent state have not been sufficiently addressed by the database community. Although active database (i.e., Triggers)\cite{?} and complex stream event processing (CEP)\cite{?} techniques both address the challenges of monitoring persistent state, neither is designed to handle complexity in the monitoring task, nor rapid changes to ``persistent'' state.  In this section we now support this assertion through experimental (and some anecdotal) evidence, which clearly demonstrates that existing data-management systems are incapable of efficiently performing these sorts of monitoring tasks.
+Fundamentally, automated monitoring is a data-management challenge.  Even for the relatively simple conditions from the three examples above, rapid changes to the state of the world can easily overwhelm a naively implemented monitoring system.  Filtering, projection, and aggregation -- the traditional tools of the database community -- are all necessary to reduce the data to manageable levels.  
+
+However, simple data manipulation is not sufficient.  In order to achieve realtime performance, automated monitoring systems must exploit the incrementality of their application domain.  As servers go down in the compute cluster example, an intelligently designed monitoring application will not attempt to recompute the availability of each task from scratch.  Rather, the application will maintain a running tally of how many ``up'' servers are assigned to each task and adjust the tally as servers come up or go down.  
+
+Although this sort of incrementality is often obvious to a human developer, techniques for automatic identification and exploitation of such patterns have not been developed within the database community.  Active database \cite{morgenstern1983active} and complex stream event processing (CEP)\cite{?} techniques both address the challenges of monitoring persistent state, yet neither approach fully identifies or exploits incrementality.
+
+As we will now show through experimental (and some anecdotal) evidence, the state of the art techniques of the database community: both active databases and CEP are ill suited for the task of building automated monitoring systems.
 
 We consider the three example scenarios as described above.  Each monitoring task is implemented using triggers in Postgres and two commercial database systems, and using CEP in two commercial stream processing systems\footnote{The names of the commercial databases and stream processors are kept anonymous due to restrictions in their license agreements.}.  Concretely, the scenarios are as follows:
 
@@ -35,7 +41,7 @@ CREATE TABLE Assignment(asid int, atid int);
 
 \begin{example}
 \label{ex:dbfail:stock}
-A stock market trading system monitors the spread across significant orders for a particular stock (i.e., orders larger than 0.01\% of the total volume of orders for the stock).  Given the table schemas defined in Figure \ref{fig:dbfail:example:schemas}, we can express the value being monitored as a SQL query:
+A stock market trading system monitors the spread across significant orders for a particular stock (i.e., orders larger than 0.01\% of the total volume of orders for the stock).  Given the table schemas defined in Figure \ref{fig:dbfail:schemas}, we are interested in monitoring the value represented by the result of the following SQL query:
 % test/sql/finance/pricespread.sql
 \begin{verbatim}
 SELECT SUM(a.price - b.price)
@@ -46,12 +52,12 @@ WHERE  b.volume > 0.0001 * (SELECT SUM(b1.volume)
                             FROM   asks a1);
 \end{verbatim}
 
-\todo{Back of napkin calculations/citation for expected update rate}
 \end{example}
 
 \begin{example}
 \label{ex:dbfail:tpch}
-A corporate data warehouse monitors the volume of of parts of each type being shipped between each region based on the locations of the supplier and the client.  Given the standard TPC-H benchmark schema\cite{tpch}, we can express this monitoring task as the following SQL group-by query (based on, but not identical to SSB query 4\cite{ssb}): 
+A corporate data warehouse monitors the volume of of parts of each type being shipped between each region based on the locations of the supplier and the client.  Given the standard TPC-H benchmark schema\cite{counciltpc}, we can express this monitoring task as the following SQL group-by query: 
+% test/sql/tpch/ssb4.sql
 \begin{verbatim}
 SELECT   sn.regionkey, cn.regionkey,
          p.type, SUM(li.quantity)
@@ -66,12 +72,12 @@ WHERE       c.custkey = o.custkey
 GROUP BY sn.regionkey, cn.regionkey, PART.type;
 \end{verbatim}
 
-\todo{Back of napkin calculations/citation for expected update rate}
 \end{example}
 
 \begin{example}
 \label{ex:dbfail:network}
-A cluster monitoring system keeps monitors servers assigned to work on different compute tasks -- the system issues an alert whenever the number of failed servers assigned to a given task exceeds a given threshold (e.g., 50\%).  These alerts are dispatched based on priority, and number of threatened tasks.  Given the table schemas defined in Figure \ref{fig:dbfail:example:schemas}, we can represent this monitoring task as triggering whenever the following SQL group-by query returns a non-empty result:
+A cluster monitoring system keeps monitors servers assigned to work on different compute tasks -- the system issues an alert whenever the number of failed servers assigned to a given task exceeds a given threshold (e.g., 50\%).  These alerts are dispatched based on priority, and number of threatened tasks.  Given the table schemas defined in Figure \ref{fig:dbfail:schemas}, we can represent this monitoring task as monitoring the result of the following SQL group-by query (e.g., triggering an alert whenever the query returns a non-empty result):
+% test/sql/clusteravailable_priority.sql
 \begin{verbatim}
 SELECT priority, COUNT(*)
 FROM   Task t
@@ -87,13 +93,15 @@ WHERE  (SELECT COUNT(*)
 GROUP BY t.priority;
 \end{verbatim}
 
-\todo{Back of napkin calculations/citation for expected update rate}
 \end{example}
 
 \subsection{Monitoring with Active Databases}
-The first existing technique for monitoring in the database literature is based around so called Active Databases\cite{?}.  This technique allows user-defined {\em triggers} to intercept updates to one table in the database, and initiate secondary updates as a result.  Trigger functionality has been implemented in most high-end database management systems -- Postgres\cite{?}, MySQL\cite{?}, and virtually all commercial systems, including the two we test.
+\label{sec:dbfail:active}
+Of the two monitoring technologies considered to be state-of-the-art in the database community, we first consider {\em Active Databases}\cite{morgenstern1983active} -- systems where derived and non-derived (base) data are all-but indistinguishable.  As noted in the initial description of the idea, monitoring in such a system is easy from the user's perspective; The user need only declare how the value to be monitored is derived.  
 
-Closely related to Active Databases are Incremental View Maintenance\cite{?} (IVM) systems.  Rather than allowing arbitrary user-defined operations to trigger after updates to the database, IVM systems allow users to define materialized views.  The result of the view query is materialized, but rather than re-evaluating the entire query from scratch whenever one of the tables in the query changes, the IVM system uses a so-called delta query.  The delta query is a simpler form of the original query, which identify how the original query changes as after an update to one of its tables.  
+Unfortunately, production-quality implementations of this idea have not been able to fully realize its possibilities.  Both the declarative rules of \cite{morgenstern1983active}, and the equivalent notion of on-conditions\cite{taylor1976codasyl} or {\em triggers}\cite{mccarthy1989architecture} are designed to be restrictive in order to limit the amount of computation effected by an update to the base data.  Although simple declarative rules or triggers can be combined into more complex conditions\cite{DBLP:conf/icde/ZimmerU99}, in doing so, users are forced to explicitly specify the implementation strategy.  The benefits of a declarative specification are lost.  Nevertheless, support for triggers can be found in a variety of noncommercial\cite{stonebraker1991postgres,mysql1mysql} and commercial\cite{oracle,graymicrosoft,gassner1993query} database engines.
+
+Efforts to identify incrementality in declaratively specified monitoring tasks can be found in work on {\em incremental view maintenance} (IVM)\cite{gupta1993maintaining,ceri1991deriving}.  Monitoring tasks are specified as declarative SQL queries -- the result of the query is kept materialized in the database at all times.  When the base data changes, the IVM system does not recompute the monitored query from scratch.  Rather, it evaluates a delta query -- derived automatically from the monitored query -- the result of which indicates how the monitored query's result is affected by the change to the base data.
 
 \begin{example}
 For example, consider the query from Example \ref{ex:dbfail:tpch} and an insertion into the {\tt LINEITEM} table:
@@ -103,10 +111,10 @@ LINEITEM(orderkey, partkey, suppkey, quantity)
 VALUES  (37,       42,      7,       100);
 \end{verbatim}
 
-We can run the following query:
+We can run the following (delta) query:
 \begin{verbatim}
 SELECT   sn.regionkey, cn.regionkey,
-         p.type, SUM(100)
+         p.type, SUM(100) 
 FROM     CUSTOMER c, ORDERS o, PART p, 
          SUPPLIER s, NATION cn, NATION sn
 WHERE       c.custkey = o.custkey
@@ -120,7 +128,7 @@ GROUP BY sn.regionkey, cn.regionkey, PART.type;
 
 Note that all columns from the {\tt LINEITEM} table have been replaced by the corresponding value from the inserted tuple.  
 
-The result of running this query is the delta to the original table.  The delta is then merged into the original query's materialized results -- group by terms are paired with like values from the original query, and the new sums are added to the corresponding old ones.  
+The tuples resulting from running this query represent how the monitored query changes.  We can merge the new results with the old ones by adding the sum columns of the delta query and old results for tuples with identical group-by columns (treating non-existent rows as having an effective sum value of 0).
 
 After merging it with the delta, the materialized view correctly represents the results of the original query after the insertion into {\tt LINEITEM}.
 \end{example}
@@ -173,12 +181,12 @@ Figures \ref{fig:dbfail:postgres}, \ref{fig:dbfail:CD1}, and \ref{fig:dbfail:CD2
 \todo{Hardware overview goes here}.  Each graph shows the rate of updates supported by our configuration with respect to the frequency with which the query results are refreshed.  The Full Refresh and Incremental Maintenance implementations refresh the query results after every update, and are unaffected by the desired refresh rate.
 
 \todo{Rewrite this paragraph after we have results}
-Even with IVM techniques (which must be implemented by hand in some implementations), these systems can handle a maximum of \todo{fill in} updates per second to the base relations.  If users are willing resort to sampling as infrequently as once per one or ten seconds, it is possible to improve that to as much as \todo{fill in} or \todo{fill in} updates per second respectively.  Even with sampling, this is not sufficient to achieve the sorts of update rates required by our example applications.
+Even with IVM techniques (which must be implemented by hand for Postgres), these systems can handle a maximum of \todo{fill in} updates per second to the base relations.  If users are willing resort to sampling as infrequently as once per one or ten seconds, it is possible to improve that to as much as \todo{fill in} or \todo{fill in} updates per second respectively.  Even with sampling, this is not sufficient to achieve the sorts of update rates required by our example applications.
 
 \subsection{Monitoring with Stream Processors}
-Database Management Systems -- even Active Databases -- are not designed for monitoring of rapidly changing data.  A more closely related area is the field of Stream Processing\cite{?}.  In a Stream Processing system, users define pipelines similar to traditional query plans, except that each edge in the plan is a continuous stream of data.  Selection and projection operators are evaluated immediately.  Window operators\cite{?} {\em temporarily} cache tuples appearing on a stream, and allow joins over the most recent set of tuples.
+Section \ref{sec:dbfail:active} is perhaps a little unfair.  Although these systems are designed to efficiently process complex queries, even those that support incremental view maintenance are not designed to support rapidly changing data.  Rapidly changing data is the domain of stream processing systems \cite{abadi2003aurora,arvind2003stream,chandrasekaran2003telegraphcq,abadi2005design}.  In a Stream Processing system, users define pipelines similar to traditional query plans, except that each edge in the plan is a continuous stream of data.  Selection and projection operators are evaluated immediately.  Sliding Window Operators\cite{datar2002maintaining} {\em temporarily} store tuples appearing on a stream, and allow joins over the most recent set of tuples.  
 
-Recently, most commercial stream processing systems have begun to support Complex Event Processing\cite{?}.  Essentially, the stream processor is extended with support for traditional relational tables, making it possible to implement joins between relational tables and streams.  
+Although sliding window operators make it easier for a stream processor to provide realtime performance guarantees, relying exclusively on the sliding window operator precludes the use of persistent state.  Recently, most commercial stream processing systems have added support for hybrid queries over both streaming and static data -- an approach commonly referred to as Complex Event Processing (CEP)\cite{DBLP:conf/sigmod/WuDR06}.   
 
 \begin{figure*}
 \begin{center}
@@ -206,7 +214,7 @@ Recently, most commercial stream processing systems have begun to support Comple
 
 Figures \ref{fig:dbfail:CSP1}, \ref{fig:dbfail:CSP2}, and \ref{fig:dbfail:CD2} show how two Commercial Stream Processing Systems perform in each of the three example scenarios.  We have also considered a third system, but were unable to implement these scenarios using it.
 
-We consider two implementations of each example in each stream processor: one based on a straight translation of the query into the stream processor's language (Full Refresh), and one based on a translation of the delta queries that would have been generated by IVM (Incremental Maintenance).
+We consider two implementations of each example in each stream processor: one based on a straight translation of the query into the stream processor's language (Full Refresh), and one based on a translation of the delta queries that would have been generated by IVM (Incremental Maintenance) -- the delta queries are constructed by hand.
 
 \todo{Rewrite this paragraph after we have results}
 Even with IVM techniques (which must be implemented by hand in some implementations), these systems can handle a maximum of \todo{fill in} updates per second to the base relations.  This is, in part, the result of a need to lock the base relations before applying updates.  The CEP implementation in the stream processing systems we have analyzed is geared towards implementing tables as purely input or output sources -- persistent state used by the query is assumed to be relatively stable.  
