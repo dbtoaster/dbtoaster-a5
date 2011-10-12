@@ -10,6 +10,7 @@ open Compiler
 let mk_vwap_delta_2 price_var volume_var : M3.stmt_t =
   (
     ("QUERY_1_1",[],[],(mk_c 0.,())),
+    M3.Stmt_Update,
     ((mk_if 
       (mk_lt
         (mk_ma false ("QUERY_1_1__2",[price_var],[],(

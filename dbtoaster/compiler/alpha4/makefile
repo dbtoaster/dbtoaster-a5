@@ -239,7 +239,6 @@ test: top
 	@$(DEBUG_APP) test/unit/calctom3.ml
 	@$(DEBUG_APP) test/unit/CompilerTest.ml
 	@$(DEBUG_APP) test/unit/compiler.ml
-	@$(DEBUG_APP) test/unit/m3_ex.ml
 	@$(DEBUG_APP) test/unit/ssb4_debug.ml
 #	@$(DEBUG_APP) test/unit/extract.ml
 #	@$(DEBUG_APP) test/unit/k3_ocaml.ml

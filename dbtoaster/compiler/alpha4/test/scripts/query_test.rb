@@ -235,9 +235,11 @@ $strict = false;
 $ret = 0;
 $depth = nil;
 $verbose = false;
-$compile_only = false
+$compile_only = false;
 $dataset = nil;
-$executable_args = []
+$executable_args = [];
+$dump_query = false;
+$log_detail = false;
 
 GetoptLong.new(
   [ '-f',                GetoptLong::REQUIRED_ARGUMENT],
@@ -250,7 +252,8 @@ GetoptLong.new(
   [ '--strict',          GetoptLong::NO_ARGUMENT],
   [ '--compile-only',    GetoptLong::NO_ARGUMENT],
   [ '--dataset',         GetoptLong::REQUIRED_ARGUMENT],
-  [ '--trace',           GetoptLong::OPTIONAL_ARGUMENT]
+  [ '--trace',           GetoptLong::OPTIONAL_ARGUMENT],
+  [ '--dump-query',      GetoptLong::NO_ARGUMENT]
 ).each do |opt, arg|
   case opt
     when '-f' then $opts.push(arg)
@@ -268,10 +271,11 @@ GetoptLong.new(
     when '-v', '--verbose' then $verbose = true;
     when '--compile-only' then $compile_only = true;
     when '--dataset' then $dataset = arg;
-    when '--trace' then $executable_args += ["-t", ".", "-s", 
+    when '--trace' then $executable_args += ["-t", "QUERY_1_1", "-s", 
                                              if arg.nil? then "100" 
-                                                         else arg end ]
-        
+                                                         else arg end ];
+                        $log_detail = true;
+    when '--dump-query' then $dump_query = true;
   end
 end
 
@@ -293,7 +297,8 @@ queries.each do |tquery|
         (if $dataset.nil? then [] else [["dataset", [$dataset]]] end)+
         (if $executable_args.empty? then [] 
                                     else [["runtime args", 
-                                           [$executable_args.join(" ")]]] end)
+                                           ["'#{$executable_args.join(" ")}'"]]] 
+                                    end)
       opt_string =
         if opt_terms.empty? then ""
         else " with #{opt_terms.map{|k,tm|"#{k} #{tm.join(", ")}"}.join("; ")}"
@@ -301,6 +306,7 @@ queries.each do |tquery|
       print "Testing query '#{tquery}'#{opt_string} on the #{t.to_s}: ";
       STDOUT.flush;
       t.query = tquery
+      puts t.query if $dump_query;
       begin
         t.run
         unless $compile_only then

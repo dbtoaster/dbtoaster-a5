@@ -18,7 +18,7 @@ $log_targets = [
   },
   {
     :type     => :growl,
-    :sticky   => true,
+    :sticky   => false,
     :appname  => "DBTNightly",
     :detail   => :error
   },
