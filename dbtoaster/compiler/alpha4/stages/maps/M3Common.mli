@@ -130,6 +130,11 @@ module Patterns : sig
   
   val singleton_pattern_map: (string * pattern) -> pattern_map
   
+  val string_of_pattern: pattern -> string
+
   val patterns_to_string: pattern_map -> string
 
 end
+
+val string_of_declarations :
+  M3.map_type_t list * Patterns.pattern_map -> string list

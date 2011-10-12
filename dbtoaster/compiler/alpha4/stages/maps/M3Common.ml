@@ -346,6 +346,10 @@ struct
         (-1, 0) l)
      in if pos = -1 then raise Not_found else pos
   
+  let equal_pat a b = match a,b with
+    | In(u,v), In(x,y) | Out(u,v), Out(x,y) -> v = y
+    | _,_ -> false
+
   let make_in_pattern dimensions accesses =
      In(accesses, List.map (index dimensions) accesses)
   
@@ -375,7 +379,7 @@ struct
   
   let add_pattern pm (mapn,pat) =
      let existing = if List.mem_assoc mapn pm then List.assoc mapn pm else [] in
-     let new_pats = pat::(List.filter (fun x -> x <> pat) existing) in
+     let new_pats = pat::(List.filter (fun x -> not(equal_pat x pat)) existing) in
         (mapn, new_pats)::(List.remove_assoc mapn pm)
   
   let merge_pattern_maps p1 p2 =
@@ -387,6 +391,13 @@ struct
   
   let singleton_pattern_map (mapn,pat) = [(mapn, [pat])]
   
+  let string_of_pattern p =
+    let f x y = List.map (fun (a,b) -> a^":"^b)
+      (List.combine (List.map string_of_int y) x)
+    in match p with
+    | In(x,y) -> "in{"^(String.concat "," (f x y))^"}"
+    | Out(x,y) -> "out{"^(String.concat "," (f x y))^"}"
+      
   let patterns_to_string pm =
      let patlist_to_string pl = List.fold_left (fun acc pat ->
         let pat_str = String.concat "," (
@@ -399,3 +410,13 @@ struct
      List.fold_left (fun acc (mapn, pats) ->
         acc^"\n"^mapn^": "^(patlist_to_string pats)) "" pm
 end
+
+let string_of_declarations (schema, patterns)  =
+  List.map (fun (mapn, ins, outs) ->
+    let is = string_of_type_list ins in
+    let os = string_of_type_list outs in
+    let pats =
+      if not(List.mem_assoc mapn patterns) then ""
+      else String.concat ","
+             (List.map Patterns.string_of_pattern (List.assoc mapn patterns))
+    in mapn^"[ "^is^" ]"^"[ "^os^" ] <"^pats^">") schema

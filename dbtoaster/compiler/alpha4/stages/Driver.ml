@@ -394,8 +394,10 @@ Debug.print "LOG-DRIVER" (fun () -> "BUILDING K3");;
 
 let k3_prog = K3Builder.m3_to_k3 m3_prog;;
 
-let output_k3_program (_,_,triggers) = 
+let output_k3_program (sch,pats,triggers) = 
    let fd = (output_file ()) in
+      output_string fd ((String.concat "\n"
+                         (M3Common.string_of_declarations (sch, pats)))^"\n");
       List.iter (fun (pm, rel, args, stmts) ->
          output_string fd
             ("\nON_"^(match pm with M3.Insert -> "insert"
@@ -406,8 +408,10 @@ let output_k3_program (_,_,triggers) =
          ) stmts
       ) triggers
 
-let output_k3_ds_program (_,dstrigs) = 
+let output_k3_ds_program ((sch,pats),dstrigs) = 
    let fd = (output_file ()) in
+      output_string fd ((String.concat "\n"
+                         (M3Common.string_of_declarations (sch, pats)))^"\n");
       List.iter (fun ((pm, rel, args), stmts) ->
           output_string fd
             ("\nON_"^(match pm with M3.Insert -> "insert"
@@ -542,14 +546,16 @@ let ic_opts = {
 };;
 
 let ic_prog =
-  let (schema,patterns,_) = k3_opt_prog in
-  let prog =  
-    if enable_k3_ds then
-      let k3_ds_prog =
-        K3Optimizer.optimize_with_datastructures dbschema k3_opt_prog
-      in ImpCompiler.Compiler.compile_ds_triggers ic_opts dbschema k3_ds_prog   
-    else ImpCompiler.Compiler.compile_triggers ic_opts dbschema k3_opt_prog
-  in schema, patterns, prog
+  if enable_k3_ds then
+    let ((ds_sch, ds_pats), dsp) =
+      K3Optimizer.optimize_with_datastructures dbschema k3_opt_prog in
+    let prog = ImpCompiler.Compiler.compile_ds_triggers
+                 ic_opts dbschema ((ds_sch, ds_pats),dsp)
+    in ds_sch, ds_pats, prog
+  else
+    let (schema,patterns,_) = k3_opt_prog in
+    let prog = ImpCompiler.Compiler.compile_triggers ic_opts dbschema k3_opt_prog
+    in schema, patterns, prog
 ;;
 
 Debug.print "LOG-DRIVER" (fun () -> "BUILDING C++ AND COMPILING");;

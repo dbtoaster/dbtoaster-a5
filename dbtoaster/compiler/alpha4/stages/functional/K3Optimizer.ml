@@ -1460,11 +1460,19 @@ let extract_predicates env schema e =
   let unambiguous_bp =
     List.map (fun (id, e_l) -> id, List.hd e_l)
       (List.filter (fun (_, e_l) -> List.length e_l = 1) bp_groups)
-  in unambiguous_bp, re
+  in unambiguous_bp, conservative_beta_reduction [] re
 
 
 let ds_sym = ref 0 
 let gen_ds_sym () = incr ds_sym; "__ds"^(string_of_int !ds_sym)
+
+let back l = let x = List.rev l in List.rev (List.tl x), List.hd x
+
+let index e l =
+  snd (List.fold_left (fun (found, pos) e2 ->
+    if not found then (e=e2, if e=e2 then pos else pos+1)
+    else (found,pos))
+  (false, 0) l)
 
 let m3_type_of_k3_type t = match t with
   | TInt -> VT_Int
@@ -1475,9 +1483,10 @@ let m3_type_of_k3_type t = match t with
  * and constructor expression *)
 let create_datastructure arg partial_key e =
   let schema = get_arg_vars_w_types arg in
-  if List.length schema = 1 then failwith "invalid tuple collection"
+  if List.length schema = 1 then
+    (print_endline ("singleton schema "^(String.concat "," (List.map fst schema)));
+     failwith ("invalid tuple collection "^(string_of_expr e)))
   else
-    let back l = let x = List.rev l in List.rev (List.tl x), List.hd x in
     let k_sch, _ = back schema in
     let kv_l = List.map (fun (id, ty) -> Var(id,ty)) schema in
     let oute_l, ve = back kv_l in
@@ -1487,12 +1496,6 @@ let create_datastructure arg partial_key e =
     let ds_e = OutPC(ds_id, k_sch, v_t) in
     let cons_e = Iterate(Lambda(arg, PCValueUpdate(ds_e, [], oute_l, ve)), e) in
     let patterns = 
-      let index e l =
-        snd (List.fold_left (fun (found, pos) e2 ->
-          if not found then (e=e2, if e=e2 then pos else pos+1)
-          else (found,pos))
-        (false, 0) l)
-      in
       let schema_ids = List.map fst schema in
       let p = List.split
         (List.map (fun ((id,_),_) -> id, index id schema_ids) partial_key)
@@ -1506,46 +1509,76 @@ let create_datastructure arg partial_key e =
     in ds_e, decl, cons_e
 
 let datastructure_statement (schema, patterns) (pm, rel, args) stmt =
-  let back l = let x = List.rev l in List.rev (List.tl x), List.hd x in
+  let is_tuple_collection e = match K3Typechecker.typecheck_expr e with
+    | Collection(TTuple _) -> true
+    | _ -> false
+  in
+  let is_primitive_collection e = match e with
+    | Slice _ | Lookup _ -> true | _ -> false
+  in
+  let rec get_collection_name e = match e with
+    | Slice (e,_,_) -> get_collection_name e
+    | Lookup (e,_) -> get_collection_name e
+    | SingletonPC (n,_) | InPC (n,_,_) | OutPC (n,_,_) | PC (n,_,_,_) -> n
+    | _ -> failwith "invalid collection name"
+  in 
+  let slice_collection e pkey = match e with
+    | Slice (e,sch,pk) ->
+      let npk = List.fold_left (fun kacc (id,e) ->
+        if List.mem_assoc id kacc then kacc else kacc@[id,e]) pk pkey
+      in Slice(e,sch,npk)
+    | _ -> e
+  in
+
+  (* Result schema and patterns that are mutated inline *)
+  let r_sch = ref schema in
+  let r_pats = ref patterns in
+
   (* Returns a list of datastructure signatures and construction statements,
    * and an expression using these datastructures *)
   let bu_f env parts e = match e with
     | Const _ -> [], e
     | Var _ -> [], e
 
-    | Map(Lambda(arg, Map(Lambda(arg2, b), c2)), c) ->
-      let new_sub_ds, new_e =
-        let sub_ds = List.flatten
-          (List.map (fun l -> List.flatten (List.map fst l)) parts) in
-        let new_ds_decl, new_ds_cons, new_lambda =
-          match snd (List.hd (List.hd parts)) with
-          | Lambda(narg, Map(Lambda(narg2, nb), nc2)) ->
-            let inner_env =
-              (* narg2 can rebind vars in the env or in narg, thus exclude such
-               * bindings from the inner env *)
-              Util.ListAsSet.diff
-                (Util.ListAsSet.union env (get_arg_vars_w_types narg))
-                (get_arg_vars_w_types narg2)
-            in
-            let ds_sch, slice_sch =
-              let x = get_arg_vars_w_types narg2 in
-              let k,v = back x in x, k
-            in
-            let bp_pairs, rest_b = extract_predicates inner_env ds_sch nb in
-            let ds, ds_decl, ds_cons = create_datastructure narg2 bp_pairs nc2 in
-            let probe_key = List.map (fun ((id,_),e) -> id,e) bp_pairs in
+    | Map(Lambda(arg, b), c) when is_tuple_collection c ->
+      let sub_ds = List.flatten
+        (List.map (fun l -> List.flatten (List.map fst l)) parts) in
+      let new_ds_decl, new_e =
+        let rlambda = snd (List.hd (List.hd parts)) in
+        let rc = snd (List.hd (List.nth parts 1)) in
+        match rlambda with
+        | Lambda(narg, nb) ->
+          let ds_sch, slice_sch =
+            let k,v = back (get_arg_vars_w_types narg) in k@[v], k
+          in
+          (* narg can rebind vars in the env, thus exclude such bindings
+           * from the inner env *)
+          let inner_env = Util.ListAsSet.diff env ds_sch in
+          let bp_pairs, rest_b = extract_predicates inner_env ds_sch nb in
+          let probe_key = List.map (fun ((id,_),e) -> id,e) bp_pairs in
+          if is_primitive_collection rc then
+            begin
+              let key_pat = List.split (List.map
+                (fun (v,_) -> v, index v (List.map fst ds_sch)) probe_key)
+              in
+              r_pats := Patterns.add_pattern !r_pats
+                (get_collection_name rc, M3Common.Patterns.Out(key_pat)); 
+              None,
+              Map(Lambda(narg, rest_b), slice_collection rc probe_key)
+            end
+          else
+            (* TODO: lift datastructure constructor if it is independent of narg. *)
+            let ds, ds_decl, ds_cons = create_datastructure narg bp_pairs rc in
             let rebuilt_expr =
               (* Perform a lookup instead of a slice if all keys are probed. *)
               if (List.length probe_key) = (List.length slice_sch) then
                 Singleton(Apply(
-                  Lambda(narg2, rest_b), Lookup(ds, List.map snd probe_key)))
-              else Map(Lambda(narg2, rest_b), Slice(ds, slice_sch, probe_key))
-            in ds_decl, None, Lambda(narg, Block([ds_cons; rebuilt_expr]))
-          | _ -> failwith "invalid map lambda"
-        in
-        let rc = snd (List.hd (List.nth parts 1))
-        in sub_ds@[new_ds_decl, new_ds_cons], Map(new_lambda, rc)
-      in new_sub_ds, new_e
+                  Lambda(narg, rest_b), Lookup(ds, List.map snd probe_key)))
+              else Map(Lambda(narg, rest_b), Slice(ds, slice_sch, probe_key))
+            in Some(ds_decl), Block([ds_cons; rebuilt_expr])
+
+        | _ -> failwith "invalid map lambda"
+      in sub_ds@[new_ds_decl], new_e
 
     | _ ->
       let ds = List.flatten
@@ -1561,38 +1594,41 @@ let datastructure_statement (schema, patterns) (pm, rel, args) stmt =
     | AssocLambda(arg1, arg2, _) -> Util.ListAsSet.multiunion [env; f arg1; f arg2]
     | _ -> env
   in
-  let ds, new_stmt = fold_expr bu_f td_f args ([],Const(CFloat 1.0)) stmt in
-  let decl_patterns, cons_opts = List.split ds in
-  let constructors = List.map
-    (function Some(x) -> x | _ -> failwith "invalid ds constructor") 
-    (List.filter ((<>) None) cons_opts)
+  let filter_opts l = List.map (function Some(x) -> x
+                                | None -> failwith "invalid ds decl and pattern")
+       (List.filter ((<>) None) l)
   in
+  let decl_opts, new_stmt = fold_expr bu_f td_f args ([],Const(CFloat 1.0)) stmt in
   let decls, patterns = 
-    let d, p_l = List.split decl_patterns in
+    let d, p_l = List.split (filter_opts decl_opts) in
     let p = match p_l with
       | [] -> Patterns.empty_pattern_map()
       | [pm] -> pm
       | _ -> List.fold_left Patterns.merge_pattern_maps (List.hd p_l) (List.tl p_l)
     in d, p
-  in (decls, patterns), constructors@[new_stmt]
+  in (!r_sch, !r_pats), ((decls, patterns), [new_stmt])
+
+let k3_type_of_calc_type t = match t with
+  | Calculus.TInt -> TInt
+  | Calculus.TLong -> failwith "unsupported K3 type: long"
+  | Calculus.TDouble -> TFloat
+  | Calculus.TString -> failwith "unsupported K3 type: string"
 
 let rewrite_with_datastructures dbschema (schema, patterns) k3trigs =
-  let k3_type_of_calc_type t = match t with
-    | Calculus.TInt -> TInt
-    | Calculus.TLong -> failwith "unsupported K3 type: long"
-    | Calculus.TDouble -> TFloat
-    | Calculus.TString -> failwith "unsuppoerted K3 type: string"
-  in 
-  List.map (fun (pm, rel, args, stmts) ->
+  List.fold_left (fun ((rs,rp),acc) (pm, rel, args, stmts) ->
     let k3args = List.map2 (fun v1 v2 ->
       v1, k3_type_of_calc_type (snd v2)) args (List.assoc rel dbschema) in
-    let ds_stmts = List.map (fun (_,s) ->
-      datastructure_statement (schema, patterns) (pm, rel, k3args) s) stmts 
-    in (pm, rel, args), ds_stmts) k3trigs
+    let (new_sch, new_pats), ds_stmts =
+      List.fold_left (fun ((rs,rp),acc) (_,s) ->
+        let ((ns,np),nds) = datastructure_statement (rs, rp) (pm, rel, k3args) s
+        in ((ns,np), acc@[nds]))
+      ((rs, rp), []) stmts 
+    in (new_sch, new_pats), acc@[(pm, rel, args), ds_stmts])
+    ((schema, patterns), []) k3trigs
 
 let optimize_with_datastructures dbschema k3prog =
   let (g_schema, g_patterns, k3trigs) = k3prog in
   let global_ds = g_schema, g_patterns in
-  let ds_trigs = rewrite_with_datastructures dbschema global_ds k3trigs
-  in (global_ds, ds_trigs)
+  let new_gds, ds_trigs = rewrite_with_datastructures dbschema global_ds k3trigs
+  in (new_gds, ds_trigs)
   
