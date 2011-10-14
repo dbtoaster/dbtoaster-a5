@@ -9,7 +9,6 @@ CREATE TABLE ORDERS (
         shippriority   int,
         comment        int  -- hash
     )
---  FROM FILE 'test/data/tpch_100M/orders.csv'
   FROM FILE 'test/data/tpch/orders.csv'
   LINE DELIMITED orders;
 
@@ -23,7 +22,6 @@ CREATE TABLE CUSTOMER (
         mktsegment   int, -- hash
         comment      int  -- hash
     )
---  FROM FILE 'test/data/tpch_100M/customer.csv'
   FROM FILE 'test/data/tpch/customer.csv'
   LINE DELIMITED customer;
 

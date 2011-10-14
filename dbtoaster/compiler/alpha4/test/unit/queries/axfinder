@@ -2,5 +2,10 @@
   :path => "test/sql/finance/axfinder.sql",
   :type => :onelevel,
   :answer => results_file("test/results/axfinder.csv"),
-  :valid_opts => ["runtime-bigsums", "dup-ivc"]
+  :datasets => {
+    "tiny" => {
+      :subs => [ [/vwap5k/, "vwap100"] ],
+      :answer => results_file("test/results/axfinder_100.csv")
+    }
+  }
 }

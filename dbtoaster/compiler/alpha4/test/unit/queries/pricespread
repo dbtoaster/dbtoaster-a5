@@ -1,7 +1,11 @@
 {
   :path => "test/sql/finance/pricespread.sql",
   :type => :singleton,
-#  :answer => 389562600,
   :answer => 76452380068302.0,
-  :valid_opts => ["dup-ivc"]
+  :datasets => {
+    "tiny" => {
+      :subs => [ [/vwap5k/, "vwap100"] ],
+      :answer => 389562600,
+    }
+  }
 }

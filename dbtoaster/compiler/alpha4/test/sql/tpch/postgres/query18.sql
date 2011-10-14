@@ -55,8 +55,8 @@ FROM '@@PATH@@/test/data/tpch/customer.csv' WITH DELIMITER '|';
 select c.custkey, sum(l1.quantity)
 from customer c, orders o, lineitem l1
 where o.orderkey in (select l3.orderkey from lineitem l3
-                  l3.orderkey
-                  having sum(l3.quantity) > 100))
+                  group by l3.orderkey
+                  having sum(l3.quantity) > 100)
 and c.custkey = o.custkey
 and o.orderkey = l1.orderkey
 group by c.custkey;

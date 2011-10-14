@@ -1,14 +1,19 @@
-  {
-    :path => "test/sql/clusteravailable_priority.sql",
-    :type => :onelevel,
-    :answer => {    # small dataset
-       [2.0] => 2,
-       [1.0] => 1,
-       [0.0] => 1
+{
+  :path => "test/sql/clusteravailable_priority.sql",
+  :type => :onelevel,
+  :answer => { 
+    [2.0] => 10,
+    [1.0] => 7,
+    [0.0] => 7
+  },
+  :datasets => {
+    "tiny" => {
+      :subs => [ [/ca_/, "casmall_"] ],
+      :answer => {
+         [2.0] => 2,
+         [1.0] => 1,
+         [0.0] => 1
+      }
     }
-#    :answer => {    # large dataset
-#      [2.0] => 10,
-#      [1.0] => 7,
-#      [0.0] => 7
-#    }
   }
+}

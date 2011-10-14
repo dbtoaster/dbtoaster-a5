@@ -3,5 +3,11 @@
   :type => :onelevel,
   :answer => results_file("test/results/tpch/ssb4.csv"),
   :compiler_flags => ["-d", "disable-deletes", 
-                      "-d", "dup-ivc"]
+                      "-d", "dup-ivc"],
+  :datasets => {
+    "tiny" => {
+      :subs => [ [/test\/data\/tpch\//, "test/data/tpch_tiny/"] ],
+      :answer => results_file("test/results/tpch/ssb4_tiny.csv")
+    }
+  }
 }

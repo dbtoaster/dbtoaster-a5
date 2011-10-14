@@ -357,7 +357,7 @@ let nonincremental_program (db_schema: (string * (Calculus.var_t list)) list)
     ) accum_with_base_rels bs_maps
   in
     Debug.print "LOG-NONINCREMENTAL" (fun () ->
-      "Creating Final Map"
+      "Creating Final Map: "^(Calculus.string_of_term (snd value_calc))
     );
     generate_insert_code db_schema
                   (map_definition,map_term,false)
@@ -373,7 +373,8 @@ let nonincremental_program (db_schema: (string * (Calculus.var_t list)) list)
                           delete, 
                           rel, dummy_rel_vars,
                           (snd (Calculus.decode_map_term map_term), []),
-                          (snd value_calc)
+                          (Calculus.un_roly_poly
+                            (Calculus.term_sum_list (snd value_calc)))
                         ) :: insdel_trigs
                       ) rel_trigs [true; false]
                     ) [] (Calculus.term_relations map_definition)

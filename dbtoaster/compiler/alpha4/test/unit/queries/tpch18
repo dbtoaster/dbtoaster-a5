@@ -6,7 +6,7 @@
     "tiny" => {
       :subs => [ [/test\/data\/tpch\//, "test/data/tpch_tiny/"],
                  [/\.tbl/, ".csv"] ],
-      :answer => 98015.33
+      :answer => results_file("test/results/tpch/query18_tiny.csv")
     }
   }
 }
