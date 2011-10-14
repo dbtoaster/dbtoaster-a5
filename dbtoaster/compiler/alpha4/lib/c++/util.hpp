@@ -18,6 +18,13 @@ namespace dbtoaster {
     };
 
   }
+  
+  template<class T> 
+    std::list<T> singleton(T elem) {
+      std::list<T> sing;
+      sing.push_back(elem);
+      return sing;
+    }
 }
 
 #endif
