@@ -574,6 +574,13 @@ let collection_expr expr =
         | _ -> false
     end
 
+let contains_collection_expr expr =
+  let bu_f _ parts e = match e with
+    | Const _ | Var _ -> false
+    | SingletonPC _ | InPC _ | OutPC _ | PC _ -> true
+    | _ -> List.exists (fun x -> x) (List.flatten parts)
+  in fold_expr bu_f (fun x _ -> x) None false expr
+
 (* selective_expr:
  * -- returns if expr is an aggregate, or a map with a selective lambda (i.e. a
  *    lambda contains a predicate dependent on the function argument)
@@ -640,28 +647,30 @@ let rec inline_collection_functions substitutions expr =
 let rec conservative_beta_reduction substitutions expr =
   let recur = conservative_beta_reduction in
   (* recursive identity fn, i.e. recur with same set of substitutions *)
-  let recid = descend_expr (recur substitutions) in  
+  let recid e = match e with
+    | Var _ -> 
+      (* Force recursive application when directly used on vars, since
+       * descend_expr does not invoke the descent function on terminals *)
+      recur substitutions e
+    | _ -> descend_expr (recur substitutions) e
+  in  
   let rebind subs vt arg =
     let ns = if List.mem_assoc vt subs then List.remove_assoc vt subs else subs
     in (vt,arg)::ns
   in
   let beta_reduce free_vars (rem_acc, subs_acc, expr_acc) ((v,t), arg) =
+    let red_arg = recid arg in
+    let preserve () = (rem_acc@[(v,t), red_arg]), subs_acc, expr_acc in
     let reduce () =
-      let new_subs = rebind substitutions (v,t) (recid arg)
+      let new_subs = rebind subs_acc (v,t) red_arg
       in rem_acc, new_subs, descend_expr (recur new_subs) expr_acc
     in
-    begin match t with
-    | TInt | TFloat -> reduce ()
-    | _ ->
+    if not(contains_collection_expr arg) then reduce()
+    else
       let occurrences = List.filter ((=) v) free_vars in
        (* first case preserves the variable even if it is not used, since the
         * argument may have side-effects, such as persistent collection updates. *)
-       begin match occurrences with
-       | [] -> (rem_acc@[(v,t), (recid arg)]), subs_acc, expr_acc
-       | [x] -> reduce()
-       | _ -> (rem_acc@[(v,t), (recid arg)]), subs_acc, expr_acc
-       end
-    end
+       if List.length occurrences = 1 then reduce() else preserve()
   in
   begin match expr with
   | Add(Const(CFloat(0.0)), x) | Add(x, Const(CFloat(0.0))) -> recid x
@@ -670,23 +679,25 @@ let rec conservative_beta_reduction substitutions expr =
   | Mult(Const(CFloat(1.0)), x) | Mult(x, Const(CFloat(1.0))) -> recid x
   | Mult(Const(x), Const(y)) -> Const(c_prod x y)
 
-  | Apply(Lambda(AVar(v,t), body), arg) ->
+  | Apply(Lambda(AVar(v,t), body) as lambda_e, arg) ->
     let free_vars = get_free_vars [] body in
     let remaining, _, new_e =
-      beta_reduce free_vars ([], substitutions, body) ((v,t), arg) in
-    if remaining <> [] then descend_expr (recur substitutions) expr else new_e
+      beta_reduce free_vars ([], substitutions, lambda_e) ((v,t), arg) in
+    if remaining <> [] then recid expr else snd (get_fun_parts new_e)
 
-  | Apply(Lambda(ATuple(vt_l), body), Tuple(fields)) ->
+  | Apply(Lambda(ATuple(vt_l), body) as lambda_e, Tuple(fields)) ->
     let free_vars = get_free_vars [] body in
     let reml, _, new_e = List.fold_left (beta_reduce free_vars)
-        ([], substitutions, body) (List.combine vt_l fields) in
+        ([], substitutions, lambda_e) (List.combine vt_l fields) in
     let rem_vt_l, rem_fields = List.split reml in
-    if rem_fields = fields then descend_expr (recur substitutions) expr
-    else Apply(Lambda(ATuple(rem_vt_l), new_e), Tuple(rem_fields))
+    if rem_fields = fields then recid expr
+    else Apply(Lambda(ATuple(rem_vt_l), snd (get_fun_parts new_e)), Tuple(rem_fields))
  
+  (* TODO: handle Apply(AssocLambda(...)) *)
+
   | Var(v,t) -> if List.mem_assoc (v,t) substitutions
                 then List.assoc (v,t) substitutions else expr
-  | _ -> descend_expr (recur substitutions) expr
+  | _ -> recid expr
   end
 
 (* Performs dependency tests at lambda-if boundaries *)
