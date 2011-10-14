@@ -37,7 +37,7 @@ tpch11 -d dup-ivc --depth 1 -f cse -f breduce -f hashds
 tpch17 -d dup-ivc -f cse -f breduce -f hashds
 tpch17 -d dup-ivc --depth 0 -f cse -f breduce -f hashds  --compile-only
 tpch17 -d dup-ivc --depth 1 -f cse -f breduce -f hashds 
-tpch18 -d dup-ivc -f cse -f breduce -f hashds
+tpch18 -d dup-ivc 
 tpch18 -d dup-ivc --depth 0 -f cse -f breduce -f hashds  --compile-only
 tpch18 -d dup-ivc --depth 1 -f cse -f breduce -f hashds 
 tpch18short -d dup-ivc -f cse -f breduce -f hashds
