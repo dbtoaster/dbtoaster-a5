@@ -300,17 +300,34 @@ let nonincremental_program (db_schema: (string * (Calculus.var_t list)) list)
                            (generate_insert_code:'a output_translator_t)
                            (generate_delta_code:'a output_translator_t)
                            (accum:'a): 'a =
-  let (base_relations, new_value) = 
+  let (mapn, map_params) = Calculus.decode_map_term map_term in
+  let (bigsum_vars, bsrw_theta, bsrw_term) =
+      Calculus.preaggregate Calculus.ModeOpenDomain 
+                            (Calculus.roly_poly map_definition) 
+                            map_params 
+                            (mapn^"_")
+  in
+  let (base_relations, extracted_map_definitions) = 
     Calculus.extract_base_relations 
-      [ snd (Calculus.decode_map_term map_term), 
-        (Calculus.roly_poly map_definition)
-      ] in
+      ( (map_params, bsrw_term) :: 
+        (List.map (fun (bs_map_defn, bs_map_term) -> 
+            ( snd (Calculus.decode_map_term bs_map_term),
+              bs_map_defn )
+        ) bsrw_theta)
+      ) in
+  let (bs_map_defns, value_calc) = (List.tl extracted_map_definitions,
+                                    List.hd extracted_map_definitions) in
+  let bs_maps = List.map (fun ((_,defn),(_,term)) -> defn,term) 
+                         (List.combine bs_map_defns bsrw_theta) in
   let accum_with_base_rels = 
     List.fold_left (fun curr_accum rel ->
       let rel_schema = List.assoc rel db_schema in
       let rel_term = ( Calculus.base_relation_expr (rel,rel_schema),
                        Calculus.map_term rel rel_schema,
                        false ) in
+      Debug.print "LOG-NONINCREMENTAL" (fun () ->
+        "Creating table for relation: "^(rel)
+      );
       generate_delta_code db_schema
                     rel_term
                     ( List.fold_left (fun trig_accum delete ->
@@ -328,6 +345,20 @@ let nonincremental_program (db_schema: (string * (Calculus.var_t list)) list)
                     curr_accum
     ) accum base_relations
   in
+  let accum_with_bs_maps = 
+    List.fold_left (fun curr_accum (bs_map_defn, bs_map_term) ->
+      Debug.print "LOG-NONINCREMENTAL" (fun () ->
+        "Creating inline aggregate: "^(Calculus.string_of_term bs_map_term)
+      );
+      generate_delta_code db_schema
+                  (bs_map_defn, bs_map_term, true)
+                  [] (* inline aggregate... don't need any triggers *)
+                  curr_accum
+    ) accum_with_base_rels bs_maps
+  in
+    Debug.print "LOG-NONINCREMENTAL" (fun () ->
+      "Creating Final Map"
+    );
     generate_insert_code db_schema
                   (map_definition,map_term,false)
                   ( List.fold_left (fun rel_trigs rel ->
@@ -342,9 +373,9 @@ let nonincremental_program (db_schema: (string * (Calculus.var_t list)) list)
                           delete, 
                           rel, dummy_rel_vars,
                           (snd (Calculus.decode_map_term map_term), []),
-                          (Calculus.term_list_sum (List.map snd new_value))
+                          (snd value_calc)
                         ) :: insdel_trigs
                       ) rel_trigs [true; false]
                     ) [] (Calculus.term_relations map_definition)
                   )
-                  accum_with_base_rels
+                  accum_with_bs_maps

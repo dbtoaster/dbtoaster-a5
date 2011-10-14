@@ -271,7 +271,8 @@ let rec to_m3_initializer (sch:(string * (var_t list))list) (inline_agg:bool)
 
 (********************************)
 
-and to_naive_m3_initializer (sch:(string * (var_t list))list) 
+and to_naive_m3_initializer ?(inner_bindings = StringMap.empty)
+                            (sch:(string * (var_t list))list) 
                             (map_def: term_t) (vars: var_t list) 
                             (map_prefix: string): (M3.calc_t * todo_list_t) =
 
@@ -333,7 +334,7 @@ and to_naive_m3_initializer (sch:(string * (var_t list))list)
                   (subt_todos @ subc_todos, 
                    trels @ (ListAsSet.no_duplicates (List.map fst crels)))
                )
-         | RVal(_) -> to_m3 sch t StringMap.empty
+         | RVal(_) -> to_m3 sch t inner_bindings
          | RNeg(n) -> 
             let (new_n, todos) = rewrite_term n in
                (M3.mk_prod (M3.mk_c (-1.)) new_n, todos)
@@ -357,6 +358,7 @@ and split_vars (want_input_vars:bool) (vars:'a list) (bindings:bindings_list_t):
 (********************************)
 
 and to_m3_map_access 
+    ?(inner_bindings = StringMap.empty)
     (sch:(string * (var_t list)) list)
     ((map_definition, map_term, bindings, inline_agg):map_ref_t)
     (vars:var_t list option) :
@@ -382,6 +384,7 @@ and to_m3_map_access
     if ((List.length input_var_list) > 0) || (inline_agg)
     then
       to_naive_m3_initializer 
+         ~inner_bindings:inner_bindings
          sch
          (apply_variable_substitution_to_term
            (ListAsSet.no_duplicates (List.combine basevars mapvars))
@@ -454,6 +457,7 @@ and to_m3
           begin try
               let (access_term, inline_agg, todos) = 
                 (to_m3_map_access 
+                  ~inner_bindings:inner_bindings
                   sch
                   (StringMap.find mapn inner_bindings)
                   (Some(map_vars)))
@@ -714,6 +718,9 @@ module M3InProgress = struct
                   (accum: t): t =
     let map_ref_as_m3 = translate_map_ref map_ref in
     let (_,term_for_map,_) = map_ref in
+    Debug.print "LOG-M3-ACCUM" (fun () ->
+      string_of_list0 "\n" fst (StringMap.bindings (get_map_refs accum))
+    );
     let (triggers_as_m3, (std_todos, rel_todos)) = 
       List.fold_left (fun (tlist,old_todos) 
                           (delete, reln, relvars, (params,bsvars), expr) ->

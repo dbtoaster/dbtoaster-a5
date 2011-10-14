@@ -70,6 +70,7 @@ val to_m3_initializer: (string * Calculus.var_t list) list -> bool ->
   referenced inside the expression. (see relation_set_t, above)
 *)
 val to_m3_map_access:
+  ?inner_bindings:map_ref_t Util.StringMap.t ->
   (string * Calculus.var_t list) list ->
   map_ref_t ->
   Calculus.var_t list option ->
