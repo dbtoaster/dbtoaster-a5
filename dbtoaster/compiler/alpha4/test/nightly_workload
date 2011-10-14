@@ -1,51 +1,51 @@
 rst
 rst --depth 1
 rst --depth 2
-ssb4 -d disable-deletes -d dup-ivc
-ssb4 -d disable-deletes -d dup-ivc --depth 1 -d projected-map-access
-ssb4 -d disable-deletes -d dup-ivc --depth 2 -d projected-map-access
-ssb4 -d disable-deletes -d dup-ivc --depth 3 -d projected-map-access
-ssb4 -d disable-deletes -d dup-ivc --depth 4 -d projected-map-access
-ssb4 -d disable-deletes -d dup-ivc --depth 5 -d projected-map-access
-ssb4 -d disable-deletes -d dup-ivc --depth 6 -d projected-map-access
-vwap
-vwap -d dup-ivc
-vwap -d dup-ivc --depth 0 --compile-only
-vwap -d dup-ivc --depth 1
-pricespread 
-pricespread -d dup-ivc
-pricespread -d dup-ivc --depth 0 --compile-only
-pricespread -d dup-ivc --depth 1 --compile-only
-missedtrades
-missedtrades -d dup-ivc
-missedtrades -d dup-ivc --depth 0 --compile-only
-missedtrades -d dup-ivc --depth 1 --compile-only
-axfinder 
-axfinder -d runtime-bigsums
-axfinder -d runtime-bigsums -d dup-ivc
-axfinder -d dup-ivc --depth 0 --compile-only
-axfinder -d dup-ivc --depth 1
-brokerspread -d dup-ivc
-brokerspread -d dup-ivc --depth 0 --compile-only
-brokerspread -d dup-ivc --depth 1
-tpch3 -d dup-ivc
-tpch3 -d dup-ivc --depth 0 --dataset tiny
-tpch3 -d dup-ivc --depth 1
-tpch11 -d dup-ivc
-tpch11 -d dup-ivc --depth 0 --compile-only
-tpch11 -d dup-ivc --depth 1
-tpch17 -d dup-ivc
-tpch17 -d dup-ivc --depth 0 --compile-only
-tpch17 -d dup-ivc --depth 1
-tpch18 -d dup-ivc
-tpch18 -d dup-ivc --depth 0 --compile-only -d projected-map-access
-tpch18 -d dup-ivc --depth 1
-tpch18short -d dup-ivc
-tpch18short -d dup-ivc --depth 0 --compile-only
-tpch18short -d dup-ivc --depth 1
-tpch22 -d dup-ivc
-tpch22 -d dup-ivc --depth 0 --compile-only
-tpch22 -d dup-ivc --depth 1
-clusteravailablenew -d dup-ivc
-clusteravailablenew -d dup-ivc --depth 0 --compile-only
-clusteravailablenew -d dup-ivc --depth 1 --compile-only
+ssb4 -d disable-deletes -d dup-ivc -f cse -f breduce -f hashds
+ssb4 -d disable-deletes -d dup-ivc --depth 1 -f cse -f breduce -f hashds -d projected-map-access
+ssb4 -d disable-deletes -d dup-ivc --depth 2 -f cse -f breduce -f hashds -d projected-map-access
+ssb4 -d disable-deletes -d dup-ivc --depth 3 -f cse -f breduce -f hashds -d projected-map-access
+ssb4 -d disable-deletes -d dup-ivc --depth 4 -f cse -f breduce -f hashds -d projected-map-access
+ssb4 -d disable-deletes -d dup-ivc --depth 5 -f cse -f breduce -f hashds -d projected-map-access
+ssb4 -d disable-deletes -d dup-ivc --depth 6 -f cse -f breduce -f hashds -d projected-map-access
+vwap -f cse -f breduce -f hashds
+vwap -d dup-ivc -f cse -f breduce -f hashds
+vwap -d dup-ivc --depth 0 -f cse -f breduce -f hashds -d projected-map-access --compile-only
+vwap -d dup-ivc --depth 1 -f cse -f breduce -f hashds -d projected-map-access
+pricespread  -f cse -f breduce -f hashds
+pricespread -d dup-ivc -f cse -f breduce -f hashds
+pricespread -d dup-ivc --depth 0 -f cse -f breduce -f hashds -d projected-map-access --compile-only
+pricespread -d dup-ivc --depth 1 -f cse -f breduce -f hashds -d projected-map-access --compile-only
+missedtrades -f cse -f breduce -f hashds
+missedtrades -d dup-ivc -f cse -f breduce -f hashds
+missedtrades -d dup-ivc --depth 0 -f cse -f breduce -f hashds -d projected-map-access --compile-only
+missedtrades -d dup-ivc --depth 1 -f cse -f breduce -f hashds -d projected-map-access --compile-only
+axfinder  -f cse -f breduce -f hashds
+axfinder -d runtime-bigsums -f cse -f breduce -f hashds
+axfinder -d runtime-bigsums -d dup-ivc -f cse -f breduce -f hashds
+axfinder -d dup-ivc --depth 0 -f cse -f breduce -f hashds -d projected-map-access --compile-only
+axfinder -d dup-ivc --depth 1 -f cse -f breduce -f hashds -d projected-map-access
+brokerspread -d dup-ivc -f cse -f breduce -f hashds
+brokerspread -d dup-ivc --depth 0 -f cse -f breduce -f hashds -d projected-map-access --compile-only
+brokerspread -d dup-ivc --depth 1 -f cse -f breduce -f hashds -d projected-map-access
+tpch3 -d dup-ivc -f cse -f breduce -f hashds
+tpch3 -d dup-ivc --depth 0 -f cse -f breduce -f hashds -d projected-map-access --dataset tiny
+tpch3 -d dup-ivc --depth 1 -f cse -f breduce -f hashds -d projected-map-access
+tpch11 -d dup-ivc -f cse -f breduce -f hashds
+tpch11 -d dup-ivc --depth 0 -f cse -f breduce -f hashds -d projected-map-access --compile-only
+tpch11 -d dup-ivc --depth 1 -f cse -f breduce -f hashds -d projected-map-access
+tpch17 -d dup-ivc -f cse -f breduce -f hashds
+tpch17 -d dup-ivc --depth 0 -f cse -f breduce -f hashds -d projected-map-access --compile-only
+tpch17 -d dup-ivc --depth 1 -f cse -f breduce -f hashds -d projected-map-access
+tpch18 -d dup-ivc -f cse -f breduce -f hashds
+tpch18 -d dup-ivc --depth 0 -f cse -f breduce -f hashds -d projected-map-access --compile-only
+tpch18 -d dup-ivc --depth 1 -f cse -f breduce -f hashds -d projected-map-access
+tpch18short -d dup-ivc -f cse -f breduce -f hashds
+tpch18short -d dup-ivc --depth 0 -f cse -f breduce -f hashds -d projected-map-access --compile-only
+tpch18short -d dup-ivc --depth 1 -f cse -f breduce -f hashds -d projected-map-access
+tpch22 -d dup-ivc -f cse -f breduce -f hashds
+tpch22 -d dup-ivc --depth 0 -f cse -f breduce -f hashds -d projected-map-access --compile-only
+tpch22 -d dup-ivc --depth 1 -f cse -f breduce -f hashds -d projected-map-access
+clusteravailablenew -d dup-ivc -f cse -f breduce -f hashds
+clusteravailablenew -d dup-ivc --depth 0 -f cse -f breduce -f hashds -d projected-map-access --compile-only
+clusteravailablenew -d dup-ivc --depth 1 -f cse -f breduce -f hashds -d projected-map-access --compile-only
