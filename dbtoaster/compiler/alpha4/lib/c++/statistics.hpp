@@ -8,17 +8,19 @@
 #include <boost/chrono.hpp>
 #include <boost/cstdint.hpp>
 #include <boost/lexical_cast.hpp>
-#include <boost/phoenix.hpp>
+#include <boost/phoenix/core.hpp>
+#include <boost/phoenix/operator.hpp>
+#include <boost/phoenix/bind.hpp>
 
 namespace dbtoaster {
   namespace statistics {
 
-    using namespace ::std;
-    using namespace ::boost;
-    //using namespace ::boost::phoenix;
-    using namespace ::boost::chrono;
-    using ::boost::phoenix::arg_names::arg1;
-    using ::boost::chrono::high_resolution_clock;
+    using namespace std;
+    using namespace boost;
+    //using namespace boost::phoenix;
+    using namespace boost::chrono;
+    using boost::phoenix::arg_names::arg1;
+    using boost::chrono::high_resolution_clock;
 
     // Sample buffer.
     template<typename value, typename window = circular_buffer<value> >
@@ -322,7 +324,6 @@ namespace dbtoaster {
       void update(int id) { update_counts[id] += 1; }
       void update(int id, int sz) { update_counts[id] += sz; }
     };
-
   }
 }
 

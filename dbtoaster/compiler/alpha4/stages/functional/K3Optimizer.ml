@@ -1428,9 +1428,15 @@ let extract_predicates env schema e =
             
             | _ -> (List.flatten bp_vars, re)
           end
-        | IfThenElse(_, t, e) ->
-          (* Only propagate up those pairs that are common to both branches *)
+        
+        (* For disjunctions and conditions, only propagate up those pairs that
+         * are common to both branches *)
+        | Add _ -> 
+          (Util.ListAsSet.inter (List.hd bp_vars) (List.nth bp_vars 1)), re
+        
+        | IfThenElse _ ->
           (Util.ListAsSet.inter (List.nth bp_vars 1) (List.nth bp_vars 2)), re
+        
         | _ -> (List.flatten bp_vars, re)
       end
   in
