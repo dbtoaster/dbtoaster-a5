@@ -178,8 +178,8 @@ let language =
       | "OCAML:M3" -> L_OCAML(OCG_M3)
       | "C++"      -> L_CPP(false)
       | "CPP"      -> L_CPP(false)
-      | "C++:prof" -> L_CPP(true)
-      | "CPP:prof" -> L_CPP(true)
+      | "C++:PROF" -> L_CPP(true)
+      | "CPP:PROF" -> L_CPP(true)
       | "CALCULUS" -> L_CALC
       | "CALC"     -> L_CALC
       | "M3"       -> L_M3(false)
