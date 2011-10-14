@@ -1,75 +1,37 @@
-DROP TABLE IF EXISTS PARTSUPP;
-CREATE TABLE PARTSUPP (LIKE PARTSUPP_STREAM);
-
-DROP TABLE IF EXISTS SUPPLIER;
-CREATE TABLE SUPPLIER (LIKE SUPPLIER_STREAM);
+TRUNCATE TABLE PARTSUPP;
+TRUNCATE TABLE SUPPLIER;
 
 DROP TABLE IF EXISTS RESULTS;
-CREATE TABLE RESULTS (total double precision);
+CREATE TABLE RESULTS (
+    total   float 
+);
 
-CREATE OR REPLACE FUNCTION on_insert_partsuppf() RETURNS TRIGGER AS $on_insert_partsuppf$
+CREATE OR REPLACE FUNCTION recompute_query() RETURNS TRIGGER AS $recompute_query$
     DECLARE
         item RESULTS%ROWTYPE;
     BEGIN
-        FOR item IN
-          SELECT case when sum(ps.supplycost * ps.availqty) is null then 0 else sum(ps.supplycost * ps.availqty) end
-          FROM PARTSUPP ps, SUPPLIER s
-          WHERE ps.suppkey = s.suppkey
-        LOOP
-            UPDATE RESULTS SET total = total + item.total;
-
-            IF found THEN
-                CONTINUE;
-            END IF;
-
-            INSERT INTO RESULTS VALUES (item.total);
-        END LOOP;
-
-        RETURN new;
-    END;
-$on_insert_partsuppf$ LANGUAGE plpgsql;
-
-CREATE OR REPLACE FUNCTION on_insert_supplierf() RETURNS TRIGGER AS $on_insert_supplierf$
-    DECLARE
-        item RESULTS%ROWTYPE;
-    BEGIN
-        FOR item IN
+        TRUNCATE TABLE RESULTS;
+        INSERT INTO RESULTS (
           SELECT
-            case when
-                sum(ps.supplycost * ps.availqty) is null then 0
-                else sum(ps.supplycost * ps.availqty)
-            end
+            case when sum(ps.supplycost * ps.availqty) is null then 0
+            else sum(ps.supplycost * ps.availqty) end
           FROM PARTSUPP ps, SUPPLIER s
           WHERE ps.suppkey = s.suppkey
-        LOOP
-            UPDATE RESULTS SET total = total + item.total;
-
-            IF found THEN
-                CONTINUE;
-            END IF;
-
-            INSERT INTO RESULTS VALUES (item.total);
-        END LOOP;
-
+        );
         RETURN new;
     END;
-$on_insert_supplierf$ LANGUAGE plpgsql;
+$recompute_query$ LANGUAGE plpgsql;
 
-CREATE TRIGGER on_insert_partsupp AFTER INSERT ON PARTSUPP
-    FOR EACH ROW EXECUTE PROCEDURE on_insert_partsuppf();
+CREATE TRIGGER refresh_partsupp AFTER INSERT OR DELETE ON PARTSUPP
+    FOR EACH ROW EXECUTE PROCEDURE recompute_query();
 
-CREATE TRIGGER on_insert_supplier AFTER INSERT ON SUPPLIER
-    FOR EACH ROW EXECUTE PROCEDURE on_insert_supplierf();
+CREATE TRIGGER refresh_supplier AFTER INSERT OR DELETE ON SUPPLIER
+    FOR EACH ROW EXECUTE PROCEDURE recompute_query();
 
-INSERT INTO PARTSUPP SELECT * FROM PARTSUPP_STREAM;
-INSERT INTO SUPPLIER SELECT * FROM SUPPLIER_STREAM;
+SELECT dispatch();
 
 SELECT * FROM RESULTS;
 
-DROP TRIGGER on_insert_partsupp ON PARTSUPP;
-DROP TRIGGER on_insert_supplier ON SUPPLIER;
-
 DROP TABLE RESULTS;
-
-DROP TABLE PARTSUPP;
-DROP TABLE SUPPLIER;
+DROP TRIGGER refresh_partsupp ON PARTSUPP;
+DROP TRIGGER refresh_supplier ON SUPPLIER;
