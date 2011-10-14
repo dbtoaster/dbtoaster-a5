@@ -2,10 +2,10 @@
   :path => "test/sql/tpch/query17.sql",
   :type => :singleton,
   :answer => 898778.73,
-  :valid_opts => ["depth-1"],
   :datasets => {
     "tiny" => {
-      :subs => [ [/test\/data\/tpch\//, "test/data/tpch_tiny/"] ],
+      :subs => [ [/test\/data\/tpch\//, "test/data/tpch_tiny/"],
+                 [/\.tbl/, ".csv"] ],
       :answer => 98015.33
     }
   }

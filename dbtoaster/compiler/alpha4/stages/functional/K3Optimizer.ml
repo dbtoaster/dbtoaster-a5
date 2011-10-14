@@ -1578,9 +1578,20 @@ let datastructure_statement (schema, patterns) (pm, rel, args) stmt =
             let rebuilt_expr =
               (* Perform a lookup instead of a slice if all keys are probed. *)
               if (List.length probe_key) = (List.length slice_sch) then
-                Singleton(Apply(
-                  Lambda(narg, rest_b), Lookup(ds, List.map snd probe_key)))
-              else Map(Lambda(narg, rest_b), Slice(ds, slice_sch, probe_key))
+                (* Rebind variables as needed *)
+                let rebuilt_lookup = 
+                   begin match narg with
+                      | AVar _   -> Lookup(ds, List.map snd probe_key)
+                      | ATuple(tl) -> 
+                        (* Since we're doing a lookup, we need to match the
+                           schema of the original map with a hand-constructed
+                           tuple. *)
+                        Tuple(   (List.map snd probe_key) @ 
+                                 [Lookup(ds, List.map snd probe_key)] )
+                   end in
+                Singleton(Apply(Lambda(narg, rest_b), rebuilt_lookup))
+              else 
+                Map(Lambda(narg, rest_b), Slice(ds, slice_sch, probe_key))
             in Some(ds_decl), Block([ds_cons; rebuilt_expr])
 
         | _ -> failwith "invalid map lambda"

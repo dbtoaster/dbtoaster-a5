@@ -380,6 +380,13 @@ and calc_to_expr trig_args metadata expected_schema calc =
          if (Debug.active "PROJECTED-MAP-ACCESS")
          then ListAsSet.inter outv expected_schema
          else outv in
+      (Debug.print "LOG-MAP-PROJECTIONS" (fun () ->
+         "Access to : "^mapn^
+         "\nDefault Outputs : "^(Util.list_to_string (fun x->x) outv)^
+         "\nExpected Outputs : "^
+            (Util.list_to_string (fun x->x) expected_schema)^
+         "\nResult Outputs : "^(Util.list_to_string (fun x->x) retv)
+      ));
       let new_metadata = metadata@[mapn,inv,outv] in
       if (ListAsSet.seteq retv outv)
          then (outv, new_metadata, r)

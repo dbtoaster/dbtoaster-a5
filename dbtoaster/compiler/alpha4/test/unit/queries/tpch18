@@ -2,5 +2,11 @@
   :path => "test/sql/tpch/query18.sql",
   :type => :onelevel,
   :answer => results_file("test/results/tpch/query18.csv"),
-  :valid_opts => ["depth-0", "depth-1"]
+  :datasets => {
+    "tiny" => {
+      :subs => [ [/test\/data\/tpch\//, "test/data/tpch_tiny/"],
+                 [/\.tbl/, ".csv"] ],
+      :answer => 98015.33
+    }
+  }
 }
