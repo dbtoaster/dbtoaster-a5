@@ -2,7 +2,7 @@ rst
 rst --depth 1
 rst --depth 2
 ssb4 -d disable-deletes -d dup-ivc
-ssb4 -d disable-deletes -d dup-ivc --depth 1 -f cse -f breduce -f hashds 
+ssb4 -d disable-deletes -d dup-ivc --depth 1
 ssb4 -d disable-deletes -d dup-ivc --depth 2 -f cse -f breduce -f hashds 
 ssb4 -d disable-deletes -d dup-ivc --depth 3 -f cse -f breduce -f hashds 
 ssb4 -d disable-deletes -d dup-ivc --depth 4 -f cse -f breduce -f hashds 
