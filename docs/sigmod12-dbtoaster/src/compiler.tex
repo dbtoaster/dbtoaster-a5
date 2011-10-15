@@ -17,10 +17,10 @@ q := SELECT SUM(R.a  * T.e)
 \end{verbatim}
 \end{example}
 
-Prior to compilation, the SQL query is translated verbatim into the compiler's internal query representation.  This representation is closely related to the AGCA language presented in \cite{dbtoaster-pods}.  For brevity, the internal representation is omitted from this paper, and query expressions in DBToaster's internal representation are presented in the form of an equivalent expression in SQL.  \todo{present Calculus in the appendix?  Is there an appendix?}
+Prior to compilation, the SQL query is translated verbatim into the compiler's internal query representation.  This representation is closely related to the AGCA language presented in \cite{koch-pods:10}.  For brevity, the internal representation is omitted from this paper, and query expressions in DBToaster's internal representation are presented in the form of an equivalent expression in SQL.  \todo{present Calculus in the appendix?  Is there an appendix?}
 
 \subsection{Building the Materialization Plan}
-The first stage in the compilation pipeline is a recursive compilation process that establishes a strategy for incrementally maintaining the query results -- a {\em materialization plan}.  This process is similar to the recursive compilation of \cite{dbtoaster-cidr,dbtoaster-pods}, and is described in detail in Section \ref{}.  The first step in the recursive compilation is the computation of the {\em delta of the query with respect an update to one of its relations}.  The delta expresses how the results of the query change when the delta's relation is updated.  
+The first stage in the compilation pipeline is a recursive compilation process that establishes a strategy for incrementally maintaining the query results -- a {\em materialization plan}.  This process is similar to the recursive compilation of \cite{kennedy-ahmad-koch-cidr:11,koch-pods:10}, and is described in detail in Section \ref{}.  The first step in the recursive compilation is the computation of the {\em delta of the query with respect an update to one of its relations}.  The delta expresses how the results of the query change when the delta's relation is updated.  
 
 \begin{example}
 For example, consider the delta of {\tt q} with respect to the insertion of tuple $\left< \alpha, \beta\right>$ into relation {\tt R}.  We write this as $\Delta_{{\tt R}(\alpha, \beta)}{\tt q :=}$
@@ -63,7 +63,7 @@ The compiler takes advantage of the delta queries being in the same language by 
 The first stage in the compilation pipeline is the construction of a {\em materialization plan}, a representation of the operations and data structures required to maintain the query being compiled.  
 
 
- \cite{dbtoaster-cidr}, 
+ \cite{kennedy-ahmad-koch-cidr:11}, 
 
 
 The materialization plan is constructed using two fundamental operations: {\bf delta} and {\bf extract}.  Delta identifies the set of query expressions required to incrementally maintain a data structure when one of the base relations changes.  Extract identifies the set of data structures required to evaluate a query expression.  We document these operations more extensively in Section \ref{sec:iprogram:mplan}. 
