@@ -39,13 +39,13 @@ tpch17 -d dup-ivc --depth 0 -f cse -f breduce -f hashds
 tpch17 -d dup-ivc --depth 1 -f cse -f breduce -f hashds 
 tpch18 -d dup-ivc 
 tpch18 -d dup-ivc --depth 0 -f cse -f breduce -f hashds  --compile-only
-tpch18 -d dup-ivc --depth 1 -f cse -f breduce -f hashds 
+tpch18 -d dup-ivc --depth 1
 tpch18short -d dup-ivc -f cse -f breduce -f hashds
 tpch18short -d dup-ivc --depth 0 -f cse -f breduce -f hashds  --compile-only
-tpch18short -d dup-ivc --depth 1 -f cse -f breduce -f hashds 
+tpch18short -d dup-ivc --depth 1
 tpch22 -d dup-ivc -f cse -f breduce -f hashds
 tpch22 -d dup-ivc --depth 0 -f cse -f breduce -f hashds  --compile-only
-tpch22 -d dup-ivc --depth 1 -f cse -f breduce -f hashds 
+tpch22 -d dup-ivc --depth 1
 clusteravailablenew -d dup-ivc -f cse -f breduce -f hashds
 clusteravailablenew -d dup-ivc --depth 0 -f cse -f breduce -f hashds  --compile-only
-clusteravailablenew -d dup-ivc --depth 1 -f cse -f breduce -f hashds
+clusteravailablenew -d dup-ivc --depth 1
