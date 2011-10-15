@@ -591,14 +591,15 @@ namespace dbtoaster {
         int num_fields;
         bool deletions;
 
-        tpch_adaptor(stream_id i, string tpch_rel) : csv_adaptor(i) {
+        tpch_adaptor(stream_id i, string tpch_rel) : csv_adaptor(i), 
+                                                     deletions(false){
           schema = parse_schema(get_schema(tpch_rel));
           if ( delimiter == "" ) delimiter = "|";
         }
 
         tpch_adaptor(stream_id i, string tpch_rel, int num_params,
                      const pair<string, string> params[])
-          : csv_adaptor(i,num_params,params)
+          : csv_adaptor(i,num_params,params), deletions(false)
         {
           // Parse TPCH adaptor-specific parameters.
           for (int i = 0; i< num_params; ++i) {
