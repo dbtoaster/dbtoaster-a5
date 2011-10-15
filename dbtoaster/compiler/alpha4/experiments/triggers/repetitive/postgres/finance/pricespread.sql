@@ -13,20 +13,21 @@ CREATE OR REPLACE FUNCTION recompute_query() RETURNS TRIGGER AS $recompute_query
         TRUNCATE TABLE RESULTS;
         INSERT INTO RESULTS (
             SELECT
-              case when sum(b1.price * b1.volume) is NULL then 0
-              else sum(b1.price * b1.volume) end
-            FROM   bids b1
-            WHERE  0.25 * (
-                SELECT 
-                  case when sum(b3.volume) is NULL then 0
-                  else sum(b3.volume) end
-                FROM bids b3
-            ) > (
-                SELECT 
-                  case when sum(b2.volume) is NULL then 0
-                  else sum(b2.volume) end
-                FROM bids b2
-                WHERE b2.price > b1.price
+                case when sum(a.price + -1 * b.price) is NULL then 0
+                else sum(a.price + -1 * b.price) end
+            FROM ASKS a, BIDS b
+            WHERE (b.volume > 0.0001 * (
+                    SELECT
+                        case when sum(b1.volume) is NULL then 0
+                        else sum(b1.volume) end
+                    FROM BIDS b1
+                )
+            ) AND ( a.volume > 0.0001 * (
+                    SELECT 
+                        case when sum(a1.volume) is NULL then 0
+                        else sum(a1.volume) end
+                    FROM ASKS a1
+                )
             )
         );
         RETURN new;
