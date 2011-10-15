@@ -6,14 +6,15 @@ let should_compile  = ref false;;
 let compile_fname   = ref "";;
 let output_fname    = ref None;;
 let compile_env : string list StringMap.t ref = ref StringMap.empty;;
+let compiler_flags  = ref [];;
 
-let compile_to_file   s = 
-   should_compile := true; compile_fname := s;;
+let compile_to_file   s = should_compile := true; compile_fname := s;;
 
-let set_source_file   s = 
-   output_fname := Some(s);;
+let set_source_file   s = output_fname := Some(s);;
 
 let set_env k v         = compile_env := StringMap.add k v !compile_env;;
+
+let set_flags f         = compiler_flags := f;;
 
 module type EC_Base = sig
    val extension : string
@@ -42,7 +43,7 @@ module EC_Ocaml_Base : EC_Base = struct
       (* would nice to generate args dynamically off the makefile *)
       Unix.execvp ocaml_cc 
       ( Array.of_list (
-        [ ocaml_cc; "-ccopt"; "-O3"; "-nodynlink"; ] @
+        [ ocaml_cc; "-ccopt"; "-O3"; "-nodynlink"; ] @ (!compiler_flags) @
         (if Debug.active "COMPILE-WITH-GDB" then [ "-g" ] else []) @
         (List.flatten (List.map (fun x -> [ "-I" ; x ]) dbt_includes)) @
         (List.map (fun x -> x^ocaml_lib_ext) ocaml_libs) @
@@ -75,7 +76,7 @@ module EC_CPP_Base : EC_Base = struct
            "-DFUSION_MAX_VECTOR_SIZE=50";
            in_file_name ;
            "-o"; !compile_fname
-         ]
+         ] @ (!compiler_flags)
       ) in
          Debug.print "LOG-GCC" (fun () -> (string_of_list " " cpp_args));
          Unix.execvp cpp_cc (Array.of_list cpp_args)

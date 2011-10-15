@@ -103,8 +103,11 @@ let flag_descriptors =
           ("INCLUDE_LIB", ParseArgs.ARG_LIST), "<path> [<path> [...]]",
           "Add a library include path for C++ compilation (equivalent to the DBT_LIB environment variable)");
       (["-f";"--enable-optimization"],
-          ("OPTFLAGS", ParseArgs.ARG_LIST), "<optimization flag> [<flag> [...]]", 
-          "Enable K3 optimizations")
+          ("OPTFLAGS", ParseArgs.ARG_LIST), "<optimization flag> [-f <flag> [...]]", 
+          "Enable K3 optimizations");
+      (["-g"],
+          ("COMPILERFLAGS", ParseArgs.ARG_LIST), "<compiler flag> [-g <flag> [...]]", 
+          "Pass through argument to GCC/Ocamlcc")
     ];;
 
 let arguments = ParseArgs.parse flag_descriptors;;
@@ -163,7 +166,7 @@ type language_t =
    | L_INTERPRETER of ocaml_codegen_t
    | L_OCAML of ocaml_codegen_t
    | L_IMP of bool (* desugar *)
-   | L_CPP of bool (* profiled *) 
+   | L_CPP of bool (* profiled *)
    | L_SQL of sql_language_t
    | L_NONE
 
@@ -209,6 +212,8 @@ let output_file = match flag_val "OUTPUT" with
 match flag_val "COMPILE" with
    | None    -> ()
    | Some(a) -> ExternalCompiler.compile_to_file a;;
+
+ExternalCompiler.set_flags (flag_vals "COMPILERFLAGS");;
 
 List.iter (fun e ->
    ExternalCompiler.set_env e (flag_vals e)

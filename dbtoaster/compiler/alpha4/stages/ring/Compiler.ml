@@ -33,33 +33,38 @@ let mk_external (n: string) (vs: Calculus.var_t list) =
 
 let generate_unit_test_code
       (db_schema : (string * (Calculus.var_t list)) list)
-      ((map_definition, map_term, _) : map_ref_t)
+      ((map_definition, map_term, is_inline) : map_ref_t)
       (trigger_defs : trigger_definition_t list)
       (accum: string list) : string list 
 =
-   let aux acc (delete, reln, relvars, (params, bigsum_vars), new_term) =
-   match (Calculus.readable_term map_term) with
-    | Calculus.RVal(Calculus.External(mapn,_)) ->
-      let vars = List.map fst in
-      let strlist = String.concat in
-      let loop_vars = Util.ListAsSet.diff (vars params) (vars relvars) in
-      let prop_vars = Util.ListAsSet.inter (vars bigsum_vars) loop_vars in
-      let bs_vars = Util.ListAsSet.diff (vars bigsum_vars) loop_vars in
-      let code =
-         (if delete then "-" else "+")^
-         reln^"("^(strlist ", " (vars relvars))^ "): "^
-         (if (loop_vars = []) then ""
-          else "foreach "^(strlist ", " loop_vars)^" do ")^
-         mapn^"["^(strlist ", " (vars params))^"] += "^
-         (if prop_vars = [] then ""
-          else "up_and_left_{"^(strlist ", " prop_vars)^"} ")^
-         (if (bs_vars = []) then ""
-          else "bigsum_{"^(strlist ", " bs_vars)^"} ")^
-         (Calculus.term_as_string new_term)
-      in [code]@acc
+   if is_inline then begin
+     ((Calculus.string_of_term map_term)^" := "^
+      (Calculus.string_of_term map_definition)) :: accum
+   end else begin
+     let aux acc (delete, reln, relvars, (params, bigsum_vars), new_term) =
+     match (Calculus.readable_term map_term) with
+      | Calculus.RVal(Calculus.External(mapn,_)) ->
+        let vars = List.map fst in
+        let strlist = String.concat in
+        let loop_vars = Util.ListAsSet.diff (vars params) (vars relvars) in
+        let prop_vars = Util.ListAsSet.inter (vars bigsum_vars) loop_vars in
+        let bs_vars = Util.ListAsSet.diff (vars bigsum_vars) loop_vars in
+        let code =
+           (if delete then "-" else "+")^
+           reln^"("^(strlist ", " (vars relvars))^ "): "^
+           (if (loop_vars = []) then ""
+            else "foreach "^(strlist ", " loop_vars)^" do ")^
+           mapn^"["^(strlist ", " (vars params))^"] += "^
+           (if prop_vars = [] then ""
+            else "up_and_left_{"^(strlist ", " prop_vars)^"} ")^
+           (if (bs_vars = []) then ""
+            else "bigsum_{"^(strlist ", " bs_vars)^"} ")^
+           (Calculus.term_as_string new_term)
+        in code :: acc
 
-    | _ -> failwith "Invalid map term for unit test code generation."
-   in List.fold_left aux accum (List.rev trigger_defs)
+      | _ -> failwith "Invalid map term for unit test code generation."
+     in List.fold_left aux accum (List.rev trigger_defs)
+   end
 
 
 (* compilation functions *)
