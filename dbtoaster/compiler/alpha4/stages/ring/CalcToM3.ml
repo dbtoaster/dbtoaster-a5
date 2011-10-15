@@ -720,7 +720,7 @@ module M3InProgress = struct
     let (_,term_for_map,_) = map_ref in
     Debug.print "LOG-M3-ACCUM" (fun () ->
       string_of_list0 "\n" fst 
-         (StringMap.fold (fun k v l -> (k,v)::l) (get_map_refs accum))
+         (StringMap.fold (fun k v l -> (k,v)::l) (get_map_refs accum) [])
     );
     let (triggers_as_m3, (std_todos, rel_todos)) = 
       List.fold_left (fun (tlist,old_todos) 
