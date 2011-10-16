@@ -6,12 +6,10 @@
 CREATE SCHEMA OrderbookEntry
 (timestamp double, orderId int, brokerId int, volume double, price double);
 
-/* Order book input streams. Trim to your needs */ 
-CREATE STREAM InsertBids OrderbookEntry;
-CREATE STREAM DeleteBids OrderbookEntry;
-
 /* Main memory order book tables */
-CREATE MEMORY TABLE Bids OrderbookEntry PRIMARY KEY (timestamp, orderId, brokerId);
+CREATE MEMORY TABLE Bids OrderbookEntry
+  PRIMARY KEY (timestamp, orderId, brokerId, volume, price);
+
 CREATE INDEX BidsByPrice ON Bids(price);
 
 /*
@@ -27,22 +25,19 @@ CREATE STREAM SDeleteBids SOrderbookEntry;
 CREATE STREAM BidsInserted SOrderbookEntry;
 CREATE STREAM BidsDeleted  SOrderbookEntry;
 
+/* A dispatch stream for direct loading from a unified events file */
+CREATE SCHEMA TaggedInputs 
+  (stream_name string, evt int,
+   timestamp double, orderId int, brokerId int, volume double, price double); 
 
-/* Tuple identification across union of input streams 
- * Currently this uses an unordered union operation. Alternatively one could
- * use a merge on the order book entry's timestamp field.
- */
-CREATE SCHEMA TaggedInputs (evt int, tag int, o OrderbookEntry);
-CREATE STREAM MultiplexedInputs AS
-      SELECT 0 AS evt, 1 AS tag, OrderbookEntry(* AS *) AS o FROM InsertBids
-UNION SELECT 1 AS evt, 1 AS tag, OrderbookEntry(* AS *) AS o FROM DeleteBids;
+CREATE STREAM Dispatch TaggedInputs;
 
 /* Lockset for serial execution across updates and queries. */
 CREATE LOCKSET InputLock (i int);
 CREATE STREAM InputLocked TaggedInputs;
-LOCK InputLock ON 0 FROM MultiplexedInputs INTO InputLocked; 
+LOCK InputLock ON 0 FROM Dispatch INTO InputLocked; 
 
-/* Counter for barriering */
+/* Counter for barriering per update. */
 DECLARE Counter int DEFAULT 0;
 CREATE STREAM UpdateCounter (i int);
 UPDATE Counter FROM (SELECT i FROM UpdateCounter);
@@ -50,8 +45,14 @@ SELECT Counter+1 as i FROM InputLocked INTO UpdateCounter;
 
 
 /* Partition into serialized streams after locking */
-SELECT Counter as tid, o  FROM InputLocked WHERE evt = 0 AND tag = 1 INTO SInsertBids;
-SELECT Counter as tid, o  FROM InputLocked WHERE evt = 1 AND tag = 1 INTO SDeleteBids;
+
+SELECT Counter as tid,
+       OrderbookEntry(timestamp, orderId, brokerId, volume, price) as o
+FROM InputLocked WHERE evt = 1 INTO SInsertBids;
+
+SELECT Counter as tid,
+       OrderbookEntry(timestamp, orderId, brokerId, volume, price) as o 
+FROM InputLocked WHERE evt = 0 INTO SDeleteBids;
 
 
 /* Maintain Bids table */
@@ -66,18 +67,39 @@ RETURNING SDeleteBids.* INTO BidsDeleted;
 
 
 /* Track changes to Bids */
-CREATE STREAM BidsChanged AS SELECT tid FROM BidsInserted UNION BidsDeleted;
+CREATE STREAM BidsChanged AS BidsInserted UNION BidsDeleted;
 
 /* Compute the total Bids volume */
 CREATE STREAM BidsVolume AS
-SELECT B.tid, sum(Bids.volume) as sumBV FROM BidsChanged as B, Bids;
+SELECT B.tid, sum(Bids.volume) as sumBV, count() as numB
+FROM BidsChanged as B, Bids;
 
 /* For a given total, turn the Bids relation into a stream,
-   i.e. perform a scan over Bids. This is the outer loop of a
-   correlated subquery.
-*/
+ * i.e. perform a scan over Bids. This is the outer loop of a
+ * correlated subquery.
+ */
 CREATE STREAM CurrentBids AS
 SELECT BV.*, Bids.* FROM BidsVolume as BV, Bids;
+
+/* Keep a counter to determine when we're done scanning from in-memory tables,
+ * to unlock and begin processing the next update
+ */
+DECLARE CBCounter int DEFAULT 0;
+CREATE STREAM UpdateCBCounter (i int, tid int, total int);
+UPDATE CBCounter FROM (SELECT i FROM UpdateCBCounter);
+SELECT CBCounter+1 as i, tid, numB as total FROM CurrentBids INTO UpdateCBCounter;
+
+CREATE STREAM ScanDone AS
+SELECT tid, total FROM UpdateCBCounter
+WHERE total = CBCounter;
+
+/* Reset counter and unlock the next input as soon as we're done scanning.
+ * At this point all tuples from the materialized window for this update
+ * are active in the stream graph
+ */
+UPDATE CBCounter FROM (SELECT 0 as i FROM ScanDone);
+CREATE OUTPUT STREAM Unlocked (tid int, total int);
+UNLOCK InputLock on 0 FROM ScanDone INTO Unlocked;
 
 /* Perform the correlated subquery, via a nested loops join with
    the above CurrentBids stream, and the Bids table.
@@ -98,39 +120,41 @@ FROM (SELECT b1.tid, b1.sumBV, b1.price*b1.volume as pv,
       WHERE b2.price > b1.price) AS S
 WHERE (0.25*sumBV) > sumBV2;
 
-/* Is a 5 second clock sufficient? It must be strictly greater than the time
- * required to process the above subquery for any input, otherwise it will
- * cause premature aggregation
- */
-CREATE METRONOME BidsClock (t,5);
-CREATE STREAM BidsFlusher AS BidsSubquery UNION BidsClock;
+/*
+CREATE STREAM TimeoutSubquery AS
+SELECT * FROM BidsSubquery
+WITH HEARTBEAT ON t EVERY 5;
 
-CREATE STREAM BidsValid AS
-SELECT (if isnull(tid) then Counter+1 else tid) as tid,
+CREATE STREAM FlushedSubquery AS
+SELECT t,
+       (if isnull(tid) and CBCounter == 0 then Counter+1 else tid) as tid,
        (if isnull(pv) then 0 else pv) as pv
-FROM BidsFlusher;
+FROM TimeoutSubquery;
 
-/* Perform a final aggregation over the outer stream, having run the subquery */
-CREATE STREAM BidsResult AS
+CREATE STREAM ValidSubquery AS
+SELECT * FROM FlushedSubquery
+WHERE not(isnull(tid));
+*/
+
+/* Perform the final aggregation over the replayed and filtered stream */
+CREATE OUTPUT STREAM Result AS
 SELECT now() as t, sum(pv) as vwap
-FROM BidsValid[SIZE 1 ADVANCE 1 ON tid] AS S2;
-
-/* Unlock and output */
-CREATE STREAM Result (t timestamp, vwap double);
-UNLOCK InputLock ON 0 FROM BidsResult INTO Result;
-
+FROM BidsSubquery[SIZE 1 ADVANCE 1 ON tid] AS S2;
 
 /* Load data. */
 CREATE STREAM FileEvents;
 
 APPLY JAVA "com.streambase.sb.adapter.csvreader.CSVReader"
-  (FileName="InsertBids.dbtdat", Delimiter=",", StartEventPort="true",
-   Schema=(timestamp double, orderId int, brokerId int, volume double, price double))
-  INTO InsertBids, FileEvents;
+  (FileName="Events.dbtdat", Delimiter=",", StartEventPort="true",
+   Schema=(stream_name string, evt int,
+           timestamp double, orderId int, brokerId int, volume double, price double))
+  INTO Dispatch, FileEvents;
 
 /* Log outputs */
 APPLY JAVA "com.streambase.sb.adapter.csvwriter.CSVWriter"
-  (FileName="Vwap.csv", IfFileDoesntExist="Create new file")
+  (FileName="Vwap.csv", 
+   IfFileExists="Truncate existing file",
+   IfFileDoesntExist="Create new file")
   FROM Result;
 
 /* Track data file open and close for timing */
@@ -139,6 +163,9 @@ SELECT now() as t, * FROM FileEvents;
 
 /* Log data file events */
 APPLY JAVA  "com.streambase.sb.adapter.csvwriter.CSVWriter"
-  (FileName="FileEvents.csv", IfFileDoesntExist="Create new file")
+  (FileName="FileEvents.csv",
+   IfFileExists="Truncate existing file",
+   IfFileDoesntExist="Create new file")
   FROM TimedFileEvents;
   
+
