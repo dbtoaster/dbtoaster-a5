@@ -81,17 +81,17 @@ CREATE STREAM OFileEvents;
 CREATE STREAM CFileEvents;
 
 APPLY JAVA "com.streambase.sb.adapter.csvreader.CSVReader"
-  (FileName="lineitem.csv", Delimiter="|", StartEventPort="true",
+  (FileName="@@PATH@@lineitem.csv", Delimiter="|", StartEventPort="true",
    TimestampFormat="yyyy-MM-dd", Schema=LineitemSchema)
   INTO InsertLineitem, LFileEvents;
   
 APPLY JAVA "com.streambase.sb.adapter.csvreader.CSVReader"
-  (FileName="orders.csv", Delimiter="|", StartEventPort="true",
+  (FileName="@@PATH@@orders.csv", Delimiter="|", StartEventPort="true",
    TimestampFormat="yyyy-MM-dd", Schema=OrdersSchema)
   INTO InsertOrders, OFileEvents;
 
 APPLY JAVA "com.streambase.sb.adapter.csvreader.CSVReader"
-  (FileName="customer.csv", Delimiter="|", StartEventPort="true",
+  (FileName="@@PATH@@customer.csv", Delimiter="|", StartEventPort="true",
    TimestampFormat="yyyy-MM-dd", Schema=CustomerSchema)
   INTO InsertCustomer, CFileEvents;
 
@@ -108,7 +108,7 @@ FROM MultiplexedInputs=Dispatch
 INTO Unlocked=Query3Progress, Result=Query3Results;
 
 APPLY JAVA "com.streambase.sb.adapter.csvwriter.CSVWriter"
-  (FileName="Query3.csv",
+  (FileName="query3.csv",
    IfFileExists="Truncate existing file",
    IfFileDoesntExist="Create new file")
   FROM Query3Results;
@@ -119,7 +119,7 @@ SELECT now() as t, * FROM (LFileEvents UNION OFileEvents UNION CFileEvents);
 
 /* Log data file events */
 APPLY JAVA  "com.streambase.sb.adapter.csvwriter.CSVWriter"
-  (FileName="FileEvents.csv",
+  (FileName="file_events.csv",
    IfFileExists="Truncate existing file",
    IfFileDoesntExist="Create new file")
   FROM TimedFileEvents;

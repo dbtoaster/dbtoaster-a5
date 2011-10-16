@@ -61,12 +61,12 @@ CREATE STREAM LFileEvents;
 CREATE STREAM PFileEvents;
 
 APPLY JAVA "com.streambase.sb.adapter.csvreader.CSVReader"
-  (FileName="lineitem.csv", Delimiter="|", StartEventPort="true",
+  (FileName="@@PATH@@lineitem.csv", Delimiter="|", StartEventPort="true",
    TimestampFormat="yyyy-MM-dd", Schema=LineitemSchema)
   INTO InsertLineitem, LFileEvents;
   
 APPLY JAVA "com.streambase.sb.adapter.csvreader.CSVReader"
-  (FileName="part.csv", Delimiter="|", StartEventPort="true",
+  (FileName="@@PATH@@part.csv", Delimiter="|", StartEventPort="true",
    TimestampFormat="yyyy-MM-dd", Schema=PartSchema)
   INTO InsertPart, PFileEvents;
 
@@ -83,7 +83,7 @@ FROM MultiplexedInputs=Dispatch
 INTO Unlocked=Query17Progress, Result=Query17Results;
 
 APPLY JAVA "com.streambase.sb.adapter.csvwriter.CSVWriter"
-  (FileName="Query17.csv",
+  (FileName="query17.csv",
    IfFileExists="Truncate existing file",
    IfFileDoesntExist="Create new file")
   FROM Query17Results;
@@ -94,7 +94,7 @@ SELECT now() as t, * FROM (LFileEvents UNION PFileEvents);
 
 /* Log data file events */
 APPLY JAVA  "com.streambase.sb.adapter.csvwriter.CSVWriter"
-  (FileName="FileEvents.csv",
+  (FileName="file_events.csv",
    IfFileExists="Truncate existing file",
    IfFileDoesntExist="Create new file")
   FROM TimedFileEvents;
