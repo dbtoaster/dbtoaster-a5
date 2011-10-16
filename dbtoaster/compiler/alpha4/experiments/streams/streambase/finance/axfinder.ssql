@@ -134,7 +134,7 @@ UNLOCK InputLock on 0 FROM ScanDone INTO Unlocked;
 
 
 /* Perform outer stream aggregation */
-CREATE STREAM Result AS
+CREATE OUTPUT STREAM Result AS
 SELECT now() as t, brokerId, sum(diff) as axf
 FROM ValidJoin[SIZE 1 ADVANCE 1 ON tid] as S
 GROUP BY brokerId;
@@ -144,7 +144,7 @@ GROUP BY brokerId;
 CREATE STREAM FileEvents;
 
 APPLY JAVA "com.streambase.sb.adapter.csvreader.CSVReader"
-  (FileName="AxEvents.dbtdat", Delimiter=",", StartEventPort="true",
+  (FileName="Events.dbtdat", Delimiter=",", StartEventPort="true",
    Schema=(stream_name string, evt int,
            timestamp double, orderId int, brokerId int, volume double, price double))
   INTO Dispatch, FileEvents;

@@ -9,9 +9,9 @@ CREATE SCHEMA LineitemSchema (
   tax            double,
   returnflag     string, -- text(1)
   linestatus     string, -- text(1)
-  shipdate       string, -- date
-  commitdate     string, -- date
-  receiptdate    string, -- date
+  shipdate       timestamp, -- date
+  commitdate     timestamp, -- date
+  receiptdate    timestamp, -- date
   shipinstruct   string, -- text
   shipmode       string, -- text
   comment        string  -- text
@@ -22,7 +22,7 @@ CREATE SCHEMA OrdersSchema (
   custkey        int,
   orderstatus    string, -- text(1)
   totalprice     double,
-  orderdate      string, -- date
+  orderdate      timestamp, -- date
   orderpriority  string, -- text
   clerk          string, -- text
   shippriority   int,
@@ -41,22 +41,30 @@ CREATE SCHEMA CustomerSchema (
 );
 
 
-/* All possible TPCH input streams. Trim to your query. */
-
-CREATE INPUT STREAM InsertLineitem LineitemSchema;
-CREATE INPUT STREAM InsertOrders   OrdersSchema;
-CREATE INPUT STREAM InsertCustomer CustomerSchema;
-
-CREATE INPUT STREAM DeleteLineitem LineitemSchema;
-CREATE INPUT STREAM DeleteOrders   OrdersSchema;
-CREATE INPUT STREAM DeleteCustomer CustomerSchema;
-
-
 /* Main memory TPCH tables */
 CREATE MEMORY TABLE Lineitem LineitemSchema PRIMARY KEY (orderkey, linenumber);
 CREATE MEMORY TABLE Orders   OrdersSchema   PRIMARY KEY (orderkey);
 CREATE MEMORY TABLE Customer CustomerSchema PRIMARY KEY (custkey);
 
+
+
+/* Tuple identification across union of input streams */
+CREATE SCHEMA TaggedInputs
+  (stream_name string, evt int,
+   l LineitemSchema, o OrdersSchema, c CustomerSchema);
+
+CREATE INPUT STREAM MultiplexedInputs TaggedInputs;
+
+/* Lockset for serial execution across updates and queries. */
+CREATE LOCKSET InputLock (i int);
+CREATE STREAM InputLocked TaggedInputs;
+LOCK InputLock ON 0 FROM MultiplexedInputs INTO InputLocked; 
+
+/* Counter for barriering */
+DECLARE Counter int DEFAULT 0;
+CREATE STREAM UpdateCounter (i int);
+UPDATE Counter FROM (SELECT i FROM UpdateCounter);
+SELECT Counter+1 as i FROM InputLocked INTO UpdateCounter;
 
 /*
  * Table change notification streams
@@ -84,37 +92,24 @@ CREATE STREAM OrdersDeleted    SOrdersSchema;
 CREATE STREAM CustomerDeleted  SCustomerSchema;
 
 
-/* Tuple identification across union of input streams */
-CREATE SCHEMA TaggedInputs (evt int, tag int, l Lineitem, o Orders, c Customer);
-
-CREATE STREAM MultiplexedInputs TaggedInputs AS
-      SELECT 0 as evt, 1 as tag, Lineitem as l  FROM InsertLineitem
-UNION SELECT 1 as evt, 1 as tag, Lineitem as l  FROM DeleteLineitem
-UNION SELECT 0 as evt, 2 as tag, Orders as o    FROM InsertOrders
-UNION SELECT 1 as evt, 2 as tag, Orders as o    FROM DeleteOrders
-UNION SELECT 0 as evt, 3 as tag, Customer as c  FROM InsertCustomer
-UNION SELECT 1 as evt, 3 as tag, Customer as c  FROM DeleteCustomer;
-
-/* Lockset for serial execution across updates and queries. */
-CREATE LOCKSET InputLock (i int);
-CREATE STREAM InputLocked TaggedInputs;
-LOCK InputLock ON 0 FROM MultiplexedInputs INTO InputLocked; 
-
-/* Counter for barriering */
-DECLARE Counter int DEFAULT 0;
-CREATE STREAM UpdateCounter (i int);
-UPDATE Counter FROM (SELECT i FROM UpdateCounter);
-SELECT Counter+1 as i FROM InputLocked INTO UpdateCounter;
-
-
 /* Partition into serialized streams after locking */
-SELECT i as tid, l  FROM InputLocked WHERE evt = 0 AND tag = 1 INTO SInsertLineitem;
-SELECT i as tid, o  FROM InputLocked WHERE evt = 0 AND tag = 2 INTO SInsertOrders;
-SELECT i as tid, c  FROM InputLocked WHERE evt = 0 AND tag = 3 INTO SInsertCustomer;
+SELECT Counter as tid, l  FROM InputLocked
+WHERE stream_name = "Lineitem" AND evt = 1 INTO SInsertLineitem;
 
-SELECT i as tid, l  FROM InputLocked WHERE evt = 1 AND tag = 1 INTO SDeleteLineitem;
-SELECT i as tid, o  FROM InputLocked WHERE evt = 1 AND tag = 2 INTO SDeleteOrders;
-SELECT i as tid, c  FROM InputLocked WHERE evt = 1 AND tag = 3 INTO SDeleteCustomer;
+SELECT Counter as tid, o  FROM InputLocked
+WHERE stream_name = "Orders" AND evt = 1 INTO SInsertOrders;
+
+SELECT Counter as tid, c  FROM InputLocked
+WHERE stream_name = "Customer" AND evt = 1 INTO SInsertCustomer;
+
+SELECT Counter as tid, l  FROM InputLocked
+WHERE stream_name = "Lineitem" AND evt = 0 INTO SDeleteLineitem;
+
+SELECT Counter as tid, o  FROM InputLocked
+WHERE stream_name = "Orders" AND evt = 0 INTO SDeleteOrders;
+
+SELECT Counter as tid, c  FROM InputLocked
+WHERE stream_name = "Customer" AND evt = 0 INTO SDeleteCustomer;
 
 
 /* Maintain TPCH tables */
@@ -129,7 +124,7 @@ RETURNING SInsertCustomer.* INTO CustomerInserted;
 
 DELETE FROM Lineitem USING SDeleteLineitem
 WHERE SDeleteLineitem.l.orderkey = Lineitem.orderkey
-  AND SDeleteLineitem.l.brokerId = Lineitem.linenumber
+  AND SDeleteLineitem.l.linenumber = Lineitem.linenumber
 RETURNING SDeleteLineitem.* INTO LineitemDeleted;
 
 DELETE FROM Orders USING SDeleteOrders
@@ -148,82 +143,82 @@ SELECT tid FROM  LineitemInserted UNION LineitemDeleted
            UNION OrdersInserted   UNION OrdersDeleted 
            UNION CustomerInserted UNION CustomerDeleted;
 
-CREATE STREAM ReplayL3 AS
-SELECT tid, L3.orderkey, sum(L3.quantity) as sumQ
-FROM TableChanged, Lineitem AS L3;
+/* Table to stream replays */
+CREATE STREAM CountLineitem AS
+SELECT TC.*, count() as numL FROM TableChanged AS TC OUTER JOIN Lineitem;
 
-CREATE STREAM ReplayL2 AS
-SELECT L3.tid, L3.orderkey, count() as cnt
-FROM  ReplayL3 AS L3, Lineitem AS L2
-WHERE L3.orderkey = L2.orderkey
-AND   100 < L3.sumQ;
+CREATE STREAM CountOrders AS
+SELECT CL.*, count() as numO FROM CountLineitem AS CL OUTER JOIN Orders;
 
-CREATE STREAM ReplayL1 AS
-SELECT L2.tid, L1.orderkey, sum(L1.quantity) as sumQ
-FROM ReplayL2 AS L2, Lineitem AS L1
-WHERE L2.orderkey = L1.orderkey
-AND   1 <= L2.cnt
-GROUP BY L1.orderkey;
+CREATE STREAM CountCustomer AS
+SELECT CO.*, count() as numC FROM CountOrders AS CO OUTER JOIN Customer;
 
--- stream L join O join C
-CREATE STREAM LjoinO AS
-SELECT L1.tid, O.custkey, L1.sumQ*count() as sumQ
-FROM ReplayL1 AS L1, Orders as O
-WHERE L1.orderkey = O.orderkey
-GROUP BY O.custkey;
+CREATE STREAM ValidCounts AS
+SELECT tid, 
+       ((if isnull(numL) then 1 else numL)*
+        (if isnull(numO) then 1 else numO)*
+        (if isnull(numC) then 1 else numC)) as expected
+FROM CountCustomer;
 
-CREATE STREAM ReplayOuter AS
-SELECT LO.tid, C.custkey, LO.sumQ*count() as sumQ
-FROM LjoinO AS LO, Customer AS C
-WHERE LO.custkey = C.custkey
-GROUP BY C.custkey;
- 
-CREATE METRONOME OuterClock (t, 5);
-CREATE STREAM OuterGroups AS
-SELECT Counter+1 as tid, C.custkey, 0 as sumQ FROM OuterClock, Customer AS C
-GROUP BY C.custkey;
+CREATE STREAM ReplayLineitem AS
+SELECT S.*, L.orderkey as l_ordkey, L.quantity
+FROM ValidCounts AS S OUTER JOIN Lineitem AS L;
 
-CREATE STREAM OuterFlusher AS ReplayOuter UNION OuterGroups;
+CREATE STREAM Subquery2 AS
+SELECT S.*, sum(L3.quantity) as sumL3Q
+FROM ReplayLineitem AS S OUTER JOIN Lineitem AS L3
+WHERE l_ordkey = L3.orderkey;
 
-CREATE STREAM LockedResult AS
-SELECT now() as t, custkey, sum(sumQ) as result
-FROM OuterFlusher[SIZE 1 ADVANCE 1 ON tid] AS S
-GROUP BY custkey;
+/* Explicitly count the number of L2 rows that satisfy subquery 2.
+   doing this as a count expression ensures we still have 'numL' rows and
+   subsequently 'expected' rows on the replayed stream, some of which have
+   this count as 0, rather than filtering the stream itself. */
+CREATE STREAM Subquery1 AS
+SELECT S.tid, S.expected, S.l_ordkey, S.quantity,
+       count(if 100 < sumL3Q then 0 else null) as cntSub1 
+FROM Subquery2 AS S OUTER JOIN Lineitem AS L2
+WHERE S.l_ordkey = L2.orderkey;
 
-CREATE STREAM Result (t timestamp, custkey int, result double);
-UNLOCK InputLock ON 0 FROM LockedResult INTO Result;
+CREATE STREAM ReplayLO AS
+SELECT S.*, O.orderkey as o_ordkey, O.custkey as o_custkey
+FROM Subquery1 AS S OUTER JOIN Orders AS O;
 
-
-/* Load data. */
-CREATE STREAM FileEvents;
-
-APPLY JAVA "com.streambase.sb.adapter.csvreader.CSVReader"
-  (FileName="lineitem.tbl", Delimiter="|", StartEventPort="true", Schema=Lineitem)
-  INTO InsertLineitem, FileEvents;
-  
-APPLY JAVA "com.streambase.sb.adapter.csvreader.CSVReader"
-  (FileName="orders.tbl", Delimiter="|", StartEventPort="true", Schema=Orders)
-  INTO InsertOrders, FileEvents;
-
-APPLY JAVA "com.streambase.sb.adapter.csvreader.CSVReader"
-  (FileName="customer.tbl", Delimiter="|", StartEventPort="true", Schema=Customer)
-  INTO InsertCustomer, FileEvents;
+CREATE STREAM ReplayLOC AS
+SELECT S.*, C.custkey as c_custkey
+FROM ReplayLO AS S OUTER JOIN Customer AS C;
 
 
-/* TODO: deletions */
+/* Keep a counter to determine when we're done scanning from in-memory tables,
+ * to unlock and begin processing the next update
+ */
+DECLARE CBCounter int DEFAULT 0;
+CREATE STREAM UpdateCBCounter (i int, tid int, total int);
+UPDATE CBCounter FROM (SELECT i FROM UpdateCBCounter);
+SELECT CBCounter+1 as i, tid, expected as total
+FROM ReplayLOC INTO UpdateCBCounter;
 
-/* Log outputs */
-APPLY JAVA "com.streambase.sb.adapter.csvwriter.CSVWriter"
-  (FileName="Query18.csv", IfFileDoesntExist="Create new file")
-  FROM Result;
+CREATE STREAM ScanDone AS
+SELECT tid, total FROM UpdateCBCounter
+WHERE total = CBCounter;
+
+/* Reset counter and unlock the next input as soon as we're done scanning.
+ * At this point all tuples from the materialized window for this update
+ * are active in the stream graph
+ */
+UPDATE CBCounter FROM (SELECT 0 as i FROM ScanDone);
+CREATE OUTPUT STREAM Unlocked (tid int, total int);
+UNLOCK InputLock on 0 FROM ScanDone INTO Unlocked;
 
 
-/* Track data file open and close for timing */
-CREATE OUTPUT STREAM TimedFileEvents AS
-SELECT now() as t, * FROM FileEvents;
+/* Outer query */
+CREATE STREAM FilteredReplay AS
+  SELECT tid, c_custkey as custkey, quantity FROM ReplayLOC
+  WHERE c_custkey = o_custkey
+  AND   o_ordkey = l_ordkey
+  AND   1 <= cntSub1;
 
-/* Log data file events */
-APPLY JAVA  "com.streambase.sb.adapter.csvwriter.CSVWriter"
-  (FileName="FileEvents.csv", IfFileDoesntExist="Create new file")
-  FROM TimedFileEvents;
-  
+CREATE OUTPUT STREAM Result AS
+  SELECT now() as t, custkey, sum(quantity) as result
+  FROM FilteredReplay[SIZE 1 ADVANCE 1 ON tid] AS S
+  GROUP BY custkey;
+

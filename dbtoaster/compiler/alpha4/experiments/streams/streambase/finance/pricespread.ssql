@@ -1,15 +1,16 @@
+/* Repetitive pricespread implementation.
+ *
+ * @author Yanif Ahmad
+ */
+
 CREATE SCHEMA OrderbookEntry
 (timestamp double, orderId int, brokerId int, volume double, price double);
-
-/* Order book input streams. Trim to your needs */ 
-CREATE INPUT STREAM InsertBids OrderbookEntry;
-CREATE INPUT STREAM DeleteBids OrderbookEntry;
-CREATE INPUT STREAM InsertAsks OrderbookEntry;
-CREATE INPUT STREAM DeleteAsks OrderbookEntry;
 
 /* Main memory order book tables */
 CREATE MEMORY TABLE Bids OrderbookEntry PRIMARY KEY (timestamp, orderId, brokerId);
 CREATE MEMORY TABLE Asks OrderbookEntry PRIMARY KEY (timestamp, orderId, brokerId);
+
+CREATE Index AsksByVol ON Asks(volume);
 
 /*
  * Table change notification streams
@@ -29,34 +30,41 @@ CREATE STREAM AsksInserted SOrderbookEntry;
 CREATE STREAM AsksDeleted  SOrderbookEntry;
 
 
-/* Tuple identification across union of input streams 
- * Currently this uses an unordered union operation. Alternatively one could
- * use a merge on the order book entry's timestamp field.
- */
-CREATE SCHEMA TaggedInputs (evt int, tag int, o OrderbookEntry);
-CREATE STREAM MultiplexedInputs TaggedInputs AS
-      SELECT 0 AS evt, 1 AS tag, OrderbookEntry(* AS *) AS o FROM InsertBids
-UNION SELECT 1 AS evt, 1 AS tag, OrderbookEntry(* AS *) AS o FROM DeleteBids
-UNION SELECT 0 AS evt, 2 AS tag, OrderbookEntry(* AS *) AS o FROM InsertAsks
-UNION SELECT 1 AS evt, 2 AS tag, OrderbookEntry(* AS *) AS o FROM DeleteAsks;
+/* A dispatch stream for direct loading from a unified events file */
+CREATE SCHEMA TaggedInputs 
+  (stream_name string, evt int,
+   timestamp double, orderId int, brokerId int, volume double, price double); 
+
+CREATE STREAM Dispatch TaggedInputs;
 
 /* Lockset for serial execution across updates and queries. */
 CREATE LOCKSET InputLock (i int);
 CREATE STREAM InputLocked TaggedInputs;
-LOCK InputLock ON 0 FROM MultiplexedInputs INTO InputLocked; 
+LOCK InputLock ON 0 FROM Dispatch INTO InputLocked; 
 
 /* Counter for barriering */
 DECLARE Counter int DEFAULT 0;
 CREATE STREAM UpdateCounter (i int);
 UPDATE Counter FROM (SELECT i FROM UpdateCounter);
-SELECT Counter+1 as i, InputLocked.* FROM InputLocked INTO UpdateCounter;
+SELECT Counter+1 as i FROM InputLocked INTO UpdateCounter;
 
 
 /* Partition into serialized streams after locking */
-SELECT i as tid, o  FROM InputLocked WHERE evt = 0 AND tag = 1 INTO SInsertBids;
-SELECT i as tid, o  FROM InputLocked WHERE evt = 1 AND tag = 1 INTO SDeleteBids;
-SELECT i as tid, o  FROM InputLocked WHERE evt = 0 AND tag = 2 INTO SInsertAsks;
-SELECT i as tid, o  FROM InputLocked WHERE evt = 1 AND tag = 2 INTO SDeleteAsks;
+SELECT Counter as tid,
+       OrderbookEntry(timestamp, orderId, brokerId, volume, price) as o
+FROM InputLocked WHERE evt = 1 AND stream_name = "BIDS" INTO SInsertBids;
+
+SELECT Counter as tid,
+       OrderbookEntry(timestamp, orderId, brokerId, volume, price) as o 
+FROM InputLocked WHERE evt = 0 AND stream_name = "BIDS" INTO SDeleteBids;
+
+SELECT Counter as tid,
+       OrderbookEntry(timestamp, orderId, brokerId, volume, price) as o
+FROM InputLocked WHERE evt = 1 AND stream_name = "ASKS" INTO SInsertAsks;
+
+SELECT Counter as tid,
+       OrderbookEntry(timestamp, orderId, brokerId, volume, price) as o 
+FROM InputLocked WHERE evt = 0 AND stream_name = "ASKS" INTO SDeleteAsks;
 
 
 /* Maintain Bids and Asks */
@@ -67,7 +75,7 @@ DELETE FROM Bids USING SDeleteBids
 WHERE SDeleteBids.o.timestamp = Bids.timestamp
   AND SDeleteBids.o.orderId = Bids.orderId
   AND SDeleteBids.o.brokerId = Bids.brokerId
-RETURNING DeleteBids.* INTO BidsDeleted;
+RETURNING SDeleteBids.* INTO BidsDeleted;
 
 INSERT INTO Asks SELECT o.* FROM SInsertAsks
 RETURNING SInsertAsks.* INTO AsksInserted;
@@ -81,62 +89,80 @@ RETURNING SDeleteAsks.* INTO AsksDeleted;
 
 /* Track changes to Bids */
 CREATE STREAM TableChanged AS
-SELECT tid FROM  BidsInserted UNION BidsDeleted;
+SELECT tid FROM  BidsInserted UNION BidsDeleted
            UNION AsksInserted UNION AsksDeleted;
 
 /* Bids replay and join */
 CREATE STREAM TotalBids AS
-SELECT B.tid, sum(Bids.volume) as sumBV FROM TableChanged AS B, Bids;
+SELECT B.tid, sum(Bids.volume) as sumBV, count() as numB
+FROM TableChanged AS B OUTER JOIN Bids;
 
 CREATE STREAM TotalBA AS
-SELECT T.*, sum(Asks.volume) as sumAV FROM TotalBids AS T, Asks;
+SELECT T.*, sum(Asks.volume) as sumAV
+FROM TotalBids AS T OUTER JOIN Asks;
+
+CREATE STREAM ValidTotals AS
+SELECT tid,
+       (if isnull(numB) then 1 else numB) as numB,
+       (if isnull(sumBV) then 0 else sumBV) as sumBV,
+       (if isnull(sumAV) then 0 else sumAV) as sumAV
+FROM TotalBA;
 
 CREATE STREAM ReplayBids AS
-SELECT T.*, B.price, B.volume from TotalBA AS T, Bids AS B; 
+SELECT T.*, B.price, B.volume
+FROM ValidTotals AS T OUTER JOIN Bids AS B; 
 
 CREATE STREAM ReplayJoin AS
-SELECT B.tid, sum(A.price-B.price) AS diff
-FROM ReplayBids AS B, Asks AS A
+SELECT B.tid, B.numB, sum(A.price-B.price) AS diff
+FROM ReplayBids AS B OUTER JOIN Asks AS A
 WHERE ( B.volume > 0.0001 * B.sumBV )
 AND   ( A.volume > 0.0001 * B.sumAV );
 
-/* TODO: check sufficiency of 5-second clock */
-CREATE METRONOME ReplayClock (t, 5);
-CREATE STREAM ReplayFlusher AS ReplayJoin UNION ReplayClock;
-
-CREATE STREAM ValidReplay AS
-SELECT (if isnull(tid) then Counter+1 else tid) as tid,
+CREATE STREAM ValidJoin AS
+SELECT tid, numB,
        (if isnull(diff) then 0 else diff) as diff
-FROM ReplayFlusher;
+FROM ReplayJoin;
+
+/* Keep a counter to determine when we're done scanning from in-memory tables,
+ * to unlock and begin processing the next update
+ */
+DECLARE CBCounter int DEFAULT 0;
+CREATE STREAM UpdateCBCounter (i int, tid int, total int);
+UPDATE CBCounter FROM (SELECT i FROM UpdateCBCounter);
+SELECT CBCounter+1 as i, tid, numB as total FROM ValidJoin INTO UpdateCBCounter;
+
+CREATE STREAM ScanDone AS
+SELECT tid, total FROM UpdateCBCounter
+WHERE total = CBCounter;
+
+/* Reset counter and unlock the next input as soon as we're done scanning.
+ * At this point all tuples from the materialized window for this update
+ * are active in the stream graph
+ */
+UPDATE CBCounter FROM (SELECT 0 as i FROM ScanDone);
+CREATE OUTPUT STREAM Unlocked (tid int, total int);
+UNLOCK InputLock on 0 FROM ScanDone INTO Unlocked;
 
 /* Perform outer stream aggregation */
-CREATE STREAM BidsResult AS
-SELECT sum(diff) AS ps FROM ValidReplay[SIZE 1 ADVANCE 1 ON tid] AS S;
+CREATE OUTPUT STREAM Result AS
+SELECT now() as t, sum(diff) AS ps
+FROM ValidJoin[SIZE 1 ADVANCE 1 ON tid] AS S;
 
-
-/* Unlock and output */
-CREATE STREAM LockedResult AS
-SELECT now() as t, ps FROM BidsResult UNION AsksResult;  
-
-CREATE STREAM Result (t timestamp, ps double);
-UNLOCK InputLock ON 0 FROM LockedResult INTO Result;
 
 /* Load data. */
 CREATE STREAM FileEvents;
 
 APPLY JAVA "com.streambase.sb.adapter.csvreader.CSVReader"
-  (FileName="InsertBids.dbtdat", Delimiter=",", StartEventPort="true",
-   Schema=(timestamp double, orderId int, brokerId int, volume double, price double))
-  INTO InsertBids, FileEvents;
+  (FileName="Events.dbtdat", Delimiter=",", StartEventPort="true",
+   Schema=(stream_name string, evt int,
+           timestamp double, orderId int, brokerId int, volume double, price double))
+  INTO Dispatch, FileEvents;
   
-APPLY JAVA "com.streambase.sb.adapter.csvreader.CSVReader"
-  (FileName="InsertAsks.dbtdat", Delimiter=",", StartEventPort="true",
-   Schema=(timestamp double, orderId int, brokerId int, volume double, price double))
-  INTO InsertAsks, FileEvents;
-
 /* Log outputs */
 APPLY JAVA "com.streambase.sb.adapter.csvwriter.CSVWriter"
-  (FileName="Pricespread.csv", IfFileDoesntExist="Create new file")
+  (FileName="Pricespread.csv",
+   IfFileExists="Truncate existing file",
+   IfFileDoesntExist="Create new file")
   FROM Result;
 
 /* Track data file open and close for timing */
@@ -145,6 +171,7 @@ SELECT now() as t, * FROM FileEvents;
 
 /* Log data file events */
 APPLY JAVA  "com.streambase.sb.adapter.csvwriter.CSVWriter"
-  (FileName="FileEvents.csv", IfFileDoesntExist="Create new file")
+  (FileName="FileEvents.csv",
+   IfFileExists="Truncate existing file",
+   IfFileDoesntExist="Create new file")
   FROM TimedFileEvents;
-  

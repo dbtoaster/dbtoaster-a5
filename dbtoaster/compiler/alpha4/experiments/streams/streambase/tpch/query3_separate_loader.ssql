@@ -1,0 +1,125 @@
+CREATE SCHEMA LineitemSchema (
+  orderkey       int,
+  partkey        int,
+  suppkey        int,
+  linenumber     int,
+  quantity       double,
+  extendedprice  double,
+  discount       double,
+  tax            double,
+  returnflag     string, -- text(1)
+  linestatus     string, -- text(1)
+  shipdate       timestamp, -- date
+  commitdate     timestamp, -- date
+  receiptdate    timestamp, -- date
+  shipinstruct   string, -- text
+  shipmode       string, -- text
+  comment        string  -- text
+);
+
+CREATE SCHEMA OrdersSchema (
+  orderkey       int,
+  custkey        int,
+  orderstatus    string, -- text(1)
+  totalprice     double,
+  orderdate      timestamp, -- date
+  orderpriority  string, -- text
+  clerk          string, -- text
+  shippriority   int,
+  comment        string  -- text
+);
+
+CREATE SCHEMA CustomerSchema (
+  custkey      int,
+  name         string, -- text
+  address      string, -- text
+  nationkey    int,
+  phone        string, -- text
+  acctbal      double,
+  mktsegment   string, -- text
+  comment      string  -- text
+);
+
+CREATE STREAM InsertLineitem LineitemSchema;
+CREATE STREAM InsertOrders   OrdersSchema;
+CREATE STREAM InsertCustomer CustomerSchema;
+
+CREATE STREAM DeleteLineitem LineitemSchema;
+CREATE STREAM DeleteOrders   OrdersSchema;
+CREATE STREAM DeleteCustomer CustomerSchema;
+
+
+CREATE STREAM Dispatch AS
+      SELECT "Lineitem" as stream_name, 1 as evt,
+              LineitemSchema(* AS *) as l 
+      FROM InsertLineitem
+
+UNION SELECT "Lineitem" as stream_name, 0 as evt,
+             LineitemSchema(* AS *) as l 
+      FROM DeleteLineitem
+
+UNION SELECT "Orders" as stream_name, 1 as evt,
+             OrdersSchema(* AS *)   as o
+      FROM InsertOrders
+
+UNION SELECT "Orders" as stream_name, 0 as evt,
+             OrdersSchema(* AS *)   as o
+      FROM DeleteOrders
+
+UNION SELECT "Customer" as stream_name, 1 as evt,
+             CustomerSchema(* AS *) as c
+      FROM InsertCustomer
+
+UNION SELECT "Customer" as stream_name, 0 as evt,
+              CustomerSchema(* AS *) as c
+      FROM DeleteCustomer;
+      
+
+/* Load data. */
+CREATE STREAM LFileEvents;
+CREATE STREAM OFileEvents;
+CREATE STREAM CFileEvents;
+
+APPLY JAVA "com.streambase.sb.adapter.csvreader.CSVReader"
+  (FileName="lineitem.csv", Delimiter="|", StartEventPort="true",
+   TimestampFormat="yyyy-MM-dd", Schema=LineitemSchema)
+  INTO InsertLineitem, LFileEvents;
+  
+APPLY JAVA "com.streambase.sb.adapter.csvreader.CSVReader"
+  (FileName="orders.csv", Delimiter="|", StartEventPort="true",
+   TimestampFormat="yyyy-MM-dd", Schema=OrdersSchema)
+  INTO InsertOrders, OFileEvents;
+
+APPLY JAVA "com.streambase.sb.adapter.csvreader.CSVReader"
+  (FileName="customer.csv", Delimiter="|", StartEventPort="true",
+   TimestampFormat="yyyy-MM-dd", Schema=CustomerSchema)
+  INTO InsertCustomer, CFileEvents;
+
+
+/* TODO: deletions */
+
+/* Log outputs */
+CREATE OUTPUT STREAM Query3Results;
+CREATE OUTPUT STREAM Query3Progress;
+
+/* Run query module */
+APPLY MODULE "query3.ssql"
+FROM MultiplexedInputs=Dispatch
+INTO Unlocked=Query3Progress, Result=Query3Results;
+
+APPLY JAVA "com.streambase.sb.adapter.csvwriter.CSVWriter"
+  (FileName="Query3.csv",
+   IfFileExists="Truncate existing file",
+   IfFileDoesntExist="Create new file")
+  FROM Query3Results;
+
+/* Track data file open and close for timing */
+CREATE OUTPUT STREAM TimedFileEvents AS
+SELECT now() as t, * FROM (LFileEvents UNION OFileEvents UNION CFileEvents);
+
+/* Log data file events */
+APPLY JAVA  "com.streambase.sb.adapter.csvwriter.CSVWriter"
+  (FileName="FileEvents.csv",
+   IfFileExists="Truncate existing file",
+   IfFileDoesntExist="Create new file")
+  FROM TimedFileEvents;
