@@ -485,10 +485,17 @@ namespace dbtoaster {
 
       shared_ptr<dispatch_table> triggers;
       shared_ptr<logger_table> loggers;
+      
+      unsigned int log_count_every;
+      unsigned int tuple_count;
 
-      stream_dispatcher() {
+      stream_dispatcher() : log_count_every(0), tuple_count(0) {
         triggers = shared_ptr<dispatch_table>(new dispatch_table());
         loggers = shared_ptr<logger_table>(new logger_table());
+      }
+      
+      bool set_log_count_every(unsigned int _log_count_every){
+        log_count_every = _log_count_every;
       }
 
       bool has_triggers() { return triggers && triggers->size() > 0; }
@@ -566,6 +573,10 @@ namespace dbtoaster {
           cerr << "Could not find "
                << (tuple.type == insert_tuple? "insert" : "delete")
                << " handler for stream " << tuple.id << endl;
+        }
+        tuple_count += 1;
+        if(log_count_every && (tuple_count % log_count_every == 0)){
+          cout << tuple_count << " tuples processed" << endl;
         }
       }
 

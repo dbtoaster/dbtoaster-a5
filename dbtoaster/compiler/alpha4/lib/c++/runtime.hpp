@@ -42,10 +42,14 @@ namespace dbtoaster {
       bool traced;
       int trace_counter, trace_step;
       unordered_set<string> traced_maps;
+      unsigned int log_tuple_count_every;
 
-      runtime_options() { traced = false; trace_step = trace_counter = 0; }
+      runtime_options() { traced = false; trace_step = trace_counter = 0; 
+                          log_tuple_count_every = 0; }
 
-      runtime_options(int argc, char* argv[]) { init(argc, argv); }
+      runtime_options(int argc, char* argv[]) { 
+        traced = false; trace_step = trace_counter = log_tuple_count_every = 0;
+        init(argc, argv); }
 
       void init_options(options_description& desc) {
         desc.add_options()
@@ -70,7 +74,8 @@ namespace dbtoaster {
           // Tracing parameters
           ("trace-dir", value<string>(), "trace output dir")
           ("trace,t", value<string>(&trace_opts), "trace query execution")
-          ("trace-step,s", value(&trace_step), "trace step size");
+          ("trace-step,s", value(&trace_step), "trace step size")
+          ("log-count", value<unsigned int>(&log_tuple_count_every), "log tuple count every [arg] updates");
       }
 
       void init_positional_options(positional_options_description& p) {
@@ -185,6 +190,7 @@ namespace dbtoaster {
             }
           }
         }
+        d.set_log_count_every(log_tuple_count_every);
       }
 
       // Statistics
