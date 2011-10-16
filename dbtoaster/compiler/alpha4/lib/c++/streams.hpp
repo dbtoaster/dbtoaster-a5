@@ -4,6 +4,7 @@
 #include <map>
 #include <set>
 #include <vector>
+#include <sys/time.h>
 #include <boost/any.hpp>
 #include <boost/filesystem.hpp>
 #include <boost/function.hpp>
@@ -574,10 +575,13 @@ namespace dbtoaster {
                << (tuple.type == insert_tuple? "insert" : "delete")
                << " handler for stream " << tuple.id << endl;
         }
-        tuple_count += 1;
         if(log_count_every && (tuple_count % log_count_every == 0)){
-          cout << tuple_count << " tuples processed" << endl;
+          struct timeval tp;
+          gettimeofday(&tp, NULL);
+          cout << tuple_count << " tuples processed at "
+               << tp.tv_sec << "s+" << tp.tv_usec << "us" << endl;
         }
+        tuple_count += 1;
       }
 
       private:
