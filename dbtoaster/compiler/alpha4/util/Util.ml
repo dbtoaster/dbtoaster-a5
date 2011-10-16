@@ -551,11 +551,16 @@ struct
           )
         else
           ((*print_line ("arg: "^arg^"; NOT FLAG:"^last_flag);*)
-            let append_to_entry k v m =
-              if StringMap.mem k m then
-                StringMap.add k ((StringMap.find k m)@[v]) m
-              else
-                StringMap.add k [v] m
+            let append_to_entry k unclean_v m =
+              let clean_v = if unclean_v.[0] = '^' 
+                            then String.sub unclean_v 1 
+                                            ((String.length unclean_v) - 1)
+                            else unclean_v
+              in
+                 if StringMap.mem k m then
+                   StringMap.add k ((StringMap.find k m)@[clean_v]) m
+                 else
+                   StringMap.add k [clean_v] m
             in
               match last_type with
               | NO_ARG -> 
