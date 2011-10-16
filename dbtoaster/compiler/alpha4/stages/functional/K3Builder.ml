@@ -88,7 +88,8 @@ let map_access_to_expr
     let map_t = Collection(TTuple((List.map snd sch)@[t])) in
     let map_v,map_var = "slice",Var("slice", map_t) in
     let access_expr =
-      if Debug.active "DUP-IVC" && skip_init && singleton then Lookup(map_var,ke)
+      if (not (Debug.active "NO-DEDUP-IVC")) && skip_init && singleton 
+      then Lookup(map_var,ke)
       else if singleton then 
         IfThenElse(Member(map_var,ke), Lookup(map_var,ke), init_expr)
       else let p_ve = List.map (fun v -> 

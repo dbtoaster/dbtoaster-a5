@@ -1,51 +1,51 @@
 rst
 rst --depth 1
 rst --depth 2
-ssb4 -d disable-deletes -d dup-ivc
-ssb4 -d disable-deletes -d dup-ivc --depth 1
-ssb4 -d disable-deletes -d dup-ivc --depth 2 -f cse -f breduce -f hashds 
-ssb4 -d disable-deletes -d dup-ivc --depth 3 -f cse -f breduce -f hashds 
-ssb4 -d disable-deletes -d dup-ivc --depth 4 -f cse -f breduce -f hashds 
-ssb4 -d disable-deletes -d dup-ivc --depth 5 -f cse -f breduce -f hashds 
-ssb4 -d disable-deletes -d dup-ivc --depth 6 -f cse -f breduce -f hashds 
+ssb4 -d disable-deletes
+ssb4 -d disable-deletes --depth 1
+ssb4 -d disable-deletes --depth 2 -f cse -f breduce -f hashds 
+ssb4 -d disable-deletes --depth 3 -f cse -f breduce -f hashds 
+ssb4 -d disable-deletes --depth 4 -f cse -f breduce -f hashds 
+ssb4 -d disable-deletes --depth 5 -f cse -f breduce -f hashds 
+ssb4 -d disable-deletes --depth 6 -f cse -f breduce -f hashds 
 vwap -f cse -f breduce -f hashds
-vwap -d dup-ivc -f cse -f breduce -f hashds
-vwap -d dup-ivc --depth 0 -f cse -f breduce -f hashds
-vwap -d dup-ivc --depth 1 -f cse -f breduce -f hashds 
-pricespread  -f cse -f breduce -f hashds
-pricespread -d dup-ivc -f cse -f breduce -f hashds
-pricespread -d dup-ivc --depth 0 -f cse -f breduce -f hashds  --compile-only
-pricespread -d dup-ivc --depth 1 -f cse -f breduce -f hashds
+vwap -f cse -f breduce -f hashds
+vwap --depth 0 -f cse -f breduce -f hashds
+vwap --depth 1 -f cse -f breduce -f hashds 
+pricespread -d no-dedup-ivc -f cse -f breduce -f hashds
+pricespread -f cse -f breduce -f hashds
+pricespread --depth 0 -f cse -f breduce -f hashds  --compile-only
+pricespread --depth 1
 missedtrades -f cse -f breduce -f hashds
-missedtrades -d dup-ivc -f cse -f breduce -f hashds
-missedtrades -d dup-ivc --depth 0 -f cse -f breduce -f hashds  --compile-only
-missedtrades -d dup-ivc --depth 1 -f cse -f breduce -f hashds
+missedtrades -f cse -f breduce -f hashds
+missedtrades --depth 0 -f cse -f breduce -f hashds  --compile-only
+missedtrades --depth 1 -f cse -f breduce -f hashds
 axfinder  -f cse -f breduce -f hashds
 axfinder -d runtime-bigsums -f cse -f breduce -f hashds
-axfinder -d runtime-bigsums -d dup-ivc -f cse -f breduce -f hashds
-axfinder -d dup-ivc --depth 0 -f cse -f breduce -f hashds  --compile-only
-axfinder -d dup-ivc --depth 1 -f cse -f breduce -f hashds 
-brokerspread -d dup-ivc -f cse -f breduce -f hashds
-brokerspread -d dup-ivc --depth 0 -f cse -f breduce -f hashds  --compile-only
-brokerspread -d dup-ivc --depth 1 -f cse -f breduce -f hashds 
-tpch3 -d dup-ivc -f cse -f breduce -f hashds
-tpch3 -d dup-ivc --depth 0 -f cse -f breduce -f hashds  --dataset tiny
-tpch3 -d dup-ivc --depth 1 -f cse -f breduce -f hashds 
-tpch11 -d dup-ivc -f cse -f breduce -f hashds
-tpch11 -d dup-ivc --depth 0 -f cse -f breduce -f hashds  --compile-only
-tpch11 -d dup-ivc --depth 1 -f cse -f breduce -f hashds 
-tpch17 -d dup-ivc -f cse -f breduce -f hashds
-tpch17 -d dup-ivc --depth 0 -f cse -f breduce -f hashds
-tpch17 -d dup-ivc --depth 1 -f cse -f breduce -f hashds 
-tpch18 -d dup-ivc 
-tpch18 -d dup-ivc --depth 0 -f cse -f breduce -f hashds  --compile-only
-tpch18 -d dup-ivc --depth 1
-tpch18short -d dup-ivc -f cse -f breduce -f hashds
-tpch18short -d dup-ivc --depth 0 -f cse -f breduce -f hashds  --compile-only
-tpch18short -d dup-ivc --depth 1
-tpch22 -d dup-ivc -f cse -f breduce -f hashds
-tpch22 -d dup-ivc --depth 0 -f cse -f breduce -f hashds  --compile-only
-tpch22 -d dup-ivc --depth 1
-clusteravailablenew -d dup-ivc -f cse -f breduce -f hashds
-clusteravailablenew -d dup-ivc --depth 0 -f cse -f breduce -f hashds  --compile-only
-clusteravailablenew -d dup-ivc --depth 1
+axfinder -d runtime-bigsums -f cse -f breduce -f hashds
+axfinder --depth 0 -f cse -f breduce -f hashds  --compile-only
+axfinder --depth 1 -f cse -f breduce -f hashds 
+brokerspread -f cse -f breduce -f hashds
+brokerspread --depth 0 -f cse -f breduce -f hashds  --compile-only
+brokerspread --depth 1 -f cse -f breduce -f hashds 
+tpch3 -f cse -f breduce -f hashds
+tpch3 --depth 0 -f cse -f breduce -f hashds  --dataset tiny
+tpch3 --depth 1 -f cse -f breduce -f hashds 
+tpch11 -f cse -f breduce -f hashds
+tpch11 --depth 0 -f cse -f breduce -f hashds  --compile-only
+tpch11 --depth 1 -f cse -f breduce -f hashds 
+tpch17 -f cse -f breduce -f hashds
+tpch17 --depth 0 -f cse -f breduce -f hashds
+tpch17 --depth 1 -f cse -f breduce -f hashds 
+tpch18 
+tpch18 --depth 0 -f cse -f breduce -f hashds  --compile-only
+tpch18 --depth 1
+tpch18short -f cse -f breduce -f hashds
+tpch18short --depth 0 -f cse -f breduce -f hashds  --compile-only
+tpch18short --depth 1
+tpch22 -f cse -f breduce -f hashds
+tpch22 --depth 0 -f cse -f breduce -f hashds  --compile-only
+tpch22 --depth 1
+clusteravailablenew -f cse -f breduce -f hashds
+clusteravailablenew --depth 0 -f cse -f breduce -f hashds  --compile-only
+clusteravailablenew --depth 1
