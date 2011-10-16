@@ -494,7 +494,7 @@ namespace dbtoaster {
         loggers = shared_ptr<logger_table>(new logger_table());
       }
       
-      bool set_log_count_every(unsigned int _log_count_every){
+      void set_log_count_every(unsigned int _log_count_every){
         log_count_every = _log_count_every;
       }
 
