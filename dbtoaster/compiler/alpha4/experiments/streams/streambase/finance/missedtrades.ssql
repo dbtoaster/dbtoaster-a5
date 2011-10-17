@@ -171,25 +171,31 @@ GROUP BY brokerId;
 CREATE STREAM FileEvents;
 
 APPLY JAVA "com.streambase.sb.adapter.csvreader.CSVReader"
-  (FileName="Events.dbtdat", Delimiter=",", StartEventPort="true",
+  (FileName="@@PATH@@Events.dbtdat", Delimiter=",", StartEventPort="true",
    Schema=(stream_name string, evt int,
            timestamp double, orderId int, brokerId int, volume double, price double))
   INTO Dispatch, FileEvents;
 
 /* Log outputs */
 APPLY JAVA "com.streambase.sb.adapter.csvwriter.CSVWriter"
-  (FileName="Missedtrades.csv",
+  (FileName="missedtrades.csv",
    IfFileExists="Truncate existing file",
    IfFileDoesntExist="Create new file")
   FROM Result;
 
+/* Track query progress */
+CREATE STREAM ProgressCounter AS
+  SELECT Counter FROM InputLocked WHERE (Counter % 20) == 0;
+
 /* Track data file open and close for timing */
 CREATE OUTPUT STREAM TimedFileEvents AS
-SELECT now() as t, * FROM FileEvents;
+  SELECT now() as t, * FROM
+    (SELECT * FROM
+      (SELECT 0 as Counter, * FROM FileEvents) AS S UNION ProgressCounter );
 
 /* Log data file events */
 APPLY JAVA  "com.streambase.sb.adapter.csvwriter.CSVWriter"
-  (FileName="FileEvents.csv",
+  (FileName="file_events.csv",
    IfFileExists="Truncate existing file",
    IfFileDoesntExist="Create new file")
   FROM TimedFileEvents;

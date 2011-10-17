@@ -49,7 +49,7 @@ LOCK InputLock ON 0 FROM MultiplexedInputs INTO InputLocked;
 
 /* Counter for barriering */
 DECLARE Counter int DEFAULT 0;
-CREATE STREAM UpdateCounter (i int);
+CREATE OUTPUT STREAM UpdateCounter (i int);
 UPDATE Counter FROM (SELECT i FROM UpdateCounter);
 SELECT Counter+1 as i FROM InputLocked INTO UpdateCounter;
 

@@ -9,10 +9,14 @@ default_dir = "/damsl/software/streambase"
 event_file_name = "file_events.csv"
 
 queries = {
-  'query3' : ['lineitem', 'orders', 'customer'], 
-  'query17': ['lineitem', 'part'],
-  'query18': ['lineitem', 'orders', 'customer'],
-  'query22': ['orders', 'customer']
+  'query3'      : ['lineitem', 'orders', 'customer'], 
+  'query17'     : ['lineitem', 'part'],
+  'query18'     : ['lineitem', 'orders', 'customer'],
+  'query22'     : ['orders', 'customer'],
+  'vwap'        : ['events'],
+  'axfinder'    : ['events'],
+  'pricespread' : ['events'],
+  'missedtrades': ['events']
 }
 
 num_files = {}
@@ -45,12 +49,13 @@ def save_run(query_name):
 # Run SPE in a subprocess, poll for termination based on file events,
 # send SIGTERM to terminate the SPE
 #####
-def run_stream_engine(sbdir, query_name, poll_period):
+def run_stream_engine(sbdir, query_name, loader_name, poll_period):
   terminate = False
-  loader = query_name+"_separate_loader.ssql"
+  (original, loader) = query_name+".ssql", query_name+loader_name+".ssql"
+  query_file = loader if loader != "" else original
   
   # Spawn and poll.
-  spe = subprocess.Popen([os.path.join(sbdir, "bin/sbd"), loader])
+  spe = subprocess.Popen([os.path.join(sbdir, "bin/sbd"), query_file])
   while not(terminate):
     time.sleep(poll_period)
     done = spe.poll() 
@@ -65,10 +70,14 @@ def run_stream_engine(sbdir, query_name, poll_period):
 if __name__ == '__main__':
   usage = "Usage: %prog [options] <query name>"
   parser = OptionParser(usage=usage)
+  
   parser.add_option("-p", "--poll", type="int", dest="poll_period", default=10,
                     help="set termination polling period", metavar="SECS")
-  parser.add_option("-d", "--sbdir", dest="sbdir",
-                    default=default_dir,
+
+  parser.add_option("-l", "--loader", dest="loader", default="",
+                    help="use query loader", metavar="LOADER")
+  
+  parser.add_option("-d", "--sbdir", dest="sbdir", default=default_dir,
                     help="set SPE top-level dir", metavar="DIR")
                     
   (options, args) = parser.parse_args()
@@ -82,13 +91,16 @@ if __name__ == '__main__':
     parser.error("invalid SPE directory: "+options.sbdir)
 
   query_name = args[0]
+  query_loader = options.loader 
   poll_period = options.poll_period
 
   # Check query files
-  test_q_paths = [query_name+".ssql", query_name+"_separate_loader.ssql"]
+  test_q_paths = [query_name+".ssql"] + \
+    ([query_name+query_loader+".ssql"] if query_loader != "" else [])
+
   if query_name in queries and all([os.path.exists(p) for p in test_q_paths]):
     print "Running query " + query_name + " from " + os.getcwd()
-    run_stream_engine(options.sbdir, query_name, poll_period)
+    run_stream_engine(options.sbdir, query_name, query_loader, poll_period)
   else:
     print "Unknown query: " + query_name
     print "Valid queries: " + str(queries.keys())

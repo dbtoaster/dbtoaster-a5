@@ -74,13 +74,15 @@ APPLY JAVA "com.streambase.sb.adapter.csvreader.CSVReader"
 
 
 /* Log outputs */
-CREATE OUTPUT STREAM Query17Results;
+CREATE OUTPUT STREAM Query17InDispatch;
 CREATE OUTPUT STREAM Query17Progress;
+CREATE OUTPUT STREAM Query17Results;
 
 /* Run query module */
 APPLY MODULE "query17.ssql"
 FROM MultiplexedInputs=Dispatch
-INTO Unlocked=Query17Progress, Result=Query17Results;
+INTO UpdateCounter=Query17InDispatch, Unlocked=Query17Progress,
+     Result=Query17Results;
 
 APPLY JAVA "com.streambase.sb.adapter.csvwriter.CSVWriter"
   (FileName="query17.csv",
@@ -88,9 +90,16 @@ APPLY JAVA "com.streambase.sb.adapter.csvwriter.CSVWriter"
    IfFileDoesntExist="Create new file")
   FROM Query17Results;
 
+/* Track query progress */
+CREATE STREAM ProgressCounter AS
+  SELECT i as Counter FROM Query17InDispatch WHERE (i % 20) == 0;
+
 /* Track data file open and close for timing */
 CREATE OUTPUT STREAM TimedFileEvents AS
-SELECT now() as t, * FROM (LFileEvents UNION PFileEvents);
+  SELECT now() as t, * FROM
+    (SELECT * FROM
+      (SELECT 0 as Counter, * FROM (LFileEvents UNION PFileEvents))
+     AS S UNION ProgressCounter );
 
 /* Log data file events */
 APPLY JAVA  "com.streambase.sb.adapter.csvwriter.CSVWriter"

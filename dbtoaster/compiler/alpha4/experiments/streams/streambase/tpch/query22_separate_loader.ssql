@@ -63,13 +63,15 @@ APPLY JAVA "com.streambase.sb.adapter.csvreader.CSVReader"
 /* TODO: deletions */
 
 /* Log outputs */
-CREATE OUTPUT STREAM Query22Results;
+CREATE OUTPUT STREAM Query22InDispatch;
 CREATE OUTPUT STREAM Query22Progress;
+CREATE OUTPUT STREAM Query22Results;
 
 /* Run query module */
 APPLY MODULE "query22.ssql"
 FROM MultiplexedInputs=Dispatch
-INTO Unlocked=Query22Progress, Result=Query22Results;
+INTO UpdateCounter=Query22InDispatch, Unlocked=Query22Progress,
+     Result=Query22Results;
 
 APPLY JAVA "com.streambase.sb.adapter.csvwriter.CSVWriter"
   (FileName="query22.csv",
@@ -77,10 +79,16 @@ APPLY JAVA "com.streambase.sb.adapter.csvwriter.CSVWriter"
    IfFileDoesntExist="Create new file")
   FROM Query22Results;
 
+/* Track query progress */
+CREATE STREAM ProgressCounter AS
+  SELECT i as Counter FROM Query22InDispatch WHERE (i % 20) == 0;
 
 /* Track data file open and close for timing */
 CREATE OUTPUT STREAM TimedFileEvents AS
-SELECT now() as t, * FROM (OFileEvents UNION CFileEvents);
+  SELECT now() as t, * FROM
+    (SELECT * FROM
+      (SELECT 0 as Counter, * FROM (OFileEvents UNION CFileEvents))
+     AS S UNION ProgressCounter );
 
 /* Log data file events */
 APPLY JAVA  "com.streambase.sb.adapter.csvwriter.CSVWriter"
