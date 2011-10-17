@@ -446,6 +446,7 @@ let enable_k3_ds, k3_opt_flags =
    in
    begin match (flag_vals "OPTFLAGS") with
     | [] -> false, [K3Optimizer.CSE; K3Optimizer.Beta]
+    | ["NONE"] -> false, []
     | x -> 
       let y = List.map String.uppercase x
       in (List.mem "HASHDS" y),

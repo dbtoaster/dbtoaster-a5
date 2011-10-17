@@ -1,11 +1,11 @@
 prefs = { 
-  "servers" => 50,
-  "tasks"   => 100,
-  "s_per_t" => 10,
+  "servers" => 500,
+  "tasks"   => 1000,
+  "s_per_t" => 100,
   "p_down"  => 0.25
 }
 
-$prefix = "casmall_"; #"ca_";
+$prefix = "cabig_"; #"ca_";
 
 servers = (0...prefs["servers"]).map do |s| 
   [s, (rand < prefs["p_down"]) ? 0 : 1];
