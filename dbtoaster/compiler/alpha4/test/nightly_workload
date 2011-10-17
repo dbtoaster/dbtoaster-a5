@@ -16,16 +16,15 @@ pricespread -d no-dedup-ivc -f cse -f breduce -f hashds
 pricespread -f cse -f breduce -f hashds
 pricespread --depth 0 -f cse -f breduce -f hashds  --compile-only
 pricespread --depth 1
-missedtrades -f cse -f breduce -f hashds
-missedtrades -f cse -f breduce -f hashds
+missedtrades
 missedtrades --depth 0 -f cse -f breduce -f hashds  --compile-only
 missedtrades --depth 1 -f cse -f breduce -f hashds
-axfinder  -f cse -f breduce -f hashds
-axfinder -d runtime-bigsums -f cse -f breduce -f hashds
-axfinder -d runtime-bigsums -f cse -f breduce -f hashds
+axfinder 
+axfinder -d runtime-bigsums
+axfinder -d runtime-bigsums
 axfinder --depth 0 -f cse -f breduce -f hashds  --compile-only
 axfinder --depth 1 -f cse -f breduce -f hashds 
-brokerspread -f cse -f breduce -f hashds
+brokerspread
 brokerspread --depth 0 -f cse -f breduce -f hashds  --compile-only
 brokerspread --depth 1 -f cse -f breduce -f hashds 
 tpch3 -f cse -f breduce -f hashds
