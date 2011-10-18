@@ -1,0 +1,306 @@
+reading from /tmp/okennedy_dbtoaster_data/tpch/orders.csv with 1 adaptors
+reading from /tmp/okennedy_dbtoaster_data/tpch/customer.csv with 1 adaptors
+tracing: 
+0 tuples processed at 1318891903s+343098us
+1000 tuples processed at 1318891903s+484000us
+2000 tuples processed at 1318891903s+894386us
+3000 tuples processed at 1318891904s+406753us
+4000 tuples processed at 1318891904s+863239us
+5000 tuples processed at 1318891905s+477991us
+6000 tuples processed at 1318891906s+230705us
+7000 tuples processed at 1318891907s+106825us
+8000 tuples processed at 1318891908s+85686us
+9000 tuples processed at 1318891909s+138887us
+10000 tuples processed at 1318891910s+347527us
+11000 tuples processed at 1318891911s+776464us
+12000 tuples processed at 1318891913s+352540us
+13000 tuples processed at 1318891915s+80671us
+14000 tuples processed at 1318891916s+944484us
+15000 tuples processed at 1318891918s+925139us
+16000 tuples processed at 1318891920s+992166us
+17000 tuples processed at 1318891923s+213056us
+18000 tuples processed at 1318891925s+563770us
+19000 tuples processed at 1318891928s+76033us
+20000 tuples processed at 1318891930s+719899us
+21000 tuples processed at 1318891933s+525880us
+22000 tuples processed at 1318891936s+495599us
+23000 tuples processed at 1318891939s+677410us
+24000 tuples processed at 1318891943s+153932us
+25000 tuples processed at 1318891946s+391314us
+26000 tuples processed at 1318891949s+831043us
+27000 tuples processed at 1318891953s+352299us
+28000 tuples processed at 1318891956s+931470us
+29000 tuples processed at 1318891960s+726129us
+30000 tuples processed at 1318891964s+562105us
+done with stream, 1 remain
+31000 tuples processed at 1318891968s+683043us
+32000 tuples processed at 1318891972s+587803us
+33000 tuples processed at 1318891976s+598029us
+34000 tuples processed at 1318891980s+635022us
+35000 tuples processed at 1318891984s+663323us
+36000 tuples processed at 1318891988s+728548us
+37000 tuples processed at 1318891992s+776960us
+38000 tuples processed at 1318891996s+923356us
+39000 tuples processed at 1318892000s+907864us
+40000 tuples processed at 1318892004s+843195us
+41000 tuples processed at 1318892008s+936301us
+42000 tuples processed at 1318892012s+984900us
+43000 tuples processed at 1318892016s+944431us
+44000 tuples processed at 1318892020s+816492us
+45000 tuples processed at 1318892024s+909576us
+46000 tuples processed at 1318892028s+852564us
+47000 tuples processed at 1318892032s+768382us
+48000 tuples processed at 1318892036s+785743us
+49000 tuples processed at 1318892040s+955941us
+50000 tuples processed at 1318892044s+985636us
+51000 tuples processed at 1318892049s+43649us
+52000 tuples processed at 1318892052s+937810us
+53000 tuples processed at 1318892056s+862549us
+54000 tuples processed at 1318892060s+610677us
+55000 tuples processed at 1318892064s+626977us
+56000 tuples processed at 1318892068s+593770us
+57000 tuples processed at 1318892072s+632154us
+58000 tuples processed at 1318892076s+472406us
+59000 tuples processed at 1318892080s+512957us
+60000 tuples processed at 1318892084s+517682us
+61000 tuples processed at 1318892088s+649778us
+62000 tuples processed at 1318892092s+695577us
+63000 tuples processed at 1318892096s+762388us
+64000 tuples processed at 1318892100s+786584us
+65000 tuples processed at 1318892104s+710338us
+66000 tuples processed at 1318892108s+784629us
+67000 tuples processed at 1318892112s+847136us
+68000 tuples processed at 1318892116s+971728us
+69000 tuples processed at 1318892120s+848033us
+70000 tuples processed at 1318892124s+799178us
+71000 tuples processed at 1318892128s+759565us
+72000 tuples processed at 1318892132s+857509us
+73000 tuples processed at 1318892136s+773358us
+74000 tuples processed at 1318892140s+602986us
+75000 tuples processed at 1318892144s+607702us
+76000 tuples processed at 1318892148s+731058us
+77000 tuples processed at 1318892152s+777969us
+78000 tuples processed at 1318892156s+816874us
+79000 tuples processed at 1318892160s+867269us
+80000 tuples processed at 1318892164s+842829us
+81000 tuples processed at 1318892168s+820174us
+82000 tuples processed at 1318892172s+796657us
+83000 tuples processed at 1318892176s+901105us
+84000 tuples processed at 1318892180s+810531us
+85000 tuples processed at 1318892184s+644577us
+86000 tuples processed at 1318892188s+524148us
+87000 tuples processed at 1318892192s+658779us
+88000 tuples processed at 1318892196s+799402us
+89000 tuples processed at 1318892200s+819155us
+90000 tuples processed at 1318892204s+752348us
+91000 tuples processed at 1318892208s+739245us
+92000 tuples processed at 1318892212s+740067us
+93000 tuples processed at 1318892216s+828408us
+94000 tuples processed at 1318892220s+982824us
+95000 tuples processed at 1318892224s+987188us
+96000 tuples processed at 1318892228s+945106us
+97000 tuples processed at 1318892232s+909840us
+98000 tuples processed at 1318892236s+876089us
+99000 tuples processed at 1318892240s+891799us
+100000 tuples processed at 1318892244s+932300us
+101000 tuples processed at 1318892249s+36141us
+102000 tuples processed at 1318892253s+137664us
+103000 tuples processed at 1318892257s+257088us
+104000 tuples processed at 1318892261s+382920us
+105000 tuples processed at 1318892265s+485194us
+106000 tuples processed at 1318892269s+572329us
+107000 tuples processed at 1318892273s+567708us
+108000 tuples processed at 1318892277s+546834us
+109000 tuples processed at 1318892281s+571968us
+110000 tuples processed at 1318892285s+551294us
+111000 tuples processed at 1318892289s+544452us
+112000 tuples processed at 1318892293s+618499us
+113000 tuples processed at 1318892297s+639391us
+114000 tuples processed at 1318892301s+709186us
+115000 tuples processed at 1318892305s+829530us
+116000 tuples processed at 1318892309s+941938us
+117000 tuples processed at 1318892314s+970us
+118000 tuples processed at 1318892318s+40064us
+119000 tuples processed at 1318892322s+52476us
+120000 tuples processed at 1318892325s+925078us
+121000 tuples processed at 1318892329s+976327us
+122000 tuples processed at 1318892333s+887845us
+123000 tuples processed at 1318892337s+989746us
+124000 tuples processed at 1318892342s+16120us
+125000 tuples processed at 1318892345s+858956us
+126000 tuples processed at 1318892349s+756576us
+127000 tuples processed at 1318892353s+739790us
+128000 tuples processed at 1318892357s+700297us
+129000 tuples processed at 1318892361s+608940us
+130000 tuples processed at 1318892365s+591930us
+131000 tuples processed at 1318892369s+704736us
+132000 tuples processed at 1318892373s+609178us
+133000 tuples processed at 1318892377s+630577us
+134000 tuples processed at 1318892381s+616768us
+135000 tuples processed at 1318892385s+716974us
+136000 tuples processed at 1318892389s+811939us
+137000 tuples processed at 1318892393s+823506us
+138000 tuples processed at 1318892397s+887383us
+139000 tuples processed at 1318892401s+939193us
+140000 tuples processed at 1318892405s+896819us
+141000 tuples processed at 1318892409s+918252us
+142000 tuples processed at 1318892413s+919643us
+143000 tuples processed at 1318892417s+862033us
+144000 tuples processed at 1318892421s+864080us
+145000 tuples processed at 1318892425s+814574us
+146000 tuples processed at 1318892429s+798250us
+147000 tuples processed at 1318892433s+724750us
+148000 tuples processed at 1318892437s+609081us
+149000 tuples processed at 1318892441s+650384us
+150000 tuples processed at 1318892445s+528966us
+151000 tuples processed at 1318892449s+712242us
+152000 tuples processed at 1318892453s+754291us
+153000 tuples processed at 1318892457s+844546us
+154000 tuples processed at 1318892461s+838326us
+155000 tuples processed at 1318892465s+982471us
+156000 tuples processed at 1318892470s+116279us
+157000 tuples processed at 1318892474s+278545us
+158000 tuples processed at 1318892478s+332368us
+159000 tuples processed at 1318892482s+531343us
+160000 tuples processed at 1318892486s+730082us
+161000 tuples processed at 1318892490s+933538us
+162000 tuples processed at 1318892495s+89440us
+163000 tuples processed at 1318892499s+231343us
+164000 tuples processed at 1318892503s+262151us
+done with stream, 0 remain
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<!DOCTYPE boost_serialization>
+<boost_serialization signature="serialization::archive" version="9">
+<QUERY_1_1 class_id="0" tracking_level="0" version="2">
+	<count>25</count>
+	<value_version class_id="1" tracking_level="0" version="0"></value_version>
+	<item class_id="2" tracking_level="0" version="0">
+		<__a0>0</__a0>
+		<__av>992205.19000000006</__av>
+	</item>
+	<position class_id="3" tracking_level="0" version="0"></position>
+	<item>
+		<__a0>1</__a0>
+		<__av>858208.03000000014</__av>
+	</item>
+	<position></position>
+	<item>
+		<__a0>2</__a0>
+		<__av>844482.89000000001</__av>
+	</item>
+	<position></position>
+	<item>
+		<__a0>3</__a0>
+		<__av>975400.97999999963</__av>
+	</item>
+	<position></position>
+	<item>
+		<__a0>4</__a0>
+		<__av>982761.72999999905</__av>
+	</item>
+	<position></position>
+	<item>
+		<__a0>5</__a0>
+		<__av>799026.12999999954</__av>
+	</item>
+	<position></position>
+	<item>
+		<__a0>6</__a0>
+		<__av>847814.59000000032</__av>
+	</item>
+	<position></position>
+	<item>
+		<__a0>7</__a0>
+		<__av>944685.92000000062</__av>
+	</item>
+	<position></position>
+	<item>
+		<__a0>8</__a0>
+		<__av>943518.25000000012</__av>
+	</item>
+	<position></position>
+	<item>
+		<__a0>9</__a0>
+		<__av>866422.99000000104</__av>
+	</item>
+	<position></position>
+	<item>
+		<__a0>10</__a0>
+		<__av>866993.0500000004</__av>
+	</item>
+	<position></position>
+	<item>
+		<__a0>11</__a0>
+		<__av>1008304.5600000005</__av>
+	</item>
+	<position></position>
+	<item>
+		<__a0>12</__a0>
+		<__av>953122.02000000107</__av>
+	</item>
+	<position></position>
+	<item>
+		<__a0>13</__a0>
+		<__av>861900.90999999852</__av>
+	</item>
+	<position></position>
+	<item>
+		<__a0>14</__a0>
+		<__av>924723.98000000033</__av>
+	</item>
+	<position></position>
+	<item>
+		<__a0>15</__a0>
+		<__av>871849.67000000086</__av>
+	</item>
+	<position></position>
+	<item>
+		<__a0>16</__a0>
+		<__av>896167.10999999929</__av>
+	</item>
+	<position></position>
+	<item>
+		<__a0>17</__a0>
+		<__av>904301.78999999934</__av>
+	</item>
+	<position></position>
+	<item>
+		<__a0>18</__a0>
+		<__av>954751.71999999997</__av>
+	</item>
+	<position></position>
+	<item>
+		<__a0>19</__a0>
+		<__av>829957.07000000274</__av>
+	</item>
+	<position></position>
+	<item>
+		<__a0>20</__a0>
+		<__av>836642.19999999984</__av>
+	</item>
+	<position></position>
+	<item>
+		<__a0>21</__a0>
+		<__av>867623.79999999853</__av>
+	</item>
+	<position></position>
+	<item>
+		<__a0>22</__a0>
+		<__av>823466.40999999898</__av>
+	</item>
+	<position></position>
+	<item>
+		<__a0>23</__a0>
+		<__av>979749.18999999994</__av>
+	</item>
+	<position></position>
+	<item>
+		<__a0>24</__a0>
+		<__av>966904.27999999945</__av>
+	</item>
+	<position></position>
+	<position></position>
+	<position class_id="4" tracking_level="0" version="0"></position>
+</QUERY_1_1>
+</boost_serialization>
+

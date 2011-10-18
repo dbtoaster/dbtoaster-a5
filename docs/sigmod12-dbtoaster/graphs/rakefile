@@ -1,0 +1,173 @@
+require 'util.rb'
+$:.push("/usr/lib/ruby/user-gems/1.8/gems/gnuplot-2.3.6/")
+require 'lib/gnuplot.rb'
+
+$num_threads = 16;
+$queries = [
+  "axfinder",
+  "brokerspread",
+  "clusteravailable",
+  "missedtrades",
+  "pricespread",
+  "ssb4",
+  "tpch11",
+  "tpch17",
+  "tpch18",
+  "tpch22",
+  "tpch3",
+  "vwap",
+];
+$configurations = [
+  ["Standard Optimizations -- Infinite Depth", "depth_infty"],
+  ["Standard Optimizations -- Depth 1",        "depth_1"],
+]
+
+def get_mem(bin,heap_file,map)
+#  puts "Getting memory usage for #{map} from #{heap_file}";
+  m_fn = "#{map}_value_update"
+  `pprof --text #{bin} #{heap_file} --focus=#{m_fn} 2>/dev/null`.
+    split(/\n/).
+    map { |l| if /Total: (.*)$/ =~ l then $1 else nil end }.
+    compact[0].gsub(/ /, "")
+end
+
+def get_maps(q)
+  File.open("bin/#{q}.maps") { |f| f.readlines }.map { |m| m.chomp }
+end
+
+def query_maps(testfile) 
+  File.open(testfile){ |f| f.readlines }.
+  map { |t| t.chomp.sub(/\t/, "_").split(/\t/) }.
+  map do |q, tuples, id, heap_f| 
+    get_maps(q).map do |m|
+       [  q, tuples, 
+          "bin/#{q}", 
+          "#{File.dirname testfile}/#{heap_f}",
+          m
+        ]
+    end
+  end.flatten(1)
+end
+
+def get_mem_threaded(testfile)
+  query_maps(testfile).subdivide($num_threads).map do |workload|
+    Thread.new do
+      Thread.current[:ret] = 
+        workload.map do |q, tuples, bin, heap, map|
+          mem = get_mem(bin,heap,map);
+          raise "Invalid memory value #{mem}" unless 
+            /([0-9.]*)([a-zA-Z]+)/ =~ mem;
+          mem = $1.to_f * (case $2
+            when "MB" then 1024 * 1024
+            when "KB" then 1024
+            when "B" then 1
+            else raise "Unknown memory suffix '#{$2}' in #{mem}"
+            end)
+          puts "#{q} @ #{tuples} #{map}=#{mem.to_i}B";
+          [q,tuples,map,mem];
+        end
+    end
+  end.map { |t| t.join[:ret]; }.flatten(1)
+end
+
+def get_filename args
+  case args
+    when Hash then args.keys[0]
+    else           args
+  end
+end
+
+def intermediate_data title
+  File.open(title) do |f|
+    f.readlines.map { |l| l.chomp.split(/\t/) }
+  end
+end
+
+def intermediate args
+  title = get_filename args;
+  file args do
+    data = yield.map { |l| l.join("\t") }.join("\n");
+    File.open(intermediate_file(title), "w+") { |f| f.write(data) }
+  end
+end
+
+def plot(args = {})
+  file args do
+    filename = get_filename args;
+    puts "gnuplot > #{filename}"
+    
+    Gnuplot.open do |gp|
+      Gnuplot::Plot.new(gp) do |plot|
+        plot.terminal "pdf"
+        plot.output filename;
+        yield plot;
+      end
+    end
+  end
+end
+
+def tuples_processed(file)
+  data =
+    File.open(file) do |f|
+      f.readlines.
+        grep(/([0-9]+) tuples processed at ([0-9]+)s\+([0-9]+)us/) do |l| 
+          [l[1].to_i, l[2].to_i, l[3].to_i] 
+        end
+    end
+  start_s  = data[0][1];
+  start_us = data[0][2];
+  data.map {|tuples,s,us| [(s - start_s)+(us-start_us)*0.000001, tuples] }
+end
+
+$queries.each do |q|
+  
+  q_graphs = [];
+  
+  alldata = $configurations.map { |title,code| "data/time_#{q}_#{code}_0" }
+  
+  plot "graphs/time_#{q}.pdf" => alldata do |plot|
+    plot.xlabel "Time (s)"
+    plot.ylabel "Tuples Processed"
+    $configurations.each do |conf_title, conf_code|
+      datafile = "data/time_#{q}_#{conf_code}_0";
+      plot.data << 
+        Gnuplot::DataSet.new(tuples_processed(datafile).unzip) do |ds|
+          ds.title = conf_title
+        end
+    end
+  end
+  task "#{q}_all" => "graphs/time_#{q}.pdf"
+
+  $configurations.each do |conf_title, conf_code|
+    datafile = "data/time_#{q}_#{conf_code}_0";
+    plot "graphs/rate_#{q}_#{conf_code}.pdf" => datafile do |plot|
+      plot.xlabel "Tuples Processed"
+      plot.ylabel "Rate (tuples/s)"
+      data = tuples_processed(datafile);
+      last_t, last_tuples = *(data.shift); rate = 0;
+      plot.data << Gnuplot::DataSet.new(
+        data.map do |t, tuples|
+          rate = (tuples-last_tuples)/(t - last_t) unless (t - last_t) == 0;
+          last_t = t
+          last_tuples = tuples;
+          [tuples, rate]
+        end.unzip
+      ) do |ds|
+        ds.title = conf_title
+      end
+    end
+    task "#{q}_all" => "graphs/rate_#{q}_#{conf_code}.pdf"
+  end
+  
+  task q => "#{q}_all" do
+    sh "open graphs/time_#{q}.pdf graphs/rate_#{q}*.pdf";
+  end
+
+  task :all_graphs => "#{q}_all";
+  task :default => q;
+end
+
+file "graphs.tgz" => :all_graphs do
+  sh "tar -zcvvf graphs.tgz graphs"
+end
+

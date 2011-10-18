@@ -1,0 +1,50 @@
+order book adaptor params: book, asks
+order book adaptor params: brokers, 10
+order book adaptor params: book, bids
+order book adaptor params: brokers, 10
+reading from /tmp/okennedy_dbtoaster_data/finance.csv with 2 adaptors
+tracing: 
+0 tuples processed at 1318905164s+342326us
+1000 tuples processed at 1318905164s+627838us
+2000 tuples processed at 1318905166s+350739us
+3000 tuples processed at 1318905169s+119131us
+4000 tuples processed at 1318905171s+786782us
+5000 tuples processed at 1318905174s+439492us
+6000 tuples processed at 1318905177s+121524us
+7000 tuples processed at 1318905179s+804741us
+8000 tuples processed at 1318905182s+490402us
+9000 tuples processed at 1318905185s+83228us
+10000 tuples processed at 1318905187s+864261us
+11000 tuples processed at 1318905190s+643002us
+12000 tuples processed at 1318905193s+476272us
+13000 tuples processed at 1318905196s+341085us
+14000 tuples processed at 1318905199s+345940us
+15000 tuples processed at 1318905202s+319088us
+16000 tuples processed at 1318905204s+993759us
+17000 tuples processed at 1318905207s+893499us
+18000 tuples processed at 1318905210s+844781us
+19000 tuples processed at 1318905213s+829723us
+20000 tuples processed at 1318905216s+727847us
+21000 tuples processed at 1318905219s+449111us
+22000 tuples processed at 1318905222s+205642us
+23000 tuples processed at 1318905225s+179838us
+24000 tuples processed at 1318905228s+90004us
+25000 tuples processed at 1318905231s+3924us
+26000 tuples processed at 1318905239s+884366us
+27000 tuples processed at 1318905258s+44528us
+28000 tuples processed at 1318905286s+370698us
+29000 tuples processed at 1318905329s+891136us
+30000 tuples processed at 1318905397s+510801us
+31000 tuples processed at 1318905493s+390167us
+32000 tuples processed at 1318905618s+735499us
+33000 tuples processed at 1318905770s+788504us
+34000 tuples processed at 1318905952s+569030us
+35000 tuples processed at 1318906157s+496017us
+36000 tuples processed at 1318906382s+665310us
+37000 tuples processed at 1318906631s+447134us
+38000 tuples processed at 1318906921s+449242us
+39000 tuples processed at 1318907260s+361541us
+40000 tuples processed at 1318907649s+461623us
+41000 tuples processed at 1318908115s+551842us
+42000 tuples processed at 1318908641s+295728us
+43000 tuples processed at 1318909188s+11550us
