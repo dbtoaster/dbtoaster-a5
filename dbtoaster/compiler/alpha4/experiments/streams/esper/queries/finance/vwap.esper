@@ -1,6 +1,14 @@
 create window Bids.win:keepall() as 
   (timestamp double, orderId int, brokerId int, price double, volume double);
 
+insert into InsertBids
+  select timestamp, orderId, brokerId, price, volume from Dispatch
+  where streamName = "BIDS" and eventType = 1;
+
+insert into DeleteBids
+  select timestamp, orderId, brokerId, price, volume from Dispatch
+  where streamName = "BIDS" and eventType = 0;
+
 insert into Bids
   select timestamp, orderId, brokerId, price, volume from InsertBids;
 
@@ -55,7 +63,7 @@ insert into AggOuter
    deleting their partials.
  */ 
 on AggOuter(sz=1) as e
-  select w.tid as tid, e.tid as tid2, max(w.pv) as pv
+  select current_timestamp() as t, w.tid as tid, max(w.pv) as pv
   from AggOuter as w
   where w.tid < e.tid
   group by w.tid;

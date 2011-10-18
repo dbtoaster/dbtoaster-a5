@@ -1,16 +1,17 @@
 #!/bin/bash
 
-if [ $# -ne 3 ]; then
-  echo "Usage: $0 <query template dir> <output dir> <data dir>"
+if [ $# -ne 4 ]; then
+  echo "Usage: $0 <timeout> <query template dir> <output dir> <data dir>"
   exit 1
 fi
 
-query_template_dir=$1
-output_dir=$2
-data_dir=$3
+timeout=$1
+query_template_dir=$2
+output_dir=$3
+data_dir=$4
 
 working_dir=`pwd`
-script_dir=/home/yna/sbworkspace/tpch/scripts
+script_dir=/home/yna/sbworkspace/scripts
 
 queries=`ls -1 $query_template_dir/*_separate_loader.ssql | sed 's/_separate_loader.ssql//'`
 
@@ -33,7 +34,7 @@ for i in 0; do
       # Run the SPE on this query.
       cd $run_dir
       echo "Running SPE on $query"
-      $script_dir/run_spe.py -l "_separate_loader" $query
+      $script_dir/run_spe.py -t $timeout -l "_separate_loader" $query
       
       cd $working_dir
     fi

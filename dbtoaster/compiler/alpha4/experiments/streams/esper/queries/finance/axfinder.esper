@@ -4,6 +4,24 @@ create window Bids.win:keepall() as
 create window Asks.win:keepall() as 
   (timestamp double, orderId int, brokerId int, price double, volume double);
 
+/* Dispatching */
+insert into InsertBids
+  select timestamp, orderId, brokerId, price, volume from Dispatch
+  where streamName = "BIDS" and eventType = 1;
+
+insert into DeleteBids
+  select timestamp, orderId, brokerId, price, volume from Dispatch
+  where streamName = "BIDS" and eventType = 0;
+
+insert into InsertAsks
+  select timestamp, orderId, brokerId, price, volume from Dispatch
+  where streamName = "ASKS" and eventType = 1;
+
+insert into DeleteAsks
+  select timestamp, orderId, brokerId, price, volume from Dispatch
+  where streamName = "ASKS" and eventType = 0;
+
+/* Start of query */
 insert into Bids
   select timestamp, orderId, brokerId, price, volume from InsertBids;
 
@@ -30,7 +48,7 @@ insert into TableChanged select 0 as bids, 0 as evt from DeleteAsks;
 create variable int current_update = 0;
 on TableChanged set current_update = current_update+1;
 
-select   current_update+1 as tid,
+select   current_timestamp() as t, current_update+1 as tid,
          b.brokerId, sum(a.volume + -1 * b.volume) as axf
 from     TableChanged as T unidirectional, Bids as b, Asks as a
 where    b.brokerId = a.brokerId

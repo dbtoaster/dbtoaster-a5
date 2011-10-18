@@ -22,7 +22,7 @@ on Nation   insert into TableChanged select 1;
 create variable int current_update = 0;
 on TableChanged set current_update = current_update+1;
 
-SELECT  current_update as tid,
+SELECT  current_timestamp() as t, current_update as tid,
         sn.regionkey, 
         cn.regionkey,
         p.type,

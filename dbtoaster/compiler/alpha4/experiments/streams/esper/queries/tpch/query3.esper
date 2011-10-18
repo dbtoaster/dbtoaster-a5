@@ -10,17 +10,14 @@ on Lineitem insert into TableChanged select 1;
 on Orders   insert into TableChanged select 1;
 on Customer insert into TableChanged select 1;
 
-select O.orderkey, 
-       O.orderdate,
-       O.shippriority,
-       sum(L.extendedprice * (1 - L.discount)) as r
+select current_timestamp() as t,
+       O.orderkey, O.orderdate, O.shippriority,
+       sum(L.extendedprice * (1 - L.discount)) as etomd
  from  TableChanged as S unidirectional,
        Customer as C, Orders as O, Lineitem as L
 where  C.mktsegment = 'BUILDING'
   and  O.custkey = C.custkey
   and  L.orderkey = O.orderkey
-  /*
   and  O.orderdate < '1995-03-15'
-  and  L.shipdate > '1995-03-15' 
-  */
+  and  L.shipdate > '1995-03-15'
 group by O.orderkey, O.orderdate, O.shippriority;

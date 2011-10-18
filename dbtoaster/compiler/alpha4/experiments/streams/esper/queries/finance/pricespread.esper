@@ -4,6 +4,24 @@ create window Bids.win:keepall() as
 create window Asks.win:keepall() as 
   (timestamp double, orderId int, brokerId int, price double, volume double);
 
+/* Dispatching */
+insert into InsertBids
+  select timestamp, orderId, brokerId, price, volume from Dispatch
+  where streamName = "BIDS" and eventType = 1;
+
+insert into DeleteBids
+  select timestamp, orderId, brokerId, price, volume from Dispatch
+  where streamName = "BIDS" and eventType = 0;
+
+insert into InsertAsks
+  select timestamp, orderId, brokerId, price, volume from Dispatch
+  where streamName = "ASKS" and eventType = 1;
+
+insert into DeleteAsks
+  select timestamp, orderId, brokerId, price, volume from Dispatch
+  where streamName = "ASKS" and eventType = 0;
+
+/* Start of query */
 insert into Bids
   select timestamp, orderId, brokerId, price, volume from InsertBids;
 
@@ -39,7 +57,7 @@ insert into Subquery2
   from Subquery1 as S1 unidirectional, Asks as a1
   group by S1.tid, S1.tbv;
 
-select S2.tid as tid, sum(a.price+-1*b.price) as ps
+select current_timestamp() as t, S2.tid as tid, sum(a.price+-1*b.price) as ps
 from   Subquery2 as S2 unidirectional, Bids as b, Asks as a
 where  ( b.volume>0.0001*tbv )
 and    ( a.volume>0.0001*tav )

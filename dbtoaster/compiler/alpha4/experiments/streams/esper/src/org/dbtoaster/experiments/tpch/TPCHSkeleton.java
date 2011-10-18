@@ -122,7 +122,7 @@ public class TPCHSkeleton extends CommonSkeleton {
           ofType( String.class );
 
         acceptsAll( Arrays.asList("b", "basedir") ).withRequiredArg().
-          describedAs( "dataset base directory" ).
+          describedAs( "Esper bin directory (where the dataset should be present)" ).
           ofType( String.class );
         
         acceptsAll( Arrays.asList("s", "sample") ).withRequiredArg().
@@ -210,7 +210,7 @@ public class TPCHSkeleton extends CommonSkeleton {
     "orderkey", "partkey", "suppkey",
     "linenumber", "quantity", "extendedprice", "discount", "tax",
     "returnflag", "linestatus",
-    "shipDate", "commitDate", "receiptDate",
+    "shipdate", "commitdate", "receiptdate",
     "shipinstruct", "shipmode", "comment",
   };
   

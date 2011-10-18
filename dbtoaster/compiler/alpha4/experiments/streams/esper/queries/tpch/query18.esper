@@ -54,7 +54,7 @@ insert into AggOuter
    deleting their partials.
  */ 
 on AggOuter(sz=1) as e
-  select w.tid as tid, e.tid as tid2, w.ck, max(w.sumq) as sumq
+  select current_timestamp() as t, w.tid as tid, w.ck, max(w.sumq) as sumq
   from AggOuter as w
   where w.tid < e.tid
   group by w.tid, w.ck;

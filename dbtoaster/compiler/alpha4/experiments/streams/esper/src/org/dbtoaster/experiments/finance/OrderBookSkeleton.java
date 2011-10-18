@@ -14,6 +14,7 @@ import org.dbtoaster.experiments.finance.events.DeleteBidsEntry;
 import org.dbtoaster.experiments.finance.events.InsertAsksEntry;
 import org.dbtoaster.experiments.finance.events.InsertBidsEntry;
 import org.dbtoaster.experiments.finance.events.OrderBookEntry;
+import org.dbtoaster.experiments.finance.events.UnifiedEvent;
 
 import com.espertech.esper.client.Configuration;
 import com.espertech.esper.client.EPStatement;
@@ -27,6 +28,7 @@ public class OrderBookSkeleton extends CommonSkeleton {
 
   private static final Log log = LogFactory.getLog(OrderBookSkeleton.class);
 
+  EventSender dispatch;
   EventSender insertBids;
   EventSender insertAsks;
   EventSender deleteBids;
@@ -34,6 +36,7 @@ public class OrderBookSkeleton extends CommonSkeleton {
 
   public OrderBookSkeleton() {
     super(getDefaultConfiguration());
+    dispatch = runtime.getEventSender("Dispatch");
     insertBids = runtime.getEventSender("InsertBids");
     insertAsks = runtime.getEventSender("InsertAsks");
     deleteBids = runtime.getEventSender("DeleteBids");
@@ -42,6 +45,7 @@ public class OrderBookSkeleton extends CommonSkeleton {
   
   public static Configuration getDefaultConfiguration() {
     Configuration config = new Configuration();
+    config.addEventType("Dispatch", UnifiedEvent.class);
     config.addEventType("InsertBids", InsertBidsEntry.class);
     config.addEventType("InsertAsks", InsertAsksEntry.class);
     config.addEventType("DeleteBids", DeleteBidsEntry.class);
@@ -142,6 +146,10 @@ public class OrderBookSkeleton extends CommonSkeleton {
           describedAs( "result query id (from the last)" ).
           ofType ( Integer.class );
 
+        acceptsAll( Arrays.asList("u", "unified") ).withRequiredArg().
+          describedAs( "unified events file" ).
+          ofType( String.class );
+        
         acceptsAll( Arrays.asList("ib", "insertbids") ).withRequiredArg().
           describedAs( "insert bids file" ).
           ofType( String.class );
@@ -168,24 +176,35 @@ public class OrderBookSkeleton extends CommonSkeleton {
     int queryId = -1;
     int sampleFreq = 10;
     
+    String unifiedFile = null;
+
     String insertBidsFile = null;
     String insertAsksFile = null;
     String deleteBidsFile = null;
     String deleteAsksFile = null;
 
+    String[] unifiedFieldOrder = { "streamName", "eventType", "timestamp",
+                                   "orderId", "brokerId", "volume", "price" };
+
     String[] fieldOrder = { "timestamp", "orderId", "brokerId", "volume", "price" };
 
     try {
       OptionSet options = parser.parse(args);
-      if ( options.has("h") || options.has("?") ||
-           (options.valueOf("ib") == null && options.valueOf("ia") == null) )
-      {
+      
+      boolean hasInputs =
+        options.valueOf("u") != null ||
+        options.valueOf("ib") != null || options.valueOf("ia") != null;
+
+      if ( options.has("h") || options.has("?") || !hasInputs ) {
         parser.printHelpOn(System.out);
       }
       
       queryFile = (String) options.valueOf("q");
       queryId = (Integer) options.valueOf("r");
-      
+
+      if ( options.has( "u" ) && options.valueOf("u") != null )
+        unifiedFile = (String) options.valueOf("u");
+
       if ( options.has( "s" ) && options.valueOf("s") != null )
         sampleFreq = (Integer) options.valueOf("s");
 
@@ -232,29 +251,35 @@ public class OrderBookSkeleton extends CommonSkeleton {
       epStmts.get(epStmts.size()-queryId).setSubscriber(subscriber);
     }
     
-    if ( !(insertBidsFile == null && insertAsksFile == null 
-           && deleteBidsFile == null && deleteAsksFile == null) )
+    if ( !(unifiedFile == null && insertBidsFile == null && insertAsksFile == null) )
     {
       List<CSVInputAdapter> sources = new LinkedList<CSVInputAdapter>();
       
-      if ( insertBidsFile != null ) {
-        log.info("loading insert bids from "+insertBidsFile);
-        sources.add(s.setupCSVSource(insertBidsFile, "InsertBids", fieldOrder));
+      if ( unifiedFile != null ) {
+        log.info("loading events from "+unifiedFile);
+        sources.add(s.setupCSVSource(unifiedFile, "Dispatch", unifiedFieldOrder));
       }
-      
-      if ( insertAsksFile != null ) {
-        log.info("loading insert asks from "+insertAsksFile);
-        sources.add(s.setupCSVSource(insertAsksFile, "InsertAsks", fieldOrder));
-      }
-
-      if ( deleteBidsFile != null ) {
-        log.info("loading delete bids from "+deleteBidsFile);
-        sources.add(s.setupCSVSource(deleteBidsFile, "DeleteBids", fieldOrder));
-      }
-      
-      if ( deleteAsksFile != null ) {
-        log.info("loading delete asks from "+deleteAsksFile);
-        sources.add(s.setupCSVSource(deleteAsksFile, "DeleteAsks", fieldOrder));
+      else
+      {
+        if ( insertBidsFile != null ) {
+          log.info("loading insert bids from "+insertBidsFile);
+          sources.add(s.setupCSVSource(insertBidsFile, "InsertBids", fieldOrder));
+        }
+        
+        if ( insertAsksFile != null ) {
+          log.info("loading insert asks from "+insertAsksFile);
+          sources.add(s.setupCSVSource(insertAsksFile, "InsertAsks", fieldOrder));
+        }
+  
+        if ( deleteBidsFile != null ) {
+          log.info("loading delete bids from "+deleteBidsFile);
+          sources.add(s.setupCSVSource(deleteBidsFile, "DeleteBids", fieldOrder));
+        }
+        
+        if ( deleteAsksFile != null ) {
+          log.info("loading delete asks from "+deleteAsksFile);
+          sources.add(s.setupCSVSource(deleteAsksFile, "DeleteAsks", fieldOrder));
+        }
       }
 
       for ( CSVInputAdapter src : sources ) { src.start(); }

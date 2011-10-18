@@ -35,7 +35,7 @@ insert into AggOuter
    deleting their partials.
  */ 
 on AggOuter(sz=1) as e
-  select w.tid as tid, e.tid as tid2, max(w.sumep) as sumep
+  select current_timestamp() as t, w.tid as tid, max(w.sumep) as sumep
   from AggOuter as w
   where w.tid < e.tid
   group by w.tid;

@@ -6,7 +6,7 @@ public class Orders {
   long   custkey;
   String orderstatus;
   double totalprice;
-  String orderdate;      // date
+  String   orderdate;      // date
   String orderpriority;
   String clerk;
   int    shippriority;

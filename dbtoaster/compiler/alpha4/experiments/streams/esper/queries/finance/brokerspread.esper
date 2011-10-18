@@ -1,7 +1,16 @@
 create window Bids.win:keepall() as 
   (timestamp double, orderId int, brokerId int, price double, volume double);
 
-insert into Bids
+/* Dispatching */
+insert into InsertBids
+  select timestamp, orderId, brokerId, price, volume from Dispatch
+  where streamName = "BIDS" and eventType = 1;
+
+insert into DeleteBids
+  select timestamp, orderId, brokerId, price, volume from Dispatch
+  where streamName = "BIDS" and eventType = 0;
+
+/* Start of query */insert into Bids
   select timestamp, orderId, brokerId, price, volume from InsertBids;
 
 on DeleteBids as e
@@ -16,7 +25,7 @@ insert into TableChanged select 1 as bids, 0 as evt from DeleteBids;
 create variable int current_update = 0;
 on TableChanged set current_update = current_update+1;
 
-select current_update+1 as tid, 
+select current_timestamp() as t, current_update+1 as tid, 
        x.brokerId as brokerId,
        sum(x.volume * x.price - y.volume * y.price) as bsp
 from   TableChanged as t unidirectional, Bids as x, Bids as y
