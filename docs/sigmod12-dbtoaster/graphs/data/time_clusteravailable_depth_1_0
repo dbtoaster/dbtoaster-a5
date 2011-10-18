@@ -1,0 +1,16 @@
+csv params: fields: ,
+csv params: schema: int,int
+csv params: eventtype: insert
+reading from /tmp/okennedy_dbtoaster_data/cluster/assignments.dat with 1 adaptors
+csv params: fields: ,
+csv params: schema: int,int
+csv params: eventtype: insert
+reading from /tmp/okennedy_dbtoaster_data/cluster/servers.dat with 1 adaptors
+csv params: fields: ,
+csv params: schema: int,int
+csv params: eventtype: insert
+reading from /tmp/okennedy_dbtoaster_data/cluster/tasks.dat with 1 adaptors
+tracing: 
+0 tuples processed at 1318943977s+389777us
+1000 tuples processed at 1318944823s+731617us
+done with stream, 2 remain

@@ -120,6 +120,26 @@ class Array
     end
     ret
   end
+  
+  def window(window_size = 10, &block)
+    if length <= window_size then 
+      if block.nil? then return [self.clone];
+                    else return [block.call(self)];
+      end
+    else
+      ret = Array.new;
+      w = Array.new;
+      each do |item|
+        w.push(item);
+        w.shift if w.length > window_size;
+        if w.length >= window_size then
+          ret.push(if block.nil? then [w.clone] else block.call(w) end)
+        end
+      end
+      ret
+    end
+  end
+  
 end
 
 class Hash

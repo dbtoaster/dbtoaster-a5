@@ -119,6 +119,17 @@ def tuples_processed(file)
   data.map {|tuples,s,us| [(s - start_s)+(us-start_us)*0.000001, tuples] }
 end
 
+def tuple_rate(datafile)
+  data = tuples_processed(datafile)
+  last_t, last_tuples = *(data.shift); rate = 0;
+  data.map do |t, tuples|
+    rate = (tuples-last_tuples)/(t - last_t) unless (t - last_t) == 0;
+    last_t = t
+    last_tuples = tuples;
+    [tuples, rate]
+  end
+end
+
 $queries.each do |q|
   
   q_graphs = [];
@@ -143,24 +154,34 @@ $queries.each do |q|
     plot "graphs/rate_#{q}_#{conf_code}.pdf" => datafile do |plot|
       plot.xlabel "Tuples Processed"
       plot.ylabel "Rate (tuples/s)"
-      data = tuples_processed(datafile);
-      last_t, last_tuples = *(data.shift); rate = 0;
-      plot.data << Gnuplot::DataSet.new(
-        data.map do |t, tuples|
-          rate = (tuples-last_tuples)/(t - last_t) unless (t - last_t) == 0;
-          last_t = t
-          last_tuples = tuples;
-          [tuples, rate]
-        end.unzip
-      ) do |ds|
+      plot.data << Gnuplot::DataSet.new(tuple_rate(datafile).unzip) do |ds|
         ds.title = conf_title
       end
     end
     task "#{q}_all" => "graphs/rate_#{q}_#{conf_code}.pdf"
   end
   
+  plot "graphs/windowedrate_#{q}.pdf" => alldata do |plot|
+    plot.xlabel "Tuples Processed"
+    plot.ylabel "Rate (tuples/s)"
+    $configurations.each do |conf_title, conf_code|
+      datafile = "data/time_#{q}_#{conf_code}_0";
+      plot.data << Gnuplot::DataSet.new(
+        tuple_rate(datafile).window(10) do |w| 
+          tuples, rate = w.unzip
+          [tuples[-1], rate.avg]
+        end.unzip
+      ) do |ds|
+        ds.title = conf_title;
+        ds.with = "linespoints";
+      end
+    end
+  end
+  task "#{q}_all" => "graphs/windowedrate_#{q}.pdf"
+  
   task q => "#{q}_all" do
-    sh "open graphs/time_#{q}.pdf graphs/rate_#{q}*.pdf";
+    sh "open graphs/time_#{q}.pdf graphs/rate_#{q}*.pdf "+
+       "graphs/windowedrate_#{q}.pdf";
   end
 
   task :all_graphs => "#{q}_all";
