@@ -1,0 +1,10 @@
+order book adaptor params: book, asks
+order book adaptor params: brokers, 10
+order book adaptor params: book, bids
+order book adaptor params: brokers, 10
+reading from /tmp/okennedy_dbtoaster_data/finance.csv with 2 adaptors
+tracing: 
+0 tuples processed at 1318973483s+103545us
+1000 tuples processed at 1318973520s+283125us
+2000 tuples processed at 1318974607s+938146us
+3000 tuples processed at 1318977945s+865379us
