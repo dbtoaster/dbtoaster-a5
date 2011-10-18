@@ -143,6 +143,7 @@ $queries.unzip[0].each do |q|
       datafile = "data/time_#{q}_#{conf_code}_0";
       plot.data << 
         Gnuplot::DataSet.new(tuples_processed(datafile).unzip) do |ds|
+          ds.with = "linespoints";
           ds.title = conf_title
         end
     end
