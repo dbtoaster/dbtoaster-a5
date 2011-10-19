@@ -283,7 +283,7 @@ Debug.print "LOG-DRIVER" (fun () -> "COMPILING DELTAS");;
 if language == L_DELTA then
   (
     output_string (output_file ()) ((
-      string_of_list "\n" (
+      string_of_list "\n\n" (
         List.fold_left (fun accum (qlist,dbschema,qvars) ->
           List.fold_left (fun accum q ->
             (Compiler.compile 

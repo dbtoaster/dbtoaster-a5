@@ -56,9 +56,14 @@ sig
   (* Profiler code generation *)
   val declare_profiling : M3.map_type_t list -> source_code_t
   val profile_trigger :
-    int -> (string * Calculus.var_t list) list ->
-    (ext_type type_t, ext_type, ext_fn) Program.trigger_t
-    -> source_code_t list * (ext_type type_t, ext_type, ext_fn) Program.trigger_t 
+       int                         (* statement id offset, across all triggers *)
+    -> (int * (string * int list) list) (* map ivc offset, across all triggers *)
+    -> (string * Calculus.var_t list) list
+    -> M3.map_type_t list
+    -> (ext_type type_t, ext_type, ext_fn) Program.trigger_t
+    -> (int * (string * int list) list) *
+       (source_code_t list  *
+         (ext_type type_t, ext_type, ext_fn) Program.trigger_t) 
 
   (* Toplevel code generation *)
 
@@ -81,7 +86,8 @@ sig
     -> (string * int) list -> M3.map_type_t list
     -> (ext_type, ext_fn) typed_expr_t list
        (* Trigger registration metadata *)
-    -> (string * string * string * (string * string) list) list
+    -> (string * string * string * (string * string) list) list *
+       (string * int list) list
     -> string list -> source_code_t * source_code_t
 end
 

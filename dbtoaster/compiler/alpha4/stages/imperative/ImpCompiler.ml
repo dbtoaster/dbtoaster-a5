@@ -90,9 +90,14 @@ sig
   (* Profiler code generation *)
   val declare_profiling : M3.map_type_t list -> source_code_t
   val profile_trigger :
-    int -> (string * Calculus.var_t list) list ->
-    (ext_type type_t, ext_type, ext_fn) Program.trigger_t
-    -> source_code_t list * (ext_type type_t, ext_type, ext_fn) Program.trigger_t 
+       int                         (* statement id offset, across all triggers *)
+    -> (int * (string * int list) list) (* map ivc offset, across all triggers *)
+    -> (string * Calculus.var_t list) list
+    -> M3.map_type_t list
+    -> (ext_type type_t, ext_type, ext_fn) Program.trigger_t
+    -> (int * (string * int list) list) *
+       (source_code_t list  *
+         (ext_type type_t, ext_type, ext_fn) Program.trigger_t) 
 
   (* Toplevel code generation *)
 
@@ -115,7 +120,8 @@ sig
     -> (string * int) list -> M3.map_type_t list
     -> (ext_type, ext_fn) typed_expr_t list
        (* Trigger registration metadata *)
-    -> (string * string * string * (string * string) list) list
+    -> (string * string * string * (string * string) list) list *
+       (string * int list) list
     -> string list -> source_code_t * source_code_t
 end
 
@@ -2006,8 +2012,72 @@ end (* Typing *)
            profile_nested_map_value_update id x y;
            profile_map_update id x y])
      schema))
-  
-  let profile_trigger sid_offset dbschema (evt,rel,args,imp) =
+
+  let profile_ivc schema map_ivc_ids stmt_name imp =
+    let is_schema_map id = List.exists (fun (x,y,z) -> x=id) schema in
+    let mii_ref = ref map_ivc_ids in 
+    let bui_f _ _ i = match i with
+      | IfThenElse(if_t,
+          (BinOp(o_t, Neq,
+                 Fn(fn_t, Ext(FindCollection), fn_args), op_r_i) as pred_i),
+          then_i, else_i) ->
+        if fn_args <> [] then
+          begin match List.hd fn_args with
+            | Var(m,(id,t)) when is_schema_map id ->
+              let ivc_id = stmt_name^"_ivc"^id in
+              let prof_id = 
+                let (cnt, ivc_cnts) = !mii_ref in
+                let nivc_cnts =
+                  if List.mem_assoc ivc_id ivc_cnts then
+                    (ivc_id, (List.assoc ivc_id ivc_cnts)@[cnt])::
+                      (List.remove_assoc ivc_id ivc_cnts)
+                  else ivc_cnts@[ivc_id, [cnt]]
+                in mii_ref := cnt+1, nivc_cnts; (string_of_int cnt) 
+              in
+              let new_else_i =
+                let prof_begin = Expr(unit, Fn(unit, Ext(Inline(
+                  "ivc_stats->begin_probe("^prof_id^")")), []))
+                in
+                let prof_end = Expr(unit, Fn(unit, Ext(Inline(
+                  "ivc_stats->end_probe("^prof_id^")")), []))
+                in 
+                Block(unit, [prof_begin; else_i; prof_end])
+              in IfThenElse(if_t, pred_i, then_i, new_else_i)
+            | _ -> i 
+          end
+        else i
+      | _ -> i
+    in
+    let new_imp =
+      fold_imp bui_f (fun _ _ e -> Block(unit,[])) (fun x _ -> x) (fun x _ -> x)
+        None (Block(unit, [])) imp
+    in !mii_ref, new_imp
+
+  let profile_stmt schema sid_offset ivc_offsets stmt_id
+                   trig_name iarg_decls iargs imp =
+    let sid = string_of_int stmt_id in
+    let prof_begin = Expr(unit, Fn(unit, Ext(Inline(
+      "exec_stats->begin_probe("^(string_of_int (sid_offset+stmt_id))^")")), []))
+    in
+    let prof_end = Expr(unit, Fn(unit, Ext(Inline(
+      "exec_stats->end_probe("^(string_of_int (sid_offset+stmt_id))^")")), []))
+    in
+    let stmt_name = trig_name^"_s"^sid in
+    let nivc_offsets, new_decl =
+      let nivco, prof_imp = profile_ivc schema ivc_offsets stmt_name imp in
+      let bimp = match prof_imp with | Block _ -> prof_imp
+                                     | _ -> Block(unit, [prof_imp])
+      in nivco,
+         [Lines (["void "^stmt_name^"("^(String.concat ", " iarg_decls)^")"^
+                  " __attribute__((noinline));";
+                  "void "^stmt_name^"("^(String.concat ", " iarg_decls)^")"])]@
+                 [source_code_of_imp bimp]@[Lines ([""])]
+    in nivc_offsets, new_decl,
+       [prof_begin; 
+        Expr(unit, Fn(unit, Ext(Apply(stmt_name)), iargs)); 
+        prof_end]
+
+  let profile_trigger sid_offset ivc_offsets dbschema schema (evt,rel,args,imp) =
     let pm_name pm =
       match pm with M3.Insert -> "insert" | M3.Delete -> "delete" in
     let trig_name = (pm_name evt)^"_"^rel in
@@ -2018,43 +2088,29 @@ end (* Typing *)
           (string_of_calc_type ty)^" "^a, Var(i_t, (a, i_t)))
       (List.combine args arg_types))
     in
-    let imp_stmts = match imp with
-      | Block(_,s) -> s
-      | _ -> failwith "invalid non-block trigger"
+    let imp_stmts = match imp with | Block(_,s) -> s
+                                   | _ -> failwith "invalid non-block trigger"
     in
-    let decls, new_stmts = 
-      snd (List.fold_left (fun (stmt_id,(dacc,sacc)) imp ->
-          let sid = string_of_int stmt_id in
-          let prof_begin = Expr(unit, Fn(unit, Ext(Inline(
-            "exec_stats->begin_probe("^
-              (string_of_int (sid_offset+stmt_id))^")")), []))
+    let nivc_offsets, decls, new_stmts = snd (
+      List.fold_left (fun (stmt_id,(ivc_acc,dacc,sacc)) imp ->
+          let nivc_acc, new_decl, new_imp =
+            profile_stmt schema sid_offset ivc_acc stmt_id
+                         trig_name iarg_decls iargs imp
           in
-          let prof_end =
-            Expr(unit, Fn(unit, Ext(Inline(
-              "exec_stats->end_probe("^
-                (string_of_int (sid_offset+stmt_id))^")")), []))
-          in
-          let stmt_name = trig_name^"_s"^sid in
-          let new_decl =
-            let bimp = match imp with | Block _ -> imp | _ -> Block(unit, [imp]) in
-            [Lines (["void "^stmt_name^"("^(String.concat ", " iarg_decls)^")"^
-                     " __attribute__((noinline));";
-                     "void "^stmt_name^"("^(String.concat ", " iarg_decls)^")"])]@
-            [source_code_of_imp bimp]@[Lines ([""])]
-          in
-          let new_imp =
-            [prof_begin; 
-             Expr(unit, Fn(unit, Ext(Apply(stmt_name)), iargs)); 
-             prof_end]
-          in stmt_id+1,(dacc@new_decl,sacc@new_imp))
-        (0,([],[])) imp_stmts)
+          stmt_id+1, (nivc_acc,dacc@new_decl,sacc@new_imp))
+        (0,(ivc_offsets,[],[])) imp_stmts)
     in let profiled_trig =
       [Expr(unit, Fn(unit,
-         Ext(Inline("exec_stats->begin_trigger(\""^trig_name^"\")")), []))]@
+         Ext(Inline("exec_stats->begin_trigger(\""^trig_name^"\")")), []));
+       Expr(unit, Fn(unit,
+         Ext(Inline("ivc_stats->begin_trigger(\""^trig_name^"\")")), []))]@
       new_stmts@
       [Expr(unit, Fn(unit,
-         Ext(Inline("exec_stats->end_trigger(\""^trig_name^"\")")), []))]
-    in decls, (evt,rel,args, Block(unit, profiled_trig)) 
+         Ext(Inline("exec_stats->end_trigger(\""^trig_name^"\")")), []));
+       Expr(unit, Fn(unit,
+         Ext(Inline("ivc_stats->end_trigger(\""^trig_name^"\")")), []))]
+    in
+    nivc_offsets, (decls, (evt,rel,args, Block(unit, profiled_trig))) 
   
   (* Top-level code generation *)
   let preamble opts = Lines
@@ -2226,11 +2282,14 @@ end (* Typing *)
     in x, cscl y
   
   (* Main function generation *)
-  let declare_main opts stream_ids map_schema source_vars trig_reg_info tlqs =
+  let declare_main opts stream_ids map_schema source_vars
+                   (trig_reg_info, ivc_counters) tlqs =
     let mt = Target(Type("stream_multiplexer")) in
     let dt = Target(Type("stream_dispatcher")) in
     let rot = Target(Type("runtime_options")) in
     let exec_ts, exect =
+      let x = "trigger_exec_stats" in x,Target(Type("shared_ptr<"^x^">")) in
+    let ivc_ts, ivct =
       let x = "trigger_exec_stats" in x,Target(Type("shared_ptr<"^x^">")) in
     let delta_sz_ts, delta_sz_t =
       let x = "delta_size_stats" in x, Target(Type("shared_ptr<"^x^">")) in
@@ -2244,6 +2303,7 @@ end (* Typing *)
        Decl(unit, ("run_opts", rot), None)]@
       (if opts.profile then 
         [Decl(unit, ("exec_stats", exect), None);
+         Decl(unit, ("ivc_stats", ivct), None);
          Decl(unit, ("delta_stats", delta_sz_t), None)]
        else [])
     in
@@ -2302,15 +2362,24 @@ end (* Typing *)
             sids)
           trig_reg_info)
         in
+        let ivc_ids =
+          List.fold_left (fun acc (n,cl) ->
+            acc@(List.map (fun i ->
+              "  ivc_stats->register_probe("^(string_of_int i)^", \""^
+              (String.escaped n)^"\");") cl))
+          [] ivc_counters
+        in
+        let ts_params = String.concat ", "
+          ["run_opts.get_stats_window_size()";
+           "run_opts.get_stats_period()"; "run_opts.get_stats_file()"]
+        in 
          ["  exec_stats = shared_ptr<"^exec_ts^" >("^
-            "new "^exec_ts^"(\"exec\", "^
-              "run_opts.get_stats_window_size(), run_opts.get_stats_period(), "^
-              "run_opts.get_stats_file()));";
+            "new "^exec_ts^"(\"exec\", "^ts_params^"));";
+          "  ivc_stats = shared_ptr<"^exec_ts^" >("^
+            "new "^exec_ts^"(\"ivc\", "^ts_params^"));";
           "  delta_stats = shared_ptr<"^delta_sz_ts^">("^
-            "new "^delta_sz_ts^"(\"delta_sz\", "^
-              "run_opts.get_stats_window_size(), run_opts.get_stats_period(), "^
-              "run_opts.get_stats_file()));"]
-         @stmt_ids
+            "new "^delta_sz_ts^"(\"delta_sz\", "^ts_params^"));"]
+         @stmt_ids@ivc_ids
       in
       Lines (stepper@
              ["int main(int argc, char* argv[]) {"]
@@ -2406,7 +2475,8 @@ struct
   module IBC = ImpBuilder.Common
   
   type trigger_setup_t =
-    (string * string * string * (string * string) list) list
+    (string * string * string * (string * string) list) list *
+    (string * int list) list
 
   type compiler_trig_t = (ext_type type_t, ext_type, ext_fn) Program.trigger_t
 
@@ -2437,15 +2507,15 @@ struct
   (* Compiles a K3 trigger, setting up a type environment based on the
    * given datastructure schemas and access patterns *)
   let compile_k3_trigger opts dbschema decl_f schema patterns 
-                         counter evt rel args k3stmts =
+                         counter ivc_counters evt rel args k3stmts =
     let arg_types = List.map2 (fun v1 v2 ->
       v1, imp_type_of_calc_type (snd v2)) args (List.assoc rel dbschema)
     in
     let compile_f = compile_k3_stmt decl_f opts arg_types schema patterns in
     let i = Imperative.Block (Host TUnit, List.map compile_f k3stmts) in
     let t = (evt,rel,args,i) in
-    if not opts.profile then [],t
-    else profile_trigger counter dbschema t
+    if not opts.profile then (0,[]),([],t)
+    else profile_trigger counter ivc_counters dbschema schema t
 
   (* Builds registration metadata for the imperative main function *)
   let build_trigger_setup_info counter evt rel stmts =
@@ -2462,20 +2532,22 @@ struct
   let compile_triggers opts dbschema (schema,patterns,trigs) :
     (source_code_t list * compiler_trig_t) list * trigger_setup_t 
   =
-    let compiler_trigs =
-      snd (List.fold_left (fun (gcnt, acc) (evt,rel,args,k3stmts) ->
+    let ivc_counters, compiler_trigs = snd (
+      List.fold_left (fun (gcnt, (ivc_cnt, acc)) (evt,rel,args,k3stmts) ->
         let local_decl_f schema patterns stmt = schema, patterns, [] in
-        let r = compile_k3_trigger opts dbschema local_decl_f schema patterns
-                                   gcnt evt rel args (List.map snd k3stmts)
-        in gcnt+(List.length k3stmts), acc@[r])
-      (0,[]) trigs)
+        let nivc_cnt, r =
+          compile_k3_trigger opts dbschema local_decl_f schema patterns
+            gcnt ivc_cnt evt rel args (List.map snd k3stmts)
+        in gcnt+(List.length k3stmts),
+           (nivc_cnt, acc@[r]))
+      (0,((0,[]),[])) trigs)
     in
     let trigger_setup =
       snd (List.fold_left (fun (gcnt, acc) (evt,rel,_,stmts) ->
         gcnt+(List.length stmts),
         acc@[build_trigger_setup_info gcnt evt rel (List.map snd stmts)])
       (0, []) trigs)
-    in compiler_trigs, trigger_setup
+    in compiler_trigs, (trigger_setup, snd ivc_counters)
 
 
   (* Driver interface functions *)
@@ -2527,8 +2599,8 @@ struct
   let compile_ds_triggers opts dbschema ((schema, patterns), dstrigs) :
     (source_code_t list * compiler_trig_t) list * trigger_setup_t 
   =
-    let compiler_trigs =
-      snd (List.fold_left (fun (gcnt, acc) ((evt,rel,args), ds_stmts) ->
+    let ivc_counters, compiler_trigs = snd (
+      List.fold_left (fun (gcnt, (ivc_cnt, acc)) ((evt,rel,args), ds_stmts) ->
         (* Retrieve statement-specific declarations during compilation *)
         let stmt_decls = List.fold_left (fun acc ((lsch, lpats), stmts) ->
           let ltd, ld = declare_maps_of_schema lsch lpats in
@@ -2543,17 +2615,18 @@ struct
         let ds_type_decls = List.map (fun (_,s) ->
           let _,_,td,_ = List.assoc (List.hd s) stmt_decls in td) ds_stmts in
         let k3stmts = List.flatten (List.map snd ds_stmts) in
-        let (sc_l, t) = compile_k3_trigger
-          opts dbschema local_decl_f schema patterns gcnt evt rel args k3stmts
-        in gcnt+(List.length k3stmts), acc@[(sc_l@ds_type_decls), t])
-      (0,[]) dstrigs)
+        let nivc_cnt, (sc_l, t) = compile_k3_trigger opts
+          dbschema local_decl_f schema patterns gcnt ivc_cnt evt rel args k3stmts
+        in gcnt+(List.length k3stmts),
+           (nivc_cnt, acc@[(sc_l@ds_type_decls), t]))
+      (0,((0,[]),[])) dstrigs)
     in
     let trigger_setup =
       snd (List.fold_left (fun (gcnt, acc) ((evt,rel,_),stmts) ->
         gcnt+(List.length stmts),
         acc@[build_trigger_setup_info gcnt evt rel stmts])
       (0, []) dstrigs)
-    in compiler_trigs, trigger_setup
+    in compiler_trigs, (trigger_setup, snd ivc_counters)
 
   let compile_ds_query opts dbsch ((mapsch,pats),dstrigs) srcs tlqs chan =
     compile_imp 
