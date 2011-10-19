@@ -39,12 +39,12 @@ tpch17 --depth 1 -f cse -f breduce -f hashds
 tpch18 
 tpch18 --depth 0 -f cse -f breduce -f hashds  --compile-only
 tpch18 --depth 1
-tpch18short -f cse -f breduce -f hashds
+tpch18short
 tpch18short --depth 0 -f cse -f breduce -f hashds  --compile-only
 tpch18short --depth 1
-tpch22 -f cse -f breduce -f hashds
+tpch22
 tpch22 --depth 0 -f cse -f breduce -f hashds  --compile-only
 tpch22 --depth 1
-clusteravailablenew -f cse -f breduce -f hashds
+clusteravailablenew
 clusteravailablenew --depth 0 -f cse -f breduce -f hashds  --compile-only
 clusteravailablenew --depth 1
