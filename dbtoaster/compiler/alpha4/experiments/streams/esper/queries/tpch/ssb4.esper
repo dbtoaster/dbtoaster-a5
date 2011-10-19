@@ -41,3 +41,8 @@ where  c.custkey = o.custkey
   and  cn.nationkey = c.nationkey
   and  sn.nationkey = s.nationkey
 group by sn.regionkey, cn.regionkey, p.type;
+
+/* Progress stream */
+insert into ProgressCounter
+  select current_timestamp() as t, current_update as tid
+  from TableChanged where (current_update % 20) = 0;

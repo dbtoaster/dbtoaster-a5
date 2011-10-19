@@ -143,7 +143,7 @@ public class TPCHSkeleton extends CommonSkeleton {
 
     String queryFile = null;
     String baseDir = System.getProperty("user.dir");
-    int queryId = -1;
+    List<Integer> queryIds = new LinkedList<Integer>();
     int sampleFreq = 10;
 
     List<String> dataFiles = new LinkedList<String>();
@@ -156,7 +156,9 @@ public class TPCHSkeleton extends CommonSkeleton {
       }
       
       queryFile = (String) options.valueOf("q");
-      queryId = (Integer) options.valueOf("r");
+      for (Object o : options.valuesOf("r")) {
+        queryIds.add((Integer) o);
+      }
 
       if ( options.has( "s" ) && options.valueOf("s") != null )
         sampleFreq = (Integer) options.valueOf("s");
@@ -178,8 +180,17 @@ public class TPCHSkeleton extends CommonSkeleton {
     log.info("using script "+queryFile);
     epStmts = t.setupScript(queryFile);
     if ( !epStmts.isEmpty() ) {
-      GenericSubscriber subscriber = new GenericSubscriber(sampleFreq);
-      epStmts.get(epStmts.size()-queryId).setSubscriber(subscriber);
+      for (Integer queryId : queryIds) {
+        if ( queryId <= 0 || queryId > epStmts.size() ) {
+          log.error("invalid query id: "+queryId);
+          System.exit(1);
+        }
+
+        EPStatement stmt = epStmts.get(epStmts.size()-queryId);
+        log.info("Logging query(-"+queryId+"): "+stmt.getText());
+        GenericSubscriber subscriber = new GenericSubscriber(sampleFreq);
+        stmt.setSubscriber(subscriber);
+      }
     }
 
     // Push data files.

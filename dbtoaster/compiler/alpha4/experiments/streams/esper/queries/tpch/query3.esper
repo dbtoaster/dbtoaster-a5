@@ -21,3 +21,8 @@ where  C.mktsegment = 'BUILDING'
   and  O.orderdate < '1995-03-15'
   and  L.shipdate > '1995-03-15'
 group by O.orderkey, O.orderdate, O.shippriority;
+
+/* Progress stream */
+insert into ProgressCounter
+  select current_timestamp() as t, current_update as tid
+  from TableChanged where (current_update % 20) = 0;

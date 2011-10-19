@@ -60,3 +60,8 @@ on AggOuter(sz=1) as e delete from AggOuter as w where w.tid < e.tid;
 on AggOuter(sz>1) as e
   delete from AggOuter as w
   where w.tid = e.tid and w.sz < e.sz;
+
+/* Progress stream */
+insert into ProgressCounter
+  select current_timestamp() as t, current_update as tid
+  from TableChanged where (current_update % 20) = 0;

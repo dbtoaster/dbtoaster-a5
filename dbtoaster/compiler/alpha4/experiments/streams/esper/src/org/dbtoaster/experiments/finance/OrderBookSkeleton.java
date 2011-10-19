@@ -173,7 +173,7 @@ public class OrderBookSkeleton extends CommonSkeleton {
     };
     
     String queryFile = null;
-    int queryId = -1;
+    List<Integer> queryIds = new LinkedList<Integer>();
     int sampleFreq = 10;
     
     String unifiedFile = null;
@@ -200,7 +200,9 @@ public class OrderBookSkeleton extends CommonSkeleton {
       }
       
       queryFile = (String) options.valueOf("q");
-      queryId = (Integer) options.valueOf("r");
+      for (Object o : options.valuesOf("r")) {
+        queryIds.add((Integer) o);
+      }
 
       if ( options.has( "u" ) && options.valueOf("u") != null )
         unifiedFile = (String) options.valueOf("u");
@@ -242,13 +244,15 @@ public class OrderBookSkeleton extends CommonSkeleton {
     log.info("using script "+queryFile);
     epStmts = s.setupScript(queryFile);
     if ( !epStmts.isEmpty() ) {
-      if ( queryId <= 0 || queryId > epStmts.size() ) {
-        log.error("invalid query id: "+queryId);
-        System.exit(1);
+      for (Integer queryId : queryIds) {
+        if ( queryId <= 0 || queryId > epStmts.size() ) {
+          log.error("invalid query id: "+queryId);
+          System.exit(1);
+        }
+  
+        GenericSubscriber subscriber = new GenericSubscriber(sampleFreq);
+        epStmts.get(epStmts.size()-queryId).setSubscriber(subscriber);
       }
-
-      GenericSubscriber subscriber = new GenericSubscriber(sampleFreq);
-      epStmts.get(epStmts.size()-queryId).setSubscriber(subscriber);
     }
     
     if ( !(unifiedFile == null && insertBidsFile == null && insertAsksFile == null) )

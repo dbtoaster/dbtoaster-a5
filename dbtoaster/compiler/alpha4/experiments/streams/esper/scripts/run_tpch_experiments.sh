@@ -3,15 +3,16 @@
 # This script should be run from within the Esper scripts/ dir.
 #
 
-if [ $# -ne 4 ]; then
+if [ $# -ne 5 ]; then
   echo "Usage: $0 <timeout> <esper dir> <output dir> <data dir>"
   exit 1
 fi
 
 timeout=$1
-esper_dir=$2
-output_dir=$3
-data_dir=$4
+sample_rate=$2
+esper_dir=$3
+output_dir=$4
+data_dir=$5
 
 if [ ! -d $esper_dir -o ! -f $esper_dir/src/org/dbtoaster/experiments/tpch/TPCHSkeleton.java ]; then
   echo "Invalid Esper directory: $esper_dir"
@@ -57,7 +58,8 @@ for i in 0; do
         # Run the SPE on this query.
         # For TPCH, this requires a data dir relative to the bin_dir  
         echo "Running SPE on $query"
-        $script_dir/run_esper.py $query -e $esper_dir -q $query_dir -d data -o $run_dir -t $timeout 
+        $script_dir/run_esper.py $query -e $esper_dir -q $query_dir -d data -o $run_dir -t $timeout
+        sleep 20 
       fi
     done
   fi

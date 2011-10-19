@@ -18,14 +18,14 @@ finance_queries = {
 
 finance_ext = ".dbtdat"
 finance_files = [i+finance_ext for i in \
-                 ["Events", "InsertBIDS", "DeleteBIDS", "InsertASKS", "DeleteASKS"]]
+                 ["Events2M", "InsertBIDS", "DeleteBIDS", "InsertASKS", "DeleteASKS"]]
 
 tpch_queries = {
-  'query3'   : ['-r 1', '-b {ABSDATADIR}', '-i {LINEITEM}', '-i {CUSTOMER}', '-i {ORDERS}'],
-  'query17'  : ['-r 3', '-b {ABSDATADIR}', '-i {LINEITEM}', '-i {PART}'],
-  'query18'  : ['-r 3', '-b {ABSDATADIR}', '-i {LINEITEM}', '-i {CUSTOMER}', '-i {ORDERS}'],
-  'query22'  : ['-r 3', '-b {ABSDATADIR}', '-i {CUSTOMER}', '-i {ORDERS}'],
-  'ssb4'     : ['-r 1', '-b {ABSDATADIR}', '-i {LINEITEM}', '-i {CUSTOMER}', '-i {ORDERS}', '-i {SUPPLIER}', '-i {PART}', '-i {NATION}']
+  'query3'   : ['-r 1', '-r 2', '-s {SAMPLEFREQ}', '-b {ABSDATADIR}', '-i {LINEITEM}', '-i {CUSTOMER}', '-i {ORDERS}'],
+  'query17'  : ['-r 1', '-r 4', '-s {SAMPLEFREQ}', '-b {ABSDATADIR}', '-i {LINEITEM}', '-i {PART}'],
+  'query18'  : ['-r 1', '-r 4', '-s {SAMPLEFREQ}', '-b {ABSDATADIR}', '-i {LINEITEM}', '-i {CUSTOMER}', '-i {ORDERS}'],
+  'query22'  : ['-r 1', '-r 4', '-s {SAMPLEFREQ}', '-b {ABSDATADIR}', '-i {CUSTOMER}', '-i {ORDERS}'],
+  'ssb4'     : ['-r 1', '-r 2', '-s {SAMPLEFREQ}', '-b {ABSDATADIR}', '-i {LINEITEM}', '-i {CUSTOMER}', '-i {ORDERS}', '-i {SUPPLIER}', '-i {PART}', '-i {NATION}']
 }
 
 tpch_ext = ".csv"

@@ -11,7 +11,7 @@ create variable int current_update = 0;
 on TableChanged set current_update = current_update+1;
 
 insert into Subquery
-  select current_update+1 as tid,
+  select current_update as tid,
          p.partkey as partkey, sum(l2.quantity) as sumq
   from TableChanged as t unidirectional, Lineitem as l2, Part as p
   where l2.partkey = p.partkey
@@ -52,3 +52,8 @@ on AggOuter(sz=1) as e delete from AggOuter as w where w.tid < e.tid;
 on AggOuter(sz>1) as e
   delete from AggOuter as w
   where w.tid = e.tid and w.sz < e.sz;
+
+/* Progress stream */
+insert into ProgressCounter
+  select current_timestamp() as t, current_update as tid
+  from TableChanged where (current_update % 20) = 0;
