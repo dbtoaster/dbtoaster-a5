@@ -14,7 +14,7 @@ create variable int current_update = 0;
 on TableChanged set current_update = current_update+1;
 
 insert into Subquery1
-  select current_update+1 as tid,
+  select current_update as tid,
          l3.orderkey as orderkey, sum(l3.quantity) as sumq
   from TableChanged as t unidirectional, Lineitem as l3
   group by l3.orderkey;

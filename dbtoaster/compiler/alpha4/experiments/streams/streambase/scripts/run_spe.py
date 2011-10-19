@@ -61,7 +61,7 @@ def run_stream_engine(sbdir, query_name, loader_name, poll_period, timeout):
   print "Starting SPE with '{0}'".format(spe_cmd)
   spe = subprocess.Popen(spe_cmd, shell=True)
   
-  time.sleep(2)
+  time.sleep(5)
   with open(spe_log_filename) as log_file:
     spe_pid = int(log_file.readline()) 
   print "SPE pid {0}".format(spe_pid)
@@ -79,7 +79,7 @@ def run_stream_engine(sbdir, query_name, loader_name, poll_period, timeout):
   # Cleanup.
   print "SPE done, terminating..."
   if spe.poll() == None:
-    os.kill(spe_pid, signal.SIGTERM)
+    os.kill(spe_pid, signal.SIGKILL)
     spe.terminate()
   save_run(query_name)
 

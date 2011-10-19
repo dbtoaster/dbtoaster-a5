@@ -7,27 +7,13 @@ CREATE SCHEMA OrderbookEntry
 (timestamp double, orderId int, brokerId int, volume double, price double);
 
 /* Main memory order book tables */
-CREATE MEMORY TABLE Bids OrderbookEntry PRIMARY KEY (timestamp, orderId, brokerId);
-CREATE MEMORY TABLE Asks OrderbookEntry PRIMARY KEY (timestamp, orderId, brokerId);
+CREATE MEMORY TABLE Bids OrderbookEntry
+  PRIMARY KEY (timestamp, orderId, brokerId, volume, price);
+
+CREATE MEMORY TABLE Asks OrderbookEntry
+  PRIMARY KEY (timestamp, orderId, brokerId, volume, price);
 
 CREATE INDEX AsksByBP ON Asks(brokerId,price);
-
-/*
- * Table change notification streams
- */
-CREATE SCHEMA SOrderbookEntry (tid int, o OrderbookEntry);
-
-/* Pre-update serialized streams */
-CREATE STREAM SInsertBids SOrderbookEntry;
-CREATE STREAM SDeleteBids SOrderbookEntry;
-CREATE STREAM SInsertAsks SOrderbookEntry;
-CREATE STREAM SDeleteAsks SOrderbookEntry;
-
-/* Post-update serialized streams */
-CREATE STREAM BidsInserted SOrderbookEntry;
-CREATE STREAM BidsDeleted  SOrderbookEntry;
-CREATE STREAM AsksInserted SOrderbookEntry;
-CREATE STREAM AsksDeleted  SOrderbookEntry;
 
 
 /* A dispatch stream for direct loading from a unified events file */
@@ -48,6 +34,22 @@ CREATE STREAM UpdateCounter (i int);
 UPDATE Counter FROM (SELECT i FROM UpdateCounter);
 SELECT Counter+1 as i FROM InputLocked INTO UpdateCounter;
 
+/*
+ * Table change notification streams
+ */
+CREATE SCHEMA SOrderbookEntry (tid int, o OrderbookEntry);
+
+/* Pre-update serialized streams */
+CREATE STREAM SInsertBids SOrderbookEntry;
+CREATE STREAM SDeleteBids SOrderbookEntry;
+CREATE STREAM SInsertAsks SOrderbookEntry;
+CREATE STREAM SDeleteAsks SOrderbookEntry;
+
+/* Post-update serialized streams */
+CREATE STREAM BidsInserted SOrderbookEntry;
+CREATE STREAM BidsDeleted  SOrderbookEntry;
+CREATE STREAM AsksInserted SOrderbookEntry;
+CREATE STREAM AsksDeleted  SOrderbookEntry;
 
 /* Partition into serialized streams after locking */
 SELECT Counter as tid,
@@ -93,12 +95,12 @@ SELECT tid FROM  BidsInserted UNION BidsDeleted
            UNION AsksInserted UNION AsksDeleted;
 
 CREATE STREAM CountBids AS
-SELECT TC.tid, count() as numB FROM TableChanged AS TC, Bids;
+SELECT TC.tid, count() as numB FROM TableChanged AS TC OUTER JOIN Bids;
  
 /* Replay Bids and join with Asks */
 CREATE STREAM ReplayBids AS
 SELECT CB.tid, CB.numB, B.brokerId, B.price, B.volume
-FROM CountBids AS CB, Bids AS B;
+FROM CountBids AS CB OUTER JOIN Bids AS B;
 
 CREATE STREAM ReplayJoin AS
 SELECT B.tid, B.numB, B.brokerId, sum(A.volume - B.volume) as diff

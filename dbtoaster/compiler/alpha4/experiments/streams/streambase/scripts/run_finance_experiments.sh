@@ -35,6 +35,8 @@ for i in 0; do
       echo "Running SPE on $query"
       $script_dir/run_spe.py -t $timeout $query
       
+      # wait a bit to ensure the socket is freed after terminating the SPE
+      sleep 20
       cd $working_dir
     fi
   done

@@ -12,19 +12,6 @@ CREATE MEMORY TABLE Bids OrderbookEntry
 
 CREATE INDEX BidsByPrice ON Bids(price);
 
-/*
- * Table change notification streams
- */
-CREATE SCHEMA SOrderbookEntry (tid int, o OrderbookEntry);
-
-/* Pre-update serialized streams */
-CREATE STREAM SInsertBids SOrderbookEntry;
-CREATE STREAM SDeleteBids SOrderbookEntry;
-
-/* Post-update serialized streams */
-CREATE STREAM BidsInserted SOrderbookEntry;
-CREATE STREAM BidsDeleted  SOrderbookEntry;
-
 /* A dispatch stream for direct loading from a unified events file */
 CREATE SCHEMA TaggedInputs 
   (stream_name string, evt int,
@@ -45,6 +32,18 @@ CREATE STREAM UpdateCounter (i int);
 UPDATE Counter FROM (SELECT i FROM UpdateCounter);
 SELECT Counter+1 as i FROM InputLocked INTO UpdateCounter;
 
+/*
+ * Table change notification streams
+ */
+CREATE SCHEMA SOrderbookEntry (tid int, o OrderbookEntry);
+
+/* Pre-update serialized streams */
+CREATE STREAM SInsertBids SOrderbookEntry;
+CREATE STREAM SDeleteBids SOrderbookEntry;
+
+/* Post-update serialized streams */
+CREATE STREAM BidsInserted SOrderbookEntry;
+CREATE STREAM BidsDeleted  SOrderbookEntry;
 
 /* Partition into serialized streams after locking */
 

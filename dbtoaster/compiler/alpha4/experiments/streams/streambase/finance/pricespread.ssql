@@ -7,28 +7,13 @@ CREATE SCHEMA OrderbookEntry
 (timestamp double, orderId int, brokerId int, volume double, price double);
 
 /* Main memory order book tables */
-CREATE MEMORY TABLE Bids OrderbookEntry PRIMARY KEY (timestamp, orderId, brokerId);
-CREATE MEMORY TABLE Asks OrderbookEntry PRIMARY KEY (timestamp, orderId, brokerId);
+CREATE MEMORY TABLE Bids OrderbookEntry
+  PRIMARY KEY (timestamp, orderId, brokerId, volume, price);
+
+CREATE MEMORY TABLE Asks OrderbookEntry
+  PRIMARY KEY (timestamp, orderId, brokerId, volume, price);
 
 CREATE Index AsksByVol ON Asks(volume);
-
-/*
- * Table change notification streams
- */
-CREATE SCHEMA SOrderbookEntry (tid int, o OrderbookEntry);
-
-/* Pre-update serialized streams */
-CREATE STREAM SInsertBids SOrderbookEntry;
-CREATE STREAM SDeleteBids SOrderbookEntry;
-CREATE STREAM SInsertAsks SOrderbookEntry;
-CREATE STREAM SDeleteAsks SOrderbookEntry;
-
-/* Post-update serialized streams */
-CREATE STREAM BidsInserted SOrderbookEntry;
-CREATE STREAM BidsDeleted  SOrderbookEntry;
-CREATE STREAM AsksInserted SOrderbookEntry;
-CREATE STREAM AsksDeleted  SOrderbookEntry;
-
 
 /* A dispatch stream for direct loading from a unified events file */
 CREATE SCHEMA TaggedInputs 
@@ -48,6 +33,22 @@ CREATE STREAM UpdateCounter (i int);
 UPDATE Counter FROM (SELECT i FROM UpdateCounter);
 SELECT Counter+1 as i FROM InputLocked INTO UpdateCounter;
 
+/*
+ * Table change notification streams
+ */
+CREATE SCHEMA SOrderbookEntry (tid int, o OrderbookEntry);
+
+/* Pre-update serialized streams */
+CREATE STREAM SInsertBids SOrderbookEntry;
+CREATE STREAM SDeleteBids SOrderbookEntry;
+CREATE STREAM SInsertAsks SOrderbookEntry;
+CREATE STREAM SDeleteAsks SOrderbookEntry;
+
+/* Post-update serialized streams */
+CREATE STREAM BidsInserted SOrderbookEntry;
+CREATE STREAM BidsDeleted  SOrderbookEntry;
+CREATE STREAM AsksInserted SOrderbookEntry;
+CREATE STREAM AsksDeleted  SOrderbookEntry;
 
 /* Partition into serialized streams after locking */
 SELECT Counter as tid,
