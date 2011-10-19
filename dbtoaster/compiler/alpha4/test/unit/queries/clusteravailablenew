@@ -2,18 +2,25 @@
   :path => "test/sql/clusteravailable_priority.sql",
   :type => :onelevel,
   :answer => { 
-    [2.0] => 10,
-    [1.0] => 7,
-    [0.0] => 7
+    [2.0] => 2631, #10,
+    [1.0] => 2520, #7,
+    [0.0] => 2489, #7
   },
   :datasets => {
     "tiny" => {
       :subs => [ [/ca_/, "casmall_"] ],
       :answer => {
-         [2.0] => 2,
-         [1.0] => 1,
-         [0.0] => 1
+          # commenting out results for old variant
+         [2.0] => 214, #2,
+         [1.0] => 301, #1,
+         [0.0] => 205, #1
       }
     }
   }
 }
+
+#  priority | sum | sum 
+# ----------+-----+-----
+#         1 | 400 | 301
+#         2 | 300 | 214
+#         0 | 300 | 205

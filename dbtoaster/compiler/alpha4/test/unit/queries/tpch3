@@ -6,6 +6,10 @@
     "tiny" => {
       :subs => [ [/test\/data\/tpch\//, "test/data/tpch_tiny/"] ],
       :answer => results_file("test/results/tpch/query3_tiny.csv")
+    },
+    "big" => {
+      :subs => [ [/test\/data\/tpch\//, "test/data/tpch_100M/"] ],
+      :answer => results_file("test/results/tpch/query3_100M.csv")
     }
   }
 }

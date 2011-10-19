@@ -87,7 +87,7 @@ class GenericUnitTest
   def dbt_base_cmd
     [ $dbt, @qpath ] +
       (if $depth.nil? then [] else ["--depth", $depth ] end) + 
-      @compiler_flags +
+      @compiler_flags + $compiler_args +
       ($debug_flags.map { |f| ["-d", f]}.flatten(1)) +
       ($opts.map { |f| ["-f", f]}.flatten(1))
   end
@@ -237,6 +237,7 @@ $depth = nil;
 $verbose = false;
 $compile_only = false;
 $dataset = nil;
+$compiler_args = [];
 $executable_args = [];
 $dump_query = false;
 $log_detail = false;
@@ -253,7 +254,8 @@ GetoptLong.new(
   [ '--compile-only',    GetoptLong::NO_ARGUMENT],
   [ '--dataset',         GetoptLong::REQUIRED_ARGUMENT],
   [ '--trace',           GetoptLong::OPTIONAL_ARGUMENT],
-  [ '--dump-query',      GetoptLong::NO_ARGUMENT]
+  [ '--dump-query',      GetoptLong::NO_ARGUMENT],
+  [ '--memprofiling',    GetoptLong::NO_ARGUMENT]
 ).each do |opt, arg|
   case opt
     when '-f' then $opts.push(arg)
@@ -276,6 +278,8 @@ GetoptLong.new(
                                                          else arg end ];
                         $log_detail = true;
     when '--dump-query' then $dump_query = true;
+    when '--memprofiling' then 
+      $compiler_args += ["-l", "cpp:prof", "-g", "^-ltcmalloc"]
   end
 end
 
@@ -295,6 +299,10 @@ queries.each do |tquery|
         (if $depth.nil? then [] else [["depth", ["#{$depth}"]]] end)+
         (if $compile_only then [["compilation", ["only"]]] else [] end)+
         (if $dataset.nil? then [] else [["dataset", [$dataset]]] end)+
+        (if $compiler_args.empty? then [] 
+                                  else [["compilation args", 
+                                        ["'#{$compiler_args.join(" ")}'"]]] 
+                                  end)+
         (if $executable_args.empty? then [] 
                                     else [["runtime args", 
                                            ["'#{$executable_args.join(" ")}'"]]] 
