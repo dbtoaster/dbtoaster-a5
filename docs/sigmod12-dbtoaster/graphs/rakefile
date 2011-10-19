@@ -18,8 +18,9 @@ $queries = [
   ["tpch22", "tpch/query22.sql"]
 ];
 $configurations = [
-  ["Standard Optimizations -- Infinite Depth", "depth_infty"],
-  ["Standard Optimizations -- Depth 1",        "depth_1"],
+  ["Infinite Depth",                     "depth_infty"],
+  ["Depth 1 (IVC) -- Hash Joins",        "depth_1"],
+  ["Depth 1 (IVC) -- Nested Loop Joins", "depth_1_nohash"],
 ]
 
 def get_mem(bin,heap_file,map)
