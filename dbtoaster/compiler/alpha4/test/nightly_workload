@@ -47,4 +47,4 @@ tpch22 --depth 0 -f cse -f breduce -f hashds  --compile-only
 tpch22 --depth 1
 clusteravailablenew
 clusteravailablenew --depth 0 -f cse -f breduce -f hashds  --compile-only
-clusteravailablenew --depth 1
+clusteravailablenew --depth 1 --dataset tiny
