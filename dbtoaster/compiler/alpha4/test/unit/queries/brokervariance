@@ -1,0 +1,11 @@
+{
+  :path => "test/sql/finance/brokervariance.sql",
+  :type => :onelevel,
+  :answer => results_file("test/results/brokervariance.csv"),
+#  :datasets => {
+#    "tiny" => {
+#      :subs => [ [/vwap5k/, "vwap100"] ],
+#      :answer => results_file("test/results/brokerspread_100.csv"),
+#    }
+#  }
+}
