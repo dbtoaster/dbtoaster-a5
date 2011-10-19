@@ -94,16 +94,30 @@ end
 def plot(args = {})
   file args do
     filename = get_filename args;
-    puts "gnuplot > #{filename}"
+    fmt = case filename
+        when /\.pdf$/ then "pdf"
+        when /\.ps$/ then "postscript eps enhanced"
+        else raise "Unknown plot format"
+      end
+    puts "gnuplot > #{filename} (#{fmt})"
     
     Gnuplot.open do |gp|
       Gnuplot::Plot.new(gp) do |plot|
-        plot.terminal "pdf"
+        plot.terminal fmt
         plot.output filename;
+        $gp_rake_plot = plot;
         yield plot;
       end
     end
   end
+end
+
+def dataset(title, with="lines")
+  $gp_rake_plot.data << 
+    Gnuplot::DataSet.new(yield.unzip) do |ds|
+      ds.title = title
+      ds.with = with;
+    end
 end
 
 def tuples_processed(file)
@@ -136,53 +150,45 @@ $queries.unzip[0].each do |q|
   
   alldata = $configurations.map { |title,code| "data/time_#{q}_#{code}_0" }
   
-  plot "graphs/time_#{q}.pdf" => alldata do |plot|
+  plot "graphs/time_#{q}.ps" => alldata do |plot|
     plot.xlabel "Time (s)"
     plot.ylabel "Tuples Processed"
     $configurations.each do |conf_title, conf_code|
       datafile = "data/time_#{q}_#{conf_code}_0";
-      plot.data << 
-        Gnuplot::DataSet.new(tuples_processed(datafile).unzip) do |ds|
-          ds.with = "linespoints";
-          ds.title = conf_title
-        end
+      dataset(conf_title) { tuples_processed(datafile) }
     end
   end
-  task "#{q}_all" => "graphs/time_#{q}.pdf"
+  task "#{q}_all" => "graphs/time_#{q}.ps"
 
   $configurations.each do |conf_title, conf_code|
     datafile = "data/time_#{q}_#{conf_code}_0";
-    plot "graphs/rate_#{q}_#{conf_code}.pdf" => datafile do |plot|
+    plot "graphs/rate_#{q}_#{conf_code}.ps" => datafile do |plot|
       plot.xlabel "Tuples Processed"
       plot.ylabel "Rate (tuples/s)"
-      plot.data << Gnuplot::DataSet.new(tuple_rate(datafile).unzip) do |ds|
-        ds.title = conf_title
-      end
+      dataset(conf_title) { tuple_rate(datafile) }
     end
-    task "#{q}_all" => "graphs/rate_#{q}_#{conf_code}.pdf"
+    task "#{q}_all" => "graphs/rate_#{q}_#{conf_code}.ps"
   end
   
-  plot "graphs/windowedrate_#{q}.pdf" => alldata do |plot|
+  plot "graphs/windowedrate_#{q}.ps" => alldata do |plot|
     plot.xlabel "Tuples Processed"
     plot.ylabel "Rate (tuples/s)"
+    i = 0;
     $configurations.each do |conf_title, conf_code|
       datafile = "data/time_#{q}_#{conf_code}_0";
-      plot.data << Gnuplot::DataSet.new(
+      dataset(conf_title) do 
         tuple_rate(datafile).window(10) do |w| 
           tuples, rate = w.unzip
           [tuples[-1], rate.avg]
-        end.unzip
-      ) do |ds|
-        ds.title = conf_title;
-        ds.with = "linespoints";
+        end
       end
     end
   end
-  task "#{q}_all" => "graphs/windowedrate_#{q}.pdf"
+  task "#{q}_all" => "graphs/windowedrate_#{q}.ps"
   
   task q => "#{q}_all" do
-    sh "open graphs/time_#{q}.pdf graphs/rate_#{q}*.pdf "+
-       "graphs/windowedrate_#{q}.pdf";
+    sh "open graphs/time_#{q}.ps graphs/rate_#{q}*.ps "+
+       "graphs/windowedrate_#{q}.ps";
   end
 
   task :all_graphs => "#{q}_all";
