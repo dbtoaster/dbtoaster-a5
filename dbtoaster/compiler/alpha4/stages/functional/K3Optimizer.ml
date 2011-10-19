@@ -1543,8 +1543,8 @@ let datastructure_statement (schema, patterns) (pm, rel, args) stmt =
     | Slice (e,sch,pk) ->
       let npk = List.fold_left (fun kacc (id,e) ->
         if List.mem_assoc id kacc then kacc else kacc@[id,e]) pk pkey
-      in Slice(e,sch,npk)
-    | _ -> e
+      in npk, Slice(e,sch,npk)
+    | _ -> [], e
   in
 
   (* Result schema and patterns that are mutated inline *)
@@ -1575,13 +1575,21 @@ let datastructure_statement (schema, patterns) (pm, rel, args) stmt =
           let probe_key = List.map (fun ((id,_),e) -> id,e) bp_pairs in
           if is_primitive_collection rc then
             begin
+              (* merged_probe_key combines the predicates with any existing
+                 slice keys. We thus need to add a pattern for this new
+                 partial key *)
+              let c_name = get_collection_name rc in
+              let merged_probe_key, slice_expr = slice_collection rc probe_key in
               let key_pat = List.split (List.map
-                (fun (v,_) -> v, index v (List.map fst ds_sch)) probe_key)
+                (fun (v,_) -> v, index v (List.map fst ds_sch)) merged_probe_key)
               in
-              r_pats := Patterns.add_pattern !r_pats
-                (get_collection_name rc, M3Common.Patterns.Out(key_pat)); 
+              let existing_patterns = Patterns.get_out_patterns !r_pats c_name in
+              let has_pattern = List.mem (snd key_pat) existing_patterns in 
+              if not(probe_key = [] || has_pattern) then 
+                r_pats := Patterns.add_pattern !r_pats
+                            (c_name, M3Common.Patterns.Out(key_pat));
               None,
-              Map(Lambda(narg, rest_b), slice_collection rc probe_key)
+              Map(Lambda(narg, rest_b), slice_expr)
             end
           else
             (* TODO: lift datastructure constructor if it is independent of narg. *)
