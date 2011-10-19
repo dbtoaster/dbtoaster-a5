@@ -18,7 +18,7 @@ pricespread --depth 0 -f cse -f breduce -f hashds  --compile-only
 pricespread --depth 1
 missedtrades
 missedtrades --depth 0 -f cse -f breduce -f hashds  --compile-only
-missedtrades --depth 1 -f cse -f breduce -f hashds
+missedtrades
 axfinder 
 axfinder -d runtime-bigsums
 axfinder -d runtime-bigsums
