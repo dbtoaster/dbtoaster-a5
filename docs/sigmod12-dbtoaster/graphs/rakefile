@@ -61,9 +61,10 @@ $queries = {
   }
 };
 $configurations = [
-  ["Infinite Depth",   "depth_infty"],
+  ["Full Compilation", "depth_infty"],
   ["Depth 1 (IVC)",        "depth_1"],
   ["Depth 1 (IVC)", "depth_1_nohash"],
+  ["Depth 0",              "depth_0"],
 ]
 $conf_titles = $configurations.map {|t,c| [c,t]}.to_h;
 
@@ -193,7 +194,90 @@ def tuple_rate(datafile)
   end
 end
 
+def draw_clustered_bar_plot plot, args
+  data = args.fetch(:data).unzip;
+  base_offset       = args.fetch(:base_offset,       0);
+  interbar_offset   = args.fetch(:interbar_offset,   10);
+  intergroup_offset = args.fetch(:intergroup_offset, interbar_offset);
+  margins           = args.fetch(:intergroup_offset, intergroup_offset);
+  bar_width         = args.fetch(:bar_width,         30);
+  tic_commands      = args.fetch(:tic_commands,      "");
+  
+  group_offset = base_offset + margins
+  group_size = interbar_offset * data.length + intergroup_offset;
+  data.zip(args[:dataset_labels]).each do |dataset, dataset_title|
+    offset = group_offset - group_size;
+    group_offset += interbar_offset;
+    
+    indices = dataset.map { |i| offset += group_size; }
+    
+    plot.data << Gnuplot::DataSet.new([indices,dataset]) do |ds|
+      ds.title = dataset_title
+      ds.with  = "impulses lw #{bar_width}";
+    end
+  end
+  
+  label_offset = (group_size+intergroup_offset-margins)/2
+  group_offset = base_offset - label_offset;
+  plot.xtics "(#{args[:group_labels].map do |label|
+    "\"#{label}\" #{group_offset += group_size}";
+  end.join(", ")}) #{tic_commands}";
+  
+  plot.xrange "[0:#{group_offset+label_offset+margins-intergroup_offset}]"
+end
+
+plot "graphs/test.pdf" => "rakefile" do |plot|
+  plot.yrange "[0:6]"
+  draw_clustered_bar_plot plot, 
+    :group_labels => ["A", "B", "C"],
+    :dataset_labels => ["X", "Y", "Z", "D"],
+    :data => [ [1, 2, 3], [2, 3, 4], [3, 4, 5], [5, 6, 7] ];
+end
+
 ["pdf", "tex", "ps"].each do |fmt|
+  plot "graphs/bakeoff.#{fmt}" => "rakefile" do |plot|
+    depths = ["0", "1", "infty"];
+    
+    plot.term "pdf enhanced size 4,2.7" if fmt == "pdf"
+    plot.logscale "y"
+    plot.key "top center"
+    
+    labels, data = $queries.keys.sort.map do |q|
+      args = $queries[q]
+      data = depths.map do |d|
+        chosen_conf = "depth_#{d}";
+        args.fetch(:representatives, []).
+          each { |r| chosen_conf = r if /depth_#{d}/ =~ r; }
+        time, tuples =
+          tuples_processed("data/time_#{q}_#{chosen_conf}_0")[-1];
+        
+        if time == 0 then 0 else tuples / time end;
+      end
+      
+      [ q, data.map { |rate| rate / data[1] } ]
+    end.unzip
+    
+    draw_clustered_bar_plot plot, 
+      :group_labels => labels,
+      :dataset_labels => depths.map { |d| $conf_titles["depth_#{d}"] },
+      :data => data,
+      :tic_commands => "rotate by -45",
+      :bar_width => 15
+  end
+
+#  clustered_bar_plot "graphs/bakeoff.#{fmt}" do |plot|
+#    ["depth_0", "depth_1", "depth_infty"]
+#    $queries.to_a.map do |q,args|
+#      [ 
+#        args.fetch(:representatives, $conf_titles.keys).map do |conf_code|
+#          time, tuples = tuples_processed("data/time_#{q}_#{conf_code}_0")[-1];
+#          rate = if time == 0 then 0 else tuples / time;
+#          ["#{q} #{$conf_titles[conf_code]}", rate];
+#        end
+#      ]
+#    end
+#  end
+
   $queries.each do |q,args|
     q_graphs = [];
     
