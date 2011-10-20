@@ -33,9 +33,6 @@ CREATE OR REPLACE FUNCTION recompute_query() RETURNS TRIGGER AS $recompute_query
     END;
 $recompute_query$ LANGUAGE plpgsql;
 
-CREATE TRIGGER refresh_asks AFTER INSERT OR DELETE ON ASKS
-    FOR EACH ROW EXECUTE PROCEDURE recompute_query();
-
 CREATE TRIGGER refresh_bids AFTER INSERT OR DELETE ON BIDS
     FOR EACH ROW EXECUTE PROCEDURE recompute_query();
 
@@ -44,5 +41,4 @@ SELECT dispatch();
 SELECT * FROM RESULTS;
 
 DROP TABLE RESULTS;
-DROP TRIGGER refresh_asks ON ASKS;
 DROP TRIGGER refresh_bids ON BIDS;

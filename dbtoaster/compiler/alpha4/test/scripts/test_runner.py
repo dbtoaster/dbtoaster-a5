@@ -1,5 +1,7 @@
 import argparse
 import subprocess
+import sys
+import os
 import time
 import re
 
@@ -23,11 +25,11 @@ def drop_database(database):
         stderr=subprocess.PIPE,
     )
 
-def initialize_schema(database):
+def initialize_schema(setup, database):
     '''Initializes our test database.'''
 
     subprocess.call(
-        ['psql', '-f' 'schema_definition.postgres.sql', database],
+        ['psql', '-f', setup, database],
         stdout=subprocess.PIPE,
         stderr=subprocess.PIPE,
     )
@@ -47,25 +49,25 @@ def load_agenda(database, agenda):
 
     database_load.communicate("\copy AGENDA FROM '{}' CSV;".format(agenda).encode())
 
-def run_query(database, query, timeout):
+def run_query(database, query, output, timeout):
     '''Runs our supplied query against our test database.'''
 
     query_results = subprocess.Popen(
-        ['psql', '-f', query, database],
-        stderr=subprocess.PIPE,
-        stdout=subprocess.PIPE,
+        ' '.join(['psql', '-f', query, database, '>' + output, '2>&1', ]),
+        shell=True
     )
 
     time.sleep(timeout)
-    query_results.kill()
-    error = query_results.stderr.read()
+    query_results.terminate()
     terminate_query = subprocess.call(
         ['psql', '-c', "select pg_cancel_backend(procpid) from pg_stat_activity where current_query LIKE 'SELECT dispatch();'", DATABASE],
         stderr=subprocess.PIPE,
         stdout=subprocess.PIPE,
     )
 
-    operations = list(filter(lambda line: 'OPERATION' in line, error.decode().split('\n')))
+    error = open(output).readlines()
+
+    operations = list(filter(lambda line: 'OPERATION' in line, error))
     print(progress.search(operations[-1]).group(1))
 
 
@@ -85,6 +87,16 @@ if __name__ == '__main__':
     )
 
     parser.add_argument(
+        'setup',
+        help='Schema Definition script for this query.',
+    )
+
+    parser.add_argument(
+        'output',
+        help='Location of output logfile for this query.',
+    )
+
+    parser.add_argument(
         'time',
         help='Time (in minutes) to run this query for, before killing it.',
         type=int,
@@ -97,10 +109,11 @@ if __name__ == '__main__':
         dest='debug',
     )
 
+
     args = parser.parse_args()
 
     DATABASE = 'dbtoaster'
 
-    initialize_schema(DATABASE)
+    initialize_schema(args.setup, DATABASE)
     load_agenda(DATABASE, args.agenda)
-    run_query(DATABASE, args.query, args.time)
+    run_query(DATABASE, args.query, args.output, args.time)

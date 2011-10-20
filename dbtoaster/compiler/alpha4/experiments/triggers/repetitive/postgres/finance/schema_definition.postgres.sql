@@ -42,7 +42,7 @@ CREATE OR REPLACE FUNCTION dispatch() RETURNS void AS $dispatch$
 
             count := count + 1;
             result_count := (select count(*) from RESULTS);
-            RAISE NOTICE 'OPERATION %/% (%): % %', count, total_count, result_count, item.schema, item.event;
+            RAISE NOTICE 'OPERATION % %/% (%): % %', clock_timestamp(), count, total_count, result_count, item.schema, item.event;
 
             case 
 
