@@ -1,0 +1,144 @@
+csv params: fields: ,
+csv params: schema: int,int
+csv params: eventtype: insert
+reading from /tmp/okennedy_dbtoaster_data/cluster/assignments.dat with 1 adaptors
+csv params: fields: ,
+csv params: schema: int,int
+csv params: eventtype: insert
+reading from /tmp/okennedy_dbtoaster_data/cluster/servers.dat with 1 adaptors
+csv params: fields: ,
+csv params: schema: int,int
+csv params: eventtype: insert
+reading from /tmp/okennedy_dbtoaster_data/cluster/tasks.dat with 1 adaptors
+tracing: 
+0 tuples processed at 1319049092s+266468us
+1000 tuples processed at 1319049092s+373827us
+done with stream, 2 remain
+2000 tuples processed at 1319049092s+751203us
+done with stream, 1 remain
+3000 tuples processed at 1319049093s+129038us
+4000 tuples processed at 1319049093s+232790us
+5000 tuples processed at 1319049093s+381218us
+6000 tuples processed at 1319049093s+585565us
+7000 tuples processed at 1319049093s+987491us
+8000 tuples processed at 1319049094s+319779us
+9000 tuples processed at 1319049094s+649438us
+10000 tuples processed at 1319049095s+25777us
+11000 tuples processed at 1319049095s+438510us
+12000 tuples processed at 1319049095s+859572us
+13000 tuples processed at 1319049096s+349273us
+14000 tuples processed at 1319049096s+896223us
+15000 tuples processed at 1319049097s+468561us
+16000 tuples processed at 1319049098s+76205us
+17000 tuples processed at 1319049098s+767693us
+18000 tuples processed at 1319049099s+508764us
+19000 tuples processed at 1319049100s+241063us
+20000 tuples processed at 1319049101s+55235us
+21000 tuples processed at 1319049101s+913094us
+22000 tuples processed at 1319049102s+809453us
+23000 tuples processed at 1319049103s+696766us
+24000 tuples processed at 1319049104s+612841us
+25000 tuples processed at 1319049105s+651975us
+26000 tuples processed at 1319049106s+691169us
+27000 tuples processed at 1319049107s+765162us
+28000 tuples processed at 1319049108s+933094us
+29000 tuples processed at 1319049110s+66976us
+30000 tuples processed at 1319049111s+262866us
+31000 tuples processed at 1319049112s+484074us
+32000 tuples processed at 1319049113s+689037us
+33000 tuples processed at 1319049115s+54244us
+34000 tuples processed at 1319049116s+451968us
+35000 tuples processed at 1319049117s+819115us
+36000 tuples processed at 1319049119s+278602us
+37000 tuples processed at 1319049120s+839549us
+38000 tuples processed at 1319049122s+438961us
+39000 tuples processed at 1319049124s+116671us
+40000 tuples processed at 1319049125s+811728us
+41000 tuples processed at 1319049127s+419352us
+42000 tuples processed at 1319049129s+208710us
+43000 tuples processed at 1319049131s+14187us
+44000 tuples processed at 1319049132s+841338us
+45000 tuples processed at 1319049134s+725467us
+46000 tuples processed at 1319049136s+664052us
+47000 tuples processed at 1319049138s+625018us
+48000 tuples processed at 1319049140s+674463us
+49000 tuples processed at 1319049142s+778334us
+50000 tuples processed at 1319049144s+871351us
+51000 tuples processed at 1319049147s+223720us
+52000 tuples processed at 1319049149s+277568us
+53000 tuples processed at 1319049151s+454165us
+54000 tuples processed at 1319049153s+992503us
+55000 tuples processed at 1319049156s+379945us
+56000 tuples processed at 1319049158s+996002us
+57000 tuples processed at 1319049161s+481991us
+58000 tuples processed at 1319049164s+233077us
+59000 tuples processed at 1319049167s+46843us
+60000 tuples processed at 1319049169s+865406us
+61000 tuples processed at 1319049173s+91901us
+62000 tuples processed at 1319049175s+966611us
+63000 tuples processed at 1319049178s+731323us
+64000 tuples processed at 1319049181s+532120us
+65000 tuples processed at 1319049184s+636802us
+66000 tuples processed at 1319049187s+618941us
+67000 tuples processed at 1319049190s+652621us
+68000 tuples processed at 1319049194s+149178us
+69000 tuples processed at 1319049197s+269364us
+70000 tuples processed at 1319049200s+450564us
+71000 tuples processed at 1319049203s+647466us
+72000 tuples processed at 1319049206s+880171us
+73000 tuples processed at 1319049210s+136257us
+74000 tuples processed at 1319049213s+530787us
+75000 tuples processed at 1319049216s+993429us
+76000 tuples processed at 1319049220s+511859us
+77000 tuples processed at 1319049224s+15563us
+78000 tuples processed at 1319049227s+565487us
+79000 tuples processed at 1319049231s+265683us
+80000 tuples processed at 1319049235s+18261us
+81000 tuples processed at 1319049238s+671608us
+82000 tuples processed at 1319049242s+411722us
+83000 tuples processed at 1319049246s+222400us
+84000 tuples processed at 1319049249s+955609us
+85000 tuples processed at 1319049253s+828301us
+86000 tuples processed at 1319049257s+808113us
+87000 tuples processed at 1319049261s+862038us
+88000 tuples processed at 1319049265s+863432us
+89000 tuples processed at 1319049269s+931826us
+90000 tuples processed at 1319049274s+105202us
+91000 tuples processed at 1319049278s+213184us
+92000 tuples processed at 1319049282s+431457us
+93000 tuples processed at 1319049286s+737018us
+94000 tuples processed at 1319049291s+68562us
+95000 tuples processed at 1319049295s+339381us
+96000 tuples processed at 1319049299s+646851us
+97000 tuples processed at 1319049304s+135913us
+98000 tuples processed at 1319049309s+193958us
+99000 tuples processed at 1319049314s+489089us
+100000 tuples processed at 1319049319s+453142us
+101000 tuples processed at 1319049324s+679950us
+done with stream, 0 remain
+<?xml version="1.0" encoding="UTF-8" standalone="yes" ?>
+<!DOCTYPE boost_serialization>
+<boost_serialization signature="serialization::archive" version="9">
+<QUERY_1_1 class_id="0" tracking_level="0" version="2">
+	<count>3</count>
+	<value_version class_id="1" tracking_level="0" version="0"></value_version>
+	<item class_id="2" tracking_level="0" version="0">
+		<__a0>0</__a0>
+		<__av>53</__av>
+	</item>
+	<position class_id="3" tracking_level="0" version="0"></position>
+	<item>
+		<__a0>1</__a0>
+		<__av>55</__av>
+	</item>
+	<position></position>
+	<item>
+		<__a0>2</__a0>
+		<__av>77</__av>
+	</item>
+	<position></position>
+	<position></position>
+	<position class_id="4" tracking_level="0" version="0"></position>
+</QUERY_1_1>
+</boost_serialization>
+

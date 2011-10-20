@@ -1,0 +1,37 @@
+order book adaptor params: book, bids
+order book adaptor params: brokers, 10
+reading from /tmp/okennedy_dbtoaster_data/finance.csv with 1 adaptors
+tracing: 
+0 tuples processed at 1319044737s+767127us
+1000 tuples processed at 1319044739s+37559us
+2000 tuples processed at 1319044741s+917137us
+3000 tuples processed at 1319044746s+305714us
+4000 tuples processed at 1319044752s+933427us
+5000 tuples processed at 1319044760s+910935us
+6000 tuples processed at 1319044770s+797751us
+7000 tuples processed at 1319044786s+94303us
+8000 tuples processed at 1319044804s+585766us
+9000 tuples processed at 1319044827s+960498us
+10000 tuples processed at 1319044853s+605169us
+11000 tuples processed at 1319044882s+753916us
+12000 tuples processed at 1319044914s+621368us
+13000 tuples processed at 1319044953s+811996us
+14000 tuples processed at 1319044998s+719794us
+15000 tuples processed at 1319045047s+41194us
+16000 tuples processed at 1319045097s+959889us
+17000 tuples processed at 1319045152s+683805us
+18000 tuples processed at 1319045209s+797268us
+19000 tuples processed at 1319045269s+590785us
+20000 tuples processed at 1319045333s+89881us
+21000 tuples processed at 1319045400s+85810us
+22000 tuples processed at 1319045469s+144110us
+23000 tuples processed at 1319045541s+583080us
+24000 tuples processed at 1319045619s+334727us
+25000 tuples processed at 1319045731s+526269us
+26000 tuples processed at 1319045865s+90932us
+27000 tuples processed at 1319046059s+5103us
+28000 tuples processed at 1319046345s+667243us
+29000 tuples processed at 1319046761s+820504us
+30000 tuples processed at 1319047376s+619550us
+31000 tuples processed at 1319048212s+681845us
+32000 tuples processed at 1319049063s+131103us
