@@ -1,0 +1,33 @@
+csv params: fields: ,
+csv params: schema: event,int,float
+reading from /tmp/okennedy_dbtoaster_data/cluster/serverload.dat with 1 adaptors
+tracing: 
+0 tuples processed at 1319149133s+632300us
+1000 tuples processed at 1319149133s+677174us
+2000 tuples processed at 1319149133s+919747us
+3000 tuples processed at 1319149134s+587334us
+4000 tuples processed at 1319149135s+587479us
+5000 tuples processed at 1319149137s+657741us
+6000 tuples processed at 1319149140s+199623us
+7000 tuples processed at 1319149143s+427078us
+8000 tuples processed at 1319149148s+158282us
+9000 tuples processed at 1319149155s+122442us
+10000 tuples processed at 1319149163s+456622us
+11000 tuples processed at 1319149173s+646386us
+12000 tuples processed at 1319149185s+885773us
+13000 tuples processed at 1319149199s+678199us
+14000 tuples processed at 1319149215s+358011us
+15000 tuples processed at 1319149233s+246295us
+16000 tuples processed at 1319149255s+735022us
+17000 tuples processed at 1319149282s+624639us
+18000 tuples processed at 1319149312s+959919us
+19000 tuples processed at 1319149346s+148180us
+20000 tuples processed at 1319149382s+821984us
+21000 tuples processed at 1319149441s+618544us
+22000 tuples processed at 1319149568s+227101us
+23000 tuples processed at 1319149777s+298174us
+24000 tuples processed at 1319150085s+28329us
+25000 tuples processed at 1319150547s+395910us
+26000 tuples processed at 1319151189s+442663us
+27000 tuples processed at 1319152014s+590123us
+28000 tuples processed at 1319153137s+832130us

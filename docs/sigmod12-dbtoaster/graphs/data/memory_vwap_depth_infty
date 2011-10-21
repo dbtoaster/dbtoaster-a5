@@ -1,0 +1,3181 @@
+Starting tracking the heap
+
+order book adaptor params: book, bids
+
+order book adaptor params: brokers, 10
+
+reading from /tmp/okennedy_dbtoaster_data/finance.csv with 1 adaptors
+
+tracing: 
+
+0 tuples processed at 1319221839s+512955us
+
+1000 tuples processed at 1319221839s+654050us
+
+2000 tuples processed at 1319221839s+809211us
+
+3000 tuples processed at 1319221839s+987097us
+
+4000 tuples processed at 1319221840s+163609us
+
+5000 tuples processed at 1319221840s+317623us
+
+6000 tuples processed at 1319221840s+454985us
+
+7000 tuples processed at 1319221840s+597649us
+
+8000 tuples processed at 1319221840s+738190us
+
+9000 tuples processed at 1319221840s+876631us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0001.heap (16 MB allocated cumulatively, 0 MB currently in use)
+
+10000 tuples processed at 1319221841s+29874us
+
+11000 tuples processed at 1319221841s+170550us
+
+12000 tuples processed at 1319221841s+311058us
+
+13000 tuples processed at 1319221841s+452357us
+
+14000 tuples processed at 1319221841s+593174us
+
+15000 tuples processed at 1319221841s+733511us
+
+16000 tuples processed at 1319221841s+875546us
+
+17000 tuples processed at 1319221842s+13814us
+
+18000 tuples processed at 1319221842s+150954us
+
+19000 tuples processed at 1319221842s+288137us
+
+20000 tuples processed at 1319221842s+461726us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0002.heap (32 MB allocated cumulatively, 1 MB currently in use)
+
+21000 tuples processed at 1319221842s+607104us
+
+22000 tuples processed at 1319221842s+748236us
+
+23000 tuples processed at 1319221842s+878803us
+
+24000 tuples processed at 1319221843s+12541us
+
+25000 tuples processed at 1319221843s+162721us
+
+26000 tuples processed at 1319221843s+318719us
+
+27000 tuples processed at 1319221843s+519184us
+
+28000 tuples processed at 1319221843s+770196us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0003.heap (48 MB allocated cumulatively, 1 MB currently in use)
+
+29000 tuples processed at 1319221844s+93555us
+
+30000 tuples processed at 1319221844s+603358us
+
+31000 tuples processed at 1319221844s+994073us
+
+32000 tuples processed at 1319221845s+380824us
+
+33000 tuples processed at 1319221845s+750503us
+
+34000 tuples processed at 1319221846s+106547us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0004.heap (64 MB allocated cumulatively, 1 MB currently in use)
+
+35000 tuples processed at 1319221846s+494853us
+
+36000 tuples processed at 1319221846s+876769us
+
+37000 tuples processed at 1319221847s+261887us
+
+38000 tuples processed at 1319221847s+649120us
+
+39000 tuples processed at 1319221848s+34882us
+
+40000 tuples processed at 1319221848s+599893us
+
+41000 tuples processed at 1319221849s+162630us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0005.heap (80 MB allocated cumulatively, 2 MB currently in use)
+
+42000 tuples processed at 1319221849s+545998us
+
+43000 tuples processed at 1319221849s+920275us
+
+44000 tuples processed at 1319221850s+266362us
+
+45000 tuples processed at 1319221850s+612864us
+
+46000 tuples processed at 1319221850s+972848us
+
+47000 tuples processed at 1319221851s+330038us
+
+48000 tuples processed at 1319221851s+686241us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0006.heap (96 MB allocated cumulatively, 2 MB currently in use)
+
+49000 tuples processed at 1319221852s+29801us
+
+50000 tuples processed at 1319221852s+443001us
+
+51000 tuples processed at 1319221852s+884610us
+
+52000 tuples processed at 1319221853s+406324us
+
+53000 tuples processed at 1319221853s+789435us
+
+54000 tuples processed at 1319221854s+168541us
+
+55000 tuples processed at 1319221854s+746812us
+
+56000 tuples processed at 1319221855s+135030us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0007.heap (112 MB allocated cumulatively, 2 MB currently in use)
+
+57000 tuples processed at 1319221855s+702419us
+
+58000 tuples processed at 1319221856s+108822us
+
+59000 tuples processed at 1319221856s+501901us
+
+60000 tuples processed at 1319221856s+932990us
+
+61000 tuples processed at 1319221857s+329550us
+
+62000 tuples processed at 1319221857s+726003us
+
+63000 tuples processed at 1319221858s+101242us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0008.heap (128 MB allocated cumulatively, 2 MB currently in use)
+
+64000 tuples processed at 1319221858s+493538us
+
+65000 tuples processed at 1319221858s+876551us
+
+66000 tuples processed at 1319221859s+248252us
+
+67000 tuples processed at 1319221859s+617725us
+
+68000 tuples processed at 1319221860s+88109us
+
+69000 tuples processed at 1319221860s+499125us
+
+70000 tuples processed at 1319221860s+929999us
+
+71000 tuples processed at 1319221861s+321179us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0009.heap (144 MB allocated cumulatively, 2 MB currently in use)
+
+72000 tuples processed at 1319221861s+709654us
+
+73000 tuples processed at 1319221862s+100408us
+
+74000 tuples processed at 1319221862s+488448us
+
+75000 tuples processed at 1319221862s+875594us
+
+76000 tuples processed at 1319221863s+263179us
+
+77000 tuples processed at 1319221863s+653170us
+
+78000 tuples processed at 1319221864s+49176us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0010.heap (160 MB allocated cumulatively, 3 MB currently in use)
+
+79000 tuples processed at 1319221864s+442314us
+
+80000 tuples processed at 1319221864s+879019us
+
+81000 tuples processed at 1319221865s+276550us
+
+82000 tuples processed at 1319221865s+659847us
+
+83000 tuples processed at 1319221866s+14856us
+
+84000 tuples processed at 1319221866s+444383us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0011.heap (176 MB allocated cumulatively, 3 MB currently in use)
+
+85000 tuples processed at 1319221866s+935976us
+
+86000 tuples processed at 1319221867s+304512us
+
+87000 tuples processed at 1319221867s+668586us
+
+88000 tuples processed at 1319221868s+24964us
+
+89000 tuples processed at 1319221868s+386357us
+
+90000 tuples processed at 1319221868s+814247us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0012.heap (192 MB allocated cumulatively, 3 MB currently in use)
+
+91000 tuples processed at 1319221869s+213287us
+
+92000 tuples processed at 1319221869s+595571us
+
+93000 tuples processed at 1319221869s+961935us
+
+94000 tuples processed at 1319221870s+333297us
+
+95000 tuples processed at 1319221870s+716136us
+
+96000 tuples processed at 1319221871s+106233us
+
+97000 tuples processed at 1319221871s+517192us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0013.heap (208 MB allocated cumulatively, 3 MB currently in use)
+
+98000 tuples processed at 1319221871s+916513us
+
+99000 tuples processed at 1319221872s+301802us
+
+100000 tuples processed at 1319221872s+734944us
+
+101000 tuples processed at 1319221873s+122380us
+
+102000 tuples processed at 1319221873s+515194us
+
+103000 tuples processed at 1319221873s+897269us
+
+104000 tuples processed at 1319221874s+248805us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0014.heap (224 MB allocated cumulatively, 4 MB currently in use)
+
+105000 tuples processed at 1319221874s+784178us
+
+106000 tuples processed at 1319221875s+175052us
+
+107000 tuples processed at 1319221875s+559177us
+
+108000 tuples processed at 1319221875s+988841us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0015.heap (240 MB allocated cumulatively, 4 MB currently in use)
+
+109000 tuples processed at 1319221876s+414448us
+
+110000 tuples processed at 1319221876s+962678us
+
+111000 tuples processed at 1319221877s+385030us
+
+112000 tuples processed at 1319221877s+766069us
+
+113000 tuples processed at 1319221878s+120406us
+
+114000 tuples processed at 1319221878s+472927us
+
+115000 tuples processed at 1319221878s+862676us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0016.heap (256 MB allocated cumulatively, 4 MB currently in use)
+
+116000 tuples processed at 1319221879s+243689us
+
+117000 tuples processed at 1319221879s+611983us
+
+118000 tuples processed at 1319221879s+988427us
+
+119000 tuples processed at 1319221880s+364200us
+
+120000 tuples processed at 1319221880s+804021us
+
+121000 tuples processed at 1319221881s+409844us
+
+122000 tuples processed at 1319221881s+858347us
+
+123000 tuples processed at 1319221882s+410687us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0017.heap (272 MB allocated cumulatively, 4 MB currently in use)
+
+124000 tuples processed at 1319221882s+941139us
+
+125000 tuples processed at 1319221883s+310997us
+
+126000 tuples processed at 1319221883s+697863us
+
+127000 tuples processed at 1319221884s+104093us
+
+128000 tuples processed at 1319221884s+488617us
+
+129000 tuples processed at 1319221884s+861578us
+
+130000 tuples processed at 1319221885s+303135us
+
+131000 tuples processed at 1319221885s+915615us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0018.heap (288 MB allocated cumulatively, 4 MB currently in use)
+
+132000 tuples processed at 1319221886s+386291us
+
+133000 tuples processed at 1319221886s+739749us
+
+134000 tuples processed at 1319221887s+350890us
+
+135000 tuples processed at 1319221887s+729249us
+
+136000 tuples processed at 1319221888s+91244us
+
+137000 tuples processed at 1319221888s+453889us
+
+138000 tuples processed at 1319221888s+820198us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0019.heap (304 MB allocated cumulatively, 4 MB currently in use)
+
+139000 tuples processed at 1319221889s+184420us
+
+140000 tuples processed at 1319221889s+590065us
+
+141000 tuples processed at 1319221890s+117411us
+
+142000 tuples processed at 1319221890s+555056us
+
+143000 tuples processed at 1319221890s+933888us
+
+144000 tuples processed at 1319221891s+311124us
+
+145000 tuples processed at 1319221891s+686249us
+
+146000 tuples processed at 1319221892s+45004us
+
+147000 tuples processed at 1319221892s+414676us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0020.heap (320 MB allocated cumulatively, 5 MB currently in use)
+
+148000 tuples processed at 1319221892s+796856us
+
+149000 tuples processed at 1319221893s+170115us
+
+150000 tuples processed at 1319221893s+609631us
+
+151000 tuples processed at 1319221894s+222646us
+
+152000 tuples processed at 1319221894s+609660us
+
+153000 tuples processed at 1319221894s+977537us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0021.heap (336 MB allocated cumulatively, 5 MB currently in use)
+
+154000 tuples processed at 1319221895s+348129us
+
+155000 tuples processed at 1319221895s+742977us
+
+156000 tuples processed at 1319221896s+123744us
+
+157000 tuples processed at 1319221896s+503719us
+
+158000 tuples processed at 1319221896s+880948us
+
+159000 tuples processed at 1319221897s+255562us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0022.heap (352 MB allocated cumulatively, 5 MB currently in use)
+
+160000 tuples processed at 1319221897s+705160us
+
+161000 tuples processed at 1319221898s+311304us
+
+162000 tuples processed at 1319221898s+683161us
+
+163000 tuples processed at 1319221899s+67260us
+
+164000 tuples processed at 1319221899s+440981us
+
+165000 tuples processed at 1319221899s+805346us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0023.heap (368 MB allocated cumulatively, 5 MB currently in use)
+
+166000 tuples processed at 1319221900s+166890us
+
+167000 tuples processed at 1319221900s+543522us
+
+168000 tuples processed at 1319221900s+939947us
+
+169000 tuples processed at 1319221901s+325760us
+
+170000 tuples processed at 1319221901s+788067us
+
+171000 tuples processed at 1319221902s+489419us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0024.heap (384 MB allocated cumulatively, 5 MB currently in use)
+
+172000 tuples processed at 1319221902s+966325us
+
+173000 tuples processed at 1319221903s+336246us
+
+174000 tuples processed at 1319221903s+702895us
+
+175000 tuples processed at 1319221904s+74007us
+
+176000 tuples processed at 1319221904s+423845us
+
+177000 tuples processed at 1319221904s+785747us
+
+178000 tuples processed at 1319221905s+147984us
+
+179000 tuples processed at 1319221905s+527391us
+
+180000 tuples processed at 1319221905s+967138us
+
+181000 tuples processed at 1319221906s+345763us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0025.heap (400 MB allocated cumulatively, 5 MB currently in use)
+
+182000 tuples processed at 1319221906s+724902us
+
+183000 tuples processed at 1319221907s+103936us
+
+184000 tuples processed at 1319221907s+480591us
+
+185000 tuples processed at 1319221907s+853353us
+
+186000 tuples processed at 1319221908s+224139us
+
+187000 tuples processed at 1319221908s+595541us
+
+188000 tuples processed at 1319221908s+973336us
+
+189000 tuples processed at 1319221909s+344865us
+
+190000 tuples processed at 1319221909s+774380us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0026.heap (416 MB allocated cumulatively, 5 MB currently in use)
+
+191000 tuples processed at 1319221910s+155756us
+
+192000 tuples processed at 1319221910s+533975us
+
+193000 tuples processed at 1319221910s+928723us
+
+194000 tuples processed at 1319221911s+309013us
+
+195000 tuples processed at 1319221911s+686760us
+
+196000 tuples processed at 1319221912s+62249us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0027.heap (432 MB allocated cumulatively, 6 MB currently in use)
+
+197000 tuples processed at 1319221912s+441373us
+
+198000 tuples processed at 1319221912s+819385us
+
+199000 tuples processed at 1319221913s+195558us
+
+200000 tuples processed at 1319221913s+641246us
+
+201000 tuples processed at 1319221914s+272924us
+
+202000 tuples processed at 1319221914s+652241us
+
+203000 tuples processed at 1319221915s+9059us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0028.heap (448 MB allocated cumulatively, 7 MB currently in use)
+
+204000 tuples processed at 1319221915s+378368us
+
+205000 tuples processed at 1319221915s+753063us
+
+206000 tuples processed at 1319221916s+119345us
+
+207000 tuples processed at 1319221916s+497267us
+
+208000 tuples processed at 1319221916s+871252us
+
+209000 tuples processed at 1319221917s+215974us
+
+210000 tuples processed at 1319221917s+643122us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0029.heap (464 MB allocated cumulatively, 7 MB currently in use)
+
+211000 tuples processed at 1319221918s+248389us
+
+212000 tuples processed at 1319221918s+625201us
+
+213000 tuples processed at 1319221918s+999991us
+
+214000 tuples processed at 1319221919s+359826us
+
+215000 tuples processed at 1319221919s+702771us
+
+216000 tuples processed at 1319221920s+75082us
+
+217000 tuples processed at 1319221920s+450159us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0030.heap (480 MB allocated cumulatively, 7 MB currently in use)
+
+218000 tuples processed at 1319221920s+855812us
+
+219000 tuples processed at 1319221921s+217252us
+
+220000 tuples processed at 1319221921s+648534us
+
+221000 tuples processed at 1319221922s+258742us
+
+222000 tuples processed at 1319221922s+631499us
+
+223000 tuples processed at 1319221923s+6432us
+
+224000 tuples processed at 1319221923s+373994us
+
+225000 tuples processed at 1319221923s+724362us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0031.heap (496 MB allocated cumulatively, 7 MB currently in use)
+
+226000 tuples processed at 1319221924s+86432us
+
+227000 tuples processed at 1319221924s+463975us
+
+228000 tuples processed at 1319221924s+841132us
+
+229000 tuples processed at 1319221925s+217412us
+
+230000 tuples processed at 1319221925s+622235us
+
+231000 tuples processed at 1319221926s+220413us
+
+232000 tuples processed at 1319221926s+604396us
+
+233000 tuples processed at 1319221926s+981203us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0032.heap (512 MB allocated cumulatively, 7 MB currently in use)
+
+234000 tuples processed at 1319221927s+359168us
+
+235000 tuples processed at 1319221927s+732115us
+
+236000 tuples processed at 1319221928s+101770us
+
+237000 tuples processed at 1319221928s+476594us
+
+238000 tuples processed at 1319221928s+859843us
+
+239000 tuples processed at 1319221929s+234903us
+
+240000 tuples processed at 1319221929s+653557us
+
+241000 tuples processed at 1319221930s+250580us
+
+242000 tuples processed at 1319221930s+602143us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0033.heap (528 MB allocated cumulatively, 7 MB currently in use)
+
+243000 tuples processed at 1319221930s+982389us
+
+244000 tuples processed at 1319221931s+355866us
+
+245000 tuples processed at 1319221931s+732059us
+
+246000 tuples processed at 1319221932s+109403us
+
+247000 tuples processed at 1319221932s+487098us
+
+248000 tuples processed at 1319221932s+873270us
+
+249000 tuples processed at 1319221933s+216837us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0034.heap (544 MB allocated cumulatively, 8 MB currently in use)
+
+250000 tuples processed at 1319221933s+649537us
+
+251000 tuples processed at 1319221934s+279179us
+
+252000 tuples processed at 1319221934s+667979us
+
+253000 tuples processed at 1319221935s+43129us
+
+254000 tuples processed at 1319221935s+435543us
+
+255000 tuples processed at 1319221935s+791369us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0035.heap (560 MB allocated cumulatively, 8 MB currently in use)
+
+256000 tuples processed at 1319221936s+134013us
+
+257000 tuples processed at 1319221936s+474043us
+
+258000 tuples processed at 1319221936s+827907us
+
+259000 tuples processed at 1319221937s+203658us
+
+260000 tuples processed at 1319221937s+637957us
+
+261000 tuples processed at 1319221938s+254589us
+
+262000 tuples processed at 1319221938s+635967us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0036.heap (576 MB allocated cumulatively, 8 MB currently in use)
+
+263000 tuples processed at 1319221939s+13744us
+
+264000 tuples processed at 1319221939s+387645us
+
+265000 tuples processed at 1319221939s+763312us
+
+266000 tuples processed at 1319221940s+140255us
+
+267000 tuples processed at 1319221940s+511980us
+
+268000 tuples processed at 1319221940s+889633us
+
+269000 tuples processed at 1319221941s+262385us
+
+270000 tuples processed at 1319221941s+706358us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0037.heap (592 MB allocated cumulatively, 8 MB currently in use)
+
+271000 tuples processed at 1319221942s+314414us
+
+272000 tuples processed at 1319221942s+691840us
+
+273000 tuples processed at 1319221943s+70017us
+
+274000 tuples processed at 1319221943s+447112us
+
+275000 tuples processed at 1319221943s+831837us
+
+276000 tuples processed at 1319221944s+206228us
+
+277000 tuples processed at 1319221944s+583710us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0038.heap (608 MB allocated cumulatively, 8 MB currently in use)
+
+278000 tuples processed at 1319221944s+961882us
+
+279000 tuples processed at 1319221945s+330062us
+
+280000 tuples processed at 1319221945s+763765us
+
+281000 tuples processed at 1319221946s+365417us
+
+282000 tuples processed at 1319221946s+742413us
+
+283000 tuples processed at 1319221947s+128222us
+
+284000 tuples processed at 1319221947s+517986us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0039.heap (624 MB allocated cumulatively, 8 MB currently in use)
+
+285000 tuples processed at 1319221947s+896063us
+
+286000 tuples processed at 1319221948s+272221us
+
+287000 tuples processed at 1319221948s+649988us
+
+288000 tuples processed at 1319221949s+29036us
+
+289000 tuples processed at 1319221949s+407133us
+
+290000 tuples processed at 1319221949s+843871us
+
+291000 tuples processed at 1319221950s+221980us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0040.heap (640 MB allocated cumulatively, 9 MB currently in use)
+
+292000 tuples processed at 1319221950s+840732us
+
+293000 tuples processed at 1319221951s+216776us
+
+294000 tuples processed at 1319221951s+595578us
+
+295000 tuples processed at 1319221951s+972431us
+
+296000 tuples processed at 1319221952s+348303us
+
+297000 tuples processed at 1319221952s+725538us
+
+298000 tuples processed at 1319221953s+102707us
+
+299000 tuples processed at 1319221953s+481089us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0041.heap (656 MB allocated cumulatively, 9 MB currently in use)
+
+300000 tuples processed at 1319221953s+924001us
+
+301000 tuples processed at 1319221954s+358941us
+
+302000 tuples processed at 1319221954s+919934us
+
+303000 tuples processed at 1319221955s+303731us
+
+304000 tuples processed at 1319221955s+682822us
+
+305000 tuples processed at 1319221956s+60575us
+
+306000 tuples processed at 1319221956s+439585us
+
+307000 tuples processed at 1319221956s+819313us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0042.heap (672 MB allocated cumulatively, 9 MB currently in use)
+
+308000 tuples processed at 1319221957s+199076us
+
+309000 tuples processed at 1319221957s+582386us
+
+310000 tuples processed at 1319221958s+27916us
+
+311000 tuples processed at 1319221958s+590702us
+
+312000 tuples processed at 1319221959s+49951us
+
+313000 tuples processed at 1319221959s+438566us
+
+314000 tuples processed at 1319221959s+835356us
+
+315000 tuples processed at 1319221960s+226007us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0043.heap (688 MB allocated cumulatively, 9 MB currently in use)
+
+316000 tuples processed at 1319221960s+628295us
+
+317000 tuples processed at 1319221961s+17642us
+
+318000 tuples processed at 1319221961s+416674us
+
+319000 tuples processed at 1319221961s+831278us
+
+320000 tuples processed at 1319221962s+324376us
+
+321000 tuples processed at 1319221962s+733035us
+
+322000 tuples processed at 1319221963s+147259us
+
+323000 tuples processed at 1319221963s+555552us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0044.heap (704 MB allocated cumulatively, 9 MB currently in use)
+
+324000 tuples processed at 1319221963s+973898us
+
+325000 tuples processed at 1319221964s+385034us
+
+326000 tuples processed at 1319221964s+793441us
+
+327000 tuples processed at 1319221965s+199415us
+
+328000 tuples processed at 1319221965s+610958us
+
+329000 tuples processed at 1319221966s+17287us
+
+330000 tuples processed at 1319221966s+491244us
+
+331000 tuples processed at 1319221966s+909430us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0045.heap (720 MB allocated cumulatively, 10 MB currently in use)
+
+332000 tuples processed at 1319221967s+318341us
+
+333000 tuples processed at 1319221967s+721694us
+
+334000 tuples processed at 1319221968s+134033us
+
+335000 tuples processed at 1319221968s+573060us
+
+336000 tuples processed at 1319221968s+980530us
+
+337000 tuples processed at 1319221969s+391287us
+
+338000 tuples processed at 1319221969s+804139us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0046.heap (736 MB allocated cumulatively, 10 MB currently in use)
+
+339000 tuples processed at 1319221970s+228026us
+
+340000 tuples processed at 1319221970s+712061us
+
+341000 tuples processed at 1319221971s+121137us
+
+342000 tuples processed at 1319221971s+713413us
+
+343000 tuples processed at 1319221972s+113599us
+
+344000 tuples processed at 1319221972s+496144us
+
+345000 tuples processed at 1319221972s+904022us
+
+346000 tuples processed at 1319221973s+302309us
+
+347000 tuples processed at 1319221973s+702173us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0047.heap (752 MB allocated cumulatively, 10 MB currently in use)
+
+348000 tuples processed at 1319221974s+98339us
+
+349000 tuples processed at 1319221974s+495438us
+
+350000 tuples processed at 1319221974s+927783us
+
+351000 tuples processed at 1319221975s+382259us
+
+352000 tuples processed at 1319221975s+926232us
+
+353000 tuples processed at 1319221976s+318832us
+
+354000 tuples processed at 1319221976s+723613us
+
+355000 tuples processed at 1319221977s+117200us
+
+356000 tuples processed at 1319221977s+511104us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0048.heap (768 MB allocated cumulatively, 10 MB currently in use)
+
+357000 tuples processed at 1319221977s+906408us
+
+358000 tuples processed at 1319221978s+294320us
+
+359000 tuples processed at 1319221978s+698757us
+
+360000 tuples processed at 1319221979s+383182us
+
+361000 tuples processed at 1319221979s+796529us
+
+362000 tuples processed at 1319221980s+191336us
+
+363000 tuples processed at 1319221980s+594891us
+
+364000 tuples processed at 1319221981s+170069us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0049.heap (784 MB allocated cumulatively, 10 MB currently in use)
+
+365000 tuples processed at 1319221981s+602274us
+
+366000 tuples processed at 1319221982s+574us
+
+367000 tuples processed at 1319221982s+405822us
+
+368000 tuples processed at 1319221982s+814035us
+
+369000 tuples processed at 1319221983s+219928us
+
+370000 tuples processed at 1319221983s+690884us
+
+371000 tuples processed at 1319221984s+97885us
+
+372000 tuples processed at 1319221984s+501667us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0050.heap (800 MB allocated cumulatively, 10 MB currently in use)
+
+373000 tuples processed at 1319221984s+901525us
+
+374000 tuples processed at 1319221985s+301935us
+
+375000 tuples processed at 1319221985s+699969us
+
+376000 tuples processed at 1319221986s+106129us
+
+377000 tuples processed at 1319221986s+503326us
+
+378000 tuples processed at 1319221986s+893068us
+
+379000 tuples processed at 1319221987s+284897us
+
+380000 tuples processed at 1319221987s+744958us
+
+381000 tuples processed at 1319221988s+370189us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0051.heap (816 MB allocated cumulatively, 11 MB currently in use)
+
+382000 tuples processed at 1319221988s+789318us
+
+383000 tuples processed at 1319221989s+193513us
+
+384000 tuples processed at 1319221989s+591035us
+
+385000 tuples processed at 1319221989s+989773us
+
+386000 tuples processed at 1319221990s+386762us
+
+387000 tuples processed at 1319221990s+781565us
+
+388000 tuples processed at 1319221991s+176800us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0052.heap (832 MB allocated cumulatively, 11 MB currently in use)
+
+389000 tuples processed at 1319221991s+624372us
+
+390000 tuples processed at 1319221992s+70445us
+
+391000 tuples processed at 1319221992s+480301us
+
+392000 tuples processed at 1319221992s+870204us
+
+393000 tuples processed at 1319221993s+274187us
+
+394000 tuples processed at 1319221993s+681595us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0053.heap (848 MB allocated cumulatively, 12 MB currently in use)
+
+395000 tuples processed at 1319221994s+87656us
+
+396000 tuples processed at 1319221994s+485845us
+
+397000 tuples processed at 1319221994s+883440us
+
+398000 tuples processed at 1319221995s+290882us
+
+399000 tuples processed at 1319221995s+688648us
+
+400000 tuples processed at 1319221996s+124088us
+
+401000 tuples processed at 1319221996s+708654us
+
+402000 tuples processed at 1319221997s+129116us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0054.heap (864 MB allocated cumulatively, 13 MB currently in use)
+
+403000 tuples processed at 1319221997s+522624us
+
+404000 tuples processed at 1319221997s+923931us
+
+405000 tuples processed at 1319221998s+326962us
+
+406000 tuples processed at 1319221998s+739755us
+
+407000 tuples processed at 1319221999s+149822us
+
+408000 tuples processed at 1319221999s+556296us
+
+409000 tuples processed at 1319221999s+963878us
+
+410000 tuples processed at 1319222000s+436202us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0055.heap (880 MB allocated cumulatively, 13 MB currently in use)
+
+411000 tuples processed at 1319222000s+942987us
+
+412000 tuples processed at 1319222001s+488339us
+
+413000 tuples processed at 1319222001s+898599us
+
+414000 tuples processed at 1319222002s+302645us
+
+415000 tuples processed at 1319222002s+705624us
+
+416000 tuples processed at 1319222003s+102603us
+
+417000 tuples processed at 1319222003s+487791us
+
+418000 tuples processed at 1319222003s+887418us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0056.heap (896 MB allocated cumulatively, 13 MB currently in use)
+
+419000 tuples processed at 1319222004s+290137us
+
+420000 tuples processed at 1319222004s+808049us
+
+421000 tuples processed at 1319222005s+470385us
+
+422000 tuples processed at 1319222005s+959605us
+
+423000 tuples processed at 1319222006s+357258us
+
+424000 tuples processed at 1319222006s+825686us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0057.heap (912 MB allocated cumulatively, 13 MB currently in use)
+
+425000 tuples processed at 1319222007s+239958us
+
+426000 tuples processed at 1319222007s+641258us
+
+427000 tuples processed at 1319222008s+40625us
+
+428000 tuples processed at 1319222008s+461123us
+
+429000 tuples processed at 1319222008s+905241us
+
+430000 tuples processed at 1319222009s+369117us
+
+431000 tuples processed at 1319222009s+771083us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0058.heap (928 MB allocated cumulatively, 13 MB currently in use)
+
+432000 tuples processed at 1319222010s+175032us
+
+433000 tuples processed at 1319222010s+576600us
+
+434000 tuples processed at 1319222010s+978085us
+
+435000 tuples processed at 1319222011s+375641us
+
+436000 tuples processed at 1319222011s+769434us
+
+437000 tuples processed at 1319222012s+168947us
+
+438000 tuples processed at 1319222012s+570983us
+
+439000 tuples processed at 1319222012s+974688us
+
+440000 tuples processed at 1319222013s+447703us
+
+441000 tuples processed at 1319222013s+846120us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0059.heap (944 MB allocated cumulatively, 14 MB currently in use)
+
+442000 tuples processed at 1319222014s+258138us
+
+443000 tuples processed at 1319222014s+700989us
+
+444000 tuples processed at 1319222015s+117582us
+
+445000 tuples processed at 1319222015s+558841us
+
+446000 tuples processed at 1319222015s+955996us
+
+447000 tuples processed at 1319222016s+367777us
+
+448000 tuples processed at 1319222016s+775247us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0060.heap (960 MB allocated cumulatively, 14 MB currently in use)
+
+449000 tuples processed at 1319222017s+174352us
+
+450000 tuples processed at 1319222017s+644818us
+
+451000 tuples processed at 1319222018s+48777us
+
+452000 tuples processed at 1319222018s+449003us
+
+453000 tuples processed at 1319222018s+865718us
+
+454000 tuples processed at 1319222019s+266543us
+
+455000 tuples processed at 1319222019s+670725us
+
+456000 tuples processed at 1319222020s+65311us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0061.heap (976 MB allocated cumulatively, 14 MB currently in use)
+
+457000 tuples processed at 1319222020s+521576us
+
+458000 tuples processed at 1319222020s+986311us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0062.heap (992 MB allocated cumulatively, 14 MB currently in use)
+
+459000 tuples processed at 1319222021s+455536us
+
+460000 tuples processed at 1319222021s+989146us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0063.heap (1008 MB allocated cumulatively, 14 MB currently in use)
+
+461000 tuples processed at 1319222022s+528774us
+
+462000 tuples processed at 1319222023s+21822us
+
+463000 tuples processed at 1319222023s+440933us
+
+464000 tuples processed at 1319222023s+885028us
+
+465000 tuples processed at 1319222024s+286055us
+
+466000 tuples processed at 1319222024s+681651us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0064.heap (1024 MB allocated cumulatively, 14 MB currently in use)
+
+467000 tuples processed at 1319222025s+120759us
+
+468000 tuples processed at 1319222025s+529342us
+
+469000 tuples processed at 1319222025s+931091us
+
+470000 tuples processed at 1319222026s+401211us
+
+471000 tuples processed at 1319222026s+841719us
+
+472000 tuples processed at 1319222027s+432220us
+
+473000 tuples processed at 1319222027s+906414us
+
+474000 tuples processed at 1319222028s+437010us
+
+475000 tuples processed at 1319222028s+845925us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0065.heap (1040 MB allocated cumulatively, 14 MB currently in use)
+
+476000 tuples processed at 1319222029s+257259us
+
+477000 tuples processed at 1319222029s+662608us
+
+478000 tuples processed at 1319222030s+62267us
+
+479000 tuples processed at 1319222030s+455228us
+
+480000 tuples processed at 1319222030s+930418us
+
+481000 tuples processed at 1319222031s+336897us
+
+482000 tuples processed at 1319222031s+745754us
+
+483000 tuples processed at 1319222032s+158900us
+
+484000 tuples processed at 1319222032s+765261us
+
+485000 tuples processed at 1319222033s+148658us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0066.heap (1056 MB allocated cumulatively, 15 MB currently in use)
+
+486000 tuples processed at 1319222033s+553142us
+
+487000 tuples processed at 1319222033s+963853us
+
+488000 tuples processed at 1319222034s+367175us
+
+489000 tuples processed at 1319222034s+770714us
+
+490000 tuples processed at 1319222035s+246232us
+
+491000 tuples processed at 1319222035s+867664us
+
+492000 tuples processed at 1319222036s+267838us
+
+493000 tuples processed at 1319222036s+669781us
+
+494000 tuples processed at 1319222037s+71509us
+
+495000 tuples processed at 1319222037s+620138us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0067.heap (1072 MB allocated cumulatively, 15 MB currently in use)
+
+496000 tuples processed at 1319222038s+76896us
+
+497000 tuples processed at 1319222038s+480074us
+
+498000 tuples processed at 1319222038s+868288us
+
+499000 tuples processed at 1319222039s+268354us
+
+500000 tuples processed at 1319222039s+745298us
+
+501000 tuples processed at 1319222040s+159834us
+
+502000 tuples processed at 1319222040s+565636us
+
+503000 tuples processed at 1319222040s+961445us
+
+504000 tuples processed at 1319222041s+385907us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0068.heap (1088 MB allocated cumulatively, 15 MB currently in use)
+
+505000 tuples processed at 1319222041s+824050us
+
+506000 tuples processed at 1319222042s+257006us
+
+507000 tuples processed at 1319222042s+675163us
+
+508000 tuples processed at 1319222043s+81858us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0069.heap (1104 MB allocated cumulatively, 15 MB currently in use)
+
+509000 tuples processed at 1319222043s+486825us
+
+510000 tuples processed at 1319222043s+961515us
+
+511000 tuples processed at 1319222044s+376273us
+
+512000 tuples processed at 1319222044s+779666us
+
+513000 tuples processed at 1319222045s+176181us
+
+514000 tuples processed at 1319222045s+580686us
+
+515000 tuples processed at 1319222045s+993802us
+
+516000 tuples processed at 1319222046s+417027us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0070.heap (1120 MB allocated cumulatively, 15 MB currently in use)
+
+517000 tuples processed at 1319222046s+837143us
+
+518000 tuples processed at 1319222047s+239086us
+
+519000 tuples processed at 1319222047s+646768us
+
+520000 tuples processed at 1319222048s+101775us
+
+521000 tuples processed at 1319222048s+685996us
+
+522000 tuples processed at 1319222049s+109672us
+
+523000 tuples processed at 1319222049s+510733us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0071.heap (1136 MB allocated cumulatively, 15 MB currently in use)
+
+524000 tuples processed at 1319222049s+911093us
+
+525000 tuples processed at 1319222050s+309830us
+
+526000 tuples processed at 1319222050s+708488us
+
+527000 tuples processed at 1319222051s+111376us
+
+528000 tuples processed at 1319222051s+523632us
+
+529000 tuples processed at 1319222051s+940376us
+
+530000 tuples processed at 1319222052s+502041us
+
+531000 tuples processed at 1319222053s+196028us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0072.heap (1152 MB allocated cumulatively, 16 MB currently in use)
+
+532000 tuples processed at 1319222053s+645898us
+
+533000 tuples processed at 1319222054s+60959us
+
+534000 tuples processed at 1319222054s+508058us
+
+535000 tuples processed at 1319222054s+913397us
+
+536000 tuples processed at 1319222055s+313089us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0073.heap (1168 MB allocated cumulatively, 16 MB currently in use)
+
+537000 tuples processed at 1319222055s+719819us
+
+538000 tuples processed at 1319222056s+204910us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0074.heap (1184 MB allocated cumulatively, 16 MB currently in use)
+
+539000 tuples processed at 1319222056s+688908us
+
+540000 tuples processed at 1319222057s+156828us
+
+541000 tuples processed at 1319222057s+798622us
+
+542000 tuples processed at 1319222058s+199132us
+
+543000 tuples processed at 1319222058s+821869us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0075.heap (1200 MB allocated cumulatively, 16 MB currently in use)
+
+544000 tuples processed at 1319222059s+259273us
+
+545000 tuples processed at 1319222059s+678501us
+
+546000 tuples processed at 1319222060s+96636us
+
+547000 tuples processed at 1319222060s+522675us
+
+548000 tuples processed at 1319222060s+938271us
+
+549000 tuples processed at 1319222061s+365395us
+
+550000 tuples processed at 1319222061s+864604us
+
+551000 tuples processed at 1319222062s+687104us
+
+552000 tuples processed at 1319222063s+176269us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0076.heap (1216 MB allocated cumulatively, 16 MB currently in use)
+
+553000 tuples processed at 1319222063s+635344us
+
+554000 tuples processed at 1319222064s+74511us
+
+555000 tuples processed at 1319222064s+479369us
+
+556000 tuples processed at 1319222064s+885283us
+
+557000 tuples processed at 1319222065s+292064us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0077.heap (1232 MB allocated cumulatively, 16 MB currently in use)
+
+558000 tuples processed at 1319222065s+687775us
+
+559000 tuples processed at 1319222066s+74628us
+
+560000 tuples processed at 1319222066s+554088us
+
+561000 tuples processed at 1319222066s+962036us
+
+562000 tuples processed at 1319222067s+365573us
+
+563000 tuples processed at 1319222067s+770598us
+
+564000 tuples processed at 1319222068s+189384us
+
+565000 tuples processed at 1319222068s+621088us
+
+566000 tuples processed at 1319222069s+28580us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0078.heap (1248 MB allocated cumulatively, 16 MB currently in use)
+
+567000 tuples processed at 1319222069s+434720us
+
+568000 tuples processed at 1319222069s+834634us
+
+569000 tuples processed at 1319222070s+293069us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0079.heap (1264 MB allocated cumulatively, 16 MB currently in use)
+
+570000 tuples processed at 1319222070s+845555us
+
+571000 tuples processed at 1319222071s+323567us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0080.heap (1280 MB allocated cumulatively, 17 MB currently in use)
+
+572000 tuples processed at 1319222071s+784612us
+
+573000 tuples processed at 1319222072s+237372us
+
+574000 tuples processed at 1319222072s+641073us
+
+575000 tuples processed at 1319222073s+48592us
+
+576000 tuples processed at 1319222073s+445694us
+
+577000 tuples processed at 1319222073s+845700us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0081.heap (1296 MB allocated cumulatively, 17 MB currently in use)
+
+578000 tuples processed at 1319222074s+251749us
+
+579000 tuples processed at 1319222074s+658018us
+
+580000 tuples processed at 1319222075s+149667us
+
+581000 tuples processed at 1319222075s+559656us
+
+582000 tuples processed at 1319222076s+112045us
+
+583000 tuples processed at 1319222076s+577427us
+
+584000 tuples processed at 1319222076s+995862us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0082.heap (1312 MB allocated cumulatively, 17 MB currently in use)
+
+585000 tuples processed at 1319222077s+413468us
+
+586000 tuples processed at 1319222077s+855069us
+
+587000 tuples processed at 1319222078s+271546us
+
+588000 tuples processed at 1319222078s+683908us
+
+589000 tuples processed at 1319222079s+88969us
+
+590000 tuples processed at 1319222079s+540700us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0083.heap (1328 MB allocated cumulatively, 17 MB currently in use)
+
+591000 tuples processed at 1319222079s+955673us
+
+592000 tuples processed at 1319222080s+366426us
+
+593000 tuples processed at 1319222080s+779274us
+
+594000 tuples processed at 1319222081s+183902us
+
+595000 tuples processed at 1319222081s+596259us
+
+596000 tuples processed at 1319222081s+985536us
+
+597000 tuples processed at 1319222082s+388726us
+
+598000 tuples processed at 1319222082s+796089us
+
+599000 tuples processed at 1319222083s+211359us
+
+600000 tuples processed at 1319222083s+691390us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0084.heap (1344 MB allocated cumulatively, 17 MB currently in use)
+
+601000 tuples processed at 1319222084s+97759us
+
+602000 tuples processed at 1319222084s+496720us
+
+603000 tuples processed at 1319222084s+906017us
+
+604000 tuples processed at 1319222085s+309696us
+
+605000 tuples processed at 1319222085s+736682us
+
+606000 tuples processed at 1319222086s+138148us
+
+607000 tuples processed at 1319222086s+548260us
+
+608000 tuples processed at 1319222086s+953383us
+
+609000 tuples processed at 1319222087s+367457us
+
+610000 tuples processed at 1319222087s+831508us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0085.heap (1360 MB allocated cumulatively, 17 MB currently in use)
+
+611000 tuples processed at 1319222088s+237013us
+
+612000 tuples processed at 1319222088s+868974us
+
+613000 tuples processed at 1319222089s+276322us
+
+614000 tuples processed at 1319222089s+689363us
+
+615000 tuples processed at 1319222090s+101222us
+
+616000 tuples processed at 1319222090s+511927us
+
+617000 tuples processed at 1319222090s+913768us
+
+618000 tuples processed at 1319222091s+320433us
+
+619000 tuples processed at 1319222091s+721866us
+
+620000 tuples processed at 1319222092s+211326us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0086.heap (1376 MB allocated cumulatively, 18 MB currently in use)
+
+621000 tuples processed at 1319222092s+625506us
+
+622000 tuples processed at 1319222093s+26460us
+
+623000 tuples processed at 1319222093s+420468us
+
+624000 tuples processed at 1319222093s+820249us
+
+625000 tuples processed at 1319222094s+226302us
+
+626000 tuples processed at 1319222094s+627966us
+
+627000 tuples processed at 1319222095s+21072us
+
+628000 tuples processed at 1319222095s+420114us
+
+629000 tuples processed at 1319222095s+820107us
+
+630000 tuples processed at 1319222096s+295445us
+
+631000 tuples processed at 1319222096s+690552us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0087.heap (1392 MB allocated cumulatively, 18 MB currently in use)
+
+632000 tuples processed at 1319222097s+85964us
+
+633000 tuples processed at 1319222097s+488823us
+
+634000 tuples processed at 1319222097s+888830us
+
+635000 tuples processed at 1319222098s+288821us
+
+636000 tuples processed at 1319222098s+687196us
+
+637000 tuples processed at 1319222099s+88763us
+
+638000 tuples processed at 1319222099s+484530us
+
+639000 tuples processed at 1319222099s+881207us
+
+640000 tuples processed at 1319222100s+358615us
+
+641000 tuples processed at 1319222100s+757584us
+
+642000 tuples processed at 1319222101s+146196us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0088.heap (1408 MB allocated cumulatively, 18 MB currently in use)
+
+643000 tuples processed at 1319222101s+541527us
+
+644000 tuples processed at 1319222101s+942788us
+
+645000 tuples processed at 1319222102s+344094us
+
+646000 tuples processed at 1319222102s+741611us
+
+647000 tuples processed at 1319222103s+160084us
+
+648000 tuples processed at 1319222103s+571637us
+
+649000 tuples processed at 1319222103s+979609us
+
+650000 tuples processed at 1319222104s+464933us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0089.heap (1424 MB allocated cumulatively, 18 MB currently in use)
+
+651000 tuples processed at 1319222104s+884332us
+
+652000 tuples processed at 1319222105s+297621us
+
+653000 tuples processed at 1319222105s+709076us
+
+654000 tuples processed at 1319222106s+110594us
+
+655000 tuples processed at 1319222106s+521275us
+
+656000 tuples processed at 1319222106s+949024us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0090.heap (1440 MB allocated cumulatively, 18 MB currently in use)
+
+657000 tuples processed at 1319222107s+358244us
+
+658000 tuples processed at 1319222107s+760874us
+
+659000 tuples processed at 1319222108s+164132us
+
+660000 tuples processed at 1319222108s+628675us
+
+661000 tuples processed at 1319222109s+255958us
+
+662000 tuples processed at 1319222109s+654670us
+
+663000 tuples processed at 1319222110s+56339us
+
+664000 tuples processed at 1319222110s+458464us
+
+665000 tuples processed at 1319222110s+854121us
+
+666000 tuples processed at 1319222111s+254549us
+
+667000 tuples processed at 1319222111s+652778us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0091.heap (1456 MB allocated cumulatively, 19 MB currently in use)
+
+668000 tuples processed at 1319222112s+55959us
+
+669000 tuples processed at 1319222112s+457688us
+
+670000 tuples processed at 1319222112s+887746us
+
+671000 tuples processed at 1319222113s+287295us
+
+672000 tuples processed at 1319222113s+682961us
+
+673000 tuples processed at 1319222114s+80330us
+
+674000 tuples processed at 1319222114s+477396us
+
+675000 tuples processed at 1319222114s+877283us
+
+676000 tuples processed at 1319222115s+277516us
+
+677000 tuples processed at 1319222115s+679074us
+
+678000 tuples processed at 1319222116s+85278us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0092.heap (1472 MB allocated cumulatively, 19 MB currently in use)
+
+679000 tuples processed at 1319222116s+485833us
+
+680000 tuples processed at 1319222116s+935923us
+
+681000 tuples processed at 1319222117s+339064us
+
+682000 tuples processed at 1319222117s+733825us
+
+683000 tuples processed at 1319222118s+136004us
+
+684000 tuples processed at 1319222118s+541591us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0093.heap (1488 MB allocated cumulatively, 19 MB currently in use)
+
+685000 tuples processed at 1319222118s+986424us
+
+686000 tuples processed at 1319222119s+434385us
+
+687000 tuples processed at 1319222119s+867337us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0094.heap (1504 MB allocated cumulatively, 19 MB currently in use)
+
+688000 tuples processed at 1319222120s+298770us
+
+689000 tuples processed at 1319222120s+699008us
+
+690000 tuples processed at 1319222121s+138385us
+
+691000 tuples processed at 1319222121s+540858us
+
+692000 tuples processed at 1319222121s+947407us
+
+693000 tuples processed at 1319222122s+346647us
+
+694000 tuples processed at 1319222122s+744386us
+
+695000 tuples processed at 1319222123s+148571us
+
+696000 tuples processed at 1319222123s+546293us
+
+697000 tuples processed at 1319222123s+943271us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0095.heap (1520 MB allocated cumulatively, 19 MB currently in use)
+
+698000 tuples processed at 1319222124s+345489us
+
+699000 tuples processed at 1319222124s+748077us
+
+700000 tuples processed at 1319222125s+203838us
+
+701000 tuples processed at 1319222125s+604111us
+
+702000 tuples processed at 1319222126s+5093us
+
+703000 tuples processed at 1319222126s+403938us
+
+704000 tuples processed at 1319222126s+800907us
+
+705000 tuples processed at 1319222127s+204822us
+
+706000 tuples processed at 1319222127s+602835us
+
+707000 tuples processed at 1319222128s+1419us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0096.heap (1536 MB allocated cumulatively, 20 MB currently in use)
+
+708000 tuples processed at 1319222128s+398308us
+
+709000 tuples processed at 1319222128s+799494us
+
+710000 tuples processed at 1319222129s+258576us
+
+711000 tuples processed at 1319222129s+656278us
+
+712000 tuples processed at 1319222130s+54325us
+
+713000 tuples processed at 1319222130s+458165us
+
+714000 tuples processed at 1319222130s+857002us
+
+715000 tuples processed at 1319222131s+256898us
+
+716000 tuples processed at 1319222131s+657026us
+
+717000 tuples processed at 1319222132s+57544us
+
+718000 tuples processed at 1319222132s+458688us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0097.heap (1552 MB allocated cumulatively, 20 MB currently in use)
+
+719000 tuples processed at 1319222132s+863501us
+
+720000 tuples processed at 1319222133s+326712us
+
+721000 tuples processed at 1319222133s+724687us
+
+722000 tuples processed at 1319222134s+120181us
+
+723000 tuples processed at 1319222134s+521606us
+
+724000 tuples processed at 1319222134s+929325us
+
+725000 tuples processed at 1319222135s+329408us
+
+726000 tuples processed at 1319222135s+731951us
+
+727000 tuples processed at 1319222136s+137590us
+
+728000 tuples processed at 1319222136s+554413us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0098.heap (1568 MB allocated cumulatively, 20 MB currently in use)
+
+729000 tuples processed at 1319222136s+963667us
+
+730000 tuples processed at 1319222137s+425065us
+
+731000 tuples processed at 1319222137s+903415us
+
+732000 tuples processed at 1319222138s+329650us
+
+733000 tuples processed at 1319222138s+747008us
+
+734000 tuples processed at 1319222139s+184629us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0099.heap (1584 MB allocated cumulatively, 20 MB currently in use)
+
+735000 tuples processed at 1319222139s+621777us
+
+736000 tuples processed at 1319222140s+46422us
+
+737000 tuples processed at 1319222140s+470291us
+
+738000 tuples processed at 1319222140s+907775us
+
+739000 tuples processed at 1319222141s+334277us
+
+740000 tuples processed at 1319222141s+826849us
+
+741000 tuples processed at 1319222142s+242502us
+
+742000 tuples processed at 1319222142s+651500us
+
+743000 tuples processed at 1319222143s+61231us
+
+744000 tuples processed at 1319222143s+463188us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0100.heap (1600 MB allocated cumulatively, 21 MB currently in use)
+
+745000 tuples processed at 1319222143s+870883us
+
+746000 tuples processed at 1319222144s+275818us
+
+747000 tuples processed at 1319222144s+680325us
+
+748000 tuples processed at 1319222145s+78376us
+
+749000 tuples processed at 1319222145s+475467us
+
+750000 tuples processed at 1319222145s+927649us
+
+751000 tuples processed at 1319222146s+380718us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0101.heap (1616 MB allocated cumulatively, 21 MB currently in use)
+
+752000 tuples processed at 1319222146s+812283us
+
+753000 tuples processed at 1319222147s+262988us
+
+754000 tuples processed at 1319222147s+666346us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0102.heap (1632 MB allocated cumulatively, 21 MB currently in use)
+
+755000 tuples processed at 1319222148s+125740us
+
+756000 tuples processed at 1319222148s+579916us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0103.heap (1648 MB allocated cumulatively, 21 MB currently in use)
+
+757000 tuples processed at 1319222149s+63029us
+
+758000 tuples processed at 1319222149s+519320us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0104.heap (1664 MB allocated cumulatively, 21 MB currently in use)
+
+759000 tuples processed at 1319222150s+22193us
+
+760000 tuples processed at 1319222150s+494318us
+
+761000 tuples processed at 1319222150s+904044us
+
+762000 tuples processed at 1319222151s+496848us
+
+763000 tuples processed at 1319222152s+40722us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0105.heap (1680 MB allocated cumulatively, 21 MB currently in use)
+
+764000 tuples processed at 1319222152s+486383us
+
+765000 tuples processed at 1319222152s+941701us
+
+766000 tuples processed at 1319222153s+390135us
+
+767000 tuples processed at 1319222153s+844558us
+
+768000 tuples processed at 1319222154s+423214us
+
+769000 tuples processed at 1319222154s+843604us
+
+770000 tuples processed at 1319222155s+317205us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0106.heap (1696 MB allocated cumulatively, 21 MB currently in use)
+
+771000 tuples processed at 1319222155s+742357us
+
+772000 tuples processed at 1319222156s+167323us
+
+773000 tuples processed at 1319222156s+578229us
+
+774000 tuples processed at 1319222156s+985853us
+
+775000 tuples processed at 1319222157s+398016us
+
+776000 tuples processed at 1319222157s+821044us
+
+777000 tuples processed at 1319222158s+255847us
+
+778000 tuples processed at 1319222158s+683724us
+
+779000 tuples processed at 1319222159s+91973us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0107.heap (1712 MB allocated cumulatively, 21 MB currently in use)
+
+780000 tuples processed at 1319222159s+553111us
+
+781000 tuples processed at 1319222159s+968589us
+
+782000 tuples processed at 1319222160s+497060us
+
+783000 tuples processed at 1319222160s+900529us
+
+784000 tuples processed at 1319222161s+308793us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0108.heap (1728 MB allocated cumulatively, 24 MB currently in use)
+
+785000 tuples processed at 1319222161s+724725us
+
+786000 tuples processed at 1319222162s+134753us
+
+787000 tuples processed at 1319222162s+541533us
+
+788000 tuples processed at 1319222162s+941750us
+
+789000 tuples processed at 1319222163s+342831us
+
+790000 tuples processed at 1319222163s+824502us
+
+791000 tuples processed at 1319222164s+228171us
+
+792000 tuples processed at 1319222164s+630496us
+
+793000 tuples processed at 1319222165s+29069us
+
+794000 tuples processed at 1319222165s+427624us
+
+795000 tuples processed at 1319222165s+826775us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0109.heap (1744 MB allocated cumulatively, 25 MB currently in use)
+
+796000 tuples processed at 1319222166s+229396us
+
+797000 tuples processed at 1319222166s+632906us
+
+798000 tuples processed at 1319222167s+35502us
+
+799000 tuples processed at 1319222167s+442481us
+
+800000 tuples processed at 1319222167s+909527us
+
+801000 tuples processed at 1319222168s+308955us
+
+802000 tuples processed at 1319222168s+714910us
+
+803000 tuples processed at 1319222169s+117397us
+
+804000 tuples processed at 1319222169s+518664us
+
+805000 tuples processed at 1319222169s+911127us
+
+806000 tuples processed at 1319222170s+312776us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0110.heap (1760 MB allocated cumulatively, 25 MB currently in use)
+
+807000 tuples processed at 1319222170s+717184us
+
+808000 tuples processed at 1319222171s+122862us
+
+809000 tuples processed at 1319222171s+525097us
+
+810000 tuples processed at 1319222172s+9511us
+
+811000 tuples processed at 1319222172s+412657us
+
+812000 tuples processed at 1319222172s+822741us
+
+813000 tuples processed at 1319222173s+255097us
+
+814000 tuples processed at 1319222173s+678729us
+
+815000 tuples processed at 1319222174s+96625us
+
+816000 tuples processed at 1319222174s+520806us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0111.heap (1776 MB allocated cumulatively, 25 MB currently in use)
+
+817000 tuples processed at 1319222174s+942943us
+
+818000 tuples processed at 1319222175s+361687us
+
+819000 tuples processed at 1319222175s+779883us
+
+820000 tuples processed at 1319222176s+251489us
+
+821000 tuples processed at 1319222176s+651925us
+
+822000 tuples processed at 1319222177s+61790us
+
+823000 tuples processed at 1319222177s+457181us
+
+824000 tuples processed at 1319222177s+866474us
+
+825000 tuples processed at 1319222178s+277937us
+
+826000 tuples processed at 1319222178s+670718us
+
+827000 tuples processed at 1319222179s+65426us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0112.heap (1792 MB allocated cumulatively, 25 MB currently in use)
+
+828000 tuples processed at 1319222179s+481687us
+
+829000 tuples processed at 1319222179s+894281us
+
+830000 tuples processed at 1319222180s+361118us
+
+831000 tuples processed at 1319222180s+770561us
+
+832000 tuples processed at 1319222181s+184244us
+
+833000 tuples processed at 1319222181s+594845us
+
+834000 tuples processed at 1319222182s+4576us
+
+835000 tuples processed at 1319222182s+414097us
+
+836000 tuples processed at 1319222182s+823777us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0113.heap (1808 MB allocated cumulatively, 26 MB currently in use)
+
+837000 tuples processed at 1319222183s+296236us
+
+838000 tuples processed at 1319222183s+727635us
+
+839000 tuples processed at 1319222184s+138181us
+
+840000 tuples processed at 1319222184s+594567us
+
+841000 tuples processed at 1319222185s+7957us
+
+842000 tuples processed at 1319222185s+423128us
+
+843000 tuples processed at 1319222185s+838247us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0114.heap (1824 MB allocated cumulatively, 26 MB currently in use)
+
+844000 tuples processed at 1319222186s+257745us
+
+845000 tuples processed at 1319222186s+684214us
+
+846000 tuples processed at 1319222187s+103017us
+
+847000 tuples processed at 1319222187s+513740us
+
+848000 tuples processed at 1319222187s+933088us
+
+849000 tuples processed at 1319222188s+347887us
+
+850000 tuples processed at 1319222188s+837463us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0115.heap (1840 MB allocated cumulatively, 26 MB currently in use)
+
+851000 tuples processed at 1319222189s+265825us
+
+852000 tuples processed at 1319222189s+884803us
+
+853000 tuples processed at 1319222190s+297183us
+
+854000 tuples processed at 1319222190s+714633us
+
+855000 tuples processed at 1319222191s+117228us
+
+856000 tuples processed at 1319222191s+525089us
+
+857000 tuples processed at 1319222191s+936038us
+
+858000 tuples processed at 1319222192s+349644us
+
+859000 tuples processed at 1319222192s+757169us
+
+860000 tuples processed at 1319222193s+233494us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0116.heap (1856 MB allocated cumulatively, 26 MB currently in use)
+
+861000 tuples processed at 1319222193s+627102us
+
+862000 tuples processed at 1319222194s+4590us
+
+863000 tuples processed at 1319222194s+382213us
+
+864000 tuples processed at 1319222194s+757455us
+
+865000 tuples processed at 1319222195s+133827us
+
+866000 tuples processed at 1319222195s+509940us
+
+867000 tuples processed at 1319222195s+889859us
+
+868000 tuples processed at 1319222196s+268130us
+
+869000 tuples processed at 1319222196s+646803us
+
+870000 tuples processed at 1319222197s+75088us
+
+871000 tuples processed at 1319222197s+604406us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0117.heap (1872 MB allocated cumulatively, 26 MB currently in use)
+
+872000 tuples processed at 1319222198s+39811us
+
+873000 tuples processed at 1319222198s+414620us
+
+874000 tuples processed at 1319222198s+787475us
+
+875000 tuples processed at 1319222199s+166374us
+
+876000 tuples processed at 1319222199s+541627us
+
+877000 tuples processed at 1319222199s+921082us
+
+878000 tuples processed at 1319222200s+295895us
+
+879000 tuples processed at 1319222200s+671806us
+
+880000 tuples processed at 1319222201s+115014us
+
+881000 tuples processed at 1319222201s+748099us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0118.heap (1888 MB allocated cumulatively, 27 MB currently in use)
+
+882000 tuples processed at 1319222202s+133783us
+
+883000 tuples processed at 1319222202s+511749us
+
+884000 tuples processed at 1319222202s+891838us
+
+885000 tuples processed at 1319222203s+266964us
+
+886000 tuples processed at 1319222203s+649151us
+
+887000 tuples processed at 1319222204s+28875us
+
+888000 tuples processed at 1319222204s+384879us
+
+889000 tuples processed at 1319222204s+758239us
+
+890000 tuples processed at 1319222205s+192230us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0119.heap (1904 MB allocated cumulatively, 27 MB currently in use)
+
+891000 tuples processed at 1319222205s+569477us
+
+892000 tuples processed at 1319222205s+944064us
+
+893000 tuples processed at 1319222206s+321308us
+
+894000 tuples processed at 1319222206s+703101us
+
+895000 tuples processed at 1319222207s+87808us
+
+896000 tuples processed at 1319222207s+470318us
+
+897000 tuples processed at 1319222207s+853309us
+
+898000 tuples processed at 1319222208s+236649us
+
+899000 tuples processed at 1319222208s+612113us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0120.heap (1920 MB allocated cumulatively, 27 MB currently in use)
+
+900000 tuples processed at 1319222209s+98015us
+
+901000 tuples processed at 1319222209s+746316us
+
+902000 tuples processed at 1319222210s+126807us
+
+903000 tuples processed at 1319222210s+503122us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0121.heap (1936 MB allocated cumulatively, 27 MB currently in use)
+
+904000 tuples processed at 1319222210s+882914us
+
+905000 tuples processed at 1319222211s+260100us
+
+906000 tuples processed at 1319222211s+634882us
+
+907000 tuples processed at 1319222212s+10390us
+
+908000 tuples processed at 1319222212s+382369us
+
+909000 tuples processed at 1319222212s+762797us
+
+910000 tuples processed at 1319222213s+190433us
+
+911000 tuples processed at 1319222213s+769703us
+
+912000 tuples processed at 1319222214s+144850us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0122.heap (1952 MB allocated cumulatively, 27 MB currently in use)
+
+913000 tuples processed at 1319222214s+545368us
+
+914000 tuples processed at 1319222214s+931601us
+
+915000 tuples processed at 1319222215s+316979us
+
+916000 tuples processed at 1319222215s+709157us
+
+917000 tuples processed at 1319222216s+75747us
+
+918000 tuples processed at 1319222216s+450106us
+
+919000 tuples processed at 1319222216s+823245us
+
+920000 tuples processed at 1319222217s+234649us
+
+921000 tuples processed at 1319222217s+811785us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0123.heap (1968 MB allocated cumulatively, 28 MB currently in use)
+
+922000 tuples processed at 1319222218s+187316us
+
+923000 tuples processed at 1319222218s+559849us
+
+924000 tuples processed at 1319222218s+933446us
+
+925000 tuples processed at 1319222219s+308282us
+
+926000 tuples processed at 1319222219s+683981us
+
+927000 tuples processed at 1319222220s+61476us
+
+928000 tuples processed at 1319222220s+433444us
+
+929000 tuples processed at 1319222220s+809210us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0124.heap (1984 MB allocated cumulatively, 28 MB currently in use)
+
+930000 tuples processed at 1319222221s+280168us
+
+931000 tuples processed at 1319222221s+907430us
+
+932000 tuples processed at 1319222222s+390138us
+
+933000 tuples processed at 1319222222s+762623us
+
+934000 tuples processed at 1319222223s+137472us
+
+935000 tuples processed at 1319222223s+511474us
+
+936000 tuples processed at 1319222223s+886341us
+
+937000 tuples processed at 1319222224s+261056us
+
+938000 tuples processed at 1319222224s+620045us
+
+939000 tuples processed at 1319222224s+984042us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0125.heap (2000 MB allocated cumulatively, 28 MB currently in use)
+
+940000 tuples processed at 1319222225s+421625us
+
+941000 tuples processed at 1319222225s+904676us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0126.heap (2016 MB allocated cumulatively, 28 MB currently in use)
+
+942000 tuples processed at 1319222226s+472071us
+
+943000 tuples processed at 1319222226s+876880us
+
+944000 tuples processed at 1319222227s+243001us
+
+945000 tuples processed at 1319222227s+686989us
+
+946000 tuples processed at 1319222228s+59986us
+
+947000 tuples processed at 1319222228s+421245us
+
+948000 tuples processed at 1319222228s+775133us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0127.heap (2032 MB allocated cumulatively, 28 MB currently in use)
+
+949000 tuples processed at 1319222229s+163639us
+
+950000 tuples processed at 1319222229s+592010us
+
+951000 tuples processed at 1319222230s+170966us
+
+952000 tuples processed at 1319222230s+572445us
+
+953000 tuples processed at 1319222230s+989313us
+
+954000 tuples processed at 1319222231s+361285us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0128.heap (2048 MB allocated cumulatively, 28 MB currently in use)
+
+955000 tuples processed at 1319222231s+730787us
+
+956000 tuples processed at 1319222232s+69366us
+
+957000 tuples processed at 1319222232s+441975us
+
+958000 tuples processed at 1319222232s+825025us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0129.heap (2064 MB allocated cumulatively, 28 MB currently in use)
+
+959000 tuples processed at 1319222233s+177307us
+
+960000 tuples processed at 1319222233s+588858us
+
+961000 tuples processed at 1319222234s+160714us
+
+962000 tuples processed at 1319222234s+570828us
+
+963000 tuples processed at 1319222234s+941423us
+
+964000 tuples processed at 1319222235s+317186us
+
+965000 tuples processed at 1319222235s+692139us
+
+966000 tuples processed at 1319222236s+65413us
+
+967000 tuples processed at 1319222236s+438739us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0130.heap (2080 MB allocated cumulatively, 29 MB currently in use)
+
+968000 tuples processed at 1319222236s+822411us
+
+969000 tuples processed at 1319222237s+196197us
+
+970000 tuples processed at 1319222237s+622385us
+
+971000 tuples processed at 1319222238s+228687us
+
+972000 tuples processed at 1319222238s+618248us
+
+973000 tuples processed at 1319222239s+4401us
+
+974000 tuples processed at 1319222239s+380583us
+
+975000 tuples processed at 1319222239s+755413us
+
+976000 tuples processed at 1319222240s+128205us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0131.heap (2096 MB allocated cumulatively, 29 MB currently in use)
+
+977000 tuples processed at 1319222240s+512229us
+
+978000 tuples processed at 1319222240s+892297us
+
+979000 tuples processed at 1319222241s+299897us
+
+980000 tuples processed at 1319222241s+734002us
+
+981000 tuples processed at 1319222242s+356130us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0132.heap (2112 MB allocated cumulatively, 29 MB currently in use)
+
+982000 tuples processed at 1319222242s+748784us
+
+983000 tuples processed at 1319222243s+130704us
+
+984000 tuples processed at 1319222243s+518306us
+
+985000 tuples processed at 1319222243s+897130us
+
+986000 tuples processed at 1319222244s+278851us
+
+987000 tuples processed at 1319222244s+652572us
+
+988000 tuples processed at 1319222245s+33103us
+
+989000 tuples processed at 1319222245s+412772us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0133.heap (2128 MB allocated cumulatively, 29 MB currently in use)
+
+990000 tuples processed at 1319222245s+835308us
+
+991000 tuples processed at 1319222246s+210685us
+
+992000 tuples processed at 1319222246s+788791us
+
+993000 tuples processed at 1319222247s+167439us
+
+994000 tuples processed at 1319222247s+598394us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0134.heap (2144 MB allocated cumulatively, 29 MB currently in use)
+
+995000 tuples processed at 1319222247s+982115us
+
+996000 tuples processed at 1319222248s+370457us
+
+997000 tuples processed at 1319222248s+742397us
+
+998000 tuples processed at 1319222249s+121298us
+
+999000 tuples processed at 1319222249s+496471us
+
+1000000 tuples processed at 1319222249s+932396us
+
+1001000 tuples processed at 1319222250s+387046us
+
+1002000 tuples processed at 1319222250s+937268us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0135.heap (2160 MB allocated cumulatively, 29 MB currently in use)
+
+1003000 tuples processed at 1319222251s+316298us
+
+1004000 tuples processed at 1319222251s+703406us
+
+1005000 tuples processed at 1319222252s+122124us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0136.heap (2176 MB allocated cumulatively, 29 MB currently in use)
+
+1006000 tuples processed at 1319222252s+554794us
+
+1007000 tuples processed at 1319222252s+953402us
+
+1008000 tuples processed at 1319222253s+360583us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0137.heap (2192 MB allocated cumulatively, 30 MB currently in use)
+
+1009000 tuples processed at 1319222253s+792939us
+
+1010000 tuples processed at 1319222254s+267674us
+
+1011000 tuples processed at 1319222254s+646728us
+
+1012000 tuples processed at 1319222255s+35314us
+
+1013000 tuples processed at 1319222255s+412183us
+
+1014000 tuples processed at 1319222255s+787337us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0138.heap (2208 MB allocated cumulatively, 30 MB currently in use)
+
+1015000 tuples processed at 1319222256s+163768us
+
+1016000 tuples processed at 1319222256s+540618us
+
+1017000 tuples processed at 1319222256s+918325us
+
+1018000 tuples processed at 1319222257s+294339us
+
+1019000 tuples processed at 1319222257s+671628us
+
+1020000 tuples processed at 1319222258s+103029us
+
+1021000 tuples processed at 1319222258s+653824us
+
+1022000 tuples processed at 1319222259s+56149us
+
+1023000 tuples processed at 1319222259s+430660us
+
+1024000 tuples processed at 1319222259s+802962us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0139.heap (2224 MB allocated cumulatively, 30 MB currently in use)
+
+1025000 tuples processed at 1319222260s+173360us
+
+1026000 tuples processed at 1319222260s+536755us
+
+1027000 tuples processed at 1319222260s+915098us
+
+1028000 tuples processed at 1319222261s+291999us
+
+1029000 tuples processed at 1319222261s+668806us
+
+1030000 tuples processed at 1319222262s+98896us
+
+1031000 tuples processed at 1319222262s+684865us
+
+1032000 tuples processed at 1319222263s+83223us
+
+1033000 tuples processed at 1319222263s+457991us
+
+1034000 tuples processed at 1319222263s+834090us
+
+1035000 tuples processed at 1319222264s+202461us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0140.heap (2240 MB allocated cumulatively, 30 MB currently in use)
+
+1036000 tuples processed at 1319222264s+576110us
+
+1037000 tuples processed at 1319222264s+947715us
+
+1038000 tuples processed at 1319222265s+322183us
+
+1039000 tuples processed at 1319222265s+695121us
+
+1040000 tuples processed at 1319222266s+115149us
+
+1041000 tuples processed at 1319222266s+489624us
+
+1042000 tuples processed at 1319222266s+859334us
+
+1043000 tuples processed at 1319222267s+231739us
+
+1044000 tuples processed at 1319222267s+600768us
+
+1045000 tuples processed at 1319222267s+974607us
+
+1046000 tuples processed at 1319222268s+347948us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0141.heap (2256 MB allocated cumulatively, 30 MB currently in use)
+
+1047000 tuples processed at 1319222268s+720183us
+
+1048000 tuples processed at 1319222269s+93603us
+
+1049000 tuples processed at 1319222269s+466352us
+
+1050000 tuples processed at 1319222269s+893313us
+
+1051000 tuples processed at 1319222270s+309291us
+
+1052000 tuples processed at 1319222270s+886186us
+
+1053000 tuples processed at 1319222271s+262107us
+
+1054000 tuples processed at 1319222271s+640462us
+
+1055000 tuples processed at 1319222272s+16068us
+
+1056000 tuples processed at 1319222272s+387999us
+
+1057000 tuples processed at 1319222272s+755147us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0142.heap (2272 MB allocated cumulatively, 31 MB currently in use)
+
+1058000 tuples processed at 1319222273s+109898us
+
+1059000 tuples processed at 1319222273s+477055us
+
+1060000 tuples processed at 1319222273s+907919us
+
+1061000 tuples processed at 1319222274s+329784us
+
+1062000 tuples processed at 1319222274s+919721us
+
+1063000 tuples processed at 1319222275s+315858us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0143.heap (2288 MB allocated cumulatively, 31 MB currently in use)
+
+1064000 tuples processed at 1319222275s+718000us
+
+1065000 tuples processed at 1319222276s+114198us
+
+1066000 tuples processed at 1319222276s+515739us
+
+1067000 tuples processed at 1319222276s+917095us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0144.heap (2304 MB allocated cumulatively, 31 MB currently in use)
+
+1068000 tuples processed at 1319222277s+314698us
+
+1069000 tuples processed at 1319222277s+704911us
+
+1070000 tuples processed at 1319222278s+138570us
+
+1071000 tuples processed at 1319222278s+743926us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0145.heap (2320 MB allocated cumulatively, 31 MB currently in use)
+
+1072000 tuples processed at 1319222279s+141582us
+
+1073000 tuples processed at 1319222279s+521393us
+
+1074000 tuples processed at 1319222279s+912896us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0146.heap (2336 MB allocated cumulatively, 31 MB currently in use)
+
+1075000 tuples processed at 1319222280s+294718us
+
+1076000 tuples processed at 1319222280s+690953us
+
+1077000 tuples processed at 1319222281s+82367us
+
+1078000 tuples processed at 1319222281s+467983us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0147.heap (2352 MB allocated cumulatively, 31 MB currently in use)
+
+1079000 tuples processed at 1319222281s+869083us
+
+1080000 tuples processed at 1319222282s+307159us
+
+1081000 tuples processed at 1319222282s+689114us
+
+1082000 tuples processed at 1319222283s+73964us
+
+1083000 tuples processed at 1319222283s+457013us
+
+1084000 tuples processed at 1319222283s+839192us
+
+1085000 tuples processed at 1319222284s+217255us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0148.heap (2368 MB allocated cumulatively, 31 MB currently in use)
+
+1086000 tuples processed at 1319222284s+598433us
+
+1087000 tuples processed at 1319222284s+972725us
+
+1088000 tuples processed at 1319222285s+324389us
+
+1089000 tuples processed at 1319222285s+700949us
+
+1090000 tuples processed at 1319222286s+157412us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0149.heap (2384 MB allocated cumulatively, 31 MB currently in use)
+
+1091000 tuples processed at 1319222286s+747228us
+
+1092000 tuples processed at 1319222287s+128424us
+
+1093000 tuples processed at 1319222287s+507807us
+
+1094000 tuples processed at 1319222287s+882975us
+
+1095000 tuples processed at 1319222288s+281053us
+
+1096000 tuples processed at 1319222288s+663409us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0150.heap (2400 MB allocated cumulatively, 32 MB currently in use)
+
+1097000 tuples processed at 1319222289s+62579us
+
+1098000 tuples processed at 1319222289s+470959us
+
+1099000 tuples processed at 1319222289s+862240us
+
+1100000 tuples processed at 1319222290s+300593us
+
+1101000 tuples processed at 1319222290s+675093us
+
+1102000 tuples processed at 1319222291s+288469us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0151.heap (2416 MB allocated cumulatively, 32 MB currently in use)
+
+1103000 tuples processed at 1319222291s+666793us
+
+1104000 tuples processed at 1319222292s+45352us
+
+1105000 tuples processed at 1319222292s+416718us
+
+1106000 tuples processed at 1319222292s+783250us
+
+1107000 tuples processed at 1319222293s+151695us
+
+1108000 tuples processed at 1319222293s+510117us
+
+1109000 tuples processed at 1319222293s+883611us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0152.heap (2432 MB allocated cumulatively, 32 MB currently in use)
+
+1110000 tuples processed at 1319222294s+342984us
+
+1111000 tuples processed at 1319222294s+718318us
+
+1112000 tuples processed at 1319222295s+95297us
+
+1113000 tuples processed at 1319222295s+467728us
+
+1114000 tuples processed at 1319222295s+843050us
+
+1115000 tuples processed at 1319222296s+220088us
+
+1116000 tuples processed at 1319222296s+582721us
+
+1117000 tuples processed at 1319222296s+939475us
+
+1118000 tuples processed at 1319222297s+318426us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0153.heap (2448 MB allocated cumulatively, 32 MB currently in use)
+
+1119000 tuples processed at 1319222297s+694409us
+
+1120000 tuples processed at 1319222298s+107829us
+
+1121000 tuples processed at 1319222298s+712982us
+
+1122000 tuples processed at 1319222299s+94370us
+
+1123000 tuples processed at 1319222299s+465685us
+
+1124000 tuples processed at 1319222299s+818379us
+
+1125000 tuples processed at 1319222300s+171724us
+
+1126000 tuples processed at 1319222300s+512914us
+
+1127000 tuples processed at 1319222300s+889865us
+
+1128000 tuples processed at 1319222301s+260388us
+
+1129000 tuples processed at 1319222301s+605724us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0154.heap (2464 MB allocated cumulatively, 32 MB currently in use)
+
+1130000 tuples processed at 1319222302s+658us
+
+1131000 tuples processed at 1319222302s+374098us
+
+1132000 tuples processed at 1319222302s+763093us
+
+1133000 tuples processed at 1319222303s+140129us
+
+1134000 tuples processed at 1319222303s+536549us
+
+1135000 tuples processed at 1319222303s+917831us
+
+1136000 tuples processed at 1319222304s+302435us
+
+1137000 tuples processed at 1319222304s+683057us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0155.heap (2480 MB allocated cumulatively, 32 MB currently in use)
+
+1138000 tuples processed at 1319222305s+62689us
+
+1139000 tuples processed at 1319222305s+446501us
+
+1140000 tuples processed at 1319222305s+910414us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0156.heap (2496 MB allocated cumulatively, 33 MB currently in use)
+
+1141000 tuples processed at 1319222306s+339175us
+
+1142000 tuples processed at 1319222306s+726480us
+
+1143000 tuples processed at 1319222307s+108707us
+
+1144000 tuples processed at 1319222307s+483213us
+
+1145000 tuples processed at 1319222307s+858328us
+
+1146000 tuples processed at 1319222308s+233583us
+
+1147000 tuples processed at 1319222308s+606002us
+
+1148000 tuples processed at 1319222308s+980438us
+
+1149000 tuples processed at 1319222309s+354174us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0157.heap (2512 MB allocated cumulatively, 33 MB currently in use)
+
+1150000 tuples processed at 1319222309s+798828us
+
+1151000 tuples processed at 1319222310s+421960us
+
+1152000 tuples processed at 1319222310s+909761us
+
+1153000 tuples processed at 1319222311s+285550us
+
+1154000 tuples processed at 1319222311s+661310us
+
+1155000 tuples processed at 1319222312s+38418us
+
+1156000 tuples processed at 1319222312s+417929us
+
+1157000 tuples processed at 1319222312s+793940us
+
+1158000 tuples processed at 1319222313s+168895us
+
+1159000 tuples processed at 1319222313s+546272us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0158.heap (2528 MB allocated cumulatively, 33 MB currently in use)
+
+1160000 tuples processed at 1319222313s+986572us
+
+1161000 tuples processed at 1319222314s+466672us
+
+1162000 tuples processed at 1319222314s+972324us
+
+1163000 tuples processed at 1319222315s+355358us
+
+1164000 tuples processed at 1319222315s+731596us
+
+1165000 tuples processed at 1319222316s+106604us
+
+1166000 tuples processed at 1319222316s+482128us
+
+1167000 tuples processed at 1319222316s+861393us
+
+1168000 tuples processed at 1319222317s+235466us
+
+1169000 tuples processed at 1319222317s+610583us
+
+1170000 tuples processed at 1319222318s+65827us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0159.heap (2544 MB allocated cumulatively, 33 MB currently in use)
+
+1171000 tuples processed at 1319222318s+584688us
+
+1172000 tuples processed at 1319222319s+33927us
+
+1173000 tuples processed at 1319222319s+411453us
+
+1174000 tuples processed at 1319222319s+791614us
+
+1175000 tuples processed at 1319222320s+172239us
+
+1176000 tuples processed at 1319222320s+556839us
+
+1177000 tuples processed at 1319222320s+914509us
+
+1178000 tuples processed at 1319222321s+256578us
+
+1179000 tuples processed at 1319222321s+620563us
+
+1180000 tuples processed at 1319222322s+57890us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0160.heap (2560 MB allocated cumulatively, 33 MB currently in use)
+
+1181000 tuples processed at 1319222322s+618658us
+
+1182000 tuples processed at 1319222323s+53745us
+
+1183000 tuples processed at 1319222323s+411199us
+
+1184000 tuples processed at 1319222323s+785753us
+
+1185000 tuples processed at 1319222324s+156676us
+
+1186000 tuples processed at 1319222324s+528043us
+
+1187000 tuples processed at 1319222324s+909598us
+
+1188000 tuples processed at 1319222325s+275119us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0161.heap (2576 MB allocated cumulatively, 34 MB currently in use)
+
+1189000 tuples processed at 1319222325s+652291us
+
+1190000 tuples processed at 1319222326s+98857us
+
+1191000 tuples processed at 1319222326s+712320us
+
+1192000 tuples processed at 1319222327s+104729us
+
+1193000 tuples processed at 1319222327s+489710us
+
+1194000 tuples processed at 1319222327s+873837us
+
+1195000 tuples processed at 1319222328s+255497us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0162.heap (2592 MB allocated cumulatively, 34 MB currently in use)
+
+1196000 tuples processed at 1319222328s+646963us
+
+1197000 tuples processed at 1319222329s+34142us
+
+1198000 tuples processed at 1319222329s+412930us
+
+1199000 tuples processed at 1319222329s+796766us
+
+1200000 tuples processed at 1319222330s+230158us
+
+1201000 tuples processed at 1319222330s+815660us
+
+1202000 tuples processed at 1319222331s+196034us
+
+1203000 tuples processed at 1319222331s+574606us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0163.heap (2608 MB allocated cumulatively, 34 MB currently in use)
+
+1204000 tuples processed at 1319222331s+963266us
+
+1205000 tuples processed at 1319222332s+372800us
+
+1206000 tuples processed at 1319222332s+746352us
+
+1207000 tuples processed at 1319222333s+119424us
+
+1208000 tuples processed at 1319222333s+490259us
+
+1209000 tuples processed at 1319222333s+863580us
+
+1210000 tuples processed at 1319222334s+265069us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0164.heap (2624 MB allocated cumulatively, 34 MB currently in use)
+
+1211000 tuples processed at 1319222334s+648947us
+
+1212000 tuples processed at 1319222335s+28083us
+
+1213000 tuples processed at 1319222335s+395306us
+
+1214000 tuples processed at 1319222335s+772988us
+
+1215000 tuples processed at 1319222336s+156104us
+
+1216000 tuples processed at 1319222336s+523374us
+
+1217000 tuples processed at 1319222336s+870733us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0165.heap (2640 MB allocated cumulatively, 34 MB currently in use)
+
+1218000 tuples processed at 1319222337s+246900us
+
+1219000 tuples processed at 1319222337s+622683us
+
+1220000 tuples processed at 1319222338s+40189us
+
+1221000 tuples processed at 1319222338s+579295us
+
+1222000 tuples processed at 1319222339s+58121us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0166.heap (2656 MB allocated cumulatively, 34 MB currently in use)
+
+1223000 tuples processed at 1319222339s+467149us
+
+1224000 tuples processed at 1319222339s+848358us
+
+1225000 tuples processed at 1319222340s+235597us
+
+1226000 tuples processed at 1319222340s+598590us
+
+1227000 tuples processed at 1319222340s+962013us
+
+1228000 tuples processed at 1319222341s+338236us
+
+1229000 tuples processed at 1319222341s+701935us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0167.heap (2672 MB allocated cumulatively, 35 MB currently in use)
+
+1230000 tuples processed at 1319222342s+145738us
+
+1231000 tuples processed at 1319222342s+760866us
+
+1232000 tuples processed at 1319222343s+137792us
+
+1233000 tuples processed at 1319222343s+498718us
+
+1234000 tuples processed at 1319222343s+844194us
+
+1235000 tuples processed at 1319222344s+188399us
+
+1236000 tuples processed at 1319222344s+566389us
+
+1237000 tuples processed at 1319222344s+942596us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0168.heap (2688 MB allocated cumulatively, 35 MB currently in use)
+
+1238000 tuples processed at 1319222345s+319373us
+
+1239000 tuples processed at 1319222345s+670368us
+
+1240000 tuples processed at 1319222346s+79137us
+
+1241000 tuples processed at 1319222346s+614210us
+
+1242000 tuples processed at 1319222347s+45112us
+
+1243000 tuples processed at 1319222347s+427370us
+
+1244000 tuples processed at 1319222347s+809470us
+
+1245000 tuples processed at 1319222348s+188704us
+
+1246000 tuples processed at 1319222348s+567640us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0169.heap (2704 MB allocated cumulatively, 35 MB currently in use)
+
+1247000 tuples processed at 1319222348s+954340us
+
+1248000 tuples processed at 1319222349s+345595us
+
+1249000 tuples processed at 1319222349s+734911us
+
+1250000 tuples processed at 1319222350s+163180us
+
+1251000 tuples processed at 1319222350s+629082us
+
+1252000 tuples processed at 1319222351s+32025us
+
+1253000 tuples processed at 1319222351s+425770us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0170.heap (2720 MB allocated cumulatively, 35 MB currently in use)
+
+1254000 tuples processed at 1319222351s+807533us
+
+1255000 tuples processed at 1319222352s+182801us
+
+1256000 tuples processed at 1319222352s+547749us
+
+1257000 tuples processed at 1319222352s+928084us
+
+1258000 tuples processed at 1319222353s+292560us
+
+1259000 tuples processed at 1319222353s+663901us
+
+1260000 tuples processed at 1319222354s+99110us
+
+1261000 tuples processed at 1319222354s+686582us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0171.heap (2736 MB allocated cumulatively, 35 MB currently in use)
+
+1262000 tuples processed at 1319222355s+89814us
+
+1263000 tuples processed at 1319222355s+464395us
+
+1264000 tuples processed at 1319222355s+835042us
+
+1265000 tuples processed at 1319222356s+232775us
+
+1266000 tuples processed at 1319222356s+595646us
+
+1267000 tuples processed at 1319222356s+975148us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0172.heap (2752 MB allocated cumulatively, 35 MB currently in use)
+
+1268000 tuples processed at 1319222357s+344589us
+
+1269000 tuples processed at 1319222357s+719130us
+
+1270000 tuples processed at 1319222358s+143651us
+
+1271000 tuples processed at 1319222358s+739251us
+
+1272000 tuples processed at 1319222359s+114169us
+
+1273000 tuples processed at 1319222359s+487475us
+
+1274000 tuples processed at 1319222359s+859062us
+
+1275000 tuples processed at 1319222360s+229822us
+
+1276000 tuples processed at 1319222360s+602618us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0173.heap (2768 MB allocated cumulatively, 36 MB currently in use)
+
+1277000 tuples processed at 1319222360s+972067us
+
+1278000 tuples processed at 1319222361s+345953us
+
+1279000 tuples processed at 1319222361s+710483us
+
+1280000 tuples processed at 1319222362s+137095us
+
+1281000 tuples processed at 1319222362s+503232us
+
+1282000 tuples processed at 1319222362s+867988us
+
+1283000 tuples processed at 1319222363s+242444us
+
+1284000 tuples processed at 1319222363s+610421us
+
+1285000 tuples processed at 1319222363s+978201us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0174.heap (2784 MB allocated cumulatively, 36 MB currently in use)
+
+1286000 tuples processed at 1319222364s+363030us
+
+1287000 tuples processed at 1319222364s+740423us
+
+1288000 tuples processed at 1319222365s+114308us
+
+1289000 tuples processed at 1319222365s+490070us
+
+1290000 tuples processed at 1319222365s+921220us
+
+1291000 tuples processed at 1319222366s+350574us
+
+1292000 tuples processed at 1319222366s+917518us
+
+1293000 tuples processed at 1319222367s+303076us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0175.heap (2800 MB allocated cumulatively, 36 MB currently in use)
+
+1294000 tuples processed at 1319222367s+676400us
+
+1295000 tuples processed at 1319222368s+52863us
+
+1296000 tuples processed at 1319222368s+429937us
+
+1297000 tuples processed at 1319222368s+820932us
+
+1298000 tuples processed at 1319222369s+225130us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0176.heap (2816 MB allocated cumulatively, 36 MB currently in use)
+
+1299000 tuples processed at 1319222369s+614643us
+
+1300000 tuples processed at 1319222370s+47164us
+
+1301000 tuples processed at 1319222370s+419762us
+
+1302000 tuples processed at 1319222370s+793547us
+
+1303000 tuples processed at 1319222371s+165046us
+
+1304000 tuples processed at 1319222371s+534303us
+
+1305000 tuples processed at 1319222371s+898437us
+
+1306000 tuples processed at 1319222372s+232059us
+
+1307000 tuples processed at 1319222372s+579895us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0177.heap (2832 MB allocated cumulatively, 36 MB currently in use)
+
+1308000 tuples processed at 1319222372s+959830us
+
+1309000 tuples processed at 1319222373s+329920us
+
+1310000 tuples processed at 1319222373s+750053us
+
+1311000 tuples processed at 1319222374s+121587us
+
+1312000 tuples processed at 1319222374s+497130us
+
+1313000 tuples processed at 1319222374s+871035us
+
+1314000 tuples processed at 1319222375s+238728us
+
+1315000 tuples processed at 1319222375s+606754us
+
+1316000 tuples processed at 1319222375s+976799us
+
+1317000 tuples processed at 1319222376s+350582us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0178.heap (2848 MB allocated cumulatively, 37 MB currently in use)
+
+1318000 tuples processed at 1319222376s+721717us
+
+1319000 tuples processed at 1319222377s+94282us
+
+1320000 tuples processed at 1319222377s+512612us
+
+1321000 tuples processed at 1319222378s+15949us
+
+1322000 tuples processed at 1319222378s+494669us
+
+1323000 tuples processed at 1319222378s+884025us
+
+1324000 tuples processed at 1319222379s+251720us
+
+1325000 tuples processed at 1319222379s+599769us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0179.heap (2864 MB allocated cumulatively, 37 MB currently in use)
+
+1326000 tuples processed at 1319222379s+974523us
+
+1327000 tuples processed at 1319222380s+348535us
+
+1328000 tuples processed at 1319222380s+720178us
+
+1329000 tuples processed at 1319222381s+95256us
+
+1330000 tuples processed at 1319222381s+527877us
+
+1331000 tuples processed at 1319222381s+900090us
+
+1332000 tuples processed at 1319222382s+280319us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0180.heap (2880 MB allocated cumulatively, 37 MB currently in use)
+
+1333000 tuples processed at 1319222382s+652047us
+
+1334000 tuples processed at 1319222383s+33903us
+
+1335000 tuples processed at 1319222383s+530900us
+
+1336000 tuples processed at 1319222383s+903831us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0181.heap (2896 MB allocated cumulatively, 37 MB currently in use)
+
+1337000 tuples processed at 1319222384s+265886us
+
+1338000 tuples processed at 1319222384s+628605us
+
+1339000 tuples processed at 1319222385s+3604us
+
+1340000 tuples processed at 1319222385s+430712us
+
+1341000 tuples processed at 1319222385s+849989us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0182.heap (2912 MB allocated cumulatively, 37 MB currently in use)
+
+1342000 tuples processed at 1319222386s+384787us
+
+1343000 tuples processed at 1319222386s+759078us
+
+1344000 tuples processed at 1319222387s+116691us
+
+1345000 tuples processed at 1319222387s+470685us
+
+1346000 tuples processed at 1319222387s+804523us
+
+1347000 tuples processed at 1319222388s+174083us
+
+1348000 tuples processed at 1319222388s+541300us
+
+1349000 tuples processed at 1319222388s+925315us
+
+1350000 tuples processed at 1319222389s+356421us
+
+1351000 tuples processed at 1319222389s+732029us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0183.heap (2928 MB allocated cumulatively, 37 MB currently in use)
+
+1352000 tuples processed at 1319222390s+342173us
+
+1353000 tuples processed at 1319222390s+714493us
+
+1354000 tuples processed at 1319222391s+91039us
+
+1355000 tuples processed at 1319222391s+462851us
+
+1356000 tuples processed at 1319222391s+836629us
+
+1357000 tuples processed at 1319222392s+201390us
+
+1358000 tuples processed at 1319222392s+558731us
+
+1359000 tuples processed at 1319222392s+901622us
+
+1360000 tuples processed at 1319222393s+341083us
+
+1361000 tuples processed at 1319222393s+712311us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0184.heap (2944 MB allocated cumulatively, 38 MB currently in use)
+
+1362000 tuples processed at 1319222394s+322913us
+
+1363000 tuples processed at 1319222394s+694630us
+
+1364000 tuples processed at 1319222395s+66516us
+
+1365000 tuples processed at 1319222395s+438508us
+
+1366000 tuples processed at 1319222395s+808719us
+
+1367000 tuples processed at 1319222396s+181660us
+
+1368000 tuples processed at 1319222396s+550248us
+
+1369000 tuples processed at 1319222396s+924131us
+
+1370000 tuples processed at 1319222397s+368929us
+
+1371000 tuples processed at 1319222397s+761618us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0185.heap (2960 MB allocated cumulatively, 38 MB currently in use)
+
+1372000 tuples processed at 1319222398s+367980us
+
+1373000 tuples processed at 1319222398s+954320us
+
+1374000 tuples processed at 1319222399s+325443us
+
+1375000 tuples processed at 1319222399s+698749us
+
+1376000 tuples processed at 1319222400s+74775us
+
+1377000 tuples processed at 1319222400s+435490us
+
+1378000 tuples processed at 1319222400s+799840us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0186.heap (2976 MB allocated cumulatively, 38 MB currently in use)
+
+1379000 tuples processed at 1319222401s+176830us
+
+1380000 tuples processed at 1319222401s+818578us
+
+1381000 tuples processed at 1319222402s+197934us
+
+1382000 tuples processed at 1319222402s+784455us
+
+1383000 tuples processed at 1319222403s+161200us
+
+1384000 tuples processed at 1319222403s+527450us
+
+1385000 tuples processed at 1319222403s+985514us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0187.heap (2992 MB allocated cumulatively, 38 MB currently in use)
+
+1386000 tuples processed at 1319222404s+366809us
+
+1387000 tuples processed at 1319222404s+746664us
+
+1388000 tuples processed at 1319222405s+136048us
+
+1389000 tuples processed at 1319222405s+502026us
+
+1390000 tuples processed at 1319222405s+935826us
+
+1391000 tuples processed at 1319222406s+359287us
+
+1392000 tuples processed at 1319222406s+922027us
+
+1393000 tuples processed at 1319222407s+298399us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_infty.0188.heap (3008 MB allocated cumulatively, 38 MB currently in use)
+
+1394000 tuples processed at 1319222407s+651567us
+
+1395000 tuples processed at 1319222408s+33127us
+
+1396000 tuples processed at 1319222408s+420887us
+
+1397000 tuples processed at 1319222408s+816752us

@@ -1,0 +1,56 @@
+reading from /tmp/okennedy_dbtoaster_data/tpch/part.csv with 1 adaptors
+reading from /tmp/okennedy_dbtoaster_data/tpch/orders.csv with 1 adaptors
+reading from /tmp/okennedy_dbtoaster_data/tpch/nation.csv with 1 adaptors
+reading from /tmp/okennedy_dbtoaster_data/tpch/customer.csv with 1 adaptors
+reading from /tmp/okennedy_dbtoaster_data/tpch/lineitem.csv with 1 adaptors
+reading from /tmp/okennedy_dbtoaster_data/tpch/supplier.csv with 1 adaptors
+tracing: 
+0 tuples processed at 1319134907s+192166us
+done with stream, 5 remain
+1000 tuples processed at 1319134907s+570686us
+2000 tuples processed at 1319134908s+306581us
+3000 tuples processed at 1319134909s+625705us
+4000 tuples processed at 1319134912s+675565us
+5000 tuples processed at 1319134921s+367187us
+done with stream, 4 remain
+6000 tuples processed at 1319134929s+949544us
+7000 tuples processed at 1319134936s+643007us
+8000 tuples processed at 1319134942s+837207us
+9000 tuples processed at 1319134953s+952248us
+10000 tuples processed at 1319134963s+772809us
+11000 tuples processed at 1319134976s+179224us
+12000 tuples processed at 1319134994s+992824us
+13000 tuples processed at 1319135009s+393431us
+14000 tuples processed at 1319135027s+990740us
+15000 tuples processed at 1319135050s+84073us
+16000 tuples processed at 1319135087s+18032us
+17000 tuples processed at 1319135116s+132538us
+18000 tuples processed at 1319135149s+98814us
+19000 tuples processed at 1319135189s+531467us
+20000 tuples processed at 1319135222s+137506us
+21000 tuples processed at 1319135257s+962635us
+22000 tuples processed at 1319135323s+9550us
+23000 tuples processed at 1319135375s+766678us
+24000 tuples processed at 1319135427s+814211us
+25000 tuples processed at 1319135478s+295128us
+26000 tuples processed at 1319135548s+894020us
+27000 tuples processed at 1319135617s+112436us
+28000 tuples processed at 1319135704s+793931us
+29000 tuples processed at 1319135790s+519767us
+30000 tuples processed at 1319135900s+300139us
+31000 tuples processed at 1319135969s+241147us
+32000 tuples processed at 1319136080s+583184us
+33000 tuples processed at 1319136200s+467029us
+34000 tuples processed at 1319136314s+713522us
+35000 tuples processed at 1319136463s+518551us
+36000 tuples processed at 1319136608s+25108us
+37000 tuples processed at 1319136778s+242197us
+38000 tuples processed at 1319136942s+823223us
+39000 tuples processed at 1319137079s+547863us
+40000 tuples processed at 1319137245s+626893us
+41000 tuples processed at 1319137380s+341535us
+42000 tuples processed at 1319137701s+218469us
+43000 tuples processed at 1319137876s+725772us
+44000 tuples processed at 1319138111s+386226us
+45000 tuples processed at 1319138321s+915602us
+46000 tuples processed at 1319138540s+665114us
