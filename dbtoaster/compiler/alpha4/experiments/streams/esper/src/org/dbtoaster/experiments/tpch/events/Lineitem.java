@@ -82,7 +82,7 @@ public class Lineitem {
   public void setOrderkey(long ok) { orderkey = ok; }
   public void setPartkey(long pk) { partkey = pk; }
   public void setSuppkey(long sk) { suppkey = sk; }
-  public void setLineNumber(int ln) { linenumber = ln; }
+  public void setLinenumber(int ln) { linenumber = ln; }
   public void setQuantity(double q) { quantity = q; }
   public void setExtendedprice(double ep) { extendedprice = ep; }
   public void setDiscount(double di) { discount = di; }

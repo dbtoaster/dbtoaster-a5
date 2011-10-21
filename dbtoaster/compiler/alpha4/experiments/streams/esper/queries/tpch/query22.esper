@@ -1,5 +1,40 @@
-create window Orders.win:keepall()   as InsertOrders;
-create window Customer.win:keepall() as InsertCustomer;
+create window Orders.win:keepall()   /* as InsertOrders */
+as (
+    orderkey         int,
+    custkey          int,
+    orderstatus      int,
+    totalprice       double,
+    orderdate        int,
+    orderpriority    int,
+    clerk            int,
+    shippriority     int,
+    comment          int
+);
+
+create window Customer.win:keepall() /* as InsertCustomer */
+as (
+    custkey          int,
+    name             int,
+    address          int,
+    nationkey        int,
+    phone            int,
+    acctbal          double,
+    mktsegment       int,
+    comment          int
+);
+
+insert into InsertOrders 
+  select
+    orderkey, custkey, orderstatus, totalprice, orderdate, orderpriority,
+    clerk, shippriority, comment
+  from Dispatch
+  where streamname = "ORDERS" and event = 1;
+
+insert into InsertCustomer 
+  select
+    custkey, name, address, nationkey, phone, acctbal, mktsegment, comment
+  from Dispatch
+  where streamname = "CUSTOMER" and event = 1;
 
 insert into Orders   select * from InsertOrders;
 insert into Customer select * from InsertCustomer;

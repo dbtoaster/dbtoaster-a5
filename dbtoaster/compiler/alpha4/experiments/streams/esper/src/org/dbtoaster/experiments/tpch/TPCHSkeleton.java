@@ -21,6 +21,7 @@ import org.dbtoaster.experiments.tpch.events.InsertPart;
 import org.dbtoaster.experiments.tpch.events.InsertPartsupp;
 import org.dbtoaster.experiments.tpch.events.InsertRegion;
 import org.dbtoaster.experiments.tpch.events.InsertSupplier;
+import org.dbtoaster.experiments.tpch.events.UnifiedEvent;
 
 import com.espertech.esper.client.Configuration;
 import com.espertech.esper.client.EPStatement;
@@ -31,6 +32,8 @@ public class TPCHSkeleton extends CommonSkeleton {
 
   private static final Log log = LogFactory.getLog(TPCHSkeleton.class);
 
+  EventSender dispatch;
+  /*
   EventSender insertLineitem;
   EventSender insertOrders;
   EventSender insertCustomer;
@@ -39,9 +42,12 @@ public class TPCHSkeleton extends CommonSkeleton {
   EventSender insertPartsupp;
   EventSender insertNation;
   EventSender insertRegion;
+  */
   
   public TPCHSkeleton() {
     super(getDefaultConfiguration());
+    dispatch = runtime.getEventSender("Dispatch");
+    /*
     insertLineitem = runtime.getEventSender("InsertLineitem");
     insertOrders = runtime.getEventSender("InsertOrders");
     insertCustomer = runtime.getEventSender("InsertCustomer");
@@ -50,10 +56,13 @@ public class TPCHSkeleton extends CommonSkeleton {
     insertPartsupp = runtime.getEventSender("InsertPartsupp");
     insertNation = runtime.getEventSender("InsertNation");
     insertRegion = runtime.getEventSender("InsertRegion");
+    */
   }
   
   public static Configuration getDefaultConfiguration() {
     Configuration config = new Configuration();
+    config.addEventType("Dispatch", UnifiedEvent.class);
+    /*
     config.addEventType("InsertLineitem", InsertLineitem.class);
     config.addEventType("InsertOrders", InsertOrders.class);
     config.addEventType("InsertCustomer", InsertCustomer.class);
@@ -62,6 +71,7 @@ public class TPCHSkeleton extends CommonSkeleton {
     config.addEventType("InsertPartsupp", InsertPartsupp.class);
     config.addEventType("InsertNation", InsertNation.class);
     config.addEventType("InsertRegion", InsertRegion.class);
+    */
     return config;
   }
 
@@ -134,8 +144,11 @@ public class TPCHSkeleton extends CommonSkeleton {
           describedAs( "result query id (from the last)" ).
           ofType ( Integer.class );
 
+        acceptsAll( Arrays.asList("u", "unified") ).withRequiredArg().
+          describedAs( "unified events file" ).
+          ofType( String.class );
+
         acceptsAll( Arrays.asList("i","inputfile") ).withRequiredArg().
-          required().
           describedAs( "input data files" ).
           ofType( String.class );
       }
@@ -146,13 +159,16 @@ public class TPCHSkeleton extends CommonSkeleton {
     List<Integer> queryIds = new LinkedList<Integer>();
     int sampleFreq = 10;
 
+    String unifiedFile = null;
     List<String> dataFiles = new LinkedList<String>();
 
     try {
       OptionSet options = parser.parse(args);
-      if ( options.has("h") || options.has("?") || !options.has("i") )
+      if ( options.has("h") || options.has("?")
+           || !(options.has("i") || options.has("u")) )
       {
         parser.printHelpOn(System.out);
+        System.exit(1);
       }
       
       queryFile = (String) options.valueOf("q");
@@ -165,6 +181,9 @@ public class TPCHSkeleton extends CommonSkeleton {
 
       if ( options.has( "b" ) && options.valueOf("b") != null )
         baseDir = (String) options.valueOf("b");
+
+      if ( options.has( "u" ) && options.valueOf("u") != null )
+        unifiedFile = (String) options.valueOf("u");
 
       for (Object o : options.valuesOf("i") ) {
         if ( o instanceof String ) dataFiles.add((String) o);
@@ -193,27 +212,34 @@ public class TPCHSkeleton extends CommonSkeleton {
       }
     }
 
-    // Push data files.
-    if ( !dataFiles.isEmpty() ) {
-      List<CSVInputAdapter> sources = new LinkedList<CSVInputAdapter>();
-
-      for (String f : dataFiles) {
-        LinkedList<String> evtAndFields = matchFileEvent(baseDir, f);
-        if ( evtAndFields != null && !evtAndFields.isEmpty() ) {
-          String evt = evtAndFields.pop();
-          log.info("Found data for "+evt);
-          sources.add(t.setupCSVSource(f, evt,
-              evtAndFields.toArray(new String[0])));
-        } else {
-          log.error("failed to match event type for file "+f);
-        }
-      }
-
-      for (CSVInputAdapter src : sources) { src.start(); }
-
-    } else {
-      log.error("no data files found!");
+    // Set up data files.
+    List<CSVInputAdapter> sources = new LinkedList<CSVInputAdapter>();
+    
+    if ( unifiedFile != null ) {
+      log.info("loading events from "+unifiedFile);
+      sources.add(t.setupCSVSource(unifiedFile, "Dispatch", unifiedFields));
     }
+    else
+    {
+      if ( !dataFiles.isEmpty() ) {
+        for (String f : dataFiles) {
+          LinkedList<String> evtAndFields = matchFileEvent(baseDir, f);
+          if ( evtAndFields != null && !evtAndFields.isEmpty() ) {
+            String evt = evtAndFields.pop();
+            log.info("Found data for "+evt);
+            sources.add(t.setupCSVSource(f, evt,
+                evtAndFields.toArray(new String[0])));
+          } else {
+            log.error("failed to match event type for file "+f);
+          }
+        }
+      } else {
+        log.error("no data files found!");
+      }
+    }
+    
+    // Process data.
+    for (CSVInputAdapter src : sources) { src.start(); }
   }
   
   
@@ -258,4 +284,16 @@ public class TPCHSkeleton extends CommonSkeleton {
     "regionkey", "name", "comment"
   };
   
+  private static final String[] unifiedFields = {
+    "streamname", "event",
+    "acctbal", "address", "availqty", "brand",
+    "clerk", "comment", "commitdate", "container", "custkey",
+    "discount", "extendedprice", "linenumber", "linestatus",
+    "mfgr", "mktsegment", "name", "nationkey",
+    "orderdate", "orderkey", "orderpriority", "orderstatus",
+    "partkey", "phone", "quantity",
+    "receiptdate", "regionkey", "retailprice", "returnflag",
+    "shipdate", "shipinstruct", "shipmode", "shippriority", "size", "suppkey", "supplycost",
+    "tax", "totalprice", "type"
+  };
 }

@@ -1,6 +1,68 @@
-create window Lineitem.win:keepall() as InsertLineitem;
-create window Orders.win:keepall()   as InsertOrders;
-create window Customer.win:keepall() as InsertCustomer;
+create window Lineitem.win:keepall() /* as InsertLineitem */
+as (
+    orderkey         int,
+    partkey          int,
+    suppkey          int,
+    linenumber       int,
+    quantity         double,
+    extendedprice    double,
+    discount         double,
+    tax              double,
+    returnflag       int,
+    linestatus       int,
+    shipdate         int,
+    commitdate       int,
+    receiptdate      int,
+    shipinstruct     int,
+    shipmode         int,
+    comment          int
+);
+
+create window Orders.win:keepall()   /* as InsertOrders */
+as (
+    orderkey         int,
+    custkey          int,
+    orderstatus      int,
+    totalprice       double,
+    orderdate        int,
+    orderpriority    int,
+    clerk            int,
+    shippriority     int,
+    comment          int
+);
+
+create window Customer.win:keepall() /* as InsertCustomer */
+as (
+    custkey          int,
+    name             int,
+    address          int,
+    nationkey        int,
+    phone            int,
+    acctbal          double,
+    mktsegment       int,
+    comment          int
+);
+
+insert into InsertLineitem 
+  select
+    orderkey, partkey, suppkey, linenumber, quantity,
+    extendedprice, discount, tax, returnflag, linestatus,
+    shipdate, commitdate, receiptdate, shipinstruct, shipmode, comment
+  from Dispatch
+  where streamname = "LINEITEM" and event = 1;
+
+insert into InsertOrders 
+  select
+    orderkey, custkey, orderstatus, totalprice, orderdate, orderpriority,
+    clerk, shippriority, comment
+  from Dispatch
+  where streamname = "ORDERS" and event = 1;
+
+insert into InsertCustomer 
+  select
+    custkey, name, address, nationkey, phone, acctbal, mktsegment, comment
+  from Dispatch
+  where streamname = "CUSTOMER" and event = 1;
 
 insert into Lineitem select * from InsertLineitem;
 insert into Orders   select * from InsertOrders;

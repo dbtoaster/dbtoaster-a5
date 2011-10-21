@@ -1,9 +1,110 @@
-create window Lineitem.win:keepall() as InsertLineitem;
-create window Orders.win:keepall()   as InsertOrders;
-create window Customer.win:keepall() as InsertCustomer;
-create window Part.win:keepall()     as InsertPart;
-create window Supplier.win:keepall() as InsertSupplier;
-create window Nation.win:keepall()   as InsertNation;
+create window Linewin:keepall() /* as InsertLineitem */
+as (
+    orderkey         int,
+    partkey          int,
+    suppkey          int,
+    linenumber       int,
+    quantity         double,
+    extendedprice    double,
+    discount         double,
+    tax              double,
+    returnflag       int,
+    linestatus       int,
+    shipdate         int,
+    commitdate       int,
+    receiptdate      int,
+    shipinstruct     int,
+    shipmode         int,
+    comment          int
+);
+
+create window Orders.win:keepall()   /* as InsertOrders */
+as (
+    orderkey         int,
+    custkey          int,
+    orderstatus      int,
+    totalprice       double,
+    orderdate        int,
+    orderpriority    int,
+    clerk            int,
+    shippriority     int,
+    comment          int
+);
+
+create window Customer.win:keepall() /* as InsertCustomer */
+as (
+    custkey          int,
+    name             int,
+    address          int,
+    nationkey        int,
+    phone            int,
+    acctbal          double,
+    mktsegment       int,
+    comment          int
+);
+
+create window Part.win:keepall()     /* as InsertPart */
+as (
+    partkey          int,
+    name             int,
+    mfgr             int,
+    brand            int,
+    type             int,
+    size             int,
+    container        int,
+    retailprice      double,
+    comment          int
+);
+
+create window Supplier.win:keepall() /* as InsertSupplier */
+as (
+    suppkey          int,
+    name             int,
+    address          int,
+    nationkey        int,
+    phone            int,
+    acctbal          double,
+    comment          int
+);
+
+create window Nation.win:keepall()   /* as InsertNation */
+as (
+    nationkey        int,
+    name             int,
+    regionkey        int,
+    comment          int
+);
+
+insert into InsertLineitem 
+  select
+    orderkey, partkey, suppkey, linenumber, quantity,
+    extendedprice, discount, tax, returnflag, linestatus,
+    shipdate, commitdate, receiptdate, shipinstruct, shipmode, comment
+  from Dispatch where streamname = "LINEITEM" and event = 1;
+
+insert into InsertOrders 
+  select
+    orderkey, custkey, orderstatus, totalprice, orderdate, orderpriority,
+    clerk, shippriority, comment
+  from Dispatch where streamname = "ORDERS" and event = 1;
+
+insert into InsertCustomer 
+  select
+    custkey, name, address, nationkey, phone, acctbal, mktsegment, comment
+  from Dispatch where streamname = "CUSTOMER" and event = 1;
+
+insert into InsertPart 
+  select
+    partkey, name, mfgr, brand, type, size, container, retailprice, comment
+  from Dispatch where streamname = "PART" and event = 1;
+
+insert into InsertSupplier 
+  select suppkey, name, address, nationkey, phone, acctbal, comment
+  from Dispatch where streamname = "SUPPLIER" and event = 1;
+
+insert into InsertNation 
+  select nationkey, name, regionkey, comment from Dispatch
+  where streamname = "NATION" and event = 1;
 
 insert into Lineitem select * from InsertLineitem;
 insert into Orders   select * from InsertOrders;
@@ -34,10 +135,8 @@ where  c.custkey = o.custkey
   and  o.orderkey = l.orderkey
   and  p.partkey = l.partkey
   and  s.suppkey = l.suppkey
-  /*
-  and  o.orderdate >= DATE('1997-01-01')
-  and  o.orderdate <  DATE('1998-01-01')
-  */
+  and  o.orderdate >= 19970101 /* DATE('1997-01-01') */
+  and  o.orderdate <  19980101 /* DATE('1998-01-01') */
   and  cn.nationkey = c.nationkey
   and  sn.nationkey = s.nationkey
 group by sn.regionkey, cn.regionkey, p.type;

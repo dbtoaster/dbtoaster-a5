@@ -1,5 +1,49 @@
-create window Lineitem.win:keepall() as InsertLineitem;
-create window Part.win:keepall()     as InsertPart;
+create window Lineitem.win:keepall() /* as InsertLineitem */
+as (
+    orderkey         int,
+    partkey          int,
+    suppkey          int,
+    linenumber       int,
+    quantity         double,
+    extendedprice    double,
+    discount         double,
+    tax              double,
+    returnflag       int,
+    linestatus       int,
+    shipdate         int,
+    commitdate       int,
+    receiptdate      int,
+    shipinstruct     int,
+    shipmode         int,
+    comment          int
+);
+
+create window Part.win:keepall()     /* as InsertPart */
+as (
+    partkey          int,
+    name             int,
+    mfgr             int,
+    brand            int,
+    type             int,
+    size             int,
+    container        int,
+    retailprice      double,
+    comment          int
+);
+
+insert into InsertLineitem 
+  select
+    orderkey, partkey, suppkey, linenumber, quantity,
+    extendedprice, discount, tax, returnflag, linestatus,
+    shipdate, commitdate, receiptdate, shipinstruct, shipmode, comment
+  from Dispatch
+  where streamname = "LINEITEM" and event = 1;
+
+insert into InsertPart 
+  select
+    partkey, name, mfgr, brand, type, size, container, retailprice, comment
+  from Dispatch
+  where streamname = "PART" and event = 1;
 
 insert into Lineitem select * from InsertLineitem;
 insert into Part     select * from InsertPart;
