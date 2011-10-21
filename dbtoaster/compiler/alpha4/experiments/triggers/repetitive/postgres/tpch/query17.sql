@@ -44,5 +44,5 @@ SELECT dispatch();
 SELECT * FROM RESULTS;
 
 DROP TABLE RESULTS;
-DROP TRIGGER refresh_partsupp ON PART;
-DROP TRIGGER refresh_supplier ON LINEITEM;
+DROP TRIGGER refresh_part ON PART;
+DROP TRIGGER refresh_lineitem ON LINEITEM;
