@@ -1,82 +1,276 @@
-Figure \ref{} illustrates the DBToaster compilation pipeline.  Before describing each stage in detail, we provide a high-level overview of the entire pipeline by means of a simple example:
+\section{The technical section -- to be split up later}
 
-\begin{example}
-\label{ex:compiler:rst}
-We have a database with the schema: 
+
+\subsection{Queries with binding patterns, deltas, and the extract/materialize-incrementally rewriting}
+
+In this section, we formalize an intermediate representation (IR) for SQL queries that is suitable for compilation of database queries and to perform the transformations necessary to enable efficient multilevel incremental view maintenance. This language is a refinement of the query language defined in \cite{koch-pods:10}, but here we aim at better readability and avoid unnecessary formality. We will use SQL syntax wherever we can. The IR is introduced as we discuss its desiderata.
+
+\begin{itemize}
+\item
+The IR must be small-step compositional, which means that any natural syntactical subexpression must be a valid query and member of the IR. This is in essence true for SQL, if one assigns a natural meaning to subexpressions such as ?A<B? (return 1 if the values of parameters A and B given from outside the query satisfy A<B, and 0 otherwise) and ?from R? (select * from R).
+
+This has two particular implications: First, elements of our IR are queries with binding patterns. Binding patterns represent information flow. In general, this flow is not exclusively bottom-up.
+Some of an expression?s variables are input variables or parameters which cannot be computed from the query but have to be given to the query so that it can be evaluated. The most interesting case of this if a correlated nested aggregate is viewed in isolation (which must be possible for small-step compositionality). In such an aggregate, the correlation variable from the outside is such an input variable. The aggregate query can only be computed if a value for the input variable is given.
+
+
+
+
+
+The second implication is that conditions have to be first-class citizens of the IR and valid queries.
+
+The solution is to think of queries as SQL expressions with binding patterns, i.e., each query $Q$ has input variables or parameters $\vec{x_{in}}$ and a set of output variables $\vec{x_{out}}$, which form the schema of the query result. We denote such an expression as $Q[\vec{x_{in}}][\vec{x_{out}}]$.
+
+Examples. Assume relation schema $R(A,B)$. All of the following expressions are valid queries.
+\begin{itemize}
+\item
+   (select * from R)[][A,B]
+\item
+   R[][A,B]
+\item
+   (C<D)[C,D][]
+\item
+   (select A from R where B < C)[C][A]
+\item
+   (select * from R r1 where r1.B < (select sum(r2.B) Bsum from R r2 where r1.A > r2.A)[][r1.A, r1.B].
+Here, the nested aggregate subexpression has binding pattern [r1.A][Bsum]
+
+\item
+For an aggregate query with group-by, this means that the group by columns are the output variables.
+\end{itemize}
+
+
+
+\item
+The language must be closed under taking deltas, i.e. for any query, its delta query must be a member of the language too. This in particular requires us to be able to express deletions as elements of the IR.
+
+
+
+Aggregation semantics: tuples with {\em integer} multiplicities, all queries are aggregates.
+
+
+
+
+\item
+Aggregate queries dominate analytical workloads and can greatly profit from incremental view maintenance, also because refreshing such query results often just means to update some aggregate values rather than change the table structure (i.e., add or remove tuples). Thus efficiency can profit from a language that is optimized for aggregate query processing. We eliminate the distinction between aggregate and non-aggregate queries.
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+Explain how joins and combination with elements of the where-clause are multiplications.
+
+
+
+
+\subsubsection{Computing the delta of a query.}
+
+We focus on nested SQL with sum aggs. Select-from-where queries with aggregates and group by, arbitrary nesting. We exclude min/max aggs, null values and outer joins. Explain min/max aggs briefly: deletions need additional storage structures.
+
+Proposition: The query language is compositional and closed under taking deltas.
+
+Any syntactic subquery is a query of the language, and any query has a delta which is a query of the language.
+
+
+
+\subsubsection{Recursive incremental view maintenance \cite{koch-pods:10}.}
+
+
+The query language is a special case without nested aggregation. Termination. No query operators left.
+
+
+
+Recursive incremental view maintenance makes use of the simple fact that a delta query is a query too. Thus it can be incrementally maintained as well, making use of a delta query to the delta query, which again can be materialized and incrementally maintained, and so on, recursively.
+
+This works if the following requirement on the query language is satisfied:
+Deltas must be structurally simpler than the base queries, allowing this recursive query transformation to terminate. We fix our criterion for greater simplicity to be fewer joins. The recursive transformation terminates for a k-th delta query if it does not contain any database relation.
+Termination is ensured for select-project-join queries with certain forms of aggregation, but some other features of SQL (specifically aggregations nested in where-conditions) have to be excluded. 
+
+Example.
+
+
+
+
+\subsubsection{Challenges and insights.}
+
+
+Explain challenges:
+\begin{itemize}
+\item
+Delta query with input/output vars is a bulk operation: needs to be done for each var assignment to input/output vars. Output vars are essentially group by.
+
+\item
+In general, such expressions with binding patterns have to be materialized, which causes difficulties: how to determine a suitable domain for these input variables for which to materialize the results of the expressions, how to represent and store such materialized structures, and how to dynamically maintain the domains of input variables as updates add previously unseen data values.
+
+Maintaining the right domains for the variables is a challenge, particularly for input variables. Great optimization potential and so far we only have a na‹ve solution. Assuming all the relevant variables are in the domain, it?s easy, but that is an unrealistic assumption.
+\end{itemize}
+
+
+
+We learn two lessons:
+\begin{itemize}
+\item
+This calls for a compilers approach. Since the work gets conceptually so simple and well-behaved, we should be able to gain from doing something different from what classical query interpreters do. We have to study to what extent this is true if we return to the larger query language with nested aggs.
+
+\item
+There is a need for decomposition and factorization to make this useful. Next section.
+\end{itemize}
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 \begin{verbatim}
-CREATE TABLE R(a int, b int); 
-CREATE TABLE S(b int, c int);
-CREATE TABLE T(d int, e int);
+select A, sum(C) from R, S where R.B<S.B group by R.A
+
+q = (select sum(C) from R,S where R.B<S.B)[][R.A] 
+
++R(a,b):
+   q[][a] += q1[b][]
+
+q1 = (select sum(C) from S where y<S.B)[y][]
+
++S(b,c):
+   foreach y: q1[y][] += select c where y < b
+
+
+(y<b) ? c : 0
+
+q[\vec{v}_b][\vec{v}_f]
 \end{verbatim}
 
-We wish to maintain a view over the query:
+
+
+
+Use SQL with input-output signature. Every query is an aggregate, we maintain multiplicities. This is important for a clean handling of deletions, but it is optimized for aggregate-group-by queries.
+
 \begin{verbatim}
-q := SELECT SUM(R.a  * T.e)
-     FROM R, S, T
-     WHERE R.b = S.b AND S.c < T.d;
+(x)->(A)-> sum_B(R *  C=x)
+select A, sum(B) from R where C=x group by A.
+
+
+(x) -> (A)-> {0,1}
+select A from R where C=x
 \end{verbatim}
-\end{example}
 
-Prior to compilation, the SQL query is translated verbatim into the compiler's internal query representation.  This representation is closely related to the AGCA language presented in \cite{koch-pods:10}.  For brevity, the internal representation is omitted from this paper, and query expressions in DBToaster's internal representation are presented in the form of an equivalent expression in SQL.  \todo{present Calculus in the appendix?  Is there an appendix?}
 
-\subsection{Building the Materialization Plan}
-The first stage in the compilation pipeline is a recursive compilation process that establishes a strategy for incrementally maintaining the query results -- a {\em materialization plan}.  This process is similar to the recursive compilation of \cite{kennedy-ahmad-koch-cidr:11,koch-pods:10}, and is described in detail in Section \ref{}.  The first step in the recursive compilation is the computation of the {\em delta of the query with respect an update to one of its relations}.  The delta expresses how the results of the query change when the delta's relation is updated.  
+Technically, rather than computing tuples we compute multiplicities.
 
-\begin{example}
-For example, consider the delta of {\tt q} with respect to the insertion of tuple $\left< \alpha, \beta\right>$ into relation {\tt R}.  We write this as $\Delta_{{\tt R}(\alpha, \beta)}{\tt q :=}$
-\\ \\
-\noindent{\tt SELECT SUM(}$\alpha${\tt\ * T.e)\\
-FROM\ \ \ S, T\\
-WHERE\ \ }$\beta${\tt\ = S.b AND S.c < T.d;}
-\\ \\
-In this expression, the two parameters $\alpha$ and $\beta$ are assigned values from the tuple being inserted.  Note that the delta expression may be further simplified (using the distributivity of addition and multiplication) to: 
-\\ \\
-\noindent $\alpha${\tt\ * (SELECT SUM(T.e)\\
-\hspace*{8.8mm}FROM\ \ \ S, T\\
-\hspace*{8.8mm}WHERE\ \ }$\beta${\tt\ = S.b AND S.c < T.d);
-}
-\end{example}
 
-At runtime, an update to one of the base relations in the query triggers an update to a datastructure maintaining the query result.  The value of the update is computed by using the appropriate delta query; This process is virtually identical to the behavior of incremental view maintenance techniques\cite{cite?}.  
+Table for delta rules: use relational algebra notation.
 
-However, the delta queries are queries in their own right -- the delta operation is closed under the compiler's internal representation.  As a consequence, it is possible to incrementally maintain the delta queries in the same way that the original query is incrementally maintained.  The compiler analyzes the delta query and identifies an incrementally maintainable datastructure that can be used to efficiently answer the query
+Delta under single-tuple update of a query for a particular relation. Creating update trigger programs.
+
+Give example for an aggressive compilation.
 
 
 
-The compiler analyzes the delta query and identifies one or more strategies for instantiating a 
-
- datastructures to incrementally maintain, or {\em materialize} it.
 
 
- {\em materializing} it: 
-
-Because 
+\subsection{Join graph decomposition and factorization}
 
 
+\begin{verbatim}
+R(AB), S(BC), T(CDE)
 
-The compiler takes advantage of the delta queries being in the same language by incre
-
-
- by incrementally maintaining the delta queries as well as the original query.  The compiler analyzes the delta query and identifies one or more ways of {\em materializing}
-
-
-The first stage in the compilation pipeline is the construction of a {\em materialization plan}, a representation of the operations and data structures required to maintain the query being compiled.  
+select sum(A*D) from natjoin(R,S,T) [][T.E]
 
 
- \cite{kennedy-ahmad-koch-cidr:11}, 
++S(b,c):
+   foreach x: q[][x] += select sum(A*D) from R,T [][E]
+         = select sum(A) from R where B=b [][] *
+            select sum(D) from T where C=c [][T.E/x]
+\end{verbatim}
 
 
-The materialization plan is constructed using two fundamental operations: {\bf delta} and {\bf extract}.  Delta identifies the set of query expressions required to incrementally maintain a data structure when one of the base relations changes.  Extract identifies the set of data structures required to evaluate a query expression.  We document these operations more extensively in Section \ref{sec:iprogram:mplan}. 
+Factorization:
 
-A materialization plan is constructed by invoking delta to produce a series of maintenance queries, extract to produce a series of data structures required to evaluate those queries, delta to produce maintenance queries for those data structures, and so forth recursively\footnote{As discussed in \cite{dbtoaster-pods}, the delta operation can be constructed in such a way that guarantees termination of this recursive process.}.  
+\begin{verbatim}
+R(A,B)
+q = select sum(r1.B) from R r1, R r2 where r1.A = r2.A [][r2.B]  
+\end{verbatim}
 
-Figure \ref{} shows the materialization plan for Example \ref{ex:compiler:rst}.  As illustrated in this figure, the structure of a materialization plan is a tree which mirrors the recursive invocation of delta and extract -- nodes correspond to data structures identified by extract, while edges correspond to maintenance operations identified by delta.  The materialization plan corresponds fundamentally to the operations that will be evaluated by the binary output by the compiler.  Also note that each data structure corresponds to a query -- data structures are effectively materialized views.  
 
-In some cases, it may be beneficial to evaluate a query using multiple data structures (as in Figure \ref{}.a).  As a consequence, note that each edge is tagged not only with the maintenance query, but also an expression describing how to use the data structure(s) involved.
+three terms; 
 
-Furthermore, for some query expressions, there may be several different options for which data structures to use in evaluating the expression (as in Figure \ref{}.b).  To handle such cases, extract can emit (and correspondingly, each edge in the graph can have) several distinct {\em implementation} options for a given query expression.  
 
-After the materialization plan is constructed, a {\em Materialization Optimizer} analyzes the plan and identifies 
 
-\subsection{Building the Incremental Program}
-The second stage in the 
+
+
+\subsection{Initial value computation}
+
+
+Theorem: case where values are zero.
+
+Compile initial value computations for incremental evaluation. This needs non-query code.
+
+
+
+
+
+\subsection{Inequality Joins and nested aggregation}
+
+Bigsum rewriting: Oliver
+
+
+\begin{verbatim}
+R(ABC)
+Q = select sum(r1.A) from R r1 where
+   5*r1.B < select sum(r2.A) from R r2 where r1.C=r2.C [][]
+
+q2 = select sum(A) from R where x=C[x][]
+
++R(a,b,c):
+foreach x: q2[x][] +=  
+\end{verbatim}
+
+
+
+
+Choice of subquery extraction / common subexpression elimination.
+
+
+
+
+
+\subsection{Overall compiler architecture}
+
+\subsection{The functional compiler/optimizer}
+
+Yanif
+
+K3 optimizations: what cannot be expressed on the level of relational algebra; optimization rules. 
+
+\subsection{Code generators and runtime system}
+
+Yanif/Oliver
+
+
+
+
+
