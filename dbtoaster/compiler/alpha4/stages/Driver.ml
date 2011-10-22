@@ -442,6 +442,7 @@ let enable_k3_ds, k3_opt_flags =
   let parse_opt_flag s = match String.uppercase s with
      | "CSE" -> K3Optimizer.CSE
      | "BREDUCE" -> K3Optimizer.Beta
+     | "NOFILTER" -> K3Optimizer.NoFilter 
      | _ -> give_up ("invalid K3 optimization flag: "^s)
    in
    begin match (flag_vals "OPTFLAGS") with
