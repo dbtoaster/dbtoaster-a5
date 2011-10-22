@@ -392,7 +392,7 @@ open M3
 open M3Common
 open K3.SR
 
-type optimization_t = CSE | Beta 
+type optimization_t = CSE | Beta | NoFilter
 
 let var_counter = ref 0
 let gen_var_sym() = incr var_counter; "var"^(string_of_int (!var_counter))
@@ -803,8 +803,8 @@ let rec simplify_if_chains predicates expr =
     | _ -> descend_expr (simplify_if_chains []) expr 
 
 (* TODO: pairwith2, deep flattens *)
-let rec simplify_collections expr =
-  let recur = simplify_collections in
+let rec simplify_collections filter expr =
+  let recur = simplify_collections filter in
   let simplify expr =
     let ne = descend_expr recur expr in
     begin match ne with
@@ -818,11 +818,12 @@ let rec simplify_collections expr =
         let v,v_t = gen_var_sym(), Collection(mapf_arg_t)
         in Flatten(Map(Lambda(AVar(v,v_t), Map(map_f, Var(v,v_t))), c))
 
-    | Map(map_f, (Map(_,_) as rmap))
-      when not(collection_expr map_f && selective_expr rmap) ->
-        let rmap_f, rmap_c = get_map_parts rmap in
-        let new_map_f = compose map_f rmap_f
-        in Map(new_map_f, rmap_c)
+    | Map(map_f, (Map(_,_) as rmap)) ->
+        if filter && (collection_expr map_f || selective_expr rmap) then ne
+        else
+          let rmap_f, rmap_c = get_map_parts rmap in
+          let new_map_f = compose map_f rmap_f
+          in Map(new_map_f, rmap_c)
 
     | Aggregate((AssocLambda _ as agg_f),init, (Map _ as rmap)) ->
         (* v,w,fb *)
@@ -1375,7 +1376,7 @@ let optimize ?(optimizations=[]) trigger_vars expr =
       Debug.print "LOG-K3-OPT-DETAIL" (fun () -> "LIFT IFS");
     let e1 = (lift_ifs trigger_vars e) in
       Debug.print "LOG-K3-OPT-DETAIL" (fun () -> "SIMPLIFY COLLECTIONS");
-    let e2 = (simplify_collections e1) in
+    let e2 = (simplify_collections (not(List.mem NoFilter optimizations)) e1) in
       Debug.print "LOG-K3-OPT-DETAIL" (fun () -> "SIMPLIFY IF CHAINS");
     let e3 = (simplify_if_chains [] e2) in
       Debug.print "LOG-K3-OPT-DETAIL" (fun () -> "LIFT UPDATES");
