@@ -1,0 +1,11 @@
+\section{Related work}
+
+\subsection{Data stream processing}
+
+Data stream processing and streaming algorithms have conflated several aspects of computation: i) shared, incremental processing (e.g. sliding windows, paired vs paned windows, etc.), ii) sublinear algorithms (i.e. polylogarithmic space bounds). The latter are inherently approximate processing techniques where epsilon-delta guarantees abound. Approximate queries/programs are fundamentally difficult to program and compose, as seen with the limited adoption of online aggregation in commercial DBMS in enterprise applications (similar issues arise with probabilistic programming languages).
+
+Our approach to streaming is about generalizing incremental processing. There are no general purpose approaches to exact incremental processing techniques and optimization thereof from the DB community beyond incremental view maintenance. Nor is there much from the PL community (see Annie Liu's work etc). Advanced processing techniques in the streaming community focus almost entirely on approximate techniques when processing cannot keep up with stream rates (e.g. load shedding, prioritization, etc), on shared processing and multiquery optimization (e.g. on-the-fly aggregation, TriWeave, etc), or specialized algorithms and data structures.
+
+In terms of optimization and speedup, the streaming arrival of inputs has a foundational effect -- just think of Amdahl's law. We cannot parallelize over inputs we don't have, thus a some fraction of our program is sequential. However, we can ask whether there are any inherently sequential computations in database query languages, and the answer appears to be no. We can even parallelize aggregates, for example via partial aggregation trees. Thus any sequentiality we have arises from streaming inputs, and the natural approach here is to parallelize the parallel part, and incrementalize the sequential streaming parts of the program. Computer scientists already understand it is hard to parallelize programs, but writing incremental programs is also hard. In particular, writing as incremental as possible programs is hard, but I don't think people have a good understanding of what it means to write an incremental as possible program.
+
+

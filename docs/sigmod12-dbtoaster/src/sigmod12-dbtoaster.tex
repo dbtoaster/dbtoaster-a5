@@ -51,12 +51,13 @@ Compilers and Query Optimizers}
 
 
 \begin{abstract}
-Multilevel incremental view maintenance generalizes the idea of using materialized views for query answering by allowing a query optimizer to also use materialized views for answering delta queries, that is, the auxiliary queries that are used to refresh materialized views when updates happen. Aggressive recursive use of this idea can allow to eliminate all joins from certain queries, yielding the option of generating highly efficient low-level code without classical query operators that performs all query evaluation and view refreshment work. This calls for the compilation of queries.
+Multilevel incremental view maintenance generalizes the idea of using materialized views for query answering by allowing a query optimizer to use materialized views for also answering delta queries, which are the auxiliary queries that are used in incremental view maintenance to refresh materialized views when updates happen. Aggressive recursive use of this idea allows to eliminate all joins from certain queries and to generate highly efficient low-level code without classical query operators that performs all query evaluation and view refreshment work. This calls for the compilation of queries.
 
-In this paper, we present a general compiler architecture for database queries and multi-level incremental view maintenance which is applicable to languages such as SQL. To realize such a compiler, we overcome the challenges of materializing views with binding patterns (parameters) to support arbitrarily nested queries with aggregates, complex patterns of side effects that may arise, and the need to perform sophisticated forms of deforestation and fusion popular and essential in compilers but almost unknown in the database literature.
+In this paper, we present a general compiler architecture for languages such as SQL. To realize such a compiler, we overcome the challenges of materializing views with binding patterns (parameters) to support arbitrarily nested queries with aggregates, complex patterns of side effects that may arise, and the need to perform sophisticated forms of deforestation and fusion frequently employed in compilers but almost unknown in the database literature.
 
-Aggressive multilevel incremental view maintenance bears the potential to be, by many degrees of magnitude, faster than classical incremental view maintenance and to have substantially greater expressive power compared to the query languages supported in stream engines; this may lead to a new breed of data management systems that can drive sophisticated streaming, online, and real-time analytics that are not supported by current data management systems.
-We illustrate this through extensive experimentation with different parameterizations of our compiler as well as existing DBMS and stream engines, on an analytics workload composed of monitoring, algorithmic trading, and ETL queries. 
+Aggressive multilevel incremental view maintenance bears the potential to be, by many degrees of magnitude, faster than classical incremental view maintenance and to have substantially greater expressive power compared to the query languages supported in stream engines. This may lead to a new breed of data management systems that can drive sophisticated streaming, online, and real-time analytics that are not supported by current data management systems.
+
+We illustrate this through extensive experimentation with different parameterizations of our compiler as well as existing DBMS and stream engines, on an analytics workload consisting of monitoring, algorithmic trading, and ETL queries. We observe that multilevel incremental view maintenance dominates previous continuous querying approaches, frequently by multiple orders of magnitude, for queries involving many joins or nested aggregation. However, managing domains of parameters in auxiliary views can be costly, which turns out to be a problem for certain queries with inequalities.
 \end{abstract}
 
 
@@ -64,21 +65,15 @@ We illustrate this through extensive experimentation with different parameteriza
 \label{sec:introduction}
 \input{introduction.tex}
 
+\label{sec:related}
+\input{related.tex}
+
 \section{Motivation and Related Work}
 \label{sec:dbfail}
 \input{dbfail.tex}
 
-\section{Compiler Overview}
 \label{sec:compiler}
 \input{compiler.tex}
-
-\section{Incremental Programs}
-\label{sec:iprogram}
-\input{iprogram.tex}
-
-\section{Functional Optimization}
-\label{sec:functional}
-\input{functional.tex}
 
 \section{Experimental Results}
 \label{sec:experiments}
