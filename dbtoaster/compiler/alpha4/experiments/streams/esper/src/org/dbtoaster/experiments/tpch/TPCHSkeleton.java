@@ -61,6 +61,7 @@ public class TPCHSkeleton extends CommonSkeleton {
   
   public static Configuration getDefaultConfiguration() {
     Configuration config = new Configuration();
+    config.getEngineDefaults().getLogging().setEnableQueryPlan(true);
     config.addEventType("Dispatch", UnifiedEvent.class);
     /*
     config.addEventType("InsertLineitem", InsertLineitem.class);
