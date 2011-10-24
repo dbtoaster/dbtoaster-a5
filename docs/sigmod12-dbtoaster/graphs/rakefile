@@ -383,12 +383,12 @@ end
       
       [ if args.has_key? :title 
         then args[:title]
-        else q.sub(/tpch/, "TPCH Q").upcase
+        else q.sub(/tpch/, "TPCH Query ").upcase
         end, 
         data.map { |rate| rate / base_rate } ];
     end.unzip
     
-    plot.ylabel "Performance Relative To Repeat Evaluation"
+    plot.ylabel "Average Refresh Rate \\n(Relative To Repeated Evaluation)"
     plot.bmargin "5"
     
     draw_clustered_bar_plot plot, 
