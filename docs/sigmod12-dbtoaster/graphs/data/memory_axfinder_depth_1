@@ -1,0 +1,2827 @@
+Starting tracking the heap
+
+order book adaptor params: book, asks
+
+order book adaptor params: brokers, 10
+
+order book adaptor params: deterministic, yes
+
+order book adaptor params: book, bids
+
+order book adaptor params: brokers, 10
+
+order book adaptor params: deterministic, yes
+
+reading from /tmp/okennedy_dbtoaster_data/finance.csv with 2 adaptors
+
+tracing: 
+
+0 tuples processed at 1319330593s+848380us
+
+1000 tuples processed at 1319330593s+941061us
+
+2000 tuples processed at 1319330594s+37210us
+
+3000 tuples processed at 1319330594s+136370us
+
+4000 tuples processed at 1319330594s+236597us
+
+5000 tuples processed at 1319330594s+338666us
+
+6000 tuples processed at 1319330594s+442072us
+
+7000 tuples processed at 1319330594s+518862us
+
+8000 tuples processed at 1319330594s+575715us
+
+9000 tuples processed at 1319330594s+632868us
+
+10000 tuples processed at 1319330594s+696752us
+
+11000 tuples processed at 1319330594s+755280us
+
+12000 tuples processed at 1319330594s+814693us
+
+13000 tuples processed at 1319330594s+874751us
+
+14000 tuples processed at 1319330594s+937044us
+
+15000 tuples processed at 1319330594s+999784us
+
+16000 tuples processed at 1319330595s+63123us
+
+17000 tuples processed at 1319330595s+127363us
+
+18000 tuples processed at 1319330595s+192333us
+
+19000 tuples processed at 1319330595s+257768us
+
+20000 tuples processed at 1319330595s+339284us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0001.heap (32 MB allocated cumulatively, 1 MB currently in use)
+
+21000 tuples processed at 1319330595s+406680us
+
+22000 tuples processed at 1319330595s+473670us
+
+23000 tuples processed at 1319330595s+540861us
+
+24000 tuples processed at 1319330595s+608952us
+
+25000 tuples processed at 1319330595s+680998us
+
+26000 tuples processed at 1319330595s+771384us
+
+27000 tuples processed at 1319330595s+862087us
+
+28000 tuples processed at 1319330595s+957926us
+
+29000 tuples processed at 1319330596s+51045us
+
+30000 tuples processed at 1319330596s+178084us
+
+31000 tuples processed at 1319330596s+280174us
+
+32000 tuples processed at 1319330596s+381366us
+
+33000 tuples processed at 1319330596s+491181us
+
+34000 tuples processed at 1319330596s+658851us
+
+35000 tuples processed at 1319330596s+844699us
+
+36000 tuples processed at 1319330597s+12825us
+
+37000 tuples processed at 1319330597s+141832us
+
+38000 tuples processed at 1319330597s+296723us
+
+39000 tuples processed at 1319330597s+455990us
+
+40000 tuples processed at 1319330597s+639281us
+
+41000 tuples processed at 1319330597s+799693us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0002.heap (64 MB allocated cumulatively, 3 MB currently in use)
+
+42000 tuples processed at 1319330597s+962047us
+
+43000 tuples processed at 1319330598s+122991us
+
+44000 tuples processed at 1319330598s+287281us
+
+45000 tuples processed at 1319330598s+452167us
+
+46000 tuples processed at 1319330598s+620488us
+
+47000 tuples processed at 1319330598s+788363us
+
+48000 tuples processed at 1319330598s+962213us
+
+49000 tuples processed at 1319330599s+139986us
+
+50000 tuples processed at 1319330599s+344776us
+
+51000 tuples processed at 1319330599s+526608us
+
+52000 tuples processed at 1319330599s+711856us
+
+53000 tuples processed at 1319330599s+896641us
+
+54000 tuples processed at 1319330600s+86248us
+
+55000 tuples processed at 1319330600s+278160us
+
+56000 tuples processed at 1319330600s+467130us
+
+57000 tuples processed at 1319330600s+662395us
+
+58000 tuples processed at 1319330600s+859002us
+
+59000 tuples processed at 1319330601s+56634us
+
+60000 tuples processed at 1319330601s+285123us
+
+61000 tuples processed at 1319330601s+478507us
+
+62000 tuples processed at 1319330601s+683794us
+
+63000 tuples processed at 1319330601s+887936us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0003.heap (96 MB allocated cumulatively, 4 MB currently in use)
+
+64000 tuples processed at 1319330602s+100667us
+
+65000 tuples processed at 1319330602s+310875us
+
+66000 tuples processed at 1319330602s+525265us
+
+67000 tuples processed at 1319330602s+744117us
+
+68000 tuples processed at 1319330602s+961595us
+
+69000 tuples processed at 1319330603s+180139us
+
+70000 tuples processed at 1319330603s+429675us
+
+71000 tuples processed at 1319330603s+734030us
+
+72000 tuples processed at 1319330604s+43092us
+
+73000 tuples processed at 1319330604s+276784us
+
+74000 tuples processed at 1319330604s+509113us
+
+75000 tuples processed at 1319330604s+745246us
+
+76000 tuples processed at 1319330604s+987774us
+
+77000 tuples processed at 1319330605s+235147us
+
+78000 tuples processed at 1319330605s+478369us
+
+79000 tuples processed at 1319330605s+722741us
+
+80000 tuples processed at 1319330605s+997895us
+
+81000 tuples processed at 1319330606s+357887us
+
+82000 tuples processed at 1319330606s+653818us
+
+83000 tuples processed at 1319330606s+909926us
+
+84000 tuples processed at 1319330607s+163494us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0004.heap (128 MB allocated cumulatively, 4 MB currently in use)
+
+85000 tuples processed at 1319330607s+424165us
+
+86000 tuples processed at 1319330607s+683815us
+
+87000 tuples processed at 1319330607s+950834us
+
+88000 tuples processed at 1319330608s+215587us
+
+89000 tuples processed at 1319330608s+482451us
+
+90000 tuples processed at 1319330608s+768167us
+
+91000 tuples processed at 1319330609s+32670us
+
+92000 tuples processed at 1319330609s+301826us
+
+93000 tuples processed at 1319330609s+572782us
+
+94000 tuples processed at 1319330609s+848923us
+
+95000 tuples processed at 1319330610s+128507us
+
+96000 tuples processed at 1319330610s+407161us
+
+97000 tuples processed at 1319330610s+687126us
+
+98000 tuples processed at 1319330610s+976265us
+
+99000 tuples processed at 1319330611s+265429us
+
+100000 tuples processed at 1319330611s+566827us
+
+101000 tuples processed at 1319330611s+865778us
+
+102000 tuples processed at 1319330612s+240823us
+
+103000 tuples processed at 1319330612s+614013us
+
+104000 tuples processed at 1319330612s+912241us
+
+105000 tuples processed at 1319330613s+206973us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0005.heap (160 MB allocated cumulatively, 5 MB currently in use)
+
+106000 tuples processed at 1319330613s+485582us
+
+107000 tuples processed at 1319330613s+780923us
+
+108000 tuples processed at 1319330614s+84855us
+
+109000 tuples processed at 1319330614s+392751us
+
+110000 tuples processed at 1319330614s+742047us
+
+111000 tuples processed at 1319330615s+83872us
+
+112000 tuples processed at 1319330615s+526176us
+
+113000 tuples processed at 1319330615s+841699us
+
+114000 tuples processed at 1319330616s+158569us
+
+115000 tuples processed at 1319330616s+481453us
+
+116000 tuples processed at 1319330616s+808040us
+
+117000 tuples processed at 1319330617s+137398us
+
+118000 tuples processed at 1319330617s+470280us
+
+119000 tuples processed at 1319330617s+801851us
+
+120000 tuples processed at 1319330618s+166980us
+
+121000 tuples processed at 1319330618s+504768us
+
+122000 tuples processed at 1319330619s+1066us
+
+123000 tuples processed at 1319330619s+339626us
+
+124000 tuples processed at 1319330619s+680926us
+
+125000 tuples processed at 1319330620s+26497us
+
+126000 tuples processed at 1319330620s+376012us
+
+127000 tuples processed at 1319330620s+731370us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0006.heap (192 MB allocated cumulatively, 6 MB currently in use)
+
+128000 tuples processed at 1319330621s+84082us
+
+129000 tuples processed at 1319330621s+431019us
+
+130000 tuples processed at 1319330621s+852679us
+
+131000 tuples processed at 1319330622s+315698us
+
+132000 tuples processed at 1319330622s+732083us
+
+133000 tuples processed at 1319330623s+109264us
+
+134000 tuples processed at 1319330623s+478055us
+
+135000 tuples processed at 1319330623s+845475us
+
+136000 tuples processed at 1319330624s+233333us
+
+137000 tuples processed at 1319330624s+604833us
+
+138000 tuples processed at 1319330624s+979897us
+
+139000 tuples processed at 1319330625s+362773us
+
+140000 tuples processed at 1319330625s+758067us
+
+141000 tuples processed at 1319330626s+213225us
+
+142000 tuples processed at 1319330626s+682175us
+
+143000 tuples processed at 1319330627s+74128us
+
+144000 tuples processed at 1319330627s+463374us
+
+145000 tuples processed at 1319330627s+856977us
+
+146000 tuples processed at 1319330628s+251301us
+
+147000 tuples processed at 1319330628s+651410us
+
+148000 tuples processed at 1319330629s+49425us
+
+149000 tuples processed at 1319330629s+439768us
+
+150000 tuples processed at 1319330629s+856436us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0007.heap (224 MB allocated cumulatively, 7 MB currently in use)
+
+151000 tuples processed at 1319330630s+254769us
+
+152000 tuples processed at 1319330630s+655499us
+
+153000 tuples processed at 1319330631s+64589us
+
+154000 tuples processed at 1319330631s+462242us
+
+155000 tuples processed at 1319330631s+841951us
+
+156000 tuples processed at 1319330632s+237126us
+
+157000 tuples processed at 1319330632s+648006us
+
+158000 tuples processed at 1319330633s+65163us
+
+159000 tuples processed at 1319330633s+493895us
+
+160000 tuples processed at 1319330633s+959899us
+
+161000 tuples processed at 1319330634s+541483us
+
+162000 tuples processed at 1319330634s+955185us
+
+163000 tuples processed at 1319330635s+381434us
+
+164000 tuples processed at 1319330635s+814583us
+
+165000 tuples processed at 1319330636s+253238us
+
+166000 tuples processed at 1319330636s+784183us
+
+167000 tuples processed at 1319330637s+290451us
+
+168000 tuples processed at 1319330637s+721471us
+
+169000 tuples processed at 1319330638s+163865us
+
+170000 tuples processed at 1319330638s+642834us
+
+171000 tuples processed at 1319330639s+128767us
+
+172000 tuples processed at 1319330639s+674031us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0008.heap (256 MB allocated cumulatively, 7 MB currently in use)
+
+173000 tuples processed at 1319330640s+137259us
+
+174000 tuples processed at 1319330640s+614249us
+
+175000 tuples processed at 1319330641s+153961us
+
+176000 tuples processed at 1319330641s+600459us
+
+177000 tuples processed at 1319330642s+33608us
+
+178000 tuples processed at 1319330642s+469436us
+
+179000 tuples processed at 1319330642s+892953us
+
+180000 tuples processed at 1319330643s+349702us
+
+181000 tuples processed at 1319330643s+827028us
+
+182000 tuples processed at 1319330644s+302201us
+
+183000 tuples processed at 1319330644s+771857us
+
+184000 tuples processed at 1319330645s+241809us
+
+185000 tuples processed at 1319330645s+693369us
+
+186000 tuples processed at 1319330646s+168775us
+
+187000 tuples processed at 1319330646s+658401us
+
+188000 tuples processed at 1319330647s+141612us
+
+189000 tuples processed at 1319330647s+679189us
+
+190000 tuples processed at 1319330648s+297590us
+
+191000 tuples processed at 1319330648s+914638us
+
+192000 tuples processed at 1319330649s+451165us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0009.heap (288 MB allocated cumulatively, 8 MB currently in use)
+
+193000 tuples processed at 1319330649s+949304us
+
+194000 tuples processed at 1319330650s+442411us
+
+195000 tuples processed at 1319330650s+945700us
+
+196000 tuples processed at 1319330651s+454754us
+
+197000 tuples processed at 1319330652s+113550us
+
+198000 tuples processed at 1319330652s+690579us
+
+199000 tuples processed at 1319330653s+298092us
+
+200000 tuples processed at 1319330653s+853862us
+
+201000 tuples processed at 1319330654s+522734us
+
+202000 tuples processed at 1319330655s+75081us
+
+203000 tuples processed at 1319330655s+721115us
+
+204000 tuples processed at 1319330656s+369492us
+
+205000 tuples processed at 1319330656s+943117us
+
+206000 tuples processed at 1319330657s+486925us
+
+207000 tuples processed at 1319330658s+173333us
+
+208000 tuples processed at 1319330658s+705165us
+
+209000 tuples processed at 1319330659s+236764us
+
+210000 tuples processed at 1319330659s+945791us
+
+211000 tuples processed at 1319330660s+626963us
+
+212000 tuples processed at 1319330661s+244855us
+
+213000 tuples processed at 1319330661s+863825us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0010.heap (320 MB allocated cumulatively, 10 MB currently in use)
+
+214000 tuples processed at 1319330662s+411799us
+
+215000 tuples processed at 1319330662s+961585us
+
+216000 tuples processed at 1319330663s+658844us
+
+217000 tuples processed at 1319330664s+198624us
+
+218000 tuples processed at 1319330664s+741714us
+
+219000 tuples processed at 1319330665s+260940us
+
+220000 tuples processed at 1319330665s+815465us
+
+221000 tuples processed at 1319330666s+518603us
+
+222000 tuples processed at 1319330667s+75683us
+
+223000 tuples processed at 1319330667s+603744us
+
+224000 tuples processed at 1319330668s+219401us
+
+225000 tuples processed at 1319330668s+838373us
+
+226000 tuples processed at 1319330669s+373455us
+
+227000 tuples processed at 1319330669s+927994us
+
+228000 tuples processed at 1319330670s+490340us
+
+229000 tuples processed at 1319330671s+36812us
+
+230000 tuples processed at 1319330671s+641947us
+
+231000 tuples processed at 1319330672s+325474us
+
+232000 tuples processed at 1319330672s+912120us
+
+233000 tuples processed at 1319330673s+503843us
+
+234000 tuples processed at 1319330674s+94331us
+
+235000 tuples processed at 1319330674s+697860us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0011.heap (352 MB allocated cumulatively, 10 MB currently in use)
+
+236000 tuples processed at 1319330675s+420075us
+
+237000 tuples processed at 1319330676s+32423us
+
+238000 tuples processed at 1319330676s+662489us
+
+239000 tuples processed at 1319330677s+355503us
+
+240000 tuples processed at 1319330677s+990764us
+
+241000 tuples processed at 1319330678s+742351us
+
+242000 tuples processed at 1319330679s+364906us
+
+243000 tuples processed at 1319330679s+998137us
+
+244000 tuples processed at 1319330680s+766200us
+
+245000 tuples processed at 1319330681s+393750us
+
+246000 tuples processed at 1319330682s+171590us
+
+247000 tuples processed at 1319330682s+802704us
+
+248000 tuples processed at 1319330683s+441051us
+
+249000 tuples processed at 1319330684s+70339us
+
+250000 tuples processed at 1319330684s+734075us
+
+251000 tuples processed at 1319330685s+504763us
+
+252000 tuples processed at 1319330686s+129656us
+
+253000 tuples processed at 1319330686s+756372us
+
+254000 tuples processed at 1319330687s+545117us
+
+255000 tuples processed at 1319330688s+202885us
+
+256000 tuples processed at 1319330688s+866059us
+
+257000 tuples processed at 1319330689s+540157us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0012.heap (384 MB allocated cumulatively, 11 MB currently in use)
+
+258000 tuples processed at 1319330690s+292456us
+
+259000 tuples processed at 1319330691s+30994us
+
+260000 tuples processed at 1319330691s+865427us
+
+261000 tuples processed at 1319330692s+680027us
+
+262000 tuples processed at 1319330693s+362951us
+
+263000 tuples processed at 1319330694s+34805us
+
+264000 tuples processed at 1319330694s+686802us
+
+265000 tuples processed at 1319330695s+346104us
+
+266000 tuples processed at 1319330696s+34369us
+
+267000 tuples processed at 1319330696s+830083us
+
+268000 tuples processed at 1319330697s+629053us
+
+269000 tuples processed at 1319330698s+292474us
+
+270000 tuples processed at 1319330699s+15208us
+
+271000 tuples processed at 1319330699s+791191us
+
+272000 tuples processed at 1319330700s+541867us
+
+273000 tuples processed at 1319330701s+261740us
+
+274000 tuples processed at 1319330701s+964954us
+
+275000 tuples processed at 1319330702s+634768us
+
+276000 tuples processed at 1319330703s+299344us
+
+277000 tuples processed at 1319330704s+90194us
+
+278000 tuples processed at 1319330704s+737742us
+
+279000 tuples processed at 1319330705s+445968us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0013.heap (416 MB allocated cumulatively, 12 MB currently in use)
+
+280000 tuples processed at 1319330706s+192576us
+
+281000 tuples processed at 1319330707s+36108us
+
+282000 tuples processed at 1319330707s+744390us
+
+283000 tuples processed at 1319330708s+468744us
+
+284000 tuples processed at 1319330709s+201227us
+
+285000 tuples processed at 1319330709s+931209us
+
+286000 tuples processed at 1319330710s+669400us
+
+287000 tuples processed at 1319330711s+407588us
+
+288000 tuples processed at 1319330712s+153369us
+
+289000 tuples processed at 1319330712s+910475us
+
+290000 tuples processed at 1319330713s+685403us
+
+291000 tuples processed at 1319330714s+586128us
+
+292000 tuples processed at 1319330715s+352761us
+
+293000 tuples processed at 1319330716s+115481us
+
+294000 tuples processed at 1319330716s+884400us
+
+295000 tuples processed at 1319330717s+651089us
+
+296000 tuples processed at 1319330718s+437438us
+
+297000 tuples processed at 1319330719s+217415us
+
+298000 tuples processed at 1319330719s+994301us
+
+299000 tuples processed at 1319330720s+776499us
+
+300000 tuples processed at 1319330721s+647631us
+
+301000 tuples processed at 1319330722s+531574us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0014.heap (448 MB allocated cumulatively, 12 MB currently in use)
+
+302000 tuples processed at 1319330723s+385726us
+
+303000 tuples processed at 1319330724s+202496us
+
+304000 tuples processed at 1319330725s+113346us
+
+305000 tuples processed at 1319330725s+938471us
+
+306000 tuples processed at 1319330726s+808937us
+
+307000 tuples processed at 1319330727s+663282us
+
+308000 tuples processed at 1319330728s+474294us
+
+309000 tuples processed at 1319330729s+399686us
+
+310000 tuples processed at 1319330730s+367900us
+
+311000 tuples processed at 1319330731s+314737us
+
+312000 tuples processed at 1319330732s+65915us
+
+313000 tuples processed at 1319330733s+35793us
+
+314000 tuples processed at 1319330733s+867579us
+
+315000 tuples processed at 1319330734s+677156us
+
+316000 tuples processed at 1319330735s+523817us
+
+317000 tuples processed at 1319330736s+503469us
+
+318000 tuples processed at 1319330737s+331053us
+
+319000 tuples processed at 1319330738s+161294us
+
+320000 tuples processed at 1319330739s+84133us
+
+321000 tuples processed at 1319330739s+937076us
+
+322000 tuples processed at 1319330740s+918044us
+
+323000 tuples processed at 1319330741s+819608us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0015.heap (480 MB allocated cumulatively, 13 MB currently in use)
+
+324000 tuples processed at 1319330742s+693683us
+
+325000 tuples processed at 1319330743s+602018us
+
+326000 tuples processed at 1319330744s+639737us
+
+327000 tuples processed at 1319330745s+678981us
+
+328000 tuples processed at 1319330746s+647421us
+
+329000 tuples processed at 1319330747s+686185us
+
+330000 tuples processed at 1319330748s+743303us
+
+331000 tuples processed at 1319330749s+712434us
+
+332000 tuples processed at 1319330750s+773109us
+
+333000 tuples processed at 1319330751s+827451us
+
+334000 tuples processed at 1319330752s+875775us
+
+335000 tuples processed at 1319330753s+827820us
+
+336000 tuples processed at 1319330754s+830909us
+
+337000 tuples processed at 1319330755s+819864us
+
+338000 tuples processed at 1319330756s+673860us
+
+339000 tuples processed at 1319330757s+667715us
+
+340000 tuples processed at 1319330758s+576490us
+
+341000 tuples processed at 1319330759s+499378us
+
+342000 tuples processed at 1319330760s+403955us
+
+343000 tuples processed at 1319330761s+326069us
+
+344000 tuples processed at 1319330762s+368201us
+
+345000 tuples processed at 1319330763s+378273us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0016.heap (512 MB allocated cumulatively, 13 MB currently in use)
+
+346000 tuples processed at 1319330764s+302074us
+
+347000 tuples processed at 1319330765s+236015us
+
+348000 tuples processed at 1319330766s+141508us
+
+349000 tuples processed at 1319330767s+205685us
+
+350000 tuples processed at 1319330768s+155494us
+
+351000 tuples processed at 1319330769s+259308us
+
+352000 tuples processed at 1319330770s+398738us
+
+353000 tuples processed at 1319330771s+520673us
+
+354000 tuples processed at 1319330772s+702952us
+
+355000 tuples processed at 1319330773s+849581us
+
+356000 tuples processed at 1319330774s+886800us
+
+357000 tuples processed at 1319330776s+14798us
+
+358000 tuples processed at 1319330777s+78234us
+
+359000 tuples processed at 1319330778s+25517us
+
+360000 tuples processed at 1319330779s+187733us
+
+361000 tuples processed at 1319330780s+335211us
+
+362000 tuples processed at 1319330781s+485179us
+
+363000 tuples processed at 1319330782s+602485us
+
+364000 tuples processed at 1319330783s+573088us
+
+365000 tuples processed at 1319330784s+518342us
+
+366000 tuples processed at 1319330785s+735023us
+
+367000 tuples processed at 1319330786s+826981us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0017.heap (544 MB allocated cumulatively, 14 MB currently in use)
+
+368000 tuples processed at 1319330787s+939804us
+
+369000 tuples processed at 1319330788s+941622us
+
+370000 tuples processed at 1319330790s+93028us
+
+371000 tuples processed at 1319330791s+291200us
+
+372000 tuples processed at 1319330792s+500305us
+
+373000 tuples processed at 1319330793s+564610us
+
+374000 tuples processed at 1319330794s+593234us
+
+375000 tuples processed at 1319330795s+781692us
+
+376000 tuples processed at 1319330797s+31401us
+
+377000 tuples processed at 1319330798s+134661us
+
+378000 tuples processed at 1319330799s+369740us
+
+379000 tuples processed at 1319330800s+495996us
+
+380000 tuples processed at 1319330801s+603725us
+
+381000 tuples processed at 1319330802s+842912us
+
+382000 tuples processed at 1319330804s+160611us
+
+383000 tuples processed at 1319330805s+415478us
+
+384000 tuples processed at 1319330806s+777617us
+
+385000 tuples processed at 1319330808s+89922us
+
+386000 tuples processed at 1319330809s+326138us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0018.heap (576 MB allocated cumulatively, 16 MB currently in use)
+
+387000 tuples processed at 1319330810s+561449us
+
+388000 tuples processed at 1319330811s+842481us
+
+389000 tuples processed at 1319330813s+39394us
+
+390000 tuples processed at 1319330814s+518857us
+
+391000 tuples processed at 1319330815s+854279us
+
+392000 tuples processed at 1319330817s+181684us
+
+393000 tuples processed at 1319330818s+450677us
+
+394000 tuples processed at 1319330819s+779245us
+
+395000 tuples processed at 1319330821s+138589us
+
+396000 tuples processed at 1319330822s+349668us
+
+397000 tuples processed at 1319330823s+726099us
+
+398000 tuples processed at 1319330825s+69052us
+
+399000 tuples processed at 1319330826s+454103us
+
+400000 tuples processed at 1319330827s+748563us
+
+401000 tuples processed at 1319330829s+224721us
+
+402000 tuples processed at 1319330830s+687316us
+
+403000 tuples processed at 1319330831s+948267us
+
+404000 tuples processed at 1319330833s+308231us
+
+405000 tuples processed at 1319330834s+605572us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0019.heap (608 MB allocated cumulatively, 18 MB currently in use)
+
+406000 tuples processed at 1319330835s+987764us
+
+407000 tuples processed at 1319330837s+342173us
+
+408000 tuples processed at 1319330838s+665967us
+
+409000 tuples processed at 1319330840s+55475us
+
+410000 tuples processed at 1319330841s+633398us
+
+411000 tuples processed at 1319330843s+67406us
+
+412000 tuples processed at 1319330844s+348591us
+
+413000 tuples processed at 1319330845s+833312us
+
+414000 tuples processed at 1319330847s+245698us
+
+415000 tuples processed at 1319330848s+598065us
+
+416000 tuples processed at 1319330850s+16255us
+
+417000 tuples processed at 1319330851s+351792us
+
+418000 tuples processed at 1319330852s+795040us
+
+419000 tuples processed at 1319330854s+108494us
+
+420000 tuples processed at 1319330855s+595765us
+
+421000 tuples processed at 1319330857s+123055us
+
+422000 tuples processed at 1319330858s+579022us
+
+423000 tuples processed at 1319330859s+997791us
+
+424000 tuples processed at 1319330861s+367587us
+
+425000 tuples processed at 1319330862s+796895us
+
+426000 tuples processed at 1319330864s+235804us
+
+427000 tuples processed at 1319330865s+642137us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0020.heap (640 MB allocated cumulatively, 19 MB currently in use)
+
+428000 tuples processed at 1319330867s+43914us
+
+429000 tuples processed at 1319330868s+423666us
+
+430000 tuples processed at 1319330869s+931334us
+
+431000 tuples processed at 1319330871s+403227us
+
+432000 tuples processed at 1319330872s+888395us
+
+433000 tuples processed at 1319330874s+385738us
+
+434000 tuples processed at 1319330875s+923635us
+
+435000 tuples processed at 1319330877s+618890us
+
+436000 tuples processed at 1319330879s+96374us
+
+437000 tuples processed at 1319330880s+718603us
+
+438000 tuples processed at 1319330882s+200597us
+
+439000 tuples processed at 1319330883s+818077us
+
+440000 tuples processed at 1319330885s+326078us
+
+441000 tuples processed at 1319330886s+876239us
+
+442000 tuples processed at 1319330888s+210298us
+
+443000 tuples processed at 1319330889s+573409us
+
+444000 tuples processed at 1319330890s+939071us
+
+445000 tuples processed at 1319330892s+400035us
+
+446000 tuples processed at 1319330893s+926001us
+
+447000 tuples processed at 1319330895s+443348us
+
+448000 tuples processed at 1319330896s+953648us
+
+449000 tuples processed at 1319330898s+333833us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0021.heap (672 MB allocated cumulatively, 19 MB currently in use)
+
+450000 tuples processed at 1319330899s+773674us
+
+451000 tuples processed at 1319330901s+404244us
+
+452000 tuples processed at 1319330902s+946685us
+
+453000 tuples processed at 1319330904s+458047us
+
+454000 tuples processed at 1319330905s+963091us
+
+455000 tuples processed at 1319330907s+428411us
+
+456000 tuples processed at 1319330908s+972970us
+
+457000 tuples processed at 1319330910s+562309us
+
+458000 tuples processed at 1319330912s+151509us
+
+459000 tuples processed at 1319330913s+641392us
+
+460000 tuples processed at 1319330915s+131392us
+
+461000 tuples processed at 1319330916s+732163us
+
+462000 tuples processed at 1319330918s+341222us
+
+463000 tuples processed at 1319330919s+906388us
+
+464000 tuples processed at 1319330921s+530785us
+
+465000 tuples processed at 1319330923s+139305us
+
+466000 tuples processed at 1319330924s+735582us
+
+467000 tuples processed at 1319330926s+268576us
+
+468000 tuples processed at 1319330927s+830832us
+
+469000 tuples processed at 1319330929s+397766us
+
+470000 tuples processed at 1319330931s+25301us
+
+471000 tuples processed at 1319330932s+719699us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0022.heap (704 MB allocated cumulatively, 20 MB currently in use)
+
+472000 tuples processed at 1319330934s+335303us
+
+473000 tuples processed at 1319330936s+69502us
+
+474000 tuples processed at 1319330937s+829184us
+
+475000 tuples processed at 1319330939s+562103us
+
+476000 tuples processed at 1319330941s+325294us
+
+477000 tuples processed at 1319330943s+21370us
+
+478000 tuples processed at 1319330944s+636902us
+
+479000 tuples processed at 1319330946s+292616us
+
+480000 tuples processed at 1319330947s+892132us
+
+481000 tuples processed at 1319330949s+478494us
+
+482000 tuples processed at 1319330951s+81324us
+
+483000 tuples processed at 1319330952s+838122us
+
+484000 tuples processed at 1319330954s+467763us
+
+485000 tuples processed at 1319330956s+171933us
+
+486000 tuples processed at 1319330957s+749246us
+
+487000 tuples processed at 1319330959s+309598us
+
+488000 tuples processed at 1319330960s+855276us
+
+489000 tuples processed at 1319330962s+521103us
+
+490000 tuples processed at 1319330964s+214051us
+
+491000 tuples processed at 1319330966s+36730us
+
+492000 tuples processed at 1319330967s+613900us
+
+493000 tuples processed at 1319330969s+446447us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0023.heap (736 MB allocated cumulatively, 20 MB currently in use)
+
+494000 tuples processed at 1319330971s+225957us
+
+495000 tuples processed at 1319330973s+64991us
+
+496000 tuples processed at 1319330974s+772498us
+
+497000 tuples processed at 1319330976s+441865us
+
+498000 tuples processed at 1319330978s+353846us
+
+499000 tuples processed at 1319330980s+123233us
+
+500000 tuples processed at 1319330981s+880221us
+
+501000 tuples processed at 1319330983s+768663us
+
+502000 tuples processed at 1319330985s+566105us
+
+503000 tuples processed at 1319330987s+562623us
+
+504000 tuples processed at 1319330989s+476238us
+
+505000 tuples processed at 1319330991s+308277us
+
+506000 tuples processed at 1319330993s+56217us
+
+507000 tuples processed at 1319330994s+999833us
+
+508000 tuples processed at 1319330996s+954647us
+
+509000 tuples processed at 1319330998s+807070us
+
+510000 tuples processed at 1319331000s+622820us
+
+511000 tuples processed at 1319331002s+517947us
+
+512000 tuples processed at 1319331004s+283283us
+
+513000 tuples processed at 1319331006s+442us
+
+514000 tuples processed at 1319331007s+756132us
+
+515000 tuples processed at 1319331009s+584352us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0024.heap (768 MB allocated cumulatively, 21 MB currently in use)
+
+516000 tuples processed at 1319331011s+414985us
+
+517000 tuples processed at 1319331013s+163923us
+
+518000 tuples processed at 1319331015s+16223us
+
+519000 tuples processed at 1319331016s+768108us
+
+520000 tuples processed at 1319331018s+487118us
+
+521000 tuples processed at 1319331020s+423551us
+
+522000 tuples processed at 1319331022s+257149us
+
+523000 tuples processed at 1319331024s+118561us
+
+524000 tuples processed at 1319331025s+922255us
+
+525000 tuples processed at 1319331027s+767918us
+
+526000 tuples processed at 1319331029s+667915us
+
+527000 tuples processed at 1319331031s+582780us
+
+528000 tuples processed at 1319331033s+278845us
+
+529000 tuples processed at 1319331035s+90032us
+
+530000 tuples processed at 1319331037s+301391us
+
+531000 tuples processed at 1319331039s+348220us
+
+532000 tuples processed at 1319331041s+269442us
+
+533000 tuples processed at 1319331043s+209608us
+
+534000 tuples processed at 1319331045s+131108us
+
+535000 tuples processed at 1319331047s+77587us
+
+536000 tuples processed at 1319331048s+970578us
+
+537000 tuples processed at 1319331050s+936188us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0025.heap (800 MB allocated cumulatively, 21 MB currently in use)
+
+538000 tuples processed at 1319331052s+923353us
+
+539000 tuples processed at 1319331054s+895122us
+
+540000 tuples processed at 1319331056s+846832us
+
+541000 tuples processed at 1319331058s+684149us
+
+542000 tuples processed at 1319331060s+533501us
+
+543000 tuples processed at 1319331062s+313082us
+
+544000 tuples processed at 1319331064s+209970us
+
+545000 tuples processed at 1319331066s+145865us
+
+546000 tuples processed at 1319331067s+969780us
+
+547000 tuples processed at 1319331069s+850608us
+
+548000 tuples processed at 1319331071s+840742us
+
+549000 tuples processed at 1319331073s+854947us
+
+550000 tuples processed at 1319331075s+927078us
+
+551000 tuples processed at 1319331078s+22090us
+
+552000 tuples processed at 1319331080s+47249us
+
+553000 tuples processed at 1319331082s+124267us
+
+554000 tuples processed at 1319331084s+150903us
+
+555000 tuples processed at 1319331086s+179832us
+
+556000 tuples processed at 1319331088s+208733us
+
+557000 tuples processed at 1319331090s+369033us
+
+558000 tuples processed at 1319331092s+549086us
+
+559000 tuples processed at 1319331094s+646576us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0026.heap (832 MB allocated cumulatively, 22 MB currently in use)
+
+560000 tuples processed at 1319331096s+793137us
+
+561000 tuples processed at 1319331099s+47213us
+
+562000 tuples processed at 1319331101s+103878us
+
+563000 tuples processed at 1319331103s+181188us
+
+564000 tuples processed at 1319331105s+289262us
+
+565000 tuples processed at 1319331107s+395134us
+
+566000 tuples processed at 1319331109s+460073us
+
+567000 tuples processed at 1319331111s+502621us
+
+568000 tuples processed at 1319331113s+487270us
+
+569000 tuples processed at 1319331115s+522614us
+
+570000 tuples processed at 1319331117s+665184us
+
+571000 tuples processed at 1319331119s+898597us
+
+572000 tuples processed at 1319331122s+25666us
+
+573000 tuples processed at 1319331124s+85806us
+
+574000 tuples processed at 1319331126s+253645us
+
+575000 tuples processed at 1319331128s+384074us
+
+576000 tuples processed at 1319331130s+538943us
+
+577000 tuples processed at 1319331132s+589248us
+
+578000 tuples processed at 1319331134s+706466us
+
+579000 tuples processed at 1319331136s+838496us
+
+580000 tuples processed at 1319331139s+9925us
+
+581000 tuples processed at 1319331141s+252338us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0027.heap (864 MB allocated cumulatively, 23 MB currently in use)
+
+582000 tuples processed at 1319331143s+371567us
+
+583000 tuples processed at 1319331145s+583984us
+
+584000 tuples processed at 1319331147s+741388us
+
+585000 tuples processed at 1319331149s+877568us
+
+586000 tuples processed at 1319331152s+106326us
+
+587000 tuples processed at 1319331154s+316465us
+
+588000 tuples processed at 1319331156s+462750us
+
+589000 tuples processed at 1319331158s+641629us
+
+590000 tuples processed at 1319331160s+875251us
+
+591000 tuples processed at 1319331163s+103616us
+
+592000 tuples processed at 1319331165s+331260us
+
+593000 tuples processed at 1319331167s+609187us
+
+594000 tuples processed at 1319331169s+807549us
+
+595000 tuples processed at 1319331171s+963896us
+
+596000 tuples processed at 1319331174s+43348us
+
+597000 tuples processed at 1319331176s+19659us
+
+598000 tuples processed at 1319331178s+25383us
+
+599000 tuples processed at 1319331180s+277153us
+
+600000 tuples processed at 1319331182s+560978us
+
+601000 tuples processed at 1319331184s+833354us
+
+602000 tuples processed at 1319331187s+111948us
+
+603000 tuples processed at 1319331189s+397608us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0028.heap (896 MB allocated cumulatively, 23 MB currently in use)
+
+604000 tuples processed at 1319331191s+644060us
+
+605000 tuples processed at 1319331193s+939377us
+
+606000 tuples processed at 1319331196s+282426us
+
+607000 tuples processed at 1319331198s+598488us
+
+608000 tuples processed at 1319331200s+824225us
+
+609000 tuples processed at 1319331203s+142855us
+
+610000 tuples processed at 1319331205s+445712us
+
+611000 tuples processed at 1319331207s+895875us
+
+612000 tuples processed at 1319331210s+243246us
+
+613000 tuples processed at 1319331212s+606797us
+
+614000 tuples processed at 1319331214s+944709us
+
+615000 tuples processed at 1319331217s+228907us
+
+616000 tuples processed at 1319331219s+446093us
+
+617000 tuples processed at 1319331221s+743301us
+
+618000 tuples processed at 1319331224s+82301us
+
+619000 tuples processed at 1319331226s+401075us
+
+620000 tuples processed at 1319331228s+806762us
+
+621000 tuples processed at 1319331231s+197985us
+
+622000 tuples processed at 1319331233s+511147us
+
+623000 tuples processed at 1319331235s+775195us
+
+624000 tuples processed at 1319331238s+168423us
+
+625000 tuples processed at 1319331240s+522682us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0029.heap (928 MB allocated cumulatively, 24 MB currently in use)
+
+626000 tuples processed at 1319331242s+737028us
+
+627000 tuples processed at 1319331244s+767507us
+
+628000 tuples processed at 1319331247s+248804us
+
+629000 tuples processed at 1319331249s+668433us
+
+630000 tuples processed at 1319331252s+137601us
+
+631000 tuples processed at 1319331254s+686237us
+
+632000 tuples processed at 1319331256s+926943us
+
+633000 tuples processed at 1319331259s+68137us
+
+634000 tuples processed at 1319331261s+349635us
+
+635000 tuples processed at 1319331263s+748221us
+
+636000 tuples processed at 1319331266s+219313us
+
+637000 tuples processed at 1319331268s+570585us
+
+638000 tuples processed at 1319331270s+730481us
+
+639000 tuples processed at 1319331273s+114105us
+
+640000 tuples processed at 1319331275s+417099us
+
+641000 tuples processed at 1319331277s+710865us
+
+642000 tuples processed at 1319331280s+96680us
+
+643000 tuples processed at 1319331282s+612984us
+
+644000 tuples processed at 1319331284s+952754us
+
+645000 tuples processed at 1319331287s+352652us
+
+646000 tuples processed at 1319331289s+726082us
+
+647000 tuples processed at 1319331292s+12199us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0030.heap (960 MB allocated cumulatively, 24 MB currently in use)
+
+648000 tuples processed at 1319331294s+232255us
+
+649000 tuples processed at 1319331296s+453468us
+
+650000 tuples processed at 1319331298s+747940us
+
+651000 tuples processed at 1319331301s+54224us
+
+652000 tuples processed at 1319331303s+289781us
+
+653000 tuples processed at 1319331305s+806672us
+
+654000 tuples processed at 1319331308s+335103us
+
+655000 tuples processed at 1319331310s+844276us
+
+656000 tuples processed at 1319331313s+529635us
+
+657000 tuples processed at 1319331316s+77135us
+
+658000 tuples processed at 1319331318s+672118us
+
+659000 tuples processed at 1319331321s+219757us
+
+660000 tuples processed at 1319331323s+833873us
+
+661000 tuples processed at 1319331326s+610020us
+
+662000 tuples processed at 1319331329s+185655us
+
+663000 tuples processed at 1319331331s+778259us
+
+664000 tuples processed at 1319331334s+292705us
+
+665000 tuples processed at 1319331336s+630395us
+
+666000 tuples processed at 1319331338s+929232us
+
+667000 tuples processed at 1319331341s+257922us
+
+668000 tuples processed at 1319331343s+576011us
+
+669000 tuples processed at 1319331346s+32433us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0031.heap (992 MB allocated cumulatively, 25 MB currently in use)
+
+670000 tuples processed at 1319331348s+433905us
+
+671000 tuples processed at 1319331350s+919710us
+
+672000 tuples processed at 1319331353s+345312us
+
+673000 tuples processed at 1319331355s+702297us
+
+674000 tuples processed at 1319331358s+238844us
+
+675000 tuples processed at 1319331360s+935033us
+
+676000 tuples processed at 1319331363s+498041us
+
+677000 tuples processed at 1319331366s+76089us
+
+678000 tuples processed at 1319331368s+767720us
+
+679000 tuples processed at 1319331371s+410951us
+
+680000 tuples processed at 1319331374s+106638us
+
+681000 tuples processed at 1319331377s+17854us
+
+682000 tuples processed at 1319331379s+746498us
+
+683000 tuples processed at 1319331382s+494624us
+
+684000 tuples processed at 1319331385s+218583us
+
+685000 tuples processed at 1319331387s+929340us
+
+686000 tuples processed at 1319331390s+651424us
+
+687000 tuples processed at 1319331393s+357057us
+
+688000 tuples processed at 1319331396s+87415us
+
+689000 tuples processed at 1319331398s+838938us
+
+690000 tuples processed at 1319331401s+652733us
+
+691000 tuples processed at 1319331404s+585693us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0032.heap (1024 MB allocated cumulatively, 26 MB currently in use)
+
+692000 tuples processed at 1319331407s+373212us
+
+693000 tuples processed at 1319331410s+166705us
+
+694000 tuples processed at 1319331412s+986846us
+
+695000 tuples processed at 1319331415s+783970us
+
+696000 tuples processed at 1319331418s+535305us
+
+697000 tuples processed at 1319331421s+342562us
+
+698000 tuples processed at 1319331424s+82935us
+
+699000 tuples processed at 1319331426s+864291us
+
+700000 tuples processed at 1319331429s+305278us
+
+701000 tuples processed at 1319331431s+882823us
+
+702000 tuples processed at 1319331434s+551273us
+
+703000 tuples processed at 1319331437s+208779us
+
+704000 tuples processed at 1319331439s+960502us
+
+705000 tuples processed at 1319331442s+496842us
+
+706000 tuples processed at 1319331445s+236019us
+
+707000 tuples processed at 1319331447s+653590us
+
+708000 tuples processed at 1319331450s+111267us
+
+709000 tuples processed at 1319331452s+625405us
+
+710000 tuples processed at 1319331455s+177868us
+
+711000 tuples processed at 1319331457s+950432us
+
+712000 tuples processed at 1319331460s+907460us
+
+713000 tuples processed at 1319331463s+849242us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0033.heap (1056 MB allocated cumulatively, 26 MB currently in use)
+
+714000 tuples processed at 1319331466s+759631us
+
+715000 tuples processed at 1319331469s+660866us
+
+716000 tuples processed at 1319331472s+470710us
+
+717000 tuples processed at 1319331475s+302648us
+
+718000 tuples processed at 1319331478s+203317us
+
+719000 tuples processed at 1319331481s+101809us
+
+720000 tuples processed at 1319331484s+181485us
+
+721000 tuples processed at 1319331487s+193985us
+
+722000 tuples processed at 1319331490s+142689us
+
+723000 tuples processed at 1319331492s+987848us
+
+724000 tuples processed at 1319331495s+879396us
+
+725000 tuples processed at 1319331498s+678763us
+
+726000 tuples processed at 1319331501s+617753us
+
+727000 tuples processed at 1319331504s+469445us
+
+728000 tuples processed at 1319331507s+384777us
+
+729000 tuples processed at 1319331510s+289430us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0034.heap (1088 MB allocated cumulatively, 30 MB currently in use)
+
+730000 tuples processed at 1319331513s+314342us
+
+731000 tuples processed at 1319331516s+385660us
+
+732000 tuples processed at 1319331519s+288199us
+
+733000 tuples processed at 1319331522s+195199us
+
+734000 tuples processed at 1319331525s+252842us
+
+735000 tuples processed at 1319331528s+267468us
+
+736000 tuples processed at 1319331531s+242590us
+
+737000 tuples processed at 1319331534s+319847us
+
+738000 tuples processed at 1319331537s+291052us
+
+739000 tuples processed at 1319331540s+278200us
+
+740000 tuples processed at 1319331543s+298593us
+
+741000 tuples processed at 1319331546s+569361us
+
+742000 tuples processed at 1319331549s+603520us
+
+743000 tuples processed at 1319331552s+189092us
+
+744000 tuples processed at 1319331555s+203281us
+
+745000 tuples processed at 1319331558s+240765us
+
+746000 tuples processed at 1319331561s+338943us
+
+747000 tuples processed at 1319331564s+189201us
+
+748000 tuples processed at 1319331567s+308010us
+
+749000 tuples processed at 1319331570s+360850us
+
+750000 tuples processed at 1319331573s+184062us
+
+751000 tuples processed at 1319331576s+120817us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0035.heap (1120 MB allocated cumulatively, 30 MB currently in use)
+
+752000 tuples processed at 1319331579s+279265us
+
+753000 tuples processed at 1319331582s+506999us
+
+754000 tuples processed at 1319331585s+359730us
+
+755000 tuples processed at 1319331588s+303838us
+
+756000 tuples processed at 1319331591s+427619us
+
+757000 tuples processed at 1319331594s+597562us
+
+758000 tuples processed at 1319331597s+616266us
+
+759000 tuples processed at 1319331600s+855263us
+
+760000 tuples processed at 1319331604s+142447us
+
+761000 tuples processed at 1319331607s+436601us
+
+762000 tuples processed at 1319331610s+635772us
+
+763000 tuples processed at 1319331613s+528434us
+
+764000 tuples processed at 1319331616s+255048us
+
+765000 tuples processed at 1319331619s+536723us
+
+766000 tuples processed at 1319331622s+718431us
+
+767000 tuples processed at 1319331625s+803634us
+
+768000 tuples processed at 1319331628s+927501us
+
+769000 tuples processed at 1319331631s+898987us
+
+770000 tuples processed at 1319331635s+32788us
+
+771000 tuples processed at 1319331638s+82852us
+
+772000 tuples processed at 1319331640s+985320us
+
+773000 tuples processed at 1319331643s+777286us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0036.heap (1152 MB allocated cumulatively, 31 MB currently in use)
+
+774000 tuples processed at 1319331646s+564141us
+
+775000 tuples processed at 1319331649s+469337us
+
+776000 tuples processed at 1319331652s+317259us
+
+777000 tuples processed at 1319331655s+85724us
+
+778000 tuples processed at 1319331657s+903043us
+
+779000 tuples processed at 1319331660s+803500us
+
+780000 tuples processed at 1319331664s+126828us
+
+781000 tuples processed at 1319331667s+349977us
+
+782000 tuples processed at 1319331670s+442276us
+
+783000 tuples processed at 1319331673s+359017us
+
+784000 tuples processed at 1319331676s+544454us
+
+785000 tuples processed at 1319331679s+629750us
+
+786000 tuples processed at 1319331682s+593338us
+
+787000 tuples processed at 1319331685s+672311us
+
+788000 tuples processed at 1319331688s+706756us
+
+789000 tuples processed at 1319331691s+681082us
+
+790000 tuples processed at 1319331694s+741807us
+
+791000 tuples processed at 1319331698s+46786us
+
+792000 tuples processed at 1319331701s+155900us
+
+793000 tuples processed at 1319331704s+313418us
+
+794000 tuples processed at 1319331707s+276101us
+
+795000 tuples processed at 1319331710s+174254us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0037.heap (1184 MB allocated cumulatively, 31 MB currently in use)
+
+796000 tuples processed at 1319331713s+101250us
+
+797000 tuples processed at 1319331716s+433232us
+
+798000 tuples processed at 1319331719s+625805us
+
+799000 tuples processed at 1319331722s+701677us
+
+800000 tuples processed at 1319331725s+949326us
+
+801000 tuples processed at 1319331729s+216671us
+
+802000 tuples processed at 1319331732s+434964us
+
+803000 tuples processed at 1319331735s+751943us
+
+804000 tuples processed at 1319331739s+42332us
+
+805000 tuples processed at 1319331742s+390787us
+
+806000 tuples processed at 1319331745s+506122us
+
+807000 tuples processed at 1319331748s+438017us
+
+808000 tuples processed at 1319331751s+467119us
+
+809000 tuples processed at 1319331754s+579456us
+
+810000 tuples processed at 1319331757s+572108us
+
+811000 tuples processed at 1319331760s+713286us
+
+812000 tuples processed at 1319331764s+236034us
+
+813000 tuples processed at 1319331767s+741059us
+
+814000 tuples processed at 1319331770s+808626us
+
+815000 tuples processed at 1319331773s+810997us
+
+816000 tuples processed at 1319331776s+777827us
+
+817000 tuples processed at 1319331779s+864156us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0038.heap (1216 MB allocated cumulatively, 32 MB currently in use)
+
+818000 tuples processed at 1319331782s+914711us
+
+819000 tuples processed at 1319331785s+937409us
+
+820000 tuples processed at 1319331789s+38361us
+
+821000 tuples processed at 1319331792s+333397us
+
+822000 tuples processed at 1319331795s+523412us
+
+823000 tuples processed at 1319331798s+674317us
+
+824000 tuples processed at 1319331802s+194412us
+
+825000 tuples processed at 1319331805s+721996us
+
+826000 tuples processed at 1319331809s+44481us
+
+827000 tuples processed at 1319331812s+655696us
+
+828000 tuples processed at 1319331816s+226039us
+
+829000 tuples processed at 1319331819s+372323us
+
+830000 tuples processed at 1319331822s+745795us
+
+831000 tuples processed at 1319331826s+437078us
+
+832000 tuples processed at 1319331830s+52978us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0039.heap (1248 MB allocated cumulatively, 35 MB currently in use)
+
+833000 tuples processed at 1319331833s+689905us
+
+834000 tuples processed at 1319331837s+93652us
+
+835000 tuples processed at 1319331840s+691351us
+
+836000 tuples processed at 1319331844s+209290us
+
+837000 tuples processed at 1319331847s+275590us
+
+838000 tuples processed at 1319331850s+401793us
+
+839000 tuples processed at 1319331853s+853773us
+
+840000 tuples processed at 1319331857s+380552us
+
+841000 tuples processed at 1319331860s+994106us
+
+842000 tuples processed at 1319331864s+694487us
+
+843000 tuples processed at 1319331868s+280842us
+
+844000 tuples processed at 1319331872s+16484us
+
+845000 tuples processed at 1319331875s+661892us
+
+846000 tuples processed at 1319331879s+254708us
+
+847000 tuples processed at 1319331882s+726152us
+
+848000 tuples processed at 1319331886s+23766us
+
+849000 tuples processed at 1319331889s+273483us
+
+850000 tuples processed at 1319331892s+544043us
+
+851000 tuples processed at 1319331895s+960175us
+
+852000 tuples processed at 1319331899s+494092us
+
+853000 tuples processed at 1319331902s+954151us
+
+854000 tuples processed at 1319331906s+372877us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0040.heap (1280 MB allocated cumulatively, 36 MB currently in use)
+
+855000 tuples processed at 1319331909s+763806us
+
+856000 tuples processed at 1319331913s+142818us
+
+857000 tuples processed at 1319331916s+372041us
+
+858000 tuples processed at 1319331919s+694314us
+
+859000 tuples processed at 1319331922s+939375us
+
+860000 tuples processed at 1319331926s+309657us
+
+861000 tuples processed at 1319331929s+822550us
+
+862000 tuples processed at 1319331933s+182199us
+
+863000 tuples processed at 1319331936s+689024us
+
+864000 tuples processed at 1319331940s+217716us
+
+865000 tuples processed at 1319331943s+769181us
+
+866000 tuples processed at 1319331947s+247317us
+
+867000 tuples processed at 1319331950s+654509us
+
+868000 tuples processed at 1319331954s+208944us
+
+869000 tuples processed at 1319331957s+639966us
+
+870000 tuples processed at 1319331961s+70360us
+
+871000 tuples processed at 1319331964s+390571us
+
+872000 tuples processed at 1319331968s+9583us
+
+873000 tuples processed at 1319331971s+297510us
+
+874000 tuples processed at 1319331974s+833689us
+
+875000 tuples processed at 1319331978s+319279us
+
+876000 tuples processed at 1319331981s+739971us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0041.heap (1312 MB allocated cumulatively, 37 MB currently in use)
+
+877000 tuples processed at 1319331985s+243692us
+
+878000 tuples processed at 1319331988s+623815us
+
+879000 tuples processed at 1319331992s+74893us
+
+880000 tuples processed at 1319331995s+355550us
+
+881000 tuples processed at 1319331999s+21414us
+
+882000 tuples processed at 1319332002s+464203us
+
+883000 tuples processed at 1319332006s+96672us
+
+884000 tuples processed at 1319332009s+631029us
+
+885000 tuples processed at 1319332013s+43164us
+
+886000 tuples processed at 1319332016s+627749us
+
+887000 tuples processed at 1319332020s+200212us
+
+888000 tuples processed at 1319332023s+708615us
+
+889000 tuples processed at 1319332027s+180808us
+
+890000 tuples processed at 1319332030s+762784us
+
+891000 tuples processed at 1319332034s+616119us
+
+892000 tuples processed at 1319332038s+475900us
+
+893000 tuples processed at 1319332042s+73071us
+
+894000 tuples processed at 1319332045s+913040us
+
+895000 tuples processed at 1319332049s+533391us
+
+896000 tuples processed at 1319332053s+133436us
+
+897000 tuples processed at 1319332056s+718254us
+
+898000 tuples processed at 1319332060s+535276us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0042.heap (1344 MB allocated cumulatively, 37 MB currently in use)
+
+899000 tuples processed at 1319332064s+185766us
+
+900000 tuples processed at 1319332067s+773177us
+
+901000 tuples processed at 1319332071s+386615us
+
+902000 tuples processed at 1319332074s+849233us
+
+903000 tuples processed at 1319332078s+351235us
+
+904000 tuples processed at 1319332081s+911017us
+
+905000 tuples processed at 1319332085s+683810us
+
+906000 tuples processed at 1319332089s+393895us
+
+907000 tuples processed at 1319332092s+940954us
+
+908000 tuples processed at 1319332096s+455792us
+
+909000 tuples processed at 1319332099s+967706us
+
+910000 tuples processed at 1319332103s+475700us
+
+911000 tuples processed at 1319332107s+67834us
+
+912000 tuples processed at 1319332110s+546913us
+
+913000 tuples processed at 1319332114s+7301us
+
+914000 tuples processed at 1319332117s+442474us
+
+915000 tuples processed at 1319332121s+107793us
+
+916000 tuples processed at 1319332125s+159027us
+
+917000 tuples processed at 1319332129s+174832us
+
+918000 tuples processed at 1319332133s+91967us
+
+919000 tuples processed at 1319332136s+671516us
+
+920000 tuples processed at 1319332140s+152655us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0043.heap (1376 MB allocated cumulatively, 38 MB currently in use)
+
+921000 tuples processed at 1319332143s+668791us
+
+922000 tuples processed at 1319332147s+136171us
+
+923000 tuples processed at 1319332150s+732924us
+
+924000 tuples processed at 1319332154s+934478us
+
+925000 tuples processed at 1319332159s+28780us
+
+926000 tuples processed at 1319332163s+58373us
+
+927000 tuples processed at 1319332166s+643931us
+
+928000 tuples processed at 1319332170s+199583us
+
+929000 tuples processed at 1319332173s+733131us
+
+930000 tuples processed at 1319332177s+266662us
+
+931000 tuples processed at 1319332181s+97418us
+
+932000 tuples processed at 1319332184s+834384us
+
+933000 tuples processed at 1319332188s+435585us
+
+934000 tuples processed at 1319332192s+108343us
+
+935000 tuples processed at 1319332195s+749991us
+
+936000 tuples processed at 1319332199s+306563us
+
+937000 tuples processed at 1319332202s+881223us
+
+938000 tuples processed at 1319332206s+494959us
+
+939000 tuples processed at 1319332209s+975604us
+
+940000 tuples processed at 1319332213s+630467us
+
+941000 tuples processed at 1319332217s+313207us
+
+942000 tuples processed at 1319332221s+16174us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0044.heap (1408 MB allocated cumulatively, 38 MB currently in use)
+
+943000 tuples processed at 1319332224s+625106us
+
+944000 tuples processed at 1319332228s+437571us
+
+945000 tuples processed at 1319332232s+190502us
+
+946000 tuples processed at 1319332235s+972817us
+
+947000 tuples processed at 1319332239s+748173us
+
+948000 tuples processed at 1319332243s+748821us
+
+949000 tuples processed at 1319332247s+470079us
+
+950000 tuples processed at 1319332251s+341303us
+
+951000 tuples processed at 1319332255s+203734us
+
+952000 tuples processed at 1319332259s+109926us
+
+953000 tuples processed at 1319332263s+170694us
+
+954000 tuples processed at 1319332267s+175414us
+
+955000 tuples processed at 1319332270s+987198us
+
+956000 tuples processed at 1319332274s+985245us
+
+957000 tuples processed at 1319332279s+55146us
+
+958000 tuples processed at 1319332283s+400586us
+
+959000 tuples processed at 1319332287s+464206us
+
+960000 tuples processed at 1319332291s+306848us
+
+961000 tuples processed at 1319332295s+314060us
+
+962000 tuples processed at 1319332299s+374095us
+
+963000 tuples processed at 1319332303s+653866us
+
+964000 tuples processed at 1319332308s+106563us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0045.heap (1440 MB allocated cumulatively, 39 MB currently in use)
+
+965000 tuples processed at 1319332312s+479832us
+
+966000 tuples processed at 1319332316s+874870us
+
+967000 tuples processed at 1319332321s+367986us
+
+968000 tuples processed at 1319332325s+753759us
+
+969000 tuples processed at 1319332330s+78190us
+
+970000 tuples processed at 1319332334s+469218us
+
+971000 tuples processed at 1319332338s+660407us
+
+972000 tuples processed at 1319332342s+496590us
+
+973000 tuples processed at 1319332346s+875766us
+
+974000 tuples processed at 1319332351s+298347us
+
+975000 tuples processed at 1319332355s+712551us
+
+976000 tuples processed at 1319332360s+136075us
+
+977000 tuples processed at 1319332364s+587608us
+
+978000 tuples processed at 1319332368s+918777us
+
+979000 tuples processed at 1319332373s+281749us
+
+980000 tuples processed at 1319332377s+486234us
+
+981000 tuples processed at 1319332381s+984252us
+
+982000 tuples processed at 1319332386s+429825us
+
+983000 tuples processed at 1319332391s+16612us
+
+984000 tuples processed at 1319332395s+277931us
+
+985000 tuples processed at 1319332399s+219887us
+
+986000 tuples processed at 1319332403s+622095us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0046.heap (1472 MB allocated cumulatively, 40 MB currently in use)
+
+987000 tuples processed at 1319332407s+742089us
+
+988000 tuples processed at 1319332412s+303859us
+
+989000 tuples processed at 1319332416s+891971us
+
+990000 tuples processed at 1319332421s+586841us
+
+991000 tuples processed at 1319332426s+214314us
+
+992000 tuples processed at 1319332430s+760138us
+
+993000 tuples processed at 1319332435s+406570us
+
+994000 tuples processed at 1319332439s+947587us
+
+995000 tuples processed at 1319332444s+643661us
+
+996000 tuples processed at 1319332449s+274425us
+
+997000 tuples processed at 1319332454s+22746us
+
+998000 tuples processed at 1319332458s+735069us
+
+999000 tuples processed at 1319332463s+310276us
+
+1000000 tuples processed at 1319332467s+807349us
+
+1001000 tuples processed at 1319332472s+180416us
+
+1002000 tuples processed at 1319332476s+433820us
+
+1003000 tuples processed at 1319332481s+85000us
+
+1004000 tuples processed at 1319332485s+731304us
+
+1005000 tuples processed at 1319332490s+413599us
+
+1006000 tuples processed at 1319332494s+913108us
+
+1007000 tuples processed at 1319332499s+657941us
+
+1008000 tuples processed at 1319332504s+523249us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0047.heap (1504 MB allocated cumulatively, 40 MB currently in use)
+
+1009000 tuples processed at 1319332508s+940138us
+
+1010000 tuples processed at 1319332513s+164382us
+
+1011000 tuples processed at 1319332517s+319371us
+
+1012000 tuples processed at 1319332521s+547844us
+
+1013000 tuples processed at 1319332526s+449375us
+
+1014000 tuples processed at 1319332530s+843494us
+
+1015000 tuples processed at 1319332535s+49954us
+
+1016000 tuples processed at 1319332539s+173729us
+
+1017000 tuples processed at 1319332543s+144431us
+
+1018000 tuples processed at 1319332547s+285578us
+
+1019000 tuples processed at 1319332551s+534889us
+
+1020000 tuples processed at 1319332555s+689208us
+
+1021000 tuples processed at 1319332559s+987668us
+
+1022000 tuples processed at 1319332564s+192972us
+
+1023000 tuples processed at 1319332568s+415715us
+
+1024000 tuples processed at 1319332572s+511927us
+
+1025000 tuples processed at 1319332576s+626883us
+
+1026000 tuples processed at 1319332580s+681620us
+
+1027000 tuples processed at 1319332584s+890472us
+
+1028000 tuples processed at 1319332589s+172039us
+
+1029000 tuples processed at 1319332593s+368158us
+
+1030000 tuples processed at 1319332597s+744702us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0048.heap (1536 MB allocated cumulatively, 41 MB currently in use)
+
+1031000 tuples processed at 1319332602s+17990us
+
+1032000 tuples processed at 1319332606s+146041us
+
+1033000 tuples processed at 1319332610s+275668us
+
+1034000 tuples processed at 1319332614s+278045us
+
+1035000 tuples processed at 1319332618s+398242us
+
+1036000 tuples processed at 1319332622s+649615us
+
+1037000 tuples processed at 1319332626s+712065us
+
+1038000 tuples processed at 1319332630s+816405us
+
+1039000 tuples processed at 1319332634s+978112us
+
+1040000 tuples processed at 1319332639s+43268us
+
+1041000 tuples processed at 1319332643s+142586us
+
+1042000 tuples processed at 1319332647s+567254us
+
+1043000 tuples processed at 1319332651s+674243us
+
+1044000 tuples processed at 1319332655s+688590us
+
+1045000 tuples processed at 1319332659s+920991us
+
+1046000 tuples processed at 1319332664s+166277us
+
+1047000 tuples processed at 1319332668s+499484us
+
+1048000 tuples processed at 1319332672s+894307us
+
+1049000 tuples processed at 1319332677s+284803us
+
+1050000 tuples processed at 1319332681s+868169us
+
+1051000 tuples processed at 1319332686s+758898us
+
+1052000 tuples processed at 1319332691s+599242us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0049.heap (1568 MB allocated cumulatively, 41 MB currently in use)
+
+1053000 tuples processed at 1319332696s+354746us
+
+1054000 tuples processed at 1319332700s+917845us
+
+1055000 tuples processed at 1319332705s+237488us
+
+1056000 tuples processed at 1319332710s+296430us
+
+1057000 tuples processed at 1319332715s+326806us
+
+1058000 tuples processed at 1319332719s+725422us
+
+1059000 tuples processed at 1319332724s+171809us
+
+1060000 tuples processed at 1319332728s+393945us
+
+1061000 tuples processed at 1319332732s+737446us
+
+1062000 tuples processed at 1319332737s+238260us
+
+1063000 tuples processed at 1319332741s+630870us
+
+1064000 tuples processed at 1319332746s+240818us
+
+1065000 tuples processed at 1319332750s+908784us
+
+1066000 tuples processed at 1319332756s+37663us
+
+1067000 tuples processed at 1319332760s+706974us
+
+1068000 tuples processed at 1319332765s+385131us
+
+1069000 tuples processed at 1319332769s+880061us
+
+1070000 tuples processed at 1319332774s+360661us
+
+1071000 tuples processed at 1319332779s+128049us
+
+1072000 tuples processed at 1319332783s+766752us
+
+1073000 tuples processed at 1319332788s+157173us
+
+1074000 tuples processed at 1319332792s+609124us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0050.heap (1600 MB allocated cumulatively, 42 MB currently in use)
+
+1075000 tuples processed at 1319332797s+339819us
+
+1076000 tuples processed at 1319332802s+368263us
+
+1077000 tuples processed at 1319332806s+647907us
+
+1078000 tuples processed at 1319332810s+985610us
+
+1079000 tuples processed at 1319332815s+604768us
+
+1080000 tuples processed at 1319332820s+276845us
+
+1081000 tuples processed at 1319332824s+717735us
+
+1082000 tuples processed at 1319332829s+1841us
+
+1083000 tuples processed at 1319332833s+127460us
+
+1084000 tuples processed at 1319332837s+200307us
+
+1085000 tuples processed at 1319332841s+299033us
+
+1086000 tuples processed at 1319332845s+544989us
+
+1087000 tuples processed at 1319332849s+841639us
+
+1088000 tuples processed at 1319332854s+273998us
+
+1089000 tuples processed at 1319332859s+232083us
+
+1090000 tuples processed at 1319332864s+74733us
+
+1091000 tuples processed at 1319332868s+836045us
+
+1092000 tuples processed at 1319332873s+183240us
+
+1093000 tuples processed at 1319332877s+512742us
+
+1094000 tuples processed at 1319332881s+872838us
+
+1095000 tuples processed at 1319332886s+384681us
+
+1096000 tuples processed at 1319332890s+925319us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0051.heap (1632 MB allocated cumulatively, 42 MB currently in use)
+
+1097000 tuples processed at 1319332895s+156194us
+
+1098000 tuples processed at 1319332899s+504003us
+
+1099000 tuples processed at 1319332903s+962228us
+
+1100000 tuples processed at 1319332908s+430905us
+
+1101000 tuples processed at 1319332912s+734084us
+
+1102000 tuples processed at 1319332916s+948183us
+
+1103000 tuples processed at 1319332921s+289013us
+
+1104000 tuples processed at 1319332925s+559770us
+
+1105000 tuples processed at 1319332930s+52469us
+
+1106000 tuples processed at 1319332934s+690448us
+
+1107000 tuples processed at 1319332939s+81394us
+
+1108000 tuples processed at 1319332943s+533427us
+
+1109000 tuples processed at 1319332948s+32080us
+
+1110000 tuples processed at 1319332952s+458731us
+
+1111000 tuples processed at 1319332956s+848050us
+
+1112000 tuples processed at 1319332961s+213097us
+
+1113000 tuples processed at 1319332965s+688003us
+
+1114000 tuples processed at 1319332969s+977663us
+
+1115000 tuples processed at 1319332974s+295979us
+
+1116000 tuples processed at 1319332978s+712583us
+
+1117000 tuples processed at 1319332983s+146594us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0052.heap (1664 MB allocated cumulatively, 43 MB currently in use)
+
+1118000 tuples processed at 1319332987s+606004us
+
+1119000 tuples processed at 1319332992s+91405us
+
+1120000 tuples processed at 1319332996s+644689us
+
+1121000 tuples processed at 1319333001s+173855us
+
+1122000 tuples processed at 1319333005s+600175us
+
+1123000 tuples processed at 1319333010s+197189us
+
+1124000 tuples processed at 1319333014s+790225us
+
+1125000 tuples processed at 1319333019s+165857us
+
+1126000 tuples processed at 1319333023s+896402us
+
+1127000 tuples processed at 1319333028s+367887us
+
+1128000 tuples processed at 1319333032s+848731us
+
+1129000 tuples processed at 1319333037s+542605us
+
+1130000 tuples processed at 1319333041s+877660us
+
+1131000 tuples processed at 1319333046s+346105us
+
+1132000 tuples processed at 1319333050s+957114us
+
+1133000 tuples processed at 1319333055s+554999us
+
+1134000 tuples processed at 1319333059s+945081us
+
+1135000 tuples processed at 1319333064s+503504us
+
+1136000 tuples processed at 1319333069s+65409us
+
+1137000 tuples processed at 1319333073s+503260us
+
+1138000 tuples processed at 1319333078s+22750us
+
+1139000 tuples processed at 1319333082s+369576us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0053.heap (1696 MB allocated cumulatively, 44 MB currently in use)
+
+1140000 tuples processed at 1319333086s+955248us
+
+1141000 tuples processed at 1319333092s+167680us
+
+1142000 tuples processed at 1319333096s+812357us
+
+1143000 tuples processed at 1319333101s+769202us
+
+1144000 tuples processed at 1319333106s+357758us
+
+1145000 tuples processed at 1319333111s+110480us
+
+1146000 tuples processed at 1319333115s+969983us
+
+1147000 tuples processed at 1319333120s+525202us
+
+1148000 tuples processed at 1319333125s+80943us
+
+1149000 tuples processed at 1319333129s+598338us
+
+1150000 tuples processed at 1319333134s+802754us
+
+1151000 tuples processed at 1319333140s+148804us
+
+1152000 tuples processed at 1319333145s+400661us
+
+1153000 tuples processed at 1319333150s+646972us
+
+1154000 tuples processed at 1319333155s+821856us
+
+1155000 tuples processed at 1319333161s+107090us
+
+1156000 tuples processed at 1319333166s+373101us
+
+1157000 tuples processed at 1319333171s+426087us
+
+1158000 tuples processed at 1319333176s+58664us
+
+1159000 tuples processed at 1319333180s+737226us
+
+1160000 tuples processed at 1319333185s+756352us
+
+1161000 tuples processed at 1319333191s+140233us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0054.heap (1728 MB allocated cumulatively, 44 MB currently in use)
+
+1162000 tuples processed at 1319333196s+72969us
+
+1163000 tuples processed at 1319333200s+676190us
+
+1164000 tuples processed at 1319333205s+236428us
+
+1165000 tuples processed at 1319333209s+908287us
+
+1166000 tuples processed at 1319333214s+518780us
+
+1167000 tuples processed at 1319333219s+126914us
+
+1168000 tuples processed at 1319333223s+925174us
+
+1169000 tuples processed at 1319333228s+659335us
+
+1170000 tuples processed at 1319333233s+654215us
+
+1171000 tuples processed at 1319333239s+184238us
+
+1172000 tuples processed at 1319333244s+635813us
+
+1173000 tuples processed at 1319333249s+556098us
+
+1174000 tuples processed at 1319333254s+254593us
+
+1175000 tuples processed at 1319333259s+27170us
+
+1176000 tuples processed at 1319333264s+428237us
+
+1177000 tuples processed at 1319333269s+816428us
+
+1178000 tuples processed at 1319333274s+379072us
+
+1179000 tuples processed at 1319333278s+906567us
+
+1180000 tuples processed at 1319333283s+745323us
+
+1181000 tuples processed at 1319333288s+672062us
+
+1182000 tuples processed at 1319333293s+447215us
+
+1183000 tuples processed at 1319333298s+248357us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0055.heap (1760 MB allocated cumulatively, 45 MB currently in use)
+
+1184000 tuples processed at 1319333303s+176034us
+
+1185000 tuples processed at 1319333308s+130491us
+
+1186000 tuples processed at 1319333313s+83903us
+
+1187000 tuples processed at 1319333318s+81315us
+
+1188000 tuples processed at 1319333323s+96940us
+
+1189000 tuples processed at 1319333327s+944476us
+
+1190000 tuples processed at 1319333332s+988048us
+
+1191000 tuples processed at 1319333338s+426083us
+
+1192000 tuples processed at 1319333343s+564124us
+
+1193000 tuples processed at 1319333349s+97167us
+
+1194000 tuples processed at 1319333354s+232026us
+
+1195000 tuples processed at 1319333359s+118273us
+
+1196000 tuples processed at 1319333363s+994577us
+
+1197000 tuples processed at 1319333368s+952679us
+
+1198000 tuples processed at 1319333373s+855571us
+
+1199000 tuples processed at 1319333378s+778324us
+
+1200000 tuples processed at 1319333383s+769176us
+
+1201000 tuples processed at 1319333388s+637985us
+
+1202000 tuples processed at 1319333393s+480036us
+
+1203000 tuples processed at 1319333398s+349304us
+
+1204000 tuples processed at 1319333403s+155002us
+
+1205000 tuples processed at 1319333407s+903465us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0056.heap (1792 MB allocated cumulatively, 45 MB currently in use)
+
+1206000 tuples processed at 1319333412s+745852us
+
+1207000 tuples processed at 1319333417s+636460us
+
+1208000 tuples processed at 1319333422s+470362us
+
+1209000 tuples processed at 1319333427s+387695us
+
+1210000 tuples processed at 1319333432s+369336us
+
+1211000 tuples processed at 1319333437s+340391us
+
+1212000 tuples processed at 1319333442s+642787us
+
+1213000 tuples processed at 1319333447s+908685us
+
+1214000 tuples processed at 1319333452s+909345us
+
+1215000 tuples processed at 1319333457s+778347us
+
+1216000 tuples processed at 1319333462s+879075us
+
+1217000 tuples processed at 1319333467s+722621us
+
+1218000 tuples processed at 1319333472s+761655us
+
+1219000 tuples processed at 1319333477s+648075us
+
+1220000 tuples processed at 1319333482s+559371us
+
+1221000 tuples processed at 1319333487s+600989us
+
+1222000 tuples processed at 1319333492s+525112us
+
+1223000 tuples processed at 1319333497s+693288us
+
+1224000 tuples processed at 1319333502s+554178us
+
+1225000 tuples processed at 1319333507s+488961us
+
+1226000 tuples processed at 1319333512s+480678us
+
+1227000 tuples processed at 1319333517s+320042us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0057.heap (1824 MB allocated cumulatively, 46 MB currently in use)
+
+1228000 tuples processed at 1319333522s+295098us
+
+1229000 tuples processed at 1319333527s+314835us
+
+1230000 tuples processed at 1319333532s+692051us
+
+1231000 tuples processed at 1319333537s+912108us
+
+1232000 tuples processed at 1319333543s+103896us
+
+1233000 tuples processed at 1319333548s+301353us
+
+1234000 tuples processed at 1319333553s+446120us
+
+1235000 tuples processed at 1319333558s+693201us
+
+1236000 tuples processed at 1319333563s+797261us
+
+1237000 tuples processed at 1319333568s+748318us
+
+1238000 tuples processed at 1319333574s+230907us
+
+1239000 tuples processed at 1319333579s+791990us
+
+1240000 tuples processed at 1319333584s+995943us
+
+1241000 tuples processed at 1319333590s+737648us
+
+1242000 tuples processed at 1319333596s+418832us
+
+1243000 tuples processed at 1319333601s+824798us
+
+1244000 tuples processed at 1319333607s+956750us
+
+1245000 tuples processed at 1319333613s+839303us
+
+1246000 tuples processed at 1319333619s+953855us
+
+1247000 tuples processed at 1319333626s+37378us
+
+1248000 tuples processed at 1319333632s+258743us
+
+1249000 tuples processed at 1319333638s+180289us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0058.heap (1856 MB allocated cumulatively, 47 MB currently in use)
+
+1250000 tuples processed at 1319333644s+336881us
+
+1251000 tuples processed at 1319333650s+458999us
+
+1252000 tuples processed at 1319333656s+660817us
+
+1253000 tuples processed at 1319333662s+895339us
+
+1254000 tuples processed at 1319333669s+167616us
+
+1255000 tuples processed at 1319333675s+113831us
+
+1256000 tuples processed at 1319333681s+502578us
+
+1257000 tuples processed at 1319333687s+891482us
+
+1258000 tuples processed at 1319333693s+980429us
+
+1259000 tuples processed at 1319333699s+954365us
+
+1260000 tuples processed at 1319333705s+820332us
+
+1261000 tuples processed at 1319333711s+970163us
+
+1262000 tuples processed at 1319333717s+917018us
+
+1263000 tuples processed at 1319333723s+237071us
+
+1264000 tuples processed at 1319333729s+412921us
+
+1265000 tuples processed at 1319333735s+638481us
+
+1266000 tuples processed at 1319333741s+836317us
+
+1267000 tuples processed at 1319333747s+577860us
+
+1268000 tuples processed at 1319333753s+170669us
+
+1269000 tuples processed at 1319333758s+198931us
+
+1270000 tuples processed at 1319333763s+668171us
+
+1271000 tuples processed at 1319333769s+128069us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0059.heap (1888 MB allocated cumulatively, 47 MB currently in use)
+
+1272000 tuples processed at 1319333774s+241565us
+
+1273000 tuples processed at 1319333779s+451560us
+
+1274000 tuples processed at 1319333784s+619747us
+
+1275000 tuples processed at 1319333789s+820331us
+
+1276000 tuples processed at 1319333795s+70199us
+
+1277000 tuples processed at 1319333800s+239236us
+
+1278000 tuples processed at 1319333805s+494636us
+
+1279000 tuples processed at 1319333810s+931742us
+
+1280000 tuples processed at 1319333816s+361940us
+
+1281000 tuples processed at 1319333821s+533694us
+
+1282000 tuples processed at 1319333826s+967414us
+
+1283000 tuples processed at 1319333832s+76708us
+
+1284000 tuples processed at 1319333837s+222167us
+
+1285000 tuples processed at 1319333842s+256344us
+
+1286000 tuples processed at 1319333847s+445291us
+
+1287000 tuples processed at 1319333852s+641865us
+
+1288000 tuples processed at 1319333857s+831022us
+
+1289000 tuples processed at 1319333862s+979959us
+
+1290000 tuples processed at 1319333868s+624366us
+
+1291000 tuples processed at 1319333874s+120098us
+
+1292000 tuples processed at 1319333879s+397221us
+
+1293000 tuples processed at 1319333884s+703721us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0060.heap (1920 MB allocated cumulatively, 48 MB currently in use)
+
+1294000 tuples processed at 1319333889s+910073us
+
+1295000 tuples processed at 1319333895s+138605us
+
+1296000 tuples processed at 1319333900s+427632us
+
+1297000 tuples processed at 1319333906s+140736us
+
+1298000 tuples processed at 1319333911s+704675us
+
+1299000 tuples processed at 1319333917s+388952us
+
+1300000 tuples processed at 1319333922s+938167us
+
+1301000 tuples processed at 1319333928s+613399us
+
+1302000 tuples processed at 1319333934s+256281us
+
+1303000 tuples processed at 1319333939s+746833us
+
+1304000 tuples processed at 1319333945s+374475us
+
+1305000 tuples processed at 1319333950s+936034us
+
+1306000 tuples processed at 1319333956s+592385us
+
+1307000 tuples processed at 1319333962s+122550us
+
+1308000 tuples processed at 1319333968s+75607us
+
+1309000 tuples processed at 1319333973s+716583us
+
+1310000 tuples processed at 1319333979s+430427us
+
+1311000 tuples processed at 1319333984s+932393us
+
+1312000 tuples processed at 1319333990s+478146us
+
+1313000 tuples processed at 1319333996s+414169us
+
+1314000 tuples processed at 1319334002s+292418us
+
+1315000 tuples processed at 1319334007s+842592us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0061.heap (1952 MB allocated cumulatively, 48 MB currently in use)
+
+1316000 tuples processed at 1319334013s+465800us
+
+1317000 tuples processed at 1319334019s+394631us
+
+1318000 tuples processed at 1319334025s+453095us
+
+1319000 tuples processed at 1319334031s+198803us
+
+1320000 tuples processed at 1319334037s+140920us
+
+1321000 tuples processed at 1319334042s+914237us
+
+1322000 tuples processed at 1319334048s+612285us
+
+1323000 tuples processed at 1319334054s+616903us
+
+1324000 tuples processed at 1319334060s+422118us
+
+1325000 tuples processed at 1319334066s+243315us
+
+1326000 tuples processed at 1319334071s+878142us
+
+1327000 tuples processed at 1319334077s+337027us
+
+1328000 tuples processed at 1319334082s+889350us
+
+1329000 tuples processed at 1319334088s+562403us
+
+1330000 tuples processed at 1319334094s+86742us
+
+1331000 tuples processed at 1319334099s+612941us
+
+1332000 tuples processed at 1319334105s+198593us
+
+1333000 tuples processed at 1319334111s+137017us
+
+1334000 tuples processed at 1319334116s+675633us
+
+1335000 tuples processed at 1319334122s+155635us
+
+1336000 tuples processed at 1319334127s+987711us
+
+1337000 tuples processed at 1319334134s+112587us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_axfinder_depth_1.0062.heap (1984 MB allocated cumulatively, 49 MB currently in use)
+
+1338000 tuples processed at 1319334139s+851613us
+
+1339000 tuples processed at 1319334145s+305340us
+
+1340000 tuples processed at 1319334151s+3613us
+
+1341000 tuples processed at 1319334156s+845386us
+
+1342000 tuples processed at 1319334162s+310875us

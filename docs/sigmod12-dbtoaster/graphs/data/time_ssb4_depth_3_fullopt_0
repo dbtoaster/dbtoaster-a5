@@ -1,0 +1,14 @@
+reading from /tmp/okennedy_dbtoaster_data/tpch/part.csv with 1 adaptors
+reading from /tmp/okennedy_dbtoaster_data/tpch/orders.csv with 1 adaptors
+reading from /tmp/okennedy_dbtoaster_data/tpch/nation.csv with 1 adaptors
+reading from /tmp/okennedy_dbtoaster_data/tpch/customer.csv with 1 adaptors
+reading from /tmp/okennedy_dbtoaster_data/tpch/lineitem.csv with 1 adaptors
+reading from /tmp/okennedy_dbtoaster_data/tpch/supplier.csv with 1 adaptors
+tracing: 
+0 tuples processed at 1319127570s+447662us
+done with stream, 5 remain
+1000 tuples processed at 1319127581s+439790us
+2000 tuples processed at 1319127691s+743896us
+3000 tuples processed at 1319128090s+218442us
+4000 tuples processed at 1319129854s+993732us
+5000 tuples processed at 1319134712s+412523us

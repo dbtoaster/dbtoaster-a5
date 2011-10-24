@@ -6,91 +6,122 @@ $num_threads = 16;
 $queries = {
   "axfinder" => {
     :datafile      => "finance/axfinder.sql",
-    :max_plot_rate => 1,
+    :max_plot_rate => 800,
+    :max_plot_mem  => 60,
     :representatives => ["depth_infty", "depth_1"],
     :tuple_mult    => 1000,
-    :timescale     => :minutes
+    :timescale     => :minutes,
+    :total_updates  => 2540000
   },
   "brokerspread" => {
     :datafile      => "finance/brokerspread.sql",
-    :max_plot_rate => 0.3,
+    :max_plot_rate => 300,
+    :max_plot_mem  => 60,
     :representatives => ["depth_infty", "depth_1"],
     :tuple_mult    => 1000,
-    :timescale     => :minutes
+    :timescale     => :minutes,
+    :total_updates  => 2540000
   },
   "brokervariance" => {
     :datafile      => "finance/brokervariance.sql",
+    :max_plot_rate => 200000,
+    :max_plot_mem  => 40,
     :representatives => ["depth_infty", "depth_1_nohash"],
     :tuple_mult    => 1000000,
-    :timescale     => :minutes
+    :rate_mult     => 1000,
+    :timescale     => :minutes,
+    :total_updates  => 1400000
   },
   "missedtrades" => {
     :datafile      => "finance/missedtrades.sql",
-    :max_plot_rate => 0.06,
+    :max_plot_rate => 60,
     :representatives => ["depth_infty", "depth_1_nohash", "depth_0"],
     :tuple_mult    => 1000,
-    :timescale     => :minutes
+    :timescale     => :minutes,
+    :total_updates  => 2540000
   },
   "pricespread" => {
     :datafile      => "finance/pricespread.sql",
-    :max_plot_rate => 0.50,
+    :max_plot_rate => 500,
+    :max_plot_mem  => 0.12,
     :representatives => ["depth_infty", "depth_1_nohash", "depth_0"],
     :tuple_mult    => 1000,
-    :timescale     => :minutes
+    :mem_mult      => 1000,
+    :timescale     => :minutes,
+    :total_updates  => 2540000
   },
   "serverload" => {
     :datafile      => "serverload.sql",
     :representatives => ["depth_infty", "depth_1_nohash", "depth_0"],
-    :max_plot_rate => 0.4,
+    :max_plot_rate => 400,
     :tuple_mult    => 1000,
-    :timescale     => :minutes
+    :timescale     => :minutes,
+    :total_updates  => 220000
   },
   "vwap" => {
     :datafile      => "finance/vwap.sql",
-    :max_plot_rate => 6,
-    :representatives => ["depth_infty", "depth_1_nohash", "depth_0"],
+    :max_plot_mem  => 40,
+    :max_plot_rate => 4000,
+    :representatives => ["depth_infty", "depth_1_nohash"],
     :tuple_mult    => 1000,
-    :timescale     => :minutes
+    :rate_mult     => 1000,
+    :timescale     => :minutes,
+    :total_updates  => 1400000,
   },
   "ssb4" => {
     :datafile      => "tpch/ssb4.sql -d disable-deletes",
-    :max_plot_rate => 1,
+    :max_plot_rate => 1000,
     :representatives => ["depth_infty", "depth_1"],
     :tuple_mult    => 1000,
-    :timescale     => :minutes
+    :timescale     => :minutes,
+    :total_updates => 786000,
+    :title         => "SHIPPING"
   },
   "tpch3" => {
     :datafile      => "tpch/query3.sql",
-    :max_plot_rate => 40,
+    :max_plot_rate => 40000,
+    :max_plot_time => 600,
+    :max_plot_mem  => 100,
     :representatives => ["depth_infty", "depth_1"],
-    :tuple_mult    => 1000
+    :tuple_mult    => 1000,
+    :rate_mult     => 1000,
+    :timescale     => :minutes,
+    :total_updates => 765000
   },
   "tpch11" => { 
     :datafile      => "tpch/query11.sql",
-    :max_plot_rate => 70,
+    :max_plot_rate => 80000,
+    :max_plot_time => 2,
+    :max_plot_mem  => 8,
     :representatives => ["depth_infty", "depth_1"],
-    :tuple_mult    => 1000
+    :tuple_mult    => 1000,
+    :rate_mult     => 1000,
+    :total_updates => 81000
   },
   "tpch17" => { 
     :datafile      => "tpch/query17.sql",
-    :max_plot_rate => 0.50,
+    :max_plot_rate => 500,
     :representatives => ["depth_infty", "depth_1_nohash", "depth_0"],
     :tuple_mult    => 1000,
-    :timescale     => :minutes
+    :timescale     => :minutes,
+    :total_updates => 620000
   },
   "tpch18" => { 
     :datafile      => "tpch/query18.sql",
-    :max_plot_rate => 0.10,
+    :max_plot_rate => 100,
     :representatives => ["depth_infty", "depth_1_nohash", "depth_0"],
     :tuple_mult    => 1000,
-    :timescale     => :minutes
+    :timescale     => :minutes,
+    :total_updates => 765000
   },
   "tpch22" => { 
     :datafile      => "tpch/query22.sql",
-    :max_plot_rate => 0.5,
-    :representatives => ["depth_infty", "depth_1_nohash", "depth_0"],
+    :max_plot_rate => 500,
+    :max_plot_mem  => 1.6,
+    :representatives => ["depth_infty", "depth_1_nohash"],
     :tuple_mult    => 1000,
-    :timescale     => :minutes
+    :timescale     => :minutes,
+    :total_updates => 165000
   }
 };
 $configurations = [
@@ -303,20 +334,30 @@ class Numeric
   end
 end
 
+def file_data args
+  filename = case args
+    when Hash then args.keys[0];
+    else args
+  end
+  file args do
+    data = yield;
+    File.open(filename, "w+") { |f| f.write(data); }
+  end
+end
 
 ["pdf", "tex", "ps"].each do |fmt|
-  plot "graphs/bakeoff.#{fmt}" do |plot|
+  plot "graphs/bakeoff.#{fmt}" => "rakefile" do |plot|
     depths = ["0", "1", "infty"];
     
-    plot.term "pdf enhanced size 5,2.2" if fmt == "pdf"
+    plot.term "pdf enhanced size 5,2.5" if fmt == "pdf"
     plot.logscale "y"
     plot.key "top right"
     
     query_order = [
-      "tpch3", "tpch11", "tpch17", "tpch18", "tpch22",
-      "axfinder", "brokerspread", "brokervariance", "vwap", "pricespread",
-        "missedtrades",
-      "serverload"
+      "tpch3", "tpch11", "tpch17", "tpch18", "tpch22", "ssb4", 
+      "serverload",
+      "brokervariance", "brokerspread", "axfinder", "pricespread",
+        "missedtrades", "vwap", 
     ]
     
     labels, data = query_order.map do |q|
@@ -326,11 +367,11 @@ end
         args.fetch(:representatives, []).
           each { |r| chosen_conf = r if /depth_#{d}/ =~ r; }
         
-        #puts "reading data/time_#{q}_#{chosen_conf}_0";
         time, tuples =
           if File.exists? "data/time_#{q}_#{chosen_conf}_0"
           then tuples_processed("data/time_#{q}_#{chosen_conf}_0")[-1];
-          else [0,0]
+          else puts "Warning: missing file 'data/time_#{q}_#{chosen_conf}_0'";
+               [0,0]
           end
         
         if time == 0 then 0 else tuples / time end;
@@ -340,18 +381,23 @@ end
         puts "Warning: Depth 0 rate = 0 for #{q}, using Depth 1 rate";
         data[1] else data[0] end
       
-      [ q, data.map { |rate| rate / base_rate } ];
+      [ if args.has_key? :title 
+        then args[:title]
+        else q.sub(/tpch/, "TPCH Q").upcase
+        end, 
+        data.map { |rate| rate / base_rate } ];
     end.unzip
     
-    plot.ylabel "Performance Relative To IVC"
+    plot.ylabel "Performance Relative To Repeat Evaluation"
+    plot.bmargin "5"
     
     draw_clustered_bar_plot plot, 
       :group_labels => labels,
       :dataset_labels => depths.map { |d| $conf_titles["depth_#{d}"] },
       :data => data,
-      :tic_commands => "rotate by -20",
+      :tic_commands => "rotate by -30",
       :bar_width => 25,
-      :label_offset => 8
+      :label_offset => 12
   end
   task fmt => "graphs/bakeoff.#{fmt}"
   
@@ -366,7 +412,7 @@ end
       end.unzip
 
     plot.term "pdf enhanced size 3,2.0" if fmt == "pdf"
-    plot.ylabel "Processing Rate"
+    plot.ylabel "Processing Rate (Relative to Depth 0)"
 
     draw_bar_plot plot, 
       :labels => labels,
@@ -428,7 +474,7 @@ end
     plot "graphs/windowedrate_#{q}.#{fmt}" => alldata do |plot|
       plot.xlabel "Tuples Processed#{tuple_mult_txt}"
       plot.ylabel "Refresh Rate (#{tuple_mult.to_i.to_pretty_s}/s)"
-      plot.yrange "[0:#{args[:max_plot_rate]}]" if args.has_key? :max_plot_rate;
+      plot.yrange "[0:#{args[:max_plot_rate]/tuple_mult}]" if args.has_key? :max_plot_rate;
 
       i = 0;
       graph_configs.each do |conf_code|
@@ -512,6 +558,189 @@ end
   end
   task :all_graphs => fmt;
 end
+
+class Array
+  def fold(accum = nil)
+    each { |i| accum = yield accum, i }
+    accum
+  end
+end
+
+class Hash
+  def intersect(other)
+    ret = {};
+    keys.each do |k|
+      ret[k] = yield k, self[k], other[k] if other.has_key? k
+    end
+    ret;
+  end
+  
+  def to_sorted_a
+    keys.sort.map do |k|
+      [k, self[k]]
+    end
+  end
+end
+
+
+
+$queries.each do |q, args|
+  tot_tups = args[:total_updates];
+  graph_configs = args.fetch(:representatives, $configurations.unzip[1]);
+
+  graph_configs.map do |config|
+    file_data "extracted/memory_#{q}_#{config}" => 
+              "data/memory_#{q}_#{config}.profile" do
+      puts "Building extracted/memory_#{q}_#{config}"
+  
+      mem_by_tuples = Hash.new { |h,k| h[k] = Array.new };
+  
+      File.open("data/memory_#{q}_#{config}.profile") { |f| f.readlines }.
+        map { |l| l.chomp.split(/\t/) }.
+        each do |tuples, map, mem, mempct|
+          mem_by_tuples[tuples.to_f].push mem.to_f
+        end
+        
+      "#% Complete\t#{config}\n" +
+      mem_by_tuples.to_sorted_a.
+        map { |tuples, mem| [tuples / tot_tups, mem.sum]}.
+        map { |row| row.join("\t") }.join("\n");
+    end
+
+    file_data "extracted/time_#{q}_#{config}" => 
+              "data/time_#{q}_#{config}_0" do
+      puts "Building extracted/time_#{q}_#{config}"
+  
+      last_tuple = 0;
+      last_time = 0;
+      
+      datafile = "data/time_#{q}_#{config}_0";
+
+      "#% Complete\ttime_#{config}\trate_#{config}"+
+        if File.exists? datafile then
+          tuples_processed(datafile).map do |t,tuples|
+            rate = 
+              if t - last_time <= 0 then 0
+              else (tuples - last_tuple) / (t - last_time)
+              end
+            last_tuple, last_time = tuples, t;
+            [ tuples.to_f / tot_tups, t.to_f, rate.to_f ] 
+          end
+        else 
+          []
+        end.map {|l| l.join("\t") }.join("\n");
+    end
+    
+    file "graphs/unified_#{q}.pdf" => 
+      ["extracted/time_#{q}_#{config}", "extracted/memory_#{q}_#{config}"]
+    
+  end
+  
+  file "graphs/unified_#{q}.pdf" => "rakefile" do
+    IO.popen("gnuplot", "w") do |gp|
+      gp.puts "set term pdf enhanced size 3.5,3";
+      gp.puts "set output 'graphs/unified_#{q}.pdf'";
+      gp.puts "set multiplot";
+      gp.puts "set bmargin 0";
+      gp.puts "set tmargin 0";
+      
+      gp.puts "set xtics format ''";
+      time_mult, time_scale = 
+        case args.fetch(:timescale, :seconds);
+          when :minutes then [60, "min"]
+          when :seconds then [1,  "s"]
+        end
+      max_time_y = if args.has_key? :max_plot_time then
+          args[:max_plot_time].to_f
+        else
+          [graph_configs.map do |cfg|
+            File.open("extracted/time_#{q}_#{cfg}") {|f|f.readlines[1..-1]}.
+              map { |r| r.split(/\t/)[1].to_f }.max
+          end.max, 3600].min
+        end / time_mult
+      mem_mult = 1000000.0 / args.fetch(:mem_mult, 1000000).to_f
+      mem_scale = case mem_mult
+          when 1000000 then "B"
+          when 1000 then "KB"
+          when 1 then "MB"
+          else raise "Unknown memory multiplier #{mem_mult}"
+        end
+      max_mem_y = if args.has_key? :max_plot_mem then
+          args[:max_plot_mem].to_f
+        else
+          graph_configs.map do |cfg|
+            File.open("extracted/memory_#{q}_#{cfg}") {|f|f.readlines[1..-1]}.
+              map { |r| r.split(/\t/)[1].to_f }.max
+          end.max
+        end.to_f * mem_mult.to_f
+      rate_mult = args.fetch(:rate_mult, 1);
+      rate_scale = case rate_mult
+          when 1 then "Refresh/s"
+          when 1000 then "Refresh/ms"
+          when 1000000 then "Refresh/ns"
+          else "x#{rate_mult} Refreshes/s"
+        end
+      max_rate_y = args[:max_plot_rate] / rate_mult;
+      graph_style = lambda { |i| (1 + i * 4).to_s }
+
+      gp.puts "set lmargin #{args.fetch(:lmargin, 8)}";
+      gp.puts "set ylabel 'Time (#{time_scale})'";
+      gp.puts "set key top left";
+      gp.puts "set size 1,0.30";
+      gp.puts "set origin 0,0.68";
+      gp.puts "set yrange [#{-0.05 * max_time_y}:#{max_time_y*1.1}]";
+      gp.puts "set ytics 0,#{max_time_y / 4.0},#{max_time_y}"
+      gp.puts "plot #{
+        i = -1;
+        graph_configs.map do |cfg| 
+          "'extracted/time_#{q}_#{cfg}' using 1:($2/#{time_mult}) "+
+          "with lines lw #{graph_style.call(i+=1)} "+
+          "title '#{$conf_titles[cfg]}'"
+        end.join(", ")
+      }";
+
+      gp.puts "set ylabel 'Rate (#{rate_scale})'";
+      gp.puts "set yrange [#{-0.05 * max_rate_y}:#{max_rate_y*1.1}]";
+      gp.puts "set ytics 0,#{(max_rate_y) / 4.0},#{(max_rate_y)}"
+      gp.puts "set size 1,0.33";
+      gp.puts "set origin 0,0.35";
+      gp.puts "set key off";
+      gp.puts "plot #{
+        i = -1;
+        graph_configs.map do |cfg| 
+          "'extracted/time_#{q}_#{cfg}' using 1:($3/#{rate_mult}) "+
+          "with lines lw #{graph_style.call(i+=1)} "+
+          "title '#{$conf_titles[cfg]}'"
+        end.join(", ")
+      }";
+      
+      gp.puts "set ylabel 'Memory (#{mem_scale})'";
+      gp.puts "set yrange [#{-0.05 * max_mem_y}:#{max_mem_y*1.1}]";
+      gp.puts "set ytics 0,#{max_mem_y / 4.0},#{max_mem_y}"
+      gp.puts "set size 1,0.35";
+      gp.puts "set origin 0,0.00";
+      gp.puts "set xtics"
+      gp.puts "set xtics format \"%g\""
+      gp.puts "set xlabel 'Progress (Fraction of Stream Trace Processed)'"
+      gp.puts "set bmargin 3";
+      gp.puts "plot #{
+        i = -1;
+        graph_configs.map do |cfg| 
+          "'extracted/memory_#{q}_#{cfg}' using 1:($2*#{mem_mult}) "+
+          "with lines lw #{graph_style.call(i+=1)} "+
+          "title '#{$conf_titles[cfg]}'"
+        end.join(", ")
+      }";
+      gp.puts "unset multiplot";
+      
+    end
+  end
+
+  task :unified => "graphs/unified_#{q}.pdf" do
+    sh "open graphs/unified_#{q}.pdf"
+  end
+end
+
 
 file "tuple_count.dat" => "rakefile" do
   tuples = Dir.entries("data").

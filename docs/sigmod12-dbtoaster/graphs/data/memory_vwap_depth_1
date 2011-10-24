@@ -1,0 +1,107 @@
+Starting tracking the heap
+
+order book adaptor params: book, bids
+
+order book adaptor params: brokers, 10
+
+reading from /tmp/okennedy_dbtoaster_data/finance.csv with 1 adaptors
+
+tracing: 
+
+0 tuples processed at 1319309148s+697948us
+
+1000 tuples processed at 1319309150s+10638us
+
+2000 tuples processed at 1319309153s+337198us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_1.0001.heap (16 MB allocated cumulatively, 0 MB currently in use)
+
+3000 tuples processed at 1319309158s+41746us
+
+4000 tuples processed at 1319309165s+448087us
+
+5000 tuples processed at 1319309174s+585136us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_1.0002.heap (32 MB allocated cumulatively, 0 MB currently in use)
+
+6000 tuples processed at 1319309185s+309240us
+
+7000 tuples processed at 1319309202s+247609us
+
+8000 tuples processed at 1319309221s+643709us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_1.0003.heap (48 MB allocated cumulatively, 0 MB currently in use)
+
+9000 tuples processed at 1319309244s+217587us
+
+10000 tuples processed at 1319309269s+463080us
+
+11000 tuples processed at 1319309297s+657120us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_1.0004.heap (64 MB allocated cumulatively, 0 MB currently in use)
+
+12000 tuples processed at 1319309328s+773041us
+
+13000 tuples processed at 1319309366s+244957us
+
+14000 tuples processed at 1319309408s+34138us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_1.0005.heap (80 MB allocated cumulatively, 0 MB currently in use)
+
+15000 tuples processed at 1319309452s+356281us
+
+16000 tuples processed at 1319309499s+737635us
+
+17000 tuples processed at 1319309550s+873383us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_1.0006.heap (96 MB allocated cumulatively, 0 MB currently in use)
+
+18000 tuples processed at 1319309604s+985772us
+
+19000 tuples processed at 1319309661s+995783us
+
+20000 tuples processed at 1319309721s+844001us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_1.0007.heap (112 MB allocated cumulatively, 1 MB currently in use)
+
+21000 tuples processed at 1319309784s+751061us
+
+22000 tuples processed at 1319309850s+82471us
+
+23000 tuples processed at 1319309918s+853948us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_1.0008.heap (128 MB allocated cumulatively, 1 MB currently in use)
+
+24000 tuples processed at 1319309992s+126894us
+
+25000 tuples processed at 1319310095s+908094us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_1.0009.heap (144 MB allocated cumulatively, 1 MB currently in use)
+
+26000 tuples processed at 1319310220s+276302us
+
+27000 tuples processed at 1319310392s+790376us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_1.0010.heap (160 MB allocated cumulatively, 1 MB currently in use)
+
+28000 tuples processed at 1319310631s+951289us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_1.0011.heap (176 MB allocated cumulatively, 1 MB currently in use)
+
+29000 tuples processed at 1319310989s+558263us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_1.0012.heap (192 MB allocated cumulatively, 1 MB currently in use)
+
+30000 tuples processed at 1319311562s+26896us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_1.0013.heap (208 MB allocated cumulatively, 1 MB currently in use)
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_1.0014.heap (224 MB allocated cumulatively, 1 MB currently in use)
+
+31000 tuples processed at 1319312349s+838068us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_1.0015.heap (240 MB allocated cumulatively, 1 MB currently in use)
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_vwap_depth_1.0016.heap (256 MB allocated cumulatively, 1 MB currently in use)
+
+32000 tuples processed at 1319313159s+130462us

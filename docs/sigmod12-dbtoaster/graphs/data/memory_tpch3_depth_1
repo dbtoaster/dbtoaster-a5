@@ -1,0 +1,2067 @@
+Starting tracking the heap
+
+reading from /tmp/okennedy_dbtoaster_data/tpch/orders.csv with 1 adaptors
+
+reading from /tmp/okennedy_dbtoaster_data/tpch/customer.csv with 1 adaptors
+
+reading from /tmp/okennedy_dbtoaster_data/tpch/lineitem.csv with 1 adaptors
+
+tracing: 
+
+0 tuples processed at 1319299163s+604533us
+
+1000 tuples processed at 1319299163s+824730us
+
+2000 tuples processed at 1319299164s+74063us
+
+3000 tuples processed at 1319299164s+320584us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0001.heap (16 MB allocated cumulatively, 0 MB currently in use)
+
+4000 tuples processed at 1319299164s+483755us
+
+5000 tuples processed at 1319299164s+676143us
+
+6000 tuples processed at 1319299164s+859261us
+
+7000 tuples processed at 1319299165s+76635us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0002.heap (32 MB allocated cumulatively, 1 MB currently in use)
+
+8000 tuples processed at 1319299165s+306953us
+
+9000 tuples processed at 1319299165s+557290us
+
+10000 tuples processed at 1319299165s+813009us
+
+11000 tuples processed at 1319299166s+88032us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0003.heap (48 MB allocated cumulatively, 1 MB currently in use)
+
+12000 tuples processed at 1319299166s+421745us
+
+13000 tuples processed at 1319299166s+761037us
+
+14000 tuples processed at 1319299167s+91521us
+
+15000 tuples processed at 1319299167s+443015us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0004.heap (64 MB allocated cumulatively, 2 MB currently in use)
+
+16000 tuples processed at 1319299167s+918343us
+
+17000 tuples processed at 1319299168s+397442us
+
+18000 tuples processed at 1319299168s+901880us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0005.heap (80 MB allocated cumulatively, 2 MB currently in use)
+
+19000 tuples processed at 1319299169s+406770us
+
+20000 tuples processed at 1319299169s+884826us
+
+21000 tuples processed at 1319299170s+390025us
+
+22000 tuples processed at 1319299171s+80506us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0006.heap (96 MB allocated cumulatively, 3 MB currently in use)
+
+23000 tuples processed at 1319299171s+707627us
+
+24000 tuples processed at 1319299172s+343009us
+
+25000 tuples processed at 1319299172s+978129us
+
+26000 tuples processed at 1319299173s+628773us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0007.heap (112 MB allocated cumulatively, 3 MB currently in use)
+
+27000 tuples processed at 1319299174s+296817us
+
+28000 tuples processed at 1319299175s+120725us
+
+29000 tuples processed at 1319299175s+899302us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0008.heap (128 MB allocated cumulatively, 4 MB currently in use)
+
+30000 tuples processed at 1319299176s+614318us
+
+31000 tuples processed at 1319299177s+562119us
+
+32000 tuples processed at 1319299178s+661246us
+
+33000 tuples processed at 1319299179s+741338us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0009.heap (144 MB allocated cumulatively, 4 MB currently in use)
+
+34000 tuples processed at 1319299180s+727088us
+
+35000 tuples processed at 1319299181s+958876us
+
+36000 tuples processed at 1319299183s+61750us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0010.heap (160 MB allocated cumulatively, 5 MB currently in use)
+
+37000 tuples processed at 1319299184s+284312us
+
+38000 tuples processed at 1319299185s+479806us
+
+39000 tuples processed at 1319299186s+399612us
+
+40000 tuples processed at 1319299187s+586266us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0011.heap (176 MB allocated cumulatively, 5 MB currently in use)
+
+41000 tuples processed at 1319299188s+727367us
+
+42000 tuples processed at 1319299189s+949003us
+
+43000 tuples processed at 1319299191s+259911us
+
+44000 tuples processed at 1319299192s+806499us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0012.heap (192 MB allocated cumulatively, 6 MB currently in use)
+
+done with stream, 2 remain
+
+45000 tuples processed at 1319299194s+398142us
+
+46000 tuples processed at 1319299196s+480967us
+
+47000 tuples processed at 1319299198s+600267us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0013.heap (208 MB allocated cumulatively, 6 MB currently in use)
+
+48000 tuples processed at 1319299200s+808438us
+
+49000 tuples processed at 1319299202s+997546us
+
+50000 tuples processed at 1319299205s+257189us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0014.heap (224 MB allocated cumulatively, 7 MB currently in use)
+
+51000 tuples processed at 1319299207s+476135us
+
+52000 tuples processed at 1319299209s+899708us
+
+53000 tuples processed at 1319299212s+174935us
+
+54000 tuples processed at 1319299214s+290761us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0015.heap (240 MB allocated cumulatively, 7 MB currently in use)
+
+55000 tuples processed at 1319299216s+755232us
+
+56000 tuples processed at 1319299219s+220867us
+
+57000 tuples processed at 1319299221s+292434us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0016.heap (256 MB allocated cumulatively, 7 MB currently in use)
+
+58000 tuples processed at 1319299223s+792623us
+
+59000 tuples processed at 1319299226s+287580us
+
+60000 tuples processed at 1319299228s+676062us
+
+61000 tuples processed at 1319299231s+372251us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0017.heap (272 MB allocated cumulatively, 8 MB currently in use)
+
+62000 tuples processed at 1319299233s+875519us
+
+63000 tuples processed at 1319299236s+142360us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0018.heap (288 MB allocated cumulatively, 9 MB currently in use)
+
+64000 tuples processed at 1319299238s+314067us
+
+65000 tuples processed at 1319299240s+672691us
+
+66000 tuples processed at 1319299243s+74690us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0019.heap (304 MB allocated cumulatively, 10 MB currently in use)
+
+67000 tuples processed at 1319299245s+206730us
+
+68000 tuples processed at 1319299247s+475415us
+
+69000 tuples processed at 1319299249s+900185us
+
+70000 tuples processed at 1319299251s+966351us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0020.heap (320 MB allocated cumulatively, 10 MB currently in use)
+
+71000 tuples processed at 1319299254s+116424us
+
+72000 tuples processed at 1319299256s+303361us
+
+73000 tuples processed at 1319299258s+620582us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0021.heap (336 MB allocated cumulatively, 11 MB currently in use)
+
+74000 tuples processed at 1319299261s+206261us
+
+75000 tuples processed at 1319299263s+837708us
+
+76000 tuples processed at 1319299266s+327994us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0022.heap (352 MB allocated cumulatively, 11 MB currently in use)
+
+77000 tuples processed at 1319299269s+109001us
+
+78000 tuples processed at 1319299271s+488221us
+
+79000 tuples processed at 1319299274s+102532us
+
+80000 tuples processed at 1319299276s+490801us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0023.heap (368 MB allocated cumulatively, 11 MB currently in use)
+
+81000 tuples processed at 1319299279s+461214us
+
+82000 tuples processed at 1319299281s+652893us
+
+83000 tuples processed at 1319299284s+150730us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0024.heap (384 MB allocated cumulatively, 12 MB currently in use)
+
+84000 tuples processed at 1319299286s+726147us
+
+85000 tuples processed at 1319299289s+276588us
+
+86000 tuples processed at 1319299292s+425798us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0025.heap (400 MB allocated cumulatively, 12 MB currently in use)
+
+87000 tuples processed at 1319299294s+854620us
+
+88000 tuples processed at 1319299297s+452699us
+
+89000 tuples processed at 1319299300s+81108us
+
+90000 tuples processed at 1319299302s+884318us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0026.heap (416 MB allocated cumulatively, 12 MB currently in use)
+
+91000 tuples processed at 1319299305s+453091us
+
+92000 tuples processed at 1319299307s+970147us
+
+93000 tuples processed at 1319299310s+212899us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0027.heap (432 MB allocated cumulatively, 13 MB currently in use)
+
+94000 tuples processed at 1319299312s+899246us
+
+95000 tuples processed at 1319299315s+528626us
+
+96000 tuples processed at 1319299317s+665345us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0028.heap (448 MB allocated cumulatively, 13 MB currently in use)
+
+97000 tuples processed at 1319299320s+494537us
+
+98000 tuples processed at 1319299322s+825402us
+
+99000 tuples processed at 1319299325s+171613us
+
+100000 tuples processed at 1319299327s+560907us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0029.heap (464 MB allocated cumulatively, 14 MB currently in use)
+
+101000 tuples processed at 1319299330s+282928us
+
+102000 tuples processed at 1319299332s+860779us
+
+103000 tuples processed at 1319299335s+458367us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0030.heap (480 MB allocated cumulatively, 14 MB currently in use)
+
+104000 tuples processed at 1319299338s+611521us
+
+105000 tuples processed at 1319299340s+989104us
+
+106000 tuples processed at 1319299343s+323120us
+
+107000 tuples processed at 1319299346s+159144us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0031.heap (496 MB allocated cumulatively, 14 MB currently in use)
+
+108000 tuples processed at 1319299349s+27783us
+
+109000 tuples processed at 1319299351s+582299us
+
+110000 tuples processed at 1319299354s+273179us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0032.heap (512 MB allocated cumulatively, 15 MB currently in use)
+
+111000 tuples processed at 1319299357s+551977us
+
+112000 tuples processed at 1319299360s+738696us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0033.heap (528 MB allocated cumulatively, 17 MB currently in use)
+
+113000 tuples processed at 1319299362s+990023us
+
+114000 tuples processed at 1319299365s+303169us
+
+115000 tuples processed at 1319299367s+54916us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0034.heap (544 MB allocated cumulatively, 18 MB currently in use)
+
+116000 tuples processed at 1319299369s+680073us
+
+117000 tuples processed at 1319299371s+808523us
+
+118000 tuples processed at 1319299374s+524609us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0035.heap (560 MB allocated cumulatively, 19 MB currently in use)
+
+119000 tuples processed at 1319299376s+673394us
+
+120000 tuples processed at 1319299379s+5499us
+
+121000 tuples processed at 1319299381s+533246us
+
+122000 tuples processed at 1319299383s+772356us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0036.heap (576 MB allocated cumulatively, 19 MB currently in use)
+
+123000 tuples processed at 1319299386s+277102us
+
+124000 tuples processed at 1319299388s+601701us
+
+125000 tuples processed at 1319299391s+176235us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0037.heap (592 MB allocated cumulatively, 19 MB currently in use)
+
+126000 tuples processed at 1319299393s+970746us
+
+127000 tuples processed at 1319299396s+621352us
+
+128000 tuples processed at 1319299398s+890582us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0038.heap (608 MB allocated cumulatively, 20 MB currently in use)
+
+129000 tuples processed at 1319299401s+413640us
+
+130000 tuples processed at 1319299403s+844769us
+
+131000 tuples processed at 1319299406s+847815us
+
+132000 tuples processed at 1319299409s+486559us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0039.heap (624 MB allocated cumulatively, 20 MB currently in use)
+
+133000 tuples processed at 1319299411s+782234us
+
+134000 tuples processed at 1319299414s+417794us
+
+135000 tuples processed at 1319299416s+756250us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0040.heap (640 MB allocated cumulatively, 20 MB currently in use)
+
+136000 tuples processed at 1319299419s+650391us
+
+137000 tuples processed at 1319299422s+394623us
+
+138000 tuples processed at 1319299424s+830051us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0041.heap (656 MB allocated cumulatively, 21 MB currently in use)
+
+139000 tuples processed at 1319299427s+253283us
+
+140000 tuples processed at 1319299429s+824223us
+
+141000 tuples processed at 1319299432s+711916us
+
+142000 tuples processed at 1319299435s+365697us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0042.heap (672 MB allocated cumulatively, 21 MB currently in use)
+
+143000 tuples processed at 1319299437s+493166us
+
+144000 tuples processed at 1319299440s+157419us
+
+145000 tuples processed at 1319299442s+887389us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0043.heap (688 MB allocated cumulatively, 22 MB currently in use)
+
+146000 tuples processed at 1319299445s+286661us
+
+147000 tuples processed at 1319299448s+265019us
+
+148000 tuples processed at 1319299450s+840661us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0044.heap (704 MB allocated cumulatively, 22 MB currently in use)
+
+149000 tuples processed at 1319299453s+313873us
+
+150000 tuples processed at 1319299455s+693715us
+
+151000 tuples processed at 1319299458s+768979us
+
+152000 tuples processed at 1319299461s+642304us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0045.heap (720 MB allocated cumulatively, 22 MB currently in use)
+
+153000 tuples processed at 1319299464s+697769us
+
+154000 tuples processed at 1319299467s+261635us
+
+155000 tuples processed at 1319299469s+883342us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0046.heap (736 MB allocated cumulatively, 23 MB currently in use)
+
+156000 tuples processed at 1319299472s+947494us
+
+157000 tuples processed at 1319299475s+610960us
+
+158000 tuples processed at 1319299478s+524542us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0047.heap (752 MB allocated cumulatively, 23 MB currently in use)
+
+159000 tuples processed at 1319299481s+495810us
+
+160000 tuples processed at 1319299484s+514306us
+
+161000 tuples processed at 1319299487s+134447us
+
+162000 tuples processed at 1319299489s+639869us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0048.heap (768 MB allocated cumulatively, 23 MB currently in use)
+
+163000 tuples processed at 1319299492s+266786us
+
+164000 tuples processed at 1319299494s+797596us
+
+165000 tuples processed at 1319299497s+493704us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0049.heap (784 MB allocated cumulatively, 24 MB currently in use)
+
+166000 tuples processed at 1319299500s+345700us
+
+167000 tuples processed at 1319299503s+424094us
+
+168000 tuples processed at 1319299506s+158267us
+
+169000 tuples processed at 1319299508s+722211us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0050.heap (800 MB allocated cumulatively, 24 MB currently in use)
+
+170000 tuples processed at 1319299511s+786434us
+
+171000 tuples processed at 1319299514s+642826us
+
+172000 tuples processed at 1319299517s+543243us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0051.heap (816 MB allocated cumulatively, 25 MB currently in use)
+
+173000 tuples processed at 1319299520s+342087us
+
+174000 tuples processed at 1319299523s+253535us
+
+175000 tuples processed at 1319299526s+513407us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0052.heap (832 MB allocated cumulatively, 25 MB currently in use)
+
+176000 tuples processed at 1319299529s+474511us
+
+177000 tuples processed at 1319299532s+620018us
+
+178000 tuples processed at 1319299534s+985835us
+
+179000 tuples processed at 1319299537s+879512us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0053.heap (848 MB allocated cumulatively, 25 MB currently in use)
+
+180000 tuples processed at 1319299540s+972518us
+
+181000 tuples processed at 1319299543s+820760us
+
+182000 tuples processed at 1319299546s+724698us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0054.heap (864 MB allocated cumulatively, 26 MB currently in use)
+
+183000 tuples processed at 1319299549s+73760us
+
+184000 tuples processed at 1319299552s+175090us
+
+185000 tuples processed at 1319299555s+520339us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0055.heap (880 MB allocated cumulatively, 26 MB currently in use)
+
+186000 tuples processed at 1319299558s+545916us
+
+187000 tuples processed at 1319299561s+692052us
+
+188000 tuples processed at 1319299564s+200376us
+
+189000 tuples processed at 1319299567s+706us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0056.heap (896 MB allocated cumulatively, 26 MB currently in use)
+
+190000 tuples processed at 1319299569s+881738us
+
+191000 tuples processed at 1319299573s+157394us
+
+192000 tuples processed at 1319299575s+855195us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0057.heap (912 MB allocated cumulatively, 27 MB currently in use)
+
+193000 tuples processed at 1319299579s+20342us
+
+194000 tuples processed at 1319299582s+461006us
+
+195000 tuples processed at 1319299585s+532680us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0058.heap (928 MB allocated cumulatively, 27 MB currently in use)
+
+196000 tuples processed at 1319299588s+661249us
+
+197000 tuples processed at 1319299591s+716421us
+
+198000 tuples processed at 1319299594s+778847us
+
+199000 tuples processed at 1319299597s+708959us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0059.heap (944 MB allocated cumulatively, 27 MB currently in use)
+
+200000 tuples processed at 1319299600s+826548us
+
+201000 tuples processed at 1319299604s+471120us
+
+202000 tuples processed at 1319299607s+924037us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0060.heap (960 MB allocated cumulatively, 28 MB currently in use)
+
+203000 tuples processed at 1319299610s+700356us
+
+204000 tuples processed at 1319299614s+62659us
+
+205000 tuples processed at 1319299617s+491329us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0061.heap (976 MB allocated cumulatively, 28 MB currently in use)
+
+206000 tuples processed at 1319299620s+486224us
+
+207000 tuples processed at 1319299623s+600799us
+
+208000 tuples processed at 1319299626s+860979us
+
+209000 tuples processed at 1319299629s+860826us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0062.heap (992 MB allocated cumulatively, 29 MB currently in use)
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0063.heap (1008 MB allocated cumulatively, 35 MB currently in use)
+
+210000 tuples processed at 1319299633s+24910us
+
+211000 tuples processed at 1319299635s+810670us
+
+212000 tuples processed at 1319299638s+241203us
+
+213000 tuples processed at 1319299640s+964443us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0064.heap (1024 MB allocated cumulatively, 34 MB currently in use)
+
+214000 tuples processed at 1319299643s+505249us
+
+215000 tuples processed at 1319299646s+282666us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0065.heap (1040 MB allocated cumulatively, 35 MB currently in use)
+
+216000 tuples processed at 1319299648s+893767us
+
+217000 tuples processed at 1319299651s+545912us
+
+218000 tuples processed at 1319299654s+333121us
+
+219000 tuples processed at 1319299656s+812335us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0066.heap (1056 MB allocated cumulatively, 36 MB currently in use)
+
+220000 tuples processed at 1319299659s+364544us
+
+221000 tuples processed at 1319299662s+613632us
+
+222000 tuples processed at 1319299664s+811196us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0067.heap (1072 MB allocated cumulatively, 36 MB currently in use)
+
+223000 tuples processed at 1319299667s+870631us
+
+224000 tuples processed at 1319299670s+378594us
+
+225000 tuples processed at 1319299673s+235405us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0068.heap (1088 MB allocated cumulatively, 36 MB currently in use)
+
+226000 tuples processed at 1319299676s+83017us
+
+227000 tuples processed at 1319299678s+718737us
+
+228000 tuples processed at 1319299680s+915729us
+
+229000 tuples processed at 1319299683s+293768us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0069.heap (1104 MB allocated cumulatively, 37 MB currently in use)
+
+230000 tuples processed at 1319299686s+32939us
+
+231000 tuples processed at 1319299689s+421613us
+
+232000 tuples processed at 1319299692s+256601us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0070.heap (1120 MB allocated cumulatively, 37 MB currently in use)
+
+233000 tuples processed at 1319299695s+468196us
+
+234000 tuples processed at 1319299699s+25203us
+
+235000 tuples processed at 1319299702s+154789us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0071.heap (1136 MB allocated cumulatively, 38 MB currently in use)
+
+236000 tuples processed at 1319299704s+614161us
+
+237000 tuples processed at 1319299707s+112554us
+
+238000 tuples processed at 1319299709s+635364us
+
+239000 tuples processed at 1319299712s+603018us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0072.heap (1152 MB allocated cumulatively, 38 MB currently in use)
+
+240000 tuples processed at 1319299715s+687329us
+
+241000 tuples processed at 1319299718s+988884us
+
+242000 tuples processed at 1319299722s+324803us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0073.heap (1168 MB allocated cumulatively, 38 MB currently in use)
+
+243000 tuples processed at 1319299724s+999974us
+
+244000 tuples processed at 1319299727s+805827us
+
+245000 tuples processed at 1319299730s+436992us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0074.heap (1184 MB allocated cumulatively, 39 MB currently in use)
+
+246000 tuples processed at 1319299733s+605800us
+
+247000 tuples processed at 1319299736s+433574us
+
+248000 tuples processed at 1319299739s+767001us
+
+249000 tuples processed at 1319299742s+842217us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0075.heap (1200 MB allocated cumulatively, 39 MB currently in use)
+
+250000 tuples processed at 1319299745s+546060us
+
+251000 tuples processed at 1319299748s+740782us
+
+252000 tuples processed at 1319299751s+439448us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0076.heap (1216 MB allocated cumulatively, 39 MB currently in use)
+
+253000 tuples processed at 1319299753s+895303us
+
+254000 tuples processed at 1319299756s+791898us
+
+255000 tuples processed at 1319299759s+413317us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0077.heap (1232 MB allocated cumulatively, 40 MB currently in use)
+
+256000 tuples processed at 1319299762s+778577us
+
+257000 tuples processed at 1319299765s+303185us
+
+258000 tuples processed at 1319299768s+247846us
+
+259000 tuples processed at 1319299771s+448943us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0078.heap (1248 MB allocated cumulatively, 40 MB currently in use)
+
+260000 tuples processed at 1319299774s+525984us
+
+261000 tuples processed at 1319299777s+465173us
+
+262000 tuples processed at 1319299780s+346268us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0079.heap (1264 MB allocated cumulatively, 40 MB currently in use)
+
+263000 tuples processed at 1319299783s+724363us
+
+264000 tuples processed at 1319299787s+68107us
+
+265000 tuples processed at 1319299789s+900044us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0080.heap (1280 MB allocated cumulatively, 41 MB currently in use)
+
+266000 tuples processed at 1319299792s+388881us
+
+267000 tuples processed at 1319299795s+311393us
+
+268000 tuples processed at 1319299798s+479756us
+
+269000 tuples processed at 1319299801s+745533us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0081.heap (1296 MB allocated cumulatively, 41 MB currently in use)
+
+270000 tuples processed at 1319299804s+985200us
+
+271000 tuples processed at 1319299808s+542050us
+
+272000 tuples processed at 1319299811s+562202us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0082.heap (1312 MB allocated cumulatively, 42 MB currently in use)
+
+273000 tuples processed at 1319299814s+558293us
+
+274000 tuples processed at 1319299817s+337902us
+
+275000 tuples processed at 1319299820s+292758us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0083.heap (1328 MB allocated cumulatively, 42 MB currently in use)
+
+276000 tuples processed at 1319299823s+546893us
+
+277000 tuples processed at 1319299826s+386188us
+
+278000 tuples processed at 1319299829s+965us
+
+279000 tuples processed at 1319299832s+328941us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0084.heap (1344 MB allocated cumulatively, 42 MB currently in use)
+
+280000 tuples processed at 1319299835s+592392us
+
+281000 tuples processed at 1319299838s+853730us
+
+282000 tuples processed at 1319299842s+211909us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0085.heap (1360 MB allocated cumulatively, 43 MB currently in use)
+
+283000 tuples processed at 1319299844s+684336us
+
+284000 tuples processed at 1319299847s+387136us
+
+285000 tuples processed at 1319299850s+285932us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0086.heap (1376 MB allocated cumulatively, 43 MB currently in use)
+
+286000 tuples processed at 1319299853s+711498us
+
+287000 tuples processed at 1319299856s+726683us
+
+288000 tuples processed at 1319299859s+572107us
+
+289000 tuples processed at 1319299862s+790838us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0087.heap (1392 MB allocated cumulatively, 43 MB currently in use)
+
+290000 tuples processed at 1319299865s+849612us
+
+291000 tuples processed at 1319299869s+145106us
+
+292000 tuples processed at 1319299872s+118111us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0088.heap (1408 MB allocated cumulatively, 44 MB currently in use)
+
+293000 tuples processed at 1319299875s+108173us
+
+294000 tuples processed at 1319299878s+48833us
+
+295000 tuples processed at 1319299881s+346366us
+
+296000 tuples processed at 1319299884s+810284us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0089.heap (1424 MB allocated cumulatively, 44 MB currently in use)
+
+297000 tuples processed at 1319299888s+160332us
+
+298000 tuples processed at 1319299891s+406071us
+
+299000 tuples processed at 1319299895s+199138us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0090.heap (1440 MB allocated cumulatively, 45 MB currently in use)
+
+300000 tuples processed at 1319299898s+613294us
+
+301000 tuples processed at 1319299902s+258962us
+
+302000 tuples processed at 1319299904s+956750us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0091.heap (1456 MB allocated cumulatively, 45 MB currently in use)
+
+303000 tuples processed at 1319299908s+671115us
+
+304000 tuples processed at 1319299911s+663955us
+
+305000 tuples processed at 1319299915s+133856us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0092.heap (1472 MB allocated cumulatively, 45 MB currently in use)
+
+306000 tuples processed at 1319299918s+160946us
+
+307000 tuples processed at 1319299921s+488776us
+
+308000 tuples processed at 1319299924s+719080us
+
+309000 tuples processed at 1319299927s+525445us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0093.heap (1488 MB allocated cumulatively, 46 MB currently in use)
+
+310000 tuples processed at 1319299930s+408538us
+
+311000 tuples processed at 1319299933s+553552us
+
+312000 tuples processed at 1319299937s+24397us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0094.heap (1504 MB allocated cumulatively, 46 MB currently in use)
+
+313000 tuples processed at 1319299940s+63095us
+
+314000 tuples processed at 1319299943s+26569us
+
+done with stream, 1 remain
+
+315000 tuples processed at 1319299948s+932070us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0095.heap (1520 MB allocated cumulatively, 46 MB currently in use)
+
+316000 tuples processed at 1319299955s+94992us
+
+317000 tuples processed at 1319299961s+307421us
+
+318000 tuples processed at 1319299967s+422242us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0096.heap (1536 MB allocated cumulatively, 47 MB currently in use)
+
+319000 tuples processed at 1319299973s+630251us
+
+320000 tuples processed at 1319299979s+936175us
+
+321000 tuples processed at 1319299986s+389964us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0097.heap (1552 MB allocated cumulatively, 47 MB currently in use)
+
+322000 tuples processed at 1319299992s+611225us
+
+323000 tuples processed at 1319299998s+743560us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0098.heap (1568 MB allocated cumulatively, 47 MB currently in use)
+
+324000 tuples processed at 1319300005s+44366us
+
+325000 tuples processed at 1319300011s+334090us
+
+326000 tuples processed at 1319300017s+860802us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0099.heap (1584 MB allocated cumulatively, 47 MB currently in use)
+
+327000 tuples processed at 1319300024s+47730us
+
+328000 tuples processed at 1319300030s+188385us
+
+329000 tuples processed at 1319300036s+738875us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0100.heap (1600 MB allocated cumulatively, 48 MB currently in use)
+
+330000 tuples processed at 1319300042s+875088us
+
+331000 tuples processed at 1319300049s+441201us
+
+332000 tuples processed at 1319300055s+669579us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0101.heap (1616 MB allocated cumulatively, 48 MB currently in use)
+
+333000 tuples processed at 1319300062s+171196us
+
+334000 tuples processed at 1319300068s+844728us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0102.heap (1632 MB allocated cumulatively, 48 MB currently in use)
+
+335000 tuples processed at 1319300075s+477188us
+
+336000 tuples processed at 1319300081s+652022us
+
+337000 tuples processed at 1319300088s+323343us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0103.heap (1648 MB allocated cumulatively, 48 MB currently in use)
+
+338000 tuples processed at 1319300095s+648769us
+
+339000 tuples processed at 1319300103s+272501us
+
+340000 tuples processed at 1319300110s+647622us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0104.heap (1664 MB allocated cumulatively, 49 MB currently in use)
+
+341000 tuples processed at 1319300117s+855773us
+
+342000 tuples processed at 1319300125s+65553us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0105.heap (1680 MB allocated cumulatively, 49 MB currently in use)
+
+343000 tuples processed at 1319300131s+913240us
+
+344000 tuples processed at 1319300138s+663672us
+
+345000 tuples processed at 1319300145s+793867us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0106.heap (1696 MB allocated cumulatively, 49 MB currently in use)
+
+346000 tuples processed at 1319300152s+983219us
+
+347000 tuples processed at 1319300159s+896014us
+
+348000 tuples processed at 1319300166s+979868us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0107.heap (1712 MB allocated cumulatively, 50 MB currently in use)
+
+349000 tuples processed at 1319300173s+881184us
+
+350000 tuples processed at 1319300180s+594530us
+
+351000 tuples processed at 1319300187s+427901us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0108.heap (1728 MB allocated cumulatively, 50 MB currently in use)
+
+352000 tuples processed at 1319300194s+173970us
+
+353000 tuples processed at 1319300200s+890180us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0109.heap (1744 MB allocated cumulatively, 50 MB currently in use)
+
+354000 tuples processed at 1319300207s+645391us
+
+355000 tuples processed at 1319300215s+41956us
+
+356000 tuples processed at 1319300222s+87086us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0110.heap (1760 MB allocated cumulatively, 50 MB currently in use)
+
+357000 tuples processed at 1319300229s+510377us
+
+358000 tuples processed at 1319300236s+761820us
+
+359000 tuples processed at 1319300243s+591310us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0111.heap (1776 MB allocated cumulatively, 51 MB currently in use)
+
+360000 tuples processed at 1319300250s+66521us
+
+361000 tuples processed at 1319300257s+203494us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0112.heap (1793 MB allocated cumulatively, 54 MB currently in use)
+
+362000 tuples processed at 1319300264s+275154us
+
+363000 tuples processed at 1319300271s+389935us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0113.heap (1809 MB allocated cumulatively, 54 MB currently in use)
+
+364000 tuples processed at 1319300278s+195652us
+
+365000 tuples processed at 1319300285s+512922us
+
+366000 tuples processed at 1319300292s+490335us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0114.heap (1825 MB allocated cumulatively, 54 MB currently in use)
+
+367000 tuples processed at 1319300299s+336524us
+
+368000 tuples processed at 1319300306s+95794us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0115.heap (1841 MB allocated cumulatively, 55 MB currently in use)
+
+369000 tuples processed at 1319300312s+516615us
+
+370000 tuples processed at 1319300318s+566526us
+
+371000 tuples processed at 1319300325s+558933us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0116.heap (1857 MB allocated cumulatively, 55 MB currently in use)
+
+372000 tuples processed at 1319300332s+670576us
+
+373000 tuples processed at 1319300339s+573184us
+
+374000 tuples processed at 1319300346s+572244us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0117.heap (1873 MB allocated cumulatively, 55 MB currently in use)
+
+375000 tuples processed at 1319300353s+885278us
+
+376000 tuples processed at 1319300360s+383916us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0118.heap (1889 MB allocated cumulatively, 55 MB currently in use)
+
+377000 tuples processed at 1319300366s+835392us
+
+378000 tuples processed at 1319300373s+899191us
+
+379000 tuples processed at 1319300380s+212163us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0119.heap (1905 MB allocated cumulatively, 56 MB currently in use)
+
+380000 tuples processed at 1319300386s+572265us
+
+381000 tuples processed at 1319300393s+11087us
+
+382000 tuples processed at 1319300399s+344773us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0120.heap (1921 MB allocated cumulatively, 56 MB currently in use)
+
+383000 tuples processed at 1319300405s+793911us
+
+384000 tuples processed at 1319300412s+529279us
+
+385000 tuples processed at 1319300419s+129060us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0121.heap (1937 MB allocated cumulatively, 56 MB currently in use)
+
+386000 tuples processed at 1319300426s+76688us
+
+387000 tuples processed at 1319300432s+706994us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0122.heap (1953 MB allocated cumulatively, 56 MB currently in use)
+
+388000 tuples processed at 1319300439s+916725us
+
+389000 tuples processed at 1319300447s+74569us
+
+390000 tuples processed at 1319300454s+605236us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0123.heap (1969 MB allocated cumulatively, 57 MB currently in use)
+
+391000 tuples processed at 1319300461s+228826us
+
+392000 tuples processed at 1319300468s+232982us
+
+393000 tuples processed at 1319300475s+625551us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0124.heap (1985 MB allocated cumulatively, 57 MB currently in use)
+
+394000 tuples processed at 1319300482s+825415us
+
+395000 tuples processed at 1319300489s+150740us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0125.heap (2001 MB allocated cumulatively, 57 MB currently in use)
+
+396000 tuples processed at 1319300495s+694651us
+
+397000 tuples processed at 1319300502s+41196us
+
+398000 tuples processed at 1319300508s+354133us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0126.heap (2017 MB allocated cumulatively, 58 MB currently in use)
+
+399000 tuples processed at 1319300514s+738605us
+
+400000 tuples processed at 1319300521s+172887us
+
+401000 tuples processed at 1319300528s+290143us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0127.heap (2033 MB allocated cumulatively, 58 MB currently in use)
+
+402000 tuples processed at 1319300535s+197971us
+
+403000 tuples processed at 1319300542s+96371us
+
+404000 tuples processed at 1319300549s+632273us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0128.heap (2049 MB allocated cumulatively, 58 MB currently in use)
+
+405000 tuples processed at 1319300556s+531563us
+
+406000 tuples processed at 1319300563s+549229us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0129.heap (2065 MB allocated cumulatively, 58 MB currently in use)
+
+407000 tuples processed at 1319300570s+558182us
+
+408000 tuples processed at 1319300577s+391076us
+
+409000 tuples processed at 1319300583s+924149us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0130.heap (2081 MB allocated cumulatively, 59 MB currently in use)
+
+410000 tuples processed at 1319300590s+292553us
+
+411000 tuples processed at 1319300596s+966167us
+
+412000 tuples processed at 1319300603s+744184us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0131.heap (2097 MB allocated cumulatively, 59 MB currently in use)
+
+413000 tuples processed at 1319300610s+474634us
+
+414000 tuples processed at 1319300617s+263706us
+
+415000 tuples processed at 1319300623s+887553us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0132.heap (2113 MB allocated cumulatively, 59 MB currently in use)
+
+416000 tuples processed at 1319300630s+377644us
+
+417000 tuples processed at 1319300637s+85590us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0133.heap (2129 MB allocated cumulatively, 59 MB currently in use)
+
+418000 tuples processed at 1319300643s+907099us
+
+419000 tuples processed at 1319300650s+506820us
+
+420000 tuples processed at 1319300657s+115696us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0134.heap (2145 MB allocated cumulatively, 60 MB currently in use)
+
+421000 tuples processed at 1319300663s+312678us
+
+422000 tuples processed at 1319300669s+780741us
+
+423000 tuples processed at 1319300676s+184513us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0135.heap (2161 MB allocated cumulatively, 60 MB currently in use)
+
+424000 tuples processed at 1319300682s+366834us
+
+425000 tuples processed at 1319300688s+580081us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0136.heap (2177 MB allocated cumulatively, 60 MB currently in use)
+
+426000 tuples processed at 1319300695s+53784us
+
+427000 tuples processed at 1319300701s+388604us
+
+428000 tuples processed at 1319300707s+717497us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0137.heap (2193 MB allocated cumulatively, 61 MB currently in use)
+
+429000 tuples processed at 1319300714s+504013us
+
+430000 tuples processed at 1319300720s+900825us
+
+431000 tuples processed at 1319300727s+905722us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0138.heap (2209 MB allocated cumulatively, 61 MB currently in use)
+
+432000 tuples processed at 1319300735s+58769us
+
+433000 tuples processed at 1319300741s+790883us
+
+434000 tuples processed at 1319300748s+506962us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0139.heap (2225 MB allocated cumulatively, 61 MB currently in use)
+
+435000 tuples processed at 1319300755s+430558us
+
+436000 tuples processed at 1319300761s+979738us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0140.heap (2241 MB allocated cumulatively, 61 MB currently in use)
+
+437000 tuples processed at 1319300768s+726537us
+
+438000 tuples processed at 1319300774s+927094us
+
+439000 tuples processed at 1319300781s+690959us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0141.heap (2257 MB allocated cumulatively, 62 MB currently in use)
+
+440000 tuples processed at 1319300788s+474703us
+
+441000 tuples processed at 1319300795s+26854us
+
+442000 tuples processed at 1319300801s+668540us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0142.heap (2273 MB allocated cumulatively, 62 MB currently in use)
+
+443000 tuples processed at 1319300808s+172725us
+
+444000 tuples processed at 1319300814s+898242us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0143.heap (2289 MB allocated cumulatively, 62 MB currently in use)
+
+445000 tuples processed at 1319300821s+334839us
+
+446000 tuples processed at 1319300827s+914811us
+
+447000 tuples processed at 1319300834s+610806us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0144.heap (2305 MB allocated cumulatively, 62 MB currently in use)
+
+448000 tuples processed at 1319300841s+72175us
+
+449000 tuples processed at 1319300847s+817064us
+
+450000 tuples processed at 1319300854s+320229us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0145.heap (2321 MB allocated cumulatively, 63 MB currently in use)
+
+451000 tuples processed at 1319300861s+109374us
+
+452000 tuples processed at 1319300867s+795248us
+
+453000 tuples processed at 1319300874s+584595us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0146.heap (2337 MB allocated cumulatively, 63 MB currently in use)
+
+454000 tuples processed at 1319300881s+245003us
+
+455000 tuples processed at 1319300888s+316352us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0147.heap (2353 MB allocated cumulatively, 63 MB currently in use)
+
+456000 tuples processed at 1319300894s+829884us
+
+457000 tuples processed at 1319300901s+600186us
+
+458000 tuples processed at 1319300908s+365821us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0148.heap (2369 MB allocated cumulatively, 64 MB currently in use)
+
+459000 tuples processed at 1319300914s+962728us
+
+460000 tuples processed at 1319300921s+759777us
+
+461000 tuples processed at 1319300928s+104633us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0149.heap (2385 MB allocated cumulatively, 64 MB currently in use)
+
+462000 tuples processed at 1319300934s+847812us
+
+463000 tuples processed at 1319300941s+526097us
+
+464000 tuples processed at 1319300947s+904732us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0150.heap (2401 MB allocated cumulatively, 64 MB currently in use)
+
+465000 tuples processed at 1319300954s+318669us
+
+466000 tuples processed at 1319300960s+903115us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0151.heap (2417 MB allocated cumulatively, 64 MB currently in use)
+
+467000 tuples processed at 1319300967s+530963us
+
+468000 tuples processed at 1319300974s+208783us
+
+469000 tuples processed at 1319300980s+491697us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0152.heap (2433 MB allocated cumulatively, 65 MB currently in use)
+
+470000 tuples processed at 1319300987s+31591us
+
+471000 tuples processed at 1319300993s+659520us
+
+472000 tuples processed at 1319301000s+81764us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0153.heap (2449 MB allocated cumulatively, 65 MB currently in use)
+
+473000 tuples processed at 1319301006s+655500us
+
+474000 tuples processed at 1319301013s+455133us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0154.heap (2465 MB allocated cumulatively, 65 MB currently in use)
+
+475000 tuples processed at 1319301020s+537961us
+
+476000 tuples processed at 1319301026s+955272us
+
+477000 tuples processed at 1319301033s+329689us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0155.heap (2481 MB allocated cumulatively, 65 MB currently in use)
+
+478000 tuples processed at 1319301040s+59789us
+
+479000 tuples processed at 1319301046s+427038us
+
+480000 tuples processed at 1319301053s+37369us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0156.heap (2497 MB allocated cumulatively, 66 MB currently in use)
+
+481000 tuples processed at 1319301060s+73448us
+
+482000 tuples processed at 1319301066s+470012us
+
+483000 tuples processed at 1319301072s+990315us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0157.heap (2513 MB allocated cumulatively, 66 MB currently in use)
+
+484000 tuples processed at 1319301079s+890338us
+
+485000 tuples processed at 1319301086s+58709us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0158.heap (2529 MB allocated cumulatively, 66 MB currently in use)
+
+486000 tuples processed at 1319301092s+683633us
+
+487000 tuples processed at 1319301099s+418549us
+
+488000 tuples processed at 1319301106s+12101us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0159.heap (2545 MB allocated cumulatively, 66 MB currently in use)
+
+489000 tuples processed at 1319301112s+388865us
+
+490000 tuples processed at 1319301118s+962525us
+
+491000 tuples processed at 1319301126s+522942us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0160.heap (2561 MB allocated cumulatively, 67 MB currently in use)
+
+492000 tuples processed at 1319301133s+594112us
+
+493000 tuples processed at 1319301140s+810710us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0161.heap (2577 MB allocated cumulatively, 67 MB currently in use)
+
+494000 tuples processed at 1319301148s+227734us
+
+495000 tuples processed at 1319301154s+568695us
+
+496000 tuples processed at 1319301160s+853658us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0162.heap (2593 MB allocated cumulatively, 67 MB currently in use)
+
+497000 tuples processed at 1319301167s+275963us
+
+498000 tuples processed at 1319301173s+808707us
+
+499000 tuples processed at 1319301180s+617112us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0163.heap (2609 MB allocated cumulatively, 68 MB currently in use)
+
+500000 tuples processed at 1319301187s+238147us
+
+501000 tuples processed at 1319301194s+65937us
+
+502000 tuples processed at 1319301200s+415396us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0164.heap (2625 MB allocated cumulatively, 68 MB currently in use)
+
+503000 tuples processed at 1319301206s+860253us
+
+504000 tuples processed at 1319301213s+316172us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0165.heap (2641 MB allocated cumulatively, 68 MB currently in use)
+
+505000 tuples processed at 1319301219s+655454us
+
+506000 tuples processed at 1319301226s+118585us
+
+507000 tuples processed at 1319301232s+908547us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0166.heap (2657 MB allocated cumulatively, 68 MB currently in use)
+
+508000 tuples processed at 1319301239s+521868us
+
+509000 tuples processed at 1319301246s+351416us
+
+510000 tuples processed at 1319301253s+549153us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0167.heap (2673 MB allocated cumulatively, 69 MB currently in use)
+
+511000 tuples processed at 1319301260s+725848us
+
+512000 tuples processed at 1319301267s+566340us
+
+513000 tuples processed at 1319301273s+873337us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0168.heap (2689 MB allocated cumulatively, 69 MB currently in use)
+
+514000 tuples processed at 1319301280s+589314us
+
+515000 tuples processed at 1319301287s+173125us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0169.heap (2705 MB allocated cumulatively, 69 MB currently in use)
+
+516000 tuples processed at 1319301293s+681377us
+
+517000 tuples processed at 1319301299s+846237us
+
+518000 tuples processed at 1319301306s+363449us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0170.heap (2721 MB allocated cumulatively, 69 MB currently in use)
+
+519000 tuples processed at 1319301313s+290578us
+
+520000 tuples processed at 1319301319s+588566us
+
+521000 tuples processed at 1319301326s+535100us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0171.heap (2737 MB allocated cumulatively, 70 MB currently in use)
+
+522000 tuples processed at 1319301333s+171347us
+
+523000 tuples processed at 1319301339s+940198us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0172.heap (2753 MB allocated cumulatively, 70 MB currently in use)
+
+524000 tuples processed at 1319301346s+339307us
+
+525000 tuples processed at 1319301352s+804251us
+
+526000 tuples processed at 1319301359s+558852us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0173.heap (2769 MB allocated cumulatively, 70 MB currently in use)
+
+527000 tuples processed at 1319301366s+183786us
+
+528000 tuples processed at 1319301372s+503490us
+
+529000 tuples processed at 1319301379s+290170us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0174.heap (2785 MB allocated cumulatively, 71 MB currently in use)
+
+530000 tuples processed at 1319301385s+877098us
+
+531000 tuples processed at 1319301392s+741536us
+
+532000 tuples processed at 1319301399s+138198us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0175.heap (2801 MB allocated cumulatively, 71 MB currently in use)
+
+533000 tuples processed at 1319301405s+644433us
+
+534000 tuples processed at 1319301412s+150416us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0176.heap (2817 MB allocated cumulatively, 71 MB currently in use)
+
+535000 tuples processed at 1319301418s+917576us
+
+536000 tuples processed at 1319301425s+776298us
+
+537000 tuples processed at 1319301432s+244591us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0177.heap (2833 MB allocated cumulatively, 71 MB currently in use)
+
+538000 tuples processed at 1319301439s+36788us
+
+539000 tuples processed at 1319301445s+887159us
+
+540000 tuples processed at 1319301452s+179187us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0178.heap (2849 MB allocated cumulatively, 72 MB currently in use)
+
+541000 tuples processed at 1319301458s+451142us
+
+542000 tuples processed at 1319301464s+732090us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0179.heap (2865 MB allocated cumulatively, 72 MB currently in use)
+
+543000 tuples processed at 1319301471s+219782us
+
+544000 tuples processed at 1319301477s+411838us
+
+545000 tuples processed at 1319301483s+688863us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0180.heap (2881 MB allocated cumulatively, 72 MB currently in use)
+
+546000 tuples processed at 1319301489s+965381us
+
+547000 tuples processed at 1319301496s+417938us
+
+548000 tuples processed at 1319301502s+621294us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0181.heap (2897 MB allocated cumulatively, 72 MB currently in use)
+
+549000 tuples processed at 1319301508s+902426us
+
+550000 tuples processed at 1319301515s+134916us
+
+551000 tuples processed at 1319301521s+548160us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0182.heap (2913 MB allocated cumulatively, 73 MB currently in use)
+
+552000 tuples processed at 1319301527s+951760us
+
+553000 tuples processed at 1319301534s+453182us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0183.heap (2929 MB allocated cumulatively, 73 MB currently in use)
+
+554000 tuples processed at 1319301540s+846349us
+
+555000 tuples processed at 1319301547s+226930us
+
+556000 tuples processed at 1319301553s+628294us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0184.heap (2945 MB allocated cumulatively, 73 MB currently in use)
+
+557000 tuples processed at 1319301559s+847334us
+
+558000 tuples processed at 1319301566s+45018us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0185.heap (2964 MB allocated cumulatively, 82 MB currently in use)
+
+559000 tuples processed at 1319301572s+737264us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0186.heap (2980 MB allocated cumulatively, 80 MB currently in use)
+
+560000 tuples processed at 1319301579s+49892us
+
+561000 tuples processed at 1319301585s+460489us
+
+562000 tuples processed at 1319301591s+533185us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0187.heap (2996 MB allocated cumulatively, 80 MB currently in use)
+
+563000 tuples processed at 1319301597s+786630us
+
+564000 tuples processed at 1319301604s+81704us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0188.heap (3012 MB allocated cumulatively, 80 MB currently in use)
+
+565000 tuples processed at 1319301610s+423055us
+
+566000 tuples processed at 1319301616s+643025us
+
+567000 tuples processed at 1319301622s+947148us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0189.heap (3028 MB allocated cumulatively, 80 MB currently in use)
+
+568000 tuples processed at 1319301629s+166642us
+
+569000 tuples processed at 1319301635s+373090us
+
+570000 tuples processed at 1319301641s+691267us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0190.heap (3044 MB allocated cumulatively, 81 MB currently in use)
+
+571000 tuples processed at 1319301648s+113288us
+
+572000 tuples processed at 1319301654s+576342us
+
+573000 tuples processed at 1319301660s+749111us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0191.heap (3060 MB allocated cumulatively, 81 MB currently in use)
+
+574000 tuples processed at 1319301667s+46812us
+
+575000 tuples processed at 1319301673s+405900us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0192.heap (3076 MB allocated cumulatively, 81 MB currently in use)
+
+576000 tuples processed at 1319301679s+791297us
+
+577000 tuples processed at 1319301686s+138793us
+
+578000 tuples processed at 1319301692s+445248us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0193.heap (3092 MB allocated cumulatively, 81 MB currently in use)
+
+579000 tuples processed at 1319301698s+853805us
+
+580000 tuples processed at 1319301705s+341910us
+
+581000 tuples processed at 1319301711s+929420us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0194.heap (3108 MB allocated cumulatively, 82 MB currently in use)
+
+582000 tuples processed at 1319301718s+318833us
+
+583000 tuples processed at 1319301724s+645186us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0195.heap (3124 MB allocated cumulatively, 82 MB currently in use)
+
+584000 tuples processed at 1319301731s+21964us
+
+585000 tuples processed at 1319301737s+376105us
+
+586000 tuples processed at 1319301743s+952354us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0196.heap (3140 MB allocated cumulatively, 82 MB currently in use)
+
+587000 tuples processed at 1319301750s+475388us
+
+588000 tuples processed at 1319301756s+795745us
+
+589000 tuples processed at 1319301763s+69507us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0197.heap (3156 MB allocated cumulatively, 82 MB currently in use)
+
+590000 tuples processed at 1319301769s+445615us
+
+591000 tuples processed at 1319301775s+812253us
+
+592000 tuples processed at 1319301782s+160142us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0198.heap (3172 MB allocated cumulatively, 83 MB currently in use)
+
+593000 tuples processed at 1319301788s+373314us
+
+594000 tuples processed at 1319301794s+746804us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0199.heap (3188 MB allocated cumulatively, 83 MB currently in use)
+
+595000 tuples processed at 1319301801s+86745us
+
+596000 tuples processed at 1319301807s+665773us
+
+597000 tuples processed at 1319301814s+211770us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0200.heap (3204 MB allocated cumulatively, 83 MB currently in use)
+
+598000 tuples processed at 1319301820s+600447us
+
+599000 tuples processed at 1319301826s+880673us
+
+600000 tuples processed at 1319301833s+124172us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0201.heap (3220 MB allocated cumulatively, 84 MB currently in use)
+
+601000 tuples processed at 1319301839s+459645us
+
+602000 tuples processed at 1319301845s+733783us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0202.heap (3236 MB allocated cumulatively, 84 MB currently in use)
+
+603000 tuples processed at 1319301852s+211578us
+
+604000 tuples processed at 1319301858s+349570us
+
+605000 tuples processed at 1319301864s+693855us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0203.heap (3252 MB allocated cumulatively, 84 MB currently in use)
+
+606000 tuples processed at 1319301871s+172129us
+
+607000 tuples processed at 1319301877s+756109us
+
+608000 tuples processed at 1319301884s+161818us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0204.heap (3268 MB allocated cumulatively, 84 MB currently in use)
+
+609000 tuples processed at 1319301890s+646223us
+
+610000 tuples processed at 1319301897s+16626us
+
+611000 tuples processed at 1319301903s+349160us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0205.heap (3284 MB allocated cumulatively, 85 MB currently in use)
+
+612000 tuples processed at 1319301909s+357422us
+
+613000 tuples processed at 1319301915s+470833us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0206.heap (3300 MB allocated cumulatively, 85 MB currently in use)
+
+614000 tuples processed at 1319301921s+698586us
+
+615000 tuples processed at 1319301927s+812190us
+
+616000 tuples processed at 1319301934s+37920us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0207.heap (3316 MB allocated cumulatively, 85 MB currently in use)
+
+617000 tuples processed at 1319301940s+251429us
+
+618000 tuples processed at 1319301946s+461354us
+
+619000 tuples processed at 1319301952s+862488us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0208.heap (3332 MB allocated cumulatively, 85 MB currently in use)
+
+620000 tuples processed at 1319301959s+20781us
+
+621000 tuples processed at 1319301965s+394771us
+
+622000 tuples processed at 1319301971s+936140us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0209.heap (3348 MB allocated cumulatively, 86 MB currently in use)
+
+623000 tuples processed at 1319301978s+553792us
+
+624000 tuples processed at 1319301985s+187393us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0210.heap (3364 MB allocated cumulatively, 86 MB currently in use)
+
+625000 tuples processed at 1319301991s+435535us
+
+626000 tuples processed at 1319301998s+37426us
+
+627000 tuples processed at 1319302004s+502714us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0211.heap (3380 MB allocated cumulatively, 86 MB currently in use)
+
+628000 tuples processed at 1319302010s+737112us
+
+629000 tuples processed at 1319302017s+171775us
+
+630000 tuples processed at 1319302023s+605995us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0212.heap (3396 MB allocated cumulatively, 87 MB currently in use)
+
+631000 tuples processed at 1319302029s+854512us
+
+632000 tuples processed at 1319302035s+870135us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0213.heap (3412 MB allocated cumulatively, 87 MB currently in use)
+
+633000 tuples processed at 1319302042s+59326us
+
+634000 tuples processed at 1319302048s+174137us
+
+635000 tuples processed at 1319302054s+498312us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0214.heap (3428 MB allocated cumulatively, 87 MB currently in use)
+
+636000 tuples processed at 1319302061s+14347us
+
+637000 tuples processed at 1319302067s+221037us
+
+638000 tuples processed at 1319302073s+501375us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0215.heap (3444 MB allocated cumulatively, 87 MB currently in use)
+
+639000 tuples processed at 1319302079s+883684us
+
+640000 tuples processed at 1319302086s+112679us
+
+641000 tuples processed at 1319302092s+633647us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0216.heap (3460 MB allocated cumulatively, 88 MB currently in use)
+
+642000 tuples processed at 1319302098s+961398us
+
+643000 tuples processed at 1319302105s+358503us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0217.heap (3476 MB allocated cumulatively, 88 MB currently in use)
+
+644000 tuples processed at 1319302111s+605958us
+
+645000 tuples processed at 1319302118s+42181us
+
+646000 tuples processed at 1319302124s+587904us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0218.heap (3492 MB allocated cumulatively, 88 MB currently in use)
+
+647000 tuples processed at 1319302130s+877930us
+
+648000 tuples processed at 1319302137s+295286us
+
+649000 tuples processed at 1319302143s+543792us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0219.heap (3508 MB allocated cumulatively, 88 MB currently in use)
+
+650000 tuples processed at 1319302149s+869306us
+
+651000 tuples processed at 1319302156s+981800us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0220.heap (3524 MB allocated cumulatively, 89 MB currently in use)
+
+652000 tuples processed at 1319302163s+561076us
+
+653000 tuples processed at 1319302169s+802790us
+
+654000 tuples processed at 1319302176s+102959us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0221.heap (3540 MB allocated cumulatively, 89 MB currently in use)
+
+655000 tuples processed at 1319302182s+491959us
+
+656000 tuples processed at 1319302188s+966452us
+
+657000 tuples processed at 1319302195s+576104us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0222.heap (3556 MB allocated cumulatively, 89 MB currently in use)
+
+658000 tuples processed at 1319302202s+278361us
+
+659000 tuples processed at 1319302208s+485529us
+
+660000 tuples processed at 1319302215s+154120us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0223.heap (3572 MB allocated cumulatively, 90 MB currently in use)
+
+661000 tuples processed at 1319302221s+932056us
+
+662000 tuples processed at 1319302228s+226821us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0224.heap (3588 MB allocated cumulatively, 90 MB currently in use)
+
+663000 tuples processed at 1319302234s+454051us
+
+664000 tuples processed at 1319302241s+273295us
+
+665000 tuples processed at 1319302247s+437083us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0225.heap (3604 MB allocated cumulatively, 90 MB currently in use)
+
+666000 tuples processed at 1319302253s+670247us
+
+667000 tuples processed at 1319302259s+896568us
+
+668000 tuples processed at 1319302266s+54900us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0226.heap (3620 MB allocated cumulatively, 90 MB currently in use)
+
+669000 tuples processed at 1319302272s+252751us
+
+670000 tuples processed at 1319302278s+528609us
+
+671000 tuples processed at 1319302284s+991664us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0227.heap (3636 MB allocated cumulatively, 91 MB currently in use)
+
+672000 tuples processed at 1319302291s+382404us
+
+673000 tuples processed at 1319302297s+846096us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0228.heap (3652 MB allocated cumulatively, 91 MB currently in use)
+
+674000 tuples processed at 1319302304s+221753us
+
+675000 tuples processed at 1319302310s+619774us
+
+676000 tuples processed at 1319302316s+940404us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0229.heap (3668 MB allocated cumulatively, 91 MB currently in use)
+
+677000 tuples processed at 1319302323s+331095us
+
+678000 tuples processed at 1319302329s+726799us
+
+679000 tuples processed at 1319302336s+196403us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0230.heap (3684 MB allocated cumulatively, 91 MB currently in use)
+
+680000 tuples processed at 1319302342s+597666us
+
+681000 tuples processed at 1319302349s+124176us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0231.heap (3700 MB allocated cumulatively, 92 MB currently in use)
+
+682000 tuples processed at 1319302355s+675653us
+
+683000 tuples processed at 1319302362s+219646us
+
+684000 tuples processed at 1319302368s+581845us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0232.heap (3716 MB allocated cumulatively, 92 MB currently in use)
+
+685000 tuples processed at 1319302374s+907614us
+
+686000 tuples processed at 1319302381s+397020us
+
+687000 tuples processed at 1319302387s+787454us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0233.heap (3732 MB allocated cumulatively, 92 MB currently in use)
+
+688000 tuples processed at 1319302394s+19504us
+
+689000 tuples processed at 1319302400s+388133us
+
+690000 tuples processed at 1319302406s+841765us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0234.heap (3748 MB allocated cumulatively, 92 MB currently in use)
+
+691000 tuples processed at 1319302413s+224583us
+
+692000 tuples processed at 1319302419s+425958us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0235.heap (3764 MB allocated cumulatively, 93 MB currently in use)
+
+693000 tuples processed at 1319302425s+720914us
+
+694000 tuples processed at 1319302431s+913113us
+
+695000 tuples processed at 1319302438s+387444us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0236.heap (3780 MB allocated cumulatively, 93 MB currently in use)
+
+696000 tuples processed at 1319302444s+826196us
+
+697000 tuples processed at 1319302451s+90593us
+
+698000 tuples processed at 1319302457s+339397us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0237.heap (3796 MB allocated cumulatively, 93 MB currently in use)
+
+699000 tuples processed at 1319302463s+566656us
+
+700000 tuples processed at 1319302469s+826974us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0238.heap (3812 MB allocated cumulatively, 94 MB currently in use)
+
+701000 tuples processed at 1319302476s+419210us
+
+702000 tuples processed at 1319302482s+986070us
+
+703000 tuples processed at 1319302489s+374238us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0239.heap (3828 MB allocated cumulatively, 94 MB currently in use)
+
+704000 tuples processed at 1319302495s+841466us
+
+705000 tuples processed at 1319302502s+268895us
+
+706000 tuples processed at 1319302508s+665842us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0240.heap (3844 MB allocated cumulatively, 94 MB currently in use)
+
+707000 tuples processed at 1319302515s+114680us
+
+708000 tuples processed at 1319302521s+388549us
+
+709000 tuples processed at 1319302527s+785144us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0241.heap (3860 MB allocated cumulatively, 94 MB currently in use)
+
+710000 tuples processed at 1319302534s+174645us
+
+711000 tuples processed at 1319302540s+730117us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0242.heap (3876 MB allocated cumulatively, 95 MB currently in use)
+
+712000 tuples processed at 1319302547s+206094us
+
+713000 tuples processed at 1319302553s+672260us
+
+714000 tuples processed at 1319302560s+91740us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0243.heap (3892 MB allocated cumulatively, 95 MB currently in use)
+
+715000 tuples processed at 1319302566s+430108us
+
+716000 tuples processed at 1319302572s+784905us
+
+717000 tuples processed at 1319302579s+312711us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0244.heap (3908 MB allocated cumulatively, 95 MB currently in use)
+
+718000 tuples processed at 1319302585s+834956us
+
+719000 tuples processed at 1319302592s+201529us
+
+720000 tuples processed at 1319302598s+592362us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0245.heap (3924 MB allocated cumulatively, 95 MB currently in use)
+
+721000 tuples processed at 1319302604s+996787us
+
+722000 tuples processed at 1319302611s+210691us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0246.heap (3940 MB allocated cumulatively, 96 MB currently in use)
+
+723000 tuples processed at 1319302617s+506907us
+
+724000 tuples processed at 1319302623s+873220us
+
+725000 tuples processed at 1319302630s+116103us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0247.heap (3956 MB allocated cumulatively, 96 MB currently in use)
+
+726000 tuples processed at 1319302636s+457512us
+
+727000 tuples processed at 1319302642s+733453us
+
+728000 tuples processed at 1319302648s+936043us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0248.heap (3972 MB allocated cumulatively, 96 MB currently in use)
+
+729000 tuples processed at 1319302655s+252620us
+
+730000 tuples processed at 1319302661s+542054us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0249.heap (3988 MB allocated cumulatively, 97 MB currently in use)
+
+731000 tuples processed at 1319302667s+734317us
+
+732000 tuples processed at 1319302674s+109662us
+
+733000 tuples processed at 1319302680s+408666us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0250.heap (4004 MB allocated cumulatively, 97 MB currently in use)
+
+734000 tuples processed at 1319302686s+869200us
+
+735000 tuples processed at 1319302693s+290682us
+
+736000 tuples processed at 1319302699s+634127us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0251.heap (4020 MB allocated cumulatively, 97 MB currently in use)
+
+737000 tuples processed at 1319302706s+57900us
+
+738000 tuples processed at 1319302712s+488538us
+
+739000 tuples processed at 1319302718s+929462us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0252.heap (4036 MB allocated cumulatively, 97 MB currently in use)
+
+740000 tuples processed at 1319302725s+154455us
+
+741000 tuples processed at 1319302731s+481488us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0253.heap (4052 MB allocated cumulatively, 98 MB currently in use)
+
+742000 tuples processed at 1319302737s+714031us
+
+743000 tuples processed at 1319302743s+844073us
+
+744000 tuples processed at 1319302750s+17048us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0254.heap (4068 MB allocated cumulatively, 98 MB currently in use)
+
+745000 tuples processed at 1319302756s+380037us
+
+746000 tuples processed at 1319302762s+562998us
+
+747000 tuples processed at 1319302768s+832247us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0255.heap (4084 MB allocated cumulatively, 98 MB currently in use)
+
+748000 tuples processed at 1319302775s+35854us
+
+749000 tuples processed at 1319302781s+45059us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0256.heap (4100 MB allocated cumulatively, 98 MB currently in use)
+
+750000 tuples processed at 1319302787s+196894us
+
+751000 tuples processed at 1319302793s+509549us
+
+752000 tuples processed at 1319302799s+762707us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0257.heap (4116 MB allocated cumulatively, 99 MB currently in use)
+
+753000 tuples processed at 1319302805s+891748us
+
+754000 tuples processed at 1319302811s+998640us
+
+755000 tuples processed at 1319302818s+19025us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0258.heap (4132 MB allocated cumulatively, 99 MB currently in use)
+
+756000 tuples processed at 1319302824s+57473us
+
+757000 tuples processed at 1319302829s+996027us
+
+758000 tuples processed at 1319302835s+922068us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0259.heap (4148 MB allocated cumulatively, 99 MB currently in use)
+
+759000 tuples processed at 1319302841s+917118us
+
+760000 tuples processed at 1319302848s+37094us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0260.heap (4164 MB allocated cumulatively, 99 MB currently in use)
+
+761000 tuples processed at 1319302854s+500326us
+
+762000 tuples processed at 1319302860s+972654us
+
+763000 tuples processed at 1319302867s+223144us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_tpch3_depth_1.0261.heap (4180 MB allocated cumulatively, 100 MB currently in use)
+
+764000 tuples processed at 1319302873s+529101us
+
+765000 tuples processed at 1319302879s+780184us

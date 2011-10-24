@@ -1,0 +1,221 @@
+Starting tracking the heap
+
+order book adaptor params: book, bids
+
+order book adaptor params: brokers, 10
+
+order book adaptor params: deterministic, yes
+
+reading from /tmp/okennedy_dbtoaster_data/finance.csv with 1 adaptors
+
+tracing: 
+
+0 tuples processed at 1319338739s+318625us
+
+10 tuples processed at 1319338739s+320602us
+
+20 tuples processed at 1319338739s+323209us
+
+30 tuples processed at 1319338739s+327210us
+
+40 tuples processed at 1319338739s+334038us
+
+50 tuples processed at 1319338739s+340619us
+
+60 tuples processed at 1319338739s+348747us
+
+70 tuples processed at 1319338739s+359527us
+
+80 tuples processed at 1319338739s+374782us
+
+90 tuples processed at 1319338739s+393638us
+
+100 tuples processed at 1319338739s+415758us
+
+110 tuples processed at 1319338739s+442244us
+
+120 tuples processed at 1319338739s+471666us
+
+130 tuples processed at 1319338739s+506012us
+
+140 tuples processed at 1319338739s+541255us
+
+150 tuples processed at 1319338739s+576269us
+
+160 tuples processed at 1319338739s+614908us
+
+170 tuples processed at 1319338739s+656503us
+
+180 tuples processed at 1319338739s+704444us
+
+190 tuples processed at 1319338739s+755712us
+
+200 tuples processed at 1319338739s+811086us
+
+210 tuples processed at 1319338739s+880774us
+
+220 tuples processed at 1319338739s+938183us
+
+230 tuples processed at 1319338739s+984774us
+
+240 tuples processed at 1319338740s+32400us
+
+250 tuples processed at 1319338740s+79617us
+
+260 tuples processed at 1319338740s+135966us
+
+270 tuples processed at 1319338740s+200396us
+
+280 tuples processed at 1319338740s+269370us
+
+290 tuples processed at 1319338740s+341574us
+
+300 tuples processed at 1319338740s+421005us
+
+310 tuples processed at 1319338740s+577094us
+
+320 tuples processed at 1319338740s+745991us
+
+330 tuples processed at 1319338740s+920727us
+
+340 tuples processed at 1319338741s+19454us
+
+350 tuples processed at 1319338741s+124962us
+
+360 tuples processed at 1319338741s+236816us
+
+370 tuples processed at 1319338741s+354499us
+
+380 tuples processed at 1319338741s+474094us
+
+390 tuples processed at 1319338741s+600307us
+
+400 tuples processed at 1319338741s+733991us
+
+410 tuples processed at 1319338741s+874699us
+
+420 tuples processed at 1319338742s+22332us
+
+430 tuples processed at 1319338742s+173449us
+
+440 tuples processed at 1319338742s+332437us
+
+450 tuples processed at 1319338742s+500020us
+
+460 tuples processed at 1319338742s+675089us
+
+470 tuples processed at 1319338742s+857626us
+
+480 tuples processed at 1319338743s+48837us
+
+490 tuples processed at 1319338743s+253170us
+
+500 tuples processed at 1319338743s+461835us
+
+510 tuples processed at 1319338743s+680720us
+
+520 tuples processed at 1319338743s+910858us
+
+530 tuples processed at 1319338744s+151582us
+
+540 tuples processed at 1319338744s+401467us
+
+550 tuples processed at 1319338744s+670120us
+
+560 tuples processed at 1319338744s+953437us
+
+570 tuples processed at 1319338745s+254460us
+
+580 tuples processed at 1319338745s+681980us
+
+590 tuples processed at 1319338746s+110725us
+
+600 tuples processed at 1319338746s+462973us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_brokerspread_depth_0.0001.heap (1024 MB allocated cumulatively, 1 MB currently in use)
+
+610 tuples processed at 1319338746s+836476us
+
+620 tuples processed at 1319338747s+236686us
+
+630 tuples processed at 1319338747s+794993us
+
+640 tuples processed at 1319338748s+258457us
+
+650 tuples processed at 1319338748s+684053us
+
+660 tuples processed at 1319338749s+124480us
+
+670 tuples processed at 1319338749s+572517us
+
+680 tuples processed at 1319338750s+28994us
+
+690 tuples processed at 1319338750s+501775us
+
+700 tuples processed at 1319338750s+981461us
+
+710 tuples processed at 1319338751s+516875us
+
+720 tuples processed at 1319338752s+179781us
+
+730 tuples processed at 1319338752s+700151us
+
+740 tuples processed at 1319338753s+432607us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_brokerspread_depth_0.0002.heap (2048 MB allocated cumulatively, 4 MB currently in use)
+
+750 tuples processed at 1319338753s+970093us
+
+760 tuples processed at 1319338754s+515716us
+
+770 tuples processed at 1319338755s+74524us
+
+780 tuples processed at 1319338755s+652839us
+
+790 tuples processed at 1319338756s+238055us
+
+800 tuples processed at 1319338756s+829920us
+
+810 tuples processed at 1319338757s+424862us
+
+820 tuples processed at 1319338758s+13430us
+
+830 tuples processed at 1319338758s+762401us
+
+840 tuples processed at 1319338759s+435788us
+
+850 tuples processed at 1319338760s+99705us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_brokerspread_depth_0.0003.heap (3072 MB allocated cumulatively, 1 MB currently in use)
+
+860 tuples processed at 1319338760s+762559us
+
+870 tuples processed at 1319338761s+420400us
+
+880 tuples processed at 1319338762s+93307us
+
+890 tuples processed at 1319338762s+737356us
+
+900 tuples processed at 1319338763s+469469us
+
+910 tuples processed at 1319338764s+254290us
+
+920 tuples processed at 1319338765s+10541us
+
+930 tuples processed at 1319338765s+774489us
+
+940 tuples processed at 1319338766s+561649us
+
+Dumping heap profile to /tmp/okennedy_dbtoaster_data/memory_brokerspread_depth_0.0004.heap (4096 MB allocated cumulatively, 3 MB currently in use)
+
+950 tuples processed at 1319338767s+356406us
+
+960 tuples processed at 1319338768s+98879us
+
+970 tuples processed at 1319338768s+952159us
+
+980 tuples processed at 1319338770s+12433us
+
+990 tuples processed at 1319338770s+912104us
+
+1000 tuples processed at 1319338772s+36724us
