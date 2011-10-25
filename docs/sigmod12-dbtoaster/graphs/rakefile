@@ -70,9 +70,11 @@ $queries = {
   },
   "ssb4" => {
     :datafile      => "tpch/ssb4.sql -d disable-deletes",
-    :max_plot_rate => 1000,
+    :max_plot_rate => 400,
+    :max_plot_mem  => 12000,
     :representatives => ["depth_infty", "depth_1"],
     :tuple_mult    => 1000,
+    :mem_mult      => 1000000000,
     :timescale     => :minutes,
     :total_updates => 786000,
     :title         => "SHIPPING"
@@ -109,6 +111,7 @@ $queries = {
   "tpch18" => { 
     :datafile      => "tpch/query18.sql",
     :max_plot_rate => 100,
+    :max_plot_mem  => 600,
     :representatives => ["depth_infty", "depth_1_nohash", "depth_0"],
     :tuple_mult    => 1000,
     :timescale     => :minutes,
@@ -663,6 +666,7 @@ $queries.each do |q, args|
           when 1000000 then "B"
           when 1000 then "KB"
           when 1 then "MB"
+          when 0.001 then "GB"
           else raise "Unknown memory multiplier #{mem_mult}"
         end
       max_mem_y = if args.has_key? :max_plot_mem then
@@ -681,7 +685,28 @@ $queries.each do |q, args|
           else "x#{rate_mult} Refreshes/s"
         end
       max_rate_y = args[:max_plot_rate] / rate_mult;
-      graph_style = lambda { |i| (1 + i * 4).to_s }
+      
+      max_completion_x = 
+          [graph_configs.map do |cfg|
+            File.open("extracted/memory_#{q}_#{cfg}") {|f|f.readlines[-1]}.
+              split(/\t/)[0].to_f
+          end.max, 1].min;
+      
+      graph_style = lambda do |i, file|
+        filedata = File.open(file) { |f| f.readlines };
+        max_frac_completed = filedata[-1].chomp.split(/\t/)[0].to_f;
+        total_pts = (filedata.length - 1).to_f;
+        # 25 points total across the width
+        pt_scaling = (total_pts * max_completion_x) / 
+                     (50.0 * max_frac_completed);
+
+        case i
+          when 0 then "linespoints ps 1 pi #{pt_scaling}"
+          when 1 then "linespoints ps 0.7 pi #{pt_scaling}"
+          when 2 then "linespoints ps 0.7 pi #{pt_scaling}"
+          else "lines"
+        end
+      end
 
       gp.puts "set lmargin #{args.fetch(:lmargin, 8)}";
       gp.puts "set ylabel 'Time (#{time_scale})'";
@@ -693,8 +718,9 @@ $queries.each do |q, args|
       gp.puts "plot #{
         i = -1;
         graph_configs.map do |cfg| 
-          "'extracted/time_#{q}_#{cfg}' using 1:($2/#{time_mult}) "+
-          "with lines lw #{graph_style.call(i+=1)} "+
+          file = "extracted/time_#{q}_#{cfg}";
+          "'#{file}' using 1:($2/#{time_mult}) "+
+          "with #{graph_style.call(i+=1, file)} "+
           "title '#{$conf_titles[cfg]}'"
         end.join(", ")
       }";
@@ -708,8 +734,9 @@ $queries.each do |q, args|
       gp.puts "plot #{
         i = -1;
         graph_configs.map do |cfg| 
-          "'extracted/time_#{q}_#{cfg}' using 1:($3/#{rate_mult}) "+
-          "with lines lw #{graph_style.call(i+=1)} "+
+          file = "extracted/time_#{q}_#{cfg}";
+          "'#{file}' using 1:($3/#{rate_mult}) "+
+          "with #{graph_style.call(i+=1, file)} "+
           "title '#{$conf_titles[cfg]}'"
         end.join(", ")
       }";
@@ -726,8 +753,9 @@ $queries.each do |q, args|
       gp.puts "plot #{
         i = -1;
         graph_configs.map do |cfg| 
-          "'extracted/memory_#{q}_#{cfg}' using 1:($2*#{mem_mult}) "+
-          "with lines lw #{graph_style.call(i+=1)} "+
+          file = "extracted/memory_#{q}_#{cfg}";
+          "'#{file}' using 1:($2*#{mem_mult}) "+
+          "with #{graph_style.call(i+=1, file)} "+
           "title '#{$conf_titles[cfg]}'"
         end.join(", ")
       }";
@@ -761,6 +789,81 @@ file "graphs.tgz" => :all_graphs do
   sh "tar -zcvvf graphs.tgz graphs"
 end
 
+def dbt_loc(q_file, args)
+  cmd = "../../../dbtoaster/compiler/alpha4/dbtoaster";
+  script = "../../../dbtoaster/compiler/alpha4/test/sql/#{q_file}";
+  puts "Getting LoC for #{q_file} '#{args}'"
+  `#{cmd} #{args} #{script} | wc -l`.to_i
+end
+
+
+file_data "extracted/loc_ssb4_depth" do
+  [1, 2, 3, 4, 5, "infty"].map do |d|
+    depth_flag = if d == "infty" then "" else "--depth #{d}" end
+    [ "depth_#{d}",
+      dbt_loc("tpch/ssb4.sql", "-d disable-deletes #{depth_flag}")
+    ].join("\t");
+  end.join("\n");
+end
+
+class Float
+  def sig_figs(n)
+    if self == 0.0 then self
+    else
+      mult = (10.0 ** (Math.log10(self).ceil.to_f - n.to_i.to_f))
+      (self / mult).round * mult;
+    end
+  end
+end
+
+file_data "ssb4_depth_table.tex" => ["rakefile", "extracted/loc_ssb4_depth"] do
+  loc = File.open("extracted/loc_ssb4_depth"){|f|f.readlines}.
+          map { |l| l.chomp.split(/\t/); }.to_h;
+  
+  depths = [1, 2, 3, 4, 5, "infty"];
+  "\\begin{tabular}{|l|#{depths.map{|d|"c|"}}}\\hline\n" +
+  [ "{\\bf Depth}",
+    "Avg Rate (refreshes/s)",
+    "Avg Memory per Tuple",
+    "Lines of Code",
+    "Number of Maps",
+  ].zip(depths.map do |d|
+    conf = "depth_#{d}#{"_nohash" if d == 1}"
+    time, tuples = tuples_processed("data/time_ssb4_#{conf}_0")[-1];
+    mem_file = "extracted/memory_ssb4_#{conf}";
+    mem = if File.exists? mem_file 
+          then File.open(mem_file) {|f| f.readlines[-1]}.
+                  split(/\t/)[1].to_f * 1e6 / tuples.to_f
+          else puts "Missing [[#{mem_file}]]"; 0
+          end
+    ["B", "KB", "MB", "GB"].each do |suffix|
+      if mem < 1024 then
+        mem = "#{mem.to_f.sig_figs(3)} #{suffix}"; break;
+      else
+        mem /= 1024;
+      end
+    end    
+    
+    mapfile = 
+      "data/ssb4_depth_#{d}_#{
+        if d == "infty" then "noopt" else "fullopt" end
+      }.maps"
+    
+    rate = (if time == 0 then 0 else tuples / time end).to_f.sig_figs(3)
+    
+    [ if d == "infty" then "Full" else d.to_s end,
+#      tuples,
+      rate,
+      mem,
+      loc["depth_#{d}"],
+      `cat #{mapfile} | wc -l`.chomp
+    ]
+  end.unzip).map do |row_title, row|
+    "#{row_title} & #{row.join(" & ")} \\\\ \\hline \n"
+  end.join("") +
+  "\\end{tabular}"
+end
+
 loc_configurations = 
   [ ["Infinite Depth", ""],
     ["Depth 1 with Hash Joins", "--depth 1 -f cse -f breduce -f hashds"],
@@ -788,3 +891,5 @@ file "loc_table.tex" do
     f.puts("\\end{tabular}");
   end
 end
+
+# scp damsel:/damsl/projects/dbtoaster/results/big/memory_ssb4_depth_1.profile data/
