@@ -1,0 +1,9 @@
+TRUNCATE TABLE ASKS;
+TRUNCATE TABLE BIDS;
+
+/*
+/
+
+CREATE INDEX BByP ON BIDS(price);
+*/
+exit;

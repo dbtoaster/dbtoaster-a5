@@ -1,0 +1,10 @@
+TRUNCATE TABLE ASKS;
+TRUNCATE TABLE BIDS;
+
+/*
+/
+
+CREATE INDEX BByBT ON BIDS(broker_id, timestamp);
+*/
+
+exit;

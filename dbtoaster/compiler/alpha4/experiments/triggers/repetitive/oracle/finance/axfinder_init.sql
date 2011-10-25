@@ -1,0 +1,11 @@
+TRUNCATE TABLE ASKS;
+TRUNCATE TABLE BIDS;
+
+/*
+/
+
+CREATE INDEX BByBroker ON BIDS(broker_id);
+CREATE INDEX AByBroker ON ASKS(broker_id);
+*/
+
+exit;

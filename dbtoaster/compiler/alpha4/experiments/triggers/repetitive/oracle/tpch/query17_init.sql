@@ -1,0 +1,11 @@
+TRUNCATE TABLE PART;
+TRUNCATE TABLE LINEITEM;
+
+/*
+/
+
+CREATE INDEX LByPKQ ON LINEITEM(partkey, quantity);
+CREATE INDEX PByPK ON PART(partkey);
+*/
+
+exit;
