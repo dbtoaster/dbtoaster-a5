@@ -35,6 +35,7 @@ $queries = {
   "missedtrades" => {
     :datafile      => "finance/missedtrades.sql",
     :max_plot_rate => 60,
+    :max_plot_mem  => 2,
     :representatives => ["depth_infty", "depth_1_nohash", "depth_0"],
     :tuple_mult    => 1000,
     :timescale     => :minutes,
@@ -52,8 +53,9 @@ $queries = {
   },
   "serverload" => {
     :datafile      => "serverload.sql",
-    :representatives => ["depth_infty", "depth_1_nohash", "depth_0"],
+    :representatives => ["depth_infty", "depth_1_nohash"],
     :max_plot_rate => 400,
+    :max_plot_mem  => 6,
     :tuple_mult    => 1000,
     :timescale     => :minutes,
     :total_updates  => 220000
@@ -102,7 +104,8 @@ $queries = {
   },
   "tpch17" => { 
     :datafile      => "tpch/query17.sql",
-    :max_plot_rate => 500,
+    :max_plot_rate => 100,
+    :max_plot_mem  => 24,
     :representatives => ["depth_infty", "depth_1_nohash", "depth_0"],
     :tuple_mult    => 1000,
     :timescale     => :minutes,
@@ -641,7 +644,7 @@ $queries.each do |q, args|
   
   file "graphs/unified_#{q}.pdf" => "rakefile" do
     IO.popen("gnuplot", "w") do |gp|
-      gp.puts "set term pdf enhanced size 3.5,3";
+      gp.puts "set term pdf enhanced size 2.5,2.2";
       gp.puts "set output 'graphs/unified_#{q}.pdf'";
       gp.puts "set multiplot";
       gp.puts "set bmargin 0";
