@@ -44,7 +44,8 @@ $queries = {
   "pricespread" => {
     :datafile      => "finance/pricespread.sql",
     :max_plot_rate => 500,
-    :max_plot_mem  => 0.12,
+    :max_plot_mem  => 0.4,
+    :progress_code => " 0,0.003,0.019",
     :representatives => ["depth_infty", "depth_1_nohash", "depth_0"],
     :tuple_mult    => 1000,
     :mem_mult      => 1000,
@@ -594,7 +595,7 @@ $queries.each do |q, args|
   tot_tups = args[:total_updates];
   graph_configs = args.fetch(:representatives, $configurations.unzip[1]);
 
-  graph_configs.map do |config|
+  (graph_configs+["depth_2", "depth_3", "depth_4", "depth_5"]).map do |config|
     file_data "extracted/memory_#{q}_#{config}" => 
               "data/memory_#{q}_#{config}.profile" do
       puts "Building extracted/memory_#{q}_#{config}"
@@ -650,7 +651,6 @@ $queries.each do |q, args|
       gp.puts "set bmargin 0";
       gp.puts "set tmargin 0";
       
-      gp.puts "set xtics format ''";
       time_mult, time_scale = 
         case args.fetch(:timescale, :seconds);
           when :minutes then [60, "min"]
@@ -710,7 +710,11 @@ $queries.each do |q, args|
           else "lines"
         end
       end
-
+      
+      gp.puts "set xtics format '' #{
+        args[:progress_code] if args.has_key? :progress_code
+      }";
+      gp.puts "set xrange [0:#{max_completion_x}*1.1]"
       gp.puts "set lmargin #{args.fetch(:lmargin, 8)}";
       gp.puts "set ylabel 'Time (#{time_scale})'";
       gp.puts "set key top left";
@@ -749,10 +753,11 @@ $queries.each do |q, args|
       gp.puts "set ytics 0,#{max_mem_y / 4.0},#{max_mem_y}"
       gp.puts "set size 1,0.35";
       gp.puts "set origin 0,0.00";
-      gp.puts "set xtics"
-      gp.puts "set xtics format \"%g\""
       gp.puts "set xlabel 'Progress (Fraction of Stream Trace Processed)'"
       gp.puts "set bmargin 3";
+      gp.puts "set xtics format \"%g\" #{
+        args[:progress_code] if args.has_key? :progress_code
+      }";
       gp.puts "plot #{
         i = -1;
         graph_configs.map do |cfg| 
@@ -824,13 +829,13 @@ file_data "ssb4_depth_table.tex" => ["rakefile", "extracted/loc_ssb4_depth"] do
           map { |l| l.chomp.split(/\t/); }.to_h;
   
   depths = [1, 2, 3, 4, 5, "infty"];
-  "\\begin{tabular}{|l|#{depths.map{|d|"c|"}}}\\hline\n" +
+  "\\begin{tabular}{|r|#{depths.map{|d|"c|"}}}\\hline\n" +
   [ "{\\bf Depth}",
     "Avg Rate (refreshes/s)",
     "Avg Memory per Tuple",
     "Lines of Code",
     "Number of Maps",
-  ].zip(depths.map do |d|
+  ].join(" & ") + "\\\\ \\hline\n" +depths.map do |d|
     conf = "depth_#{d}#{"_nohash" if d == 1}"
     time, tuples = tuples_processed("data/time_ssb4_#{conf}_0")[-1];
     mem_file = "extracted/memory_ssb4_#{conf}";
@@ -861,8 +866,8 @@ file_data "ssb4_depth_table.tex" => ["rakefile", "extracted/loc_ssb4_depth"] do
       loc["depth_#{d}"],
       `cat #{mapfile} | wc -l`.chomp
     ]
-  end.unzip).map do |row_title, row|
-    "#{row_title} & #{row.join(" & ")} \\\\ \\hline \n"
+  end.map do |row|
+    "#{row.join(" & ")} \\\\ \\hline \n"
   end.join("") +
   "\\end{tabular}"
 end
