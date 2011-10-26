@@ -1,0 +1,30 @@
+\subsection{Inequality Joins and nested aggregation}
+\label{sec:advanced-rewriting}
+
+This subsection gives heuristics for choosing which subqueries of
+a query to extract and materialize for incremental view maintenance.
+The delta queries created according to the construction presented in
+Section~\ref{sec:compiler_calc} can be made subject to the same optimization as well, but differently from the recursive
+incremental view maintenance (IVM) method sketched above we do not have to always aggressively materialize the full query being analyzed.
+
+This extract/materialize rewriting in its more general form remains useful in a compilation
+approach (the code generated is however, less straightforward and may now
+perform more complex computations), it is also useful as an optimization technique in more
+classical query engines.
+
+We have observed above that recursive IVM fails for queries with nested aggregate subqueries. However,
+as we will see next, we can extract and materialize the subquery without its aggregation and performing the aggregation nonincrementally on top of the materialized view. That materialized view can be optimized further using multilevel incremental view maintenance.
+
+Example: TODO
+
+
+As a general heuristic, we want to evaluate nested aggregates and inequality joins nonincrementally, but can maintain their subexpressions incrementally. Inequality joins
+require costly domain maintenance for cached values that are frequently not accessed again.
+Materialization does not pay off for inequality joins for the code we are currently creating,
+but in the future, this could change. We could employ a suitable garbage collection scheme that allows us to stop keeping multiplicities of tuples we do not expect to use again (soon) fresh and accurate. Another idea is to use
+suitable data structures such as range trees rather than hash maps (TODO: this is a forward ref currently) to efficiently maintain materialized inequality joins.
+
+TODO: Explain this by an example.
+
+TODO: Do we have further insights and heuristics?
+
