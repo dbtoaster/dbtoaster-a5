@@ -7,6 +7,7 @@
 \usepackage{stmaryrd}
 \usepackage{graphicx}
 \usepackage{color}
+\usepackage{rotating}
 
 \DeclareGraphicsRule{.tif}{png}{.png}{`convert #1 `dirname #1`/`basename #1 .tif`.png}
 
@@ -99,7 +100,6 @@ previous continuous querying approaches, frequently by multiple orders of
 magnitude, for queries involving many joins or nested aggregation. However,
 managing domains of parameters in auxiliary views can be costly, which turns out
 to be a problem for certain queries with inequalities.
-
 \end{abstract}
 
 
@@ -107,11 +107,11 @@ to be a problem for certain queries with inequalities.
 \label{sec:introduction}
 \input{introduction.tex}
 
-\input{related.tex}
-
-\section{Motivation and Related Work}
-\label{sec:dbfail}
-\input{dbfail.tex}
+\section{Motivating Applications and\\State-of-the-Art Systems}
+%\input{related.tex}
+%\label{sec:dbfail}
+%\input{dbfail.tex}
+%\input{tscomparison.tex}
 
 \input{compiler.tex}
 
@@ -126,4 +126,10 @@ to be a problem for certain queries with inequalities.
 \bibliography{sigmod12-dbtoaster,ref-long}
 %}
 
-\end{document}  
+\appendix
+\section{Queries}
+\vspace{-4mm}
+\input{queries.tex}
+
+\end{document}
+
