@@ -8,6 +8,7 @@
 \usepackage{graphicx}
 \usepackage{color}
 \usepackage{rotating}
+\usepackage{hyperref}
 
 \DeclareGraphicsRule{.tif}{png}{.png}{`convert #1 `dirname #1`/`basename #1 .tif`.png}
 
@@ -111,7 +112,7 @@ to be a problem for certain queries with inequalities.
 %\input{related.tex}
 %\label{sec:dbfail}
 %\input{dbfail.tex}
-%\input{tscomparison.tex}
+\input{tscomparison.tex}
 
 \input{compiler_recursive.tex}
 \input{compiler_multilevel.tex}
@@ -130,6 +131,7 @@ to be a problem for certain queries with inequalities.
 
 \appendix
 \section{Queries}
+\label{app:queries}
 \vspace{-4mm}
 \input{queries.tex}
 
