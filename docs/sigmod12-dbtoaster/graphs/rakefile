@@ -48,7 +48,7 @@ $queries = {
     :progress_code => " 0,0.003,0.019",
     :representatives => ["depth_infty", "depth_1_nohash", "depth_0"],
     :tuple_mult    => 1000,
-    :mem_mult      => 1000,
+    :mem_mult      => :KB,
     :timescale     => :minutes,
     :total_updates  => 2540000
   },
@@ -74,13 +74,12 @@ $queries = {
   "ssb4" => {
     :datafile      => "tpch/ssb4.sql -d disable-deletes",
     :max_plot_rate => 400,
-    :max_plot_mem  => 12000,
+    :max_plot_mem  => 12*1024,
     :representatives => ["depth_infty", "depth_1"],
     :tuple_mult    => 1000,
-    :mem_mult      => 1000000000,
+    :mem_mult      => :GB,
     :timescale     => :minutes,
     :total_updates => 786000,
-    :title         => "SHIPPING"
   },
   "tpch3" => {
     :datafile      => "tpch/query3.sql",
@@ -129,6 +128,37 @@ $queries = {
     :tuple_mult    => 1000,
     :timescale     => :minutes,
     :total_updates => 165000
+  },
+  "5gig_tpch3" => {
+    :datafile      => "tpch/query3.sql",
+    :max_plot_rate => 40000,
+    :max_plot_time => 3600,
+    :max_plot_mem  => 4096,
+    :representatives => ["depth_infty", "depth_1"],
+    :tuple_mult    => 1000,
+    :rate_mult     => 1000,
+    :mem_mult      => :GB,
+    :timescale     => :minutes,
+    :total_updates => 765000*50
+  },
+  "5gig_tpch11" => { 
+    :datafile      => "tpch/query11.sql",
+    :max_plot_rate => 80000,
+    :max_plot_time => 100,
+    :max_plot_mem  => 400,
+    :representatives => ["depth_infty", "depth_1"],
+    :tuple_mult    => 1000,
+    :rate_mult     => 1000,
+    :total_updates => 81000*50
+  },
+  "5gig_tpch22" => { 
+    :datafile      => "tpch/query22.sql",
+    :max_plot_rate => 500,
+    :max_plot_mem  => 12,
+    :representatives => ["depth_infty", "depth_1_nohash"],
+    :tuple_mult    => 1000,
+    :timescale     => :minutes,
+    :total_updates => 165000*50
   }
 };
 $configurations = [
@@ -594,8 +624,11 @@ end
 $queries.each do |q, args|
   tot_tups = args[:total_updates];
   graph_configs = args.fetch(:representatives, $configurations.unzip[1]);
+  extraction_graph_configs = graph_configs;
+  extraction_graph_configs +=
+    ["depth_2", "depth_3", "depth_4", "depth_5"] if q == "ssb4";
 
-  (graph_configs+["depth_2", "depth_3", "depth_4", "depth_5"]).map do |config|
+  extraction_graph_configs.map do |config|
     file_data "extracted/memory_#{q}_#{config}" => 
               "data/memory_#{q}_#{config}.profile" do
       puts "Building extracted/memory_#{q}_#{config}"
@@ -645,7 +678,7 @@ $queries.each do |q, args|
   
   file "graphs/unified_#{q}.pdf" => "rakefile" do
     IO.popen("gnuplot", "w") do |gp|
-      gp.puts "set term pdf enhanced size 2.5,2.2";
+      gp.puts "set term pdf enhanced size 1.9,2.2";
       gp.puts "set output 'graphs/unified_#{q}.pdf'";
       gp.puts "set multiplot";
       gp.puts "set bmargin 0";
@@ -664,14 +697,14 @@ $queries.each do |q, args|
               map { |r| r.split(/\t/)[1].to_f }.max
           end.max, 3600].min
         end / time_mult
-      mem_mult = 1000000.0 / args.fetch(:mem_mult, 1000000).to_f
-      mem_scale = case mem_mult
-          when 1000000 then "B"
-          when 1000 then "KB"
-          when 1 then "MB"
-          when 0.001 then "GB"
-          else raise "Unknown memory multiplier #{mem_mult}"
-        end
+      mem_scale = args.fetch(:mem_mult, :MB)
+      mem_mult = case mem_scale
+        when :B then 1024.0 * 1024.0
+        when :KB then 1024.0
+        when :MB then 1.0
+        when :GB then 1.0 / (1024.0)
+        else raise "Unknown memory multiplier #{mem_mult}"
+      end
       max_mem_y = if args.has_key? :max_plot_mem then
           args[:max_plot_mem].to_f
         else
@@ -681,12 +714,7 @@ $queries.each do |q, args|
           end.max
         end.to_f * mem_mult.to_f
       rate_mult = args.fetch(:rate_mult, 1);
-      rate_scale = case rate_mult
-          when 1 then "Refresh/s"
-          when 1000 then "Refresh/ms"
-          when 1000000 then "Refresh/ns"
-          else "x#{rate_mult} Refreshes/s"
-        end
+      rate_scale = "#{rate_mult}/s";
       max_rate_y = args[:max_plot_rate] / rate_mult;
       
       max_completion_x = 
@@ -753,7 +781,7 @@ $queries.each do |q, args|
       gp.puts "set ytics 0,#{max_mem_y / 4.0},#{max_mem_y}"
       gp.puts "set size 1,0.35";
       gp.puts "set origin 0,0.00";
-      gp.puts "set xlabel 'Progress (Fraction of Stream Trace Processed)'"
+      gp.puts "set xlabel 'Fraction of Stream Trace Processed'"
       gp.puts "set bmargin 3";
       gp.puts "set xtics format \"%g\" #{
         args[:progress_code] if args.has_key? :progress_code
@@ -773,7 +801,7 @@ $queries.each do |q, args|
   end
 
   task :unified => "graphs/unified_#{q}.pdf" do
-    sh "open graphs/unified_#{q}.pdf"
+#    sh "open graphs/unified_#{q}.pdf"
   end
 end
 
@@ -883,7 +911,9 @@ file "loc_table.tex" do
   File.open "loc_table.tex", "w+" do |f|
     f.puts("\\begin{tabular}{|l|#{loc_configurations.map { |x| "c|"}}}\\hline");
     f.puts("\\ & #{loc_configurations.unzip[0].join(" & ")} \\\\\\hline");
-    $queries.keys.map do |q|
+    $queries.keys.
+      delete_if { |q| /5gig/ =~ q }.
+      map do |q|
       q_file = $queries[q][:datafile];
       f.puts("#{q} & #{
         loc_configurations.map do |title, args|
