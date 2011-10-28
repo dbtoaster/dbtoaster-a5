@@ -300,7 +300,7 @@ def draw_clustered_bar_plot plot, args
   base_offset       = args.fetch(:base_offset,       0);
   interbar_offset   = args.fetch(:interbar_offset,   10);
   intergroup_offset = args.fetch(:intergroup_offset, interbar_offset);
-  margins           = args.fetch(:intergroup_offset, intergroup_offset);
+  margins           = args.fetch(:margins,           intergroup_offset);
   bar_width         = args.fetch(:bar_width,         30);
   tic_commands      = args.fetch(:tic_commands,      "");
   label_offset      = args.fetch(:label_offset,      0);
@@ -312,7 +312,6 @@ def draw_clustered_bar_plot plot, args
     group_offset += interbar_offset;
     
     indices = dataset.map { |i| offset += group_size; }
-    
     plot.data << Gnuplot::DataSet.new([indices,dataset]) do |ds|
       ds.title = dataset_title
       ds.with  = "impulses lw #{bar_width}";
@@ -323,9 +322,9 @@ def draw_clustered_bar_plot plot, args
   group_offset = base_offset - label_offset;
   plot.xtics "(#{args[:group_labels].map do |label|
     "\"#{label}\" #{group_offset += group_size}";
-  end.join(", ")}) #{tic_commands}";
+  end.join(", ")}) scale 0 #{tic_commands}";
   
-  plot.xrange "[0:#{group_offset+label_offset+margins-intergroup_offset}]"
+  plot.xrange "[0:#{group_offset+2*label_offset+margins-2*intergroup_offset}]"
 end
 
 def draw_bar_plot plot, args
@@ -382,7 +381,52 @@ def file_data args
   end
 end
 
+query_order = [
+  "tpch3", "tpch11", "tpch17", "tpch18", "tpch22", "ssb4", 
+  "serverload",
+  "brokervariance", "brokerspread", "axfinder", "pricespread",
+    "missedtrades", "vwap", 
+];
+traditional_engines = ["Esper", "CSPE", "Postgres", "CDB"];
+    
 ["pdf", "tex", "ps"].each do |fmt|
+  plot "graphs/engine_bakeoff.#{fmt}" =>
+        ["data/engine-comparison.csv","rakefile"] do |plot|
+        
+    plot.term "pdf enhanced size 4,2.5" if fmt == "pdf"
+        
+    traditional_data = 
+      File.open("data/engine-comparison.csv") {|f| f.readlines }[2..-1].
+      map { |l| l = l.chomp.split(/,/); [l.shift, l.map {|v| v.to_f }] }.
+      map { |q,d| [ q.downcase.sub(/q/, "tpch"), 
+                    [ d[0...traditional_engines.length],
+                      d[traditional_engines.length..-1] ] ] }.to_h
+    
+    data = query_order.map do |q|
+      if traditional_data.has_key? q then
+        traditional_data[q][1]
+      else
+        puts "Yanif's data is missing #{q}";
+        traditional_engines.map { |e| 0 };
+      end
+    end
+    
+    plot.logscale "y";    
+    plot.ylabel "Average Refresh Rate (1/s)";
+    plot.bmargin "5";
+    
+    draw_clustered_bar_plot plot, 
+      :group_labels => (query_order.map do |q|
+        $queries[q].fetch(:title, q.sub(/tpch/, "TPCH Query ").upcase);
+      end),
+      :dataset_labels => traditional_engines,
+      :data => data,
+      :tic_commands => "rotate by -30",
+      :bar_width => 15,
+      :label_offset => 12,
+      :intergroup_offset => 20
+  end
+  
   plot "graphs/bakeoff.#{fmt}" => 
        ["data/engine-comparison.csv","rakefile"] do |plot|
     depths = ["0", "1", "infty"];
@@ -390,13 +434,6 @@ end
     plot.term "pdf enhanced size 5,2.5" if fmt == "pdf"
     plot.logscale "y"
     plot.key "top right"
-    
-    query_order = [
-      "tpch3", "tpch11", "tpch17", "tpch18", "tpch22", "ssb4", 
-      "serverload",
-      "brokervariance", "brokerspread", "axfinder", "pricespread",
-        "missedtrades", "vwap", 
-    ]
     
     labels, data = query_order.map do |q|
       args = $queries[q]
@@ -426,7 +463,6 @@ end
         data.map { |rate| rate / base_rate } ];
     end.unzip
     
-    traditional_engines = ["Esper", "CSPE", "Postgres", "CDB"];
     good_engines = ["CSPE", "CDB"]
     traditional_data = 
       File.open("data/engine-comparison.csv") {|f| f.readlines }[2..-1].
@@ -835,7 +871,7 @@ end
       ["5 GB", "5gig_"],
       ["10 GB", "10gig_"]
     ].map do |title,size|
-      ( [title] + [1, "infty"].map do |d|
+      ( [title] + ["infty", 1].map do |d|
           file = "data/time_#{size}#{q}_depth_#{d}_0";
           puts "Reading #{file}";
           time, tuples = tuples_processed(file)[-1];
@@ -843,6 +879,8 @@ end
       ).join("\t");
     end.join("\n");
   end
+  
+  task "graphs/scaling.pdf" => ["extracted/scaling_#{q}"];
 
   plot "graphs/scaling_#{q}.pdf" => 
        ["rakefile","extracted/scaling_#{q}"] do |plot|
@@ -869,18 +907,45 @@ end
   end  
 end
 
-#file "graphs/scaling.pdf" =>
-#  Gnuplot.open do |gp|
-#    gp.puts "set term pdf"
-#    gp.puts "set output 'graphs/scaling.pdf'"
-#    
-#    gp.puts "set multiplot"
-#      ["tpch3", "tpch11"].each do |q|
-#    
-#    
-#    gp.
-#  end
-#end
+plot "graphs/scaling.pdf" => "rakefile" do |plot|
+  labels, data = 
+    ["tpch3", "foo", "tpch11"].map do |q|
+      if q == "foo" then
+        ["", [[0,0]]];
+      else
+        File.open("extracted/scaling_#{q}"){|f| f.readlines}.
+        map {|l| l = l.chomp.split(/\t/); 
+                 [l.shift,l.map{|y|y.to_f/1000}] }.unzip
+      end
+    end.unzip
+  
+  data = data.flatten(1);
+  labels = labels.flatten(1);
+  
+  plot.term "pdf enhanced size 2.1,2.2"
+  plot.key "top left"
+  
+  plot.ylabel "Rate (1000/s)"
+  
+  plot.bmargin "4"
+  plot.label "'TPCH Query 3' at #{82.5},-13 center"
+  plot.label "'TPCH Query 11' at #{257.5},-13 center"
+  plot.yrange "[0:70]"
+  draw_clustered_bar_plot plot,
+    :group_labels => labels,
+    :dataset_labels => ["Full Compilation", "Depth 1"],
+    :data => data,
+    :tic_commands => "scale 0 rotate by -30",
+    :bar_width => 14,
+    :label_offset => 10
+  plot.xrange "[-15:345]"
+  
+  vbar = 165;
+  plot.data << Gnuplot::DataSet.new([[vbar,vbar], [0,58]]) do |ds|
+    ds.with = "lines lc -1 lw 4"
+    ds.title = ""
+  end
+end
 
 
 file "tuple_count.dat" => "rakefile" do
