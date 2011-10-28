@@ -56,11 +56,10 @@ CREATE TABLE CUSTOMER (
   FROM FILE 'test/data/tpch/customer.tbl'
   LINE DELIMITED customer;
 
-select sum(1)
+select c.custkey, sum(l1.quantity)
 from customer c, orders o, lineitem l1
-where 1 <=
-      (select sum(1) from lineitem l2
-       where l1.orderkey = l2.orderkey)
+where 100 < (select sum(l3.quantity) from lineitem l3
+             where l1.orderkey = l3.orderkey)
 and c.custkey = o.custkey
-and o.orderkey = l1.orderkey;
---group by c.custkey;
+and o.orderkey = l1.orderkey
+group by c.custkey;
