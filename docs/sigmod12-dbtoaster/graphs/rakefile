@@ -44,7 +44,7 @@ $queries = {
   "pricespread" => {
     :datafile      => "finance/pricespread.sql",
     :max_plot_rate => 500,
-    :max_plot_mem  => 0.4,
+    :max_plot_mem  => 400.0/1024.0,
     :progress_code => " 0,0.003,0.019",
     :representatives => ["depth_infty", "depth_1_nohash", "depth_0"],
     :tuple_mult    => 1000,
@@ -818,7 +818,7 @@ $queries.each do |q, args|
         end.join(", ")
       }";
 
-      gp.puts "set ylabel 'Rate (#{rate_scale})'";
+      gp.puts "set ylabel 'Refreshes (#{rate_scale})'";
       gp.puts "set yrange [#{-0.05 * max_rate_y}:#{max_rate_y*1.1}]";
       gp.puts "set ytics 0,#{(max_rate_y) / 4.0},#{(max_rate_y)}"
       gp.puts "set size 1,0.33";

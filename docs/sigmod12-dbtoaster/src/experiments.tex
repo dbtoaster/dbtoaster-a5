@@ -207,7 +207,7 @@ Our technique is less effective on inequality joins and nested aggregates correl
 %\tablefig{unified_5gig_tpch22.pdf} \\
 (a) & (b) 
 \end{tabular}
-\caption{(a): TPC-H Query 18 An incorrectly chosen join ordering prevents full compilation from effectively exploiting foreign key dependencies in the TPC-H schema.  (b) Performance scaling with respect to dataset size for TPC-H Queries 3 and 11 respectively.  For these queries, performance remains roughly constant as long as sufficient memory is available. }
+\caption{(a): TPC-H Query 18 An badly chosen join ordering prevents full compilation from effectively exploiting foreign key dependencies in the TPC-H schema.  (b) Performance scaling with respect to dataset size for TPC-H Queries 3 and 11 respectively.  For these queries, performance remains roughly constant as long as sufficient memory is available. }
 %The three fastest-running TPC-H queries (3~(b), 11~(c), and 22~(d)) run on a 5GB dataset: (b) Quadratic effects from early parts of the workload become apparent in IVM at this scale, while full compilation remains linear. (c) Maintaining the base relations already projected and aggregated gives a slight edge to full compilation at this scale.  (d) Full compilation performance is reduced due to updates being linear in the size of CUSTOMER, but still performs better than depth 1.
 \label{fig:experiments:tpch18}
 \label{fig:experiments:big}
