@@ -383,7 +383,8 @@ def file_data args
 end
 
 ["pdf", "tex", "ps"].each do |fmt|
-  plot "graphs/bakeoff.#{fmt}" => "rakefile" do |plot|
+  plot "graphs/bakeoff.#{fmt}" => 
+       ["data/engine-comparison.csv","rakefile"] do |plot|
     depths = ["0", "1", "infty"];
     
     plot.term "pdf enhanced size 5,2.5" if fmt == "pdf"
@@ -425,15 +426,36 @@ end
         data.map { |rate| rate / base_rate } ];
     end.unzip
     
+    traditional_engines = ["Esper", "CSPE", "Postgres", "CDB"];
+    good_engines = ["CSPE", "CDB"]
+    traditional_data = 
+      File.open("data/engine-comparison.csv") {|f| f.readlines }[2..-1].
+      map { |l| l = l.chomp.split(/,/); [l.shift, l.map {|v| v.to_f }] }.
+      map { |q,d| [ q.downcase.sub(/q/, "tpch"), 
+                    [ d[0...traditional_engines.length],
+                      d[traditional_engines.length..-1] ] ] }.to_h
+    
+    data = data.zip(query_order.map do |q|
+      if traditional_data.has_key? q then
+        engine_data = 
+          traditional_engines.zip(traditional_data[q][1]).to_h
+        good_engines.map { |e| engine_data[e] };
+      else
+        puts "Yanif's data is missing #{q}";
+        good_engines.map { |e| 0 };
+      end
+    end).map { |a,b| a+b };
+        
     plot.ylabel "Average Refresh Rate \\n(Relative To Repeated Evaluation)"
     plot.bmargin "5"
     
     draw_clustered_bar_plot plot, 
       :group_labels => labels,
-      :dataset_labels => depths.map { |d| $conf_titles["depth_#{d}"] },
+      :dataset_labels => depths.map { |d| $conf_titles["depth_#{d}"] } +
+                         good_engines,
       :data => data,
       :tic_commands => "rotate by -30",
-      :bar_width => 25,
+      :bar_width => 15,
       :label_offset => 12
   end
   task fmt => "graphs/bakeoff.#{fmt}"
@@ -804,6 +826,61 @@ $queries.each do |q, args|
 #    sh "open graphs/unified_#{q}.pdf"
   end
 end
+
+["tpch3", "tpch11"].each do |q|
+  file_data "extracted/scaling_#{q}" do
+    [ ["100 MB", ""], 
+      ["500 MB", "500meg_"],
+      ["1 GB", "1gig_"],
+      ["5 GB", "5gig_"],
+      ["10 GB", "10gig_"]
+    ].map do |title,size|
+      ( [title] + [1, "infty"].map do |d|
+          file = "data/time_#{size}#{q}_depth_#{d}_0";
+          puts "Reading #{file}";
+          time, tuples = tuples_processed(file)[-1];
+        end.map { |time,tuples| (tuples.to_f / time.to_f) }
+      ).join("\t");
+    end.join("\n");
+  end
+
+  plot "graphs/scaling_#{q}.pdf" => 
+       ["rakefile","extracted/scaling_#{q}"] do |plot|
+    labels, data = 
+      File.open("extracted/scaling_#{q}"){|f| f.readlines}.
+        map {|l| l = l.chomp.split(/\t/); 
+                 [l.shift,l.map{|y|y.to_f/1000}] }.unzip;
+
+    plot.ylabel "Rate (1000/s)"
+    case q
+      when "tpch3" then
+        plot.yrange "[0:32]"
+      when "tpch11" then
+        plot.yrange "[0:80]";
+    end
+  
+    draw_clustered_bar_plot plot, 
+      :group_labels => labels,
+      :dataset_labels => ["Full Compilation", "Depth 1"],
+      :data => data,
+      :tic_commands => "scale 0 rotate by -30",
+      :bar_width => 35,
+      :label_offset => -8
+  end  
+end
+
+#file "graphs/scaling.pdf" =>
+#  Gnuplot.open do |gp|
+#    gp.puts "set term pdf"
+#    gp.puts "set output 'graphs/scaling.pdf'"
+#    
+#    gp.puts "set multiplot"
+#      ["tpch3", "tpch11"].each do |q|
+#    
+#    
+#    gp.
+#  end
+#end
 
 
 file "tuple_count.dat" => "rakefile" do
