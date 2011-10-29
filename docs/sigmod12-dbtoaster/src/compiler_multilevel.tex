@@ -2,130 +2,28 @@
 \label{sec:advanced-rewriting}
 
 This subsection gives heuristics for choosing which subexpressions of
-a query expression to extract and materialize for incremental view maintenance.  These heuristics apply to user-provided queries, as well as delta queries created by the compilation algorithm of Section~\ref{sec:compiler_calc} -- we have observed experimentally that under certain conditions, less aggressive incremental maintenance can be beneficial.  
+a query expression to extract and materialize for incremental view maintenance.  These heuristics apply to user-provided queries, as well as delta queries created by the compilation algorithm of Section~\ref{sec:compiler_calc} -- we have observed experimentally (see Section~\ref{sec:experiments}) that under certain conditions, less aggressive incremental maintenance can be beneficial.
 
-The heuristics for extract/materialize rewriting are, in their most general form, closely related to those for query planning.  
+We express these conditions in terms of five heuristics:
 
-\tinysection{Partial Materialization}
-The fundamental goal of materialization is join elimination.  However, when computing the join does not require more work than iterating over its results, it can be beneficial not to materialize the join result in its entirety. 
+\tinysection{Do not incrementally maintain cross-products or similar expressions}
 
-A simple example of this is cartesian cross products\footnote{Although cross products may not be common in queries, they appear frequently in delta terms -- whenever a central term in a multi-way join is removed}.  Materializing the cross-product of two subexpressions requires quadratic space and linear time per update, although the materialized representation does not reduce the quadratic time required to iterate over the result set.  
+The first heuristic revisits the idea of query decomposition.  Iteration over a cross product can not be made faster through materialization.  The same idea extends to joins bearing similarity to cross products: equi-joins that follow foreign key dependencies (e.g., {\tt ORDERS} $\bowtie_{\tt custkey}$ {\tt CUSTOMER} in the TPC-H schema, with {\tt orderkey} fixed) or inequality predicates.
 
-{\bf It is always beneficial to materialize the sides of a cross product or indexed join separately.}
+\tinysection{Keep nested aggregate queries materialized separately}
 
-\tinysection{Variable Domains}
-Certain data-dependent characteristics can create similar situations.  For example, given relation schemas $R(A,B)$, and $S(B,C)$, consider the query
+Aggregate subqueries nested inside comparison operators are a a challenge for the delta operator -- the delta of an aggregate expression is not strictly simpler than the original expression.  However, the complexity of the delta term is limited to two exact copies of the original expression -- apart from these, the delta expression is actually simpler.  Materializing the original aggregate expression reduces the cost of evaluating the nested aggregate to the cost of a join over any correlated terms.
 
-\texttt{(SELECT B, SUM(A*C) FROM R,S WHERE R.B = S.B)}
+\tinysection{Do not incrementally maintain views with both input and output variables}
 
-Materializing the final query result is not beneficial in this case -- given materializations of the two delta terms: {\tt SUM(A)} and {\tt SUM(C)}, both group by $B$, the aggregate value {\tt SUM(A*C)} group by $B$ can be computed in constant time.
+The work an insertion performs to maintain an output-only view is limited by the expression defining the delta of the view.  Pushing aggregation down into the materialized delta reduces this bound even further.  The lower-level the delta, the simpler the expression, and the less work is involved in maintaining it.
 
+Conversely, maintaining a materialized view with input variables requires iterating over a domain of values defined outside of the map, with that domain typically increasing monotonically as the query runs -- the amount of maintenance work required does not decrease for lower and lower levels of deltas.  As long as the generated datastructure stays small, this is ok -- we have found performance to be for views with only input variables.  In general, predicates introducing input variables should be applied as filters after the insertion.
 
+\tinysection{Do not materialize views for the maintenance of base relations that are never updated}
 
+As an example, the NATION table in the TPC-H schema consists of 25 nations, and is never updated (or updated infrequently at best).  Materializing views for the maintenance of this relation creates extra, unnecessary work.
 
+\tinysection{Avoid performing 3-way (or wider) equi-joins at evaluation time}
 
-Instead, it is always be
-
-
-
- the time taken to iterate over the 
-
- over all of the elements 
-
-
- -- materializing the cross-product of two subexpressions requires polynomial space, linear time, 
-
-
-and does not reduce the amount of work required to 
-
-
-For example, 
-
-
-
- -- in such cases it is often beneficial not to 
-
-computing the join does not require more work than iterating over its results, 
-
-
- in certain cases, materialization does not reduce the work required to compute a join.  
-
-
-
- is not affected by materializing 
-
- datastructures is the elimination of joins.  
-
-Size of a datastructure related to the number of values for its variables.
-Split a map to reduce its size 
-  -- need to do joins afterwards
-  -- join may be inexpensive (FKey -> CUSTOMER >< (ORDER >< LINEITEM) On insert lineitem, we don't need to precompute the join of customer/order)
-  -- can separate out cross products (decomposition)
-
-  
-\tinysection{Postprocessing}
-singletons
-  -- Evaluating inequalities after the fact
-
-\tinysection{Deltas of Definitions}
-(X <- M[] + dM) - (X <- M[])  <- keep track of the domain for which dM is nonzero.
-
-\tinysection{Datastructures}
-  -- InOutmaps as caches
-  -- Range Trees
-
-
-
-
-The delta queries created according to the construction presented in
-Section~\ref{sec:compiler_calc} can be made subject to the same optimization as well, but differently from the recursive
-incremental view maintenance (IVM) method sketched above we do not have to always aggressively materialize the full query being analyzed.
-
-This extract/materialize rewriting in its more general form remains useful in a compilation
-approach (the code generated is however, less straightforward and may now
-perform more complex computations), it is also useful as an optimization technique in more
-classical query engines.
-
-We have observed above that recursive IVM fails for queries with nested aggregate subqueries. However,
-as we will see next, we can extract and materialize the subquery without its aggregation and performing the aggregation nonincrementally on top of the materialized view. That materialized view can be optimized further using multilevel incremental view maintenance.
-
-Example: TODO
-
-
-As a general heuristic, we want to evaluate nested aggregates and inequality joins nonincrementally, but can maintain their subexpressions incrementally. Inequality joins
-require costly domain maintenance for cached values that are frequently not accessed again.
-Materialization does not pay off for inequality joins for the code we are currently creating,
-but in the future, this could change. We could employ a suitable garbage collection scheme that allows us to stop keeping multiplicities of tuples we do not expect to use again (soon) fresh and accurate. Another idea is to use
-suitable data structures such as range trees rather than hash maps (TODO: this is a forward ref currently) to efficiently maintain materialized inequality joins.
-
-TODO: Explain this by an example.
-
-TODO: Do we have further insights and heuristics?
-
-
-
-
-
-
-
-
-
-Sometimes, the most efficient way to monitor an expression's value is to materialize and incrementally maintain it in its entirety.  On the other hand, every datastructure we materialize, we have to maintain -- sometimes it is better to materialize smaller, leaner datastructures .  A simple example of this is decomposition \todo{have we mentioned this yet?  Discuss further if not}.
-
-\tinysection{Exploiting Foreign Keys}
-
-
-
-Inequalities -- 
-
-Variable Domains
-  - Functional dependencies
-    - one-to-one joins are ok at runtime.
-  - domain sizes and estimating map sizes
-
-Datastructures
-  - range trees
-  - caches
-  - versioned caches (with replay)
-
-Deltas of Definitions
+In order to conserve memory by materializing fewer views, we have considered limiting the recursive compilation in our compiler to a fixed depth (discussed in further depth in Section \ref{sec:experiments:othermetrics}).  The result is fewer materialized views, but wider joins required for view maintenance.  We have found that 3-way joins are prohibitively expensive -- performance is worse even than using traditional IVM techniques.

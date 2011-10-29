@@ -298,15 +298,17 @@ end
 def draw_clustered_bar_plot plot, args
   data = args.fetch(:data).unzip;
   base_offset       = args.fetch(:base_offset,       0);
-  interbar_offset   = args.fetch(:interbar_offset,   10);
+  interbar_offset   = args.fetch(:interbar_offset,   18);
   intergroup_offset = args.fetch(:intergroup_offset, interbar_offset);
   margins           = args.fetch(:margins,           intergroup_offset);
-  bar_width         = args.fetch(:bar_width,         30);
+  bar_width         = args.fetch(:bar_width,         10);
   tic_commands      = args.fetch(:tic_commands,      "");
   label_offset      = args.fetch(:label_offset,      0);
   
   group_offset = base_offset + margins
   group_size = interbar_offset * data.length + intergroup_offset;
+  plot.boxwidth bar_width.to_s;
+  pattern = 0;
   data.zip(args[:dataset_labels]).each do |dataset, dataset_title|
     offset = group_offset - group_size;
     group_offset += interbar_offset;
@@ -314,7 +316,7 @@ def draw_clustered_bar_plot plot, args
     indices = dataset.map { |i| offset += group_size; }
     plot.data << Gnuplot::DataSet.new([indices,dataset]) do |ds|
       ds.title = dataset_title
-      ds.with  = "impulses lw #{bar_width}";
+      ds.with  = "boxes fill pattern #{pattern += 1}";
     end
   end
   
@@ -324,7 +326,7 @@ def draw_clustered_bar_plot plot, args
     "\"#{label}\" #{group_offset += group_size}";
   end.join(", ")}) scale 0 #{tic_commands}";
   
-  plot.xrange "[0:#{group_offset+2*label_offset+margins-2*intergroup_offset}]"
+  plot.xrange "[-10:#{group_offset+label_offset+margins-intergroup_offset}]"
 end
 
 def draw_bar_plot plot, args
@@ -394,7 +396,7 @@ traditional_engines = ["Esper", "CSPE", "Postgres", "CDB"];
         ["data/engine-comparison.csv","rakefile"] do |plot|
         
     plot.term "pdf enhanced size 4,2.5" if fmt == "pdf"
-        
+    plot.ytics "nomirror"
     traditional_data = 
       File.open("data/engine-comparison.csv") {|f| f.readlines }[2..-1].
       map { |l| l = l.chomp.split(/,/); [l.shift, l.map {|v| v.to_f }] }.
@@ -434,6 +436,7 @@ traditional_engines = ["Esper", "CSPE", "Postgres", "CDB"];
     plot.term "pdf enhanced size 5,2.5" if fmt == "pdf"
     plot.logscale "y"
     plot.key "top right"
+    plot.ytics "nomirror"
     
     labels, data = query_order.map do |q|
       args = $queries[q]
