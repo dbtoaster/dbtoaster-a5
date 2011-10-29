@@ -32,11 +32,13 @@ schemas = {
 
 schemas['AGENDA'] = list(sorted(set(chain(*schemas.values()))))
 
-schemas = {t : ['schema', 'event'] + schemas[t] for t in schemas}
+#schemas = {t : ['schema', 'event'] + schemas[t] for t in schemas}
+for k in schemas.keys():
+    schemas[k] = ['schema', 'event'] + schemas[k]
 
 if __name__ == '__main__':
     source = open(argv[1])
-    agenda_writer = DictWriter(open(argv[2], 'w'), schemas['AGENDA'], restval='')
+    agenda_writer = DictWriter(open(argv[2], 'w'), schemas['AGENDA'], restval='0')
 
     for line in source:
         fields = line.strip().split(',')
