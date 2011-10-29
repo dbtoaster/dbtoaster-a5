@@ -72,7 +72,7 @@ CREATE STREAM Result AS
 CREATE STREAM FileEvents;
 
 APPLY JAVA "com.streambase.sb.adapter.csvreader.CSVReader"
-  (FileName="@@PATH@@Events.dbtdat", Delimiter=",", StartEventPort="true",
+  (FileName="@@PATH@@sl_servers.dat", Delimiter=",", StartEventPort="true",
    Schema=(event int, rackid int, load double))
   INTO Dispatch, FileEvents;
   

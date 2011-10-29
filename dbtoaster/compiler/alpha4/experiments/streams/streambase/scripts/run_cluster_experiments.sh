@@ -13,7 +13,7 @@ data_dir=$4
 working_dir=`pwd`
 script_dir=/local/dbt_stream_experiments/experiments/streams/streambase/scripts
 
-queries=`ls -1 $query_template_dir/*_separate_loader.ssql | sed 's/_separate_loader.ssql//'`
+queries=`ls -1 $query_template_dir/*.ssql | sed 's/.ssql//'`
 
 for i in 0; do
   # Prepare query files in a new run dir
@@ -25,17 +25,17 @@ for i in 0; do
 
   for q in $queries; do
     query=`basename $q`
-    if [ -f $query_template_dir/"$query"_separate_loader.ssql ]; then
+    if [ -f $query_template_dir/"$query".ssql ]; then
       echo "Generating $query.ssql..."
-      sed "s/@@PATH@@/data\//" < $query_template_dir/"$query"_separate_loader.ssql \
-        > $run_dir/"$query"_separate_loader.ssql
-      cp $query_template_dir/"$query".ssql $run_dir/"$query".ssql
+      sed "s/@@PATH@@/data\//" < $query_template_dir/"$query".ssql \
+        > $run_dir/"$query".ssql
     
       # Run the SPE on this query.
       cd $run_dir
       echo "Running SPE on $query"
-      $script_dir/run_spe.py -t $timeout -l "_separate_loader" $query
-      
+      $script_dir/run_spe.py -t $timeout $query
+
+      # wait a bit to ensure the socket is freed after terminating the SPE
       sleep 20
       cd $working_dir
     fi

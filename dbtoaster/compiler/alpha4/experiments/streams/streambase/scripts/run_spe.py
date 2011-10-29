@@ -8,17 +8,39 @@ from optparse import OptionParser
 default_dir = "/damsl/software/streambase"
 event_file_name = "file_events.csv"
 
-queries = {
-  'query3'      : ['lineitem', 'orders', 'customer'], 
-  'query17'     : ['lineitem', 'part'],
-  'query18'     : ['lineitem', 'orders', 'customer'],
-  'query22'     : ['orders', 'customer'],
-  'ssb4'        : ['lineitem', 'orders', 'customer', 'part', 'supplier', 'nation'],
-  'vwap'        : ['events'],
-  'axfinder'    : ['events'],
-  'pricespread' : ['events'],
-  'missedtrades': ['events']
+separate_queries = {
+  'query3'         : ['lineitem', 'orders', 'customer'],
+  'query11a'       : ['partsupp', 'supplier'], 
+  'query17'        : ['lineitem', 'part'],
+  'query18'        : ['lineitem', 'orders', 'customer'],
+  'query22'        : ['orders', 'customer'],
+  'ssb4'           : ['lineitem', 'orders', 'customer', 'part', 'supplier', 'nation'],
+  'vwap'           : ['events'],
+  'axfinder'       : ['events'],
+  'brokerspread'   : ['events'],
+  'brokervariance' : ['events'],
+  'pricespread'    : ['events'],
+  'missedtrades'   : ['events'],
+  'serverload'     : ['sl_servers'],
 }
+
+unified_queries = {
+  'query3'         : ['query3_agenda'],
+  'query11a'       : ['query11a_agenda'], 
+  'query17'        : ['query17_agenda'],
+  'query18'        : ['query18_agenda'],
+  'query22'        : ['query22_agenda'],
+  'ssb4'           : ['ssb4_agenda'],
+  'vwap'           : ['events'],
+  'axfinder'       : ['events'],
+  'brokerspread'   : ['events'],
+  'brokervariance' : ['events'],
+  'pricespread'    : ['events'],
+  'missedtrades'   : ['events'],
+  'serverload'     : ['sl_servers']
+}
+
+queries = unified_queries
 
 num_files = {}
 for qn in queries:

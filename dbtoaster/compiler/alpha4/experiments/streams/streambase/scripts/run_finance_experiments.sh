@@ -11,7 +11,7 @@ output_dir=$3
 data_dir=$4
 
 working_dir=`pwd`
-script_dir=/home/yna/sbworkspace/scripts
+script_dir=/local/dbt_stream_experiments/experiments/streams/streambase/scripts
 
 queries=`ls -1 $query_template_dir/*.ssql | sed 's/.ssql//'`
 
