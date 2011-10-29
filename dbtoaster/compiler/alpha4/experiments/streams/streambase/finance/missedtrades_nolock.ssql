@@ -1,0 +1,172 @@
+/* Repetitive missedtrades implementation.
+ *
+ * @author Yanif Ahmad
+ */
+
+CREATE SCHEMA OrderbookEntry
+(timestamp double, orderId int, brokerId int, volume double, price double);
+
+/* Main memory order book tables */
+CREATE MEMORY TABLE Bids OrderbookEntry
+  PRIMARY KEY (timestamp, orderId, brokerId, volume, price);
+
+CREATE MEMORY TABLE Asks OrderbookEntry
+  PRIMARY KEY (timestamp, orderId, brokerId, volume, price);
+
+CREATE INDEX BidsByPrice ON Bids(price);
+CREATE INDEX AsksByPrice ON Asks(price);
+
+/* A dispatch stream for direct loading from a unified events file */
+CREATE SCHEMA TaggedInputs 
+  (stream_name string, evt int,
+   timestamp double, orderId int, brokerId int, volume double, price double); 
+
+CREATE STREAM Dispatch TaggedInputs;
+
+/* Counter for barriering */
+DECLARE Counter int DEFAULT 0;
+CREATE STREAM UpdateCounter (i int);
+UPDATE Counter FROM (SELECT i FROM UpdateCounter);
+SELECT Counter+1 as i FROM Dispatch INTO UpdateCounter;
+
+/*
+ * Table change notification streams
+ */
+CREATE SCHEMA SOrderbookEntry (tid int, o OrderbookEntry);
+
+/* Pre-update serialized streams */
+CREATE STREAM SInsertBids SOrderbookEntry;
+CREATE STREAM SDeleteBids SOrderbookEntry;
+CREATE STREAM SInsertAsks SOrderbookEntry;
+CREATE STREAM SDeleteAsks SOrderbookEntry;
+
+/* Post-update serialized streams */
+CREATE STREAM BidsInserted SOrderbookEntry;
+CREATE STREAM BidsDeleted  SOrderbookEntry;
+CREATE STREAM AsksInserted SOrderbookEntry;
+CREATE STREAM AsksDeleted  SOrderbookEntry;
+
+/* Partition into serialized streams after locking */
+SELECT Counter as tid,
+       OrderbookEntry(timestamp, orderId, brokerId, volume, price) as o
+FROM Dispatch WHERE evt = 1 AND stream_name = "BIDS" INTO SInsertBids;
+
+SELECT Counter as tid,
+       OrderbookEntry(timestamp, orderId, brokerId, volume, price) as o 
+FROM Dispatch WHERE evt = 0 AND stream_name = "BIDS" INTO SDeleteBids;
+
+SELECT Counter as tid,
+       OrderbookEntry(timestamp, orderId, brokerId, volume, price) as o
+FROM Dispatch WHERE evt = 1 AND stream_name = "ASKS" INTO SInsertAsks;
+
+SELECT Counter as tid,
+       OrderbookEntry(timestamp, orderId, brokerId, volume, price) as o 
+FROM Dispatch WHERE evt = 0 AND stream_name = "ASKS" INTO SDeleteAsks;
+
+
+/* Maintain Bids and Asks */
+INSERT INTO Bids SELECT o.* FROM SInsertBids
+RETURNING SInsertBids.* INTO BidsInserted;
+
+DELETE FROM Bids USING SDeleteBids
+WHERE SDeleteBids.o.timestamp = Bids.timestamp
+  AND SDeleteBids.o.orderId = Bids.orderId
+  AND SDeleteBids.o.brokerId = Bids.brokerId
+RETURNING SDeleteBids.* INTO BidsDeleted;
+
+INSERT INTO Asks SELECT o.* FROM SInsertAsks
+RETURNING SInsertAsks.* INTO AsksInserted;
+
+DELETE FROM Asks USING SDeleteAsks
+WHERE SDeleteAsks.o.timestamp = Asks.timestamp
+  AND SDeleteAsks.o.orderId = Asks.orderId
+  AND SDeleteAsks.o.brokerId = Asks.brokerId
+RETURNING SDeleteAsks.* INTO AsksDeleted;
+
+
+/* Track changes to Bids */
+CREATE STREAM TableChanged AS
+SELECT tid FROM  BidsInserted UNION BidsDeleted
+           UNION AsksInserted UNION AsksDeleted;
+
+/* Recompute on changes to Bids */
+CREATE STREAM TotalBids AS
+SELECT TC.tid, sum(Bids.volume) as sumBV
+FROM TableChanged AS TC, Bids;
+
+CREATE STREAM TotalBA AS 
+SELECT T.*, sum(Asks.volume) as sumAV
+FROM TotalBids AS T, Asks;
+
+CREATE STREAM ReplayBids AS
+SELECT S.*, B.brokerId, B.price, B.volume
+FROM TotalBA AS S, Bids AS B;
+
+CREATE STREAM BidsSubquery AS
+SELECT B.tid,
+       B.sumBV, B.sumAV, 
+       B.brokerId, B.price*B.volume AS bpv,
+       sum(B2.volume) as sumBV2
+FROM ReplayBids AS B OUTER JOIN Bids AS B2
+WHERE B2.price > B.price;
+
+CREATE STREAM ReplayBA AS
+SELECT B.*, A.price, A.volume
+FROM BidsSubquery AS B OUTER JOIN Asks AS A;
+
+CREATE STREAM FullReplay AS
+SELECT A.tid,
+       A.sumBV, A.sumAV,
+       A.brokerId, A.bpv, A.price*A.volume as apv,
+       A.sumBV2, sum(A2.volume) as sumAV2
+FROM ReplayBA as A OUTER JOIN Asks A2
+WHERE A2.price > A.price;
+
+
+/* Perform outer stream aggregation */
+CREATE STREAM ReplayOuter AS
+SELECT tid, brokerId, apv-bpv as diff
+FROM FullReplay
+WHERE sumBV > sumBV2
+AND   sumAV > sumAV2
+AND   (not(isnull(brokerId)) and not(isnull(bpv)) and not(isnull(apv)));
+
+CREATE OUTPUT STREAM Result AS
+SELECT brokerId, sum(diff) as mt
+FROM ReplayOuter[SIZE 1 ADVANCE 1 ON tid] as S2
+GROUP BY brokerId;
+
+
+/* Load data. */
+CREATE STREAM FileEvents;
+
+APPLY JAVA "com.streambase.sb.adapter.csvreader.CSVReader"
+  (FileName="@@PATH@@Events.dbtdat", Delimiter=",", StartEventPort="true",
+   Schema=(stream_name string, evt int,
+           timestamp double, orderId int, brokerId int, volume double, price double))
+  INTO Dispatch, FileEvents;
+
+/* Log outputs */
+APPLY JAVA "com.streambase.sb.adapter.csvwriter.CSVWriter"
+  (FileName="missedtrades.csv",
+   IfFileExists="Truncate existing file",
+   IfFileDoesntExist="Create new file")
+  FROM Result;
+
+/* Track query progress */
+CREATE STREAM ProgressCounter AS
+  SELECT Counter FROM Dispatch WHERE (Counter % 20) == 0;
+
+/* Track data file open and close for timing */
+CREATE OUTPUT STREAM TimedFileEvents AS
+  SELECT now() as t, * FROM
+    (SELECT * FROM
+      (SELECT 0 as Counter, * FROM FileEvents) AS S UNION ProgressCounter );
+
+/* Log data file events */
+APPLY JAVA  "com.streambase.sb.adapter.csvwriter.CSVWriter"
+  (FileName="file_events.csv",
+   IfFileExists="Truncate existing file",
+   IfFileDoesntExist="Create new file")
+  FROM TimedFileEvents;
+  

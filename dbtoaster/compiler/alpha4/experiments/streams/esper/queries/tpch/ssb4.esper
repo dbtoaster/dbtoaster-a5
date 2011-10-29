@@ -1,4 +1,4 @@
-create window Linewin:keepall() /* as InsertLineitem */
+create window Lineitem.win:keepall() /* as InsertLineitem */
 as (
     orderkey         int,
     partkey          int,
@@ -74,6 +74,12 @@ as (
     regionkey        int,
     comment          int
 );
+
+create index LByOPS on Lineitem(orderkey, partkey, suppkey);
+create index OByCKOD on Orders(orderkey, custkey, orderdate btree);
+create index CByCKMKT on Customer(custkey, mktsegment);
+create index PByPK on Part(partkey);
+create index SBySK on Supplier(suppkey);
 
 insert into InsertLineitem 
   select

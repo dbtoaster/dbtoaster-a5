@@ -1,0 +1,25 @@
+create window Server.win:keepall() as (rackid int, load float);
+
+/* Dispatching */
+insert into Server
+  select rackid, load from Dispatch
+  where eventType = 1;
+
+on Dispatch(eventType = 0) as D
+delete from Server as S
+  where S.rackid = D.rackid and S.load = D.load;
+
+insert into TableChanged select 1 from Dispatch;
+
+create variable int current_update = 0;
+on TableChanged set current_update = current_update+1;
+
+insert into Subqueries
+  select current_update as tid, sum(S.load) as s2load, count(*) as s3cnt
+  from TableChanged as TC unidirectional, Server as S;
+  
+select current_timestamp() as t, S.tid,
+       S1.rackid, count(*) as cnt
+from Subqueries as S unidirectional, Server as S1
+where S.s2load * 1.5 < s3cnt * S1.load
+group by S1.rackid; 

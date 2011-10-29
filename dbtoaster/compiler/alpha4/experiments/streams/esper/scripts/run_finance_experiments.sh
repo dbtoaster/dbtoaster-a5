@@ -56,7 +56,6 @@ for i in 0; do
       query=`basename $q`
       if [ -f $query_dir/"$query".esper ]; then
         # Run the SPE on this query.
-        # For finance, this requires a data dir relative to the bin_dir 
         echo "Running SPE on $query"
         $script_dir/run_esper.py $query -e $esper_dir -q $query_dir -d data -o $run_dir -t $timeout -s $sample_rate
         sleep 20 

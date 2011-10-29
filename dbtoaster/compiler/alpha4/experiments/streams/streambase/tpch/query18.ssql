@@ -1,3 +1,4 @@
+/*
 CREATE SCHEMA LineitemSchema (
   orderkey       int,
   partkey        int,
@@ -39,6 +40,50 @@ CREATE SCHEMA CustomerSchema (
   mktsegment   string, -- text
   comment      string  -- text
 );
+*/
+
+CREATE SCHEMA LineitemSchema (
+  orderkey       int,
+  partkey        int,
+  suppkey        int,
+  linenumber     int,
+  quantity       double,
+  extendedprice  double,
+  discount       double,
+  tax            double,
+  returnflag     int, -- text(1)
+  linestatus     int, -- text(1)
+  shipdate       int, -- date
+  commitdate     int, -- date
+  receiptdate    int, -- date
+  shipinstruct   int, -- text
+  shipmode       int, -- text
+  comment        int  -- text
+);
+
+CREATE SCHEMA OrdersSchema (
+  orderkey       int,
+  custkey        int,
+  orderstatus    int, -- text(1)
+  totalprice     double,
+  orderdate      int, -- date
+  orderpriority  int, -- text
+  clerk          int, -- text
+  shippriority   int,
+  comment        int  -- text
+);
+
+CREATE SCHEMA CustomerSchema (
+  custkey      int,
+  name         int, -- text
+  address      int, -- text
+  nationkey    int,
+  phone        int, -- text
+  acctbal      double,
+  mktsegment   int, -- text
+  comment      int  -- text
+);
+
 
 
 /* Main memory TPCH tables */
@@ -94,22 +139,22 @@ CREATE STREAM CustomerDeleted  SCustomerSchema;
 
 /* Partition into serialized streams after locking */
 SELECT Counter as tid, l  FROM InputLocked
-WHERE stream_name = "Lineitem" AND evt = 1 INTO SInsertLineitem;
+WHERE stream_name = "lineitem" AND evt = 1 INTO SInsertLineitem;
 
 SELECT Counter as tid, o  FROM InputLocked
-WHERE stream_name = "Orders" AND evt = 1 INTO SInsertOrders;
+WHERE stream_name = "orders" AND evt = 1 INTO SInsertOrders;
 
 SELECT Counter as tid, c  FROM InputLocked
-WHERE stream_name = "Customer" AND evt = 1 INTO SInsertCustomer;
+WHERE stream_name = "customer" AND evt = 1 INTO SInsertCustomer;
 
 SELECT Counter as tid, l  FROM InputLocked
-WHERE stream_name = "Lineitem" AND evt = 0 INTO SDeleteLineitem;
+WHERE stream_name = "lineitem" AND evt = 0 INTO SDeleteLineitem;
 
 SELECT Counter as tid, o  FROM InputLocked
-WHERE stream_name = "Orders" AND evt = 0 INTO SDeleteOrders;
+WHERE stream_name = "orders" AND evt = 0 INTO SDeleteOrders;
 
 SELECT Counter as tid, c  FROM InputLocked
-WHERE stream_name = "Customer" AND evt = 0 INTO SDeleteCustomer;
+WHERE stream_name = "customer" AND evt = 0 INTO SDeleteCustomer;
 
 
 /* Maintain TPCH tables */

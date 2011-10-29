@@ -44,13 +44,13 @@ BEGIN EXECUTE IMMEDIATE 'CALL recompute_query()'; END;
 
 /
 
-CREATE DIRECTORY q11log AS '/tmp';
-CALL dispatch('Q11LOG', 'query11.log');
+CREATE DIRECTORY q11alog AS '/tmp';
+CALL dispatch('Q11ALOG', 'query11a.log');
 SELECT * FROM RESULTS;
 
 DROP TABLE RESULTS;
 DROP PROCEDURE recompute_query;
-DROP DIRECTORY q11log;
+DROP DIRECTORY q11alog;
 DROP TRIGGER refresh_partsupp;
 DROP TRIGGER refresh_supplier;
 

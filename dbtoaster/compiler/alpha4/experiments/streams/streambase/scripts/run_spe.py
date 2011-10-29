@@ -13,6 +13,7 @@ queries = {
   'query17'     : ['lineitem', 'part'],
   'query18'     : ['lineitem', 'orders', 'customer'],
   'query22'     : ['orders', 'customer'],
+  'ssb4'        : ['lineitem', 'orders', 'customer', 'part', 'supplier', 'nation'],
   'vwap'        : ['events'],
   'axfinder'    : ['events'],
   'pricespread' : ['events'],

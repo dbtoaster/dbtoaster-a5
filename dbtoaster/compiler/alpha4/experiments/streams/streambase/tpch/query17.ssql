@@ -1,3 +1,4 @@
+/*
 CREATE SCHEMA LineitemSchema (
   orderkey       int,
   partkey        int,
@@ -27,6 +28,38 @@ CREATE SCHEMA PartSchema (
   container    string, -- text
   retailprice  double,
   comment      string  -- text
+);
+*/
+
+CREATE SCHEMA LineitemSchema (
+  orderkey       int,
+  partkey        int,
+  suppkey        int,
+  linenumber     int,
+  quantity       double,
+  extendedprice  double,
+  discount       double,
+  tax            double,
+  returnflag     int, -- text(1)
+  linestatus     int, -- text(1)
+  shipdate       int, -- date
+  commitdate     int, -- date
+  receiptdate    int, -- date
+  shipinstruct   int, -- text
+  shipmode       int, -- text
+  comment        int  -- text
+);
+
+CREATE SCHEMA PartSchema (
+  partkey      int,
+  name         int, -- text
+  mfgr         int, -- text
+  brand        int, -- text
+  type         int, -- text
+  p_size       int,
+  container    int, -- text
+  retailprice  double,
+  comment      int  -- text
 );
 
 
@@ -76,16 +109,16 @@ CREATE STREAM PartDeleted      SPartSchema;
 /* Partition into serialized streams after locking */
 /* Partition into serialized streams after locking */
 SELECT Counter as tid, l  FROM InputLocked
-WHERE stream_name = "Lineitem" AND evt = 1 INTO SInsertLineitem;
+WHERE stream_name = "lineitem" AND evt = 1 INTO SInsertLineitem;
 
 SELECT Counter as tid, p  FROM InputLocked
-WHERE stream_name = "Part" AND evt = 1 INTO SInsertPart;
+WHERE stream_name = "part" AND evt = 1 INTO SInsertPart;
 
 SELECT Counter as tid, l  FROM InputLocked
-WHERE stream_name = "Lineitem" AND evt = 0 INTO SDeleteLineitem;
+WHERE stream_name = "lineitem" AND evt = 0 INTO SDeleteLineitem;
 
 SELECT Counter as tid, p  FROM InputLocked
-WHERE stream_name = "Part" AND evt = 0 INTO SDeletePart;
+WHERE stream_name = "part" AND evt = 0 INTO SDeletePart;
 
 
 /* Maintain TPCH tables */

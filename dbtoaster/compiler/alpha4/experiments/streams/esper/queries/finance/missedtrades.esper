@@ -1,8 +1,14 @@
 create window Bids.win:keepall() as 
   (timestamp double, orderId int, brokerId int, price double, volume double);
 
+create index BidsPI on Bids(timestamp, orderId, brokerId);
+create index BidsByPrice on Bids(price);
+
 create window Asks.win:keepall() as 
   (timestamp double, orderId int, brokerId int, price double, volume double);
+
+create index AsksPI on Asks(timestamp, orderId, brokerId);
+create index AsksByPrice on Asks(price);
 
 /* Dispatching */
 insert into InsertBids
@@ -49,7 +55,7 @@ create variable int current_update = 0;
 on TableChanged set current_update = current_update+1;
  
 insert into SubqueryTAV
-  select current_update+1 as tid, sum(a1.volume) as tav
+  select current_update as tid, sum(a1.volume) as tav
   from TableChanged as t unidirectional, Asks as a1;
 
 insert into SubqueryTBV

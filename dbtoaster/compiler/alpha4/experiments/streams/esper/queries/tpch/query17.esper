@@ -31,6 +31,8 @@ as (
     comment          int
 );
 
+create index LByPK on Lineitem(partkey);
+
 insert into InsertLineitem 
   select
     orderkey, partkey, suppkey, linenumber, quantity,

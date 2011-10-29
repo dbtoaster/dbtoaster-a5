@@ -10,5 +10,6 @@ drop trigger refresh_supplier;
 
 /
 
-drop directory q11log;
+drop directory q11alog;
+drop directory q11blog;
 exit;

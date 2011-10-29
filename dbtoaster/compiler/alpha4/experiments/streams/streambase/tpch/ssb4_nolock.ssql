@@ -1,0 +1,270 @@
+CREATE SCHEMA LineitemSchema (
+  orderkey       int,
+  partkey        int,
+  suppkey        int,
+  linenumber     int,
+  quantity       double,
+  extendedprice  double,
+  discount       double,
+  tax            double,
+  returnflag     int, -- text(1)
+  linestatus     int, -- text(1)
+  shipdate       int, -- date
+  commitdate     int, -- date
+  receiptdate    int, -- date
+  shipinstruct   int, -- text
+  shipmode       int, -- text
+  comment        int  -- text
+);
+
+CREATE SCHEMA OrdersSchema (
+  orderkey       int,
+  custkey        int,
+  orderstatus    int, -- text(1)
+  totalprice     double,
+  orderdate      int, -- date
+  orderpriority  int, -- text
+  clerk          int, -- text
+  shippriority   int,
+  comment        int  -- text
+);
+
+CREATE SCHEMA CustomerSchema (
+  custkey      int,
+  name         int, -- text
+  address      int, -- text
+  nationkey    int,
+  phone        int, -- text
+  acctbal      double,
+  mktsegment   int, -- text
+  comment      int  -- text
+);
+
+CREATE SCHEMA PartSchema (
+  partkey      int,
+  name         int, -- text
+  mfgr         int, -- text
+  brand        int, -- text
+  type         int, -- text
+  p_size       int,
+  container    int, -- text
+  retailprice  double,
+  comment      int  -- text
+);
+
+CREATE SCHEMA SupplierSchema (
+  suppkey          int,
+  name             int,
+  address          int,
+  nationkey        int,
+  phone            int,
+  acctbal          double,
+  comment          int
+);
+
+CREATE SCHEMA NationSchema (
+  nationkey        int,
+  name             int,
+  regionkey        int,
+  comment          int
+);
+
+/* Main memory TPCH tables */
+CREATE MEMORY TABLE Lineitem LineitemSchema PRIMARY KEY (orderkey, linenumber);
+CREATE MEMORY TABLE Orders   OrdersSchema   PRIMARY KEY (orderkey);
+CREATE MEMORY TABLE Customer CustomerSchema PRIMARY KEY (custkey);
+CREATE MEMORY TABLE Part     PartSchema     PRIMARY KEY (partkey);
+CREATE MEMORY TABLE Supplier SupplierSchema PRIMARY KEY (suppkey);
+CREATE MEMORY TABLE Nation   NationSchema   PRIMARY KEY (nationkey);
+
+CREATE INDEX OByOD on Orders (orderdate);
+
+/* Tuple identification across union of input streams */
+CREATE SCHEMA TaggedInputs
+  (stream_name string, evt int,
+   l LineitemSchema, o OrdersSchema, c CustomerSchema);
+
+CREATE INPUT STREAM MultiplexedInputs TaggedInputs;
+
+/* Counter for barriering */
+DECLARE Counter int DEFAULT 0;
+CREATE OUTPUT STREAM UpdateCounter (i int);
+UPDATE Counter FROM (SELECT i FROM UpdateCounter);
+SELECT Counter+1 as i FROM MultiplexedInputs INTO UpdateCounter;
+
+/* Table change notification streams */
+CREATE SCHEMA SLineitemSchema (tid int, l  LineitemSchema);
+CREATE SCHEMA SOrdersSchema   (tid int, o  OrdersSchema);
+CREATE SCHEMA SCustomerSchema (tid int, c  CustomerSchema);
+CREATE SCHEMA SPartSchema     (tid int, p  PartSchema);
+CREATE SCHEMA SSupplierSchema (tid int, s  SupplierSchema);
+CREATE SCHEMA SNationSchema   (tid int, n  NationSchema);
+
+/* Pre-update serialized streams */ 
+CREATE STREAM SInsertLineitem SLineitemSchema;
+CREATE STREAM SInsertOrders   SOrdersSchema;
+CREATE STREAM SInsertCustomer SCustomerSchema;
+CREATE STREAM SInsertPart     SPartSchema;
+CREATE STREAM SInsertSupplier SSupplierSchema;
+CREATE STREAM SInsertNation   SNationSchema;
+
+CREATE STREAM SDeleteLineitem SLineitemSchema;
+CREATE STREAM SDeleteOrders   SOrdersSchema;
+CREATE STREAM SDeleteCustomer SCustomerSchema;
+CREATE STREAM SDeletePart     SPartSchema;
+CREATE STREAM SDeleteSupplier SSupplierSchema;
+CREATE STREAM SDeleteNation   SNationSchema;
+
+/* Post-update serialized streams */
+CREATE STREAM LineitemInserted SLineitemSchema;
+CREATE STREAM OrdersInserted   SOrdersSchema;
+CREATE STREAM CustomerInserted SCustomerSchema;
+CREATE STREAM PartInserted     SPartSchema;
+CREATE STREAM SupplierInserted SSupplierSchema;
+CREATE STREAM NationInserted   SNationSchema;
+
+CREATE STREAM LineitemDeleted  SLineitemSchema;
+CREATE STREAM OrdersDeleted    SOrdersSchema;
+CREATE STREAM CustomerDeleted  SCustomerSchema;
+CREATE STREAM PartDeleted      SPartSchema;
+CREATE STREAM SupplierDeleted  SSupplierSchema;
+CREATE STREAM NationDeleted    SNationSchema;
+
+
+/* Partition into serialized streams after locking */
+SELECT Counter as tid, l  FROM MultiplexedInputs
+WHERE stream_name = "lineitem" AND evt = 1 INTO SInsertLineitem;
+
+SELECT Counter as tid, o  FROM MultiplexedInputs
+WHERE stream_name = "orders" AND evt = 1 INTO SInsertOrders;
+
+SELECT Counter as tid, c  FROM MultiplexedInputs
+WHERE stream_name = "customer" AND evt = 1 INTO SInsertCustomer;
+
+SELECT Counter as tid, p  FROM MultiplexedInputs
+WHERE stream_name = "part" AND evt = 1 INTO SInsertPart;
+
+SELECT Counter as tid, s  FROM MultiplexedInputs
+WHERE stream_name = "supplier" AND evt = 1 INTO SInsertSupplier;
+
+SELECT Counter as tid, n  FROM MultiplexedInputs
+WHERE stream_name = "nation" AND evt = 1 INTO SInsertNation;
+
+
+SELECT Counter as tid, l  FROM MultiplexedInputs
+WHERE stream_name = "lineitem" AND evt = 0 INTO SDeleteLineitem;
+
+SELECT Counter as tid, o  FROM MultiplexedInputs
+WHERE stream_name = "orders" AND evt = 0 INTO SDeleteOrders;
+
+SELECT Counter as tid, c  FROM MultiplexedInputs
+WHERE stream_name = "customer" AND evt = 0 INTO SDeleteCustomer;
+
+SELECT Counter as tid, p  FROM MultiplexedInputs
+WHERE stream_name = "part" AND evt = 0 INTO SDeletePart;
+
+SELECT Counter as tid, s  FROM MultiplexedInputs
+WHERE stream_name = "supplier" AND evt = 0 INTO SDeleteSupplier;
+
+SELECT Counter as tid, n  FROM MultiplexedInputs
+WHERE stream_name = "nation" AND evt = 0 INTO SDeleteNation;
+
+
+/* Maintain TPCH tables */
+INSERT INTO Lineitem SELECT l.* FROM SInsertLineitem
+RETURNING SInsertLineitem.* INTO LineitemInserted;
+
+INSERT INTO Orders SELECT o.* FROM SInsertOrders
+RETURNING SInsertOrders.* INTO OrdersInserted;
+
+INSERT INTO Customer SELECT c.* FROM SInsertCustomer
+RETURNING SInsertCustomer.* INTO CustomerInserted;
+
+INSERT INTO Part SELECT p.* FROM SInsertPart
+RETURNING SInsertPart.* INTO PartInserted;
+
+INSERT INTO Supplier SELECT s.* FROM SInsertSupplier
+RETURNING SInsertSupplier.* INTO SupplierInserted;
+
+INSERT INTO Nation SELECT n.* FROM SInsertNation
+RETURNING SInsertNation.* INTO NationInserted;
+
+DELETE FROM Lineitem USING SDeleteLineitem
+WHERE SDeleteLineitem.l.orderkey = Lineitem.orderkey
+  AND SDeleteLineitem.l.linenumber = Lineitem.linenumber
+RETURNING SDeleteLineitem.* INTO LineitemDeleted;
+
+DELETE FROM Orders USING SDeleteOrders
+WHERE SDeleteOrders.o.orderkey = Orders.orderkey
+RETURNING SDeleteOrders.* INTO OrdersDeleted;
+
+DELETE FROM Customer USING SDeleteCustomer
+WHERE SDeleteCustomer.c.custkey = Customer.custkey
+RETURNING SDeleteCustomer.* INTO CustomerDeleted;
+
+DELETE FROM Part USING SDeletePart
+WHERE SDeletePart.p.partkey = Part.partkey
+RETURNING SDeletePart.* INTO PartDeleted;
+
+DELETE FROM Supplier USING SDeleteSupplier
+WHERE SDeleteSupplier.s.suppkey = Supplier.suppkey
+RETURNING SDeleteSupplier.* INTO SupplierDeleted;
+
+DELETE FROM Nation USING SDeleteNation
+WHERE SDeleteNation.n.nationkey = Nation.nationkey
+RETURNING SDeleteNation.* INTO NationDeleted;
+
+
+/* Query body. */
+CREATE STREAM TableChanged AS
+SELECT tid FROM  LineitemInserted UNION LineitemDeleted
+           UNION OrdersInserted   UNION OrdersDeleted
+           UNION CustomerInserted UNION CustomerDeleted
+           UNION PartInserted     UNION PartDeleted
+           UNION SupplierInserted UNION SupplierDeleted
+           UNION NationInserted   UNION NationDeleted;
+
+
+/* Table to stream replays */
+CREATE STREAM ReplayOrders AS
+SELECT TC.tid, O.orderkey, O.custkey
+FROM TableChanged AS TC, Orders AS O
+WHERE o.orderdate >= 19970101
+AND   o.orderdate < 19980101;
+
+CREATE STREAM ReplayLO AS
+SELECT S.tid, S.custkey, L.partkey, L.suppkey, L.quantity
+FROM ReplayOrders AS S, Lineitem AS L
+WHERE S.orderkey = L.orderkey;
+
+CREATE STREAM ReplayLOC AS
+SELECT S.tid, S.partkey, S.suppkey, S.quantity, C.nationkey as c_nationkey
+FROM ReplayLO AS S, Customer AS C
+WHERE S.custkey = C.custkey;
+
+CREATE STREAM ReplayLOCS AS
+SELECT S.tid, S.partkey, S.c_nationkey, S2.nationkey as s_nationkey, S.quantity
+FROM ReplayLOC AS S, Supplier AS S2
+WHERE S.suppkey = S2.suppkey;
+
+CREATE STREAM ReplayLOCSP AS
+SELECT S.tid, P.type, S.c_nationkey, S.s_nationkey, S.quantity
+FROM ReplayLOCS AS S, Part AS P
+WHERE S.partkey = P.partkey;
+
+CREATE STREAM ReplayLOCSPN AS
+SELECT S.tid, S.type, SN.regionkey, S.c_nationkey, S.quantity
+FROM ReplayLOCSP AS S, Nation AS SN
+WHERE S.s_nationkey = SN.nationkey;
+
+CREATE STREAM ReplayLOCSPNN AS
+SELECT S.tid, S.type, S.regionkey as s_rk, CN.regionkey as c_rk, S.quantity
+FROM ReplayLOCSPN AS S, Nation AS CN
+WHERE S.c_nationkey = CN.nationkey;
+
+CREATE OUTPUT STREAM Result (type int, s_rk int, c_rk int, quantity double);
+
+SELECT type, s_rk, c_rk, sum(quantity) as quantity
+FROM ReplayLOCSPNN[SIZE 1 ADVANCE 1 ON tid] AS S
+GROUP BY type, s_rk, c_rk
+INTO Result;

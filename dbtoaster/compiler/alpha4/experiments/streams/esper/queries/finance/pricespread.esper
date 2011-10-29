@@ -49,7 +49,7 @@ create variable int current_update = 0;
 on TableChanged set current_update = current_update+1;
 
 insert into Subquery1
-  select current_update+1 as tid, sum(b1.volume) as tbv
+  select current_update as tid, sum(b1.volume) as tbv
   from TableChanged as t unidirectional, Bids as b1;
 
 insert into Subquery2

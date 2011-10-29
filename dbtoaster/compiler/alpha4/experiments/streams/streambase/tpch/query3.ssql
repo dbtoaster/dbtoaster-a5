@@ -1,3 +1,4 @@
+/*
 CREATE SCHEMA LineitemSchema (
   orderkey       int,
   partkey        int,
@@ -39,6 +40,49 @@ CREATE SCHEMA CustomerSchema (
   mktsegment   string, -- text
   comment      string  -- text
 );
+*/
+
+CREATE SCHEMA LineitemSchema (
+  orderkey       int,
+  partkey        int,
+  suppkey        int,
+  linenumber     int,
+  quantity       double,
+  extendedprice  double,
+  discount       double,
+  tax            double,
+  returnflag     int, -- text(1)
+  linestatus     int, -- text(1)
+  shipdate       int, -- date
+  commitdate     int, -- date
+  receiptdate    int, -- date
+  shipinstruct   int, -- text
+  shipmode       int, -- text
+  comment        int  -- text
+);
+
+CREATE SCHEMA OrdersSchema (
+  orderkey       int,
+  custkey        int,
+  orderstatus    int, -- text(1)
+  totalprice     double,
+  orderdate      int, -- date
+  orderpriority  int, -- text
+  clerk          int, -- text
+  shippriority   int,
+  comment        int  -- text
+);
+
+CREATE SCHEMA CustomerSchema (
+  custkey      int,
+  name         int, -- text
+  address      int, -- text
+  nationkey    int,
+  phone        int, -- text
+  acctbal      double,
+  mktsegment   int, -- text
+  comment      int  -- text
+);
 
 
 /* Main memory TPCH tables */
@@ -64,7 +108,6 @@ DECLARE Counter int DEFAULT 0;
 CREATE OUTPUT STREAM UpdateCounter (i int);
 UPDATE Counter FROM (SELECT i FROM UpdateCounter);
 SELECT Counter+1 as i FROM InputLocked INTO UpdateCounter;
-
 
 /* Table change notification streams */
 CREATE SCHEMA SLineitemSchema (tid int, l  LineitemSchema);
@@ -92,22 +135,22 @@ CREATE STREAM CustomerDeleted  SCustomerSchema;
 
 /* Partition into serialized streams after locking */
 SELECT Counter as tid, l  FROM InputLocked
-WHERE stream_name = "Lineitem" AND evt = 1 INTO SInsertLineitem;
+WHERE stream_name = "lineitem" AND evt = 1 INTO SInsertLineitem;
 
 SELECT Counter as tid, o  FROM InputLocked
-WHERE stream_name = "Orders" AND evt = 1 INTO SInsertOrders;
+WHERE stream_name = "orders" AND evt = 1 INTO SInsertOrders;
 
 SELECT Counter as tid, c  FROM InputLocked
-WHERE stream_name = "Customer" AND evt = 1 INTO SInsertCustomer;
+WHERE stream_name = "customer" AND evt = 1 INTO SInsertCustomer;
 
 SELECT Counter as tid, l  FROM InputLocked
-WHERE stream_name = "Lineitem" AND evt = 0 INTO SDeleteLineitem;
+WHERE stream_name = "lineitem" AND evt = 0 INTO SDeleteLineitem;
 
 SELECT Counter as tid, o  FROM InputLocked
-WHERE stream_name = "Orders" AND evt = 0 INTO SDeleteOrders;
+WHERE stream_name = "orders" AND evt = 0 INTO SDeleteOrders;
 
 SELECT Counter as tid, c  FROM InputLocked
-WHERE stream_name = "Customer" AND evt = 0 INTO SDeleteCustomer;
+WHERE stream_name = "customer" AND evt = 0 INTO SDeleteCustomer;
 
 
 /* Maintain TPCH tables */
@@ -193,7 +236,6 @@ UPDATE CBCounter FROM (SELECT 0 as i FROM ScanDone);
 CREATE OUTPUT STREAM Unlocked (tid int, total int);
 UNLOCK InputLock on 0 FROM ScanDone INTO Unlocked;
 
-
 /* Repetitive joins */
 
 CREATE STREAM ValidReplay AS
@@ -207,12 +249,12 @@ SELECT tid, o_ordkey as orderkey, orderdate, shippriority,
 FROM ValidReplay
 WHERE l_ordkey  = o_ordkey
 AND   o_custkey = c_custkey
-AND   mktsegment = "BUILDING"
-AND   orderdate < parse_time("1995-03-15", "yyyy-MM-dd")
-AND   shipdate > parse_time("1995-03-15", "yyyy-MM-dd");
+AND   mktsegment = 1080548553 /*"BUILDING"*/
+AND   orderdate < 19950315 /*parse_time("1995-03-15", "yyyy-MM-dd")*/
+AND   shipdate > 19950315 /*parse_time("1995-03-15", "yyyy-MM-dd")*/;
 
 CREATE OUTPUT STREAM Result
-  (orderkey int, orderdate timestamp, shippriority int, etomd double);
+  (orderkey int, orderdate int, shippriority int, etomd double);
 
 SELECT orderkey, orderdate, shippriority, sum(etomd) as etomd
 FROM JoinLOC[SIZE 1 ADVANCE 1 ON tid] AS S

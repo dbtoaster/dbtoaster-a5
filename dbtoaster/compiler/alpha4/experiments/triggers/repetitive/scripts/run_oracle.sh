@@ -1,13 +1,13 @@
 #!/bin/bash
 
 if [ $# -ne 7 ]; then 
-  echo "Usage: $0 <finance|tpch> <timeout> <user> <password> <query dir> <data dir> <output dir>"
+  echo "Usage: $0 <finance|tpch|cluster> <timeout> <user> <password> <query dir> <data dir> <output dir>"
   exit 1
 fi
 
 workload=$1
-if [ "x$workload" != "xtpch" -a "x$workload" != "xfinance" ]; then
-  echo "Usage: $0 <finance|tpch> <timeout> <user> <password> <query dir> <data dir> <output dir>"
+if [ "x$workload" != "xtpch" -a "x$workload" != "xfinance" -a "x$workload" != "xcluster" ]; then
+  echo "Usage: $0 <finance|tpch|cluster> <timeout> <user> <password> <query dir> <data dir> <output dir>"
   exit 1
 fi
 
@@ -78,7 +78,7 @@ if [ "x$workload" = "xfinance" ]; then
   done
 
 # TPCH
-else
+else if [ "x$workload" = "xcluster" ]; then
 
   querydir=$querybase/tpch
   echo "Query dir: $querydir"
@@ -125,13 +125,56 @@ else
       echo "Stopping $pid" && kill -TERM $pid
       cp /tmp/$log_file .
       
-      sleep 20
+      sleep 60
       echo "Cleaning up $q ..."
 
       sqlplus -S $user/$password @"$querydir"/"$q"_cleanup.sql
-      sleep 20
+      sleep 60
 
     done
     cd $workingdir    
+  done
+  
+else
+  
+  querydir=$querybase/tpch
+  echo "Query dir: $querydir"
+
+  for i in 0; do
+    # Create run dir
+    rundir=$outputdir/run"$i"
+    test -d $rundir || (mkdir -p $rundir && echo "Creating $rundir ...")
+
+    subsdir=`echo $datadir | sed 's/\//\\\\\//g'`
+
+    # Substitute in files.
+    sed "s/@@USER@@/$user/; s/@@PASSWORD@@/$password/" \
+      < $querydir/schema_definition.oracle.sql > $rundir/schema_definition.oracle.sql
+    sed "s/@@PATH@@/$subsdir\//" < $querydir/events.ctl > $rundir/events.ctl
+
+    # Run queries.
+    cd $rundir
+    sqlplus $user/$password @schema_definition.oracle.sql
+    for q in serverload; do
+      query_file="$q".sql
+      log_file="$q".log
+      cp $querydir/$query_file .
+
+      echo "Initializing $q ..."
+      sqlplus -S $user/$password @"$querydir"/"$q"_init.sql 
+      
+      sqlplus $user/$password "@$query_file" &
+      pid=$!
+      echo "Sleeping for $timeout seconds on pid $pid" && sleep $timeout
+      echo "Stopping $pid" && kill -TERM $pid
+      cp /tmp/$log_file .
+
+      sleep 60
+      echo "Cleaning up $q ..."
+
+      sqlplus -S $user/$password @"$querydir"/"$q"_cleanup.sql &
+      sleep 60
+    done
+    cd $workingdir
   done
 fi

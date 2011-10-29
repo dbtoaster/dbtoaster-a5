@@ -1,8 +1,14 @@
 create window Bids.win:keepall() as 
   (timestamp double, orderId int, brokerId int, price double, volume double);
 
+create index BidsPI on Bids(timestamp, orderId, brokerId);
+create index BidsByBP on Bids(brokerId, price);
+
 create window Asks.win:keepall() as 
   (timestamp double, orderId int, brokerId int, price double, volume double);
+
+create index AsksPI on Asks(timestamp, orderId, brokerId)
+create index AsksByBP on Asks(brokerId, price);
 
 /* Dispatching */
 insert into InsertBids
@@ -48,7 +54,7 @@ insert into TableChanged select 0 as bids, 0 as evt from DeleteAsks;
 create variable int current_update = 0;
 on TableChanged set current_update = current_update+1;
 
-select   current_timestamp() as t, current_update+1 as tid,
+select   current_timestamp() as t, current_update as tid,
          b.brokerId, sum(a.volume + -1 * b.volume) as axf
 from     TableChanged as T unidirectional, Bids as b, Asks as a
 where    b.brokerId = a.brokerId

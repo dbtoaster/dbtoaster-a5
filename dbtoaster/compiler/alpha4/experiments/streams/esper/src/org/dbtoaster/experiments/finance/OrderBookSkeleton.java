@@ -197,6 +197,7 @@ public class OrderBookSkeleton extends CommonSkeleton {
 
       if ( options.has("h") || options.has("?") || !hasInputs ) {
         parser.printHelpOn(System.out);
+        System.exit(1);
       }
       
       queryFile = (String) options.valueOf("q");

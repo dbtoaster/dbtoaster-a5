@@ -43,6 +43,10 @@ as (
     comment          int
 );
 
+create index LByOS on Lineitem(shipdate btree);
+create index OByOK on Orders(orderdate btree);
+create index CByCK on Customer(mktsegment);
+ 
 insert into InsertLineitem 
   select
     orderkey, partkey, suppkey, linenumber, quantity,
@@ -75,7 +79,7 @@ on Customer insert into TableChanged select 1;
 create variable int current_update = 0;
 on TableChanged set current_update = current_update+1;
 
-select current_timestamp() as t,
+select current_timestamp() as t, current_update as tid,
        O.orderkey, O.orderdate, O.shippriority,
        sum(L.extendedprice * (1 - L.discount)) as etomd
  from  TableChanged as S unidirectional,

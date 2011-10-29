@@ -106,7 +106,7 @@ insert into OrderAggregates
   group by s.tid, c.custkey;
   
 create window AggOuter.win:keepall()
-  as (tid int, ck long, sumq double, sz long);
+  as (tid int, ck int, sumq double, sz long);
 
 insert into AggOuter
   select tid, custkey as ck, sum(sumq) as sumq, count(*) as sz

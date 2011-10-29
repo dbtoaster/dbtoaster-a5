@@ -1,6 +1,8 @@
 create window Bids.win:keepall() as 
   (timestamp double, orderId int, brokerId int, price double, volume double);
 
+create index BidsByP on Bids(price);
+
 insert into InsertBids
   select timestamp, orderId, brokerId, price, volume from Dispatch
   where streamName = "BIDS" and eventType = 1;
@@ -28,7 +30,7 @@ create variable int current_update = 0;
 on BidsChanged set current_update = current_update+1;
 
 insert into Subquery1
-  select current_update+1 as tid, sum(b1.volume) as tv1
+  select current_update as tid, sum(b1.volume) as tv1
   from BidsChanged as e unidirectional, Bids as b1;
 
 insert into ReplayBids

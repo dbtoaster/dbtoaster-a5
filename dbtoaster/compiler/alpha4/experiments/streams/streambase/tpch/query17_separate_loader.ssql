@@ -39,19 +39,19 @@ CREATE STREAM DeletePart     PartSchema;
 
 
 CREATE STREAM Dispatch AS
-      SELECT "Lineitem" as stream_name, 1 as evt,
+      SELECT "lineitem" as stream_name, 1 as evt,
               LineitemSchema(* AS *) as l 
       FROM InsertLineitem
 
-UNION SELECT "Lineitem" as stream_name, 0 as evt,
+UNION SELECT "lineitem" as stream_name, 0 as evt,
              LineitemSchema(* AS *) as l 
       FROM DeleteLineitem
 
-UNION SELECT "Part" as stream_name, 1 as evt,
+UNION SELECT "part" as stream_name, 1 as evt,
              PartSchema(* AS *)   as p
       FROM InsertPart
 
-UNION SELECT "Part" as stream_name, 0 as evt,
+UNION SELECT "part" as stream_name, 0 as evt,
              PartSchema(* AS *)   as p
       FROM DeletePart;
 

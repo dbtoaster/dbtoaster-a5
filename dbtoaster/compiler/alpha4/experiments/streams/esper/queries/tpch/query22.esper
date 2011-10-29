@@ -67,7 +67,7 @@ insert into FilteredCustomer
   having count(o.custkey) = 0;
 
 create window AggOuter.win:keepall()
-  as (tid int, nk long, sumab double, sz long);
+  as (tid int, nk int, sumab double, sz long);
   
 insert into AggOuter
   select tid, nk, sum(cab) as sumab, count(*) as sz 

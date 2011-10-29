@@ -1,0 +1,178 @@
+/* Repetitive VWAP query implementation.
+ *
+ * @author Yanif Ahmad
+ */
+
+CREATE SCHEMA OrderbookEntry
+(timestamp double, orderId int, brokerId int, volume double, price double);
+
+/* Main memory order book tables */
+CREATE MEMORY TABLE Bids OrderbookEntry
+  PRIMARY KEY (timestamp, orderId, brokerId, volume, price);
+
+CREATE INDEX BidsByPrice ON Bids(price);
+
+/* A dispatch stream for direct loading from a unified events file */
+CREATE SCHEMA TaggedInputs 
+  (stream_name string, evt int,
+   timestamp double, orderId int, brokerId int, volume double, price double); 
+
+CREATE STREAM Dispatch TaggedInputs;
+CREATE STREAM BidsDispatch AS
+  SELECT * FROM Dispatch WHERE stream_name = "BIDS";
+
+/* Lockset for serial execution across updates and queries. */
+CREATE LOCKSET InputLock (i int);
+CREATE STREAM InputLocked TaggedInputs;
+LOCK InputLock ON 0 FROM BidsDispatch INTO InputLocked; 
+
+/* Counter for barriering per update. */
+DECLARE Counter int DEFAULT 0;
+CREATE STREAM UpdateCounter (i int);
+UPDATE Counter FROM (SELECT i FROM UpdateCounter);
+SELECT Counter+1 as i FROM InputLocked INTO UpdateCounter;
+
+/*
+ * Table change notification streams
+ */
+CREATE SCHEMA SOrderbookEntry (tid int, o OrderbookEntry);
+
+/* Pre-update serialized streams */
+CREATE STREAM SInsertBids SOrderbookEntry;
+CREATE STREAM SDeleteBids SOrderbookEntry;
+
+/* Post-update serialized streams */
+CREATE STREAM BidsInserted SOrderbookEntry;
+CREATE STREAM BidsDeleted  SOrderbookEntry;
+
+/* Partition into serialized streams after locking */
+
+SELECT Counter as tid,
+       OrderbookEntry(timestamp, orderId, brokerId, volume, price) as o
+FROM InputLocked WHERE evt = 1 INTO SInsertBids;
+
+SELECT Counter as tid,
+       OrderbookEntry(timestamp, orderId, brokerId, volume, price) as o 
+FROM InputLocked WHERE evt = 0 INTO SDeleteBids;
+
+
+/* Maintain Bids table */
+INSERT INTO Bids SELECT o.* FROM SInsertBids
+RETURNING SInsertBids.* INTO BidsInserted;
+
+DELETE FROM Bids USING SDeleteBids
+WHERE SDeleteBids.o.timestamp = Bids.timestamp
+  AND SDeleteBids.o.orderId = Bids.orderId
+  AND SDeleteBids.o.brokerId = Bids.brokerId
+RETURNING SDeleteBids.* INTO BidsDeleted;
+
+
+/* Track changes to Bids */
+CREATE STREAM BidsChanged AS BidsInserted UNION BidsDeleted;
+
+/* Compute the total Bids volume */
+CREATE STREAM BidsVolume AS
+SELECT B.tid, sum(Bids.volume) as sumBV, count() as numB
+FROM BidsChanged as B, Bids;
+
+/* For a given total, turn the Bids relation into a stream,
+ * i.e. perform a scan over Bids. This is the outer loop of a
+ * correlated subquery.
+ */
+CREATE STREAM CurrentBids AS
+SELECT BV.*, Bids.* FROM BidsVolume as BV, Bids;
+
+/* Keep a counter to determine when we're done scanning from in-memory tables,
+ * to unlock and begin processing the next update
+ */
+DECLARE CBCounter int DEFAULT 0;
+CREATE STREAM UpdateCBCounter (i int, tid int, total int);
+UPDATE CBCounter FROM (SELECT i FROM UpdateCBCounter);
+SELECT CBCounter+1 as i, tid, numB as total FROM CurrentBids INTO UpdateCBCounter;
+
+CREATE STREAM ScanDone AS
+SELECT tid, total FROM UpdateCBCounter
+WHERE total = CBCounter;
+
+/* Reset counter and unlock the next input as soon as we're done scanning.
+ * At this point all tuples from the materialized window for this update
+ * are active in the stream graph
+ */
+UPDATE CBCounter FROM (SELECT 0 as i FROM ScanDone);
+CREATE OUTPUT STREAM Unlocked (tid int, total int);
+UNLOCK InputLock on 0 FROM ScanDone INTO Unlocked;
+
+/* Perform the correlated subquery, via a nested loops join with
+   the above CurrentBids stream, and the Bids table.
+   Each tuple in CurrentBids has been decorated with the total volume,
+   and compares this to an aggregate applied over the Bids table.
+   Subsequently we use a windowed aggregate to compute the VWAP
+   over the outer Bids relation's tuples which we turned into a stream.
+   The use of a monotonically increasing counter per query invocation
+   ensures that the windowed aggregate is performed over only those
+   tuples corresponding to a single modification to Bids.
+ */
+ 
+CREATE STREAM BidsSubquery AS
+SELECT tid, pv
+FROM (SELECT b1.tid, b1.sumBV, b1.price*b1.volume as pv,
+             sum(b2.volume) as sumBV2
+      FROM CurrentBids AS b1, Bids AS b2
+      WHERE b2.price > b1.price) AS S
+WHERE (0.25*sumBV) > sumBV2;
+
+/*
+CREATE STREAM TimeoutSubquery AS
+SELECT * FROM BidsSubquery
+WITH HEARTBEAT ON t EVERY 5;
+
+CREATE STREAM FlushedSubquery AS
+SELECT t,
+       (if isnull(tid) and CBCounter == 0 then Counter+1 else tid) as tid,
+       (if isnull(pv) then 0 else pv) as pv
+FROM TimeoutSubquery;
+
+CREATE STREAM ValidSubquery AS
+SELECT * FROM FlushedSubquery
+WHERE not(isnull(tid));
+*/
+
+/* Perform the final aggregation over the replayed and filtered stream */
+CREATE OUTPUT STREAM Result AS
+SELECT now() as t, sum(pv) as vwap
+FROM BidsSubquery[SIZE 1 ADVANCE 1 ON tid] AS S2;
+
+/* Load data. */
+CREATE STREAM FileEvents;
+
+APPLY JAVA "com.streambase.sb.adapter.csvreader.CSVReader"
+  (FileName="@@PATH@@Events.dbtdat", Delimiter=",", StartEventPort="true",
+   Schema=(stream_name string, evt int,
+           timestamp double, orderId int, brokerId int, volume double, price double))
+  INTO Dispatch, FileEvents;
+
+/* Log outputs */
+APPLY JAVA "com.streambase.sb.adapter.csvwriter.CSVWriter"
+  (FileName="vwap.csv", 
+   IfFileExists="Truncate existing file",
+   IfFileDoesntExist="Create new file")
+  FROM Result;
+
+/* Track query progress */
+CREATE STREAM ProgressCounter AS
+  SELECT Counter FROM InputLocked WHERE (Counter % 20) == 0;
+
+/* Track data file open and close for timing */
+CREATE OUTPUT STREAM TimedFileEvents AS
+  SELECT now() as t, * FROM
+    (SELECT * FROM
+      (SELECT 0 as Counter, * FROM FileEvents) AS S UNION ProgressCounter );
+
+/* Log data file events */
+APPLY JAVA  "com.streambase.sb.adapter.csvwriter.CSVWriter"
+  (FileName="file_events.csv",
+   IfFileExists="Truncate existing file",
+   IfFileDoesntExist="Create new file")
+  FROM TimedFileEvents;
+  
+

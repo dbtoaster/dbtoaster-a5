@@ -1,0 +1,197 @@
+CREATE SCHEMA LineitemSchema (
+  orderkey       int,
+  partkey        int,
+  suppkey        int,
+  linenumber     int,
+  quantity       double,
+  extendedprice  double,
+  discount       double,
+  tax            double,
+  returnflag     int, -- text(1)
+  linestatus     int, -- text(1)
+  shipdate       int, -- date
+  commitdate     int, -- date
+  receiptdate    int, -- date
+  shipinstruct   int, -- text
+  shipmode       int, -- text
+  comment        int  -- text
+);
+
+CREATE SCHEMA OrdersSchema (
+  orderkey       int,
+  custkey        int,
+  orderstatus    int, -- text(1)
+  totalprice     double,
+  orderdate      int, -- date
+  orderpriority  int, -- text
+  clerk          int, -- text
+  shippriority   int,
+  comment        int  -- text
+);
+
+CREATE SCHEMA CustomerSchema (
+  custkey      int,
+  name         int, -- text
+  address      int, -- text
+  nationkey    int,
+  phone        int, -- text
+  acctbal      double,
+  mktsegment   int, -- text
+  comment      int  -- text
+);
+
+CREATE SCHEMA PartSchema (
+  partkey      int,
+  name         int, -- text
+  mfgr         int, -- text
+  brand        int, -- text
+  type         int, -- text
+  p_size       int,
+  container    int, -- text
+  retailprice  double,
+  comment      int  -- text
+);
+
+CREATE SCHEMA SupplierSchema (
+  suppkey          int,
+  name             int,
+  address          int,
+  nationkey        int,
+  phone            int,
+  acctbal          double,
+  comment          int
+);
+
+CREATE SCHEMA NationSchema (
+  nationkey        int,
+  name             int,
+  regionkey        int,
+  comment          int
+);
+
+CREATE SCHEMA DispatchSchema (
+    streamname       string,
+    event            int,
+    acctbal          double,
+    address          int,
+    availqty         int,
+    brand            int,
+    clerk            int,
+    comment          int,
+    commitdate       int,
+    container        int,
+    custkey          int,
+    discount         double,
+    extendedprice    double,
+    linenumber       int,
+    linestatus       int,
+    mfgr             int,
+    mktsegment       int,
+    name             int,
+    nationkey        int,
+    orderdate        int,
+    orderkey         int,
+    orderpriority    int,
+    orderstatus      int,
+    partkey          int,
+    phone            int,
+    quantity         double,
+    receiptdate      int,
+    regionkey        int,
+    retailprice      double,
+    returnflag       int,
+    shipdate         int,
+    shipinstruct     int,
+    shipmode         int,
+    shippriority     int,
+    d_size           int,
+    suppkey          int,
+    supplycost       double,
+    tax              double,
+    totalprice       double,
+    type             int
+);
+
+
+CREATE STREAM Dispatch       DispatchSchema;
+CREATE STREAM Multiplexed AS
+      SELECT lower(streamname) as stream_name, event as evt,
+             LineitemSchema(
+               orderkey, partkey, suppkey, linenumber, quantity,
+               extendedprice, discount, tax, returnflag, linestatus,
+               shipdate, commitdate, receiptdate, shipinstruct, shipmode,
+               comment) as l
+      FROM Dispatch WHERE lower(streamname) = "lineitem"
+
+UNION SELECT lower(streamname) as stream_name, event as evt,
+             OrdersSchema(
+               orderkey, custkey, orderstatus, totalprice, orderdate,
+               orderpriority, clerk, shippriority, comment) as o
+      FROM Dispatch WHERE lower(streamname) = "orders"
+
+UNION SELECT lower(streamname) as stream_name, event as evt,
+             CustomerSchema(
+               custkey, name, address, nationkey, phone, acctbal, mktsegment,
+               comment) as c
+      FROM Dispatch WHERE lower(streamname) = "customer"
+
+UNION SELECT lower(streamname) as stream_name, event as evt,
+             PartSchema(
+               partkey, name, mfgr, brand, type, d_size, container, retailprice,
+               comment) as p
+      FROM Dispatch WHERE lower(streamname) = "part"
+
+UNION SELECT lower(streamname) as stream_name, event as evt,
+             SupplierSchema(
+               suppkey, name, address, nationkey, phone, acctbal, comment) as s
+      FROM Dispatch WHERE lower(streamname) = "supplier"
+
+UNION SELECT lower(streamname) as stream_name, event as evt,
+             NationSchema(nationkey, name, regionkey, comment) as n
+      FROM Dispatch WHERE lower(streamname) = "nation";
+
+
+/* Load data. */
+CREATE STREAM FileEvents;
+
+APPLY JAVA "com.streambase.sb.adapter.csvreader.CSVReader"
+  (FileName="@@PATH@@ssb4_agenda.csv", Delimiter=",", StartEventPort="true",
+   TimestampFormat="yyyy-MM-dd", Schema=DispatchSchema)
+  INTO Dispatch, FileEvents;
+  
+/* TODO: deletions */
+
+
+/* Log outputs */
+CREATE OUTPUT STREAM SSB4InDispatch;
+/*CREATE OUTPUT STREAM SSB4Progress;*/
+CREATE OUTPUT STREAM SSB4Results;
+
+/* Run query module */
+APPLY MODULE "ssb4.ssql"
+FROM MultiplexedInputs=Multiplexed
+INTO UpdateCounter=SSB4InDispatch, /*Unlocked=SSB4Progress,*/
+     Result=SSB4Results;
+
+APPLY JAVA "com.streambase.sb.adapter.csvwriter.CSVWriter"
+  (FileName="ssb4.csv",
+   IfFileExists="Truncate existing file",
+   IfFileDoesntExist="Create new file")
+  FROM SSB4Results;
+
+/* Track query progress */
+CREATE STREAM ProgressCounter AS
+  SELECT i as Counter FROM SSB4InDispatch WHERE (i % 20) == 0;
+
+/* Track data file open and close for timing */
+CREATE OUTPUT STREAM TimedFileEvents AS
+  SELECT now() as t, * FROM
+    (SELECT * FROM (SELECT 0 as Counter, * FROM FileEvents)
+     AS S UNION ProgressCounter);
+
+/* Log data file events */
+APPLY JAVA  "com.streambase.sb.adapter.csvwriter.CSVWriter"
+  (FileName="file_events.csv",
+   IfFileExists="Truncate existing file",
+   IfFileDoesntExist="Create new file")
+  FROM TimedFileEvents;

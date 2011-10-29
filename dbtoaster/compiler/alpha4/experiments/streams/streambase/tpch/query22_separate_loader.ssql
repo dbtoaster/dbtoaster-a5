@@ -29,19 +29,19 @@ CREATE STREAM DeleteCustomer CustomerSchema;
 
 
 CREATE STREAM Dispatch AS
-      SELECT "Orders" as stream_name, 1 as evt,
+      SELECT "orders" as stream_name, 1 as evt,
              OrdersSchema(* AS *)   as o
       FROM InsertOrders
 
-UNION SELECT "Orders" as stream_name, 0 as evt,
+UNION SELECT "orders" as stream_name, 0 as evt,
              OrdersSchema(* AS *)   as o
       FROM DeleteOrders
 
-UNION SELECT "Customer" as stream_name, 1 as evt,
+UNION SELECT "customer" as stream_name, 1 as evt,
              CustomerSchema(* AS *) as c
       FROM InsertCustomer
 
-UNION SELECT "Customer" as stream_name, 0 as evt,
+UNION SELECT "customer" as stream_name, 0 as evt,
               CustomerSchema(* AS *) as c
       FROM DeleteCustomer;
 

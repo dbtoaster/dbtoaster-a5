@@ -1,0 +1,151 @@
+/*
+CREATE SCHEMA OrdersSchema (
+  orderkey       int,
+  custkey        int,
+  orderstatus    string, -- text(1)
+  totalprice     double,
+  orderdate      timestamp, -- date
+  orderpriority  string, -- text
+  clerk          string, -- text
+  shippriority   int,
+  comment        string  -- text
+);
+
+CREATE SCHEMA CustomerSchema (
+  custkey      int,
+  name         string, -- text
+  address      string, -- text
+  nationkey    int,
+  phone        string, -- text
+  acctbal      double,
+  mktsegment   string, -- text
+  comment      string  -- text
+);
+*/
+
+CREATE SCHEMA OrdersSchema (
+  orderkey       int,
+  custkey        int,
+  orderstatus    int, -- text(1)
+  totalprice     double,
+  orderdate      int, -- date
+  orderpriority  int, -- text
+  clerk          int, -- text
+  shippriority   int,
+  comment        int  -- text
+);
+
+CREATE SCHEMA CustomerSchema (
+  custkey      int,
+  name         int, -- text
+  address      int, -- text
+  nationkey    int,
+  phone        int, -- text
+  acctbal      double,
+  mktsegment   int, -- text
+  comment      int  -- text
+);
+
+
+
+/* Main memory TPCH tables */
+CREATE MEMORY TABLE Orders   OrdersSchema   PRIMARY KEY (orderkey);
+CREATE MEMORY TABLE Customer CustomerSchema PRIMARY KEY (custkey);
+
+CREATE INDEX CustByAcctbal ON Customer (acctbal);
+CREATE INDEX OrdersByCust  ON Orders (custkey); 
+
+/* Tuple identification across union of input streams */
+CREATE SCHEMA TaggedInputs
+  (stream_name string, evt int, o OrdersSchema, c CustomerSchema);
+
+CREATE INPUT STREAM MultiplexedInputs TaggedInputs;
+
+/* Counter for barriering */
+DECLARE Counter int DEFAULT 0;
+CREATE OUTPUT STREAM UpdateCounter (i int);
+UPDATE Counter FROM (SELECT i FROM UpdateCounter);
+SELECT Counter+1 as i FROM MultiplexedInputs INTO UpdateCounter;
+
+/*
+ * Table change notification streams
+ */
+CREATE SCHEMA SOrdersSchema   (tid int, o  OrdersSchema);
+CREATE SCHEMA SCustomerSchema (tid int, c  CustomerSchema);
+ 
+/* Pre-update serialized streams */ 
+CREATE STREAM SInsertOrders   SOrdersSchema;
+CREATE STREAM SInsertCustomer SCustomerSchema;
+
+CREATE STREAM SDeleteOrders   SOrdersSchema;
+CREATE STREAM SDeleteCustomer SCustomerSchema;
+
+/* Post-update serialized streams */
+CREATE STREAM OrdersInserted   SOrdersSchema;
+CREATE STREAM CustomerInserted SCustomerSchema;
+
+CREATE STREAM OrdersDeleted    SOrdersSchema;
+CREATE STREAM CustomerDeleted  SCustomerSchema;
+
+/* Partition into serialized streams after locking */
+SELECT Counter as tid, o  FROM MultiplexedInputs
+WHERE stream_name = "orders" AND evt = 1 INTO SInsertOrders;
+
+SELECT Counter as tid, c  FROM MultiplexedInputs
+WHERE stream_name = "customer" AND evt = 1 INTO SInsertCustomer;
+
+SELECT Counter as tid, o  FROM MultiplexedInputs
+WHERE stream_name = "orders" AND evt = 0 INTO SDeleteOrders;
+
+SELECT Counter as tid, c  FROM MultiplexedInputs
+WHERE stream_name = "customer" AND evt = 0 INTO SDeleteCustomer;
+
+
+/* Maintain TPCH tables */
+INSERT INTO Orders SELECT o.* FROM SInsertOrders
+RETURNING SInsertOrders.* INTO OrdersInserted;
+
+INSERT INTO Customer SELECT c.* FROM SInsertCustomer
+RETURNING SInsertCustomer.* INTO CustomerInserted;
+
+DELETE FROM Orders USING SDeleteOrders
+WHERE SDeleteOrders.o.orderkey = Orders.orderkey
+RETURNING SDeleteOrders.* INTO OrdersDeleted;
+
+DELETE FROM Customer USING SDeleteCustomer
+WHERE SDeleteCustomer.c.custkey = Customer.custkey
+RETURNING SDeleteCustomer.* INTO CustomerDeleted;
+
+
+/* Query body. */
+
+CREATE STREAM TableChanged AS
+SELECT tid FROM  OrdersInserted UNION OrdersDeleted
+           UNION CustomerInserted UNION CustomerDeleted;
+
+
+/* Table to stream replays and subqueries */
+CREATE STREAM CustomerSubquery AS
+SELECT TC.*, sum(C2.acctbal) as sumSubAB
+FROM TableChanged AS TC OUTER JOIN Customer AS C2
+WHERE C2.acctbal > 0;
+
+CREATE STREAM ReplayCustomer AS
+SELECT S.tid, (if isnull(S.sumSubAB) then 0 else S.sumSubAB) as sumSubAB,
+       C1.custkey, C1.nationkey, C1.acctbal
+FROM CustomerSubquery AS S, Customer AS C1;
+
+CREATE STREAM OrdersSubquery AS
+SELECT S.*, count(O.orderkey) as subCountO
+FROM ReplayCustomer AS S OUTER JOIN Orders AS O
+WHERE S.custkey = O.custkey;
+
+CREATE STREAM FilteredOuter AS
+  SELECT tid, nationkey, acctbal FROM OrdersSubquery
+  WHERE acctbal < sumSubAB
+  AND   subCountO = 0;
+
+CREATE OUTPUT STREAM Result AS
+  SELECT now() as t, nationkey, sum(acctbal) as result
+  FROM FilteredOuter[SIZE 1 ADVANCE 1 ON tid] AS S
+  GROUP BY nationkey;
