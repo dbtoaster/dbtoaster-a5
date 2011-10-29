@@ -54,10 +54,11 @@ Compilers and Query Optimizers}
 
 
 \begin{abstract}
-Multilevel incremental view maintenance is a general-purpose incremental
+This paper introduces and studies multilevel incremental view maintenance,
+a general-purpose incremental
 evaluation framework that allows a query optimizer to extend the use of
-materialized views from answering users' queries, to also answer the delta
-queries present under the hood of a DBMS to refresh views on updates. An
+materialized views from answering user queries to also answer the delta
+queries present under the hood of a DBMS to refresh views on updates. The
 aggressive recursive use of this idea can eliminate all joins from certain
 queries, resulting in mutation-intensive query processing that refreshes
 multiple views without classical query operators. This calls for compilation of
@@ -75,7 +76,6 @@ views when updates happen. Aggressive recursive use of this idea allows to
 eliminate all joins from certain queries and to generate highly efficient
 low-level code without classical query operators that performs all query
 evaluation and view refreshment work. This calls for the compilation of queries.
-}
 
 In this paper, we present a general compiler architecture for languages such as
 SQL. To realize such a compiler, we overcome the challenges of materializing
@@ -83,18 +83,19 @@ views with binding patterns (parameters) to support arbitrarily nested queries
 with aggregates, complex patterns of side effects that may arise, and the need
 to perform sophisticated forms of deforestation and fusion frequently employed
 in compilers but almost unknown in the database literature.
-
+}
 
 Aggressive multilevel incremental view maintenance bears the potential to be, by
 several orders of magnitude, faster than classical incremental view
 maintenance and to have substantially greater expressive power compared to the query
-languages supported in stream engines. This may lead to a new breed of data
-management systems that can drive sophisticated streaming, online, and real-time
-analytics that are not supported by current data management systems.
-
-
-We illustrate this through extensive experimentation with different
-parameterizations of our compiler as well as existing DBMS and stream engines,
+languages supported in stream engines.
+%
+%This may lead to a new breed of data
+%management systems that can drive sophisticated streaming, online, and real-time
+%analytics that are not supported by current data management systems.
+%
+We confirm this expectation through extensive experimentation with different
+parameterizations of our compiler as well as existing DBMS and stream engines
 on an analytics workload consisting of monitoring, algorithmic trading, and ETL
 queries. We observe that multilevel incremental view maintenance dominates
 previous continuous querying approaches, frequently by multiple orders of
