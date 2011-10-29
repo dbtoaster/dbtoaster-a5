@@ -51,29 +51,35 @@ of query processing engines to demonstrate the update, and view refresh rates
 they can attain.
 
 \begin{figure}[htbp]
+\scriptsize{
+\begin{center}
 \begin{tabular}{ p{0.15cm} | l | c | c | c  | c }
-\multicolumn{2}{c|}{Query} & \#~Joins    & Where- & Group- & \#~Subqueries\\
-\multicolumn{2}{c|}{}      & =: equi     & clause & bys    & and depth\\
+\multicolumn{2}{c|}{Query} & \#~Tables,  & Where- & Group- & \#~Subqueries\\
+                         & & join type.  & clause & bys    & and depth\\
+\multicolumn{2}{c|}{}      & =: equi     &        &        & \\
                          & & x: cross    &        &        & \\
 \hline
-\begin{rotate}{90}\hspace{-1.3cm}Finance\end{rotate}
-& AXF        & 1, =      & $\vee, <$     & yes & 0 / 0 \\
-& BSP        & 1, =      & $\wedge, <$   & yes & 0 / 0 \\
-& BSV        & 1, =      & None          & no  & 0 / 0 \\
-& MST        & 1, x      & $\wedge, <$   & yes & 2 / 1 \\
-& PS         & 1, x      & $\wedge, <$   & no  & 2 / 1 \\
-& VWAP       & 0         & $<$           & no  & 2 / 1 \\
+\begin{rotate}{90}\hspace{-1.1cm}Finance\end{rotate}
+& AXF        & 2, =      & $\vee, <$     & yes & 0 / 0 \\
+& BSP        & 2, =      & $\wedge, <$   & yes & 0 / 0 \\
+& BSV        & 2, =      & None          & no  & 0 / 0 \\
+& MST        & 2, x      & $\wedge, <$   & yes & 2 / 1 \\
+& PS         & 2, x      & $\wedge, <$   & no  & 2 / 1 \\
+& VWAP       & 1         & $<$           & no  & 2 / 1 \\
 \hline
-\begin{rotate}{90}\hspace{-1.4cm}TPCH\end{rotate}
+\begin{rotate}{90}\hspace{-1.1cm}TPCH\end{rotate}
 & Q3         & 3, =      & $\wedge, <$   & yes & 0 / 0 \\
 & Q11        & 2, =      & None          & yes & 0 / 0 \\
 & Q17        & 2, =      & $<$           & no  & 1 / 1 \\
 & Q18        & 3, =      & $<$           & yes & 1 / 2 \\
-& Q22        & 0         & $=,<$         & yes & 2 / 1 \\
+& Q22        & 1         & $=,<$         & yes & 2 / 1 \\
 & SSB4       & 7, =      & $<$           & yes & 0 / 0 \\
 \hline
-& SVL        & 0         & $\wedge, <$   & yes & 2 / 1 \\
+& SVL        & 1         & $\wedge, <$   & yes & 2 / 1 \\
 \end{tabular}
+\end{center}
+}
+\vspace{-4mm}
 \caption{Features of the algorithmic trading, online decision support, and
 cluster monitoring query workload used for experiments.}
 \label{fig:queries}
@@ -141,7 +147,7 @@ the standard query optimization workflow.
 
 \begin{figure}[htbp]
 \begin{center}
-\includegraphics[scale=0.33]{../graphs/graphs/engine-comparison.pdf}
+\includegraphics[scale=0.85]{../graphs/graphs/engine_bakeoff.pdf}
 \end{center}
 \vspace{-4mm}
 \caption{A comparison of four query processing engines implementing full refresh
