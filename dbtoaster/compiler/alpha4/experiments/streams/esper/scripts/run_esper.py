@@ -9,11 +9,12 @@ default_esper_dir = "../"
 default_query_dir = "../queries"
 
 finance_queries = {
-  'vwap'        : ['-r 3', '-s {SAMPLEFREQ}', '-u {EVENTS}'],
-  'axfinder'    : ['-r 1', '-s {SAMPLEFREQ}', '-u {EVENTS}'],
-  'brokerspread': ['-r 1', '-s {SAMPLEFREQ}', '-u {EVENTS}'],
-  'pricespread' : ['-r 1', '-s {SAMPLEFREQ}', '-u {EVENTS}'],
-  'missedtrades': ['-r 3', '-s {SAMPLEFREQ}', '-u {EVENTS}']
+  'vwap'          : ['-r 3', '-s {SAMPLEFREQ}', '-u {EVENTS}'],
+  'axfinder'      : ['-r 1', '-s {SAMPLEFREQ}', '-u {EVENTS}'],
+  'brokerspread'  : ['-r 1', '-s {SAMPLEFREQ}', '-u {EVENTS}'],
+  'brokervariance': ['-r 1', '-s {SAMPLEFREQ}', '-u {EVENTS}'],
+  'pricespread'   : ['-r 1', '-s {SAMPLEFREQ}', '-u {EVENTS}'],
+  'missedtrades'  : ['-r 3', '-s {SAMPLEFREQ}', '-u {EVENTS}']
 }
 
 finance_ext = ".dbtdat"
@@ -22,6 +23,7 @@ finance_files = [i+finance_ext for i in \
 
 tpch_queries = {
   'query3'   : ['-r 1', '-r 2', '-s {SAMPLEFREQ}', '-b {ABSDATADIR}', '-u {EVENTS}'],
+  'query11a' : ['-r 1', '-r 2', '-s {SAMPLEFREQ}', '-b {ABSDATADIR}', '-u {EVENTS}'],
   'query17'  : ['-r 1', '-r 4', '-s {SAMPLEFREQ}', '-b {ABSDATADIR}', '-u {EVENTS}'],
   'query18'  : ['-r 1', '-r 4', '-s {SAMPLEFREQ}', '-b {ABSDATADIR}', '-u {EVENTS}'],
   'query22'  : ['-r 1', '-r 4', '-s {SAMPLEFREQ}', '-b {ABSDATADIR}', '-u {EVENTS}'],
@@ -33,7 +35,7 @@ tpch_files = [i+tpch_ext for i in \
               ["lineitem", "orders", "customer", "supplier", "part", "partsupp", "nation", "region"]]
 
 cluster_queries = {
-  'serverload' : ['-r 1', '-s {SAMPLEFREQ}', '-u {EVENTS}']
+  'serverload' : ['-r 2', '-r 1', '-s {SAMPLEFREQ}', '-u {EVENTS}']
 }
 
 cluster_ext = ".dat"

@@ -1,4 +1,4 @@
-create window Server.win:keepall() as (rackid int, load float);
+create window Server.win:keepall() as (rackid int, load double);
 
 /* Dispatching */
 insert into Server
@@ -22,4 +22,10 @@ select current_timestamp() as t, S.tid,
        S1.rackid, count(*) as cnt
 from Subqueries as S unidirectional, Server as S1
 where S.s2load * 1.5 < s3cnt * S1.load
-group by S1.rackid; 
+group by S1.rackid;
+
+/* Progress stream */
+insert into ProgressCounter
+  select current_timestamp() as t, current_update as tid
+  from TableChanged where (current_update % 20) = 0;
+ 

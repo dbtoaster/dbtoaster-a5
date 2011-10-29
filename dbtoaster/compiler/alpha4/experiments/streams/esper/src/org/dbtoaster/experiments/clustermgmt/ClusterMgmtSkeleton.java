@@ -10,10 +10,9 @@ import joptsimple.OptionSet;
 
 import org.apache.commons.logging.Log;
 import org.apache.commons.logging.LogFactory;
+import org.dbtoaster.experiments.clustermgmt.events.UnifiedEvent;
 import org.dbtoaster.experiments.common.CommonSkeleton;
 import org.dbtoaster.experiments.common.GenericSubscriber;
-import org.dbtoaster.experiments.finance.OrderBookSkeleton;
-import org.dbtoaster.experiments.tpch.events.UnifiedEvent;
 
 import com.espertech.esper.client.Configuration;
 import com.espertech.esper.client.EPStatement;
@@ -102,7 +101,7 @@ public class ClusterMgmtSkeleton extends CommonSkeleton {
 
     } catch (IOException e) { e.printStackTrace(); }
     
-    OrderBookSkeleton s = new OrderBookSkeleton();
+    ClusterMgmtSkeleton s = new ClusterMgmtSkeleton();
 
     log.info("using script "+queryFile);
     List<EPStatement> epStmts = null;
@@ -114,8 +113,10 @@ public class ClusterMgmtSkeleton extends CommonSkeleton {
           System.exit(1);
         }
   
+        EPStatement stmt = epStmts.get(epStmts.size()-queryId);
+        log.info("Logging query(-"+queryId+"): "+stmt.getText());
         GenericSubscriber subscriber = new GenericSubscriber(sampleFreq);
-        epStmts.get(epStmts.size()-queryId).setSubscriber(subscriber);
+        stmt.setSubscriber(subscriber);
       }
     }
     

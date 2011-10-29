@@ -25,7 +25,7 @@ if [ ! -d $data_dir ]; then
 fi
 
 working_dir=`pwd`
-query_dir=$esper_dir/queries/finance
+query_dir=$esper_dir/queries/clustermgmt
 script_dir=$esper_dir/scripts
 bin_dir=$esper_dir/bin
 
