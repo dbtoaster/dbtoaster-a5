@@ -167,31 +167,45 @@ We refer to \cite{koch-pods:10} for the general case of conditions.
 TODO: explain minus.
 
 Let us be precise though about computing delta queries. In general, each expression has input and output variables,
-and taking a delta in general {\em adds variables} parameterizing the query with the update. From now on we only consider single-tuple insertions $+R(\vec{x})$ to or deletions $-R(\vec(x)$ from a relation $R$.
-For example, given schema $R(AB), S(BC)$, the delta $+R(x,y)$ to query \\
-{\tt sum(R.A * S.C) from R, S where R.B<S.B)[][]}
-is \\
-{\tt sum(x * S.C) from S where y < S.B[x,y][]}.
-Various optimizations are possible in special cases. For example, the delta to
-{\tt sum(R.A * S.C) from R, S where R.B=S.B)[][]} is \\
-{\tt x * sum(S.C) from S)[][y=S.B]}. Here two things have happened. We have exploited distributivity
-to pull $x$ out of the aggregation; moreover, the domain of $y$ is restricted by the database; the possible values of $y$ can be computed from the database (bottom-up), so it can be turned into an output variable.
-To understand better why our delta expressions have this shape, note that \\
-$\Delta_{+R(x,y)}(R[][A, B_R] \bowtie S[][B_S, C] \bowtie B_R \theta B_S)$ is \\
-$(\Delta_{+R(x,y)}R[][A, B_R]) \bowtie (S[][B_S, C] \bowtie B_R \theta B_S))$ \\
-+
-$(\Delta_{+R(x,y)}R[][A, B_R]) \bowtie (\Delta_{+R(x,y)}(S[][B_S, C] \bowtie B_R \theta B_S)))$ \\
-+
-$R[][A, B_R] \bowtie (\Delta_{+R(x,y)}(S[][B_S, C] \bowtie B_R \theta B_S)))$ and \\
-$\Delta_{+R(x,y)}(S[][B_S, C] \bowtie B_R \theta B_S)) = 0$ \\
-since both
-$\Delta_{+R(x,y)} S[][B_S, C]$ and
-$\Delta_{+R(x,y)} B_R \theta B_S$ are zero.
-Now
-$\Delta_{+R(x,y)}(R[][A, B_R]$ is the singleton relation $\{\tuple{A:x,B_R:y}\}$: the actual insertion.
-The expression $\{\tuple{A:x,B_R:y}\} \bowtie S[][B_S, C] \bowtie B_R \theta B_S)$ can be simplified to
-$\{\tuple{A:x}\} \bowtie S[][B_S, C] \bowtie y \theta B_S)$.
+and taking a delta in general {\em adds variables} parameterizing the query with the update. From now on we only consider single-tuple insertions $+R(\vec{x})$ to or deletions $-R(\vec{x})$ from a relation $R$.
 
+\def\dxy{\Delta_{+R(x,y)}}
+
+\begin{example}\em
+Given schema $R(AB), S(CD)$, and query
+\begin{verbatim}
+select sum(A * D) from R, S where B<C
+\end{verbatim}
+or, in our IR,
+$\Sum(R \bowtie S \bowtie B < C \bowtie A*D)[][]$.
+
+The delta for this query and the insertion of a tuple $\tuple{x,y}$ into $R$ is as follows.
+Let $e$ be $S \bowtie B < C \bowtie A*D$.
+Then
+\[
+\dxy \Sum(R \bowtie e) = \Sum \dxy (R \bowtie e)
+\]
+and by the delta rule for $\bowtie$,
+\begin{eqnarray*}
+\dxy (R \bowtie e) &=& (\dxy R) \bowtie e \\
+&+& R \bowtie \dxy e \\
+&+& (\dxy R) \bowtie \dxy e
+\end{eqnarray*}
+%
+and
+$\dxy(e) = 0$
+since
+$\dxy S = 0$, $\dxy B \theta C = 0$, and $\dxy (A * D) = 0$. (This follows again from the delta rule for $\bowtie$, applied
+twice.)
+Now
+$\dxy R$ is the singleton relation $\{\tuple{A:x,B:y}\}$: the actual insertion.
+The expression $\{\tuple{A:x,B:y}\} \bowtie e$ can be simplified to
+$\{\tuple{A:x}\} \bowtie S \bowtie y \theta C \bowtie x * D$.
+%
+Thus the delta of the input query is
+$\Sum(\{\tuple{A:x}\} \bowtie  S \bowtie y < C \bowtie x*D)[x,y][]$ which can be further simplified to
+$\Sum(S \bowtie y < C \bowtie x*D)[x,y][]$.
+\end{example}
 
 
 \subsubsection{Recursive incremental view maintenance \cite{koch-pods:10}.}
