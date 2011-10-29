@@ -1,21 +1,270 @@
-
 \subsection{The functional compiler/optimizer}
 \label{sec:kthree}
 
-Yanif
-
-K3 optimizations: what cannot be expressed on the level of relational algebra; optimization rules. 
-
-\subsection{Code generation}
-\label{sec:codegen}
 
 
-Yanif/Oliver
-
-\subsection{Runtime system}
-\label{sec:runtime}
+\def\map{\mbox{\texttt{map}}}
+\def\flatten{\mbox{\texttt{flatten}}}
+\def\agg{\mbox{\texttt{agg}}}
+\def\groupagg{\mbox{\texttt{groupagg}}}
+\def\apply{\mbox{\texttt{apply}}}
 
 
 
+Each step of delta transformation, and extraction and materialization in our
+recursive compilation process results in maintenance work where a query updates
+an auxiliary datastructure. The maintenance work is indeed strictly a query
+(with parameters, i.e. a function) given our language is closed under taking
+deltas, leading to our second stage functional programming IR.
 
+
+
+Functional programs have strong correspondences to relational queries, both are
+essentially dataflow programs, and the relationship of their formal
+expressiveness has been studied in complex object languages, and comprehensions.
+Our foremost motivation for a functional IR is for holistic query optimization,
+where we can exploit a breadth of powerful program transformations including
+monad transformations from structural recursion~\todo{Kleisli},
+deforestation~\todo{Wadler}, supercompilation \todo{SPJ/Bollingbroke} and
+fusion.
+A functional IR can also simplify writing optimizers, by explicitly representing
+bindings and renamings via lambda constructs, which admits simpler bookkeeping
+than schemas. Finally, a functional IR offers the potential for non-first normal
+form representations that readily admits vectorized processing, and supports
+highly-specialized, adaptive layout strategies whenever temporary data resides
+in main-memory or is spilled to disk. A full treatment of the relationship
+between optimization in functional programs and query optimizers is outside the
+scope this paper, here we summarize the techniques we have adopted in our
+work-in-progress functional IR.
+
+
+Our functional IR includes tuples and collection types, lambdas and associative
+lambdas\footnote{Determining properties such as associativity, commutativity and
+idempotence via program analyses are in general undecidable \todo{Kleisli}},
+conditionals, four higher-order collection transformers that we describe below,
+and collection accessor and mutation operations. These collection mutation
+operations perform in-place updates of entries, implying that our functional IR
+is an impure language, although these could be encapsulated in a monad as with
+Haskell's I/O system. Furthermore, our only need for higher-order functions is
+with collection transformers, that is we never pass a function as an argument to
+another function, implying that our functional IR is already low-level in the
+spirit of functional compiler internal IRs (that have applied techniques such as
+defunctionalization \todo{Danvy}, CPS, etc.).
+
+
+
+For our higher-order collection transformers, we extend the \texttt{map} and
+\texttt{flatten} constructs from Kleisli~\todo{Kleisli} with aggregations:
+\texttt{agg} and \texttt{groupagg}. Their type signatures are:
+
+
+\vspace{1mm}\hspace{-4mm}
+\begin{tabular}{p{1cm}l}
+\texttt{map}
+    & $: (\sigma \rightarrow \tau)
+           \rightarrow \sigma \ \mathcal{C}
+           \rightarrow \tau \ \mathcal{C}$\\
+\texttt{flatten}       
+    & $: (\sigma\ \mathcal{C}) \ \mathcal{C}
+           \rightarrow \sigma \ \mathcal{C}$ \\
+\texttt{agg}
+    & $: (\sigma \rightarrow \tau \rightarrow \tau)
+           \rightarrow \tau
+           \rightarrow \sigma \ \mathcal{C}
+           \rightarrow \tau$ \\
+\texttt{groupagg}
+    & $: (\sigma \rightarrow \tau \rightarrow \tau)
+           \rightarrow (\sigma \rightarrow \upsilon)
+           \rightarrow \tau
+           \rightarrow \sigma \ \mathcal{C}
+           \rightarrow \tuple{\upsilon, \tau} \ \mathcal{C}$ \\
+\end{tabular}
+
+
+
+\vspace{1mm}
+\noindent Above $\sigma \ \mathcal{C}$ indicates the type of a collection
+containing elements of type $\sigma$, and $\tuple{}$ is a tuple constructor. Our
+framework is agnostic to the collection representation, which may be sets, bags,
+and lists, and can vary in their underlying implementation (e.g. tree or
+hash sets, linked lists or vectors). We explicitly choose the datastructure type
+based on expression semantics and requirements.
+
+
+
+\comment{
+Type signatures for our collection mutators are:
+
+\vspace{1mm}
+\begin{tabular}{p{0.8cm}l}
+\texttt{merge}
+    & $: \tuple{\sigma, \tau} \ \mathcal{C}
+           \rightarrow \tuple{\sigma, \tau} \ \mathcal{C}
+           \rightarrow \tuple{\sigma, \tau} \ \mathcal{C}$ \\
+\texttt{update} 
+    & $: \tuple{\sigma, \tau} \ \mathcal{C}
+           \rightarrow \tuple{\sigma, \tau}
+           \rightarrow \tuple{\sigma, \tau} \ \mathcal{C}$
+\end{tabular}
+
+\todo{Describe these operations}
+}
+
+
+
+We apply several optimization techniques on our functional IR that are difficult
+and unsuitable to perform on our relational algebra IR. Currently, our optimizer
+performs static compile-time optimizations that universally simplify functional
+programs in its usage of collections and scalars. We plan to expand this to
+perform both static and runtime adaptive optimizations, and incorporate a
+cost-model in future work. Our optimization stages include:
+
+
+\vspace{1mm}
+\noindent\textbf{If-lifting.} This is a transformation to a canonical form
+for our functional IR that involves lifting every conditional to its minimal
+binding point. Consider an expression:
+
+$\apply(\lambda x. \apply(\lambda y.
+  \mbox{\texttt{ if }} x < 0 \mbox{\texttt{ then }} y/a
+                             \mbox{\texttt{ else }} y*3, a), b)$
+
+\vspace{1mm}
+\noindent The conditional above is independent of $y$ and we can lift to:
+
+\vspace{-2mm}
+\begin{tabbing}
+$\apply(\lambda x.
+  \mbox{\texttt{ if }} x < 0$ \= $\mbox{\texttt{ then }}
+    \apply(\lambda y. y/a, a)$\\
+\> $\mbox{\texttt{ else }} \apply(\lambda y. y*3, a),\ b)$
+\end{tabbing}
+
+
+\vspace{-2mm}  
+\comment{
+A minimal binding point is the lambda expression that binds the minimal
+sufficient set of variables to ensure a well-defined evaluation of the
+conditional.
+}
+\noindent This canonical form admits maximal optimization of the conditional's
+then-else blocks, since lifting pushes expressions from outside the conditional
+into these blocks at the expense of code size, however, queries are often
+small enough in terms of code size to justify specialization.
+\todo{Mention combined IVC and delta branches.}
+
+
+\vspace{1mm}
+\noindent\textbf{Deforestation.} This transformation converts functional
+programs to treeless forms \todo{Wadler, Gill/SPJ}, that is it eliminates
+redundant intermediate datastructures. The core subset of our deforestation
+rewrite rules are:
+
+\def\xform{\mbox{\texttt{:-}}}
+\def\fst{\mbox{\texttt{fst}}}
+
+\vspace{1mm}\hspace{-6mm}
+\begin{tabular}{p{3.6cm}l}
+$\map(f, \map(f', c))$ 
+    & $\xform\ \map(f \circ f', c)$
+\\
+$\map(f, \flatten(c))$
+    & $\xform\ \flatten(\map(\lambda c'.\ \map(f,c'), c))$
+\\
+$\agg(f^a, i, \map(f', c))$
+    & $\xform\ \agg(f^a \circ f', i, c)$
+\\
+$\agg(f^a, i, \flatten(c))$
+    & $\xform\ \agg(f, i, \map(\lambda c'.\ \agg(f, i, c'),c))$
+\\
+$\groupagg(f^a, g, i, \map(f', c))$
+    & $\xform\ \groupagg(f^a \circ f', g \circ f', i, c)$
+\\
+$\groupagg(f^a, i, \flatten(c))$ & $\xform$
+\\
+\multicolumn{2}{l}{
+$\quad\groupagg(f, \fst, i, \flatten(
+    \map(\lambda c'.\ \groupagg(f, g, i, c'),c)))$}
+\end{tabular}
+
+
+\vspace{1mm}
+Above $\circ$ is function composition and \texttt{fst} the left projection of a
+pair, and we note that both the \texttt{agg} and \texttt{groupagg} composes
+associative lambdas (above $f^a$, two-argument lambdas), with regular
+(single-argument) lambdas in terms of the first argument. We omit additional
+deforestation rules related to iterative usage of in-place updates due to space
+limitations, these are straightforward.
+
+The first rule for \texttt{map} eliminates the intermediate collection
+constructed after applying $f'$, instead pipelining the results through the
+application of both functions $f$ and $f'$. Since both $f$ and $f'$ can
+themselves contain \texttt{map} invocations, essentially performing joins, this
+rule can alter the arity of the join operation, constructing fully pipelined
+n-way joins. The second rule above is a form of late tuple construction
+\todo{Abadi}, where by lifting the \texttt{flatten} expression, we carry around
+nested intermediate collection during processing. Repeated application in large
+programs allows us to make use of deeply nested representations, in the same
+vein as work on the nested relational algebra and non-first normal forms
+\todo{Scheck}. Aggregation deforestation also uses composition to realize
+pipelining and simplification, and the variants with \texttt{flatten} are 
+partial aggregations that push an associative aggregation into the inner tier of
+a nested collection.
+
+
+\vspace{1mm}
+\noindent\textbf{Common subexpression elimination.}
+Our CSE algorithm is a one-pass bottom-up traversal of the functional IR that
+simultaneously extracts candidate common subexpressions and substitutes their
+materialization. Our algorithm prioritizes large expressions as candidates for
+substitution, and is conservative in nature. In particular, candidates extracted
+from disjunctions and conditionals must be candidates in all subexpressions.
+Picking candidates that only appear in a subset of subexpressions can incur
+overheads since we may unnecessarily execute a subexpression identified as
+common due to evaluation strategies such as short-circuiting disjunctions. Our
+substitution process considers expression equivalence under alpha renaming
+rather than pure lexical comparison, making its behavior more similar to global
+value numbering strategies. Currently our CSE algorithm operates separately on
+side-effecting queries, and we plan to extend this to apply across all
+maintenance work performed to realize multi-query optimization.
+
+
+\vspace{1mm}
+\noindent\textbf{IVC deduplication.} In the relational IR, a materialized view
+can appear multiple times due to the expansion of terms when taking deltas of
+sums and products expressions. Subsequently its initial value computation
+will also appear many times and we observe that when accounting for binding
+patterns, these initial value computations are idempotent in that they
+repeatedly update a view while evaluating a single query, without any underlying
+changes to the database. We can eliminate duplicate IVCs, although this process
+is non-trivial given we must keep track of binding pattern equivalences and
+their dependences on other variable domains. Currently we eliminate such
+duplicate IVCs while constructing the functional IR.
+
+
+\comment{
+\vspace{1mm}
+\noindent\textbf{Datastructure creation.} The final optimization pass creates
+auxiliary index datastructures to efficiently evaluate predicates. This stage
+occurs last since the prior optimizations, with the exception of if-lifting,
+yield a simpler and smaller functional IR. We presently implement hash
+datastructures, by extracting any remaining equality predicates from the IR,
+and synthesize an expression to construct a hashtable on-the-fly and perform
+probes.
+}
+
+
+\noindent\textbf{Code generation} Following functional optimization,
+we synthesize an imperative IR from our functional program for code generation
+as the final step of compilation. The synthesis process is extensible in that a
+code generator developer can define additional materialization points for
+temporaries based on the structure of the functional IR. This is useful to
+target different backend languages which have varying builtin primitive
+operations and datastructures. The imperative IR also has support for external
+functions and types to enable the usage of library code in the chosen target
+language. Currently we have implemented a C++ code generator based around
+the STL and its iterator-oriented collection APIs (e.g. \texttt{begin},
+\texttt{end}, \texttt{find}, \texttt{erase}, \texttt{clear}, etc.). Our
+imperative optimizer is a work-in-progress, particularly in its datastructure
+usage and other storage layer concerns.
 
