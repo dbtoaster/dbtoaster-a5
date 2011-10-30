@@ -38,7 +38,7 @@ create variable int current_update = 0;
 on TableChanged set current_update = current_update+1;
 
 select current_timestamp() as t, current_update as tid,
-       PS.partkey, sum(PS.supplycost * PS.availqty)
+       PS.partkey, sum(PS.supplycost * PS.availqty) as result
 from  TableChanged as TC unidirectional, Partsupp as PS, Supplier as S
 where PS.suppkey = S.suppkey
 group by PS.partkey;

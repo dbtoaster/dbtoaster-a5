@@ -30,7 +30,7 @@ create variable int current_update = 0;
 on TableChanged set current_update = current_update+1;
 
 select current_timestamp() as t, current_update as tid,
-       x.brokerId, sum(x.volume * x.price * y.volume * y.price * 0.5)
+       x.brokerId, sum(x.volume * x.price * y.volume * y.price * 0.5) as bsv
 from   TableChanged as t unidirectional, Bids as x, Bids y
 where  x.brokerId = y.brokerId
 group by x.brokerId;

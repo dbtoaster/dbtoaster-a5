@@ -89,7 +89,7 @@ CREATE OUTPUT STREAM Query11AResults;
 /* Run query module */
 APPLY MODULE "query11a.ssql"
 FROM MultiplexedInputs=Multiplexed
-INTO UpdateCounter=Query1AInDispatch, /*Unlocked=Query11AProgress,*/
+INTO UpdateCounter=Query11AInDispatch, /*Unlocked=Query11AProgress,*/
      Result=Query11AResults;
 
 APPLY JAVA "com.streambase.sb.adapter.csvwriter.CSVWriter"

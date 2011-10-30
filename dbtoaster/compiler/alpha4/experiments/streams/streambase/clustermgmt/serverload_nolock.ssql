@@ -33,11 +33,11 @@ CREATE STREAM ServerInserted SServerSchema;
 CREATE STREAM ServerDeleted  SServerSchema;
 
 /* Partition into serialized streams */
-SELECT Counter as tid, l
-FROM MultiplexedInputs WHERE evt = 1 INTO SInsertServer;
+SELECT Counter as tid, ServerSchema(rackid, load) as s 
+FROM Dispatch WHERE event = 1 INTO SInsertServer;
 
-SELECT Counter as tid, l
-FROM MultiplexedInputs WHERE evt = 0 INTO SDeleteServer;
+SELECT Counter as tid, ServerSchema(rackid, load) as s
+FROM Dispatch WHERE event = 0 INTO SDeleteServer;
 
 /* Maintain table */
 INSERT INTO Server SELECT s.* FROM SInsertServer
@@ -54,16 +54,16 @@ CREATE STREAM TableChanged AS
 SELECT tid FROM  ServerInserted UNION ServerDeleted;
 
 CREATE STREAM Subqueries AS
-SELECT TC.tid, sum(S.load) as s2load, count(*) as s3cnt
+SELECT TC.tid, sum(S.load) as s2load, count() as s3cnt
 FROM TableChanged as TC, Server AS S;
 
 CREATE STREAM ReplayServer AS
-SELECT S.tid, S.rackid
+SELECT S.tid, S1.rackid
 FROM Subqueries AS S, Server AS S1
 WHERE S.s2load * 1.5 < S.s3cnt * S1.load;
 
 CREATE STREAM Result AS
-  SELECT now() as t, rackid, count(*) as result
+  SELECT now() as t, rackid, count() as result
   FROM ReplayServer[SIZE 1 ADVANCE 1 ON tid] AS S
   GROUP BY rackid;
 

@@ -70,13 +70,13 @@ FROM TableChanged AS TC, Bids AS B;
 
 CREATE STREAM ReplayJoin AS
 SELECT X.tid, X.brokerId,
-       sum(x.volume * x.price * y.volume * y.price * 0.5) as bsv
+       sum(X.volume * X.price * Y.volume * Y.price * 0.5) as bsv
 FROM ReplayBids AS X, Bids AS Y
 WHERE X.brokerId = Y.brokerId;
 
 /* Perform outer stream aggregation */
 CREATE OUTPUT STREAM Result AS
-SELECT now() as t, brokerId, sum(bsp) as bsp
+SELECT now() as t, brokerId, sum(bsv) as bsv
 FROM ReplayJoin[SIZE 1 ADVANCE 1 ON tid] as S
 GROUP BY brokerId;
 
