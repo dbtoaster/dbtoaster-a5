@@ -8,29 +8,32 @@ $queries = {
     :datafile      => "finance/axfinder.sql",
     :max_plot_rate => 800,
     :max_plot_mem  => 60,
-    :representatives => ["depth_infty", "depth_1"],
+    :representatives => ["depth_infty", "depth_1", "depth_0"],
     :tuple_mult    => 1000,
     :timescale     => :minutes,
-    :total_updates  => 2540000
+    :total_updates  => 2540000,
+    :title => "AXF"
   },
   "brokerspread" => {
     :datafile      => "finance/brokerspread.sql",
     :max_plot_rate => 300,
     :max_plot_mem  => 60,
-    :representatives => ["depth_infty", "depth_1"],
+    :representatives => ["depth_infty", "depth_1", "depth_0"],
     :tuple_mult    => 1000,
     :timescale     => :minutes,
-    :total_updates  => 2540000
+    :total_updates  => 2540000,
+    :title => "BSP"
   },
   "brokervariance" => {
     :datafile      => "finance/brokervariance.sql",
     :max_plot_rate => 200000,
     :max_plot_mem  => 40,
-    :representatives => ["depth_infty", "depth_1_nohash"],
+    :representatives => ["depth_infty", "depth_1_nohash", "depth_0"],
     :tuple_mult    => 1000000,
     :rate_mult     => 1000,
     :timescale     => :minutes,
-    :total_updates  => 1400000
+    :total_updates  => 1400000,
+    :title => "BSV"
   },
   "missedtrades" => {
     :datafile      => "finance/missedtrades.sql",
@@ -39,7 +42,8 @@ $queries = {
     :representatives => ["depth_infty", "depth_1_nohash", "depth_0"],
     :tuple_mult    => 1000,
     :timescale     => :minutes,
-    :total_updates  => 2540000
+    :total_updates  => 2540000,
+    :title => "MST"
   },
   "pricespread" => {
     :datafile      => "finance/pricespread.sql",
@@ -50,32 +54,35 @@ $queries = {
     :tuple_mult    => 1000,
     :mem_mult      => :KB,
     :timescale     => :minutes,
-    :total_updates  => 2540000
+    :total_updates  => 2540000,
+    :title => "PSP"
   },
   "serverload" => {
     :datafile      => "serverload.sql",
-    :representatives => ["depth_infty", "depth_1_nohash"],
+    :representatives => ["depth_infty", "depth_1_nohash", "depth_0"],
     :max_plot_rate => 400,
     :max_plot_mem  => 6,
     :tuple_mult    => 1000,
     :timescale     => :minutes,
-    :total_updates  => 220000
+    :total_updates  => 220000,
+    :title => "SVL"
   },
   "vwap" => {
     :datafile      => "finance/vwap.sql",
     :max_plot_mem  => 40,
     :max_plot_rate => 4000,
-    :representatives => ["depth_infty", "depth_1_nohash"],
+    :representatives => ["depth_infty", "depth_1_nohash", "depth_0"],
     :tuple_mult    => 1000,
     :rate_mult     => 1000,
     :timescale     => :minutes,
     :total_updates  => 1400000,
+    :title => "VWAP"
   },
   "ssb4" => {
     :datafile      => "tpch/ssb4.sql -d disable-deletes",
     :max_plot_rate => 400,
     :max_plot_mem  => 12*1024,
-    :representatives => ["depth_infty", "depth_1"],
+    :representatives => ["depth_infty", "depth_1", "depth_0"],
     :tuple_mult    => 1000,
     :mem_mult      => :GB,
     :timescale     => :minutes,
@@ -86,7 +93,7 @@ $queries = {
     :max_plot_rate => 40000,
     :max_plot_time => 600,
     :max_plot_mem  => 100,
-    :representatives => ["depth_infty", "depth_1"],
+    :representatives => ["depth_infty", "depth_1", "depth_0"],
     :tuple_mult    => 1000,
     :rate_mult     => 1000,
     :timescale     => :minutes,
@@ -97,7 +104,7 @@ $queries = {
     :max_plot_rate => 80000,
     :max_plot_time => 2,
     :max_plot_mem  => 8,
-    :representatives => ["depth_infty", "depth_1"],
+    :representatives => ["depth_infty", "depth_1", "depth_0"],
     :tuple_mult    => 1000,
     :rate_mult     => 1000,
     :total_updates => 81000
@@ -124,7 +131,7 @@ $queries = {
     :datafile      => "tpch/query22.sql",
     :max_plot_rate => 500,
     :max_plot_mem  => 1.6,
-    :representatives => ["depth_infty", "depth_1_nohash"],
+    :representatives => ["depth_infty", "depth_1_nohash", "depth_0"],
     :tuple_mult    => 1000,
     :timescale     => :minutes,
     :total_updates => 165000
@@ -385,12 +392,68 @@ end
 
 query_order = [
   "tpch3", "tpch11", "tpch17", "tpch18", "tpch22", "ssb4", 
-  "serverload",
+#  "serverload",
   "brokervariance", "brokerspread", "axfinder", "pricespread",
     "missedtrades", "vwap", 
 ];
 traditional_engines = ["Esper", "CSPE", "Postgres", "CDB"];
-    
+
+
+file_data "bakeoff.tex" => ["data/engine-comparison.csv","rakefile"] do
+  labels, data = query_order.map do |q|
+      args = $queries[q]
+      data = ["infty", "0"].map do |d|
+        chosen_conf = "depth_#{d}";
+        args.fetch(:representatives, []).
+          each { |r| chosen_conf = r if /depth_#{d}/ =~ r; }
+        
+        time, tuples =
+          if File.exists? "data/time_#{q}_#{chosen_conf}_0"
+          then tuples_processed("data/time_#{q}_#{chosen_conf}_0")[-1];
+          else puts "Warning: missing file 'data/time_#{q}_#{chosen_conf}_0'";
+               [-1,-1]
+          end
+        
+        if time <= 0 then "XXX" 
+        else ((tuples / time)*100.0).round * 0.01 end;
+      end
+      
+      [ if args.has_key? :title 
+        then args[:title]
+        else q.upcase
+        end, 
+        data ];
+    end.unzip;
+  
+  good_engines = ["CSPE", "CDB"];
+  traditional_data = 
+    File.open("data/engine-comparison.csv") {|f| f.readlines }[2..-1].
+    map { |l| l = l.chomp.split(/,/); [l.shift, l.map {|v| v.to_f }] }.
+    map { |q,d| [ q.downcase.sub(/q/, "tpch"), 
+                  [ d[0...traditional_engines.length],
+                    d[traditional_engines.length..-1] ] ] }.to_h
+  
+    data = data.zip(query_order.map do |q|
+      if traditional_data.has_key? q then
+        engine_data = 
+          traditional_engines.zip(traditional_data[q][1]).to_h
+        good_engines.map { |e| ((engine_data[e]*100.0).round)*0.01 };
+      else
+        puts "Yanif's data is missing #{q}";
+        good_engines.map { |e| "XXX" };
+      end
+    end).map { |a,b| a+b };
+  
+  "\\begin{tabular}{|r|#{"c"*(good_engines.length+2)}|}\\hline \n"+
+  ([["Query", "Full Compilation", "Depth 1"]+good_engines]+
+  labels.zip(data).map do |label,data|
+    ["{\\bf #{label}}"]+data
+  end).map { |l| l.join(" & ")+"\\\\ \\hline \n" }.join("") +
+  "\\end{tabular}";
+end
+  
+
+
 ["pdf", "tex", "ps"].each do |fmt|
   plot "graphs/engine_bakeoff.#{fmt}" =>
         ["data/engine-comparison.csv","rakefile"] do |plot|
@@ -419,7 +482,7 @@ traditional_engines = ["Esper", "CSPE", "Postgres", "CDB"];
     
     draw_clustered_bar_plot plot, 
       :group_labels => (query_order.map do |q|
-        $queries[q].fetch(:title, q.sub(/tpch/, "TPCH Query ").upcase);
+        $queries[q].fetch(:title, q.upcase);
       end),
       :dataset_labels => traditional_engines,
       :data => data,
@@ -431,7 +494,7 @@ traditional_engines = ["Esper", "CSPE", "Postgres", "CDB"];
   
   plot "graphs/bakeoff.#{fmt}" => 
        ["data/engine-comparison.csv","rakefile"] do |plot|
-    depths = ["0", "1", "infty"];
+    depths = ["infty", "1", "0"];
     
     plot.term "pdf enhanced size 5,2.5" if fmt == "pdf"
     plot.logscale "y"
@@ -455,43 +518,43 @@ traditional_engines = ["Esper", "CSPE", "Postgres", "CDB"];
         if time == 0 then 0 else tuples / time end;
       end
       
-      base_rate = if data[0] == 0 then
+      base_rate = if data[2] == 0 then
         puts "Warning: Depth 0 rate = 0 for #{q}, using Depth 1 rate";
-        data[1] else data[0] end
+        data[1] else data[2] end
       
       [ if args.has_key? :title 
         then args[:title]
-        else q.sub(/tpch/, "TPCH Query ").upcase
+        else q.upcase
         end, 
         data.map { |rate| rate / base_rate } ];
     end.unzip
     
-    good_engines = ["CSPE", "CDB"]
-    traditional_data = 
-      File.open("data/engine-comparison.csv") {|f| f.readlines }[2..-1].
-      map { |l| l = l.chomp.split(/,/); [l.shift, l.map {|v| v.to_f }] }.
-      map { |q,d| [ q.downcase.sub(/q/, "tpch"), 
-                    [ d[0...traditional_engines.length],
-                      d[traditional_engines.length..-1] ] ] }.to_h
-    
-    data = data.zip(query_order.map do |q|
-      if traditional_data.has_key? q then
-        engine_data = 
-          traditional_engines.zip(traditional_data[q][1]).to_h
-        good_engines.map { |e| engine_data[e] };
-      else
-        puts "Yanif's data is missing #{q}";
-        good_engines.map { |e| 0 };
-      end
-    end).map { |a,b| a+b };
+#    good_engines = ["CSPE", "CDB"]
+#    traditional_data = 
+#      File.open("data/engine-comparison.csv") {|f| f.readlines }[2..-1].
+#      map { |l| l = l.chomp.split(/,/); [l.shift, l.map {|v| v.to_f }] }.
+#      map { |q,d| [ q.downcase.sub(/q/, "tpch"), 
+#                    [ d[0...traditional_engines.length],
+#                      d[traditional_engines.length..-1] ] ] }.to_h
+#    
+#    data = data.zip(query_order.map do |q|
+#      if traditional_data.has_key? q then
+#        engine_data = 
+#          traditional_engines.zip(traditional_data[q][1]).to_h
+#        good_engines.map { |e| engine_data[e] };
+#      else
+#        puts "Yanif's data is missing #{q}";
+#        good_engines.map { |e| 0 };
+#      end
+#    end).map { |a,b| a+b };
         
     plot.ylabel "Average Refresh Rate \\n(Relative To Repeated Evaluation)"
-    plot.bmargin "5"
+    #plot.bmargin "5"
     
     draw_clustered_bar_plot plot, 
       :group_labels => labels,
-      :dataset_labels => depths.map { |d| $conf_titles["depth_#{d}"] } +
-                         good_engines,
+      :dataset_labels => depths.map { |d| $conf_titles["depth_#{d}"] },# +
+                         #good_engines,
       :data => data,
       :tic_commands => "rotate by -30",
       :bar_width => 15,
@@ -925,15 +988,15 @@ plot "graphs/scaling.pdf" => "rakefile" do |plot|
   data = data.flatten(1);
   labels = labels.flatten(1);
   
-  plot.term "pdf enhanced size 2.1,2.2"
+  plot.term "pdf enhanced size 3,1.6"
   plot.key "top left"
   
-  plot.ylabel "Rate (1000/s)"
+  plot.ylabel "Refreshes (1000/s)"
   
   plot.bmargin "4"
-  plot.label "'TPCH Query 3' at #{82.5},-13 center"
-  plot.label "'TPCH Query 11' at #{257.5},-13 center"
-  plot.yrange "[0:70]"
+  plot.label "'TPCH Query 3' at #{150},-18 center"
+  plot.label "'TPCH Query 11' at #{500},-18 center"
+  plot.yrange "[0:65]"
   draw_clustered_bar_plot plot,
     :group_labels => labels,
     :dataset_labels => ["Full Compilation", "Depth 1"],
@@ -941,10 +1004,10 @@ plot "graphs/scaling.pdf" => "rakefile" do |plot|
     :tic_commands => "scale 0 rotate by -30",
     :bar_width => 14,
     :label_offset => 10
-  plot.xrange "[-15:345]"
+  plot.xrange "[-20:620]"
   
-  vbar = 165;
-  plot.data << Gnuplot::DataSet.new([[vbar,vbar], [0,58]]) do |ds|
+  vbar = 300;
+  plot.data << Gnuplot::DataSet.new([[vbar,vbar], [0,70]]) do |ds|
     ds.with = "lines lc -1 lw 4"
     ds.title = ""
   end

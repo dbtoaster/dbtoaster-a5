@@ -4,26 +4,51 @@
 This subsection gives heuristics for choosing which subexpressions of
 a query expression to extract and materialize for incremental view maintenance.  These heuristics apply to user-provided queries, as well as delta queries created by the compilation algorithm of Section~\ref{sec:compiler_calc} -- we have observed experimentally (see Section~\ref{sec:experiments}) that under certain conditions, less aggressive incremental maintenance can be beneficial.
 
-We express these conditions in terms of five heuristics:
+\tinysection{Nested aggregate queries}
+Aggregate subqueries, in particular those nested inside comparison operators can not be handled directly by the delta operator -- the delta of an expression containing a nested aggregate is not strictly simpler than the original expression, and recursive delta compilation does not bottom out.
 
-\tinysection{Do not incrementally maintain cross-products or similar expressions}
+\begin{example}
+Consider the query:
+\begin{verbatim}
+SELECT COUNT(*) FROM R WHERE 
+  R.A < (SELECT COUNT(*) FROM S)
+\end{verbatim}
+The delta of this query with respect to S is as follows:
+\begin{verbatim}
+(SELECT 1 FROM R WHERE 
+  (R.A >= (SELECT COUNT(*) FROM S) AND
+   R.A <  (SELECT COUNT(*) FROM S) + 1 ) ) + 
+(SELECT -1 FROM R WHERE
+  (R.A <  (SELECT COUNT(*) FROM S) AND
+   R.A >= (SELECT COUNT(*) FROM S) + 1 ) )
+\end{verbatim}
+\end{example} 
 
-The first heuristic revisits the idea of query decomposition.  Iteration over a cross product can not be made faster through materialization.  The same idea extends to joins bearing similarity to cross products: equi-joins that follow foreign key dependencies (e.g., {\tt ORDERS} $\bowtie_{\tt custkey}$ {\tt CUSTOMER} in the TPC-H schema, with {\tt orderkey} fixed) or inequality predicates.
+Note the occurrences of the original nested aggregate expression in the delta term.  The delta of the aggregate expression is strictly simpler (+1 in this case), and thus the nested aggregate can itself be maintained efficiently.  By extracting the original aggregate expression from the delta of the outer expression, the delta becomes simpler and can be efficiently maintained incrementally.
 
-\tinysection{Keep nested aggregate queries materialized separately}
+\tinysection{Input Variables}
+Maintaining a view with input variables can be expensive -- the domain of the variable is generally infinite (e.g., in the case of input variables correlated on an inequality).  When a value of this variable is encountered for the first time, the view expression must be evaluated as discussed in Section \ref{sec:compiler_calc}.  The materialized view acts as a sort of function cache, albeit one that incrementally maintains cached values rather than invalidating them.
 
-Aggregate subqueries nested inside comparison operators are a a challenge for the delta operator -- the delta of an aggregate expression is not strictly simpler than the original expression.  However, the complexity of the delta term is limited to two exact copies of the original expression -- apart from these, the delta expression is actually simpler.  Materializing the original aggregate expression reduces the cost of evaluating the nested aggregate to the cost of a join over any correlated terms.
+As with caches, there is a tradeoff between the utility of storing values and the cost of doing so.  In the case of materialized views, this is not only the memory cost, but also the cost of maintaining stored values -- each of which is a materialized view in its own right.  The amount of maintenance work required is proportional to both the domain of the input variable (the size of the cache), and the amount of work required to maintain any individual currying of the input variable.  
 
-\tinysection{Do not incrementally maintain views with both input and output variables}
+Instead of materializing a map with input variables, we can separate out terms that the input variable appears in and materialize the remainder of the expression.  The terms with the input variable are then applied as filtering predicates when the expression is evaluated -- note that the cost of doing so is  affected not only by the selectivity of the predicates, but by the reduced ability to aggressively aggregate within the portion of the expression that is materialized.
 
-The work an insertion performs to maintain an output-only view is limited by the expression defining the delta of the view.  Pushing aggregation down into the materialized delta reduces this bound even further.  The lower-level the delta, the simpler the expression, and the less work is involved in maintaining it.
+\begin{example}
+The expression $Q = Sum_A(R \bowtie (B < D))$ over relation $R(A,B,C)$ can be materialized in two ways\footnote{This simple, illustrative example, can also be materialized as a range tree, as discussed below.}:
+$$M_{full}[D][A] = Sum_A(R \bowtie (B < D))$$
+$$M_{partial}[][A,B] = Sum_{A,B}(R)$$
+\end{example}
 
-Conversely, maintaining a materialized view with input variables requires iterating over a domain of values defined outside of the map, with that domain typically increasing monotonically as the query runs -- the amount of maintenance work required does not decrease for lower and lower levels of deltas.  As long as the generated datastructure stays small, this is ok -- we have found performance to be for views with only input variables.  In general, predicates introducing input variables should be applied as filters after the insertion.
+Maintaining $M_{partial}$ requires only one operation per insertion, while maintaining $M_{full}$ involves one operation per value of $D$ currently being maintained.  
 
-\tinysection{Do not materialize views for the maintenance of base relations that are never updated}
+Using $M_{partial}$ to evaluate $Q(D)$ requires first applying the predicate $(B < D)$ to all $\left<A,B\right> \in M_{partial}$.  If $D$ is already in the domain of $M_{full}$, evaluating $Q(D)$ only requires a lookup.  If not, the expression must be computed in its entirety -- in lieu of the base relations, $M_{partial}$ can be maintained for this purpose.
 
-As an example, the NATION table in the TPC-H schema consists of 25 nations, and is never updated (or updated infrequently at best).  Materializing views for the maintenance of this relation creates extra, unnecessary work.
+We can compute the relative costs of these two approaches in terms of: the domains of variables $A$, $D$, and pairs $\left<A,B\right>$ appearing in $R$, rates of insertion into $R$, and evaluation of $Q$, and the probability of encountering duplicate values of $D$.
+\begin{eqnarray*}
+cost_{full} & = & rate_{Q} \left[(1-p(dup_D))|dom(AB)|+p(dup_D)\right] \\
+ & + & rate_{+R} (|dom(D)||dom(A)| + 1)\\
+cost_{partial} & = & rate_{Q} |dom(AB)| + rate_{+R}
+\end{eqnarray*}
 
-\tinysection{Avoid performing 3-way (or wider) equi-joins at evaluation time}
+The cost of maintaining $M_{full}$ is based on the cartesian product of the domains of $A$ and $D$, while the cost of evaluating the partial expression is based on only those pairs $\left<A,B\right>$ that actually appear in $R$.  Assuming the rates of evaluation and maintenance are comparable, and that the domain sizes of all variables are uniform, it is better not to materialize views with both input and output variables even if the probability of encountering duplicate values of $D$ is high.
 
-In order to conserve memory by materializing fewer views, we have considered limiting the recursive compilation in our compiler to a fixed depth (discussed in further depth in Section \ref{sec:experiments:othermetrics}).  The result is fewer materialized views, but wider joins required for view maintenance.  We have found that 3-way joins are prohibitively expensive -- performance is worse even than using traditional IVM techniques.
