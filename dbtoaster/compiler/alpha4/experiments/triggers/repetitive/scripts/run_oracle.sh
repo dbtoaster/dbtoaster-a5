@@ -134,10 +134,11 @@ else if [ "x$workload" = "xcluster" ]; then
     done
     cd $workingdir    
   done
-  
+
+# Cluster management  
 else
   
-  querydir=$querybase/tpch
+  querydir=$querybase/clustermgmt
   echo "Query dir: $querydir"
 
   for i in 0; do
