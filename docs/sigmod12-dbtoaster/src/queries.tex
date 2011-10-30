@@ -3,7 +3,8 @@
 \begin{rotate}{90}\hspace{-1cm}\underline{AXF}\end{rotate} &
 {\scriptsize
 \begin{verbatim}
-SELECT   b.broker_id, sum(a.volume + -1 * b.volume) FROM bids b, asks a
+SELECT   b.broker_id, sum(a.volume + -1 * b.volume)
+FROM     bids b, asks a
 WHERE    b.broker_id = a.broker_id
   AND    ( (a.price + ((-1) * b.price) > 1000) OR
            (b.price + ((-1) * a.price) > 1000) )
@@ -147,6 +148,7 @@ GROUP BY c1.nationkey
 \end{verbatim}}
 \end{tabular}
 
+\comment{
 \hspace{-5mm}\vspace{-8mm}
 \begin{tabular}{lp{0.95\textwidth}}
 \begin{rotate}{90}\hspace{-0.9cm}\underline{SVL}\end{rotate} &
@@ -158,6 +160,7 @@ WHERE (SELECT SUM(s2.load) FROM Server s2) * 1.5
 GROUP BY s1.rackid;
 \end{verbatim}}
 \end{tabular}
+}
 
 \hspace{-5mm}\vspace{-8mm}
 \begin{tabular}{lp{0.95\textwidth}}
