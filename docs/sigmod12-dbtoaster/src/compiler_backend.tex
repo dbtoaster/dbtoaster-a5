@@ -1,4 +1,4 @@
-\subsection{The functional compiler/optimizer}
+\subsection{Functional compilation and optimization}
 \label{sec:kthree}
 
 
@@ -12,50 +12,45 @@
 
 
 Each step of delta transformation, and extraction and materialization in our
-recursive compilation process results in maintenance work where a query updates
-an auxiliary datastructure. The maintenance work is indeed strictly a query
-(with parameters, i.e. a function) given our language is closed under taking
-deltas, leading to our second stage functional programming IR.
-
-
-
+recursive compilation process results in a maintenance query with parameters
+(i.e. a function) that updates an auxiliary datastructure. This leads to our
+second stage IR, a small functional programming IR.
 Functional programs have strong correspondences to relational queries, both are
 essentially dataflow programs, and the relationship of their formal
-expressiveness has been studied in complex object languages, and comprehensions.
+expressiveness has been studied in complex object
+languages~\cite{buneman-kleisli:95}, and comprehensions~\cite{jones-haskell:07}.
+
 Our foremost motivation for a functional IR is for holistic query optimization,
 where we can exploit a breadth of powerful program transformations including
-monad transformations from structural recursion~\todo{Kleisli},
-deforestation~\todo{Wadler}, supercompilation \todo{SPJ/Bollingbroke} and
+monad transformations from structural recursion~\cite{buneman-kleisli:95},
+deforestation~\cite{marlow-fp:92}, supercompilation~\cite{jonsson-popl:09} and
 fusion.
-A functional IR can also simplify writing optimizers, by explicitly representing
-bindings and renamings via lambda constructs, which admits simpler bookkeeping
-than schemas. Finally, a functional IR offers the potential for non-first normal
-form representations that readily admits vectorized processing, and supports
-highly-specialized, adaptive layout strategies whenever temporary data resides
-in main-memory or is spilled to disk. A full treatment of the relationship
-between optimization in functional programs and query optimizers is outside the
-scope this paper, here we summarize the techniques we have adopted in our
-work-in-progress functional IR.
+Other recent works have observed the need for holistic optimization of query
+executors with low-level languages~\cite{krikellas-icde:10,neumann-pvldb:11},
+but none have pursued a functional IR to the best of our knowledge.
+We believe a functional IR brings many other benefits, such as simpler optimizer
+development, and non-first normal forms for specialized in-memory or disk layout
+strategies, although a full coverage of these issues is outside the scope this
+paper.
 
 
 Our functional IR includes tuples and collection types, lambdas and associative
 lambdas\footnote{Determining properties such as associativity, commutativity and
-idempotence via program analyses are in general undecidable \todo{Kleisli}},
+idempotence via program analyses is undecidable~\cite{buneman-kleisli:95}},
 conditionals, four higher-order collection transformers that we describe below,
-and collection accessor and mutation operations. These collection mutation
-operations perform in-place updates of entries, implying that our functional IR
-is an impure language, although these could be encapsulated in a monad as with
-Haskell's I/O system. Furthermore, our only need for higher-order functions is
-with collection transformers, that is we never pass a function as an argument to
-another function, implying that our functional IR is already low-level in the
-spirit of functional compiler internal IRs (that have applied techniques such as
-defunctionalization \todo{Danvy}, CPS, etc.).
+and collection accessor and mutation operations. Collection mutation operations
+perform in-place updates of entries, implying that our functional IR is an
+impure language, although we could use monads as with Haskell's I/O system.
+Also, only our collection transformers use  higher-order functions, that is we
+never pass a function as an argument to another function. Our functional IR is
+already low-level in the spirit of functional compiler internal IRs (that have
+applied techniques such as defunctionalization~\cite{danvy-ppdp:01}, CPS, etc.).
 
 
 
 For our higher-order collection transformers, we extend the \texttt{map} and
-\texttt{flatten} constructs from Kleisli~\todo{Kleisli} with aggregations:
-\texttt{agg} and \texttt{groupagg}. Their type signatures are:
+\texttt{flatten} constructs from Kleisli~\cite{buneman-kleisli:95} with
+aggregations: \texttt{agg} and \texttt{groupagg}. Their type signatures are:
 
 
 \vspace{1mm}\hspace{-4mm}
@@ -80,18 +75,6 @@ For our higher-order collection transformers, we extend the \texttt{map} and
            \rightarrow \tuple{\upsilon, \tau} \ \mathcal{C}$ \\
 \end{tabular}
 
-
-
-\vspace{1mm}
-\noindent Above $\sigma \ \mathcal{C}$ indicates the type of a collection
-containing elements of type $\sigma$, and $\tuple{}$ is a tuple constructor. Our
-framework is agnostic to the collection representation, which may be sets, bags,
-and lists, and can vary in their underlying implementation (e.g. tree or
-hash sets, linked lists or vectors). We explicitly choose the datastructure type
-based on expression semantics and requirements.
-
-
-
 \comment{
 Type signatures for our collection mutators are:
 
@@ -110,15 +93,26 @@ Type signatures for our collection mutators are:
 \todo{Describe these operations}
 }
 
-
-
-We apply several optimization techniques on our functional IR that are difficult
-and unsuitable to perform on our relational algebra IR. Currently, our optimizer
-performs static compile-time optimizations that universally simplify functional
-programs in its usage of collections and scalars. We plan to expand this to
-perform both static and runtime adaptive optimizations, and incorporate a
-cost-model in future work. Our optimization stages include:
-
+\vspace{1mm}
+\noindent Above $\sigma \ \mathcal{C}$ indicates the type of a collection
+containing elements of type $\sigma$, and $\tuple{}$ is a tuple constructor. The
+\texttt{map} transformer applies a function to every element of a collection,
+while \texttt{flatten} reduces a two-level nested collection to a flat
+collection. The \texttt{agg} and \texttt{groupagg} transformers applies the
+accumulator function given as its first argument over a collection. Both are
+given an initial value, and \texttt{groupagg} is additionally given a grouping
+or partitioning function as its second argument. Our framework is agnostic to
+the form of collection, which may be sets, bags, and lists, and
+can vary in their underlying implementation (e.g. tree or hash sets, linked lists or
+vectors). A datastructure selection algorithm is a direction for future work, we
+currently use vectors and hashtables. Our functional IR supports several
+optimizations that are not captured by the SQL IR, including:
+\comment{
+Currently, our optimizer performs static compile-time optimizations that
+universally simplify functional programs in its usage of collections and
+scalars. We plan to expand this to perform both cost-based static and runtime
+adaptive optimizations in future work.
+}
 
 \vspace{1mm}
 \noindent\textbf{If-lifting.} This is a transformation to a canonical form
@@ -149,14 +143,14 @@ conditional.
 }
 \noindent This canonical form admits maximal optimization of the conditional's
 then-else blocks, since lifting pushes expressions from outside the conditional
-into these blocks at the expense of code size, however, queries are often
-small enough in terms of code size to justify specialization.
-\todo{Mention combined IVC and delta branches.}
+into these blocks at the expense of code size. However, queries are often small
+in code size, and if-lifting enables joint optimization of IVC expressions and
+delta expressions.
 
 
 \vspace{1mm}
-\noindent\textbf{Deforestation.} This transformation converts functional
-programs to treeless forms \todo{Wadler, Gill/SPJ}, that is it eliminates
+\noindent\textbf{Deforestation and fusion.} This transformation converts
+functional programs to treeless forms~\cite{marlow-fp:92}, that is it eliminates
 redundant intermediate datastructures. The core subset of our deforestation
 rewrite rules are:
 
@@ -192,54 +186,48 @@ $\quad\groupagg(f, \fst, i, \flatten(
 Above $\circ$ is function composition and \texttt{fst} the left projection of a
 pair, and we note that both the \texttt{agg} and \texttt{groupagg} composes
 associative lambdas (above $f^a$, two-argument lambdas), with regular
-(single-argument) lambdas in terms of the first argument. We omit additional
-deforestation rules related to iterative usage of in-place updates due to space
-limitations, these are straightforward.
+(single-argument) lambdas in terms of the first argument. Additional
+deforestation rules for iterative usage of in-place updates are
+straightforward to derive.
 
 The first rule for \texttt{map} eliminates the intermediate collection
 constructed after applying $f'$, instead pipelining the results through the
 application of both functions $f$ and $f'$. Since both $f$ and $f'$ can
 themselves contain \texttt{map} invocations, essentially performing joins, this
 rule can alter the arity of the join operation, constructing fully pipelined
-n-way joins. The second rule above is a form of late tuple construction
-\todo{Abadi}, where by lifting the \texttt{flatten} expression, we carry around
-nested intermediate collection during processing. Repeated application in large
-programs allows us to make use of deeply nested representations, in the same
-vein as work on the nested relational algebra and non-first normal forms
-\todo{Scheck}. Aggregation deforestation also uses composition to realize
-pipelining and simplification, and the variants with \texttt{flatten} are 
-partial aggregations that push an associative aggregation into the inner tier of
-a nested collection.
+n-way joins. The second rule above is a form of late tuple
+construction~\cite{abadi-icde:07}, where by lifting the \texttt{flatten}
+expression, we carry around nested intermediate collection during processing.
+Repeated application in large programs allows us to make use of deeply nested
+representations, in the same vein as work on the nested relational algebra and
+non-first normal forms~\cite{schek-infsys:86}. Aggregation deforestation also
+uses composition to realize pipelining and simplification, and the variants with
+\texttt{flatten} are partial aggregations that push an associative aggregation
+into the inner tier of a nested collection.
 
 
 \vspace{1mm}
 \noindent\textbf{Common subexpression elimination.}
-Our CSE algorithm is a one-pass bottom-up traversal of the functional IR that
-simultaneously extracts candidate common subexpressions and substitutes their
-materialization. Our algorithm prioritizes large expressions as candidates for
-substitution, and is conservative in nature. In particular, candidates extracted
-from disjunctions and conditionals must be candidates in all subexpressions.
-Picking candidates that only appear in a subset of subexpressions can incur
-overheads since we may unnecessarily execute a subexpression identified as
-common due to evaluation strategies such as short-circuiting disjunctions. Our
+Our CSE algorithm simultaneously extracts candidate common subexpressions and
+substitutes their usage, prioritizing large expressions as candidates. Our
+approach is conservative, candidates extracted from disjunctions and
+conditionals must be candidates in all subexpressions, to avoid unnecessary
+evaluation in light of short-circuiting on disjunctions and conditions. Our
 substitution process considers expression equivalence under alpha renaming
-rather than pure lexical comparison, making its behavior more similar to global
-value numbering strategies. Currently our CSE algorithm operates separately on
-side-effecting queries, and we plan to extend this to apply across all
-maintenance work performed to realize multi-query optimization.
-
+rather than pure lexical comparison, as with global value numbering strategies.
+\comment{
+Currently our CSE algorithm operates separately on side-effecting queries, and
+we plan to analyze all maintenance work performed to realize multi-query
+optimization.
+}
 
 \vspace{1mm}
-\noindent\textbf{IVC deduplication.} In the relational IR, a materialized view
-can appear multiple times due to the expansion of terms when taking deltas of
-sums and products expressions. Subsequently its initial value computation
-will also appear many times and we observe that when accounting for binding
-patterns, these initial value computations are idempotent in that they
-repeatedly update a view while evaluating a single query, without any underlying
-changes to the database. We can eliminate duplicate IVCs, although this process
-is non-trivial given we must keep track of binding pattern equivalences and
-their dependences on other variable domains. Currently we eliminate such
-duplicate IVCs while constructing the functional IR.
+\noindent\textbf{IVC deduplication.} In the SQL IR, the same view can appear
+multiple times when taking deltas of sums and products expressions. Subsequently
+its initial value computation (IVC) will also appear many times and when
+accounting for binding patterns, these initial value computations are idempotent
+and redundant. We can eliminate duplicate IVCs by tracking of binding pattern
+equivalences and their dependences on variable domains.
 
 
 \comment{
@@ -254,17 +242,16 @@ probes.
 }
 
 
-\noindent\textbf{Code generation} Following functional optimization,
-we synthesize an imperative IR from our functional program for code generation
-as the final step of compilation. The synthesis process is extensible in that a
+\noindent\textbf{Code generation} Following functional optimization, we
+synthesize an imperative IR from our functional program for code generation as
+the final step of compilation. The synthesis process is extensible in that a
 code generator developer can define additional materialization points for
-temporaries based on the structure of the functional IR. This is useful to
-target different backend languages which have varying builtin primitive
-operations and datastructures. The imperative IR also has support for external
-functions and types to enable the usage of library code in the chosen target
-language. Currently we have implemented a C++ code generator based around
-the STL and its iterator-oriented collection APIs (e.g. \texttt{begin},
-\texttt{end}, \texttt{find}, \texttt{erase}, \texttt{clear}, etc.). Our
-imperative optimizer is a work-in-progress, particularly in its datastructure
-usage and other storage layer concerns.
+temporaries given their target language since different backend languages have
+varying builtin primitive operations and datastructures. The imperative IR also
+supports external functions and types to enable the usage of library code. We
+implemented a C++ code generator based around the STL and its iterator-oriented
+collection APIs (e.g. \texttt{begin}, \texttt{end}, \texttt{find},
+\texttt{erase}, \texttt{clear}, etc.). Our imperative optimizer is a
+work-in-progress, particularly in its datastructure usage and other storage
+layer concerns.
 
