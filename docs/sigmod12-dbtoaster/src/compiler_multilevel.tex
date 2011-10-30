@@ -29,12 +29,12 @@ Note the occurrences of the original nested aggregate expression in the delta te
 \tinysection{Input Variables}
 Maintaining a view with input variables can be expensive -- the domain of the variable is generally infinite (e.g., in the case of input variables correlated on an inequality).  When a value of this variable is encountered for the first time, the view expression must be evaluated as discussed in Section \ref{sec:compiler_calc}.  The materialized view acts as a sort of function cache, albeit one that incrementally maintains cached values rather than invalidating them.
 
-As with caches, there is a tradeoff between the utility of storing values and the cost of doing so.  In the case of materialized views, this is not only the memory cost, but also the cost of maintaining stored values -- each of which is a materialized view in its own right.  The amount of maintenance work required is proportional to both the domain of the input variable (the size of the cache), and the amount of work required to maintain any individual currying of the input variable.  
+As with caches, there is a tradeoff between the utility of storing values and the cost of doing so.  In the case of materialized views, this is not only the memory cost, but also the cost of maintaining stored values -- each of which is a materialized view in its own right.  The amount of maintenance work required is proportional to both the domain of the input variable (the size of the cache), and the amount of work required to maintain any individual currying of the materialized view.  
 
 Instead of materializing a map with input variables, we can separate out terms that the input variable appears in and materialize the remainder of the expression.  The terms with the input variable are then applied as filtering predicates when the expression is evaluated -- note that the cost of doing so is  affected not only by the selectivity of the predicates, but by the reduced ability to aggressively aggregate within the portion of the expression that is materialized.
 
 \begin{example}
-The expression $Q = Sum_A(R \bowtie (B < D))$ over relation $R(A,B,C)$ can be materialized in two ways\footnote{This simple, illustrative example, can also be materialized as a range tree, as discussed below.}:
+The expression $Q = Sum_A(R \bowtie (B~<~D))$ over relation $R(A,B,C)$ can be materialized in two ways\footnote{This simple, illustrative example, can also be materialized as a range tree, as discussed below.}:
 $$M_{full}[D][A] = Sum_A(R \bowtie (B < D))$$
 $$M_{partial}[][A,B] = Sum_{A,B}(R)$$
 \end{example}

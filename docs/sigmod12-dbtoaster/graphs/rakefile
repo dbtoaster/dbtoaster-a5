@@ -173,6 +173,7 @@ $configurations = [
   ["Depth 1 (IVM)",        "depth_1"],
   ["Depth 1 (IVM)", "depth_1_nohash"],
   ["Depth 0 (Repeated)",   "depth_0"],
+  ["No Functional Opts",   "depth_infty_optsoff"],
 ]
 $conf_titles = $configurations.map {|t,c| [c,t]}.to_h;
 
@@ -1066,11 +1067,8 @@ file_data "ssb4_depth_table.tex" => ["rakefile", "extracted/loc_ssb4_depth"] do
   
   depths = [1, 2, 3, 4, 5, "infty"];
   "\\begin{tabular}{|r|#{depths.map{|d|"c|"}}}\\hline\n" +
-  [ "{\\bf Depth}",
-    "Avg Rate (refreshes/s)",
-    "Avg Memory per Tuple",
-    "Lines of Code",
-    "Number of Maps",
+[ "{\\bf Depth}", "Avg Rate",     "Avg Memory", "Lines of","Number of\\\\\n",
+                    "(refreshes/s)","per Tuple",  "Code",    "Views"
   ].join(" & ") + "\\\\ \\hline\n" +depths.map do |d|
     conf = "depth_#{d}#{"_nohash" if d == 1}"
     time, tuples = tuples_processed("data/time_ssb4_#{conf}_0")[-1];

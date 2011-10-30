@@ -51,11 +51,11 @@ Figure \ref{fig:experiments:enginesVsDBT} compares our recursive compilation tec
 
 \subsection{Equijoins}
 
-We first analyze the performance of our compiler on three equijoin queries with no nested aggregates.  Our compiler recurs only once on TPC-H Query 11.  As a consequence, the result is nearly equivalent to IVM.  We pre-aggregate the materializations of SUPPLIER and PARTSUPP, but this provides only a minor improvement at this scale\footnote{Note however the results of Figure~\ref{fig:experiments:big}b.}.  
+We first analyze the performance of our compiler on three equijoin queries with no nested aggregates.  Our compiler recurs only once on TPCH11.  As a consequence, the result is nearly equivalent to IVM.  We pre-aggregate the materializations of SUPPLIER and PARTSUPP, but this provides only a minor improvement at this scale\footnote{Note however the results of Figure~\ref{fig:experiments:big}b.}.  
 
-Both TPC-H Query 3 and SSB4 demonstrate a substantial performance increase over IVM.  The one-to-one, and bounded fanout one-to-many relationships between elements of many of these queries are actually advantageous to the IVM implementation -- each insertion only triggers a limited number of reads.  In spite of this, incrementally maintaining the (aggregate) delta queries results in a net reduction in the amount of work required -- especially in a large query like SSB4.
+Both TPCH3 and SSB4 demonstrate a substantial performance increase over IVM.  The one-to-one, and bounded fanout one-to-many relationships between elements of many of these queries are actually advantageous to the IVM implementation -- each insertion only triggers a limited number of reads.  In spite of this, incrementally maintaining the (aggregate) delta queries results in a net reduction in the amount of work required -- especially in a large query like SSB4.
 
-Also note the memory usage of TPC-H Query 3.  Starting by the 40\%\ marker, all streams have been exhausted except for LINEITEM.  The final aggregate's group-by columns are drawn purely from the order table, so insertions into LINEITEM only update aggregate values that have already been allocated by the corresponding ORDER.  Thus, memory usage plateaus for full compilation, while the IVM implementation must continue to store each row.
+Also note the memory usage of TPCH3.  Starting by the 40\%\ marker, all streams have been exhausted except for LINEITEM.  The final aggregate's group-by columns are drawn purely from the order table, so insertions into LINEITEM only update aggregate values that have already been allocated by the corresponding ORDER.  Thus, memory usage plateaus for full compilation, while the IVM implementation must continue to store each row.
 
 This is not always true.  For extremely large queries like SSB4 (a 7-way join), the number of intermediate materialized views created is quite large.  Despite the large amount of state that the fully compiled query maintains, any individual update modifies only a small amount of that state, and the fully compiled query's efficiency is unaffected as long as the system has enough memory.  However, memory usage is an important part of the cost/benefit tradeoff of full compilation -- We address a broader range of materialization strategies below in Section~\ref{sec:experiments:othermetrics}.
 
@@ -74,7 +74,7 @@ This is not always true.  For extremely large queries like SSB4 (a 7-way join), 
 \tablefig{unified_ssb4.pdf} \\
 (a) & (b) & (c) & (d)
 \end{tabular} \vspace*{-0.2in}
-\caption{TPC-H Query 3~(a), 11~(b), 17~(c), and SSB4~(d): (a) By the 40\%\ marker, all streams except LINEITEM have completed, and the remaining tuples consume no additional memory. (b) For simple two-way joins, full compilation is virtually identical to depth 1. (c) Due to the nested aggregate, IVC requires a nested loop, while full compilation requires only a single scan. (d) Full compilation is a full polynomial order faster than in IVC, although performance does begin to drop once the system begins running out of memory around the 27\%\ marker.}
+\caption{TPCH3~(a), 11~(b), 17~(c), and SSB4~(d): (a) By the 40\%\ marker, all streams except LINEITEM have completed, and the remaining tuples consume no additional memory. (b) For simple two-way joins, full compilation is virtually identical to depth 1. (c) Due to the nested aggregate, IVC requires a nested loop, while full compilation requires only a single scan. (d) Full compilation is a full polynomial order faster than in IVC, although performance does begin to drop once the system begins running out of memory around the 27\%\ marker.}
 \label{fig:experiments:tpch3}  
 \label{fig:experiments:ssb4}
 \label{fig:experiments:tpch17}
@@ -94,7 +94,7 @@ This is not always true.  For extremely large queries like SSB4 (a 7-way join), 
 %\tablefig{unified_serverload.pdf} \\
 (a) & (b) & (c) & (d)
 \end{tabular} \vspace*{-0.2in}
-\caption{BSV~(a), VWAP~(c), TPC-H Queries 18~(b), and 22~(d):  (a) The many-to-many relationship on the join term forces IVM to perform linear work on each insertion, which full compilation avoids. (b) IVM repeatedly re-evaluates the nested (parameterized) sub-query, while full compilation maintais a cache of sub-query results. (c): TPC-H Query 18 An badly chosen join ordering prevents full compilation from effectively exploiting foreign key dependencies in the TPC-H schema. (d) The small CUSTOMER stream completes at the 10\%\ marker, while the remaining ORDERS tuples require only linear time with full compilation. }
+\caption{BSV~(a), VWAP~(c), TPC-H Queries 18~(b), and 22~(d):  (a) The many-to-many relationship on the join term forces IVM to perform linear work on each insertion, which full compilation avoids. (b) IVM repeatedly re-evaluates the nested (parameterized) sub-query, while full compilation maintais a cache of sub-query results. (c): TPCH18 An badly chosen join ordering prevents full compilation from effectively exploiting foreign key dependencies in the TPC-H schema. (d) The small CUSTOMER stream completes at the 10\%\ marker, while the remaining ORDERS tuples require only linear time with full compilation. }
 
 
 %(d) Materializing nested queries gains a polynomial degree of performance over IVM, but memory continues to grow. 
@@ -131,17 +131,17 @@ This is not always true.  For extremely large queries like SSB4 (a 7-way join), 
 
 Figures \ref{fig:experiments:tpch17}c, \ref{fig:experiments:vwap}b, and \ref{fig:experiments:tpch22}d illustrate the performance of our compiler on several queries with nested aggregates.
 
-The lookup over ORDERS in TPC-H Query 22 can be evaluated in constant time both using IVM and full compilation.  However each insertion into ORDERS requires evaluating the nested aggregate on CUSTOMER, while full compilation materializes the aggregate result instead.
+The lookup over ORDERS in TPCH22 can be evaluated in constant time both using IVM and full compilation.  However each insertion into ORDERS requires evaluating the nested aggregate on CUSTOMER, while full compilation materializes the aggregate result instead.
 
 In IVM, insertions into CUSTOMER depend on whether the query optimizer detects that the nested aggregate is uncorrelated and computes it before the rest of the query.  If not, the insertion requires quadratic work, and even if it does, each insertion requires two complete iterations over the customer table: once to compute the aggregate and once to figure out for which customers the state of the comparison changes.  This latter iteration can not be eliminated by full compilation, but the iteration is only over those rows already known to satisfy the selection condition on ORDERS.
 
 VWAP is a query over BIDS with two selection predicates: one over an uncorrelated nested aggregate over BIDS, and one over a correlated (via inequality on the price from the outer BIDS table) nested aggregate over BIDS.  
 
-As with TPC-H Query 22, VWAP's uncorrelated aggregate can be evaluated efficiently if the query optimizer spots it -- the inequality-correlated aggregate is of more interest.  Because the domain of the correlating variable (price) is determined outside the nested aggregate, the nested subquery must be re-evaluated every time a new price is encountered.  However, the aggregate value can then be stored and incrementally maintained from that point on.  The domain of prices is bounded, so after an initial ramp up process (that occurs while the size of the table is small) the fully compiled version can incrementally maintain the query output in (close to) constant time.
+As with TPCH22, VWAP's uncorrelated aggregate can be evaluated efficiently if the query optimizer spots it -- the inequality-correlated aggregate is of more interest.  Because the domain of the correlating variable (price) is determined outside the nested aggregate, the nested subquery must be re-evaluated every time a new price is encountered.  However, the aggregate value can then be stored and incrementally maintained from that point on.  The domain of prices is bounded, so after an initial ramp up process (that occurs while the size of the table is small) the fully compiled version can incrementally maintain the query output in (close to) constant time.
 
-THe performance of BSV (Figure \ref{fig:experiments:brokervariance}a) is similar to the prior two queries.  This is not surprising -- correlated aggregate subqueries are known to be equivalent to joins, and materializing a nested aggregate is tantamount to materializing the first delta.  Furthermore, unlike TPC-H Query 11 (Figure \ref{fig:experiments:tpch11}d), the join relationship is many-to-many, and the benefits of maintaining the join result as an aggregate grow over time.
+THe performance of BSV (Figure \ref{fig:experiments:brokervariance}a) is similar to the prior two queries.  This is not surprising -- correlated aggregate subqueries are known to be equivalent to joins, and materializing a nested aggregate is tantamount to materializing the first delta.  Furthermore, unlike TPCH11 (Figure \ref{fig:experiments:tpch11}d), the join relationship is many-to-many, and the benefits of maintaining the join result as an aggregate grow over time.
 
-As in the last several queries, incrementally maintaining the nested aggregate of TPC-H Query 17 makes insertions into PART constant-time rather than linear.  Even in the fully compiled version, insertions into the LINEITEM table must still iterate over the results of the join -- under full compilation this join has already been materialized.
+As in the last several queries, incrementally maintaining the nested aggregate of TPCH17 makes insertions into PART constant-time rather than linear.  Even in the fully compiled version, insertions into the LINEITEM table must still iterate over the results of the join -- under full compilation this join has already been materialized.
 %
 %\subsection{5 GB Dataset}
 %\ref{sec:experiments:bigds}
@@ -151,20 +151,22 @@ As in the last several queries, incrementally maintaining the nested aggregate o
 %
 %Although IVM is nearly identical to full compilation on TPC-H 11, full compilation pushes aggregation into the materialized view while IVM performs the aggregation at lookup.  This, when inserting into SUPPLIER, full compilation reads precisely one value, while IVM reads approximately 80 (and must aggregate over them).  IVM stores both base relations in their entirety, while full compilation stores only the subset needed for query maintenance.  As a consequence, full compilation has a constant, but visible improvement in both performance and memory use at this scale.
 %
-%Under full compilation, TPC-H Query 22 requires a linear amount of work for insertions into CUSTOMER and a constant amount of work for insertions into ORDERS.  On the small dataset, full compilation was able to get through the CUSTOMER table (note the quadratic behavior in Figure \ref{fig:experiments:tpch22} up to about the 18\% marker) and quickly completed the much larger ORDERS table.  On the larger dataset, full compilation gets bogged down in processing CUSTOMER.
+%Under full compilation, TPCH22 requires a linear amount of work for insertions into CUSTOMER and a constant amount of work for insertions into ORDERS.  On the small dataset, full compilation was able to get through the CUSTOMER table (note the quadratic behavior in Figure \ref{fig:experiments:tpch22} up to about the 18\% marker) and quickly completed the much larger ORDERS table.  On the larger dataset, full compilation gets bogged down in processing CUSTOMER.
 
 \subsection{Other Metrics}
 \label{sec:experiments:othermetrics}
 
 \tinysection{Limited Recursion}
-\begin{figure*}
+\begin{figure}
 \begin{center}
+\resizebox{3.4in}{!}{
 \input{../graphs/ssb4_depth_table.tex}
+}
 \caption{Statistics for different compilation depths on SSB4.  Depth-5 is equivalent to full compilation, but also maintains copies of each of the 6 base relations.}
 \label{fig:experiments:ssb4depth}
 \end{center}
 \vspace*{-0.2in}
-\end{figure*}
+\end{figure}
 We now explore the space of limited recursive compilation beyond IVM.  Figure \ref{fig:experiments:ssb4depth} illustrates the effects of limiting compilation to depths between 0 and 5.  Recall that the maximum recursive depth is one less than the join width of the query.  Thus for SSB4 (which has a join width of 6), compilation to depth-5 is equivalent to full compilation, save that the base relations are maintained and materialized.
 
 At depth-1, the compiled query materializes only the base relations and no intermediate tables.  It must still perform a 5-way join on every insertion, but  only once per update.  The 6 materialized views that it maintains are the 6 base relations from the query.  
@@ -185,7 +187,7 @@ We now consider the performance scaling of the two best-performing TPC-H Queries
 \begin{figure}
 \begin{center}
 \input{../graphs/loc_table.tex}
-\caption{Lines of Code Per Query}
+\caption{Lines of C++ Code Generated for each}
 \label{fig:experiments:loc}
 \end{center}
 \vspace*{-0.2in}
@@ -194,19 +196,19 @@ We now consider the performance scaling of the two best-performing TPC-H Queries
 It is important to understand not only where our compiler succeeds, but where its limitations lie.  We now consider several cases where the observed performance of our technique does not match up with our (high, and perhaps naive) expectations.  As a consequence of our experimentation and analysis, we have identified three core challenges for future work in this area.
 
 \tinysection{Join Ordering}
-In spite of the simplicity of TPC-H Query 18 (Figure \ref{fig:experiments:tpch18}b), the query performs poorly -- even repeated evaluation is faster.  This is a consequence of our join ordering heuristic: The trigger that updates the query result must compute a join between the delta of the extracted nested subquery (aggregated over orderkey) and a materialized representation of CUSTOMER $\bowtie$ ORDER $\bowtie$ LINEITEM (aggregated over custkey and orderkey).  
+In spite of the simplicity of TPCH18 (Figure \ref{fig:experiments:tpch18}b), the query performs poorly -- even repeated evaluation is faster.  This is a consequence of our join ordering heuristic: The trigger that updates the query result must compute a join between the delta of the extracted nested subquery (aggregated over orderkey) and a materialized representation of CUSTOMER $\bowtie$ ORDER $\bowtie$ LINEITEM (aggregated over custkey and orderkey).  
 
 Not knowing about the one-to-many relationship between custkey and orderkey, we iterate over the materialized join first and effectively iterate over all orders placed so far.  Join ordering is a well studied problem in the database community, and the solution to this problem is purely an engineering challenge.  A further unfortunate side effect of the incorrect join ordering is that the added (unnecessary) looping involves lookups that extend the domain of several intermediate materialized views, causing an explosion of memory use.
 
 \tinysection{Domain Maintenance}
-%SVL (Figure \ref{fig:experiments:serverload}d) is quite similar to TPC-H Query 22, VWAP, and BSV (Figure \ref{fig:experiments:tpch22}), yet performs a polynomial order worse.  The slowdown is related to domain maintenance\todo{Do we discuss this elsewhere in the paper?  Backreference... this is not the place to be discussing it}.  In effect, our runtime is unable to properly garbage collect deleted entries in one of the materialized views, resulting in a progressively growing workload on every insertion.  
+%SVL (Figure \ref{fig:experiments:serverload}d) is quite similar to TPCH22, VWAP, and BSV (Figure \ref{fig:experiments:tpch22}), yet performs a polynomial order worse.  The slowdown is related to domain maintenance\todo{Do we discuss this elsewhere in the paper?  Backreference... this is not the place to be discussing it}.  In effect, our runtime is unable to properly garbage collect deleted entries in one of the materialized views, resulting in a progressively growing workload on every insertion.  
 
 Both PS and MST (Figures \ref{fig:experiments:pricespread}a, and \ref{fig:experiments:missedtrades}b respectively) do not perform as well as possible -- Apart from a stretch of updates (0.001\%\ to 0.01\%\ in the trace) in the stock market trace where the same order is repeatedly placed and revoked, query performance decreases polynomially over time.  This slowdown is related to domain maintenance.  In effect, our runtime is unable to properly garbage collect deleted entries in one of the materialized views, resulting in a progressively growing workload on every insertion.  
 
 \tinysection{Map Extraction}
 The final case of performance issues is seen in both AXF (Figure \ref{fig:experiments:axfinder}c) and BSP (Figure \ref{fig:experiments:brokerspread}d).  Our aggressive extraction heuristic attempts to materialize the entire delta query, which for inequality joins includes an unbound variable.  The result of the delta query is a table with one entry for each broker.  However, the delta query also includes an unbound variable with a domain that is as large as either input table -- insertions into either table trigger maintenance work that is linear in the number of prior insertions onto the other table.  Worse still, the work saved by doing this is minimal -- the aggregate value must be computed from scratch on every insertion.
 
-An improved, data-dependent extraction heuristic could identify such situations and compute the inequality join inline.  In effect, this is precisely what IVM is already doing -- hence the performance improvement.  Alternatively, the entire materialized delta could be incrementally maintained more efficiently using datastructures suited to computing aggregates over ranges (e.g., Range Trees\cite{range trees}).
+An improved, data-dependent extraction heuristic could identify such situations and compute the inequality join inline.  In effect, this is precisely what IVM is already doing -- hence the performance improvement.  Alternatively, the entire materialized delta could be incrementally maintained more efficiently using datastructures suited to computing aggregates over ranges (e.g., Range Trees\cite{rangetrees}).
 
 
 \tinysection{Summary}

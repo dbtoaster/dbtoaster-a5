@@ -16,7 +16,7 @@ doc/sigmod12-dbtoaster.pdf: $(TEX_FILES) doc/sigmod12-dbtoaster.bbl
 	cd src; $(TEX_CMD) -output-directory=../doc sigmod12-dbtoaster
 
 doc/sigmod12-dbtoaster.bbl: src/sigmod12-dbtoaster.bib
-	cd doc; cp ../src/sigmod12-dbtoaster.bib .; $(BIB_CMD) sigmod12-dbtoaster;\
+	cd doc; cp ../src/*.bib .; $(BIB_CMD) sigmod12-dbtoaster;\
 	rm sigmod12-dbtoaster.bib
 
 open: doc/sigmod12-dbtoaster.pdf
