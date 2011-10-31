@@ -480,7 +480,7 @@ end
       end
     end
     
-    plot.logscale "y";    
+    #plot.logscale "y";    
     plot.ylabel "Average Refresh Rate (1/s)";
     plot.bmargin "5";
     
