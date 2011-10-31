@@ -30,7 +30,7 @@ We now analyze the performance of our compilation techniques and compare them wi
 
 Memory measurements are taken using google-perftools\cite{perftools}, and count only memory allocated to the persistent maps and not transient datas (e.g., materialized join results).  
 
-An overview of the queries used is presented in Section \ref{sec:tscomparison}, and the queries themselves are presented in SQL form in Appendix~\ref{app:queries}.
+An overview of the queries used is presented in Section \ref{sec:sota}, and the queries themselves are presented in SQL form in Appendix~\ref{app:queries}.
 
 Several stream traces were used to evaluate the queries.  Queries were given 1 hour to complete the trace.  Queries that did not complete the trace in 1 hour were terminated -- The results presented for these queries are computed based on the number of tuples processed within the 1 hour time limit, and only those operations actually affecting the query results (e.g., VWAP's rate is computed based only on the number of operations on the BIDS table).
 
