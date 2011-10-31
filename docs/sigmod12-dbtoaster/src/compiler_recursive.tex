@@ -279,9 +279,9 @@ where $(y<z)$ ? $(x*u)$ : $0$ is the functional if-then-else of C
 (if $y<z$ then $x*u$ else 0).
 The on-insert into $R$ trigger $+R(x,y)$ following the construction described above is the program
 \begin{tabbing}
-~~~   $M_Q$[][] += $M_{\Delta_{+R(x,y)} Q}[x,y][]$; \\
-~~~   foreach $z,u$: $M_{\Delta_{+S(z,u)} Q}[z,u][]$ $+$= $(y<z)$ ? $(x*u)$ : $0$; \\
-~~~   foreach $z,u$: $M_{\Delta_{-S(z,u)} Q}[z,u][]$ $+$= $(y<z)$ ? $(x*u)$ : $0$
+$M_Q$[][] += $M_{\Delta_{+R(x,y)} Q}[x,y][]$; \\
+foreach $z,u$ do $M_{\Delta_{+S(z,u)} Q}[z,u][]$ $+$= $(y<z)$ ? $(x*u)$ : $0$; \\
+foreach $z,u$ do $M_{\Delta_{-S(z,u)} Q}[z,u][]$ $+$= $(y<z)$ ? $(x*u)$ : $0$
 \end{tabbing}
 The remaining triggers are constructed analogously.
 The trigger contains an update rule for the (in this case, scalar) data structure $M_Q$ for the overall
@@ -296,17 +296,11 @@ is also perfectly data parallel, and there are no data dependencies comparable t
 justification for adopting a compilers approach.
 
 
-The workload has to be further decomposed and simplified, otherwise the
-materializations will be of high dimensionality, very large, and so expensive to maintain. But if this decomposition
-is done well, there is a chance to arrive at very efficient low-level code.
-
-
-
 \subsubsection{Initial value computation}
 
 
 The technique for constructing trigger programs by recursive delta rewriting discussed above assumes
-materialized views to be represented as maps $M$ that store, for tuples $\vec{i}{o}$ of input and output variables, a value (an aggregation result) $M[\vec{i}][{o}]$.
+materialized views to be represented as maps $M$ that store, for tuples $\vec{i}\vec{o}$ of input and output variables, a value (an aggregation result) $M[\vec{i}][\vec{o}]$.
 So far we have disregarded the question what the {\em domains} of these maps are, that is,
 for which $\vec{i}\vec{o}$ the maps are defined and store values.
 If we could assume that the domains contain all the tuples that could ever be formed from values occurring
@@ -334,26 +328,54 @@ recursive IVM techniques.
 \label{sec:simplification}
 
 
-In this subsection we present two query simplification techniques that are key to making
-recursive incremental view maintenance useful, join graph decomposition, and factorization
+The construction for trigger programs presented above yields 
+materializations of high dimensionality, which will be very large and so expensive to maintain.
+This can be avoided by being slightly less aggressive with materialization.
+We next discuss two query simplification techniques that are key to making
+recursive incremental view maintenance useful, join graph decomposition and factorization
 of query polynomials.
 
 
-
+Join graph decomposition makes use of the so-called generalized distributive law [] (which plays
+an important role in the context of probabilistic inference with graphical models) to decompose
+sum-aggregates over disconnected join graphs. This is an important case, since computing deltas 
+eliminates hyperedges of the join graph, disconnecting it more and more in each delta-rewriting, until all
+hyperedges are gone. The basic law is simple. If a query is of the form $Q_1 \times Q_2$, i.e., $Q_1$ and
+$Q_2$ do not share common columns, then
+$\Sum_{\vec{A}\vec{B}}(Q_1 \times Q_2) = \Sum_{\vec{A}}(Q_2) \times \Sum{\vec{B}}(Q_2)$
+where $\vec{A}$ are columns of $Q_1$ and $\vec{B}$ are columns of $Q_2.$
+Consider for example the query $Q$
+{\tt select sum(A*D) from R natural join S natural join T}
+of schema $R(AB), S(BC), T(CDE)$. Then
+$\Delta_{+S(b,c)} Q$ is
 \begin{verbatim}
-R(AB), S(BC), T(CDE)
-
-select sum(A*D) from natjoin(R,S,T) [][T.E]
-
-
-+S(b,c):
-   foreach x: q[][x] += select sum(A*D) from R,T [][E]
-         = select sum(A) from R where B=b [][] *
-            select sum(D) from T where C=c [][T.E/x]
+select sum(A*D) from R,T where B=b and C=c
+   = (select sum(A) from R where B=b) *
+     (select sum(D) from T where C=c)
 \end{verbatim}
+Given such a decomposition, it is better to materialize the two aggregate subexpressions and compute
+the product when updating, rather than to materialize the product, that is,
+\begin{eqnarray*}
+M_Q[][] &+=& M_{\mathrm{select~sum(A)~from~R~where~B=b}}[b][] \\
+&*& M_{\mathrm{select~sum(D)~from~T~where~C=C}}[c][]
+\end{eqnarray*}
+is better than
+$M_Q[][] += M_{\Delta_{+S(b,c)} Q}[b,c][]$ because that way we materialize two (small) one-dimensional
+maps rather than one two-dimensional map.
+
+Binary sums  (unions) $+$ can be pushed through aggregate sums ($\Sum(Q_1 + Q_2) = \Sum(Q_1) + \Sum(Q_2)$).
+In conjunction with join graph decomposition, this often leaves us with expressions that do a fair amount
+of adding and multiplying of subqueries. Such expressions can be optimized using the distributive law.
+Factorization is often particularly useful to share common subexpressions.
+For example, the general delta rule for $Q_1 \bowtie Q_2$ is a sum of three subexpressions
+$\Delta(Q_1 \bowtie Q_2) := ((\Delta Q_1) \bowtie Q_2) + (Q_1 \bowtie (\Delta Q_2))
+ + ((\Delta Q_1) \bowtie (\Delta Q_2))$ which can be factorized as
+$((Q_1 + \Delta Q_1) \bowtie (\Delta Q_2)) + ((\Delta Q_1) \bowtie  Q_2)$
+or as
+$((\Delta Q_1) \bowtie (Q_2 + \Delta Q_2)) + (Q_1 \bowtie \Delta Q_2)$.
+Determining which one is better is a task for a cost-based optimizer.
 
 
-Factorization:
 
 
 
