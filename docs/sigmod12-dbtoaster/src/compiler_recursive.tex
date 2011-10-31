@@ -9,10 +9,7 @@ The compiler accepts an SQL query and schema definition (essentially create tabl
 In Section~\ref{sec:advanced-rewriting} we discuss the creation of triggers for multi-level incremental view maintenance by extracting and materializing strict subexpressions rather than the full query. This is necessary to be able to deal with nested aggregation which otherwise, if we always materialize the largest query we can, leads to recursion in compilation that does not terminate. In general, the choice of subquery to materialize and incrementally maintain is a degree of freedom in query optimization. In this section we give heuristic rules for making this choice.
 
 The next stage of the compiler, described in Section~\ref{sec:kthree}, turns the statements of the trigger program created in the first stage into an IR for purely functional programming, essentially lambda calculus without general recursion but with special higher-order functions for transforming collections (primitives such as map and reduce). This stage allows us to perform deforestation and fusion optimizations too low-level to have expression in the first, relational algebra-like IR.
-
-Section~\ref{sec:codegen} describes our infrastructure for code generation, which makes use of a third imperative IR, for generating imperative programs and performing final, low-level optimization before actual code is emitted. 
-
-Section~\ref{sec:runtime} describes our runtime system including the machinery for reading update streams.
+Section~\ref{sec:kthree} also describes our infrastructure for code generation and our runtime system.
 
 TODO: show an architecture diagram.
 
@@ -60,7 +57,9 @@ Thus an SQL query ``select sum(A) from R'' can be written in our IR as $\Sum(R \
 
 \item
 There are no explicit operations for projection and relational difference. A multiplicity-aware projection is implemented by
-sum-aggregation and universal queries can be expressed by counting aggregation (a popular homework exercise in database courses).
+sum-aggregation and universal queries can be expressed by counting aggregation (a popular homework exercise in database courses). All SQL aggregate functions can be expressed using sums (counts), ratios of sums (avg),
+and nested aggregates (min and max)\footnote{Here, the materialization of the nested subquery
+nicely corresponds to the materialization any IVM technique has to carry out to find second-best values when a min or max value is deleted.}.
 \end{itemize}
 
 Let us recap: The language departs from relational bag algebra in essentially two ways; by having integer tuple multiplicities
@@ -80,15 +79,17 @@ t &\mbox{:--}& c \mid A                 \mid t + t \mid t * t       \mid \Sum(q)
 \end{eqnarray*}
 Thus queries can be formed from relation names, atomic conditions, addition, natural join, and sum-aggregation.
 Terms are formed from constants, variables/columns, addition, multiplication, and sum-aggregation without group-by.
-The semantics was given above.
+Terms are queries returning the nullary relation in which
+tuple $\tuple{}$ has as multiplicity the value of the term. We use $Q_1 - Q_2$ as syntactic sugar for $Q_1 + (-1)\bowtie Q_2$.
+Apart from this, the semantics was given above.
 
 
 We will often use SQL syntax for conciseness, which will correspond to our IR in the natural way analogous to how we translate
 between classical bag relational algebra and SQL.
 
-It is important to observe that in general, expressions of the IR have binding patterns: There are input variables or parameters
+Expressions of the IR have binding patterns: There are input variables or parameters
 without which we cannot evaluate these expressions, and there are output variables, the columns of the schema of the query result.
-
+%
 Each expression $Q$ has input variables or parameters $\vec{x_{in}}$ and a set of output variables $\vec{x_{out}}$, which form the schema of the query result. We denote such an expression as $Q[\vec{x_{in}}][\vec{x_{out}}]$. The input variables are those that are not {\em range-restricted} in a calculus formulation, or equivalently have to be understood as {\em parameters} in a SQL query because their values cannot be computed from the database: They have to be provided so that the query can be evaluated.
 
 Binding patterns represent information flow. In general, this flow is not exclusively bottom-up.
@@ -100,31 +101,36 @@ All of the expressions there are valid queries of our IR, typed by indicating th
 
 \begin{table}
 \begin{center}
-\begin{footnotesize}
+\begin{scriptsize}
 \begin{tabular}{|l|l|l|}
 \hline
-select * from R   & $R$ & $A^f,B^f$ \\
---- & $C < D$ & $C^b,D^b$ \\
---- & $C = D$ & $C^b,D^f$ \\
-&& or $D^b,C^f$
+SQL & IR & Bdg.pat. \\
+\hline
+select * from R   & $R$ & $[][A,B]$ \\
+--- & $C < D$ & $[C,D][]$ \\
+--- & $C = D$ & $[C][D]$ \\
+&& or $[D][C]$
 \\[1ex]
-select A from R   & $\Sum_A(R \bowtie (B < C))$ & $C^b,A^f$ \\
+select A from R   & $\Sum_A(R \bowtie (B < C))$ & $[C][A]$ \\
 where B < C       &&
 \\[1ex]
-select A, sum(1) from R  & $\Sum_A(R \bowtie (B < C))$ & $C^b,A^f$ \\
+select A, sum(1) from R  & $\Sum_A(R \bowtie (B < C))$ & $[C][A]$ \\
 where B < C group by A &&
 \\[1ex]
-B < (select sum(D) from S & $B < \Sum(S \bowtie D$ & $A^b, B^b$ \\
+B < (select sum(D) from S & $B < \Sum(S \bowtie D$ & $[A,B][]$ \\
 ~~where A > C) & ~~$\bowtie (A > C))$ &
 \\[1ex]
-select * from R where & $\Sum_{A,B}(R \; \bowtie$ & $A^f, B^f$ \\
+select * from R where & $\Sum_{A,B}(R \; \bowtie$ & $[][A,B]$ \\
 B < (select sum(D) from S & ~~~~$B < \Sum(S \bowtie D$ & \\
 where A > C) & ~~~~~~$\bowtie\; (A > C)))$ & \\
 \hline
 \end{tabular}
-\end{footnotesize}
+\end{scriptsize}
 \end{center}
-\caption{Some example queries with their binding patterns. Relation $R$ and S have schema $A,B$ and $C,D$, respectively.}
+
+\vspace{-5mm}
+
+\caption{Example queries with their binding patterns (written as [input vars][output vars]). Relation $R$ and S have schema $A,B$ and $C,D$, respectively.}
 \label{tab:ir-examples}
 \end{table}
 
@@ -134,37 +140,36 @@ where A > C) & ~~~~~~$\bowtie\; (A > C)))$ & \\
 
 
 
-Note that this language specification covers most of the core features of SQL. It excludes
-null values and outer joins (which have the hugely undesirably property of being nonassociative, which is a problem for incremental computation) and 
-min/max aggregates. The latter can be supported in incremental evaluation but require additional data structures to support deletion. (We have to keep around all the tuples being aggregated to deal with the case that the min or max tuple gets deleted.) We do not further cover min and max aggregates in this paper.
-
+This language specification covers all of the core features of SQL with the exception of
+null values and outer joins (which have the undesirably property of being nonassociative, which is a problem for incremental computation).
 
 
 
 \subsubsection{Computing the delta of a query.}
 
-This language has the nice property of being closed under taking deltas. For each query expression $Q$, there
-is an expression $\Delta Q$ that expresses how the result of $Q$ changes as the database $D$ is changed by update workload $\Delta D$. This works for updates containing an unbounded number of insertions and deletions, but we will subsequently only study single-tuple inserts and deletes.
+This language has the nice property of being {\em closed under taking deltas}.
+For each query expression $Q$, there
+is an expression $\Delta Q$ of our IR that expresses how the result of $Q$ changes as the database $D$ is changed by update workload $\Delta D$. This works for updates containing an unbounded number of insertions and deletions, but we will subsequently only study single-tuple inserts and deletes.
 The reason for this is that such updates allow for particularly efficient view refresh code that
 can be run to respond online to each tuple change.
 
-Proposition: The query language is closed under taking deltas.
 
 Thanks to the strong compositionality of the language, we only have to give delta rules for the 
 individual operators. These rules a given and studied in detail in \cite{koch-pods:10}. In short,
 \begin{eqnarray*}
-\Delta(Q_1 \cup Q_2)    &:=& (\Delta Q_1) \cup (\Delta Q_2), \\ 
+\Delta(Q_1 + Q_2)    &:=& (\Delta Q_1) + (\Delta Q_2), \\ 
 \Delta(\mbox{Sum } Q)   &:=& \mbox{Sum } (\Delta Q), \\
-\Delta(Q_1 \bowtie Q_2) &:=& ((\Delta Q_1) \bowtie Q_2) \cup (Q_1 \bowtie (\Delta Q_2)) \\
-&& \cup\; ((\Delta Q_1) \bowtie (\Delta Q_2)).
+\Delta(Q_1 \bowtie Q_2) &:=& ((\Delta Q_1) \bowtie Q_2) + (Q_1 \bowtie (\Delta Q_2)) \\
+&& +\; ((\Delta Q_1) \bowtie (\Delta Q_2)).
 \end{eqnarray*}
+$\Delta R$ is the update to $R$. In the case that the update does not change $R$ (but other relation(s)),
+$\Delta R$ is empty.
+ 
 
 The deltas of conditions are 0 if they do not contain nested queries. The delta for a condition with a nested query
 is more complicated. For example, our rule for $\Delta (x > Q)$ is
-$(x > (Q \cup \Delta Q)) \bowtie (x \le Q) - (x \le (Q \cup \Delta Q)) \bowtie (x > Q)$.
+$(x > (Q + \Delta Q)) \bowtie (x \le Q) - (x \le (Q + \Delta Q)) \bowtie (x > Q)$.
 We refer to \cite{koch-pods:10} for the general case of conditions.
-
-TODO: explain minus.
 
 Let us be precise though about computing delta queries. In general, each expression has input and output variables,
 and taking a delta in general {\em adds variables} parameterizing the query with the update. From now on we only consider single-tuple insertions $+R(\vec{x})$ to or deletions $-R(\vec{x})$ from a relation $R$.
@@ -214,33 +219,42 @@ select sum(x * D) from S where y < C
 
 \subsubsection{Recursive incremental view maintenance.}
 
+\def\deg{\mbox{deg}}
 
-Before we come to multi-level incremental view maintenance, let us recap the special case of recursive incremental view maintenance of \cite{koch-pods:10, kennedy-ahmad-koch-cidr:11}, where we try to be as greedily incremental as possible.
-If we restrict our query language to exclude aggregates nested into conditions (for which the delta query was complicated), the query language fragment has the following nice property \cite{koch-pods:10}:
-For any query $Q$ of the fragment, $\Delta Q$ is again a query of the fragment. Moreover,
-$\Delta Q$ is structurally strictly simpler than $Q$ when query complexity is measured as follows. For union-free queries, the complexity, called {\em join-height} is the number of relations joined together. We can use distributivity to push unions above joins and so give a complexity measure to queries with unions. 
+Before we come to multi-level IVM, let us recap the special case of recursive IVM of \cite{koch-pods:10, kennedy-ahmad-koch-cidr:11}, where we try to be as greedily incremental as possible.
+If we restrict the query language to exclude aggregates nested into conditions (for which the delta query was complicated), the query language fragment has the following nice property \cite{koch-pods:10}.
+%
+$\Delta Q$ is structurally strictly simpler than $Q$ when query complexity is measured as follows. 
+For union(+)-free queries, the {\em degree} $\deg(Q)$ of query $Q$ is the number of relations joined together. We can use distributivity to push unions above joins and so give a degree to queries with unions, as the maximum degree of the union-free subqueries. Queries are
+strongly analogous to polynomials, and the degree of queries is defined precisely as it is defined for
+polynomials.
 
-Recursive incremental view maintenance makes use of the simple fact that a delta query is a query too. Thus it can be incrementally maintained as well, making use of a delta query to the delta query, which again can be materialized and incrementally maintained, and so on, recursively.
-Since delta queries are structurally simpler than the base queries, this recursive query transformation terminates, which happens when the join-height of a $k$-th delta query comes down to zero (i.e., it does not contain any database relation). This happens for $k$ equal the join-height of the input query.
+\begin{theorem}[\cite{koch-pods:10}]
+If $\deg(Q) > 0$, then \[\deg(\Delta Q) = \deg(Q) - 1.\]
+\end{theorem}
+
+Recursive IVM makes use of the simple fact that a delta query is a query too. Thus it can be incrementally maintained as well, making use of a delta query to the delta query, which again can be materialized and incrementally maintained, and so on, recursively.
+By the above theorem, this recursive query transformation terminates in the $\deg(Q)$-recursion level,
+when the rewritten query becomes a ``constant'' (independent of the database, and only depending on the updates).
 
 The goal of compilation is to create on-insert and on-delete triggers for every relation occurring in the query.
-Conceptually, a query $Q[\vec{x}_{in}][\vec{x}{out}]$ of join-height $H$ over relations $R_1, \dots, R_k$ is compiled as follows:
+Conceptually, a query $Q[\vec{x}_{in}][\vec{x}_{out}]$ over relations $R_1, \dots, R_k$ is compiled as follows:
 We write $M_Q$ for the materialized view of query $Q$. 
 Then the trigger program for the event $\pm R_{i_{j+1}}(\vec{y}_{j+1})$ consists of the
 statements
 
-\noindent
-foreach $\vec{x}_{out}, \vec{y}_1, \dots, \vec{y}_j$ do \\
-~~~
+\begin{tabbing}
+~~foreach $\vec{x}_{out}, \vec{y}_1, \dots, \vec{y}_j$ do \\
+~~~~~
    $M_{\Delta_{\pm R_{i_j}} \dots \Delta_{\pm R_{i_1}} Q}
-       [\vec{x}_{in}\vec{y}_1 \dots \vec{y}_j][\vec{x}_{out}] \;\pm= \\
-~~~~~~
-    M_{\Delta_{\pm R_{i_{j+1}}} \dots \Delta_{\pm R_{i_1}} Q}
+       [\vec{x}_{in}\vec{y}_1 \dots \vec{y}_j][\vec{x}_{out}] \;\pm=$ \\
+~~~~~~~~
+    $M_{\Delta_{\pm R_{i_{j+1}}} \dots \Delta_{\pm R_{i_1}} Q}
        [\vec{x}_{in}\vec{y}_1 \dots \vec{y}_{j+1}][\vec{x}_{out}]$.
-
+\end{tabbing}
 
 \noindent
-for each $j \in 1 \dots H$ and $\tuple{i_1 \dots i_j} \in {1 \dots k}^j$. Note that for correctness, unless we maintain
+for each $j \in 1 \dots \deg(Q)$ and $\tuple{i_1 \dots i_j} \in {1 \dots k}^j$. Note that for correctness, unless we maintain
 old and new versions of the maps (which would be costly), these statements have to be 
 ordered by increasing $j$. TODO: explain.
 
