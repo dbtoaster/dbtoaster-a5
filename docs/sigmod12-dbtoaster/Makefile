@@ -9,15 +9,13 @@ all: doc doc/sigmod12-dbtoaster.pdf
 doc:
 	mkdir doc
 
-bib: doc/sigmod12-dbtoaster.bbl
+bib: src/sigmod12-dbtoaster.bib src/bibtex.bib
+	cd doc; cp ../src/*.bib .; $(BIB_CMD) sigmod12-dbtoaster; $(BIB_CMD) bibtex;\
+	rm sigmod12-dbtoaster.bib
 
 doc/sigmod12-dbtoaster.pdf: $(TEX_FILES) doc/sigmod12-dbtoaster.bbl
 	cd src; $(TEX_CMD) -output-directory=../doc sigmod12-dbtoaster
 	cd src; $(TEX_CMD) -output-directory=../doc sigmod12-dbtoaster
-
-doc/sigmod12-dbtoaster.bbl: src/sigmod12-dbtoaster.bib
-	cd doc; cp ../src/*.bib .; $(BIB_CMD) sigmod12-dbtoaster;\
-	rm sigmod12-dbtoaster.bib
 
 open: doc/sigmod12-dbtoaster.pdf
 	open $<
