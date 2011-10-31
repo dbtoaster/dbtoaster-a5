@@ -15,17 +15,6 @@
 \vspace*{-0.2in}
 \end{figure}
 
-\begin{figure}
-\begin{center}
-\resizebox{3.3in}{!}{
-\input{../graphs/bakeoff.tex}
-}
-\caption{Comparison between the performance of our compiler and the two commercial data processing engines (in \# of refreshes per second) from Section \ref{sec:sota}.  These engines are performing the same amount of work as depth-0, and their performance improvement over it is the result of extensive optimization.  We expect a similar level of improvement to be possible for full compilation.}
-\label{fig:experiments:enginesVsDBT}
-\vspace*{-0.3in}
-\end{center}
-\end{figure}
-
 We now analyze the performance of our compilation techniques and compare them with the results of Section 2.  Experiments are run on Redhat Enterprise Linux with 16 GB of RAM, and 2x4 core Intel Xeon E5620 2.4 GHz processors allocated to it.  Note that our compiler produces single-threaded code, while other engines were allowed to consume the full resources of the machine.
 
 Memory measurements are taken using google-perftools\cite{perftools}, and count only memory allocated to the persistent maps and not transient datas (e.g., materialized join results).  
@@ -56,6 +45,17 @@ Both TPCH3 and SSB4 (Figures \ref{fig:experiments:tpch3}a, and \ref{fig:experime
 Also note the memory usage of TPCH3.  Starting by the 40\%\ marker, all streams have been exhausted except for LINEITEM.  The final aggregate's group-by columns are drawn purely from the order table, so insertions into LINEITEM only update aggregate values for which entries have already been allocated by the corresponding ORDER.  Thus, memory usage plateaus for full compilation, while the IVM implementation must continue to store each row.
 
 This is not always true.  For extremely large queries like SSB4 (a 7-way join), the number of intermediate materialized views created is quite large.  However, any individual update modifies only a small amount of that state -- the fully compiled query is substantially faster as long as the system has enough memory.  Memory usage is an important part of the cost/benefit tradeoff of full compilation, and we explore several other points in this space in Section~\ref{sec:experiments:othermetrics}.
+
+\begin{figure}
+\begin{center}
+\resizebox{3.3in}{!}{
+\input{../graphs/bakeoff.tex}
+}
+\caption{Comparison between the performance of our compiler and the two commercial data processing engines (in \# of refreshes per second) from Section \ref{sec:sota}.  These engines are performing the same amount of work as depth-0, and their performance improvement over it is the result of extensive optimization.  We expect a similar level of improvement to be possible for full compilation.}
+\label{fig:experiments:enginesVsDBT}
+\vspace*{-0.3in}
+\end{center}
+\end{figure}
 
 \begin{figure*}
 \begin{center}
