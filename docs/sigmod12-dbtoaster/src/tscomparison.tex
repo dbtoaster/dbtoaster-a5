@@ -1,7 +1,7 @@
 In a database system, views are one of the central features in attaining both
 logical data independence and efficient performance as evidenced by their use
 from query optimization to data integration~\cite{halevy-vldbj01}. While
-advances in view maintenance techniques would have a significant impact on many
+advances in view maintenance would have a significant impact on many
 database internals challenges, our form of multilevel views and its realization
 as efficient low-level code allows us to provide high-performance, lightweight
 monitoring and notification services to the benefit of a wide range of
@@ -18,31 +18,21 @@ its own orders.
 inventory and active demand for its products in order to identify
 supply chain problems.
 
-\item A compute cluster monitors its current status to alert a network
-administrator when some of its hardware fails, but only if a distributed task
-running on the cluster is at risk of becoming unavailable.
+\item A compute cluster monitors its status to detect hardware failures
+that place distributed tasks at risk of downtime.
 \end{list}
 
 \vspace{-1mm}
 These are all use cases of frontend analysis systems to drive rapid
 decision-making and actions in contrast to backend OLAP data warehouses for deep
 ad-hoc exploratory querying. These analysis systems sit on the critical datapath
-as close as possible to data sources, often operate without human intervention,
-and are key to operation or to achieving a competitive advantage.
+near data sources, and are key to a competitive advantage.
 Query workloads are long-running and machine-generated, making the case for
 aggressive specialization over their execution period. This calls for novel
 compilation methods in a general incremental evaluation framework. 
-Other examples of application domains include regulatory
-compliance~\cite{basel2}, 
-\comment{ fraud detection~\cite{ibmfico}, computational
-advertising~\cite{agarwal2010forecasting}, }
-scientific simulations~\cite{hey2009fourth}, and disaster
-prediction~\cite{scholz1973earthquake}
-\comment{, and online machine learning~\cite{olesen2008real}}.
-The pertinent data management methods are triggers and active databases, and
-stream and complex event systems. We present a preliminary experiment across a
-range of query processing engines to demonstrate the update, and view refresh
-rates they can attain, and discuss architectural and implementation concerns.
+Other application domains include regulatory
+compliance~\cite{basel2}, scientific simulations~\cite{hey2009fourth}, and
+disaster prediction~\cite{scholz1973earthquake}.
 
 
 \vspace{1mm}
@@ -57,6 +47,18 @@ fashion abound.
 Figure~\ref{fig:queries} lists the processing properties of a query workload
 inspired by these domains that we use in this paper. Their full SQL
 descriptions are listed in Appendix~\ref{app:queries}.
+
+The algorithmic trading queries operate on two order book tables consisting of
+the buy and sell order books present at an electronic stock exchange -- in the
+case of our dataset, over a day's worth of orders for the MSFT symbol on NASDAQ
+(approx. 2.5 million orders). The online decision support queries are taken from
+the TPC-H and SSB benchmarks, and processed over a randomized, replayed update
+stream. 
+\comment{The cluster monitoring query operates on a synthetic dataset that
+simulates tasks running on a 20,000 node cluster.}
+Our workload has a range of joins, predicates, and subqueries, up to depth 2. We
+remark that while a depth of 2 may seem small, we have not seen many queries in
+popular DBMS benchmarks even approaching 4 or 5 nesting levels.
 
 \begin{figure}[t]
 \scriptsize{
@@ -96,18 +98,8 @@ cluster monitoring query workload used for experiments.}
 \vspace{-4mm}
 \end{figure}
 
-The algorithmic trading queries operate on two order book tables consisting of
-the buy and sell order books present at an electronic stock exchange -- in the
-case of our dataset, over a day's worth of orders for the MSFT symbol on NASDAQ
-(approx. 2.5 million orders). The online decision support queries are taken from
-the TPC-H and SSB benchmarks, and processed over a randomized, replayed update
-stream. 
-\comment{The cluster monitoring query operates on a synthetic dataset that
-simulates tasks running on a 20,000 node cluster.}
-Our workload has a range of joins, predicates, and subqueries, up to depth 2. We
-remark that while a depth of 2 may seem small, we have not seen many queries in
-popular DBMS benchmarks even approaching 4 or 5 nesting levels.
-
+The pertinent data management methods are triggers and active databases, and
+stream and complex event systems.
 We benchmarked these queries on a mix of open-source and commercial stream
 systems and DBMS (Esper, Postgres, CSPE, CDB)\footnote{We anonymize the
 commercial systems due to licensing restrictions on publishing benchmarks.},
@@ -122,10 +114,10 @@ commercial DBMS because despite the wide availability of IVM, there are stil
 many limitations on its usability.
 In fact, none of the major DBMS supported incremental refresh for the
 majority of our workload given the features in Figure~\ref{fig:queries}.
-For many DBMS, the documented
-restrictions~\cite{db2-viewrestrict,mssql-viewrestrict,oracle-viewrestrict} on
-supported queries indicates that view materialization and maintenance cannot
-generally be applied side-by-side query optimization.
+For many DBMS, the documented query
+restrictions~\cite{db2-viewrestrict,mssql-viewrestrict,oracle-viewrestrict}
+indicate that view materialization and maintenance cannot generally be applied
+side-by-side query optimization.
 \comment{
 This is a strong motivator for our goal of including materialization as a
 first-class citizen in query optimization.
@@ -204,9 +196,10 @@ self-joins), similar in effect to the state bug from
 views~\cite{colby-sigmod:96}.
 CSPE on the other hand did not support subqueries in stream-to-table operations.
 
-Our approach involved performing stream-to-table joins to trigger the replay of
-tables as streams via scans, as updates arrive. The replayed tables were then
-processed by stream operators to implement fully pipelined plans.
+On both systems, our approach involved performing stream-to-table joins to
+trigger the replay of tables as streams via scans, as updates arrive. The
+replayed tables were then processed by stream operators to implement fully
+pipelined plans.
 \comment{
 Our implementation strategy involved maintaining update streams as in-memory
 tables, replaying relevant tables as updates arrive to turn tables into streams,
