@@ -23,7 +23,7 @@ Applying the rules of~\cite{koch-pods:10} yields the delta query with respect to
 \end{eqnarray*}}
 The 1s in this expression are the delta $\Delta_S Sum(S)$.  Note that the aggregate appears in the delta expression, and so $\Delta_SQ$ is not structurally simpler than $Q$ -- maintaining $\Delta_S Q$ in its entirety requires as much work as evaluating the original query.  
 
-Instead, we subdivide this expression into three components: (1) $R$, the part of $\Delta_S Q$ independent of the nested aggregate, (2) $Sum(S)$, the nested aggregate, and (3) $1$, the delta of the nested aggregate.  Each component is individually simpler, and thus safe to materialize independently\footnote{Constants are, of course, not materialized}.  Evaluating $\Delta_S Q$ with this materialization strategy requires a iterating over all elements of $R$ to apply the inequality.  However this iteration does not involve computing the nested aggregate, as it has already been materialized.
+Instead, we subdivide this expression into three components: (1) the part of $\Delta_S Q$ independent of the nested aggregate ($R$), (2) the nested aggregate ($Sum(S)$), and (3) the delta of the nested aggregate ($1$).  Each component is individually simpler, and thus safe to materialize independently\footnote{Constants are, of course, not materialized}.  Evaluating $\Delta_S Q$ with this materialization strategy requires an iteration over component (1), to apply the inequality predicate, but does not require computation of the nested aggregate.
 \end{example}
 
 \tinysection{Input Variables}
@@ -31,7 +31,7 @@ Maintaining a view with input variables can be expensive -- the domain of the va
 
 As with caches, there is a tradeoff between the utility of storing values and the cost of doing so.  In the case of materialized views, this is not only the memory cost, but also the cost of maintaining stored values -- each of which is a materialized view in its own right.  The amount of maintenance work required is proportional to both the domain of the input variable (the size of the cache), and the amount of work required to maintain any individual currying of the materialized view.  
 
-Instead of materializing a map with input variables, we can separate out terms that the input variable appears in and materialize the remainder of the expression.  The terms with the input variable are then applied as filtering predicates when the expression is evaluated -- note that the cost of doing so is  affected not only by the selectivity of the predicates, but by the reduced ability to aggressively aggregate within the portion of the expression that is materialized.
+Instead of materializing a view with input variables, we can separate out terms that the input variable appears in and materialize the remainder of the expression.  The terms with the input variable are then applied as filtering predicates when the expression is evaluated -- note that the cost of doing so is  affected not only by the selectivity of the predicates, but by the reduced ability to aggressively aggregate within the portion of the expression that is materialized.
 
 \begin{example}
 The expression $Q = Sum_A(R \bowtie (B~<~D))$ over relation $R(A,B,C)$ can be materialized in two ways\footnote{This simple, illustrative example, can also be materialized as a range tree, as discussed below.}:

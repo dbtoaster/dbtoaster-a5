@@ -1,14 +1,15 @@
-\begin{tabular}{|r|c|c|c|}\hline
-\ & Full Compile & Depth 1 & Depth 0 \\\hline
-clusteravailable & 27048 & 3352 & 1654 \\\hline
-axfinder & 2169 & 553 & 738 \\\hline
-brokerspread & 45625 & 567 & 401 \\\hline
-missedtrades & 5409 & 2822 & 1570 \\\hline
-pricespread & 1214 & 1834 & 1194 \\\hline
-vwap & 533 & 466 & 341 \\\hline
-ssb4 & 10431 & 3174 & 1838 \\\hline
-tpch3 & 2509 & 1858 & 1522 \\\hline
-tpch17 & 928 & 1054 & 858 \\\hline
-tpch18 & 3648 & 2936 & 1897 \\\hline
-tpch22 & 777 & 1135 & 754 \\\hline
+\begin{tabular}{|l|c|c|c|c|c|}\hline 
+\ & Infinite Depth & Depth 1 with Hash Joins & Depth 1 without Hash Joins & Depth 0 with Hash Joins & Depth 0 without Hash Joins \\\hline 
+TPCH3 & 2509 & 2855 & 2076 & 4198 & 2020 \\\hline
+TPCH11 & 531 & 596 & 596 & 616 & 616 \\\hline
+TPCH17 & 928 & 1516 & 1158 & 1478 & 1026 \\\hline
+TPCH18 & 3668 & 5138 & 3538 & 4631 & 2535 \\\hline
+TPCH22 & 777 & 1135 & 1135 & 754 & 754 \\\hline
+SSB4 & 10995 & 8954 & 4363 & 7904 & 3464 \\\hline
+BSV & 342 & 327 & 327 & 347 & 347 \\\hline
+BSP & 45625 & 567 & 567 & 729 & 455 \\\hline
+AXF & 2169 & 553 & 553 & 1394 & 846 \\\hline
+PSP & 1442 & 2530 & 1878 & 1890 & 1238 \\\hline
+MST & 5457 & 3686 & 2870 & 2434 & 1618 \\\hline
+VWAP & 533 & 466 & 466 & 341 & 341 \\\hline
 \end{tabular}
