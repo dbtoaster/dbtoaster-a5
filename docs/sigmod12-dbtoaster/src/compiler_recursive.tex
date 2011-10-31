@@ -26,6 +26,9 @@ TODO: show an architecture diagram.
 Next we develop an IR for SQL queries that is suitable for compilation of database queries and to perform the transformations necessary to enable efficient multilevel IVM. This language is a refinement of the query language defined in \cite{koch-pods:10}, but here we aim at better readability and avoid unnecessary formality. The language is based on positive relational algebra with aggregation but makes the following modifications:
 %
 \begin{itemize}
+\addtolength{\topsep}{-0.3ex}
+\addtolength{\labelsep}{-0.3ex}
+\addtolength{\itemsep}{-1ex}
 \item
 The data model is that of relations where tuples have {\em integer} multiplicities. This generalizes SQL bag semantics to allow for
 negative multiplicities. This way, databases and updates can be treated uniformly. A relation in which all multiplicities are
@@ -135,7 +138,6 @@ where A > C) & ~~~~~~$\bowtie\; (A > C)))$ & \\
 \end{table}
 
 
-
 \medskip
 
 
@@ -177,6 +179,7 @@ and taking a delta in general {\em adds variables} parameterizing the query with
 \def\dxy{\Delta_{+R(x,y)}}
 
 \begin{example}\em
+\label{ex:RS}
 Given schema $R(AB), S(CD)$, and query
 \begin{verbatim}
 select sum(A * D) from R, S where B < C
@@ -217,6 +220,8 @@ select sum(x * D) from S where y < C
 \end{example}
 
 
+
+
 \subsubsection{Recursive incremental view maintenance.}
 
 \def\deg{\mbox{deg}}
@@ -234,7 +239,7 @@ If $\deg(Q) > 0$, then \[\deg(\Delta Q) = \deg(Q) - 1.\]
 \end{theorem}
 
 Recursive IVM makes use of the simple fact that a delta query is a query too. Thus it can be incrementally maintained as well, making use of a delta query to the delta query, which again can be materialized and incrementally maintained, and so on, recursively.
-By the above theorem, this recursive query transformation terminates in the $\deg(Q)$-recursion level,
+By the above theorem, this recursive query transformation terminates in the $\deg(Q)$-th recursion level,
 when the rewritten query becomes a ``constant'' (independent of the database, and only depending on the updates).
 
 The goal of compilation is to create on-insert and on-delete triggers for every relation occurring in the query.
@@ -252,17 +257,46 @@ statements
     $M_{\Delta_{\pm R_{i_{j+1}}} \dots \Delta_{\pm R_{i_1}} Q}
        [\vec{x}_{in}\vec{y}_1 \dots \vec{y}_{j+1}][\vec{x}_{out}]$.
 \end{tabbing}
-
-\noindent
-for each $j \in 1 \dots \deg(Q)$ and $\tuple{i_1 \dots i_j} \in {1 \dots k}^j$. Note that for correctness, unless we maintain
+for each $j \in 0, 1, \dots, \deg(Q)$ and $\tuple{i_1 \dots i_j} \in 1, \dots, k^j$.
+For correctness, unless we maintain
 old and new versions of the maps (which would be costly), these statements have to be 
-ordered by increasing $j$. TODO: explain.
+ordered by increasing $j$.
+
+\begin{example}\em
+\label{ex:RS2}
+We return to the query $Q$ of Example~\ref{ex:RS}, and
+$(\Delta_{\pm R(x,y)} Q)[x,y][]$ which was already computed there.
+We compute:
+\[ (\Delta_{\pm S(z,u)} Q)[z,u][] = \Sum(R \bowtie B < z \bowtie A*u) \]
+and
+\begin{eqnarray*}
+(\Delta_{\pm S(z,u)} \Delta_{\pm R(x,y)} Q)[x,y,z,u][] &=& \\
+(\Delta_{\pm R(x,y)} \Delta_{\pm S(z,u)} Q)[x,y,z,u][] &=&
+\Sum(y < z \bowtie x*u) \\
+&=& \mbox{$(y<z)$ ? $(x*u)$ : $0$}
+\end{eqnarray*}
+where $(y<z)$ ? $(x*u)$ : $0$ is the functional if-then-else of C
+(if $y<z$ then $x*u$ else 0).
+The on-insert into $R$ trigger $+R(x,y)$ following the construction described above is the program
+\begin{tabbing}
+~~~   $M_Q$[][] += $M_{\Delta_{+R(x,y)} Q}[x,y][]$; \\
+~~~   foreach $z,u$: $M_{\Delta_{+S(z,u)} Q}[z,u][]$ $+$= $(y<z)$ ? $(x*u)$ : $0$; \\
+~~~   foreach $z,u$: $M_{\Delta_{-S(z,u)} Q}[z,u][]$ $+$= $(y<z)$ ? $(x*u)$ : $0$
+\end{tabbing}
+The remaining triggers are constructed analogously.
+The trigger contains an update rule for the (in this case, scalar) data structure $M_Q$ for the overall
+query result, which uses the auxiliary view $M_{\Delta_{\pm R(x,y)} Q}$ which is maintained in the update triggers for $S$, plus update rules for the auxiliary views $M_{\Delta_{\pm S(z,u)} Q}$ that are used to update
+$M_Q$ in the insertion and deletion triggers on updates to $S$.
+\end{example}
 
 We observe that the structure of the work that needs to be done is extremely regular and (conceptually) simple. Moreover,
 there are no classical large-granularity operators left, so it does not make sense to give this workload to a classical
 query optimizer. There are for-loops over many variables, which have the potential to be very expensive. But the work
 is also perfectly data parallel, and there are no data dependencies comparable to those present in joins. All this provides
-justification for adopting a compilers approach. The workload has to be further decomposed and simplified, otherwise the
+justification for adopting a compilers approach.
+
+
+The workload has to be further decomposed and simplified, otherwise the
 materializations will be of high dimensionality, very large, and so expensive to maintain. But if this decomposition
 is done well, there is a chance to arrive at very efficient low-level code.
 
@@ -271,16 +305,29 @@ is done well, there is a chance to arrive at very efficient low-level code.
 \subsubsection{Initial value computation}
 
 
-In general, expressions with binding patterns have to be materialized, which causes difficulties: how to determine a suitable domain for these input variables for which to materialize the results of the expressions, how to represent and store such materialized structures, and how to dynamically maintain the domains of input variables as updates add previously unseen data values.
+The technique for constructing trigger programs by recursive delta rewriting discussed above assumes
+materialized views to be represented as maps $M$ that store, for tuples $\vec{i}{o}$ of input and output variables, a value (an aggregation result) $M[\vec{i}][{o}]$.
+So far we have disregarded the question what the {\em domains} of these maps are, that is,
+for which $\vec{i}\vec{o}$ the maps are defined and store values.
+If we could assume that the domains contain all the tuples that could ever be formed from values occurring
+in the database, we could initialize the map values to zero, $M[\vec{i}][\vec{o}] := 0$,
+before the first update is fed into the system.
 
-Maintaining the right domains for the variables is a challenge, particularly for input variables. Great optimization potential and so far we only have a na‹ve solution. Assuming all the relevant variables are in the domain, it?s easy, but that is an unrealistic assumption.
+However, it is not feasible to assume such large or even infinite domains.
+Instead, we want to start with empty maps and extend the domains when the update triggers want to access
+values -- for reading or writing -- that are not yet represented in the map.
+This raises the question how to compute initialization values; in general, these will not be zero if 
+the system has been running for a while and the maps contain data.
+Take for instance the query of Example~\ref{ex:RS2}: Suppose so far we have only seen inserts into relation $R$,
+but $S$ is still empty. Then the auxiliary maps $M_{\Delta_{+S(z,u)} Q}[z,u][]$ still have empty domains and
+looping over each pair $\tuple{z,u}$ does nothing. When, later, a tuple $\tuple{z,u}$ is inserted into $S$,
+$M_Q$ is incremented by $M_{\Delta_{+S(z,u)} Q}[z,u][]$, which has to be computed from scratch as
+$\Sum(R \bowtie B < z \bowtie A*u)$ and will generally be nonzero.
 
-
-Theorem: case where values are zero.
-
-Compile initial value computations for incremental evaluation. This needs non-query code.
-
-
+In the currency system we use the fact that if a query defining does not use inequality joins, the map value
+will be zero. Otherwise, the value is computed from scratch by executing the query that defines the map.
+In the future, this could be improved upon by further compiling subqueries of this defining query using
+recursive IVM techniques.
 
 
 \subsection{Join graph decomposition and factorization}
