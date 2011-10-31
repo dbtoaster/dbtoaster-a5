@@ -1,4 +1,4 @@
-\subsection{Extraction Heuristics}
+\subsection{Materialization Heuristics}
 \label{sec:advanced-rewriting}
 
 We have observed experimentally (see Section~\ref{sec:experiments}) that under certain conditions, a less-aggressive maintenance strategy is beneficial.  The choice of what to materialize applies to both entire delta expressions, as well as individual subexpressions.  In this subsection, we describe challenges that we have encountered while implementing aggressive materialization, and provide heuristics for addressing them.
@@ -23,7 +23,7 @@ Applying the rules of~\cite{koch-pods:10} yields the delta query with respect to
 \end{eqnarray*}}
 Note that the aggregate appears in the delta expression, and so $\Delta_SQ$ is not structurally simpler than $Q$ -- maintaining $\Delta_S Q$ in its entirety requires as much work as evaluating the original query.  
 
-Instead, we subdivide this expression into three components: (a) the part of $\Delta_S Q$ independent of the nested aggregate ($R$), (b) the nested aggregate ($Sum(S)$), and (c) the delta of the nested aggregate ($\Delta_SSum(S) \equiv 1$).  Each component is individually simpler, and thus safe to materialize independently\footnote{Constants are, of course, not materialized.}.  This materialization strategy requires an iteration over component a, to apply the inequality predicate, but has the nested aggregate already available.
+Instead, we subdivide this expression into three components: (a) the part of $\Delta_S Q$ independent of the nested aggregate ($R$), (b) the nested aggregate ($Sum(S)$), and (c) the delta of the nested aggregate ($\Delta_SSum(S) \equiv 1$).  Each component is individually simpler, and thus safe to materialize independently.  This materialization strategy requires an iteration over component a to apply the inequality predicate, but has the nested aggregate's value already available.  This subdivision approach can be applied to {\bf any} nested aggregate delta to create a safe materialization strategy.
 \end{example}
 
 \tinysection{Input Variables}

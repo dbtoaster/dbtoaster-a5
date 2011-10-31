@@ -17,7 +17,7 @@
 
 We now analyze the performance of our compilation techniques and compare them with the results of Section 2.  Experiments are run on Redhat Enterprise Linux with 16 GB of RAM, and 2x4 core Intel Xeon E5620 2.4 GHz processors allocated to it.  Note that our compiler produces single-threaded code, while other engines were allowed to consume the full resources of the machine.
 
-Memory measurements are taken using google-perftools\cite{perftools}, and count only memory allocated to the persistent maps and not transient datas (e.g., materialized join results).  
+Memory measurements are taken using google-perftools\cite{perftools}, and count only memory allocated to the persistent maps and not transient data.  
 
 An overview of the queries used is presented in Section \ref{sec:sota}, and the queries themselves are presented in SQL form in Appendix~\ref{app:queries}.
 
@@ -90,7 +90,7 @@ This is not always true.  For extremely large queries like SSB4 (a 7-way join), 
 %\tablefig{unified_serverload.pdf} \\
 (a) & (b) & (c) & (d)
 \end{tabular} \vspace*{-0.2in}
-\caption{BSV~(a), VWAP~(b), TPCH18~(c), and TPCH22~(d):  (a) The many-to-many relationship on the join term forces IVM to perform linear work on each insertion, which full compilation avoids. (b) IVM repeatedly re-evaluates the nested (parameterized) sub-query, while full compilation maintains a cache of sub-query results. (c) Due to the nested aggregate, IVC requires a nested loop, while full compilation requires only a single scan. (d) The small CUSTOMER stream completes at the 10\%\ marker, while the remaining ORDERS tuples require only linear time with full compilation. }
+\caption{BSV~(a), VWAP~(b), TPCH17~(c), and TPCH22~(d):  (a) The many-to-many relationship on the join term forces IVM to perform linear work on each insertion, which full compilation avoids. (b) IVM repeatedly re-evaluates the nested (parameterized) sub-query, while full compilation maintains a cache of sub-query results. (c) Due to the nested aggregate, IVC requires a nested loop, while full compilation requires only a single scan. (d) The small CUSTOMER stream completes at the 10\%\ marker, while the remaining ORDERS tuples require only linear time with full compilation. }
 %(d) Materializing nested queries gains a polynomial degree of performance over IVM, but memory continues to grow. 
 \label{fig:experiments:brokervariance}
 \label{fig:experiments:tpch22}
@@ -180,19 +180,12 @@ In spite of the simplicity of TPCH18 (Figure \ref{fig:experiments:tpch18}d), the
 Not knowing about the one-to-many relationship between custkey and orderkey, we iterate over the materialized join first and effectively iterate over all orders placed so far.  Join ordering is a well studied problem in the database community, and the solution to this problem is purely an engineering challenge.  A further unfortunate side effect of the incorrect join ordering is that the added (unnecessary) looping involves lookups that extend the domain of several intermediate materialized views, causing an explosion of memory use.
 
 \tinysection{Domain Maintenance}
-
 Both PS and MST (Figures \ref{fig:experiments:pricespread}a, and \ref{fig:experiments:missedtrades}b respectively) do not perform as well as possible -- Apart from a stretch of updates (0.001\%\ to 0.01\%\ in the trace) in the stock market trace where the same order is repeatedly placed and revoked, query performance decreases polynomially over time.  This slowdown is due to overly aggressive caching.  We do not correlate the domain of the output variables of a materialized view with the domains of its base relations.  The effect of removing a row in the base relation is propagated to the multiplicity of the corresponding row(s) of the view.  However, the row itself is not garbage collected, it continues to persist albeit with a multiplicity of 0.
 
 \tinysection{Map Extraction}
 The final case of performance issues is seen in both AXF (Figure \ref{fig:experiments:axfinder}c) and BSP (Figure \ref{fig:experiments:brokerspread}d).  Our aggressive extraction heuristic attempts to materialize the entire delta query, which for inequality joins includes an unbound variable.  The result of the delta query is a table with one entry for each broker.  However, the delta query also includes an unbound variable with a domain that is as large as either input table -- insertions into either table trigger maintenance work that is linear in the number of prior insertions onto the other table.  Worse still, the work saved by doing this is minimal -- the aggregate value must be computed from scratch on every insertion.
 
 An improved, data-dependent extraction heuristic could identify such situations and compute the inequality join inline.  In effect, this is precisely what IVM is already doing -- hence the performance improvement.  Alternatively, the entire materialized delta could be incrementally maintained more efficiently using datastructures suited to computing aggregates over ranges (e.g., Range Trees\cite{rangequeries}).
-
-
-\tinysection{Summary}
-Our compilation technique is effective on select-project-join-aggregate queries involving equi-joins and nested subqueries which are uncorrelated, correlated through an equality comparison, or correlated on a variable (or variables) with a small domain.  It is especially good on queries with small result sets (but large inputs).
-
-Our technique is less effective on inequality joins and nested aggregates correlated through an inequality -- although both are still handled efficiently if the domain of the values being compared is small.  In a similar vein, we do not optimize to take advantage of, or avoid problems caused by data-specific characteristics (e.g., foreign keys, large domains, etc\ldots). 
 
 
 \begin{figure}
