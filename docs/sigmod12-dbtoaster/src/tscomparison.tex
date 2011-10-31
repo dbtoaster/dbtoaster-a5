@@ -1,11 +1,17 @@
+\comment{
 In a database system, views are one of the central features in attaining both
 logical data independence and efficient performance as evidenced by their use
 from query optimization to data integration~\cite{halevy-vldbj01}. While
-advances in view maintenance would have a significant impact on many
-database internals challenges, our form of multilevel views and its realization
-as efficient low-level code allows us to provide high-performance, lightweight
+advances in view maintenance would have a significant impact on many database
+internals challenges, our form of multilevel views and its realization as
+efficient low-level code allows us to provide high-performance, lightweight
 monitoring and notification services to the benefit of a wide range of
 application domains. Consider the following applications:
+}
+
+Multilevel views and its realization as efficient low-level code
+facilitates high-performance, lightweight monitoring for a wide range of
+applications. Consider the following uses:
 
 \vspace{-2mm}
 \begin{list}{\labelenumi}{\usecounter{enumi} \leftmargin=1em}
@@ -23,42 +29,39 @@ that place distributed tasks at risk of downtime.
 \end{list}
 
 \vspace{-1mm}
-These are all use cases of frontend analysis systems to drive rapid
-decision-making and actions in contrast to backend OLAP data warehouses for deep
-ad-hoc exploratory querying. These analysis systems sit on the critical datapath
-near data sources, and are key to a competitive advantage.
+These uses require frontend analysis systems to drive rapid decision-making in
+contrast to backend data warehouses for deep exploratory querying, residing on
+the critical datapath near data sources, and are key to a competitive advantage.
 Query workloads are long-running and machine-generated, making the case for
-aggressive specialization over their execution period. This calls for novel
-compilation methods in a general incremental evaluation framework. 
-Other application domains include regulatory
+incremental evaluation, and aggressive compilation and specialization over their
+execution period. Other domains include regulatory
 compliance~\cite{basel2}, scientific simulations~\cite{hey2009fourth}, and
 disaster prediction~\cite{scholz1973earthquake}.
 
 
 \vspace{1mm}
 \tinysection{Query Workloads for Monitoring}
-The above use cases are examples common scenarios in algorithmic trading on
-order books, online decision support at a manufacturer, and datacenter and
-network infrastructure monitoring. 
-These update-intensive applications frequently compute a variety of statistics
-and compare and contrast them prior to taking action. Queries with complex
-dataflows consisting of nested and correlated subqueries composed in arbitrary
-fashion abound.
+The above scenarios commonly occur in algorithmic trading on order books, online
+decision support at a manufacturer, and datacenter and network infrastructure
+monitoring, and often involve computing a variety of statistics,
+and comparing and contrasting them prior to taking action.
+\comment{
+Queries with complex dataflows consisting of nested and correlated subqueries
+composed in arbitrary fashion abound.
+}
 Figure~\ref{fig:queries} lists the processing properties of a query workload
-inspired by these domains that we use in this paper. Their full SQL
-descriptions are listed in Appendix~\ref{app:queries}.
+inspired by these domains that we use in this paper, with SQL code in
+Appendix~\ref{app:queries}.
 
-The algorithmic trading queries operate on two order book tables consisting of
-the buy and sell order books present at an electronic stock exchange -- in the
-case of our dataset, over a day's worth of orders for the MSFT symbol on NASDAQ
-(approx. 2.5 million orders). The online decision support queries are taken from
-the TPC-H and SSB benchmarks, and processed over a randomized, replayed update
-stream. 
+The algorithmic trading queries operate on two order book streams of a day's
+worth of orders for the MSFT symbol on NASDAQ (approx. 2.5 million orders). The
+online decision support queries are taken from the TPC-H and SSB benchmarks, and
+processed over a randomized, replayed update stream.
 \comment{The cluster monitoring query operates on a synthetic dataset that
 simulates tasks running on a 20,000 node cluster.}
-Our workload has a range of joins, predicates, and subqueries, up to depth 2. We
-remark that while a depth of 2 may seem small, we have not seen many queries in
-popular DBMS benchmarks even approaching 4 or 5 nesting levels.
+Our workload has a range of joins, predicates, and correlated
+subqueries, up to depth 2. While a depth of 2 may seem low, we have not seen
+many queries in popular DBMS benchmarks even approaching 4 or 5 nesting levels.
 
 \begin{figure}[t]
 \scriptsize{
@@ -98,26 +101,24 @@ cluster monitoring query workload used for experiments.}
 \vspace{-4mm}
 \end{figure}
 
-The pertinent data management methods are triggers and active databases, and
-stream and complex event systems.
+The pertinent DBMS methods are triggers, and stream systems.
 We benchmarked these queries on a mix of open-source and commercial stream
 systems and DBMS (Esper, Postgres, CSPE, CDB)\footnote{We anonymize the
 commercial systems due to licensing restrictions on publishing benchmarks.},
-Figure~\ref{fig:enginecomp} shows their view maintenance performance.
+Figure~\ref{fig:enginecomp} shows their view refresh performance.
 \comment{  
 We describe implementation specifics below but defer further details such as
 system configuration, to our in-depth experiments in
 Section~\ref{sec:experiments}.
 }
-We focus on trigger and stream implementations as opposed to any native IVM in
-commercial DBMS because despite the wide availability of IVM, there are stil
-many limitations on its usability.
+We do not include any native IVM in commercial DBMS because despite its wide
+availability, there are stil many limitations on its usability.
 In fact, none of the major DBMS supported incremental refresh for the
 majority of our workload given the features in Figure~\ref{fig:queries}.
 For many DBMS, the documented query
 restrictions~\cite{db2-viewrestrict,mssql-viewrestrict,oracle-viewrestrict}
 indicate that view materialization and maintenance cannot generally be applied
-side-by-side query optimization.
+side-by-side with query optimization.
 \comment{
 This is a strong motivator for our goal of including materialization as a
 first-class citizen in query optimization.
@@ -127,13 +128,11 @@ first-class citizen in query optimization.
 \tinysection{Triggers and Active Databases}
 Trigger mechanisms facilitate the manipulation of database state in a reactive
 manner, as DML statements execute.
-Much of the literature on triggers has focused on issues such as cascading, and
-recursion, with limited work on leveraging single-level incremental view
-maintenance~\cite{baralis-rids95}.
+The literature on triggers has focused on issues such as cascading, and
+recursion, and to a lesser extent single-level IVM~\cite{baralis-rids95}.
 Triggers can be implemented in a variety of languages from plpgsql, to Python or
-C. For procedural SQL languages, triggers are compiled in the same
-way as user-defined queries, into physical query plans that are interpreted by
-an executor.
+C. For procedural SQL languages, triggers are compiled in the same way as
+user-defined queries for interpretation by an executor.
 \comment{
 Triggers exemplify update processing where the developer looses the ability for
 declarative development, and where along with user-defined functions and
@@ -144,21 +143,22 @@ fine-grained, pipelined computation.
 
 We implemented a \textit{repetitive} full refresh approach to maintain views for
 our query workload, where after each update a trigger re-evaluates the query
-from scratch. This approach incurs low developer overhead. Manually implementing
+from scratch.
+\comment{
+This approach incurs low developer overhead. Manually implementing
 multilevel view maintenance is rapidly impractical after even one level of delta
 rewriting due to code expansion, affirming the benefits of automatic
 incrementalization during compilation.
-
-Figure~\ref{fig:enginecomp} shows that for small-state incremental queries
-as with the finance workload, trigger performance is stable across various types
-of queries. Here small-state refers to the state accumulated while
-processing updates. In the finance workload there are nearly as
-many deletes as inserts (unsuccessful orders are often removed from the order
-books), and relations do not grow too large. For large-state incremental
-processing, on Postgres, queries with nesting perform signficantly worse than on
-CDB. Indeed, CDB performs the best overall amongst the engines and having
-inspected the plans chosen, CDB makes better use of index structures and
-optimized plans due to its maturity over the other engines.
+}
+Figure~\ref{fig:enginecomp} shows that for small-state as with the finance
+workload, trigger performance does not vary across types of queries. Here
+small-state refers to the state accumulated while processing updates. In the
+finance workload there are nearly as many deletes as inserts (unsuccessful
+orders are often removed from the order books), and relations do not grow too
+large. For large-state workloads, on Postgres, queries with nesting perform
+signficantly worse than on CDB. Overall, CDB performs the best across all
+engines, primarily with the mature optimizer in CDB choosing better plans and
+index usage.
 
 \begin{figure}[t]
 \vspace{-3mm}
@@ -176,12 +176,19 @@ maintenance.}
 \vspace{1mm}
 \tinysection{Stream and Complex Event Processing}
 These systems (SPEs) provide low-latency push-based processing and at first
-glance may appear to be ideal for frontend analytics. However, in addition to
+glance may appear to be ideal for frontend analytics.
+\comment{
+However, in addition to
 constructs such as windows or patterns and Kleene closure, monitoring
 applications often have additional requirements -- they must often work with
 long-lived, large state. This latter requirement is not well-addressed by
 current SPEs, they rely on in-memory tables with suboptimal querying or
 external DBMS access, and cannot support end-to-end incremental computation.
+}
+However, monitoring applications must often work with long-lived, large state,
+and this requirement is not well-addressed by current SPEs. They either rely on
+in-memory tables with suboptimal engines or external DBMS access, and do not
+support incremental computation over large state.
 
 Our workload implementation varied significantly across Esper and CSPE, due to a
 clear lack of standardized semantics and portability across
@@ -196,10 +203,9 @@ self-joins), similar in effect to the state bug from
 views~\cite{colby-sigmod:96}.
 CSPE on the other hand did not support subqueries in stream-to-table operations.
 
-On both systems, our approach involved performing stream-to-table joins to
-trigger the replay of tables as streams via scans, as updates arrive. The
-replayed tables were then processed by stream operators to implement fully
-pipelined plans.
+On both systems, our approach performed stream-to-table joins to trigger the
+replay of tables as streams via scans, as updates arrive. The replayed tables
+were then processed by stream operators to implement fully pipelined plans.
 \comment{
 Our implementation strategy involved maintaining update streams as in-memory
 tables, replaying relevant tables as updates arrive to turn tables into streams,
@@ -219,7 +225,16 @@ variation between Esper and CSPE, although CSPE does consistently outperform
 Esper, but cannot match triggers in CDB. For the large-state queries, CSPE
 outperforms Esper by significantly, and provides a viable alternative to
 triggers in CDB with an overall lower variance in performance across both
-nested (TPCH 17, 18, 22) and flat queries. Esper performs particularly poorly on
-TPCH 3 due to missed indexed usage in its plan. Although we omit experiments for
-this, dynamic index maintenance helped significantly on the TPCH queries for a
-marginal maintenance cost.
+nested (TPCH 17, 18, 22) and flat queries. Esper performs poorly on
+TPCH 3 by missing index usage.
+\comment{
+Overall across all engines, we observed that index maintenance helped
+significantly on the TPCH queries for a marginal maintenance cost.
+}
+
+The takeaway from these experiments is that with complex analysis workloads
+involving nested queries and aggregate comparisons, SPEs often cannot take
+advantage of the semantics they were designed for (e.g. windows, patterns), and
+do not offer advantages over trigger processing. Furthermore neither system
+achieves a high absolute refresh rate, of more than roughly 100 refreshes a
+second suggesting poor scaling when considering many simultaneous queries.
