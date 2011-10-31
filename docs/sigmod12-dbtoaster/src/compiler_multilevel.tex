@@ -7,7 +7,7 @@ a query expression to extract and materialize for incremental view maintenance. 
 \tinysection{Nested aggregate queries}
 Aggregate subqueries, in particular those nested inside comparison operators can not be handled directly by the delta operator -- the delta of an expression containing a nested aggregate is not strictly simpler than the original expression, and recursive delta compilation does not bottom out.  Materializing the nested subquery eliminates this issue.  We illustrate the idea with a simple example.
 
-\begin{example}
+\begin{example} \em
 %SELECT COUNT(*) FROM R WHERE R.A<(SELECT COUNT(*) FROM S)
 %(SELECT 1 FROM R WHERE (R.A>=(SELECT COUNT(*) FROM S) 
 %                   AND (R.A< (SELECT COUNT(*) FROM S)+1))
@@ -16,7 +16,7 @@ Aggregate subqueries, in particular those nested inside comparison operators can
 %                   AND (R.A>=(SELECT COUNT(*) FROM S)+1))
 Consider the following query $Q$ over relations $R(A)$ and $S()$, and a nested aggregate query $Sum(S)$
 {\small $$Q = R \bowtie (A < Sum(S))$$}
-Applying the rules of~\cite{koch-pods:10} yields the delta query with respect to a relation appearing in $Q$ (other than $R$):
+Applying the rules of~\cite{koch-pods:10} yields the delta query with respect to a $S$:
 {\small \begin{eqnarray*}
 \Delta_SQ & =  & (R \bowtie (A \geq Sum(S)) \bowtie (A < (Sum(S) +1)))\\
 &-& (R \bowtie (A <  Sum(S)) \bowtie (A \geq (Sum(S) + 1)))
@@ -33,10 +33,12 @@ As with caches, there is a tradeoff between the utility of storing values and th
 
 Instead of materializing a view with input variables, we can separate out terms that the input variable appears in and materialize the remainder of the expression.  The terms with the input variable are then applied as filtering predicates when the expression is evaluated -- note that the cost of doing so is  affected not only by the selectivity of the predicates, but by the reduced ability to aggressively aggregate within the portion of the expression that is materialized.
 
-\begin{example}
-The expression $Q = Sum_A(R \bowtie (B~<~D))$ over relation $R(A,B,C)$ can be materialized in two ways\footnote{This simple, illustrative example, can also be materialized as a range tree, as discussed below.}:
-$$M_{full}[D][A] = Sum_A(R \bowtie (B < D))$$
-$$M_{part}[][A,B] = Sum_{A,B}(R)$$
+\begin{example} \em
+The expression $Q = Sum_A(R \bowtie (B~<~D))$ over relation $R(A,B,C)$ can be materialized in two ways\footnote{This simple, illustrative example, can also be materialized as a range tree.}:
+{\small \begin{eqnarray*}
+M_{full}[D][A] & = & Sum_A(R \bowtie (B < D)) \\
+M_{part}[][A,B] & = & Sum_{A,B}(R)
+\end{eqnarray*}}
 \end{example}
 
 Maintaining $M_{part}$ requires only one operation per insertion, while maintaining $M_{full}$ involves one operation per value of $D$ currently being maintained.  
@@ -70,7 +72,7 @@ Certain base relations are changed infrequently (e.g., a table of census data). 
 
 The same idea can also be generalized to append-heavy workloads by treating a table joined into the rest of a query through a foreign key as static.  
 
-\begin{example}
+\begin{example} \em
 We consider the following set of joins over tables from the TPC-H\cite{counciltpc} schema:
 $$LINEITEM \bowtie_{orderkey} ORDERS \bowtie_{custkey} CUSTOMER$$
 Compilation produces the view $LINEITEM \bowtie ORDERS$ to support insertions into $CUSTOMER$.  We will never insert a customer for an order that has already been placed.  Although this view must be maintained for all customers appearing in an order, lookups over it will always return an empty result.  The same result can be obtained just as efficiently, and with lower storage overheads, by performing the view query over the base relations. 
