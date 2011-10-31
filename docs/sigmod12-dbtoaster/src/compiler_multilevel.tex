@@ -1,8 +1,7 @@
 \subsection{Extraction Heuristics}
 \label{sec:advanced-rewriting}
 
-This subsection gives heuristics for choosing which subexpressions of
-a query expression to extract and materialize for incremental view maintenance.  These heuristics apply to user-provided queries, as well as delta queries created by the compilation algorithm of Section~\ref{sec:compiler_calc} -- we have observed experimentally (see Section~\ref{sec:experiments}) that under certain conditions, less aggressive incremental maintenance can be beneficial.
+We have observed experimentally (see Section~\ref{sec:experiments}) that under certain conditions, a less-aggressive maintenance strategy is beneficial.  The choice of what to materialize applies to both entire delta expressions, as well as individual subexpressions.  In this subsection, we describe challenges that we have encountered while implementing aggressive materialization, and provide heuristics for addressing them.
 
 \tinysection{Nested aggregate queries}
 Aggregate subqueries, in particular those nested inside comparison operators can not be handled directly by the delta operator -- the delta of an expression containing a nested aggregate is not strictly simpler than the original expression, and recursive delta compilation does not bottom out.  Materializing the nested subquery eliminates this issue.  We illustrate the idea with a simple example.
@@ -15,23 +14,22 @@ Aggregate subqueries, in particular those nested inside comparison operators can
 %(SELECT 1 FROM R WHERE (R.A< (SELECT COUNT(*) FROM S) 
 %                   AND (R.A>=(SELECT COUNT(*) FROM S)+1))
 Consider the following query $Q$ over relations $R(A)$ and $S()$, and a nested aggregate query $Sum(S)$
+\vspace*{-0.05in}
 {\small $$Q = R \bowtie (A < Sum(S))$$}
-Applying the rules of~\cite{koch-pods:10} yields the delta query with respect to a $S$:
+Applying the rules of~\cite{koch-pods:10} yields the delta query with respect to $S$:
 {\small \begin{eqnarray*}
 \Delta_SQ & =  & (R \bowtie (A \geq Sum(S)) \bowtie (A < (Sum(S) +1)))\\
 &-& (R \bowtie (A <  Sum(S)) \bowtie (A \geq (Sum(S) + 1)))
 \end{eqnarray*}}
-The 1s in this expression are the delta $\Delta_S Sum(S)$.  Note that the aggregate appears in the delta expression, and so $\Delta_SQ$ is not structurally simpler than $Q$ -- maintaining $\Delta_S Q$ in its entirety requires as much work as evaluating the original query.  
+Note that the aggregate appears in the delta expression, and so $\Delta_SQ$ is not structurally simpler than $Q$ -- maintaining $\Delta_S Q$ in its entirety requires as much work as evaluating the original query.  
 
-Instead, we subdivide this expression into three components: (1) the part of $\Delta_S Q$ independent of the nested aggregate ($R$), (2) the nested aggregate ($Sum(S)$), and (3) the delta of the nested aggregate ($1$).  Each component is individually simpler, and thus safe to materialize independently\footnote{Constants are, of course, not materialized}.  Evaluating $\Delta_S Q$ with this materialization strategy requires an iteration over component (1), to apply the inequality predicate, but does not require computation of the nested aggregate.
+Instead, we subdivide this expression into three components: (a) the part of $\Delta_S Q$ independent of the nested aggregate ($R$), (b) the nested aggregate ($Sum(S)$), and (c) the delta of the nested aggregate ($\Delta_SSum(S) \equiv 1$).  Each component is individually simpler, and thus safe to materialize independently\footnote{Constants are, of course, not materialized.}.  This materialization strategy requires an iteration over component a, to apply the inequality predicate, but has the nested aggregate already available.
 \end{example}
 
 \tinysection{Input Variables}
-Maintaining a view with input variables can be expensive -- the domain of the variable is generally infinite (e.g., in the case of input variables correlated on an inequality).  When a value of this variable is encountered for the first time, the view expression must be evaluated as discussed in Section \ref{sec:compiler_calc}.  The materialized view acts as a sort of function cache, albeit one that incrementally maintains cached values rather than invalidating them.
+Maintaining a view with input variables can be expensive -- the domain of the variable is generally infinite.  When a value of this variable is encountered for the first time, the view expression must be evaluated as discussed in Section \ref{sec:compiler_calc}.  The materialized view acts as a cache that incrementally maintains cached values rather than invalidating them.
 
-As with caches, there is a tradeoff between the utility of storing values and the cost of doing so.  In the case of materialized views, this is not only the memory cost, but also the cost of maintaining stored values -- each of which is a materialized view in its own right.  The amount of maintenance work required is proportional to both the domain of the input variable (the size of the cache), and the amount of work required to maintain any individual currying of the materialized view.  
-
-Instead of materializing a view with input variables, we can separate out terms that the input variable appears in and materialize the remainder of the expression.  The terms with the input variable are then applied as filtering predicates when the expression is evaluated -- note that the cost of doing so is  affected not only by the selectivity of the predicates, but by the reduced ability to aggressively aggregate within the portion of the expression that is materialized.
+As with caches, there is a tradeoff between the utility of caching values and the cost of doing so.  In the case of materialized views, this is not only the memory cost, but also the cost of maintaining stored values -- each of which is a materialized view in its own right.  The amount of maintenance work required is proportional to both the domain of the input variable (the size of the cache), and the amount of work required to maintain any individual currying of the materialized view.  Instead, terms where the variable appears can be pulled out of the materialization and applied as filters when the expression is evaluated.
 
 \begin{example} \em
 The expression $Q = Sum_A(R \bowtie (B~<~D))$ over relation $R(A,B,C)$ can be materialized in two ways\footnote{This simple, illustrative example, can also be materialized as a range tree.}:
@@ -43,7 +41,7 @@ M_{part}[][A,B] & = & Sum_{A,B}(R)
 
 Maintaining $M_{part}$ requires only one operation per insertion, while maintaining $M_{full}$ involves one operation per value of $D$ currently being maintained.  
 
-Using $M_{part}$ to evaluate $Q(D)$ requires first applying the predicate $(B < D)$ to all $\left<A,B\right> \in M_{part}$.  If $D$ is already in the domain of $M_{full}$, evaluating $Q(D)$ only requires a lookup.  If not, the expression must be computed in its entirety -- in lieu of the base relations, $M_{part}$ can be maintained for this purpose.
+  If $M_{full}$ already contains the cached result for a given $D$, then evaluating $Q(D)$ only requires a lookup.  If not, the expression must be computed in its entirety.  Using $M_{part}$ to evaluate $Q(D)$ requires first applying the predicate $(B < D)$ to all $\left<A,B\right> \in M_{part}$.  Note that in lieu of the base relations, $M_{part}$ can be used to compute initial values for $M_{full}$.
 
 We can compute the relative costs of these two approaches in terms of the following variables:
 
@@ -61,19 +59,11 @@ cost_{full} & = & rate_{Q} \left[p(\exists D) + (1-p(\exists D))\cdot|dom_R(AB)|
 cost_{part} & = & rate_{Q} |dom_R(AB)| + rate_{+R}
 \end{eqnarray*}
 }
-The cost of maintaining $M_{full}$ is based on the cartesian product of the domains of $A$ and $D$, while the cost of evaluating the partial expression is based on only those pairs $\left<A,B\right>$ that actually appear in $R$.  Assuming the rates of evaluation and maintenance are comparable, and that the domain sizes of all variables are uniform, it is better not to materialize the full view, even if the chance of evaluating the expression on a duplicate value of $D$ is high.
+The cost of maintaining $M_{full}$ is based on the cartesian product of the domains of $A$ and $D$, while the cost of evaluating the partial expression is based on only those pairs $\left<A,B\right>$ that actually appear in $R$.  Assuming comparable rates and domain sizes, it is better not to materialize the full view.
 
 \tinysection{Storage Considerations}
-Full compilation can actually reduce the space consumed by a base relation, as the materialized form is the relation after filters, projections, and aggregates have been applied as aggressively as possible.  However, intermediate views introduce storage overheads -- the price of the performance improvement they provide.
+Full compilation can actually reduce the space consumed by a base relation, as the materialized form of the relation has filters, projections, and aggregates applied as aggressively as possible.  However, additional intermediate materialized views introduce storage overheads.
 
-In situations where storage is limited, it is necessary to limit how many views are materialized.  This is essentially a constrained optimization problem, with the expected storage requirements of each materialized view counting against the constraint and expected performance as an optimization goal.  Although a full optimizer is beyond the scope of this paper, we now consider one particular heuristic based on properties of the data.
+In situations where storage is limited, it is necessary to limit how many views are materialized.  This is essentially a constrained optimization problem on the expected storage requirements and performance.  A full optimizer is beyond the scope of this paper, but we consider one particular heuristic.
 
-Certain base relations are changed infrequently (e.g., a table of census data).  We refer to such relations as being {\em static}.  When compiling query, views used for computing deltas with respect to {\em static} relations are not materialized -- these deltas are instead computed using traditional IVM techniques.   
-
-The same idea can also be generalized to append-heavy workloads by treating a table joined into the rest of a query through a foreign key as static.  
-
-\begin{example} \em
-We consider the following set of joins over tables from the TPC-H\cite{counciltpc} schema:
-$$LINEITEM \bowtie_{orderkey} ORDERS \bowtie_{custkey} CUSTOMER$$
-Compilation produces the view $LINEITEM \bowtie ORDERS$ to support insertions into $CUSTOMER$.  We will never insert a customer for an order that has already been placed.  Although this view must be maintained for all customers appearing in an order, lookups over it will always return an empty result.  The same result can be obtained just as efficiently, and with lower storage overheads, by performing the view query over the base relations. 
-\end{example}
+Certain base relations are changed infrequently (e.g., a table of census data).  We refer to such relations as being {\em static}.  When compiling query, views used for computing deltas with respect to {\em static} relations are not materialized -- these deltas are instead computed using traditional IVM techniques.   The same idea can be generalized to append-heavy workloads by using foreign-key constraints.
