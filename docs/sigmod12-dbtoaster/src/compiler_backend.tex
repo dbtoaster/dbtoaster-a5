@@ -205,7 +205,17 @@ uses composition to realize pipelining and simplification, and the variants with
 \texttt{flatten} are partial aggregations that push an associative aggregation
 into the inner tier of a nested collection.
 
+\comment{
+\vspace{1mm}
+\noindent\textbf{Other optimizations.} The other major simplifications that we
+perform on our functional IR include common subexpression elimination and
+initial value computation deduplication. Duplicate, redundant IVC arises in the
+SQL IR since the same view can appear multiple times when taking deltas of sums
+and products expressions. We omit full details of these due to space
+restrictions.
+}
 
+\comment{
 \vspace{1mm}
 \noindent\textbf{Common subexpression elimination.}
 Our CSE algorithm simultaneously extracts candidate common subexpressions and
@@ -228,7 +238,7 @@ its initial value computation (IVC) will also appear many times and when
 accounting for binding patterns, these initial value computations are idempotent
 and redundant. We can eliminate duplicate IVCs by tracking of binding pattern
 equivalences and their dependences on variable domains.
-
+}
 
 \comment{
 \vspace{1mm}
