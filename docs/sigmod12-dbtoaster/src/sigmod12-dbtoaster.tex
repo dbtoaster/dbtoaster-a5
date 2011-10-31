@@ -67,7 +67,7 @@ evaluation framework that allows a query optimizer to extend the use of
 materialized views from answering user queries to also \textit{answer the delta
 queries} used by a DBMS to refresh views on updates.
 The aggressive recursive use of this idea can eliminate all joins from certain
-queries, resulting query processing with fine-grained in-place updates that
+queries, resulting in query processing with fine-grained in-place updates that
 refreshes multiple views without classical query operators. This calls for
 compilation of queries to highly efficient low-level imperative code, and a
 compiler architecture that bridges the gap between query optimizers and
@@ -92,8 +92,8 @@ to perform sophisticated forms of deforestation and fusion frequently employed
 in compilers but almost unknown in the database literature.
 }
 
-Aggressive multilevel incremental view maintenance bears the potential to be, by
-several orders of magnitude, faster than classical incremental view
+Aggressive multilevel incremental view maintenance bears the potential to be
+faster than classical incremental view
 maintenance and to have substantially greater expressive power compared to the query
 languages supported in stream engines.
 %
@@ -101,9 +101,9 @@ languages supported in stream engines.
 %management systems that can drive sophisticated streaming, online, and real-time
 %analytics that are not supported by current data management systems.
 %
-We confirm this expectation through extensive experimentation with different
+We confirm this through extensive experimentation with different
 parameterizations of our compiler as well as existing DBMS and stream engines
-on an analytics workload consisting of monitoring, algorithmic trading, and ETL
+on a workload consisting of monitoring, algorithmic trading, and ETL
 queries. We observe that multilevel incremental view maintenance dominates
 previous continuous querying approaches, frequently by multiple orders of
 magnitude, for queries involving many joins or nested aggregation. However,
