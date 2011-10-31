@@ -36,19 +36,28 @@ Instead of materializing a map with input variables, we can separate out terms t
 \begin{example}
 The expression $Q = Sum_A(R \bowtie (B~<~D))$ over relation $R(A,B,C)$ can be materialized in two ways\footnote{This simple, illustrative example, can also be materialized as a range tree, as discussed below.}:
 $$M_{full}[D][A] = Sum_A(R \bowtie (B < D))$$
-$$M_{partial}[][A,B] = Sum_{A,B}(R)$$
+$$M_{part}[][A,B] = Sum_{A,B}(R)$$
 \end{example}
 
-Maintaining $M_{partial}$ requires only one operation per insertion, while maintaining $M_{full}$ involves one operation per value of $D$ currently being maintained.  
+Maintaining $M_{part}$ requires only one operation per insertion, while maintaining $M_{full}$ involves one operation per value of $D$ currently being maintained.  
 
-Using $M_{partial}$ to evaluate $Q(D)$ requires first applying the predicate $(B < D)$ to all $\left<A,B\right> \in M_{partial}$.  If $D$ is already in the domain of $M_{full}$, evaluating $Q(D)$ only requires a lookup.  If not, the expression must be computed in its entirety -- in lieu of the base relations, $M_{partial}$ can be maintained for this purpose.
+Using $M_{part}$ to evaluate $Q(D)$ requires first applying the predicate $(B < D)$ to all $\left<A,B\right> \in M_{part}$.  If $D$ is already in the domain of $M_{full}$, evaluating $Q(D)$ only requires a lookup.  If not, the expression must be computed in its entirety -- in lieu of the base relations, $M_{part}$ can be maintained for this purpose.
 
-We can compute the relative costs of these two approaches in terms of: the domains of variables $A$, $D$, and pairs $\left<A,B\right>$ appearing in $R$, rates of insertion into $R$, and evaluation of $Q$, and the probability of encountering duplicate values of $D$.
+We can compute the relative costs of these two approaches in terms of the following variables:
+
+\vspace*{0.07in}
+{\small
+\begin{tabular}{rcl}
+$rate_X$ & : & The rate of updates or evaluations of $X$\\
+$p(X \in Q)$ & : & The probability of duplicate values of $X$\\
+$dom_R(X)$ & : & The domain of values of $X$ in $R$\\
+\end{tabular}
+\vspace*{-0.09in}
 \begin{eqnarray*}
-cost_{full} & = & rate_{Q} \left[(1-p(dup_D))|dom(AB)|+p(dup_D)\right] \\
- & + & rate_{+R} (|dom(D)||dom(A)| + 1)\\
-cost_{partial} & = & rate_{Q} |dom(AB)| + rate_{+R}
+cost_{full} & = & rate_{Q} \left[(1-p(D \in Q))\cdot|dom_R(AB)|+p(D \in Q)\right] \\
+ &  & + rate_{+R} \left[|dom_Q(D)|\cdot|dom_R(A)| + 1\right]\\
+cost_{part} & = & rate_{Q} |dom_R(AB)| + rate_{+R}
 \end{eqnarray*}
-
-The cost of maintaining $M_{full}$ is based on the cartesian product of the domains of $A$ and $D$, while the cost of evaluating the partial expression is based on only those pairs $\left<A,B\right>$ that actually appear in $R$.  Assuming the rates of evaluation and maintenance are comparable, and that the domain sizes of all variables are uniform, it is better not to materialize views with both input and output variables even if the probability of encountering duplicate values of $D$ is high.
+}
+The cost of maintaining $M_{full}$ is based on the cartesian product of the domains of $A$ and $D$, while the cost of evaluating the partial expression is based on only those pairs $\left<A,B\right>$ that actually appear in $R$.  Assuming the rates of evaluation and maintenance are comparable, and that the domain sizes of all variables are uniform, it is better not to materialize views with both input and output variables, even if the probability of encountering duplicate values of $D$ is high.
 

@@ -80,7 +80,7 @@ $queries = {
   },
   "ssb4" => {
     :datafile      => "tpch/ssb4.sql -d disable-deletes",
-    :max_plot_rate => 400,
+#    :max_plot_rate => 400,
     :max_plot_mem  => 12*1024,
     :representatives => ["depth_infty", "depth_1", "depth_0"],
     :tuple_mult    => 1000,
@@ -174,6 +174,7 @@ $configurations = [
   ["Depth 1 (IVM)", "depth_1_nohash"],
   ["Depth 0 (Repeated)",   "depth_0"],
   ["No Functional Opts",   "depth_infty_optsoff"],
+  ["TCMalloc",   "depth_infty_basictcm"],
 ]
 $conf_titles = $configurations.map {|t,c| [c,t]}.to_h;
 
@@ -303,7 +304,7 @@ def tuple_rate(datafile)
   end
 end
 
-def draw_clustered_bar_plot plot, args
+def draw_clustered_bar_plot plot, args = {}
   data = args.fetch(:data).unzip;
   base_offset       = args.fetch(:base_offset,       0);
   interbar_offset   = args.fetch(:interbar_offset,   18);
@@ -312,6 +313,8 @@ def draw_clustered_bar_plot plot, args
   bar_width         = args.fetch(:bar_width,         10);
   tic_commands      = args.fetch(:tic_commands,      "");
   label_offset      = args.fetch(:label_offset,      0);
+  box_style         = args.fetch(:box_style, 
+                                 lambda { |i| "boxes fill pattern #{i}" });
   
   group_offset = base_offset + margins
   group_size = interbar_offset * data.length + intergroup_offset;
@@ -324,7 +327,7 @@ def draw_clustered_bar_plot plot, args
     indices = dataset.map { |i| offset += group_size; }
     plot.data << Gnuplot::DataSet.new([indices,dataset]) do |ds|
       ds.title = dataset_title
-      ds.with  = "boxes fill pattern #{pattern += 1}";
+      ds.with  = box_style.call(pattern += 1);
     end
   end
   
@@ -446,9 +449,9 @@ file_data "bakeoff.tex" => ["data/engine-comparison.csv","rakefile"] do
     end).map { |a,b| a+b };
   
   "\\begin{tabular}{|r|#{"c"*(good_engines.length+2)}|}\\hline \n"+
-  ([["Query", "Full Compilation", "Depth 1"]+good_engines]+
+  ([["Query", "Depth 0"]+good_engines+["Full Compilation"]]+
   labels.zip(data).map do |label,data|
-    ["{\\bf #{label}}"]+data
+    ["{\\bf #{label}}", data[1], data[2], data[3], data[0]]
   end).map { |l| l.join(" & ")+"\\\\ \\hline \n" }.join("") +
   "\\end{tabular}";
 end
@@ -481,6 +484,8 @@ end
     plot.ylabel "Average Refresh Rate (1/s)";
     plot.bmargin "5";
     
+    styles = [[0,0],[4,6],[0,3],[2,2],[5,1]];
+
     draw_clustered_bar_plot plot, 
       :group_labels => (query_order.map do |q|
         $queries[q].fetch(:title, q.upcase);
@@ -489,8 +494,12 @@ end
       :data => data,
       :tic_commands => "rotate by -30",
       :bar_width => 15,
-      :label_offset => 12,
-      :intergroup_offset => 20
+      :label_offset => 35,
+      :margins => 15,
+      :intergroup_offset => 40,
+      :box_style => (lambda do |i| 
+          "boxes fill pattern #{styles[i][0]} lc #{styles[i][1]}"
+        end)
   end
   
   plot "graphs/bakeoff.#{fmt}" => 
@@ -559,7 +568,9 @@ end
       :data => data,
       :tic_commands => "rotate by -30",
       :bar_width => 15,
-      :label_offset => 12
+      :label_offset => 25,
+      :margin => 18,
+      :intergroup_width => 30
   end
   task fmt => "graphs/bakeoff.#{fmt}"
   
@@ -608,7 +619,7 @@ end
       cap_time = false;
       graph_configs.each do |conf_code|
         datafile = "data/time_#{q}_#{conf_code}_0";
-        dataset($conf_titles[conf_code]) do
+        dataset($conf_titles[conf_code], "linespoints") do
           tuples_processed(datafile).map do |t,tuples| 
             cap_time = cap_time || t > 3600
             [ t.to_f / time_mult,
@@ -621,7 +632,7 @@ end
     end
     q_graphs.push "graphs/time_#{q}.#{fmt}"
   
-    graph_configs.each do |conf_code|
+    $configurations.unzip[1].each do |conf_code|
       datafile = "data/time_#{q}_#{conf_code}_0";
       if File.exists? datafile then
         plot "graphs/rate_#{q}_#{conf_code}.#{fmt}" => datafile do |plot|

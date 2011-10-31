@@ -20,13 +20,13 @@
 \resizebox{3.3in}{!}{
 \input{../graphs/bakeoff.tex}
 }
-\caption{Comparison between the performance of our compiler and the two commercial data processing engines (in \# of refreshes per second) from Section \ref{sec:dbfail}.  With the same level of detailed performance tuning afforded these engines, depth-0 performance should be comparable.  We expect that a similar performance improvement is achievable for the fully compiled query as well.}
+\caption{Comparison between the performance of our compiler and the two commercial data processing engines (in \# of refreshes per second) from Section \ref{sec:sota}.  These engines are performing the same amount of work as depth-0, and their performance improvement over it is the result of extensive optimization.  We expect a similar level of improvement to be possible for full compilation.}
 \label{fig:experiments:enginesVsDBT}
 \vspace*{-0.3in}
 \end{center}
 \end{figure}
 
-We now analyze the performance of our compilation techniques.  As in Section \ref{sec:dbfail}, our experiments are run on Redhat Enterprise Linux running in a VM with 16 GB of RAM, and 2x4 core Intel Xeon E5620 2.4 GHz processors allocated to it.  Note that our compiler produces single-threaded code, while other platforms were allowed to consume the full resources of the VM.
+We now analyze the performance of our compilation techniques.  As in Section \ref{sec:sota}, our experiments are run on Redhat Enterprise Linux running in a VM with 16 GB of RAM, and 2x4 core Intel Xeon E5620 2.4 GHz processors allocated to it.  Note that our compiler produces single-threaded code, while other platforms were allowed to consume the full resources of the VM.
 
 Our analysis uses the same queries and methodology as in Section~\ref{sec:tscomparison}: The queries are described in Section~\ref{sec:tscomparison:workload}, and expressed in SQL form in Appendix~\ref{app:queries}.
 
@@ -47,7 +47,7 @@ In order to evaluate our compilation algorithm in a fair environment with a comm
 As a consequence of the high join width of SSB4, the default materialization plan has an extremely high branching factor (12 at the top level).  Although most materialized views in the plan are duplicates, the compiler must still explore all children of unique nodes -- a prohibitively expensive process.  For the purpose of these experiments, we omit deletions when compiling SSB4 (halving the branching factor).  As SSB4 is a query without nested aggregates, deletions are symmetric with insertions -- In spite of the prohibitive compilation time, the behavior of the compiled query is identical.
 
 \tinysection{Comparison with Existing Systems}
-Figure \ref{fig:experiments:enginesVsDBT} compares our recursive compilation technique to the performance of the traditional databases and stream processors presented in Section~\ref{sec:dbfail} (and Figure~\ref{fig:queries}).  Recall that CSPE is implemented using IVM techniques, while CDB uses repeated evaluation.  CDB's performance with respect to our depth-0 evaluation implementation bodes well for our techniques.  It is reasonable to expect that at least order of magnitude gain in the performance of full compilation can be achieved through a commercial-grade level of performance tuning.
+Figure \ref{fig:experiments:enginesVsDBT} compares our recursive compilation technique to the performance of the traditional databases and stream processors presented in Section~\ref{sec:sota} (and Figure~\ref{fig:queries}).  Recall that CSPE is implemented using IVM techniques, while CDB uses repeated evaluation.  CDB's performance with respect to our depth-0 evaluation implementation bodes well for our techniques.  It is reasonable to expect that at least order of magnitude gain in the performance of full compilation can be achieved through a commercial-grade level of performance tuning.
 
 \subsection{Equijoins}
 
