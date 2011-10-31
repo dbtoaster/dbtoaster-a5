@@ -5,26 +5,26 @@ This subsection gives heuristics for choosing which subexpressions of
 a query expression to extract and materialize for incremental view maintenance.  These heuristics apply to user-provided queries, as well as delta queries created by the compilation algorithm of Section~\ref{sec:compiler_calc} -- we have observed experimentally (see Section~\ref{sec:experiments}) that under certain conditions, less aggressive incremental maintenance can be beneficial.
 
 \tinysection{Nested aggregate queries}
-Aggregate subqueries, in particular those nested inside comparison operators can not be handled directly by the delta operator -- the delta of an expression containing a nested aggregate is not strictly simpler than the original expression, and recursive delta compilation does not bottom out.
+Aggregate subqueries, in particular those nested inside comparison operators can not be handled directly by the delta operator -- the delta of an expression containing a nested aggregate is not strictly simpler than the original expression, and recursive delta compilation does not bottom out.  Materializing the nested subquery eliminates this issue.  We illustrate the idea with a simple example.
 
 \begin{example}
-Consider the query:
-\begin{verbatim}
-SELECT COUNT(*) FROM R WHERE 
-  R.A < (SELECT COUNT(*) FROM S)
-\end{verbatim}
-The delta of this query with respect to S is as follows:
-\begin{verbatim}
-(SELECT 1 FROM R WHERE 
-  (R.A >= (SELECT COUNT(*) FROM S) AND
-   R.A <  (SELECT COUNT(*) FROM S) + 1 ) ) + 
-(SELECT -1 FROM R WHERE
-  (R.A <  (SELECT COUNT(*) FROM S) AND
-   R.A >= (SELECT COUNT(*) FROM S) + 1 ) )
-\end{verbatim}
-\end{example} 
+%SELECT COUNT(*) FROM R WHERE R.A<(SELECT COUNT(*) FROM S)
+%(SELECT 1 FROM R WHERE (R.A>=(SELECT COUNT(*) FROM S) 
+%                   AND (R.A< (SELECT COUNT(*) FROM S)+1))
+%  - 
+%(SELECT 1 FROM R WHERE (R.A< (SELECT COUNT(*) FROM S) 
+%                   AND (R.A>=(SELECT COUNT(*) FROM S)+1))
+Consider the following query $Q$ over relations $R(A)$ and $S()$, and a nested aggregate query $Sum(S)$
+{\small $$Q = R \bowtie (A < Sum(S))$$}
+Applying the rules of~\cite{koch-pods:10} yields the delta query with respect to a relation appearing in $Q$ (other than $R$):
+{\small \begin{eqnarray*}
+\Delta_SQ & =  & (R \bowtie (A \geq Sum(S)) \bowtie (A < (Sum(S) +1)))\\
+&-& (R \bowtie (A <  Sum(S)) \bowtie (A \geq (Sum(S) + 1)))
+\end{eqnarray*}}
+The 1s in this expression are the delta $\Delta_S Sum(S)$.  Note that the aggregate appears in the delta expression, and so $\Delta_SQ$ is not structurally simpler than $Q$ -- maintaining $\Delta_S Q$ in its entirety requires as much work as evaluating the original query.  
 
-Note the occurrences of the original nested aggregate expression in the delta term.  The delta of the aggregate expression is strictly simpler (+1 in this case), and thus the nested aggregate can itself be maintained efficiently.  By extracting the original aggregate expression from the delta of the outer expression, the delta becomes simpler and can be efficiently maintained incrementally.
+Instead, we subdivide this expression into three components: (1) $R$, the part of $\Delta_S Q$ independent of the nested aggregate, (2) $Sum(S)$, the nested aggregate, and (3) $1$, the delta of the nested aggregate.  Each component is individually simpler, and thus safe to materialize independently\footnote{Constants are, of course, not materialized}.  Evaluating $\Delta_S Q$ with this materialization strategy requires a iterating over all elements of $R$ to apply the inequality.  However this iteration does not involve computing the nested aggregate, as it has already been materialized.
+\end{example}
 
 \tinysection{Input Variables}
 Maintaining a view with input variables can be expensive -- the domain of the variable is generally infinite (e.g., in the case of input variables correlated on an inequality).  When a value of this variable is encountered for the first time, the view expression must be evaluated as discussed in Section \ref{sec:compiler_calc}.  The materialized view acts as a sort of function cache, albeit one that incrementally maintains cached values rather than invalidating them.
