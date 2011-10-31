@@ -99,8 +99,8 @@ We illustrate this by a few examples in Table~\ref{tab:ir-examples}.
 All of the expressions there are valid queries of our IR, typed by indicating the input and output variables.
 
 \begin{table}
-\begin{footnotesize}
 \begin{center}
+\begin{footnotesize}
 \begin{tabular}{|l|l|l|}
 \hline
 select * from R   & $R$ & $A^f,B^f$ \\
@@ -122,8 +122,8 @@ B < (select sum(D) from S & ~~~~$B < \Sum(S \bowtie D$ & \\
 where A > C) & ~~~~~~$\bowtie\; (A > C)))$ & \\
 \hline
 \end{tabular}
-\end{center}
 \end{footnotesize}
+\end{center}
 \caption{Some example queries with their binding patterns. Relation $R$ and S have schema $A,B$ and $C,D$, respectively.}
 \label{tab:ir-examples}
 \end{table}
@@ -174,7 +174,7 @@ and taking a delta in general {\em adds variables} parameterizing the query with
 \begin{example}\em
 Given schema $R(AB), S(CD)$, and query
 \begin{verbatim}
-select sum(A * D) from R, S where B<C
+select sum(A * D) from R, S where B < C
 \end{verbatim}
 or, in our IR,
 $\Sum(R \bowtie S \bowtie B < C \bowtie A*D)[][]$.
@@ -205,6 +205,10 @@ $\{\tuple{A:x}\} \bowtie S \bowtie y \theta C \bowtie x * D$.
 Thus the delta of the input query is
 $\Sum(\{\tuple{A:x}\} \bowtie  S \bowtie y < C \bowtie x*D)[x,y][]$ which can be further simplified to
 $\Sum(S \bowtie y < C \bowtie x*D)[x,y][]$.
+In SQL notation, this is
+\begin{verbatim}
+select sum(x * D) from S where y < C
+\end{verbatim}
 \end{example}
 
 
