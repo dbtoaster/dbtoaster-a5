@@ -49,15 +49,29 @@ We can compute the relative costs of these two approaches in terms of the follow
 {\small
 \begin{tabular}{rcl}
 $rate_X$ & : & The rate of updates or evaluations of $X$\\
-$p(X \in Q)$ & : & The probability of duplicate values of $X$\\
+$p(\exists X)$ & : & The chance of $X$ already being cached.\\
 $dom_R(X)$ & : & The domain of values of $X$ in $R$\\
 \end{tabular}
 \vspace*{-0.09in}
 \begin{eqnarray*}
-cost_{full} & = & rate_{Q} \left[(1-p(D \in Q))\cdot|dom_R(AB)|+p(D \in Q)\right] \\
+cost_{full} & = & rate_{Q} \left[p(\exists D) + (1-p(\exists D))\cdot|dom_R(AB)|\right] \\
  &  & + rate_{+R} \left[|dom_Q(D)|\cdot|dom_R(A)| + 1\right]\\
 cost_{part} & = & rate_{Q} |dom_R(AB)| + rate_{+R}
 \end{eqnarray*}
 }
-The cost of maintaining $M_{full}$ is based on the cartesian product of the domains of $A$ and $D$, while the cost of evaluating the partial expression is based on only those pairs $\left<A,B\right>$ that actually appear in $R$.  Assuming the rates of evaluation and maintenance are comparable, and that the domain sizes of all variables are uniform, it is better not to materialize views with both input and output variables, even if the probability of encountering duplicate values of $D$ is high.
+The cost of maintaining $M_{full}$ is based on the cartesian product of the domains of $A$ and $D$, while the cost of evaluating the partial expression is based on only those pairs $\left<A,B\right>$ that actually appear in $R$.  Assuming the rates of evaluation and maintenance are comparable, and that the domain sizes of all variables are uniform, it is better not to materialize the full view, even if the chance of evaluating the expression on a duplicate value of $D$ is high.
 
+\tinysection{Storage Considerations}
+Full compilation can actually reduce the space consumed by a base relation, as the materialized form is the relation after filters, projections, and aggregates have been applied as aggressively as possible.  However, intermediate views introduce storage overheads -- the price of the performance improvement they provide.
+
+In situations where storage is limited, it is necessary to limit how many views are materialized.  This is essentially a constrained optimization problem, with the expected storage requirements of each materialized view counting against the constraint and expected performance as an optimization goal.  Although a full optimizer is beyond the scope of this paper, we now consider one particular heuristic based on properties of the data.
+
+Certain base relations are changed infrequently (e.g., a table of census data).  We refer to such relations as being {\em static}.  When compiling query, views used for computing deltas with respect to {\em static} relations are not materialized -- these deltas are instead computed using traditional IVM techniques.   
+
+The same idea can also be generalized to append-heavy workloads by treating a table joined into the rest of a query through a foreign key as static.  
+
+\begin{example}
+We consider the following set of joins over tables from the TPC-H\cite{counciltpc} schema:
+$$LINEITEM \bowtie_{orderkey} ORDERS \bowtie_{custkey} CUSTOMER$$
+Compilation produces the view $LINEITEM \bowtie ORDERS$ to support insertions into $CUSTOMER$.  We will never insert a customer for an order that has already been placed.  Although this view must be maintained for all customers appearing in an order, lookups over it will always return an empty result.  The same result can be obtained just as efficiently, and with lower storage overheads, by performing the view query over the base relations. 
+\end{example}
