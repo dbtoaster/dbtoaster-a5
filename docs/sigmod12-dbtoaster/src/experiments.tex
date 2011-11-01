@@ -153,7 +153,7 @@ The performance of BSV (Figure \ref{fig:experiments:brokervariance}a) is similar
 
 As in the last several queries, incrementally maintaining the nested aggregate of TPCH17 makes insertions into PART constant-time rather than linear.  Even in the fully compiled version, insertions into the LINEITEM table must still iterate over the results of the join -- under full compilation this join has already been materialized.
 
-We touch on TPCH18 (Figure~\ref{fig:experiments:tpch18}d) and Figures~\ref{fig:experiments:pricespread}a-d in Section~\ref{sec:experiments:future} to describe the implied limitations of our current approach. The takeaway for these queries is that multilevel IVM does offer improvements (PSP, MST) over repetitive and IVM, but the situation is less clear cut (e.g. AXF, BSP). Further query analysis and advanced partial materialization strategies are needed alongside multilevel IVM.
+We touch on TPCH18 (Figure~\ref{fig:experiments:tpch18}d) and Figures~\ref{fig:experiments:pricespread}a-d in Section~\ref{sec:experiments:future} to describe the implied limitations of our current approach. The takeaway for these queries is that multilevel IVM does offer improvements (PSP, MST) over repetitive and IVM, but the situation is less clear cut (e.g. AXF, BSP). In particular, we observe that views with large domains for their input variables can be costly, with entries being added and rarely reused, while still incurring maintenance work. This motivates advanced partial materialization and garbage collection strategies alongside multilevel IVM.
 
 
 \subsection{Other metrics}
