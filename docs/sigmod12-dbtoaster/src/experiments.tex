@@ -21,7 +21,7 @@ A query workload overview is presented in Section \ref{sec:sota}, and as SQL in 
 \comment{Several stream traces were used to evaluate the queries.}
 Queries were run over a replayed stream for 1 hour and then terminated. The results presented are computed based on the number of tuples processed within the 1 hour time limit.
 \comment{Only those operations actually affecting the query results (e.g., VWAP's rate is computed based only on the number of operations on the BIDS table).}
-Memory measurements are taken using google-perftools, and count memory allocated to the persistent maps and not transient data.  
+Memory measurements are taken using google-perftools, and count memory allocated to the materialized views and not transient data.  
 
 The financial queries VWAP, MST, AXF, BSP, PS, and BSV were run on a 2.63 million tuple trace of an order book update stream, representing of one day of stock market activity for MSFT.  These are updates to a BIDS and ASKS table with a schema of a timestamp, an order id, a broker id, a price, and a volume.  The stream consists of approximately 1.4 million operations on the BIDS table, and 1.14 million operations on the ASKS table.  
 
@@ -152,7 +152,7 @@ We now explore the space of limited recursive compilation beyond IVM.  Figure \r
 
 At depth-1, the compiled query materializes only the base relations and no intermediate tables.  It must still perform a 5-way join on every insertion, but  only once per update.  The 6 materialized views that it maintains are the 6 base relations from the query.  
 
-At depth-2, the compiled query must now maintain 12 intermediate materialized views, several of which require a 4-way join to maintain.  The net cost of maintaining these additional maps does not begin to pay off until depth-4 (where maintenance operations are reduced to at most 2-way joins).  By this point, decomposition has already resulted in the instantiation of all intermediate materializations relevant to the query, so extra and unnecessary work is being done.  
+At depth-2, the compiled query must now maintain 12 intermediate materialized views, several of which require a 4-way join to maintain.  The net cost of maintaining these additional views does not begin to pay off until depth-4 (where maintenance operations are reduced to at most 2-way joins).  By this point, decomposition has already resulted in the instantiation of all intermediate materializations relevant to the query, so extra and unnecessary work is being done.  
 
 The effectiveness of this approach at depth-4 (in spite of the extra work) suggests that a more effective approach to reducing memory consumption might be to materialize not just the set of views closest to the root, but rather a subset of the possible materialized views.  However, the space of materialization strategies is exponential, and a cost based optimizer is future work.
 
