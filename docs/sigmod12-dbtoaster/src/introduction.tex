@@ -20,19 +20,19 @@ But does this expectation translate into real performance gains? A priori, the c
 \medskip
 
 
-
 This paper presents the lessons learned in an effort to realize recursive IVM, spanning nearly three years of intense work, to generalize it to be applicable on all or most of SQL, and to understand its strengths and drawbacks.
 The contributions of this paper are as follows.
 \begin{itemize}
 \item
 Multilevel IVM bears the promise of providing materialized views of complex SQL queries, without
 window semantics or other restrictions, at very high refresh rates. We start by showing that there is
-a need for such functionality, creating a benchmark consisting of automated trading and ETL workloads,
-and that state of the art system cannot deliver materialized views refreshed in real-time.
+a need for such functionality, creating a benchmark consisting of automated trading and ETL workloads.
+We show that state of the art systems cannot deliver materialized views refreshed at the rates
+that some application domains (algorithmic trading, real-time analytics) require.
 This is the challenge we set ourselves for the techniques and system described in this paper.
 
 \item
-We develop the vision of multilevel IVM further into a workable framework.
+We develop the vision of multilevel IVM further into a workable system.
 While the techniques of \cite{ahmad-vldb:09, koch-pods:10} as well as existing implementations of
 IVM in commercial DBMS are very restricted and exclude nested queries and other features of SQL,
 we create the machinery to perform IVM and even recursive IVM on most of SQL (with the exception of
@@ -61,7 +61,7 @@ subqueries that are not correlated through subqueries, our compilation approach 
 state of the art, often by multiple orders of magnitude. There are also queries in our benchmark
 on which our techniques do not fare well; these usually involve the creation and maintenance of huge
 auxiliary views whose data is rarely used by other views. These scenarios could be much improved upon
-by suitable garbage collection strategies on auxiliary views. These are future work, and we consider
+by suitable garbage collection strategies on auxiliary views. This is future work, and we consider
 it likely that once such a technique has been integrated into our compiler, it will outperform the
 state-of-the-art on an even wider range of queries.
 \end{itemize}
