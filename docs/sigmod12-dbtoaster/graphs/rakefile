@@ -1142,3 +1142,23 @@ file_data "loc_table.tex" => "rakefile" do
 end
 
 # scp damsel:/damsl/projects/dbtoaster/results/big/memory_ssb4_depth_1.profile data/ 
+
+
+[["ssb4", 50], ["tpch17",20]].each do |q,maxrate|
+  plot "graphs/windowedrate_#{q}_tocompletion.pdf" => "rakefile" do |plot|
+    plot.xlabel "Tuples Processed"
+    plot.ylabel "Refresh Rate (1/s)"
+    plot.yrange "[0:#{maxrate}]"
+
+    datafile = "data/#{q}_completed";
+    dataset("To Completion") do 
+      tuple_rate(datafile).map do |tuples, rate| 
+        [ (tuples.to_f), (rate.to_f)]
+      end
+      #.window(5) do |w| 
+#          tuples, rate = w.unzip
+#          [tuples[-1], rate.avg]
+#        end
+    end
+  end
+end
