@@ -21,22 +21,24 @@ But does this expectation translate into real performance gains? A priori, the c
 
 
 This paper presents the lessons learned in an effort to realize recursive IVM, spanning nearly three years of intense work, to generalize it to be applicable to most of SQL, and to understand its strengths and drawbacks.
-The contributions of this paper are as follows.
+
+The contributions are as follows.
 \begin{itemize}
 \item
 Multilevel IVM bears the promise of providing materialized views of complex SQL queries, without
-window semantics or other restrictions, at very high refresh rates. We start by showing that there is
+window semantics or other restrictions, at very high refresh rates. We start by arguing that there is
 a need for such functionality, creating a benchmark consisting of automated trading and ETL workloads.
 We show that state of the art systems cannot deliver materialized views refreshed at the rates
 that some application domains (algorithmic trading, real-time analytics) require.
-This is the challenge we set ourselves for the techniques and system described in this paper.
+This is the challenge we set ourselves in this paper.
 
 \item
 We develop the vision of multilevel IVM further into a workable system.
 While the techniques of \cite{ahmad-vldb:09, koch-pods:10} as well as existing implementations of
 IVM in commercial DBMS are very restricted and exclude nested queries and other features of SQL,
 we create the machinery to perform IVM and even recursive IVM on most of SQL (with the exception of
-support for null values). To do this, we generalize the techniques of \cite{ahmad-vldb:09, koch-pods:10}
+support for null values).\footnote{Most of our benchmark queries contain features such as nested subqueries that none of the commercial implementations of IVM support, while our approach supports them all. Our delta processing techniques are relevant to classical IVM in their own right, not just to multilevel IVM.}
+To do this, we generalize the techniques of \cite{ahmad-vldb:09, koch-pods:10}
 to not always materialize full delta queries but instead subexpressions that allow us to perform
 IVM and maximize the performance obtained. This leads us to a query optimizer in which
 the materialization of subqueries is a degree of freedom in optimization, and can be applied anywhere
@@ -49,7 +51,7 @@ and factorization techniques that lead to efficient formulations of update trigg
 views.
 
 \item
-Multilevel IVM eliminates most query operators and yields low-level trigger programs that have simple and regular
+Multilevel IVM eliminates most query operators and yields low-level update trigger programs for view refreshing that have simple and regular
 structure. It seems natural to exploit this, and to follow an approach of {\em compiling} the view refreshing code down to
 machine code, rather than to interpret in a query execution engine.
 %

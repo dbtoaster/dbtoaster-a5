@@ -73,40 +73,13 @@ queries, resulting in query processing with fine-grained in-place updates that
 refreshes multiple views without classical query operators. This calls for
 compilation of queries to highly efficient low-level imperative code.
 
-% and a
-%compiler architecture that bridges the gap between query optimizers and
-%compilers from general-purpose programming languages.
-
-
-\comment{
-Multilevel incremental view maintenance generalizes the idea of using
-materialized views for query answering by allowing a query optimizer to use
-materialized views for also answering delta queries, which are the auxiliary
-queries that are used in incremental view maintenance to refresh materialized
-views when updates happen. Aggressive recursive use of this idea allows to
-eliminate all joins from certain queries and to generate highly efficient
-low-level code without classical query operators that performs all query
-evaluation and view refreshment work. This calls for the compilation of queries.
-
-In this paper, we present a general compiler architecture for languages such as
-SQL. To realize such a compiler, we overcome the challenges of materializing
-views with binding patterns (parameters) to support arbitrarily nested queries
-with aggregates, complex patterns of side effects that may arise, and the need
-to perform sophisticated forms of deforestation and fusion frequently employed
-in compilers but almost unknown in the database literature.
-}
-
 Multilevel incremental view maintenance bears the potential to be
-faster than classical incremental view
-maintenance and to have greater expressive power than query
+faster than classical incremental view maintenance, admitting very high view refresh rates,
+and to have greater expressive power than query
 languages supported in stream engines.
 %
-We confirm this through extensive experimentation with
-our compiler as well as existing DBMS and stream engines.
-%
-%on a workload consisting of monitoring, algorithmic trading, and ETL
-%queries.
-%
+Extensive experimentation with
+our compiler as well as existing DBMS and stream engines confirms this.
 Multilevel incremental view maintenance usually dominates
 previous continuous querying approaches, frequently by multiple orders of
 magnitude, for queries involving many joins or nested aggregation. However,
