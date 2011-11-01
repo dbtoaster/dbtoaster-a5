@@ -128,7 +128,7 @@
                                 % marginal note
 
                                 % Top of page:
-\topmargin 4.4pc                % Nominal distance from top of page to top of
+\topmargin 4.35pc                % Nominal distance from top of page to top of
                                 % box containing running head.
 \advance\topmargin by -1in      % Correct for LaTeX gratuitousness
 \headheight 0pt                 % Height of box containing running head.
@@ -149,7 +149,7 @@
 \textheight 669pt       % 9 1/4 column height
 \textwidth 42.2pc         % Width of text line.
                         % For two-column mode:
-\columnsep 2pc          %    Space between columns
+\columnsep 1.95pc          %    Space between columns
 \columnseprule 0pt      %    Width of rule between columns.
 \hfuzz 1pt              % Allow some variation in column width, otherwise it's
                         % too hard to typeset in narrow columns.
