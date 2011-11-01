@@ -175,7 +175,7 @@ It is important to understand not only where our compiler succeeds, but where it
 \tinysection{Join Ordering}
 In spite of the simplicity of TPCH18 (Figure \ref{fig:experiments:tpch18}d), the query performs poorly -- even repeated evaluation is faster.  This is a consequence of our join ordering heuristic: The trigger that updates the query result must compute a join between the delta of the extracted nested subquery (aggregated over orderkey) and a materialized representation of CUSTOMER $\bowtie$ ORDER $\bowtie$ LINEITEM (aggregated over custkey and orderkey).  
 Not knowing about the one-to-many relationship between custkey and orderkey, we iterate over the materialized join first and effectively iterate over all orders placed so far.
-We ommitted a fully fledged join-ordering optimizer to focus our efforts on multilevel IVM. Adding join ordering during compilation is straightforward in functional optimization.
+We omitted a fully fledged join-ordering optimizer to focus our efforts on multilevel IVM. Adding join ordering during compilation is straightforward in functional optimization.
 \comment{Join ordering is a well studied problem in the database community, and the solution to this problem is purely an engineering challenge.  A further outcome of the suboptimal join ordering is that the added (unnecessary) looping involves lookups that extend the domain of several intermediate materialized views, causing an explosion of memory use.}
 
 \tinysection{Domain Maintenance}

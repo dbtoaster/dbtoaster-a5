@@ -64,7 +64,7 @@ cost_{full} & = & rate_{Q} \left[p(\exists D) + (1-p(\exists D))\cdot|dom_R(AB)|
 cost_{part} & = & rate_{Q} |dom_R(AB)| + rate_{+R}
 \end{eqnarray*}
 }
-The cost of maintaining $M_{full}$ is based on the cartesian product of the domains of $A$ and $D$, while the cost of maintaining $M_{part}$ is based on only those pairs $\left<A,B\right>$ that actually appear in $R$.  Assuming comparable rates and domain sizes, it is better not to materialize the full view.
+The cost of maintaining $M_{full}$ is based on the Cartesian product of the domains of $A$ and $D$, while the cost of maintaining $M_{part}$ is based on only those pairs $\left<A,B\right>$ that actually appear in $R$.  Assuming comparable rates and domain sizes, it is better not to materialize the full view.
 
 \comment{
 \tinysection{Storage Considerations}
