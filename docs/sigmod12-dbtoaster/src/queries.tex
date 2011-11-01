@@ -5,8 +5,7 @@
 \begin{verbatim}
 SELECT   b.broker_id, sum(a.volume-b.volume) FROM bids b, asks a
 WHERE    b.broker_id = a.broker_id
-  AND    ( (a.price + ((-1) * b.price) > 1000) OR
-           (b.price + ((-1) * a.price) > 1000) )
+  AND    ( (a.price - b.price > 1000) OR (b.price - a.price > 1000) )
 GROUP BY b.broker_id;
 \end{verbatim}
 }
