@@ -16,25 +16,28 @@ applications. Consider the following uses:
 \vspace{-2mm}
 \begin{list}{\labelenumi}{\usecounter{enumi} \leftmargin=1em}
 \addtolength{\itemsep}{-0.5\baselineskip}
-\item An automated stock market trading system monitors the distribution of buy
-and sell orders of a particular stock to identify the best time and price for
-its own orders.
+\item An automated stock market trading system monitors buy
+and sell order books of a particular stock to identify the best time and price for
+its own orders. The key analyses for making such decisions can frequently be performed via SQL views,
+which however have to be fresh at very high rates (about 500 times a second for high-volume stocks)
+to be effective.
 
 \item A corporate data warehouse monitors its production facilities, warehoused
 inventory and active demand for its products in order to identify
-supply chain problems.
-
-\item A compute cluster monitors its status to detect hardware failures
-that place distributed tasks at risk of downtime.
+supply chain problems. If data warehouse loading can be performed in real time, the usefulness
+of the warehouse is leveraged.
 \end{list}
 
 \vspace{-1mm}
 These uses require frontend analysis systems to drive rapid decision-making in
-contrast to backend data warehouses for deep exploratory querying. These systems
-sit on the critical datapath near data sources, and handle long-running,
-machine-generated query workloads that require incremental evaluation, and
-aggressive specialization during execution. While the need for
-high-performance monitoring and view refresh is abundantly clear in algorithmic
+contrast to offline data warehouses for deep exploratory querying.
+%
+%These systems sit on the critical datapath near data sources, and handle long-running,
+%machine-generated query workloads that require incremental evaluation, and
+%aggressive specialization during execution.
+%
+While the need for
+high-per\-for\-mance monitoring and view refresh is abundantly clear in algorithmic
 trading, advertising, security and disaster prediction~\cite{scholz1973earthquake},
 timely response is emerging as an essential ingredient of competitive advantage
 and operational efficiencies in business, and service-oriented applications, and
@@ -46,9 +49,8 @@ of large datasets that change in small high-impact increments.
 
 \vspace{1mm}
 \tinysection{Query Workloads for Monitoring}
-The above scenarios of algorithmic trading on order books, online
-decision support at a manufacturer, and datacenter and network infrastructure
-monitoring often involve computing a variety of statistics,
+The above scenarios of algorithmic trading on order books and online
+business decision support often involve computing a variety of statistics,
 and comparing and contrasting them prior to taking action.
 \comment{
 Queries with complex dataflows consisting of nested and correlated subqueries
