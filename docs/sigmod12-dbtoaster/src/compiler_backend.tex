@@ -16,27 +16,23 @@ in our recursive compilation process results in a maintenance query with paramet
 (i.e. a function) that updates an auxiliary datastructure. This leads to our
 second stage IR, a small functional programming IR.
 }
-With IVM work performed by a parameterized query, a natural second stage IR is a
-small functional programming language.
+To narrow the gap while translating the SQL IR directly to low-level code, our
+second stage IR is a small functional programming language.
 \comment{
 Functional programs have strong correspondences to relational queries, both are
 dataflow programs, and the relationship of their formal expressiveness has been
 studied in complex object languages~\cite{buneman-kleisli:95}, and
 comprehensions~\cite{jones-haskell:07}.
 }
-Our foremost motivation for a functional IR is for holistic query optimization,
-where we can exploit a breadth of powerful program transformations including
-monad transformations from structural recursion~\cite{buneman-kleisli:95},
+We perform holistic query optimization in this functional IR, exploiting a
+breadth of powerful program transformations including monad transformations from
+structural recursion~\cite{buneman-kleisli:95},
 deforestation~\cite{marlow-fp:92}, supercompilation and fusion.
 Other recent works have observed the need for holistic optimization of query
-executors with low-level languages~\cite{krikellas-icde:10,neumann-pvldb:11},
-but none have pursued a functional IR to the best of our knowledge.
-\comment{
-We believe a functional IR brings many other benefits, such as simpler optimizer
-development, and non-first normal forms for specialized in-memory or disk layout
-strategies, although a full coverage of these issues is outside the scope this
-paper.
-}
+executors with low-level languages~\cite{krikellas-icde:10,neumann-pvldb:11}.
+Our functional IR is a work-in-progress that we believe will bring benefits such
+as simpler optimizer development, and non-first normal forms for specialized
+in-memory or disk layout strategies in future work.
 
 
 Our functional IR includes tuples and collection types, lambdas and associative

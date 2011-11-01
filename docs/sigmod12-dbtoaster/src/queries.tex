@@ -1,10 +1,9 @@
 \hspace{-5mm}\vspace{-8mm}
 \begin{tabular}{lp{0.95\textwidth}}
-\begin{rotate}{90}\hspace{-1cm}\underline{AXF}\end{rotate} &
+\begin{rotate}{90}\hspace{-1cm}\underline{{\scriptsize AXF}}\end{rotate} &
 {\scriptsize
 \begin{verbatim}
-SELECT   b.broker_id, sum(a.volume + -1 * b.volume)
-FROM     bids b, asks a
+SELECT   b.broker_id, sum(a.volume-b.volume) FROM bids b, asks a
 WHERE    b.broker_id = a.broker_id
   AND    ( (a.price + ((-1) * b.price) > 1000) OR
            (b.price + ((-1) * a.price) > 1000) )
@@ -15,7 +14,7 @@ GROUP BY b.broker_id;
 
 \hspace{-5mm}\vspace{-8mm}
 \begin{tabular}{lp{0.95\textwidth}}
-\begin{rotate}{90}\hspace{-1cm}\underline{BSP}\end{rotate} &
+\begin{rotate}{90}\hspace{-1cm}\underline{{\scriptsize BSP}}\end{rotate} &
 {\scriptsize
 \begin{verbatim}
 SELECT x.broker_id, SUM(x.volume * x.price - y.volume * y.price)
@@ -27,7 +26,7 @@ WHERE  x.broker_id = y.broker_id AND x.t > y.t GROUP BY x.broker_id;
 
 \hspace{-5mm}\vspace{-8mm}
 \begin{tabular}{lp{0.95\textwidth}}
-\begin{rotate}{90}\hspace{-1cm}\underline{BSV}\end{rotate} &
+\begin{rotate}{90}\hspace{-1cm}\underline{{\scriptsize BSV}}\end{rotate} &
 {\scriptsize
 \begin{verbatim}
 SELECT x.broker_id, SUM(x.volume * x.price * y.volume * y.price * 0.5)
@@ -39,10 +38,10 @@ WHERE  x.broker_id = y.broker_id GROUP BY x.broker_id;
 
 \hspace{-5mm}\vspace{-8mm}
 \begin{tabular}{lp{0.95\textwidth}}
-\begin{rotate}{90}\hspace{-1cm}\underline{MST}\end{rotate} &
+\begin{rotate}{90}\hspace{-1cm}\underline{{\scriptsize MST}}\end{rotate} &
 {\scriptsize
 \begin{verbatim}
-SELECT b.broker_id, sum(a.price*a.volume+-1*b.price*b.volume)
+SELECT b.broker_id, sum(a.price*a.volume - b.price*b.volume)
 FROM   bids b, asks a
 WHERE 0.25*(select sum(a1.volume) from asks a1) >
       (select sum(a2.volume) from asks a2 where a2.price > a.price)
@@ -55,10 +54,10 @@ GROUP BY b.broker_id;
 
 \hspace{-5mm}\vspace{-8mm}
 \begin{tabular}{lp{0.95\textwidth}}
-\begin{rotate}{90}\hspace{-0.75cm}\underline{PS}\end{rotate} &
+\begin{rotate}{90}\hspace{-0.95cm}\underline{{\scriptsize PSP}}\end{rotate} &
 {\scriptsize
 \begin{verbatim}
-SELECT sum(a.price+-1*b.price) FROM bids b, asks a
+SELECT sum(a.price - b.price) FROM bids b, asks a
 WHERE ( b.volume>0.0001*(select sum(b1.volume) from bids b1) )
 AND   ( a.volume>0.0001*(select sum(a1.volume) from asks a1) );
 \end{verbatim}
@@ -67,11 +66,10 @@ AND   ( a.volume>0.0001*(select sum(a1.volume) from asks a1) );
 
 \hspace{-5mm}\vspace{-8mm}
 \begin{tabular}{lp{0.95\textwidth}}
-\begin{rotate}{90}\hspace{-1.25cm}\underline{VWAP}\end{rotate} &
+\begin{rotate}{90}\hspace{-1.15cm}\underline{{\scriptsize VWAP}}\end{rotate} &
 {\scriptsize
 \begin{verbatim}
-SELECT sum(b1.price * b1.volume) 
-FROM   bids b1
+SELECT sum(b1.price * b1.volume) FROM bids b1
 WHERE  0.25 * (select sum(b3.volume) from bids b3) >
        (select sum(b2.volume) from bids b2 where b2.price > b1.price);
 \end{verbatim}
@@ -80,7 +78,7 @@ WHERE  0.25 * (select sum(b3.volume) from bids b3) >
 
 \hspace{-5mm}\vspace{-8mm}
 \begin{tabular}{lp{0.95\textwidth}}
-\begin{rotate}{90}\hspace{-0.75cm}\underline{Q3}\end{rotate} &
+\begin{rotate}{90}\hspace{-0.75cm}\underline{{\scriptsize Q3}}\end{rotate} &
 {\scriptsize
 \begin{verbatim}
 SELECT ORDERS.orderkey, ORDERS.orderdate, ORDERS.shippriority,
@@ -97,7 +95,7 @@ GROUP BY ORDERS.orderkey, ORDERS.orderdate, ORDERS.shippriority;
 
 \hspace{-5mm}\vspace{-8mm}
 \begin{tabular}{lp{0.95\textwidth}}
-\begin{rotate}{90}\hspace{-0.9cm}\underline{Q11}\end{rotate} &
+\begin{rotate}{90}\hspace{-0.9cm}\underline{{\scriptsize Q11}}\end{rotate} &
 {\scriptsize
 \begin{verbatim}
 SELECT ps.partkey, sum(ps.supplycost * ps.availqty)
@@ -108,20 +106,19 @@ WHERE  ps.suppkey = s.suppkey GROUP BY ps.partkey;
 
 \hspace{-5mm}\vspace{-8mm}
 \begin{tabular}{lp{0.95\textwidth}}
-\begin{rotate}{90}\hspace{-0.9cm}\underline{Q17}\end{rotate} &
+\begin{rotate}{90}\hspace{-0.9cm}\underline{{\scriptsize Q17}}\end{rotate} &
 {\scriptsize
 \begin{verbatim}
 SELECT sum(l.extendedprice) FROM lineitem l, part p
 WHERE  p.partkey = l.partkey
-AND    l.quantity < 0.005*
-       (SELECT sum(l2.quantity)
-        FROM lineitem l2 WHERE l2.partkey = p.partkey);
+AND    l.quantity < 0.005 * (SELECT sum(l2.quantity)
+          FROM lineitem l2 WHERE l2.partkey = p.partkey);
 \end{verbatim}}
 \end{tabular}
 
 \hspace{-5mm}\vspace{-8mm}
 \begin{tabular}{lp{0.95\textwidth}}
-\begin{rotate}{90}\hspace{-0.9cm}\underline{Q18}\end{rotate} &
+\begin{rotate}{90}\hspace{-0.9cm}\underline{{\scriptsize Q18}}\end{rotate} &
 {\scriptsize
 \begin{verbatim}
 SELECT c.custkey, sum(l1.quantity)
@@ -137,7 +134,7 @@ GROUP BY c.custkey;
 
 \hspace{-5mm}\vspace{-8mm}
 \begin{tabular}{lp{0.95\textwidth}}
-\begin{rotate}{90}\hspace{-0.9cm}\underline{Q22}\end{rotate} &
+\begin{rotate}{90}\hspace{-0.9cm}\underline{{\scriptsize Q22}}\end{rotate} &
 {\scriptsize
 \begin{verbatim}
 SELECT c1.nationkey, sum(c1.acctbal) FROM customer c1
@@ -151,7 +148,7 @@ GROUP BY c1.nationkey
 \comment{
 \hspace{-5mm}\vspace{-8mm}
 \begin{tabular}{lp{0.95\textwidth}}
-\begin{rotate}{90}\hspace{-0.9cm}\underline{SVL}\end{rotate} &
+\begin{rotate}{90}\hspace{-0.9cm}\underline{{\scriptsize SVL}}\end{rotate} &
 {\scriptsize
 \begin{verbatim}
 SELECT s1.rackid, SUM(1) FROM Server s1
@@ -164,7 +161,7 @@ GROUP BY s1.rackid;
 
 \hspace{-5mm}\vspace{-8mm}
 \begin{tabular}{lp{0.95\textwidth}}
-\begin{rotate}{90}\hspace{-1.1cm}\underline{SSB4}\end{rotate} &
+\begin{rotate}{90}\hspace{-1.1cm}\underline{{\scriptsize SSB4}}\end{rotate} &
 {\scriptsize
 \begin{verbatim}
 SELECT sn.regionkey, cn.regionkey, PART.type, SUM(LINEITEM.quantity)

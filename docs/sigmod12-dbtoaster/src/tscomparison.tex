@@ -31,12 +31,17 @@ that place distributed tasks at risk of downtime.
 \vspace{-1mm}
 These uses require frontend analysis systems to drive rapid decision-making in
 contrast to backend data warehouses for deep exploratory querying. These systems
-sit on the critical datapath near data sources, and are key to a competitive
-advantage. Query workloads are long-running and machine-generated, making the case for
-incremental evaluation, and aggressive compilation and specialization over their
-execution period. Other domains include regulatory
-compliance~\cite{basel2}, scientific simulations~\cite{hey2009fourth}, and
-disaster prediction~\cite{scholz1973earthquake}.
+sit on the critical datapath near data sources, and handle long-running,
+machine-generated query workloads that require incremental evaluation, and
+aggressive specialization during execution. While the need for
+high-performance monitoring and view refresh is abundantly clear in algorithmic
+trading, advertising, security and disaster prediction~\cite{scholz1973earthquake},
+timely response is emerging as an essential ingredient of competitive advantage
+and operational efficiencies in business, and service-oriented applications, and
+benefits other domains such as regulatory compliance~\cite{basel2} and
+scientific simulations~\cite{hey2009fourth}. To the best of our knowledge, no
+data management systems have focused on extremely efficient continuous analysis
+of large datasets that change in small high-impact increments.
 
 
 \vspace{1mm}
@@ -162,7 +167,7 @@ worse than on CDB. Overall, CDB performs the best across all engines, primarily
 with the mature optimizer in CDB choosing better plans and index usage.
 
 \begin{figure}[t]
-\vspace{-3mm}
+\vspace{-1mm}
 \begin{center}
 \includegraphics[scale=0.85]{../graphs/graphs/engine_bakeoff.pdf}
 \end{center}
@@ -246,4 +251,4 @@ paper, IBM's SPADE language~\cite{gedik-sigmod:08} has explored compilation and
 fusion for stream queries, and Ghanem et
 al.~\cite{DBLP:journals/tods/GhanemELA10} have presented a model for stream
 processing with views. Neither of these consider as
-general an incremental evaluation framework as provided by our multilevel views.
+general an incremental evaluation framework as multilevel views.
