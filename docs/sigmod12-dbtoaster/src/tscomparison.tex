@@ -22,8 +22,8 @@ its own orders. The key analyses for making such decisions can frequently be per
 which however have to be fresh at very high rates (about 500 times a second for high-volume stocks)
 to be effective.
 
-\item A corporate data warehouse monitors its production facilities, warehoused
-inventory and active demand for its products in order to identify
+\item A corporate data warehouse monitors production facilities, warehoused
+inventory and active demand for products in order to identify
 supply chain problems. If data warehouse loading can be performed in real time, the usefulness
 of the warehouse is leveraged.
 \end{list}
@@ -40,7 +40,7 @@ While the need for
 high-per\-for\-mance monitoring and view refresh is abundantly clear in algorithmic
 trading, advertising, security and disaster prediction~\cite{scholz1973earthquake},
 timely response is emerging as an essential ingredient of competitive advantage
-and operational efficiencies in business, and service-oriented applications, and
+and operational efficiencies in business applications, and
 benefits other domains such as regulatory compliance~\cite{basel2} and
 scientific simulations~\cite{hey2009fourth}. To the best of our knowledge, no
 data management systems have focused on highly-efficient continuous SQL-based analysis and aggregation
@@ -60,7 +60,7 @@ Figure~\ref{fig:queries} lists the processing properties of a query workload
 inspired by these domains that we use in this paper, with SQL code in
 Appendix~\ref{app:queries}.
 
-The algorithmic trading queries operate on two order book streams of a day's
+The algorithmic trading queries operate on the bid and ask order book streams of a day's
 worth of orders for the MSFT symbol on NASDAQ (approx. 2.5 million orders). The
 online decision support queries are taken from the TPC-H and SSB benchmarks, and
 processed over a randomized, replayed update stream.
@@ -68,7 +68,7 @@ processed over a randomized, replayed update stream.
 simulates tasks running on a 20,000 node cluster.}
 Our workload has a range of joins, predicates, and correlated
 subqueries, up to depth 2. While a depth of 2 may seem low, we have not seen
-many queries in popular DBMS benchmarks even approaching 4 or 5 nesting levels.
+many queries in popular DBMS benchmarks have more levels.
 
 \begin{figure}[t]
 \scriptsize{
@@ -137,7 +137,7 @@ first-class citizen in query optimization.
 \tinysection{Triggers and Active Databases}
 Trigger mechanisms facilitate the manipulation of database state in a reactive
 manner, as DML statements execute.
-The literature on triggers has focused on issues such as cascading, and
+The literature on triggers has focused on issues such as cascading and
 recursion, and to a lesser extent single-level IVM~\cite{baralis-rids95}.
 Triggers can be implemented in a variety of languages from plpgsql, to Python or
 C. For procedural SQL languages, triggers are compiled in the same way as
