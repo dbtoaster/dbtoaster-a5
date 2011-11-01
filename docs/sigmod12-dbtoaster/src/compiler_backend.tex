@@ -18,11 +18,12 @@ second stage IR, a small functional programming IR.
 }
 With IVM work performed by a parameterized query, a natural second stage IR is a
 small functional programming language.
+\comment{
 Functional programs have strong correspondences to relational queries, both are
 dataflow programs, and the relationship of their formal expressiveness has been
 studied in complex object languages~\cite{buneman-kleisli:95}, and
 comprehensions~\cite{jones-haskell:07}.
-
+}
 Our foremost motivation for a functional IR is for holistic query optimization,
 where we can exploit a breadth of powerful program transformations including
 monad transformations from structural recursion~\cite{buneman-kleisli:95},

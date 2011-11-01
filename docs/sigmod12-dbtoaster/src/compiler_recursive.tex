@@ -341,7 +341,7 @@ recursive IVM useful, join graph decomposition and factorization of query polyno
 
 
 Join graph decomposition makes use of the generalized distributive law~\cite{aji-toit:00} (which plays
-an important role in the context of probabilistic inference with graphical models) to decompose
+an important role for probabilistic inference with graphical models) to decompose
 sum-aggregates over disconnected join graphs. This is an important case, since computing deltas 
 eliminates hyperedges of the join graph, disconnecting it more and more in each delta-rewriting, until all
 hyperedges are gone. The basic law is simple. If a query is of the form $Q_1 \times Q_2$, i.e., $Q_1$ and
@@ -352,13 +352,11 @@ Consider for example the query $Q$
 {\tt select sum(A*D) from R natural join S natural join T}
 of schema $R(AB), S(BC), T(CDE)$. Then
 $\Delta_{+S(b,c)} Q$ is
-\vspace{-1mm}
 \begin{verbatim}
 select sum(A*D) from R,T where B=b and C=c
    = (select sum(A) from R where B=b) *
      (select sum(D) from T where C=c)
 \end{verbatim}
-\vspace{-1mm}
 Given such a decomposition, it is better to materialize the two aggregate subexpressions and compute
 the product when updating, rather than to materialize the product, that is,
 \begin{eqnarray*}

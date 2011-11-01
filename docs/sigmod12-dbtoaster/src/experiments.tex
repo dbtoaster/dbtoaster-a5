@@ -17,12 +17,11 @@
 
 We now analyze the performance of our compilation techniques and compare them with the results of Section 2.  Experiments are run on Redhat Enterprise Linux with 16 GB of RAM, and 2x4 core Intel Xeon E5620 2.4 GHz processors allocated to it.
 \comment{Note that our compiler produces single-threaded code, while other engines were allowed to consume the full resources of the machine.} 
-Memory measurements are taken using google-perftools, and count only memory allocated to the persistent maps and not transient data.  
-
-An overview of the queries used is presented in Section \ref{sec:sota}, and as SQL in Appendix~\ref{app:queries}.
+A query workload overview is presented in Section \ref{sec:sota}, and as SQL in Appendix~\ref{app:queries}.
 \comment{Several stream traces were used to evaluate the queries.}
-Queries were run over a replayed stream workload for 1 hour and then terminated. The results presented are computed based on the number of tuples processed within the 1 hour time limit.
+Queries were run over a replayed stream for 1 hour and then terminated. The results presented are computed based on the number of tuples processed within the 1 hour time limit.
 \comment{Only those operations actually affecting the query results (e.g., VWAP's rate is computed based only on the number of operations on the BIDS table).}
+Memory measurements are taken using google-perftools, and count memory allocated to the persistent maps and not transient data.  
 
 The financial queries VWAP, MST, AXF, BSP, PS, and BSV were run on a 2.63 million tuple trace of an order book update stream, representing of one day of stock market activity for MSFT.  These are updates to a BIDS and ASKS table with a schema of a timestamp, an order id, a broker id, a price, and a volume.  The stream consists of approximately 1.4 million operations on the BIDS table, and 1.14 million operations on the ASKS table.  
 
@@ -177,10 +176,8 @@ It is important to understand not only where our compiler succeeds, but where it
 \tinysection{Join Ordering}
 In spite of the simplicity of TPCH18 (Figure \ref{fig:experiments:tpch18}d), the query performs poorly -- even repeated evaluation is faster.  This is a consequence of our join ordering heuristic: The trigger that updates the query result must compute a join between the delta of the extracted nested subquery (aggregated over orderkey) and a materialized representation of CUSTOMER $\bowtie$ ORDER $\bowtie$ LINEITEM (aggregated over custkey and orderkey).  
 Not knowing about the one-to-many relationship between custkey and orderkey, we iterate over the materialized join first and effectively iterate over all orders placed so far.
-
 We ommitted a fully fledged join-ordering optimizer to focus our efforts on multilevel IVM. Adding join ordering during compilation is straightforward in functional optimization.
-\comment{Join ordering is a well studied problem in the database community, and the solution to this problem is purely an engineering challenge.}
-A further outcome of the suboptimal join ordering is that the added (unnecessary) looping involves lookups that extend the domain of several intermediate materialized views, causing an explosion of memory use.
+\comment{Join ordering is a well studied problem in the database community, and the solution to this problem is purely an engineering challenge.  A further outcome of the suboptimal join ordering is that the added (unnecessary) looping involves lookups that extend the domain of several intermediate materialized views, causing an explosion of memory use.}
 
 \tinysection{Domain Maintenance}
 Both PS and MST (Figures \ref{fig:experiments:pricespread}a, and \ref{fig:experiments:missedtrades}b respectively) do not perform as well as possible -- Apart from a stretch of updates (0.001\%\ to 0.01\%\ in the trace) in the stock market trace where the same order is repeatedly placed and revoked, query performance decreases polynomially over time.  This slowdown is due to overly aggressive caching.  We do not connect the domain of a materialized view's output variables with the domains of its base relations.  The effect of removing a row in the base relation is propagated to the multiplicity of the corresponding row(s) of the view.  However, the row itself is not garbage collected, and remains a part of iterations over the view.
