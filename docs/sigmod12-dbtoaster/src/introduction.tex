@@ -81,13 +81,9 @@ As we see, this generalization allows us to nicely leverage the machinery requir
 
 \medskip
 
-The structure of the paper is as follows. Next, in Section 2, we provide further motivation for the study of multilevel IVM by demonstrating that low-latency continuous queries from ETL, monitoring and computational finance cannot be easily expressed by or managed by classical stream processors, or any other kind of existing engine. 
-\comment{
-The structure of the paper is as follows. Next, in Section 2, we provide further motivation for the study of multilevel IVM. We present a set of use cases and a query workload that calls for low-latency continuous query processing but cannot be managed by classical stream processors, or any other existing kind of query engine. The use cases are in the contexts of ETL, monitoring, and computational finance, and are of substantial practical interest. We experimental verify our claim that state-of-the-art query processors can either not express these queries or are far from fast enough to be applicable.
-}
-
-In Section 3, we present our compilation approach in detail. In Section 4, we discuss the implementation of such a compiler further, and provide various insights obtained during the nearly three years of building the first system -- compiler and runtime system -- following this new approach.
-
-Section 5 returns to experimentation, picking up where we left off at the end of Section 2, with all current data management systems failing to provide satisfactory performance for frequently fresh views for the workload proposed there.
-We conclude and discuss future work in Section 6.
+The structure of the paper is as follows. Next, in Section~\ref{sec:sota}, we provide further motivation for the study of multilevel IVM by demonstrating by experimentation that low-latency continuous queries from ETL, monitoring and computational finance cannot be easily expressed by or managed by classical stream processors, or any other kind of existing engine. 
+In Section~\ref{sec:compiler}, we present our compilation approach in detail, covering the various stages of a compiler from multilevel
+incremental view maintenance to code generation.
+Section~\ref{sec:experiments} returns to experimentation, picking up where we left off at the end of Section~\ref{sec:sota}, with all current data management systems failing to provide satisfactory performance for frequently fresh views for the workload proposed there.
+We conclude with Section~\ref{sec:conclusion}.
 
