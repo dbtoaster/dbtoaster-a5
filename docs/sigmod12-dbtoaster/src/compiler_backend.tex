@@ -24,7 +24,7 @@ dataflow programs, and the relationship of their formal expressiveness has been
 studied in complex object languages~\cite{buneman-kleisli:95}, and
 comprehensions~\cite{jones-haskell:07}.
 }
-We perform holistic query optimization in this functional IR, exploiting a
+We perform holistic query optimization in a functional IR, exploiting a
 breadth of powerful program transformations including monad transformations from
 structural recursion~\cite{buneman-kleisli:95},
 deforestation~\cite{marlow-fp:92}, supercompilation and fusion.
@@ -156,7 +156,7 @@ delta expressions.
 
 \vspace{1mm}
 \noindent\textbf{Deforestation and fusion.} This transformation converts
-functional programs to treeless forms~\cite{marlow-fp:92}, that is it eliminates
+functional programs to treeless forms~\cite{marlow-fp:92}, that is, it eliminates
 redundant intermediate datastructures. The core subset of our deforestation
 rewrite rules are:
 

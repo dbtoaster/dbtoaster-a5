@@ -44,7 +44,7 @@ M_{part}[][A,B] & = & \Sum_{A,B}(R)
 \end{eqnarray*}}
 \end{example}
 
-Maintaining $M_{part}$ requires only one operation per insertion, while maintaining $M_{full}$ involves one operation per value of $D$ currently being maintained.  
+Maintaining $M_{part}$ requires only a constant amount of work per insertion, while maintaining $M_{full}$ involves work proportional to the size of the domain of $D$ currently being maintained.  
 
   If $M_{full}$ already contains the cached result for a given $D$, then evaluating $Q(D)$ only requires a lookup.  If not, the expression must be computed in its entirety.  Using $M_{part}$ to evaluate $Q(D)$ requires first applying the predicate $(B < D)$ to all $\left<A,B\right> \in M_{part}$.  Note that in lieu of the base relations, $M_{part}$ can be used to compute initial values for $M_{full}$.
 
