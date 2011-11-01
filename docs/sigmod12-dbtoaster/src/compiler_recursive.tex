@@ -3,7 +3,7 @@
 
 
 In this section we present our compiler. We start by sketching its architecture.
-
+%
 The compiler accepts an SQL query and schema definition (essentially create table statements for the relations the query accesses) as input. The parser turns the input query into a first intermediate representation (IR) that is somewhat reminiscent of relational algebra. The first compilation stage generates trigger programs for performing multilevel incremental view maintenance (IVM). The statements of these trigger programs increment the values of view data structures (called maps) by expressions of this IR. The IR and basics of the transformation are described in Section~\ref{sec:compiler_calc}. Section~\ref{sec:simplification} presents optimizations for simplifying IRs in the first compilation stage.
 
 In Section~\ref{sec:advanced-rewriting} we discuss the creation of triggers for multi-level incremental view maintenance by extracting and materializing strict subexpressions rather than the full query. This is necessary to be able to deal with nested aggregation which otherwise, if we always materialize the largest query we can, leads to recursion in compilation that does not terminate. In general, the choice of subquery to materialize and incrementally maintain is a degree of freedom in query optimization. In this section we give heuristic rules for making this choice.
@@ -52,6 +52,7 @@ $\sigma_{A<B}(R)$ as $R \bowtie (A<B)$.
 Sum-aggregates are of the form $\Sum_{\vec{A}} Q$ where $Q$ is a query and $\vec{A}$ is a tuple of group-by columns (which we will also
 call variables). The result are the tuples of the projection of $Q$ on $\vec{A}$ and each tuple's multiplicity is the sum of the
 multiplicities of the tuples that were projected down to it.
+Sum-aggregates can be viewed as multiplicity-respecting projection.
 
 \item
 Terms have a scalar rather than relation value. A sum-aggregate without grouping column evaluates to a term.
