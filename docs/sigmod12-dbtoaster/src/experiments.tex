@@ -53,7 +53,7 @@ This is not always true.  For extremely large queries like SSB4 (a 7-way join), 
 Our compiler recurs only once on TPCH11 (Figure \ref{fig:experiments:tpch3}b), and the result is nearly equivalent to IVM.  The fully compiled query materializes a projected and aggregated representation of SUPPLIER and PARTSUPP, but this provides only a minor improvement at this scale. Further scaling experiments can be seen in Figure~\ref{fig:experiments:big}.
 The performance of BSV (Figure \ref{fig:experiments:brokervariance}d) is similar to TPCH3. Here, unlike TPCH11, the join relationship is many-to-many, and the benefits of maintaining the join result as an aggregate grow over time.
 
-The takeaway with equijoin queries is that multilevel views are at least as good as, and mostly significantly dominate repetitive and IVM, and can greatly benefit fast refresh analytics for specific entities (e.g. a single, or customer) which perform equality filtering side-by-side with aggregation.
+The takeaway with equijoin queries is that multilevel views are at least as good as, and mostly significantly dominate repetitive and IVM, and can greatly benefit fast refresh analytics for specific entities (e.g. a single broker or customer) which perform equality filtering and aggregation.
 
 \begin{figure}
 \begin{center}
