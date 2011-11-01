@@ -44,8 +44,7 @@ Both TPCH3 and SSB4 (Figures \ref{fig:experiments:tpch3}a, and \ref{fig:experime
 
 Also note the memory usage of TPCH3.  Starting by the 40\%\ marker, all streams have been exhausted except for LINEITEM.  The final aggregate's group-by columns are drawn purely from the order table, so insertions into LINEITEM only update aggregate values for which entries have already been allocated by the corresponding ORDER.  Thus, memory usage plateaus for full compilation, while the IVM implementation must continue to store each row.
 
-This is not always true.  For extremely large queries like SSB4 (a 7-way join), the number of intermediate materialized views created is quite large.  However, any individual update modifies only a small amount of that state -- the fully compiled query is substantially faster as long as the system has enough memory.  Memory usage is an important part of the cost/benefit tradeoff of full compilation, and we explore several other points in this space in Section~\ref{sec:experiments:othermetrics}.
-
+This is not always true.  For extremely large queries like SSB4 (a 7-way join), the number of intermediate materialized views created is quite large.  However, any individual update modifies only a small amount of that state -- the fully compiled query is substantially faster as long as the system has enough memory.    Memory usage is an important part of the cost/benefit tradeoff of full compilation, and we explore several other points in this space in Section~\ref{sec:experiments:othermetrics}.  Although it is not visible in the figure, if allowed to run to completion, SSB4 converges to around 15 refreshes per second by the end of the trace.
 \begin{figure}
 \begin{center}
 \resizebox{3.3in}{!}{
