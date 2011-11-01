@@ -13,17 +13,17 @@ Aggregate subqueries, in particular those nested inside comparison operators can
 %  - 
 %(SELECT 1 FROM R WHERE (R.A< (SELECT COUNT(*) FROM S) 
 %                   AND (R.A>=(SELECT COUNT(*) FROM S)+1))
-Consider the following query $Q$ over relations $R(A)$ and $S()$, and a nested aggregate query $Sum(S)$
+Consider the following query $Q$ over relations $R(A)$ and $S()$, and a nested aggregate query $\Sum(S)$
 \vspace*{-0.05in}
-{\small $$Q = R \bowtie (A < Sum(S))$$}
+{\small $$Q = R \bowtie (A < \Sum(S))$$}
 Applying the rules of~\cite{koch-pods:10} yields the delta query with respect to $S$:
 {\small \begin{eqnarray*}
-\Delta_SQ & =  & (R \bowtie (A \geq Sum(S)) \bowtie (A < (Sum(S) +1)))\\
-&-& (R \bowtie (A <  Sum(S)) \bowtie (A \geq (Sum(S) + 1)))
+\Delta_SQ & =  & (R \bowtie (A \geq \Sum(S)) \bowtie (A < (\Sum(S) +1)))\\
+&-& (R \bowtie (A <  \Sum(S)) \bowtie (A \geq (\Sum(S) + 1)))
 \end{eqnarray*}}
 Note that the aggregate appears in the delta expression, and so $\Delta_SQ$ is not structurally simpler than $Q$ -- maintaining $\Delta_S Q$ in its entirety requires as much work as evaluating the original query.  
 
-Instead, we subdivide this expression into three components: (a) the part of $\Delta_S Q$ independent of the nested aggregate ($R$), (b) the nested aggregate ($Sum(S)$), and (c) the delta of the nested aggregate ($\Delta_SSum(S) \equiv 1$).  Each component is individually simpler, and thus safe to materialize independently.  This materialization strategy requires an iteration over component a to apply the inequality predicate, but has the nested aggregate's value already available.  This subdivision approach can be applied to {\bf any} nested aggregate delta to create a safe materialization strategy.
+Instead, we subdivide this expression into three components: (a) the part of $\Delta_S Q$ independent of the nested aggregate ($R$), (b) the nested aggregate ($\Sum(S)$), and (c) the delta of the nested aggregate ($\Delta_S\Sum(S) \equiv 1$).  Each component is individually simpler, and thus safe to materialize independently.  This materialization strategy requires an iteration over component a to apply the inequality predicate, but has the nested aggregate's value already available.  This subdivision approach can be applied to {\bf any} nested aggregate delta to create a safe materialization strategy.
 \end{example}
 
 \tinysection{Input Variables}
@@ -34,8 +34,8 @@ As with caches, there is a tradeoff between the utility of caching values and th
 \begin{example} \em
 The expression $Q = Sum_A(R \bowtie (B~<~D))$ over relation $R(A,B,C)$ can be materialized in two ways\footnote{This simple, illustrative example, can also be materialized as a range tree.}:
 {\small \begin{eqnarray*}
-M_{full}[D][A] & = & Sum_A(R \bowtie (B < D)) \\
-M_{part}[][A,B] & = & Sum_{A,B}(R)
+M_{full}[D][A] & = & \Sum_A(R \bowtie (B < D)) \\
+M_{part}[][A,B] & = & \Sum_{A,B}(R)
 \end{eqnarray*}}
 \end{example}
 
