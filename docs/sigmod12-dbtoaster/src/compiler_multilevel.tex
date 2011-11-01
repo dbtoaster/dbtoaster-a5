@@ -1,10 +1,12 @@
 \subsection{Materialization Heuristics}
 \label{sec:advanced-rewriting}
 
-We have observed experimentally (see Section~\ref{sec:experiments}) that under certain conditions, a less-aggressive maintenance strategy is beneficial.  The choice of what to materialize applies to both entire delta expressions as well for individual subexpressions.  In this subsection, we describe challenges that we have encountered while implementing aggressive materialization, and provide heuristics for addressing them.
+We have observed experimentally (see Section~\ref{sec:experiments}) that under certain conditions, a less-aggressive maintenance strategy is beneficial.
+\comment{The choice of what to materialize applies to both entire delta expressions as well for individual subexpressions.}
+In this subsection, we describe challenges that we have encountered while implementing aggressive materialization, and provide heuristics for addressing them.
 
 \tinysection{Nested aggregate queries}
-Aggregate subqueries, in particular those nested inside comparison operators cannot be recursively materialized by aggressively maintaining entire deltas -- the delta of an expression containing a nested aggregate is not strictly simpler than the original expression, and recursive delta compilation does not bottom out.  Materializing the nested subquery eliminates this issue.  We illustrate the idea with a simple example.
+Aggregate subqueries appearing as arguments to comparison operators cannot be recursively materialized by aggressively maintaining the entire delta of the comparison expression -- the delta expression is not strictly simpler than the original expression.  Materializing the nested subquery rather than the delta of the comparison expression eliminates this issue.  We illustrate the idea with a simple example.
 
 \begin{example} \em
 %SELECT COUNT(*) FROM R WHERE R.A<(SELECT COUNT(*) FROM S)
@@ -21,11 +23,11 @@ Applying the rules of~\cite{koch-pods:10} yields the delta query with respect to
 \Delta_SQ & =  & (R \bowtie (A \geq \Sum(S)) \bowtie (A < (\Sum(S) +1)))\\
 &-& (R \bowtie (A <  \Sum(S)) \bowtie (A \geq (\Sum(S) + 1)))
 \end{eqnarray*}}
-The aggregate appears in the delta expression, and so $\Delta_SQ$ is not structurally simpler than $Q$ -- maintaining $\Delta_S Q$ in its entirety requires more work than evaluating the original query.  
+The aggregate appears in the delta expression, and so $\Delta_SQ$ is not structurally simpler than $Q$ -- maintaining $\Delta_S Q$ requires more work than evaluating the original query.  
 
 Instead, we subdivide this expression into three components: (a) the part of $\Delta_S Q$ independent of the nested aggregate ($R$), (b) the nested aggregate ($\Sum(S)$), and (c) the delta of the nested aggregate ($\Delta_S\Sum(S) \equiv 1$).  Each component is individually simpler, and thus safe to materialize independently.  An iteration over component (a) is required for every insertion into $S$ in order to apply the inequality predicate, but is less expensive than the original query.
 
-This three-way subdivision approach can be applied to {\bf any} nested aggregate delta to create a safe materialization strategy.
+This three-way subdivision can be applied to {\it any} nested aggregate delta to create a safe materialization strategy.
 \end{example}
 
 \tinysection{Input Variables}
@@ -61,11 +63,13 @@ cost_{full} & = & rate_{Q} \left[p(\exists D) + (1-p(\exists D))\cdot|dom_R(AB)|
 cost_{part} & = & rate_{Q} |dom_R(AB)| + rate_{+R}
 \end{eqnarray*}
 }
-The cost of maintaining $M_{full}$ is based on the cartesian product of the domains of $A$ and $D$, while the cost of evaluating the partial expression is based on only those pairs $\left<A,B\right>$ that actually appear in $R$.  Assuming comparable rates and domain sizes, it is better not to materialize the full view.
+The cost of maintaining $M_{full}$ is based on the cartesian product of the domains of $A$ and $D$, while the cost of maintaining $M_{part}$ is based on only those pairs $\left<A,B\right>$ that actually appear in $R$.  Assuming comparable rates and domain sizes, it is better not to materialize the full view.
 
+\comment{
 \tinysection{Storage Considerations}
 Full compilation can actually reduce the space consumed by a base relation, as the materialized form of the relation has filters, projections, and aggregates applied as aggressively as possible.  However, additional intermediate materialized views introduce storage overheads.
 
 In situations where storage is limited, it is necessary to limit how many views are materialized.  This is essentially a constrained optimization problem on the expected storage requirements and performance.  A full optimizer is beyond the scope of this paper, but we consider one particular heuristic.
 
 Certain base relations are changed infrequently (e.g., a table of census data).  We refer to such relations as being {\em static}.  When compiling query, views used for computing deltas with respect to {\em static} relations are not materialized -- these deltas are instead computed using traditional IVM techniques.   The same idea can be generalized to append-heavy workloads by using foreign-key constraints.
+}
