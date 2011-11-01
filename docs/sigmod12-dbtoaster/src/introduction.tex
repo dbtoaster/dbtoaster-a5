@@ -20,7 +20,7 @@ But does this expectation translate into real performance gains? A priori, the c
 \medskip
 
 
-This paper presents the lessons learned in an effort to realize recursive IVM, spanning nearly three years of intense work, to generalize it to be applicable on all or most of SQL, and to understand its strengths and drawbacks.
+This paper presents the lessons learned in an effort to realize recursive IVM, spanning nearly three years of intense work, to generalize it to be applicable to most of SQL, and to understand its strengths and drawbacks.
 The contributions of this paper are as follows.
 \begin{itemize}
 \item
@@ -43,16 +43,20 @@ the materialization of subqueries is a degree of freedom in optimization, and ca
 in the input query or the delta queries obtained by applying this optimization.
 
 To put ourselves in the position of using such an optimizer, we have to create suitable
-intermediate representations of queries that support binding patterns for sideways information
-passing, we study when and how to efficiently initialize views, and present query decomposition
+intermediate representations (IR) of queries that support binding patterns for sideways information
+passing. We study when and how to efficiently initialize views, and present query decomposition
 and factorization techniques that lead to efficient formulations of update triggers that refresh our
 views.
 
 \item
-Once high-level trigger programs for refreshing views based on multilevel IVM have been created,
-we compile them further into highly efficient machine code.
-We present our techniques for achieving this, which make use of sophisticated deforestation and
+Multilevel IVM eliminates most query operators and yields low-level trigger programs that have simple and regular
+structure. It seems natural to exploit this, and to follow an approach of {\em compiling} the view refreshing code down to
+machine code, rather than to interpret in a query execution engine.
+%
+We present our approach to achieving this, which makes use of sophisticated deforestation and
 fusion techniques from the compilers literature.
+These optimizations in general have no expression in the high-level relational algebra-like
+IR we use for multilevel IVM rewriting, so we introduce lower-level functional IR for this purpose.
 
 \item
 We have implemented our compiler and performed extensive experimentation with it. Our experiments

@@ -14,7 +14,7 @@
 
 
 \leftmargini 2.9ex
-
+\renewcommand{\baselinestretch}{0.98}
 
 \newtheorem{theorem}{Theorem}[section]
 
@@ -64,16 +64,18 @@ Submission \#74
 
 \begin{abstract}
 This paper introduces and studies multilevel incremental view maintenance,
-a general-purpose incremental
+an incremental
 evaluation framework that allows a query optimizer to extend the use of
 materialized views from answering user queries to also \textit{answering the delta
 queries} used by a DBMS to refresh views on updates.
 The aggressive recursive use of this idea can eliminate all joins from certain
 queries, resulting in query processing with fine-grained in-place updates that
 refreshes multiple views without classical query operators. This calls for
-compilation of queries to highly efficient low-level imperative code, and a
-compiler architecture that bridges the gap between query optimizers and
-compilers from general-purpose programming languages.
+compilation of queries to highly efficient low-level imperative code.
+
+% and a
+%compiler architecture that bridges the gap between query optimizers and
+%compilers from general-purpose programming languages.
 
 
 \comment{
