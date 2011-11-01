@@ -4,14 +4,12 @@
 
 In this section we present our compiler. We start by sketching its architecture.
 %
-The compiler accepts an SQL query and schema definition (essentially create table statements for the relations the query accesses) as input. The parser turns the input query into a first intermediate representation (IR) that is somewhat reminiscent of relational algebra. The first compilation stage generates trigger programs for performing multilevel incremental view maintenance (IVM). The statements of these trigger programs increment the values of view data structures (called maps) by expressions of this IR. The IR and basics of the transformation are described in Section~\ref{sec:compiler_calc}. Section~\ref{sec:simplification} presents optimizations for simplifying IRs in the first compilation stage.
+The compiler accepts an SQL query and schema definition (essentially create table statements for the relations the query accesses) as input. The parser turns the input query into a first intermediate representation (IR) that is an adapted form of relational algebra. The first compilation stage generates trigger programs for performing multilevel incremental view maintenance (IVM). The statements of these trigger programs increment the values of view data structures (called maps) by expressions of this IR. The IR and basics of the transformation are described in Section~\ref{sec:compiler_calc}. Section~\ref{sec:simplification} presents optimizations for simplifying IRs in the first compilation stage.
 
-In Section~\ref{sec:advanced-rewriting} we discuss the creation of triggers for multi-level incremental view maintenance by extracting and materializing strict subexpressions rather than the full query. This is necessary to be able to deal with nested aggregation which otherwise, if we always materialize the largest query we can, leads to recursion in compilation that does not terminate. In general, the choice of subquery to materialize and incrementally maintain is a degree of freedom in query optimization. In this section we give heuristic rules for making this choice.
+In Section~\ref{sec:advanced-rewriting} we discuss the creation of triggers for multi-level IVM by extracting and materializing strict subexpressions rather than the full query. This is necessary to be able to deal with nested aggregation which otherwise, if we always materialize the largest query we can, leads to recursion in compilation that does not terminate. In general, the choice of subquery to materialize and incrementally maintain is a degree of freedom in query optimization. In this section we give heuristic rules for making this choice.
 
 The next stage of the compiler, described in Section~\ref{sec:kthree}, turns the statements of the trigger program created in the first stage into an IR for purely functional programming, essentially lambda calculus without general recursion but with special higher-order functions for transforming collections (primitives such as map and reduce). This stage allows us to perform deforestation and fusion optimizations too low-level to have expression in the first, relational algebra-like IR.
 Section~\ref{sec:kthree} also describes our infrastructure for code generation and our runtime system.
-
-TODO: show an architecture diagram.
 
 
 
@@ -308,21 +306,25 @@ for which $\vec{i}\vec{o}$ the maps are defined and store values.
 If we could assume that the domains contain all the tuples that could ever be formed from values occurring
 in the database, we could initialize the map values to zero, $M[\vec{i}][\vec{o}] := 0$,
 before the first update is fed into the system.
-
+%
 However, it is not feasible to assume such large or even infinite domains.
 Instead, we want to start with empty maps and extend the domains when the update triggers want to access
 values -- for reading or writing -- that are not yet represented in the map.
 This raises the question how to compute initialization values; in general, these will not be zero if 
 the system has been running for a while and the maps contain data.
+
+%\begin{example}\em
 Take for instance the query of Example~\ref{ex:RS2}: Suppose so far we have only seen inserts into relation $R$,
-but $S$ is still empty. Then the auxiliary maps $M_{\Delta_{+S(z,u)} Q}[z,u][]$ still have empty domains and
+but $S$ is still empty. Then the auxiliary maps $M_{\Delta_{\pm S(z,u)} Q}[z,u][]$ still have empty domains and
 looping over each pair $\tuple{z,u}$ does nothing. When, later, a tuple $\tuple{z,u}$ is inserted into $S$,
 $M_Q$ is incremented by $M_{\Delta_{+S(z,u)} Q}[z,u][]$, which has to be computed from scratch as
 $\Sum(R \bowtie B < z \bowtie A*u)$ and will generally be nonzero.
+%\end{example}
 
-In the currency system we use the fact that if a query defining does not use inequality joins, the map value
-will be zero. Otherwise, the value is computed from scratch by executing the query that defines the map.
-In the future, this could be improved upon by further compiling subqueries of this defining query using
+In the current implementation of our compiler, we use the fact that if query $Q$ does not use inequality joins,
+a value to be initialized in map $M_Q$
+will be zero. Otherwise, the value is computed from scratch by executing $Q$.
+In the future, this could be improved upon by further compiling subqueries of $Q$ using
 recursive IVM techniques.
 
 

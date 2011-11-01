@@ -58,6 +58,7 @@ Submission \#74
 
 
 \begin{document}
+
 \maketitle
 
 
@@ -134,7 +135,7 @@ to be a problem for certain queries with inequalities.
 \section{Conclusion}
 \label{sec:conclusion}
 Our compilation technique is effective on select-project-join-aggregate queries involving equi-joins and nested subqueries which are uncorrelated, correlated through an equality comparison, or correlated on a variable (or variables) with a small domain.  It is especially good on queries with small result sets (but large inputs).
-
+%
 Our technique is less effective on inequality joins and nested aggregates correlated through an inequality -- although both are still handled efficiently if the domain of the values being compared is small.  In a similar vein, we do not optimize to take advantage of, or avoid problems caused by data-dependent characteristics (e.g., foreign keys, large domains, etc\ldots). 
 
 We have presented guidelines for addressing these issues in future work by applying both heuristics and cost-based optimizers to the space of possible materialization plans.  With these optimizations in place, our compilation technique has the potential to dominate existing systems in this space, and to enable a broad new class of monitoring applications.

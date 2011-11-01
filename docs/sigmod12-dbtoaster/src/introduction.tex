@@ -30,7 +30,8 @@ This updating work to be performed is particularly well-behaved and can be explo
 \comment{
 As observed in \cite{koch-pods:10}, this work is highly data-parallel. While parallel query evaluation is not the focus of the present paper, the updating work to be performed is particularly well-behaved. This can be exploited for efficient evaluation:
 }
-Classical query engines employ large-granularity query operators such as joins and interpretation to execute query plans. In the past, incremental view maintenance has used such query engines to evaluate its delta queries.
+Classical query engines employ interpretation and large-gra\-nu\-la\-ri\-ty query operators such as joins to execute query plans.
+In the past, IVM has used such query engines to evaluate its delta queries.
 Instead, it is natural to avoid both query operators and plan interpretation, and the conceptual simplicity of the required work calls for aggressive code inlining and the elimination of the usual overheads due to interpreted query evaluation. It leads us to the compilation of view refreshing to lightweight machine code.
 
 A considerable challenge is to determine suitable intermediate representations of query expressions to be used in the compiler. Such expressions in general have complex binding patterns which represent information flow. In general, this flow is not exclusively bottom-up.
