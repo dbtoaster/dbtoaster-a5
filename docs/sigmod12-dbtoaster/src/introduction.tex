@@ -20,7 +20,72 @@ But does this expectation translate into real performance gains? A priori, the c
 \medskip
 
 
+
+This paper presents the lessons learned in an effort to realize recursive IVM, spanning nearly three years of intense work, to generalize it to be applicable on all or most of SQL, and to understand its strengths and drawbacks.
+The contributions of this paper are as follows.
+\begin{itemize}
+\item
+Multilevel IVM bears the promise of providing materialized views of complex SQL queries, without
+window semantics or other restrictions, at very high refresh rates. We start by showing that there is
+a need for such functionality, creating a benchmark consisting of automated trading and ETL workloads,
+and that state of the art system cannot deliver materialized views refreshed in real-time.
+This is the challenge we set ourselves for the techniques and system described in this paper.
+
+\item
+We develop the vision of multilevel IVM further into a workable framework.
+While the techniques of \cite{ahmad-vldb:09, koch-pods:10} as well as existing implementations of
+IVM in commercial DBMS are very restricted and exclude nested queries and other features of SQL,
+we create the machinery to perform IVM and even recursive IVM on most of SQL (with the exception of
+support for null values). To do this, we generalize the techniques of \cite{ahmad-vldb:09, koch-pods:10}
+to not always materialize full delta queries but instead subexpressions that at once allow to perform
+IVM and maximize the performance thus obtained. This leads us to a query optimizer in which
+the materialization of subqueries is a degree of freedom in optimization, which can be applied anywhere
+in the input query or the delta queries obtained by applying this optimization.
+
+To put ourselves in the position of using such an optimizer, we have to create suitable
+intermediate representations of queries that support binding patterns for sideways information
+passing, we study when and how to efficiently initialize views, and present query decomposition
+and factorization techniques that lead to efficient formulations of update triggers that refresh our
+views.
+
+\item
+Once high-level trigger programs for refreshing views based on multilevel IVM have been created,
+we compile them further into highly efficient machine code.
+We present our techniques for achieving this, which make use of sophisticated deforestation and
+fusion techniques from the compilers literature.
+
+\item
+We have implemented our compiler and performed extensive experimentation with it. Our experiments
+indicate that frequently, particularly for queries that consist of many joins of nested aggregation
+subqueries that are not correlated through subqueries, our compilation approach dominates the
+state of the art, often by multiple orders of magnitude. There are also queries in our benchmark
+on which our techniques do not fare well; these usually involve the creation and maintenance of huge
+auxiliary views whose data is rarely used by other views. These scenarios could be much improved upon
+by suitable garbage collection strategies on auxiliary views. These are future work, and we consider
+it likely that once such a technique has been integrated into our compiler, it will outperform the
+state-of-the-art on an even wider range of queries.
+\end{itemize}
+
+
+The structure of the paper follows the order of contribution just laid out.
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+\comment{
 This paper presents the lessons learned in an effort to realize aggressive IVM as motivated above. It represents an effort spanning nearly three years of intense work, which demonstrates that there are considerable technical challenges to be resolved. These key challenges are described next.
+
 
 {\bf Compilation of update trigger code.}
 %
@@ -86,4 +151,5 @@ In Section~\ref{sec:compiler}, we present our compilation approach in detail, co
 incremental view maintenance to code generation.
 Section~\ref{sec:experiments} returns to experimentation, picking up where we left off at the end of Section~\ref{sec:sota}, with all current data management systems failing to provide satisfactory performance for frequently fresh views for the workload proposed there.
 We conclude with Section~\ref{sec:conclusion}.
+} % end comment
 
