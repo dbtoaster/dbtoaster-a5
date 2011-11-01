@@ -135,6 +135,7 @@ where A > C) & ~~~~~~$\bowtie\; (A > C)))$ & \\
 
 \caption{Example queries with their binding patterns (written as [input vars][output vars]). Relation $R$ and S have schema $A,B$ and $C,D$, respectively.}
 \label{tab:ir-examples}
+\vspace{-3mm}
 \end{table}
 
 
@@ -152,7 +153,7 @@ null values and outer joins (which have the undesirably property of being nonass
 This language has the nice property of being {\em closed under taking deltas}.
 For each query expression $Q$, there
 is an expression $\Delta Q$ of our IR that expresses how the result of $Q$ changes as the database $D$ is changed by update workload $\Delta D$. This works for updates containing an unbounded number of insertions and deletions, but we will subsequently only study single-tuple inserts and deletes.
-The reason for this is that such updates allow for particularly efficient view refresh code that
+This is because such updates allow for particularly efficient view refresh code that
 can be run to respond online to each tuple change.
 
 
@@ -314,7 +315,7 @@ This raises the question how to compute initialization values; in general, these
 the system has been running for a while and the maps contain data.
 
 %\begin{example}\em
-Take for instance the query of Example~\ref{ex:RS2}: Suppose so far we have only seen inserts into relation $R$,
+Take for instance the query of Example~\ref{ex:RS2}: Suppose we have only seen inserts into relation $R$,
 but $S$ is still empty. Then the auxiliary maps $M_{\Delta_{\pm S(z,u)} Q}[z,u][]$ still have empty domains and
 looping over each pair $\tuple{z,u}$ does nothing. When, later, a tuple $\tuple{z,u}$ is inserted into $S$,
 $M_Q$ is incremented by $M_{\Delta_{+S(z,u)} Q}[z,u][]$, which has to be computed from scratch as
@@ -333,11 +334,10 @@ recursive IVM techniques.
 
 
 The construction for trigger programs presented above yields 
-materializations of high dimensionality, which will be very large and so expensive to maintain.
+materializations of high dimensionality, which will be very large and expensive to maintain.
 This can be avoided by being slightly less aggressive with materialization.
 We next discuss two query simplification techniques that are key to making
-recursive incremental view maintenance useful, join graph decomposition and factorization
-of query polynomials.
+recursive IVM useful, join graph decomposition and factorization of query polynomials.
 
 
 Join graph decomposition makes use of the so-called generalized distributive law [] (which plays
@@ -352,11 +352,13 @@ Consider for example the query $Q$
 {\tt select sum(A*D) from R natural join S natural join T}
 of schema $R(AB), S(BC), T(CDE)$. Then
 $\Delta_{+S(b,c)} Q$ is
+\vspace{-1mm}
 \begin{verbatim}
 select sum(A*D) from R,T where B=b and C=c
    = (select sum(A) from R where B=b) *
      (select sum(D) from T where C=c)
 \end{verbatim}
+\vspace{-1mm}
 Given such a decomposition, it is better to materialize the two aggregate subexpressions and compute
 the product when updating, rather than to materialize the product, that is,
 \begin{eqnarray*}
