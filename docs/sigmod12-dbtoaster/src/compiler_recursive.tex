@@ -35,8 +35,10 @@ negative multiplicities. This way, databases and updates can be treated uniforml
 nonnegative can be either thought of as an insertion or as a database (=an insertion into the empty database) and a relation in which all tuple multiplicities are negative is a deletion.
 
 \item
-We replace relational (bag) union by an operation $+$ that adds two relations $R$ and $S$ by assigning to each tuple in the result the integer sum of the multiplicities of that tuple in $R$ and $S$. The operation $+$ is associative, and this is key to the overall simplicity of the
-approach and allows us to treat insertions and deletions uniformly.
+We replace relational (bag) union by an operation $+$ that adds two relations $R$ and $S$ by assigning to each tuple in the result the integer sum of the multiplicities of that tuple in $R$ and $S$.
+%
+%The operation $+$ is associative, and this is key to the overall simplicity of the
+%approach and allows us to treat insertions and deletions uniformly.
 
 \item
 The join operation is the natural join, where the multiplicity of a tuple in the result
@@ -52,9 +54,8 @@ call variables). The result are the tuples of the projection of $Q$ on $\vec{A}$
 multiplicities of the tuples that were projected down to it.
 
 \item
-There are terms as in SQL, who have a scalar rather than relation value. A sum-aggregate without grouping column evaluates to a term.
-
-\item
+Terms have a scalar rather than relation value. A sum-aggregate without grouping column evaluates to a term.
+%
 Terms can be used as queries; in that case, they evaluate to the nullary tuple with multiplicity the value of the term.
 Thus an SQL query ``select sum(A) from R'' can be written in our IR as $\Sum(R \bowtie A)$; thus we first multiply the value of $A$ into the multiplicity of each tuple and than sum up all these multiplicities.
 
