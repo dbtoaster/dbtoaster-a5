@@ -211,12 +211,11 @@ rule can alter the arity of the join operation, constructing fully pipelined
 n-way joins. The second rule above is a form of late tuple
 construction~\cite{abadi-icde:07}, where by lifting the \texttt{flatten}
 expression, we carry around nested intermediate collection during processing.
-Repeating this in large programs facilitates deeply nested representations, in
-the same vein as the nested relational algebra and non-first normal
-forms~\cite{schek-infsys:86}. Aggregate deforestation also uses composition to
-realize pipelining and simplification, and the variants with \texttt{flatten}
-are partial aggregations that push an associative aggregation inside
-a nested collection.
+Repeating this facilitates deeply nested representations, in the same vein as
+non-first normal forms~\cite{schek-infsys:86}. Aggregate deforestation also uses
+composition to realize pipelining and simplification, and the variants with
+\texttt{flatten} are partial aggregations that push an associative aggregation
+inside a nested collection.
 
 \comment{
 \vspace{1mm}

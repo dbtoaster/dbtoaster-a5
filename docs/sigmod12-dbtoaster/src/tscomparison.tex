@@ -30,9 +30,9 @@ that place distributed tasks at risk of downtime.
 
 \vspace{-1mm}
 These uses require frontend analysis systems to drive rapid decision-making in
-contrast to backend data warehouses for deep exploratory querying, residing on
-the critical datapath near data sources, and are key to a competitive advantage.
-Query workloads are long-running and machine-generated, making the case for
+contrast to backend data warehouses for deep exploratory querying. These systems
+sit on the critical datapath near data sources, and are key to a competitive
+advantage. Query workloads are long-running and machine-generated, making the case for
 incremental evaluation, and aggressive compilation and specialization over their
 execution period. Other domains include regulatory
 compliance~\cite{basel2}, scientific simulations~\cite{hey2009fourth}, and
@@ -41,9 +41,9 @@ disaster prediction~\cite{scholz1973earthquake}.
 
 \vspace{1mm}
 \tinysection{Query Workloads for Monitoring}
-The above scenarios commonly occur in algorithmic trading on order books, online
+The above scenarios of algorithmic trading on order books, online
 decision support at a manufacturer, and datacenter and network infrastructure
-monitoring, and often involve computing a variety of statistics,
+monitoring often involve computing a variety of statistics,
 and comparing and contrasting them prior to taking action.
 \comment{
 Queries with complex dataflows consisting of nested and correlated subqueries
@@ -77,10 +77,12 @@ many queries in popular DBMS benchmarks even approaching 4 or 5 nesting levels.
 & BSP        & 2, =      & $\wedge, <$   & yes & 0 / 0 \\
 & BSV        & 2, =      & None          & no  & 0 / 0 \\
 & MST        & 2, x      & $\wedge, <$   & yes & 2 / 1 \\
-& PS         & 2, x      & $\wedge, <$   & no  & 2 / 1 \\
-& VWAP       & 1         & $<$           & no  & 2 / 1 \\
+& PSP        & 2, x      & $\wedge, <$   & no  & 2 / 1 \\
+& VWAP       & 1         & $<$           & no  & 2 / 1
+\vspace{0.5mm}
+\\
 \hline
-\begin{rotate}{90}\hspace{-1.1cm}TPCH\end{rotate}
+\begin{rotate}{90}\hspace{-0.9cm}ETL\end{rotate}
 & TPCH3      & 3, =      & $\wedge, <$   & yes & 0 / 0 \\
 & TPCH11     & 2, =      & None          & yes & 0 / 0 \\
 & TPCH17     & 2, =      & $<$           & no  & 1 / 1 \\
@@ -98,7 +100,7 @@ many queries in popular DBMS benchmarks even approaching 4 or 5 nesting levels.
 \caption{Features of the algorithmic trading, online decision support, and
 cluster monitoring query workload used for experiments.}
 \label{fig:queries}
-\vspace{-4mm}
+\vspace{-3mm}
 \end{figure}
 
 The pertinent DBMS methods are triggers, and stream systems.
@@ -111,8 +113,8 @@ We describe implementation specifics below but defer further details such as
 system configuration, to our in-depth experiments in
 Section~\ref{sec:experiments}.
 }
-We do not include any native IVM in commercial DBMS because despite its wide
-availability, there are stil many limitations on its usability.
+We do not include any native IVM results from commercial DBMS because despite
+its wide availability, there are still many limitations on its usability.
 In fact, none of the major DBMS supported incremental refresh for the
 majority of our workload given the features in Figure~\ref{fig:queries}.
 For many DBMS, the documented query
@@ -150,15 +152,14 @@ multilevel view maintenance is rapidly impractical after even one level of delta
 rewriting due to code expansion, affirming the benefits of automatic
 incrementalization during compilation.
 }
-Figure~\ref{fig:enginecomp} shows that for small-state as with the finance
-workload, trigger performance does not vary across types of queries. Here
-small-state refers to the state accumulated while processing updates. In the
-finance workload there are nearly as many deletes as inserts (unsuccessful
-orders are often removed from the order books), and relations do not grow too
-large. For large-state workloads, on Postgres, queries with nesting perform
-signficantly worse than on CDB. Overall, CDB performs the best across all
-engines, primarily with the mature optimizer in CDB choosing better plans and
-index usage.
+Figure~\ref{fig:enginecomp} shows that for the small-state finance workload,
+trigger performance does not vary across the types of queries. Here small-state
+refers to the state accumulated while processing updates. In the finance
+workload there are nearly as many deletes as inserts (unsuccessful orders are
+often removed from the order books), and relations do not grow too large. For
+large-state workloads, on Postgres, queries with nesting perform signficantly
+worse than on CDB. Overall, CDB performs the best across all engines, primarily
+with the mature optimizer in CDB choosing better plans and index usage.
 
 \begin{figure}[t]
 \vspace{-3mm}
@@ -190,7 +191,7 @@ and this requirement is not well-addressed by current SPEs. They either rely on
 in-memory tables with suboptimal engines or external DBMS access, and do not
 support incremental computation over large state.
 
-Our workload implementation varied significantly across Esper and CSPE, due to a
+Our implementation varied significantly across Esper and CSPE, due to a
 clear lack of standardized semantics and portability across
 SPEs~\cite{botan-pvldb:10,jain-pvldb:08}.
 In both Esper and CSPE, we maintained indexed in-memory tables to represent base
@@ -205,7 +206,7 @@ CSPE on the other hand did not support subqueries in stream-to-table operations.
 
 On both systems, our approach performed stream-to-table joins to trigger the
 replay of tables as streams via scans, as updates arrive. The replayed tables
-were then processed by stream operators to implement fully pipelined plans.
+were then processed by stream-only operators to implement fully pipelined plans.
 \comment{
 Our implementation strategy involved maintaining update streams as in-memory
 tables, replaying relevant tables as updates arrive to turn tables into streams,
@@ -239,3 +240,10 @@ do not offer advantages over trigger processing. Furthermore neither system
 achieves a high absolute refresh rate, of more than roughly 100 refreshes a
 second suggesting limited responsiveness and poor scaling when considering many
 simultaneous queries.
+
+\tinysection{Other related work} In addition to the citations throughout this
+paper, IBM's SPADE language~\cite{gedik-sigmod:08} has explored compilation and
+fusion for stream queries, and Ghanem et
+al.~\cite{DBLP:journals/tods/GhanemELA10} have presented a model for stream
+processing with views. Neither of these consider as
+general an incremental evaluation framework as provided by our multilevel views.

@@ -1,4 +1,4 @@
-\subsection{Materialization Heuristics}
+\subsection{Materialization heuristics}
 \label{sec:advanced-rewriting}
 
 We have observed experimentally (see Section~\ref{sec:experiments}) that under certain conditions, a less-aggressive maintenance strategy is beneficial.
@@ -8,6 +8,7 @@ In this subsection, we describe challenges that we have encountered while implem
 \tinysection{Nested aggregate queries}
 Aggregate subqueries appearing as arguments to comparison operators cannot be recursively materialized by aggressively maintaining the entire delta of the comparison expression -- the delta expression is not strictly simpler than the original expression.  Materializing the nested subquery rather than the delta of the comparison expression eliminates this issue.  We illustrate the idea with a simple example.
 
+\vspace{-1mm}
 \begin{example} \em
 %SELECT COUNT(*) FROM R WHERE R.A<(SELECT COUNT(*) FROM S)
 %(SELECT 1 FROM R WHERE (R.A>=(SELECT COUNT(*) FROM S) 
@@ -18,7 +19,7 @@ Aggregate subqueries appearing as arguments to comparison operators cannot be re
 Consider the following query $Q$ over relations $R(A)$ and $S()$, and a nested aggregate query $\Sum(S)$
 \vspace*{-0.05in}
 {\small $$Q = R \bowtie (A < \Sum(S))$$}
-Applying the rules of~\cite{koch-pods:10} yields the delta query with respect to $S$:
+\noindent Applying the rules of~\cite{koch-pods:10} with respect to $S$ yields the delta:
 {\small \begin{eqnarray*}
 \Delta_SQ & =  & (R \bowtie (A \geq \Sum(S)) \bowtie (A < (\Sum(S) +1)))\\
 &-& (R \bowtie (A <  \Sum(S)) \bowtie (A \geq (\Sum(S) + 1)))

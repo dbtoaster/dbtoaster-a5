@@ -1,0 +1,179 @@
+\begin{thebibliography}{10}
+\vspace{2mm}
+
+\bibitem{mssql-viewrestrict}
+{Microsoft SQL Server 2008} indexed view documentation, view restrictions.
+
+\bibitem{oracle-viewrestrict}
+{Oracle Database 11g Release 1 Documentation}.
+
+\bibitem{abadi-icde:07}
+D.~J. Abadi, D.~S. Myers, D.~J. DeWitt, and S.~Madden.
+\newblock Materialization strategies in a column-oriented {DBMS}.
+\newblock In {\em ICDE}, 2007.
+
+\bibitem{ahmad-vldb:09}
+Y.~Ahmad and C.~Koch.
+\newblock {DBToaster}: A {SQL} compiler for high-performance delta processing in main-memory databases.
+\newblock {\em PVLDB}, 2(2):1566--1569, 2009.
+
+\bibitem{aji-toit:00}
+S. Aji, R. McEliece.
+\newblock The generalized distributive law.
+\newblock {\em IEEE Trans. Inf. Theory}, 46(2):325--343, 2000.
+
+\bibitem{baralis-rids95}
+E.~Baralis and J.~Widom.
+\newblock Using delta relations to optimize condition evaluation in active
+  databases.
+\newblock In {\em Rules in Database Systems}, 1995.
+
+\bibitem{basel2}
+{Basel Committee on Banking Supervision}.
+\newblock International convergence of capital measurements and capital
+  standards: A revised framework.
+\newblock June 2006.
+
+\bibitem{DBLP:conf/sigmod/BlakeleyLT86}
+J. Blakeley, P. Larson, F. Tompa.
+\newblock Efficiently updating materialized views.
+\newblock In {\em SIGMOD}, 1986.
+
+\bibitem{botan-pvldb:10}
+I.~Botan, R.~Derakhshan, N.~Dindar, L.~M. Haas, R.~J. Miller, and N.~Tatbul.
+\newblock Secret: A model for analysis of the execution semantics of stream
+  processing systems.
+\newblock {\em PVLDB}, 3(1):232--243, 2010.
+
+\bibitem{DBLP:journals/tods/BunemanC79}
+P.~Buneman and E.~K. Clemons.
+\newblock Efficiently monitoring relational databases.
+\newblock {\em ACM TODS}, 4(3):368--382, 1979.
+
+\bibitem{buneman-kleisli:95}
+P.~Buneman, S.~A. Naqvi, V.~Tannen, and L.~Wong.
+\newblock Principles of programming with complex objects and collection types.
+\newblock {\em Theor. Comp. Sci.}, 149(1):3--48, 1995.
+
+\bibitem{DBLP:conf/vldb/CeriW91}
+S.~Ceri and J.~Widom.
+\newblock Deriving production rules for incremental view maintenance.
+\newblock In {\em VLDB}, 1991.
+
+\bibitem{colby-sigmod:96}
+L.~S. Colby, T.~Griffin, L.~Libkin, I.~S. Mumick, and H.~Trickey.
+\newblock Algorithms for deferred view maintenance.
+\newblock In {\em Proc.\ SIGMOD}, 1996.
+
+\bibitem{gedik-sigmod:08}
+B.~Gedik, H.~Andrade, K.-L. Wu, P.~Yu, and M.~Doo.
+\newblock {SPADE}: the {System S} declarative stream processing engine.
+\newblock In {\em Proc. SIGMOD}, 2008.
+
+\bibitem{GHJ1996}
+S.~Ghandeharizadeh, R.~Hull, and D.~Jacobs.
+\newblock Heraclitus: Elevating deltas to be first-class citizens in a database
+  programming language.
+\newblock {\em ACM TODS}, 21(3):370--426, Sept. 1996.
+
+\bibitem{DBLP:journals/tods/GhanemELA10}
+T.~M. Ghanem, A.~K. Elmagarmid, P.-{\AA}. Larson, and W.~G. Aref.
+\newblock Supporting views in data stream management systems.
+\newblock {\em ACM TODS}, 35(1), 2010.
+
+\bibitem{griffin-sigmod:95}
+T.~Griffin and L.~Libkin.
+\newblock Incremental maintenance of views with duplicates.
+\newblock In {\em Proc.\ SIGMOD}, 1995.
+
+\bibitem{DBLP:conf/deductive/GuptaKM92}
+A.~Gupta, D.~Katiyar, and I.~S. Mumick.
+\newblock Counting solutions to the view maintenance problem.
+\newblock In {\em Proc.\ Workshop on Deductive Databases, JICSLP}, 1992.
+
+\bibitem{DBLP:conf/sigmod/GuptaMS93}
+A.~Gupta, I.~S. Mumick, and V.~S. Subrahmanian.
+\newblock Maintaining views incrementally.
+\newblock In {\em SIGMOD}, 1993.
+
+\bibitem{hey2009fourth}
+A.~Hey, S.~Tansley, and K.~Tolle.
+\newblock {\em The fourth paradigm: data-intensive scientific discovery}.
+\newblock Microsoft Research Redmond, WA, 2009.
+
+\bibitem{rangequeries}
+C.-T. Ho, R.~Agrawal, N.~Megiddo, and R.~Srikant.
+\newblock Range queries in olap data cubes.
+\newblock In {\em SIGMOD}, 1997.
+
+\bibitem{db2-viewrestrict}
+IBM.
+\newblock {IBM DB2 Database Version 9.5 Documentation}.
+
+\bibitem{jain-pvldb:08}
+N.~Jain, S.~Mishra, J.~Gehrke, J.~Widom, H.~Balakrishnan,
+  U.~\c{C}etintemel, M.~Cherniack, R.~Tibbetts, S. Zdonik.
+\newblock Towards a streaming {SQL} standard.
+\newblock {\em PVLDB}, 1(2):1379--1390, 2008.
+
+\bibitem{kennedy-ahmad-koch-cidr:11}
+O.~Kennedy, Y.~Ahmad, and C.~Koch.
+\newblock {DBToaster}: Agile views for a dynamic data management system.
+\newblock In {\em Proc.\ CIDR}, 2011.
+
+\bibitem{koch-pods:10}
+C.~Koch.
+\newblock Incremental query evaluation in a ring of databases.
+\newblock In {\em PODS}, 2010.
+
+\bibitem{kotidis-tods:01}
+Y.~Kotidis and N.~Roussopoulos.
+\newblock A case for dynamic view management.
+\newblock {\em TODS}, 26(4):388--423, 2001.
+
+\bibitem{krikellas-icde:10}
+K.~Krikellas, S.~Viglas, and M.~Cintra.
+\newblock Generating code for holistic query evaluation.
+\newblock In {\em ICDE}, 2010.
+
+\bibitem{marlow-fp:92}
+S.~Marlow and P.~Wadler.
+\newblock Deforestation for higher-order functions.
+\newblock In {\em Func. Programming}, 1992.
+
+\bibitem{neumann-pvldb:11}
+T.~Neumann.
+\newblock Efficiently compiling efficient query plans for modern hardware.
+\newblock {\em PVLDB}, 4(9):539--550, 2011.
+
+\bibitem{roussopoulos-tods:91}
+N.~Roussopoulos.
+\newblock An incremental access method for {ViewCache}: Concept, algorithms,
+  and cost analysis.
+\newblock {\em TODS}, 16(3):535--563, 1991.
+
+\bibitem{schek-infsys:86}
+H.-J. Schek and M.~H. Scholl.
+\newblock The relational model with relation-valued attributes.
+\newblock {\em Inf. Syst.}, 11(2):137--147, 1986.
+
+\bibitem{scholz1973earthquake}
+C.~Scholz, L.~Sykes, and Y.~Aggarwal.
+\newblock Earthquake prediction: a physical basis.
+\newblock {\em Science}, 181(4102), 1973.
+
+\bibitem{DBLP:conf/sigmod/ShmueliI84}
+O.~Shmueli and A.~Itai.
+\newblock Maintenance of views.
+\newblock In {\em Proc.\ SIGMOD}, 1984.
+
+\bibitem{counciltpc}
+{Transaction Processing Performance Council}.
+\newblock TPC-H benchmark spec: \url{http://www.tpc.org/hspec.html}.
+
+\bibitem{yan-vldb:95}
+W.~P. Yan and P.-{\AA}. Larson.
+\newblock Eager aggregation and lazy aggregation.
+\newblock In {\em VLDB}, 1995.
+
+\end{thebibliography}

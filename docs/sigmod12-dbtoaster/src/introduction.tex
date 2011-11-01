@@ -37,9 +37,9 @@ While the techniques of \cite{ahmad-vldb:09, koch-pods:10} as well as existing i
 IVM in commercial DBMS are very restricted and exclude nested queries and other features of SQL,
 we create the machinery to perform IVM and even recursive IVM on most of SQL (with the exception of
 support for null values). To do this, we generalize the techniques of \cite{ahmad-vldb:09, koch-pods:10}
-to not always materialize full delta queries but instead subexpressions that at once allow to perform
-IVM and maximize the performance thus obtained. This leads us to a query optimizer in which
-the materialization of subqueries is a degree of freedom in optimization, which can be applied anywhere
+to not always materialize full delta queries but instead subexpressions that allow us to perform
+IVM and maximize the performance obtained. This leads us to a query optimizer in which
+the materialization of subqueries is a degree of freedom in optimization, and can be applied anywhere
 in the input query or the delta queries obtained by applying this optimization.
 
 To put ourselves in the position of using such an optimizer, we have to create suitable

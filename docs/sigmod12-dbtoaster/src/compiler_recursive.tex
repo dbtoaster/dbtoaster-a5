@@ -77,7 +77,7 @@ Aggregate queries dominate analytical workloads and can greatly profit from incr
 In summary, the abstract syntax of the IR is two-sorted (consisting of queries $q$ and terms $t$):
 %
 \begin{eqnarray*}
-q &\mbox{:--}& R \mid t \theta t \mid t \mid q + q \mid q \bowtie q \mid \Sum_{\vec{A}}(q) \\
+q &\mbox{:--}& R \mid t \; \theta \; t \mid t \mid q + q \mid q \bowtie q \mid \Sum_{\vec{A}}(q) \\
 t &\mbox{:--}& c \mid A                 \mid t + t \mid t * t       \mid \Sum(q)
 \end{eqnarray*}
 Thus queries can be formed from relation names, atomic conditions, addition, natural join, and sum-aggregation.
@@ -214,10 +214,12 @@ $\{\tuple{A:x}\} \bowtie S \bowtie y \theta C \bowtie x * D$.
 Thus the delta of the input query is
 $\Sum(\{\tuple{A:x}\} \bowtie  S \bowtie y < C \bowtie x*D)[x,y][]$ which can be further simplified to
 $\Sum(S \bowtie y < C \bowtie x*D)[x,y][]$.
-In SQL notation, this is
+In SQL, this is: \texttt{select sum(x * D) from S where y < C}.
+\comment{
 \begin{verbatim}
 select sum(x * D) from S where y < C
 \end{verbatim}
+}
 \end{example}
 
 
@@ -227,7 +229,7 @@ select sum(x * D) from S where y < C
 
 \def\deg{\mbox{deg}}
 
-Before we come to multi-level IVM, let us recap the special case of recursive IVM of \cite{koch-pods:10, kennedy-ahmad-koch-cidr:11}, where we try to be as greedily incremental as possible.
+Before we come to multilevel IVM, let us recap the special case of recursive IVM of \cite{koch-pods:10, kennedy-ahmad-koch-cidr:11}, where we try to be as greedily incremental as possible.
 If we restrict the query language to exclude aggregates nested into conditions (for which the delta query was complicated), the query language fragment has the following nice property \cite{koch-pods:10}.
 %
 $\Delta Q$ is structurally strictly simpler than $Q$ when query complexity is measured as follows. 
@@ -239,9 +241,9 @@ polynomials.
 If $\deg(Q) > 0$, then \[\deg(\Delta Q) = \deg(Q) - 1.\]
 \end{theorem}
 
-Recursive IVM makes use of the simple fact that a delta query is a query too. Thus it can be incrementally maintained as well, making use of a delta query to the delta query, which again can be materialized and incrementally maintained, and so on, recursively.
+Recursive IVM makes use of the simple fact that a delta query is a query too. Thus it can be incrementally maintained, making use of a delta query to the delta query, which again can be materialized and incrementally maintained, and so on, recursively.
 By the above theorem, this recursive query transformation terminates in the $\deg(Q)$-th recursion level,
-when the rewritten query becomes a ``constant'' (independent of the database, and only depending on the updates).
+when the rewritten query becomes a ``constant'' (independent of the database, and dependent only on updates).
 
 The goal of compilation is to create on-insert and on-delete triggers for every relation occurring in the query.
 Conceptually, a query $Q[\vec{x}_{in}][\vec{x}_{out}]$ over relations $R_1, \dots, R_k$ is compiled as follows:
@@ -305,8 +307,7 @@ materialized views to be represented as maps $M$ that store, for tuples $\vec{i}
 So far we have disregarded the question what the {\em domains} of these maps are, that is,
 for which $\vec{i}\vec{o}$ the maps are defined and store values.
 If we could assume that the domains contain all the tuples that could ever be formed from values occurring
-in the database, we could initialize the map values to zero, $M[\vec{i}][\vec{o}] := 0$,
-before the first update is fed into the system.
+in the database, we could preallocate map values of zero, $M[\vec{i}][\vec{o}] := 0$.
 %
 However, it is not feasible to assume such large or even infinite domains.
 Instead, we want to start with empty maps and extend the domains when the update triggers want to access
@@ -352,11 +353,13 @@ Consider for example the query $Q$
 {\tt select sum(A*D) from R natural join S natural join T}
 of schema $R(AB), S(BC), T(CDE)$. Then
 $\Delta_{+S(b,c)} Q$ is
+\vspace{-0.5mm}
 \begin{verbatim}
 select sum(A*D) from R,T where B=b and C=c
    = (select sum(A) from R where B=b) *
      (select sum(D) from T where C=c)
 \end{verbatim}
+\vspace{-0.5mm}
 Given such a decomposition, it is better to materialize the two aggregate subexpressions and compute
 the product when updating, rather than to materialize the product, that is,
 \begin{eqnarray*}
