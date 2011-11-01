@@ -40,7 +40,7 @@ We replace relational (bag) union by an operation $+$ that adds two relations $R
 
 \item
 The join operation is the natural join, where the multiplicity of a tuple in the result
-is the integer product of the multiplicities of the two tuples from which is formed.
+is the integer product of the multiplicities of the two tuples from which it is formed.
 
 \item
 Conditions are queries in their own right; there is no explicit selection operation. Thus, we write a relational algebra selection
@@ -56,7 +56,8 @@ Sum-aggregates can be viewed as multiplicity-respecting projection.
 Terms have a scalar rather than relation value. A sum-aggregate without grouping column evaluates to a term.
 %
 Terms can be used as queries; in that case, they evaluate to the nullary tuple with multiplicity the value of the term.
-Thus an SQL query ``select sum(A) from R'' can be written in our IR as $\Sum(R \bowtie A)$; thus we first multiply the value of $A$ into the multiplicity of each tuple and than sum up all these multiplicities.
+Thus an SQL query ``select sum(A) from R'' can be written in our IR as $\Sum(R \bowtie A)$;
+we first multiply the value of $A$ into the multiplicity of each tuple and then sum up all these multiplicities.
 
 \item
 There are no explicit operations for projection and relational difference. A multiplicity-aware projection is implemented by
@@ -144,7 +145,9 @@ where A > C) & ~~~~~~$\bowtie\; (A > C)))$ & \\
 
 
 This language specification covers all of the core features of SQL with the exception of
-null values and outer joins (which have the undesirably property of being nonassociative, which is a problem for incremental computation).
+null values and outer joins.
+
+% (which have the undesirable property of being non-associative, which is a problem for incremental computation).
 
 
 
@@ -158,7 +161,7 @@ can be run to respond online to each tuple change.
 
 
 Thanks to the strong compositionality of the language, we only have to give delta rules for the 
-individual operators. These rules a given and studied in detail in \cite{koch-pods:10}. In short,
+individual operators. These rules are given and studied in detail in \cite{koch-pods:10}. In short,
 \begin{eqnarray*}
 \Delta(Q_1 + Q_2)    &:=& (\Delta Q_1) + (\Delta Q_2), \\ 
 \Delta(\mbox{Sum } Q)   &:=& \mbox{Sum } (\Delta Q), \\
@@ -175,7 +178,7 @@ $(x > (Q + \Delta Q)) \bowtie (x \le Q) - (x \le (Q + \Delta Q)) \bowtie (x > Q)
 We refer to \cite{koch-pods:10} for the general case of conditions.
 
 Let us be precise though about computing delta queries. In general, each expression has input and output variables,
-and taking a delta in general {\em adds variables} parameterizing the query with the update. From now on we only consider single-tuple insertions $+R(\vec{x})$ to or deletions $-R(\vec{x})$ from a relation $R$.
+and taking a delta in general {\em adds variables} parameterizing the query with the update. From now on we only consider single-tuple insertions $+R(\vec{x})$ into or deletions $-R(\vec{x})$ from a relation $R$.
 
 \def\dxy{\Delta_{+R(x,y)}}
 
@@ -230,7 +233,7 @@ select sum(x * D) from S where y < C
 \def\deg{\mbox{deg}}
 
 Before we come to multilevel IVM, let us recap the special case of recursive IVM of \cite{koch-pods:10, kennedy-ahmad-koch-cidr:11}, where we try to be as greedily incremental as possible.
-If we restrict the query language to exclude aggregates nested into conditions (for which the delta query was complicated), the query language fragment has the following nice property \cite{koch-pods:10}.
+If we restrict the query language to exclude aggregates nested into conditions (for which the delta query was complicated), the query language fragment has the following nice property.
 %
 $\Delta Q$ is structurally strictly simpler than $Q$ when query complexity is measured as follows. 
 For union(+)-free queries, the {\em degree} $\deg(Q)$ of query $Q$ is the number of relations joined together. We can use distributivity to push unions above joins and so give a degree to queries with unions, as the maximum degree of the union-free subqueries. Queries are
@@ -248,19 +251,20 @@ when the rewritten query becomes a ``constant'' (independent of the database, an
 The goal of compilation is to create on-insert and on-delete triggers for every relation occurring in the query.
 Conceptually, a query $Q[\vec{x}_{in}][\vec{x}_{out}]$ over relations $R_1, \dots, R_k$ is compiled as follows:
 We write $M_Q$ for the materialized view of query $Q$. 
-Then the trigger program for the event $\pm R_{i_{j+1}}(\vec{y}_{j+1})$ consists of the
-statements
-
+Then the trigger program for the event $\pm R_{i_{j+1}}(\vec{y}_{j+1})$ consists of the statements
+%
 \begin{tabbing}
 ~~foreach $\vec{x}_{out}, \vec{y}_1, \dots, \vec{y}_j$ do \\
 ~~~~~
-   $M_{\Delta_{\pm R_{i_j}} \dots \Delta_{\pm R_{i_1}} Q}
+   $M_{\Delta_{s_{i_j} R_{i_j}} \dots \Delta_{s_{i_1} R_{i_1}} Q}
        [\vec{x}_{in}\vec{y}_1 \dots \vec{y}_j][\vec{x}_{out}] \;\pm=$ \\
 ~~~~~~~~
-    $M_{\Delta_{\pm R_{i_{j+1}}} \dots \Delta_{\pm R_{i_1}} Q}
+    $M_{\Delta_{s_{i_{j+1}} R_{i_{j+1}}} \dots \Delta_{s_{i_1} R_{i_1}} Q}
        [\vec{x}_{in}\vec{y}_1 \dots \vec{y}_{j+1}][\vec{x}_{out}]$.
 \end{tabbing}
-for each $j \in 0, 1, \dots, \deg(Q)$ and $\tuple{i_1 \dots i_j} \in 1, \dots, k^j$.
+%
+for each $j \in 0, 1, \dots, \deg(Q)$, $\tuple{i_1 \dots i_{j+1}} \in \{1, \dots, k\}^{j+1}$, and
+$s_{i_l} \in \{ + , - \}$.
 For correctness, unless we maintain
 old and new versions of the maps (which would be costly), these statements have to be 
 ordered by increasing $j$.
@@ -350,12 +354,15 @@ $Q_2$ do not share common columns, then
 $\Sum_{\vec{A}\vec{B}}(Q_1 \times Q_2) = \Sum_{\vec{A}}(Q_2) \times \Sum{\vec{B}}(Q_2)$
 where $\vec{A}$ are columns of $Q_1$ and $\vec{B}$ are columns of $Q_2.$
 Consider for example the query $Q$
-{\tt select sum(A*D) from R natural join S natural join T}
+\begin{verbatim}
+select sum(A*D) from R, S, T
+where R.B=S.B and S.C=T.C
+\end{verbatim}
 of schema $R(AB), S(BC), T(CDE)$. Then
 $\Delta_{+S(b,c)} Q$ is
 \vspace{-0.5mm}
 \begin{verbatim}
-select sum(A*D) from R,T where B=b and C=c
+select sum(A*D) from R, T where B=b and C=c
    = (select sum(A) from R where B=b) *
      (select sum(D) from T where C=c)
 \end{verbatim}
