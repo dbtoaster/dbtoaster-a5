@@ -1,4 +1,4 @@
--- EXPECTED RESULTS FOR TEST DATA test/data/sgl.dat
+-- EXPECTED RESULTS FOR TEST DATA ../../experiments/data/sgl.dat
 --  player | sum 
 -- --------+-----
 --       1 |   1
@@ -55,7 +55,7 @@
 
 
 CREATE TABLE E (x float, y float, player int)
-  FROM FILE 'test/data/sgl.dat'
+  FROM FILE '../../experiments/data/sgl.dat'
   LINE DELIMITED csv (
     fields := ',', 
     schema := 'hash,float,float,int', 

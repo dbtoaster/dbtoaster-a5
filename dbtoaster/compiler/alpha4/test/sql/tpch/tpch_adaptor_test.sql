@@ -16,7 +16,7 @@ CREATE TABLE LINEITEM (
         shipmode       int, -- text
         comment        int  -- text
     )
-  FROM FILE 'test/data/tpch/lineitem.tbl'
+  FROM FILE '../../experiments/data/tpch/lineitem.tbl'
   LINE DELIMITED lineitem;
 
 CREATE TABLE ORDERS (
@@ -30,7 +30,7 @@ CREATE TABLE ORDERS (
         shippriority   int,
         comment        int  -- text
     )
-  FROM FILE 'test/data/tpch/orders.tbl'
+  FROM FILE '../../experiments/data/tpch/orders.tbl'
   LINE DELIMITED orders;
 
 CREATE TABLE PART (
@@ -44,7 +44,7 @@ CREATE TABLE PART (
         retailprice  double,
         comment      int  -- text
     )
-  FROM FILE 'test/data/tpch/part.tbl'
+  FROM FILE '../../experiments/data/tpch/part.tbl'
   LINE DELIMITED part;
 
 CREATE TABLE PARTSUPP (
@@ -54,7 +54,7 @@ CREATE TABLE PARTSUPP (
         supplycost   double,
         comment      int  -- text
     )
-  FROM FILE 'test/data/tpch/partsupp.tbl'
+  FROM FILE '../../experiments/data/tpch/partsupp.tbl'
   LINE DELIMITED partsupp;
 
 CREATE TABLE CUSTOMER (
@@ -67,7 +67,7 @@ CREATE TABLE CUSTOMER (
         mktsegment   int, -- text
         comment      int  -- text
     )
-  FROM FILE 'test/data/tpch/customer.tbl'
+  FROM FILE '../../experiments/data/tpch/customer.tbl'
   LINE DELIMITED customer;
 
 CREATE TABLE SUPPLIER (
@@ -79,7 +79,7 @@ CREATE TABLE SUPPLIER (
         acctbal      double,
         comment      int  -- text
     )
-  FROM FILE 'test/data/tpch/supplier.tbl'
+  FROM FILE '../../experiments/data/tpch/supplier.tbl'
   LINE DELIMITED supplier;
 
 CREATE TABLE NATION (
@@ -88,7 +88,7 @@ CREATE TABLE NATION (
         regionkey    int,
         comment      int  -- text
     )
-  FROM FILE 'test/data/tpch/nation.tbl'
+  FROM FILE '../../experiments/data/tpch/nation.tbl'
   LINE DELIMITED nation;
   
 CREATE TABLE REGION (
@@ -96,7 +96,7 @@ CREATE TABLE REGION (
         name         int, -- text
         comment      int  -- text
     )
-  FROM FILE 'test/data/tpch/region.tbl'
+  FROM FILE '../../experiments/data/tpch/region.tbl'
   LINE DELIMITED region;
   
 SELECT sum(totalprice) from orders;

@@ -16,7 +16,7 @@ CREATE TABLE LINEITEM (
         shipmode       int,
         comment        int
     )
-  FROM FILE 'test/data/tpch/lineitem.csv'
+  FROM FILE '../../experiments/data/tpch/lineitem.csv'
   LINE DELIMITED lineitem;
 
 
@@ -31,7 +31,7 @@ CREATE TABLE ORDERS (
         shippriority   int,
         comment        int  -- text
     )
-  FROM FILE 'test/data/tpch/orders.csv'
+  FROM FILE '../../experiments/data/tpch/orders.csv'
   LINE DELIMITED orders;
 
 CREATE TABLE PART (
@@ -45,7 +45,7 @@ CREATE TABLE PART (
         retailprice  double,
         comment      int  -- text
     )
-  FROM FILE 'test/data/tpch/part.csv'
+  FROM FILE '../../experiments/data/tpch/part.csv'
   LINE DELIMITED part;
 
 CREATE TABLE CUSTOMER (
@@ -58,7 +58,7 @@ CREATE TABLE CUSTOMER (
         mktsegment   int, -- text
         comment      int  -- text
     )
-  FROM FILE 'test/data/tpch/customer.csv'
+  FROM FILE '../../experiments/data/tpch/customer.csv'
   LINE DELIMITED customer;
 
 CREATE TABLE SUPPLIER (
@@ -70,7 +70,7 @@ CREATE TABLE SUPPLIER (
         acctbal      double,
         comment      int  -- text
     )
-  FROM FILE 'test/data/tpch/supplier.csv'
+  FROM FILE '../../experiments/data/tpch/supplier.csv'
   LINE DELIMITED supplier;
 
 CREATE TABLE NATION (
@@ -79,7 +79,7 @@ CREATE TABLE NATION (
         regionkey    int,
         comment      int  -- text
     )
-  FROM FILE 'test/data/tpch/nation.csv'
+  FROM FILE '../../experiments/data/tpch/nation.csv'
   LINE DELIMITED nation;
 
 

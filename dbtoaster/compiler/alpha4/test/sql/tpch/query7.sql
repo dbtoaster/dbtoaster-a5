@@ -16,7 +16,7 @@ CREATE TABLE LINEITEM (
         shipmode       int,
         comment        int
     )
-  FROM FILE 'test/data/tpch_100M/lineitem.csv'
+  FROM FILE '../../experiments/data/tpch_100M/lineitem.csv'
   LINE DELIMITED lineitem;
 
 
@@ -31,7 +31,7 @@ CREATE TABLE ORDERS (
         shippriority   int,
         comment        int  -- text
     )
-  FROM FILE 'test/data/tpch_100M/orders.csv'
+  FROM FILE '../../experiments/data/tpch_100M/orders.csv'
   LINE DELIMITED orders;
 
 CREATE TABLE CUSTOMER (
@@ -44,7 +44,7 @@ CREATE TABLE CUSTOMER (
         mktsegment   int, -- text
         comment      int  -- text
     )
-  FROM FILE 'test/data/tpch_100M/customer.csv'
+  FROM FILE '../../experiments/data/tpch_100M/customer.csv'
   LINE DELIMITED customer;
 
 CREATE TABLE SUPPLIER (
@@ -56,7 +56,7 @@ CREATE TABLE SUPPLIER (
         acctbal      double,
         comment      int  -- text
     )
-  FROM FILE 'test/data/tpch_100M/supplier.csv'
+  FROM FILE '../../experiments/data/tpch_100M/supplier.csv'
   LINE DELIMITED supplier;
 
 CREATE TABLE NATION (
@@ -65,7 +65,7 @@ CREATE TABLE NATION (
         regionkey    int,
         comment      int  -- text
     )
-  FROM FILE 'test/data/tpch_100M/nation.csv'
+  FROM FILE '../../experiments/data/tpch_100M/nation.csv'
   LINE DELIMITED nation;
 
 SELECT n1.name, n2.name, sum(l.extendedprice)

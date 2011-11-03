@@ -1,5 +1,5 @@
 CREATE TABLE R(A int, B int) 
-  FROM FILE 'test/data/r.dat' LINE DELIMITED
+  FROM FILE '../../experiments/data/r.dat' LINE DELIMITED
   csv (fields := ',', schema := 'int,int', eventtype := 'insert');
 
 -- This query computes

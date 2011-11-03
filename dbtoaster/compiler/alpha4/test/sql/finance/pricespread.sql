@@ -8,11 +8,11 @@ result on vwap100: 389562600
  */
 
 CREATE TABLE bids(t float, id int, broker_id int, volume float, price float)
-  FROM FILE 'test/data/vwap5k.csv'
+  FROM FILE '../../experiments/data/vwap5k.csv'
   LINE DELIMITED orderbook (book := 'bids', brokers := '10');
 
 CREATE TABLE asks(t float, id int, broker_id int, volume float, price float)
-  FROM FILE 'test/data/vwap5k.csv'
+  FROM FILE '../../experiments/data/vwap5k.csv'
   LINE DELIMITED orderbook (book := 'asks', brokers := '10');
 
 

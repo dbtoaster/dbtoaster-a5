@@ -19,7 +19,7 @@ CREATE TABLE LINEITEM (
         shipmode       double,
         comment        double
     )
-  FROM FILE 'test/data/lineitem.csv'
+  FROM FILE '../../experiments/data/lineitem.csv'
   LINE DELIMITED lineitem;
 
 CREATE TABLE ORDERS (
@@ -33,7 +33,7 @@ CREATE TABLE ORDERS (
         shippriority   int,
         comment        double  -- text
     )
-  FROM FILE 'test/data/orders.csv'
+  FROM FILE '../../experiments/data/orders.csv'
   LINE DELIMITED orders;
 
 
@@ -48,7 +48,7 @@ CREATE TABLE PART (
         retailprice  double,
         comment      double  -- text
     )
-  FROM FILE 'test/data/part.csv'
+  FROM FILE '../../experiments/data/part.csv'
   LINE DELIMITED part;
 
 CREATE TABLE PARTSUPP (
@@ -58,7 +58,7 @@ CREATE TABLE PARTSUPP (
         supplycost   double,
         comment      double  -- text
     )
-  FROM FILE 'test/data/partsupp.csv'
+  FROM FILE '../../experiments/data/partsupp.csv'
   LINE DELIMITED partsupp;
 
 CREATE TABLE CUSTOMER (
@@ -71,7 +71,7 @@ CREATE TABLE CUSTOMER (
         mktsegment   double, -- text
         comment      double  -- text
     )
-  FROM FILE 'test/data/customer.csv'
+  FROM FILE '../../experiments/data/customer.csv'
   LINE DELIMITED customer;
 
 
@@ -84,7 +84,7 @@ CREATE TABLE SUPPLIER (
         acctbal      double,
         comment      double  -- text
     )
-  FROM FILE 'test/data/supplier.csv'
+  FROM FILE '../../experiments/data/supplier.csv'
   LINE DELIMITED supplier;
 
 SELECT sum(totalprice) from orders;

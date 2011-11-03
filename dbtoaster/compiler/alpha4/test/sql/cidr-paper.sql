@@ -2,7 +2,7 @@ CREATE TABLE LINEITEM (
         ordkey       int,
         extprice  double
     )
-  FROM FILE 'test/data/lineitem.csv'
+  FROM FILE '../../experiments/data/lineitem.csv'
   LINE DELIMITED lineitem;
 
 CREATE TABLE ORDERS (
@@ -10,7 +10,7 @@ CREATE TABLE ORDERS (
         custkey        int,
         sprior   int
     )
-  FROM FILE 'test/data/orders.csv'
+  FROM FILE '../../experiments/data/orders.csv'
   LINE DELIMITED orders;
 
 
@@ -20,7 +20,7 @@ CREATE TABLE CUSTOMER (
         nationkey    int,
         acctbal      double
     )
-  FROM FILE 'test/data/customer.csv'
+  FROM FILE '../../experiments/data/customer.csv'
   LINE DELIMITED customer;
 
 select l.ordkey, o.sprior, sum(l.extprice)

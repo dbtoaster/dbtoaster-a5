@@ -12,7 +12,7 @@
 --          0 |   78933620700
 
 CREATE TABLE bids(t float, id int, broker_id int, volume float, price float)
-  FROM FILE 'test/data/vwap5k.csv'
+  FROM FILE '../../experiments/data/vwap5k.csv'
   LINE DELIMITED orderbook (book := 'bids', brokers := '10', 
                             deterministic := 'yes');
 

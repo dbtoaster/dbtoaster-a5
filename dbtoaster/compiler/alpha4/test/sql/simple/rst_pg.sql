@@ -1,4 +1,4 @@
--- With the datafiles in test/data, this should produce
+-- With the datafiles in ../../experiments/data, this should produce
 -- QUERY_1_1 = 18753367048934
 -- or as the Ocaml outputter puts it:
 -- QUERY_1_1: [[  ]->[[  ]->1.87533670489e+13;]<pat=>;]<pat=>

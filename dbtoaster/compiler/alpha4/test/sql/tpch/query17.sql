@@ -26,7 +26,7 @@ CREATE TABLE LINEITEM (
         shipmode       int, -- hash
         comment        int  -- hash
     )
-  FROM FILE 'test/data/tpch/lineitem.tbl'
+  FROM FILE '../../experiments/data/tpch/lineitem.tbl'
   LINE DELIMITED lineitem;
 
 CREATE TABLE PART (
@@ -40,7 +40,7 @@ CREATE TABLE PART (
         retailprice  float,
         comment      int  -- hash
     )
-  FROM FILE 'test/data/tpch/part.tbl'
+  FROM FILE '../../experiments/data/tpch/part.tbl'
   LINE DELIMITED part;
 
 select sum(l.extendedprice)

@@ -28,19 +28,19 @@
 */
 
 CREATE TABLE Server(ssid int, status int)
-  FROM FILE 'test/data/ca_servers.dat'
+  FROM FILE '../../experiments/data/ca_servers.dat'
   LINE DELIMITED csv (
     fields := ',', schema := 'int,int', eventtype := 'insert'
   );
 
 CREATE TABLE Task(ttid int, priority int)
-  FROM FILE 'test/data/ca_tasks.dat'
+  FROM FILE '../../experiments/data/ca_tasks.dat'
   LINE DELIMITED csv (
     fields := ',', schema := 'int,int', eventtype := 'insert'
   );
 
 CREATE TABLE Assignment(asid int, atid int)
-  FROM FILE 'test/data/ca_assignments.dat'
+  FROM FILE '../../experiments/data/ca_assignments.dat'
   LINE DELIMITED csv (
     fields := ',', schema := 'int,int', eventtype := 'insert'
   );

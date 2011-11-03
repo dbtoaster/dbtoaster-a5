@@ -79,7 +79,7 @@ CREATE TABLE LINEITEM (
         shipmode       int, -- hash
         comment        int  -- hash
     )
-  FROM FILE 'test/data/tpch/lineitem.tbl'
+  FROM FILE '../../experiments/data/tpch/lineitem.tbl'
   LINE DELIMITED lineitem;
 
 CREATE TABLE ORDERS (
@@ -93,7 +93,7 @@ CREATE TABLE ORDERS (
         shippriority   int,
         comment        int  -- hash
     )
-  FROM FILE 'test/data/tpch/orders.tbl'
+  FROM FILE '../../experiments/data/tpch/orders.tbl'
   LINE DELIMITED orders;
 
 CREATE TABLE CUSTOMER (
@@ -106,7 +106,7 @@ CREATE TABLE CUSTOMER (
         mktsegment   int, -- hash
         comment      int  -- hash
     )
-  FROM FILE 'test/data/tpch/customer.tbl'
+  FROM FILE '../../experiments/data/tpch/customer.tbl'
   LINE DELIMITED customer;
 
 
@@ -119,7 +119,7 @@ CREATE TABLE SUPPLIER (
         acctbal      double,
         comment      int -- hash
     )
-  FROM FILE 'test/data/tpch/supplier.tbl'
+  FROM FILE '../../experiments/data/tpch/supplier.tbl'
   LINE DELIMITED supplier;
 
 CREATE TABLE NATION (
@@ -128,7 +128,7 @@ CREATE TABLE NATION (
         regionkey    int,
         comment      int -- hash
     )
-  FROM FILE 'test/data/tpch/nation.tbl'
+  FROM FILE '../../experiments/data/tpch/nation.tbl'
   LINE DELIMITED nation;
   
 CREATE TABLE REGION (
@@ -136,7 +136,7 @@ CREATE TABLE REGION (
         name         int, -- hash
         comment      int -- hash
     )
-  FROM FILE 'test/data/tpch/region.tbl'
+  FROM FILE '../../experiments/data/tpch/region.tbl'
   LINE DELIMITED region;
 
 

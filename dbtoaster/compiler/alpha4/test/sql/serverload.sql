@@ -1,5 +1,5 @@
 CREATE TABLE Server(rackid int, load float)
-  FROM FILE 'test/data/sl_servers.dat'
+  FROM FILE '../../experiments/data/sl_servers.dat'
   LINE DELIMITED csv (
     fields := ',', schema := 'event,int,float'
   );

@@ -1,13 +1,13 @@
 CREATE TABLE R(A int, B int) 
-  FROM FILE 'test/data/r.dat' LINE DELIMITED
+  FROM FILE '../../experiments/data/r.dat' LINE DELIMITED
   csv (fields := ',', schema := 'int,int', eventtype := 'insert');
 
 CREATE TABLE S(B int, C int) 
-  FROM FILE 'test/data/s.dat' LINE DELIMITED
+  FROM FILE '../../experiments/data/s.dat' LINE DELIMITED
   csv (fields := ',', schema := 'int,int', eventtype := 'insert');
 
 CREATE TABLE T(C int, D int)
-  FROM FILE 'test/data/t.dat' LINE DELIMITED
+  FROM FILE '../../experiments/data/t.dat' LINE DELIMITED
   csv (fields := ',', schema := 'int,int', eventtype := 'insert');
 
 -- Example of a nested query with a join.
