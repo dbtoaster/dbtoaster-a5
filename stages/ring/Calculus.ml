@@ -2,9 +2,14 @@
    A module for expressing and performing basic operations over DBToaster
    relational calculus.  Operations are provided for taking deltas.
    
-   Calculus rings are functorized by an 'External' type that makes it possible
-   to insert arbitrary subexpressions into calculus who's meaning is defined
-   outside of the calculus expression itself.
+   Calculus rings are functorized by an 'External' module that makes it possible
+   to insert arbitrary subexpressions, the meaning of which is defined outside
+   the calculus proper (i.e., datastructures, UDFs, etc...).
+   
+   A default functorization is provided and included in the calculus base 
+   module.  The default calculus functorization supports the inclusion of 
+   externals in a calculus expression, but does not attempt to interpret them 
+   in any way.
 *)
 
 open GlobalTypes
@@ -114,7 +119,7 @@ let string_of_external (string_of_meta: 'a -> string)
    (ListExtras.ocaml_of_list string_of_var eins)^
    (string_of_meta emeta)
 
-module UnitExternal : External = struct
+module DefaultExternal : External = struct
    type meta_t = type_t
    
    let type_of_external (_,_,_,et) = et
@@ -122,4 +127,4 @@ module UnitExternal : External = struct
    let delta_of_external _ = failwith "Cannot compute delta of unit external" 
 end
 
-module UnitCalculus = Make(UnitExternal)
+include Make(DefaultExternal)
