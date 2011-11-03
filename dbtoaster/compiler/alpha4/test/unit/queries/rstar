@@ -1,5 +1,0 @@
-{
-  :path => "test/sql/simple/rstar.sql",
-  :type => :singleton,
-  :answer => 0
-}

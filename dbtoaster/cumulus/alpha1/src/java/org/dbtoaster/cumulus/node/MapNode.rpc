@@ -1,8 +1,0 @@
-#default_port 52982
-Map<NetTypes.Entry,Double> get(List<NetTypes.Entry> target)
-Map<NetTypes.Entry,Double> aggreget(List<NetTypes.Entry> target, int agg)
-void push_get(Map<NetTypes.Entry,Double> result, long cmdid)
-void update(String relation, List<Double> params, int basecmd)
-void query(long id, List<Double> params, int basecmd)
-String dump() throws TException;
-void localdump() throws TException;

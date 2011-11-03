@@ -1,3 +1,0 @@
-select sum(lineitem.quantity), order.orderdate from lineitem, order where
-lineitem.orderkey = order.orderkey 
-group by order.orderdate

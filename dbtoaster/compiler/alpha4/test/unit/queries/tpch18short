@@ -1,6 +1,0 @@
-{
-  :path => "test/sql/tpch/query18real.sql",
-  :type => :onelevel,
-  :answer => results_file("test/results/tpch/query18.csv"),
-  :valid_opts => ["depth-1"]
-}

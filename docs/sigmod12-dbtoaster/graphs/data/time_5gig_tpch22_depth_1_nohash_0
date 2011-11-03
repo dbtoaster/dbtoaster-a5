@@ -1,5 +1,0 @@
-reading from /tmp/okennedy_dbtoaster_data/tpch/orders.csv with 1 adaptors
-reading from /tmp/okennedy_dbtoaster_data/tpch/customer.csv with 1 adaptors
-tracing: 
-0 tuples processed at 1319648884s+484717us
-10000 tuples processed at 1319652430s+872533us

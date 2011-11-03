@@ -1,7 +1,0 @@
-{
-  :path => "test/sql/serverload.sql",
-  :type => :onelevel,
-  :answer => { 
-    [0.0] => 0
-  },
-}

@@ -1,5 +1,0 @@
-  {
-    :path => "test/sql/clusteravailable.sql",
-    :type => :onelevel,
-    :answer => results_file("test/results/clusteravailable.csv")
-  }

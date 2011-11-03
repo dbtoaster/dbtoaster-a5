@@ -1,5 +1,0 @@
-{
-  :path => "test/sql/tpch/query5.sql",
-  :type => :onelevel,
-  :answer => results_file("test/results/tpch/query11.csv")
-}

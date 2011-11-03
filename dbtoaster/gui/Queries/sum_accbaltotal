@@ -1,2 +1,0 @@
-select sum(supplier.acctbal - order.totalprice) from supplier, order, lineitem where
-lineitem.orderkey = order.orderkey and lineitem.suppkey = supplier.suppkey 

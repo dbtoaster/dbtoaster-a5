@@ -1,5 +1,0 @@
-bid;stock_id:10101 volume:100 price:100
-ask;stock_id:10101 volume:100 price:100
-ask;stock_id:10101 volume:100 price:120
-bid;stock_id:10101 volume:100 price:90
-bid;stock_id:10101 volume:200 price:130

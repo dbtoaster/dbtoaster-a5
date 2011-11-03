@@ -1,6 +1,0 @@
-{
-  :path => "test/sql/finance/vwap.sql",
-  :type => :singleton,
-  :answer => 28916017900.0,
-  :valid_opts => ["depth-0", "depth-1"]
-}

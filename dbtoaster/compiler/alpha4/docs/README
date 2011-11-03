@@ -1,3 +1,0 @@
-
-Known Issues:
-  DBToaster's C++ engine uses LibBoost fusiontables in order to represent tuples.  For some queries, the predefined vector size is too small, and must be increased via the FUSION_MAX_VECTOR_SIZE macro.

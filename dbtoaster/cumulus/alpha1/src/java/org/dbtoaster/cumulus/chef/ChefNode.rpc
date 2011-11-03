@@ -1,8 +1,0 @@
-void update(String relation, List<Double> params)
-void forward_update(String relation, List<Double> params, int basecmd)
-void set_forwarders(List<InetSocketAddress> nodes, int nodeOrChef)
-void query(Long id, List<Double> params)
-void forward_query(Long id, List<Double> params, int basecmd)
-String dump()
-void request_backoff(String nodeID)
-void finish_backoff(String nodeID)
