@@ -2,18 +2,12 @@
    A module for expressing and performing basic operations over DBToaster
    relational calculus.  Operations are provided for taking deltas.
    
-   Calculus rings are functorized by an 'External' module that makes it possible
-   to insert arbitrary subexpressions, the meaning of which is defined outside
-   the calculus proper (i.e., datastructures, UDFs, etc...).
-   
-   A default functorization is provided and included in the calculus base 
-   module.  The default calculus functorization supports the inclusion of 
-   externals in a calculus expression, but does not attempt to interpret them 
-   in any way.
+   Calculus rings are functorized by an 'External' type that makes it possible
+   to insert arbitrary subexpressions into calculus who's meaning is defined
+   outside of the calculus expression itself.
 *)
 
 open GlobalTypes
-open Arithmetic
 
 type 'external_meta_t external_t = 
    string           * (* External name *)
@@ -23,12 +17,13 @@ type 'external_meta_t external_t =
    'external_meta_t   (* External Metadata *)
 
 type ('term_t,'e_meta_t) calc_leaf_t = 
-   | Value    of ValueRing.expr_t
+   | Value    of value_t
    | AggSum   of var_t list * 'term_t
    | Rel      of string * var_t list * type_t
    | External of 'e_meta_t external_t
    | Cmp      of cmp_t * value_t * value_t
    | Defn     of var_t * 'term_t
+
 
 module type External = sig
    type meta_t
@@ -53,24 +48,22 @@ module Make(T : External) = struct
             = Ring.Make(CalcBase)
    
    include CalcRing
-   type value_t = ValueRing.expr_t
-   
    
    (*** Constructors ***)
    let mk_bool   (b:bool)  : expr_t = 
-      CalcRing.mk_val (Value(AConst(CBool(  b))))
+      CalcRing.mk_val (Value(VConst(CBool(  b))))
 
    let mk_int    (i:int)   : expr_t = 
-      CalcRing.mk_val (Value(AConst(CInt(   i))))
+      CalcRing.mk_val (Value(VConst(CInt(   i))))
 
    let mk_float  (f:float) : expr_t = 
-      CalcRing.mk_val (Value(AConst(CFloat( f))))
+      CalcRing.mk_val (Value(VConst(CFloat( f))))
 
    let mk_string (s:string): expr_t = 
-      CalcRing.mk_val (Value(AConst(CString(s))))
+      CalcRing.mk_val (Value(VConst(CString(s))))
 
    let mk_var   (var:var_t): expr_t = 
-      CalcRing.mk_val (Value(AVar(var))         )
+      CalcRing.mk_val (Value(VVar(var))         )
 
    let mk_aggsum (gb_vars:var_t list) (expr:expr_t): expr_t = 
       CalcRing.mk_val (AggSum(gb_vars, expr))
@@ -90,7 +83,7 @@ module Make(T : External) = struct
    (*** Stringifiers ***)
    let rec string_of_leaf (leaf:leaf_t): string = 
       begin match leaf with
-         | Value(v)                -> Arithmetic.string_of_value v
+         | Value(v)                -> string_of_value(v)
          | External(ext_info)      -> T.string_of_external ext_info
          | AggSum(gb_vars, subexp) -> 
             "Sum"^(ListExtras.ocaml_of_list  string_of_var gb_vars)^
@@ -104,12 +97,13 @@ module Make(T : External) = struct
          | Defn(target, subexp)    -> 
             (string_of_var target)^" <= ("^(string_of_expr subexp)^")"
       end
-   and string_of_expr: (expr_t -> string) =
+   and string_of_expr (expr:expr_t): string =
       CalcRing.fold
-         (fun sum_list  -> "("^(String.concat " U " sum_list )^")")
-         (fun prod_list -> "("^(String.concat " |><| " prod_list)^")")
-         (fun neg_term  -> "((<>:-1)*"^neg_term^")")
+         (fun sum_list  -> "("^(String.concat " + " sum_list )^")")
+         (fun prod_list -> "("^(String.concat " * " prod_list)^")")
+         (fun neg_term  -> "(-1*"^neg_term^")")
          string_of_leaf
+         expr
    
 end (* module Make(T:External) = struct *)
 
@@ -120,7 +114,7 @@ let string_of_external (string_of_meta: 'a -> string)
    (ListExtras.ocaml_of_list string_of_var eins)^
    (string_of_meta emeta)
 
-module DefaultExternal : External = struct
+module UnitExternal : External = struct
    type meta_t = type_t
    
    let type_of_external (_,_,_,et) = et
@@ -128,4 +122,4 @@ module DefaultExternal : External = struct
    let delta_of_external _ = failwith "Cannot compute delta of unit external" 
 end
 
-include Make(DefaultExternal)
+module UnitCalculus = Make(UnitExternal)

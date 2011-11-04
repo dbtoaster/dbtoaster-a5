@@ -26,12 +26,6 @@ let type_of_const (a:const_t): type_t =
       | CFloat(_)  -> TFloat
       | CString(_) -> TString
    end
-   
-let type_of_value (v:value_t): type_t = 
-   begin match v with
-      | VConst(c)  -> type_of_const c
-      | VVar(_,vt) -> vt
-   end
 
 (**** Number conversions ****)
 let int_of_const (a:const_t): int = 
