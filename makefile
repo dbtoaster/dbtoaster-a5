@@ -4,6 +4,7 @@ FILES=\
 	util/Debug.cmo\
 	stages/GlobalTypes.cmo\
 	stages/ring/Ring.cmo\
+	stages/ring/Arithmetic.cmo\
 	stages/ring/Calculus.cmo
 
 DIRS=\

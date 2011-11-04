@@ -16,9 +16,6 @@ type const_t =
    | CFloat  of float
    | CString of string   
 type var_t = string * type_t
-type value_t = 
-   | VConst of const_t
-   | VVar   of var_t
 
 
 (**** Conversion to Type ****)
@@ -82,31 +79,3 @@ let string_of_const (a: const_t): string =
 
 let string_of_var ((name, vt): var_t): string =
    "<"^name^":"^(string_of_type vt)^">"
-
-let string_of_value (v: value_t): string =
-   begin match v with
-      | VConst(c) -> string_of_const c
-      | VVar(v)   -> string_of_var v
-   end
-
-(**** Arithmetic ****)
-let binary_op (b_op: bool   -> bool   -> bool)
-              (i_op: int    -> int    -> int)
-              (f_op: float  -> float  -> float)
-              (a: const_t) (b: const_t): const_t =
-   begin match (a,b) with
-      | (CBool(av),  CBool(bv)) -> 
-         CBool(b_op av bv)
-      | (CBool(_),   CInt(_))
-      | (CInt(_),    CBool(_)) 
-      | (CInt(_),    CInt(_)) -> 
-         CInt(i_op (int_of_const a) (int_of_const b))
-      | (CFloat(_), (CBool(_)|CInt(_)|(CFloat(_))))
-      | ((CBool(_)|CInt(_)), CFloat(_)) ->
-         CFloat(f_op (float_of_const a) (float_of_const b))
-      | (CString(_), _) | (_, CString(_)) -> 
-         failwith "Binary math op over a string"
-   end
-
-let sum  = binary_op ( || ) ( + ) ( +. )
-let prod = binary_op ( && ) ( * ) ( *. )
