@@ -2,21 +2,22 @@
    Global typesystem for use by all of DBToaster's compilation stages.
 *)
 
+module StringMap = Map.Make(String)
+
 (**** Global type definitions ****)
 type cmp_t = Eq | Lt | Lte | Gt | Gte | Neq
 type type_t = 
    | TBool
    | TInt
    | TFloat
-   | TString
+   | TString   of int
    | TExternal of string
 type const_t = 
    | CBool   of bool
    | CInt    of int
    | CFloat  of float
-   | CString of string   
+   | CString of string
 type var_t = string * type_t
-
 
 (**** Conversion to Type ****)
 let type_of_const (a:const_t): type_t =
@@ -24,7 +25,7 @@ let type_of_const (a:const_t): type_t =
       | CBool(_)   -> TBool
       | CInt(_)    -> TInt
       | CFloat(_)  -> TFloat
-      | CString(_) -> TString
+      | CString(s) -> TString(String.length s)
    end
 
 (**** Number conversions ****)
@@ -58,7 +59,7 @@ let string_of_type (ty: type_t): string =
       | TBool            -> "bool"
       | TInt             -> "int"
       | TFloat           -> "float"
-      | TString          -> "string"
+      | TString(len)     -> "string("^(string_of_int len)^")"
       | TExternal(etype) -> "external<"^etype^">"
    end
 
