@@ -45,7 +45,7 @@ module type Calculus = sig
    val string_of_expr: CalcRing.expr_t -> string
 end
 
-module Make(T : ExternalMeta) : Calculus = struct
+module Make(T : ExternalMeta) = struct
    module rec 
    CalcBase : sig
          type t = (CalcRing.expr_t,T.meta_t) calc_leaf_t
@@ -90,9 +90,10 @@ module Make(T : ExternalMeta) : Calculus = struct
          (fun neg_term  -> "((<>:-1)*"^neg_term^")")
          string_of_leaf
          expr
+   
 end
 
-module Translator(T1 : ExternalMeta, T2 : ExternalMeta) = struct
+module Translator(T1 : ExternalMeta)(T2 : ExternalMeta) = struct
    module C1 = Make(T1)
    module C2 = Make(T2)
    let rec translate (translate_meta: T1.meta_t -> T2.meta_t) 
@@ -102,20 +103,23 @@ module Translator(T1 : ExternalMeta, T2 : ExternalMeta) = struct
          C2.CalcRing.mk_sum
          C2.CalcRing.mk_prod
          C2.CalcRing.mk_neg
-         (fun lf ->
-            begin match lf with
-               | Value(v) -> Value(v)
-               | External(ename,eins,eouts,etype,emeta)
-                  External(ename,eins,eouts,etype,(translate_meta emeta))
-               | AggSum(gbvars,subexp) ->
-                  AggSum(gbvars, (rcr subexp))
-               | Rel(rname, rvars, rtype) ->
-                  Rel(rname, rvars, rtype)
-               | Cmp(op, subexp1, subexp2) ->
-                  Cmp(op, (rcr subexp1), (rcr subexp2))
-               | Lift(target, subexp) ->
-                  Lift(target, (rcr subexp))
+         (fun (lf:C1.CalcRing.leaf_t) ->
+            C2.CalcRing.mk_val
+               begin match lf with
+                  | Value(v) -> Value(v)
+                  | External(ename,eins,eouts,etype,emeta) ->
+                     External(ename,eins,eouts,etype,(translate_meta emeta))
+                  | AggSum(gbvars,subexp) ->
+                     AggSum(gbvars, (rcr subexp))
+                  | Rel(rname, rvars, rtype) ->
+                     Rel(rname, rvars, rtype)
+                  | Cmp(op, subexp1, subexp2) ->
+                     Cmp(op, subexp1, subexp2)
+                  | Lift(target, subexp) ->
+                     Lift(target, (rcr subexp))
+               end
          )   
+         e1
 end
 
 module NullMeta : ExternalMeta = struct

@@ -7,7 +7,7 @@ FILES=\
 	src/ring/Ring\
 	src/ring/Arithmetic\
 	src/ring/Calculus\
-	src/plan/M3\
+	src/maps/M3\
 	src/compiler/Datastructure\
 	src/compiler/Compiler
 
@@ -15,7 +15,8 @@ DIRS=\
 	src/\
 	src/util/\
 	src/ring/\
-	src/plan/
+	src/maps/\
+	src/compiler/
 
 INCLUDE_OBJ=\
 	str.cma\
