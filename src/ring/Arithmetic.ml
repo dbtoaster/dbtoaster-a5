@@ -36,10 +36,12 @@ type value_leaf_t = ValueRing.leaf_t
 type value_t      = ValueRing.expr_t
 
 (**** Constructors ****)
-let mk_bool   (b:bool  ):value_t = ValueRing.mk_val (AConst(CBool(b)))
-let mk_int    (i:int   ):value_t = ValueRing.mk_val (AConst(CInt(i)))
-let mk_float  (f:float ):value_t = ValueRing.mk_val (AConst(CFloat(f)))
-let mk_string (s:string):value_t = ValueRing.mk_val (AConst(CString(s)))
+let mk_bool   (b:bool   ):value_t = ValueRing.mk_val (AConst(CBool(b)))
+let mk_int    (i:int    ):value_t = ValueRing.mk_val (AConst(CInt(i)))
+let mk_float  (f:float  ):value_t = ValueRing.mk_val (AConst(CFloat(f)))
+let mk_string (s:string ):value_t = ValueRing.mk_val (AConst(CString(s)))
+let mk_const  (c:const_t):value_t = ValueRing.mk_val (AConst(c))
+let mk_var    (v:var_t  ):value_t = ValueRing.mk_val (AVar(v))
 
 (**** Stringifiers ****)
 let rec string_of_value_leaf (leaf:value_leaf_t): string =
@@ -57,38 +59,38 @@ and string_of_value (a_value:value_t): string =
       string_of_value_leaf
       a_value
 
-(**** Typechecker ****)
-let escalate_type ?(opname="<op>") (a:type_t) (b:type_t): type_t = 
-   begin match (a,b) with
-      | (at,bt) when at = bt -> at
-      | (TInt,TFloat) | (TFloat,TInt) -> TFloat
-      | _ -> failwith ("Can not compute type of "^(string_of_type a)^" "^
-                       opname^" "^(string_of_type b))
-   end
+(**** Info ****)
+let rec vars_of_value (v: value_t): var_t list =
+   ValueRing.fold
+      ListAsSet.multiunion
+      ListAsSet.multiunion
+      (fun x -> x)
+      (fun x -> begin match x with
+         | AConst(_) -> []
+         | AVar(v) -> [v]
+         | AFn(_,tl,_) -> ListAsSet.multiunion (List.map vars_of_value tl)
+      end)
+      v
 
-let rec type_of_value ?(default_type = TInt) (a_value: value_t): type_t =
-   let escalate_list op tlist = 
-      if tlist = [] then TInt
-      else 
-         List.fold_left (escalate_type ~opname:op) 
-                        (List.hd tlist) (List.tl tlist)
-   in
-      ValueRing.fold
-         (escalate_list "+")
-         (escalate_list "*")
-         (fun t -> match t with | TInt | TFloat -> t 
-           | _ -> failwith ("Can not compute type of -1 * "^(string_of_type t)))
-         (fun leaf -> match leaf with 
-            | AConst(c)  -> type_of_const c
-            | AVar(_,vt) -> vt
-            | AFn(_,fn_args,fn_type) ->
-               List.iter (fun x -> let _ = type_of_value 
-                                                ~default_type:default_type 
-                                                x in ())
-                         fn_args;
-               fn_type
-         )
-         a_value
+(**** Typechecker ****)
+
+let rec type_of_value ?(default_type = TAny) (a_value: value_t): type_t =
+   ValueRing.fold
+      (escalate_type_list ~opname:"+")
+      (escalate_type_list ~opname:"*")
+      (fun t -> match t with | TInt | TFloat -> t 
+        | _ -> failwith ("Can not compute type of -1 * "^(string_of_type t)))
+      (fun leaf -> match leaf with 
+         | AConst(c)  -> type_of_const c
+         | AVar(_,vt) -> vt
+         | AFn(_,fn_args,fn_type) ->
+            List.iter (fun x -> let _ = type_of_value 
+                                             ~default_type:default_type 
+                                             x in ())
+                      fn_args;
+            fn_type
+      )
+      a_value
 
 (**** Arithmetic ****)
 let binary_op (b_op: bool   -> bool   -> bool)
@@ -115,8 +117,8 @@ let prod = binary_op ( && ) ( * ) ( *. )
 let prodl= List.fold_left prod (CInt(1))
 let neg  = binary_op (fun x y -> failwith "Negation of a boolean") 
                      ( * ) ( *. ) (CInt(-1))
-let div1 = binary_op (failwith "Dividing a boolean") (/) (/.) (CInt(1))
-let div2 = binary_op (failwith "Dividing a boolean") (/) (/.)
+let div1 a   = binary_op (failwith "Dividing a boolean 1") (/) (/.) (CInt(1)) a
+let div2 a b = binary_op (failwith "Dividing a boolean 2") (/) (/.) a b
 
 (**** Functions ****)
 let arithmetic_functions: 

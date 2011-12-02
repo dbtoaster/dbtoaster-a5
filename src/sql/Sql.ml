@@ -9,9 +9,7 @@
    
 *)
 
-open Util
-
-opeb GlobalTypes
+open GlobalTypes
 
 exception SqlException of string
 exception Variable_binding_err of string * int
@@ -22,11 +20,9 @@ type sql_var_t = string option * string * type_t
 
 type schema_t = sql_var_t list
 
-type table_t = string * schema_t * Common.Input.source_t
+type table_t = string * schema_t * (DBSchema.source_t * DBSchema.adaptor_t)
 
 type arith_t = Sum | Prod | Sub | Div
-
-type cmp_t = Common.Types.cmp_t
 
 type agg_t = SumAgg
 
@@ -104,27 +100,10 @@ let mk_or (lhs:cond_t) (rhs:cond_t): cond_t =
     )
 
 (* Printing *)
-let string_of_const (const:const_t): string =
-   match const with
-      | Integer(i) -> string_of_int i
-      | Double(f)  -> string_of_float f
-      | String(s)  -> "\""^s^"\""
-
-let string_of_type (t:type_t): string =
-   match t with
-      | IntegerT   -> "int"
-      | DoubleT    -> "double"
-      | StringT    -> "string"
-      | AnyT       -> "?untyped?"
 
 let string_of_arith_op (op:arith_t): string =
    match op with
       | Sum -> "+" | Prod -> "*" | Sub -> "-" | Div -> "/"
-let string_of_cmp_op (op:cmp_t): string =
-   match op with
-      | Lt -> "<"   | Gt -> ">"
-      | Lte -> "<=" | Gte -> ">="
-      | Eq -> "="   | Neq -> "<>"
 
 let string_of_agg (agg:agg_t): string =
    match agg with SumAgg -> "SUM"
@@ -148,7 +127,7 @@ let rec string_of_expr (expr:expr_t): string =
 and string_of_cond (cond:cond_t): string =
    match cond with 
       | Comparison(a,cmp,b) -> "("^(string_of_expr a)^")"^
-                                   (string_of_cmp_op cmp)^
+                                   (string_of_cmp cmp)^
                                "("^(string_of_expr b)^")"
       | And(a,b)      -> "("^(string_of_cond a)^") AND ("^(string_of_cond b)^")"
       | Or(a,b)       -> "("^(string_of_cond a)^") OR ("^(string_of_cond b)^")"
@@ -159,10 +138,11 @@ and string_of_cond (cond:cond_t): string =
 
 and string_of_select (stmt:select_t): string =
    let (target,from,where,gb) = stmt in
-   "SELECT "^(string_of_list0 ", " (fun (n,e) -> (string_of_expr e)^" AS "^n)
+   "SELECT "^(ListExtras.string_of_list ~sep:", " 
+                              (fun (n,e) -> (string_of_expr e)^" AS "^n)
                               target)^
    (if List.length from > 0 then
-         " FROM "^(string_of_list0 ", " (fun (n,s) -> 
+         " FROM "^(ListExtras.string_of_list ~sep:", " (fun (n,s) -> 
             (match s with 
                | Table(t) -> t
                | SubQ(s) -> "("^(string_of_select s)^")"
@@ -173,8 +153,16 @@ and string_of_select (stmt:select_t): string =
          " WHERE "^(string_of_cond where)
       else "")^
    (if List.length gb > 0 then
-         " GROUP BY "^(string_of_list0 ", " string_of_var gb)
-      else "")
+         " GROUP BY "^(ListExtras.string_of_list ~sep:", " string_of_var gb)
+      else "")^
+   ";"
+
+let string_of_table ((name, vars, (source, adaptor)):table_t): string =
+   "CREATE TABLE "^name^"("^
+      (ListExtras.string_of_list ~sep:", " (fun (_,v,t) ->
+         v^" "^(string_of_type t)
+      ) vars)^
+      ");"
 
 (* Misc Utility *)
 
@@ -191,27 +179,16 @@ let rec expr_type (expr:expr_t) (tables:table_t list)
    let tree_err msg = 
       error (msg^": "^(string_of_expr expr))
    in
+   let return_if_numeric st msg = 
+      begin match st with TString(_) -> tree_err (msg^"string") | _ -> st end
+   in
    let rcr e = expr_type e tables sources in
    match expr with
-      | Const(Integer(_)) -> IntegerT
-      | Const(Double(_))  -> DoubleT
-      | Const(String(_))  -> StringT
-      | Var(v)            -> var_type v tables sources
-      | SQLArith(a,_,b) -> (
-            match (rcr a, rcr b) with
-               | (IntegerT, IntegerT) -> IntegerT
-               | (IntegerT, DoubleT)  -> DoubleT
-               | (DoubleT,  IntegerT) -> DoubleT
-               | (DoubleT,  DoubleT)  -> DoubleT
-               | _                    -> 
-                  tree_err "Invalid arithmetic operation (type mismatch)"
-         )
+      | Const(c)        -> type_of_const c
+      | Var(v)          -> var_type v tables sources
+      | SQLArith(a,_,b) -> (escalate_type (rcr a) (rcr b))
       | Negation(subexp) ->
-         let subtype = rcr subexp in
-            if subtype = StringT then 
-               tree_err "Negation of string"
-            else
-               subtype
+         return_if_numeric (rcr subexp) "Negation of "
       | NestedQ(stmt) -> 
          let subsch = select_schema tables stmt in
             if (List.length subsch) != 1 then
@@ -219,15 +196,10 @@ let rec expr_type (expr:expr_t) (tables:table_t list)
             else 
                let (_,_,t) = List.hd subsch in
                   t
-      | Aggregate(agg,subexp) -> (
-            match agg with
-               | SumAgg ->
-                  let subtype = rcr subexp in
-                     if subtype = StringT then 
-                        tree_err "SUM() of string"
-                     else
-                        subtype
-         )
+      | Aggregate(agg,subexp) -> 
+         begin match agg with
+            | SumAgg -> return_if_numeric (rcr subexp) "Aggregate of "
+         end
          
       
 and select_schema (tables:table_t list) (stmt:select_t): schema_t =
@@ -266,7 +238,7 @@ and source_for_var ((s,v,_):sql_var_t) (tables:table_t list)
          else
             raise (Variable_binding_err(
                "Unable to find source '"^sn^"' in list: "^
-               (string_of_list0 ", " fst sources), 
+               (ListExtras.string_of_list ~sep:", " fst sources), 
                0
             ))
       | None -> source_for_var_name v tables sources
@@ -276,7 +248,7 @@ and var_type (v:sql_var_t) (tables:table_t list)
              (sources:labeled_source_t list): type_t =
    let (_,vn,t) = v in
    match t with
-      | AnyT -> 
+      | TAny -> 
          (* Try to dereference the variable and figure out its type *)
          let (_,source) = source_for_var v tables sources in
          let sch = (
@@ -291,7 +263,7 @@ and var_type (v:sql_var_t) (tables:table_t list)
             with Not_found ->
                failwith ("Bug in Sql.var_type: Found schema for variable '"^
                          (string_of_var v)^"': "^
-                         (string_of_list0 ", " string_of_var sch)^
+                         (ListExtras.string_of_list ~sep:", " string_of_var sch)^
                          "; but variable not found inside")
          )
       | _ -> t
@@ -357,7 +329,7 @@ let rec is_agg_expr (expr:expr_t): bool =
 let is_agg_query ((targets,_,_,_):select_t): bool =
    List.exists is_agg_expr (List.map snd targets)
 ;;
-let global_table_defs = ref []
+let global_table_defs:(string * table_t) list ref = ref []
 ;;
 let reset_table_defs () = 
    (*print_endline ("Resetting tables; Old Tables Are: "^(

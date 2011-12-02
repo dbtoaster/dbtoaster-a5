@@ -39,3 +39,17 @@ let string_of_list ?(sep = "; ") (string_of_elem: ('a -> string)) (l: 'a list) =
 
 let ocaml_of_list (string_of_elem: 'a -> string) (l: 'a list) = 
    "[" ^ (string_of_list string_of_elem l) ^ "]"
+
+let index_of (a:'a) (l:'a list): int =
+   let idx, fnd = (List.fold_left (fun (i,r) e -> 
+      if r then (i,r) else if e == a then (i,true) else (i+1,false)
+   ) (0,false) l) in
+      if fnd then idx else raise Not_found
+
+let sublist (start:int) (cnt:int) (l:'a list):'a list =
+   snd (List.fold_left (fun (i, r) e ->
+      if i <= 0 then
+         if (List.length r < cnt) or (cnt < 0) then (i, r @ [e])
+                                               else (i, r)
+      else (i-1,r)
+   ) (start,[]) l)

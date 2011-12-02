@@ -37,12 +37,16 @@ module type ExternalMeta = sig
 end
 
 module type Calculus = sig
-   module CalcRing : Ring.Ring
-   
+   type external_meta_t
+   module rec CalcRing : Ring.Ring with
+      type leaf_t = (CalcRing.expr_t, external_meta_t) calc_leaf_t
    type expr_t = CalcRing.expr_t
    
    val string_of_leaf: CalcRing.leaf_t -> string
    val string_of_expr: CalcRing.expr_t -> string
+   val schema_of_expr: CalcRing.expr_t -> (var_t list * var_t list)
+   val type_of_expr:   CalcRing.expr_t -> type_t
+   val rels_of_expr:   CalcRing.expr_t -> string list
 end
 
 module Make(T : ExternalMeta) = struct
@@ -60,6 +64,7 @@ module Make(T : ExternalMeta) = struct
             = Ring.Make(CalcBase)
    
    type expr_t = CalcRing.expr_t
+   type external_meta_t = T.meta_t
    
    (*** Stringifiers ***)
    let rec string_of_leaf (leaf:CalcRing.leaf_t): string = 
@@ -83,7 +88,7 @@ module Make(T : ExternalMeta) = struct
          | Lift(target, subexp)    -> 
             (string_of_var target)^" <= ("^(string_of_expr subexp)^")"
       end
-   and string_of_expr (expr:CalcRing.expr_t): string =
+   and string_of_expr (expr:expr_t): string =
       CalcRing.fold
          (fun sum_list  -> "("^(String.concat " U " sum_list )^")")
          (fun prod_list -> "("^(String.concat " |><| " prod_list)^")")
@@ -91,12 +96,83 @@ module Make(T : ExternalMeta) = struct
          string_of_leaf
          expr
    
+   (*** Informational Operations ***)
+   let rec schema_of_expr (expr:expr_t): (var_t list * var_t list) =
+      let rcr a = schema_of_expr a in
+      CalcRing.fold 
+         (fun sum_vars ->
+            let ivars, ovars = List.split sum_vars in
+               if not (ListAsSet.seteq (ListAsSet.multiinter ovars)
+                                       (ListAsSet.multiunion ovars))
+               then failwith "Calculus expr with sum of incompatible schemas"
+               else (ListAsSet.multiunion ivars, ListAsSet.multiunion ovars)
+         )
+         (fun prod_vars ->
+            List.fold_left (fun (old_ivars, old_ovars) (new_ivars, new_ovars) ->
+                              (  ListAsSet.union 
+                                    old_ivars
+                                    (ListAsSet.diff new_ivars old_ovars),
+                                 ListAsSet.union old_ovars new_ovars 
+                              )
+                           ) ([],[]) prod_vars
+         )
+         (fun child_vars -> child_vars)
+         (fun lf -> begin match lf with
+            | Value(v) -> (vars_of_value v,[])
+            | External(_,eins,eouts,_,_) -> (eins,eouts)
+            | AggSum(gb_vars, subexp) -> 
+               let ivars, ovars = rcr subexp in
+                  if not (ListAsSet.seteq (ListAsSet.inter ovars gb_vars)
+                                          gb_vars)
+                  then failwith "Calculus expr with invalid group by var"
+                  else (ivars, gb_vars)
+            | Rel(_,rvars,_) -> ([],rvars)
+            | Cmp(_,v1,v2) ->
+               (ListAsSet.union (vars_of_value v1) (vars_of_value v2), [])
+            | Lift(target, subexp) ->
+               let ivars, ovars = rcr subexp in
+                  if List.mem target ovars
+                  then failwith "Calculus lift statement redefines var"
+                  else (ivars, target::ovars)
+         end)
+         expr
+
+   let rec type_of_expr (expr:expr_t): type_t =
+      let rcr a = type_of_expr a in
+      CalcRing.fold
+         (escalate_type_list ~opname:"[+]")
+         (escalate_type_list ~opname:"[*]")
+         (fun x->x)
+         (fun lf -> begin match lf with
+            | Value(v)                -> (type_of_value v)
+            | External(_,_,_,etype,_) -> etype
+            | AggSum(_, subexp)       -> rcr subexp
+            | Rel(_,_,rtype)          -> rtype
+            | Cmp(_,_,_)              -> TBool
+            | Lift(_,_)               -> TInt
+         end)
+         expr
+   
+   let rec rels_of_expr (expr:expr_t): string list =
+      let rcr a = rels_of_expr a in
+         CalcRing.fold
+            ListAsSet.multiunion
+            ListAsSet.multiunion
+            (fun x -> x)
+            (fun lf -> begin match lf with
+               | Value(_)            -> []
+               | External(_,_,_,_,_) -> []
+               | AggSum(_, subexp)   -> rcr subexp
+               | Rel(rn,_,_)         -> [rn]
+               | Cmp(_,_,_)          -> []
+               | Lift(_,subexp)      -> rcr subexp
+            end)
+            expr
 end
 
-module Translator(T1 : ExternalMeta)(T2 : ExternalMeta) = struct
-   module C1 = Make(T1)
-   module C2 = Make(T2)
-   let rec translate (translate_meta: T1.meta_t -> T2.meta_t) 
+module Translator(C1 : Calculus)(C2 : Calculus) = struct
+   let rec translate (translate_meta: C1.external_meta_t external_t -> 
+                                      C2.external_meta_t) 
                      (e1:C1.expr_t): C2.expr_t =
       let rcr = translate translate_meta in
       C1.CalcRing.fold 
@@ -108,7 +184,8 @@ module Translator(T1 : ExternalMeta)(T2 : ExternalMeta) = struct
                begin match lf with
                   | Value(v) -> Value(v)
                   | External(ename,eins,eouts,etype,emeta) ->
-                     External(ename,eins,eouts,etype,(translate_meta emeta))
+                     External(ename,eins,eouts,etype,
+                              (translate_meta (ename,eins,eouts,etype,emeta)))
                   | AggSum(gbvars,subexp) ->
                      AggSum(gbvars, (rcr subexp))
                   | Rel(rname, rvars, rtype) ->
@@ -128,3 +205,14 @@ module NullMeta : ExternalMeta = struct
 end
 
 module BasicCalculus = Make(NullMeta)
+module BasicCalculusTranslator = Translator(BasicCalculus)
+
+module rec IVCMeta : ExternalMeta = struct
+   type meta_t = IVCCalculus.expr_t option
+   let string_of_meta meta = 
+      begin match meta with 
+         | Some(s) -> IVCCalculus.string_of_expr s
+         | None -> ""
+      end
+end and IVCCalculus : Calculus = Make(IVCMeta)
+module BasicToIVC = BasicCalculusTranslator(IVCCalculus)

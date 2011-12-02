@@ -1,5 +1,5 @@
 %{
-open Common.Types
+open GlobalTypes
 
 exception SQLParseError of string
 exception FeatureUnsupported of string
@@ -58,10 +58,11 @@ let bind_select_vars q =
 
 %}
 
-%token <Sql.type_t> TYPE
+%token <GlobalTypes.type_t> TYPE
 %token <string> ID STRING
 %token <int> INT   
 %token <float> FLOAT
+%token VARCHAR
 %token TRUE FALSE
 %token DATE
 %token EQ NE LT LE GT GE
@@ -105,9 +106,9 @@ dbtoasterSqlStmt:
 // Create table statements
 
 framingStmt:
-|   FIXEDWIDTH INT                  { Common.Input.Fixed($2) }
-|   LINE DELIMITED                  { Common.Input.Delimited("\n") }
-|   STRING DELIMITED                { Common.Input.Delimited($1) }
+|   FIXEDWIDTH INT                  { DBSchema.FixedSize($2) }
+|   LINE DELIMITED                  { DBSchema.Delimited("\n") }
+|   STRING DELIMITED                { DBSchema.Delimited($1) }
 
 adaptorParams:
 |   ID SETVALUE STRING                     { [(String.lowercase $1,$3)] }
@@ -123,15 +124,15 @@ bytestreamParams:
 
 sourceStmt:
 |   FILE STRING bytestreamParams 
-                    { Common.Input.File($2, $3) }
+  { (DBSchema.FileSource($2, fst $3), snd $3) }
 |   SOCKET STRING INT bytestreamParams
-                    { Common.Input.Socket(Unix.inet_addr_of_string $2, $3, $4) }
+  { (DBSchema.SocketSource(Unix.inet_addr_of_string $2, $3, fst $4), snd $4) }
 |   SOCKET INT bytestreamParams
-                    { Common.Input.Socket(Unix.inet_addr_any, $2, $3) }
+  { (DBSchema.SocketSource(Unix.inet_addr_any, $2, fst $3), snd $3) }
 
 typeDefn:
-| TYPE                   { $1 }
-| TYPE LPAREN INT RPAREN { $1 } //ignore the size parameter for now
+| TYPE                      { $1 }
+| VARCHAR LPAREN INT RPAREN { TString($3) }
 
 fieldList:
 | ID typeDefn                    { [None, String.uppercase $1, $2] }
@@ -139,7 +140,7 @@ fieldList:
 
 createTableStmt:
 |   CREATE TABLE ID LPAREN fieldList RPAREN { 
-      mk_tbl (String.uppercase $3, $5, Common.Input.Manual)
+      mk_tbl (String.uppercase $3, $5, (DBSchema.NoSource, ("",[])))
     }
 |   CREATE TABLE ID LPAREN fieldList RPAREN FROM sourceStmt { 
       mk_tbl (String.uppercase $3, $5, $8)
@@ -237,8 +238,8 @@ selectStmt:
 // Expressions
 
 variable:
-| ID           { (None, String.uppercase $1, AnyT) }
-| ID PERIOD ID { ((Some(String.uppercase $1)), String.uppercase $3, AnyT) }
+| ID           { (None, String.uppercase $1, TAny) }
+| ID PERIOD ID { ((Some(String.uppercase $1)), String.uppercase $3, TAny) }
 
 op:
 | SUM     { Sql.Sum }
@@ -248,9 +249,9 @@ op:
 
 expression:
 | LPAREN expression RPAREN { $2 }
-| INT      { Sql.Const(Integer($1)) }
-| FLOAT    { Sql.Const(Double($1)) }
-| STRING   { Sql.Const(String($1)) }
+| INT      { Sql.Const(CInt($1)) }
+| FLOAT    { Sql.Const(CFloat($1)) }
+| STRING   { Sql.Const(CString($1)) }
 | variable { Sql.Var($1) }
 | expression op expression      { Sql.SQLArith($1, $2, $3) }
 | MINUS expression %prec UMINUS { Sql.Negation($2) }

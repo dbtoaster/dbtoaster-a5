@@ -4,15 +4,15 @@ type rel_t = string * var_t list * var_t
 type event_type_t = InsertEvent | DeleteEvent
 type event_t = event_type_t * rel_t
 
-type source_t = 
-   | NoSource
-   | FileSource of string (* filename *)
-   | PipeSource of string (* command *)
-   | SocketSource of int  (* port *)
-
 type framing_t =
    | Delimited of string (* delimiter *)
    | FixedSize of int    (* frame size *)
+
+type source_t = 
+   | NoSource
+   | FileSource of string * framing_t (* filename *)
+   | PipeSource of string * framing_t (* command *)
+   | SocketSource of Unix.inet_addr * int * framing_t  (* port *)
 
 type adaptor_t = string * (string * string) list
 
@@ -34,9 +34,9 @@ let add_rel (db:t)
    else
       db := ((source, framing), [decoder, rel]) :: !db
 
-let get_rels (db:t): rel_t list =
+let rels (db:t): rel_t list =
    List.fold_left (fun old (_, rels) -> old@(List.map snd rels)) [] !db
 
-let get_rel (db:t) (reln:string): rel_t =
-   List.find (fun (cmpn,_,_) -> reln == cmpn) (get_rels db)
+let rel (db:t) (reln:string): rel_t =
+   List.find (fun (cmpn,_,_) -> reln == cmpn) (rels db)
    

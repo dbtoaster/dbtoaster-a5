@@ -1,7 +1,7 @@
 {   
 open Sqlparser   
 open Lexing   
-open Common.Types
+open GlobalTypes
 
 let init_line lexbuf =
     let pos = lexbuf.Lexing.lex_curr_p in
@@ -69,13 +69,13 @@ let keywords =
         "EXISTS", EXISTS;
         "TRUE", TRUE;
         "FALSE", FALSE;
-        "INT",     TYPE(IntegerT);
-        "INTEGER", TYPE(IntegerT);
-        "FLOAT",   TYPE(DoubleT);
-        "DOUBLE",  TYPE(DoubleT);
-        "DECIMAL", TYPE(DoubleT);
-        "STRING",  TYPE(StringT);
-        "VARCHAR", TYPE(StringT)
+        "INT",     TYPE(TInt);
+        "INTEGER", TYPE(TInt);
+        "FLOAT",   TYPE(TFloat);
+        "DOUBLE",  TYPE(TFloat);
+        "DECIMAL", TYPE(TFloat);
+        "STRING",  TYPE(TString(0));
+        "VARCHAR", VARCHAR
     ]
 let _ = hashtbl_of_pair_list keyword_table keywords
 
