@@ -10,10 +10,14 @@ let tmp_var (vn:string) (vt:type_t): var_t =
    tmp_var_id := !tmp_var_id + 1;
    (vn^(string_of_int !tmp_var_id), vt)
 
-let lifted_exp ?(t="agg") (calc:BasicCalculus.expr_t) = 
-   let tmp_var = tmp_var ("__sql_"^t^"_tmp_") 
-                         (BasicCalculus.type_of_expr calc) in
-      (tmp_var, CalcRing.mk_val (Lift(tmp_var, calc)))
+let lift_if_necessary ?(t="agg") (calc:BasicCalculus.expr_t):
+                      (value_t * BasicCalculus.expr_t) = 
+   match calc with
+      | CalcRing.Val(Value(x)) -> (x, CalcRing.one)
+      | _ -> 
+         let tmp_var = tmp_var ("__sql_"^t^"_tmp_") 
+                               (BasicCalculus.type_of_expr calc) in
+            (mk_var tmp_var, CalcRing.mk_val (Lift(tmp_var, calc)))
 
 let rec preprocess (tables:Sql.table_t list) (query:Sql.select_t): 
                    Sql.select_t =
@@ -30,16 +34,43 @@ let var_of_sql_var ((rel,vn,vt):Sql.sql_var_t):var_t =
 let rec calc_of_query (tables:Sql.table_t list) 
                         ((targets,sources,cond,gb_vars):Sql.select_t): 
                         (string * BasicCalculus.expr_t) list = 
+   let gb_var_names = List.map Sql.string_of_var gb_vars in
    let source_calc = calc_of_sources tables sources in
    let cond_calc = calc_of_condition tables cond in
+   let (agg_tgts, noagg_tgts) = 
+      List.partition (fun (_,expr) -> Sql.is_agg_expr expr)
+                     targets in
+   let noagg_calc = CalcRing.mk_prod (List.map (fun (tgt_name, tgt_expr) ->
+      if not (List.mem tgt_name gb_var_names) then
+         failwith ("Non-aggregate term '"^tgt_name^"' not in group by clause")
+      else match tgt_expr with
+         | Sql.Var(v) when (Sql.string_of_var v) = tgt_name -> 
+            (* If we're being asked to group by a variable (with no renaming)
+               then we don't actually need to include the variable in any way
+               shape and/or form *)
+            CalcRing.one
+         | _ -> 
+            (* If we're being asked to group by something more complex than
+               just a simple variable, then we need to lift the expression
+               up into a variable of the appropriate name (this also covers
+               simple renaming) *)
+            let tgt_var = (tgt_name, (Sql.expr_type tgt_expr tables sources)) in
+            CalcRing.mk_val (Lift(tgt_var, calc_of_sql_expr tables tgt_expr))
+   ) noagg_tgts) in
    List.map (fun (tgt_name, tgt_expr) ->
-      (tgt_name, CalcRing.mk_prod [
-         source_calc;
-         cond_calc;
-         calc_of_sql_expr ~gb_vars:(List.map var_of_sql_var gb_vars) 
-                          tables tgt_expr
-      ])
-   ) targets
+      (tgt_name, 
+         calc_of_sql_expr ~materialize_query:(Some(fun agg_type agg_calc ->
+            begin match agg_type with
+               | Sql.SumAgg -> 
+                  CalcRing.mk_val 
+                     (AggSum(List.map var_of_sql_var gb_vars, 
+                             CalcRing.mk_prod 
+                                [source_calc; cond_calc; agg_calc; noagg_calc]
+                     ))
+            end
+         )) tables tgt_expr
+      )
+   ) agg_tgts
 
 and calc_of_sources (tables:Sql.table_t list) 
                     (sources:Sql.labeled_source_t list):
@@ -80,51 +111,56 @@ and calc_of_condition (tables:Sql.table_t list) (cond:Sql.cond_t):
    let rcr_q q = calc_of_query tables q in
       begin match cond with
          | Sql.Comparison(e1,cmp,e2) -> 
-            let (e1_var, e1_calc) = lifted_exp (rcr_e e1) in
-            let (e2_var, e2_calc) = lifted_exp (rcr_e e2) in
+            let (e1_val, e1_calc) = lift_if_necessary (rcr_e e1) in
+            let (e2_val, e2_calc) = lift_if_necessary (rcr_e e2) in
                CalcRing.mk_prod [
                   e1_calc; e2_calc;
-                  CalcRing.mk_val (Cmp(cmp, mk_var e1_var, mk_var e2_var));
+                  CalcRing.mk_val (Cmp(cmp, e1_val, e2_val));
                ]
          | Sql.And(c1,c2) -> CalcRing.mk_prod [rcr_c c1; rcr_c c2]
          | Sql.Or(c1,c2)  -> 
-            let (or_var,or_calc) = lifted_exp ~t:"or" (
+            let (or_val,or_calc) = lift_if_necessary ~t:"or" (
                CalcRing.mk_sum [rcr_c c1;rcr_c c2]
             ) in
                (* A little hackery is needed here to handle the case where
                   both c1 and c2 are true; To deal with this, we explicitly 
                   check to see if c1 and c2 are both greater than 0 *)
                CalcRing.mk_prod [or_calc; 
-                  CalcRing.mk_val (Cmp(Gt, (mk_var or_var), mk_int 0))]
+                  CalcRing.mk_val (Cmp(Gt, or_val, mk_int 0))]
          | Sql.Not(Sql.Exists(q)) ->
             begin match rcr_q q with
             | [_,q_calc_unlifted] ->
-            let (q_var,q_calc) = lifted_exp q_calc_unlifted in
+            let (q_val,q_calc) = lift_if_necessary q_calc_unlifted in
                CalcRing.mk_prod [q_calc; 
-                  CalcRing.mk_val (Cmp(Eq, (mk_var q_var), mk_int 0))]
+                  CalcRing.mk_val (Cmp(Eq, q_val, mk_int 0))]
             | _ -> (failwith "Nested subqueries must have exactly 1 argument")
             end
          | Sql.Exists(q) ->
             begin match rcr_q q with
             | [_,q_calc_unlifted] ->
-            let (q_var,q_calc) = lifted_exp q_calc_unlifted in
+            let (q_val,q_calc) = lift_if_necessary q_calc_unlifted in
                CalcRing.mk_prod [q_calc; 
-                  CalcRing.mk_val (Cmp(Gt, (mk_var q_var), mk_int 0))]
+                  CalcRing.mk_val (Cmp(Gt, q_val, mk_int 0))]
             | _ -> (failwith "Nested subqueries must have exactly 1 argument")
             end
          | Sql.Not(c) ->
-            let (not_var,not_calc) = lifted_exp ~t:"not" (rcr_c c) in
+            let (not_val,not_calc) = lift_if_necessary ~t:"not" (rcr_c c) in
                (* Note that Calculus negation is NOT boolean negation.  We need
                   to swap 0 and not 0 with a comparison *)
                CalcRing.mk_prod [not_calc; 
-                  CalcRing.mk_val (Cmp(Eq, (mk_var not_var), mk_int 0))]
+                  CalcRing.mk_val (Cmp(Eq, not_val, mk_int 0))]
          | Sql.ConstB(b) -> 
             CalcRing.mk_val (Value(mk_bool b))
       end
 
-and calc_of_sql_expr ?(gb_vars = []) (tables:Sql.table_t list) (expr:Sql.expr_t):
-                 BasicCalculus.expr_t =
-   let rcr_e e = calc_of_sql_expr ~gb_vars:gb_vars tables e in
+and calc_of_sql_expr ?(materialize_query = None)
+                     (tables:Sql.table_t list) 
+                     (expr:Sql.expr_t): BasicCalculus.expr_t =
+   let rcr_e ?(is_agg=false) e =
+      if is_agg then calc_of_sql_expr tables e
+      else calc_of_sql_expr ~materialize_query:materialize_query
+                            tables e
+   in
    let rcr_q q = calc_of_query tables q in
    begin match expr with
       | Sql.Const(c) -> 
@@ -138,10 +174,10 @@ and calc_of_sql_expr ?(gb_vars = []) (tables:Sql.table_t list) (expr:Sql.expr_t)
       | Sql.SQLArith(e1, Sql.Sub, e2) ->
          CalcRing.mk_sum [rcr_e e1; CalcRing.mk_neg (rcr_e e2)]
       | Sql.SQLArith(e1, Sql.Div, e2) ->
-         let (e2_var, e2_calc) = lifted_exp (rcr_e e2) in
+         let (e2_val, e2_calc) = lift_if_necessary (rcr_e e2) in
          CalcRing.mk_prod [rcr_e e1; e2_calc; 
             CalcRing.mk_val (Value(ValueRing.mk_val (
-               AFn("/", [mk_var e2_var], TFloat)
+               AFn("/", [e2_val], TFloat)
             )))]
       | Sql.Negation(e) -> CalcRing.mk_neg (rcr_e e)
       | Sql.NestedQ(q)  -> 
@@ -149,7 +185,15 @@ and calc_of_sql_expr ?(gb_vars = []) (tables:Sql.table_t list) (expr:Sql.expr_t)
          | [_,q_calc] -> q_calc
          | _ -> (failwith "Nested subqueries must have exactly 1 argument")
          end
-      | Sql.Aggregate(Sql.SumAgg, expr) -> 
-         CalcRing.mk_val (AggSum(gb_vars, rcr_e expr))
+      | Sql.Aggregate(agg, expr) -> 
+         begin match materialize_query with
+            | Some(mq) -> (mq agg (rcr_e ~is_agg:true expr))
+            | None -> failwith "Unexpected aggregation operator"
+         end
    end
 
+let extract_sql_schema (db:DBSchema.t) (tables:Sql.table_t list) = 
+   List.iter (fun (reln, relsch, (relsource, reladaptor)) ->
+      DBSchema.add_rel db ~source:relsource ~adaptor:reladaptor 
+                          (reln, List.map var_of_sql_var relsch, TInt)
+   ) tables

@@ -75,7 +75,8 @@ let string_of_const (a: const_t): string =
    end
 
 let string_of_var ((name, vt): var_t): string =
-   "<"^name^":"^(string_of_type vt)^">"
+   if Debug.active "PRINT-VERBOSE" then "<"^name^":"^(string_of_type vt)^">"
+                                   else name
 
 (**** Escalation ****)
 let escalate_type ?(opname="<op>") (a:type_t) (b:type_t): type_t = 

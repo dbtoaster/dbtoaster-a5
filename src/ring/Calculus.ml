@@ -82,17 +82,21 @@ module Make(T : ExternalMeta) = struct
          | Rel(rname, rvars, _)    -> 
             rname^"("^(ListExtras.string_of_list string_of_var rvars)^")"
          | Cmp(op,subexp1,subexp2) -> 
-            "("^(string_of_value subexp1)^") "^
+            "("^(string_of_value subexp1)^" "^
                 (string_of_cmp op)^
-            "("^(string_of_value subexp2)^") "
+            " "^(string_of_value subexp2)^")"
          | Lift(target, subexp)    -> 
-            (string_of_var target)^" <= ("^(string_of_expr subexp)^")"
+            "("^(string_of_var target)^" ^= "^(string_of_expr subexp)^")"
       end
    and string_of_expr (expr:expr_t): string =
+      let (sum_op, prod_op, neg_op) = 
+         if Debug.active "PRINT-VERBOSE" then (" U ", " |><| ", "(<>:-1)*")
+                                         else (" + ", " * ", "-1 * ")
+      in
       CalcRing.fold
-         (fun sum_list  -> "("^(String.concat " U " sum_list )^")")
-         (fun prod_list -> "("^(String.concat " |><| " prod_list)^")")
-         (fun neg_term  -> "((<>:-1)*"^neg_term^")")
+         (fun sum_list  -> "("^(String.concat sum_op sum_list )^")")
+         (fun prod_list -> "("^(String.concat prod_op prod_list)^")")
+         (fun neg_term  -> "("^neg_op^neg_term^")")
          string_of_leaf
          expr
    
