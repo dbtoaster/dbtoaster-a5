@@ -12,7 +12,7 @@
    have no side effects.
 *)
 
-open GlobalTypes
+open Types
 
 type 'term arithmetic_leaf_t =
    | AConst of const_t
@@ -111,7 +111,7 @@ let binary_op (b_op: bool   -> bool   -> bool)
          failwith "Binary math op over a string"
    end
 
-let sum  = binary_op ( || ) ( + ) ( +. )
+let sum  = binary_op ( failwith "sum of booleans" ) ( + ) ( +. )
 let suml = List.fold_left sum (CInt(0))
 let prod = binary_op ( && ) ( * ) ( *. )
 let prodl= List.fold_left prod (CInt(1))
@@ -153,3 +153,33 @@ let rec eval ?(scope=StringMap.empty) (v:value_t): const_t =
             else failwith ("Function "^fn^" is undefined")
    ) v
 
+let rec eval_partial ?(scope=StringMap.empty) (v:value_t): value_t = 
+   let merge v_op c_op (term_list:value_t list): value_t = 
+      let (v, c) = List.fold_right (fun (term) (v,c) ->
+         match (term, c) with
+            | (ValueRing.Val(AConst(c2)), None) -> (v, Some(c2))
+            | (ValueRing.Val(AConst(c2)), Some(c1)) -> (v, Some(c_op c1 c2))
+            | (_,_) -> (term :: v, c)
+      ) term_list ([], None) 
+      in v_op ((match c with 
+         | None -> [] 
+         | Some(c) -> [mk_const c]
+      ) @ v)
+   in
+   ValueRing.fold 
+      (merge ValueRing.mk_sum sum)
+      (merge ValueRing.mk_prod prod)
+      (fun x -> merge ValueRing.mk_prod prod [mk_int (-1); x])
+      (fun lf -> match lf with
+         | AFn(fname, fargs, ftype) -> 
+            ValueRing.mk_val 
+               (AFn(fname, List.map (eval_partial ~scope:scope) fargs, ftype))
+         | AVar(vn, vt) ->
+            if StringMap.mem vn scope 
+               then mk_const (StringMap.find vn scope)
+               else ValueRing.mk_val lf
+         | AConst(c) -> ValueRing.mk_val lf
+      )
+      v
+   
+   

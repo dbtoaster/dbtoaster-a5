@@ -9,7 +9,7 @@
    
 *)
 
-open GlobalTypes
+open Types
 
 exception SqlException of string
 exception Variable_binding_err of string * int
@@ -20,7 +20,8 @@ type sql_var_t = string option * string * type_t
 
 type schema_t = sql_var_t list
 
-type table_t = string * schema_t * (DBSchema.source_t * DBSchema.adaptor_t)
+type table_t = string * schema_t * Schema.rel_type_t *
+               (Schema.source_t * Schema.adaptor_t)
 
 type arith_t = Sum | Prod | Sub | Div
 
@@ -157,8 +158,10 @@ and string_of_select (stmt:select_t): string =
       else "")^
    ";"
 
-let string_of_table ((name, vars, (source, adaptor)):table_t): string =
-   "CREATE TABLE "^name^"("^
+let string_of_table ((name, vars, reltype, (source, adaptor)):table_t): string =
+   
+   "CREATE "^(if reltype == Schema.TableRel then "TABLE" else "STREAM")^
+   " "^name^"("^
       (ListExtras.string_of_list ~sep:", " (fun (_,v,t) ->
          v^" "^(string_of_type t)
       ) vars)^
@@ -168,9 +171,9 @@ let string_of_table ((name, vars, (source, adaptor)):table_t): string =
 
 let find_table (t:string) (tables:table_t list): table_t =
    try 
-      List.find (fun (t2,_,_) -> t = t2) tables
+      List.find (fun (t2,_,_,_) -> t = t2) tables
    with Not_found -> 
-      error ("Undefined table: '"^t^"'")
+      error ("Undefined relation: '"^t^"'")
 
 ;;
 
@@ -215,7 +218,7 @@ and source_for_var_name (v:string) (tables:table_t list)
          let sch = 
             match sd with
                | Table(t) -> 
-                  let (_,sch,_) = find_table t tables in sch
+                  let (_,sch,_,_) = find_table t tables in sch
                | SubQ(s) -> 
                   select_schema tables s
          in
@@ -253,7 +256,8 @@ and var_type (v:sql_var_t) (tables:table_t list)
          let (_,source) = source_for_var v tables sources in
          let sch = (
             match source with 
-               | Table(table) -> let (_,sch,_) = find_table table tables in sch
+               | Table(table) -> 
+                     let (_,sch,_,_) = find_table table tables in sch
                | SubQ(subq) -> select_schema tables subq 
          )
          in

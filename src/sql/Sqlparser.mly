@@ -1,5 +1,5 @@
 %{
-open GlobalTypes
+open Types
 
 exception SQLParseError of string
 exception FeatureUnsupported of string
@@ -15,18 +15,18 @@ let re_source_vars name vars =
 
 ;;
 let mk_tbl table_def = 
-   let (lc_name, schema, source) = table_def in
-   if List.mem_assoc lc_name !table_defs then
-      bail ("Duplicate Definition of Table '"^lc_name^"'")
+   let (relname, relsch, reltype, relsource) = table_def in
+   if List.mem_assoc relname !table_defs then
+      bail ("Duplicate Definition of Relation '"^relname^"'")
    else
-      let new_schema = re_source_vars lc_name schema in
-      let new_def = (lc_name, new_schema, source) in
-         table_defs := (lc_name, new_def) :: !table_defs;
+      let new_schema = re_source_vars relname relsch in
+      let new_def = (relname, new_schema, reltype, relsource) in
+         table_defs := (relname, new_def) :: !table_defs;
          new_def
 ;;
 let get_schema name = 
    if List.mem_assoc name !table_defs then
-      let (_,sch,_) = List.assoc name !table_defs in
+      let (_,sch,_,_) = List.assoc name !table_defs in
          sch
    else
       bail ("Reference to Undefined Table '"^name^"'")
@@ -58,7 +58,7 @@ let bind_select_vars q =
 
 %}
 
-%token <GlobalTypes.type_t> TYPE
+%token <Types.type_t> TYPE
 %token <string> ID STRING
 %token <int> INT   
 %token <float> FLOAT
@@ -76,7 +76,7 @@ let bind_select_vars q =
 %token SOCKET FILE FIXEDWIDTH VARSIZE OFFSET ADJUSTBY SETVALUE LINE DELIMITED
 %token POSTGRES RELATION PIPE
 %token ASC DESC
-%token SOURCE ARGS INSTANCE TUPLE ADAPTOR BINDINGS
+%token SOURCE ARGS INSTANCE TUPLE ADAPTOR BINDINGS STREAM
 %token EOSTMT
 %token EOF
 
@@ -106,9 +106,9 @@ dbtoasterSqlStmt:
 // Create table statements
 
 framingStmt:
-|   FIXEDWIDTH INT                  { DBSchema.FixedSize($2) }
-|   LINE DELIMITED                  { DBSchema.Delimited("\n") }
-|   STRING DELIMITED                { DBSchema.Delimited($1) }
+|   FIXEDWIDTH INT                  { Schema.FixedSize($2) }
+|   LINE DELIMITED                  { Schema.Delimited("\n") }
+|   STRING DELIMITED                { Schema.Delimited($1) }
 
 adaptorParams:
 |   ID SETVALUE STRING                     { [(String.lowercase $1,$3)] }
@@ -124,11 +124,11 @@ bytestreamParams:
 
 sourceStmt:
 |   FILE STRING bytestreamParams 
-  { (DBSchema.FileSource($2, fst $3), snd $3) }
+  { (Schema.FileSource($2, fst $3), snd $3) }
 |   SOCKET STRING INT bytestreamParams
-  { (DBSchema.SocketSource(Unix.inet_addr_of_string $2, $3, fst $4), snd $4) }
+  { (Schema.SocketSource(Unix.inet_addr_of_string $2, $3, fst $4), snd $4) }
 |   SOCKET INT bytestreamParams
-  { (DBSchema.SocketSource(Unix.inet_addr_any, $2, fst $3), snd $3) }
+  { (Schema.SocketSource(Unix.inet_addr_any, $2, fst $3), snd $3) }
 
 typeDefn:
 | TYPE                      { $1 }
@@ -138,12 +138,16 @@ fieldList:
 | ID typeDefn                    { [None, String.uppercase $1, $2] }
 | ID typeDefn COMMA fieldList    { (None, String.uppercase $1, $2)::$4 }
 
+tableOrStream:
+| TABLE               { Schema.TableRel }
+| STREAM              { Schema.StreamRel }
+
 createTableStmt:
-|   CREATE TABLE ID LPAREN fieldList RPAREN { 
-      mk_tbl (String.uppercase $3, $5, (DBSchema.NoSource, ("",[])))
+|   CREATE tableOrStream ID LPAREN fieldList RPAREN { 
+      mk_tbl (String.uppercase $3, $5, $2, (Schema.NoSource, ("",[])))
     }
-|   CREATE TABLE ID LPAREN fieldList RPAREN FROM sourceStmt { 
-      mk_tbl (String.uppercase $3, $5, $8)
+|   CREATE tableOrStream ID LPAREN fieldList RPAREN FROM sourceStmt { 
+      mk_tbl (String.uppercase $3, $5, $2, $8)
     }
 
 

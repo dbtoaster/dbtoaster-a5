@@ -3,15 +3,15 @@
 -- or as the Ocaml outputter puts it:
 -- QUERY_1_1: [[  ]->[[  ]->1.87533670489e+13;]<pat=>;]<pat=>
 
-CREATE TABLE R(A int, B int) 
+CREATE STREAM R(A int, B int) 
   FROM FILE '../../experiments/data/big_r.dat' LINE DELIMITED
   csv (fields := ',', schema := 'int,int', eventtype := 'insert');
 
-CREATE TABLE S(B int, C int) 
+CREATE STREAM S(B int, C int) 
   FROM FILE '../../experiments/data/big_s.dat' LINE DELIMITED
   csv (fields := ',', schema := 'int,int', eventtype := 'insert');
 
-CREATE TABLE T(C int, D int)
+CREATE STREAM T(C int, D int)
   FROM FILE '../../experiments/data/big_t.dat' LINE DELIMITED
   csv (fields := ',', schema := 'int,int', eventtype := 'insert');
 

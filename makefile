@@ -2,17 +2,18 @@ FILES=\
 	src/util/ListAsSet\
 	src/util/ListExtras\
 	src/util/Debug\
-	src/GlobalTypes\
-	src/DBSchema\
+	src/global/Types\
+	src/global/Schema\
 	src/sql/Sql\
 	src/ring/Ring\
 	src/ring/Arithmetic\
-	src/ring/Calculus\
-	src/ring/SqlToCalculus\
-	src/maps/M3\
+	src/calculus/Calculus\
+	src/calculus/Simplification\
+	src/calculus/SqlToCalculus\
 	src/compiler/Datastructure\
 	src/compiler/Statement\
-	src/compiler/Compiler
+	src/compiler/Compiler\
+	src/maps/M3\
 
 LEXERS=\
 	src/sql/Sqllexer
@@ -21,12 +22,13 @@ PARSERS=\
 	src/sql/Sqlparser
 
 DIRS=\
-	src\
 	src/util\
+	src/global\
 	src/sql\
 	src/ring\
+	src/calculus\
+	src/compiler\
 	src/maps\
-	src/compiler
 
 INCLUDE_OBJ=\
 	str.cma\
@@ -67,20 +69,22 @@ CLEAN_FILES=\
 	$(O_FILES) $(O_INCLUDES) \
 	$(patsubst %,%.o,$(FILES)) \
 	bin/dbtoaster bin/dbtoaster_top bin/dbtoaster_debug \
-	src/Driver.cmi src/Driver.cmo src/Driver.cmx src/Driver.cmxi src/Driver.o \
+	src/global/Driver.cmi src/global/Driver.cmo src/global/Driver.cmx \
+	src/global/Driver.cmxi src/global/Driver.o \
+	doc/*.aux doc/*.synctex.gz doc/*.log \
 	makefile.deps
 
 #################################################
 
 all: bin/dbtoaster_top bin/dbtoaster_debug bin/dbtoaster  
 
-bin/dbtoaster: $(O_FILES) src/Driver.ml
+bin/dbtoaster: $(O_FILES) src/global/Driver.ml
 	@echo "Linking DBToaster (Optimized)"
-	@$(OCAMLOPT) $(OPT_FLAGS) -o $@ $(O_FILES) src/Driver.ml
+	@$(OCAMLOPT) $(OPT_FLAGS) -o $@ $(O_FILES) src/global/Driver.ml
 
-bin/dbtoaster_debug: $(C_FILES) src/Driver.ml
+bin/dbtoaster_debug: $(C_FILES) src/global/Driver.ml
 	@echo "Linking DBToaster (Debug)"
-	@$(OCAMLCC) $(OCAML_FLAGS) -o $@ $(C_FILES) src/Driver.ml
+	@$(OCAMLCC) $(OCAML_FLAGS) -o $@ $(C_FILES) src/global/Driver.ml
 
 bin/dbtoaster_top: $(C_FILES)
 	@echo "Linking DBToaster Top"
@@ -114,11 +118,11 @@ $(O_FILES) : %.cmx : %.ml
 
 $(patsubst %,%.ml,$(LEXERS)) : %.ml : %.mll
 	@echo Building Lexer $(*)
-	@$(OCAMLLEX) $<
+	@$(OCAMLLEX) $< 2>&1 | sed 's/^/  /'
 
 $(patsubst %,%.ml,$(PARSERS)) : %.ml : %.mly
 	@echo Building Parser $(*)
-	@$(OCAMLYACC) $<
+	@$(OCAMLYACC) $< 2>&1 | sed 's/^/  /'
 
 # Ignore generated CMI dependencies.  They get autocompiled along with the
 # object files

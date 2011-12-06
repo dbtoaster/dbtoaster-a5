@@ -12,7 +12,7 @@
    in any way.
 *)
 
-open GlobalTypes
+open Types
 open Arithmetic
 
 type 'meta_t external_t = 

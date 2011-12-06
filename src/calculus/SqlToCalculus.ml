@@ -1,5 +1,5 @@
 open Ring
-open GlobalTypes
+open Types
 open Arithmetic
 open Calculus
 open Calculus.BasicCalculus
@@ -10,6 +10,23 @@ let tmp_var (vn:string) (vt:type_t): var_t =
    tmp_var_id := !tmp_var_id + 1;
    (vn^(string_of_int !tmp_var_id), vt)
 
+(* This utility function performs conversion from arbitrary calculus expressions 
+   to values (e.g., so that the expression values can be compared).  It does 
+   this by lifting the expression into a newly created variable (if necessary).
+   
+   Note that introducing a variable necessitates its subsequent removal from the
+   scope.  Thus, any expression containing the return value(s) of this function
+   must be surrounded by an appropriately grouped AggSum.
+   
+   Also note that in most cases where this function is used below (conditions 
+   and expressions), no new variables/columns will be introduced.  Thus, it is
+   safe to just use an AggSum with no group by variables.
+   
+   It should also be safe to leave these values ungrouped, since they'll get 
+   grouped together into the aggsum on the outside.  However, there are a few
+   corner cases where a lift can occur outside of an aggregate, so it's better
+   to be safe. 
+   *)
 let lift_if_necessary ?(t="agg") (calc:BasicCalculus.expr_t):
                       (value_t * BasicCalculus.expr_t) = 
    match calc with
@@ -19,9 +36,8 @@ let lift_if_necessary ?(t="agg") (calc:BasicCalculus.expr_t):
                                (BasicCalculus.type_of_expr calc) in
             (mk_var tmp_var, CalcRing.mk_val (Lift(tmp_var, calc)))
 
-let rec preprocess (tables:Sql.table_t list) (query:Sql.select_t): 
-                   Sql.select_t =
-   Sql.bind_select_vars query tables
+let rec preprocess ((tables, queries):Sql.file_t): Sql.file_t =
+   (tables, List.map (fun q -> Sql.bind_select_vars q tables) queries)
 
 let var_of_sql_var ((rel,vn,vt):Sql.sql_var_t):var_t = 
    begin match rel with
@@ -84,7 +100,7 @@ and calc_of_sources (tables:Sql.table_t list)
    ) sources ([],[]) in
    CalcRing.mk_prod (List.flatten [
       List.map (fun ((ref_name:string),(rel_name:string)) -> 
-         let (_,sch,_) = Sql.find_table rel_name tables in
+         let (_,sch,_,_) = Sql.find_table rel_name tables in
             CalcRing.mk_val (Rel(
                rel_name,
                List.map (fun (_,vn,vt) -> 
@@ -113,10 +129,12 @@ and calc_of_condition (tables:Sql.table_t list) (cond:Sql.cond_t):
          | Sql.Comparison(e1,cmp,e2) -> 
             let (e1_val, e1_calc) = lift_if_necessary (rcr_e e1) in
             let (e2_val, e2_calc) = lift_if_necessary (rcr_e e2) in
-               CalcRing.mk_prod [
-                  e1_calc; e2_calc;
-                  CalcRing.mk_val (Cmp(cmp, e1_val, e2_val));
-               ]
+               CalcRing.mk_val (AggSum([], 
+                  CalcRing.mk_prod [
+                     e1_calc; e2_calc;
+                     CalcRing.mk_val (Cmp(cmp, e1_val, e2_val));
+                  ]
+               ))
          | Sql.And(c1,c2) -> CalcRing.mk_prod [rcr_c c1; rcr_c c2]
          | Sql.Or(c1,c2)  -> 
             let (or_val,or_calc) = lift_if_necessary ~t:"or" (
@@ -125,30 +143,38 @@ and calc_of_condition (tables:Sql.table_t list) (cond:Sql.cond_t):
                (* A little hackery is needed here to handle the case where
                   both c1 and c2 are true; To deal with this, we explicitly 
                   check to see if c1 and c2 are both greater than 0 *)
-               CalcRing.mk_prod [or_calc; 
-                  CalcRing.mk_val (Cmp(Gt, or_val, mk_int 0))]
+               CalcRing.mk_val (AggSum([], 
+                  CalcRing.mk_prod [or_calc; 
+                     CalcRing.mk_val (Cmp(Gt, or_val, mk_int 0))]
+               ))
          | Sql.Not(Sql.Exists(q)) ->
             begin match rcr_q q with
             | [_,q_calc_unlifted] ->
             let (q_val,q_calc) = lift_if_necessary q_calc_unlifted in
-               CalcRing.mk_prod [q_calc; 
-                  CalcRing.mk_val (Cmp(Eq, q_val, mk_int 0))]
+               CalcRing.mk_val (AggSum([], 
+                  CalcRing.mk_prod [q_calc; 
+                     CalcRing.mk_val (Cmp(Eq, q_val, mk_int 0))]
+               ))
             | _ -> (failwith "Nested subqueries must have exactly 1 argument")
             end
          | Sql.Exists(q) ->
             begin match rcr_q q with
             | [_,q_calc_unlifted] ->
             let (q_val,q_calc) = lift_if_necessary q_calc_unlifted in
-               CalcRing.mk_prod [q_calc; 
-                  CalcRing.mk_val (Cmp(Gt, q_val, mk_int 0))]
+               CalcRing.mk_val (AggSum([], 
+                  CalcRing.mk_prod [q_calc; 
+                     CalcRing.mk_val (Cmp(Gt, q_val, mk_int 0))]
+               ))
             | _ -> (failwith "Nested subqueries must have exactly 1 argument")
             end
          | Sql.Not(c) ->
             let (not_val,not_calc) = lift_if_necessary ~t:"not" (rcr_c c) in
                (* Note that Calculus negation is NOT boolean negation.  We need
                   to swap 0 and not 0 with a comparison *)
-               CalcRing.mk_prod [not_calc; 
-                  CalcRing.mk_val (Cmp(Eq, not_val, mk_int 0))]
+               CalcRing.mk_val (AggSum([], 
+                  CalcRing.mk_prod [not_calc; 
+                     CalcRing.mk_val (Cmp(Eq, not_val, mk_int 0))]
+               ))
          | Sql.ConstB(b) -> 
             CalcRing.mk_val (Value(mk_bool b))
       end
@@ -175,10 +201,12 @@ and calc_of_sql_expr ?(materialize_query = None)
          CalcRing.mk_sum [rcr_e e1; CalcRing.mk_neg (rcr_e e2)]
       | Sql.SQLArith(e1, Sql.Div, e2) ->
          let (e2_val, e2_calc) = lift_if_necessary (rcr_e e2) in
-         CalcRing.mk_prod [rcr_e e1; e2_calc; 
-            CalcRing.mk_val (Value(ValueRing.mk_val (
-               AFn("/", [e2_val], TFloat)
-            )))]
+         CalcRing.mk_val (AggSum([], 
+            CalcRing.mk_prod [rcr_e e1; e2_calc; 
+               CalcRing.mk_val (Value(ValueRing.mk_val (
+                  AFn("/", [e2_val], TFloat)
+               )))]
+         ))
       | Sql.Negation(e) -> CalcRing.mk_neg (rcr_e e)
       | Sql.NestedQ(q)  -> 
          begin match rcr_q q with
@@ -192,8 +220,8 @@ and calc_of_sql_expr ?(materialize_query = None)
          end
    end
 
-let extract_sql_schema (db:DBSchema.t) (tables:Sql.table_t list) = 
-   List.iter (fun (reln, relsch, (relsource, reladaptor)) ->
-      DBSchema.add_rel db ~source:relsource ~adaptor:reladaptor 
-                          (reln, List.map var_of_sql_var relsch, TInt)
+let extract_sql_schema (db:Schema.t) (tables:Sql.table_t list) = 
+   List.iter (fun (reln, relsch, reltype, (relsource, reladaptor)) ->
+      Schema.add_rel db ~source:relsource ~adaptor:reladaptor 
+                        (reln, List.map var_of_sql_var relsch, reltype, TInt)
    ) tables
