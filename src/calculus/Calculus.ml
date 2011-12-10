@@ -203,9 +203,10 @@ module Translator(C1 : Calculus)(C2 : Calculus) = struct
          e1
 end
 
-module NullMeta : ExternalMeta = struct
+module NullMeta = struct
    type meta_t = unit
    let string_of_meta _ = ""
+   let default:meta_t = ();
 end
 
 module BasicCalculus = Make(NullMeta)
@@ -220,3 +221,6 @@ module rec IVCMeta : ExternalMeta = struct
       end
 end and IVCCalculus : Calculus = Make(IVCMeta)
 module BasicToIVC = BasicCalculusTranslator(IVCCalculus)
+   
+
+

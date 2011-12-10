@@ -1,6 +1,7 @@
 FILES=\
 	src/util/ListAsSet\
 	src/util/ListExtras\
+	src/util/Function\
 	src/util/Debug\
 	src/global/Types\
 	src/global/Schema\
@@ -16,10 +17,13 @@ FILES=\
 	src/maps/M3\
 
 LEXERS=\
-	src/sql/Sqllexer
+	src/sql/Sqllexer\
+	src/calculus/Calculuslexer
 
 PARSERS=\
-	src/sql/Sqlparser
+	src/sql/Sqlparser\
+	src/calculus/Calculusparser
+	
 
 DIRS=\
 	src/util\

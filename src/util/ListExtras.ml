@@ -53,3 +53,6 @@ let sublist (start:int) (cnt:int) (l:'a list):'a list =
                                                else (i, r)
       else (i-1,r)
    ) (start,[]) l)
+
+let assoc_fold (fn: 'a -> 'b -> 'c -> 'c) (init:'c) (l:('a * 'b) list): 'c =
+   List.fold_left (fun c (a, b) -> fn a b c) init l

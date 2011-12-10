@@ -111,14 +111,16 @@ let binary_op (b_op: bool   -> bool   -> bool)
          failwith "Binary math op over a string"
    end
 
-let sum  = binary_op ( failwith "sum of booleans" ) ( + ) ( +. )
+let sum  = binary_op ( fun x->failwith "sum of booleans" ) ( + ) ( +. )
 let suml = List.fold_left sum (CInt(0))
 let prod = binary_op ( && ) ( * ) ( *. )
 let prodl= List.fold_left prod (CInt(1))
 let neg  = binary_op (fun x y -> failwith "Negation of a boolean") 
                      ( * ) ( *. ) (CInt(-1))
-let div1 a   = binary_op (failwith "Dividing a boolean 1") (/) (/.) (CInt(1)) a
-let div2 a b = binary_op (failwith "Dividing a boolean 2") (/) (/.) a b
+let div1 a   = binary_op (fun x->failwith "Dividing a boolean 1") 
+                         (/) (/.) (CInt(1)) a
+let div2 a b = binary_op (fun x->failwith "Dividing a boolean 2")
+                         (/) (/.) a b
 
 (**** Functions ****)
 let arithmetic_functions: 
@@ -153,7 +155,7 @@ let rec eval ?(scope=StringMap.empty) (v:value_t): const_t =
             else failwith ("Function "^fn^" is undefined")
    ) v
 
-let rec eval_partial ?(scope=StringMap.empty) (v:value_t): value_t = 
+let rec eval_partial ?(scope=[]) (v:value_t): value_t = 
    let merge v_op c_op (term_list:value_t list): value_t = 
       let (v, c) = List.fold_right (fun (term) (v,c) ->
          match (term, c) with
@@ -175,8 +177,8 @@ let rec eval_partial ?(scope=StringMap.empty) (v:value_t): value_t =
             ValueRing.mk_val 
                (AFn(fname, List.map (eval_partial ~scope:scope) fargs, ftype))
          | AVar(vn, vt) ->
-            if StringMap.mem vn scope 
-               then mk_const (StringMap.find vn scope)
+            if List.mem_assoc (vn,vt) scope 
+               then (List.assoc (vn,vt) scope)
                else ValueRing.mk_val lf
          | AConst(c) -> ValueRing.mk_val lf
       )
