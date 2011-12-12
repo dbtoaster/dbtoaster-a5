@@ -216,7 +216,7 @@ let split_ctx (split_fn: value_t -> 'a option) (ctx:(var_t * C.expr_t) list):
       end
    ) ([],[]) ctx
 ;;
-let unify_lifts (big_schema:var_t list) (big_expr:C.expr_t) =
+let unify_lifts (big_schema:var_t list) (big_expr:C.expr_t): C.expr_t =
    let split_values (ctx:(var_t * C.expr_t) list): 
                     (var_t list * (var_t * value_t) list) = 
       split_ctx (fun v -> Some(v)) ctx
@@ -236,6 +236,11 @@ let unify_lifts (big_schema:var_t list) (big_expr:C.expr_t) =
    let rec rcr (schema:var_t list) (ctx:(var_t * C.expr_t) list) 
                (expr:C.expr_t): (var_t list * C.expr_t) =
       let ctx_vars = (List.map fst ctx) in
+      Debug.print "LOG-UNIFY-LIFTS" (fun () ->
+         "Context: ["^(ListExtras.string_of_list (fun (v,e) ->
+            (fst v)^" := "^(BasicCalculus.string_of_expr e)
+         ) ctx)^"]\nExpression:"^(BasicCalculus.string_of_expr expr)
+      );
       begin match expr with
          | CalcRing.Sum(sl) -> 
             let (deletable_lifts, sum_terms) =
@@ -245,18 +250,42 @@ let unify_lifts (big_schema:var_t list) (big_expr:C.expr_t) =
                   CalcRing.mk_sum sum_terms  )
          | CalcRing.Prod([]) -> (ctx_vars, CalcRing.one)
          | CalcRing.Prod((CalcRing.Val(Lift(v, term)))::pl) ->
-            let (lhs_deletable, lhs_term) = rcr schema ctx term in
-            let (rhs_deletable, rhs_term) = 
-               rcr schema ((v, term)::ctx) (CalcRing.mk_prod pl)
+            let schema_extensions = 
+               ListAsSet.inter
+                  (snd (BasicCalculus.schema_of_expr (term)))
+                  (fst (BasicCalculus.schema_of_expr (CalcRing.mk_prod pl)))
             in
-               if (not (List.mem v schema)) && (List.mem v rhs_deletable)
-               then (ListAsSet.inter lhs_deletable rhs_deletable,
-                     rhs_term )
-               else (ListAsSet.inter lhs_deletable rhs_deletable,
-                     CalcRing.mk_prod [(CalcRing.mk_val (Lift(v,term)));
-                                       rhs_term])
+            let (lhs_deletable, lhs_nested_term) = 
+               rcr (schema@schema_extensions) ctx term in
+            let ((rhs_deletable, rhs_term), lhs_term) = 
+               if not (List.mem v schema) 
+               then
+                  (* If the term isn't deletable, then we shouldn't try to unify
+                     this variable at all. *)
+                  let (rhs_deletable_optimistic, rhs_term_optimistic) = 
+                     rcr schema ((v, lhs_nested_term)::ctx) 
+                                (CalcRing.mk_prod pl)
+                  in if (Debug.active "AGGRESSIVE-UNIFY") ||
+                        (List.mem v rhs_deletable_optimistic)
+                  then ((ListAsSet.diff rhs_deletable_optimistic [v], 
+                         rhs_term_optimistic),
+                         CalcRing.one)
+                  else ((rcr schema ctx (CalcRing.mk_prod pl)), 
+                        (CalcRing.mk_val (Lift(v,lhs_nested_term))))
+               else
+                  ((rcr schema ctx (CalcRing.mk_prod pl)),
+                   (CalcRing.mk_val (Lift(v,lhs_nested_term))))
+            in
+               (  ListAsSet.inter lhs_deletable rhs_deletable,
+                  CalcRing.mk_prod [lhs_term; rhs_term] )
          | CalcRing.Prod(pt::pl) -> 
-            let (lhs_deletable, lhs_term) = rcr schema ctx pt in
+            let schema_extensions = 
+               ListAsSet.inter
+                  (snd (BasicCalculus.schema_of_expr (pt)))
+                  (fst (BasicCalculus.schema_of_expr (CalcRing.mk_prod pl)))
+            in
+            let (lhs_deletable, lhs_term) = 
+               rcr (schema@schema_extensions) ctx pt in
             let (rhs_deletable, rhs_term) = rcr schema ctx (CalcRing.mk_prod pl)
             in
                (  ListAsSet.inter lhs_deletable rhs_deletable, 
@@ -265,9 +294,13 @@ let unify_lifts (big_schema:var_t list) (big_expr:C.expr_t) =
             let (deletable, term) = rcr schema ctx nt in
                (deletable, CalcRing.mk_neg term)
          | CalcRing.Val(AggSum(gb_vars, as_term)) ->
-            let (deletable, term) = rcr gb_vars ctx as_term in
-               (deletable, (CalcRing.mk_val (AggSum(gb_vars, as_term))))
+            let (deletable, subbed_term) = rcr gb_vars ctx as_term in
+               (deletable, (CalcRing.mk_val (AggSum(gb_vars, subbed_term))))
          | CalcRing.Val(Lift(v, l_term)) ->
+            (* Standalone lifts extend the schema of the current expression, but
+               unless they're part of a product chain, it's hard for us to route
+               the unification information.  Rely on a the other optimization 
+               stages to merge the lifts into a product term. *)
             let (deletable, term) = rcr schema ctx l_term in
                (deletable, (CalcRing.mk_val (Lift(v, l_term))))
          | CalcRing.Val(Value(ValueRing.Val(AVar(v)))) ->
@@ -298,7 +331,7 @@ let unify_lifts (big_schema:var_t list) (big_expr:C.expr_t) =
                      (External(en, sub var_subs eiv, sub var_subs eov, et, em)))
       end
    in
-      rcr big_schema [] big_expr
+      snd (rcr big_schema [] big_expr)
 ;;
 
 

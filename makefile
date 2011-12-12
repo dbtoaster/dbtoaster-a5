@@ -9,7 +9,7 @@ FILES=\
 	src/ring/Ring\
 	src/ring/Arithmetic\
 	src/calculus/Calculus\
-	src/calculus/Simplification\
+	src/calculus/CalculusOptimizer\
 	src/calculus/SqlToCalculus\
 	src/compiler/Datastructure\
 	src/compiler/Statement\
@@ -69,6 +69,7 @@ OPT_FLAGS +=\
 CLEAN_FILES=\
 	$(patsubst %,%.ml,$(GENERATED_FILES))\
 	$(patsubst %,%.mli,$(PARSERS))\
+	$(patsubst %,%.states,%(PARSERS))\
 	$(C_FILES) $(C_INCLUDES) \
 	$(O_FILES) $(O_INCLUDES) \
 	$(patsubst %,%.o,$(FILES)) \
@@ -93,7 +94,9 @@ bin/dbtoaster_debug: $(C_FILES) src/global/Driver.ml
 bin/dbtoaster_top: $(C_FILES)
 	@echo "Linking DBToaster Top"
 	@$(OCAMLMKTOP) $(OCAML_FLAGS) -o $@ $(C_FILES)
-	
+
+states: $(patsubst %,%.states,%(PARSERS))
+
 clean: 
 	rm -f $(CLEAN_FILES)
 
@@ -127,6 +130,11 @@ $(patsubst %,%.ml,$(LEXERS)) : %.ml : %.mll
 $(patsubst %,%.ml,$(PARSERS)) : %.ml : %.mly
 	@echo Building Parser $(*)
 	@$(OCAMLYACC) $< 2>&1 | sed 's/^/  /'
+
+$(patsubst %,%.states,$(PARSERS)) : %.states : %.mly
+	@echo Extracting State Transitions For $(*)
+	@$(OCAMLYACC) -v $< 2>&1 | sed 's/^/  /'
+	mv $(*).output $@
 
 # Ignore generated CMI dependencies.  They get autocompiled along with the
 # object files

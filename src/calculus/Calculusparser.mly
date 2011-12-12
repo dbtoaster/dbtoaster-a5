@@ -146,8 +146,10 @@ comparison:
 | LTE { Types.Lte } | GT  { Types.Gt  } | GTE { Types.Gte }
 
 relationDefn:
-| ID LPAREN emptyVariableList RPAREN                { ($1, $3, TInt) }
-| ID LPAREN emptyVariableList COMMA dbtType RPAREN  { ($1, $3, $5) }
+| ID LPAREN RPAREN                                  { ($1, [], TInt) }
+| ID LPAREN dbtType RPAREN                          { ($1, [], $3) }
+| ID LPAREN variableList RPAREN                     { ($1, $3, TInt) }
+| ID LPAREN variableList COMMA dbtType RPAREN       { ($1, $3, $5) }
 
 externalDefn:
 | ID LBRACKET emptyVariableList RBRACKET LBRACKET emptyVariableList RBRACKET
@@ -162,7 +164,7 @@ constant:
 | STRING    { CString($1) }
 
 emptyVariableList:
-//|                             { [] }
+|                             { [] }
 | variableList                { $1 }
 
 variableList: 
