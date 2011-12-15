@@ -65,6 +65,7 @@ module Make(T : ExternalMeta) = struct
    
    type expr_t = CalcRing.expr_t
    type external_meta_t = T.meta_t
+   type schema_t = (var_t list * var_t list)
    
    (*** Stringifiers ***)
    let rec string_of_leaf (leaf:CalcRing.leaf_t): string = 
@@ -172,6 +173,56 @@ module Make(T : ExternalMeta) = struct
                | Lift(_,subexp)      -> rcr subexp
             end)
             expr
+   
+   let rec fold ?(scope = []) ?(schema = [])
+                (sum_fn:   schema_t -> 'a list         -> 'a)
+                (prod_fn:  schema_t -> 'a list         -> 'a)
+                (neg_fn:   schema_t -> 'a              -> 'a)
+                (leaf_fn:  schema_t -> CalcRing.leaf_t -> 'a)
+                (e: expr_t): 'a =
+      let rcr e_scope e_schema e2 = 
+         fold ~scope:e_scope ~schema:e_schema sum_fn prod_fn neg_fn leaf_fn e2 
+      in
+      begin match e with
+         | CalcRing.Sum(terms) -> 
+            sum_fn (scope,schema) (List.map (rcr scope schema) terms)
+         | CalcRing.Prod(terms) -> 
+            prod_fn (scope,schema) (ListExtras.scan (fun prev curr next ->
+               rcr ( 
+                  (* extend the scope with variables defined by the prev *)
+                  ListAsSet.multiunion 
+                     (scope::(List.map (fun x -> snd (schema_of_expr x)) prev))
+               ) (
+                  (* extend the schema with variables required by the next *)
+                  ListAsSet.multiunion
+                     (schema::(List.map (fun x -> fst (schema_of_expr x)) next))
+               ) curr
+            ) terms)
+         | CalcRing.Neg(term) -> neg_fn (scope,schema) term
+         | CalcRing.Val(leaf) -> leaf_fn (scope,schema) leaf
+      end
+   
+   let rec rewrite ?(scope = []) ?(schema = [])
+                (sum_fn:   schema_t -> expr_t list     -> expr_t)
+                (prod_fn:  schema_t -> expr_t list     -> expr_t)
+                (neg_fn:   schema_t -> expr_t          -> expr_t)
+                (leaf_fn:  schema_t -> CalcRing.leaf_t -> expr_t)
+                (e: expr_t): expr_t =
+      let rcr e_scope e_schema = 
+         rewrite ~scope:e_scope ~schema:e_schema sum_fn prod_fn neg_fn leaf_fn
+      in
+      fold ~scope:scope ~schema:schema sum_fn prod_fn neg_fn 
+           (fun (local_scope, local_schema) lf ->
+               leaf_fn (local_scope, local_schema) (begin match lf with
+                     | AggSum(gb_vars,sub_t) -> 
+                        (AggSum(gb_vars,(rcr local_scope gb_vars sub_t)))
+                     | Lift(v,sub_t) -> 
+                        (Lift(v,(rcr local_scope 
+                                     (ListAsSet.diff local_schema [v])
+                                     sub_t)))
+                     | _ -> lf
+            end)
+      ) e
 end
 
 module Translator(C1 : Calculus)(C2 : Calculus) = struct

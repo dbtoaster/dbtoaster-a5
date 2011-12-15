@@ -42,7 +42,7 @@ let ocaml_of_list (string_of_elem: 'a -> string) (l: 'a list) =
 
 let index_of (a:'a) (l:'a list): int =
    let idx, fnd = (List.fold_left (fun (i,r) e -> 
-      if r then (i,r) else if e == a then (i,true) else (i+1,false)
+      if r then (i,r) else if e = a then (i,true) else (i+1,false)
    ) (0,false) l) in
       if fnd then idx else raise Not_found
 
@@ -53,6 +53,10 @@ let sublist (start:int) (cnt:int) (l:'a list):'a list =
                                                else (i, r)
       else (i-1,r)
    ) (start,[]) l)
+
+let split_at_pivot (a:'a) (l:'a list): 'a list * 'a list =
+   let idx = index_of a l in
+      (sublist 0 (idx) l, sublist (idx+1) (-1) l)
 
 let assoc_fold (fn: 'a -> 'b -> 'c -> 'c) (init:'c) (l:('a * 'b) list): 'c =
    List.fold_left (fun c (a, b) -> fn a b c) init l

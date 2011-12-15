@@ -197,7 +197,17 @@ let lift_equalities (scope:var_t list) (big_expr:C.expr_t): C.expr_t =
 (******************************************************************************
  * unify_lifts schema expr
  *   Where possible, variables defined by Lifts are replaced by the lifted 
- *   expression.  If possible, the Lift expression is removed.
+ *   expression.  If possible, the Lift term is removed.  We do this by
+ *   unfolding products, substituting the lifted expression throughout.  It's 
+ *   possible that such a substitution will not be possible: e.g., if we're 
+ *   lifting an aggregate expression and the lifted variable appears in a 
+ *   comparison.  If so, then we do not remove the Lift term.
+ *
+ *   The other thing that can prevent the removal of a lift is if the variable
+ *   being lifted into is present in the output schema of the enclosing 
+ *   expression.  In short, this step only unifies lifted variables in the 
+ *   context of a single expression (product, etc...), and doesn't propagate
+ *   the unified variable up through the AST.  
  *
  *   schema: The expected output variables of the expression being unified.  
  *           These variables will never be unified away.
@@ -238,8 +248,8 @@ let unify_lifts (big_schema:var_t list) (big_expr:C.expr_t): C.expr_t =
       let ctx_vars = (List.map fst ctx) in
       Debug.print "LOG-UNIFY-LIFTS" (fun () ->
          "Context: ["^(ListExtras.string_of_list (fun (v,e) ->
-            (fst v)^" := "^(BasicCalculus.string_of_expr e)
-         ) ctx)^"]\nExpression:"^(BasicCalculus.string_of_expr expr)
+            (fst v)^" := "^(C.string_of_expr e)
+         ) ctx)^"]\nExpression:"^(C.string_of_expr expr)
       );
       begin match expr with
          | CalcRing.Sum(sl) -> 
@@ -250,10 +260,16 @@ let unify_lifts (big_schema:var_t list) (big_expr:C.expr_t): C.expr_t =
                   CalcRing.mk_sum sum_terms  )
          | CalcRing.Prod([]) -> (ctx_vars, CalcRing.one)
          | CalcRing.Prod((CalcRing.Val(Lift(v, term)))::pl) ->
+            (* Output variables contained within the lifted expression might be
+               used somewhere within pl.  Regardless of whether or not the
+               variables get projected away above, they must be considered as
+               part of the schema of this term.  *)
+            let rhs_schema = 
+               (C.schema_of_expr (CalcRing.mk_prod pl)) in
             let schema_extensions = 
                ListAsSet.inter
-                  (snd (BasicCalculus.schema_of_expr (term)))
-                  (fst (BasicCalculus.schema_of_expr (CalcRing.mk_prod pl)))
+                  (snd (C.schema_of_expr (term)))
+                  (ListAsSet.union (fst rhs_schema) (snd rhs_schema))
             in
             let (lhs_deletable, lhs_nested_term) = 
                rcr (schema@schema_extensions) ctx term in
@@ -279,10 +295,12 @@ let unify_lifts (big_schema:var_t list) (big_expr:C.expr_t): C.expr_t =
                (  ListAsSet.inter lhs_deletable rhs_deletable,
                   CalcRing.mk_prod [lhs_term; rhs_term] )
          | CalcRing.Prod(pt::pl) -> 
+            let rhs_schema = 
+               (C.schema_of_expr (CalcRing.mk_prod pl)) in
             let schema_extensions = 
                ListAsSet.inter
-                  (snd (BasicCalculus.schema_of_expr (pt)))
-                  (fst (BasicCalculus.schema_of_expr (CalcRing.mk_prod pl)))
+                  (snd (C.schema_of_expr pt))
+                  (ListAsSet.union (fst rhs_schema) (snd rhs_schema))
             in
             let (lhs_deletable, lhs_term) = 
                rcr (schema@schema_extensions) ctx pt in
@@ -333,6 +351,211 @@ let unify_lifts (big_schema:var_t list) (big_expr:C.expr_t): C.expr_t =
    in
       snd (rcr big_schema [] big_expr)
 ;;
+
+(******************************************************************************
+ * unnest_terms
+ *   AggSum and Lift contain nested expressions.  Certain terms can be lifted 
+ *   out of these nested expressions and into the enclosing expression
+ *   
+ *   AggSum([...], A) = A
+ *       IF all of the output variables of A are in the group-by variables of
+ *       the AggSum
+ *   
+ *   AggSum([...], A + B + ...) = 
+ *       AggSum([...], A) + AggSum([...], B) + AggSum([...], ...)
+ *   
+ *   AggSum([...], A * B) = A * AggSum([...], B) 
+ *       IF all of the output variables of A are in the group-by variables of
+ *       the AggSum
+ *   
+ *   AggSum([...], A * B) = B * AggSum([...], A) 
+ *       IF all of the output variables of B are in the group-by variables of
+ *       the AggSum AND B commutes with A.
+ * 
+ *   AggSum(GB1, AggSum(GB2, A)) = AggSum(GB1, A) 
+ *       IF all of the output variables of A are in the group-by variables of
+ *       the AggSum.
+ *
+ *   Lift(X, Lift(Y, A) * B) = Lift(Y,A) * Lift(X, B)
+ ******************************************************************************)
+let rec unnest_terms (expr:C.expr_t) = 
+   CalcRing.fold (CalcRing.mk_sum) (CalcRing.mk_prod) (CalcRing.mk_neg)
+      (fun e -> begin match e with
+         | AggSum(gb_vars, unprocessed_subterm) ->
+            let subterm = unnest_terms unprocessed_subterm in
+               begin match subterm with
+                  | CalcRing.Sum(sl) ->
+                     CalcRing.mk_sum 
+                        (List.map (fun x-> CalcRing.mk_val
+                                             (AggSum(gb_vars, x))) sl)
+                  | CalcRing.Prod(pl) ->
+                     let (unnested,nested) = 
+                        List.fold_left (fun (unnested,nested) term->
+                           if (commutes nested term) && 
+                              (ListAsSet.subset (snd (C.schema_of_expr term)) gb_vars)
+                           then (CalcRing.mk_prod [unnested; term], nested)
+                           else (unnested, CalcRing.mk_prod [nested; term])
+                        ) (CalcRing.one, CalcRing.one) pl in
+                        let new_gb_vars = 
+                           ListAsSet.inter gb_vars 
+                                           (snd (C.schema_of_expr nested))
+                        in
+                           CalcRing.mk_prod 
+                              [  unnested; 
+                                 CalcRing.mk_val (AggSum(new_gb_vars, nested)) ]
+                  | CalcRing.Val(AggSum(_, term)) ->
+                     CalcRing.mk_val (AggSum(gb_vars, term))
+                  | _ -> 
+                     if ListAsSet.subset (snd (C.schema_of_expr subterm))
+                                         gb_vars 
+                     then subterm
+                     else CalcRing.mk_val e
+               end
+         | Lift(v, unprocessed_subterm) ->
+            let subterm = unnest_terms unprocessed_subterm in
+            let (unnested,nested) = List.fold_left (fun (unnested,nested) term->
+               begin match term with
+                  | CalcRing.Val(Lift(_,_)) when commutes term nested -> 
+                     (CalcRing.mk_prod [unnested; term], nested)
+                  | _ -> 
+                     (unnested, CalcRing.mk_prod [nested; term])
+               end
+            ) (CalcRing.one, CalcRing.one) (CalcRing.prod_list subterm) in
+               CalcRing.mk_prod 
+                  [unnested; CalcRing.mk_val (Lift(v, nested))]
+         | _ -> CalcRing.mk_val e
+      end)
+      expr
+;;
+
+(******************************************************************************
+ * factorize_polynomial
+ *   Given an expression (A * B) + (A * C), factor out the A to get A * (B + C)
+ *   Note that this works bi-directionally, we can factor terms off the front, 
+ *   or off the back.  All that matters is whether we can commute the term 
+ *   to wherever it needs to get factored.
+ *
+ ******************************************************************************)
+let rec factorize_one_polynomial (scope:var_t list) (term_list:C.expr_t list) =
+   Debug.print "LOG-FACTORIZE" (fun () ->
+      "Factorizing Expression: ("^
+      (ListExtras.string_of_list ~sep:" + " C.string_of_expr term_list)^
+      ")["^(ListExtras.string_of_list fst scope)^"]"
+   );
+   if List.length term_list < 2 then CalcRing.mk_sum term_list
+   else
+   let (lhs_candidates,rhs_candidates) = 
+      List.fold_left (fun (lhs_candidates, rhs_candidates) term -> 
+         let (new_lhs, new_rhs) = List.split (ListExtras.scan (fun p t n ->
+            if (t = CalcRing.one) then ([],[])
+            else
+               (  (if commutes ~scope:scope (CalcRing.mk_prod p) t
+                   then [t] else []),
+                  (if commutes ~scope:scope t (CalcRing.mk_prod n)
+                   then [t] else [])  )
+            ) (CalcRing.prod_list term))
+         in
+            (  lhs_candidates @ (List.flatten new_lhs),
+               rhs_candidates @ (List.flatten new_rhs)  )
+      ) ([],[]) term_list
+   in
+   if ((List.length lhs_candidates) < 1) && ((List.length rhs_candidates) < 1)
+   then
+      (* If there are no candidates, we're done here *)
+      CalcRing.mk_sum term_list
+   else
+   let incr_mem term list = 
+      if List.mem_assoc term list then
+         (term, (List.assoc term list) + 1)::(List.remove_assoc term list)
+      else list
+   in
+   let (lhs_counts,rhs_counts) =
+      List.fold_left (fun old_counts product_term -> 
+         List.fold_left (fun (lhs_counts,rhs_counts) term ->
+               (  incr_mem term lhs_counts, 
+                  incr_mem term rhs_counts)
+         ) old_counts (CalcRing.prod_list product_term)
+      ) (   List.map (fun x->(x,0)) lhs_candidates, 
+            List.map (fun x->(x,0)) rhs_candidates
+         ) term_list
+   in
+   let lhs_sorted = List.sort (fun x y -> compare (snd y) (snd x)) lhs_counts in
+   let rhs_sorted = List.sort (fun x y -> compare (snd y) (snd x)) rhs_counts in
+   if ((List.length lhs_sorted < 1) || (snd (List.hd lhs_sorted) = 1)) &&
+      ((List.length rhs_sorted < 1) || (snd (List.hd rhs_sorted) = 1))
+   then
+      (* If both candidate lists are empty, or all non-empty lists have each 
+         candidate appearing exactly in one term, then we can't factorize 
+         anything.  We're done here. *)
+      CalcRing.mk_sum term_list
+   else
+   (* We should never get a candidate that doesn't appear at least once.  This
+      is most definitely a bug if it happens. *)
+   if ((List.length lhs_sorted >= 1) && (snd (List.hd lhs_sorted) < 1)) ||
+      ((List.length rhs_sorted >= 1) && (snd (List.hd rhs_sorted) < 1))
+   then failwith "BUG: Factorize got a vanishing candidate"
+   else
+   let factorize_and_split selected validate_fn =
+      List.fold_left (fun (factorized,unfactorized) term ->
+         try 
+            let (lhs_of_selected,rhs_of_selected) =
+               ListExtras.split_at_pivot selected (CalcRing.prod_list term) in
+            Debug.print "LOG-FACTORIZE" (fun () ->
+               "Split "^(C.string_of_expr term)^" into "^
+               (C.string_of_expr (CalcRing.mk_prod lhs_of_selected))^
+               " * [...] * "^
+               (C.string_of_expr (CalcRing.mk_prod rhs_of_selected))         
+            );
+            if validate_fn lhs_of_selected rhs_of_selected 
+            then (   factorized@
+                        [CalcRing.mk_prod (lhs_of_selected@rhs_of_selected)],
+                     unfactorized   )
+            else (factorized, unfactorized@[term])
+         with Not_found ->
+            (factorized, unfactorized@[term])
+      ) ([],[]) term_list
+   in
+   let ((factorized, unfactorized), merge_fn) = 
+      if (snd (List.hd rhs_sorted)) > (snd (List.hd lhs_sorted)) then
+         let selected = (fst (List.hd rhs_sorted)) in
+            Debug.print "LOG-FACTORIZE" (fun () ->
+               "Factorizing "^(C.string_of_expr selected)^" from the RHS"
+            );
+            (  (factorize_and_split selected (fun _ rhs ->
+                  commutes ~scope:scope selected (CalcRing.mk_prod rhs))), 
+               (fun factorized -> CalcRing.mk_prod [factorized; selected])
+            )
+      else
+         let selected = (fst (List.hd lhs_sorted)) in
+            Debug.print "LOG-FACTORIZE" (fun () ->
+               "Factorizing "^(C.string_of_expr selected)^" from the LHS"
+            );
+            (  (factorize_and_split selected (fun lhs _ ->
+                  commutes ~scope:scope (CalcRing.mk_prod lhs) selected)), 
+               (fun factorized -> CalcRing.mk_prod [selected; factorized])
+            )
+   in
+      Debug.print "LOG-FACTORIZE" (fun () ->
+         "Factorized: "^
+            (ListExtras.string_of_list C.string_of_expr factorized)^"\n"^
+         "Unfactorized: "^
+            (ListExtras.string_of_list C.string_of_expr unfactorized)
+      );
+      (* Finally, recur. We might be able to pull additional terms out of the
+         individual expressions.  Note that we're no longer able to pull out
+         terms across the factorized/unfactorized boundary *)
+      CalcRing.mk_sum [
+         (merge_fn (factorize_one_polynomial scope factorized));
+         (factorize_one_polynomial scope unfactorized)
+      ]
+
+let rec factorize_sums (scope:var_t list) (expr:C.expr_t): C.expr_t =
+   C.rewrite ~scope:scope 
+      (fun (scope,_) sum_terms -> factorize_one_polynomial scope sum_terms)
+      (fun _ -> CalcRing.mk_prod)
+      (fun _ -> CalcRing.mk_neg)
+      (fun _ -> CalcRing.mk_val)
+      expr
 
 
 

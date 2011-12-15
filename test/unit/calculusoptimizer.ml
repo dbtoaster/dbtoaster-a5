@@ -129,3 +129,43 @@ in
    test "Full expression and value into comparison" []
       "(A ^= #2*B#) * (C ^= AggSum([], R(D))) * (A < C)"
       "(C ^= AggSum([], R(D))) * (2*B < C)"
+;;
+let test msg input output =
+   Debug.log_unit_test ("Unnest Terms ("^msg^")")
+      BasicCalculus.string_of_expr
+      (CalculusOptimizer.unnest_terms (parse input))
+      (parse output)
+in
+   test "Lift of two Lifts"
+      "(A ^= (B ^= (C ^= #D#)))"
+      "(C ^= #D#) * (B ^= #1#) * (A ^= #1#)";
+   test "AggSum of a partitionable expression"
+      "AggSum([B,C], R(A, B) * S(B, C))"
+      "S(B,C) * AggSum([B], R(A, B))";
+   test "AggSum of a nested AggSum"
+      "AggSum([B], AggSum([B,C], R(A,B,C)))"
+      "AggSum([B], R(A,B,C))"
+;;
+let test msg scope input output =
+   Debug.log_unit_test ("Factorize One Polynomial ("^msg^")")
+      BasicCalculus.string_of_expr
+      (CalculusOptimizer.factorize_one_polynomial scope (List.map parse input))
+      (parse output)
+in
+(*   Debug.activate "LOG-FACTORIZE";*)
+   test "Basic" []
+      ["(#A# * #B#)";"(#A# * #C#)"]
+      "#A# * (#B# + #C#)";
+   test "Front and Back" []
+      ["(#A# * R(C) * #C#)";"(#A# * S(C) * #C#)"]
+      "#A# * (R(C) + S(C)) * #C#";
+   test "Multiple Possibilities" []
+      ["R(A) * #A#" ; "R(A) * #2#" ; "S(A) * #A#"]
+      "(R(A) * (#A# + #2#)) + (S(A) * #A#)";
+   test "Multiple Decreasing Possibilities" []
+      [  "R(A) * #A# * #2#" ; "R(A) * #C#" ; 
+         "R(A) * #A# * #D#" ; "S(A) * #A#"]
+      "(R(A) * ((#A# * (#2# + #D#)) + #C#)) + (S(A) * #A#)";
+      
+      
+      

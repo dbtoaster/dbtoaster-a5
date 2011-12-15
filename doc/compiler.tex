@@ -19,29 +19,37 @@
 The compiler maintains a work queue datastructure.  As long as the work queue is non-empty, the compiler will perform the following steps on whatever expression is at the head of the work queue\footnote{This section assumes that the head is a standard map datastructure.  If not, then we might do something more interesting.  We'll find out once we actually start supporting non-map datastructures.}:
 
 \begin{enumerate}
-\item {\bf Prematerialize the expression}.  This stage simplifies the expression, factorizes it, and computes a list of all lifted subexpressions with non-zero deltas.  Later iterations of this stage will split the factorized expression into multiple subexpressions that can have their deltas computed individually.
+\item {\bf Optimize the expression} The expression is simplified and factorized as discussed below.
+
+\item {\bf Prematerialize the expression}.  For every Lift term that appears in the expression, a copy of the subexpression being lifted is set aside and stored for use in the materialization stage.  
+
+\item {\bf Subdivide the expression} (optional) In the future, we may wish to subdivide the expression into smaller chunks, each of which (after we compute deltas) is guaranteed to be part of a separate materialized subexpression.  For now, this is ignored.
 
 \item {\bf Compute Deltas}.  For each {\em stream} appearing in the expression, apply the delta operation to the expression to get a set of delta expressions.
 
-\item {\bf Materialize the delta expressions}.  This involves pulling out all the relations in the expression and replacing them with externals.  The lifted subexpressions identified in the prematerialization phase are used as a guide in doing so.  Additionally, maps that have already been added to the work queue or compiled are re-used if appropriate.
+\item {\bf Materialize the delta expressions}.  Subexpressions are pulled out and replaced with Externals.  This process is discussed in detail below.
 
 \item {\bf Update the work queue}.  Newly instantiated datastructures are added to the work queue.  The recently compiled datastructure is also stored.
 \end{enumerate}
 
-\subsection{Prematerialization}
+\subsection{Expression Optimization}
 
-Simplification is the application of a set of rewrite rules that provides the following guarantees:
+Optimization provides the following guarantees (each being a rewrite rule):
 \begin{enumerate}
 \item Values appearing in sum and product terms are merged together and constants are combined/curried.
-\item Lifts and AggSums are un-nested as far as possible: Expressions that always evaluate to 0 or 1 (comparisons, lifts, and keyed relations) can always be pulled out of a lifted product.  If all of the output variables of an expression are group-by variables of an AggSum of a product that the expression appears in, the expression can be lifted out.  These variables can then be removed from the AggSum's group-by variable list.
-\item AggSums are factorized
-\item Unnecessary AggSums are eliminated if the aggregated expression's output variables are all GB vars in the aggsum.  Also, any GB vars that are not output variables of the aggregated expression.
 \item Equality comparisons are converted into Lifts as much as possible.
 \item Lifts are unified as much as possible.
+\item Lifts and AggSums are un-nested as far as possible: Expressions that always evaluate to 0 or 1 (comparisons, lifts, and keyed relations) can always be pulled out of a lifted product.  If all of the output variables of an expression are group-by variables of an AggSum of a product that the expression appears in, the expression can be lifted out.  These variables can then be removed from the AggSum's group-by variable list.
+\item AggSums are factorized: AggSum([\ldots], R(A) * S(B)) becomes AggSum([\ldots], R(A)) * AggSum([\ldots], S(B))
+\item Unnecessary AggSums are eliminated if the aggregate does not project away any variables (i.e., if the group-by variables of the AggSum are identical to the aggregated expression's output variables).
 \end{enumerate}
 
+\section{Expression Materialization}
+
+Materialization partitions an expression into multiple subexpressions, each of which is materialized as a datastructure.  
 
 \section{Domain Maintenance}
+
 
 
 \end{document}

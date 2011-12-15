@@ -1,0 +1,26 @@
+#!/usr/bin/env ruby
+
+mode = :off
+dirs = "";
+
+File.open("#{File.dirname $0}/../makefile") do |f|
+  f.each do |l|
+    case mode 
+      when :off
+        case l 
+          when /^DIRS=\s*(.*)\\$/ then dirs += " "+$1.chomp; mode = :on
+          when /^DIRS=\s*(.*)$/ then dirs += " "+$1.chomp
+        end
+      when :on
+        case l
+          when /^\s*(.*)\\$/ then dirs += " "+$1.chomp;
+          when /^\s*(.*)$/ then dirs += " "+$1.chomp; mode = :off
+        end
+    end
+  end
+end
+
+flags =
+  dirs.sub(/^ */, "").split(/ +/).map { |d| "-I #{File.dirname $0}/../#{d}" } +
+  ARGV
+exec "#{File.dirname $0}/dbtoaster_top #{flags.join(" ")}"
