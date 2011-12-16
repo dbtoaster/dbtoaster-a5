@@ -8,8 +8,8 @@
    a mutual recursion between ValueRing and CalcRing (which in turn saves 
    Oliver's sanity), and ensures that the delta of a value is always 0.
    
-   Note that the functions defined herein are assumed to be deterministic and
-   have no side effects.
+   Note that the functions that appear here and operate over values are assumed 
+   to be deterministic and to have no side effects.
 *)
 
 open Types
@@ -173,9 +173,19 @@ let rec eval_partial ?(scope=[]) (v:value_t): value_t =
       (merge ValueRing.mk_prod prod)
       (fun x -> merge ValueRing.mk_prod prod [mk_int (-1); x])
       (fun lf -> match lf with
-         | AFn(fname, fargs, ftype) -> 
-            ValueRing.mk_val 
-               (AFn(fname, List.map (eval_partial ~scope:scope) fargs, ftype))
+         | AFn(fname, fargs_unevaled, ftype) -> 
+            let fargs = List.map (eval_partial ~scope:scope) fargs_unevaled in
+            begin try 
+               let farg_vals = 
+                  (List.map (fun x -> match x with 
+                                      | ValueRing.Val(AConst(c)) -> c
+                                      | _ -> raise Not_found) fargs)
+               in
+               let (_,fn_def) = StringMap.find fname !arithmetic_functions in
+                  mk_const (fn_def farg_vals)
+            with Not_found ->
+               ValueRing.mk_val (AFn(fname, fargs, ftype))
+            end
          | AVar(vn, vt) ->
             if List.mem_assoc (vn,vt) scope 
                then (List.assoc (vn,vt) scope)
