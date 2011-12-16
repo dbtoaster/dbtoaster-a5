@@ -10,6 +10,7 @@ FILES=\
 	src/ring/Arithmetic\
 	src/calculus/Calculus\
 	src/calculus/CalculusOptimizer\
+	src/calculus/CalculusDeltas\
 	src/calculus/SqlToCalculus\
 	src/compiler/Datastructure\
 	src/compiler/Statement\

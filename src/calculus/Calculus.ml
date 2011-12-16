@@ -198,7 +198,7 @@ module Make(T : ExternalMeta) = struct
                      (schema::(List.map (fun x -> fst (schema_of_expr x)) next))
                ) curr
             ) terms)
-         | CalcRing.Neg(term) -> neg_fn (scope,schema) term
+         | CalcRing.Neg(term) -> neg_fn (scope,schema) (rcr scope schema term)
          | CalcRing.Val(leaf) -> leaf_fn (scope,schema) leaf
       end
    

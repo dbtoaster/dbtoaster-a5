@@ -72,9 +72,11 @@ let test msg schema input output =
       (CalculusOptimizer.unify_lifts schema (parse input))
       (parse output)
 in
+   (* We don't unify expressions for now 
    test "Empty schema, Full expression into variable" []
       "(A ^= AggSum([C],R(B,C)*#B#)) * #A#"
       "AggSum([C],R(B,C)*#B#)";
+   *)
    test "Empty schema, Full expression into value" []
       "(A ^= AggSum([C],R(B,C)*#B#)) * #2*A#"
       "(A ^= AggSum([C],R(B,C)*#B#)) * #2*A#";
@@ -131,9 +133,9 @@ in
       "(C ^= AggSum([], R(D))) * (2*B < C)"
 ;;
 let test msg input output =
-   Debug.log_unit_test ("Unnest Terms ("^msg^")")
+   Debug.log_unit_test ("Nesting Rewrites ("^msg^")")
       BasicCalculus.string_of_expr
-      (CalculusOptimizer.unnest_terms (parse input))
+      (CalculusOptimizer.nesting_rewrites (parse input))
       (parse output)
 in
    test "Lift of two Lifts"
@@ -165,7 +167,30 @@ in
    test "Multiple Decreasing Possibilities" []
       [  "R(A) * #A# * #2#" ; "R(A) * #C#" ; 
          "R(A) * #A# * #D#" ; "S(A) * #A#"]
+      "(R(A) * ((#A# * (#2# + #D#)) + #C#)) + (S(A) * #A#)"
+;;
+let test msg scope input output =
+   Debug.log_unit_test ("Factorize Sums ("^msg^")")
+      BasicCalculus.string_of_expr
+      (CalculusOptimizer.factorize_polynomial scope (parse input))
+      (parse output)
+in
+(*   Debug.activate "LOG-FACTORIZE";*)
+   test "Basic" []
+      "(#A# * #B#)+(#A# * #C#)"
+      "#A# * (#B# + #C#)";
+   test "Front and Back" []
+      "(#A# * R(C) * #C#)+(#A# * S(C) * #C#)"
+      "#A# * (R(C) + S(C)) * #C#";
+   test "Multiple Possibilities" []
+      "(R(A) * #A#)+(R(A) * #2#)+(S(A) * #A#)"
+      "(R(A) * (#A# + #2#)) + (S(A) * #A#)";
+   test "Multiple Decreasing Possibilities" []
+      "(R(A) * #A# * #2#)+(R(A) * #C#)+(R(A) * #A# * #D#)+(S(A) * #A#)"
       "(R(A) * ((#A# * (#2# + #D#)) + #C#)) + (S(A) * #A#)";
+   test "Multiple Decreasing With Negs" []
+      "(R(A) * #A# * #2#)+(R(A) * #C#)-((R(A) * #A# * #D#)+(S(A) * #A#))"
+      "(R(A) * ((#A# * #2#) + #C#))-(((R(A) * #D#)+S(A)) * #A#)";
       
       
       

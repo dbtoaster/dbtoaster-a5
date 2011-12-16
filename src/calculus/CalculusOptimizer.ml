@@ -6,6 +6,13 @@ open Calculus
 module C = BasicCalculus
 open C
 
+type opt_t = 
+   | OptCombineValues
+   | OptLiftEqualities
+   | OptUnifyLifts
+   | OptNestingRewrites
+   | OptFactorizePolynomial
+
 let commutes ?(scope = []) (e1:C.expr_t) (e2:C.expr_t): 
              bool =
    let (_,ovar1) = C.schema_of_expr e1 in
@@ -274,7 +281,15 @@ let unify_lifts (big_schema:var_t list) (big_expr:C.expr_t): C.expr_t =
             let (lhs_deletable, lhs_nested_term) = 
                rcr (schema@schema_extensions) ctx term in
             let ((rhs_deletable, rhs_term), lhs_term) = 
-               if not (List.mem v schema) 
+               (* If the variable is part of the output schema, then we're not
+                  allowed to delete the lift.  Additionally, we do not want to
+                  unify away full expressions, since doing so breaks an 
+                  optimization that we're able to perform in the delta 
+                  computation.  See CalculusDeltas.delta_of_expr's Lift case. *)
+               if (not (List.mem v schema)) && (
+                   (Debug.active "UNIFY-EXPRESSIONS") ||
+                   (match term with CalcRing.Val(Value(_))->true |_->false)
+                  )
                then
                   (* If the term isn't deletable, then we shouldn't try to unify
                      this variable at all. *)
@@ -353,9 +368,10 @@ let unify_lifts (big_schema:var_t list) (big_expr:C.expr_t): C.expr_t =
 ;;
 
 (******************************************************************************
- * unnest_terms
- *   AggSum and Lift contain nested expressions.  Certain terms can be lifted 
- *   out of these nested expressions and into the enclosing expression
+ * nesting_rewrites
+ *   A hodgepodge of simple rewrite rules for nested expressions (i.e., 
+ *   expressions nested within a Lift or AggSum.  Many of these have to do with
+ *   lifting expressions out of the nesting.
  *   
  *   AggSum([...], A) = A
  *       IF all of the output variables of A are in the group-by variables of
@@ -375,14 +391,19 @@ let unify_lifts (big_schema:var_t list) (big_expr:C.expr_t): C.expr_t =
  *   AggSum(GB1, AggSum(GB2, A)) = AggSum(GB1, A) 
  *       IF all of the output variables of A are in the group-by variables of
  *       the AggSum.
+ *   
+ *   AggSum([...], A) = A 
+ *       IF A is a constant term (i.e., has no output variables)
  *
  *   Lift(X, Lift(Y, A) * B) = Lift(Y,A) * Lift(X, B)
  ******************************************************************************)
-let rec unnest_terms (expr:C.expr_t) = 
+let rec nesting_rewrites (expr:C.expr_t) = 
    CalcRing.fold (CalcRing.mk_sum) (CalcRing.mk_prod) (CalcRing.mk_neg)
       (fun e -> begin match e with
          | AggSum(gb_vars, unprocessed_subterm) ->
-            let subterm = unnest_terms unprocessed_subterm in
+            let subterm = nesting_rewrites unprocessed_subterm in
+            if (snd (C.schema_of_expr subterm)) = [] then subterm
+            else
                begin match subterm with
                   | CalcRing.Sum(sl) ->
                      CalcRing.mk_sum 
@@ -412,7 +433,7 @@ let rec unnest_terms (expr:C.expr_t) =
                      else CalcRing.mk_val e
                end
          | Lift(v, unprocessed_subterm) ->
-            let subterm = unnest_terms unprocessed_subterm in
+            let subterm = nesting_rewrites unprocessed_subterm in
             let (unnested,nested) = List.fold_left (fun (unnested,nested) term->
                begin match term with
                   | CalcRing.Val(Lift(_,_)) when commutes term nested -> 
@@ -434,7 +455,20 @@ let rec unnest_terms (expr:C.expr_t) =
  *   Note that this works bi-directionally, we can factor terms off the front, 
  *   or off the back.  All that matters is whether we can commute the term 
  *   to wherever it needs to get factored.
- *
+ * 
+ *   Most of the work happens in factorize_one_polynomial, which takes a list
+ *   of monomials representing a list of terms and identifies a Calculus 
+ *   expression that is equivalent to their sum but which has terms factorized
+ *   out as possible.
+ * 
+ *   This process happens in several stages. 
+ *   - First, we identify a set of candidate subterms that may be factorized out 
+ *     of the right or left hand side of each term.
+ *   - For each candidate we count how many terms it can be factorized out of.
+ *   - We pick the candidate that can be factorized out of the most terms and
+ *     delete the term from those terms.
+ *   - We recur twice, once on the set of terms that were factorized, and once
+ *     on the set of terms that weren't.
  ******************************************************************************)
 let rec factorize_one_polynomial (scope:var_t list) (term_list:C.expr_t list) =
    Debug.print "LOG-FACTORIZE" (fun () ->
@@ -549,7 +583,7 @@ let rec factorize_one_polynomial (scope:var_t list) (term_list:C.expr_t list) =
          (factorize_one_polynomial scope unfactorized)
       ]
 
-let rec factorize_sums (scope:var_t list) (expr:C.expr_t): C.expr_t =
+let factorize_polynomial (scope:var_t list) (expr:C.expr_t): C.expr_t =
    C.rewrite ~scope:scope 
       (fun (scope,_) sum_terms -> factorize_one_polynomial scope sum_terms)
       (fun _ -> CalcRing.mk_prod)
@@ -557,5 +591,32 @@ let rec factorize_sums (scope:var_t list) (expr:C.expr_t): C.expr_t =
       (fun _ -> CalcRing.mk_val)
       expr
 
-
-
+(******************************************************************************
+ * optimize_expr
+ *   Given an expression apply the above optimizations to it until a fixed point
+ *   is reached.
+ ******************************************************************************)
+let optimize_expr ?(optimizations = [OptCombineValues; OptLiftEqualities; 
+                                     OptUnifyLifts; OptNestingRewrites;
+                                     OptFactorizePolynomial])
+                  ((scope,schema):C.schema_t) (expr:C.expr_t): C.expr_t =
+   let include_opt in_fn o new_fn = 
+      in_fn := (  if List.mem o optimizations 
+                  then (fun x -> !in_fn (new_fn x))
+                  else !in_fn  )
+   in
+   let fp_1 = ref (fun x -> x) in
+      include_opt fp_1 OptLiftEqualities      (lift_equalities scope);
+      include_opt fp_1 OptUnifyLifts          (unify_lifts schema);
+      include_opt fp_1 OptNestingRewrites     (nesting_rewrites);
+      include_opt fp_1 OptFactorizePolynomial (factorize_polynomial scope);
+   let fp_2 = ref (fun x -> x) in
+      include_opt fp_1 OptCombineValues       (combine_values);
+   let rec fixedpoint f x = 
+      let new_x = f x in
+         if new_x <> x then fixedpoint f new_x
+         else new_x
+   (* We do this in two stages, so we can avoid breaking potential optimizations
+      by combining values together *)
+   in (fixedpoint !fp_2 (fixedpoint !fp_1 expr))
+ 
