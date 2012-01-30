@@ -19,18 +19,18 @@ let rel rn rv = (Rel(rn, rv, TInt))
 
 Debug.log_unit_test "Invalid Commute"
    string_of_bool
-   (CalculusOptimizer.commutes (parse "R(A,B) * #A#") (parse "#B#"))
+   (BasicCalculus.commutes (parse "R(A,B) * #A#") (parse "#B#"))
    false
 ;;
 Debug.log_unit_test "Invalid Commute (Made valid by scope)"
    string_of_bool
-   (CalculusOptimizer.commutes ~scope:[var "B"] (parse "R(A,B) * #A#") 
+   (BasicCalculus.commutes ~scope:[var "B"] (parse "R(A,B) * #A#") 
                                              (parse "#B#"))
    true
 ;;
 Debug.log_unit_test "Valid Commute"
    string_of_bool
-   (CalculusOptimizer.commutes (parse "R(A,B) * #A#") (parse "#C#"))
+   (BasicCalculus.commutes (parse "R(A,B) * #A#") (parse "#C#"))
    true
 ;;
 Debug.log_unit_test "Combine Values"

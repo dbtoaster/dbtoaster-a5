@@ -23,7 +23,7 @@ type 'meta_t external_t =
    'meta_t        (* Metadata associated with the external *)
 
 type ('term_t,'meta_t) calc_leaf_t = 
-   | Value    of ValueRing.expr_t
+   | Value    of value_t
    | AggSum   of var_t list * 'term_t (* vars listed are group-by vars (i.e., 
                                          the schema of this AggSum) *)
    | Rel      of string * var_t list * type_t
@@ -65,6 +65,9 @@ module Make(T : ExternalMeta) = struct
    
    type expr_t = CalcRing.expr_t
    type external_meta_t = T.meta_t
+                   (* Scope:   Available Input Variables
+                      x
+                      Schema:  Expected Output Variables *)
    type schema_t = (var_t list * var_t list)
    
    (*** Stringifiers ***)
@@ -174,6 +177,22 @@ module Make(T : ExternalMeta) = struct
             end)
             expr
    
+   let rec degree_of_expr (expr:expr_t): int =
+      let rcr a = degree_of_expr a in
+         CalcRing.fold
+            ListExtras.max
+            ListExtras.sum
+            (fun (x:int) -> x)
+            (fun lf -> begin match lf with
+               | Value(_)            -> 0
+               | External(_,_,_,_,_) -> 0
+               | AggSum(_, subexp)   -> rcr subexp
+               | Rel(rn,_,_)         -> 1
+               | Cmp(_,_,_)          -> 0
+               | Lift(_,subexp)      -> rcr subexp
+            end)
+            expr
+   
    let rec fold ?(scope = []) ?(schema = [])
                 (sum_fn:   schema_t -> 'a list         -> 'a)
                 (prod_fn:  schema_t -> 'a list         -> 'a)
@@ -187,7 +206,7 @@ module Make(T : ExternalMeta) = struct
          | CalcRing.Sum(terms) -> 
             sum_fn (scope,schema) (List.map (rcr scope schema) terms)
          | CalcRing.Prod(terms) -> 
-            prod_fn (scope,schema) (ListExtras.scan (fun prev curr next ->
+            prod_fn (scope,schema) (ListExtras.scan_map (fun prev curr next ->
                rcr ( 
                   (* extend the scope with variables defined by the prev *)
                   ListAsSet.multiunion 
@@ -223,6 +242,61 @@ module Make(T : ExternalMeta) = struct
                      | _ -> lf
             end)
       ) e
+
+   let commutes ?(scope = []) (e1:expr_t) (e2:expr_t): bool =
+      let (_,ovar1) = schema_of_expr e1 in
+      let (ivar2,_) = schema_of_expr e2 in
+         (* Commutativity within a product is possible if and only if all input 
+            variables on the right hand side do not enter scope on the left hand 
+            side.  A variable enters scope in an expression if it is an output 
+            variable, and not already present in the scope (which we're given as  
+            a parameter).  *)
+      (ListAsSet.inter (ListAsSet.diff ovar1 scope) ivar2) = []
+   
+   let rec cmp_exprs ?(cmp_external = 
+                        (fun _ _ -> failwith "unable to compare externals"))
+                     (e1:expr_t) (e2:expr_t):((var_t * var_t) list option) = 
+      let rcr a b = 
+         cmp_exprs ~cmp_external:cmp_external a b
+      in
+      CalcRing.cmp_exprs Function.multimerge Function.multimerge
+                        (fun lf1 lf2 -> 
+         begin match (lf1,lf2) with
+            | ((Value v1), (Value v2)) ->
+               Arithmetic.cmp_values v1 v2
+            
+            | ((AggSum(gb1, sub1)), (AggSum(gb2, sub2))) ->
+               begin match rcr sub1 sub2 with
+                  | None -> None
+                  | Some(mappings) -> 
+                     Function.merge mappings (List.combine gb1 gb2)
+               end
+            
+            | ((Rel(rn1,rv1,rt1)), (Rel(rn2,rv2,rt2))) ->
+               if (rn1 <> rn2) || (rt1 <> rt2) then None else
+                  Some(List.combine rv1 rv2)
+               
+            | ((External(e1)), (External(e2))) ->
+               cmp_external e1 e2
+
+            | ((Cmp(op1,va1,vb1)), (Cmp(op2,va2,vb2))) ->
+               if op1 <> op2 then None else
+               begin match (Arithmetic.cmp_values va1 va2,
+                            Arithmetic.cmp_values vb1 vb2) with
+                  | ((Some(mappings1)),(Some(mappings2))) ->
+                     Function.merge mappings1 mappings2
+                  | _ -> None
+               end
+               
+            | ((Lift(v1,sub1)), (Lift(v2,sub2))) ->
+               begin match rcr sub1 sub2 with
+                  | None -> None
+                  | Some(new_mappings) -> Function.merge [v1,v2] new_mappings
+               end
+               
+            | (_,_) -> None
+         end
+      ) e1 e2
 end
 
 module Translator(C1 : Calculus)(C2 : Calculus) = struct

@@ -12,23 +12,13 @@ type opt_t =
    | OptUnifyLifts
    | OptNestingRewrites
    | OptFactorizePolynomial
-
-let commutes ?(scope = []) (e1:C.expr_t) (e2:C.expr_t): 
-             bool =
-   let (_,ovar1) = C.schema_of_expr e1 in
-   let (ivar2,_) = C.schema_of_expr e2 in
-      (* Commutativity within a product is possible if and only if all input 
-         variables on the right hand side do not enter scope on the left hand 
-         side.  A variable enters scope in an expression if it is an output 
-         variable, and not already present in the scope (which we're given as a 
-         parameter).  *)
-   (ListAsSet.inter (ListAsSet.diff ovar1 scope) ivar2) = []
 ;;
 (******************************************************************************
  * combine_values expr
  *   Recursively merges together Value terms appearing in expr.  Ring operators 
  *   are pushed into the ValueRing, and expressions are evaluated to the fullest
- *   extent possible.  
+ *   extent possible.  Additionally, negations are converted to multiplication
+ *   by -1.
  *
  *   expr: The calculus expression to be processed
  ******************************************************************************)
@@ -49,7 +39,7 @@ let rec combine_values (expr:C.expr_t): C.expr_t =
    CalcRing.fold
       (merge CalcRing.mk_sum  ValueRing.mk_sum)
       (merge CalcRing.mk_prod ValueRing.mk_prod)
-      (CalcRing.mk_neg)
+      (fun x -> CalcRing.mk_prod [CalcRing.mk_val (Value(mk_int (-1))); x])
       (fun x -> CalcRing.mk_val (match x with
          | Value(_) | Rel(_,_,_) | External(_) | Cmp(_,_,_) -> x
          | AggSum(gb_vars, subexp) -> AggSum(gb_vars, rcr subexp)
@@ -412,7 +402,7 @@ let rec nesting_rewrites (expr:C.expr_t) =
                   | CalcRing.Prod(pl) ->
                      let (unnested,nested) = 
                         List.fold_left (fun (unnested,nested) term->
-                           if (commutes nested term) && 
+                           if (C.commutes nested term) && 
                               (ListAsSet.subset (snd (C.schema_of_expr term)) gb_vars)
                            then (CalcRing.mk_prod [unnested; term], nested)
                            else (unnested, CalcRing.mk_prod [nested; term])
@@ -436,7 +426,7 @@ let rec nesting_rewrites (expr:C.expr_t) =
             let subterm = nesting_rewrites unprocessed_subterm in
             let (unnested,nested) = List.fold_left (fun (unnested,nested) term->
                begin match term with
-                  | CalcRing.Val(Lift(_,_)) when commutes term nested -> 
+                  | CalcRing.Val(Lift(_,_)) when C.commutes term nested -> 
                      (CalcRing.mk_prod [unnested; term], nested)
                   | _ -> 
                      (unnested, CalcRing.mk_prod [nested; term])
@@ -480,12 +470,12 @@ let rec factorize_one_polynomial (scope:var_t list) (term_list:C.expr_t list) =
    else
    let (lhs_candidates,rhs_candidates) = 
       List.fold_left (fun (lhs_candidates, rhs_candidates) term -> 
-         let (new_lhs, new_rhs) = List.split (ListExtras.scan (fun p t n ->
+         let (new_lhs, new_rhs) = List.split (ListExtras.scan_map (fun p t n ->
             if (t = CalcRing.one) then ([],[])
             else
-               (  (if commutes ~scope:scope (CalcRing.mk_prod p) t
+               (  (if C.commutes ~scope:scope (CalcRing.mk_prod p) t
                    then [t] else []),
-                  (if commutes ~scope:scope t (CalcRing.mk_prod n)
+                  (if C.commutes ~scope:scope t (CalcRing.mk_prod n)
                    then [t] else [])  )
             ) (CalcRing.prod_list term))
          in
@@ -556,7 +546,7 @@ let rec factorize_one_polynomial (scope:var_t list) (term_list:C.expr_t list) =
                "Factorizing "^(C.string_of_expr selected)^" from the RHS"
             );
             (  (factorize_and_split selected (fun _ rhs ->
-                  commutes ~scope:scope selected (CalcRing.mk_prod rhs))), 
+                  C.commutes ~scope:scope selected (CalcRing.mk_prod rhs))), 
                (fun factorized -> CalcRing.mk_prod [factorized; selected])
             )
       else
@@ -565,7 +555,7 @@ let rec factorize_one_polynomial (scope:var_t list) (term_list:C.expr_t list) =
                "Factorizing "^(C.string_of_expr selected)^" from the LHS"
             );
             (  (factorize_and_split selected (fun lhs _ ->
-                  commutes ~scope:scope (CalcRing.mk_prod lhs) selected)), 
+                  C.commutes ~scope:scope (CalcRing.mk_prod lhs) selected)), 
                (fun factorized -> CalcRing.mk_prod [selected; factorized])
             )
    in
@@ -616,7 +606,12 @@ let optimize_expr ?(optimizations = [OptCombineValues; OptLiftEqualities;
       let new_x = f x in
          if new_x <> x then fixedpoint f new_x
          else new_x
-   (* We do this in two stages, so we can avoid breaking potential optimizations
-      by combining values together *)
+
+   (* The combine optimization pushes ring operators into values.  Often this is 
+      a good idea, especially once we start graph decomposition.  However, this 
+      optimization sometimes conflicts with Unification and Factorization, and 
+      generally provides less benefit than either of these.  Thus, we apply it 
+      as separate, second stage operation. *)
+
    in (fixedpoint !fp_2 (fixedpoint !fp_1 expr))
  

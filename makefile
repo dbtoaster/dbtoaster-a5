@@ -1,8 +1,9 @@
 FILES=\
+	src/util/Debug\
 	src/util/ListAsSet\
 	src/util/ListExtras\
 	src/util/Function\
-	src/util/Debug\
+	src/util/HyperGraph\
 	src/global/Types\
 	src/global/Schema\
 	src/sql/Sql\
@@ -12,9 +13,6 @@ FILES=\
 	src/calculus/CalculusOptimizer\
 	src/calculus/CalculusDeltas\
 	src/calculus/SqlToCalculus\
-	src/compiler/Datastructure\
-	src/compiler/Statement\
-	src/compiler/Compiler\
 	src/maps/M3\
 
 LEXERS=\

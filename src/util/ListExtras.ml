@@ -2,12 +2,29 @@
    Additional functionality for manipulating and working with lists
 *)
 
-let scan (f:('a list -> 'a -> 'a list -> 'b)) (l:('a list)): ('b list) = 
+let scan (f:('a list -> 'a -> 'a list -> unit)) (l:('a list)): unit = 
+   let rec iterate prev curr_next =
+      match curr_next with 
+         | []         -> ()
+         | curr::next -> (f prev curr next); (iterate (prev@[curr]) next)
+   in iterate [] l
+   
+let scan_map (f:('a list -> 'a -> 'a list -> 'b)) (l:('a list)): ('b list) = 
    let rec iterate prev curr_next =
       match curr_next with 
          | []         -> []
          | curr::next -> (f prev curr next) :: (iterate (prev@[curr]) next)
    in iterate [] l
+   
+let scan_fold (f:('b -> 'a list -> 'a -> 'a list -> 'b)) (init:'b) 
+              (l:('a list)): 'b = 
+   let rec iterate curr_val prev curr_next =
+      match curr_next with 
+         | []         -> curr_val
+         | curr::next -> (iterate (f curr_val prev curr next) 
+                                  (prev@[curr]) next
+                         )
+   in iterate init [] l
 
 let reduce_assoc (l:('a * 'b) list): (('a * ('b list)) list) =
    List.fold_right (fun (a,b) ret ->
@@ -60,3 +77,13 @@ let split_at_pivot (a:'a) (l:'a list): 'a list * 'a list =
 
 let assoc_fold (fn: 'a -> 'b -> 'c -> 'c) (init:'c) (l:('a * 'b) list): 'c =
    List.fold_left (fun c (a, b) -> fn a b c) init l
+
+let max (l:'a list):'a = 
+   if l = [] then raise Not_found
+   else List.fold_left Pervasives.max (List.hd l) (List.tl l)
+
+let min (l:'a list):'a = 
+   if l = [] then raise Not_found
+   else List.fold_left Pervasives.min (List.hd l) (List.tl l)
+
+let sum l = List.fold_left (+) 0 l

@@ -193,5 +193,28 @@ let rec eval_partial ?(scope=[]) (v:value_t): value_t =
          | AConst(c) -> ValueRing.mk_val lf
       )
       v
-   
+
+let rec cmp_values (val1:value_t) (val2:value_t):((var_t * var_t) list option) =
+   ValueRing.cmp_exprs Function.multimerge Function.multimerge 
+                      (fun lf1 lf2 ->
+      match (lf1,lf2) with 
+      | ((AConst(c1)),(AConst(c2))) ->
+         if c1 <> c2 then None else Some([])
+         
+      | ((AVar(v1)),(AVar(v2))) ->
+         Some([v1,v2])
+         
+      | ((AFn(fn1,subt1,ft1)),(AFn(fn2,subt2,ft2))) ->
+         if (fn1 <> fn2) || (ft1 <> ft2) then None
+         else begin try 
+            Function.multimerge (List.map2 (fun a b -> 
+            begin match cmp_values a b with 
+               | None -> raise Not_found
+               | Some(s) -> s
+            end) subt1 subt2)
+         with Not_found -> None
+         end
+      
+      | (_,_) -> None
+   ) val1 val2
    

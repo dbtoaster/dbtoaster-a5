@@ -177,22 +177,39 @@ sig
    *)
    val simplify: expr_t -> expr_t
    
-   (* cmp_exprs cmp_leaf expr_a expr_b accum -> accum
+   (* cmp_exprs sum_f prod_f leaf_f a b -> 
       
       Helper function for comparing expressions.  
       
       Performs a DFS in parallel over two expressions.  If any differences are
       encountered between the two expressions, cmp_exprs will immediately return
-      None.  cmp_leaf will be invoked to determine whether two leaves are 
-      equivalent.  
+      None.  
+      
+      
+      cmp_leaf will be invoked to determine whether two leaves are equivalent
+      and should return None if they are not.  Metadata about the comparison
+      may be returned if they are equivalent in isolation.
+      
+      sum_f and prod_f are invoked on values returned by cmp_leaf and should be
+      used to ensure that the returned metadata is consistent.  If so, metadata
+      regarding the entire sum or product should be returned.      
       
       A positive result (Some(x)) is guaranteed to be an equivalent expr, while
       a negative result (None) only indicates that we were not able to establish
       equivalence.  Among other things, form normalization, double-negation,
       and Product/Sum commutability are not handled properly (yet).
    *)
-   val cmp_exprs: (leaf_t -> leaf_t -> 'a -> 'a option) ->
-                  expr_t ->  expr_t -> 'a -> 'a option
+   val cmp_exprs: ('a list -> 'a option) ->
+                  ('a list -> 'a option) ->
+                  (leaf_t -> leaf_t  -> 'a option) ->
+                  expr_t -> expr_t -> 'a option
+   
+   (* multiply_out lhs sum rhs 
+      
+      Shorthand operation that multiplies every sum term in sum by lhs and rhs
+      and returns the resultant list of expressions
+   *)
+   val multiply_out: expr_t list -> expr_t -> expr_t list -> expr_t list
 end
 
 
@@ -356,25 +373,31 @@ struct
    let simplify (e: expr_t) =
       apply_to_leaves (fun x -> mk_val x) e
     
-   let rec cmp_exprs (leaf_f: leaf_t -> leaf_t -> 'a -> 'a option)
-                     (a: expr_t) (b: expr_t) 
-                     (accum: 'a): 'a option =
-      let do_recur (ae:expr_t list) (be:expr_t list) (accum:'a): 'a option = 
-        if List.length ae <> List.length be then None
-        else List.fold_right2 (fun curr_a curr_b curr_accum_opt ->
-          match curr_accum_opt with 
-            | None -> None
-            | Some(curr_accum) -> 
-                (cmp_exprs leaf_f curr_a curr_b curr_accum)
-        ) ae be (Some(accum))
+   let rec cmp_exprs (sum_f: 'a list -> 'a option)
+                     (prod_f: 'a list -> 'a option)
+                     (leaf_f: leaf_t -> leaf_t -> 'a option)
+                     (a: expr_t) (b: expr_t): 'a option = 
+      let rcr a b = cmp_exprs sum_f prod_f leaf_f a b in
+      let rcr_all merge_fn al bl = 
+         if List.length al <> List.length bl then None
+         else begin try 
+            merge_fn (List.map2 (fun a b -> begin match rcr a b with 
+               | None -> raise Not_found
+               | Some(s) -> s
+            end) al bl)
+         with Not_found -> None
+         end
       in
       match (a,b) with
-        (Val  xa, Val  xb) -> leaf_f xa xb accum
-      | (Neg  ae, Neg  be) -> cmp_exprs leaf_f ae be accum
-      | (Sum  ae, Sum  be) -> do_recur ae be accum
-      | (Prod ae, Prod be) -> do_recur ae be accum
+        (Val  xa, Val  xb) -> leaf_f         xa xb
+      | (Neg  ae, Neg  be) -> rcr            ae be 
+      | (Sum  ae, Sum  be) -> rcr_all sum_f  ae be 
+      | (Prod ae, Prod be) -> rcr_all prod_f ae be 
       | _ -> None
    
+   let multiply_out (lhs:expr_t list) (sum:expr_t) (rhs:expr_t list):
+                    expr_t list =
+      List.map (fun x -> mk_prod (lhs@[x]@rhs)) (sum_list sum)
 end
 
 

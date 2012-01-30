@@ -30,7 +30,7 @@ type source_info_t = (source_t * (adaptor_t * rel_t) list)
 
 type t = source_info_t list ref
 
-let empty_db:t = ref []
+let empty_db ():t = ref []
 
 let add_rel (db:t) ?(source = NoSource) ?(adaptor = ("",[])) (rel:rel_t) = 
    if List.mem_assoc source !db then

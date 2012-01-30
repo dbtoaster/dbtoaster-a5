@@ -4,7 +4,7 @@ open Arithmetic
 open Calculus
 open Calculus.BasicCalculus
 
-let incorporate_stmt ?(old = (Schema.empty_db, [])) (rel, query) =
+let incorporate_stmt ?(old = (Schema.empty_db (), [])) (rel, query) =
    let (old_rels,old_queries) = old in
    begin match rel with 
       | Some(name, schema, reltype, source, adaptor) ->
@@ -119,6 +119,9 @@ valueExpr:
                                     ValueRing.mk_val 
                                        (AConst(Arithmetic.prod c (CInt(-1)))) 
                                 | _ -> ValueRing.mk_neg $2 }
+| valueLeaf                   { $1 }
+
+valueLeaf:
 | constant                    { ValueRing.mk_val (AConst $1) }
 | variable                    { ValueRing.mk_val (AVar $1) }
 | functionDefn                { ValueRing.mk_val $1 }
@@ -130,6 +133,7 @@ calculusExpr:
 | calculusExpr MINUS calculusExpr { CalcRing.mk_sum [$1; CalcRing.mk_neg $3] }
 | MINUS calculusExpr              { CalcRing.mk_neg $2 }
 | POUND valueExpr POUND           { CalcRing.mk_val (Value $2) }
+| valueLeaf                       { CalcRing.mk_val (Value $1) }
 | AGGSUM LPAREN LBRACKET emptyVariableList RBRACKET COMMA calculusExpr RPAREN
                                   { CalcRing.mk_val (AggSum($4, $7)) }
 | relationDefn                    { let (reln, relv, relt) = $1 in

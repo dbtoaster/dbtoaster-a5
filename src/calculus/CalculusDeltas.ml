@@ -10,9 +10,13 @@ let delta_var_id = ref 0
 
 let rec delta_of_expr 
           ?(external_delta=(fun _ _ _->failwith "Delta of external"))
-          (delta_reln:string) (delta_relv:var_t list) (expr:C.expr_t): C.expr_t=
+          ((delta_event, 
+            (delta_reln,delta_relv,delta_reltablet,delta_relt):Schema.event_t))           
+          (expr:C.expr_t): C.expr_t=
    let rcr = delta_of_expr ~external_delta:external_delta 
-                           delta_reln delta_relv in
+                           (delta_event, 
+                            (delta_reln,delta_relv,delta_reltablet,delta_relt)) 
+   in
    CalcRing.delta
       (fun lf ->
          match lf with
@@ -24,12 +28,16 @@ let rec delta_of_expr
          (*****************************************)
             | Rel(reln,relv,_) ->
                if delta_reln = reln then 
-                  CalcRing.mk_prod (
-                     List.map (fun (dv, v) ->
-                        CalcRing.mk_val (Lift(dv, 
-                           CalcRing.mk_val (Value(mk_var v))))
-                     ) (List.combine relv delta_relv)
-                  )
+                  let definition_terms = 
+                     CalcRing.mk_prod (
+                        List.map (fun (dv, v) ->
+                           CalcRing.mk_val (Lift(dv, 
+                              CalcRing.mk_val (Value(mk_var v))))
+                        ) (List.combine relv delta_relv)
+                     )
+                  in if delta_event = Schema.InsertEvent
+                     then definition_terms
+                     else CalcRing.mk_neg definition_terms
                else CalcRing.zero
          (*****************************************)
             | External(e) -> external_delta delta_reln delta_relv e
@@ -71,3 +79,7 @@ let rec delta_of_expr
                   ]
          (*****************************************) 
       ) expr
+
+;;
+
+let has_no_deltas (expr:C.expr_t): bool = (C.rels_of_expr expr = [])
