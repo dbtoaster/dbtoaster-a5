@@ -17,7 +17,7 @@ end
 
 
 (* We build rings using the Make functor over the Base type.
-   Examples are in RingTest.ml.
+   Examples are in ring.ml.
 *)
 module type Ring =
 sig
