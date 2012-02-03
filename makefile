@@ -94,7 +94,7 @@ bin/dbtoaster_top: $(C_FILES)
 	@echo "Linking DBToaster Top"
 	@$(OCAMLMKTOP) $(OCAML_FLAGS) -o $@ $(C_FILES)
 
-states: $(patsubst %,%.states,%(PARSERS))
+states: $(patsubst %,%.states,$(PARSERS))
 
 clean: 
 	rm -f $(CLEAN_FILES)
