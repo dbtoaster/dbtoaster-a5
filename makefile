@@ -68,7 +68,7 @@ OPT_FLAGS +=\
 CLEAN_FILES=\
 	$(patsubst %,%.ml,$(GENERATED_FILES))\
 	$(patsubst %,%.mli,$(PARSERS))\
-	$(patsubst %,%.states,%(PARSERS))\
+	$(patsubst %,%.states,$(PARSERS))\
 	$(C_FILES) $(C_INCLUDES) \
 	$(O_FILES) $(O_INCLUDES) \
 	$(patsubst %,%.o,$(FILES)) \
