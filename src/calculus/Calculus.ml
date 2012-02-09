@@ -110,10 +110,16 @@ module Make(T : ExternalMeta) = struct
       CalcRing.fold 
          (fun sum_vars ->
             let ivars, ovars = List.split sum_vars in
-               if not (ListAsSet.seteq (ListAsSet.multiinter ovars)
-                                       (ListAsSet.multiunion ovars))
-               then failwith "Calculus expr with sum of incompatible schemas"
-               else (ListAsSet.multiunion ivars, ListAsSet.multiunion ovars)
+               let old_ivars = ListAsSet.multiunion ivars in
+               let old_ovars = ListAsSet.multiunion ovars in
+               (* Output variables that appear on only one side of the
+                  union operator lose finite support and must now be treated
+                  as input variables *)
+               let new_ivars = ListAsSet.diff old_ovars 
+                                              (ListAsSet.multiinter ovars)
+               in
+                  (  ListAsSet.union old_ivars new_ivars,
+                     ListAsSet.diff  old_ovars new_ivars )
          )
          (fun prod_vars ->
             List.fold_left (fun (old_ivars, old_ovars) (new_ivars, new_ovars) ->
