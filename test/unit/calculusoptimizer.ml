@@ -36,7 +36,7 @@ Debug.log_unit_test "Combine Values"
    string_of_expr
    (CalculusOptimizer.combine_values 
       (parse "(R(A,B) * #-1#) * (#22-1# + #3#) * #A#"))
-   (parse "#((-24) * A)# * R(A,B)")
+   (parse "R(A,B)*#((-24) * A)#")
 ;;
 
 let test msg scope input output =

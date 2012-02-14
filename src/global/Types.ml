@@ -83,6 +83,8 @@ let escalate_type ?(opname="<op>") (a:type_t) (b:type_t): type_t =
    begin match (a,b) with
       | (at,bt) when at = bt -> at
       | (TAny,t) | (t,TAny) -> t
+      | (TInt,TBool) | (TBool,TInt) -> TInt
+      | (TBool,TFloat) | (TFloat,TBool) -> TFloat
       | (TInt,TFloat) | (TFloat,TInt) -> TFloat
       | _ -> failwith ("Can not compute type of "^(string_of_type a)^" "^
                        opname^" "^(string_of_type b))

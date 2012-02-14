@@ -79,6 +79,8 @@ end
 
 module Materializer = TemporaryMaterializer
 
+(******************************************************************************)
+
 type todo_list_t = ds_t list
 type ds_metadata_t = {
    init_at_start  : bool;
@@ -93,20 +95,41 @@ type plan_t = compiled_ds_t list
 
 (******************************************************************************)
 
+let extract_renamings ((scope,schema):C.schema_t) (expr:C.expr_t): 
+                      ((var_t * var_t) list * C.expr_t) =
+   let (mappings, expr_terms) = 
+      List.fold_left (fun (mappings, expr_terms) term ->
+         begin match term with
+         | CalcRing.Val(Lift(v1, 
+            CalcRing.Val(Value(ValueRing.Val(AVar(v2))))))->
+            if (List.mem v2 scope) && (List.mem v1 schema) then
+               ((v1, v2)::mappings, expr_terms)
+            else (mappings, expr_terms @ [term])
+         | _ ->  (mappings, expr_terms @ [term])
+         end
+      ) ([], []) (CalcRing.prod_list expr)
+   in
+      (mappings, Calculus.rename_vars mappings (CalcRing.mk_prod expr_terms))
+
+(******************************************************************************)
+
 let compile_map (db_schema:Schema.t) (history:Materializer.ds_history_t)
                 (todo: ds_t): todo_list_t * compiled_ds_t =
    (* Sanity check: Deltas of non-numeric types don't make sense and it doesn't
       make sense to compile a map that doesn't support deltas of some form. *)
-   let (todo_name, todo_ivars, todo_ovars, todo_type, _) =
+   let (todo_name, todo_ivars, todo_ovars, todo_base_type, _) =
       begin match todo.ds_name with
          | CalcRing.Val(External(e)) -> e
          | _ -> failwith "Error: Invalid datastructure name, not an external"
       end
    in
-   begin match todo_type with
-      | TInt | TFloat -> ()
-      | _ -> failwith "Error: Compiling map with unsupported type"
-   end;
+   let todo_type = 
+      begin match todo_base_type with
+         | TInt | TFloat -> todo_base_type
+         | TBool -> TInt
+         | _ -> failwith "Error: Compiling map with unsupported type"
+      end
+   in
    Debug.print "LOG-COMPILE-DETAIL" (fun () ->
       "Optimizing: "^(C.string_of_expr todo.ds_definition)
    );
@@ -151,8 +174,12 @@ let compile_map (db_schema:Schema.t) (history:Materializer.ds_history_t)
       in
       let prefixed_relv = List.map (fun (n,t) -> (map_prefix^n, t)) relv in
       let delta_event = (event,(reln, prefixed_relv, Schema.StreamRel, relt)) in
-      let delta_expr = 
-         CalculusDeltas.delta_of_expr delta_event optimized_defn
+      let delta_expr_unextracted = 
+         CalculusOptimizer.optimize_expr (todo_ivars @ prefixed_relv,todo_ovars) 
+            (CalculusDeltas.delta_of_expr delta_event optimized_defn)
+      in
+      let (delta_renamings, delta_expr) = 
+         extract_renamings (prefixed_relv, todo_ovars) delta_expr_unextracted
       in
       Debug.print "LOG-COMPILE-DETAIL" (fun () ->
          "Delta: "^(Schema.string_of_event 
@@ -160,10 +187,7 @@ let compile_map (db_schema:Schema.t) (history:Materializer.ds_history_t)
             " DO "^(C.string_of_expr delta_expr)
       );
       let (new_todos, materialized_delta) = 
-         Materializer.materialize history map_prefix 
-            (CalculusOptimizer.optimize_expr (todo_ivars @ prefixed_relv,
-                                              todo_ovars) 
-                                             delta_expr)
+         Materializer.materialize history map_prefix delta_expr
       in
          Debug.print "LOG-COMPILE-DETAIL" (fun () ->
             "Materialized: "^(C.string_of_expr materialized_delta)
@@ -171,7 +195,8 @@ let compile_map (db_schema:Schema.t) (history:Materializer.ds_history_t)
          trigger_todos := new_todos @ !trigger_todos;
          triggers      := 
             (delta_event, {
-               Statement.target_map = todo.ds_name;
+               Statement.target_map = 
+                  Calculus.rename_vars delta_renamings todo.ds_name;
                Statement.update_type = Statement.UpdateStmt;
                Statement.update_expr = materialized_delta
             }) :: !triggers
@@ -218,17 +243,10 @@ let compile (db_schema:Schema.t) (queries:todo_list_t): plan_t =
       in
       (* The order in which we concatenate new_todos decides whether compilation 
       is performed 'depth-first' or 'breadth-first' with respect to the map 
-      heirarchy.  Both of these approaches are correct (even in the absence of a 
-      topological sort postprocessing step).  The real question is how and where 
-      duplicate map elimination takes place: depth-first will encounter most of 
-      its duplicate maps in the 'completed' list, while breadth first will 
-      encounter most of its duplicate maps in the 'todos' list.  Without the 
-      topo sort, we can't re-use maps in the 'completed' table, but there are 
-      cases where breadth first is going to re-use maps it encounters in 
-      'completed' as well.  So, in general, depth-first should be a touch more 
-      efficient *)
+      heirarchy.  Only depth-first is correct without a topological sort 
+      postprocessing step. *)
       todos     := new_todos @ !todos;
-      plan      := compiled_ds :: !plan
+      plan      := (!plan) @ [compiled_ds]
    ) done; !plan
 
 (******************************************************************************)

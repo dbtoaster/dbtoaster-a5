@@ -36,7 +36,7 @@ let rec combine_values (expr:C.expr_t): C.expr_t =
       else let val_term = 
          CalcRing.mk_val (Value(Arithmetic.eval_partial (val_op val_list))) in
       if calc_list = [] then val_term 
-      else calc_op (val_term::calc_list)
+      else calc_op (calc_list @ [val_term])
    in
    CalcRing.fold
       (merge CalcRing.mk_sum  ValueRing.mk_sum)
@@ -660,8 +660,11 @@ let factorize_polynomial (scope:var_t list) (expr:C.expr_t): C.expr_t =
  * optimize_expr
  *   Given an expression apply the above optimizations to it until a fixed point
  *   is reached.
+ * 
+ * OptCombineValues is actually a bad idea by default, since it limits the
+ * range of options available to processes that work exclusively on Calculus
  ******************************************************************************)
-let optimize_expr ?(optimizations = [OptCombineValues; OptLiftEqualities; 
+let optimize_expr ?(optimizations = [OptLiftEqualities; 
                                      OptUnifyLifts; OptNestingRewrites;
                                      OptFactorizePolynomial])
                   ((scope,schema):C.schema_t) (expr:C.expr_t): C.expr_t =

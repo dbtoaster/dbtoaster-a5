@@ -1,4 +1,5 @@
 open Calculus
+open Statement
 
 exception DriverError of string
 
@@ -62,11 +63,15 @@ type stage_t =
    | StagePrintCalc
    | StagePrintSchema
    | StageCompileCalc
+   | StagePrintPlan
    | StageParseM3
 
-let output_stages = [StagePrintSQL; StagePrintSchema; StagePrintCalc]
-let input_stages = [StageParseSQL]
-let core_stages = [StageSQLToCalc]
+let output_stages = 
+   [StagePrintSQL; StagePrintSchema; StagePrintCalc; StagePrintPlan]
+let input_stages = 
+   [StageParseSQL]
+let core_stages = 
+   [StageSQLToCalc; StageCompileCalc]
 
 let stages_from (stage:stage_t): stage_t list =
    ListExtras.sublist (ListExtras.index_of stage core_stages) (-1) core_stages
@@ -80,10 +85,11 @@ let active_stages = ref (ListAsSet.inter
       | _    -> error "Unsupported input language"
     )@output_stages)
    ((match !output_language with
-      | Auto -> bug "output language still auto"
-      | SQL  -> StagePrintSQL::[]
-      | Calc -> StagePrintCalc::(stages_to StageSQLToCalc)
-      | _    -> error "Unsupported output language"
+      | Auto  -> bug "output language still auto"
+      | SQL   -> StagePrintSQL::[]
+      | Calc  -> StagePrintCalc::(stages_to StageSQLToCalc)
+      | MPlan -> StagePrintPlan::(stages_to StageCompileCalc)
+      | _     -> error "Unsupported output language"
     )@input_stages))
 ;;
 let stage_is_active s = List.mem s !active_stages;;
@@ -107,6 +113,11 @@ let db_schema:Schema.t = Schema.empty_db ();;
    the output must be generated as a separate query (this can be eliminated in
    the future by adding support for tuple values to the calculus) *)
 let calc_queries:(string * Calculus.expr_t) list ref = ref [];;
+
+(* The materialization plan.  This is typically an intermediate stage after
+   the deltas have been generated, but before the triggers have been gathered
+   together into an M3 program. *)
+let plan:(Compiler.plan_t ref) = ref [];;
 
 (* Representation of the input queries after compilation/materialization.  This
    is the expression that needs to be evaluated to get the query result (in 
@@ -171,3 +182,24 @@ if stage_is_active StagePrintCalc then (
    )
 )
 ;; 
+if stage_is_active StageCompileCalc then (
+   let query_ds_list = List.map (fun (qname,qexpr) -> {
+      Statement.ds_name = Statement.mk_ds_name qname 
+                                               (Calculus.schema_of_expr qexpr)
+                                               (Calculus.type_of_expr qexpr);
+      Statement.ds_definition = qexpr
+   }) !calc_queries in
+
+      (* Compile things *)
+      plan := Compiler.compile db_schema query_ds_list ;
+
+      (* And save the accessor expressions *)
+      toplevel_queries := List.map (fun q_ds ->
+         let (q_name, _, _, _, _) = Statement.expand_ds_name q_ds.ds_name in
+            (q_name, q_ds.ds_name)
+      ) query_ds_list
+)
+;;
+if stage_is_active StagePrintPlan then (
+   print_endline (Compiler.string_of_plan !plan)
+)
