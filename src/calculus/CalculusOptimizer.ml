@@ -424,7 +424,8 @@ let rec nesting_rewrites (expr:C.expr_t) =
    Debug.print "LOG-CALCOPT-DETAIL" (fun () ->
       "Nesting Rewrites: "^(C.string_of_expr expr) 
    );
-   CalcRing.fold (CalcRing.mk_sum) (CalcRing.mk_prod) (CalcRing.mk_neg)
+   CalcRing.fold (CalcRing.mk_sum) (CalcRing.mk_prod) 
+      (fun x -> CalcRing.mk_prod [CalcRing.mk_val (Value(mk_int (-1))); x])
       (fun e -> begin match e with
          | AggSum(gb_vars, unprocessed_subterm) ->
             let subterm = nesting_rewrites unprocessed_subterm in
