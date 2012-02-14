@@ -11,5 +11,7 @@ unit:
 	@$(UNIT_TEST) unit/calculusoptimizer.ml
 
 development:
+	@$(UNIT_TEST) unit/calculusoptimizer.ml
+	@$(UNIT_TEST) unit/compiler.ml
 
 .PHONY: all unit development

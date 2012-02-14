@@ -1,8 +1,8 @@
 open Types
 open Arithmetic
 open Calculus
-open Calculus.BasicCalculus
-open Calculus.BasicCalculus.CalcRing
+open Calculus
+open Calculus.CalcRing
 
 
 let parse (expr:string):expr_t = 
@@ -26,7 +26,7 @@ Debug.log_unit_test "Stringification"
 ;;
 
 Debug.log_unit_test "Parsing"
-   BasicCalculus.string_of_expr
+   string_of_expr
    (parse "R(A,B) * S(B,C) * #(A+C)#")
    (CalcRing.mk_prod [
       CalcRing.mk_val (rel "R" [var "A"; var "B"]);

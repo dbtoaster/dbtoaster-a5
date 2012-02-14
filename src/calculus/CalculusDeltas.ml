@@ -3,20 +3,20 @@ open Ring
 open Arithmetic
 open Calculus
 
-module C = BasicCalculus
-open C
+module C = Calculus
 
 let delta_var_id = ref 0
 
 let rec delta_of_expr 
-          ?(external_delta=(fun _ _ _->failwith "Delta of external"))
           ((delta_event, 
             (delta_reln,delta_relv,delta_reltablet,delta_relt):Schema.event_t))           
           (expr:C.expr_t): C.expr_t=
-   let rcr = delta_of_expr ~external_delta:external_delta 
-                           (delta_event, 
+   let rcr = delta_of_expr (delta_event, 
                             (delta_reln,delta_relv,delta_reltablet,delta_relt)) 
    in
+   Debug.print "LOG-DELTA-DETAIL" (fun () ->
+      "d"^delta_reln^" of "^(C.string_of_expr expr) 
+   );
    CalcRing.delta
       (fun lf ->
          match lf with
@@ -40,7 +40,7 @@ let rec delta_of_expr
                      else CalcRing.mk_neg definition_terms
                else CalcRing.zero
          (*****************************************)
-            | External(e) -> external_delta delta_reln delta_relv e
+            | External(_) -> failwith "Can not take delta of an external"
          (*****************************************)
             | Cmp(_,_,_) -> CalcRing.zero
          (*****************************************)
@@ -54,7 +54,7 @@ let rec delta_of_expr
                         d (A ^= B) ==> (A ^= (B + dB)) - (A ^= B)
                      we use an equivalent expression 
                         d (A ^= B) ==> 
-                           (deltaVar ^= dB) * (A ^= (B + deltaVar)) - (A ^= B)
+                           (deltaVar ^= dB) * (A ^= (B + deltaVar) - (A ^= B))
                      where deltaVar is a fresh variable.  The reason for this is
                      to range-restrict the evaluation of B.  Assuming products
                      are built up as nested-loop-joins, composed left-to-right

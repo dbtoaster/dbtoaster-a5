@@ -59,7 +59,7 @@ and string_of_value (a_value:value_t): string =
       string_of_value_leaf
       a_value
 
-(**** Info ****)
+(**** Variable Operations ****)
 let rec vars_of_value (v: value_t): var_t list =
    ValueRing.fold
       ListAsSet.multiunion
@@ -70,6 +70,19 @@ let rec vars_of_value (v: value_t): var_t list =
          | AVar(v) -> [v]
          | AFn(_,tl,_) -> ListAsSet.multiunion (List.map vars_of_value tl)
       end)
+      v
+
+let rec rename_vars (mapping:(var_t,var_t)Function.table_fn_t) (v: value_t): 
+                    value_t =
+   ValueRing.fold
+      ValueRing.mk_sum
+      ValueRing.mk_prod
+      ValueRing.mk_neg
+      (fun lf -> ValueRing.mk_val (begin match lf with
+         | AConst(c)     -> lf
+         | AVar(v)       -> AVar(Function.apply_if_present mapping v)
+         | AFn(fn,fa,ft) -> AFn(fn, List.map (rename_vars mapping) fa, ft)
+      end))
       v
 
 (**** Typechecker ****)

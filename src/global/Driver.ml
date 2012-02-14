@@ -106,12 +106,12 @@ let db_schema:Schema.t = Schema.empty_db ();;
    query may map to multiple calculus queries, since each aggregated column in
    the output must be generated as a separate query (this can be eliminated in
    the future by adding support for tuple values to the calculus) *)
-let calc_queries:(string * BasicCalculus.expr_t) list ref = ref [];;
+let calc_queries:(string * Calculus.expr_t) list ref = ref [];;
 
 (* Representation of the input queries after compilation/materialization.  This
    is the expression that needs to be evaluated to get the query result (in 
    general, each of these will be a single map access) *)
-let toplevel_queries:(string * IVCCalculus.expr_t) list ref = ref [];;
+let toplevel_queries:(string * Calculus.expr_t) list ref = ref [];;
 
 (************ SQL Stages ************)
 
@@ -166,7 +166,7 @@ if stage_is_active StagePrintSchema then (
 if stage_is_active StagePrintCalc then (
    print_endline (
       (ListExtras.string_of_list ~sep:"\n" 
-         (fun (name, calc) -> name^": \n  "^(BasicCalculus.string_of_expr calc))
+         (fun (name, calc) -> name^": \n  "^(Calculus.string_of_expr calc))
          !calc_queries)
    )
 )

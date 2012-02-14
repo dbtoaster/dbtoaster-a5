@@ -44,7 +44,14 @@ let rels (db:t): rel_t list =
    List.fold_left (fun old (_, rels) -> old@(List.map snd rels)) [] !db
 
 let rel (db:t) (reln:string): rel_t =
-   List.find (fun (cmpn,_,_,_) -> reln == cmpn) (rels db)
+   List.find (fun (cmpn,_,_,_) -> reln = cmpn) (rels db)
+
+let string_of_rel ((reln,relsch,_,_):rel_t): string =
+   (reln^"("^(ListExtras.string_of_list ~sep:", " string_of_var relsch)^")")
+
+let string_of_event ((event_t,event_rel):event_t) =
+   ((if event_t = InsertEvent then "ON +" else "ON -")^
+    (string_of_rel event_rel))
 
 let string_of_schema (sch:t):string =
    ListExtras.string_of_list ~sep:"\n" (fun (source, rels) ->

@@ -13,20 +13,22 @@ FILES=\
 	src/calculus/CalculusOptimizer\
 	src/calculus/CalculusDeltas\
 	src/calculus/SqlToCalculus\
+	src/compiler/Statement\
+	src/compiler/Compiler\
 	src/maps/M3\
 
 LEXERS=\
-	src/sql/Sqllexer\
-	src/calculus/Calculuslexer
+	src/parsers/Sqllexer\
+	src/parsers/Calculuslexer
 
 PARSERS=\
-	src/sql/Sqlparser\
-	src/calculus/Calculusparser
-	
+	src/parsers/Sqlparser\
+	src/parsers/Calculusparser
 
 DIRS=\
 	src/util\
 	src/global\
+	src/parsers\
 	src/sql\
 	src/ring\
 	src/calculus\
@@ -101,6 +103,9 @@ clean:
 
 test: bin/dbtoaster_top
 	@DIRS="$(DIRS)" make -C test
+	
+devtest: bin/dbtoaster_top
+	@DIRS="$(DIRS)" make -C test development
 
 .PHONY: all clean test
 

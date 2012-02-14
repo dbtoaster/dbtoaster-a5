@@ -30,8 +30,10 @@ let keywords =
       "STREAM",     STREAM;
       "AS",         AS;
       "FROM",       FROM;
+      "ON",         ON;
       "DECLARE",    DECLARE;
       "QUERY",      QUERY;
+      "MAP",        MAP;
       "FILE",       FILE;
       "SOCKET",     SOCKET;
       "FIXEDWIDTH", FIXEDWIDTH;
@@ -65,7 +67,8 @@ let ops =
         "/",    DIVIDE;
         "#",    POUND;
         "^=",   LIFT;
-        
+        ":=",   SETVALUE;
+        "+=",   INCREMENT
     ]
 let _ = hashtbl_of_pair_list ops_table ops
     
@@ -121,7 +124,6 @@ rule tokenize = parse
 | singlecm      { tokenize lexbuf}
 | multicmst     { comment 1 lexbuf }
 | ';'           { EOSTMT }
-| ":="          { SETVALUE }
 | eof           { EOF }
 
 and comment depth = parse

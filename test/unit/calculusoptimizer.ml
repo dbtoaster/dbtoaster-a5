@@ -2,7 +2,6 @@ open Types
 open Ring
 open Arithmetic
 open Calculus
-open Calculus.BasicCalculus
 
 let parse (expr:string):expr_t = 
    try
@@ -19,22 +18,22 @@ let rel rn rv = (Rel(rn, rv, TInt))
 
 Debug.log_unit_test "Invalid Commute"
    string_of_bool
-   (BasicCalculus.commutes (parse "R(A,B) * #A#") (parse "#B#"))
+   (commutes (parse "R(A,B) * #A#") (parse "#B#"))
    false
 ;;
 Debug.log_unit_test "Invalid Commute (Made valid by scope)"
    string_of_bool
-   (BasicCalculus.commutes ~scope:[var "B"] (parse "R(A,B) * #A#") 
+   (commutes ~scope:[var "B"] (parse "R(A,B) * #A#") 
                                              (parse "#B#"))
    true
 ;;
 Debug.log_unit_test "Valid Commute"
    string_of_bool
-   (BasicCalculus.commutes (parse "R(A,B) * #A#") (parse "#C#"))
+   (commutes (parse "R(A,B) * #A#") (parse "#C#"))
    true
 ;;
 Debug.log_unit_test "Combine Values"
-   BasicCalculus.string_of_expr
+   string_of_expr
    (CalculusOptimizer.combine_values 
       (parse "(R(A,B) * #-1#) * (#22-1# + #3#) * #A#"))
    (parse "#((-24) * A)# * R(A,B)")
@@ -42,7 +41,7 @@ Debug.log_unit_test "Combine Values"
 
 let test msg scope input output =
    Debug.log_unit_test ("Lift Equalities ("^msg^")")
-      BasicCalculus.string_of_expr
+      string_of_expr
       (CalculusOptimizer.lift_equalities scope (parse input))
       (parse output)
 in 
@@ -68,7 +67,7 @@ in
 
 let test msg schema input output =
    Debug.log_unit_test ("Unify Lifts ("^msg^")")
-      BasicCalculus.string_of_expr
+      string_of_expr
       (CalculusOptimizer.unify_lifts schema (parse input))
       (parse output)
 in
@@ -130,11 +129,17 @@ in
       "AggSum([C], (C ^= #2*B#)*#C#)";
    test "Full expression and value into comparison" []
       "(A ^= #2*B#) * (C ^= AggSum([], R(D))) * (A < C)"
-      "(C ^= AggSum([], R(D))) * (2*B < C)"
+      "(C ^= AggSum([], R(D))) * (2*B < C)";
+   test "Dropping unnecessary lifts 1" []
+      "AggSum([], (A ^= B))"
+      "AggSum([], 1)"; (* The aggsum would be deleted by nesting_rewrites *)
+   test "Dropping unnecessary lifts 2" []
+      "AggSum([], (A ^= B)*(C ^= D))"
+      "AggSum([], 1)"
 ;;
 let test msg input output =
    Debug.log_unit_test ("Nesting Rewrites ("^msg^")")
-      BasicCalculus.string_of_expr
+      string_of_expr
       (CalculusOptimizer.nesting_rewrites (parse input))
       (parse output)
 in
@@ -150,7 +155,7 @@ in
 ;;
 let test msg scope input output =
    Debug.log_unit_test ("Factorize One Polynomial ("^msg^")")
-      BasicCalculus.string_of_expr
+      string_of_expr
       (CalculusOptimizer.factorize_one_polynomial scope (List.map parse input))
       (parse output)
 in
@@ -171,7 +176,7 @@ in
 ;;
 let test msg scope input output =
    Debug.log_unit_test ("Factorize Sums ("^msg^")")
-      BasicCalculus.string_of_expr
+      string_of_expr
       (CalculusOptimizer.factorize_polynomial scope (parse input))
       (parse output)
 in

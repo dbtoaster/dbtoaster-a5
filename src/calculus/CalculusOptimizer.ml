@@ -3,8 +3,7 @@ open Ring
 open Arithmetic
 open Calculus
 
-module C = BasicCalculus
-open C
+module C = Calculus
 
 type opt_t = 
    | OptCombineValues
@@ -23,6 +22,9 @@ type opt_t =
  *   expr: The calculus expression to be processed
  ******************************************************************************)
 let rec combine_values (expr:C.expr_t): C.expr_t =
+   Debug.print "LOG-CALCOPT-DETAIL" (fun () ->
+      "Combine Values: "^(C.string_of_expr expr) 
+   );
    let rcr = combine_values in
    let merge calc_op val_op e =
       let (val_list, calc_list) = List.fold_right (fun term (v, c) ->
@@ -66,6 +68,9 @@ type lift_candidate_t =
    | UnidirectionalLift of var_t * value_t
 
 let lift_equalities (scope:var_t list) (big_expr:C.expr_t): C.expr_t =
+   Debug.print "LOG-CALCOPT-DETAIL" (fun () ->
+      "Lift Equalities: "^(C.string_of_expr big_expr) 
+   );
    let candidate_term (candidate:lift_candidate_t) = 
       CalcRing.mk_val (match candidate with
          | BidirectionalLift(x, y)  -> (Cmp(Eq, mk_var x, mk_var y))
@@ -224,6 +229,9 @@ let split_ctx (split_fn: value_t -> 'a option) (ctx:(var_t * C.expr_t) list):
    ) ([],[]) ctx
 ;;
 let unify_lifts (big_schema:var_t list) (big_expr:C.expr_t): C.expr_t =
+   Debug.print "LOG-CALCOPT-DETAIL" (fun () ->
+      "Unify Lifts: "^(C.string_of_expr big_expr) 
+   );
    let split_values (ctx:(var_t * C.expr_t) list): 
                     (var_t list * (var_t * value_t) list) = 
       split_ctx (fun v -> Some(v)) ctx
@@ -288,14 +296,29 @@ let unify_lifts (big_schema:var_t list) (big_expr:C.expr_t): C.expr_t =
                                 (CalcRing.mk_prod pl)
                   in if (Debug.active "AGGRESSIVE-UNIFY") ||
                         (List.mem v rhs_deletable_optimistic)
-                  then ((ListAsSet.diff rhs_deletable_optimistic [v], 
+                  then (
+                     Debug.print "LOG-UNIFY-LIFTS" (fun () -> 
+                        "Unify of "^(string_of_var v)^" succeeded"
+                     );
+                     ((ListAsSet.diff rhs_deletable_optimistic [v], 
                          rhs_term_optimistic),
                          CalcRing.one)
-                  else ((rcr schema ctx (CalcRing.mk_prod pl)), 
+                  ) else (
+                     Debug.print "LOG-UNIFY-LIFTS" (fun () -> 
+                        "Not unifying "^(string_of_var v)^
+                        " because an RHS term decided it was a bad idea"
+                     );
+                     ((rcr schema ctx (CalcRing.mk_prod pl)), 
                         (CalcRing.mk_val (Lift(v,lhs_nested_term))))
-               else
+                  )
+               else (
+                  Debug.print "LOG-UNIFY-LIFTS" (fun () -> 
+                     "Not unifying "^(string_of_var v)^
+                     " because Lift is an expression or in the schema"
+                  );
                   ((rcr schema ctx (CalcRing.mk_prod pl)),
                    (CalcRing.mk_val (Lift(v,lhs_nested_term))))
+               )
             in
                (  ListAsSet.inter lhs_deletable rhs_deletable,
                   CalcRing.mk_prod [lhs_term; rhs_term] )
@@ -320,12 +343,22 @@ let unify_lifts (big_schema:var_t list) (big_expr:C.expr_t): C.expr_t =
             let (deletable, subbed_term) = rcr gb_vars ctx as_term in
                (deletable, (CalcRing.mk_val (AggSum(gb_vars, subbed_term))))
          | CalcRing.Val(Lift(v, l_term)) ->
-            (* Standalone lifts extend the schema of the current expression, but
-               unless they're part of a product chain, it's hard for us to route
-               the unification information.  Rely on a the other optimization 
-               stages to merge the lifts into a product term. *)
-            let (deletable, term) = rcr schema ctx l_term in
-               (deletable, (CalcRing.mk_val (Lift(v, l_term))))
+            (* Standalone lifts extend the schema of the current expression, so
+               it's difficult to figure out whether or not the variable can 
+               actually be unified.  However if the variable we're lifting into 
+               is not part of the schema, AND the term being lifted doesn't 
+               contain any relations, then we can safely delete this lift term 
+            *)
+            if ((C.rels_of_expr l_term) = []) &&
+               (not (List.mem v schema))
+            then (
+               Debug.print "LOG-UNIFY-LIFTS" (fun () -> 
+                  "Allowed to unify standalone lift into "^(string_of_var v)
+               ); (ctx_vars, CalcRing.one)
+            ) else (
+               let (deletable, new_l_term) = rcr schema ctx l_term in
+                  (deletable, (CalcRing.mk_val (Lift(v, new_l_term))))
+            )
          | CalcRing.Val(Value(ValueRing.Val(AVar(v)))) ->
             (  ctx_vars, 
                if List.mem_assoc v ctx then List.assoc v ctx
@@ -388,6 +421,9 @@ let unify_lifts (big_schema:var_t list) (big_expr:C.expr_t): C.expr_t =
  *   Lift(X, Lift(Y, A) * B) = Lift(Y,A) * Lift(X, B)
  ******************************************************************************)
 let rec nesting_rewrites (expr:C.expr_t) = 
+   Debug.print "LOG-CALCOPT-DETAIL" (fun () ->
+      "Nesting Rewrites: "^(C.string_of_expr expr) 
+   );
    CalcRing.fold (CalcRing.mk_sum) (CalcRing.mk_prod) (CalcRing.mk_neg)
       (fun e -> begin match e with
          | AggSum(gb_vars, unprocessed_subterm) ->
@@ -591,8 +627,9 @@ let optimize_expr ?(optimizations = [OptCombineValues; OptLiftEqualities;
                                      OptFactorizePolynomial])
                   ((scope,schema):C.schema_t) (expr:C.expr_t): C.expr_t =
    let include_opt in_fn o new_fn = 
+      let old_in_fn = !in_fn in
       in_fn := (  if List.mem o optimizations 
-                  then (fun x -> !in_fn (new_fn x))
+                  then (fun x -> old_in_fn (new_fn x))
                   else !in_fn  )
    in
    let fp_1 = ref (fun x -> x) in
@@ -601,8 +638,11 @@ let optimize_expr ?(optimizations = [OptCombineValues; OptLiftEqualities;
       include_opt fp_1 OptNestingRewrites     (nesting_rewrites);
       include_opt fp_1 OptFactorizePolynomial (factorize_polynomial scope);
    let fp_2 = ref (fun x -> x) in
-      include_opt fp_1 OptCombineValues       (combine_values);
+      include_opt fp_2 OptCombineValues       (combine_values);
    let rec fixedpoint f x = 
+      Debug.print "LOG-CALCOPT-DETAIL" (fun () ->
+         "OPTIMIZING: "^(C.string_of_expr x) 
+      );
       let new_x = f x in
          if new_x <> x then fixedpoint f new_x
          else new_x

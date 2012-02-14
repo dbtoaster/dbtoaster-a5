@@ -2,7 +2,8 @@ open Ring
 open Types
 open Arithmetic
 open Calculus
-open Calculus.BasicCalculus
+
+module C = Calculus
 
 let tmp_var_id = ref 0
 
@@ -27,13 +28,13 @@ let tmp_var (vn:string) (vt:type_t): var_t =
    corner cases where a lift can occur outside of an aggregate, so it's better
    to be safe. 
    *)
-let lift_if_necessary ?(t="agg") (calc:BasicCalculus.expr_t):
-                      (value_t * BasicCalculus.expr_t) = 
+let lift_if_necessary ?(t="agg") (calc:C.expr_t):
+                      (value_t * C.expr_t) = 
    match calc with
       | CalcRing.Val(Value(x)) -> (x, CalcRing.one)
       | _ -> 
          let tmp_var = tmp_var ("__sql_"^t^"_tmp_") 
-                               (BasicCalculus.type_of_expr calc) in
+                               (C.type_of_expr calc) in
             (mk_var tmp_var, CalcRing.mk_val (Lift(tmp_var, calc)))
 
 let rec preprocess ((tables, queries):Sql.file_t): Sql.file_t =
@@ -49,7 +50,7 @@ let var_of_sql_var ((rel,vn,vt):Sql.sql_var_t):var_t =
 
 let rec calc_of_query (tables:Sql.table_t list) 
                         ((targets,sources,cond,gb_vars):Sql.select_t): 
-                        (string * BasicCalculus.expr_t) list = 
+                        (string * C.expr_t) list = 
    let gb_var_names = List.map Sql.string_of_var gb_vars in
    let source_calc = calc_of_sources tables sources in
    let cond_calc = calc_of_condition tables cond in
@@ -90,7 +91,7 @@ let rec calc_of_query (tables:Sql.table_t list)
 
 and calc_of_sources (tables:Sql.table_t list) 
                     (sources:Sql.labeled_source_t list):
-                    BasicCalculus.expr_t =
+                    C.expr_t =
    let rcr_q q = calc_of_query tables q in
    let (rels,subqs) = List.fold_right (fun (sname,source) (tables,subqs) ->
       begin match source with
@@ -113,7 +114,7 @@ and calc_of_sources (tables:Sql.table_t list)
             CalcRing.mk_val (Lift(
                var_of_sql_var ((Some(ref_name)),
                                tgt_name,
-                               (BasicCalculus.type_of_expr subq)),
+                               (C.type_of_expr subq)),
                subq
             ))
          ) (rcr_q q))
@@ -121,7 +122,7 @@ and calc_of_sources (tables:Sql.table_t list)
    ])
 
 and calc_of_condition (tables:Sql.table_t list) (cond:Sql.cond_t):
-                      BasicCalculus.expr_t =
+                      C.expr_t =
    let rcr_e e = calc_of_sql_expr tables e in
    let rcr_c c = calc_of_condition tables c in
    let rcr_q q = calc_of_query tables q in
@@ -181,7 +182,7 @@ and calc_of_condition (tables:Sql.table_t list) (cond:Sql.cond_t):
 
 and calc_of_sql_expr ?(materialize_query = None)
                      (tables:Sql.table_t list) 
-                     (expr:Sql.expr_t): BasicCalculus.expr_t =
+                     (expr:Sql.expr_t): C.expr_t =
    let rcr_e ?(is_agg=false) e =
       if is_agg then calc_of_sql_expr tables e
       else calc_of_sql_expr ~materialize_query:materialize_query
