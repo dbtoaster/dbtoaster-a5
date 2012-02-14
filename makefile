@@ -12,6 +12,7 @@ FILES=\
 	src/calculus/Calculus\
 	src/calculus/CalculusOptimizer\
 	src/calculus/CalculusDeltas\
+	src/calculus/CalculusDecomposition\
 	src/calculus/SqlToCalculus\
 	src/compiler/Statement\
 	src/compiler/Compiler\

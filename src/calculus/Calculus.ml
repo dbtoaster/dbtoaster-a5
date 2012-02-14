@@ -56,9 +56,9 @@ let rec string_of_leaf (leaf:CalcRing.leaf_t): string =
       | Value(v)                -> Arithmetic.string_of_value v
       | External(ename,eins,eouts,etype,emeta) ->
          ename^
-         (ListExtras.ocaml_of_list string_of_var eins)^
-         (ListExtras.ocaml_of_list string_of_var eins)^
          "("^(string_of_type etype)^")"^
+         (ListExtras.ocaml_of_list string_of_var eins)^
+         (ListExtras.ocaml_of_list string_of_var eouts)^
          (match emeta with | None -> "" 
                            | Some(s) -> ":("^(string_of_expr s)^")")
       | AggSum(gb_vars, subexp) -> 
@@ -85,6 +85,16 @@ and string_of_expr (expr:expr_t): string =
       string_of_leaf
       expr
 
+(*** Utility ***)
+
+exception CalculusException of expr_t * string
+;;
+let bail_out expr msg = 
+   Debug.print "LOG-CALC-FAILURES" (fun () ->
+      msg^" while processing "^(string_of_expr expr)
+   );
+   raise (CalculusException(expr, msg))
+;;
 (*** Informational Operations ***)
 let rec schema_of_expr (expr:expr_t): (var_t list * var_t list) =
    let rcr a = schema_of_expr a in
@@ -116,19 +126,22 @@ let rec schema_of_expr (expr:expr_t): (var_t list * var_t list) =
          | Value(v) -> (vars_of_value v,[])
          | External(_,eins,eouts,_,_) -> (eins,eouts)
          | AggSum(gb_vars, subexp) -> 
-            let ivars, ovars = rcr subexp in
-               if not (ListAsSet.seteq (ListAsSet.inter ovars gb_vars)
-                                       gb_vars)
-               then failwith "Calculus expr with invalid group by var"
+            let (ivars, ovars) = rcr subexp in
+               let trimmed_gb_vars = (ListAsSet.inter ovars gb_vars) in
+               if not (ListAsSet.seteq trimmed_gb_vars gb_vars)
+               then bail_out expr (
+                  "Calculus expr with invalid group by vars: "^
+                     (ListExtras.ocaml_of_list string_of_var ovars)^
+                     " instead of "^
+                     (ListExtras.ocaml_of_list string_of_var gb_vars)
+                  )
                else (ivars, gb_vars)
          | Rel(_,rvars,_) -> ([],rvars)
          | Cmp(_,v1,v2) ->
             (ListAsSet.union (vars_of_value v1) (vars_of_value v2), [])
          | Lift(target, subexp) ->
             let ivars, ovars = rcr subexp in
-               if List.mem target ovars
-               then failwith "Calculus lift statement redefines var"
-               else (ivars, target::ovars)
+               (ivars, ListAsSet.union [target] ovars)
       end)
       expr
 
@@ -293,7 +306,7 @@ let rename_vars (mapping:(var_t,var_t)Function.table_fn_t)
    rewrite_leaves
       (fun _ lf -> CalcRing.mk_val (begin match lf with
          | Value(v)                   -> Value(remap_value v)
-         | External(en,eiv,eov,et,em) -> External(en, remap eiv, remap eiv,   
+         | External(en,eiv,eov,et,em) -> External(en, remap eiv, remap eov,   
                                                   et, em)
          | AggSum(gb_vars, subexp)    -> AggSum(remap gb_vars, subexp)
          | Rel(rn,rv,rt)              -> Rel(rn, remap rv, rt)

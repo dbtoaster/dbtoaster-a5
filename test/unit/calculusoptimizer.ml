@@ -135,7 +135,13 @@ in
       "AggSum([], 1)"; (* The aggsum would be deleted by nesting_rewrites *)
    test "Dropping unnecessary lifts 2" []
       "AggSum([], (A ^= B)*(C ^= D))"
-      "AggSum([], 1)"
+      "AggSum([], 1)";
+   test "Dropping some unnecessary lifts 2" []
+      "AggSum([], (A ^= AA)*(B ^= BB)*S(B))"
+      "AggSum([BB], S(BB))";
+   test "Lifts in non-normal form" []
+      "AggSum([], S(B)*(B ^= BB))"
+      "AggSum([], S(B)*(B = BB))" (* The next lift_eq... eliminates this *)
 ;;
 let test msg input output =
    Debug.log_unit_test ("Nesting Rewrites ("^msg^")")

@@ -33,17 +33,18 @@ let os () =
 let showdiff exp_str fnd_str = 
    print_string ("--Expected--\n"^exp_str^
                  "\n\n--Result--\n"^fnd_str^"\n\n"); 
-   match (os ()) with
-   (*
-    | "Darwin" -> (
-         GenericIO.write (GenericIO.O_TempFile("exp", ".diff", (fun exp_f -> 
-         GenericIO.write (GenericIO.O_TempFile("fnd", ".diff", (fun fnd_f ->
-            let _ = Unix.system("opendiff "^exp_f^" "^fnd_f) in ()
-         ))) (fun fd -> output_string fd (fnd_str^"\n"))
-         ))) (fun fd -> output_string fd (exp_str^"\n"))
-      )
-   *)
-    | _ -> ()
+   if active "VISUAL-DIFF" then
+      match (os ()) with
+       | "Darwin" -> (
+         let (exp,exp_fd) = Filename.open_temp_file "expected" ".diff" in
+         let (fnd,fnd_fd) = Filename.open_temp_file "found" ".diff" in
+            output_string exp_fd exp_str; close_out exp_fd;
+            output_string fnd_fd fnd_str; close_out fnd_fd;
+            let _ = Unix.system("opendiff "^exp^" "^fnd) in
+            Unix.unlink exp;
+            Unix.unlink fnd
+         )
+       | _ -> ()
 
 let log_unit_test (title:string) (to_s:'a -> string) 
                   (result:'a) (expected:'a) : unit =

@@ -39,3 +39,25 @@ Debug.log_unit_test "Parsing"
       ))
    ])
 ;;
+
+let test_delta (name:string) ins reln relv expr delta
+   Debug.log_unit_test ("Deltas: "^name)
+      Calculus.string_of_expr
+      (CalculusDeltas.delta_of_expr
+         (  (if ins then Schema.InsertEvent else Schema.DeleteEvent),
+            (reln, List.map var relv, Schema.StreamRel, TInt)),
+         (parse expr))
+      (parse delta)
+;;
+
+test_delta "2-way Delta" true "R" ["dA", "dB"]
+   "AggSum([], R(A, B)*S(B, C))"
+   "AggSum([], (A ^= dA)*(B ^= dB)*S(B,C))"
+
+;;
+
+Debug.log_unit_test "Renaming an external"
+   string_of_expr
+   (Calculus.rename_vars [var "A", var "B"] 
+                         (parse "FOO(int)[][A]"))
+   (parse "FOO(int)[][B]")

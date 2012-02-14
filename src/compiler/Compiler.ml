@@ -13,20 +13,25 @@ module TemporaryMaterializer = struct
       queries with nested subqueries. *)
    type ds_history_t = ds_t list ref
    
-   let materialize (history:ds_history_t) (prefix:string) (expr:C.expr_t) =
+   let materialize_one (history:ds_history_t) (prefix:string) (expr:C.expr_t) =
       if (C.rels_of_expr expr) = [] then ([], expr) else
       let (expr_ivars, expr_ovars) = C.schema_of_expr expr in
+      Debug.print "LOG-COMPILE-DETAIL" (fun () -> 
+         "Materializing expression: "^(C.string_of_expr expr)^"\n"^
+         "Output Variables: ["^
+            (ListExtras.string_of_list string_of_var expr_ovars)^"]"
+      );
       let (found_ds,mapping_if_found) = 
          List.fold_left (fun result i ->
             if (snd result) <> None then result else
-               (i, (C.cmp_exprs expr i.ds_definition))
+               (i, (C.cmp_exprs i.ds_definition expr))
             ) ({ds_name=CalcRing.one;ds_definition=CalcRing.one}, None) !history
       in begin match mapping_if_found with
          | None -> 
             let new_ds = {
                ds_name = CalcRing.mk_val (
                      External(
-                        prefix^"1",
+                        prefix,
                         expr_ivars,
                         expr_ovars,
                         C.type_of_expr expr,
@@ -39,8 +44,37 @@ module TemporaryMaterializer = struct
                ([new_ds], new_ds.ds_name)
          
          | Some(mapping) ->
+            Debug.print "LOG-COMPILE-DETAIL" (fun () -> 
+               "Found Mapping to : "^(C.string_of_expr found_ds.ds_name)^
+               "\nWith: "^
+                  (ListExtras.ocaml_of_list (fun ((a,_),(b,_))->a^"->"^b) 
+                                            mapping)
+            );
             ([], C.rename_vars mapping found_ds.ds_name)
       end
+   
+   let materialize (history:ds_history_t) (prefix:string) (expr:C.expr_t) =
+      let (expr_ivars, expr_ovars) = C.schema_of_expr expr in
+      let subexprs = 
+         List.map (fun (subexp_schema, subexp) ->
+            let (_, subexp_ovars) = C.schema_of_expr subexp in
+            if ListAsSet.seteq subexp_ovars subexp_schema then
+               subexp
+            else C.CalcRing.mk_val (C.AggSum(subexp_schema, subexp))
+         ) 
+         (snd 
+            (CalculusDecomposition.decompose_graph expr_ivars (expr_ovars,expr))
+         )  
+      in
+         fst (List.fold_left (fun (ret, i) subexp ->
+            let (new_todos, new_term) = 
+               materialize_one history (prefix^"_"^(string_of_int i)) subexp
+            in
+            ((new_todos @ (fst ret), 
+             CalcRing.mk_prod [snd ret; new_term]), 
+             i+1)
+         ) (([], CalcRing.one), 1) subexprs)
+      
 end
 
 module Materializer = TemporaryMaterializer
@@ -199,16 +233,17 @@ let compile (db_schema:Schema.t) (queries:todo_list_t): plan_t =
 
 (******************************************************************************)
 
+let string_of_ds ds = 
+   "DECLARE "^(string_of_ds ds.definition)^"\n"^(String.concat "\n" 
+      (List.map (fun x -> "   "^x) (
+         (if ds.metadata.init_at_start 
+            then ["WITH init_at_start"] else [])@
+         (if ds.metadata.init_on_access 
+            then ["WITH init_on_access"] else [])@
+         (List.map (fun (evt, stmt) ->
+            (Schema.string_of_event evt)^" DO "^(string_of_statement stmt))
+            ds.triggers)
+      )))
+
 let string_of_plan (plan:plan_t): string =
-   ListExtras.string_of_list ~sep:"\n\n" (fun ds ->
-      "DECLARE "^(string_of_ds ds.definition)^"\n"^(String.concat "\n" 
-         (List.map (fun x -> "   "^x) (
-            (if ds.metadata.init_at_start 
-               then ["WITH init_at_start"] else [])@
-            (if ds.metadata.init_on_access 
-               then ["WITH init_on_access"] else [])@
-            (List.map (fun (evt, stmt) ->
-               (Schema.string_of_event evt)^" DO "^(string_of_statement stmt))
-               ds.triggers)
-         )))
-   ) plan
+   ListExtras.string_of_list ~sep:"\n\n" string_of_ds plan

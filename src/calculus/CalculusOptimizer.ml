@@ -228,6 +228,12 @@ let split_ctx (split_fn: value_t -> 'a option) (ctx:(var_t * C.expr_t) list):
       end
    ) ([],[]) ctx
 ;;
+let next_unify_var = ref 0;;
+let mk_unify_lift_var term = 
+   next_unify_var := !next_unify_var + 1; 
+   (  "unify_temp_var_"^(string_of_int !next_unify_var), 
+      C.type_of_expr term)
+;;
 let unify_lifts (big_schema:var_t list) (big_expr:C.expr_t): C.expr_t =
    Debug.print "LOG-CALCOPT-DETAIL" (fun () ->
       "Unify Lifts: "^(C.string_of_expr big_expr) 
@@ -242,6 +248,25 @@ let unify_lifts (big_schema:var_t list) (big_expr:C.expr_t): C.expr_t =
        | ValueRing.Val(AVar(var)) -> Some(var)
        | _ -> None
       ) ctx
+   in
+   
+   (* The unification process defined below expects that lifts will be provided 
+      in a 'normalized' form, where the lift is guaranteed to be introducing its
+      variable into scope.  In cases where this is not true, we convert the
+      lift into an equality comparison and trust the next round of 
+      lift_equalities to shift it into the right place. *)
+   let normalize_lifts = C.rewrite_leaves (fun (scope, _) lf ->
+         match lf with
+            | Lift(v, term) -> 
+               let tmpv = mk_unify_lift_var term in
+               if List.mem v scope then
+                  CalcRing.mk_prod [
+                     CalcRing.mk_val (Lift(tmpv, term));
+                     CalcRing.mk_val (Cmp(Eq, mk_var v, mk_var tmpv))
+                  ]
+               else CalcRing.mk_val lf
+            | _ -> CalcRing.mk_val lf
+      )
    in
    let deletable_vars term_vars unusable_vars usable_vars =
       ListAsSet.union (List.map fst usable_vars)
@@ -340,8 +365,21 @@ let unify_lifts (big_schema:var_t list) (big_expr:C.expr_t): C.expr_t =
             let (deletable, term) = rcr schema ctx nt in
                (deletable, CalcRing.mk_neg term)
          | CalcRing.Val(AggSum(gb_vars, as_term)) ->
+               (* Aggsum is a little non-intuitive.  Input variables flow into
+                  the expression without anything special happening.  However, 
+                  output variables must be explicitly allowed out.  When 
+                  unifying lifts, it's possible for an input variable to be
+                  transformed into an output variable.  If this happens, we need
+                  to include the variable as part of the output schema of this
+                  AggSum *)
             let (deletable, subbed_term) = rcr gb_vars ctx as_term in
-               (deletable, (CalcRing.mk_val (AggSum(gb_vars, subbed_term))))
+            let (old_ivars,_) = C.schema_of_expr as_term in
+            let (new_ivars,new_ovars) = C.schema_of_expr subbed_term in
+            let new_gb_vars = 
+               ListAsSet.union (ListAsSet.inter old_ivars new_ovars)
+                               gb_vars
+            in
+               (deletable, (CalcRing.mk_val (AggSum(new_gb_vars, subbed_term))))
          | CalcRing.Val(Lift(v, l_term)) ->
             (* Standalone lifts extend the schema of the current expression, so
                it's difficult to figure out whether or not the variable can 
@@ -387,7 +425,7 @@ let unify_lifts (big_schema:var_t list) (big_expr:C.expr_t): C.expr_t =
                      (External(en, sub var_subs eiv, sub var_subs eov, et, em)))
       end
    in
-      snd (rcr big_schema [] big_expr)
+      snd (rcr big_schema [] (normalize_lifts big_expr))
 ;;
 
 (******************************************************************************
