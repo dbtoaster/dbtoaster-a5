@@ -2,7 +2,7 @@
 open Types
 open Arithmetic
 open Calculus
-open Statement
+open Plan
 
 let incorporate_stmt ?(old = (Schema.empty_db (), [])) (rel, query) =
    let (old_rels,old_queries) = old in
@@ -15,12 +15,8 @@ let incorporate_stmt ?(old = (Schema.empty_db (), [])) (rel, query) =
    (old_rels, query @ old_queries)
 ;;
 
-let strip_calc_metadata:(Calculus.expr_t -> Calculus.expr_t) =
-   rewrite_leaves (fun _ lf -> match lf with
-      | External(en, eiv, eov, et, em) ->
-         CalcRing.mk_val (External(en, eiv, eov, et, None))
-      | _ -> CalcRing.mk_val lf
-   )
+type map_metadata = 
+   MapIsQuery | MapIsPartial | MapInitializedAtStart
 
 %}
 
@@ -33,10 +29,10 @@ let strip_calc_metadata:(Calculus.expr_t -> Calculus.expr_t) =
 %token VARCHAR
 %token EOF EOSTMT
 %token CREATE TABLE STREAM
-%token LPAREN RPAREN LBRACKET RBRACKET
+%token LPAREN RPAREN LBRACKET RBRACKET LBRACE RBRACE
 %token COMMA COLON PLUS TIMES MINUS DIVIDE POUND
-%token AS FROM ON
-%token DECLARE QUERY MAP
+%token AS FROM ON DO
+%token DECLARE QUERY MAP PARTIAL INITIALIZED
 %token FILE SOCKET FIXEDWIDTH LINE DELIMITED
 %token AGGSUM
 %token LIFT SETVALUE INCREMENT
@@ -135,7 +131,7 @@ valueLeaf:
 | functionDefn                { ValueRing.mk_val $1 }
 
 calculusExpr:
-| ivcCalculusExpr             { strip_calc_metadata $1 }
+| ivcCalculusExpr             { Calculus.strip_calc_metadata $1 }
 
 ivcCalculusExpr:
 | LPAREN ivcCalculusExpr RPAREN   { $2 }
@@ -154,7 +150,7 @@ ivcCalculusExpr:
                                     CalcRing.mk_val (Rel(reln, relv, relt)) }
 | externalDefn                    { let (en, iv, ov, et, em) = $1 in
                                     CalcRing.mk_val (External(en,iv,ov,et,em)) }
-| LPAREN valueExpr comparison valueExpr RPAREN
+| LBRACKET valueExpr comparison valueExpr RBRACKET
                                   { CalcRing.mk_val (Cmp($3,$2,$4)) }
 | LPAREN variable LIFT ivcCalculusExpr RPAREN
                                   { CalcRing.mk_val (Lift($2, $4)) }
@@ -229,41 +225,49 @@ mapProgram:
    }
 
 mapProgramStatementList:
-| mapProgramStatement EOSTMT mapProgramStatementList
-      {  let (orels, oviews, otriggers, oqueries) = $3 in
+| mapProgramStatement mapProgramStatementList
+      {  let (orels, oviews, otriggers, oqueries) = $2 in
          let (nrels, nviews, ntriggers, nqueries) = $1 in
             (  nrels @ orels,          nviews @ oviews, 
                ntriggers @ otriggers,  nqueries @ oqueries) 
       }
-| mapProgramStatement EOSTMT
+| mapProgramStatement 
       {  $1 }
 
 mapProgramStatement:
-| relStatement { ([$1], [], [], []) }
-| mapView      { ([], [fst $1], [], snd $1) }
-| mapTrigger   { ([], [], [$1], []) }
-| mapQuery     { ([], [], [], [$1]) }
+| relStatement EOSTMT { ([$1], [], [], []) }
+| mapView      EOSTMT { ([], [fst $1], [], snd $1) }
+| mapTrigger          { ([], [], [$1], []) }
+| mapQuery     EOSTMT { ([], [], [], [$1]) }
 
 mapView:
-| DECLARE mapViewIsQuery MAP externalDefnWithoutMeta SETVALUE ivcCalculusExpr { 
-      let (name, ivars, ovars, dtype, init) = $4 in
-      (  {  M3.name = name;
-            M3.schema = (ivars, ovars);
-            M3.definition = $6;
+| DECLARE mapViewMetadata MAP externalDefnWithoutMeta SETVALUE ivcCalculusExpr { 
+      let (name, ivars, ovars, dtype, _) = $4 in
+      (  {  M3.view_description = {
+               Plan.ds_name = Plan.mk_ds_name name (ivars,ovars) dtype;
+               Plan.ds_definition = $6
+            };
+            M3.view_metadata = {
+               Plan.init_on_access = List.mem MapIsPartial $2;
+               Plan.init_at_start  = List.mem MapInitializedAtStart $2
+            }
          },
-         if $2 then [name, CalcRing.mk_val (External($4))] else []
+         if List.mem MapIsQuery $2
+         then [name, CalcRing.mk_val (External($4))] else []
       )
    }
 
-mapViewIsQuery:
-|       { false }
-| QUERY { true }
+mapViewMetadata:
+|                             { [] }
+| QUERY mapViewMetadata       { MapIsQuery::$2 }
+| PARTIAL mapViewMetadata     { MapIsPartial::$2 }
+| INITIALIZED mapViewMetadata { MapInitializedAtStart::$2 }
 
 mapQuery:
 | DECLARE QUERY ID SETVALUE ivcCalculusExpr { ($3, $5) }
 
 mapTrigger:
-| ON mapEvent mapTriggerStmtList { ($2, $3) }
+| ON mapEvent LBRACE mapTriggerStmtList RBRACE { ($2, $4) }
 
 mapEvent:
 | mapEventType relationDefn {

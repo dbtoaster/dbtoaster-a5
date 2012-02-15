@@ -115,33 +115,33 @@ Debug.activate "PRINT-VERBOSE";;
 Debug.activate "LOG-UNIFY-LIFTS";;
 Debug.activate "LOG-FACTORIZE";;
 *)
-test_compile "RSTest" "AggSum([], R(A,B)*S(B,C)*A*C)" [
-   "RSTest", [], "AggSum([], R(A,B)*S(B,C)*A*C)", TFloat, [
-      true,  "S", ["RSTest_p_SB"; "RSTest_p_SC"], [], 
-         "RSTest_p_SC*RSTest_m_S_3(float)[][RSTest_p_SB]"; 
-      false, "S", ["RSTest_m_SB"; "RSTest_m_SC"], [], 
-         "-1*RSTest_m_SC*RSTest_m_S_3(float)[][RSTest_m_SB]"; 
-      true,  "R", ["RSTest_p_RA"; "RSTest_p_RB"], [], 
-         "RSTest_p_RA*RSTest_m_R_3(float)[][RSTest_p_RB]"; 
-      false, "R", ["RSTest_m_RA"; "RSTest_m_RB"], [], 
-         "-1*RSTest_m_RA*RSTest_m_R_3(float)[][RSTest_m_RB]"; 
+test_compile "RSABTest" "AggSum([], R(A,B)*S(B,C)*A*C)" [
+   "RSABTest", [], "AggSum([], R(A,B)*S(B,C)*A*C)", TFloat, [
+      true,  "S", ["RSABTest_p_SB"; "RSABTest_p_SC"], [], 
+         "RSABTest_p_SC*RSABTest_m_S_3(float)[][RSABTest_p_SB]"; 
+      false, "S", ["RSABTest_m_SB"; "RSABTest_m_SC"], [], 
+         "-1*RSABTest_m_SC*RSABTest_m_S_3(float)[][RSABTest_m_SB]"; 
+      true,  "R", ["RSABTest_p_RA"; "RSABTest_p_RB"], [], 
+         "RSABTest_p_RA*RSABTest_m_R_3(float)[][RSABTest_p_RB]"; 
+      false, "R", ["RSABTest_m_RA"; "RSABTest_m_RB"], [], 
+         "-1*RSABTest_m_RA*RSABTest_m_R_3(float)[][RSABTest_m_RB]"; 
    ];
-   "RSTest_m_S_3", ["RSTest_m_SB"], "AggSum([RSTest_m_SB], R(A,RSTest_m_SB)*A)", 
-                   TFloat, [
-      true,  "R", ["RSTest_m_S_3_p_RA"; "RSTest_m_S_3_p_RB"], 
-         ["RSTest_m_S_3_p_RB"],
-         "RSTest_m_S_3_p_RA"; 
-      false, "R", ["RSTest_m_S_3_m_RA"; "RSTest_m_S_3_m_RB"], 
-         ["RSTest_m_S_3_m_RB"],
-         "-1*RSTest_m_S_3_m_RA"; 
+   "RSABTest_m_S_3", ["RSABTest_m_SB"], "AggSum([RSABTest_m_SB], 
+                     R(A,RSABTest_m_SB)*A)", TFloat, [
+      true,  "R", ["RSABTest_m_S_3_p_RA"; "RSABTest_m_S_3_p_RB"], 
+         ["RSABTest_m_S_3_p_RB"],
+         "RSABTest_m_S_3_p_RA"; 
+      false, "R", ["RSABTest_m_S_3_m_RA"; "RSABTest_m_S_3_m_RB"], 
+         ["RSABTest_m_S_3_m_RB"],
+         "-1*RSABTest_m_S_3_m_RA"; 
    ];
-   "RSTest_m_R_3", ["RSTest_m_RB"], "AggSum([RSTest_m_RB], S(RSTest_m_RB,C)*C)", 
-                   TFloat, [
-      true,  "S", ["RSTest_m_R_3_p_SB"; "RSTest_m_R_3_p_SC"], 
-         ["RSTest_m_R_3_p_SB"],
-         "RSTest_m_R_3_p_SC"; 
-      false, "S", ["RSTest_m_R_3_m_SB"; "RSTest_m_R_3_m_SC"], 
-         ["RSTest_m_R_3_m_SB"],
-         "-1*RSTest_m_R_3_m_SC"; 
+   "RSABTest_m_R_3", ["RSABTest_m_RB"], "AggSum([RSABTest_m_RB], 
+                     S(RSABTest_m_RB,C)*C)", TFloat, [
+      true,  "S", ["RSABTest_m_R_3_p_SB"; "RSABTest_m_R_3_p_SC"], 
+         ["RSABTest_m_R_3_p_SB"],
+         "RSABTest_m_R_3_p_SC"; 
+      false, "S", ["RSABTest_m_R_3_m_SB"; "RSABTest_m_R_3_m_SC"], 
+         ["RSABTest_m_R_3_m_SB"],
+         "-1*RSABTest_m_R_3_m_SC"; 
    ];
 ]

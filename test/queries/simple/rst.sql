@@ -15,4 +15,4 @@ CREATE STREAM T(C int, D int)
   FROM FILE '../../experiments/data/big_t.dat' LINE DELIMITED
   csv (fields := ',', schema := 'int,int', eventtype := 'insert');
 
-SELECT sum(A*D) AS result FROM R,S,T WHERE R.B=S.B AND S.C=T.C;
+SELECT sum(A*D) AS AtimesD FROM R,S,T WHERE R.B=S.B AND S.C=T.C;

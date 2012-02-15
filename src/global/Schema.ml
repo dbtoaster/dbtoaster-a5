@@ -50,8 +50,49 @@ let string_of_rel ((reln,relsch,_,_):rel_t): string =
    (reln^"("^(ListExtras.string_of_list ~sep:", " string_of_var relsch)^")")
 
 let string_of_event ((event_t,event_rel):event_t) =
-   ((if event_t = InsertEvent then "ON +" else "ON -")^
+   ((if event_t = InsertEvent then "ON + " else "ON - ")^
     (string_of_rel event_rel))
+
+let code_of_framing (framing:framing_t):string = begin match framing with
+      | Delimited("\n") -> "LINE DELIMITED"
+      | Delimited(x)    -> "'"^x^"' DELIMITED"
+      | FixedSize(i)    -> "FIXEDWIDTH "^(string_of_int i)
+   end
+
+let code_of_source (source:source_t):string = begin match source with
+      | NoSource -> ""
+      | FileSource(file, framing) -> 
+         "FROM FILE '"^file^"' "^(code_of_framing framing)
+      | PipeSource(file, framing) -> 
+         "FROM PIPE '"^file^"' "^(code_of_framing framing)
+      | SocketSource(addr, port, framing) -> 
+         "FROM SOCKET "^(if addr = Unix.inet_addr_any then "" else
+                         "'"^(Unix.string_of_inet_addr addr)^"' ")^
+         (string_of_int port)^" "^(code_of_framing framing)
+   end
+
+let code_of_adaptor ((aname, aparams):adaptor_t):string = 
+   (String.uppercase aname)^(
+      if aparams = [] then (if aname <> "" then "()" else "")
+      else "("^(ListExtras.string_of_list ~sep:", " (fun (k,v) ->
+         k^" := '"^v^"'") aparams)^")")
+
+let code_of_rel (reln, relv, relt, _): string =
+   "CREATE "^(match relt with 
+      | StreamRel -> "STREAM"
+      | TableRel  -> "TABLE"
+   )^" "^reln^"("^(ListExtras.string_of_list ~sep:", " (fun (varn,vart) ->
+      varn^" "^(string_of_type vart)
+   ) relv)^")"
+
+let code_of_schema (sch:t):string =
+   ListExtras.string_of_list ~sep:"\n\n" (fun (source, rels) ->
+      let source_string = code_of_source source in
+         ListExtras.string_of_list ~sep:"\n\n" (fun (adaptor,rel) ->
+            (code_of_rel rel)^"\n  "^source_string^"\n  "^
+            (code_of_adaptor adaptor)^";"
+         ) rels
+   ) !sch
 
 let string_of_schema (sch:t):string =
    ListExtras.string_of_list ~sep:"\n" (fun (source, rels) ->

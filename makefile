@@ -14,7 +14,7 @@ FILES=\
 	src/calculus/CalculusDeltas\
 	src/calculus/CalculusDecomposition\
 	src/calculus/SqlToCalculus\
-	src/compiler/Statement\
+	src/compiler/Plan\
 	src/compiler/Compiler\
 	src/maps/M3\
 
@@ -101,6 +101,7 @@ states: $(patsubst %,%.states,$(PARSERS))
 
 clean: 
 	rm -f $(CLEAN_FILES)
+	make -C test/queries clean
 
 test: bin/dbtoaster_top
 	@DIRS="$(DIRS)" make -C test
@@ -108,7 +109,10 @@ test: bin/dbtoaster_top
 devtest: bin/dbtoaster_top
 	@DIRS="$(DIRS)" make -C test development
 
-.PHONY: all clean test
+queries: bin/dbtoaster
+	make -C test/queries
+
+.PHONY: all clean test states
 
 #################################################
 

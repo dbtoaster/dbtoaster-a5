@@ -56,20 +56,20 @@ let rec string_of_leaf (leaf:CalcRing.leaf_t): string =
       | Value(v)                -> Arithmetic.string_of_value v
       | External(ename,eins,eouts,etype,emeta) ->
          ename^
-         "("^(string_of_type etype)^")"^
-         (ListExtras.ocaml_of_list string_of_var eins)^
-         (ListExtras.ocaml_of_list string_of_var eouts)^
+         "("^(string_of_type etype)^")"^"["^
+         (ListExtras.string_of_list ~sep:", " string_of_var eins)^"]["^
+         (ListExtras.string_of_list ~sep:", " string_of_var eouts)^"]"^
          (match emeta with | None -> "" 
                            | Some(s) -> ":("^(string_of_expr s)^")")
       | AggSum(gb_vars, subexp) -> 
-         "AggSum"^(ListExtras.ocaml_of_list  string_of_var gb_vars)^
-               "("^(string_of_expr subexp)^")"
+         "AggSum(["^(ListExtras.string_of_list ~sep:", " string_of_var gb_vars)^
+         "],("^(string_of_expr subexp)^"))"
       | Rel(rname, rvars, _)    -> 
-         rname^"("^(ListExtras.string_of_list string_of_var rvars)^")"
+         rname^"("^(ListExtras.string_of_list ~sep:", " string_of_var rvars)^")"
       | Cmp(op,subexp1,subexp2) -> 
-         "("^(string_of_value subexp1)^" "^
+         "["^(string_of_value subexp1)^" "^
              (string_of_cmp op)^
-         " "^(string_of_value subexp2)^")"
+         " "^(string_of_value subexp2)^"]"
       | Lift(target, subexp)    -> 
          "("^(string_of_var target)^" ^= "^(string_of_expr subexp)^")"
    end
@@ -254,6 +254,13 @@ let rewrite_leaves ?(scope = []) ?(schema = [])
       (fun _ e -> CalcRing.mk_prod e)
       (fun _ e -> CalcRing.mk_neg e)
       leaf_fn e
+
+let strip_calc_metadata:(expr_t -> expr_t) =
+   rewrite_leaves (fun _ lf -> match lf with
+      | External(en, eiv, eov, et, em) ->
+         CalcRing.mk_val (External(en, eiv, eov, et, None))
+      | _ -> CalcRing.mk_val lf
+   )
 
 let rec all_vars (expr:expr_t): var_t list =
    CalcRing.fold (ListAsSet.multiunion) (ListAsSet.multiunion) (fun x->x)

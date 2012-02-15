@@ -2,9 +2,7 @@ open Ring
 open Arithmetic
 open Types
 open Calculus
-open Statement
-
-module C = Calculus
+open Plan
 
 module TemporaryMaterializer = struct
    (* Temporary hack to test the rest of the code.  This materializer doesn't
@@ -13,18 +11,18 @@ module TemporaryMaterializer = struct
       queries with nested subqueries. *)
    type ds_history_t = ds_t list ref
    
-   let materialize_one (history:ds_history_t) (prefix:string) (expr:C.expr_t) =
-      if (C.rels_of_expr expr) = [] then ([], expr) else
-      let (expr_ivars, expr_ovars) = C.schema_of_expr expr in
+   let materialize_one (history:ds_history_t) (prefix:string) (expr:expr_t) =
+      if (rels_of_expr expr) = [] then ([], expr) else
+      let (expr_ivars, expr_ovars) = schema_of_expr expr in
       Debug.print "LOG-COMPILE-DETAIL" (fun () -> 
-         "Materializing expression: "^(C.string_of_expr expr)^"\n"^
+         "Materializing expression: "^(string_of_expr expr)^"\n"^
          "Output Variables: ["^
             (ListExtras.string_of_list string_of_var expr_ovars)^"]"
       );
       let (found_ds,mapping_if_found) = 
          List.fold_left (fun result i ->
             if (snd result) <> None then result else
-               (i, (C.cmp_exprs i.ds_definition expr))
+               (i, (cmp_exprs i.ds_definition expr))
             ) ({ds_name=CalcRing.one;ds_definition=CalcRing.one}, None) !history
       in begin match mapping_if_found with
          | None -> 
@@ -34,7 +32,7 @@ module TemporaryMaterializer = struct
                         prefix,
                         expr_ivars,
                         expr_ovars,
-                        C.type_of_expr expr,
+                        type_of_expr expr,
                         None
                      )
                   );
@@ -45,22 +43,22 @@ module TemporaryMaterializer = struct
          
          | Some(mapping) ->
             Debug.print "LOG-COMPILE-DETAIL" (fun () -> 
-               "Found Mapping to : "^(C.string_of_expr found_ds.ds_name)^
+               "Found Mapping to : "^(string_of_expr found_ds.ds_name)^
                "\nWith: "^
                   (ListExtras.ocaml_of_list (fun ((a,_),(b,_))->a^"->"^b) 
                                             mapping)
             );
-            ([], C.rename_vars mapping found_ds.ds_name)
+            ([], rename_vars mapping found_ds.ds_name)
       end
    
-   let materialize (history:ds_history_t) (prefix:string) (expr:C.expr_t) =
-      let (expr_ivars, expr_ovars) = C.schema_of_expr expr in
+   let materialize (history:ds_history_t) (prefix:string) (expr:expr_t) =
+      let (expr_ivars, expr_ovars) = schema_of_expr expr in
       let subexprs = 
          List.map (fun (subexp_schema, subexp) ->
-            let (_, subexp_ovars) = C.schema_of_expr subexp in
+            let (_, subexp_ovars) = schema_of_expr subexp in
             if ListAsSet.seteq subexp_ovars subexp_schema then
                subexp
-            else C.CalcRing.mk_val (C.AggSum(subexp_schema, subexp))
+            else CalcRing.mk_val (AggSum(subexp_schema, subexp))
          ) 
          (snd 
             (CalculusDecomposition.decompose_graph expr_ivars (expr_ovars,expr))
@@ -68,7 +66,7 @@ module TemporaryMaterializer = struct
       in
          fst (List.fold_left (fun (ret, i) subexp ->
             let (new_todos, new_term) = 
-               materialize_one history (prefix^"_"^(string_of_int i)) subexp
+               materialize_one history (prefix^(string_of_int i)) subexp
             in
             ((new_todos @ (fst ret), 
              CalcRing.mk_prod [snd ret; new_term]), 
@@ -82,21 +80,11 @@ module Materializer = TemporaryMaterializer
 (******************************************************************************)
 
 type todo_list_t = ds_t list
-type ds_metadata_t = {
-   init_at_start  : bool;
-   init_on_access : bool
-}
-type compiled_ds_t = {
-   definition : ds_t;
-   metadata   : ds_metadata_t;
-   triggers   : (Schema.event_t * stmt_t) list
-}
-type plan_t = compiled_ds_t list
 
 (******************************************************************************)
 
-let extract_renamings ((scope,schema):C.schema_t) (expr:C.expr_t): 
-                      ((var_t * var_t) list * C.expr_t) =
+let extract_renamings ((scope,schema):schema_t) (expr:expr_t): 
+                      ((var_t * var_t) list * expr_t) =
    let (mappings, expr_terms) = 
       List.fold_left (fun (mappings, expr_terms) term ->
          begin match term with
@@ -131,21 +119,21 @@ let compile_map (db_schema:Schema.t) (history:Materializer.ds_history_t)
       end
    in
    Debug.print "LOG-COMPILE-DETAIL" (fun () ->
-      "Optimizing: "^(C.string_of_expr todo.ds_definition)
+      "Optimizing: "^(string_of_expr todo.ds_definition)
    );
    let optimized_defn = 
       CalculusOptimizer.optimize_expr (todo_ivars, todo_ovars) 
                                       todo.ds_definition
    in
    Debug.print "LOG-COMPILE-DETAIL" (fun () ->
-      "Optimized: "^(C.string_of_expr optimized_defn)
+      "Optimized: "^(string_of_expr optimized_defn)
    );
    let rels = 
-      try List.map (Schema.rel db_schema) (C.rels_of_expr optimized_defn)
+      try List.map (Schema.rel db_schema) (rels_of_expr optimized_defn)
       with Not_found -> 
          Debug.print "LOG-COMPILE-DETAIL" (fun () ->
             "Expected rels: "^(ListExtras.string_of_list (fun x->x)
-                                 (C.rels_of_expr optimized_defn))^
+                                 (rels_of_expr optimized_defn))^
             "\nDatabase Schema: "^(Schema.string_of_schema db_schema)
          );
          failwith "Compiling expression with undefined relation.";
@@ -168,9 +156,7 @@ let compile_map (db_schema:Schema.t) (history:Materializer.ds_history_t)
       (***** THE FUN STUFF HAPPENS HERE *****)
       
       let map_prefix = 
-         todo_name^"_"^
-            (if event == Schema.InsertEvent then "p" else "m")^
-            "_"^reln
+         todo_name^"_"^(if event == Schema.InsertEvent then "p" else "m")^reln
       in
       let prefixed_relv = List.map (fun (n,t) -> (map_prefix^n, t)) relv in
       let delta_event = (event,(reln, prefixed_relv, Schema.StreamRel, relt)) in
@@ -184,21 +170,21 @@ let compile_map (db_schema:Schema.t) (history:Materializer.ds_history_t)
       Debug.print "LOG-COMPILE-DETAIL" (fun () ->
          "Delta: "^(Schema.string_of_event 
             (event,(reln,relv,Schema.StreamRel,relt)))^
-            " DO "^(C.string_of_expr delta_expr)
+            " DO "^(string_of_expr delta_expr)
       );
       let (new_todos, materialized_delta) = 
          Materializer.materialize history map_prefix delta_expr
       in
          Debug.print "LOG-COMPILE-DETAIL" (fun () ->
-            "Materialized: "^(C.string_of_expr materialized_delta)
+            "Materialized: "^(string_of_expr materialized_delta)
          );
          trigger_todos := new_todos @ !trigger_todos;
          triggers      := 
             (delta_event, {
-               Statement.target_map = 
+               Plan.target_map = 
                   Calculus.rename_vars delta_renamings todo.ds_name;
-               Statement.update_type = Statement.UpdateStmt;
-               Statement.update_expr = materialized_delta
+               Plan.update_type = Plan.UpdateStmt;
+               Plan.update_expr = materialized_delta
             }) :: !triggers
       
       (**************************************)
@@ -206,7 +192,7 @@ let compile_map (db_schema:Schema.t) (history:Materializer.ds_history_t)
    ) events) stream_rels;
    
    let (init_todos, init_expr) = 
-      if ds_meta.init_at_start || ds_meta.init_on_access then
+      if ds_meta.init_on_access then
          let (init_todos,init_expr) =
             Materializer.materialize history (todo_name^"_init") optimized_defn
          in (init_todos, Some(init_expr))
@@ -215,14 +201,14 @@ let compile_map (db_schema:Schema.t) (history:Materializer.ds_history_t)
    
    in
       (((!trigger_todos) @ init_todos), {
-         definition = {
+         description = {
             ds_name = CalcRing.mk_val (External(
                   todo_name, todo_ivars, todo_ovars, todo_type, init_expr
                ));
             ds_definition = optimized_defn
          };
          metadata = ds_meta;
-         triggers = !triggers
+         ds_triggers = !triggers
       })
 
 
@@ -252,7 +238,7 @@ let compile (db_schema:Schema.t) (queries:todo_list_t): plan_t =
 (******************************************************************************)
 
 let string_of_ds ds = 
-   "DECLARE "^(string_of_ds ds.definition)^"\n"^(String.concat "\n" 
+   "DECLARE "^(string_of_ds ds.description)^"\n"^(String.concat "\n" 
       (List.map (fun x -> "   "^x) (
          (if ds.metadata.init_at_start 
             then ["WITH init_at_start"] else [])@
@@ -260,7 +246,7 @@ let string_of_ds ds =
             then ["WITH init_on_access"] else [])@
          (List.map (fun (evt, stmt) ->
             (Schema.string_of_event evt)^" DO "^(string_of_statement stmt))
-            ds.triggers)
+            ds.ds_triggers)
       )))
 
 let string_of_plan (plan:plan_t): string =
