@@ -222,6 +222,9 @@ let rec fold ?(scope = []) ?(schema = [])
       | CalcRing.Val(leaf) -> leaf_fn (scope,schema) leaf
    end
 
+let rec expr_is_singleton ?(scope=[]) (expr:expr_t): bool =
+   (ListAsSet.inter scope (snd (schema_of_expr expr))) = []
+
 let rec rewrite ?(scope = []) ?(schema = [])
              (sum_fn:   schema_t -> expr_t list     -> expr_t)
              (prod_fn:  schema_t -> expr_t list     -> expr_t)

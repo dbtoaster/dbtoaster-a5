@@ -1,68 +1,40 @@
 
 open Types
-open Statement
+open Plan
+open UnitTest
 
-let var vn = (vn, TFloat)
-let rel rn rv = (rn, List.map var rv, Schema.StreamRel, TFloat)
-;;
-let test_db = Schema.empty_db ()
-;;
+let test_db = mk_db [
+   ("R", ["A"; "B"]);
+   ("S", ["B"; "C"]);
+   ("T", ["C"; "D"]);
+];;
 
-Schema.add_rel test_db (rel "R" ["A"; "B"]);;
-Schema.add_rel test_db (rel "S" ["B"; "C"]);;
-Schema.add_rel test_db (rel "T" ["C"; "D"]);;
-
-let parse_calc ?(opt=false) (expr:string):Calculus.expr_t =
-   try  
-      let ret = 
-         Calculusparser.calculusExpr Calculuslexer.tokenize 
-                                     (Lexing.from_string expr)
-      in if opt then CalculusOptimizer.optimize_expr 
-                        (Calculus.schema_of_expr ret) ret
-                else ret
-   with Parsing.Parse_error -> (
-      print_endline ("Error parsing :'"^expr^"'");
-      let _ = Parsing.set_trace true in
-      Calculusparser.calculusExpr Calculuslexer.tokenize 
-                                     (Lexing.from_string expr)
-   )
-;;
-let compile (name:string) (expr:string) =
-   let q_expr = parse_calc expr in
-   let q_schema = Calculus.schema_of_expr q_expr in
-   let q_type = Calculus.type_of_expr q_expr in
-      Compiler.compile test_db [{
-         Statement.ds_name = Statement.mk_ds_name name q_schema q_type;
-         Statement.ds_definition = q_expr
-      }]
-;;
 let test_compile (name:string) (expr:string) 
         (datastructures: (string * string list * string * type_t *
                            (bool * string * string list * string list * string) 
                            list) list) =
-   Debug.log_unit_test_list ("Compiling "^name)
+   log_list_test ("Compiling "^name)
       Compiler.string_of_ds
-      (compile name expr)
+      (compile test_db name expr)
       (List.map (fun (ds_name, ds_ovars, ds_defn, ds_type, ds_triggers) -> 
          let ds = {
-            Statement.ds_name = 
-               Statement.mk_ds_name ds_name ([],List.map var ds_ovars) ds_type;
-            Statement.ds_definition = parse_calc ~opt:true ds_defn
+            Plan.ds_name = 
+               Plan.mk_ds_name ds_name ([],List.map var ds_ovars) ds_type;
+            Plan.ds_definition = parse_calc ~opt:true ds_defn
          } in {  
-            Compiler.definition = ds;
-            Compiler.metadata = {
-               Compiler.init_at_start = false;
-               Compiler.init_on_access = false
+            Plan.description = ds;
+            Plan.metadata = {
+               Plan.init_at_start = false;
+               Plan.init_on_access = false
             };
-            Compiler.triggers = 
+            Plan.ds_triggers = 
                List.map (fun (ins, reln, relv, update_ov, delta) -> 
-               (  (  (if ins then Schema.InsertEvent else Schema.DeleteEvent), 
-                     rel reln relv), 
-                  {  Statement.target_map = 
-                        Statement.mk_ds_name ds_name ([],List.map var update_ov)
+               (  event ins reln relv, 
+                  {  Plan.target_map = 
+                        Plan.mk_ds_name ds_name ([],List.map var update_ov)
                                              ds_type;
-                     Statement.update_type = Statement.UpdateStmt;
-                     Statement.update_expr = parse_calc ~opt:true delta
+                     Plan.update_type = Plan.UpdateStmt;
+                     Plan.update_expr = parse_calc ~opt:true delta
                   })
             ) ds_triggers
          }
@@ -71,38 +43,38 @@ let test_compile (name:string) (expr:string)
 
 test_compile "RTest" "AggSum([], R(A,B))" [
    "RTest", [], "AggSum([], R(A,B))", TInt, [
-      true,  "R", ["RTest_p_RA"; "RTest_p_RB"], [], "1"; 
-      false, "R", ["RTest_m_RA"; "RTest_m_RB"], [], "-1"; 
+      true,  "R", ["RTest_pRA"; "RTest_pRB"], [], "1"; 
+      false, "R", ["RTest_mRA"; "RTest_mRB"], [], "-1"; 
    ]
 ]
 ;;
 test_compile "RSTest" "AggSum([], R(A,B)*S(B,C))" [
    "RSTest", [], "AggSum([], R(A,B)*S(B,C))", TInt, [
-      true,  "S", ["RSTest_p_SB"; "RSTest_p_SC"], [], 
-         "RSTest_m_S_2(int)[][RSTest_p_SB]"; 
-      false, "S", ["RSTest_m_SB"; "RSTest_m_SC"], [], 
-         "-1*RSTest_m_S_2(int)[][RSTest_m_SB]"; 
-      true,  "R", ["RSTest_p_RA"; "RSTest_p_RB"], [], 
-         "RSTest_m_R_2(int)[][RSTest_p_RB]"; 
-      false, "R", ["RSTest_m_RA"; "RSTest_m_RB"], [], 
-         "-1*RSTest_m_R_2(int)[][RSTest_m_RB]"; 
+      true,  "S", ["RSTest_pSB"; "RSTest_pSC"], [], 
+         "RSTest_mS2(int)[][RSTest_pSB]"; 
+      false, "S", ["RSTest_mSB"; "RSTest_mSC"], [], 
+         "-1*RSTest_mS2(int)[][RSTest_mSB]"; 
+      true,  "R", ["RSTest_pRA"; "RSTest_pRB"], [], 
+         "RSTest_mR2(int)[][RSTest_pRB]"; 
+      false, "R", ["RSTest_mRA"; "RSTest_mRB"], [], 
+         "-1*RSTest_mR2(int)[][RSTest_mRB]"; 
    ];
-   "RSTest_m_S_2", ["RSTest_m_SB"], "AggSum([RSTest_m_SB], R(A,RSTest_m_SB))", 
+   "RSTest_mS2", ["RSTest_mSB"], "AggSum([RSTest_mSB], R(A,RSTest_mSB))", 
                    TInt, [
-      true,  "R", ["RSTest_m_S_2_p_RA"; "RSTest_m_S_2_p_RB"], 
-         ["RSTest_m_S_2_p_RB"], 
+      true,  "R", ["RSTest_mS2_pRA"; "RSTest_mS2_pRB"], 
+         ["RSTest_mS2_pRB"], 
          "1";
-      false, "R", ["RSTest_m_S_2_m_RA"; "RSTest_m_S_2_m_RB"], 
-         ["RSTest_m_S_2_m_RB"], 
+      false, "R", ["RSTest_mS2_mRA"; "RSTest_mS2_mRB"], 
+         ["RSTest_mS2_mRB"], 
          "-1"; 
    ];
-   "RSTest_m_R_2", ["RSTest_m_RB"], "AggSum([RSTest_m_RB], S(RSTest_m_RB,C))", 
+   "RSTest_mR2", ["RSTest_mRB"], "AggSum([RSTest_mRB], S(RSTest_mRB,C))", 
                    TInt, [
-      true,  "S", ["RSTest_m_R_2_p_SB"; "RSTest_m_R_2_p_SC"], 
-         ["RSTest_m_R_2_p_SB"], 
+      true,  "S", ["RSTest_mR2_pSB"; "RSTest_mR2_pSC"], 
+         ["RSTest_mR2_pSB"], 
          "1";
-      false, "S", ["RSTest_m_R_2_m_SB"; "RSTest_m_R_2_m_SC"], 
-         ["RSTest_m_R_2_m_SB"], 
+      false, "S", ["RSTest_mR2_mSB"; "RSTest_mR2_mSC"], 
+         ["RSTest_mR2_mSB"], 
          "-1";
    ];
 ]
@@ -117,31 +89,31 @@ Debug.activate "LOG-FACTORIZE";;
 *)
 test_compile "RSABTest" "AggSum([], R(A,B)*S(B,C)*A*C)" [
    "RSABTest", [], "AggSum([], R(A,B)*S(B,C)*A*C)", TFloat, [
-      true,  "S", ["RSABTest_p_SB"; "RSABTest_p_SC"], [], 
-         "RSABTest_p_SC*RSABTest_m_S_3(float)[][RSABTest_p_SB]"; 
-      false, "S", ["RSABTest_m_SB"; "RSABTest_m_SC"], [], 
-         "-1*RSABTest_m_SC*RSABTest_m_S_3(float)[][RSABTest_m_SB]"; 
-      true,  "R", ["RSABTest_p_RA"; "RSABTest_p_RB"], [], 
-         "RSABTest_p_RA*RSABTest_m_R_3(float)[][RSABTest_p_RB]"; 
-      false, "R", ["RSABTest_m_RA"; "RSABTest_m_RB"], [], 
-         "-1*RSABTest_m_RA*RSABTest_m_R_3(float)[][RSABTest_m_RB]"; 
+      true,  "S", ["RSABTest_pSB"; "RSABTest_pSC"], [], 
+         "RSABTest_pSC*RSABTest_mS3(float)[][RSABTest_pSB]"; 
+      false, "S", ["RSABTest_mSB"; "RSABTest_mSC"], [], 
+         "-1*RSABTest_mSC*RSABTest_mS3(float)[][RSABTest_mSB]"; 
+      true,  "R", ["RSABTest_pRA"; "RSABTest_pRB"], [], 
+         "RSABTest_pRA*RSABTest_mR3(float)[][RSABTest_pRB]"; 
+      false, "R", ["RSABTest_mRA"; "RSABTest_mRB"], [], 
+         "-1*RSABTest_mRA*RSABTest_mR3(float)[][RSABTest_mRB]"; 
    ];
-   "RSABTest_m_S_3", ["RSABTest_m_SB"], "AggSum([RSABTest_m_SB], 
-                     R(A,RSABTest_m_SB)*A)", TFloat, [
-      true,  "R", ["RSABTest_m_S_3_p_RA"; "RSABTest_m_S_3_p_RB"], 
-         ["RSABTest_m_S_3_p_RB"],
-         "RSABTest_m_S_3_p_RA"; 
-      false, "R", ["RSABTest_m_S_3_m_RA"; "RSABTest_m_S_3_m_RB"], 
-         ["RSABTest_m_S_3_m_RB"],
-         "-1*RSABTest_m_S_3_m_RA"; 
+   "RSABTest_mS3", ["RSABTest_mSB"], "AggSum([RSABTest_mSB], 
+                     R(A,RSABTest_mSB)*A)", TFloat, [
+      true,  "R", ["RSABTest_mS3_pRA"; "RSABTest_mS3_pRB"], 
+         ["RSABTest_mS3_pRB"],
+         "RSABTest_mS3_pRA"; 
+      false, "R", ["RSABTest_mS3_mRA"; "RSABTest_mS3_mRB"], 
+         ["RSABTest_mS3_mRB"],
+         "-1*RSABTest_mS3_mRA"; 
    ];
-   "RSABTest_m_R_3", ["RSABTest_m_RB"], "AggSum([RSABTest_m_RB], 
-                     S(RSABTest_m_RB,C)*C)", TFloat, [
-      true,  "S", ["RSABTest_m_R_3_p_SB"; "RSABTest_m_R_3_p_SC"], 
-         ["RSABTest_m_R_3_p_SB"],
-         "RSABTest_m_R_3_p_SC"; 
-      false, "S", ["RSABTest_m_R_3_m_SB"; "RSABTest_m_R_3_m_SC"], 
-         ["RSABTest_m_R_3_m_SB"],
-         "-1*RSABTest_m_R_3_m_SC"; 
+   "RSABTest_mR3", ["RSABTest_mRB"], "AggSum([RSABTest_mRB], 
+                     S(RSABTest_mRB,C)*C)", TFloat, [
+      true,  "S", ["RSABTest_mR3_pSB"; "RSABTest_mR3_pSC"], 
+         ["RSABTest_mR3_pSB"],
+         "RSABTest_mR3_pSC"; 
+      false, "S", ["RSABTest_mR3_mSB"; "RSABTest_mR3_mSC"], 
+         ["RSABTest_mR3_mSB"],
+         "-1*RSABTest_mR3_mSC"; 
    ];
 ]

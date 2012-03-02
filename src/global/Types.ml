@@ -54,7 +54,17 @@ let string_of_cmp (op:cmp_t): string =
       | Eq  -> "="  | Lt -> "<" | Lte -> "<="
       | Neq -> "!=" | Gt -> ">" | Gte -> ">="
    end
-   
+
+let ocaml_of_type (ty: type_t): string =
+   begin match ty with
+      | TAny             -> "TAny"
+      | TBool            -> "TBool"
+      | TInt             -> "TIng"
+      | TFloat           -> "TFloat"
+      | TString(len)     -> "TString("^(string_of_int len)^")"
+      | TExternal(etype) -> "TExternal(\""^etype^"\")"
+   end
+
 let string_of_type (ty: type_t): string =
    begin match ty with
       | TAny             -> "?"
@@ -74,9 +84,19 @@ let string_of_const (a: const_t): string =
       | CString(av)  -> av
    end
 
-let string_of_var ((name, vt): var_t): string =
-   if Debug.active "PRINT-VERBOSE" then "<"^name^":"^(string_of_type vt)^">"
-                                   else name
+let ocaml_of_const (a: const_t): string =
+   begin match a with
+      | CBool(true)  -> "CBool(true)"
+      | CBool(false) -> "CBool(false)"
+      | CInt(i)      -> "CInt("^(string_of_int i)^")"
+      | CFloat(f)    -> "CInt("^(string_of_float f)^")"
+      | CString(s)   -> "CString(\""^s^"\")"
+   end
+
+let string_of_var ?(verbose = Debug.active "PRINT-VERBOSE")
+                  ((name, vt): var_t): string =
+   if verbose then name^","^(string_of_type vt)
+              else name
 
 (**** Escalation ****)
 let escalate_type ?(opname="<op>") (a:type_t) (b:type_t): type_t = 

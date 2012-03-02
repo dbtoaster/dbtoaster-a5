@@ -2,74 +2,62 @@ open Types
 open Ring
 open Arithmetic
 open Calculus
-
-let parse (expr:string):expr_t = 
-   try
-      Calculusparser.calculusExpr 
-         Calculuslexer.tokenize (Lexing.from_string expr)
-   with Parsing.Parse_error ->
-      let _ = Parsing.set_trace true in
-      Calculusparser.calculusExpr 
-         Calculuslexer.tokenize (Lexing.from_string expr)
-;;      
-let var v = (v,TFloat)
-let rel rn rv = (Rel(rn, rv, TInt))
+open UnitTest
 ;;
-
-Debug.log_unit_test "Invalid Commute"
+log_test "Invalid Commute"
    string_of_bool
-   (commutes (parse "R(A,B) * #A#") (parse "#B#"))
+   (commutes (parse_calc "R(A,B) * #A#") (parse_calc "#B#"))
    false
 ;;
-Debug.log_unit_test "Invalid Commute (Made valid by scope)"
+log_test "Invalid Commute (Made valid by scope)"
    string_of_bool
-   (commutes ~scope:[var "B"] (parse "R(A,B) * #A#") 
-                                             (parse "#B#"))
+   (commutes ~scope:[var "B"] (parse_calc "R(A,B) * #A#") 
+                                             (parse_calc "#B#"))
    true
 ;;
-Debug.log_unit_test "Valid Commute"
+log_test "Valid Commute"
    string_of_bool
-   (commutes (parse "R(A,B) * #A#") (parse "#C#"))
+   (commutes (parse_calc "R(A,B) * #A#") (parse_calc "#C#"))
    true
 ;;
-Debug.log_unit_test "Combine Values"
+log_test "Combine Values"
    string_of_expr
    (CalculusOptimizer.combine_values 
-      (parse "(R(A,B) * #-1#) * (#22-1# + #3#) * #A#"))
-   (parse "R(A,B)*#((-24) * A)#")
+      (parse_calc "(R(A,B) * #-1#) * (#22-1# + #3#) * #A#"))
+   (parse_calc "R(A,B)*#((-24) * A)#")
 ;;
 
 let test msg scope input output =
-   Debug.log_unit_test ("Lift Equalities ("^msg^")")
+   log_test ("Lift Equalities ("^msg^")")
       string_of_expr
-      (CalculusOptimizer.lift_equalities scope (parse input))
-      (parse output)
+      (CalculusOptimizer.lift_equalities scope (parse_calc input))
+      (parse_calc output)
 in 
    test "Empty Scope, Unliftable" [] 
-      "R(A,B) * (A = B)"
-      "R(A,B) * (A = B)";
+      "R(A,B) * [A = B]"
+      "R(A,B) * [A = B]";
    test "Empty Scope, Liftable" []
-      "R(A,B) * S(B,C) * (A = C)"
+      "R(A,B) * S(B,C) * [A = C]"
       "R(A,B) * (C ^= #A#) * S(B,C)";
    test "Liftable due to scope" [var "B"]
-      "R(A,B) * (A = B)"
+      "R(A,B) * [A = B]"
       "(A ^= #B#) * R(A,B)";
    test "Unliftable due to scope" [var "A"; var "B"]
-      "R(A,B) * (A = B)"
-      "(A = B) * R(A,B)";
+      "R(A,B) * [A = B]"
+      "[A = B] * R(A,B)";
    test "Liftable due to nested scope" []
-      "S(B) * AggSum([], R(A,B) * (A = B))"
+      "S(B) * AggSum([], R(A,B) * [A = B])"
       "S(B) * AggSum([], (A ^= #B#) * R(A,B))";
    test "Unliftable due to nested scope" []
-      "S(A, B) * AggSum([], R(A,B) * (A = B))"
-      "S(A, B) * AggSum([], (A = B) * R(A,B))"
+      "S(A, B) * AggSum([], R(A,B) * [A = B])"
+      "S(A, B) * AggSum([], [A = B] * R(A,B))"
 ;;
 
 let test msg schema input output =
-   Debug.log_unit_test ("Unify Lifts ("^msg^")")
+   log_test ("Unify Lifts ("^msg^")")
       string_of_expr
-      (CalculusOptimizer.unify_lifts schema (parse input))
-      (parse output)
+      (CalculusOptimizer.unify_lifts schema (parse_calc input))
+      (parse_calc output)
 in
    (* We don't unify expressions for now 
    test "Empty schema, Full expression into variable" []
@@ -128,8 +116,8 @@ in
       "(A ^= #B#) * AggSum([C], (C ^= #A*2#)*#C#)"
       "AggSum([C], (C ^= #2*B#)*#C#)";
    test "Full expression and value into comparison" []
-      "(A ^= #2*B#) * (C ^= AggSum([], R(D))) * (A < C)"
-      "(C ^= AggSum([], R(D))) * (2*B < C)";
+      "(A ^= #2*B#) * (C ^= AggSum([], R(D))) * [A < C]"
+      "(C ^= AggSum([], R(D))) * [2*B < C]";
    test "Dropping unnecessary lifts 1" []
       "AggSum([], (A ^= B))"
       "AggSum([], 1)"; (* The aggsum would be deleted by nesting_rewrites *)
@@ -141,13 +129,13 @@ in
       "AggSum([BB], S(BB))";
    test "Lifts in non-normal form" []
       "AggSum([], S(B)*(B ^= BB))"
-      "AggSum([], S(B)*(B = BB))" (* The next lift_eq... eliminates this *)
+      "AggSum([], S(B)*[B = BB])" (* The next lift_eq... eliminates this *)
 ;;
 let test msg input output =
-   Debug.log_unit_test ("Nesting Rewrites ("^msg^")")
+   log_test ("Nesting Rewrites ("^msg^")")
       string_of_expr
-      (CalculusOptimizer.nesting_rewrites (parse input))
-      (parse output)
+      (CalculusOptimizer.nesting_rewrites (parse_calc input))
+      (parse_calc output)
 in
    test "Lift of two Lifts"
       "(A ^= (B ^= (C ^= #D#)))"
@@ -160,10 +148,10 @@ in
       "AggSum([B], R(A,B,C))"
 ;;
 let test msg scope input output =
-   Debug.log_unit_test ("Factorize One Polynomial ("^msg^")")
+   log_test ("Factorize One Polynomial ("^msg^")")
       string_of_expr
-      (CalculusOptimizer.factorize_one_polynomial scope (List.map parse input))
-      (parse output)
+      (CalculusOptimizer.factorize_one_polynomial scope (List.map parse_calc input))
+      (parse_calc output)
 in
 (*   Debug.activate "LOG-FACTORIZE";*)
    test "Basic" []
@@ -181,10 +169,10 @@ in
       "(R(A) * ((#A# * (#2# + #D#)) + #C#)) + (S(A) * #A#)"
 ;;
 let test msg scope input output =
-   Debug.log_unit_test ("Factorize Sums ("^msg^")")
+   log_test ("Factorize Sums ("^msg^")")
       string_of_expr
-      (CalculusOptimizer.factorize_polynomial scope (parse input))
-      (parse output)
+      (CalculusOptimizer.factorize_polynomial scope (parse_calc input))
+      (parse_calc output)
 in
 (*   Debug.activate "LOG-FACTORIZE";*)
    test "Basic" []

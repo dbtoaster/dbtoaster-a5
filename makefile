@@ -17,6 +17,7 @@ FILES=\
 	src/compiler/Plan\
 	src/compiler/Compiler\
 	src/maps/M3\
+	src/maps/Pattern\
 
 LEXERS=\
 	src/parsers/Sqllexer\
@@ -35,6 +36,7 @@ DIRS=\
 	src/calculus\
 	src/compiler\
 	src/maps\
+	src/functional\
 
 INCLUDE_OBJ=\
 	str.cma\
@@ -93,9 +95,9 @@ bin/dbtoaster_debug: $(C_FILES) src/global/Driver.ml
 	@echo "Linking DBToaster (Debug)"
 	@$(OCAMLCC) $(OCAML_FLAGS) -o $@ $(C_FILES) src/global/Driver.ml
 
-bin/dbtoaster_top: $(C_FILES)
+bin/dbtoaster_top: $(C_FILES) src/global/UnitTest.ml
 	@echo "Linking DBToaster Top"
-	@$(OCAMLMKTOP) $(OCAML_FLAGS) -o $@ $(C_FILES)
+	@$(OCAMLMKTOP) $(OCAML_FLAGS) -o $@ $(C_FILES) src/global/UnitTest.ml
 
 states: $(patsubst %,%.states,$(PARSERS))
 
