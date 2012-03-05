@@ -37,10 +37,7 @@ log_test "Parsing"
 let test_delta (name:string) ins reln relv expr delta =
    log_test ("Deltas: "^name)
       Calculus.string_of_expr
-      (CalculusDeltas.delta_of_expr
-         (  (if ins then Schema.InsertEvent else Schema.DeleteEvent),
-            (reln, List.map var relv, Schema.StreamRel, TInt))
-         (parse_calc expr))
+      (CalculusDeltas.delta_of_expr (event ins reln relv) (parse_calc expr))
       (parse_calc delta)
 ;;
 

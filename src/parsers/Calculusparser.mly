@@ -243,14 +243,9 @@ mapProgramStatement:
 mapView:
 | DECLARE mapViewMetadata MAP externalDefnWithoutMeta SETVALUE ivcCalculusExpr { 
       let (name, ivars, ovars, dtype, _) = $4 in
-      (  {  M3.view_description = {
-               Plan.ds_name = Plan.mk_ds_name name (ivars,ovars) dtype;
-               Plan.ds_definition = $6
-            };
-            M3.view_metadata = {
-               Plan.init_on_access = List.mem MapIsPartial $2;
-               Plan.init_at_start  = List.mem MapInitializedAtStart $2
-            }
+      (  {
+            Plan.ds_name = Plan.mk_ds_name name (ivars,ovars) dtype;
+            Plan.ds_definition = $6
          },
          if List.mem MapIsQuery $2
          then [name, CalcRing.mk_val (External($4))] else []
@@ -270,13 +265,14 @@ mapTrigger:
 | ON mapEvent LBRACE mapTriggerStmtList RBRACE { ($2, $4) }
 
 mapEvent:
-| mapEventType relationDefn {
-      let (reln, relv, relt) = $2 in ($1, (reln, relv, Schema.StreamRel, relt))
-   }
+| PLUS  schemaRelationDefn { Schema.InsertEvent($2) }
+| MINUS schemaRelationDefn { Schema.DeleteEvent($2) }
+| INITIALIZED              { Schema.SystemInitializedEvent }
 
-mapEventType:
-| PLUS   { Schema.InsertEvent }
-| MINUS  { Schema.DeleteEvent }
+schemaRelationDefn:
+| relationDefn {
+   let (reln, relv, relt) = $1 in (reln, relv, Schema.StreamRel, relt)
+}
 
 mapTriggerStmtList:
 | mapTriggerStmt EOSTMT mapTriggerStmtList { $1 :: $3 }

@@ -7,13 +7,15 @@ module C = Calculus
 
 let delta_var_id = ref 0
 
-let rec delta_of_expr 
-          ((delta_event, 
-            (delta_reln,delta_relv,delta_reltablet,delta_relt):Schema.event_t))           
-          (expr:C.expr_t): C.expr_t=
-   let rcr = delta_of_expr (delta_event, 
-                            (delta_reln,delta_relv,delta_reltablet,delta_relt)) 
+let rec delta_of_expr (delta_event:Schema.event_t) (expr:C.expr_t): C.expr_t=
+   let (apply_sign, (delta_reln,delta_relv,_,_)) =
+      begin match delta_event with
+         | Schema.InsertEvent(rel) -> ((fun x -> x),    rel)
+         | Schema.DeleteEvent(rel) -> (CalcRing.mk_neg, rel)
+         | _ -> failwith "Error: Can not take delta of a non relation event"
+      end
    in
+   let rcr = delta_of_expr delta_event in
    Debug.print "LOG-DELTA-DETAIL" (fun () ->
       "d"^delta_reln^" of "^(C.string_of_expr expr) 
    );
@@ -35,9 +37,7 @@ let rec delta_of_expr
                               CalcRing.mk_val (Value(mk_var v))))
                         ) (List.combine relv delta_relv)
                      )
-                  in if delta_event = Schema.InsertEvent
-                     then definition_terms
-                     else CalcRing.mk_neg definition_terms
+                  in apply_sign definition_terms
                else CalcRing.zero
          (*****************************************)
             | External(_) -> failwith "Can not take delta of an external"

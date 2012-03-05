@@ -37,13 +37,8 @@ let string_of_statement (stmt:stmt_t): string =
    (string_of_expr (stmt.update_expr))
 
 (******************* Compiled Datastructures *******************)
-type ds_metadata_t = {
-   init_at_start  : bool;
-   init_on_access : bool
-}
 type compiled_ds_t = {
    description : ds_t;
-   metadata    : ds_metadata_t;
    ds_triggers : (Schema.event_t * stmt_t) list
 }
 type plan_t = compiled_ds_t list

@@ -101,6 +101,19 @@ let extract_renamings ((scope,schema):schema_t) (expr:expr_t):
 
 (******************************************************************************)
 
+let compute_init_at_start (table_rels:Schema.rel_t list) (expr:expr_t): expr_t =
+   let table_names = List.map (fun (rn,_,_,_) -> rn) table_rels in
+   Calculus.rewrite_leaves (fun _ lf -> match lf with
+      | Rel(rn, rv, rt) ->
+         if List.mem rn table_names
+         then CalcRing.mk_val (External("_"^rn, [], rv, rt, None))
+         else CalcRing.zero
+      | _ -> CalcRing.mk_val lf
+   ) expr
+
+
+(******************************************************************************)
+
 let compile_map (db_schema:Schema.t) (history:Materializer.ds_history_t)
                 (todo: ds_t): todo_list_t * compiled_ds_t =
    (* Sanity check: Deltas of non-numeric types don't make sense and it doesn't
@@ -143,23 +156,20 @@ let compile_map (db_schema:Schema.t) (history:Materializer.ds_history_t)
    in
    let triggers = ref [] in
    let trigger_todos = ref [] in
-   let ds_meta = {
-      init_at_start  = table_rels <> [];
-      init_on_access = todo_ivars <> []
-   } in
+   let needs_init_at_start = table_rels <> [] in
+   let needs_init_on_access = todo_ivars <> [] in
    let events = (if (Debug.active "IGNORE DELETES")
-                 then [Schema.InsertEvent]
-                 else [Schema.DeleteEvent; Schema.InsertEvent])
+                 then [(fun x -> Schema.InsertEvent(x)), ""]
+                 else [(fun x -> Schema.DeleteEvent(x)), "_m";
+                       (fun x -> Schema.InsertEvent(x)), "_p"])
    in
-   List.iter (fun (reln,relv,_,relt) -> List.iter (fun event ->
+   List.iter (fun (reln,relv,_,relt) -> List.iter (fun (mk_evt,evt_prefix) ->
                
       (***** THE FUN STUFF HAPPENS HERE *****)
       
-      let map_prefix = 
-         todo_name^"_"^(if event == Schema.InsertEvent then "p" else "m")^reln
-      in
+      let map_prefix = todo_name^evt_prefix^reln in
       let prefixed_relv = List.map (fun (n,t) -> (map_prefix^n, t)) relv in
-      let delta_event = (event,(reln, prefixed_relv, Schema.StreamRel, relt)) in
+      let delta_event = mk_evt (reln, prefixed_relv, Schema.StreamRel, relt) in
       let delta_expr_unextracted = 
          CalculusOptimizer.optimize_expr (todo_ivars @ prefixed_relv,todo_ovars) 
             (CalculusDeltas.delta_of_expr delta_event optimized_defn)
@@ -168,8 +178,7 @@ let compile_map (db_schema:Schema.t) (history:Materializer.ds_history_t)
          extract_renamings (prefixed_relv, todo_ovars) delta_expr_unextracted
       in
       Debug.print "LOG-COMPILE-DETAIL" (fun () ->
-         "Delta: "^(Schema.string_of_event 
-            (event,(reln,relv,Schema.StreamRel,relt)))^
+         "Delta: "^(Schema.string_of_event delta_event)^
             " DO "^(string_of_expr delta_expr)
       );
       let (new_todos, materialized_delta) = 
@@ -191,8 +200,23 @@ let compile_map (db_schema:Schema.t) (history:Materializer.ds_history_t)
 
    ) events) stream_rels;
    
+   if needs_init_at_start then (
+      let system_init_expr =
+         compute_init_at_start (Schema.table_rels db_schema)
+                               todo.ds_definition
+      in
+      if system_init_expr <> CalcRing.zero
+      then triggers := 
+         (Schema.SystemInitializedEvent, {
+            Plan.target_map = todo.ds_name;
+            Plan.update_type = Plan.ReplaceStmt;
+            Plan.update_expr = system_init_expr
+         }) :: !triggers
+   );
+   
+   
    let (init_todos, init_expr) = 
-      if ds_meta.init_on_access then
+      if needs_init_on_access then
          let (init_todos,init_expr) =
             Materializer.materialize history (todo_name^"_init") optimized_defn
          in (init_todos, Some(init_expr))
@@ -207,7 +231,6 @@ let compile_map (db_schema:Schema.t) (history:Materializer.ds_history_t)
                ));
             ds_definition = optimized_defn
          };
-         metadata = ds_meta;
          ds_triggers = !triggers
       })
 
@@ -218,6 +241,14 @@ let compile (db_schema:Schema.t) (queries:todo_list_t): plan_t =
    let todos  :todo_list_t ref           = ref queries in
    let history:Materializer.ds_history_t = ref [] in
    let plan   :plan_t ref                = ref [] in
+   
+   (* Make sure to include all the table rels as well *)
+   List.iter (fun (rel_name, rel_vars, rel_updatet, rel_t) ->
+      todos := {
+         ds_name = mk_ds_name ("_"^rel_name) ([], rel_vars) (rel_t);
+         ds_definition = CalcRing.mk_val (Rel(rel_name, rel_vars, rel_t))
+      } :: !todos
+   ) (Schema.table_rels db_schema);
       
    while List.length !todos > 0 do (
       let next_ds = List.hd !todos in todos := List.tl !todos;
@@ -240,10 +271,6 @@ let compile (db_schema:Schema.t) (queries:todo_list_t): plan_t =
 let string_of_ds ds = 
    "DECLARE "^(string_of_ds ds.description)^"\n"^(String.concat "\n" 
       (List.map (fun x -> "   "^x) (
-         (if ds.metadata.init_at_start 
-            then ["WITH init_at_start"] else [])@
-         (if ds.metadata.init_on_access 
-            then ["WITH init_on_access"] else [])@
          (List.map (fun (evt, stmt) ->
             (Schema.string_of_event evt)^" DO "^(string_of_statement stmt))
             ds.ds_triggers)

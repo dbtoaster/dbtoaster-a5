@@ -23,10 +23,6 @@ let test_compile (name:string) (expr:string)
             Plan.ds_definition = parse_calc ~opt:true ds_defn
          } in {  
             Plan.description = ds;
-            Plan.metadata = {
-               Plan.init_at_start = false;
-               Plan.init_on_access = false
-            };
             Plan.ds_triggers = 
                List.map (fun (ins, reln, relv, update_ov, delta) -> 
                (  event ins reln relv, 

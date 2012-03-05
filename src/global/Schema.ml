@@ -11,8 +11,12 @@ type rel_t =
    type_t                (* The relation's data type (usually the data is the
                             multiplicity of tuples in the bag, so this is nearly
                             always going to be a TInt) *)
-type event_type_t = InsertEvent | DeleteEvent
-type event_t = event_type_t * rel_t
+
+type event_t =
+ | InsertEvent of rel_t
+ | DeleteEvent of rel_t
+ | SystemInitializedEvent  (* Invoked when the system has been initialized, once
+                              all static tables have been loaded. *)
 
 type framing_t =
    | Delimited of string (* delimiter *)
@@ -43,15 +47,39 @@ let add_rel (db:t) ?(source = NoSource) ?(adaptor = ("",[])) (rel:rel_t) =
 let rels (db:t): rel_t list =
    List.fold_left (fun old (_, rels) -> old@(List.map snd rels)) [] !db
 
+let table_rels (db:t): rel_t list =
+   (List.filter (fun (_,_,rt,_) -> rt == TableRel) (rels db))
+
+let stream_rels (db:t): rel_t list =
+   (List.filter (fun (_,_,rt,_) -> rt == StreamRel) (rels db))
+
 let rel (db:t) (reln:string): rel_t =
    List.find (fun (cmpn,_,_,_) -> reln = cmpn) (rels db)
+
+let event_vars (event:event_t): var_t list =
+   begin match event with
+      | InsertEvent(_,relv,_,_) -> relv
+      | DeleteEvent(_,relv,_,_) -> relv
+      | SystemInitializedEvent -> []
+   end
+
+let events_equal (a:event_t) (b:event_t): bool =
+   begin match (a,b) with
+      | (SystemInitializedEvent, SystemInitializedEvent) -> true
+      | (InsertEvent(an,_,_,_), InsertEvent(bn,_,_,_)) -> an = bn
+      | (DeleteEvent(an,_,_,_), DeleteEvent(bn,_,_,_)) -> an = bn
+      | _ -> false
+   end
 
 let string_of_rel ((reln,relsch,_,_):rel_t): string =
    (reln^"("^(ListExtras.string_of_list ~sep:", " string_of_var relsch)^")")
 
-let string_of_event ((event_t,event_rel):event_t) =
-   ((if event_t = InsertEvent then "ON + " else "ON - ")^
-    (string_of_rel event_rel))
+let string_of_event (event:event_t) =
+   begin match event with 
+      | InsertEvent(rel)       -> "ON + "^(string_of_rel rel)
+      | DeleteEvent(rel)       -> "ON - "^(string_of_rel rel)
+      | SystemInitializedEvent -> "ON SYSTEM READY"
+   end
 
 let code_of_framing (framing:framing_t):string = begin match framing with
       | Delimited("\n") -> "LINE DELIMITED"

@@ -88,8 +88,9 @@ let rel rn rv = (Calculus.Rel(rn, List.map var rv, Types.TInt));;
 let schema_rel reln relv = 
    (reln, List.map var relv, Schema.StreamRel, Types.TInt);;
 let event ins reln relv = (
-   (if ins then Schema.InsertEvent else Schema.DeleteEvent), 
-   schema_rel reln relv
+   (if ins then Schema.InsertEvent(schema_rel reln relv)
+           else Schema.DeleteEvent(schema_rel reln relv)) 
+   
 );;
 let mk_db rels = (
    let ret_db = Schema.empty_db() in

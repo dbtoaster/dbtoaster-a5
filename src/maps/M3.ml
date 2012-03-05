@@ -9,13 +9,8 @@ type trigger_t = {
    statements : Plan.stmt_t list ref
 }
 
-type incremental_view_t = {
-   view_description : Plan.ds_t;
-   view_metadata    : Plan.ds_metadata_t
-}
-
 type map_t = 
-   | DSView  of incremental_view_t
+   | DSView  of Plan.ds_t
    | DSTable of Schema.rel_t
 
 type prog_t = {
@@ -30,13 +25,11 @@ type prog_t = {
 let string_of_map ?(is_query=false) (map:map_t): string = begin match map with
    | DSView(view) -> 
       "DECLARE "^
-      (if view.view_metadata.init_on_access then "PARTIAL " else "")^
-      (if view.view_metadata.init_at_start then "INITIALIZED " else "")^
       (if is_query then "QUERY " else "")^
       "MAP "^(Calculus.string_of_expr (
-         Calculus.strip_calc_metadata view.view_description.ds_name))^
+         Calculus.strip_calc_metadata view.ds_name))^
       " := \n    "^
-      (Calculus.string_of_expr view.view_description.ds_definition)^";"
+      (Calculus.string_of_expr view.ds_definition)^";"
    | DSTable(rel) -> Schema.code_of_rel rel
    end
 
@@ -64,12 +57,8 @@ let string_of_m3 (prog:prog_t): string =
 (************************* Accessors/Mutators *************************)
 
 let get_trigger (prog:prog_t) 
-                (event_type:Schema.event_type_t) 
-                (event_name:string): trigger_t =
-   List.find (fun trig ->
-               let (trig_type, (trig_name, _,_,_)) = trig.event in
-                  (trig_type = event_type) && (trig_name = event_name)
-             ) !(prog.triggers)
+                (event:Schema.event_t): trigger_t =
+   List.find (fun trig -> Schema.events_equal event trig.event) !(prog.triggers)
 ;;
 
 let add_rel (prog:prog_t) ?(source = Schema.NoSource)
@@ -79,8 +68,8 @@ let add_rel (prog:prog_t) ?(source = Schema.NoSource)
    let (_,_,t,_) = rel in if t = Schema.TableRel then
       prog.maps     := (DSTable(rel)) :: !(prog.maps)
    else
-      prog.triggers := { event = (Schema.InsertEvent, rel); statements=ref [] }
-                    :: { event = (Schema.DeleteEvent, rel); statements=ref [] }
+      prog.triggers := { event = (Schema.InsertEvent(rel)); statements=ref [] }
+                    :: { event = (Schema.DeleteEvent(rel)); statements=ref [] }
                     :: !(prog.triggers)
 ;;
 
@@ -88,16 +77,16 @@ let add_query (prog:prog_t) (name:string) (expr:expr_t): unit =
    prog.queries := (name, expr) :: !(prog.queries)
 ;;
 
-let add_view (prog:prog_t) (view:incremental_view_t): unit =
+let add_view (prog:prog_t) (view:Plan.ds_t): unit =
    prog.maps := (DSView(view)) :: !(prog.maps)
 ;;
 
-let add_stmt (prog:prog_t) ((event_type,event_rel):Schema.event_t)
+let add_stmt (prog:prog_t) (event:Schema.event_t)
                            (stmt:stmt_t): unit =
-   let (reln, relv, relvt, relt) = event_rel in
+   let (relv) = Schema.event_vars event in
    try
-      let trigger = get_trigger prog event_type reln in
-      let (_,(_,trig_relv,_,_)) = trigger.event in
+      let trigger = get_trigger prog event in
+      let trig_relv = Schema.event_vars trigger.event in
       (* We need to ensure that we're not clobbering any existing variable names
          with these rewrites.  This includes not just the update expression, 
          but also any IVC computations present in the target map reference *)
@@ -115,6 +104,9 @@ let add_stmt (prog:prog_t) ((event_type,event_rel):Schema.event_t)
       }]
    with Not_found -> 
       failwith "Adding statement for an event that has not been established"
+;;
+(************************* Metadata *************************)
+
 
 (************************* Initializers *************************)
 
@@ -129,8 +121,8 @@ let init (db:Schema.t): prog_t =
          ref (List.map (fun x -> { event = x; statements = ref [] })
                        (List.flatten 
                           (List.map (fun x -> 
-                                       [  Schema.InsertEvent,x; 
-                                          Schema.DeleteEvent,x])
+                                       [  Schema.InsertEvent(x); 
+                                          Schema.DeleteEvent(x)])
                                     db_streams)));
       db = db
    }
@@ -144,10 +136,7 @@ let empty_prog (): prog_t =
 let plan_to_m3 (db:Schema.t) (plan:Plan.plan_t):prog_t =
    let prog = init db in
       List.iter (fun (ds:Plan.compiled_ds_t) ->
-         add_view prog {
-            view_description = ds.description;
-            view_metadata    = ds.metadata
-         };
+         add_view prog ds.description;
          List.iter (fun (event, stmt) ->
             add_stmt prog event stmt
          ) (ds.ds_triggers)
