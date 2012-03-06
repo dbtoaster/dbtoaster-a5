@@ -20,11 +20,21 @@ log_test "Valid Commute"
    (commutes (parse_calc "R(A,B) * A") (parse_calc "C"))
    true
 ;;
-log_test "Combine Values"
-   string_of_expr
-   (CalculusOptimizer.combine_values 
-      (parse_calc "(R(A,B) * [-1]) * ([22-1] + [3]) * [A]"))
-   (parse_calc "R(A,B)*[((-24) * A)]")
+let test msg input output =
+   log_test ("Combine Values ("^msg^")")
+      string_of_expr
+      (CalculusOptimizer.combine_values (parse_calc input))
+      (parse_calc output)
+in
+   test "Constants and Var"
+      "(R(A,B) * [-1]) * ([22-1] + [3]) * [A]"
+      "R(A,B)* [-24] * A";
+   test "Vars across relations"
+      "R(A) * S(B) * A * B"
+      "R(A) * S(B) * A * B";
+   test "Vars already combined"
+      "R(A) * S(B) * [A+B] * A * B"
+      "R(A) * S(B) * [(A+B)* A * B]"
 ;;
 
 let test msg scope input output =
@@ -189,7 +199,20 @@ in
       "(R(A) * ((A * (2 + D)) + C)) + (S(A) * A)";
    test "Multiple Decreasing With Negs" []
       "(R(A) * A * 2)+(R(A) * C)-((R(A) * A * D)+(S(A) * A))"
-      "(R(A) * ((A * 2) + C))-(((R(A) * D)+S(A)) * A)";
-      
-      
+      "(R(A) * ((A * 2) + C))-(((R(A) * D)+S(A)) * A)"
+;;
+let test msg scope schema input output =
+   log_test ("End-to-end ("^msg^")")
+      string_of_expr
+      (CalculusOptimizer.optimize_expr (
+         List.map var scope,
+         List.map var schema) (parse_calc input))
+      (parse_calc output)
+in
+   test "TPCH17 dParts" ["dPK"] []
+      "(PK ^= dPK) * LI(PK, QTY) * (alpha ^= 0) * (
+         (nested ^= (AggSum([PK], LI(PK, QTY2) * QTY2) + alpha))
+         - (nested ^= (AggSum([PK], LI(PK, QTY2) * QTY2)))
+       ) * [QTY < 0.5 * nested]"
+      "0"
       

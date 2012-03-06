@@ -53,7 +53,7 @@ type schema_t = (var_t list * var_t list)
 (*** Stringifiers ***)
 let rec string_of_leaf (leaf:CalcRing.leaf_t): string = 
    begin match leaf with
-      | Value(v)                -> Arithmetic.string_of_value v
+      | Value(v)                -> "["^(Arithmetic.string_of_value v)^"]"
       | External(ename,eins,eouts,etype,emeta) ->
          ename^
          "("^(string_of_type etype)^")"^"["^

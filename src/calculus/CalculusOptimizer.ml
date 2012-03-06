@@ -34,7 +34,30 @@ let rec combine_values (expr:C.expr_t): C.expr_t =
       ) e ([],[]) in
       if val_list = [] then calc_op calc_list
       else let val_term = 
-         CalcRing.mk_val (Value(Arithmetic.eval_partial (val_op val_list))) in
+         (* By default, combine values is a little too aggressive.  Specifically
+            consider the expression 
+               R(A) * S(B) * (A + B)
+            The (A+B) makes our lives harder, since now we can't materialize
+            these two terms separately.  That is to say, using << >> as a
+            materialization operator, we want to materialize this expression as
+               << R(A) * A >> * << S(B) >> + << R(A) >> * << S(B) * B >>.
+            Which is something that we'd get with the standard decomposition.
+            However, once the values are combined, this is not possible.  Thus
+            When we combine variables, we always respect the hypergraph, and 
+            only merge connected components (terms without variables can be
+            safely merged into one). *)
+         let (number_values, variable_values) = 
+            List.partition (fun x -> (Arithmetic.vars_of_value x) = [])
+                           val_list
+         in
+         let partitioned_variable_values = 
+            HyperGraph.connected_components Arithmetic.vars_of_value
+                                            variable_values
+         in
+            calc_op (List.map (fun val_list -> CalcRing.mk_val (
+               Value(Arithmetic.eval_partial (val_op val_list))
+            )) (number_values :: partitioned_variable_values))
+      in      
       if calc_list = [] then val_term 
       else calc_op (calc_list @ [val_term])
    in
@@ -365,6 +388,18 @@ let unify_lifts (big_schema:var_t list) (big_expr:C.expr_t): C.expr_t =
             let (deletable, term) = rcr schema ctx nt in
                (deletable, CalcRing.mk_neg term)
          | CalcRing.Val(AggSum(gb_vars, as_term)) ->
+               (* It's possible that one of the rewrites will rename a 
+                  nested variable.  We should push this renaming into the
+                  gb terms.  We should also eliminate context terms that
+                  can not be renamed. *)
+            let (non_subbable,var_subs) = split_vars ctx in
+            let undeletable_gb_vars = 
+               ListAsSet.inter gb_vars non_subbable
+            in let new_ctx = 
+               List.fold_right List.remove_assoc undeletable_gb_vars ctx 
+            in let subbed_gb_vars = 
+               List.map (Function.apply_if_present var_subs) gb_vars
+            in
                (* Aggsum is a little non-intuitive.  Input variables flow into
                   the expression without anything special happening.  However, 
                   output variables must be explicitly allowed out.  When 
@@ -372,12 +407,13 @@ let unify_lifts (big_schema:var_t list) (big_expr:C.expr_t): C.expr_t =
                   transformed into an output variable.  If this happens, we need
                   to include the variable as part of the output schema of this
                   AggSum *)
-            let (deletable, subbed_term) = rcr gb_vars ctx as_term in
+            let (deletable, subbed_term) = rcr subbed_gb_vars new_ctx as_term in
             let (old_ivars,_) = C.schema_of_expr as_term in
             let (new_ivars,new_ovars) = C.schema_of_expr subbed_term in
+            
             let new_gb_vars = 
                ListAsSet.union (ListAsSet.inter old_ivars new_ovars)
-                               gb_vars
+                               subbed_gb_vars
             in
                (deletable, (CalcRing.mk_val (AggSum(new_gb_vars, subbed_term))))
          | CalcRing.Val(Lift(v, l_term)) ->
@@ -666,7 +702,7 @@ let factorize_polynomial (scope:var_t list) (expr:C.expr_t): C.expr_t =
  ******************************************************************************)
 let optimize_expr ?(optimizations = [OptLiftEqualities; 
                                      OptUnifyLifts; OptNestingRewrites;
-                                     OptFactorizePolynomial])
+                                     OptFactorizePolynomial; OptCombineValues])
                   ((scope,schema):C.schema_t) (expr:C.expr_t): C.expr_t =
    let include_opt in_fn o new_fn = 
       let old_in_fn = !in_fn in
