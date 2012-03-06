@@ -142,7 +142,7 @@ ivcCalculusExpr:
 | ivcCalculusExpr MINUS ivcCalculusExpr 
                                   { CalcRing.mk_sum [$1; CalcRing.mk_neg $3] }
 | MINUS ivcCalculusExpr           { CalcRing.mk_neg $2 }
-| POUND valueExpr POUND           { CalcRing.mk_val (Value $2) }
+| LBRACKET valueExpr RBRACKET     { CalcRing.mk_val (Value $2) }
 | valueLeaf                       { CalcRing.mk_val (Value $1) }
 | AGGSUM LPAREN LBRACKET emptyVariableList RBRACKET COMMA ivcCalculusExpr RPAREN
                                   { CalcRing.mk_val (AggSum($4, $7)) }

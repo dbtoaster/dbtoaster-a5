@@ -51,7 +51,8 @@ module TemporaryMaterializer = struct
             ([], rename_vars mapping found_ds.ds_name)
       end
    
-   let materialize (history:ds_history_t) (prefix:string) (expr:expr_t) =
+   let materialize (history:ds_history_t) (prefix:string) 
+                   (_:Schema.event_t option) (expr:expr_t) =
       let (expr_ivars, expr_ovars) = schema_of_expr expr in
       let subexprs = 
          List.map (fun (subexp_schema, subexp) ->
@@ -156,8 +157,6 @@ let compile_map (db_schema:Schema.t) (history:Materializer.ds_history_t)
    in
    let triggers = ref [] in
    let trigger_todos = ref [] in
-   let needs_init_at_start = table_rels <> [] in
-   let needs_init_on_access = todo_ivars <> [] in
    let events = (if (Debug.active "IGNORE DELETES")
                  then [(fun x -> Schema.InsertEvent(x)), ""]
                  else [(fun x -> Schema.DeleteEvent(x)), "_m";
@@ -182,7 +181,8 @@ let compile_map (db_schema:Schema.t) (history:Materializer.ds_history_t)
             " DO "^(string_of_expr delta_expr)
       );
       let (new_todos, materialized_delta) = 
-         Materializer.materialize history map_prefix delta_expr
+         Materializer.materialize history map_prefix (Some(delta_event)) 
+                                  delta_expr
       in
          Debug.print "LOG-COMPILE-DETAIL" (fun () ->
             "Materialized: "^(string_of_expr materialized_delta)
@@ -200,7 +200,9 @@ let compile_map (db_schema:Schema.t) (history:Materializer.ds_history_t)
 
    ) events) stream_rels;
    
-   if needs_init_at_start then (
+   if table_rels <> [] then ( 
+      (* If the expression contains tables, we need to initialize it at 
+         startup *)
       let system_init_expr =
          compute_init_at_start (Schema.table_rels db_schema)
                                todo.ds_definition
@@ -216,9 +218,11 @@ let compile_map (db_schema:Schema.t) (history:Materializer.ds_history_t)
    
    
    let (init_todos, init_expr) = 
-      if needs_init_on_access then
+      if todo_ivars <> [] then
+         (* If the todo has input variables, it needs a default initializer *)
          let (init_todos,init_expr) =
-            Materializer.materialize history (todo_name^"_init") optimized_defn
+            Materializer.materialize history (todo_name^"_init") None 
+                                     optimized_defn
          in (init_todos, Some(init_expr))
       else
          ([], None)

@@ -194,6 +194,12 @@ let rec degree_of_expr (expr:expr_t): int =
          end)
          expr
 
+(************
+ * Like Ring.fold, except it computes the scope and schema at each node.
+ *
+ * WARNING: Calculus.fold does NOT descend into AggSums, Lifts, or 
+ * externals.  This must be done manually
+ *************)
 let rec fold ?(scope = []) ?(schema = [])
              (sum_fn:   schema_t -> 'a list         -> 'a)
              (prod_fn:  schema_t -> 'a list         -> 'a)

@@ -21,7 +21,7 @@ log_test "Stringification"
 
 log_test "Parsing"
    string_of_expr
-   (parse_calc "R(A,B) * S(B,C) * #(A+C)#")
+   (parse_calc "R(A,B) * S(B,C) * [A+C] * [A < C]")
    (CalcRing.mk_prod [
       CalcRing.mk_val (rel "R" ["A"; "B"]);
       CalcRing.mk_val (rel "S" ["B"; "C"]);
@@ -30,6 +30,10 @@ log_test "Parsing"
             Arithmetic.mk_var (var "A");
             Arithmetic.mk_var (var "C")
          ]
+      ));
+      CalcRing.mk_val (Cmp(Lt,
+         Arithmetic.mk_var (var "A"),
+         Arithmetic.mk_var (var "C")
       ))
    ])
 ;;
