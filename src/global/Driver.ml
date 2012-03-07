@@ -281,6 +281,7 @@ if stage_is_active StagePrintM3 then (
    print_endline (M3.string_of_m3 !m3_program)
 )
 ;;
+
 if stage_is_active StageM3DomainMaintenance then (
    dm_program := M3DM.make_DM_triggers (M3.get_triggers !m3_program) 
 )

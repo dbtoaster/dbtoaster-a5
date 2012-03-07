@@ -131,9 +131,9 @@ let maintain_statement (statement:Plan.stmt_t)
 
 let maintain_all (relation: Schema.rel_t)
                 (stmts: Plan.stmt_t list)
-                (event_type: Schema.event_type_t): trigger_t = 
+                (event_input: Schema.event_t): trigger_t = 
     let dm_statements = ref [] in
-    let dm_trigger: trigger_t = {event = (event_type, relation); statements = dm_statements} in
+    let dm_trigger: trigger_t = {event = event_input; statements = dm_statements} in
     List.iter (fun (statement:Plan.stmt_t) ->
             let dm_statement = maintain_statement (statement) (relation) in
             dm_statements := dm_statement @ !dm_statements
@@ -141,13 +141,20 @@ let maintain_all (relation: Schema.rel_t)
         dm_statements := simplify_dm_triggers !dm_statements;
     dm_trigger
 
+let get_relation_of_event (event_input: Schema.event_t): Schema.rel_t =
+    begin match event_input with
+        | Schema.InsertEvent(rel) -> rel
+        | Schema.DeleteEvent(rel) -> rel
+        | _ -> failwith ("incorrect event!")
+    end
+
 
 let make_DM_triggers (m3_triggers: trigger_t list): dm_prog_t =
     let dm_triggers = ref [] in
     let dm_prog:dm_prog_t = dm_triggers in
         List.iter (fun (trigger:trigger_t) ->
-            let (event_type, relation) = trigger.event in
-            let dm_trigger = maintain_all (relation) (!(trigger.statements)) (event_type) in
+            let relation = get_relation_of_event (trigger.event) in
+            let dm_trigger = maintain_all (relation) (!(trigger.statements)) (trigger.event) in
             dm_triggers := dm_trigger :: !dm_triggers
         ) m3_triggers;
     dm_prog
