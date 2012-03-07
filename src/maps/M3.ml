@@ -61,6 +61,10 @@ let get_trigger (prog:prog_t)
    List.find (fun trig -> Schema.events_equal event trig.event) !(prog.triggers)
 ;;
 
+let get_triggers (prog:prog_t) : trigger_t list =
+    !(prog.triggers)
+;;
+
 let add_rel (prog:prog_t) ?(source = Schema.NoSource)
                           ?(adaptor = ("", []))
                           (rel:Schema.rel_t): unit = 

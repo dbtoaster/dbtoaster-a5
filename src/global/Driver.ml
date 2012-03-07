@@ -10,7 +10,7 @@ let bug   msg = failwith ("BUG : "^msg)
 
 (************ Language Names ************)
 type language_t =
-   | Auto | SQL | Calc | MPlan | M3 | K3 | CPP
+   | Auto | SQL | Calc | MPlan | M3 | K3 | CPP | M3DM
 
 let languages =
    [  "AUTO", (Auto , "automatic"     ); 
@@ -18,6 +18,7 @@ let languages =
       "CALC", (Calc , "DBToaster Relational Calculus");
       "PLAN", (MPlan, "Materialization Plan");
       "M3"  , (M3   , "M3 Program");
+      "M3DM", (M3DM , "M3 Domain Maintenance Program");
       "K3"  , (K3   , "K3 Program");
       "CPP" , (CPP  , "C++ Code");
    ]
@@ -86,11 +87,13 @@ type stage_t =
    | StagePrintPlan
    | StagePlanToM3
    | StageParseM3
+   | StageM3DomainMaintenance
    | StagePrintM3
+   | StagePrintM3DomainMaintenance
 
 let output_stages = 
    [  StagePrintSQL; StagePrintSchema; StagePrintCalc; StagePrintPlan;
-      StagePrintM3 ]
+      StagePrintM3; StagePrintM3DomainMaintenance ]
 let input_stages = 
    [  StageParseSQL; StageParseM3 ]
 (* The following list (core_stages) MUST be kept in order of desired execution.  
@@ -101,7 +104,7 @@ let input_stages =
    input format (e.g., StageSQLToCalc if Calculus is the input format), and all 
    stages after the stage that produces the desired output format. *)
 let core_stages = 
-   [StageSQLToCalc; StageCompileCalc; StagePlanToM3]
+   [StageSQLToCalc; StageCompileCalc; StagePlanToM3; StageM3DomainMaintenance]
 
 let stages_from (stage:stage_t): stage_t list =
    ListExtras.sublist (ListExtras.index_of stage core_stages) (-1) core_stages
@@ -121,6 +124,7 @@ let active_stages = ref (ListAsSet.inter
       | Calc  -> StagePrintCalc::(stages_to StageSQLToCalc)
       | MPlan -> StagePrintPlan::(stages_to StageCompileCalc)
       | M3    -> StagePrintM3::(stages_to StagePlanToM3)
+      | M3DM  -> StagePrintM3DomainMaintenance::(stages_to StageM3DomainMaintenance)
       | _     -> error "Unsupported output language"
     )@input_stages))
 ;;
@@ -164,6 +168,8 @@ let toplevel_queries:(string * Calculus.expr_t) list ref = ref [];;
    trigger rather than by datastructure.  The m3 program also contains the
    db_schema and the toplevel_queries fields above. *)
 let m3_program:(M3.prog_t ref) = ref (M3.empty_prog ());;
+ (** TODO Comment **)
+let dm_program:(M3DM.dm_prog_t ref) = ref( ref ([]));;
 
 (************ SQL Stages ************)
 
@@ -227,7 +233,7 @@ if stage_is_active StagePrintCalc then (
          !calc_queries)
    )
 )
-;; 
+;; 				
 if stage_is_active StageCompileCalc then (
    let query_ds_list = List.map (fun (qname,qexpr) -> {
       Plan.ds_name = Plan.mk_ds_name qname 
@@ -272,5 +278,13 @@ if stage_is_active StageParseM3 then (
 )
 ;;
 if stage_is_active StagePrintM3 then (
-   print_endline (M3.string_of_m3 !m3_program);
+   print_endline (M3.string_of_m3 !m3_program)
+)
+;;
+if stage_is_active StageM3DomainMaintenance then (
+   dm_program := M3DM.make_DM_triggers (M3.get_triggers !m3_program) 
+)
+;;
+if stage_is_active StagePrintM3DomainMaintenance then (
+   print_endline (M3DM.string_of_m3DM !dm_program)
 )

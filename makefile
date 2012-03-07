@@ -18,6 +18,7 @@ FILES=\
 	src/compiler/Compiler\
 	src/maps/M3\
 	src/maps/Pattern\
+    src/maps/M3DM\
 
 LEXERS=\
 	src/parsers/Sqllexer\
