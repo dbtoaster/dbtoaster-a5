@@ -240,6 +240,4 @@ in
          ))
       ) * [QTY < 0.5 * nested]"
       "LI(dPK,QTY) * (nested ^= (AggSum([dPK], LI(dPK,QTY2) * QTY2))) *
-         [QTY < 0.5 * nested]"
-
-      
+         [QTY < 0.5 * nested]";

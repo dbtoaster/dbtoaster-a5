@@ -26,10 +26,19 @@ let rec delta_of_expr (delta_event:Schema.event_t) (expr:C.expr_t): C.expr_t=
             | Value(_) -> CalcRing.zero
          (*****************************************)
             | AggSum(gb_vars, sub_t) -> 
-               CalcRing.mk_val (AggSum(gb_vars, rcr sub_t))
+               let sub_t_delta = rcr sub_t in
+                  if sub_t_delta = CalcRing.zero
+                  then CalcRing.zero
+                  else CalcRing.mk_val (AggSum(gb_vars, rcr sub_t))
          (*****************************************)
             | Rel(reln,relv,_) ->
                if delta_reln = reln then 
+                  if (List.length relv) <> (List.length delta_relv)
+                  then
+                     raise (CalculusException(expr,
+                        "Relation '"^reln^"' has an inconsistent number of vars"
+                     ))
+                  else
                   let definition_terms = 
                      CalcRing.mk_prod (
                         List.map (fun (dv, v) ->
@@ -45,8 +54,9 @@ let rec delta_of_expr (delta_event:Schema.event_t) (expr:C.expr_t): C.expr_t=
             | Cmp(_,_,_) -> CalcRing.zero
          (*****************************************)
             | Lift(v, sub_t) ->
-               delta_var_id := !delta_var_id + 1; 
                let delta_term = rcr sub_t in
+               if delta_term = CalcRing.zero then CalcRing.zero else (
+               delta_var_id := !delta_var_id + 1; 
                let delta_var = ("delta_"^(string_of_int !delta_var_id),
                                 C.type_of_expr delta_term) in
                   (* We do a slightly non-standard delta rewrite here.  Rather
@@ -77,6 +87,7 @@ let rec delta_of_expr (delta_event:Schema.event_t) (expr:C.expr_t): C.expr_t=
                         CalcRing.mk_neg (CalcRing.mk_val (Lift(v, sub_t)))
                      ]
                   ]
+               )
          (*****************************************) 
       ) expr
 

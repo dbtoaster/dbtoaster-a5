@@ -86,6 +86,10 @@ let rec combine_values ?(aggressive=false) (expr:C.expr_t): C.expr_t =
  *   if it is possible to commute it further by converting it to a lift, this
  *   function does so.
  *
+ *   Because it's as good a place to do it as anywhere, lift_equalities will
+ *   also delete obviously irrelevant equalities (i.e., equalities of the form 
+ *   X=X will be replaced by 1).
+ *
  *   scope: Any variables defined outside of the expression being evaluated. 
  *          This includes trigger variables, input variables from the map on the
  *          lhs of the statement being evaluated.
@@ -241,6 +245,9 @@ let lift_equalities (global_scope:var_t list) (big_expr:C.expr_t): C.expr_t =
             ([], CalcRing.mk_val (AggSum(gb_vars, rcr_merge term)))
          | CalcRing.Val(Lift(v, term)) ->
             ([], CalcRing.mk_val (Lift(v, rcr_merge term)))
+         | CalcRing.Val(Cmp(Eq, x, y)) when x = y ->
+            (* X = X is a no-op *)
+            ([], CalcRing.one)
          | CalcRing.Val(Cmp(Eq, ValueRing.Val(AVar(x)), 
                                 ValueRing.Val(AVar(y)))) ->
             ([BidirectionalLift(x, y)], CalcRing.one)
