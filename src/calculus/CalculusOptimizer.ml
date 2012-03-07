@@ -7,6 +7,7 @@ module C = Calculus
 
 type opt_t = 
    | OptCombineValues
+   | OptCombineValuesAggressive
    | OptLiftEqualities
    | OptUnifyLifts
    | OptNestingRewrites
@@ -21,7 +22,7 @@ type opt_t =
  *
  *   expr: The calculus expression to be processed
  ******************************************************************************)
-let rec combine_values (expr:C.expr_t): C.expr_t =
+let rec combine_values ?(aggressive=false) (expr:C.expr_t): C.expr_t =
    Debug.print "LOG-CALCOPT-DETAIL" (fun () ->
       "Combine Values: "^(C.string_of_expr expr) 
    );
@@ -34,8 +35,11 @@ let rec combine_values (expr:C.expr_t): C.expr_t =
       ) e ([],[]) in
       if val_list = [] then calc_op calc_list
       else let val_term = 
-         (* By default, combine values is a little too aggressive.  Specifically
-            consider the expression 
+         if aggressive then 
+            CalcRing.mk_val (Value(Arithmetic.eval_partial (val_op val_list)))
+         else
+         (* If we let it run free, combine values would be a little too 
+            aggressive.  Specifically consider the expression 
                R(A) * S(B) * (A + B)
             The (A+B) makes our lives harder, since now we can't materialize
             these two terms separately.  That is to say, using << >> as a
@@ -45,7 +49,10 @@ let rec combine_values (expr:C.expr_t): C.expr_t =
             However, once the values are combined, this is not possible.  Thus
             When we combine variables, we always respect the hypergraph, and 
             only merge connected components (terms without variables can be
-            safely merged into one). *)
+            safely merged into one). 
+            
+            Thus, the default is to be nonaggressive, as follows:
+            *)
          let (number_values, variable_values) = 
             List.partition (fun x -> (Arithmetic.vars_of_value x) = [])
                            val_list
@@ -90,24 +97,51 @@ type lift_candidate_t =
    (* An equality that can only be lifted one way *)
    | UnidirectionalLift of var_t * value_t
 
-let lift_equalities (scope:var_t list) (big_expr:C.expr_t): C.expr_t =
+let lift_equalities (global_scope:var_t list) (big_expr:C.expr_t): C.expr_t =
    Debug.print "LOG-CALCOPT-DETAIL" (fun () ->
       "Lift Equalities: "^(C.string_of_expr big_expr) 
    );
-   let candidate_term (candidate:lift_candidate_t) = 
+   let candidate_term (local_scope:var_t list) (candidate:lift_candidate_t) = 
       CalcRing.mk_val (match candidate with
-         | BidirectionalLift(x, y)  -> (Cmp(Eq, mk_var x, mk_var y))
-         | UnidirectionalLift(x, y) -> (Cmp(Eq, mk_var x, y))
+         | BidirectionalLift(x, y)  -> 
+            if (List.mem x local_scope)
+            then if (List.mem y local_scope)
+                 then (Cmp(Eq, mk_var x, mk_var y))
+                 else (Lift(y, CalcRing.mk_val (Value(mk_var x))))
+            else if (List.mem y local_scope)
+                 then (Lift(x, CalcRing.mk_val (Value(mk_var y))))
+                 else (Debug.print "LOG-CALCOPT-DETAIL" (fun () ->
+                        "Scope of error is : " ^
+                        (ListExtras.ocaml_of_list string_of_var local_scope)
+                      );
+                      failwith "Error: lifted equality past scope of both vars")
+         | UnidirectionalLift(x, y) -> 
+            if not (List.for_all (fun y_var -> List.mem y_var local_scope)
+                                 (Arithmetic.vars_of_value y))
+            then (Debug.print "LOG-CALCOPT-DETAIL" (fun () ->
+                        "Scope of error is : " ^
+                        (ListExtras.ocaml_of_list string_of_var local_scope)
+                      );
+                 failwith "Error: lifted equality past scope of value")
+            else if (List.mem x local_scope)
+                 then (Cmp(Eq, mk_var x, y))
+                 else (Lift(x, CalcRing.mk_val (Value(y))))
       )
    in
-   let merge ((candidates:((lift_candidate_t) list list)),
+   let merge (local_scope:var_t list)
+             ((candidates:((lift_candidate_t) list list)),
               (terms:C.expr_t list)): C.expr_t = 
-      CalcRing.mk_prod ((List.map candidate_term (List.flatten candidates)) @
+      CalcRing.mk_prod ((List.map (candidate_term local_scope)
+                                  (List.flatten candidates)) @
                         terms)
    in
    let rec rcr (scope:var_t list) (expr:C.expr_t):
                ((lift_candidate_t) list * C.expr_t) = 
-      let rcr_merge x = merge (List.split [rcr scope x]) in
+      Debug.print "LOG-LIFT-EQUALITIES" (fun () ->
+         "Lift Equalities: "^(C.string_of_expr expr)^"\n\t\tWith Scope: "^
+         (ListExtras.ocaml_of_list string_of_var scope)
+      );
+      let rcr_merge x = merge scope (List.split [rcr scope x]) in
       begin match expr with
          | CalcRing.Sum(sl) -> 
             ([], (CalcRing.mk_sum (List.map rcr_merge sl)))
@@ -155,8 +189,9 @@ let lift_equalities (scope:var_t list) (big_expr:C.expr_t): C.expr_t =
                            lift this expression (for now, this is true even if x 
                            doesn't enter scope here) *)
                         (  commuting_eqs, 
-                           CalcRing.mk_prod [updated_lhs; 
-                                             candidate_term candidate])
+                           CalcRing.mk_prod 
+                              [updated_lhs; 
+                               candidate_term rhs_scope candidate])
                      else if List.mem x entering_scope then
                         (* x enters scope here, but y does not.  We can
                            lift this equality *)
@@ -174,8 +209,9 @@ let lift_equalities (scope:var_t list) (big_expr:C.expr_t): C.expr_t =
                             List.mem y entering_scope) with
                      | (true, true) -> (* x and y enter scope: abort *)
                         (  commuting_eqs, 
-                           CalcRing.mk_prod [updated_lhs; 
-                                             candidate_term candidate])
+                           CalcRing.mk_prod 
+                              [updated_lhs; 
+                               candidate_term rhs_scope candidate])
                      | (false, true) -> (* y enters scope, x does not: 
                                            lift into y *)
                         (  commuting_eqs, 
@@ -216,7 +252,7 @@ let lift_equalities (scope:var_t list) (big_expr:C.expr_t): C.expr_t =
             ([], expr)
       end
    in
-      merge (List.split [rcr scope big_expr])
+      merge global_scope (List.split [rcr global_scope big_expr])
 ;;
 
 (******************************************************************************
@@ -691,18 +727,18 @@ let factorize_polynomial (scope:var_t list) (expr:C.expr_t): C.expr_t =
       (fun _ -> CalcRing.mk_neg)
       (fun _ -> CalcRing.mk_val)
       expr
-
+;;
 (******************************************************************************
  * optimize_expr
  *   Given an expression apply the above optimizations to it until a fixed point
  *   is reached.
- * 
- * OptCombineValues is actually a bad idea by default, since it limits the
- * range of options available to processes that work exclusively on Calculus
  ******************************************************************************)
-let optimize_expr ?(optimizations = [OptLiftEqualities; 
-                                     OptUnifyLifts; OptNestingRewrites;
-                                     OptFactorizePolynomial; OptCombineValues])
+ 
+let default_optimizations = 
+   [  OptLiftEqualities; OptUnifyLifts; OptNestingRewrites;
+      OptFactorizePolynomial; OptCombineValues]
+;;
+let optimize_expr ?(optimizations = default_optimizations)
                   ((scope,schema):C.schema_t) (expr:C.expr_t): C.expr_t =
    let include_opt in_fn o new_fn = 
       let old_in_fn = !in_fn in
@@ -711,25 +747,20 @@ let optimize_expr ?(optimizations = [OptLiftEqualities;
                   else !in_fn  )
    in
    let fp_1 = ref (fun x -> x) in
-      include_opt fp_1 OptLiftEqualities      (lift_equalities scope);
-      include_opt fp_1 OptUnifyLifts          (unify_lifts schema);
-      include_opt fp_1 OptNestingRewrites     (nesting_rewrites);
-      include_opt fp_1 OptFactorizePolynomial (factorize_polynomial scope);
-   let fp_2 = ref (fun x -> x) in
-      include_opt fp_2 OptCombineValues       (combine_values);
-   let rec fixedpoint f x = 
+      include_opt fp_1 OptUnifyLifts              (unify_lifts schema);
+      include_opt fp_1 OptLiftEqualities          (lift_equalities scope);
+      include_opt fp_1 OptNestingRewrites         (nesting_rewrites);
+      include_opt fp_1 OptFactorizePolynomial     (factorize_polynomial scope);
+      include_opt fp_1 OptCombineValues           (combine_values);
+      include_opt fp_1 OptCombineValuesAggressive (combine_values 
+                                                      ~aggressive:true);
+   let rec fixpoint f x = 
       Debug.print "LOG-CALCOPT-DETAIL" (fun () ->
          "OPTIMIZING: "^(C.string_of_expr x) 
       );
       let new_x = f x in
-         if new_x <> x then fixedpoint f new_x
+         if new_x <> x then fixpoint f new_x
          else new_x
 
-   (* The combine optimization pushes ring operators into values.  Often this is 
-      a good idea, especially once we start graph decomposition.  However, this 
-      optimization sometimes conflicts with Unification and Factorization, and 
-      generally provides less benefit than either of these.  Thus, we apply it 
-      as separate, second stage operation. *)
-
-   in (fixedpoint !fp_2 (fixedpoint !fp_1 expr))
+   in (fixpoint !fp_1 expr)
  

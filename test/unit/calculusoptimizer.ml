@@ -60,7 +60,13 @@ in
       "S(B) * AggSum([], (A ^= [B]) * R(A,B))";
    test "Unliftable due to nested scope" []
       "S(A, B) * AggSum([], R(A,B) * [A = B])"
-      "S(A, B) * AggSum([], [A = B] * R(A,B))"
+      "S(A, B) * AggSum([], [A = B] * R(A,B))";
+   test "TPCH17" [var "dPK"]
+      "LI(PK, QTY) * (nested ^= AggSum([PK],((LI(PK, QTY2) * [QTY2])))) * 
+         [PK = dPK] * [QTY < (0.5 * nested)]"
+      "(PK ^= dPK) * LI(PK, QTY) * 
+         (nested ^= AggSum([PK],((LI(PK, QTY2) * [QTY2])))) * 
+         [QTY < (0.5 * nested)]"
 ;;
 
 let test msg schema input output =
@@ -201,18 +207,39 @@ in
       "(R(A) * A * 2)+(R(A) * C)-((R(A) * A * D)+(S(A) * A))"
       "(R(A) * ((A * 2) + C))-(((R(A) * D)+S(A)) * A)"
 ;;
-let test msg scope schema input output =
+let test ?(opts = CalculusOptimizer.default_optimizations)
+         ?(skip_opts = [])
+         msg scope schema input output =
    log_test ("End-to-end ("^msg^")")
       string_of_expr
-      (CalculusOptimizer.optimize_expr (
-         List.map var scope,
-         List.map var schema) (parse_calc input))
+      (CalculusOptimizer.optimize_expr 
+         ~optimizations:(ListAsSet.diff opts skip_opts)
+         (List.map var scope, List.map var schema) 
+         (parse_calc input)
+      )
       (parse_calc output)
 in
-   test "TPCH17 dParts" ["dPK"] []
+   test "TPCH17 dPart Tricky Term" ["dPK"] []
       "(PK ^= dPK) * LI(PK, QTY) * (alpha ^= 0) * (
          (nested ^= (AggSum([PK], LI(PK, QTY2) * QTY2) + alpha))
          - (nested ^= (AggSum([PK], LI(PK, QTY2) * QTY2)))
        ) * [QTY < 0.5 * nested]"
-      "0"
+      "0";
+   test "TPCH17 dPart Full" ["dPK"] [] 
+      "( ((PK ^= dPK) * LI(PK, QTY) *
+            (nested ^= (AggSum([PK], LI(PK,QTY2) * QTY2))))
+         +
+         (P(PK) * LI(PK, QTY) * (alpha ^= 0) * (
+            (nested ^= (AggSum([PK], LI(PK, QTY2) * QTY2) + alpha))
+            - (nested ^= (AggSum([PK], LI(PK, QTY2) * QTY2)))
+         ))
+         +
+         ((PK ^= dPK) * LI(PK, QTY) * (alpha ^= 0) * (
+            (nested ^= (AggSum([PK], LI(PK, QTY2) * QTY2) + alpha))
+            - (nested ^= (AggSum([PK], LI(PK, QTY2) * QTY2)))
+         ))
+      ) * [QTY < 0.5 * nested]"
+      "LI(dPK,QTY) * (nested ^= (AggSum([dPK], LI(dPK,QTY2) * QTY2))) *
+         [QTY < 0.5 * nested]"
+
       
