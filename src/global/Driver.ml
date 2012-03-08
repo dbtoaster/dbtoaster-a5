@@ -168,7 +168,13 @@ let toplevel_queries:(string * Calculus.expr_t) list ref = ref [];;
    trigger rather than by datastructure.  The m3 program also contains the
    db_schema and the toplevel_queries fields above. *)
 let m3_program:(M3.prog_t ref) = ref (M3.empty_prog ());;
- (** TODO Comment **)
+ 
+(* Representation of the Domain Maintenance Triggers (DMT). It contains a list of 
+   triggers which has the same type as the M3 triggers. For each event it contains 
+   a list of expressions which shows the computations which are needed for domain
+   maintenance. In this expressions, the domain of the variables for each map is 
+   represented by relation.
+*)
 let dm_program:(M3DM.dm_prog_t ref) = ref( ref ([]));;
 
 (************ SQL Stages ************)

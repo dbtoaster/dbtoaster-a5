@@ -47,26 +47,114 @@ let get_relation_vars (expr: Calculus.expr_t): var_t list =
         | _ -> failwith "Expression should be relation!"
         end
         
-let simplify_dm_trigger (trigger: Plan.stmt_t): Plan.stmt_t list = 
-    let left_domain = trigger.target_map in
-(*    let update_domain = trigger.update_expr in *)
-    let schema_left_domain = snd (Calculus.schema_of_expr left_domain) in
-    if schema_left_domain = [] then [] else
-    begin
-        [trigger]
+let is_calculus_relation (expr: Calculus.expr_t): bool = 
+    let leaf = 
+            begin match expr with
+            | CalcRing.Val(x) -> x
+            | _ -> CalcRing.get_val CalcRing.one
+            end in
+        begin match leaf with
+        | Rel(_, _, _) ->
+            true
+        | _ -> false
+        end
+
+      
+let rec simplify_formula(expr: Calculus.expr_t): Calculus.expr_t * bool = (* First return is the simplified query and the second one is whether it should be removed or not! *)
+    begin match expr with
+        | CalcRing.Sum([q1;q2]) -> 
+            let (rq1, rb1) = simplify_formula(q1) in
+            let (rq2, rb2) = simplify_formula(q2) in
+            if rb1 = true then 
+                if rb2 = true then
+                    (CalcRing.mk_sum([rq1; rq2]), true)
+                else
+                    (rq1, true)
+            else
+                if rb2 = true then
+                    (rq2, true)
+                else
+                    (CalcRing.zero, false) 
+        | CalcRing.Sum(q1::qo) -> 
+            let (rq1, rb1) = simplify_formula(q1) in
+            let (rq2, rb2) = simplify_formula(CalcRing.mk_sum(qo)) in
+            if rb1 = true then 
+                if rb2 = true then
+                    (CalcRing.mk_sum([rq1; rq2]), true)
+                else
+                    (rq1, true)
+            else
+                if rb2 = true then
+                    (rq2, true)
+                else
+                    (CalcRing.zero, false) 
+        | CalcRing.Prod([q1;q2]) -> 
+            let (rq1, rb1) = simplify_formula(q1) in
+            let (rq2, rb2) = simplify_formula(q2) in
+            if rb1 = true then 
+                if rb2 = true then
+                    (CalcRing.mk_prod([rq1; rq2]), true)
+                else
+                    (rq1, true)
+            else
+                if rb2 = true then
+                    (rq2, true)
+                else
+                    (CalcRing.zero, false) 
+        | CalcRing.Prod(q1::qo) -> 
+            let (rq1, rb1) = simplify_formula(q1) in
+            let (rq2, rb2) = simplify_formula(CalcRing.mk_prod(qo)) in
+            if rb1 = true then 
+                if rb2 = true then
+                    (CalcRing.mk_prod([rq1; rq2]), true)
+                else
+                    (rq1, true)
+            else
+                if rb2 = true then
+                    (rq2, true)
+                else
+                    (CalcRing.zero, false)         
+        | CalcRing.Val(leaf) ->
+            begin match leaf with
+            | AggSum(gb_vars, subexp) -> 
+                if gb_vars = [] then 
+                    (CalcRing.zero, false)
+                else 
+                    let (rq, rb) = simplify_formula(subexp) in
+                        if rb = true then 
+                            (CalcRing.Val(AggSum(gb_vars, rq)), true) 
+                        else 
+                            (CalcRing.zero, false)
+            | Rel(rname, rvars, _)    -> 
+                if rvars = [] then (CalcRing.zero, false) else (expr, true)
+            | _ -> failwith ("Incorrect leaf")
+            end
+        | _ -> failwith ("Incorrect formula")
     end
 
-let simplify_dm_triggers (trigger_list: Plan.stmt_t list): Plan.stmt_t list = 
-    List.fold_left (fun (x) (y) -> x@(simplify_dm_trigger y)) [] trigger_list
-    
-        
 let mk_dm_trigger (left_domain: Calculus.expr_t)
-                (update_domain: Calculus.expr_t):Plan.stmt_t= 
+                    (update_domain: Calculus.expr_t):Plan.stmt_t= 
     {
         target_map = left_domain;
         update_type = Plan.UpdateStmt;
         update_expr = update_domain
     }
+
+        
+let simplify_dm_trigger (trigger: Plan.stmt_t): Plan.stmt_t list = 
+    let left_domain = trigger.target_map in
+    let update_domain = trigger.update_expr in 
+    let schema_left_domain = snd (Calculus.schema_of_expr left_domain) in
+    if schema_left_domain = [] then [] else
+        let (simplified_update_domain, _) = simplify_formula (update_domain) in
+            [mk_dm_trigger (left_domain) (simplified_update_domain)]
+    
+
+let simplify_dm_triggers (trigger_list: Plan.stmt_t list): Plan.stmt_t list = 
+    List.fold_left (fun (x) (y) -> x@(simplify_dm_trigger y)) [] trigger_list
+    
+        
+
 
 let rec maintain (context: Calculus.expr_t)
                 (formula: Calculus.expr_t) : Plan.stmt_t list * Calculus.expr_t =
