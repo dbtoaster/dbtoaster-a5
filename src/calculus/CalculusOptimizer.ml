@@ -1,3 +1,7 @@
+(**
+   Tools for optimizing/simplifying Calculus Expressions
+*)
+
 open Types
 open Ring
 open Arithmetic
@@ -13,15 +17,14 @@ type opt_t =
    | OptNestingRewrites
    | OptFactorizePolynomial
 ;;
-(******************************************************************************
- * combine_values expr
- *   Recursively merges together Value terms appearing in expr.  Ring operators 
- *   are pushed into the ValueRing, and expressions are evaluated to the fullest
- *   extent possible.  Additionally, negations are converted to multiplication
- *   by -1.
- *
- *   expr: The calculus expression to be processed
- ******************************************************************************)
+(**
+ combine_values expr
+   Recursively merges together Value terms appearing in expr.  Ring operators 
+   are pushed into the ValueRing, and expressions are evaluated to the fullest
+   extent possible.  Additionally, negations are converted to multiplication
+   by -1.
+   @param expr The calculus expression to be processed
+ *)
 let rec combine_values ?(aggressive=false) (expr:C.expr_t): C.expr_t =
    Debug.print "LOG-CALCOPT-DETAIL" (fun () ->
       "Combine Values: "^(C.string_of_expr expr) 
@@ -79,22 +82,22 @@ let rec combine_values ?(aggressive=false) (expr:C.expr_t): C.expr_t =
       ))
       expr
 ;;
-(******************************************************************************
- * lift_equalities scope expr
- *   Recursively commutes equality comparison terms as far left through the 
- *   expression as possible.  Once the term commutes all the way to the left, 
- *   if it is possible to commute it further by converting it to a lift, this
- *   function does so.
- *
- *   Because it's as good a place to do it as anywhere, lift_equalities will
- *   also delete obviously irrelevant equalities (i.e., equalities of the form 
- *   X=X will be replaced by 1).
- *
- *   scope: Any variables defined outside of the expression being evaluated. 
- *          This includes trigger variables, input variables from the map on the
- *          lhs of the statement being evaluated.
- *   expr:  The calculus expression to be processed
- ******************************************************************************)
+(**
+  lift_equalities scope expr
+    Recursively commutes equality comparison terms as far left through the 
+    expression as possible.  Once the term commutes all the way to the left, 
+    if it is possible to commute it further by converting it to a lift, this
+    function does so.
+ 
+    Because it's as good a place to do it as anywhere, lift_equalities will
+    also delete obviously irrelevant equalities (i.e., equalities of the form 
+    X=X will be replaced by 1).
+ 
+    scope: Any variables defined outside of the expression being evaluated. 
+           This includes trigger variables, input variables from the map on the
+           lhs of the statement being evaluated.
+    expr:  The calculus expression to be processed
+*)
 type lift_candidate_t = 
    (* A var=var equality that can be lifted in either direction *)
    | BidirectionalLift of var_t * var_t
@@ -262,25 +265,25 @@ let lift_equalities (global_scope:var_t list) (big_expr:C.expr_t): C.expr_t =
       merge global_scope (List.split [rcr global_scope big_expr])
 ;;
 
-(******************************************************************************
- * unify_lifts schema expr
- *   Where possible, variables defined by Lifts are replaced by the lifted 
- *   expression.  If possible, the Lift term is removed.  We do this by
- *   unfolding products, substituting the lifted expression throughout.  It's 
- *   possible that such a substitution will not be possible: e.g., if we're 
- *   lifting an aggregate expression and the lifted variable appears in a 
- *   comparison.  If so, then we do not remove the Lift term.
- *
- *   The other thing that can prevent the removal of a lift is if the variable
- *   being lifted into is present in the output schema of the enclosing 
- *   expression.  In short, this step only unifies lifted variables in the 
- *   context of a single expression (product, etc...), and doesn't propagate
- *   the unified variable up through the AST.  
- *
- *   schema: The expected output variables of the expression being unified.  
- *           These variables will never be unified away.
- *   expr:   The calculus expression being processed
- ******************************************************************************)
+(**
+  unify_lifts schema expr
+    Where possible, variables defined by Lifts are replaced by the lifted 
+    expression.  If possible, the Lift term is removed.  We do this by
+    unfolding products, substituting the lifted expression throughout.  It's 
+    possible that such a substitution will not be possible: e.g., if we're 
+    lifting an aggregate expression and the lifted variable appears in a 
+    comparison.  If so, then we do not remove the Lift term.
+ 
+    The other thing that can prevent the removal of a lift is if the variable
+    being lifted into is present in the output schema of the enclosing 
+    expression.  In short, this step only unifies lifted variables in the 
+    context of a single expression (product, etc...), and doesn't propagate
+    the unified variable up through the AST.  
+ 
+    schema: The expected output variables of the expression being unified.  
+            These variables will never be unified away.
+    expr:   The calculus expression being processed
+*)
 let split_ctx (split_fn: value_t -> 'a option) (ctx:(var_t * C.expr_t) list): 
               (var_t list * (var_t * 'a) list) =
    List.fold_left (fun (unusable_ctx, usable_ctx) (v,e) ->
@@ -507,36 +510,36 @@ let unify_lifts (big_schema:var_t list) (big_expr:C.expr_t): C.expr_t =
       snd (rcr big_schema [] (normalize_lifts big_expr))
 ;;
 
-(******************************************************************************
- * nesting_rewrites
- *   A hodgepodge of simple rewrite rules for nested expressions (i.e., 
- *   expressions nested within a Lift or AggSum.  Many of these have to do with
- *   lifting expressions out of the nesting.
- *   
- *   AggSum([...], A) = A
- *       IF all of the output variables of A are in the group-by variables of
- *       the AggSum
- *   
- *   AggSum([...], A + B + ...) = 
- *       AggSum([...], A) + AggSum([...], B) + AggSum([...], ...)
- *   
- *   AggSum([...], A * B) = A * AggSum([...], B) 
- *       IF all of the output variables of A are in the group-by variables of
- *       the AggSum
- *   
- *   AggSum([...], A * B) = B * AggSum([...], A) 
- *       IF all of the output variables of B are in the group-by variables of
- *       the AggSum AND B commutes with A.
- * 
- *   AggSum(GB1, AggSum(GB2, A)) = AggSum(GB1, A) 
- *       IF all of the output variables of A are in the group-by variables of
- *       the AggSum.
- *   
- *   AggSum([...], A) = A 
- *       IF A is a constant term (i.e., has no output variables)
- *
- *   Lift(X, Lift(Y, A) * B) = Lift(Y,A) * Lift(X, B)
- ******************************************************************************)
+(**
+  nesting_rewrites
+    A hodgepodge of simple rewrite rules for nested expressions (i.e., 
+    expressions nested within a Lift or AggSum.  Many of these have to do with
+    lifting expressions out of the nesting.
+    
+    AggSum([...], A) = A
+        IF all of the output variables of A are in the group-by variables of
+        the AggSum
+    
+    AggSum([...], A + B + ...) = 
+        AggSum([...], A) + AggSum([...], B) + AggSum([...], ...)
+    
+    AggSum([...], A * B) = A * AggSum([...], B) 
+        IF all of the output variables of A are in the group-by variables of
+        the AggSum
+    
+    AggSum([...], A * B) = B * AggSum([...], A) 
+        IF all of the output variables of B are in the group-by variables of
+        the AggSum AND B commutes with A.
+  
+    AggSum(GB1, AggSum(GB2, A)) = AggSum(GB1, A) 
+        IF all of the output variables of A are in the group-by variables of
+        the AggSum.
+    
+    AggSum([...], A) = A 
+        IF A is a constant term (i.e., has no output variables)
+ 
+    Lift(X, Lift(Y, A) * B) = Lift(Y,A) * Lift(X, B)
+*)
 let rec nesting_rewrites (expr:C.expr_t) = 
    Debug.print "LOG-CALCOPT-DETAIL" (fun () ->
       "Nesting Rewrites: "^(C.string_of_expr expr) 
@@ -593,27 +596,27 @@ let rec nesting_rewrites (expr:C.expr_t) =
       expr
 ;;
 
-(******************************************************************************
- * factorize_polynomial
- *   Given an expression (A * B) + (A * C), factor out the A to get A * (B + C)
- *   Note that this works bi-directionally, we can factor terms off the front, 
- *   or off the back.  All that matters is whether we can commute the term 
- *   to wherever it needs to get factored.
- * 
- *   Most of the work happens in factorize_one_polynomial, which takes a list
- *   of monomials representing a list of terms and identifies a Calculus 
- *   expression that is equivalent to their sum but which has terms factorized
- *   out as possible.
- * 
- *   This process happens in several stages. 
- *   - First, we identify a set of candidate subterms that may be factorized out 
- *     of the right or left hand side of each term.
- *   - For each candidate we count how many terms it can be factorized out of.
- *   - We pick the candidate that can be factorized out of the most terms and
- *     delete the term from those terms.
- *   - We recur twice, once on the set of terms that were factorized, and once
- *     on the set of terms that weren't.
- ******************************************************************************)
+(**
+  factorize_polynomial
+    Given an expression (A * B) + (A * C), factor out the A to get A * (B + C)
+    Note that this works bi-directionally, we can factor terms off the front, 
+    or off the back.  All that matters is whether we can commute the term 
+    to wherever it needs to get factored.
+  
+    Most of the work happens in factorize_one_polynomial, which takes a list
+    of monomials representing a list of terms and identifies a Calculus 
+    expression that is equivalent to their sum but which has terms factorized
+    out as possible.
+  
+    This process happens in several stages. 
+    - First, we identify a set of candidate subterms that may be factorized out 
+      of the right or left hand side of each term.
+    - For each candidate we count how many terms it can be factorized out of.
+    - We pick the candidate that can be factorized out of the most terms and
+      delete the term from those terms.
+    - We recur twice, once on the set of terms that were factorized, and once
+      on the set of terms that weren't.
+*)
 let rec factorize_one_polynomial (scope:var_t list) (term_list:C.expr_t list) =
    Debug.print "LOG-FACTORIZE" (fun () ->
       "Factorizing Expression: ("^
@@ -735,11 +738,11 @@ let factorize_polynomial (scope:var_t list) (expr:C.expr_t): C.expr_t =
       (fun _ -> CalcRing.mk_val)
       expr
 ;;
-(******************************************************************************
- * optimize_expr
- *   Given an expression apply the above optimizations to it until a fixed point
- *   is reached.
- ******************************************************************************)
+(**
+  optimize_expr
+    Given an expression apply the above optimizations to it until a fixed point
+    is reached.
+*)
  
 let default_optimizations = 
    [  OptLiftEqualities; OptUnifyLifts; OptNestingRewrites;

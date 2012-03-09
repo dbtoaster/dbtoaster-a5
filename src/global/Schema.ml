@@ -1,3 +1,7 @@
+(**
+   Global definitions for the schema of a database/set of streams
+*)
+
 open Types
 
 type rel_type_t = 

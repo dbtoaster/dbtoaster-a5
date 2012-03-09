@@ -1,3 +1,13 @@
+(**
+   The heart of the DBToaster frontend: Where we do delta processing. 
+
+   The primary entry into this module is Compiler.compile, which takes a list
+   of named queries and transforms them into a Plan.plan_t.  
+   
+   Compiler makes extensive use of Calculus functionality, and in particular
+   CalculusOptimizer and CalculusDeltas.
+  *)
+
 open Ring
 open Arithmetic
 open Types
@@ -107,10 +117,10 @@ let compute_init_at_start (table_rels:Schema.rel_t list) (expr:expr_t): expr_t =
    Calculus.rewrite_leaves (fun _ lf -> match lf with
       | Rel(rn, rv, rt) ->
          if List.mem rn table_names
-         then CalcRing.mk_val (External("_"^rn, [], rv, rt, None))
+         then CalcRing.mk_val (Rel(rn,rv,rt))
          else CalcRing.zero
       | _ -> CalcRing.mk_val lf
-   ) expr
+   ) (CalculusOptimizer.optimize_expr (Calculus.schema_of_expr expr) expr)
 
 
 (******************************************************************************)
@@ -157,7 +167,7 @@ let compile_map (db_schema:Schema.t) (history:Materializer.ds_history_t)
    in
    let triggers = ref [] in
    let trigger_todos = ref [] in
-   let events = (if (Debug.active "IGNORE DELETES")
+   let events = (if (Debug.active "IGNORE-DELETES")
                  then [(fun x -> Schema.InsertEvent(x)), ""]
                  else [(fun x -> Schema.DeleteEvent(x)), "_m";
                        (fun x -> Schema.InsertEvent(x)), "_p"])
@@ -238,6 +248,25 @@ let compile_map (db_schema:Schema.t) (history:Materializer.ds_history_t)
          ds_triggers = !triggers
       })
 
+(******************************************************************************)
+let compile_table ((reln, relv, relut, relt):Schema.rel_t): compiled_ds_t = 
+   let map_name = (Plan.mk_ds_name ("_"^reln) ([],relv) relt) in {
+      Plan.description = {
+         Plan.ds_name       = map_name ;
+         Plan.ds_definition = (CalcRing.mk_val (Rel(reln, relv, relt)))
+      };
+      Plan.ds_triggers = (List.map (fun (event, update_expr) ->
+         (event, {
+            Plan.target_map  = map_name;
+            Plan.update_type = UpdateStmt;
+            Plan.update_expr = update_expr
+         }
+      )) [(Schema.InsertEvent(reln, relv, relut, relt)), 
+               CalcRing.one; 
+          (Schema.DeleteEvent(reln, relv, relut, relt)), 
+               CalcRing.mk_neg CalcRing.one]
+      )
+   }
 
 (******************************************************************************)
 
@@ -245,14 +274,6 @@ let compile (db_schema:Schema.t) (queries:todo_list_t): plan_t =
    let todos  :todo_list_t ref           = ref queries in
    let history:Materializer.ds_history_t = ref [] in
    let plan   :plan_t ref                = ref [] in
-   
-   (* Make sure to include all the table rels as well *)
-   List.iter (fun (rel_name, rel_vars, rel_updatet, rel_t) ->
-      todos := {
-         ds_name = mk_ds_name ("_"^rel_name) ([], rel_vars) (rel_t);
-         ds_definition = CalcRing.mk_val (Rel(rel_name, rel_vars, rel_t))
-      } :: !todos
-   ) (Schema.table_rels db_schema);
       
    while List.length !todos > 0 do (
       let next_ds = List.hd !todos in todos := List.tl !todos;
@@ -265,7 +286,11 @@ let compile (db_schema:Schema.t) (queries:todo_list_t): plan_t =
       (* The order in which we concatenate new_todos decides whether compilation 
       is performed 'depth-first' or 'breadth-first' with respect to the map 
       heirarchy.  Only depth-first is correct without a topological sort 
-      postprocessing step. *)
+      postprocessing step. 
+      
+      OAK: I'm not 100% convinced that this is the case.  It might be safer just 
+      to do a topo sort postprocessing step regardless.
+      *)
       todos     := new_todos @ !todos;
       plan      := (!plan) @ [compiled_ds]
    ) done; !plan

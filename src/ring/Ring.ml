@@ -1,10 +1,10 @@
-(* 
+(** 
    A module for representing expressions over a ring functorized over a based 
    type.  The module also includes tools for transforming arbitrary expressions
    into polynomials, and for computing deltas of expressions.
 *)
 
-(* The base type t over which we define the ring, plus its zero and one
+(** The base type t over which we define the ring, plus its zero and one
    elements.
 *) 
 module type Base =
@@ -16,15 +16,15 @@ end
 ;;
 
 
-(* We build rings using the Make functor over the Base type.
+(** We build rings using the Make functor over the Base type.
    Examples are in unit/test/ring.ml.
 *)
 module type Ring =
 sig
-   (* the type of base values. *)
+   (** the type of base values. *)
    type leaf_t
 
-   (* expression type. The implementation is hidden (abstract), so it
+   (** expression type. The implementation is hidden (abstract), so it
       can only be accessed through special access functions.
 
       Making expr_t abstract:
@@ -42,33 +42,33 @@ sig
                | Neg  of expr_t
 
 
-   (* constant multiplicity represented by int; could be an arbitrary
+   (** constant multiplicity represented by int; could be an arbitrary
       constant ring element. *)
    type mono_t = int * (leaf_t list)
 
 
-   (* the zero- and one-elements of the ring *)
+   (** the zero- and one-elements of the ring *)
    val zero: expr_t
    val one:  expr_t
 
 
-   (* constructing a (nested) expression using base values,
+   (** constructing a (nested) expression using base values,
       sums, and products of expressions *)
 
-   (* turns a value of type T.t into an expression (consisting just of
+   (** turns a value of type T.t into an expression (consisting just of
       that value) *)
    val mk_val: leaf_t -> expr_t
 
-   (* turns a list l of expressions into \bigsum l and \bigprod l, resp. *)
+   (** turns a list l of expressions into \bigsum l and \bigprod l, resp. *)
    val mk_sum:  (expr_t list) -> expr_t
    val mk_prod: (expr_t list) -> expr_t
    val mk_neg:  expr_t -> expr_t
 
-   (* accessing the contents of an expression *)
+   (** accessing the contents of an expression *)
    exception NotAValException
    val get_val: expr_t -> leaf_t
 
-   (* returns a list l of expressions such that (mk_sum l) resp. (mk_prod l)
+   (** returns a list l of expressions such that (mk_sum l) resp. (mk_prod l)
       are equivalent to the input.
 
       Applied to a polynomial, sum_list returns the list of monomials.
@@ -78,9 +78,9 @@ sig
    val prod_list: expr_t -> (expr_t list)
 
 
-   (* some functions for constructing modified expressions *)
+   (** some functions for constructing modified expressions *)
 
-   (* (fold sum_f prod_f leaf_f e) folds the expression by proceeding
+   (** (fold sum_f prod_f leaf_f e) folds the expression by proceeding
       bottom-up, applying
       sum_f  to the fold result of the constituents of sums;
       prod_f to the fold result of the constituents of products;
@@ -96,21 +96,21 @@ sig
              (leaf_t -> 'b) -> expr_t -> 'b
 
 
-   (* (apply_to_leaves f e)  applies function f to each base value leaf of
+   (** (apply_to_leaves f e)  applies function f to each base value leaf of
       expression e, i.e., replaces the base value v by expression (f v) *)
    val apply_to_leaves: (leaf_t -> expr_t) -> expr_t -> expr_t
 
-   (* returns the list of leaves of an expression in top-down left to right
+   (** returns the list of leaves of an expression in top-down left to right
       traversal order. *)
    val leaves: expr_t -> (leaf_t list)
 
-   (* (substitute f e1 e2 e3) replaces each occurrence of e1 in e3 by e2. *)
-   val substitute: expr_t -> (* replace_this *)
-                   expr_t -> (* by_that *)
-                   expr_t -> (* in_expr *)
-                   expr_t    (* returns expr with substitutions applied *)
+   (** (substitute f e1 e2 e3) replaces each occurrence of e1 in e3 by e2. *)
+   val substitute: expr_t -> (** replace_this *)
+                   expr_t -> (** by_that *)
+                   expr_t -> (** in_expr *)
+                   expr_t    (** returns expr with substitutions applied *)
 
-   (* make a set of substitutions given by a list of
+   (** make a set of substitutions given by a list of
      (replace_this by_that) pairs. The order in which the replacements are
      made is arbitrary, so you must not have dependent chain of replacements
      such as in (substitute_many [(a,b), (b,c)] e); you must not assume that
@@ -119,7 +119,7 @@ sig
    *)
    val substitute_many: ((expr_t * expr_t) list) -> expr_t -> expr_t
 
-   (* (extract sum_combinator_f prod_combinator_f neg_f leaf_f expr);
+   (** (extract sum_combinator_f prod_combinator_f neg_f leaf_f expr);
 
       folds an expression into a pair of values, where the first is
 
@@ -133,7 +133,7 @@ sig
    val extract: ('a list -> 'a) -> ('a list -> 'a) -> ('a -> 'a) ->
                 (leaf_t -> ('a * expr_t)) -> expr_t -> ('a * expr_t)
 
-   (* (delta f e) returns an expression such that
+   (** (delta f e) returns an expression such that
 
       mk_sum [e; (delta f e)]
 
@@ -149,26 +149,26 @@ sig
    *)
    val delta: (leaf_t -> expr_t) -> expr_t -> expr_t
 
-   (* a polynomial is a sum of monomials.
+   (** a polynomial is a sum of monomials.
       A monomial is a (possibly negated) product of base values.
       turns an arbitrary expression into a polynomial represents as a list
       of monomials represented as mono_t values.
    *)
    val polynomial: expr_t -> (mono_t list)
-   (* val polynomial: expr_t -> expr_t *)
+   (** val polynomial: expr_t -> expr_t *)
 
-   (* turns a monomial into a product expression *)
+   (** turns a monomial into a product expression *)
    val monomial_to_expr: mono_t -> expr_t
 
-   (* turns the input expression into a sum of products. *)
+   (** turns the input expression into a sum of products. *)
    val polynomial_expr:  expr_t -> expr_t
 
-   (* casts an expression to a monomial. If that is not possible
+   (** casts an expression to a monomial. If that is not possible
       (because of the presence of sums or zeros, an exception is thrown. *)
    val cast_to_monomial: expr_t -> (leaf_t list)
    exception CannotCastToMonomialException of expr_t
 
-   (* simplifies expressions by unnesting sums of sums and products
+   (** simplifies expressions by unnesting sums of sums and products
       of products, and simplifies using ones and zeros.
       The only real difference to the function polynomial is that
       products of sums are not turned into sums of products using
@@ -177,7 +177,7 @@ sig
    *)
    val simplify: expr_t -> expr_t
    
-   (* cmp_exprs sum_f prod_f leaf_f a b -> 
+   (** cmp_exprs sum_f prod_f leaf_f a b -> 
       
       Helper function for comparing expressions.  
       
@@ -204,7 +204,7 @@ sig
                   (leaf_t -> leaf_t  -> 'a option) ->
                   expr_t -> expr_t -> 'a option
    
-   (* multiply_out lhs sum rhs 
+   (** multiply_out lhs sum rhs 
       
       Shorthand operation that multiplies every sum term in sum by lhs and rhs
       and returns the resultant list of expressions
@@ -215,7 +215,7 @@ end
 
 
 
-(* For using Ring, there should be no need to read on below.
+(** For using Ring, there should be no need to read on below.
    The following code implements a ring with some standard operations
    on expressions; there is nothing specific to DBToaster in here.
 
@@ -245,15 +245,15 @@ struct
 
    type mono_t = int * (leaf_t list)
 
-   let zero = Val(T.zero)  (* Sum [] *)
-   let one  = Val(T.one)   (* Prod [] *)
+   let zero = Val(T.zero)  (** Sum [] *)
+   let one  = Val(T.one)   (** Prod [] *)
 
    let  sum_list e = match e with  Sum(l) -> l | _ -> [e]
    let prod_list e = match e with Prod(l) -> l | _ -> [e]
 
    let mk_val a = Val(a)
 
-   (* any construction of complex expressions is done with mk_sum and mk_prod,
+   (** any construction of complex expressions is done with mk_sum and mk_prod,
       which enforce the representation invariant.
    *)
    let mk_sum  l =
@@ -330,7 +330,7 @@ struct
             mk_prod((delta lf_delta x)::l);
             mk_prod([mk_sum[x; (delta lf_delta x)];
                      (delta lf_delta (mk_prod(l)))])
-            (* this nesting makes sense because it renders the delta
+            (** this nesting makes sense because it renders the delta
                computation cheaper: delta for l is only computed once here;
                we can still distribute later if we need it. *)
          ])

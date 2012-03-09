@@ -1,3 +1,8 @@
+(**
+   Transforming a SQL parse tree (SQL.expr_t) and database definition into 
+   Calculus expressions, and DBToaster's internal Schema.t representation.
+*)
+
 open Ring
 open Types
 open Arithmetic
@@ -11,7 +16,8 @@ let tmp_var (vn:string) (vt:type_t): var_t =
    tmp_var_id := !tmp_var_id + 1;
    (vn^(string_of_int !tmp_var_id), vt)
 
-(* This utility function performs conversion from arbitrary calculus expressions 
+(** 
+   This utility function performs conversion from arbitrary calculus expressions 
    to values (e.g., so that the expression values can be compared).  It does 
    this by lifting the expression into a newly created variable (if necessary).
    

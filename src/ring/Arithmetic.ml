@@ -1,4 +1,4 @@
-(*
+(**
    A ring of values (i.e., operations for doing arithmetic over constants),
    variables, and functions thereof.
    

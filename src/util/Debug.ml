@@ -1,10 +1,26 @@
+(**
+   Functionality for managing debugging statements and 'hidden' functionality in  
+   DBToaster.  Accessed through dbtoaster's -d flag.
+   
+   The debug module keeps track of a list of globally 'active' debug modes.  
+   Each mode is identified in the string, and referenced within the code via the 
+   Debug.exec, Debug.print, and Debug.active functions.  
+   
+   Debug modes can be explicitly managed in the code using Debug.activate or 
+   Debug.deactivate.  Users can activate debug modes in the dbtoaster binary by
+   passing -d [mode name].  A list of available Debug modes is being maintained 
+   on the Assembla page.
+*)
 
+
+(**/**)
 module StringSet = Set.Make(String)
 
 module DebugInternal =
 struct
    let debug_modes = ref StringSet.empty;
 end
+(**/**)
 
 let set_modes new_modes = DebugInternal.debug_modes := new_modes;;
 

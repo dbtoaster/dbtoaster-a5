@@ -1,4 +1,4 @@
-(*
+(**
    Global typesystem for use by all of DBToaster's compilation stages.
 *)
 

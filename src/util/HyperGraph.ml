@@ -1,4 +1,8 @@
-(* compute the connected components of the hypergraph where the nodes
+(** 
+   Tools for working with HyperGraphs, and in particular identifying connected
+   components
+
+ compute the connected components of the hypergraph where the nodes
    in guard_set may be ignored.
    factorizes a MultiNatJoin of leaves given in list form.
 

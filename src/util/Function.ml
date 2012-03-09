@@ -1,3 +1,7 @@
+(**
+   Utilities for performing list-based translation
+*)
+
 type ('a, 'b) table_fn_t = ('a * 'b) list
 
 exception NonFunctionalMappingException

@@ -1,3 +1,7 @@
+(**
+   Computing the delta of a Calculus expression.
+*)
+
 open Types
 open Ring
 open Arithmetic

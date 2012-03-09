@@ -1,7 +1,16 @@
-(* 
+(**
    Additional functionality for manipulating and working with lists
 *)
 
+(** Scan through elements of a list.  Similar to List.iter, but the elements
+    both before and after the element currently being processed are passed to 
+    the lambda function.
+    
+    e.g., On the list [1;2;3;4], the lambda function would be invoked as...
+    f [] 1 [2;3;4]
+    f [1] 2 [3;4]
+    f [1;2] 3 [4]
+    f [1;2;3] 4 [] *)
 let scan (f:('a list -> 'a -> 'a list -> unit)) (l:('a list)): unit = 
    let rec iterate prev curr_next =
       match curr_next with 
@@ -9,13 +18,17 @@ let scan (f:('a list -> 'a -> 'a list -> unit)) (l:('a list)): unit =
          | curr::next -> (f prev curr next); (iterate (prev@[curr]) next)
    in iterate [] l
    
+(** Map the elements of a list in the same manner as scan.  Like 
+    ListExtras.scan, but based on List.map instead of List.iter. *)
 let scan_map (f:('a list -> 'a -> 'a list -> 'b)) (l:('a list)): ('b list) = 
    let rec iterate prev curr_next =
       match curr_next with 
          | []         -> []
          | curr::next -> (f prev curr next) :: (iterate (prev@[curr]) next)
    in iterate [] l
-   
+
+(** Fold the elements of a list in the sam manner as scan.  Like ListExtras.scan
+    but based on List.fold_left instead of List.iter *)
 let scan_fold (f:('b -> 'a list -> 'a -> 'a list -> 'b)) (init:'b) 
               (l:('a list)): 'b = 
    let rec iterate curr_val prev curr_next =
@@ -26,6 +39,12 @@ let scan_fold (f:('b -> 'a list -> 'a -> 'a list -> 'b)) (init:'b)
                          )
    in iterate init [] l
 
+(** A standard reduce (i.e., group-by) implementation on lists.
+
+    Given a list of 2-tuples {b (a,b)}, produce a list of 2-tuples 
+    {b (a,b list)} such that the returned list has only one element for every 
+    distinct value of {b a}, and every value of {b b} appears paired with the 
+    same value of {b a} that it appeared with in the input list.*)
 let reduce_assoc (l:('a * 'b) list): (('a * ('b list)) list) =
    List.fold_right (fun (a,b) ret ->
       if List.mem_assoc a ret
@@ -33,6 +52,8 @@ let reduce_assoc (l:('a * 'b) list): (('a * ('b list)) list) =
       else (a, [b]) :: ret
    ) l []
 
+(** Flatten on a list of 2-tuples of lists.  Shorthand for List.split, and 
+    flattening each list individually *)
 let flatten_list_pair (l:('a list * 'b list) list): ('a list * 'b list) =
    let (a, b) = List.split l in
       (List.flatten a, List.flatten b)

@@ -115,7 +115,12 @@ devtest: bin/dbtoaster_top
 queries: bin/dbtoaster
 	make -C test/queries
 
-.PHONY: all clean test states
+doc: $(C_FILES)
+	@FILES="$(patsubst %,../%.ml,$(FILES))"\
+	 DIRS="$(patsubst %,../%,$(DIRS))"\
+	 make -C doc
+
+.PHONY: all clean test states doc
 
 #################################################
 

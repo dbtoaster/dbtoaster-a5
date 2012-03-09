@@ -1,4 +1,4 @@
-(* 
+(**
    A module for expressing and performing basic operations over DBToaster
    relational calculus.  Operations are provided for taking deltas.
    
@@ -231,6 +231,12 @@ let rec fold ?(scope = []) ?(schema = [])
 let rec expr_is_singleton ?(scope=[]) (expr:expr_t): bool =
    (ListAsSet.inter scope (snd (schema_of_expr expr))) = []
 
+(************
+ * Like Ring.fold, except it computes the scope and schema at each node.
+ *
+ * WARNING: Calculus.rewrite DOES descend into AggSums, Lifts, and 
+ * externals.  This is UNLIKE Calculus.fold
+ *************)
 let rec rewrite ?(scope = []) ?(schema = [])
              (sum_fn:   schema_t -> expr_t list     -> expr_t)
              (prod_fn:  schema_t -> expr_t list     -> expr_t)
@@ -255,6 +261,12 @@ let rec rewrite ?(scope = []) ?(schema = [])
          end)
    ) e
 
+(************
+ * Like Ring.fold, except it computes the scope and schema at each node.
+ *
+ * WARNING: Calculus.rewrite_leaves DOES descend into AggSums, Lifts, and 
+ * externals.  This is UNLIKE Calculus.fold
+ *************)
 let rewrite_leaves ?(scope = []) ?(schema = [])
                    (leaf_fn:schema_t -> CalcRing.leaf_t -> expr_t)
                    (e: expr_t): expr_t =

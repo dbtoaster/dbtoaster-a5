@@ -1,4 +1,6 @@
-(*
+(**
+   Internal representation of a SQL parse tree.
+
    CREATE TABLE name(col1 type1[, ...]) 
    FROM type 
    
