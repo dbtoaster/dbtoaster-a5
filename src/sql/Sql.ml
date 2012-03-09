@@ -1,5 +1,6 @@
 (**
-   Internal representation of a SQL parse tree.
+   Internal representation of a SQL parse tree.  The first representation in the 
+   compiler pipeline.
 
    CREATE TABLE name(col1 type1[, ...]) 
    FROM type 

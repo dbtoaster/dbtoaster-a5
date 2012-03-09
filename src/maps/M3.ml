@@ -1,5 +1,6 @@
 (** 
-   The fourth stage in the compilation process (SQL -> Calc -> Plan -> M3). 
+   The fourth representation in the calculus compiler pipeline
+   (SQL -> Calc -> Plan -> M3). 
    
    An M3 program is a reshuffling of the triggers in a Plan, so that they're 
    organized by triggering event.  This is stored in addition to some user-

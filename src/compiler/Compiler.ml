@@ -5,7 +5,7 @@
    of named queries and transforms them into a Plan.plan_t.  
    
    Compiler makes extensive use of Calculus functionality, and in particular
-   CalculusOptimizer and CalculusDeltas.
+   CalculusTransforms and CalculusDeltas.
   *)
 
 open Ring
@@ -120,7 +120,7 @@ let compute_init_at_start (table_rels:Schema.rel_t list) (expr:expr_t): expr_t =
          then CalcRing.mk_val (Rel(rn,rv,rt))
          else CalcRing.zero
       | _ -> CalcRing.mk_val lf
-   ) (CalculusOptimizer.optimize_expr (Calculus.schema_of_expr expr) expr)
+   ) (CalculusTransforms.optimize_expr (Calculus.schema_of_expr expr) expr)
 
 
 (******************************************************************************)
@@ -146,7 +146,7 @@ let compile_map (db_schema:Schema.t) (history:Materializer.ds_history_t)
       "Optimizing: "^(string_of_expr todo.ds_definition)
    );
    let optimized_defn = 
-      CalculusOptimizer.optimize_expr (todo_ivars, todo_ovars) 
+      CalculusTransforms.optimize_expr (todo_ivars, todo_ovars) 
                                       todo.ds_definition
    in
    Debug.print "LOG-COMPILE-DETAIL" (fun () ->
@@ -180,7 +180,8 @@ let compile_map (db_schema:Schema.t) (history:Materializer.ds_history_t)
       let prefixed_relv = List.map (fun (n,t) -> (map_prefix^n, t)) relv in
       let delta_event = mk_evt (reln, prefixed_relv, Schema.StreamRel, relt) in
       let delta_expr_unextracted = 
-         CalculusOptimizer.optimize_expr (todo_ivars @ prefixed_relv,todo_ovars) 
+         CalculusTransforms.optimize_expr 
+            (todo_ivars @ prefixed_relv,todo_ovars) 
             (CalculusDeltas.delta_of_expr delta_event optimized_defn)
       in
       let (delta_renamings, delta_expr) = 

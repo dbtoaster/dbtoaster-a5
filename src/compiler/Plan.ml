@@ -1,5 +1,6 @@
 (**
-   A plan is the third representation in the Calculus pipeline (SQL->Calc->Plan)
+   A plan is the third representation in the compiler pipeline 
+   (SQL -> Calc -> Plan)
    
    Each plan consists of a set of compiled datastructures, which consist of 
    {ul

@@ -10,7 +10,7 @@ FILES=\
 	src/ring/Ring\
 	src/ring/Arithmetic\
 	src/calculus/Calculus\
-	src/calculus/CalculusOptimizer\
+	src/calculus/CalculusTransforms\
 	src/calculus/CalculusDeltas\
 	src/calculus/CalculusDecomposition\
 	src/calculus/SqlToCalculus\
@@ -18,7 +18,11 @@ FILES=\
 	src/compiler/Compiler\
 	src/maps/M3\
 	src/maps/Pattern\
-    src/maps/M3DM\
+  src/maps/M3DM\
+
+TOPLEVEL_FILES=\
+	src/global/Driver\
+	src/global/UnitTest
 
 LEXERS=\
 	src/parsers/Sqllexer\
@@ -105,6 +109,7 @@ states: $(patsubst %,%.states,$(PARSERS))
 clean: 
 	rm -f $(CLEAN_FILES)
 	make -C test/queries clean
+	make -C doc clean
 
 test: bin/dbtoaster_top
 	@DIRS="$(DIRS)" make -C test
@@ -115,8 +120,8 @@ devtest: bin/dbtoaster_top
 queries: bin/dbtoaster
 	make -C test/queries
 
-doc: $(C_FILES)
-	@FILES="$(patsubst %,../%.ml,$(FILES))"\
+doc: $(C_FILES) $(patsubst %,%.ml,$(TOPLEVEL_FILES))
+	@FILES="$(patsubst %,../%.ml,$(FILES) $(TOPLEVEL_FILES))"\
 	 DIRS="$(patsubst %,../%,$(DIRS))"\
 	 make -C doc
 

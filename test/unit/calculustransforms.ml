@@ -23,7 +23,7 @@ log_test "Valid Commute"
 let test msg input output =
    log_test ("Combine Values ("^msg^")")
       string_of_expr
-      (CalculusOptimizer.combine_values (parse_calc input))
+      (CalculusTransforms.combine_values (parse_calc input))
       (parse_calc output)
 in
    test "Constants and Var"
@@ -40,7 +40,7 @@ in
 let test msg scope input output =
    log_test ("Lift Equalities ("^msg^")")
       string_of_expr
-      (CalculusOptimizer.lift_equalities scope (parse_calc input))
+      (CalculusTransforms.lift_equalities scope (parse_calc input))
       (parse_calc output)
 in 
    test "Empty Scope, Unliftable" [] 
@@ -72,7 +72,7 @@ in
 let test msg schema input output =
    log_test ("Unify Lifts ("^msg^")")
       string_of_expr
-      (CalculusOptimizer.unify_lifts schema (parse_calc input))
+      (CalculusTransforms.unify_lifts schema (parse_calc input))
       (parse_calc output)
 in
    (* We don't unify expressions for now 
@@ -150,7 +150,7 @@ in
 let test msg input output =
    log_test ("Nesting Rewrites ("^msg^")")
       string_of_expr
-      (CalculusOptimizer.nesting_rewrites (parse_calc input))
+      (CalculusTransforms.nesting_rewrites (parse_calc input))
       (parse_calc output)
 in
    test "Lift of two Lifts"
@@ -166,7 +166,7 @@ in
 let test msg scope input output =
    log_test ("Factorize One Polynomial ("^msg^")")
       string_of_expr
-      (CalculusOptimizer.factorize_one_polynomial scope (List.map parse_calc input))
+      (CalculusTransforms.factorize_one_polynomial scope (List.map parse_calc input))
       (parse_calc output)
 in
 (*   Debug.activate "LOG-FACTORIZE";*)
@@ -187,7 +187,7 @@ in
 let test msg scope input output =
    log_test ("Factorize Sums ("^msg^")")
       string_of_expr
-      (CalculusOptimizer.factorize_polynomial scope (parse_calc input))
+      (CalculusTransforms.factorize_polynomial scope (parse_calc input))
       (parse_calc output)
 in
 (*   Debug.activate "LOG-FACTORIZE";*)
@@ -207,12 +207,12 @@ in
       "(R(A) * A * 2)+(R(A) * C)-((R(A) * A * D)+(S(A) * A))"
       "(R(A) * ((A * 2) + C))-(((R(A) * D)+S(A)) * A)"
 ;;
-let test ?(opts = CalculusOptimizer.default_optimizations)
+let test ?(opts = CalculusTransforms.default_optimizations)
          ?(skip_opts = [])
          msg scope schema input output =
    log_test ("End-to-end ("^msg^")")
       string_of_expr
-      (CalculusOptimizer.optimize_expr 
+      (CalculusTransforms.optimize_expr 
          ~optimizations:(ListAsSet.diff opts skip_opts)
          (List.map var scope, List.map var schema) 
          (parse_calc input)

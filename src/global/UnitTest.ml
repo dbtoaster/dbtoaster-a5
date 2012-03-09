@@ -71,7 +71,7 @@ let parse_calc ?(opt=false) (expr:string):Calculus.expr_t =
       let ret = 
          Calculusparser.calculusExpr Calculuslexer.tokenize 
                                      (Lexing.from_string expr)
-      in if opt then CalculusOptimizer.optimize_expr 
+      in if opt then CalculusTransforms.optimize_expr 
                         (Calculus.schema_of_expr ret) ret
                 else ret
    with Parsing.Parse_error -> (
