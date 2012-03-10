@@ -10,6 +10,7 @@ unit:
 	@$(UNIT_TEST) unit/calculus.ml
 	@$(UNIT_TEST) unit/calculustransforms.ml
 	@$(UNIT_TEST) unit/calculusdeltas.ml
+	@$(UNIT_TEST) unit/heuristics.ml
 	@$(UNIT_TEST) unit/compiler.ml
 
 development:

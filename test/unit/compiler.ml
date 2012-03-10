@@ -44,6 +44,7 @@ test_compile "RTest" "AggSum([], R(A,B))" [
    ]
 ]
 ;;
+(*
 test_compile "RSTest" "AggSum([], R(A,B)*S(B,C))" [
    "RSTest", [], "AggSum([], R(A,B)*S(B,C))", TInt, [
       true,  "S", ["RSTest_pSB"; "RSTest_pSC"], [], 
@@ -75,6 +76,7 @@ test_compile "RSTest" "AggSum([], R(A,B)*S(B,C))" [
    ];
 ]
 ;;
+*)
 (*
 Debug.activate "VISUAL-DIFF";;
 Debug.activate "LOG-COMPILE-DETAIL";;
@@ -83,6 +85,7 @@ Debug.activate "PRINT-VERBOSE";;
 Debug.activate "LOG-UNIFY-LIFTS";;
 Debug.activate "LOG-FACTORIZE";;
 *)
+(*
 test_compile "RSABTest" "AggSum([], R(A,B)*S(B,C)*A*C)" [
    "RSABTest", [], "AggSum([], R(A,B)*S(B,C)*A*C)", TFloat, [
       true,  "S", ["RSABTest_pSB"; "RSABTest_pSC"], [], 
@@ -113,3 +116,4 @@ test_compile "RSABTest" "AggSum([], R(A,B)*S(B,C)*A*C)" [
          "-1*RSABTest_mR1_mSC"; 
    ];
 ]
+*)

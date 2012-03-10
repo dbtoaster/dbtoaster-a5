@@ -14,6 +14,7 @@ open Types
 open Calculus
 open Plan
 
+(*
 module TemporaryMaterializer = struct
    (* Temporary hack to test the rest of the code.  This materializer doesn't
       do anything interesting, it just materializes the entire expression, doing
@@ -87,7 +88,7 @@ module TemporaryMaterializer = struct
 end
 
 module Materializer = TemporaryMaterializer
-
+*)
 (******************************************************************************)
 
 type todo_list_t = ds_t list
@@ -191,9 +192,9 @@ let compile_map (db_schema:Schema.t) (history:Materializer.ds_history_t)
          "Delta: "^(Schema.string_of_event delta_event)^
             " DO "^(string_of_expr delta_expr)
       );
+
       let (new_todos, materialized_delta) = 
-         Materializer.materialize history map_prefix (Some(delta_event)) 
-                                  delta_expr
+         Heuristics.materialize history map_prefix (Some(delta_event)) delta_expr
       in
          Debug.print "LOG-COMPILE-DETAIL" (fun () ->
             "Materialized: "^(string_of_expr materialized_delta)
@@ -232,7 +233,7 @@ let compile_map (db_schema:Schema.t) (history:Materializer.ds_history_t)
       if todo_ivars <> [] then
          (* If the todo has input variables, it needs a default initializer *)
          let (init_todos,init_expr) =
-            Materializer.materialize history (todo_name^"_init") None 
+            Heuristics.materialize history (todo_name^"_init") None 
                                      optimized_defn
          in (init_todos, Some(init_expr))
       else
@@ -273,7 +274,7 @@ let compile_table ((reln, relv, relut, relt):Schema.rel_t): compiled_ds_t =
 
 let compile (db_schema:Schema.t) (queries:todo_list_t): plan_t =
    let todos  :todo_list_t ref           = ref queries in
-   let history:Materializer.ds_history_t = ref [] in
+   let history:Heuristics.ds_history_t = ref [] in
    let plan   :plan_t ref                = ref [] in
       
    while List.length !todos > 0 do (

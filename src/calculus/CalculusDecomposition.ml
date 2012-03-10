@@ -10,7 +10,7 @@ module C = Calculus
 
 
 (******************************************************************************)
-
+(* TODO ensure that different expessions under AggSum have disjunct schemas *)
 let decompose_poly (expr:C.expr_t):(var_t list * C.expr_t) list = 
    let schema = snd (C.schema_of_expr expr) in
    let rec erase_aggsums e = 
