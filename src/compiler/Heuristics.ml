@@ -20,10 +20,18 @@ let extract_event_reln (event:Schema.event_t option) : (string option) =
 		| Some(Schema.DeleteEvent((reln,_,_,_))) -> Some(reln)
 		| _  -> None
 
+let schema_of_expr ?(scope = []) (expr:expr_t) : (var_t list * var_t list) =
+	let (expr_ivars, expr_ovars) = Calculus.schema_of_expr expr in
+	let new_ovars = ListAsSet.inter expr_ivars scope in
+		(ListAsSet.diff expr_ivars new_ovars, ListAsSet.union expr_ovars new_ovars) 
+
+let string_of_vars = ListExtras.string_of_list string_of_var
+
 (******************************************************************************)
 
 (* Returns todo list with the current expression *)
-let rec materialize ?(scope = []) (history:ds_history_t) (prefix:string) 
+let rec materialize ?(scope = []) ?(schema = [])
+										(history:ds_history_t) (prefix:string) 
 							      (event:Schema.event_t option) (expr:expr_t) 
 										: (ds_t list * expr_t) =
 									
@@ -31,16 +39,19 @@ let rec materialize ?(scope = []) (history:ds_history_t) (prefix:string)
 		(* Note: all subexpressions have the same schema *)
 
 		let scope_evars = ListAsSet.union scope (extract_event_vars event) in
-			fst (List.fold_left ( fun ((todos, mat_expr), i) (schema, subexpr) ->
-						let subexpr_opt = optimize_expr (scope_evars, schema) subexpr in
-						let subexpr_name = (prefix^"_"^(string_of_int i)) in
-						(*
-						print_string ("subexpr_name: "^subexpr_name^
-													"   Scope: "^(ListExtras.string_of_list string_of_var scope_evars)^
-												  "   Schema: "^(ListExtras.string_of_list string_of_var schema)^"\n");
-						*)
+			fst (List.fold_left ( fun ((todos, mat_expr), i) (subexpr_schema, subexpr) ->
+						let subexpr_new_schema = ListAsSet.union subexpr_schema schema in
+						let subexpr_opt = optimize_expr (scope_evars, subexpr_new_schema) subexpr in
+						let subexpr_name = (prefix^"_"^(string_of_int i)) in						
+
+						Debug.print "LOG-HEURISTICS-DETAIL" (fun () -> 
+							"Materializing expression: "^(string_of_expr subexpr)^"    "^
+							"Scope: ["^(string_of_vars scope)^"]    "^
+			 				"Schema: ["^	(string_of_vars schema)^"]"
+						);
+
 						let (todos_subexpr, mat_subexpr) = 
-							materialize_expr history subexpr_name event (scope_evars, schema) subexpr_opt 
+							materialize_expr history subexpr_name event (scope_evars, subexpr_new_schema) subexpr_opt 
 					  in	
 						  	((todos @ todos_subexpr, CalcRing.mk_sum [mat_expr; mat_subexpr]), 
 								i + 1)	
@@ -104,30 +115,25 @@ and materialize_expr (history:ds_history_t) (prefix:string)
 			) ((CalcRing.one, CalcRing.one, CalcRing.one), scope) (CalcRing.prod_list expr)) 
 		in 		
 			
+		let (mat_exprs_ivars, mat_exprs_ovars) = schema_of_expr ~scope:scope mat_exprs in
+		let lifts_exprs_ivars = fst (schema_of_expr ~scope:scope lift_exprs) in
+		let rest_exprs_ivars = fst (schema_of_expr ~scope:scope rest_exprs) in
+		(* The schema should be extended with the input variables of other expressions *) 
+		let mat_exprs_schema = 
+			(ListAsSet.multiunion [ schema; lifts_exprs_ivars; rest_exprs_ivars]) in
+		
 		(* Lifts are always materialized separately *)
-		let scope_lift = ListAsSet.union scope (snd (schema_of_expr mat_exprs)) in
+		let scope_lift = ListAsSet.union scope mat_exprs_ovars in
 		let (todo_lifts, mat_lifts) = 
 				List.fold_left (fun (todos, mats) lift ->
 						match (CalcRing.get_val lift) with
 								| Lift(v, subexp) ->
-									let (todo, mat) = materialize ~scope:scope_lift 
+									let (todo, mat) = materialize ~scope:scope_lift ~schema:scope_lift
 											history prefix event subexp in
 									(todos @ todo, CalcRing.mk_prod [mats; CalcRing.mk_val (Lift(v, mat))])			
 								| _  -> (todos, mats)
 				) ([], CalcRing.one) (CalcRing.prod_list lift_exprs)
 		in																
-		
-		let (mat_exprs_ivars, mat_exprs_ovars) = schema_of_expr mat_exprs in
-			Debug.print "LOG-COMPILE-DETAIL" (fun () -> 
-					"Materializing expression: "^(string_of_expr mat_exprs)^"\n"^
-	 				"Output Variables: ["^
-						(ListExtras.string_of_list string_of_var mat_exprs_ovars)^"]"
-			);
-		(*
-		print_string ("Output variables: "^(ListExtras.string_of_list string_of_var mat_exprs_ovars)^
-									"    Schema: "^(ListExtras.string_of_list string_of_var schema)^
-									"    Intersection: "^(ListExtras.string_of_list string_of_var (ListAsSet.inter mat_exprs_ovars schema))^"\n");
-		*)
 		let (found_ds,mapping_if_found) = 
 				List.fold_left (fun result i ->
 						if (snd result) <> None then result else
@@ -139,8 +145,8 @@ and materialize_expr (history:ds_history_t) (prefix:string)
 							ds_name = CalcRing.mk_val (
 									External(
 			                prefix,
-			                ListAsSet.diff mat_exprs_ivars scope,
-			                ListAsSet.inter mat_exprs_ovars schema,
+			                mat_exprs_ivars,
+											ListAsSet.inter mat_exprs_ovars mat_exprs_schema,
 			                type_of_expr mat_exprs,
 			                None
 			            )
@@ -151,11 +157,10 @@ and materialize_expr (history:ds_history_t) (prefix:string)
 			      ([new_ds] @ todo_lifts, CalcRing.mk_prod ( [new_ds.ds_name; mat_lifts; rest_exprs] ))
 			         
 			| Some(mapping) ->
-					Debug.print "LOG-COMPILE-DETAIL" (fun () -> 
-   						"Found Mapping to : "^(string_of_expr found_ds.ds_name)^
-   						"\nWith: "^
-							(ListExtras.ocaml_of_list (fun ((a,_),(b,_))->a^"->"^b) 
-                                        mapping)
+					Debug.print "LOG-HEURISTICS-DETAIL" (fun () -> 
+   						"Found Mapping to: "^(string_of_expr found_ds.ds_name)^
+   						"      With: "^
+							(ListExtras.ocaml_of_list (fun ((a,_),(b,_))->a^"->"^b) mapping)
         		);
         		(todo_lifts, CalcRing.mk_prod [ (rename_vars mapping found_ds.ds_name); 
 																				  (rename_vars mapping mat_lifts); 

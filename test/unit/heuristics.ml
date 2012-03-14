@@ -3,6 +3,9 @@ open Arithmetic
 open Calculus
 open UnitTest
 ;;
+
+Debug.activate "LOG-HEURISTICS-DETAIL";;
+
 let test msg input output =
    log_test ("Decomposition ("^msg^")")
       string_of_expr
@@ -36,17 +39,17 @@ in
 ;;
 
 let test msg input output =
-	 let history:Heuristics.ds_history_t = ref [] in 
-	 let event = Some(Schema.InsertEvent(schema_rel "R" ["dA"])) in
-	 let expr = parse_calc input in
-   log_test ("Materialization ("^msg^")")
-      (fun x -> x)
-    		(string_of_expr (snd(Heuristics.materialize history "M1" event expr)))
-      (output) 
-in
+	let history:Heuristics.ds_history_t = ref [] in 
+	let event = Some(Schema.InsertEvent(schema_rel "R" ["dA"])) in
+	let expr = parse_calc input in 
+	   log_test ("Materialization ("^msg^")")
+     	string_of_expr
+     	(snd(Heuristics.materialize history "M1" event expr))
+      (parse_calc output) 
+in 
 	test "Simple"
       "R(A,B)"
-      "M1_1(int)[][A, B]";
+      "M1_1(int)[][A, B]";	
 	test "Simple with an aggregation"
       "AggSum([A], R(A,B))"
       "M1_1(int)[][A]";
@@ -82,15 +85,14 @@ in
       "(M1_1(int)[][A] * (C ^= M1_1_1(float)[][A, B]))";
 	test "Aggregation with a lift containing a relevant relation and a condition"
 			"AggSum([A], R(A,B) * (C ^= R(A,B) * B) * [C > 0])"
-      "(M1_1(int)[][A] * (C ^= M1_1_1(float)[][A, B]) * [C > 0])";
-	
-(*	
-	test "Killer2"
-			"AggSum([A], R(A) * S(C) * (D ^= R(B) * C))"		
-			"(M1_1(int)[][A,C] * (D ^= M1_1_1(float)[][B,C])";
-			
-	test "Killer"
+      "(M1_1(int)[][A] * (C ^= M1_1_1(float)[][A, B]) * [C > 0])";	
+	test "Extending schema due to a comparison"
 			"AggSum([A], R(A,B) * [B > C])"		
-			"(M1_1(int)[][A,B] * [B > C])";
-*)																								
+			"(M1_1(int)[][A, B] * [B > C])";
+	test "Extending schema due to a lift"
+			"AggSum([A], R(A) * S(C) * (D ^= R(B) * C))"		
+			"(M1_1(int)[][A, C] * (D ^= M1_1_1(float)[][B, C]))";
+	test "Mapping example - Killer"
+			"R(A) * S(C) * (E ^= R(B) * S(D))"		
+			"(M1_1_1(int)[][A, C] * (E ^= M1_1_1(int)[][B, D]))";																				
 ;;
