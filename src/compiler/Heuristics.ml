@@ -115,7 +115,7 @@ and materialize_expr (history:ds_history_t) (prefix:string)
 			) ((CalcRing.one, CalcRing.one, CalcRing.one), scope) (CalcRing.prod_list expr)) 
 		in 		
 			
-		let (mat_exprs_ivars, mat_exprs_ovars) = schema_of_expr ~scope:scope mat_exprs in
+		let mat_exprs_ovars = snd (schema_of_expr ~scope:scope mat_exprs) in
 		let lifts_exprs_ivars = fst (schema_of_expr ~scope:scope lift_exprs) in
 		let rest_exprs_ivars = fst (schema_of_expr ~scope:scope rest_exprs) in
 		(* The schema should be extended with the input variables of other expressions *) 
@@ -123,7 +123,8 @@ and materialize_expr (history:ds_history_t) (prefix:string)
 			(ListAsSet.multiunion [ schema; lifts_exprs_ivars; rest_exprs_ivars]) in
 		
 		(* Lifts are always materialized separately *)
-		let scope_lift = ListAsSet.union scope mat_exprs_ovars in
+		(* let scope_lift = ListAsSet.union scope mat_exprs_ovars in *)
+		let scope_lift = scope in
 		let (todo_lifts, mat_lifts) = 
 				List.fold_left (fun (todos, mats) lift ->
 						match (CalcRing.get_val lift) with
@@ -134,35 +135,44 @@ and materialize_expr (history:ds_history_t) (prefix:string)
 								| _  -> (todos, mats)
 				) ([], CalcRing.one) (CalcRing.prod_list lift_exprs)
 		in																
-		let (found_ds,mapping_if_found) = 
-				List.fold_left (fun result i ->
-						if (snd result) <> None then result else
-						(i, (cmp_exprs i.ds_definition mat_exprs))
-      		) ({ds_name=CalcRing.one;ds_definition=CalcRing.one}, None) !history
-		in begin match mapping_if_found with
-			| None -> 
-					let new_ds = {
-							ds_name = CalcRing.mk_val (
-									External(
-			                prefix,
-			                mat_exprs_ivars,
-											ListAsSet.inter mat_exprs_ovars mat_exprs_schema,
-			                type_of_expr mat_exprs,
-			                None
-			            )
-			        );
-			        ds_definition = mat_exprs;
-			    } in
-						history := new_ds :: !history;
-			      ([new_ds] @ todo_lifts, CalcRing.mk_prod ( [new_ds.ds_name; mat_lifts; rest_exprs] ))
-			         
-			| Some(mapping) ->
-					Debug.print "LOG-HEURISTICS-DETAIL" (fun () -> 
-   						"Found Mapping to: "^(string_of_expr found_ds.ds_name)^
-   						"      With: "^
-							(ListExtras.ocaml_of_list (fun ((a,_),(b,_))->a^"->"^b) mapping)
-        		);
-        		(todo_lifts, CalcRing.mk_prod [ (rename_vars mapping found_ds.ds_name); 
-																				  (rename_vars mapping mat_lifts); 
-																					(rename_vars mapping rest_exprs)])
-		end
+
+		(* Graph Decomposition *)		
+		let mat_subexprs = snd (decompose_graph scope (mat_exprs_schema, mat_exprs)) in
+		(*let mat_subexprs = [(mat_exprs_schema, mat_exprs)] in*)
+		fst (
+			List.fold_left ( fun ((todos, mats), i) (schema_mat_expr, mat_expr) ->
+			
+			let (mat_expr_ivars, mat_expr_ovars) = schema_of_expr ~scope:scope mat_expr in
+
+			let (found_ds, mapping_if_found) = 
+					List.fold_left (fun result i ->
+							if (snd result) <> None then result else
+							(i, (cmp_exprs i.ds_definition mat_expr))
+	      		) ({ds_name = CalcRing.one; ds_definition = CalcRing.one}, None) !history
+			in begin match mapping_if_found with
+				| None -> 
+						let new_ds = {
+								ds_name = CalcRing.mk_val (
+										External(
+				                (prefix^"_G"^(string_of_int i)),
+				                mat_expr_ivars,
+												ListAsSet.inter mat_expr_ovars mat_exprs_schema,
+				                type_of_expr mat_expr,
+				                None
+				            )
+				        );
+				        ds_definition = mat_expr;
+				    } in
+							history := new_ds :: !history;
+				      (([new_ds] @ todos, CalcRing.mk_prod [new_ds.ds_name; mats]), i+1)
+				         
+				| Some(mapping) ->
+						Debug.print "LOG-HEURISTICS-DETAIL" (fun () -> 
+	   						"Found Mapping to: "^(string_of_expr found_ds.ds_name)^
+	   						"      With: "^
+								(ListExtras.ocaml_of_list (fun ((a,_),(b,_))->a^"->"^b) mapping)
+	        		);
+	        		((todos, CalcRing.mk_prod [ (rename_vars mapping found_ds.ds_name); mats]), i+1)
+			end		
+			) ((todo_lifts, CalcRing.mk_prod [mat_lifts; rest_exprs]), 1) mat_subexprs
+		)
