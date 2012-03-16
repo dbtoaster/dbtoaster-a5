@@ -4,7 +4,7 @@ open Calculus
 open UnitTest
 ;;
 
-(* Debug.activate "LOG-HEURISTICS-DETAIL";; *)
+(*Debug.activate "LOG-HEURISTICS-DETAIL";;*) 
 
 let test msg input output =
    log_test ("Decomposition ("^msg^")")
@@ -61,31 +61,48 @@ in
 
 let test msg input output =
 	let history:Heuristics.ds_history_t = ref [] in 
-	let event = Some(Schema.InsertEvent(schema_rel "R" ["dA"])) in
+	let event = Some(Schema.InsertEvent(schema_rel "R" ["dA"; "dB"])) in
 	let expr = parse_calc input in 
 	   log_test ("Materialization ("^msg^")")
      	string_of_expr
-     	(snd(Heuristics.materialize history "M1" event expr))
+     	(snd(Heuristics.materialize history "M" event expr))
       (parse_calc output) 
 in 
 	test "Simple"
       "R(A,B)"
-      "M1_1_1(int)[][A, B]";	
+      "M_t1_g1(int)[][A, B]";	
 	test "Simple with an aggregation"
       "AggSum([A], R(A,B))"
-      "M1_1_1(int)[][A]";
+      "M_t1_g1(int)[][A]";
 	test "Binary sum with an aggregation"
       "AggSum([A], R(A,B) + S(A,C))"
-      "(M1_1_1(int)[][A] + M1_2_1(int)[][A])";
+      "(M_t1_g1(int)[][A] + M_t2_g1(int)[][A])";
 	test "Join with an aggregation"
       "AggSum([A], R(A,B) * S(B))"
-      "M1_1_1(int)[][A]";		
+      "M_t1_g1(int)[][A]";		
 	test "Aggregation with a condition"
 			"AggSum([A], R(A,B) * [A < B])"
-      "M1_1_1(int)[][A]";
+      "M_t1_g1(int)[][A]";
 	test "Aggregation with an input variable"
 			"AggSum([A], R(A,B) * [A < C])"
-      "(M1_1_1(int)[][A] * [A < C])";
+      "M_t1_g1(int)[][A] * [A < C]";
+	test "Extending output schema due to an input variable"
+			"AggSum([A], R(A,B) * [B < C])"
+      "M_t1_g1(int)[][A,B] * [B < C]";
+	test "Graph Decomposition"
+			"AggSum([A], R(A,B) * S(C))"
+      "M_t1_g1(int)[][A] * M_t1_g2(int)[][]";
+	test "Map reuse"
+			"AggSum([A], R(A,B) + R(A,B))"
+      "(M_t1_g1(int)[][A] + M_t1_g1(int)[][A])";
+	test "Map reuse with renaming"
+			"AggSum([A], R(A,B) * (S(C) + S(D)))"
+      "(M_t1_g1(int)[][A] * M_t1_g2(int)[][]) + (M_t1_g1(int)[][A] * M_t1_g2(int)[][])";
+	test "Map reuse with renaming"
+			"(R(A,B) * S(C)) + (R(B,C) * S(A))"
+      "(M_t1_g1(int)[][A,B] * M_t1_g2(int)[][C]) + (M_t1_g1(int)[][B,C] * M_t1_g2(int)[][A])";
+			
+(*	
 	test "Aggregation with a lift containing no relations"
 			"AggSum([A], R(A,B) * (C ^= (A + B)))"
       "M1_1_1(int)[][A]";		
@@ -104,21 +121,21 @@ in
 	test "Aggregation with a lift containing a relevant relation and a condition"
 			"AggSum([A], R(A,B) * (C ^= R(A,B) * B) * [C > 0])"
       "(M1_1_1(int)[][A] * (C ^= M1_1_1_1(float)[][A, B]) * [C > 0])";	
-	test "Extending schema due to a comparison"
-			"AggSum([A], R(A,B) * [B > C])"		
-			"(M1_1_1(int)[][A, B] * [B > C])";
-	test "Extending schema due to a lift"
+*)			
+(*
+		test "Extending schema due to a lift"
 			"AggSum([A], R(A) * S(C) * (D ^= R(B) * C))"		
-			"(M1_1_1(int)[][A, C] * (D ^= M1_1_1_1(float)[][B, C]))";
+			"(M1_t1_g1(int)[][A, C] * (D ^= M1_1_1_1(float)[][B, C]))";
 	test "Mapping example"
 			"R(A) * S(C) * (E ^= R(B) * S(D))"		
-			"(M1_1_1_1(int)[][A, C] * (E ^= M1_1_1_1(int)[][B, D]))";
-	
+			"(M1_t1_g1_1(int)[][A, C] * (E ^= M1_1_1_1(int)[][B, D]))";
+*)	
+(*
 	test "Killer - Aggregation with a lift containing an irrelevant relation"
 			"AggSum([A], R(A,B) * (C ^= S(D)))"
       "M1_1_1(int)[][A]";		
 	test "Killer - Aggregation with a lift containing an irrelevant relation"
 			"AggSum([A], R(A,B) * (C ^= S(D)) * [C > 0])"
       "M1_1_1(int)[][A]";
-
+*)
 ;;

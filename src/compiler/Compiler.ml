@@ -126,7 +126,7 @@ let compute_init_at_start (table_rels:Schema.rel_t list) (expr:expr_t): expr_t =
 
 (******************************************************************************)
 
-let compile_map (db_schema:Schema.t) (history:Materializer.ds_history_t)
+let compile_map (db_schema:Schema.t) (history:Heuristics.ds_history_t)
                 (todo: ds_t): todo_list_t * compiled_ds_t =
    (* Sanity check: Deltas of non-numeric types don't make sense and it doesn't
       make sense to compile a map that doesn't support deltas of some form. *)
