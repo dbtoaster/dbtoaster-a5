@@ -19,7 +19,13 @@ FILES=\
 	src/compiler/Compiler\
 	src/maps/M3\
 	src/maps/Pattern\
-  src/maps/M3DM\
+	src/maps/M3DM\
+	src/functional/Patterns\
+	src/functional/K3\
+	src/functional/K3Typechecker\
+	src/functional/K3Optimizer\
+	src/functional/K3Codegen\
+	src/functional/K3Compiler\
 
 TOPLEVEL_FILES=\
 	src/global/Driver\
