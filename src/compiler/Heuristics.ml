@@ -132,121 +132,72 @@ and materialize_expr (history:ds_history_t) (prefix:string)
 
 		(* Divide the expression into three parts *)
 		let (rel_exprs, lift_exprs, rest_exprs) = split_expr event expr in 		
-		
-		let (rel_exprs_ivars, rel_exprs_ovars) = schema_of_expr rel_exprs in
-		let (lift_exprs_ivars, lift_exprs_ovars) = schema_of_expr lift_exprs in
-		let (rest_exprs_ivars, rest_exprs_ovars) = schema_of_expr rest_exprs in
 
-		(* Sanity check - mat_exprs should not contain any input variables *)
-		if rel_exprs_ivars <> [] then 
-			failwith "The materialized expression has input variables" 
-		else
-			
-		let (todo_lifts, mat_lifts) = ([], CalcRing.one) in
-(*		
 		(* Lifts are always materialized separately *)
-		(* let scope_lift = ListAsSet.union scope mat_exprs_ovars in *)
 		let (todo_lifts, mat_lifts) = 
 				List.fold_left (fun (todos, mats) lift ->
 						match (CalcRing.get_val lift) with
 								| Lift(v, subexp) ->
-									let (todo, mat) = materialize history prefix event subexp in
+									let (todo, mat) = materialize history (prefix^"_") event subexp in
 									(todos @ todo, CalcRing.mk_prod [mats; CalcRing.mk_val (Lift(v, mat))])			
 								| _  -> (todos, mats)
 				) ([], CalcRing.one) (CalcRing.prod_list lift_exprs)
-		in																
-*)
+		in	
 
-		(* Extended the schema with the input variables of other expressions *) 
-		let expected_schema = ListAsSet.inter rel_exprs_ovars 
-														(ListAsSet.multiunion [schema; lift_exprs_ivars; 
-																									 rest_exprs_ivars]) in
-		(* Add an aggregation if necessary *)
-		let agg_rel_expr = if ListAsSet.seteq rel_exprs_ovars expected_schema then rel_exprs
-												else CalcRing.mk_val (AggSum(expected_schema, rel_exprs)) in
+		if (rels_of_expr rel_exprs) = [] then 
+			(todo_lifts, CalcRing.mk_prod [ rel_exprs; mat_lifts; rest_exprs])
+		else
 		
-		(* Try to found an already existing map *)
-		let (found_ds, mapping_if_found) = 
-			List.fold_left (fun result i ->
-					if (snd result) <> None then result else
-					(i, (cmp_exprs i.ds_definition agg_rel_expr))
-  			) ({ds_name = CalcRing.one; ds_definition = CalcRing.one}, None) !history
-		in begin match mapping_if_found with
-			| None -> 
-				let new_ds = {
-						ds_name = CalcRing.mk_val (
-								External(
-				            prefix,
-		                rel_exprs_ivars,
-										expected_schema,
-		                type_of_expr agg_rel_expr,
-		                None
-		            )
-		        );
-		        ds_definition = agg_rel_expr;
-		    } in
-					history := new_ds :: !history;
-		      ([new_ds] @ todo_lifts, CalcRing.mk_prod [new_ds.ds_name; mat_lifts; rest_exprs])
-		         
-			| Some(mapping) ->
-				Debug.print "LOG-HEURISTICS-DETAIL" (fun () -> 
-		   						"Found Mapping to: "^(string_of_expr found_ds.ds_name)^
-		   						"      With: "^
-									(ListExtras.ocaml_of_list (fun ((a,_),(b,_))->a^"->"^b) mapping)
-				);
-				(todo_lifts, CalcRing.mk_prod [(rename_vars mapping found_ds.ds_name); mat_lifts; rest_exprs])
-		end		
-		(*
-		(*let mat_subexprs = snd (decompose_graph event_vars (expected_schema, mat_exprs)) in*)		
-		let (mat_subexprs_todos, mat_subexprs_mats) = fst (
-			List.fold_left ( fun ((todos, mats), i) (schema_mat_expr, mat_expr) ->
-			
-				if (rels_of_expr mat_expr) = [] then 
-					((todos, CalcRing.mk_prod [mats; mat_expr]), i) 
-				else
-			
-				let (mat_expr_ivars, mat_expr_ovars) = schema_of_expr mat_expr in
-  				let full_mat_expr = 
-					if ListAsSet.seteq mat_expr_ovars schema_mat_expr then
-						mat_expr
-					else CalcRing.mk_val (AggSum(schema_mat_expr, mat_expr)) in
+			let (rel_exprs_ivars, rel_exprs_ovars) = schema_of_expr rel_exprs in
+			let (lift_exprs_ivars, _) = schema_of_expr lift_exprs in
+			let (rest_exprs_ivars, _) = schema_of_expr rest_exprs in
 	
-				(* Sanity check - mat_exprs should not contain any input variables *)
-				if mat_exprs_ivars <> [] then 
-					failwith "The materialized subexpression has input variables" 
-				else
-					
-				let (found_ds, mapping_if_found) = 
-						List.fold_left (fun result i ->
-								if (snd result) <> None then result else
-								(i, (cmp_exprs i.ds_definition full_mat_expr))
-		      		) ({ds_name = CalcRing.one; ds_definition = CalcRing.one}, None) !history
-				in begin match mapping_if_found with
-					| None -> 
-							let new_ds = {
-									ds_name = CalcRing.mk_val (
-											External(
-					                (prefix^"_g"^(string_of_int i)),
-					                mat_expr_ivars,
-													ListAsSet.inter mat_expr_ovars expected_schema,
-					                type_of_expr full_mat_expr,
-					                None
-					            )
-					        );
-					        ds_definition = full_mat_expr;
-					    } in
-								history := new_ds :: !history;
-					      ((todos @ [new_ds], CalcRing.mk_prod [mats; new_ds.ds_name]), i+1)
-					         
-					| Some(mapping) ->
-							Debug.print "LOG-HEURISTICS-DETAIL" (fun () -> 
-		   						"Found Mapping to: "^(string_of_expr found_ds.ds_name)^
-		   						"      With: "^
-									(ListExtras.ocaml_of_list (fun ((a,_),(b,_))->a^"->"^b) mapping)
-		        		);
-		        		((todos, CalcRing.mk_prod [mats; (rename_vars mapping found_ds.ds_name)]), i+1)
-				end		
-			) (([], CalcRing.one), 1) mat_subexprs
-		) in
-		(mat_subexprs_todos @ todo_lifts, CalcRing.mk_prod [mat_subexprs_mats; mat_lifts; rest_exprs])
-*)
+			(* Sanity check - mat_exprs should not contain any input variables *)
+			if rel_exprs_ivars <> [] then 
+				failwith "The materialized expression has input variables" 
+			else
+				
+			(* Extended the schema with the input variables of other expressions *) 
+			let expected_schema = ListAsSet.inter rel_exprs_ovars 
+															(ListAsSet.multiunion [schema; lift_exprs_ivars; 
+																										 rest_exprs_ivars]) in
+			(* Add an aggregation if necessary *)
+			let agg_rel_expr = if ListAsSet.seteq rel_exprs_ovars expected_schema then rel_exprs
+													else CalcRing.mk_val (AggSum(expected_schema, rel_exprs)) in
+			
+			(* Try to found an already existing map *)
+			let (found_ds, mapping_if_found) = 
+				List.fold_left (fun result i ->
+						if (snd result) <> None then result else
+						(i, (cmp_exprs i.ds_definition agg_rel_expr))
+	  			) ({ds_name = CalcRing.one; ds_definition = CalcRing.one}, None) !history
+			in begin match mapping_if_found with
+				| None -> 
+					let new_ds = {
+							ds_name = CalcRing.mk_val (
+									External(
+					            prefix,
+			                rel_exprs_ivars,
+											expected_schema,
+			                type_of_expr agg_rel_expr,
+			                None
+			            )
+			        );
+			        ds_definition = agg_rel_expr;
+			    } in
+						history := new_ds :: !history;
+						Debug.print "LOG-HEURISTICS-DETAIL" (fun () -> 
+			   						"Materializing: "^(string_of_expr agg_rel_expr)
+						);
+	
+			      ([new_ds] @ todo_lifts, CalcRing.mk_prod [new_ds.ds_name; mat_lifts; rest_exprs])
+			         
+				| Some(mapping) ->
+					Debug.print "LOG-HEURISTICS-DETAIL" (fun () -> 
+			   						"Found Mapping to: "^(string_of_expr found_ds.ds_name)^
+			   						"      With: "^
+										(ListExtras.ocaml_of_list (fun ((a,_),(b,_))->a^"->"^b) mapping)
+					);
+					(todo_lifts, CalcRing.mk_prod [(rename_vars mapping found_ds.ds_name); mat_lifts; rest_exprs])
+			end
+		

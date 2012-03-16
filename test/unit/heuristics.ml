@@ -4,7 +4,7 @@ open Calculus
 open UnitTest
 ;;
 
-(* Debug.activate "LOG-HEURISTICS-DETAIL";; *) 
+Debug.activate "LOG-HEURISTICS-DETAIL";;  
 
 let test msg input output =
    log_test ("Decomposition ("^msg^")")
@@ -102,40 +102,44 @@ in
 			"(R(A,B) * S(C)) + (R(B,C) * S(A))"
       "(M1(int)[][A,B] * M2(int)[][C]) + (M1(int)[][B,C] * M2(int)[][A])";
 			
-(*	
 	test "Aggregation with a lift containing no relations"
 			"AggSum([A], R(A,B) * (C ^= (A + B)))"
-      "M1_1_1(int)[][A]";		
-	test "Aggregation with a lift containing no relations"
+      "M1(int)[][A]";		
+	test "Aggregation with a lift containing no relations and a comparison"
 			"AggSum([A], R(A,B) * (C ^= (A + B)) * [C > 0])"
-      "M1_1_1(int)[][A]";		
+      "M1(int)[][A]";		
 	test "Aggregation with a lift containing an irrelevant relation"
 			"AggSum([A], R(A,B) * (C ^= S(A)))"
-      "M1_1_1(int)[][A]";		
-	test "Aggregation with a lift containing an irrelevant relation"
+      "M1(int)[][A]";		
+	test "Aggregation with a lift containing an irrelevant relation and a comparison"
 			"AggSum([A], R(A,B) * (C ^= S(A)) * [C > 0])"
-      "M1_1_1(int)[][A]";
+      "M1(int)[][A]";
 	test "Aggregation with a lift containing a relevant relation"
 			"AggSum([A], R(A,B) * (C ^= R(A,B) * B))"
-      "(M1_1_1(int)[][A] * (C ^= M1_1_1_1(float)[][A, B]))";
+      "(M1(int)[][A] * (C ^= M1_1(float)[][A, B]))";
 	test "Aggregation with a lift containing a relevant relation and a condition"
 			"AggSum([A], R(A,B) * (C ^= R(A,B) * B) * [C > 0])"
-      "(M1_1_1(int)[][A] * (C ^= M1_1_1_1(float)[][A, B]) * [C > 0])";	
-*)			
-(*
-		test "Extending schema due to a lift"
+      "(M1(int)[][A] * (C ^= M1_1(float)[][A, B]) * [C > 0])";	
+	test "Aggregation with a lift containing a relevant relation and a variable"
+			"AggSum([A], R(A,B) * (C ^= R(A,B) * B) * C)"
+      "(M1(int)[][A] * (C ^= M1_1(float)[][A, B]) * C)";	
+	test "Extending schema due to a lift"
 			"AggSum([A], R(A) * S(C) * (D ^= R(B) * C))"		
-			"(M1_t1_g1(int)[][A, C] * (D ^= M1_1_1_1(float)[][B, C]))";
+			"(M1(int)[][A] * M2(int)[][C] * (D ^= M1(int)[][B] * C))";
 	test "Mapping example"
-			"R(A) * S(C) * (E ^= R(B) * S(D))"		
-			"(M1_t1_g1_1(int)[][A, C] * (E ^= M1_1_1_1(int)[][B, D]))";
-*)	
-(*
-	test "Killer - Aggregation with a lift containing an irrelevant relation"
+			"R(A) * S(C) * (E ^= R(B) * S(D)) * 5"		
+			"M1(int)[][A] * M2(int)[][C] * (E ^= M1(int)[][B] * M2(int)[][D]) * 5";
+	
+	test "Aggregation with a lift containing an irrelevant relation"
 			"AggSum([A], R(A,B) * (C ^= S(D)))"
-      "M1_1_1(int)[][A]";		
-	test "Killer - Aggregation with a lift containing an irrelevant relation"
+      "M1(int)[][A] * M2(int)[][]";		
+	test "Aggregation with a lift containing an irrelevant relation and a common variable"
+			"AggSum([A], R(A,B) * (C ^= S(B)))"
+      "M1(int)[][A]";		
+	test "Aggregation with a lift containing an irrelevant relation"
 			"AggSum([A], R(A,B) * (C ^= S(D)) * [C > 0])"
-      "M1_1_1(int)[][A]";
-*)
+      "M1(int)[][A] * M2(int)[][]";
+	test "Aggregation with a lift containing an irrelevant relation and a common variable"
+			"AggSum([A], R(A,B) * (C ^= S(A)) * [C > 0])"
+      "M1(int)[][A]";
 ;;
