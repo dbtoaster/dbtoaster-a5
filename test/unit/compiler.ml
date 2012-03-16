@@ -45,33 +45,33 @@ test_compile "RTest" "AggSum([], R(A,B))" [
 ]
 ;;
 
-test_compile "RSTest" "AggSum([], R(A,B)*S(B,C))" [
-   "RSTest", [], "AggSum([], R(A,B)*S(B,C))", TInt, [
+test_compile "RSTest" "AggSum([], R(A,B) * S(B,C))" [
+   "RSTest", [], "AggSum([], R(A,B) * S(B,C))", TInt, [
       true,  "S", ["RSTest_pSB"; "RSTest_pSC"], [], 
-         "RSTest_mS_t1_g1(int)[][RSTest_pSB]"; 
+         "RSTest_mS1(int)[][RSTest_pSB]"; 
       false, "S", ["RSTest_mSB"; "RSTest_mSC"], [], 
-         "-1*RSTest_mS_t1_g1(int)[][RSTest_mSB]"; 
+         "-1 * RSTest_mS1(int)[][RSTest_mSB]"; 
       true,  "R", ["RSTest_pRA"; "RSTest_pRB"], [], 
-         "RSTest_mR_t1_g1(int)[][RSTest_pRB]"; 
+         "RSTest_mR1(int)[][RSTest_pRB]"; 
       false, "R", ["RSTest_mRA"; "RSTest_mRB"], [], 
-         "-1*RSTest_mR_t1_g1(int)[][RSTest_mRB]"; 
+         "-1 * RSTest_mR1(int)[][RSTest_mRB]"; 
    ];
-   "RSTest_mS_t1_g1", ["RSTest_mSB"], "AggSum([RSTest_mSB], R(A,RSTest_mSB))", 
+   "RSTest_mS1", ["RSTest_mSB"], "AggSum([RSTest_mSB], R(A,RSTest_mSB))", 
                    TInt, [
-      true,  "R", ["RSTest_mS_t1_g1_pRA"; "RSTest_mS_t1_g1_pRB"], 
-         ["RSTest_mS_t1_g1_pRB"], 
+      true,  "R", ["RSTest_mS1_pRA"; "RSTest_mS1_pRB"], 
+         ["RSTest_mS1_pRB"], 
          "1";
-      false, "R", ["RSTest_mS_t1_g1_mRA"; "RSTest_mS_t1_g1_mRB"], 
-         ["RSTest_mS_t1_g1_mRB"], 
+      false, "R", ["RSTest_mS1_mRA"; "RSTest_mS1_mRB"], 
+         ["RSTest_mS1_mRB"], 
          "-1"; 
    ];
-   "RSTest_mR_t1_g1", ["RSTest_mRB"], "AggSum([RSTest_mRB], S(RSTest_mRB,C))", 
+   "RSTest_mR1", ["RSTest_mRB"], "AggSum([RSTest_mRB], S(RSTest_mRB,C))", 
                    TInt, [
-      true,  "S", ["RSTest_mR_t1_g1_pSB"; "RSTest_mR_t1_g1_pSC"], 
-         ["RSTest_mR_t1_g1_pSB"], 
+      true,  "S", ["RSTest_mR1_pSB"; "RSTest_mR1_pSC"], 
+         ["RSTest_mR1_pSB"], 
          "1";
-      false, "S", ["RSTest_mR_t1_g1_mSB"; "RSTest_mR_t1_g1_mSC"], 
-         ["RSTest_mR_t1_g1_mSB"], 
+      false, "S", ["RSTest_mR1_mSB"; "RSTest_mR1_mSC"], 
+         ["RSTest_mR1_mSB"], 
          "-1";
    ];
 ]
@@ -85,35 +85,35 @@ Debug.activate "PRINT-VERBOSE";;
 Debug.activate "LOG-UNIFY-LIFTS";;
 Debug.activate "LOG-FACTORIZE";;
 *)
-(*
-test_compile "RSABTest" "AggSum([], R(A,B)*S(B,C)*A*C)" [
-   "RSABTest", [], "AggSum([], R(A,B)*S(B,C)*A*C)", TFloat, [
-      true,  "S", ["RSABTest_pSB"; "RSABTest_pSC"], [], 
-         "RSABTest_pSC*RSABTest_mS1(float)[][RSABTest_pSB]"; 
-      false, "S", ["RSABTest_mSB"; "RSABTest_mSC"], [], 
-         "-1*RSABTest_mSC*RSABTest_mS1(float)[][RSABTest_mSB]"; 
-      true,  "R", ["RSABTest_pRA"; "RSABTest_pRB"], [], 
-         "RSABTest_pRA*RSABTest_mR1(float)[][RSABTest_pRB]"; 
-      false, "R", ["RSABTest_mRA"; "RSABTest_mRB"], [], 
-         "-1*RSABTest_mRA*RSABTest_mR1(float)[][RSABTest_mRB]"; 
+
+test_compile "RSACTest" "AggSum([], R(A,B) * S(B,C) * A*C)" [
+   "RSACTest", [], "AggSum([], R(A,B) * S(B,C) * A * C)", TFloat, [
+      true,  "S", ["RSACTest_pSB"; "RSACTest_pSC"], [], 
+         "RSACTest_pSC * RSACTest_mS1(float)[][RSACTest_pSB]"; 
+      false, "S", ["RSACTest_mSB"; "RSACTest_mSC"], [], 
+         "-1 * RSACTest_mSC * RSACTest_mS1(float)[][RSACTest_mSB]"; 
+      true,  "R", ["RSACTest_pRA"; "RSACTest_pRB"], [], 
+         "RSACTest_pRA * RSACTest_mR1(float)[][RSACTest_pRB]"; 
+      false, "R", ["RSACTest_mRA"; "RSACTest_mRB"], [], 
+         "-1 * RSACTest_mRA * RSACTest_mR1(float)[][RSACTest_mRB]"; 
    ];
-   "RSABTest_mS1", ["RSABTest_mSB"], "AggSum([RSABTest_mSB], 
-                     R(A,RSABTest_mSB)*A)", TFloat, [
-      true,  "R", ["RSABTest_mS1_pRA"; "RSABTest_mS1_pRB"], 
-         ["RSABTest_mS1_pRB"],
-         "RSABTest_mS1_pRA"; 
-      false, "R", ["RSABTest_mS1_mRA"; "RSABTest_mS1_mRB"], 
-         ["RSABTest_mS1_mRB"],
-         "-1*RSABTest_mS1_mRA"; 
+   "RSACTest_mS1", ["RSACTest_mSB"], "AggSum([RSACTest_mSB], 
+                    R(A,RSACTest_mSB) * A)", TFloat, [
+      true,  "R", ["RSACTest_mS1_pRA"; "RSACTest_mS1_pRB"], 
+         ["RSACTest_mS1_pRB"],
+         "RSACTest_mS1_pRA"; 
+      false, "R", ["RSACTest_mS1_mRA"; "RSACTest_mS1_mRB"], 
+         ["RSACTest_mS1_mRB"],
+         "-1 * RSACTest_mS1_mRA"; 
    ];
-   "RSABTest_mR1", ["RSABTest_mRB"], "AggSum([RSABTest_mRB], 
-                     S(RSABTest_mRB,C)*C)", TFloat, [
-      true,  "S", ["RSABTest_mR1_pSB"; "RSABTest_mR1_pSC"], 
-         ["RSABTest_mR1_pSB"],
-         "RSABTest_mR1_pSC"; 
-      false, "S", ["RSABTest_mR1_mSB"; "RSABTest_mR1_mSC"], 
-         ["RSABTest_mR1_mSB"],
-         "-1*RSABTest_mR1_mSC"; 
+   "RSACTest_mR1", ["RSACTest_mRB"], "AggSum([RSACTest_mRB], 
+                     S(RSACTest_mRB,C) * C)", TFloat, [
+      true,  "S", ["RSACTest_mR1_pSB"; "RSACTest_mR1_pSC"], 
+         ["RSACTest_mR1_pSB"],
+         "RSACTest_mR1_pSC"; 
+      false, "S", ["RSACTest_mR1_mSB"; "RSACTest_mR1_mSC"], 
+         ["RSACTest_mR1_mSB"],
+         "-1 * RSACTest_mR1_mSC"; 
    ];
 ]
-*)
+
