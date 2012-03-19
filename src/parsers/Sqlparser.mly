@@ -62,6 +62,7 @@ let bind_select_vars q =
 %token <string> ID STRING
 %token <int> INT   
 %token <float> FLOAT
+%token DATE
 %token VARCHAR
 %token TRUE FALSE
 %token DATE
@@ -266,7 +267,22 @@ expression:
              else
                bail ("Unknown Aggregate Function '"^$1^"'")
            }
-
+| DATE LPAREN STRING RPAREN     {
+            if (Str.string_match
+                (Str.regexp "\\([0-9]+\\)-\\([0-9]+\\)-\\([0-9]+\\)") $3 0)
+						then (
+                let y = (int_of_string (Str.matched_group 1 $3)) in
+                let m = (int_of_string (Str.matched_group 2 $3)) in
+                let d = (int_of_string (Str.matched_group 3 $3)) in
+                    if (m > 12) then bail 
+                        ("Invalid month ("^(string_of_int m)^") in date: "^$3);                                         
+                    if (d > 31) then bail
+                        ("Invalid day ("^(string_of_int d)^") in date: "^$3);
+                    Sql.Const(CInt((y * 10000) + (m * 100) + (d * 1))) 
+            ) else
+                bail ("Improperly formatted date: "^$3)	             
+          }
+						
 cmpOp:
 | EQ { Eq }
 | NE { Neq }
