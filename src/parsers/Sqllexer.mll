@@ -75,7 +75,8 @@ let keywords =
         "DOUBLE",  TYPE(TFloat);
         "DECIMAL", TYPE(TFloat);
         "STRING",  TYPE(TString(0));
-        "VARCHAR", VARCHAR;
+        "CHAR",    CHAR;
+				"VARCHAR", VARCHAR;
         "STREAM", STREAM;
     ]
 let _ = hashtbl_of_pair_list keyword_table keywords

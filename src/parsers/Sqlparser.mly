@@ -63,6 +63,7 @@ let bind_select_vars q =
 %token <int> INT   
 %token <float> FLOAT
 %token DATE
+%token CHAR
 %token VARCHAR
 %token TRUE FALSE
 %token DATE
@@ -133,7 +134,9 @@ sourceStmt:
 
 typeDefn:
 | TYPE                      { $1 }
+| CHAR LPAREN INT RPAREN    { TString($3) }
 | VARCHAR LPAREN INT RPAREN { TString($3) }
+| DATE                      { TInt        }
 
 fieldList:
 | ID typeDefn                    { [None, String.uppercase $1, $2] }
