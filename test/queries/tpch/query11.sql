@@ -1,21 +1,21 @@
 CREATE STREAM PARTSUPP (
-        partkey      int,
-        suppkey      int,
-        availqty     int,
-        supplycost   float,
-        comment      int  -- hash
+        partkey      INT,
+        suppkey      INT,
+        availqty     INT,
+        supplycost   DECIMAL,
+        comment      VARCHAR(199)
     )
   FROM FILE '../../experiments/data/tpch/partsupp.csv'
   LINE DELIMITED csv ( deletions := 'true' );
 
 CREATE STREAM SUPPLIER (
-        suppkey      int,
-        name         int, -- hash
-        address      int, -- hash
-        nationkey    int,
-        phone        int, -- hash
-        acctbal      float,
-        comment      int  -- hash
+        suppkey      INT,
+        name         CHAR(25),
+        address      VARCHAR(40),
+        nationkey    INT,
+        phone        CHAR(15),
+        acctbal      DECIMAL,
+        comment      VARCHAR(199)
     )
   FROM FILE '../../experiments/data/tpch/supplier.csv'
   LINE DELIMITED csv ( deletions := 'true' );

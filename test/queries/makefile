@@ -1,5 +1,6 @@
 QUERIES := \
 	simple/rst \
+	tpch/query3 \
 	tpch/query11
 
 SQL_QUERIES := $(patsubst %,%.sql,$(QUERIES))
