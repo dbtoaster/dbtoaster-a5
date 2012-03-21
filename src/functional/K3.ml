@@ -28,8 +28,6 @@
  *   ++ updates should add any secondary indexes as needed
  *)
 
-open Schema
-open Types
 open Format
 
 (*
@@ -103,7 +101,7 @@ struct
 		type id_t = string (* DONE *) (* move to Types module ? *)
     type coll_id_t = string (* DONE *) (* move to Types module ? *)
 		
-		type var_type_t = type_t
+		type var_type_t = Types.type_t
 		type map_type_t = coll_id_t * (var_type_t list) * (var_type_t list)
 		
 		type rel_id_t = string (* DONE *) (* move to Types module ? *)
@@ -120,7 +118,7 @@ struct
 
     type k3_type_t =
 	      TUnit
-			| TBase      of type_t
+			| TBase      of Types.type_t
       | TTuple     of k3_type_t list          (* unnamed records *)
 	    | Collection of k3_type_t               (* collections *)
 	    | Fn         of k3_type_t list * k3_type_t (* args * body *)
@@ -133,7 +131,7 @@ struct
    
    
        (* Terminals *)
-         Const         of const_t (* DONE *)
+         Const         of Types.const_t (* DONE *)
        | Var           of id_t        * k3_type_t
 
        (* Tuples, i.e. unnamed records *)
@@ -188,8 +186,9 @@ struct
 
     (* Incremental section *)
     type statement = expr_t * expr_t
-    type trigger = event_t * rel_id_t * id_t list * statement list
-    type program = map_type_t list * Patterns.pattern_map * trigger list
+		type event_type_t = Insert | Delete
+    type trigger = event_type_t * rel_id_t * id_t list * statement list
+    type program = map_type_t list * Pattern.Patterns.pattern_map * trigger list
 
 
 (* Expression traversal helpers *)
@@ -371,7 +370,7 @@ let contains_expr e1 e2 =
 let rec string_of_type t =
     match t with
       TUnit -> "TUnit"
-		| TBase(tb) -> ocaml_of_type tb (* use string_of_type instead? *)
+		| TBase(tb) -> Types.ocaml_of_type tb (* use string_of_type instead? *)
     | TTuple(t_l) -> "TTuple("^(String.concat " ; " (List.map string_of_type t_l))^")"
     | Collection(c_t) -> "Collection("^(string_of_type c_t)^")"
     | Fn(a,b) -> "Fn("^(String.concat "," (List.map string_of_type a))^
@@ -416,11 +415,11 @@ let string_of_expr e =
     match e with
     | Const c -> 
       let const_ts = match c with (* TODO outsource stringification to Types module *)
-				| CBool _ -> "CBool"
-				| CInt _ -> "CInt"
-        | CFloat _ -> "CFloat"
-        | CString _ -> "CString" 
-      in ob(); ps ("Const("^const_ts^"("^(string_of_const c)^"))"); cb()
+				| Types.CBool _ -> "CBool"
+				| Types.CInt _ -> "CInt"
+        | Types.CFloat _ -> "CFloat"
+        | Types.CString _ -> "CString" 
+      in ob(); ps ("Const("^const_ts^"("^(Types.string_of_const c)^"))"); cb()
     | Var (id,t) -> ob(); ps "Var("; pid id; ps ","; 
                                      ps (string_of_type t); ps ")"; cb()
 
@@ -483,7 +482,7 @@ let rec code_of_expr e =
    let rcr ex = "("^(code_of_expr ex)^")" in
    let rec ttostr t = "("^(match t with
       | TUnit -> "K3.SR.TUnit"
-			| TBase(tb) -> ocaml_of_type(tb)
+			| TBase(tb) -> Types.ocaml_of_type(tb)
       | TTuple(tlist) -> 
          "K3.SR.TTuple("^(ListExtras.string_of_list ttostr tlist)^")"
       | Collection(subt) -> "K3.SR.Collection("^(ttostr subt)^")"
@@ -502,11 +501,11 @@ let rec code_of_expr e =
    match e with
       | Const c -> 
         let const_ts = match c with
-					| CBool _ -> "CBool"
-					| CInt _ -> "CInt"
-          | CFloat _ -> "CFloat"
-          | CString _ -> "CString" 
-        in "K3.SR.Const(M3."^const_ts^"("^(string_of_const c)^"))"
+					| Types.CBool _ -> "CBool"
+					| Types.CInt _ -> "CInt"
+          | Types.CFloat _ -> "CFloat"
+          | Types.CString _ -> "CString" 
+        in "K3.SR.Const(M3."^const_ts^"("^(Types.string_of_const c)^"))"
       | Var (id,t) -> "K3.SR.Var(\""^id^"\","^(ttostr t)^")"
       | Tuple e_l -> "K3.SR.Tuple("^(ListExtras.string_of_list rcr e_l)^")"
       
@@ -581,7 +580,7 @@ let collection_of_list (l : expr_t list) =
 
 let collection_of_float_list (l : float list) =
     if l = [] then failwith "invalid list for construction" else
-    List.fold_left (fun acc v -> Combine(acc,Singleton(Const(CFloat(v)))))
-        (Singleton(Const(CFloat(List.hd l)))) (List.tl l)
+    List.fold_left (fun acc v -> Combine(acc,Singleton(Const(Types.CFloat(v)))))
+        (Singleton(Const(Types.CFloat(List.hd l)))) (List.tl l)
 
 end
