@@ -20,6 +20,8 @@ FILES=\
 	src/maps/M3\
 	src/maps/Pattern\
 	src/maps/M3DM\
+	src/functional/K3
+
 
 TOPLEVEL_FILES=\
 	src/global/Driver\
@@ -48,7 +50,7 @@ INCLUDE_OBJ=\
 	str.cma\
 	unix.cma
 
-OCAML_FLAGS = -g
+OCAML_FLAGS = -g -dtypes
 OPT_FLAGS   = -ccopt -O3 -nodynlink -unsafe -noassert
 
 OCAMLCC   =ocamlc
