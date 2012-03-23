@@ -45,6 +45,10 @@ let compute_init_at_start (table_rels:Schema.rel_t list) (expr:expr_t): expr_t =
          if List.mem rn table_names
          then CalcRing.mk_val (Rel(rn,rv,rt))
          else CalcRing.zero
+      | AggSum(gb_vars, subexp) ->
+         if subexp <> CalcRing.zero 
+         then CalcRing.mk_val (AggSum(gb_vars, subexp))
+         else CalcRing.zero				
       | _ -> CalcRing.mk_val lf
    ) (CalculusTransforms.optimize_expr (Calculus.schema_of_expr expr) expr)
 
