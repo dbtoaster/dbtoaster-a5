@@ -2,8 +2,8 @@ QUERIES := \
 	simple/rst \
 	tpch/query3 \
 	tpch/query11 \
-#	tpch/query17 \
-    tpch/ssb4
+	tpch/query17 \
+	tpch/ssb4
 
 SQL_QUERIES := $(patsubst %,%.sql,$(QUERIES))
 M3_QUERIES  := $(patsubst %,%.m3,$(QUERIES))

@@ -90,7 +90,7 @@ let rec materialize ?(scope:var_t list = [])
 							      (event:Schema.event_t option) (expr:expr_t) 
 										: (ds_t list * expr_t) = 
 		
-		print_string "\n\nMATERIALIZE\n";	
+(*		print_string "\n\nMATERIALIZE\n"; *)	
 																							
     let expr_scope = ListAsSet.union scope (extract_event_vars event) in
 		fst (
@@ -99,10 +99,10 @@ let rec materialize ?(scope:var_t list = [])
 
     	    let term_opt = optimize_expr (expr_scope, term_schema) term in
 
-        print_string ("SUM: "^(string_of_expr term_opt)^
+(*        print_string ("SUM: "^(string_of_expr term_opt)^
                 "\n     Scope: ["^(string_of_vars expr_scope)^"]"^
                 "\n     Schema: ["^(string_of_vars term_schema)^"]\n"
-        );
+        ); *)
 
 				(* Graph decomposition *)
 				let ((new_term_todos, new_term_mats), k) =  
@@ -113,10 +113,10 @@ let rec materialize ?(scope:var_t list = [])
 						
 						let subexpr_name = (prefix^(string_of_int j)) in
 				
-				    print_string ("GRAPH: "^(string_of_expr subexpr)^
+(*				    print_string ("GRAPH: "^(string_of_expr subexpr)^
                     "\n      Scope: ["^(string_of_vars expr_scope)^"]"^
                     "\n      Schema: ["^    (string_of_vars subexpr_schema)^"]\n"
-            );
+            ); *)
 				
 						Debug.print "LOG-HEURISTICS-DETAIL" (fun () -> 
 							"Materializing expression: "^(string_of_expr subexpr)^"    "^
@@ -127,7 +127,7 @@ let rec materialize ?(scope:var_t list = [])
 						let (todos_subexpr, mat_subexpr) = 
 							materialize_expr history subexpr_name event expr_scope subexpr_schema subexpr_opt 
 					  in
-              print_string ("MATERIALIZED GRAPH: "^(string_of_expr mat_subexpr)^"\n");
+(*              print_string ("MATERIALIZED GRAPH: "^(string_of_expr mat_subexpr)^"\n"); *)
 	
 						  	((todos @ todos_subexpr, CalcRing.mk_prod [mat_expr; mat_subexpr]), 	j + 1)	
 	
@@ -183,14 +183,14 @@ and materialize_expr (history:ds_history_t) (prefix:string)
 			let agg_rel_expr = if ListAsSet.seteq rel_exprs_ovars expected_schema then rel_exprs
 													else CalcRing.mk_val (AggSum(expected_schema, rel_exprs)) in
 			
-			print_string ("AGG_EXPR: "^(string_of_expr agg_rel_expr)^
+(*			print_string ("AGG_EXPR: "^(string_of_expr agg_rel_expr)^
 			              "\n       SCHEMA: "^(string_of_vars rel_exprs_ovars)^
-										"\n       EXPECTED SCHEMA: "^(string_of_vars expected_schema)^"\n");
+										"\n       EXPECTED SCHEMA: "^(string_of_vars expected_schema)^"\n"); *)
 			
 			(* Try to found an already existing map *)
 			let (found_ds, mapping_if_found) = 
 				List.fold_left (fun result i ->
-                        (*print_string ("  DS_DEFINITION: "^(string_of_expr i.ds_definition)^"\n");*)
+            (*print_string ("  DS_DEFINITION: "^(string_of_expr i.ds_definition)^"\n");*)
 						if (snd result) <> None then result else
 						(i, (cmp_exprs i.ds_definition agg_rel_expr))
 	  			) ({ds_name = CalcRing.one; ds_definition = CalcRing.one}, None) !history
