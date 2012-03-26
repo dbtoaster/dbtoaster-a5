@@ -369,7 +369,9 @@ let rec cmp_exprs (e1:expr_t) (e2:expr_t):((var_t * var_t) list option) =
             begin match rcr sub1 sub2 with
                | None -> None
                | Some(mappings) -> 
-                  Function.merge mappings (List.combine gb1 gb2)
+                    if ((List.length gb1) = (List.length gb2)) then  
+                        Function.merge mappings (List.combine gb1 gb2)
+                    else None                     
             end
          
          | ((Rel(rn1,rv1,rt1)), (Rel(rn2,rv2,rt2))) ->
