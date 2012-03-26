@@ -4,7 +4,8 @@ QUERIES := \
 	tpch/query11 \
 	tpch/ssb4 \
     finance/axfinder \
-    finance/brokerspread	
+    finance/brokerspread	\
+    finance/brokervariance
 
 SQL_QUERIES := $(patsubst %,%.sql,$(QUERIES))
 M3_QUERIES  := $(patsubst %,%.m3,$(QUERIES))
