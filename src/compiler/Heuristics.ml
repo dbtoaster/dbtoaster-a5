@@ -47,7 +47,7 @@ let split_expr (event:Schema.event_t option)
 									else 
 											((rel, lift, CalcRing.mk_prod [rest; term]), scope_acc)
 						| AggSum (v, subexp) ->
-									failwith "[materialize_expr] Error: AggSums are supposed to be removed."																	
+									failwith "[split_expr] Error: AggSums are supposed to be removed."																	
 						| Rel (reln, relv, relt) ->								
 									((CalcRing.mk_prod [rel; term], lift, rest), (ListAsSet.union scope_acc relv))
 						| External (_) -> 
@@ -59,12 +59,13 @@ let split_expr (event:Schema.event_t option)
 									else 
 											((rel, lift, CalcRing.mk_prod [rest; term]), scope_acc)
 						| Lift (v, subexpr) ->						
-									if (ListAsSet.subset [v] scope_acc) then
+									if (ListAsSet.subset [v] scope_acc) ||
+									   (ListAsSet.subset [v] scope) then
 											failwith"[materialize_expr] Error: The lift variable is in the scope"
 									else
 										let subexpr_rels = rels_of_expr subexpr in
 										let subexpr_ivars = fst (schema_of_expr ~scope:scope_acc subexpr) in
-										let subexpr_ivars_covered = (subexpr_ivars = []) in
+										let subexpr_ivars_covered = (ListAsSet.subset subexpr_ivars scope) in
 										let lift_contains_event_rel = 
 												match extract_event_reln event with 
 													| Some(reln) -> List.mem reln subexpr_rels
@@ -78,7 +79,7 @@ let split_expr (event:Schema.event_t option)
 												(* trigger function is being created.*)
    											((CalcRing.mk_prod [rel; term], lift, rest), scope_acc @ [v])							
 															
-			) ((CalcRing.one, CalcRing.one, CalcRing.one), scope) (CalcRing.prod_list expr)
+			) ((CalcRing.one, CalcRing.one, CalcRing.one), []) (CalcRing.prod_list expr)
 		) 
 
 
@@ -90,7 +91,10 @@ let rec materialize ?(scope:var_t list = [])
 							      (event:Schema.event_t option) (expr:expr_t) 
 										: (ds_t list * expr_t) = 
 		
-(*		print_string "\n\nMATERIALIZE\n"; *)	
+		Debug.print "LOG-HEURISTICS-DETAIL" (fun () ->
+			 "[Heuristics] Raw expression: "^(string_of_expr expr)^
+       "\n\t Scope: ["^(string_of_vars scope)^"]"
+		);
 																							
     let expr_scope = ListAsSet.union scope (extract_event_vars event) in
 		fst (
@@ -99,10 +103,11 @@ let rec materialize ?(scope:var_t list = [])
 
     	    let term_opt = optimize_expr (expr_scope, term_schema) term in
 
-(*        print_string ("SUM: "^(string_of_expr term_opt)^
-                "\n     Scope: ["^(string_of_vars expr_scope)^"]"^
-                "\n     Schema: ["^(string_of_vars term_schema)^"]\n"
-        ); *)
+        Debug.print "LOG-HEURISTICS-DETAIL" (fun () ->
+            "[Heuristics] PolyDecomposition + Optimization: "^(string_of_expr term_opt)^
+            "\n\t Scope: ["^(string_of_vars expr_scope)^"]"^
+            "\n\t Schema: ["^(string_of_vars term_schema)^"]"
+        ); 
 
 				(* Graph decomposition *)
 				let ((new_term_todos, new_term_mats), k) =  
@@ -112,23 +117,19 @@ let rec materialize ?(scope:var_t list = [])
 						let subexpr_opt = optimize_expr (expr_scope, subexpr_schema) subexpr in
 						
 						let subexpr_name = (prefix^(string_of_int j)) in
-				
-(*				    print_string ("GRAPH: "^(string_of_expr subexpr)^
-                    "\n      Scope: ["^(string_of_vars expr_scope)^"]"^
-                    "\n      Schema: ["^    (string_of_vars subexpr_schema)^"]\n"
-            ); *)
-				
+								
 						Debug.print "LOG-HEURISTICS-DETAIL" (fun () -> 
-							"Materializing expression: "^(string_of_expr subexpr)^"    "^
-							"Scope: ["^(string_of_vars expr_scope)^"]    "^
-				 			"Schema: ["^	(string_of_vars subexpr_schema)^"]"
+							"[Heuristics] Graph decomposition: "^(string_of_expr subexpr)^
+							"\n\t Scope: ["^(string_of_vars expr_scope)^"]"^
+				 			"\n\t Schema: ["^	(string_of_vars subexpr_schema)^"]"
 						);
 				
 						let (todos_subexpr, mat_subexpr) = 
 							materialize_expr history subexpr_name event expr_scope subexpr_schema subexpr_opt 
 					  in
-(*              print_string ("MATERIALIZED GRAPH: "^(string_of_expr mat_subexpr)^"\n"); *)
-	
+						  Debug.print "LOG-HEURISTICS-DETAIL" (fun () -> 
+                  "[Heuristics] Materialized form: "^(string_of_expr mat_subexpr)
+              );
 						  	((todos @ todos_subexpr, CalcRing.mk_prod [mat_expr; mat_subexpr]), 	j + 1)	
 	
 					) (([], CalcRing.one), i)
@@ -183,9 +184,11 @@ and materialize_expr (history:ds_history_t) (prefix:string)
 			let agg_rel_expr = if ListAsSet.seteq rel_exprs_ovars expected_schema then rel_exprs
 													else CalcRing.mk_val (AggSum(expected_schema, rel_exprs)) in
 			
-(*			print_string ("AGG_EXPR: "^(string_of_expr agg_rel_expr)^
-			              "\n       SCHEMA: "^(string_of_vars rel_exprs_ovars)^
-										"\n       EXPECTED SCHEMA: "^(string_of_vars expected_schema)^"\n"); *)
+      Debug.print "LOG-HEURISTICS-DETAIL" (fun () ->
+			     	"[Heuristics]  Materializing AggSum expression: "^(string_of_expr agg_rel_expr)^
+						"\n\t Schema: ["^(string_of_vars rel_exprs_ovars)^"]"^
+            "\n\t Expected schema: ["^(string_of_vars expected_schema)^"]"
+		  ); 
 			
 			(* Try to found an already existing map *)
 			let (found_ds, mapping_if_found) = 
@@ -209,15 +212,11 @@ and materialize_expr (history:ds_history_t) (prefix:string)
 			        ds_definition = agg_rel_expr;
 			    } in
 						history := new_ds :: !history;
-						Debug.print "LOG-HEURISTICS-DETAIL" (fun () -> 
-			   						"Materializing: "^(string_of_expr agg_rel_expr)
-						);
-	
 			      ([new_ds] @ todo_lifts, CalcRing.mk_prod [new_ds.ds_name; mat_lifts; rest_exprs])
 			         
 				| Some(mapping) ->
 					Debug.print "LOG-HEURISTICS-DETAIL" (fun () -> 
-			   						"Found Mapping to: "^(string_of_expr found_ds.ds_name)^
+			   						"[Heuristics] Found Mapping to: "^(string_of_expr found_ds.ds_name)^
 			   						"      With: "^
 										(ListExtras.ocaml_of_list (fun ((a,_),(b,_))->a^"->"^b) mapping)
 					);

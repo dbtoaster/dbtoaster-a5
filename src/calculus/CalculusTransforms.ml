@@ -328,7 +328,7 @@ let unify_lifts (big_schema:var_t list) (big_expr:C.expr_t): C.expr_t =
          match lf with
             | Lift(v, term) -> 
                let tmpv = mk_unify_lift_var term in
-               if List.mem v scope then
+               if (List.mem v scope) && (not (List.mem v big_schema)) then
                   CalcRing.mk_prod [
                      CalcRing.mk_val (Lift(tmpv, term));
                      CalcRing.mk_val (Cmp(Eq, mk_var v, mk_var tmpv))

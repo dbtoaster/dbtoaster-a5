@@ -115,15 +115,18 @@ in
 			"AggSum([A], R(A,B) * (C ^= S(A)) * [C > 0])"
       "M1(int)[][A]";
 	test "Aggregation with a lift containing a relevant relation"
-			"AggSum([A], R(A,B) * (C ^= R(A,B) * B))"
-      "(M1(int)[][A] * (C ^= M1_1(float)[][A, B]))";
+			"AggSum([A], R(A,B) * (E ^= R(C,D) * B))"
+      "(M1_1(int)[][A,B] * (E ^= M1_1(int)[][C, D] * B))";
 	test "Aggregation with a lift containing a relevant relation and a condition"
-			"AggSum([A], R(A,B) * (C ^= R(A,B) * B) * [C > 0])"
-      "(M1(int)[][A] * (C ^= M1_1(float)[][A, B]) * [C > 0])";	
+			"AggSum([A], R(A,B) * (E ^= R(C,D) * B) * [E > 0])"
+      "(M1_1(int)[][A,B] * (E ^= M1_1(int)[][C,D] * B) * [E > 0])"; 	
 	test "Aggregation with a lift containing a relevant relation and a variable"
-			"AggSum([A], R(A,B) * (C ^= R(A,B) * B) * C)"
-      "(M1(int)[][A] * (C ^= M1_1(float)[][A, B]) * C)";	
-	test "Extending schema due to a lift"
+			"AggSum([A], R(A,B) * (E ^= R(C,D) * B) * E)"
+      "(M1_1(int)[][A,B] * (E ^= M1_1(int)[][C,D] * B) * E)";	
+  test "Aggregation with a lift containing a relevant relation and a common variable"
+      "AggSum([A], R(A,B) * (E ^= R(C,D) * [A = C]) * [E > 0])"
+      "M1(int)[][A] * (E ^= M1_1(int)[][A,D]) * [E > 0]";
+  	test "Extending schema due to a lift"
 			"AggSum([A], R(A) * S(C) * (D ^= R(B) * C))"		
 			"(M1(int)[][A] * M2(int)[][C] * (D ^= M1(int)[][B] * C))";
 	test "Mapping example"
@@ -141,5 +144,5 @@ in
       "M1(int)[][A] * M2(int)[][]";
 	test "Aggregation with a lift containing an irrelevant relation and a common variable"
 			"AggSum([A], R(A,B) * (C ^= S(A)) * [C > 0])"
-      "M1(int)[][A]";
+      "M1(int)[][A]";  
 ;;

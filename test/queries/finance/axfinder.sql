@@ -25,7 +25,7 @@ CREATE STREAM asks(t FLOAT, id INT, broker_id INT, volume FLOAT, price FLOAT)
   LINE DELIMITED orderbook (book := 'asks', brokers := '10', 
                             deterministic := 'yes');
 
-SELECT   b.broker_id, sum(a.volume + -1 * b.volume) AS axf
+SELECT   b.broker_id, SUM(a.volume + (-1 * b.volume)) AS axf
 FROM     bids b, asks a
 WHERE    b.broker_id = a.broker_id
   AND    ( (a.price + ((-1) * b.price) > 1000) OR
