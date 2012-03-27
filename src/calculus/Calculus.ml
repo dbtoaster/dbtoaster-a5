@@ -228,9 +228,9 @@ let rec fold ?(scope = []) ?(schema = [])
       | CalcRing.Val(leaf) -> leaf_fn (scope,schema) leaf
    end
 
-let rec expr_is_singleton ?(scope=[]) (expr:expr_t): bool =
-   (ListAsSet.inter scope (snd (schema_of_expr expr))) = []
-
+let expr_is_singleton ?(scope=[]) (expr:expr_t): bool =
+    (ListAsSet.diff  (snd (schema_of_expr expr))  scope ) = []
+		
 (************
  * Like Ring.fold, except it computes the scope and schema at each node.
  *
