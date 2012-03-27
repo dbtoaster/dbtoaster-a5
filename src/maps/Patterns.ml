@@ -1,7 +1,5 @@
 (******************* Patterns *******************)
 
-module Patterns =
-struct
   type pattern =
        In of (Types.var_t list * int list)
      | Out of (Types.var_t list * int list)
@@ -78,23 +76,18 @@ struct
      in
      List.fold_left (fun acc (mapn, pats) ->
         acc^"\n"^mapn^": "^(patlist_to_string pats)) "" pm
-end
 
-
-open Patterns
 
 
 
 let extract_patterns (triggers : M3.trigger_t list) : pattern_map =
-		let create_pattern_map_from_access mapn theta_vars inv outv =
-				let bound_vars vl = ListAsSet.inter vl theta_vars in 
-				let valid_pattern vl = List.length (bound_vars vl) < List.length vl in
-				List.fold_left
-						(fun acc (pattern_f, vl) -> 
-	            		add_pattern acc (mapn, pattern_f vl (bound_vars vl))) 
-						(empty_pattern_map())
-						(List.filter (fun (_,vl) -> valid_pattern vl)
-												 [make_in_pattern, inv;make_out_pattern, outv])
+		let create_pattern_map_from_access mapn theta_vars outv =
+				let bound_outv = ListAsSet.inter outv theta_vars in 
+				let valid_pattern = List.length bound_outv < List.length outv in
+				if valid_pattern then 
+						singleton_pattern_map (mapn, (make_out_pattern outv bound_outv))
+				else
+						empty_pattern_map()
 		in
 					
 	  let rec extract_from_calc (theta_vars: Types.var_t list) (calc: Calculus.expr_t) : pattern_map = 
@@ -114,14 +107,17 @@ let extract_patterns (triggers : M3.trigger_t list) : pattern_map =
 							| Calculus.AggSum( gb_vars, agg_calc ) -> extract_from_calc tvars agg_calc
 							| Calculus.Lift( v, lift_calc ) -> 				extract_from_calc tvars lift_calc
 							| Calculus.Rel( reln, relv, _ ) -> 
-									create_pattern_map_from_access reln tvars [] relv
-							| Calculus.External( mapn, inv, outv, _, None ) -> 
-									create_pattern_map_from_access mapn tvars inv outv
-							| Calculus.External( mapn, inv, outv, _, Some(init_calc) ) ->
-		           		let init_tvars = ListAsSet.union tvars inv  in           
-		           		merge_pattern_maps 
-											(extract_from_calc init_tvars init_calc)
-											(create_pattern_map_from_access mapn tvars inv outv )								
+									create_pattern_map_from_access reln tvars relv
+							| Calculus.External( mapn, inv, outv, _, init_calc_opt ) -> 
+								  (* all input variables must be bound at this point in order to be able to*)
+									(* evaluate the expression*)
+									assert( List.length (ListAsSet.diff inv tvars) = 0 );
+									let incr_pat = create_pattern_map_from_access mapn tvars outv in
+									let init_pat = begin match init_calc_opt with
+										| Some(init_calc) -> extract_from_calc tvars init_calc
+										| None -> empty_pattern_map()
+									end in
+									merge_pattern_maps init_pat incr_pat						
 						end
 				in
 				Calculus.fold ~scope:theta_vars	
@@ -136,16 +132,18 @@ let extract_patterns (triggers : M3.trigger_t list) : pattern_map =
 				in
 				let incr_calc = stmt.Plan.update_expr in
 				
-	      let theta_w_loopinv = ListAsSet.union theta_vars      linv  in
-	      let theta_w_lhs     = ListAsSet.union theta_w_loopinv loutv in
+				(* all lhs input variables must be free, they cannot be bound by trigger args *)
+				assert (List.length (ListAsSet.inter theta_vars linv) = 0);
+	      let theta_w_linv = ListAsSet.union theta_vars   linv  in
+	      let theta_w_lhs  = ListAsSet.union theta_w_linv loutv in
 	      
+	      let stmt_patterns = create_pattern_map_from_access lmapn theta_vars loutv 		in
 	      let init_patterns = begin match init_calc_opt with
 					| Some(init_calc) -> extract_from_calc theta_w_lhs init_calc 
 					| None            -> empty_pattern_map()
 					end
 				in
-	      let incr_patterns = extract_from_calc theta_w_loopinv incr_calc in
-	      let stmt_patterns = create_pattern_map_from_access lmapn theta_vars linv loutv 		in
+	      let incr_patterns = extract_from_calc theta_w_linv incr_calc in
 	      List.fold_left merge_pattern_maps 
 											 stmt_patterns
 	        						 ([init_patterns; incr_patterns])

@@ -18,7 +18,7 @@ FILES=\
 	src/compiler/Heuristics\
 	src/compiler/Compiler\
 	src/maps/M3\
-	src/maps/Pattern\
+	src/maps/Patterns\
 	src/maps/M3DM\
 	src/functional/K3
 

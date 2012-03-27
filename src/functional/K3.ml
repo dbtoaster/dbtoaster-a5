@@ -188,7 +188,7 @@ struct
     type statement = expr_t * expr_t
 		type event_type_t = Insert | Delete
     type trigger = event_type_t * rel_id_t * id_t list * statement list
-    type program = map_type_t list * Pattern.Patterns.pattern_map * trigger list
+    type program = map_type_t list * Patterns.pattern_map * trigger list
 
 
 (* Expression traversal helpers *)
