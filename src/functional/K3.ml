@@ -30,109 +30,48 @@
 
 open Format
 
+
+type k3_var_t = string
+type k3_map_type_t = string * (Types.type_t list) * (Types.type_t list)
+	
 (*
-  in alpha4:
-		K3.id_t = M3.var_id_t = string
-		M3.var_t = M3.var_id_t = string
-		M3.map_id_t = string
-		M3.Prepared.pprebind_t       = (var_t * var_t) list
-    M3.Prepared.pinbind_t        = (var_t * int) list
-		M3.var_type_t = VT_String | VT_Int | VT_Float
-		M3.map_type_t = map_id_t * (var_type_t list) * (var_type_t list)
-		M3.const_t = CFloat of float | CString of string
-		
-		M3.pm_t = Insert | Delete
-		M3.rel_id_t = string
+type m3schema  = m3_var_t list
+type extension = m3_var_t list
+type pattern   = int list
 *)
 
-(*
 (* Signatures *)
 module type SRSig =
 sig
-
-    (* K3 methods *)
-
-
-    (* Traversal helpers *)
-    val get_branches : expr_t -> expr_t list list
-    val rebuild_expr : expr_t -> expr_t list list -> expr_t
-    val descend_expr : (expr_t -> expr_t) -> expr_t -> expr_t
-    
-    (* Tree traversal *)
-
-    (* map: pre- and post-order traversal of an expression tree, applying the
-     * map function at every node
-     *)
-    val pre_map_expr : (expr_t -> expr_t) -> expr_t -> expr_t
-    val post_map_expr : (expr_t -> expr_t) -> expr_t -> expr_t
-
-    (* fold f pre acc init e
-     * applies f to each subexpr of e, with both a top-down and bottom-up
-     * accumulator (acc, return value respectively), using init as the
-     * bottom-up accumulator at leaves.
-     * pre transforms the top-down accumulator prior to recursive calls
-     * the bottom-up accumulation is a list of lists, representing
-     * list branches at internal nodes (i.e. where a child can be a list
-     * itself, as with tuples, tuple collection accessors, etc) 
-     *)
-    val fold_expr :
-      ('b -> 'a list list -> expr_t -> 'a) ->
-      ('b -> expr_t -> 'b) -> 'b -> 'a -> expr_t -> 'a
-
-    (* Returns whether second expression is a subexpression of the first *)
-    val contains_expr : expr_t -> expr_t -> bool
-
-    val string_of_type : k3_type_t -> string
-    val string_of_arg  : arg_t -> string
-    val string_of_expr : expr_t -> string
-    val code_of_expr   : expr_t -> string
-    
-    (* Helpers *)
-    val collection_of_list : expr_t list -> expr_t
-    val collection_of_float_list : float list -> expr_t
-
-    
-end *)
-
-module SR =
-struct
-
-	
-		type id_t = string (* DONE *) (* move to Types module ? *)
-    type coll_id_t = string (* DONE *) (* move to Types module ? *)
+		type id_t = string
+		type coll_id_t = string
 		
-		type var_type_t = Types.type_t
-		type map_type_t = coll_id_t * (var_type_t list) * (var_type_t list)
-		
-		type rel_id_t = string (* DONE *) (* move to Types module ? *)
-    
-    (* type prebind   = M3.Prepared.pprebind_t TODO *)
-    (* type inbind    = M3.Prepared.pinbind_t TODO *)
-    (* type m3schema  = M3.var_t list TODO *)
-    (* type extension = M3.var_t list TODO *)
-
+    (* Daniel
+    type prebind   = M3.Prepared.pprebind_t
+    type inbind    = M3.Prepared.pinbind_t
+    *)
     (*
     type fn_id_t = string
     type ext_fn_id = Symbol of fn_id_t
     *)
 
-    type k3_type_t =
-	      TUnit
-			| TBase      of Types.type_t
-      | TTuple     of k3_type_t list          (* unnamed records *)
-	    | Collection of k3_type_t               (* collections *)
-	    | Fn         of k3_type_t list * k3_type_t (* args * body *)
+    type type_t =
+	      TUnit 
+			| TBase      of Types.type_t      
+      | TTuple     of type_t list          (* unnamed records *)
+	    | Collection of type_t               (* collections *)
+	    | Fn         of type_t list * type_t (* args * body *)
 
-    type schema = (id_t * k3_type_t) list
+    type schema = (id_t * type_t) list
 
-    type arg_t = AVar of id_t * k3_type_t | ATuple of (id_t * k3_type_t) list
+    type arg_t = AVar of id_t * type_t | ATuple of (id_t * type_t) list
 
     type expr_t =
    
    
        (* Terminals *)
-         Const         of Types.const_t (* DONE *)
-       | Var           of id_t        * k3_type_t
+         Const         of Types.const_t
+       | Var           of id_t        * type_t
 
        (* Tuples, i.e. unnamed records *)
        | Tuple         of expr_t list
@@ -175,20 +114,162 @@ struct
        | Slice       of expr_t      * schema      * (id_t * expr_t) list
 
        (* Persistent collections *)
-       | SingletonPC   of coll_id_t   * k3_type_t
-       | OutPC         of coll_id_t   * schema   * k3_type_t
-       | InPC          of coll_id_t   * schema   * k3_type_t
-       | PC            of coll_id_t   * schema   * schema    * k3_type_t
+       | SingletonPC   of coll_id_t   * type_t
+       | OutPC         of coll_id_t   * schema   * type_t
+       | InPC          of coll_id_t   * schema   * type_t
+       | PC            of coll_id_t   * schema   * schema    * type_t
 
        | PCUpdate      of expr_t      * expr_t list * expr_t
        | PCValueUpdate of expr_t      * expr_t list * expr_t list * expr_t 
 	   (*| External      of ext_fn_id*)
 
+    (* K3 methods *)
+
+
+    (* Traversal helpers *)
+    val get_branches : expr_t -> expr_t list list
+    val rebuild_expr : expr_t -> expr_t list list -> expr_t
+    val descend_expr : (expr_t -> expr_t) -> expr_t -> expr_t
+    
+    (* Tree traversal *)
+
+    (* map: pre- and post-order traversal of an expression tree, applying the
+     * map function at every node
+     *)
+    val pre_map_expr : (expr_t -> expr_t) -> expr_t -> expr_t
+    val post_map_expr : (expr_t -> expr_t) -> expr_t -> expr_t
+
+    (* fold f pre acc init e
+     * applies f to each subexpr of e, with both a top-down and bottom-up
+     * accumulator (acc, return value respectively), using init as the
+     * bottom-up accumulator at leaves.
+     * pre transforms the top-down accumulator prior to recursive calls
+     * the bottom-up accumulation is a list of lists, representing
+     * list branches at internal nodes (i.e. where a child can be a list
+     * itself, as with tuples, tuple collection accessors, etc) 
+     *)
+    val fold_expr :
+      ('b -> 'a list list -> expr_t -> 'a) ->
+      ('b -> expr_t -> 'b) -> 'b -> 'a -> expr_t -> 'a
+
+    (* Returns whether second expression is a subexpression of the first *)
+    val contains_expr : expr_t -> expr_t -> bool
+
+    val string_of_type : type_t -> string
+    val string_of_arg  : arg_t -> string
+    val string_of_expr : expr_t -> string
+    val code_of_expr   : expr_t -> string
+    
+    (* Helpers *)
+    val collection_of_list : expr_t list -> expr_t
+    val collection_of_float_list : float list -> expr_t
+
     (* Incremental section *)
     type statement = expr_t * expr_t
-		type event_type_t = Insert | Delete
-    type trigger = event_type_t * rel_id_t * id_t list * statement list
-    type program = map_type_t list * Patterns.pattern_map * trigger list
+		type ev_type_t = Insert | Delete
+    type trigger = ev_type_t * string * k3_var_t list * statement list
+    type program = k3_map_type_t list * Patterns.pattern_map * trigger list
+    
+end
+
+
+module SR : SRSig =
+struct
+
+(* Metadata for code generation *)
+
+type id_t = string
+type coll_id_t = string
+
+(* K3 Typing.
+ * -- collection type is used for both persistent and temporary collections.
+ * -- maps are collections of tuples, where the tuple includes key types
+ *    and the value type. 
+ *)
+type type_t =
+      TUnit 
+		| TBase      of Types.type_t
+    | TTuple     of type_t list
+    | Collection of type_t
+    | Fn         of type_t list * type_t
+
+(* Schemas are carried along with persistent map references,
+ * and temporary slices *)
+type schema = (id_t * type_t) list
+
+
+type arg_t = AVar of id_t * type_t | ATuple of (id_t * type_t) list
+
+(* External functions *)
+(*
+type ext_fn_type_t = type_t list * type_t   (* arg, ret type *)
+
+type fn_id_t = string
+type ext_fn_id = Symbol of fn_id_t
+
+type symbol_table = (fn_id_t, ext_fn_type_t) Hashtbl.t
+let ext_fn_symbols : symbol_table = Hashtbl.create 100
+*)
+
+(* Expression AST *)
+type expr_t =
+   
+   (* Terminals *)
+     Const         of Types.const_t
+   | Var           of id_t        * type_t
+
+   (* Tuples, i.e. unnamed records *)
+   | Tuple         of expr_t list
+   | Project       of expr_t      * int list
+
+   (* Collection construction *)
+   | Singleton     of expr_t
+   | Combine       of expr_t      * expr_t 
+
+   (* Arithmetic and comparison operators, conditionals *) 
+   | Add           of expr_t      * expr_t
+   | Mult          of expr_t      * expr_t
+   | Eq            of expr_t      * expr_t
+   | Neq           of expr_t      * expr_t
+   | Lt            of expr_t      * expr_t
+   | Leq           of expr_t      * expr_t
+   | IfThenElse0   of expr_t      * expr_t
+
+   (* Control flow: conditionals, sequences, side-effecting iterations *)
+   | Comment       of string      * expr_t
+   | IfThenElse    of expr_t      * expr_t   * expr_t
+   | Block         of expr_t list 
+   | Iterate       of expr_t      * expr_t  
+     
+   (* Functions *)
+   | Lambda        of arg_t       * expr_t
+   | AssocLambda   of arg_t       * arg_t    * expr_t
+   | Apply         of expr_t      * expr_t
+
+   (* Structural recursion operators *)
+   | Map              of expr_t      * expr_t 
+   | Flatten          of expr_t
+   | Aggregate        of expr_t      * expr_t   * expr_t
+   | GroupByAggregate of expr_t      * expr_t   * expr_t * expr_t
+
+   (* Tuple collection accessors *)
+   | Member      of expr_t      * expr_t list  
+   | Lookup      of expr_t      * expr_t list
+   | Slice       of expr_t      * schema      * (id_t * expr_t) list
+   
+   (* Persistent collection types w.r.t in/out vars *)
+   | SingletonPC   of coll_id_t   * type_t
+   | OutPC         of coll_id_t   * schema   * type_t
+   | InPC          of coll_id_t   * schema   * type_t
+   | PC            of coll_id_t   * schema   * schema    * type_t
+
+   (* map, key (optional, used for double-tiered), tier *)
+   | PCUpdate      of expr_t      * expr_t list * expr_t
+
+   (* map, in key (optional), out key, value *)   
+   | PCValueUpdate of expr_t      * expr_t list * expr_t list * expr_t 
+
+   (*| External      of ext_fn_id*)
 
 
 (* Expression traversal helpers *)
@@ -369,8 +450,8 @@ let contains_expr e1 e2 =
 (* Stringification *)
 let rec string_of_type t =
     match t with
-      TUnit -> "TUnit"
-		| TBase(tb) -> Types.ocaml_of_type tb (* use string_of_type instead? *)
+      TUnit -> "TUnit" 
+		| TBase(b_t) -> Types.string_of_type b_t
     | TTuple(t_l) -> "TTuple("^(String.concat " ; " (List.map string_of_type t_l))^")"
     | Collection(c_t) -> "Collection("^(string_of_type c_t)^")"
     | Fn(a,b) -> "Fn("^(String.concat "," (List.map string_of_type a))^
@@ -414,11 +495,11 @@ let string_of_expr e =
                           ps (","^(string_of_type t)); ps ")"; cb() in
     match e with
     | Const c -> 
-      let const_ts = match c with (* TODO outsource stringification to Types module *)
-				| Types.CBool _ -> "CBool"
-				| Types.CInt _ -> "CInt"
+      let const_ts = match c with
         | Types.CFloat _ -> "CFloat"
-        | Types.CString _ -> "CString" 
+        | Types.CString _ -> "CString"
+				| Types.CInt _ -> "CInt"
+				| Types.CBool _ -> "CBool" 
       in ob(); ps ("Const("^const_ts^"("^(Types.string_of_const c)^"))"); cb()
     | Var (id,t) -> ob(); ps "Var("; pid id; ps ","; 
                                      ps (string_of_type t); ps ")"; cb()
@@ -482,15 +563,15 @@ let rec code_of_expr e =
    let rcr ex = "("^(code_of_expr ex)^")" in
    let rec ttostr t = "("^(match t with
       | TUnit -> "K3.SR.TUnit"
-			| TBase(tb) -> Types.ocaml_of_type(tb)
+      | TBase( b_t ) -> "Types."^(Types.ocaml_of_type b_t)
       | TTuple(tlist) -> 
-         "K3.SR.TTuple("^(ListExtras.string_of_list ttostr tlist)^")"
+         "K3.SR.TTuple("^(ListExtras.ocaml_of_list ttostr tlist)^")"
       | Collection(subt) -> "K3.SR.Collection("^(ttostr subt)^")"
       | Fn(argt,rett) -> 
-         "K3.SR.Fn("^(ListExtras.string_of_list ttostr argt)^","^(ttostr rett)^")"
+         "K3.SR.Fn("^(ListExtras.ocaml_of_list ttostr argt)^","^(ttostr rett)^")"
    )^")" in
    let string_of_vpair (v,vt) = "\""^v^"\","^(ttostr vt) in
-   let vltostr = ListExtras.string_of_list string_of_vpair in
+   let vltostr = ListExtras.ocaml_of_list string_of_vpair in
    let argstr arg = 
       match arg with
          | AVar(v,vt) -> 
@@ -501,16 +582,16 @@ let rec code_of_expr e =
    match e with
       | Const c -> 
         let const_ts = match c with
-					| Types.CBool _ -> "CBool"
-					| Types.CInt _ -> "CInt"
           | Types.CFloat _ -> "CFloat"
           | Types.CString _ -> "CString" 
+					| Types.CInt _ -> "CInt"
+          | Types.CBool _ -> "CBool" 
         in "K3.SR.Const(M3."^const_ts^"("^(Types.string_of_const c)^"))"
       | Var (id,t) -> "K3.SR.Var(\""^id^"\","^(ttostr t)^")"
-      | Tuple e_l -> "K3.SR.Tuple("^(ListExtras.string_of_list rcr e_l)^")"
+      | Tuple e_l -> "K3.SR.Tuple("^(ListExtras.ocaml_of_list rcr e_l)^")"
       
       | Project (ce, idx) -> "K3.SR.Project("^(rcr ce)^","^
-                           (ListExtras.string_of_list string_of_int idx)^")"
+                           (ListExtras.ocaml_of_list string_of_int idx)^")"
       
       | Singleton ce      -> "K3.SR.Singleton("^(rcr ce)^")"
       | Combine (ce1,ce2) -> "K3.SR.Combine("^(rcr ce1)^","^(rcr ce2)^")"
@@ -528,7 +609,7 @@ let rec code_of_expr e =
       | IfThenElse  (pe,te,ee) -> 
             "K3.SR.IfThenElse("^(rcr pe)^","^(rcr te)^","^(rcr ee)^")"
       
-      | Block   e_l        -> "K3.SR.Block("^(ListExtras.string_of_list rcr e_l)^")"
+      | Block   e_l        -> "K3.SR.Block("^(ListExtras.ocaml_of_list rcr e_l)^")"
       | Iterate (fn_e, ce) -> "K3.SR.Iterate("^(rcr fn_e)^","^(rcr ce)^")"
       | Lambda  (arg_e,ce) -> "K3.SR.Lambda("^(argstr arg_e)^","^(rcr ce)^")"
       
@@ -556,20 +637,20 @@ let rec code_of_expr e =
             "K3.SR.PC(\""^id^"\","^(vltostr ins)^","^(vltostr ins)^","^
                       (ttostr t)^")"
       | Member(me,ke) -> 
-            "K3.SR.Member("^(rcr me)^","^(ListExtras.string_of_list rcr ke)^")"  
+            "K3.SR.Member("^(rcr me)^","^(ListExtras.ocaml_of_list rcr ke)^")"  
       | Lookup(me,ke) -> 
-            "K3.SR.Lookup("^(rcr me)^","^(ListExtras.string_of_list rcr ke)^")"
+            "K3.SR.Lookup("^(rcr me)^","^(ListExtras.ocaml_of_list rcr ke)^")"
       | Slice(me,sch,pat_ve) -> 
-            let pat_str = ListExtras.string_of_list (fun (id,expr) ->
+            let pat_str = ListExtras.ocaml_of_list (fun (id,expr) ->
                "\""^id^"\","^(rcr expr)
             ) pat_ve in
             "K3.SR.Slice("^(rcr me)^","^(vltostr sch)^",("^pat_str^"))"
       | PCUpdate(me,ke,te) -> 
-            "K3.SR.PCUpdate("^(rcr me)^","^(ListExtras.string_of_list rcr ke)^","^
+            "K3.SR.PCUpdate("^(rcr me)^","^(ListExtras.ocaml_of_list rcr ke)^","^
                             (rcr te)^")"
       | PCValueUpdate(me,ine,oute,ve) -> 
-            "K3.SR.PCValueUpdate("^(rcr me)^","^(ListExtras.string_of_list rcr ine)^
-                                 ","^(ListExtras.string_of_list rcr oute)^","^
+            "K3.SR.PCValueUpdate("^(rcr me)^","^(ListExtras.ocaml_of_list rcr ine)^
+                                 ","^(ListExtras.ocaml_of_list rcr oute)^","^
                                  (rcr ve)^")"
 
 (* Native collection constructors *)
@@ -583,4 +664,11 @@ let collection_of_float_list (l : float list) =
     List.fold_left (fun acc v -> Combine(acc,Singleton(Const(Types.CFloat(v)))))
         (Singleton(Const(Types.CFloat(List.hd l)))) (List.tl l)
 
+
+(* Incremental section *)
+type statement = expr_t * expr_t
+type ev_type_t = Insert | Delete
+type trigger = ev_type_t * string * k3_var_t list * statement list
+type program = k3_map_type_t list * Patterns.pattern_map * trigger list
+    
 end
