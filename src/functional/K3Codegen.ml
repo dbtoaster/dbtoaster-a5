@@ -21,14 +21,14 @@ sig
 
     (* Terminals *)
     val const : ?expr:K3.SR.expr_t option -> const_t -> code_t
-    val var   : ?expr:K3.SR.expr_t option -> var_t -> K3.SR.k3_type_t -> code_t
+    val var   : ?expr:K3.SR.expr_t option -> K3.SR.id_t -> K3.SR.type_t -> code_t
 
     (* Tuples *)
     val tuple   : ?expr:K3.SR.expr_t option -> code_t list -> code_t
     val project : ?expr:K3.SR.expr_t option -> code_t -> int list -> code_t
 
     (* Native collections *)
-    val singleton : ?expr:K3.SR.expr_t option -> code_t -> K3.SR.k3_type_t -> code_t
+    val singleton : ?expr:K3.SR.expr_t option -> code_t -> K3.SR.type_t -> code_t
     val combine   : ?expr:K3.SR.expr_t option -> code_t -> code_t -> code_t
 
     (* Arithmetic, comparision operators *)
@@ -59,7 +59,7 @@ sig
     (* Structural recursion operations *)
     (* map fn, collection -> map *)
     val map : ?expr:K3.SR.expr_t option ->
-        code_t -> K3.SR.k3_type_t -> code_t -> code_t
+        code_t -> K3.SR.type_t -> code_t -> code_t
     
     (* agg fn, initial agg, collection -> agg *)
     val aggregate : ?expr:K3.SR.expr_t option -> code_t -> code_t -> code_t -> code_t
@@ -100,19 +100,19 @@ sig
 
     (* Database retrieval methods *)
     val get_value   : 
-      ?expr:K3.SR.expr_t option -> K3.SR.k3_type_t -> K3.SR.coll_id_t -> code_t
+      ?expr:K3.SR.expr_t option -> K3.SR.type_t -> K3.SR.coll_id_t -> code_t
 
     val get_in_map  : 
-      ?expr:K3.SR.expr_t option -> K3.SR.schema -> K3.SR.k3_type_t ->
+      ?expr:K3.SR.expr_t option -> K3.SR.schema -> K3.SR.type_t ->
       K3.SR.coll_id_t -> code_t
     
     val get_out_map : 
-      ?expr:K3.SR.expr_t option -> K3.SR.schema -> K3.SR.k3_type_t ->
+      ?expr:K3.SR.expr_t option -> K3.SR.schema -> K3.SR.type_t ->
       K3.SR.coll_id_t -> code_t
     
     val get_map     : 
       ?expr:K3.SR.expr_t option -> (K3.SR.schema * K3.SR.schema) -> 
-      K3.SR.k3_type_t -> K3.SR.coll_id_t -> code_t
+      K3.SR.type_t -> K3.SR.coll_id_t -> code_t
     
     
     (* Database udpate methods *)
@@ -161,7 +161,7 @@ sig
     (* Toplevel: sources and main *)
     (* event, rel, trigger args, statement code block -> trigger code *)
     val trigger :
-        Schema.event_t -> K3.SR.rel_id_t -> var_t list -> code_t list -> code_t
+        K3.SR.ev_type_t -> K3.SR.id_t -> K3.SR.var_id_t list -> code_t list -> code_t
 
     (* source type, framing type, (relation * adaptor type) list 
      * -> source impl type,
@@ -173,7 +173,7 @@ sig
     (* db schema, map schema, patterns, source decls and inits, triggers, toplevel queries
        -> top level code *)
     val main : (string * var_t list) list ->
-               K3.SR.map_type_t list -> pattern_map ->
+               K3.SR.map_t list -> pattern_map ->
                (source_impl_t * code_t option * code_t option) list ->
                code_t list -> string list -> code_t
 

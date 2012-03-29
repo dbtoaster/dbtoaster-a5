@@ -108,3 +108,6 @@ let min (l:'a list):'a =
    else List.fold_left Pervasives.min (List.hd l) (List.tl l)
 
 let sum l = List.fold_left (+) 0 l
+
+let list_to_pair (l:'a list): 'a * 'a = 
+			(List.hd l, List.hd (List.tl l)) 

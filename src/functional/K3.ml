@@ -164,9 +164,9 @@ sig
     (* Incremental section *)
     type statement_t = expr_t * expr_t
 		type ev_type_t = Insert | Delete
-		type var_t = string
+		type var_id_t = string
 		type map_t = string * (Types.type_t list) * (Types.type_t list)
-    type trigger_t = ev_type_t * string * var_t list * statement_t list
+    type trigger_t = ev_type_t * string * var_id_t list * statement_t list
     type prog_t = map_t list * Patterns.pattern_map * trigger_t list
     
 end
@@ -667,9 +667,9 @@ let collection_of_float_list (l : float list) =
 (* Incremental section *)
 type statement_t = expr_t * expr_t
 type ev_type_t = Insert | Delete
-type var_t = string
+type var_id_t = string
 type map_t = string * (Types.type_t list) * (Types.type_t list)
-type trigger_t = ev_type_t * string * var_t list * statement_t list
+type trigger_t = ev_type_t * string * var_id_t list * statement_t list
 type prog_t = map_t list * Patterns.pattern_map * trigger_t list
     
 end

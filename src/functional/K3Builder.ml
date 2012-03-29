@@ -53,7 +53,7 @@ let float_k3_t = K.TBase(float_t)
 let init_val = K.Const(Types.CFloat(0.0))
 			
 	
-let bind_for_apply_each (trig_args: Types.var_t list) vt_list e = 
+let bind_for_apply_each (trig_args: Types.var_t list) (vt_list: K.schema) e = 
   let non_trig_vt_list = 
 		List.map (fun (v,t) -> if List.mem_assoc v trig_args then (gensym(),t) 
 													 else (v,t)) 
@@ -64,19 +64,19 @@ let bind_for_apply_each (trig_args: Types.var_t list) vt_list e =
     failwith "invalid lambda with duplicate variables"
   else
   begin match non_trig_vt_list with 
-    | [var,vart] -> K.Lambda(K.AVar(var,K.TBase(vart)), e)
-    | l          -> K.Lambda(K.ATuple(varIdType_to_k3_idType l), e)
+    | [var,vart] -> K.Lambda(K.AVar(var,vart), e)
+    | l          -> K.Lambda(K.ATuple(l), e)
   end
 
 
 let create_proj_fn trig_args from_vars to_vars = 
 		bind_for_apply_each 
         trig_args
-        from_vars
+        (varIdType_to_k3_idType from_vars)
         (K.Tuple(varIdType_to_k3_expr to_vars))		
 		
 				
-let bind_for_aggregate (trig_args: Types.var_t list) vt_list (iv,it) e = 
+let bind_for_aggregate (trig_args: Types.var_t list) (vt_list: K.schema) (iv,it) e = 
   let non_trig_vt_list = 
 		List.map (fun (v,t) -> if List.mem_assoc v trig_args then (gensym(),t) 
 													 else (v,t)) 
@@ -88,19 +88,19 @@ let bind_for_aggregate (trig_args: Types.var_t list) vt_list (iv,it) e =
   else
   begin match non_trig_vt_list with 
     | [var,vart] -> 
-			K.AssocLambda(K.AVar(var,K.TBase(vart)), K.AVar(iv,K.TBase(it)), e )
+			K.AssocLambda(K.AVar(var,vart), K.AVar(iv,it), e )
     | l          -> 
-			K.AssocLambda(K.ATuple(varIdType_to_k3_idType l),	K.AVar(iv,K.TBase(it)), e )
+			K.AssocLambda(K.ATuple(l),	K.AVar(iv,it), e )
   end	
 
 let create_agg_fn trig_args vars (multpl_var,multpl_t) =
 		let accv = next_accum_var () in 
 		bind_for_aggregate 
 				trig_args
-				(vars@[multpl_var,multpl_t]) 
-				(accv,multpl_t)
+				(varIdType_to_k3_idType vars@[multpl_var,K.TBase(multpl_t)]) 
+				(accv,K.TBase(multpl_t))
      		(K.Add(K.Var(multpl_var, K.TBase(multpl_t)), 
-									 K.Var(accv, K.TBase(multpl_t))))
+							 K.Var(      accv, K.TBase(multpl_t))))
     
 (**********************************************************************)
 
@@ -367,14 +367,14 @@ and op_to_k3_expr trig_args metadata (expected_sch1,expected_sch2) op c c1 c2 =
 			     calc_to_singleton_k3_expr trig_args meta child_sing in
 					
 				let (v,v_t,left,right) = if c1_sing 
-						then "v2",float_t,inline,K.Var("v2",float_k3_t)
-						else "v1",float_t,K.Var("v1",float_k3_t),inline in
+						then "v2",float_k3_t,inline,K.Var("v2",float_k3_t)
+						else "v1",float_k3_t,K.Var("v1",float_k3_t),inline in
 				let (op_sch, op_result) = (op outsch left right) in
 				  
-				let fn = bind_for_apply_each trig_args (outsch@[v,v_t]) op_result
+				let fn = bind_for_apply_each trig_args (varIdType_to_k3_idType outsch@[v,v_t]) op_result
 				in 
 						if outsch = [] then (op_sch, meta2, K.Apply(fn,ce))
-						else                (op_sch, meta2,  K.Map(fn, ce))
+						else                (op_sch, meta2,   K.Map(fn,ce))
         
     | (false, false, false) ->
       (* Note: there is no difference to the nesting whether this op
@@ -388,8 +388,8 @@ and op_to_k3_expr trig_args metadata (expected_sch1,expected_sch2) op c c1 c2 =
 			
       let applied_expr = 
          if (sch1 = []) && (sch2 = []) then
-            K.Apply(bind_for_apply_each trig_args ["v1",float_t] (
-               K.Apply(bind_for_apply_each trig_args ["v2",float_t] (
+            K.Apply(bind_for_apply_each trig_args ["v1",float_k3_t] (
+               K.Apply(bind_for_apply_each trig_args ["v2",float_k3_t] (
                   op_result
                ), ine)
             ), oute)
@@ -399,14 +399,14 @@ and op_to_k3_expr trig_args metadata (expected_sch1,expected_sch2) op c c1 c2 =
                then "v1",oute,sch2@["v2",float_t],ine
                else "v2", ine,sch1@["v1",float_t],oute
             in
-               K.Map(bind_for_apply_each trig_args set_v (
-                  K.Apply(bind_for_apply_each trig_args [singleton_v,float_t] (
+               K.Map(bind_for_apply_each trig_args (varIdType_to_k3_idType set_v) (
+                  K.Apply(bind_for_apply_each trig_args [singleton_v,float_k3_t] (
                      op_result
                   ), singleton_e)
                ), set_e)
          else
-            let nested = bind_for_apply_each trig_args (sch2@["v2",float_t]) op_result in 
-            let inner  = bind_for_apply_each trig_args (sch1@["v1",float_t]) (K.Map(nested, ine)) 
+            let nested = bind_for_apply_each trig_args (varIdType_to_k3_idType sch2@["v2",float_k3_t]) op_result in 
+            let inner  = bind_for_apply_each trig_args (varIdType_to_k3_idType sch1@["v1",float_k3_t]) (K.Map(nested, ine)) 
             in K.Flatten(K.Map(inner, oute))
       in op_sch, meta2, applied_expr
 
@@ -512,7 +512,7 @@ and calc_to_k3_expr trig_args metadata expected_schema calc =
 					  if (ListAsSet.seteq rets outs)
 					     then (outs, new_metadata, r)
 					     else let projected = (
-					        let agg_fn = create_agg_fn trig_args outs ("v",float_t) in
+					        let agg_fn = create_agg_fn  trig_args outs ("v",float_t) in
 								  let gb_fn  = create_proj_fn trig_args (outs@["v",float_t]) rets in
 													
 						      if rets = [] 
@@ -593,14 +593,13 @@ let collection_stmt trig_args (m3stmt: Plan.stmt_t) : K.statement_t =
     let schema vars = List.map (fun v -> (v,TFloat)) vars in
     let vars_expr vars = List.map (fun v -> Var(v,TFloat)) vars in
 		*)
-    let fn_arg_expr v t = (v,t),K.Var(v,t) in
+    let fn_arg_expr v t = (v,t),K.AVar(v,t),K.Var(v,t) in
 
 		(* alpha4:
     let ((mapn, lhs_inv, lhs_outv, init_aggcalc), stmt_type, incr_aggcalc, sm) = m3stmt *) 
 		let (mapn, lhs_ins, lhs_outs, map_type, Some(init_aggcalc)) = Plan.expand_ds_name m3stmt.Plan.target_map in
 		
-		let (lhs_inv,   lhs_outv)  = (List.map         fst lhs_ins, List.map         fst lhs_outs) in
-    let (lhs_in_el, lhs_out_el)= (varIdType_to_k3_expr lhs_ins, varIdType_to_k3_expr lhs_outs) in
+		let (lhs_in_el, lhs_out_el)= (varIdType_to_k3_expr lhs_ins, varIdType_to_k3_expr lhs_outs) in
 		let {Plan.update_type = update_type; Plan.update_expr = incr_aggcalc} = m3stmt in 
 		
 		(* all lhs input variables must be free, they cannot be bound by trigger args *)
@@ -622,9 +621,10 @@ let collection_stmt trig_args (m3stmt: Plan.stmt_t) : K.statement_t =
     in
     
 		(* TODO: use typechecker to compute types here *)
-    let out_tier_t = Collection(TTuple(List.map snd outs@[TFloat])) in
+		let map_k3_type = K.TBase(map_type) in
+    let out_tier_t = K.Collection(K.TTuple(varIdType_to_k3_type lhs_outs@[map_k3_type])) in
 
-    let collection = map_to_expr mapn ins outs in
+    let collection = map_to_expr mapn lhs_ins lhs_outs map_k3_type in
     
     (* Update expression, singleton initializer expression
      * -- update expression: increments the current var/slice by computing
@@ -636,33 +636,28 @@ let collection_stmt trig_args (m3stmt: Plan.stmt_t) : K.statement_t =
      *    the new value by combining (inline) the initial value and delta
      *)
     let (update_expr, sing_init_expr) =
-        let zero_init = Const(CFloat(0.0)) in
-        let singleton_aux init_e =
-            let ca,ce = fn_arg_expr "current_v" TFloat in
-            (Lambda(AVar(fst ca, snd ca),Add(ce,incr_expr)), init_e)
+        let singleton_aux =
+            let _,ca,ce = fn_arg_expr "current_v" map_k3_type in
+            K.Lambda(ca,K.Add(ce,incr_expr))
         in
-        let slice_t = Collection(TTuple((List.map snd outs)@[TFloat])) in
         let slice_aux init_f =
-            let ca,ce = fn_arg_expr "current_slice" slice_t in
-            let ma,me = fn_arg_expr "dv" TFloat in
-            (* merge fn: check if the delta exists in the current slice and
+            let _,ca,ce = fn_arg_expr "current_slice" out_tier_t in
+            let mv,_,me = fn_arg_expr "dv" map_k3_type in
+						(* merge fn: check if the delta exists in the current slice and
              * increment, otherwise compute an initial value and increment  *)
             let merge_body =
-                let build_entry e = Tuple(out_el@[e]) in 
-                IfThenElse(Member(ce,out_el),
-                    build_entry (Add(Lookup(ce, out_el), me)),
+                let build_entry e = K.Tuple(lhs_out_el@[e]) in 
+                K.IfThenElse(K.Member(ce,lhs_out_el),
+                    build_entry (K.Add(K.Lookup(ce, lhs_out_el), me)),
                     build_entry (init_f me))
             in
-            let merge_fn = bind_for_apply_each
-              trig_args ((args_of_vars lhs_outv)@[ma]) merge_body in
+            let merge_fn = bind_for_apply_each trig_args (varIdType_to_k3_idType lhs_outs@[mv]) merge_body in
             (* slice update: merge current slice with delta slice *)
-            let merge_expr = Map(merge_fn, incr_expr)
-            in (Lambda(AVar(fst ca, snd ca),merge_expr), zero_init)
+            K.Lambda(ca,K.Map(merge_fn, incr_expr))
         in
         match (incr_single, init_single) with
-        | (true,true) -> singleton_aux (Add(incr_expr,init_expr))
-
-        | (true,false) ->
+        | (true,true)  -> singleton_aux, K.Add(incr_expr,init_expr)
+        | (true,false) -> singleton_aux, K.Add(K.Lookup(init_expr,lhs_out_el), incr_expr)
             (* Note: we don't need to bind lhs_outv for init_expr since
              * incr_expr is a singleton, implying that lhs_outv are all
              * bound vars.
@@ -670,15 +665,12 @@ let collection_stmt trig_args (m3stmt: Plan.stmt_t) : K.statement_t =
              *    no loop out vars, and all in vars are bound, and all bigsums 
              *    are fully aggregated, this case should never occur. 
              *    Check this. *)
-            (* Look up slice w/ out vars for init lhs expr *)
-            singleton_aux (Add(Lookup(init_expr,out_el), incr_expr))
+            (* Look up slice w/ out vars for init lhs expr *)            
 
-        | (false,true) -> slice_aux (fun me -> Add(init_expr,me))
-        
-        | (false,false) ->
+        | (false,true)  -> slice_aux (fun me -> K.Add(init_expr,me)), init_val        
+        | (false,false) -> slice_aux (fun me -> K.Add(K.Lookup(init_expr, lhs_out_el), me)), init_val
             (* All lhs_outv are bound in the map function for the merge,
-             * making loop lhs_outv available to the init expr. *)
-            slice_aux (fun me -> Add(Lookup(init_expr, out_el), me))
+             * making loop lhs_outv available to the init expr. *) 
     in
     
     (* Statement expression:
@@ -686,41 +678,40 @@ let collection_stmt trig_args (m3stmt: Plan.stmt_t) : K.statement_t =
      *    persistent collection, thus has type Unit *)
 
     let loop_in_aux (la,le) loop_fn_body =
-        let patv = Util.ListAsSet.inter lhs_inv trig_args in
-        let pat_ve = List.map (fun v -> (v,Var(v,TFloat))) patv in
-        if (List.length patv) = (List.length lhs_inv)
+        let patv = ListAsSet.inter lhs_ins trig_args in
+        let pat_ve = List.map (fun (v,t) -> (v,K.Var(v,K.TBase(t)))) patv in
+        if (List.length patv) = (List.length lhs_ins)
           then 
-            Apply(bind_for_apply_each trig_args [la] loop_fn_body,
-                  Lookup(collection, List.map snd pat_ve))
+            K.Apply(bind_for_apply_each trig_args [la] loop_fn_body,
+                  K.Lookup(collection, List.map snd pat_ve))
           else
             (*(print_endline ("looping over slices with trig args "^
               (String.concat "," lhs_inv)^" / "^(String.concat "," trig_args));*)
-            Iterate(bind_for_apply_each
-                      trig_args ((args_of_vars lhs_inv)@[la]) loop_fn_body,
-                    Slice(collection, ins, pat_ve))
+            K.Iterate(bind_for_apply_each
+                      trig_args ((varIdType_to_k3_idType lhs_ins)@[la]) loop_fn_body,
+                    K.Slice(collection, (varIdType_to_k3_idType lhs_ins), pat_ve))
     in
     let loop_update_aux ins outs delta_slice =
-        let ua,ue = fn_arg_expr "updated_v" TFloat in
+        let uv,_,ue = fn_arg_expr "updated_v" map_k3_type in
         let update_body = map_value_update_expr collection ins outs ue in
-        let loop_update_fn = bind_for_apply_each
-            trig_args ((args_of_vars lhs_outv)@[ua]) update_body
-        in Iterate(loop_update_fn, delta_slice)
+        let loop_update_fn = bind_for_apply_each trig_args ((varIdType_to_k3_idType lhs_outs)@[uv]) update_body
+        in K.Iterate(loop_update_fn, delta_slice)
     in
     let rhs_basic_merge collection_expr =
-      match stmt_type with
-         | M3.Stmt_Update -> Apply(update_expr, collection_expr)
-         | M3.Stmt_Replace -> incr_expr
+      match update_type with
+         | Plan.UpdateStmt  -> K.Apply(update_expr, collection_expr)
+         | Plan.ReplaceStmt -> incr_expr
     in
     let rhs_test_merge collection_expr =
-      match stmt_type with
-         | M3.Stmt_Update -> 
-            IfThenElse(Member(collection_expr, out_el),
-                       Apply(update_expr, Lookup(collection_expr, out_el)),
-                       sing_init_expr)
-         | M3.Stmt_Replace -> incr_expr
+      match update_type with
+         | Plan.UpdateStmt -> 
+            K.IfThenElse( K.Member(collection_expr, lhs_out_el),
+                       		K.Apply(update_expr, K.Lookup(collection_expr, lhs_out_el)),
+                       		sing_init_expr )
+         | Plan.ReplaceStmt -> incr_expr
     in
     let statement_expr = 
-        begin match lhs_inv, lhs_outv, incr_single with
+        begin match lhs_ins, lhs_outs, incr_single with
         | ([],[],false) -> failwith "invalid slice update on a singleton map"
 
         | ([],[],_) ->
@@ -730,10 +721,10 @@ let collection_stmt trig_args (m3stmt: Plan.stmt_t) : K.statement_t =
         | (x,[],false) -> failwith "invalid slice update on a singleton out tier"
 
         | (x,[],true) ->
-            let la,le = fn_arg_expr "existing_v" TFloat in
+            let lv,_,le = fn_arg_expr "existing_v" map_k3_type in
             let rhs_expr = rhs_basic_merge le
-            in loop_in_aux (la,le)
-                 (map_value_update_expr collection in_el [] rhs_expr) 
+            in loop_in_aux (lv,le)
+                 (map_value_update_expr collection lhs_in_el [] rhs_expr) 
 
         | ([],x,false) ->
             (* We explicitly loop, updating each incremented value in the rhs slice,
@@ -741,24 +732,24 @@ let collection_stmt trig_args (m3stmt: Plan.stmt_t) : K.statement_t =
              * the current slice.
              *)
             let rhs_expr = rhs_basic_merge collection
-            in loop_update_aux [] out_el rhs_expr
+            in loop_update_aux [] lhs_out_el rhs_expr
 
         | ([],x,true) ->
             let rhs_expr = rhs_test_merge collection
-            in map_value_update_expr collection [] out_el rhs_expr
+            in map_value_update_expr collection [] lhs_out_el rhs_expr
 
         | (x,y,false) ->
             (* Use a value update loop to persist the delta slice *)
-            let la,le = fn_arg_expr "existing_slice" out_tier_t in
+            let la,_,le = fn_arg_expr "existing_slice" out_tier_t in
             let rhs_expr = rhs_basic_merge le in
-            let update_body = loop_update_aux in_el out_el rhs_expr
+            let update_body = loop_update_aux lhs_in_el lhs_out_el rhs_expr
             in loop_in_aux (la,le) update_body
 
         | (x,y,true) ->
-            let la,le = fn_arg_expr "existing_slice" out_tier_t in
+            let lv,_,le = fn_arg_expr "existing_slice" out_tier_t in
             let rhs_expr = rhs_test_merge le
-            in loop_in_aux (la,le)
-                (map_value_update_expr collection in_el out_el rhs_expr)
+            in loop_in_aux (lv,le)
+                (map_value_update_expr collection lhs_in_el lhs_out_el rhs_expr)
         end
     in
 		(collection, statement_expr) 

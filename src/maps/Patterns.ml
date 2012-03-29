@@ -1,8 +1,8 @@
 (******************* Patterns *******************)
 
   type pattern =
-       In of (Types.var_t list * int list)
-     | Out of (Types.var_t list * int list)
+       In of (string list * int list)
+     | Out of (string list * int list)
   
   type pattern_map = (string * pattern list) list
   
@@ -58,8 +58,8 @@
   
   let singleton_pattern_map (mapn,pat) = [(mapn, [pat])]
   
-  let string_of_pattern p =
-    let f x y = List.map (fun (a,b) -> a^":"^(Types.string_of_var b))
+  let string_of_pattern (p:pattern) =
+    let f (x: string list) (y: int list) = List.map (fun (a,b) -> a^":"^b)
       (List.combine (List.map string_of_int y) x)
     in match p with
     | In(x,y) -> "in{"^(String.concat "," (f x y))^"}"
@@ -69,7 +69,7 @@
      let patlist_to_string pl = List.fold_left (fun acc pat ->
         let pat_str = String.concat "," (
            match pat with | In(x,y) | Out(x,y) ->
-              List.map (fun (a,b) -> a^":"^(Types.string_of_var b))
+              List.map (fun (a,b) -> a^":"^b)
                  (List.combine (List.map string_of_int y) x))
         in
         acc^(if acc = "" then acc else " / ")^pat_str) "" pl
@@ -85,7 +85,7 @@ let extract_patterns (triggers : M3.trigger_t list) : pattern_map =
 				let bound_outv = ListAsSet.inter outv theta_vars in 
 				let valid_pattern = List.length bound_outv < List.length outv in
 				if valid_pattern then 
-						singleton_pattern_map (mapn, (make_out_pattern outv bound_outv))
+						singleton_pattern_map (mapn, (make_out_pattern (List.map fst outv) (List.map fst bound_outv)))
 				else
 						empty_pattern_map()
 		in

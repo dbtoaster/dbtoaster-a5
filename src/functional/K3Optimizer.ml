@@ -1399,8 +1399,8 @@ let optimize ?(optimizations=[]) trigger_vars expr =
 
 (**** Datastructure optimization ****)
 
-type ds_trig_decl = Schema.event_t * rel_id_t * id_t list 
-type ds_map_decls = map_type_t list * Patterns.pattern_map 
+type ds_trig_decl = Schema.event_t * id_t * id_t list 
+type ds_map_decls = map_t list * Patterns.pattern_map 
 
 type ds_statement = ds_map_decls * K3.SR.expr_t list
 type ds_trigger = ds_trig_decl * ds_statement list

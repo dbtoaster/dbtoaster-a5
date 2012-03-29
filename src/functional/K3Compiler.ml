@@ -1,12 +1,12 @@
+module K = K3.SR
+
 module Make = functor (CG : K3Codegen.CG) ->
 struct
 
 open Types
 open Schema
 open CG
-open K3.SR
 open K3Typechecker
-open K3Optimizer
 
 (* TODO move this somewhere else? *)
 type relation_input_t = source_t * framing_t * string * adaptor_t
@@ -61,58 +61,58 @@ let rec compile_k3_expr e =
     let rcr = compile_k3_expr in
     let tc_fn_rt e = 
         let r = typecheck_expr e in match r with
-            | Fn(_,rt) -> rt
+            | K.Fn(_,rt) -> rt
             | _ -> failwith "invalid function"
     in
     let debug e = Some(e) in
     let compile_op o l r = op ~expr:(debug e) o (rcr l) (rcr r) in
     begin match e with
-    | Const (c) -> const ~expr:(debug e) c
-    | Var(v,t) -> var ~expr:(debug e) v t
-    | Tuple(field_l) -> tuple ~expr:(debug e) (List.map rcr field_l)
-    | Project(e,fields) -> project ~expr:(debug e) (rcr e) fields
-    | Singleton(e) -> singleton ~expr:(debug e) (rcr e) (typecheck_expr e)
-    | Combine(l,r) -> combine ~expr:(debug e) (rcr l) (rcr r) 
-    | Add(l,r)  -> compile_op add_op l r
-    | Mult(l,r) -> compile_op mult_op l r
-    | Eq(l,r)   -> compile_op eq_op l r
-    | Neq(l,r)  -> compile_op neq_op l r
-    | Lt(l,r)   -> compile_op lt_op l r
-    | Leq(l,r)  -> compile_op leq_op l r 
+    | K.Const (c) -> const ~expr:(debug e) c
+    | K.Var(v,t) -> var ~expr:(debug e) v t
+    | K.Tuple(field_l) -> tuple ~expr:(debug e) (List.map rcr field_l)
+    | K.Project(e,fields) -> project ~expr:(debug e) (rcr e) fields
+    | K.Singleton(e) -> singleton ~expr:(debug e) (rcr e) (typecheck_expr e)
+    | K.Combine(l,r) -> combine ~expr:(debug e) (rcr l) (rcr r) 
+    | K.Add(l,r)  -> compile_op add_op l r
+    | K.Mult(l,r) -> compile_op mult_op l r
+    | K.Eq(l,r)   -> compile_op eq_op l r
+    | K.Neq(l,r)  -> compile_op neq_op l r
+    | K.Lt(l,r)   -> compile_op lt_op l r
+    | K.Leq(l,r)  -> compile_op leq_op l r 
 
-    | IfThenElse0(cond,v) -> compile_op ifthenelse0_op cond v
+    | K.IfThenElse0(cond,v) -> compile_op ifthenelse0_op cond v
     
-    | Comment(c, cexp) -> rcr cexp
+    | K.Comment(c, cexp) -> rcr cexp
 
-    | IfThenElse(p,t,e) -> ifthenelse ~expr:(debug e) (rcr p) (rcr t) (rcr e)
+    | K.IfThenElse(p,t,e) -> ifthenelse ~expr:(debug e) (rcr p) (rcr t) (rcr e)
 
-    | Block(e_l) -> block ~expr:(debug e) (List.map rcr e_l)
-    | Iterate(fn_e, c_e) -> iterate ~expr:(debug e) (rcr fn_e) (rcr c_e)
+    | K.Block(e_l) -> block ~expr:(debug e) (List.map rcr e_l)
+    | K.Iterate(fn_e, c_e) -> iterate ~expr:(debug e) (rcr fn_e) (rcr c_e)
     
-    | Lambda(arg_e, b_e) -> lambda ~expr:(debug e) arg_e (rcr b_e)
+    | K.Lambda(arg_e, b_e) -> lambda ~expr:(debug e) arg_e (rcr b_e)
     
-    | AssocLambda(arg1_e,arg2_e,b_e) ->
+    | K.AssocLambda(arg1_e,arg2_e,b_e) ->
         assoc_lambda ~expr:(debug e) arg1_e arg2_e (rcr b_e)
     
-    | Apply(fn_e, arg_e) -> apply ~expr:(debug e) (rcr fn_e) (rcr arg_e)
+    | K.Apply(fn_e, arg_e) -> apply ~expr:(debug e) (rcr fn_e) (rcr arg_e)
     
-    | Map(fn_e, c_e) -> map ~expr:(debug e) (rcr fn_e) (tc_fn_rt fn_e) (rcr c_e) 
-    | Flatten(c_e) -> flatten ~expr:(debug e) (rcr c_e) 
-    | Aggregate(fn_e, init_e, c_e) ->
+    | K.Map(fn_e, c_e) -> map ~expr:(debug e) (rcr fn_e) (tc_fn_rt fn_e) (rcr c_e) 
+    | K.Flatten(c_e) -> flatten ~expr:(debug e) (rcr c_e) 
+    | K.Aggregate(fn_e, init_e, c_e) ->
         begin match List.map rcr [fn_e;init_e;c_e] with
         | [x;y;z] -> aggregate ~expr:(debug e) x y z
         | _ -> failwith "invalid aggregate compilation"
         end
 
-    | GroupByAggregate(fn_e, init_e, gb_e, c_e) -> 
+    | K.GroupByAggregate(fn_e, init_e, gb_e, c_e) -> 
         begin match List.map rcr [fn_e;init_e;gb_e;c_e] with
         | [w;x;y;z] -> group_by_aggregate ~expr:(debug e) w x y z
         | _ -> failwith "invalid group-by aggregate compilation"
         end
 
-    | Member(m_e, ke_l) -> exists ~expr:(debug e) (rcr m_e) (List.map rcr ke_l)  
-    | Lookup(m_e, ke_l) -> lookup ~expr:(debug e) (rcr m_e) (List.map rcr ke_l)
-    | Slice(m_e, sch, idk_l) ->
+    | K.Member(m_e, ke_l) -> exists ~expr:(debug e) (rcr m_e) (List.map rcr ke_l)  
+    | K.Lookup(m_e, ke_l) -> lookup ~expr:(debug e) (rcr m_e) (List.map rcr ke_l)
+    | K.Slice(m_e, sch, idk_l) ->
         let index l e =
           let (pos,found) = List.fold_left (fun (c,f) x ->
             if f then (c,f) else if x = e then (c,true) else (c+1,false))
@@ -123,32 +123,32 @@ let rec compile_k3_expr e =
         let idx_l = List.map (index (List.map fst sch)) v_l in
         slice ~expr:(debug e) (rcr m_e) (List.map rcr k_l) idx_l
 
-    | SingletonPC(id,t)      -> get_value ~expr:(debug e) t id
-    | OutPC(id,outs,t)       -> get_out_map ~expr:(debug e) outs t id
-    | InPC(id,ins,t)         -> get_in_map ~expr:(debug e) ins t id
-    | PC(id,ins,outs,t)      -> get_map ~expr:(debug e) (ins,outs) t id
+    | K.SingletonPC(id,t)      -> get_value ~expr:(debug e) t id
+    | K.OutPC(id,outs,t)       -> get_out_map ~expr:(debug e) outs t id
+    | K.InPC(id,ins,t)         -> get_in_map ~expr:(debug e) ins t id
+    | K.PC(id,ins,outs,t)      -> get_map ~expr:(debug e) (ins,outs) t id
 
-    | PCUpdate(m_e, ke_l, u_e) ->
+    | K.PCUpdate(m_e, ke_l, u_e) ->
         begin match m_e with
-        | SingletonPC _     -> failwith "invalid bulk update of value"
-        | OutPC(id,outs,t)  -> update_out_map ~expr:(debug e) id (rcr u_e)
-        | InPC(id,ins,t)    -> update_in_map ~expr:(debug e) id (rcr u_e)
-        | PC(id,ins,outs,t) -> update_map ~expr:(debug e) id
+        | K.SingletonPC _     -> failwith "invalid bulk update of value"
+        | K.OutPC(id,outs,t)  -> update_out_map ~expr:(debug e) id (rcr u_e)
+        | K.InPC(id,ins,t)    -> update_in_map ~expr:(debug e) id (rcr u_e)
+        | K.PC(id,ins,outs,t) -> update_map ~expr:(debug e) id
             (List.map rcr ke_l) (rcr u_e)
         | _ -> failwith "invalid map to bulk update"
         end
 
-    | PCValueUpdate(m_e, ine_l, oute_l, u_e) ->
+    | K.PCValueUpdate(m_e, ine_l, oute_l, u_e) ->
         begin match (m_e, ine_l, oute_l) with
-        | (SingletonPC(id,_),[],[]) -> update_value ~expr:(debug e) id (rcr u_e)
+        | (K.SingletonPC(id,_),[],[]) -> update_value ~expr:(debug e) id (rcr u_e)
         
-        | (OutPC(id,_,_), [], e_l) -> update_out_map_value ~expr:(debug e) id
+        | (K.OutPC(id,_,_), [], e_l) -> update_out_map_value ~expr:(debug e) id
             (List.map rcr e_l) (rcr u_e) 
         
-        | (InPC(id,_,_), e_l, []) -> update_in_map_value ~expr:(debug e) id
+        | (K.InPC(id,_,_), e_l, []) -> update_in_map_value ~expr:(debug e) id
             (List.map rcr e_l) (rcr u_e)
         
-        | (PC(id,_,_,_), ie_l, oe_l) -> update_map_value ~expr:(debug e) id
+        | (K.PC(id,_,_,_), ie_l, oe_l) -> update_map_value ~expr:(debug e) id
             (List.map rcr ie_l) (List.map rcr oe_l)
             (rcr u_e)
         | _ -> failwith "invalid map value to update"
@@ -168,8 +168,8 @@ let compile_triggers trigs : code_t list =
       in trigger event rel args stmts)
     trigs
     
-let compile_k3_to_code (dbschema:(string * Patterns.var_t list) list)
-                       (((schema,patterns,trigs) : K3.SR.program),
+let compile_k3_to_code (dbschema:(string * var_t list) list)
+                       (((schema,patterns,trigs) : K3.SR.prog_t),
                         (sources: relation_input_t list))
                        (toplevel_queries : string list): code_t =
    let trig_rels = ListAsSet.no_duplicates
@@ -203,7 +203,6 @@ let compile_query schema prog tlqs (out : GenericIO.out_t): unit =
 
 end
 
-open K3.SR
 
 let optimize_prog ?(optimizations=[]) (schema, patterns, trigs) =
   let opt_trigs = List.map (fun (event, rel, args, cs) ->
