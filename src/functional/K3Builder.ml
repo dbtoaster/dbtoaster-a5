@@ -47,13 +47,15 @@ let accum_prefix  = "accv_"
 let accum_counter = ref 0
 let next_accum_var() = incr accum_counter;
    										 accum_prefix^(string_of_int !accum_counter)
-	
+
+let float_t = Types.TFloat
+let float_k3_t = K.TBase(float_t)
 let init_val = K.Const(Types.CFloat(0.0))
 			
 	
-let bind_for_apply_each trig_args vt_list e = 
+let bind_for_apply_each (trig_args: Types.var_t list) vt_list e = 
   let non_trig_vt_list = 
-		List.map (fun (v,t) -> if List.mem v trig_args then (gensym(),t) 
+		List.map (fun (v,t) -> if List.mem_assoc v trig_args then (gensym(),t) 
 													 else (v,t)) 
 							vt_list 
 	in
@@ -62,36 +64,41 @@ let bind_for_apply_each trig_args vt_list e =
     failwith "invalid lambda with duplicate variables"
   else
   begin match non_trig_vt_list with 
-    | [var,vart] -> K.Lambda(K.AVar(var,vart), e)
-    | l          -> K.Lambda(K.ATuple(l), e)
+    | [var,vart] -> K.Lambda(K.AVar(var,K.TBase(vart)), e)
+    | l          -> K.Lambda(K.ATuple(varIdType_to_k3_idType l), e)
   end
 
 
 let create_proj_fn trig_args from_vars to_vars = 
 		bind_for_apply_each 
         trig_args
-        (varIdType_to_k3_idType from_vars)
+        from_vars
         (K.Tuple(varIdType_to_k3_expr to_vars))		
 		
 				
-let bind_for_aggregate trig_args vt_list (iv,it) e = 
-  let non_trig_vt_list = List.map (fun (v,t) ->
-    if List.mem v trig_args then (gensym(),t) else (v,t)) vt_list in
+let bind_for_aggregate (trig_args: Types.var_t list) vt_list (iv,it) e = 
+  let non_trig_vt_list = 
+		List.map (fun (v,t) -> if List.mem_assoc v trig_args then (gensym(),t) 
+													 else (v,t)) 
+							vt_list 
+	in
   let vars = List.map fst non_trig_vt_list in
   if (unique vars) <> vars then
     failwith "invalid lambda with duplicate variables"
   else
   begin match non_trig_vt_list with 
-    | [var,vart] -> K.AssocLambda(K.AVar(var,vart),	K.AVar(iv,it), e )
-    | l          -> K.AssocLambda(K.ATuple(l),			K.AVar(iv,it), e )
+    | [var,vart] -> 
+			K.AssocLambda(K.AVar(var,K.TBase(vart)), K.AVar(iv,K.TBase(it)), e )
+    | l          -> 
+			K.AssocLambda(K.ATuple(varIdType_to_k3_idType l),	K.AVar(iv,K.TBase(it)), e )
   end	
 
 let create_agg_fn trig_args vars (multpl_var,multpl_t) =
 		let accv = next_accum_var () in 
 		bind_for_aggregate 
 				trig_args
-				(varIdType_to_k3_idType (vars@[multpl_var,multpl_t])) 
-				(accv,K.TBase(multpl_t))
+				(vars@[multpl_var,multpl_t]) 
+				(accv,multpl_t)
      		(K.Add(K.Var(multpl_var, K.TBase(multpl_t)), 
 									 K.Var(accv, K.TBase(multpl_t))))
     
@@ -302,14 +309,12 @@ let rec calc_to_singleton_k3_expr (trig_args: Types.var_t list) metadata (calc:e
 				| External(mapn, ins, outs, ext_type, None) -> failwith "(* TODO: External with init_calc = None *)"	
 		    | External(mapn, ins, outs, ext_type, Some(init_aggecalc)) ->
 				  (* Note: no need for lambda construction since all in vars are bound. *)
-		      (* TODO: schema+value types *)
-		      let (inv,outv) = (List.map fst ins, List.map fst outs) in
-					
+		      					
 		      let init_single = expr_is_singleton ~scope:trig_args init_aggecalc in
-		      let init_k3_expr = m3rhs_to_k3_expr trig_args outv init_aggecalc in
+		      let init_k3_expr = m3rhs_to_k3_expr trig_args outs init_aggecalc in
 					
-					let new_metadata = metadata@[mapn, inv, outv] in
-					let skip = List.mem (mapn, inv, outv) metadata in
+					let new_metadata = metadata@[mapn, ins, outs] in
+					let skip = List.mem (mapn, ins, outs) metadata in
 					
 					let map_expr = map_to_expr mapn ins outs (K.TBase(ext_type)) in			   
 					let r = map_access_to_expr skip map_expr init_k3_expr true init_single []
@@ -336,81 +341,73 @@ let rec calc_to_singleton_k3_expr (trig_args: Types.var_t list) metadata (calc:e
 (**********************************************************************)
 
 and op_to_k3_expr trig_args metadata (expected_sch1,expected_sch2) op c c1 c2 =
-  let aux ecalc expected_sch = 
-      (ListAsSet.inter (calc_schema ecalc) expected_sch, 
-       M3P.get_singleton ecalc) in
-  let (outv1, c1_sing) = aux c1 expected_sch1 in
-  let (outv2, c2_sing) = aux c2 expected_sch2 in
-  let (schema, c_sing, c_prod) =
-    calc_schema c, M3P.get_singleton c, M3P.get_product c
+  let aux (calc, expected_sch) = ListAsSet.inter (snd (schema_of_expr calc)) expected_sch	
+	in	
+	let (  outs1,   outs2) = pair_map aux ((c1,expected_sch1),(c2,expected_sch2)) in
+	let (c1_sing, c2_sing) = pair_map expr_is_singleton (c1,c2) in
+  let (schema,   c_sing) = (snd (schema_of_expr c)), expr_is_singleton c
   in match (c_sing, c1_sing, c2_sing) with
     | (true, false, _) | (true, _, false) | (false, true, true) ->
             failwith "invalid parent singleton"
         
     | (true, _, _) -> 
-         Debug.print "TRACK-K3-SINGLETON" (fun () ->
-            (M3Common.PreparedPrinting.pretty_print_calc c)
-         );
-         let (meta,expr) = calc_to_singleton_expr trig_args metadata c
-         in ([],meta,expr)
+    		Debug.print "TRACK-K3-SINGLETON" (fun () -> string_of_expr c );
+        let (meta,expr) = calc_to_singleton_k3_expr trig_args metadata c in 
+				([],meta,expr)
+				
     | (false, true, false) | (false, false, true) ->
-      (* TODO: types *)
-      Debug.print "TRACK-K3-SINGLETON" (fun () ->
-         (M3Common.PreparedPrinting.pretty_print_calc
-             (if c1_sing then c1 else c2))
-      );
-      let outsch, meta, ce = 
-         calc_to_expr trig_args metadata 
+				let child_sing,child_coll = (if c1_sing then (c1,c2) else (c2,c1)) in
+				
+				Debug.print "TRACK-K3-SINGLETON" (fun () -> string_of_expr child_sing);
+    		let outsch, meta, ce = 
+        	calc_to_k3_expr trig_args metadata 
                       (if c1_sing then expected_sch2 else expected_sch1)
-                      (if c1_sing then c2 else c1) in
-      let meta2, inline = 
-         calc_to_singleton_expr 
-                      trig_args 
-                      meta
-                      (if c1_sing then c1 else c2) in
-      let (v,v_t,l,r) =
-        if c1_sing then "v2",TFloat,inline,Var("v2",TFloat)
-        else "v1",TFloat,Var("v1",TFloat),inline in
-      let (op_sch, op_result) = (op outsch l r) in
-      let fn = bind_for_apply_each
-        trig_args ((args_of_vars outsch)@[v,v_t]) op_result
-      in 
-         if outsch = [] then (op_sch, meta2, Apply(fn,ce))
-         else                (op_sch, meta2, Map(fn, ce))
+                      child_coll in
+			  let meta2, inline = 
+			     calc_to_singleton_k3_expr trig_args meta child_sing in
+					
+				let (v,v_t,left,right) = if c1_sing 
+						then "v2",float_t,inline,K.Var("v2",float_k3_t)
+						else "v1",float_t,K.Var("v1",float_k3_t),inline in
+				let (op_sch, op_result) = (op outsch left right) in
+				  
+				let fn = bind_for_apply_each trig_args (outsch@[v,v_t]) op_result
+				in 
+						if outsch = [] then (op_sch, meta2, K.Apply(fn,ce))
+						else                (op_sch, meta2,  K.Map(fn, ce))
         
     | (false, false, false) ->
-      (* TODO: types *)
       (* Note: there is no difference to the nesting whether this op
        * is a product or a join *)
-      let sch1, meta, oute = calc_to_expr trig_args metadata expected_sch1 c1 in
-      let sch2, meta2, ine = calc_to_expr trig_args meta     expected_sch2 c2 in
+      let sch1, meta, oute = calc_to_k3_expr trig_args metadata expected_sch1 c1 in
+      let sch2, meta2, ine = calc_to_k3_expr trig_args meta     expected_sch2 c2 in
       let ret_schema = ListAsSet.union sch1 sch2 in
-      let (l,r) = (Var("v1",TFloat), Var("v2",TFloat)) in
+			
+      let (l,r) = (K.Var("v1",float_k3_t), K.Var("v2",float_k3_t)) in
       let (op_sch, op_result) = (op ret_schema l r) in
+			
       let applied_expr = 
          if (sch1 = []) && (sch2 = []) then
-            Apply(bind_for_apply_each trig_args ["v1",TFloat] (
-               Apply(bind_for_apply_each trig_args ["v2",TFloat] (
+            K.Apply(bind_for_apply_each trig_args ["v1",float_t] (
+               K.Apply(bind_for_apply_each trig_args ["v2",float_t] (
                   op_result
                ), ine)
             ), oute)
          else if (sch1 = []) || (sch2 = []) then
             let (singleton_v,singleton_e,set_v,set_e) = 
                if sch1 = [] 
-               then "v1",oute,(args_of_vars sch2)@["v2",TFloat],ine
-               else "v2",ine, (args_of_vars sch1)@["v1",TFloat],oute
+               then "v1",oute,sch2@["v2",float_t],ine
+               else "v2", ine,sch1@["v1",float_t],oute
             in
-               Map(bind_for_apply_each trig_args set_v (
-                  Apply(bind_for_apply_each trig_args [singleton_v,TFloat] (
+               K.Map(bind_for_apply_each trig_args set_v (
+                  K.Apply(bind_for_apply_each trig_args [singleton_v,float_t] (
                      op_result
                   ), singleton_e)
                ), set_e)
          else
-            let nested = bind_for_apply_each
-              trig_args ((args_of_vars sch2)@["v2",TFloat]) op_result in 
-            let inner = bind_for_apply_each
-              trig_args ((args_of_vars sch1)@["v1",TFloat]) (Map(nested, ine)) 
-            in Flatten(Map(inner, oute))
+            let nested = bind_for_apply_each trig_args (sch2@["v2",float_t]) op_result in 
+            let inner  = bind_for_apply_each trig_args (sch1@["v1",float_t]) (K.Map(nested, ine)) 
+            in K.Flatten(K.Map(inner, oute))
       in op_sch, meta2, applied_expr
 
 (**********************************************************************)
@@ -425,8 +422,7 @@ and calc_to_k3_expr trig_args metadata expected_schema calc =
                  else schema
     in if outsch = []
        then [], (op c1 c2)
-       else outsch, 
-            K.Tuple((varId_to_k3_expr outsch)@[op c1 c2])
+       else outsch, K.Tuple((varIdType_to_k3_expr outsch)@[op c1 c2])
   in 
   let bin_op f c1 c2 = (
     op_to_k3_expr trig_args 
@@ -451,8 +447,8 @@ and calc_to_k3_expr trig_args metadata expected_schema calc =
                   let c2_in_schema = (fst (schema_of_expr c2)) in
                      Debug.print "BIN-OP-SCHEMA" (fun () -> 
                         (string_of_expr calc)^
-                        (list_to_string (fun x->x) common_schema)^"; "^
-                        (list_to_string (fun x->x) c2_in_schema)^
+                        (ListExtras.ocaml_of_list (fun (x,t)->x) common_schema)^"; "^
+                        (ListExtras.ocaml_of_list (fun (x,t)->x) c2_in_schema)^
                         (string_of_expr c2)
                      );
                      (  ListAsSet.union common_schema c2_in_schema, 
@@ -493,19 +489,36 @@ and calc_to_k3_expr trig_args metadata expected_schema calc =
 				| Rel(reln, rel_schema, rel_type) -> failwith "(* TODO: Relation *)"		
 				| External(mapn, ins, outs, ext_type, None) -> failwith "(* TODO: External with init_calc = None *)"	
 		    | External(mapn, ins, outs, ext_type, Some(init_aggecalc)) ->
-				  (* Note: no need for lambda construction since all in vars are bound. *)
-		      (* TODO: schema+value types *)
-		      let (inv,outv) = (List.map fst ins, List.map fst outs) in
-					
-		      let init_single = expr_is_singleton ~scope:trig_args init_aggecalc in
-		      let init_k3_expr = m3rhs_to_k3_expr trig_args outv init_aggecalc in
-					
-					let new_metadata = metadata@[mapn, inv, outv] in
-					let skip = List.mem (mapn, inv, outv) metadata in
-					
-					let map_expr = map_to_expr mapn ins outs (K.TBase(ext_type)) in			   
-					let r = map_access_to_expr skip map_expr init_k3_expr true init_single []
-					in new_metadata, r
+					  let init_k3_expr = m3rhs_to_k3_expr trig_args outs init_aggecalc in
+					  let map_expr     = map_to_expr mapn ins outs (K.TBase(ext_type)) in
+					  
+						let incr_single = (expr_is_singleton ~scope:trig_args calc)          in
+					  let init_single = (expr_is_singleton ~scope:trig_args init_aggecalc) in
+						let patv = [] (* M3P.get_extensions (M3P.get_ecalc init_aggecalc) *) in
+					  						
+						let skip = List.mem (mapn, ins, outs) metadata in
+					  let r = map_access_to_expr skip map_expr init_k3_expr incr_single init_single patv in
+					  let rets = 
+					     if (Debug.active "PROJECTED-MAP-ACCESS")
+					     then ListAsSet.inter outs expected_schema
+					     else outs in
+								(Debug.print "LOG-MAP-PROJECTIONS" (fun () ->
+									"Access to : "^mapn^
+									"\nDefault Outputs : "^(ListExtras.string_of_list (fun (x,t)->x) outs)^
+									"\nExpected Outputs : "^(ListExtras.string_of_list (fun (x,t)->x) expected_schema)^
+									"\nResult Outputs : "^(ListExtras.string_of_list (fun (x,t)->x) rets)
+								));
+					  let new_metadata = metadata@[mapn,ins,outs] in
+					  if (ListAsSet.seteq rets outs)
+					     then (outs, new_metadata, r)
+					     else let projected = (
+					        let agg_fn = create_agg_fn trig_args outs ("v",float_t) in
+								  let gb_fn  = create_proj_fn trig_args (outs@["v",float_t]) rets in
+													
+						      if rets = [] 
+						      then K.Aggregate(agg_fn, init_val, r)
+						      else K.GroupByAggregate(agg_fn, init_val, gb_fn, r)
+								 ) in (rets, new_metadata, projected)
 			end
     | CalcRing.Sum( c1::sum_arg2::sum_args_tl )	->
 				let c2 = if sum_args_tl = [] then sum_arg2
@@ -518,60 +531,10 @@ and calc_to_k3_expr trig_args metadata expected_schema calc =
 				bin_op (fun x y -> K.Mult (x,y)) c1 c2	            
     
 		| CalcRing.Neg( neg_arg ) ->
-				let nm, neg_arg_k = rcr neg_arg in
-				nm, K.Mult (K.Const(Types.CFloat(-1.0)),neg_arg_k)
+				let no, nm, neg_arg_k = rcr neg_arg in
+				no, nm, K.Mult (K.Const(Types.CFloat(-1.0)),neg_arg_k)
 				
 		| _ -> failwith "Empty or Single operand to CalcRing.Sum or Prod."
-
-    
-    | M3.MapAccess((mapn, inv, outv, init_aggecalc),inline_agg) ->
-      (* TODO: schema, value types *)
-      let s_l = List.map (List.map (fun v -> (v,TFloat))) [inv; outv] in
-      let (ins,outs) = (List.hd s_l, List.hd (List.tl s_l)) in
-      let init_expr = m3rhs_to_expr trig_args outv init_aggecalc in
-      if inline_agg then
-         (outv, metadata, init_expr)
-      else
-      let map_expr = map_to_expr mapn ins outs in
-      let singleton_init_code = 
-        (M3P.get_singleton (M3P.get_ecalc init_aggecalc)) ||
-        (M3P.get_full_agg (M3P.get_agg_meta init_aggecalc))
-      in
-      let patv = M3P.get_extensions (M3P.get_ecalc init_aggecalc) in
-      let r =
-        let skip = List.mem (mapn, inv, outv) metadata
-        in map_access_to_expr skip map_expr init_expr
-             (M3P.get_singleton calc) singleton_init_code patv in
-      let retv = 
-         if (Debug.active "PROJECTED-MAP-ACCESS")
-         then ListAsSet.inter outv expected_schema
-         else outv in
-      (Debug.print "LOG-MAP-PROJECTIONS" (fun () ->
-         "Access to : "^mapn^
-         "\nDefault Outputs : "^(Util.list_to_string (fun x->x) outv)^
-         "\nExpected Outputs : "^
-            (Util.list_to_string (fun x->x) expected_schema)^
-         "\nResult Outputs : "^(Util.list_to_string (fun x->x) retv)
-      ));
-      let new_metadata = metadata@[mapn,inv,outv] in
-      if (ListAsSet.seteq retv outv)
-         then (outv, new_metadata, r)
-         else let projected = (
-            let accv = next_accum_var () in
-            let agg_fn = bind_for_aggregate 
-               trig_args 
-               (args_of_vars (outv@["v"]))
-               (accv,TFloat)
-               (Add(Var("v", TFloat), Var(accv, TFloat))) in
-            let gb_fn = bind_for_apply_each 
-               trig_args
-               (args_of_vars (outv@["v"]))
-               (Tuple(List.map (fun v -> Var(v, TFloat)) retv)) in
-            if retv = [] 
-            then Aggregate(agg_fn, (Const(M3.CFloat(0.))), r)
-            else GroupByAggregate(agg_fn, (Const(M3.CFloat(0.))), gb_fn, r)
-         ) in (retv, new_metadata, projected)
-    
   end 
 
 (**********************************************************************)
@@ -641,7 +604,7 @@ let collection_stmt trig_args (m3stmt: Plan.stmt_t) : K.statement_t =
 		let {Plan.update_type = update_type; Plan.update_expr = incr_aggcalc} = m3stmt in 
 		
 		(* all lhs input variables must be free, they cannot be bound by trigger args *)
-		assert (List.length (ListAsSet.inter trig_args  ins) = 0);
+		assert (List.length (ListAsSet.inter trig_args  lhs_ins) = 0);
 	  let trig_w_ins = ListAsSet.union trig_args  lhs_ins  in
 	  let trig_w_lhs = ListAsSet.union trig_w_ins lhs_outs in
 		
@@ -649,15 +612,156 @@ let collection_stmt trig_args (m3stmt: Plan.stmt_t) : K.statement_t =
 		let incr_single = Calculus.expr_is_singleton ~scope:trig_w_ins incr_aggcalc in
 		
 		let (incr_expr,init_expr) = pair_map 
-						(fun calc single ->
+						(fun (calc,single) ->
 		            (* Note: we can only use calc_to_singleton_expr if there are
 		             * no loop or bigsum vars in calc *) 
 		            (if single 
-										then snd (calc_to_singleton_expr trig_args       [] calc)
-		              	else      m3rhs_to_expr          trig_args lhs_outs calc))
+										then snd (calc_to_singleton_k3_expr trig_args       [] calc)
+		              	else      m3rhs_to_k3_expr          trig_args lhs_outs calc))
             ((incr_aggcalc,incr_single), (init_aggcalc,init_single))
     in
-    (incr_expr,init_expr)
+    
+		(* TODO: use typechecker to compute types here *)
+    let out_tier_t = Collection(TTuple(List.map snd outs@[TFloat])) in
+
+    let collection = map_to_expr mapn ins outs in
+    
+    (* Update expression, singleton initializer expression
+     * -- update expression: increments the current var/slice by computing
+     *    a delta. For slices, merges the delta slice w/ the current.
+     * -- NOTE: returns the increment for the delta slice only, not the
+     *    entire current slice. Thus each incremented entry must be updated
+     *    in the persistent store, and not the slice as a whole. 
+     * -- singleton initializer: for singleton deltas, directly computes
+     *    the new value by combining (inline) the initial value and delta
+     *)
+    let (update_expr, sing_init_expr) =
+        let zero_init = Const(CFloat(0.0)) in
+        let singleton_aux init_e =
+            let ca,ce = fn_arg_expr "current_v" TFloat in
+            (Lambda(AVar(fst ca, snd ca),Add(ce,incr_expr)), init_e)
+        in
+        let slice_t = Collection(TTuple((List.map snd outs)@[TFloat])) in
+        let slice_aux init_f =
+            let ca,ce = fn_arg_expr "current_slice" slice_t in
+            let ma,me = fn_arg_expr "dv" TFloat in
+            (* merge fn: check if the delta exists in the current slice and
+             * increment, otherwise compute an initial value and increment  *)
+            let merge_body =
+                let build_entry e = Tuple(out_el@[e]) in 
+                IfThenElse(Member(ce,out_el),
+                    build_entry (Add(Lookup(ce, out_el), me)),
+                    build_entry (init_f me))
+            in
+            let merge_fn = bind_for_apply_each
+              trig_args ((args_of_vars lhs_outv)@[ma]) merge_body in
+            (* slice update: merge current slice with delta slice *)
+            let merge_expr = Map(merge_fn, incr_expr)
+            in (Lambda(AVar(fst ca, snd ca),merge_expr), zero_init)
+        in
+        match (incr_single, init_single) with
+        | (true,true) -> singleton_aux (Add(incr_expr,init_expr))
+
+        | (true,false) ->
+            (* Note: we don't need to bind lhs_outv for init_expr since
+             * incr_expr is a singleton, implying that lhs_outv are all
+             * bound vars.
+             * -- TODO: how can the init val be a slice then? if there are
+             *    no loop out vars, and all in vars are bound, and all bigsums 
+             *    are fully aggregated, this case should never occur. 
+             *    Check this. *)
+            (* Look up slice w/ out vars for init lhs expr *)
+            singleton_aux (Add(Lookup(init_expr,out_el), incr_expr))
+
+        | (false,true) -> slice_aux (fun me -> Add(init_expr,me))
+        
+        | (false,false) ->
+            (* All lhs_outv are bound in the map function for the merge,
+             * making loop lhs_outv available to the init expr. *)
+            slice_aux (fun me -> Add(Lookup(init_expr, out_el), me))
+    in
+    
+    (* Statement expression:
+     * -- statement_expr is a side-effecting expression that updates a
+     *    persistent collection, thus has type Unit *)
+
+    let loop_in_aux (la,le) loop_fn_body =
+        let patv = Util.ListAsSet.inter lhs_inv trig_args in
+        let pat_ve = List.map (fun v -> (v,Var(v,TFloat))) patv in
+        if (List.length patv) = (List.length lhs_inv)
+          then 
+            Apply(bind_for_apply_each trig_args [la] loop_fn_body,
+                  Lookup(collection, List.map snd pat_ve))
+          else
+            (*(print_endline ("looping over slices with trig args "^
+              (String.concat "," lhs_inv)^" / "^(String.concat "," trig_args));*)
+            Iterate(bind_for_apply_each
+                      trig_args ((args_of_vars lhs_inv)@[la]) loop_fn_body,
+                    Slice(collection, ins, pat_ve))
+    in
+    let loop_update_aux ins outs delta_slice =
+        let ua,ue = fn_arg_expr "updated_v" TFloat in
+        let update_body = map_value_update_expr collection ins outs ue in
+        let loop_update_fn = bind_for_apply_each
+            trig_args ((args_of_vars lhs_outv)@[ua]) update_body
+        in Iterate(loop_update_fn, delta_slice)
+    in
+    let rhs_basic_merge collection_expr =
+      match stmt_type with
+         | M3.Stmt_Update -> Apply(update_expr, collection_expr)
+         | M3.Stmt_Replace -> incr_expr
+    in
+    let rhs_test_merge collection_expr =
+      match stmt_type with
+         | M3.Stmt_Update -> 
+            IfThenElse(Member(collection_expr, out_el),
+                       Apply(update_expr, Lookup(collection_expr, out_el)),
+                       sing_init_expr)
+         | M3.Stmt_Replace -> incr_expr
+    in
+    let statement_expr = 
+        begin match lhs_inv, lhs_outv, incr_single with
+        | ([],[],false) -> failwith "invalid slice update on a singleton map"
+
+        | ([],[],_) ->
+            let rhs_expr = rhs_basic_merge collection
+            in map_value_update_expr collection [] [] rhs_expr
+
+        | (x,[],false) -> failwith "invalid slice update on a singleton out tier"
+
+        | (x,[],true) ->
+            let la,le = fn_arg_expr "existing_v" TFloat in
+            let rhs_expr = rhs_basic_merge le
+            in loop_in_aux (la,le)
+                 (map_value_update_expr collection in_el [] rhs_expr) 
+
+        | ([],x,false) ->
+            (* We explicitly loop, updating each incremented value in the rhs slice,
+             * since the rhs_expr is only the delta slice and not a full merge with
+             * the current slice.
+             *)
+            let rhs_expr = rhs_basic_merge collection
+            in loop_update_aux [] out_el rhs_expr
+
+        | ([],x,true) ->
+            let rhs_expr = rhs_test_merge collection
+            in map_value_update_expr collection [] out_el rhs_expr
+
+        | (x,y,false) ->
+            (* Use a value update loop to persist the delta slice *)
+            let la,le = fn_arg_expr "existing_slice" out_tier_t in
+            let rhs_expr = rhs_basic_merge le in
+            let update_body = loop_update_aux in_el out_el rhs_expr
+            in loop_in_aux (la,le) update_body
+
+        | (x,y,true) ->
+            let la,le = fn_arg_expr "existing_slice" out_tier_t in
+            let rhs_expr = rhs_test_merge le
+            in loop_in_aux (la,le)
+                (map_value_update_expr collection in_el out_el rhs_expr)
+        end
+    in
+		(collection, statement_expr) 
 
 
 
@@ -665,18 +769,18 @@ let collection_stmt trig_args (m3stmt: Plan.stmt_t) : K.statement_t =
 let collection_trig (m3_trig: M3.trigger_t) : K.trigger_t =
 	
 	let (k3_event_type, k3_rel_name, k3_trig_args) = m3_event_to_k3_event m3_trig.M3.event 	in
-	let k3_trig_stmts = List.map (collection_stmt (event_args m3_trig.M3.event)) !m3_trig.M3.statements 
+	let k3_trig_stmts = List.map (collection_stmt (Schema.event_vars m3_trig.M3.event)) !(m3_trig.M3.statements) 
 	in
   (k3_event_type, k3_rel_name, k3_trig_args, 
    if (Debug.active "RUNTIME-BIGSUMS") then
        	List.filter (fun (c,_) -> match c with 
-																	PC(_,_,_,_) -> false | InPC(_,_,_) -> false | _ -> true) 
+																	K.PC(_,_,_,_) -> false | K.InPC(_,_,_) -> false | _ -> true) 
 										k3_trig_stmts
    else k3_trig_stmts
 	)
 
 
-let m3_to_k3 (( _, m3_prog_schema, m3_prog_trigs, _ ):M3.prog_t) : (K.progr_t) =
+let m3_to_k3 ({M3.maps = m3_prog_schema; M3.triggers = m3_prog_trigs }:M3.prog_t) : (K.prog_t) =
 	 let k3_prog_schema = List.map m3_map_to_k3_map !m3_prog_schema in
    let patterns_map = Patterns.extract_patterns !m3_prog_trigs in
 	 let k3_prog_trigs = List.map collection_trig !m3_prog_trigs in
