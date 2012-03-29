@@ -31,9 +31,6 @@
 open Format
 
 
-type k3_var_t = string
-type k3_map_type_t = string * (Types.type_t list) * (Types.type_t list)
-	
 (*
 type m3schema  = m3_var_t list
 type extension = m3_var_t list
@@ -165,10 +162,12 @@ sig
     val collection_of_float_list : float list -> expr_t
 
     (* Incremental section *)
-    type statement = expr_t * expr_t
+    type statement_t = expr_t * expr_t
 		type ev_type_t = Insert | Delete
-    type trigger = ev_type_t * string * k3_var_t list * statement list
-    type program = k3_map_type_t list * Patterns.pattern_map * trigger list
+		type var_t = string
+		type map_t = string * (Types.type_t list) * (Types.type_t list)
+    type trigger_t = ev_type_t * string * var_t list * statement_t list
+    type prog_t = map_t list * Patterns.pattern_map * trigger_t list
     
 end
 
@@ -666,9 +665,11 @@ let collection_of_float_list (l : float list) =
 
 
 (* Incremental section *)
-type statement = expr_t * expr_t
+type statement_t = expr_t * expr_t
 type ev_type_t = Insert | Delete
-type trigger = ev_type_t * string * k3_var_t list * statement list
-type program = k3_map_type_t list * Patterns.pattern_map * trigger list
+type var_t = string
+type map_t = string * (Types.type_t list) * (Types.type_t list)
+type trigger_t = ev_type_t * string * var_t list * statement_t list
+type prog_t = map_t list * Patterns.pattern_map * trigger_t list
     
 end
