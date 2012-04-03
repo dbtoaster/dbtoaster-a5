@@ -34,7 +34,13 @@ in
       "R(A) * S(B) * A * B";
    test "Vars already combined"
       "R(A) * S(B) * [A+B] * A * B"
-      "R(A) * S(B) * [(A+B)* A * B]"
+      "R(A) * S(B) * [(A+B)* A * B]";
+   test "Self-comparison"
+      "R(A) * [A = A]"
+      "R(A)";
+   test "Self-anticomparison"
+      "R(A) * ([A != A] + [A < A])"
+      "0"
 ;;
 
 let test msg scope input output =
@@ -161,7 +167,16 @@ in
       "S(B,C) * AggSum([B], R(A, B))";
    test "AggSum of a nested AggSum"
       "AggSum([B], AggSum([B,C], R(A,B,C)))"
-      "AggSum([B], R(A,B,C))"
+      "AggSum([B], R(A,B,C))";
+   test "AggSum of zero"
+      "AggSum([B,C], 0)"
+      "0";
+   test "AggSum of Lifted Value"
+      "(A ^= A)"
+      "[A = A]";
+   test "AggSum of Lifted More Complex Value"
+      "(A ^= [A*B*C])"
+      "[A = (A*B*C)]"
 ;;
 let test msg scope input output =
    log_test ("Factorize One Polynomial ("^msg^")")

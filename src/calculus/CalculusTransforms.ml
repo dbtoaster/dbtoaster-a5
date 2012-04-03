@@ -17,6 +17,12 @@ type opt_t =
    | OptNestingRewrites
    | OptFactorizePolynomial
 ;;
+let next_temp_var = ref 0;;
+let mk_temp_var term = 
+   next_temp_var := !next_temp_var + 1; 
+   (  "calc_transform_temp_var_"^(string_of_int !next_temp_var), 
+      C.type_of_expr term)
+;;
 (**
  combine_values expr
    Recursively merges together Value terms appearing in expr.  Ring operators 
@@ -75,10 +81,14 @@ let rec combine_values ?(aggressive=false) (expr:C.expr_t): C.expr_t =
       (merge CalcRing.mk_sum  ValueRing.mk_sum)
       (merge CalcRing.mk_prod ValueRing.mk_prod)
       (fun x -> CalcRing.mk_prod [CalcRing.mk_val (Value(mk_int (-1))); x])
-      (fun x -> CalcRing.mk_val (match x with
-         | Value(_) | Rel(_,_,_) | External(_) | Cmp(_,_,_) -> x
-         | AggSum(gb_vars, subexp) -> AggSum(gb_vars, rcr subexp)
-         | Lift(lift_v, subexp)    -> Lift(lift_v,    rcr subexp)
+      (fun x -> (match x with
+         | Cmp(Eq,x,y) when x = y -> CalcRing.one
+         | Cmp(_,x,y) when x = y  -> CalcRing.zero
+         | Value(_) | Rel(_,_,_) | External(_) | Cmp(_,_,_) -> CalcRing.mk_val x
+         | AggSum(gb_vars, subexp) -> 
+            CalcRing.mk_val (AggSum(gb_vars, rcr subexp))
+         | Lift(lift_v, subexp)    -> 
+            CalcRing.mk_val (Lift(lift_v,    rcr subexp))
       ))
       expr
 ;;
@@ -297,12 +307,6 @@ let split_ctx (split_fn: value_t -> 'a option) (ctx:(var_t * C.expr_t) list):
       end
    ) ([],[]) ctx
 ;;
-let next_unify_var = ref 0;;
-let mk_unify_lift_var term = 
-   next_unify_var := !next_unify_var + 1; 
-   (  "unify_temp_var_"^(string_of_int !next_unify_var), 
-      C.type_of_expr term)
-;;
 let unify_lifts (big_schema:var_t list) (big_expr:C.expr_t): C.expr_t =
    Debug.print "LOG-CALCOPT-DETAIL" (fun () ->
       "Unify Lifts: "^(C.string_of_expr big_expr) 
@@ -327,7 +331,7 @@ let unify_lifts (big_schema:var_t list) (big_expr:C.expr_t): C.expr_t =
    let normalize_lifts = C.rewrite_leaves (fun (scope, _) lf ->
          match lf with
             | Lift(v, term) -> 
-               let tmpv = mk_unify_lift_var term in
+               let tmpv = mk_temp_var term in
                if (List.mem v scope) && (not (List.mem v big_schema)) then
                   CalcRing.mk_prod [
                      CalcRing.mk_val (Lift(tmpv, term));
@@ -516,6 +520,8 @@ let unify_lifts (big_schema:var_t list) (big_expr:C.expr_t): C.expr_t =
     expressions nested within a Lift or AggSum.  Many of these have to do with
     lifting expressions out of the nesting.
     
+    AggSum([...], 0) = 0
+    
     AggSum([...], A) = A
         IF all of the output variables of A are in the group-by variables of
         the AggSum
@@ -539,6 +545,10 @@ let unify_lifts (big_schema:var_t list) (big_expr:C.expr_t): C.expr_t =
         IF A is a constant term (i.e., has no output variables)
  
     Lift(X, Lift(Y, A) * B) = Lift(Y,A) * Lift(X, B)
+    
+    Lift(A, A) = 1
+    
+    Lift(A, f(A)) => [A = f(A)] (or equivalent)
 *)
 let rec nesting_rewrites (expr:C.expr_t) = 
    Debug.print "LOG-CALCOPT-DETAIL" (fun () ->
@@ -547,6 +557,7 @@ let rec nesting_rewrites (expr:C.expr_t) =
    CalcRing.fold (CalcRing.mk_sum) (CalcRing.mk_prod) 
       (fun x -> CalcRing.mk_prod [CalcRing.mk_val (Value(mk_int (-1))); x])
       (fun e -> begin match e with
+         | AggSum(gb_vars, x) when x = CalcRing.zero -> CalcRing.zero
          | AggSum(gb_vars, unprocessed_subterm) ->
             let subterm = nesting_rewrites unprocessed_subterm in
             if (snd (C.schema_of_expr subterm)) = [] then subterm
@@ -589,8 +600,36 @@ let rec nesting_rewrites (expr:C.expr_t) =
                      (unnested, CalcRing.mk_prod [nested; term])
                end
             ) (CalcRing.one, CalcRing.one) (CalcRing.prod_list subterm) in
-               CalcRing.mk_prod 
-                  [unnested; CalcRing.mk_val (Lift(v, nested))]
+            let (nested_ivars,nested_ovars) = C.schema_of_expr nested in
+            (* Perform a few quick sanity checks.
+               The variable being lifted should not occur in the nested 
+               expression, especially not as an output variable (in which case, 
+               the lift operation would overwrite that part of the schema).
+               
+               If the expression being lifted has the lifted variable as an 
+               input, then what it's trying to express is an equality.  
+               Technically this is an error, but there are certain cases 
+               (unification in particular) where it can occur, so we simply 
+               convert it into an equality.
+            *)
+            let lift_expr = 
+               if List.mem v nested_ovars
+               then failwith "Error: Overwriting schema of lifted expression"
+               else if List.mem v nested_ivars
+               then begin match nested with
+                  | CalcRing.Val (Value(cmp_val)) ->
+                     CalcRing.mk_val (Cmp(Eq, Arithmetic.mk_var v, cmp_val))
+                  | _ ->
+                     let temp_var = mk_temp_var nested in
+                        CalcRing.mk_prod [
+                           CalcRing.mk_val (Lift(temp_var, nested));
+                           CalcRing.mk_val (Cmp(Eq, Arithmetic.mk_var v,
+                                                    Arithmetic.mk_var temp_var))
+                        ]
+                  end
+               else CalcRing.mk_val (Lift(v, nested))
+               in
+                  CalcRing.mk_prod [unnested; lift_expr]
          | _ -> CalcRing.mk_val e
       end)
       expr

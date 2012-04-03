@@ -14,6 +14,7 @@ unit:
 	@$(UNIT_TEST) unit/compiler.ml
 
 development:
+	@$(UNIT_TEST) unit/calculustransforms.ml
 
 queries:
 	make -C queries
