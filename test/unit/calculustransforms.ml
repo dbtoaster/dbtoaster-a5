@@ -75,10 +75,30 @@ in
          [QTY < (0.5 * nested)]"
 ;;
 
-let test msg schema input output =
+let test msg scope input output =
+   log_test ("Advance Lifts ("^msg^")")
+      string_of_expr
+      (CalculusTransforms.advance_lifts scope (parse_calc input))
+      (parse_calc output)
+in
+   test "Basic Advancement" []
+      "C * (A ^= B)"
+      "(A ^= B) * C";
+   test "Schema-Forbidden" []
+      "R(A) * (B ^= A)"
+      "R(A) * (B ^= A)";
+   test "Schema-Forbidden with Nested Agg" []
+      "R(A) * (B ^= AggSum([], R(C) * [C < A]))";
+      "R(A) * (B ^= AggSum([], R(C) * [C < A]))";
+   test "Schema-Permitted with Nested Agg" [var "A"]
+      "R(A) * (B ^= AggSum([], R(C) * [C < A]))";
+      "(B ^= AggSum([], R(C) * [C < A])) * R(A)";
+;;
+
+let test ?(scope=[]) msg schema input output =
    log_test ("Unify Lifts ("^msg^")")
       string_of_expr
-      (CalculusTransforms.unify_lifts schema (parse_calc input))
+      (CalculusTransforms.unify_lifts scope schema (parse_calc input))
       (parse_calc output)
 in
    (* We don't unify expressions for now 
@@ -151,7 +171,8 @@ in
       "AggSum([BB], S(BB))";
    test "Lifts in non-normal form" []
       "AggSum([], S(B)*(B ^= BB))"
-      "AggSum([], S(B)*[B = BB])" (* The next lift_eq... eliminates this *)
+      "AggSum([], S(B)*(B ^= BB))" (* This should get shifted left by 
+                                      nesting_rewrites *)
 ;;
 let test msg input output =
    log_test ("Nesting Rewrites ("^msg^")")
@@ -254,5 +275,5 @@ in
             - (nested ^= (AggSum([PK], LI(PK, QTY2) * QTY2)))
          ))
       ) * [QTY < 0.5 * nested]"
-      "LI(dPK,QTY) * (nested ^= (AggSum([dPK], LI(dPK,QTY2) * QTY2))) *
+      "(nested ^= (AggSum([dPK], LI(dPK,QTY2) * QTY2))) * LI(dPK,QTY) *
          [QTY < 0.5 * nested]";

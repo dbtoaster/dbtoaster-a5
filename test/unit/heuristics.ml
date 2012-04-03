@@ -4,7 +4,7 @@ open Calculus
 open UnitTest
 ;;
 
-Debug.activate "LOG-HEURISTICS-DETAIL";;  
+(*Debug.activate "LOG-HEURISTICS-DETAIL";;  *)
 
 let test msg input output =
    log_test ("Decomposition ("^msg^")")
@@ -131,17 +131,18 @@ in
 			"(M1(int)[][A] * M2(int)[][C] * (D ^= M1(int)[][B] * C))";
 	test "Mapping example"
 			"R(A) * S(C) * (E ^= R(B) * S(D)) * 5"		
-			"M1(int)[][A] * M2(int)[][C] * (E ^= M1(int)[][B] * M2(int)[][D]) * 5";
+			"(E ^= M1_1(int)[][B] * M1_2(int)[][D]) * 
+			   M1_1(int)[][A] * M1_2(int)[][C] * 5";
 	
 	test "Aggregation with a lift containing an irrelevant relation"
 			"AggSum([A], R(A,B) * (C ^= S(D)))"
-      "M1(int)[][A] * M2(int)[][]";		
+      "M1(int)[][] * M2(int)[][A]";		
 	test "Aggregation with a lift containing an irrelevant relation and a common variable"
 			"AggSum([A], R(A,B) * (C ^= S(B)))"
       "M1(int)[][A]";		
 	test "Aggregation with a lift containing an irrelevant relation"
 			"AggSum([A], R(A,B) * (C ^= S(D)) * [C > 0])"
-      "M1(int)[][A] * M2(int)[][]";
+      "M1(int)[][] * M2(int)[][A]";
 	test "Aggregation with a lift containing an irrelevant relation and a common variable"
 			"AggSum([A], R(A,B) * (C ^= S(A)) * [C > 0])"
       "M1(int)[][A]";  
