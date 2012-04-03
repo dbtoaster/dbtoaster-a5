@@ -277,3 +277,22 @@ in
       ) * [QTY < 0.5 * nested]"
       "(nested ^= (AggSum([dPK], LI(dPK,QTY2) * QTY2))) * LI(dPK,QTY) *
          [QTY < 0.5 * nested]";
+   test "TPCH17 dLineitem" ["dPK"; "dQTY"] []
+      "P(PK) * (((PK ^= dPK) * (QTY ^= dQTY) * 
+                  (nested ^= AggSum([PK], L(PK, QTY2) * QTY2)))
+            + 
+            ((L(PK, QTY) + (PK ^= dPK) * (QTY ^= dQTY)) * 
+            (delta_2 ^= (AggSum([PK],(
+               ((PK ^= [dPK]) * (QTY2 ^= [dQTY]) * [QTY2]))))) * 
+            (
+               (nested ^= AggSum([PK], L(PK, QTY2) * QTY2) + delta_2)
+                - (nested ^= AggSum([PK], L(PK, QTY2) * QTY2))
+            )))"
+      "P(dPK) * (
+         ((QTY ^= dQTY) * (nested ^= AggSum([dPK], L(dPK, QTY2) * QTY2)))
+            + 
+            ((L(dPK, QTY) + (QTY ^= dQTY)) * 
+            (
+               (nested ^= AggSum([dPK], L(dPK, QTY2) * QTY2) + dQTY) +
+               (nested ^= AggSum([dPK], L(dPK, QTY2) * QTY2)) * [-1]
+            )))"

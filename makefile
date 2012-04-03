@@ -4,6 +4,7 @@ FILES=\
 	src/util/ListExtras\
 	src/util/Function\
 	src/util/HyperGraph\
+	src/util/Fixpoint\
 	src/global/Types\
 	src/global/Schema\
 	src/sql/Sql\

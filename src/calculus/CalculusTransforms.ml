@@ -368,8 +368,12 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
       );
       begin match expr with
          | CalcRing.Sum(sl) -> 
+            (* We need to make sure that the schema stays sane *)
+            let sum_schema = 
+               ListAsSet.union (snd (C.schema_of_expr expr)) (schema)
+            in
             let (deletable_lifts, sum_terms) =
-               List.split (List.map (rcr scope schema ctx) sl)
+               List.split (List.map (rcr scope sum_schema ctx) sl)
             in
                (  ListAsSet.multiinter (ctx_vars::deletable_lifts),
                   CalcRing.mk_sum sum_terms  )
@@ -844,28 +848,16 @@ let default_optimizations =
 ;;
 let optimize_expr ?(optimizations = default_optimizations)
                   ((scope,schema):C.schema_t) (expr:C.expr_t): C.expr_t =
-   let include_opt in_fn o new_fn = 
-      let old_in_fn = !in_fn in
-      in_fn := (  if List.mem o optimizations 
-                  then (fun x -> old_in_fn (new_fn x))
-                  else !in_fn  )
-   in
-   let fp_1 = ref (fun x -> x) in
-      include_opt fp_1 OptAdvanceLifts            (advance_lifts scope);
-      include_opt fp_1 OptUnifyLifts              (unify_lifts scope schema);
-      include_opt fp_1 OptLiftEqualities          (lift_equalities scope);
-      include_opt fp_1 OptNestingRewrites         (nesting_rewrites);
-      include_opt fp_1 OptFactorizePolynomial     (factorize_polynomial scope);
-      include_opt fp_1 OptCombineValues           (combine_values);
-      include_opt fp_1 OptCombineValuesAggressive (combine_values 
-                                                      ~aggressive:true);
-   let rec fixpoint f x = 
-      Debug.print "LOG-CALCOPT-DETAIL" (fun () ->
-         "OPTIMIZING: "^(C.string_of_expr x) 
-      );
-      let new_x = f x in
-         if new_x <> x then fixpoint f new_x
-         else new_x
-
-   in (fixpoint !fp_1 expr)
+   let fp_1 = Fixpoint.noop () in
+   let include_opt o new_fn = Fixpoint.build_if optimizations fp_1 o new_fn in
+      include_opt OptAdvanceLifts            (advance_lifts scope);
+      include_opt OptUnifyLifts              (unify_lifts scope schema);
+      include_opt OptLiftEqualities          (lift_equalities scope);
+      include_opt OptNestingRewrites         (nesting_rewrites);
+      include_opt OptFactorizePolynomial     (factorize_polynomial scope);
+      include_opt OptCombineValues           (combine_values);
+      include_opt OptCombineValuesAggressive (combine_values ~aggressive:true);
+   if Debug.active "LOG-CALCOPT-STEPS" then Fixpoint.build fp_1 
+      (fun x -> print_endline ("OPTIMIZING: "^(C.string_of_expr x)); x);
+   Fixpoint.compute_with_history !fp_1 expr
  
