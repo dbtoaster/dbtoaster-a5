@@ -88,10 +88,10 @@ in
       "R(A) * (B ^= A)"
       "R(A) * (B ^= A)";
    test "Schema-Forbidden with Nested Agg" []
-      "R(A) * (B ^= AggSum([], R(C) * [C < A]))";
+      "R(A) * (B ^= AggSum([], R(C) * [C < A]))"
       "R(A) * (B ^= AggSum([], R(C) * [C < A]))";
    test "Schema-Permitted with Nested Agg" [var "A"]
-      "R(A) * (B ^= AggSum([], R(C) * [C < A]))";
+      "R(A) * (B ^= AggSum([], R(C) * [C < A]))"
       "(B ^= AggSum([], R(C) * [C < A])) * R(A)";
 ;;
 
@@ -192,10 +192,10 @@ in
    test "AggSum of zero"
       "AggSum([B,C], 0)"
       "0";
-   test "AggSum of Lifted Value"
+   test "A Lifted Value"
       "(A ^= A)"
       "[A = A]";
-   test "AggSum of Lifted More Complex Value"
+   test "A Lifted More Complex Value"
       "(A ^= [A*B*C])"
       "[A = (A*B*C)]"
 ;;
