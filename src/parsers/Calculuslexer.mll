@@ -87,7 +87,7 @@ let hexint      = '0'['X' 'x']hexdigit+
 let int         = binint|octint|decint|hexint
 let decimal     = digit+ '.' digit+
 let float       = (int|decimal)'E'('+'|'-')?digit+
-let identifier  = char(char|digit|['-' '_'])*
+let identifier  = (char|['_'])(char|digit|['-' '_'])*
 let whitespace  = [' ' '\t']   
 let newline     = "\n\r" | '\n' | '\r'  
 let cmp_op      = ">" | ">=" | "<" | "<=" | "=" | "!=" | "<>" | "#" | "^="

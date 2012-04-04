@@ -480,10 +480,24 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
                rcr scope subbed_gb_vars new_ctx as_term in
             let (old_ivars,_) = C.schema_of_expr as_term in
             let (new_ivars,new_ovars) = C.schema_of_expr subbed_term in
-            
+            let gb_extension = (ListAsSet.inter 
+               (* The extension can come from two places -- first, a nested
+                  input variable might have been subbed into a relation.  In 
+                  this case the nested input variable will become an output
+                  variable.  It is also possible that a variable being subbed
+                  from the outside will become an output variable. *)
+               (ListAsSet.union 
+                  old_ivars 
+                  (ListAsSet.multiunion (List.map (fun (_,sub_expr) ->
+                     fst (C.schema_of_expr sub_expr)) ctx)))
+               new_ovars)
+            in
+            (Debug.print "LOG-UNIFY-LIFTS" (fun () ->
+               "Group-By Extension: "^
+               (ListExtras.string_of_list fst gb_extension)
+            ));
             let new_gb_vars = 
-               ListAsSet.union (ListAsSet.inter old_ivars new_ovars)
-                               subbed_gb_vars
+               ListAsSet.union gb_extension subbed_gb_vars
             in
                (deletable, (CalcRing.mk_val (AggSum(new_gb_vars, subbed_term))))
          | CalcRing.Val(Lift(v, l_term)) ->

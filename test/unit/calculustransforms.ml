@@ -255,6 +255,55 @@ let test ?(opts = CalculusTransforms.default_optimizations)
       )
       (parse_calc output)
 in
+   test "TPCH17 simple raw" [] []
+      "AggSum([], (
+         P(PPK) * LI(LPK, LQTY) * 
+         AggSum([], ([PPK = LPK])) *
+         AggSum([], (
+            (nested ^= (0.5 * AggSum([], LI(LPK2, LQTY2) * 
+               AggSum([], [LPK2 = PPK]) * [LQTY2]))) *
+            [LQTY < nested]
+         ))
+      ))"
+      "AggSum([], (
+         P(PPK) * LI(PPK, LQTY) * 
+         AggSum([PPK], (
+            (nested ^= AggSum([PPK], LI(PPK, LQTY2) * [LQTY2]) * 
+               0.5) *
+            [LQTY < nested]
+         ))
+      ))";
+   test "TPCH17 full raw" [] []
+      "AggSum([],(
+         (  LINEITEM(L_PARTKEY, L_QUANTITY, L_EXTENDEDPRICE) * 
+            PART(P_PARTKEY) * 
+            AggSum([],([P_PARTKEY = L_PARTKEY])) * 
+            AggSum([],(
+               (  (__sql_agg_tmp_1 ^= ([0.005] * AggSum([],(
+                     (LINEITEM(L2_PARTKEY, L2_QUANTITY, L2_EXTENDEDPRICE) * 
+                     AggSum([],([L2_PARTKEY = P_PARTKEY])) * 
+                     [L2_QUANTITY]
+                  ))))) * 
+                  [L_QUANTITY < __sql_agg_tmp_1]
+               )
+            )) * 
+            [L_EXTENDEDPRICE]
+         )
+      ))"
+      "AggSum([],(
+         (  LINEITEM(L_PARTKEY, L_QUANTITY, L_EXTENDEDPRICE) * 
+            PART(L_PARTKEY) * 
+            AggSum([L_PARTKEY],(
+               (  (__sql_agg_tmp_1 ^= (AggSum([L_PARTKEY],(
+                     (LINEITEM(L_PARTKEY, L2_QUANTITY, L2_EXTENDEDPRICE) * 
+                     [L2_QUANTITY]
+                  )))) * [0.005] ) * 
+                  [L_QUANTITY < __sql_agg_tmp_1]
+               )
+            )) * 
+            [L_EXTENDEDPRICE]
+         )
+      ))";
    test "TPCH17 dPart Tricky Term" ["dPK"] []
       "(PK ^= dPK) * LI(PK, QTY) * (alpha ^= 0) * (
          (nested ^= (AggSum([PK], LI(PK, QTY2) * QTY2) + alpha))
