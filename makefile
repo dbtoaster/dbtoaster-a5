@@ -5,6 +5,7 @@ FILES=\
 	src/util/Function\
 	src/util/HyperGraph\
 	src/util/Fixpoint\
+	src/util/ExternalCompiler\
 	src/global/Types\
 	src/global/Schema\
 	src/sql/Sql\

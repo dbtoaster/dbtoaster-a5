@@ -10,17 +10,21 @@ let bug   msg = failwith ("BUG : "^msg)
 
 (************ Language Names ************)
 type language_t =
-   | Auto | SQL | Calc | MPlan | M3 | K3 | CPP | M3DM
+   | Auto | SQL | Calc | MPlan | M3 | M3DM | K3 | CPP | Scala | Ocaml 
+   | Interpreter
 
 let languages =
-   [  "AUTO", (Auto , "automatic"     ); 
-      "SQL",  (SQL  , "DBToaster SQL" );
-      "CALC", (Calc , "DBToaster Relational Calculus");
-      "PLAN", (MPlan, "Materialization Plan");
-      "M3"  , (M3   , "M3 Program");
-      "M3DM", (M3DM , "M3 Domain Maintenance Program");
-      "K3"  , (K3   , "K3 Program");
-      "CPP" , (CPP  , "C++ Code");
+   [  "AUTO" , (Auto       , "automatic"                    ); 
+      "SQL",   (SQL        , "DBToaster SQL"                );
+      "CALC" , (Calc       , "DBToaster Relational Calculus");
+      "PLAN" , (MPlan      , "Materialization Plan"         );
+      "M3"   , (M3         , "M3 Program"                   );
+      "M3DM" , (M3DM       , "M3 Domain Maintenance Program");
+      "K3"   , (K3         , "K3 Program"                   );
+      "SCALA", (Scala      , "Scala Code"                   );
+      "OCAML", (Ocaml      , "Ocaml Code"                   );
+      "RUN",   (Interpreter, "Ocaml Interpreter"            );
+      "CPP"  , (CPP        , "C++ Code"                     );
    ]
 
 let input_language  = ref Auto
@@ -34,6 +38,26 @@ let parse_language lang =
 ;;
 
 let (files:string list ref) = ref [];;
+let output_file = ref "-";;
+let output_filehandle = ref None;;
+let binary_file = ref "";;
+let compiler = ref ExternalCompiler.null_compiler;;
+
+let output s = 
+   let fh = 
+      match !output_filehandle with 
+      | None -> 
+         let fh = 
+            if !output_file = "-" then stdout
+            else open_out !output_file
+         in
+            output_filehandle := Some(fh); fh
+      | Some(fh) -> fh
+   in
+      output_string fh s
+;;
+let output_endline s = output (s^"\n");;
+
 
 (************ Command Line Parsing ************)
 let specs:(Arg.key * Arg.spec * Arg.doc) list  = Arg.align [ 
@@ -45,7 +69,16 @@ let specs:(Arg.key * Arg.spec * Arg.doc) list  = Arg.align [
       "lang  Set the compiler's input language to lang (default: auto)");
    (  "-d",
       (Arg.String(fun x -> Debug.activate (String.uppercase x))),
-      "mode  Activate indicated debugging output mode");  
+      "mode  Activate indicated debugging output mode");
+   (  "-o",
+      (Arg.Set_string(output_file)),
+      "file  Direct the output to the indicated file (default: '-'/stdout)" );
+   (  "-c",
+      (Arg.Set_string(binary_file)),
+      "file  Invoke the appropriate second stage compiler on the source file");
+   (  "-r",
+      (Arg.Unit(fun () -> output_language := Interpreter)),
+      "      Run the query in the internal interpreter")
 ];;
 
 Arg.parse specs (fun x -> files := !files @ [x]) 
@@ -90,12 +123,23 @@ type stage_t =
    | StageM3DomainMaintenance
    | StagePrintM3
    | StagePrintM3DomainMaintenance
+   | StageM3ToK3
+   | StageOptimizeK3
+   | StagePrintK3
+   | StageK3ToTargetLanguage
+   | StageRunInterpreter
+   | StageK3ToImp
+   | StageImpToTargetLanguage
+   | StageOutputSource
+   | StageCompileSource
 
 let output_stages = 
    [  StagePrintSQL; StagePrintSchema; StagePrintCalc; StagePrintPlan;
       StagePrintM3; StagePrintM3DomainMaintenance ]
 let input_stages = 
    [  StageParseSQL; StageParseM3 ]
+
+
 (* The following list (core_stages) MUST be kept in order of desired execution.  
 
    The list of active stages is created with the user's choice of input and 
@@ -104,12 +148,22 @@ let input_stages =
    input format (e.g., StageSQLToCalc if Calculus is the input format), and all 
    stages after the stage that produces the desired output format. *)
 let core_stages = 
-   [StageSQLToCalc; StageCompileCalc; StagePlanToM3; StageM3DomainMaintenance]
+   [  StageSQLToCalc; StageCompileCalc; StagePlanToM3; StageM3DomainMaintenance;
+      StageM3ToK3; StageOptimizeK3; StageK3ToImp
+   ]
 
 let stages_from (stage:stage_t): stage_t list =
    ListExtras.sublist (ListExtras.index_of stage core_stages) (-1) core_stages
 let stages_to   (stage:stage_t): stage_t list =
    ListExtras.sublist 0 ((ListExtras.index_of stage core_stages)+1) core_stages
+
+let compile_stages target_stage final_stage target_compiler =
+   compiler := target_compiler;
+   StageOutputSource::target_stage::(stages_to final_stage)
+let functional_stages =
+   compile_stages StageK3ToTargetLanguage StageM3ToK3
+let imperative_stages =
+   compile_stages StageImpToTargetLanguage StageK3ToImp
 
 let active_stages = ref (ListAsSet.inter
    ((match !input_language with
@@ -124,8 +178,16 @@ let active_stages = ref (ListAsSet.inter
       | Calc  -> StagePrintCalc::(stages_to StageSQLToCalc)
       | MPlan -> StagePrintPlan::(stages_to StageCompileCalc)
       | M3    -> StagePrintM3::(stages_to StagePlanToM3)
-      | M3DM  -> StagePrintM3DomainMaintenance::(stages_to StageM3DomainMaintenance)
-      | _     -> error "Unsupported output language"
+      | M3DM  -> StagePrintM3DomainMaintenance::
+                     (stages_to StageM3DomainMaintenance)
+      | K3    -> StagePrintK3::(stages_to StageM3ToK3)
+      | Scala -> functional_stages ExternalCompiler.null_compiler
+      | Ocaml -> functional_stages ExternalCompiler.OCaml.compiler
+      | CPP   -> imperative_stages ExternalCompiler.CPP.compiler
+      | Interpreter
+              -> StageRunInterpreter::StageK3ToTargetLanguage::
+                     (stages_to StageM3ToK3)
+(*    | _     -> error "Unsupported output language"*)
     )@input_stages))
 ;;
 let stage_is_active s = List.mem s !active_stages;;
@@ -136,6 +198,20 @@ Debug.exec "LOG-SCHEMA" (fun () -> activate_stage StagePrintSchema);;
 Debug.exec "LOG-PLAN"   (fun () -> activate_stage StagePrintPlan);;
 Debug.exec "LOG-M3"     (fun () -> activate_stage StagePrintM3);;
 Debug.exec "LOG-PARSER" (fun () -> let _ = Parsing.set_trace true in ());;
+
+if !binary_file <> "" then (
+   activate_stage StageCompileSource;
+   if !output_file = "-" then (
+      let (fname, stream) = 
+         Filename.open_temp_file ~mode:[Open_append]
+                                 "dbtoaster_"
+                                 (!compiler).ExternalCompiler.extension
+      in
+         output_file := fname;
+         output_filehandle := Some(stream);
+         at_exit (fun () -> Unix.unlink fname)
+   )
+)
 
 (************ Globals Used Across All Stages ************)
 (* Program generated from the SQL files in the input.  Generated in 
@@ -169,13 +245,16 @@ let toplevel_queries:(string * Calculus.expr_t) list ref = ref [];;
    db_schema and the toplevel_queries fields above. *)
 let m3_program:(M3.prog_t ref) = ref (M3.empty_prog ());;
  
-(* Representation of the Domain Maintenance Triggers (DMT). It contains a list of 
-   triggers which has the same type as the M3 triggers. For each event it contains 
-   a list of expressions which shows the computations which are needed for domain
-   maintenance. In this expressions, the domain of the variables for each map is 
-   represented by relation.
+(* Representation of the Domain Maintenance Triggers (DMT). It contains a list 
+   of triggers which has the same type as the M3 triggers. For each event it 
+   contains a list of expressions which shows the computations which are needed 
+   for domain maintenance. In this expressions, the domain of the variables for 
+   each map is represented by relation.
 *)
 let dm_program:(M3DM.dm_prog_t ref) = ref( ref ([]));;
+
+(* String representation of the source code being produced *)
+let source_code:string ref = ref "";;
 
 (************ SQL Stages ************)
 
@@ -190,7 +269,7 @@ if stage_is_active StageParseSQL then (
 ;;
 if stage_is_active StagePrintSQL then (
    let (tables, queries) = !sql_program in
-      print_endline (
+      output_endline (
          (ListExtras.string_of_list ~sep:"\n" Sql.string_of_table tables)^
          "\n\n"^
          (ListExtras.string_of_list ~sep:"\n" Sql.string_of_select queries)
@@ -229,11 +308,11 @@ if stage_is_active StageSQLToCalc then (
 )
 ;;
 if stage_is_active StagePrintSchema then (
-   print_endline (Schema.string_of_schema db_schema)
+   output_endline (Schema.string_of_schema db_schema)
 )
 ;;
 if stage_is_active StagePrintCalc then (
-   print_endline (
+   output_endline (
       (ListExtras.string_of_list ~sep:"\n" 
          (fun (name, calc) -> name^": \n  "^(Calculus.string_of_expr calc))
          !calc_queries)
@@ -259,7 +338,7 @@ if stage_is_active StageCompileCalc then (
 )
 ;;
 if stage_is_active StagePrintPlan then (
-   print_endline (Compiler.string_of_plan !materialization_plan)
+   output_endline (Compiler.string_of_plan !materialization_plan)
 )
 ;;
 
@@ -284,7 +363,7 @@ if stage_is_active StageParseM3 then (
 )
 ;;
 if stage_is_active StagePrintM3 then (
-   print_endline (M3.string_of_m3 !m3_program)
+   output_endline (M3.string_of_m3 !m3_program)
 )
 ;;
 
@@ -293,5 +372,50 @@ if stage_is_active StageM3DomainMaintenance then (
 )
 ;;
 if stage_is_active StagePrintM3DomainMaintenance then (
-   print_endline (M3DM.string_of_m3DM !dm_program)
+   output_endline (M3DM.string_of_m3DM !dm_program)
+)
+;;
+
+(************ K3 Stages ************)
+
+if stage_is_active StageM3ToK3 then (
+
+)
+;;
+if stage_is_active StageOptimizeK3 then (
+
+)
+;;
+if stage_is_active StagePrintK3 then (
+
+)
+;;
+if stage_is_active StageK3ToTargetLanguage then (
+
+)
+;;
+
+(************ Imperative Stages ************)
+
+if stage_is_active StageK3ToImp then (
+
+)
+;;
+if stage_is_active StageImpToTargetLanguage then (
+
+)
+;;
+
+(************ Program Management Stages ************)
+
+if stage_is_active StageRunInterpreter then (
+
+)
+;;
+if stage_is_active StageOutputSource then (
+  output_endline (!source_code)
+)
+;;
+if stage_is_active StageCompileSource then (
+   (!compiler).ExternalCompiler.compile !output_file !binary_file
 )
