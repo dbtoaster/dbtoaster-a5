@@ -31,6 +31,10 @@ let k3_expr_to_k3_type   (var_el : K.expr_t list ) =
 							end )
 					 var_el
 					
+let name_of_kvar kvar = begin match kvar with
+		| K.Var(v_name,vtype) -> v_name
+		| _ -> failwith "K.Var expected."
+	end
 let type_of_kvar kvar = begin match kvar with
 		| K.Var(v_name,vtype) -> vtype
 		| _ -> failwith "K.Var expected."
@@ -96,7 +100,7 @@ let extract_opt opt =  begin match opt with
 
 (**********************************************************************)
 let unique l = List.fold_left (fun acc e -> if List.mem e acc then acc else acc@[e]) [] l	
-let keys_from_vars vars  = List.map (fun (v,t) -> (v,(K.Var(v,K.TBase(t))))) vars
+let keys_from_kvars kvars  = List.map (fun kv -> (name_of_kvar kv,kv)) kvars
 
 let exprs_to_tuple (el: K.expr_t list) = 
 		begin match el with
@@ -154,12 +158,12 @@ let map_to_expr mapn ins outs map_type =
 (**********************************************************************)
 
 
-let map_access_to_expr mapn ins outs map_ret_t free_vars init_expr_opt =
-		let bound_vars = ListAsSet.diff outs free_vars in
+let map_access_to_expr mapn ins outs map_ret_t theta_vars_el init_expr_opt =
 		
 		let (ins_k,outs_k)   = pair_map varIdType_to_k3_idType (ins,outs) in
 		let (ins_el,outs_el) = pair_map varIdType_to_k3_expr   (ins,outs) in
-		let free_vars_el   = varIdType_to_k3_expr free_vars in
+		let free_vars_el  = ListAsSet.diff outs_el theta_vars_el in
+		let bound_vars_el = ListAsSet.diff outs_el free_vars_el in
 		
 		let (ins_tl,outs_tl) = pair_map varIdType_to_k3_type (ins,outs) in
 		let map_ret_k = K.TBase(map_ret_t) in
@@ -173,11 +177,11 @@ let map_access_to_expr mapn ins outs map_ret_t free_vars init_expr_opt =
 		let map_ve     = K.Var("m",map_t) in
 		
 		let slice_and_project coll_ve : K.expr_t =
-			assert (free_vars <> []);
-			if free_vars = outs then coll_ve
+			assert (free_vars_el <> []);
+			if free_vars_el = outs_el then coll_ve
 			else 
 				K.Map( project_fn (outs_el@[map_ret_ve]) (free_vars_el@[map_ret_ve]), 
-							 K.Slice(coll_ve, outs_k, keys_from_vars bound_vars))
+							 K.Slice(coll_ve, outs_k, keys_from_kvars bound_vars_el))
 		in
 		let single_access_and_init_expr sch_el =	
 				if init_expr_opt = None then K.Lookup(map_ve,sch_el)
@@ -195,8 +199,8 @@ let map_access_to_expr mapn ins outs map_ret_t free_vars init_expr_opt =
 	  | ([], y) ->       
 			let map_expr = K.OutPC(mapn, outs_k, map_ret_k) in
 			let access_expr =	
-				if free_vars = [] then single_access_and_init_expr outs_el      		
-	      else                   slice_and_project map_ve
+				if free_vars_el = [] then single_access_and_init_expr outs_el      		
+	      else                      slice_and_project map_ve
 			in 
 			apply_lambda [map_ve] [map_expr] access_expr
 				
@@ -208,8 +212,8 @@ let map_access_to_expr mapn ins outs map_ret_t free_vars init_expr_opt =
 			let map_expr = K.PC(mapn, ins_k, outs_k, map_ret_k) in
 											
 			let out_access_expr coll_ve =	
-				if free_vars = [] then	K.Lookup(coll_ve,outs_el)
-	      else                    slice_and_project coll_ve
+				if free_vars_el = [] then	K.Lookup(coll_ve,outs_el)
+	      else                      slice_and_project coll_ve
 			in
 			
 			let access_expr = 
@@ -274,23 +278,23 @@ let rec value_to_k3_expr (value_calc : V.expr_t) : K.type_t * K.expr_t =
 
 type meta_t = (string * (T.var_t list)) list
 
-let rec calc_to_k3_expr meta theta_vars calc : (K.expr_t list * K.expr_t * K.expr_t * meta_t) =
-	let rcr        = calc_to_k3_expr meta  theta_vars in
-	let rcr2 meta2 = calc_to_k3_expr meta2 theta_vars in
+let rec calc_to_k3_expr meta theta_vars_el calc : ((K.expr_t list * K.expr_t * K.expr_t) * meta_t) =
+	let rcr        = calc_to_k3_expr meta  theta_vars_el in
+	let rcr2 meta2 = calc_to_k3_expr meta2 theta_vars_el in
 	
-	let ins,outs = schema_of_expr calc in
-	assert ((ListAsSet.diff ins theta_vars) = []) ;
+	let ins_el = varIdType_to_k3_expr( fst (schema_of_expr calc)) in
+	assert ((ListAsSet.diff ins_el theta_vars_el) = []) ;
 	
 	let bin_fn op_fn c1 c2 =
 		let ((ret1_t, e1),(ret2_t, e2)) = pair_map value_to_k3_expr (c1,c2) in
 		assert (compatible_types ret1_t ret2_t);
-		[], K.Var("v",K.TBase(T.TBool)), (op_fn e1 e2), meta
+		([], K.Var("v",K.TBase(T.TBool)), (op_fn e1 e2)), meta
 	in
   begin match calc with
 		| C.Val( calc_val ) -> begin match calc_val with
 				| Value( calc_val_value ) ->
 						let ret_t, expr = value_to_k3_expr calc_val_value in
-						[], K.Var("v",ret_t), expr, meta
+						([], K.Var("v",ret_t), expr), meta
 				| Cmp( T.Eq, c1, c2 )     -> bin_fn ( fun e1 e2 -> K.Eq  (e1,e2) ) c1 c2
 				| Cmp( T.Lt, c1, c2 )     -> bin_fn ( fun e1 e2 -> K.Lt  (e1,e2) ) c1 c2
 		    | Cmp( T.Lte,c1, c2 )     -> bin_fn ( fun e1 e2 -> K.Leq (e1,e2) ) c1 c2
@@ -301,7 +305,7 @@ let rec calc_to_k3_expr meta theta_vars calc : (K.expr_t list * K.expr_t * K.exp
 				| AggSum( agg_vars0, aggsum_calc ) ->
 						let agg_vars0_el = varIdType_to_k3_expr agg_vars0 in
 						
-						let aggsum_outs_el,ret_ve,aggsum_e,nm = rcr aggsum_calc in
+						let (aggsum_outs_el,ret_ve,aggsum_e),nm = rcr aggsum_calc in
 						let agg_vars_el = ListAsSet.inter agg_vars0_el aggsum_outs_el in
 						
 						
@@ -313,10 +317,10 @@ let rec calc_to_k3_expr meta theta_vars calc : (K.expr_t list * K.expr_t * K.exp
 										let gb_fn = project_fn (aggsum_outs_el@[ret_ve]) agg_vars_el in 
 										K.GroupByAggregate(agg_fn, init_val ret_ve, gb_fn, aggsum_e)
 						in
-						(agg_vars_el, ret_ve, expr, nm)
+						((agg_vars_el, ret_ve, expr), nm)
 										
 				| Lift(lift_v, lift_calc) 	      -> 
-						let lift_outs_el,ret_ve,lift_e,nm = rcr lift_calc in
+						let (lift_outs_el,ret_ve,lift_e),nm = rcr lift_calc in
 						let lift_ve = K.Var("lift_v",type_of_kvar ret_ve) in
 						let lift_ret_ve = K.Var("v",K.TBase(T.TFloat)) in
 						let expr =
@@ -327,17 +331,14 @@ let rec calc_to_k3_expr meta theta_vars calc : (K.expr_t list * K.expr_t * K.exp
 															(K.Tuple(lift_outs_el@[ret_ve;one_flt_val])),
 													lift_e)
 						in
-						(lift_outs_el@[lift_ve], lift_ret_ve, expr, nm)
+						((lift_outs_el@[lift_ve], lift_ret_ve, expr), nm)
 						
 				| Rel(reln, rel_schema, rel_type) -> 
-						let free_vars  = ListAsSet.diff  rel_schema theta_vars in
 						let rel_outs_el, rel_ret_ve, expr = 
-								map_access_to_expr reln [] rel_schema rel_type free_vars None in
-					  (rel_outs_el, rel_ret_ve, expr, meta)
+								map_access_to_expr reln [] rel_schema rel_type theta_vars_el None in
+					  ((rel_outs_el, rel_ret_ve, expr), meta)
 				
 				| External(mapn, eins, eouts, ext_type, init_calc_opt) ->
-						let free_vars  = ListAsSet.diff  eouts theta_vars in
-												
 						let nm, init_expr_opt = begin match eins, eouts with
 							| [],[] -> meta, None
 							| [],_  -> if List.mem (mapn, eouts) meta then meta, None
@@ -346,26 +347,27 @@ let rec calc_to_k3_expr meta theta_vars calc : (K.expr_t list * K.expr_t * K.exp
 								if (Debug.active "M3ToK3-GENERATE-INIT") && 
 									 init_calc_opt != None && not (List.mem (mapn, eins) meta) then
 											let init_calc = extract_opt init_calc_opt in
-											let init_theta_vars = ListAsSet.diff  theta_vars eouts in
-											let init_outs_el, init_ret_ve, init_expr, nm_1 = 
-													calc_to_k3_expr meta  init_theta_vars init_calc in
-											assert (init_outs_el = (varIdType_to_k3_expr eouts));
+											let eouts_el = varIdType_to_k3_expr eouts in
+											let init_theta_vars_el = ListAsSet.diff  theta_vars_el eouts_el in
+											let (init_outs_el, init_ret_ve, init_expr), nm_1 = 
+													calc_to_k3_expr meta  init_theta_vars_el init_calc in
+											assert (init_outs_el = eouts_el);
 											assert ((type_of_kvar init_ret_ve) = K.TBase(ext_type));
 											nm_1@[mapn, eins], Some(init_expr)
 								else meta, None
 						end					
 						in					  
 					  let (map_outs_el, map_ret_ve, expr) = 
-							map_access_to_expr mapn eins eouts ext_type free_vars init_expr_opt in
-					  (map_outs_el, map_ret_ve, expr, nm)
+							map_access_to_expr mapn eins eouts ext_type theta_vars_el init_expr_opt in
+					  ((map_outs_el, map_ret_ve, expr), nm)
 			end
 			
     | C.Sum( c1::c2::sum_args_tl )	->
-				let outs_el = varIdType_to_k3_expr outs in
+				let outs_el = varIdType_to_k3_expr( snd (schema_of_expr calc) ) in
 				let prepare_fn old_meta c = 
-					let e_outs_el,e_ret_ve,e,new_meta = rcr2 old_meta c in
+					let (e_outs_el,e_ret_ve,e),new_meta = rcr2 old_meta c in
 					assert (ListAsSet.seteq e_outs_el outs_el);
-					(e_outs_el,e_ret_ve,e,new_meta)
+					((e_outs_el,e_ret_ve,e),new_meta)
 					(*
 					if ListAsSet.seteq e_outs outs then e
 					else
@@ -377,12 +379,12 @@ let rec calc_to_k3_expr meta theta_vars calc : (K.expr_t list * K.expr_t * K.exp
 					*)
 				in
 				
-				let (e1_outs_el,e1_ret_ve,e1,nm1) = prepare_fn meta c1 in
-				let (e2_outs_el,e2_ret_ve,e2,nm2) = prepare_fn nm1  c2 in
+				let (r1,nm1) = prepare_fn meta c1 in
+				let (r2,nm2) = prepare_fn nm1  c2 in
 				let nm,sum_exprs_tl = 
 						List.fold_left (fun (old_meta,old_el) c -> 
-																let e_outs_el,e_ret_ve,e,new_meta = prepare_fn old_meta c in
-																new_meta,old_el@[e_outs_el,e_ret_ve,e]) 
+																let result,new_meta = prepare_fn old_meta c in
+																new_meta,old_el@[result]) 
 													 (nm2,[]) 
 													 sum_args_tl in
 				
@@ -411,19 +413,25 @@ let rec calc_to_k3_expr meta theta_vars calc : (K.expr_t list * K.expr_t * K.exp
 					in
 					(s1_outs_el, ret_ve, expr)
 				in
-				let r = sum_fn (e1_outs_el,e1_ret_ve,e1) (e2_outs_el,e2_ret_ve,e2) in
-				let sum_outs_el, sum_ret_ve, sum_expr = List.fold_left sum_fn r sum_exprs_tl in
-				(sum_outs_el, sum_ret_ve, sum_expr, nm)
+				let r = sum_fn r1 r2 in
+				let sum_result = List.fold_left sum_fn r sum_exprs_tl in
+				(sum_result, nm)
     
-		| C.Prod( c1::c2::prod_args_tl )	->	  
-				let (e1_outs_el,e1_ret_ve,e1,nm1) = rcr2 meta c1 in
-    		let (e2_outs_el,e2_ret_ve,e2,nm2) = rcr2 nm1  c2 in
-				let nm,prod_exprs_tl = List.fold_left 
-																	(fun (old_meta,old_el) c -> 
-																				let e_outs_el,e_ret_ve,e,new_meta = rcr2 old_meta c in
-																				new_meta,old_el@[e_outs_el,e_ret_ve,e])
-																	(nm2,[]) 
-																	prod_args_tl in
+		| C.Prod( c1::c2::prod_args_tl )	->	
+				let prepare_fn old_meta old_theta c = 
+					let (e_outs_el,e_ret_ve,e),new_meta = calc_to_k3_expr old_meta old_theta  c in
+					((e_outs_el,e_ret_ve,e),new_meta,ListAsSet.union old_theta e_outs_el)
+				in
+				let (r1,nm1,nt1) = prepare_fn meta theta_vars_el c1 in
+    		let (r2,nm2,nt2) = prepare_fn nm1  nt1           c2 in
+				let nm,_,prod_exprs_tl = 
+					List.fold_left (fun (old_meta,old_theta,old_el) c -> 
+															let result,new_meta,new_theta = 
+																						prepare_fn old_meta old_theta c in
+															new_meta,new_theta,old_el@[result]
+													)
+													(nm2,nt2,[]) 
+													prod_args_tl in
 				
 				let prod_fn (p1_outs_el,p1_ret_ve,p1) (p2_outs_el,p2_ret_ve,p2) =
 					let ret1_t,ret2_t = pair_map type_of_kvar (p1_ret_ve,p2_ret_ve) in
@@ -451,9 +459,9 @@ let rec calc_to_k3_expr meta theta_vars calc : (K.expr_t list * K.expr_t * K.exp
 					(p_outs_el, ret_ve, expr)
 				in
 				
-				let r = prod_fn (e1_outs_el,e1_ret_ve,e1) (e2_outs_el,e2_ret_ve,e2) in
-				let prod_outs_el, prod_ret_ve, prod_expr = List.fold_left prod_fn r prod_exprs_tl in		
-				(prod_outs_el, prod_ret_ve, prod_expr, nm)
+				let r = prod_fn r1 r2 in
+				let prod_result = List.fold_left prod_fn r prod_exprs_tl in		
+				(prod_result, nm)
 				
 		| C.Neg( neg_arg ) ->
 				rcr (C.Prod( [(C.Val(Value(V.Val(AConst(T.CInt(-1))))));neg_arg] ))
@@ -479,6 +487,7 @@ let collection_stmt trig_args (m3stmt: Plan.stmt_t) : K.statement_t =
 		let (mapn, lhs_ins, lhs_outs, map_type, init_calc_opt) = Plan.expand_ds_name m3stmt.Plan.target_map in
 		let {Plan.update_type = update_type; Plan.update_expr = incr_calc} = m3stmt in 
 		
+		let trig_args_el = varIdType_to_k3_expr trig_args in
 		let (lhs_ins_el,lhs_outs_el) = pair_map varIdType_to_k3_expr   (lhs_ins, lhs_outs) in
 		let (lhs_ins_tl,lhs_outs_tl) = pair_map varIdType_to_k3_type   (lhs_ins, lhs_outs) in
 		
@@ -489,9 +498,9 @@ let collection_stmt trig_args (m3stmt: Plan.stmt_t) : K.statement_t =
     
 		(* all lhs input variables must be free, they cannot be bound by trigger args *)
 		assert ((ListAsSet.inter trig_args  lhs_ins) = []);
-	  let trig_w_ins = ListAsSet.union trig_args  lhs_ins  in
-		let rhs_outs_el,rhs_ret_ve,incr_expr,_ = calc_to_k3_expr [] trig_w_ins incr_calc in
-		let trig_args_el = varIdType_to_k3_expr trig_args in
+	  let trig_w_ins_el = ListAsSet.union trig_args_el  lhs_ins_el  in
+		let (rhs_outs_el,rhs_ret_ve,incr_expr),_ = calc_to_k3_expr [] trig_w_ins_el incr_calc in
+		
 		assert (ListAsSet.seteq (ListAsSet.diff lhs_outs_el trig_args_el) rhs_outs_el);
 		assert (compatible_types (type_of_kvar rhs_ret_ve) map_k3_type);
 		
@@ -502,8 +511,8 @@ let collection_stmt trig_args (m3stmt: Plan.stmt_t) : K.statement_t =
 				else
 						if (Debug.active "M3ToK3-GENERATE-INIT") && init_calc_opt != None then
 							let init_calc = extract_opt init_calc_opt in
-							let trig_w_lhs = ListAsSet.union trig_w_ins lhs_outs in
-							let init_outs_el,init_ret_ve,init_expr,_ = calc_to_k3_expr [] trig_w_lhs init_calc in
+							let trig_w_lhs_el = ListAsSet.union trig_w_ins_el lhs_outs_el in
+							let (init_outs_el,init_ret_ve,init_expr),_ = calc_to_k3_expr [] trig_w_lhs_el init_calc in
 							assert (init_outs_el = []);
 							assert (compatible_types (type_of_kvar init_ret_ve) map_k3_type);
 							
