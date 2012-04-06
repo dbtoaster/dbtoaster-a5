@@ -140,8 +140,6 @@ let map_update_expr map_expr e_l te =
 let lambda_vars (v_name,vtype) = K.AVar(v_name,vtype),K.Var(v_name,vtype)
 let keys_from_pattern sch pat  = List.map (fun v -> let t = List.assoc v sch in (v,(K.Var(v,t)))) pat
 
-type k_var_expr
-
 let apply_lambda_block v_e e block = begin match v_e with
 		| K.Var(v_name,vtype) -> K.Apply(K.Lambda(K.AVar(v_name,vtype), K.Block(block)), e)
 		| _ -> failwith "Invalid argument to apply_lambda_block."
