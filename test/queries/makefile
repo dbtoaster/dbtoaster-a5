@@ -2,6 +2,7 @@ QUERIES := \
 	simple/rst \
 	tpch/query3 \
 	tpch/query11 \
+	tpch/query17 \
 	tpch/ssb4 \
     finance/axfinder \
     finance/brokerspread	\

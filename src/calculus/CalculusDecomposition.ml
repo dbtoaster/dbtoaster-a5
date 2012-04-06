@@ -11,8 +11,8 @@ module C = Calculus
 
 (******************************************************************************)
 (* TODO ensure that different expessions under AggSum have disjunct schemas *)
-let decompose_poly (expr:C.expr_t):(var_t list * C.expr_t) list = 
-   let schema = snd (C.schema_of_expr expr) in
+let decompose_poly (scope:var_t list) (expr:C.expr_t):(var_t list * C.expr_t) list = 
+   let schema = snd (C.schema_of_expr ~scope:scope expr) in
    let rec erase_aggsums e = 
       C.CalcRing.fold C.CalcRing.mk_sum C.CalcRing.mk_prod C.CalcRing.mk_neg
          (fun lf -> begin match lf with

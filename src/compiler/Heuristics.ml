@@ -10,9 +10,9 @@ type ds_history_t = ds_t list ref
 (******************************************************************************)
 		 
 let extract_event_vars (event:Schema.event_t option) : (var_t list) =
-	match event with 
+  match event with 
 		| Some(ev) ->  Schema.event_vars ev
-		| None -> []
+	  | None -> []
 
 let extract_event_reln (event:Schema.event_t option) : (string option) =
 	match event with
@@ -20,14 +20,28 @@ let extract_event_reln (event:Schema.event_t option) : (string option) =
 		| Some(Schema.DeleteEvent((reln,_,_,_))) -> Some(reln)
 		| _  -> None
 
+(*
 let schema_of_expr ?(scope:var_t list = []) (expr:expr_t) : 
                     (var_t list * var_t list) =
 	let (expr_ivars, expr_ovars) = Calculus.schema_of_expr expr in
 	let new_ovars = ListAsSet.inter expr_ivars scope in
 		(ListAsSet.diff expr_ivars new_ovars, ListAsSet.union expr_ovars new_ovars) 
+*)
 
 let string_of_vars = ListExtras.string_of_list string_of_var
 
+(* Push cmps and values to the right *)
+let push_cmps_right (expr:expr_t) : (expr_t) =
+	let (left, right) = 
+		List.fold_left ( fun (l,r) term ->
+        match CalcRing.get_val term with
+            | Value(_) | Cmp (_, _, _) -> (l, r @ [term])
+            | Rel (_, _, _) | Lift (_, _) | External (_) -> (l @ [term], r)                             
+						| AggSum (_, _) ->
+							failwith "[push_cmps_right] Error: AggSums are supposed to be removed."
+    ) ([], []) (CalcRing.prod_list expr)
+	in
+	   CalcRing.mk_prod (left @ right)
 
 (* Divide the expression into three parts:                                     *)
 (* lift_exprs: lifts containing the event relation or input variables          *)
@@ -59,27 +73,25 @@ let split_expr (event:Schema.event_t option)
 									else 
 											((rel, lift, CalcRing.mk_prod [rest; term]), scope_acc)
 						| Lift (v, subexpr) ->						
-									if (ListAsSet.subset [v] scope_acc) ||
-									   (ListAsSet.subset [v] scope) then
-											failwith"[materialize_expr] Error: The lift variable is in the scope"
+									if (List.mem v (ListAsSet.union scope_acc scope)) then
+											failwith "[split_expr] Error: The lift variable is in the scope"
 									else
-										let subexpr_rels = rels_of_expr subexpr in
 										let subexpr_ivars = fst (schema_of_expr ~scope:scope_acc subexpr) in
-										let subexpr_ivars_covered = (ListAsSet.subset subexpr_ivars scope) in
-										let lift_contains_event_rel = 
-												match extract_event_reln event with 
-													| Some(reln) -> List.mem reln subexpr_rels
-													| None -> false
+										let subexpr_rels = rels_of_expr subexpr in
+										let lift_contains_event_rel =
+											match extract_event_reln event with 
+												| Some(reln) -> List.mem reln subexpr_rels
+												| None -> false
 										in
-										if ((not subexpr_ivars_covered) || lift_contains_event_rel) then										
-											 	((rel, CalcRing.mk_prod [lift; term], rest), scope_acc)	
+										if ((lift_contains_event_rel) || (subexpr_ivars <> [])) then
+											((rel, CalcRing.mk_prod [lift; term], rest), scope_acc)
 										else
-												(* The expression does not include input variables *)
-												(* and does not involve the relation for which the *)
-												(* trigger function is being created.*)
-   											((CalcRing.mk_prod [rel; term], lift, rest), scope_acc @ [v])							
-															
-			) ((CalcRing.one, CalcRing.one, CalcRing.one), []) (CalcRing.prod_list expr)
+											(* The expression does not include input variables *)
+											(* and does not involve the relation for which the *)
+											(* trigger function is being created.*)
+											((CalcRing.mk_prod [rel; term], lift, rest), scope_acc @ [v])													
+			) ((CalcRing.one, CalcRing.one, CalcRing.one), []) 
+			  (CalcRing.prod_list (push_cmps_right expr))
 		) 
 
 
@@ -90,6 +102,9 @@ let rec materialize ?(scope:var_t list = [])
                     (history:ds_history_t) (prefix:string) 
 							      (event:Schema.event_t option) (expr:expr_t) 
 										: (ds_t list * expr_t) = 
+		
+
+		(*Debug.activate "LOG-HEURISTICS-DETAIL";*)
 		
 		Debug.print "LOG-HEURISTICS-DETAIL" (fun () ->
 			 "[Heuristics] Raw expression: "^(string_of_expr expr)^
@@ -137,7 +152,7 @@ let rec materialize ?(scope:var_t list = [])
 				in
 					((term_todos @ new_term_todos, CalcRing.mk_sum [term_mats; new_term_mats]), k)
 					
-			) (([], CalcRing.zero), 1) (decompose_poly expr)
+			) (([], CalcRing.zero), 1) (decompose_poly scope expr)
 		)
 	
 (* Materialization of an expression of the form mk_prod [ ...] *)	
@@ -157,7 +172,8 @@ and materialize_expr (history:ds_history_t) (prefix:string)
 					
 		(* Sanity check - mat_exprs should not contain any input variables *)
 		if rel_exprs_ivars <> [] then 
-		    failwith "The materialized expression has input variables" 
+			  (print_string ((string_of_expr rel_exprs)^"\nScope:"^(string_of_vars scope)^"\nInpVars: "^(string_of_vars rel_exprs_ivars));
+		    failwith "The materialized expression has input variables") 
 		else
 										
 		(* Lifts are always materialized separately *)
@@ -178,7 +194,7 @@ and materialize_expr (history:ds_history_t) (prefix:string)
 				
 			(* Extended the schema with the input variables of other expressions *) 
 			let expected_schema = ListAsSet.inter rel_exprs_ovars 
-															(ListAsSet.multiunion [scope; schema; lift_exprs_ivars; 
+															(ListAsSet.multiunion [schema; lift_exprs_ivars; 
 																										 rest_exprs_ivars]) in
 			(* Add an aggregation if necessary *)
 			let agg_rel_expr = if ListAsSet.seteq rel_exprs_ovars expected_schema then rel_exprs
@@ -186,6 +202,10 @@ and materialize_expr (history:ds_history_t) (prefix:string)
 			
       Debug.print "LOG-HEURISTICS-DETAIL" (fun () ->
 			     	"[Heuristics]  Materializing AggSum expression: "^(string_of_expr agg_rel_expr)^
+						"\n\t Scope: ["^(string_of_vars scope)^"]"^
+						"\n\t Lift InpVars: ["^(string_of_vars lift_exprs_ivars)^"]"^
+            "\n\t Rest InpVars: ["^(string_of_vars rest_exprs_ivars)^"]"^
+            "\n\t Schema org: ["^(string_of_vars schema)^"]"^
 						"\n\t Schema: ["^(string_of_vars rel_exprs_ovars)^"]"^
             "\n\t Expected schema: ["^(string_of_vars expected_schema)^"]"
 		  ); 

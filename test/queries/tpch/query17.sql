@@ -6,46 +6,43 @@
  */
 
 CREATE STREAM LINEITEM (
-        orderkey       int,
-        partkey        int,
-        suppkey        int,
-        linenumber     int,
-        quantity       int,
-        extendedprice  float,
-        discount       float,
-        tax            float,
-        -- the fields below should be text, but since dbtoaster
-        -- does not handle strings, we make them floats for now
-        -- by hashing in the adaptor
-        returnflag     int, -- hash
-        linestatus     int, -- hash
-        shipdate       int, -- date
-        commitdate     int, -- date
-        receiptdate    int, -- date
-        shipinstruct   int, -- hash
-        shipmode       int, -- hash
-        comment        int  -- hash
+        orderkey       INT,
+        partkey        INT,
+        suppkey        INT,
+        linenumber     INT,
+        quantity       DECIMAL,
+        extendedprice  DECIMAL,
+        discount       DECIMAL,
+        tax            DECIMAL,
+        returnflag     CHAR(1),
+        linestatus     CHAR(1),
+        shipdate       DATE,
+        commitdate     DATE,
+        receiptdate    DATE,
+        shipinstruct   CHAR(25),
+        shipmode       CHAR(10),
+        comment        VARCHAR(44)
     )
-  FROM FILE '../../experiments/data/tpch/lineitem.tbl'
-  LINE DELIMITED lineitem;
+  FROM FILE '../../experiments/data/tpch/lineitem.csv'
+  LINE DELIMITED csv (deletions := 'true');
 
 CREATE STREAM PART (
-        partkey      int,
-        name         int, -- hash
-        mfgr         int, -- hash
-        brand        int, -- hash
-        type         int, -- hash
-        size         int,
-        container    int, -- hash
-        retailprice  float,
-        comment      int  -- hash
+        partkey      INT,
+        name         VARCHAR(55),
+        mfgr         CHAR(25),
+        brand        CHAR(10),
+        type         VARCHAR(25),
+        size         INT,
+        container    CHAR(10),
+        retailprice  DECIMAL,
+        comment      VARCHAR(23)
     )
-  FROM FILE '../../experiments/data/tpch/part.tbl'
-  LINE DELIMITED part;
+  FROM FILE '../../experiments/data/tpch/part.csv'
+  LINE DELIMITED csv (deletions := 'true');
 
-select sum(l.extendedprice) AS tot_price
-from   lineitem l, part p
-where  p.partkey = l.partkey
-and    l.quantity < 0.005*
-       (select sum(l2.quantity)
-        from lineitem l2 where l2.partkey = p.partkey);
+SELECT sum(l.extendedprice) AS query17
+FROM   lineitem l, part p
+WHERE  p.partkey = l.partkey
+AND    l.quantity < 0.005 *
+       (SELECT sum(l2.quantity)
+        FROM lineitem l2 WHERE l2.partkey = p.partkey);
