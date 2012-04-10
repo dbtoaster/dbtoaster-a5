@@ -3,6 +3,7 @@ QUERIES := \
 	tpch/query3 \
 	tpch/query11 \
 	tpch/query17 \
+    tpch/query18 \
 	tpch/query22 \
 	tpch/ssb4 \
     finance/axfinder \
