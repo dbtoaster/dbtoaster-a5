@@ -9,7 +9,7 @@ let incorporate_stmt ?(old = (Schema.empty_db (), [])) (rel, query) =
    begin match rel with 
       | Some(name, schema, reltype, source, adaptor) ->
          Schema.add_rel old_rels ~source:source ~adaptor:adaptor
-                        (name, schema, reltype, TInt)
+                        (name, schema, reltype)
       | None    -> ()
    end;
    (old_rels, query @ old_queries)
@@ -146,8 +146,8 @@ ivcCalculusExpr:
 | valueLeaf                       { CalcRing.mk_val (Value $1) }
 | AGGSUM LPAREN LBRACKET emptyVariableList RBRACKET COMMA ivcCalculusExpr RPAREN
                                   { CalcRing.mk_val (AggSum($4, $7)) }
-| relationDefn                    { let (reln, relv, relt) = $1 in
-                                    CalcRing.mk_val (Rel(reln, relv, relt)) }
+| relationDefn                    { let (reln, relv) = $1 in
+                                    CalcRing.mk_val (Rel(reln, relv)) }
 | externalDefn                    { let (en, iv, ov, et, em) = $1 in
                                     CalcRing.mk_val (External(en,iv,ov,et,em)) }
 | LBRACKET valueExpr comparison valueExpr RBRACKET
@@ -160,10 +160,8 @@ comparison:
 | LTE { Types.Lte } | GT  { Types.Gt  } | GTE { Types.Gte }
 
 relationDefn:
-| ID LPAREN RPAREN                                  { ($1, [], TInt) }
-| ID LPAREN dbtType RPAREN                          { ($1, [], $3) }
-| ID LPAREN variableList RPAREN                     { ($1, $3, TInt) }
-| ID LPAREN variableList COMMA dbtType RPAREN       { ($1, $3, $5) }
+| ID LPAREN RPAREN                                  { ($1, []) }
+| ID LPAREN variableList RPAREN                     { ($1, $3) }
 
 externalDefn:
 | externalDefnWithoutMeta { $1 }
@@ -212,7 +210,7 @@ mapProgram:
          let db = Schema.empty_db () in (
             List.iter (fun (name, schema, reltype, source, adaptor) -> 
                Schema.add_rel db ~source:source ~adaptor:adaptor 
-                                 (name, schema, reltype, TInt)
+                                 (name, schema, reltype)
             ) rels;
             let prog = M3.init db in
                List.iter (M3.add_view prog) views;
@@ -271,7 +269,7 @@ mapEvent:
 
 schemaRelationDefn:
 | relationDefn {
-   let (reln, relv, relt) = $1 in (reln, relv, Schema.StreamRel, relt)
+   let (reln, relv) = $1 in (reln, relv, Schema.StreamRel)
 }
 
 mapTriggerStmtList:

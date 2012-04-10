@@ -12,7 +12,7 @@ module C = Calculus
 let delta_var_id = ref 0
 
 let rec delta_of_expr (delta_event:Schema.event_t) (expr:C.expr_t): C.expr_t=
-   let (apply_sign, (delta_reln,delta_relv,_,_)) =
+   let (apply_sign, (delta_reln,delta_relv,_)) =
       begin match delta_event with
          | Schema.InsertEvent(rel) -> ((fun x -> x),    rel)
          | Schema.DeleteEvent(rel) -> (CalcRing.mk_neg, rel)
@@ -35,7 +35,7 @@ let rec delta_of_expr (delta_event:Schema.event_t) (expr:C.expr_t): C.expr_t=
                   then CalcRing.zero
                   else CalcRing.mk_val (AggSum(gb_vars, rcr sub_t))
          (*****************************************)
-            | Rel(reln,relv,_) ->
+            | Rel(reln,relv) ->
                if delta_reln = reln then 
                   if (List.length relv) <> (List.length delta_relv)
                   then

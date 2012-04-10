@@ -117,7 +117,7 @@ let add_rel (prog:prog_t) ?(source = Schema.NoSource)
                           ?(adaptor = ("", []))
                           (rel:Schema.rel_t): unit = 
    Schema.add_rel prog.db ~source:source ~adaptor:adaptor rel;
-   let (_,_,t,_) = rel in if t = Schema.TableRel then
+   let (_,_,t) = rel in if t = Schema.TableRel then
       prog.maps     := (DSTable(rel)) :: !(prog.maps)
    else
       prog.triggers := { event = (Schema.InsertEvent(rel)); statements=ref [] }
@@ -169,7 +169,7 @@ let default_triggers () =
 
 let init (db:Schema.t): prog_t = 
    let (db_tables, db_streams) = 
-      List.partition (fun (_,_,t,_) -> t = Schema.TableRel)
+      List.partition (fun (_,_,t) -> t = Schema.TableRel)
                      (Schema.rels db)
    in
    {  queries = ref [];

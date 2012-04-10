@@ -1,3 +1,5 @@
+include makefile.inc
+
 FILES=\
 	src/util/Debug\
 	src/util/ListAsSet\
@@ -22,20 +24,30 @@ FILES=\
 	src/maps/M3\
 	src/maps/Patterns\
 	src/maps/M3DM\
-	src/functional/K3
-
+	src/functional/K3\
+	src/functional/K3Typechecker\
+	src/functional/K3Optimizer\
+	src/functional/K3Codegen\
+	src/functional/K3Compiler\
+	src/lib/Sources\
+	src/lib/StandardAdaptors\
+	src/lib/SliceableMap\
+	src/lib/Values\
+	src/lib/Database\
+	src/lib/Runtime\
+	src/codegen/K3Interpreter\
 
 TOPLEVEL_FILES=\
 	src/global/Driver\
-	src/global/UnitTest
+	src/global/UnitTest\
 
 LEXERS=\
 	src/parsers/Sqllexer\
-	src/parsers/Calculuslexer
+	src/parsers/Calculuslexer\
 
 PARSERS=\
 	src/parsers/Sqlparser\
-	src/parsers/Calculusparser
+	src/parsers/Calculusparser\
 
 DIRS=\
 	src/util\
@@ -47,23 +59,16 @@ DIRS=\
 	src/compiler\
 	src/maps\
 	src/functional\
+	src/codegen\
+	src/lib\
 
 INCLUDE_OBJ=\
 	str.cma\
 	unix.cma
 
-OCAML_FLAGS = -g -dtypes
-OPT_FLAGS   = -ccopt -O3 -nodynlink -unsafe -noassert
-
-OCAMLCC   =ocamlc
-OCAMLOPT  =ocamlopt
-OCAMLMKTOP=ocamlmktop
-OCAMLDEP  =ocamldep
-OCAMLYACC =ocamlyacc
-OCAMLLEX  =ocamllex
-
 #################################################
 
+BASE_FILES     := $(FILES)
 GENERATED_FILES = $(PARSERS) $(LEXERS) 
 FILES += $(GENERATED_FILES)
 
@@ -80,22 +85,13 @@ OPT_FLAGS +=\
 	$(patsubst %, -I %,$(DIRS))\
 	$(patsubst %.cma,%.cmxa,$(INCLUDE_OBJ))
 
-CLEAN_FILES=\
-	$(patsubst %,%.ml,$(GENERATED_FILES))\
-	$(patsubst %,%.mli,$(PARSERS))\
-	$(patsubst %,%.states,$(PARSERS))\
-	$(C_FILES) $(C_INCLUDES) \
-	$(O_FILES) $(O_INCLUDES) \
-	$(patsubst %,%.o,$(FILES)) \
-	bin/dbtoaster bin/dbtoaster_top bin/dbtoaster_debug \
-	src/global/Driver.cmi src/global/Driver.cmo src/global/Driver.cmx \
-	src/global/Driver.cmxi src/global/Driver.o \
-	doc/*.aux doc/*.synctex.gz doc/*.log \
-	makefile.deps
-
 #################################################
 
-all: bin/dbtoaster_top bin/dbtoaster_debug bin/dbtoaster  
+all: bin/dbtoaster_top bin/dbtoaster_debug bin/dbtoaster lib
+
+lib: $(O_FILES) $(C_FILES)
+	@echo Making Libraries
+	@make -C lib
 
 bin/dbtoaster: $(O_FILES) src/global/Driver.ml
 	@echo "Linking DBToaster (Optimized)"
@@ -112,9 +108,24 @@ bin/dbtoaster_top: $(C_FILES) src/global/UnitTest.ml
 states: $(patsubst %,%.states,$(PARSERS))
 
 clean: 
-	rm -f $(CLEAN_FILES)
-	make -C test/queries clean
+	rm -f $(patsubst %,%.ml,$(GENERATED_FILES))
+	rm -f $(patsubst %,%.mli,$(PARSERS))
+	rm -f $(patsubst %,%.states,$(PARSERS))
+	rm -f $(C_FILES) $(C_INCLUDES)
+	rm -f $(O_FILES) $(O_INCLUDES)
+	rm -f $(patsubst %,%.o,$(FILES))
+	rm -f $(patsubst %,%.annot,$(FILES))
+	rm -f bin/dbtoaster bin/dbtoaster_top bin/dbtoaster_debug
+	rm -f src/global/Driver.cmi src/global/Driver.cmo src/global/Driver.cmx
+	rm -f src/global/Driver.cmxi src/global/Driver.o
+	rm -f doc/*.aux doc/*.synctex.gz doc/*.log
+	rm -f makefile.deps
+	make -C lib clean
+
+distclean: clean
 	make -C doc clean
+	make -C test/queries clean
+	
 
 test: bin/dbtoaster_top
 	@DIRS="$(DIRS)" make -C test
@@ -130,7 +141,7 @@ doc: $(C_FILES) $(patsubst %,%.ml,$(TOPLEVEL_FILES))
 	 DIRS="$(patsubst %,../%,$(DIRS))"\
 	 make -C doc
 
-.PHONY: all clean test states doc
+.PHONY: all clean distclean test states doc lib
 
 #################################################
 
@@ -171,7 +182,7 @@ $(patsubst %,%.cmxi,$(FILES)) :
 
 #################################################
 
-makefile.deps: makefile $(patsubst %,%.ml,$(FILES))
+makefile.deps: makefile $(patsubst %,%.ml,$(BASE_FILES))
 	@echo Computing Dependency Graph
 	@$(OCAMLDEP) $(patsubst %, -I %,$(DIRS)) $^ > $@
 

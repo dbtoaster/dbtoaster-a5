@@ -10,7 +10,7 @@ let test msg input output =
    log_test ("Decomposition ("^msg^")")
       string_of_expr
       (CalcRing.mk_sum (snd (List.split 
-						(CalculusDecomposition.decompose_poly (parse_calc input)))))
+						(CalculusDecomposition.decompose_poly [] (parse_calc input)))))
       (parse_calc output) 
 in
    test "Simple Decomposition #1"

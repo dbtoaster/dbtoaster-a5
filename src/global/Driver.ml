@@ -197,6 +197,7 @@ Debug.exec "LOG-CALC"   (fun () -> activate_stage StagePrintCalc);;
 Debug.exec "LOG-SCHEMA" (fun () -> activate_stage StagePrintSchema);;
 Debug.exec "LOG-PLAN"   (fun () -> activate_stage StagePrintPlan);;
 Debug.exec "LOG-M3"     (fun () -> activate_stage StagePrintM3);;
+Debug.exec "LOG-K3"     (fun () -> activate_stage StagePrintK3);;
 Debug.exec "LOG-PARSER" (fun () -> let _ = Parsing.set_trace true in ());;
 
 if !binary_file <> "" then (

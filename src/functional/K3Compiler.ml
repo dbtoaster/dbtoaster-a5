@@ -8,9 +8,6 @@ open Schema
 open CG
 open K3Typechecker
 
-(* TODO move this somewhere else? *)
-type relation_input_t = source_t * framing_t * string * adaptor_t
-
 
 (* TODO move this somewhere else! *)
 (* IO Operation abstraction - one level up from streams.  Mostly there to
@@ -156,37 +153,26 @@ let rec compile_k3_expr e =
     end
 
 let compile_triggers_noopt trigs : code_t list =
-   List.map (fun (event, rel, args, cs) ->
+   List.map (fun (event, cs) ->
       let stmts = List.map compile_k3_expr (List.map snd cs) in
-         trigger event rel args stmts
+         trigger event stmts
    ) trigs
 
 let compile_triggers trigs : code_t list =
-  List.map (fun (event, rel, args, cs) ->
+  List.map (fun (event, cs) ->
+      let args = List.map fst (event_vars event) in
       let stmts = List.map compile_k3_expr
         (List.map (fun (_,e) -> K3Optimizer.optimize args e) cs) 
-      in trigger event rel args stmts)
+      in trigger event stmts)
     trigs
     
 let compile_k3_to_code (dbschema:(string * var_t list) list)
                        (((schema,patterns,trigs) : K3.SR.prog_t),
-                        (sources: relation_input_t list))
+                        (sources:Schema.source_info_t list))
                        (toplevel_queries : string list): code_t =
-   let trig_rels = ListAsSet.no_duplicates
-      (List.map (fun (_,rel,_,_) -> rel) trigs) in
    let ctrigs = compile_triggers_noopt trigs in
-   let sources_and_adaptors =
-      List.fold_left (fun acc (s,f,rel,a) ->
-         match (List.mem rel trig_rels, List.mem_assoc (s,f) acc) with
-           | (false,_) -> acc
-           | (_,false) -> ((s,f),[rel,a])::acc
-           | (_, true) ->
-           	let existing = List.assoc (s,f) acc
-            in ((s,f), ((rel,a)::existing))::(List.remove_assoc (s,f) acc))
-     	[] sources
-   in
    let csource =
-     List.map (fun ((s,f),ra) -> CG.source s f ra) sources_and_adaptors
+     List.map (fun (s,ra) -> CG.source s ra) sources
    in
       (main dbschema schema patterns csource ctrigs toplevel_queries)
 

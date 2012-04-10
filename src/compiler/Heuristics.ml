@@ -16,8 +16,8 @@ let extract_event_vars (event:Schema.event_t option) : (var_t list) =
 
 let extract_event_reln (event:Schema.event_t option) : (string option) =
 	match event with
-		| Some(Schema.InsertEvent((reln,_,_,_))) 
-		| Some(Schema.DeleteEvent((reln,_,_,_))) -> Some(reln)
+		| Some(Schema.InsertEvent((reln,_,_))) 
+		| Some(Schema.DeleteEvent((reln,_,_))) -> Some(reln)
 		| _  -> None
 
 (*
@@ -36,7 +36,7 @@ let push_cmps_right (expr:expr_t) : (expr_t) =
 		List.fold_left ( fun (l,r) term ->
         match CalcRing.get_val term with
             | Value(_) | Cmp (_, _, _) -> (l, r @ [term])
-            | Rel (_, _, _) | Lift (_, _) | External (_) -> (l @ [term], r)                             
+            | Rel (_, _) | Lift (_, _) | External (_) -> (l @ [term], r)                             
 						| AggSum (_, _) ->
 							failwith "[push_cmps_right] Error: AggSums are supposed to be removed."
     ) ([], []) (CalcRing.prod_list expr)
@@ -62,7 +62,7 @@ let split_expr (event:Schema.event_t option)
 											((rel, lift, CalcRing.mk_prod [rest; term]), scope_acc)
 						| AggSum (v, subexp) ->
 									failwith "[split_expr] Error: AggSums are supposed to be removed."																	
-						| Rel (reln, relv, relt) ->								
+						| Rel (reln, relv) ->								
 									((CalcRing.mk_prod [rel; term], lift, rest), (ListAsSet.union scope_acc relv))
 						| External (_) -> 
 									((rel, lift, CalcRing.mk_prod [rest; term]), scope_acc) 

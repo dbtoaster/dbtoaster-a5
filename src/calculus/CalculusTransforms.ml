@@ -85,7 +85,7 @@ let rec combine_values ?(aggressive=false) (expr:C.expr_t): C.expr_t =
       (fun x -> (match x with
          | Cmp(Eq,x,y) when x = y -> CalcRing.one
          | Cmp(_,x,y) when x = y  -> CalcRing.zero
-         | Value(_) | Rel(_,_,_) | External(_) | Cmp(_,_,_) -> CalcRing.mk_val x
+         | Value(_) | Rel(_,_) | External(_) | Cmp(_,_,_) -> CalcRing.mk_val x
          | AggSum(gb_vars, subexp) -> 
             CalcRing.mk_val (AggSum(gb_vars, rcr subexp))
          | Lift(lift_v, subexp)    -> 
@@ -534,10 +534,10 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
                                                    (vars_of_value rhs))
                                   noval_ctx value_subs),
                   CalcRing.mk_val (Cmp(cmp_op, simplified_lhs, simplified_rhs)))
-         | CalcRing.Val(Rel(reln, relv, relt)) ->
+         | CalcRing.Val(Rel(reln, relv)) ->
             let (novar_ctx, var_subs) = split_vars ctx in
                (  (deletable_vars relv novar_ctx var_subs),
-                  CalcRing.mk_val (Rel(reln, sub var_subs relv, relt)))
+                  CalcRing.mk_val (Rel(reln, sub var_subs relv)))
          | CalcRing.Val(External(en, eiv, eov, et, em)) ->
             let (novar_ctx, var_subs) = split_vars ctx in
                (  (deletable_vars (ListAsSet.union eiv eov) novar_ctx var_subs),

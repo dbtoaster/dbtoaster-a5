@@ -111,8 +111,7 @@ and calc_of_sources (tables:Sql.table_t list)
             CalcRing.mk_val (Rel(
                rel_name,
                List.map (fun (_,vn,vt) -> 
-                              var_of_sql_var ((Some(ref_name)),vn,vt)) sch, 
-               TInt
+                              var_of_sql_var ((Some(ref_name)),vn,vt)) sch
             ))
       ) rels;
       List.map (fun (ref_name, q) ->
@@ -230,5 +229,5 @@ and calc_of_sql_expr ?(materialize_query = None)
 let extract_sql_schema (db:Schema.t) (tables:Sql.table_t list) = 
    List.iter (fun (reln, relsch, reltype, (relsource, reladaptor)) ->
       Schema.add_rel db ~source:relsource ~adaptor:reladaptor 
-                        (reln, List.map var_of_sql_var relsch, reltype, TInt)
+                        (reln, List.map var_of_sql_var relsch, reltype)
    ) tables

@@ -106,7 +106,7 @@ let extract_patterns (triggers : M3.trigger_t list) : pattern_map =
 							| Calculus.Cmp   _ -> empty_pattern_map()
 							| Calculus.AggSum( gb_vars, agg_calc ) -> extract_from_calc tvars agg_calc
 							| Calculus.Lift( v, lift_calc ) -> 				extract_from_calc tvars lift_calc
-							| Calculus.Rel( reln, relv, _ ) -> 
+							| Calculus.Rel( reln, relv ) -> 
 									create_pattern_map_from_access reln tvars relv
 							| Calculus.External( mapn, inv, outv, _, init_calc_opt ) -> 
 								  (* all input variables must be bound at this point in order to be able to*)

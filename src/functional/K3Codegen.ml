@@ -161,13 +161,13 @@ sig
     (* Toplevel: sources and main *)
     (* event, rel, trigger args, statement code block -> trigger code *)
     val trigger :
-        K3.SR.ev_type_t -> K3.SR.id_t -> K3.SR.var_id_t list -> code_t list -> code_t
+        Schema.event_t -> code_t list -> code_t
 
     (* source type, framing type, (relation * adaptor type) list 
      * -> source impl type,
      *    source and adaptor declaration code, (optional)
      *    source and adaptor initialization code (optional) *)
-    val source: Schema.source_t -> Schema.framing_t -> (string * Schema.adaptor_t) list ->
+    val source: Schema.source_t -> (Schema.adaptor_t * Schema.rel_t) list ->
                 source_impl_t * code_t option * code_t option
 
     (* db schema, map schema, patterns, source decls and inits, triggers, toplevel queries
@@ -190,5 +190,5 @@ sig
 
     type value_t
 
-    val eval : code_t -> var_t list -> const_t list -> db_t -> value_t
+    val eval : code_t -> string list -> const_t list -> db_t -> value_t
 end

@@ -15,7 +15,7 @@ let get_map_output_domain (expr: Calculus.expr_t): Calculus.expr_t =
             end in
         begin match target_leaf with
         | External(ename,eins,eouts,etype,emeta) ->
-            CalcRing.Val(Rel(ename^"_output",eouts,etype))
+            CalcRing.Val(Rel(ename^"_output",eouts))
         | _ -> failwith "Expression should be map!"
         end
         
@@ -27,13 +27,13 @@ let get_map_input_domain (expr: Calculus.expr_t): Calculus.expr_t =
             end in
         begin match target_leaf with
         | External(ename,eins,eouts,etype,emeta) ->
-            CalcRing.Val(Rel(ename^"_input",eins,etype))
+            CalcRing.Val(Rel(ename^"_input",eins))
         | _ -> failwith "Expression should be map!"
         end
         
 let get_singleton_tuple (relation: Schema.rel_t): Calculus.expr_t =
-    let (rname, rvars, _, rtype) = relation in
-        CalcRing.Val(Rel(rname^"_singleton", rvars, rtype))
+    let (rname, rvars, _) = relation in
+        CalcRing.Val(Rel(rname^"_singleton", rvars))
         
 let get_relation_vars (expr: Calculus.expr_t): var_t list = 
     let leaf = 
@@ -42,7 +42,7 @@ let get_relation_vars (expr: Calculus.expr_t): var_t list =
             | _ -> failwith "Expression should be leaf!"
             end in
         begin match leaf with
-        | Rel(_, rvars, _) ->
+        | Rel(_, rvars) ->
             rvars
         | _ -> failwith "Expression should be relation!"
         end
@@ -54,7 +54,7 @@ let is_calculus_relation (expr: Calculus.expr_t): bool =
             | _ -> CalcRing.get_val CalcRing.one
             end in
         begin match leaf with
-        | Rel(_, _, _) ->
+        | Rel(_, _) ->
             true
         | _ -> false
         end
@@ -125,7 +125,7 @@ let rec simplify_formula(expr: Calculus.expr_t): Calculus.expr_t * bool = (* Fir
                             (CalcRing.Val(AggSum(gb_vars, rq)), true) 
                         else 
                             (CalcRing.zero, false)
-            | Rel(rname, rvars, _)    -> 
+            | Rel(rname, rvars)    -> 
                 if rvars = [] then (CalcRing.zero, false) else (expr, true)
             | _ -> failwith ("Incorrect leaf")
             end
@@ -192,7 +192,7 @@ let rec maintain (context: Calculus.expr_t)
             let (trlist, context1) = maintain (context) (subexp) in
                 let right_context = CalcRing.Val(AggSum(gb_vars, context1)) in
                     (trlist, CalcRing.mk_prod ([context; right_context]))
-        | Rel(rname, rvars, _)    -> 
+        | Rel(rname, rvars)    -> 
             ([], CalcRing.mk_prod ([context; formula]))
         | Cmp(op,subexp1,subexp2) -> 
             failwith ("comparison not supported!") (*TODO*)

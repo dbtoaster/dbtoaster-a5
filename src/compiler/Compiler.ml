@@ -39,11 +39,11 @@ let extract_renamings ((scope,schema):schema_t) (expr:expr_t):
 (******************************************************************************)
 
 let compute_init_at_start (table_rels:Schema.rel_t list) (expr:expr_t): expr_t =
-   let table_names = List.map (fun (rn,_,_,_) -> rn) table_rels in
+   let table_names = List.map (fun (rn,_,_) -> rn) table_rels in
    Calculus.rewrite_leaves (fun _ lf -> match lf with
-      | Rel(rn, rv, rt) ->
+      | Rel(rn, rv) ->
          if List.mem rn table_names
-         then CalcRing.mk_val (Rel(rn,rv,rt))
+         then CalcRing.mk_val (Rel(rn,rv))
          else CalcRing.zero
       | AggSum(gb_vars, subexp) ->
          if subexp <> CalcRing.zero 
@@ -93,7 +93,7 @@ let compile_map (db_schema:Schema.t) (history:Heuristics.ds_history_t)
          failwith "Compiling expression with undefined relation.";
    in
    let (table_rels, stream_rels) = 
-      List.partition (fun (_,_,t,_) -> t = Schema.TableRel) rels
+      List.partition (fun (_,_,t) -> t = Schema.TableRel) rels
    in
    let triggers = ref [] in
    let trigger_todos = ref [] in
@@ -102,13 +102,13 @@ let compile_map (db_schema:Schema.t) (history:Heuristics.ds_history_t)
                  else [(fun x -> Schema.DeleteEvent(x)), "_m";
                        (fun x -> Schema.InsertEvent(x)), "_p"])
    in
-   List.iter (fun (reln,relv,_,relt) -> List.iter (fun (mk_evt,evt_prefix) ->
+   List.iter (fun (reln,relv,_) -> List.iter (fun (mk_evt,evt_prefix) ->
                
       (***** THE FUN STUFF HAPPENS HERE *****)
       
       let map_prefix = todo_name^evt_prefix^reln in
       let prefixed_relv = List.map (fun (n,t) -> (map_prefix^n, t)) relv in
-      let delta_event = mk_evt (reln, prefixed_relv, Schema.StreamRel, relt) in
+      let delta_event = mk_evt (reln, prefixed_relv, Schema.StreamRel) in
       let delta_expr_unextracted = 
          CalculusTransforms.optimize_expr 
             (todo_ivars @ prefixed_relv,todo_ovars) 
@@ -180,11 +180,11 @@ let compile_map (db_schema:Schema.t) (history:Heuristics.ds_history_t)
       })
 
 (******************************************************************************)
-let compile_table ((reln, relv, relut, relt):Schema.rel_t): compiled_ds_t = 
-   let map_name = (Plan.mk_ds_name ("_"^reln) ([],relv) relt) in {
+let compile_table ((reln, relv, relut):Schema.rel_t): compiled_ds_t = 
+   let map_name = (Plan.mk_ds_name ("_"^reln) ([],relv) TInt) in {
       Plan.description = {
          Plan.ds_name       = map_name ;
-         Plan.ds_definition = (CalcRing.mk_val (Rel(reln, relv, relt)))
+         Plan.ds_definition = (CalcRing.mk_val (Rel(reln, relv)))
       };
       Plan.ds_triggers = (List.map (fun (event, update_expr) ->
          (event, {
@@ -192,9 +192,9 @@ let compile_table ((reln, relv, relut, relt):Schema.rel_t): compiled_ds_t =
             Plan.update_type = UpdateStmt;
             Plan.update_expr = update_expr
          }
-      )) [(Schema.InsertEvent(reln, relv, relut, relt)), 
+      )) [(Schema.InsertEvent(reln, relv, relut)), 
                CalcRing.one; 
-          (Schema.DeleteEvent(reln, relv, relut, relt)), 
+          (Schema.DeleteEvent(reln, relv, relut)), 
                CalcRing.mk_neg CalcRing.one]
       )
    }

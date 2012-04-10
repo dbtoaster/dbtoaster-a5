@@ -84,9 +84,9 @@ let parse_calc ?(opt=false) (expr:string):Calculus.expr_t =
 
 (*************************** Type constructors ****************************)
 let var v = (v,Types.TFloat);;
-let rel rn rv = (Calculus.Rel(rn, List.map var rv, Types.TInt));;
+let rel rn rv = (Calculus.Rel(rn, List.map var rv));;
 let schema_rel (reln:string) (relv:string list) = 
-   (reln, List.map var relv, Schema.StreamRel, Types.TInt);;
+   (reln, List.map var relv, Schema.StreamRel);;
 let event ins reln relv = (
    (if ins then Schema.InsertEvent(schema_rel reln relv)
            else Schema.DeleteEvent(schema_rel reln relv)) 

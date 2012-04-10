@@ -15,7 +15,7 @@
 open Types
 open Arithmetic
 
-type 'meta_t external_t = 
+type 'meta_t external_leaf_t = 
    string *       (* The external's name *)
    var_t list *   (* The external's input variables *)
    var_t list *   (* The external's output variables *)
@@ -26,8 +26,8 @@ type ('term_t) calc_leaf_t =
    | Value    of value_t
    | AggSum   of var_t list * 'term_t (* vars listed are group-by vars (i.e., 
                                          the schema of this AggSum) *)
-   | Rel      of string * var_t list * type_t
-   | External of 'term_t external_t
+   | Rel      of string * var_t list
+   | External of 'term_t external_leaf_t
    | Cmp      of cmp_t * value_t * value_t
    | Lift     of var_t * 'term_t
 
@@ -48,6 +48,7 @@ type expr_t = CalcRing.expr_t
                 (* Scope:   Available Input Variables
                    x
                    Schema:  Expected Output Variables *)
+type external_t = CalcRing.expr_t external_leaf_t
 type schema_t = (var_t list * var_t list)
 
 (*** Stringifiers ***)
@@ -64,7 +65,7 @@ let rec string_of_leaf (leaf:CalcRing.leaf_t): string =
       | AggSum(gb_vars, subexp) -> 
          "AggSum(["^(ListExtras.string_of_list ~sep:", " string_of_var gb_vars)^
          "],("^(string_of_expr subexp)^"))"
-      | Rel(rname, rvars, _)    -> 
+      | Rel(rname, rvars)       -> 
          rname^"("^(ListExtras.string_of_list ~sep:", " string_of_var rvars)^")"
       | Cmp(op,subexp1,subexp2) -> 
          "["^(string_of_value subexp1)^" "^
@@ -137,7 +138,7 @@ let rec schema_of_expr ?(scope:var_t list = []) (expr:expr_t):
                      (ListExtras.ocaml_of_list string_of_var gb_vars)
                   )
                else (ivars, gb_vars)
-         | Rel(_,rvars,_) -> ([],rvars)
+         | Rel(_,rvars) -> ([],rvars)
          | Cmp(_,v1,v2) ->
             (ListAsSet.union (vars_of_value v1) (vars_of_value v2), [])
          | Lift(target, subexp) ->
@@ -159,7 +160,7 @@ let rec type_of_expr (expr:expr_t): type_t =
          | Value(v)                -> (type_of_value v)
          | External(_,_,_,etype,_) -> etype
          | AggSum(_, subexp)       -> rcr subexp
-         | Rel(_,_,rtype)          -> rtype
+         | Rel(_,_)                -> TInt
          | Cmp(_,_,_)              -> TBool
          | Lift(_,_)               -> TInt
       end)
@@ -176,7 +177,7 @@ let rec rels_of_expr (expr:expr_t): string list =
             | External(_,_,_,_,None) -> []
             | External(_,_,_,_,Some(em)) -> rels_of_expr em
             | AggSum(_, subexp)   -> rcr subexp
-            | Rel(rn,_,_)         -> [rn]
+            | Rel(rn,_)           -> [rn]
             | Cmp(_,_,_)          -> []
             | Lift(_,subexp)      -> rcr subexp
          end)
@@ -192,7 +193,7 @@ let rec degree_of_expr (expr:expr_t): int =
             | Value(_)            -> 0
             | External(_,_,_,_,_) -> 0
             | AggSum(_, subexp)   -> rcr subexp
-            | Rel(rn,_,_)         -> 1
+            | Rel(rn,_)           -> 1
             | Cmp(_,_,_)          -> 0
             | Lift(_,subexp)      -> rcr subexp
          end)
@@ -295,7 +296,7 @@ let rec all_vars (expr:expr_t): var_t list =
             ListAsSet.uniq (iv @ ov @ (match m with | None -> []
                                                     | Some(s) -> all_vars s))
          | AggSum(_, subexp) -> all_vars subexp
-         | Rel(_,ov,_) -> ListAsSet.uniq ov
+         | Rel(_,ov) -> ListAsSet.uniq ov
          | Cmp(_,v1,v2) -> ListAsSet.uniq ((Arithmetic.vars_of_value v1) @
                                            (Arithmetic.vars_of_value v2))
          | Lift(var,subexp) -> ListAsSet.union [var] (all_vars subexp)
@@ -341,7 +342,7 @@ let rename_vars (mapping:(var_t,var_t)Function.table_fn_t)
          | External(en,eiv,eov,et,em) -> External(en, remap eiv, remap eov,   
                                                   et, em)
          | AggSum(gb_vars, subexp)    -> AggSum(remap gb_vars, subexp)
-         | Rel(rn,rv,rt)              -> Rel(rn, remap rv, rt)
+         | Rel(rn,rv)                 -> Rel(rn, remap rv)
          | Cmp(op,v1,v2)              -> Cmp(op, remap_value v1, 
                                                  remap_value v2)
          | Lift(var,subexp)           -> Lift(remap_one var, subexp)
@@ -378,8 +379,8 @@ let rec cmp_exprs (e1:expr_t) (e2:expr_t):((var_t * var_t) list option) =
                     else None                     
             end
          
-         | ((Rel(rn1,rv1,rt1)), (Rel(rn2,rv2,rt2))) ->
-            if (rn1 <> rn2) || (rt1 <> rt2) then None else
+         | ((Rel(rn1,rv1)), (Rel(rn2,rv2))) ->
+            if (rn1 <> rn2) then None else
                Some(List.combine rv1 rv2)
             
          | ((External(en1,eiv1,eov1,et1,em1)), 
