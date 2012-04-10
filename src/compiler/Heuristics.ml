@@ -104,7 +104,7 @@ let rec materialize ?(scope:var_t list = [])
 										: (ds_t list * expr_t) = 
 		
 
-		(*Debug.activate "LOG-HEURISTICS-DETAIL";*)
+		Debug.activate "LOG-HEURISTICS-DETAIL";
 		
 		Debug.print "LOG-HEURISTICS-DETAIL" (fun () ->
 			 "[Heuristics] Raw expression: "^(string_of_expr expr)^
@@ -178,15 +178,16 @@ and materialize_expr (history:ds_history_t) (prefix:string)
 										
 		(* Lifts are always materialized separately *)
 	  let scope_lifts = ListAsSet.union scope rel_exprs_ovars in
-		let (todo_lifts, mat_lifts) = 
-				List.fold_left (fun (todos, mats) lift ->
+		let (todo_lifts, mat_lifts) = fst ( 
+				List.fold_left (fun ((todos, mats), j) lift ->
 						match (CalcRing.get_val lift) with
 								| Lift(v, subexp) ->
-									let (todo, mat) = materialize ~scope:scope_lifts history (prefix^"_") event subexp in
-									(todos @ todo, CalcRing.mk_prod [mats; CalcRing.mk_val (Lift(v, mat))])			
-								| _  -> (todos, mats)
-				) ([], CalcRing.one) (CalcRing.prod_list lift_exprs)
-		in	
+									let (todo, mat) = materialize ~scope:scope_lifts history 
+									                 (prefix^"_L"^(string_of_int j)^"_") event subexp in
+									((todos @ todo, CalcRing.mk_prod [mats; CalcRing.mk_val (Lift(v, mat))]), j + 1)			
+								| _  -> ((todos, mats), j)
+				) (([], CalcRing.one), 1) (CalcRing.prod_list lift_exprs)
+		)	in	
 
 		if (rels_of_expr rel_exprs) = [] then 
 			(todo_lifts, CalcRing.mk_prod [ rel_exprs; mat_lifts; rest_exprs])
