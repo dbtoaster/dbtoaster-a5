@@ -64,6 +64,67 @@ let log_list_test (title:string) (to_s:'a -> string)
            exit 1
    );;
 
+let log_collection_test (title:string) (result:Values.K3Value.t)
+                        (expected:(float list * float) list): unit = 
+   let k3_expected = 
+      List.map (fun (k,v) -> 
+                  (  List.map (fun x -> Values.K3Value.Float(x)) k, 
+                     Values.K3Value.Float(v))) 
+               expected 
+   in
+   let collection_entries = 
+      match result with
+         | Values.K3Value.SingleMap(m) ->
+            Values.K3ValuationMap.to_list m
+         | _ ->
+            print_endline (title^": Failed");
+            showdiff "-- A collection --" 
+                     (Values.K3Value.string_of_value result);
+            exit 1
+   in 
+   let dom = ListAsSet.union (fst (List.split k3_expected))
+                             (fst (List.split collection_entries))
+   in
+   let (expected_strings,found_strings) = 
+      List.fold_left (fun (expected_strings,found_strings) k ->
+      let k_string = 
+         ListExtras.string_of_list Values.K3Value.string_of_value k in
+      if not (List.mem_assoc k k3_expected) then
+         (  (k_string^" -> n/a")::expected_strings,
+            (k_string^" -> "^(Values.K3Value.string_of_value 
+                                 (List.assoc k collection_entries)))::
+                                    found_strings
+         )
+      else if not (List.mem_assoc k collection_entries) then
+         (  (k_string^" -> "^(Values.K3Value.string_of_value 
+                                 (List.assoc k k3_expected)))::
+                                    expected_strings,
+            (k_string^" -> n/a")::found_strings
+         )
+      else 
+         let expected_val = List.assoc k k3_expected in
+         let found_val    = List.assoc k collection_entries in
+         if found_val = expected_val
+            then (expected_strings,found_strings)
+            else (   (k_string^" -> "^(Values.K3Value.string_of_value
+                                       expected_val))::expected_strings,
+                     (k_string^" -> "^(Values.K3Value.string_of_value
+                                       found_val))::found_strings)
+   ) ([], []) dom
+   in
+      if (expected_strings <> []) then (
+         let suffix = if List.length expected_strings < List.length dom
+                      then "\n... and the remaining values match"
+                      else ""
+         in
+         print_endline (title^": Failed");
+         showdiff ((String.concat "\n" expected_strings)^suffix)
+                  ((String.concat "\n" found_strings)^suffix);
+         exit 1
+      ) else (
+         print_endline (title^": Passed")
+      );;
+
 (*************************** String parsers ****************************)
 
 let parse_calc ?(opt=false) (expr:string):Calculus.expr_t = 

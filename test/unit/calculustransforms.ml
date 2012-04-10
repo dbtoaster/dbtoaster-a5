@@ -173,8 +173,6 @@ in
       "AggSum([], S(B)*(B ^= BB))"
       "AggSum([], S(B)*(B ^= BB))"; (* This should get shifted left by 
                                        nesting_rewrites *)
-   Debug.activate "NO-VISUAL-DIFF";
-   Debug.activate "LOG-UNIFY-LIFTS";
    test "Duplicate lifts" []
       "(A ^= 0) * (A ^= AggSum([], B))"
       "(A ^= 0) * (A ^= AggSum([], B))";
