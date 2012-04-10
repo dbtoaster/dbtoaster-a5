@@ -58,16 +58,11 @@ struct
         | TTuple t -> List.for_all is_flat t
         | _ -> false
 
-    let value_of_float x = Float(x)
-    let value_of_const_t x = 
-      match x with CFloat(f)    -> Float(f) 
-                 | CString(s)   -> Float(float_of_int (Hashtbl.hash s))
-                 | CInt(i)      -> Float(float_of_int i)
-                 | CBool(true)  -> Int(1)
-                 | CBool(false) -> Int(0)
+    let value_of_float x = BaseValue(CFloat(x))
+    let value_of_const_t x = BaseValue(x)
     
     let float_of_value x = match x with
-        | Float f -> f | Int i -> float_of_int i
+        | BaseValue(c) -> float_of_const c
         | _ -> failwith ("invalid float: "^(string_of_value x))
 
     let float_of_const_t x = 
@@ -78,8 +73,8 @@ struct
                  | CBool(false) -> 0.
 
     let const_t_of_value x = match x with
-        | Float f -> CFloat f | Int i -> CFloat (float_of_int i)
-        | _ -> failwith ("invalid const_t: "^(string_of_value x))
+      | BaseValue(c) -> c
+      | _ -> failwith ("invalid const_t: "^(string_of_value x))
 
     let const_t_of_float x = CFloat(x)
 
@@ -142,15 +137,7 @@ struct
         (cur+1, if List.mem cur idx then acc@[v] else acc)) (0,[]) t_v)
 
 
-    (* Operators *)
-    let promote_op f_op i_op x y =
-        match x,y with
-        | (Float f, Int i) -> Float(f_op f (float_of_int i))
-        | (Int i, Float f) -> Float(f_op (float_of_int i) f)
-        | (Float f1, Float f2) -> Float(f_op f1 f2)
-        | (Int i1, Int i2) -> Int(i_op i1 i2)
-        | (_,_) -> failwith "invalid arithmetic operands" 
-    
+    (* Operators *)    
     (* Comparisons:
      * -- supports base types, tuples and lists. Tuple and list comparison
      *    works as with standard OCaml semantics (structural comparisons) *)
@@ -160,10 +147,16 @@ struct
     let int_op (op : 'a -> 'a -> bool) x y =
         match (x,y) with
         | Unit,_ | _,Unit -> failwith "invalid comparison to unit"
-        | _,_ -> if op x y then Int(1) else Int(0) 
+        | _,_ -> if op x y then BaseValue(CInt(1))
+                           else BaseValue(CInt(0))
     
-    let add_op  = promote_op (+.) (+)
-    let mult_op = promote_op ( *. ) ( * )
+    let bin_op (op : const_t -> const_t -> const_t) x y =
+      match (x,y) with
+         | (BaseValue(cx), BaseValue(cy)) -> BaseValue(op cx cy)
+         | (_,_) -> failwith "invalid arithmetic operation"
+    
+    let add_op  = bin_op Arithmetic.sum
+    let mult_op = bin_op Arithmetic.prod
     let lt_op   = (int_op (< ))
     let leq_op  = (int_op (<=))
     let eq_op   = (int_op (= ))
@@ -171,11 +164,12 @@ struct
     
     let ifthenelse0_op cond v = 
         let aux v = match v with
-            | Int _ -> Int(0) | Float _ -> Float(0.0)
+            | BaseValue(CInt(_)) -> BaseValue(CInt(0))
+            | BaseValue(CFloat(_)) -> BaseValue(CFloat(0.))
             | _ -> failwith "invalid then clause value"
         in match cond with
-        | Float(bcond) -> if bcond <> 0.0 then v else aux v
-        | Int(bcond) -> if bcond <> 0 then v else aux v
+        | BaseValue(CFloat(bcond)) -> if bcond <> 0.0 then v else aux v
+        | BaseValue(CInt(bcond)) -> if bcond <> 0 then v else aux v
         | _ -> failwith "invalid predicate value"
 
 
@@ -203,8 +197,10 @@ struct
                 if List.for_all is_flat t then TupleList([v])
                 else ListCollection([v])
             | TBase(TFloat)    -> FloatList([v])
-            | TBase(TInt)      -> FloatList([Float(float_of_value v)])
-            | TBase(TBool)     -> FloatList([Float(float_of_value v)])
+            | TBase(TInt)      -> 
+               FloatList([BaseValue(CFloat(float_of_value v))])
+            | TBase(TBool)     -> 
+               FloatList([BaseValue(CFloat(float_of_value v))])
             | TBase(_)         -> failwith "Unsupported base type in K3"
             | Collection _ -> ListCollection([v])
             | Fn (args_t,body_t) ->
@@ -213,7 +209,7 @@ struct
             | TUnit -> failwith "cannot create singleton of unit expression"
         in Eval(fun th db ->
         begin match (get_eval el) th db with
-        | Tuple _ | Float _ | Int _
+        | Tuple _ | BaseValue _ 
         | FloatList _ | TupleList _ | EmptyList
         | ListCollection _ | MapCollection _ as v -> rv_f v
         | SingleMapList l -> rv_f (ListCollection(smlc_to_c l))
@@ -256,7 +252,8 @@ struct
     (* predicate, then clause, else clause -> condition *) 
     let ifthenelse ?(expr = None) pred t e = Eval(fun th db ->
         let valid = match ((get_eval pred) th db) with
-            | Float x -> x <> 0.0 | Int x -> x <> 0
+            | BaseValue(CFloat(x)) -> x <> 0.0 
+            | BaseValue(CInt(x))   -> x <> 0
             | _ -> failwith ("invalid predicate value"^(get_expr expr))
         in if valid then (get_eval t) th db else (get_eval e) th db)
 
@@ -308,7 +305,7 @@ struct
     (* Functions *)
     let bind_float expr arg th f =
         begin match arg with
-        | AVar(var,_) -> Env.add (fst th) var (Float f), snd th
+        | AVar(var,_) -> Env.add (fst th) var (BaseValue(CFloat(f))), snd th
         | ATuple(vt_l) -> 
             failwith ("cannot bind a float to a tuple"^(get_expr expr))
         end
@@ -336,8 +333,8 @@ struct
         end
 
     let bind_arg expr arg th v = begin match v with
-        | Float x -> bind_float expr arg th x
-        | Int x -> bind_float expr arg th (float_of_int x)
+        | BaseValue(CFloat(x)) -> bind_float expr arg th x
+        | BaseValue(CInt(x)) -> bind_float expr arg th (float_of_int x)
         | Tuple t -> bind_tuple expr arg th t
         | _ -> bind_value expr arg th v
         end
@@ -372,7 +369,7 @@ struct
         let rv_f v = match map_rt with
             | TBase(TFloat) -> FloatList(v) 
             | TBase(TInt)   -> FloatList(List.map (fun x -> 
-                                             Float(float_of_value x)) v)
+                                       BaseValue(CFloat(float_of_value x))) v)
             | TBase(_)      -> failwith "Unsupported base type in K3"
             | TTuple tl ->
                 if is_flat map_rt then TupleList(v)
@@ -529,9 +526,11 @@ struct
         let lc_f l k =
             let r = List.exists (fun t ->
                 match_key_prefix k (tuple_of_value t)) l
-            in if r then Int(1) else Int(0)
+            in if r then BaseValue(CInt(1)) 
+                    else BaseValue(CInt(0))
         in
-        let mc_f m k_v = if MC.mem k_v m then Int(1) else Int(0)
+        let mc_f m k_v = if MC.mem k_v m then BaseValue(CInt(1)) 
+                                         else BaseValue(CInt(0))
         in tcollection_op expr "exists" lc_f mc_f mc_f mc_f tcollection key_l
 
     (* map, key -> map value *)
@@ -564,7 +563,8 @@ struct
 
     (* Database retrieval methods *)
     let get_value ?(expr = None) (_) id = Eval(fun th db ->
-        match DB.get_value id db with | Some(x) -> x | None -> Float(0.0))
+        match DB.get_value id db with | Some(x) -> x | None -> 
+               BaseValue(CFloat(0.0)))
 
     let get_in_map ?(expr = None) (_) (_) id =
         Eval(fun th db -> SingleMap(DB.get_in_map id db))

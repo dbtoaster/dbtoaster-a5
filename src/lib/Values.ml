@@ -250,8 +250,7 @@ sig
     and map_t = single_map_t K3ValuationMap.t
     and t = 
     | Unit
-    | Float          of float
-    | Int            of int
+    | BaseValue      of Types.const_t
     | Tuple          of t list
     | Fun            of (t -> t) 
 
@@ -302,8 +301,7 @@ struct
     and map_t = single_map_t K3ValuationMap.t
     and t = 
     | Unit
-    | Float          of float
-    | Int            of int
+    | BaseValue      of Types.const_t
     | Tuple          of t list
     | Fun            of (t -> t) 
     | SingleMap      of single_map_t
@@ -315,7 +313,7 @@ struct
     | ListCollection of t list
     | MapCollection  of t K3ValuationMap.t
 
-    let zero = Float(0.0)
+    let zero = BaseValue(CFloat(0.0))
     let compare = Pervasives.compare
 
     let rec key_to_string k = ListExtras.ocaml_of_list string_of_value k
@@ -326,8 +324,7 @@ struct
     and string_of_value v =
       begin match v with
       | Unit -> "unit"
-      | Float(f) -> string_of_float f
-      | Int(i) -> string_of_int i
+      | BaseValue(c) -> string_of_const c
       | Tuple(fl) -> "("^(String.concat "," (List.map string_of_value fl))^")"
       | Fun(f) -> "<fun>"
 

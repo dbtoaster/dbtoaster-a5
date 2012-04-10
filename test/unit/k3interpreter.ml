@@ -46,36 +46,36 @@ let test_map ?(env = []) msg code rval =
 in
    test "A simple number"
       (Const(CInt(42)))
-      (Float(42.));
-   test "A variable" ~env:["imavar", CFloat(42.)]
+      (BaseValue(CInt(42)));
+   test "A variable" ~env:["imavar", (CFloat(42.))]
       (Var("imavar", TBase(TFloat)))
-      (Float(42.));
+      (BaseValue(CFloat(42.)));
    test "A function invocation"
       (Apply((Lambda((AVar("aparam", TBase(TFloat))),
                      (Var("aparam", TBase(TFloat))))),
              (Const(CFloat(42.)))))
-      (Float(42.));
+      (BaseValue(CFloat(42.)));
    test "Arithmetic"
       (Add((Mult((Const(CFloat(6.))), (Const(CFloat(9.))))),
            (Const(CFloat(-12.)))))
-      (Float(42.));
+      (BaseValue(CFloat(42.)));
    test "Blocks"
       (Block[
          (Const(CFloat(37.)));
          (Const(CFloat(69.)));
          (Const(CFloat(42.)))
       ])
-      (Float(42.));
+      (BaseValue(CFloat(42.)));
    test "Singleton DB Updates"
       (Block[
          PCValueUpdate(pc_a, [], [],
                        (Const(CFloat(42.))));
          pc_a
       ])
-      (Float(42.));
+      (BaseValue(CFloat(42.)));
    test "Persistence of DB Updates"
       pc_a
-      (Float(42.));
+      (BaseValue(CFloat(42.)));
    test_map "Mass updating a collection"
       (Block[
          PCValueUpdate(pc_b, [],
@@ -110,7 +110,7 @@ in
                                    (Var("old", TBase(TFloat))))))),
                  (Const(CFloat(0.))),
                  pc_b))
-      (Float(12.));
+      (BaseValue(CFloat(12.)));
    test "Aggregation 2"
       (Aggregate((AssocLambda((ATuple(["X", TBase(TFloat); 
                                        "Y", TBase(TFloat);
@@ -124,7 +124,7 @@ in
                                       (Var("old", TBase(TFloat))))))))),
                  (Const(CFloat(42.))),
                  pc_b))
-      (Float(42.));
+      (BaseValue(CFloat(42.)));
    test_map "Slicing"
       (Slice(pc_b, ["X", TBase(TFloat); "Y", TBase(TFloat)], 
                    ["X", (Const(CFloat(1.)))]))

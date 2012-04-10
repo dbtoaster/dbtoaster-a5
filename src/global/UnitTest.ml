@@ -68,8 +68,8 @@ let log_collection_test (title:string) (result:Values.K3Value.t)
                         (expected:(float list * float) list): unit = 
    let k3_expected = 
       List.map (fun (k,v) -> 
-                  (  List.map (fun x -> Values.K3Value.Float(x)) k, 
-                     Values.K3Value.Float(v))) 
+                  (  List.map (fun x -> Values.K3Value.BaseValue(CFloat(x))) k, 
+                     Values.K3Value.BaseValue(CFloat(v)))) 
                expected 
    in
    let collection_entries = 
