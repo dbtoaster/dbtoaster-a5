@@ -390,9 +390,14 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
                   (snd (C.schema_of_expr (term)))
                   (ListAsSet.union (fst rhs_schema) (snd rhs_schema))
             in
-            let rhs_scope = ListAsSet.union schema_extensions scope in
+            let rhs_scope = (ListAsSet.union schema_extensions scope) in
             let (lhs_deletable, lhs_nested_term) = 
                rcr scope (schema@schema_extensions) ctx term in
+            let no_previous_distinct_lift = 
+               (List.for_all (fun (ctx_v, ctx_term) -> 
+                  (ctx_v <> v) || (lhs_nested_term = ctx_term)
+               ) ctx)
+            in
             let ((rhs_deletable, rhs_term), lhs_term) = 
                (* If the variable is part of the output schema, then we're not
                   allowed to delete the lift.  Additionally, we do not want to
@@ -402,7 +407,7 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
                if (not (List.mem v schema)) && (not (List.mem v scope)) && (
                    (Debug.active "UNIFY-EXPRESSIONS") ||
                    (match term with CalcRing.Val(Value(_))->true |_->false)
-                  )
+                  ) && no_previous_distinct_lift
                then
                   (* If the term isn't deletable, then we shouldn't try to unify
                      this variable at all. *)
@@ -423,7 +428,7 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
                         "Not unifying "^(string_of_var v)^
                         " because an RHS term decided it was a bad idea"
                      );
-                     ((rcr rhs_scope schema ctx (CalcRing.mk_prod pl)), 
+                     ((rcr (v::rhs_scope) schema ctx (CalcRing.mk_prod pl)), 
                         (CalcRing.mk_val (Lift(v,lhs_nested_term))))
                   )
                else (
@@ -431,11 +436,14 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
                      "Not unifying "^(string_of_var v)^
                      " because Lift is an expression or in the schema"
                   );
-                  ((rcr rhs_scope schema ctx (CalcRing.mk_prod pl)),
+                  ((rcr (v::rhs_scope) schema ctx (CalcRing.mk_prod pl)),
                    (CalcRing.mk_val (Lift(v,lhs_nested_term))))
                )
             in
-               (  ListAsSet.inter lhs_deletable rhs_deletable,
+               (  (  if no_previous_distinct_lift
+                     then ListAsSet.inter lhs_deletable rhs_deletable
+                     else (List.filter (fun x -> x <> v) (
+                           ListAsSet.inter lhs_deletable rhs_deletable))),
                   CalcRing.mk_prod [lhs_term; rhs_term] )
          | CalcRing.Prod(pt::pl) -> 
             let rhs_schema = 
@@ -507,15 +515,28 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
                is not part of the schema, AND the term being lifted doesn't 
                contain any relations, then we can safely delete this lift term 
             *)
+            let (deletable, new_l_term) = rcr scope schema ctx l_term in
+            let no_previous_distinct_lift = 
+               (List.for_all (fun (ctx_v, ctx_term) -> 
+                  Debug.print "LOG-UNIFY-LIFTS" (fun () ->
+                     "Testing : "^(string_of_var v)^" ^= "^
+                     (string_of_expr new_l_term)
+                  );
+                  (ctx_v <> v) || (new_l_term = ctx_term)
+               ) ctx)
+            in
             if ((C.rels_of_expr l_term) = []) &&
-               (not (List.mem v schema)) && (not (List.mem v scope))
+               (not (List.mem v schema)) && (not (List.mem v scope)) &&
+               no_previous_distinct_lift
             then (
                Debug.print "LOG-UNIFY-LIFTS" (fun () -> 
                   "Allowed to unify standalone lift into "^(string_of_var v)
                ); (ctx_vars, CalcRing.one)
             ) else (
-               let (deletable, new_l_term) = rcr scope schema ctx l_term in
-                  (deletable, (CalcRing.mk_val (Lift(v, new_l_term))))
+                  (  (  if no_previous_distinct_lift
+                        then deletable
+                        else (List.filter (fun x -> x <> v) deletable)), 
+                     (CalcRing.mk_val (Lift(v, new_l_term))))
             )
          | CalcRing.Val(Value(ValueRing.Val(AVar(v)))) ->
             (  ctx_vars, 

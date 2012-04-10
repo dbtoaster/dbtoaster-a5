@@ -3,7 +3,7 @@ DBTOASTER_TOP=../bin/dbtoaster_unit
 UNIT_TEST=sh -c 'echo ==== $$1 ====; $(DBTOASTER_TOP) $$1' --
 
 
-all: development unit
+all: unit
 
 unit: 
 	@$(UNIT_TEST) unit/ring.ml
@@ -12,9 +12,7 @@ unit:
 	@$(UNIT_TEST) unit/calculusdeltas.ml
 	@$(UNIT_TEST) unit/heuristics.ml
 	@$(UNIT_TEST) unit/compiler.ml
-
-development:
-	@$(UNIT_TEST) unit/calculustransforms.ml
+	@$(UNIT_TEST) unit/compiler.ml
 
 queries:
 	make -C queries

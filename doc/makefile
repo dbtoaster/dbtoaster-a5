@@ -5,7 +5,7 @@ DIRS  := $(patsubst %,-I %,$(shell echo $$DIRS))
 HTMLDOC = ocamldoc -html -d html $(DIRS)
 
 all: html
-	@echo Building HTML Documentation (This can take a while)
+	@echo "Building HTML Documentation (This can take a while)"
 	@$(HTMLDOC) $(FILES)
 
 html:

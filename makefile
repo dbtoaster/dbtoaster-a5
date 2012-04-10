@@ -107,32 +107,9 @@ bin/dbtoaster_top: $(C_FILES) src/global/UnitTest.ml
 
 states: $(patsubst %,%.states,$(PARSERS))
 
-clean: 
-	rm -f $(patsubst %,%.ml,$(GENERATED_FILES))
-	rm -f $(patsubst %,%.mli,$(PARSERS))
-	rm -f $(patsubst %,%.states,$(PARSERS))
-	rm -f $(C_FILES) $(C_INCLUDES)
-	rm -f $(O_FILES) $(O_INCLUDES)
-	rm -f $(patsubst %,%.o,$(FILES))
-	rm -f $(patsubst %,%.annot,$(FILES))
-	rm -f bin/dbtoaster bin/dbtoaster_top bin/dbtoaster_debug
-	rm -f src/global/Driver.cmi src/global/Driver.cmo src/global/Driver.cmx
-	rm -f src/global/Driver.cmxi src/global/Driver.o
-	rm -f doc/*.aux doc/*.synctex.gz doc/*.log
-	rm -f makefile.deps
-	make -C lib clean
-
-distclean: clean
-	make -C doc clean
-	make -C test/queries clean
-	
-
 test: bin/dbtoaster_top
 	@DIRS="$(DIRS)" make -C test
 	
-devtest: bin/dbtoaster_top
-	@DIRS="$(DIRS)" make -C test development
-
 queries: bin/dbtoaster
 	make -C test/queries
 
@@ -140,8 +117,6 @@ doc: $(C_FILES) $(patsubst %,%.ml,$(TOPLEVEL_FILES))
 	@FILES="$(patsubst %,../%.ml,$(FILES) $(TOPLEVEL_FILES))"\
 	 DIRS="$(patsubst %,../%,$(DIRS))"\
 	 make -C doc
-
-.PHONY: all clean distclean test states doc lib
 
 #################################################
 
@@ -179,7 +154,6 @@ $(patsubst %,%.states,$(PARSERS)) : %.states : %.mly
 $(patsubst %,%.cmi,$(FILES)) : 
 $(patsubst %,%.cmxi,$(FILES)) : 
 
-
 #################################################
 
 makefile.deps: makefile $(patsubst %,%.ml,$(BASE_FILES))
@@ -187,3 +161,29 @@ makefile.deps: makefile $(patsubst %,%.ml,$(BASE_FILES))
 	@$(OCAMLDEP) $(patsubst %, -I %,$(DIRS)) $^ > $@
 
 include makefile.deps
+
+#################################################
+
+clean: 
+	rm -f $(patsubst %,%.ml,$(GENERATED_FILES))
+	rm -f $(patsubst %,%.mli,$(PARSERS))
+	rm -f $(patsubst %,%.states,$(PARSERS))
+	rm -f $(C_FILES) $(C_INCLUDES)
+	rm -f $(O_FILES) $(O_INCLUDES)
+	rm -f $(patsubst %,%.o,$(FILES))
+	rm -f $(patsubst %,%.annot,$(FILES))
+	rm -f bin/dbtoaster bin/dbtoaster_top bin/dbtoaster_debug
+	rm -f src/global/Driver.cmi src/global/Driver.cmo src/global/Driver.cmx
+	rm -f src/global/Driver.cmxi src/global/Driver.o
+	rm -f doc/*.aux doc/*.synctex.gz doc/*.log
+	rm -f makefile.deps
+	make -C lib clean
+
+distclean: clean
+	make -C doc clean
+	make -C test/queries clean
+
+#################################################
+
+.PHONY: all clean distclean test states doc lib
+
