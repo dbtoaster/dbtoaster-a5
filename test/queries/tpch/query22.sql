@@ -1,26 +1,26 @@
 CREATE STREAM ORDERS (
---        orderkey       INT,
-        custkey        INT
---        orderstatus    CHAR(1),
---        totalprice     DECIMAL,
---        orderdate      DATE,
---        orderpriority  CHAR(15),
---        clerk          CHAR(15),
---        shippriority   INT,
---        comment        VARCHAR(79)
+        orderkey       INT,
+        custkey        INT,
+        orderstatus    CHAR(1),
+        totalprice     DECIMAL,
+        orderdate      DATE,
+        orderpriority  CHAR(15),
+        clerk          CHAR(15),
+        shippriority   INT,
+        comment        VARCHAR(79)
     )
   FROM FILE '../../experiments/data/tpch/orders.csv'
   LINE DELIMITED csv (deletions := 'true');
 
 CREATE STREAM CUSTOMER (
         custkey      INT,
---        name         VARCHAR(25),
---        address      VARCHAR(40),
+        name         VARCHAR(25),
+        address      VARCHAR(40),
         nationkey    INT,
---        phone        CHAR(15),
-        acctbal      DECIMAL
---        mktsegment   CHAR(10),
---        comment      VARCHAR(117)
+        phone        CHAR(15),
+        acctbal      DECIMAL,
+        mktsegment   CHAR(10),
+        comment      VARCHAR(117)
     )
   FROM FILE '../../experiments/data/tpch/customer.csv'
   LINE DELIMITED csv (deletions := 'true');
