@@ -73,9 +73,9 @@ let split_expr (event:Schema.event_t option)
 									else 
 											((rel, lift, CalcRing.mk_prod [rest; term]), scope_acc)
 						| Lift (v, subexpr) ->						
-									if (List.mem v (ListAsSet.union scope_acc scope)) then
+(*									if (List.mem v (ListAsSet.union scope_acc scope)) then
 											failwith "[split_expr] Error: The lift variable is in the scope"
-									else
+									else *)
 										let subexpr_ivars = fst (schema_of_expr ~scope:scope_acc subexpr) in
 										let subexpr_rels = rels_of_expr subexpr in
 										let lift_contains_event_rel =
@@ -194,7 +194,7 @@ and materialize_expr (history:ds_history_t) (prefix:string)
 				
 			(* Extended the schema with the input variables of other expressions *) 
 			let expected_schema = ListAsSet.inter rel_exprs_ovars 
-															(ListAsSet.multiunion [schema; lift_exprs_ivars; 
+															(ListAsSet.multiunion [scope; schema; lift_exprs_ivars; 
 																										 rest_exprs_ivars]) in
 			(* Add an aggregation if necessary *)
 			let agg_rel_expr = if ListAsSet.seteq rel_exprs_ovars expected_schema then rel_exprs
