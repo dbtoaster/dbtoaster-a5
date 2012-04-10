@@ -167,6 +167,7 @@ sig
     type trigger_t = Schema.event_t * statement_t list
     type prog_t = map_t list * Patterns.pattern_map * trigger_t list
     
+    val code_of_prog : prog_t -> string
 end
 
 
@@ -668,4 +669,20 @@ type map_t = string * (Types.type_t list) * (Types.type_t list)
 type trigger_t = Schema.event_t * statement_t list
 type prog_t = map_t list * Patterns.pattern_map * trigger_t list
     
+let code_of_prog ((maps,_,triggers):prog_t): string = (
+   "--------------------- MAPS ----------------------\n"^
+   (ListExtras.string_of_list ~sep:"\n\n" (fun (mapn, mapiv, mapov) ->
+      "DECLARE "^mapn^
+      (ListExtras.ocaml_of_list Types.string_of_type mapiv)^
+      (ListExtras.ocaml_of_list Types.string_of_type mapov)
+   ) maps)^"\n\n"^
+   "--------------------- TRIGGERS ----------------------\n"^
+   (ListExtras.string_of_list ~sep:"\n\n" (fun (event, stmts) ->
+      "ON "^(Schema.string_of_event event)^" : {"^
+      (ListExtras.string_of_list ~sep:"\n\t" code_of_expr
+                                 (List.map snd stmts))^
+      "}"
+   ) triggers)^"\n"
+)
+
 end

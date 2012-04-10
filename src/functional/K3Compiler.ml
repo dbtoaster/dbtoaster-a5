@@ -9,51 +9,6 @@ open CG
 open K3Typechecker
 
 
-(* TODO move this somewhere else! *)
-(* IO Operation abstraction - one level up from streams.  Mostly there to
-   support file/close blocks, but has some useful temporary file functionality
-   and eases simultaneous use of both channels and raw filenames (and 
-   eventually, sockets as well perhaps? *)
-module GenericIO =
-struct
-  type out_t = 
-    | O_FileName of string * open_flag list
-    | O_FileDescriptor of out_channel
-    (* TempFile with a continuation; After write() has finished its callback
-       block, The TempFile continuation is invoked with the filename of the
-       temporary file.  The file will be deleted on continuation return *)
-    | O_TempFile of string * string * (string -> unit)
-  ;;
-  
-  type in_t =
-    | I_FileName of string
-    | I_FileDescriptor of in_channel
-  ;;
-  
-  (* write fd (fun out -> ... ; (write to out);) *)
-  let write (fd:out_t) (block:out_channel -> unit): unit =
-    match fd with
-    | O_FileName(fn,flags) -> 
-      let file = open_out_gen flags 0x777 fn in
-        (block file;close_out file)
-    | O_FileDescriptor(file) -> block file
-    | O_TempFile(prefix, suffix, finished_cb) -> 
-      let (filename, file) = (Filename.open_temp_file prefix suffix) in
-        (block file;flush file;close_out file;
-         finished_cb filename;Unix.unlink filename)
-  ;;
-
-  (* read fd (fun in -> ... ; (read from in);) *)
-  let read (fd:in_t) (block:in_channel -> unit): unit =
-    match fd with
-    | I_FileName(fn) -> 
-      let file = open_in fn in
-        (block file;close_in file)
-    | I_FileDescriptor(file) -> block file
-  ;;
-end
-
-
 let rec compile_k3_expr e =
     let rcr = compile_k3_expr in
     let tc_fn_rt e = 
@@ -166,26 +121,21 @@ let compile_triggers trigs : code_t list =
       in trigger event stmts)
     trigs
     
-let compile_k3_to_code (dbschema:(string * var_t list) list)
-                       (((schema,patterns,trigs) : K3.SR.prog_t),
-                        (sources:Schema.source_info_t list))
+let compile_k3_to_code (dbschema:Schema.t)
+                       ((schema,patterns,trigs) : K3.SR.prog_t)
                        (toplevel_queries : string list): code_t =
+   let rels = List.map (fun (reln,relv,_) -> (reln,relv))
+                       (Schema.rels dbschema) in
    let ctrigs = compile_triggers_noopt trigs in
    let csource =
-     List.map (fun (s,ra) -> CG.source s ra) sources
+     List.map (fun (s,ra) -> CG.source s ra) !dbschema
    in
-      (main dbschema schema patterns csource ctrigs toplevel_queries)
+      (main rels schema patterns csource ctrigs toplevel_queries)
 
 ;;
 
 let compile_query_to_string schema prog tlqs: string =
   to_string (compile_k3_to_code schema prog tlqs)
-
-let compile_query schema prog tlqs (out : GenericIO.out_t): unit =
-  GenericIO.write out 
-    (fun out_file -> 
-       output (compile_k3_to_code schema prog tlqs) out_file; 
-       output_string out_file "\n")
 
 end
 
