@@ -13,6 +13,7 @@ unit:
 	@$(UNIT_TEST) unit/heuristics.ml
 	@$(UNIT_TEST) unit/compiler.ml
 	@$(UNIT_TEST) unit/compiler.ml
+	@$(UNIT_TEST) unit/k3interpreter.ml
 
 queries:
 	make -C queries

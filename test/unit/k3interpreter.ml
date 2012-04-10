@@ -18,7 +18,7 @@ let pc_b = OutPC("B", ["X", TBase(TFloat); "Y", TBase(TFloat)], TBase(TFloat))
 ;;
 let patterns = [
    "A", [];
-   "B", [In(["X"], [0])];
+   "B", [Out(["X"], [0])];
 ]
 ;;
 let db = NamedK3Database.make_empty_db maps patterns
@@ -125,6 +125,30 @@ in
                  (Const(CFloat(42.))),
                  pc_b))
       (Float(42.));
+   test_map "Slicing"
+      (Slice(pc_b, ["X", TBase(TFloat); "Y", TBase(TFloat)], 
+                   ["X", (Const(CFloat(1.)))]))
+      [  [1.; 3.], 3.;
+         [1.; 2.], 2.;
+         [1.; 1.], 1.;
+      ];
+   test_map "Group-By Aggregation"
+      (GroupByAggregate((AssocLambda((ATuple(["X", TBase(TFloat); 
+                                              "Y", TBase(TFloat);
+                                              "v", TBase(TFloat)])),
+                                     (AVar("old", TBase(TFloat))),
+                                     (Add((Var("v", TBase(TFloat))),
+                                          (Var("old", TBase(TFloat))))))),
+                        (Const(CFloat(0.))),
+                        (Lambda((ATuple(["X", TBase(TFloat); 
+                                         "Y", TBase(TFloat);
+                                         "v", TBase(TFloat)])),
+                                (K3.SR.Tuple[Var("X", TBase(TFloat))]))),
+                        (Slice(pc_b, ["X", TBase(TFloat); "Y", TBase(TFloat)], 
+                                     []))))
+      [  [ 1. ], 6.;
+         [ 2. ], 6.;
+      ];
    ()
       
             

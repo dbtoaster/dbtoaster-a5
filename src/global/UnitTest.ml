@@ -76,6 +76,16 @@ let log_collection_test (title:string) (result:Values.K3Value.t)
       match result with
          | Values.K3Value.SingleMap(m) ->
             Values.K3ValuationMap.to_list m
+         | Values.K3Value.TupleList(tlist) -> 
+            List.map (fun tuple ->
+               match tuple with
+                  | Values.K3Value.Tuple(telems) ->
+                     if telems = [] then failwith "Invalid tuple"
+                     else let revelems = List.rev telems in
+                        (  List.rev (List.tl revelems),
+                           List.hd revelems )
+                  | _ -> failwith "Invalid tuple list"
+            ) tlist
          | _ ->
             print_endline (title^": Failed");
             showdiff "-- A collection --" 

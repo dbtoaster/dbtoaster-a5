@@ -356,6 +356,12 @@ struct
     *)
    let slice pat pkey m =
       let aux acc k = add k (find k m) acc in
+      Debug.print "LOG-RUNTIME" (fun () -> 
+         "Slice of "^(to_string (ListExtras.string_of_list M.to_string)
+                                (fun _ -> "?") m)^
+         " using pattern "^(ListExtras.string_of_list string_of_int pat)^
+         " with key "^(ListExtras.string_of_list M.to_string pkey)
+      );
       match pkey with
       | [] -> let r = empty_map_w_secondaries m in
          if mem pkey m then (add pkey (find pkey m) r)
