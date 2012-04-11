@@ -113,7 +113,7 @@ let rec materialize ?(scope:var_t list = [])
 		);
 																							
     let expr_scope = ListAsSet.union scope (extract_event_vars event) in
-		fst (
+		let (todos, mat_expr) = fst (
 			(* Polynomial decomposition. Note: all the terms have the same schema *)
 			List.fold_left ( fun ((term_todos, term_mats), i) (term_schema, term) ->
 
@@ -153,8 +153,11 @@ let rec materialize ?(scope:var_t list = [])
 				in
 					((term_todos @ new_term_todos, CalcRing.mk_sum [term_mats; new_term_mats]), k)
 					
-			) (([], CalcRing.zero), 1) (decompose_poly scope expr)
+			) (([], CalcRing.zero), 1) (decompose_poly expr_scope expr)
 		)
+		in
+		let schema = snd (schema_of_expr ~scope:expr_scope mat_expr) in
+		  (todos, optimize_expr (expr_scope, schema) mat_expr)
 	
 (* Materialization of an expression of the form mk_prod [ ...] *)	
 and materialize_expr (history:ds_history_t) (prefix:string)
