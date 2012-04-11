@@ -20,13 +20,13 @@ let extract_event_reln (event:Schema.event_t option) : (string option) =
 		| Some(Schema.DeleteEvent((reln,_,_))) -> Some(reln)
 		| _  -> None
 
-(*
+
 let schema_of_expr ?(scope:var_t list = []) (expr:expr_t) : 
                     (var_t list * var_t list) =
 	let (expr_ivars, expr_ovars) = Calculus.schema_of_expr expr in
 	let new_ovars = ListAsSet.inter expr_ivars scope in
 		(ListAsSet.diff expr_ivars new_ovars, ListAsSet.union expr_ovars new_ovars) 
-*)
+
 
 let string_of_vars = ListExtras.string_of_list string_of_var
 

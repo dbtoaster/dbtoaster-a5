@@ -97,10 +97,9 @@ let bail_out expr msg =
    raise (CalculusException(expr, msg))
 ;;
 (*** Informational Operations ***)
-let rec schema_of_expr ?(scope:var_t list = []) (expr:expr_t): 
-                        (var_t list * var_t list) =
+let rec schema_of_expr (expr:expr_t):(var_t list * var_t list) =
    let rcr a = schema_of_expr a in
-   let (expr_ivars, expr_ovars) = CalcRing.fold 
+   CalcRing.fold 
       (fun sum_vars ->
          let ivars, ovars = List.split sum_vars in
             let old_ivars = ListAsSet.multiunion ivars in
@@ -146,9 +145,6 @@ let rec schema_of_expr ?(scope:var_t list = []) (expr:expr_t):
                (ivars, ListAsSet.union [target] ovars)
       end)
       expr 
-	 in
-	 let new_ovars = ListAsSet.inter expr_ivars scope in
-       (ListAsSet.diff expr_ivars new_ovars, ListAsSet.union expr_ovars new_ovars) 
 
 let rec type_of_expr (expr:expr_t): type_t =
    let rcr a = type_of_expr a in
