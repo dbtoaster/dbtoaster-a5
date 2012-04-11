@@ -9,8 +9,9 @@ QUERIES := \
     finance/brokerspread	\
     finance/brokervariance \
     finance/vwap \
-    finance/pricespread
-
+    finance/pricespread \
+    finance/missedtrades
+    
 SQL_QUERIES := $(patsubst %,%.sql,$(QUERIES))
 M3_QUERIES  := $(patsubst %,%.m3,$(QUERIES))
 

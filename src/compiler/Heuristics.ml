@@ -30,18 +30,19 @@ let schema_of_expr ?(scope:var_t list = []) (expr:expr_t) :
 
 let string_of_vars = ListExtras.string_of_list string_of_var
 
-(* Push cmps and values to the right *)
-let push_cmps_right (expr:expr_t) : (expr_t) =
-	let (left, right) = 
-		List.fold_left ( fun (l,r) term ->
+(* Push rels to the left, cmps and values to the right *)
+let reorganize (expr:expr_t) : (expr_t) =
+	let (rels, lifts, rest) = 
+		List.fold_left ( fun (rel,lift,rest) term ->
         match CalcRing.get_val term with
-            | Value(_) | Cmp (_, _, _) -> (l, r @ [term])
-            | Rel (_, _) | Lift (_, _) | External (_) -> (l @ [term], r)                             
+            | Value(_) | Cmp (_, _, _) -> (rel, lift, rest @ [term])
+            | Rel (_, _) | External (_) -> (rel @ [term], lift, rest)
+						| Lift (_, _) -> (rel, lift @ [term], rest)                              
 						| AggSum (_, _) ->
-							failwith "[push_cmps_right] Error: AggSums are supposed to be removed."
-    ) ([], []) (CalcRing.prod_list expr)
+							failwith "[reorganize] Error: AggSums are supposed to be removed."
+    ) ([], [], []) (CalcRing.prod_list expr)
 	in
-	   CalcRing.mk_prod (left @ right)
+	   CalcRing.mk_prod (rels @ lifts @ rest)
 
 (* Divide the expression into three parts:                                     *)
 (* lift_exprs: lifts containing the event relation or input variables          *)
@@ -91,7 +92,7 @@ let split_expr (event:Schema.event_t option)
 											(* trigger function is being created.*)
 											((CalcRing.mk_prod [rel; term], lift, rest), scope_acc @ [v])													
 			) ((CalcRing.one, CalcRing.one, CalcRing.one), []) 
-			  (CalcRing.prod_list (push_cmps_right expr))
+			  (CalcRing.prod_list (reorganize expr))
 		) 
 
 

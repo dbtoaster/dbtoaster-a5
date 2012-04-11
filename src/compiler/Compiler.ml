@@ -72,6 +72,8 @@ let compile_map (db_schema:Schema.t) (history:Heuristics.ds_history_t)
          | _ -> failwith "Error: Compiling map with unsupported type"
       end
    in
+	 (*Debug.activate "IGNORE-DELETES";*)
+	 (*Debug.activate "LOG-COMPILE-DETAIL";*)
    Debug.print "LOG-COMPILE-DETAIL" (fun () ->
       "Optimizing: "^(string_of_expr todo.ds_definition)
    );
