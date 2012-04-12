@@ -338,7 +338,8 @@ if stage_is_active StagePrintSchema then (
 if stage_is_active StagePrintCalc then (
    output_endline (
       (ListExtras.string_of_list ~sep:"\n" 
-         (fun (name, calc) -> name^": \n  "^(Calculus.string_of_expr calc))
+         (fun (name, calc) -> name^": \n"^
+            (CalculusPrinter.string_of_expr calc))
          !calc_queries)
    )
 )
