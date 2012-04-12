@@ -178,7 +178,17 @@ in
       "(A ^= 0) * (A ^= AggSum([], B))";
    test "Duplicate lifts (not terminal)" []
       "(A ^= 0) * (A ^= AggSum([], B)) * 2"
-      "(A ^= 0) * (A ^= AggSum([], B)) * 2"
+      "(A ^= 0) * (A ^= AggSum([], B)) * 2";
+   test "Query18 funny business" [var "query18_mLINEITEMLINEITEM_ORDERKEY"; var "query18_mLINEITEMLINEITEM_QUANTITY"]
+      "(O_OK ^= [dOK]) * AggSum([O_OK],(
+         (AggSum([O_OK],(LINEITEM(O_OK, L3_Q)))) +
+            ( (O_OK ^= [dOK]) * AggSum([O_OK],(LINEITEM(O_OK, L3_Q)))
+       )))"
+      "AggSum([dOK],(
+         (AggSum([dOK],(LINEITEM(dOK, L3_Q)))) +
+         (AggSum([dOK],(LINEITEM(dOK, L3_Q))))
+       ))"
+      
 ;;
 let test msg input output =
    log_test ("Nesting Rewrites ("^msg^")")
@@ -203,7 +213,13 @@ in
       "[A = A]";
    test "A Lifted More Complex Value"
       "(A ^= [A*B*C])"
-      "[A = (A*B*C)]"
+      "[A = (A*B*C)]";
+   test "Aggsum of a lifted value - schema changed"
+      "AggSum([A], (A ^= B))"
+      "(A ^= B)";
+   test "Aggsum of a lifted value - schema unchanged"
+      "AggSum([A], (A ^= B) * R(A,C))"
+      "(A ^= B) * AggSum([A], R(A,C))";
 ;;
 let test msg scope input output =
    log_test ("Factorize One Polynomial ("^msg^")")
@@ -344,10 +360,10 @@ in
                 - (nested ^= AggSum([PK], L(PK, QTY2) * QTY2))
             )))"
       "P(dPK) * (
-         ((QTY ^= dQTY) * (nested ^= AggSum([dPK], L(dPK, QTY2) * QTY2)))
+         ((nested ^= AggSum([dPK], L(dPK, QTY2) * QTY2)) * (QTY ^= dQTY))
             + 
             ((L(dPK, QTY) + (QTY ^= dQTY)) * 
             (
                (nested ^= AggSum([dPK], L(dPK, QTY2) * QTY2) + dQTY) +
                (nested ^= AggSum([dPK], L(dPK, QTY2) * QTY2)) * [-1]
-            )))"
+            )))";

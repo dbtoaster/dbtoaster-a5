@@ -91,7 +91,7 @@ and string_of_expr (expr:expr_t): string =
 exception CalculusException of expr_t * string
 ;;
 let bail_out expr msg = 
-   Debug.print "LOG-CALC-FAILURES" (fun () ->
+   Debug.print "LOG-ERROR-DETAIL" (fun () ->
       msg^" while processing "^(string_of_expr expr)
    );
    raise (CalculusException(expr, msg))
@@ -115,12 +115,16 @@ let rec schema_of_expr (expr:expr_t):(var_t list * var_t list) =
       )
       (fun prod_vars ->
          List.fold_left (fun (old_ivars, old_ovars) (new_ivars, new_ovars) ->
-                           (  ListAsSet.union 
-                                 old_ivars
-                                 (ListAsSet.diff new_ivars old_ovars),
-                              ListAsSet.union old_ovars new_ovars 
-                           )
-                        ) ([],[]) prod_vars
+            (* The following expression treats [A] * R(A) as having A as an
+               output variable.  This is correct as long as A is in the scope
+               when this expression is evaluated, but that might be incorrect
+            *)
+            (  (ListAsSet.union (ListAsSet.diff new_ivars old_ovars)
+                                old_ivars),
+               (ListAsSet.diff (ListAsSet.union old_ovars new_ovars)
+                               old_ivars)
+            )
+         ) ([],[]) prod_vars
       )
       (fun child_vars -> child_vars)
       (fun lf -> begin match lf with

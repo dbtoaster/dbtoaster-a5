@@ -158,7 +158,8 @@ $(patsubst %,%.cmxi,$(FILES)) :
 
 makefile.deps: makefile $(patsubst %,%.ml,$(BASE_FILES))
 	@echo Computing Dependency Graph
-	@$(OCAMLDEP) $(patsubst %, -I %,$(DIRS)) $^ > $@
+	@$(OCAMLDEP) $(patsubst %, -I %,$(DIRS)) \
+			$(patsubst %,%.ml,$(BASE_FILES)) > $@
 
 include makefile.deps
 

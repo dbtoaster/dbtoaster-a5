@@ -111,16 +111,23 @@ let compile_map (db_schema:Schema.t) (history:Heuristics.ds_history_t)
       let map_prefix = todo_name^evt_prefix^reln in
       let prefixed_relv = List.map (fun (n,t) -> (map_prefix^n, t)) relv in
       let delta_event = mk_evt (reln, prefixed_relv, Schema.StreamRel) in
+      let delta_expr_unoptimized = 
+         (CalculusDeltas.delta_of_expr delta_event optimized_defn)
+      in
+      Debug.print "LOG-COMPILE-DETAIL" (fun () ->
+         "Unoptimized Delta: "^(Schema.string_of_event delta_event)^
+            " DO "^(string_of_expr delta_expr_unoptimized)
+      );
       let delta_expr_unextracted = 
          CalculusTransforms.optimize_expr 
             (todo_ivars @ prefixed_relv,todo_ovars) 
-            (CalculusDeltas.delta_of_expr delta_event optimized_defn)
+            delta_expr_unoptimized
       in
       let (delta_renamings, delta_expr) = 
          extract_renamings (prefixed_relv, todo_ovars) delta_expr_unextracted
       in
       Debug.print "LOG-COMPILE-DETAIL" (fun () ->
-         "Delta: "^(Schema.string_of_event delta_event)^
+         "Optimized Delta: "^(Schema.string_of_event delta_event)^
             " DO "^(string_of_expr delta_expr)
       );
 

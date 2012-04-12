@@ -366,6 +366,7 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
          (ListExtras.string_of_list fst scope)^
          "\nExpression:"^(C.string_of_expr expr)
       );
+      let (return_deletables, return_expr) =
       begin match expr with
          | CalcRing.Sum(sl) -> 
             (* We need to make sure that the schema stays sane *)
@@ -393,10 +394,11 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
             let rhs_scope = (ListAsSet.union schema_extensions scope) in
             let (lhs_deletable, lhs_nested_term) = 
                rcr scope (schema@schema_extensions) ctx term in
-            let no_previous_distinct_lift = 
-               (List.for_all (fun (ctx_v, ctx_term) -> 
-                  (ctx_v <> v) || (lhs_nested_term = ctx_term)
-               ) ctx)
+            let ( lift_already_occurs, 
+                  previous_lift_is_identical ) =
+               if List.mem_assoc v ctx
+               then (true, (List.assoc v ctx) = lhs_nested_term)
+               else (false, false)
             in
             let ((rhs_deletable, rhs_term), lhs_term) = 
                (* If the variable is part of the output schema, then we're not
@@ -404,25 +406,33 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
                   unify away full expressions, since doing so breaks an 
                   optimization that we're able to perform in the delta 
                   computation.  See CalculusDeltas.delta_of_expr's Lift case. *)
-               if (not (List.mem v schema)) && (not (List.mem v scope)) && (
-                   (Debug.active "UNIFY-EXPRESSIONS") ||
-                   (match term with CalcRing.Val(Value(_))->true |_->false)
-                  ) && no_previous_distinct_lift
+               if (previous_lift_is_identical) || (
+                     (not (List.mem v schema)) && (not (List.mem v scope)) && (
+                      (Debug.active "UNIFY-EXPRESSIONS") ||
+                      (match term with CalcRing.Val(Value(_))->true |_->false)
+                     ) && (not lift_already_occurs)
+                  )
                then
+                  let rhs_ctx = 
+                     if previous_lift_is_identical
+                     then ctx
+                     else (v, lhs_nested_term)::ctx
+                  in
                   (* If the term isn't deletable, then we shouldn't try to unify
                      this variable at all. *)
                   let (rhs_deletable_optimistic, rhs_term_optimistic) = 
-                     rcr rhs_scope schema ((v, lhs_nested_term)::ctx) 
-                                          (CalcRing.mk_prod pl)
+                     rcr rhs_scope schema rhs_ctx (CalcRing.mk_prod pl)
                   in if (Debug.active "AGGRESSIVE-UNIFY") ||
                         (List.mem v rhs_deletable_optimistic)
                   then (
                      Debug.print "LOG-UNIFY-LIFTS" (fun () -> 
-                        "Unify of "^(string_of_var v)^" succeeded"
+                        if previous_lift_is_identical
+                        then "Removing "^(string_of_var v)^" due to identical prior"
+                        else "Unify of "^(string_of_var v)^" succeeded"
                      );
-                     ((ListAsSet.diff rhs_deletable_optimistic [v], 
-                         rhs_term_optimistic),
-                         CalcRing.one)
+                     (  (  rhs_deletable_optimistic, 
+                           rhs_term_optimistic),
+                        CalcRing.one)
                   ) else (
                      Debug.print "LOG-UNIFY-LIFTS" (fun () -> 
                         "Not unifying "^(string_of_var v)^
@@ -440,10 +450,10 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
                    (CalcRing.mk_val (Lift(v,lhs_nested_term))))
                )
             in
-               (  (  if no_previous_distinct_lift
-                     then ListAsSet.inter lhs_deletable rhs_deletable
-                     else (List.filter (fun x -> x <> v) (
-                           ListAsSet.inter lhs_deletable rhs_deletable))),
+               (  (if previous_lift_is_identical
+                     then (ListAsSet.inter lhs_deletable rhs_deletable)
+                     else ListAsSet.diff 
+                           (ListAsSet.inter lhs_deletable rhs_deletable) [v]),
                   CalcRing.mk_prod [lhs_term; rhs_term] )
          | CalcRing.Prod(pt::pl) -> 
             let rhs_schema = 
@@ -493,7 +503,15 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
                   input variable might have been subbed into a relation.  In 
                   this case the nested input variable will become an output
                   variable.  It is also possible that a variable being subbed
-                  from the outside will become an output variable. *)
+                  from the outside will become an output variable.  Finally, 
+                  there are some rare cases where an output variable will 
+                  become an input variable: For example, when A is unified away
+                  in the following: 
+                     (A ^= B) * AggSum([A], (A ^= B) * (R(A) + C))
+                  we should get
+                     AggSum([], (R(B) + C))
+                  since B is an input variable.
+                  *)
                (ListAsSet.union 
                   old_ivars 
                   (ListAsSet.multiunion (List.map (fun (_,sub_expr) ->
@@ -564,7 +582,14 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
                (  (deletable_vars (ListAsSet.union eiv eov) novar_ctx var_subs),
                   CalcRing.mk_val 
                      (External(en, sub var_subs eiv, sub var_subs eov, et, em)))
-      end
+      end in
+         Debug.print "LOG-UNIFY-LIFTS" (fun () ->
+            "Popping out of \n\t"^
+            (C.string_of_expr return_expr)^
+            "\nWith acceptable deletions: "^
+            (ListExtras.ocaml_of_list fst return_deletables)
+         );
+         (return_deletables, return_expr)
    in
       snd (rcr big_scope big_schema [] big_expr)
 ;;
@@ -673,6 +698,17 @@ let rec nesting_rewrites (expr:C.expr_t) =
                            ListAsSet.inter gb_vars 
                                            (snd (C.schema_of_expr nested))
                         in
+                           Debug.print "LOG-NESTINGREWRITES-DETAIL" (fun () ->
+                              "Nesting rewrites lifting out:\n"^
+                              (string_of_expr unnested)^
+                              "\n\tand keeping in:\n"^
+                              (string_of_expr nested)^
+                              "\n\twith output variables : "^
+                              (ListExtras.ocaml_of_list fst 
+                                    (snd (C.schema_of_expr nested)))^
+                              "\n\tMaking the new group-by variables:\n"^
+                              (ListExtras.ocaml_of_list fst new_gb_vars)
+                           );
                            CalcRing.mk_prod 
                               [  unnested; 
                                  CalcRing.mk_val (AggSum(new_gb_vars, nested)) ]
@@ -893,6 +929,12 @@ let optimize_expr ?(optimizations = default_optimizations)
       include_opt OptCombineValues           (combine_values);
       include_opt OptCombineValuesAggressive (combine_values ~aggressive:true);
    if Debug.active "LOG-CALCOPT-STEPS" then Fixpoint.build fp_1 
-      (fun x -> print_endline ("OPTIMIZING: "^(C.string_of_expr x)); x);
+      (fun x -> 
+         let (ivars,ovars) = C.schema_of_expr x in
+         print_endline ("OPTIMIZING: "^
+            (ListExtras.ocaml_of_list fst ivars)^
+            (ListExtras.ocaml_of_list fst ovars)^
+            " ::>> "^
+            (C.string_of_expr x)); x);
    Fixpoint.compute_with_history !fp_1 expr
  

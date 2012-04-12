@@ -39,7 +39,7 @@ log_test "Parsing"
 ;;
 
 let test_delta (name:string) ins reln relv expr delta =
-   log_test ("Deltas: "^name)
+   log_test ("Deltas ("^name^")")
       Calculus.string_of_expr
       (CalculusDeltas.delta_of_expr (event ins reln relv) (parse_calc expr))
       (parse_calc delta)
@@ -56,3 +56,52 @@ log_test "Renaming an external"
    (Calculus.rename_vars [var "A", var "B"] 
                          (parse_calc "FOO(int)[][A]"))
    (parse_calc "FOO(int)[][B]")
+;;
+
+let test_schema (name:string) expr ivar ovar =
+   log_test ("Schemas ("^name^")")
+      (fun (iv,ov) -> (ListExtras.ocaml_of_list fst iv)^
+                      (ListExtras.ocaml_of_list fst ov))
+      (schema_of_expr (parse_calc expr))
+      ((List.map var ivar), (List.map var ovar))
+;;
+
+test_schema "TPCH18 simplified funny business"
+   "( ( AggSum([],(
+      ( (delta_143 ^= 
+          (
+            [-1] * 
+            [query18_mLINEITEMLINEITEM_QUANTITY]
+          )
+        ) * 
+        ( (__sql_agg_tmp_1 ^= 
+            ( AggSum([O_ORDERKEY],(
+                ( LINEITEM(O_ORDERKEY, L3_QUANTITY) * 
+                  [L3_QUANTITY]
+                )
+              )) + 
+              [delta_143]
+            )
+          ) + 
+          ( (__sql_agg_tmp_1 ^= 
+              AggSum([O_ORDERKEY],(
+                ( LINEITEM(O_ORDERKEY, L3_QUANTITY) * 
+                  [L3_QUANTITY]
+                )
+              ))
+            ) * 
+            [-1]
+          )
+        ) * 
+        [100 < __sql_agg_tmp_1]
+      )
+    )) * 
+    AggSum([O_ORDERKEY],(
+      LINEITEM(O_ORDERKEY, L2_QUANTITY)
+    ))
+  ) 
+)"
+   ["O_ORDERKEY"; "query18_mLINEITEMLINEITEM_QUANTITY"] []
+
+
+;;

@@ -94,10 +94,10 @@ in
       "M1(int)[][A] * M2(int)[][]";
 	test "Map reuse"
 			"AggSum([A], R(A,B) + R(A,B))"
-      "(M1(int)[][A] + M1(int)[][A])";
+      "(M1(int)[][A] * 2)";
 	test "Map reuse with renaming"
 			"AggSum([A], R(A,B) * (S(C) + S(D)))"
-      "(M1(int)[][A] * M2(int)[][]) + (M1(int)[][A] * M2(int)[][])";
+      "M2(int)[][] * M1(int)[][A] * 2";
 	test "Map reuse with renaming"
 			"(R(A,B) * S(C)) + (R(B,C) * S(A))"
       "(M1(int)[][A,B] * M2(int)[][C]) + (M1(int)[][B,C] * M2(int)[][A])";
@@ -125,7 +125,7 @@ in
       "(M1_L1_1(int)[][A,B] * (E ^= M1_L1_1(int)[][C,D] * B) * E)";	
   test "Aggregation with a lift containing a relevant relation and a common variable"
       "AggSum([A], R(A,B) * (E ^= R(C,D) * [A = C]) * [E > 0])"
-      "M1(int)[][A] * (E ^= M1_L1_1(int)[][A,D]) * [E > 0]";
+      "(E ^= M1_L1_1(int)[][A,D]) * M1(int)[][A] * [E > 0]";
   	test "Extending schema due to a lift"
 			"AggSum([A], R(A) * S(C) * (D ^= R(B) * C))"		
 			"(M1(int)[][A] * M2(int)[][C] * (D ^= M1(int)[][B] * C))";

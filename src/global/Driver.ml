@@ -352,7 +352,7 @@ if stage_is_active StageCompileCalc then (
    }) !calc_queries in
 
       (* Compile things *)
-      materialization_plan := Compiler.compile db_schema query_ds_list ;
+      materialization_plan := Compiler.compile db_schema query_ds_list;
 
       (* And save the accessor expressions *)
       toplevel_queries := List.map (fun q_ds ->
