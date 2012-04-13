@@ -105,7 +105,8 @@ let rec materialize ?(scope:var_t list = [])
 										: (ds_t list * expr_t) = 
 		
 
-		(* Debug.activate "LOG-HEURISTICS-DETAIL"; *)
+		(*Debug.activate "LOG-HEURISTICS-DETAIL";
+		Debug.activate "IGNORE-FINAL-OPTIMIZATION";*) 
 		
 		Debug.print "LOG-HEURISTICS-DETAIL" (fun () ->
 			 "[Heuristics] Raw expression: "^(string_of_expr expr)^
@@ -156,8 +157,11 @@ let rec materialize ?(scope:var_t list = [])
 			) (([], CalcRing.zero), 1) (decompose_poly expr_scope expr)
 		)
 		in
-		let schema = snd (schema_of_expr ~scope:expr_scope mat_expr) in
-		  (todos, optimize_expr (expr_scope, schema) mat_expr)
+		(if (Debug.active "IGNORE-FINAL-OPTIMIZATION") then
+		  (todos, mat_expr)
+		else 
+			let schema = snd (schema_of_expr ~scope:expr_scope mat_expr) in
+			(todos, optimize_expr (expr_scope, schema) mat_expr))
 	
 (* Materialization of an expression of the form mk_prod [ ...] *)	
 and materialize_expr (history:ds_history_t) (prefix:string)

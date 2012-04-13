@@ -1,47 +1,47 @@
 CREATE STREAM LINEITEM (
         orderkey       INT,
---        partkey        INT,
---        suppkey        INT,
---        linenumber     INT,
-        quantity       DECIMAL
---        extendedprice  DECIMAL,
---        discount       DECIMAL,
---        tax            DECIMAL,
---        returnflag     CHAR(1),
---        linestatus     CHAR(1),
---        shipdate       DATE,
---        commitdate     DATE,
---        receiptdate    DATE,
---        shipinstruct   CHAR(25),
---        shipmode       CHAR(10),
---        comment        VARCHAR(44)
+        partkey        INT,
+        suppkey        INT,
+        linenumber     INT,
+        quantity       DECIMAL,
+        extendedprice  DECIMAL,
+        discount       DECIMAL,
+        tax            DECIMAL,
+        returnflag     CHAR(1),
+        linestatus     CHAR(1),
+        shipdate       DATE,
+        commitdate     DATE,
+        receiptdate    DATE,
+        shipinstruct   CHAR(25),
+        shipmode       CHAR(10),
+        comment        VARCHAR(44)
     )
   FROM FILE '../../experiments/data/tpch/lineitem.csv'
   LINE DELIMITED csv (deletions := 'true');
 
 CREATE STREAM ORDERS (
         orderkey       INT,
-        custkey        INT
---        orderstatus    CHAR(1),
---        totalprice     DECIMAL,
---        orderdate      DATE,
---        orderpriority  CHAR(15),
---        clerk          CHAR(15),
---        shippriority   INT,
---        comment        VARCHAR(79)
+        custkey        INT,
+        orderstatus    CHAR(1),
+        totalprice     DECIMAL,
+        orderdate      DATE,
+        orderpriority  CHAR(15),
+        clerk          CHAR(15),
+        shippriority   INT,
+        comment        VARCHAR(79)
     )
   FROM FILE '../../experiments/data/tpch/orders.csv'
   LINE DELIMITED csv (deletions := 'true');
 
 CREATE STREAM CUSTOMER (
-        custkey      INT
---        name         VARCHAR(25),
---        address      VARCHAR(40),
---        nationkey    INT,
---        phone        CHAR(15),
---        acctbal      DECIMAL,
---        mktsegment   CHAR(10),
---        comment      VARCHAR(117)
+        custkey      INT,
+        name         VARCHAR(25),
+        address      VARCHAR(40),
+        nationkey    INT,
+        phone        CHAR(15),
+        acctbal      DECIMAL,
+        mktsegment   CHAR(10),
+        comment      VARCHAR(117)
     )
   FROM FILE '../../experiments/data/tpch/customer.csv'
   LINE DELIMITED csv (deletions := 'true');
