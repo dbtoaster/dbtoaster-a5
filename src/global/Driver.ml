@@ -353,7 +353,19 @@ if stage_is_active StageCompileCalc then (
    }) !calc_queries in
 
       (* Compile things *)
-      materialization_plan := Compiler.compile db_schema query_ds_list;
+      if Debug.active "LOG-ERROR-DETAIL" then (
+         try 
+            materialization_plan := Compiler.compile db_schema query_ds_list
+         with Calculus.CalculusException(expr, msg) ->
+            Debug.print "LOG-ERROR-DETAIL" (fun () ->
+               msg^" while processing: \n"^
+               (CalculusPrinter.string_of_expr expr)
+            );
+            failwith msg
+      ) else (
+         materialization_plan := Compiler.compile db_schema query_ds_list
+      );
+      
 
       (* And save the accessor expressions *)
       toplevel_queries := List.map (fun q_ds ->

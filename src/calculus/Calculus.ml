@@ -91,9 +91,6 @@ and string_of_expr (expr:expr_t): string =
 exception CalculusException of expr_t * string
 ;;
 let bail_out expr msg = 
-   Debug.print "LOG-ERROR-DETAIL" (fun () ->
-      msg^" while processing "^(string_of_expr expr)
-   );
    raise (CalculusException(expr, msg))
 ;;
 (*** Informational Operations ***)

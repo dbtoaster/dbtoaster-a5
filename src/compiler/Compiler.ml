@@ -34,7 +34,30 @@ let extract_renamings ((scope,schema):schema_t) (expr:expr_t):
          end
       ) ([], []) (CalcRing.prod_list expr)
    in
-      (mappings, Calculus.rename_vars mappings (CalcRing.mk_prod expr_terms))
+   let rec fix_schemas expr =
+      (* We can't just leave the result of the standard rename_vars approach 
+         here, because we're actually mucking with the schema of the 
+         subexpressions.  In particular it's possible for us to remove Lifts (if 
+         we get X ^= X), and the schema of AggSums may need to be updated. *)
+      CalcRing.fold CalcRing.mk_sum CalcRing.mk_prod CalcRing.mk_neg
+         (fun leaf -> (begin match leaf with
+            | AggSum(gb_vars, subexp) ->
+               let new_subexp = fix_schemas subexp in
+               CalcRing.mk_val (AggSum(
+                  ListAsSet.inter gb_vars (snd (schema_of_expr new_subexp)),
+                  new_subexp
+               ))
+            | Lift(var1, CalcRing.Val(Value(ValueRing.Val(AVar(var2)))))
+                  when var1 = var2 -> CalcRing.one
+            | Lift(var, subexp) -> 
+               CalcRing.mk_val (Lift(var, fix_schemas subexp))
+            | _ -> CalcRing.mk_val leaf
+         end))
+         expr
+   in
+      (  mappings, 
+         fix_schemas (Calculus.rename_vars mappings 
+                                           (CalcRing.mk_prod expr_terms)))
 
 (******************************************************************************)
 
@@ -75,14 +98,14 @@ let compile_map (db_schema:Schema.t) (history:Heuristics.ds_history_t)
 	 (*Debug.activate "IGNORE-DELETES";*)
 	 (*Debug.activate "LOG-COMPILE-DETAIL";*)
    Debug.print "LOG-COMPILE-DETAIL" (fun () ->
-      "Optimizing: "^(string_of_expr todo.ds_definition)
+      "Optimizing: \n"^(CalculusPrinter.string_of_expr todo.ds_definition)
    );
    let optimized_defn = 
       CalculusTransforms.optimize_expr (todo_ivars, todo_ovars) 
                                       todo.ds_definition
    in
    Debug.print "LOG-COMPILE-DETAIL" (fun () ->
-      "Optimized: "^(string_of_expr optimized_defn)
+      "Optimized: \n"^(CalculusPrinter.string_of_expr optimized_defn)
    );
    let rels = 
       try List.map (Schema.rel db_schema) (rels_of_expr optimized_defn)
@@ -116,7 +139,7 @@ let compile_map (db_schema:Schema.t) (history:Heuristics.ds_history_t)
       in
       Debug.print "LOG-COMPILE-DETAIL" (fun () ->
          "Unoptimized Delta: "^(Schema.string_of_event delta_event)^
-            " DO "^(string_of_expr delta_expr_unoptimized)
+            " DO \n"^(CalculusPrinter.string_of_expr delta_expr_unoptimized)
       );
       let delta_expr_unextracted = 
          CalculusTransforms.optimize_expr 
@@ -127,15 +150,16 @@ let compile_map (db_schema:Schema.t) (history:Heuristics.ds_history_t)
          extract_renamings (prefixed_relv, todo_ovars) delta_expr_unextracted
       in
       Debug.print "LOG-COMPILE-DETAIL" (fun () ->
-         "Optimized Delta: "^(Schema.string_of_event delta_event)^
-            " DO "^(string_of_expr delta_expr)
+         "Optimized Delta: \n"^(Schema.string_of_event delta_event)^
+            " DO "^(CalculusPrinter.string_of_expr delta_expr)
       );
 
       let (new_todos, materialized_delta) = 
          Heuristics.materialize history map_prefix (Some(delta_event)) delta_expr
       in
          Debug.print "LOG-COMPILE-DETAIL" (fun () ->
-            "Materialized: "^(string_of_expr materialized_delta)
+            "Materialized: \n"^
+            (CalculusPrinter.string_of_expr materialized_delta)
          );
          trigger_todos := new_todos @ !trigger_todos;
          triggers      := 

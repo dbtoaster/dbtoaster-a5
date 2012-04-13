@@ -14,11 +14,11 @@ FILES=\
 	src/ring/Ring\
 	src/ring/Arithmetic\
 	src/calculus/Calculus\
+	src/calculus/CalculusPrinter\
 	src/calculus/CalculusTransforms\
 	src/calculus/CalculusDeltas\
 	src/calculus/CalculusDecomposition\
 	src/calculus/SqlToCalculus\
-	src/calculus/CalculusPrinter\
 	src/compiler/Plan\
 	src/compiler/Heuristics\
 	src/compiler/Compiler\

@@ -4,6 +4,8 @@ open Calculus
 open Format
 ;;
 
+let line_indent = ref 2;
+
 type formatter_t = {
    bopen  : int -> unit;
    bclose : unit -> unit;
@@ -11,6 +13,7 @@ type formatter_t = {
    space  : unit -> unit;
    break  : int -> int -> unit;
    string : string -> unit;
+   flush  : unit -> unit;
 }
 
 let wrap_formatter (f:formatter) = {
@@ -20,6 +23,7 @@ let wrap_formatter (f:formatter) = {
    space  = pp_print_space  f;
    break  = pp_print_break  f;
    string = pp_print_string f;
+   flush  = pp_print_flush  f;
 };;
 
 let fmt:formatter_t ref = ref (wrap_formatter str_formatter);;
@@ -34,7 +38,7 @@ let rec format_list ?(default = "") (format_element:'a -> unit) (sep:string)
    else (
       format_element (List.hd l);
       List.iter (fun element ->
-         !fmt.string sep; !fmt.space (); format_element element
+         !fmt.string sep; !fmt.break 1 !line_indent; format_element element
       ) (List.tl l)
    )
 ;;
@@ -42,8 +46,16 @@ let rec format_list ?(default = "") (format_element:'a -> unit) (sep:string)
 let rec format_value (v:value_t) =
    !fmt.bopen 0;
    begin match v with
-      | ValueRing.Sum(sl)  -> format_list format_value " +" ~default:"0" sl
-      | ValueRing.Prod(pl) -> format_list format_value " *" ~default:"1" pl
+      | ValueRing.Sum(sl)  -> 
+         !fmt.string "(";
+         format_list format_value " +" ~default:"0" sl;
+         !fmt.string ")"
+         
+      | ValueRing.Prod(pl) -> 
+         !fmt.string "(";
+         format_list format_value " *" ~default:"1" pl;
+         !fmt.string ")"
+         
       | ValueRing.Neg(element) -> 
          !fmt.string "(";
          format_list format_value " *" [(mk_int (-1)); element];
@@ -67,8 +79,16 @@ let rec format_value (v:value_t) =
 let rec format_expr (expr:expr_t) = 
    !fmt.bopen 0;
    begin match expr with
-      | CalcRing.Sum(sl)  -> format_list format_expr " +" ~default:"0" sl
-      | CalcRing.Prod(pl) -> format_list format_expr " *" ~default:"1" pl
+      | CalcRing.Sum(sl)  -> 
+         !fmt.string "(";
+         format_list format_expr " +" ~default:"0" sl;
+         !fmt.string ")"
+         
+      | CalcRing.Prod(pl) -> 
+         !fmt.string "(";
+         format_list format_expr " *" ~default:"1" pl;
+         !fmt.string ")"
+         
       | CalcRing.Neg(element) -> 
          !fmt.string "(";
          format_list format_expr " *"
@@ -88,7 +108,7 @@ let rec format_expr (expr:expr_t) =
          !fmt.bclose ();
          !fmt.string "]";
          !fmt.string ", ";
-         !fmt.break 0 2;
+         !fmt.break 0 !line_indent;
          format_expr subexp;
          !fmt.string ")"
       
@@ -133,7 +153,7 @@ let rec format_expr (expr:expr_t) =
          !fmt.string "(";
          !fmt.string (string_of_var v);
          !fmt.string " ^=";
-         !fmt.break 1 2;
+         !fmt.break 1 !line_indent;
          format_expr subexp;
          !fmt.string ")";
       
@@ -144,15 +164,10 @@ let rec format_expr (expr:expr_t) =
 (******************************* API **************************)
 
 let string_of_value v =
-   Buffer.clear Format.stdbuf;
    format_value v;
-   let str = Buffer.contents Format.stdbuf in
-      Buffer.clear Format.stdbuf;
-      str
+   flush_str_formatter ()
+;;
 
 let string_of_expr e =
-   Buffer.clear Format.stdbuf;
    format_expr e;
-   let str = Buffer.contents Format.stdbuf in
-      Buffer.clear Format.stdbuf;
-      str
+   flush_str_formatter ()

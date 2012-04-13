@@ -15,7 +15,11 @@ while true do
       print_string ">> ";
       flush stdout;
       get_schema (input_line stdin)
-   with End_of_file ->
-      print_string "\n\n";
-      exit 0
+   with 
+      | End_of_file ->
+         print_string "\n\n";
+         exit 0
+      | Parsing.Parse_error -> 
+         print_string "PARSE ERROR\n\n"
+         
 done;;

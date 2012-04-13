@@ -934,7 +934,7 @@ let optimize_expr ?(optimizations = default_optimizations)
          print_endline ("OPTIMIZING: "^
             (ListExtras.ocaml_of_list fst ivars)^
             (ListExtras.ocaml_of_list fst ovars)^
-            " ::>> "^
-            (C.string_of_expr x)); x);
+            " ::>> \n"^
+            (CalculusPrinter.string_of_expr x)); x);
    Fixpoint.compute_with_history !fp_1 expr
  
