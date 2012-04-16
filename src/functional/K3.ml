@@ -31,22 +31,12 @@
 open Format
 
 
-(*
-type m3schema  = m3_var_t list
-type extension = m3_var_t list
-type pattern   = int list
-*)
-
 (* Signatures *)
 module type SRSig =
 sig
 		type id_t = string
 		type coll_id_t = string
 		
-    (* Daniel
-    type prebind   = M3.Prepared.pprebind_t
-    type inbind    = M3.Prepared.pinbind_t
-    *)
     (*
     type fn_id_t = string
     type ext_fn_id = Symbol of fn_id_t
