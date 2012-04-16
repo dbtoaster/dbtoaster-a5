@@ -1,22 +1,53 @@
+(**
+   Utilities for invoking second-stage compilers.  The basic operation here is
+   defined in [ExternalCompiler.t.compile], which takes the name of an input and
+   an output file, and invokes the relevant compiler.
+*)
 
+(**/**)
 module StringMap = Map.Make(String);;
+(**/**)
 
-let binary_base_dir = Array.get Sys.argv 0;;
+(** The base directory in which all the binaries live (alpha5/bin) *)
+let binary_base_dir = Filename.dirname (Array.get Sys.argv 0);;
+
+(** Potentially applicable environment variables.  This includes library and
+    include search paths. *)
 let compile_env : string list StringMap.t ref = ref StringMap.empty;;
+
+(** Raw flags to pass to the compiler (e.g., via the command line) *)
 let compiler_flags  = ref [];;
 
+(** 
+   Set a specific environment variable 
+   @param k The environment variable set
+   @param v A list of values to set the value to
+*)
 let set_env k v         = compile_env := StringMap.add k v !compile_env;;
 
+(**
+   Set the inline compiler flags to the provided value
+   @param f The new list of raw compiler flags
+*)
 let set_flags f         = compiler_flags := f;;
 
-module type EC_Base = sig
-   val extension : string
-   val compile : string -> string -> unit
-end
+(**
+   The signature for an external compiler implementation
+*)
+type t = {
+   (** The extension used by files read by this type of external compiler *)
+   extension : string;
 
-module EC_Ocaml_Base : EC_Base = struct
-   let extension = ".ml"
-   let compile in_file_name out_file_name =
+   (** Compile the provided input and output (respectively) files. *)
+   compile   : string -> string -> unit
+}
+
+(**
+   The External Ocaml compiler 
+*)
+let ocaml_compiler = {
+   extension = ".ml" ;
+   compile = (fun in_file_name out_file_name ->
       let ocaml_cc = "ocamlopt" in
       let ocaml_lib_ext = ".cmxa" in
       let dbt_lib_ext = ".cmx" in
@@ -42,12 +73,16 @@ module EC_Ocaml_Base : EC_Base = struct
         (List.map (fun x -> x^ocaml_lib_ext) ocaml_libs) @
         (List.map (fun x -> dbt_lib_path^"/"^x^dbt_lib_ext) dbt_libs) @
         ["-" ; in_file_name ; "-o" ; out_file_name ]
-      ));;
-end
+      ))
+   );
+};;
 
-module EC_CPP_Base : EC_Base = struct
-   let extension = ".cpp"
-   let compile in_file_name out_file_name =
+(**
+   The External C++ compiler 
+*)
+let cpp_compiler = {
+   extension = ".cpp";
+   compile = (fun in_file_name out_file_name ->
      let compile_flags  flag_name env_name =
         ( StringMap.find flag_name !compile_env ) @
         ( try (Str.split (Str.regexp ":") (Unix.getenv env_name)) 
@@ -74,27 +109,13 @@ module EC_CPP_Base : EC_Base = struct
          Debug.print "LOG-GCC" (fun () -> (
             ListExtras.string_of_list ~sep:" " (fun x->x) cpp_args));
          Unix.execvp cpp_cc (Array.of_list cpp_args)
-   ;;
+   )
+};;
 
-end
-
-type t = {
-   extension : string;
-   compile   : string -> string -> unit
-}
-
+(**
+   A dummy "compiler" that will error if you try to compile something with it.
+*)
 let null_compiler = {
    extension = ".?";
    compile   = (fun _ _ -> failwith "Invalid external compiler")
 }
-
-module Make(Compiler : EC_Base) =
-   struct
-      let compiler:t = {
-         extension = Compiler.extension;
-         compile   = Compiler.compile
-      };;
-   end
-
-module OCaml = Make(EC_Ocaml_Base);;
-module CPP = Make(EC_CPP_Base);;

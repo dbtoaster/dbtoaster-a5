@@ -20,6 +20,7 @@ while true do
          print_string "\n\n";
          exit 0
       | Parsing.Parse_error -> 
-         print_string "PARSE ERROR\n\n"
+         print_string "PARSE ERROR\n\n";
+         Parsing.set_trace false
          
 done;;

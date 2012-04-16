@@ -2,25 +2,42 @@
    Global typesystem for use by all of DBToaster's compilation stages.
 *)
 
+(**/**)
 module StringMap = Map.Make(String)
+(**/**)
 
 (**** Global type definitions ****)
-type cmp_t = Eq | Lt | Lte | Gt | Gte | Neq
+(** Comparison operations *)
+type cmp_t = 
+   Eq (** Equals *) | Lt (** Less than *) | Lte (** Less than or equal *)
+ | Gt (** Greater than *) | Gte (** Greater than or equal *) 
+ | Neq (** Not equal *)
+
+(** Basic Types *)
 type type_t = 
-   | TBool
-   | TInt
-   | TFloat
-   | TString   of int
-   | TAny
-   | TExternal of string
+   | TBool                 (** Boolean *)
+   | TInt                  (** Integer *)
+   | TFloat                (** Floating point number *)
+   | TString   of int      (** A string of bounded length n (0 is infinite) *)
+   | TAny                  (** An unspecified type *)
+   | TExternal of string   (** An externally defined type *)
+
+(** Basic Constants *)
 type const_t = 
-   | CBool   of bool
-   | CInt    of int
-   | CFloat  of float
-   | CString of string
+   | CBool   of bool       (** Boolean  *)
+   | CInt    of int        (** Integer *)
+   | CFloat  of float      (** Float *)
+   | CString of string     (** String *)
+
+(** Basic (typed) variables *)
 type var_t = string * type_t
 
-(**** Conversion to Type ****)
+(**** Basic Operations ****)
+(** 
+   Compute the type of a given constant
+   @param a   A constant
+   @return    The type of [a]
+*)
 let type_of_const (a:const_t): type_t =
    begin match a with
       | CBool(_)   -> TBool
@@ -29,7 +46,13 @@ let type_of_const (a:const_t): type_t =
       | CString(s) -> TString(String.length s)
    end
 
-(**** Number conversions ****)
+(** 
+   Cast a constant to an integer.  Floats are truncated, and booleans are 
+   converted to 1/0.  Strings produce an error.
+   @param a   A constant
+   @return    The integer value of [a]
+   @raise Failure If the constant can not be cast to an integer
+*)
 let int_of_const (a:const_t): int = 
    begin match a with
       | CBool(true)  -> 1
@@ -39,6 +62,13 @@ let int_of_const (a:const_t): int =
       | CString(av)  -> failwith "Cannot produce string of integer"
    end
 
+(**
+   Cast a constant to a float.  Integers are promoted, booleans are converted to 
+   1./0..  Strings produce an error.
+   @param a   A constant
+   @return    The floating point value of [a]
+   @raise Failure If the constant can not be cast to a float
+*)
 let float_of_const (a:const_t): float = 
    begin match a with
       | CBool(true)  -> 1.
@@ -49,12 +79,24 @@ let float_of_const (a:const_t): float =
    end
    
 (**** Conversion to Strings ****)
+(**
+   Get the string representation (according to SQL syntax) of a comparison 
+   operation.
+   @param op   A comparison operation
+   @return     The string representation of [op]
+*)
 let string_of_cmp (op:cmp_t): string = 
    begin match op with 
       | Eq  -> "="  | Lt -> "<" | Lte -> "<="
       | Neq -> "!=" | Gt -> ">" | Gte -> ">="
    end
 
+(**
+   Get the string representation (corresponding to the OCaml defined above) of
+   a type
+   @param ty   A type
+   @return     The string representation of the OCaml type declaration of [ty]
+*)
 let ocaml_of_type (ty: type_t): string =
    begin match ty with
       | TAny             -> "TAny"
@@ -65,6 +107,12 @@ let ocaml_of_type (ty: type_t): string =
       | TExternal(etype) -> "TExternal(\""^etype^"\")"
    end
 
+(**
+   Get the human-readable string representation of a type.  (Corresponds to
+   values accepted by Calculusparser)
+   @param ty   A type
+   @return     The human-readable representation of [ty]
+*)
 let string_of_type (ty: type_t): string =
    begin match ty with
       | TAny             -> "?"
@@ -75,6 +123,11 @@ let string_of_type (ty: type_t): string =
       | TExternal(etype) -> "external<"^etype^">"
    end
 
+(**
+   Get the human-readable string representation of a constant.
+   @param a   A constant
+   @return    The human-readable string-representation of [a]
+*)
 let string_of_const (a: const_t): string = 
    begin match a with
       | CBool(true)  -> "true"
@@ -84,6 +137,12 @@ let string_of_const (a: const_t): string =
       | CString(av)  -> av
    end
 
+(**
+   Get the string representation (corresponding to the OCaml defined above) of
+   a constant
+   @param a   A constant
+   @return    The string representation of the OCaml constant declaration of [a]
+*)
 let ocaml_of_const (a: const_t): string =
    begin match a with
       | CBool(true)  -> "CBool(true)"
@@ -93,12 +152,36 @@ let ocaml_of_const (a: const_t): string =
       | CString(s)   -> "CString(\""^s^"\")"
    end
 
+(**
+   Get the string representation of a variable.  If the PRINT-VERBOSE debug mode
+   is active, the variable will be printed with its full type using syntax
+   accepted by Calculusparser.
+   @param var   A variable
+   @return      The string representation of [var]
+*)
 let string_of_var ?(verbose = Debug.active "PRINT-VERBOSE")
                   ((name, vt): var_t): string =
-   if verbose then name^","^(string_of_type vt)
+   if verbose then name^":"^(string_of_type vt)
               else name
 
 (**** Escalation ****)
+(**
+   Given two types, return the "greater" of the two.  
+   {ul
+      {- [TAny] can be escalated to any other type}
+      {- [TBool] can be escalated to [TInt]}
+      {- [TInt] can be escalated to [TFloat]}
+      {- [TString]s of finite length can be escalated to [TStrings] of infinite 
+         length}
+      {- [TString]s of finite length can be escalated to any [TString] of 
+         greater length}
+      {- Two types that can not be escalated will trigger an error.}
+   }
+   @param opname  (optional) The operation name to include in error messages
+   @param a       The first type
+   @param b       The second type
+   @return        A type that both [a] and [b] escalate to.
+*)
 let escalate_type ?(opname="<op>") (a:type_t) (b:type_t): type_t = 
    begin match (a,b) with
       | (at,bt) when at = bt -> at
@@ -106,10 +189,18 @@ let escalate_type ?(opname="<op>") (a:type_t) (b:type_t): type_t =
       | (TInt,TBool) | (TBool,TInt) -> TInt
       | (TBool,TFloat) | (TFloat,TBool) -> TFloat
       | (TInt,TFloat) | (TFloat,TInt) -> TFloat
+      | (TString(0),TString(_)) | (TString(_),TString(0)) -> TString(0)
+      | (TString(alen),TString(blen)) -> TString(max alen blen)
       | _ -> failwith ("Can not compute type of "^(string_of_type a)^" "^
                        opname^" "^(string_of_type b))
    end
 
+(**
+   Given a list of types, return the "greatest" (as [escalate_type])
+   @param opname  (optional) The operation name to include in error messages
+   @param tlist   A list of types
+   @return        A type that every element of [tlist] escalates to
+*)
 let escalate_type_list ?(opname="<op>") tlist = 
    if tlist = [] then TInt
    else 

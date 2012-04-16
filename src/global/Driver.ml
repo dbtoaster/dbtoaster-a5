@@ -184,8 +184,8 @@ let active_stages = ref (ListAsSet.inter
                      (stages_to StageM3DomainMaintenance)
       | K3    -> StagePrintK3::(stages_to StageM3ToK3)
       | Scala -> functional_stages ExternalCompiler.null_compiler
-      | Ocaml -> functional_stages ExternalCompiler.OCaml.compiler
-      | CPP   -> imperative_stages ExternalCompiler.CPP.compiler
+      | Ocaml -> functional_stages ExternalCompiler.ocaml_compiler
+      | CPP   -> imperative_stages ExternalCompiler.cpp_compiler
       | Interpreter
               -> StageRunInterpreter::StageK3ToTargetLanguage::
                      (stages_to StageM3ToK3)

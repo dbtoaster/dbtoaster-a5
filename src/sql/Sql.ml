@@ -1,7 +1,9 @@
 (**
    Internal representation of a SQL parse tree.  The first representation in the 
-   compiler pipeline.
+   compiler pipeline.  Not all features of SQL are supported.  In particular, 
+   only SUM aggregates are available, and there is no HAVING clause.
 
+{[
    CREATE TABLE name(col1 type1[, ...]) 
    FROM type 
    
@@ -9,78 +11,179 @@
    FROM     rel
    WHERE    condition
    GROUP BY 
-   
+]}
 *)
 
 open Types
 
+(**
+   A generic exception pertaining to SQL
+*)
 exception SqlException of string
+
+(**
+   An error associating a given variable with a relation or pseudorelation that
+   is the result of a nested select statement.  The first field is the name of
+   the variable, and the second field is the number of candidates that may be
+   associated with the variable.  0 means no relation/pseudorelation has a
+   variable by that name in its schema, while a number greater than 1 means that
+   more than 1 relation/pseudorelation can be associated with the variable
+*)
 exception Variable_binding_err of string * int
 
+(**/**)
 let error msg = raise (SqlException(msg))
+(**/**)
 
+(**
+   A SQL variable.  The first field is the (optional) relation or pseudorelation 
+   that the variable is associated with.  Distinct from [Types.var_t], because 
+   of this optional relation association.
+*)
 type sql_var_t = string option * string * type_t
 
+(**
+   A SQL schema (list of variables)
+*)
 type schema_t = sql_var_t list
 
+(**
+   A SQL table (analogous to individual elements of [Schema.t]).
+   
+   [Schema.t] is effectively a set of [Sql.table_t]s grouped by source.
+*)
 type table_t = string * schema_t * Schema.rel_type_t *
                (Schema.source_t * Schema.adaptor_t)
 
+(**
+   Sql arithmetic operations
+*)
 type arith_t = Sum | Prod | Sub | Div
 
+(**
+   Sql aggregate types
+*)
 type agg_t = SumAgg
 
+(**
+   A Sql expression (which appears in either the target clause, or as part of a 
+   comparison condition)
+*)
 type expr_t = 
- | Const      of const_t
- | Var        of sql_var_t
- | SQLArith   of expr_t * arith_t * expr_t
- | Negation   of expr_t
- | NestedQ    of select_t
- | Aggregate  of agg_t * expr_t
+ | Const      of const_t                    (** A constant value *)
+ | Var        of sql_var_t                  (** A variable *)
+ | SQLArith   of expr_t * arith_t * expr_t  (** A binary arithmetic operation *)
+ | Negation   of expr_t                     (** Negation of an expression *)
+ | NestedQ    of select_t                   (** A single-target nested query 
+                                                (which evaluates to a constant 
+                                                value) *)
+ | Aggregate  of agg_t * expr_t             (** An aggregate operator.  This
+                                                only makes sense if this
+                                                expression appears in the target 
+                                                (or having) clause(s). *)
 
+(**
+   A member of the target clause (a named Sql expression).  The result of the 
+   query will include a column with the indicated name with values based on the 
+   provided expression.
+*)
 and target_t = string * expr_t
 
+(**
+   A member of the where clause (or technically, having clauses, if they were 
+   supported).  This is a boolean query.
+*)
 and cond_t   = 
- | Comparison of expr_t * cmp_t * expr_t
- | And        of cond_t * cond_t
- | Or         of cond_t * cond_t
- | Not        of cond_t
- | Exists     of select_t
- | ConstB     of bool
+ | Comparison of expr_t * cmp_t * expr_t (** A comparison between two 
+                                             expressions *)
+ | And        of cond_t * cond_t         (** A conjunction between two 
+                                             conditions *)
+ | Or         of cond_t * cond_t         (** A disjunction between two
+                                             conditions *)
+ | Not        of cond_t                  (** The negation of a condition *)
+ | Exists     of select_t                (** An existential subquery *)
+ | ConstB     of bool                    (** A boolean constant *)
 
+(**
+   A member of a from clause.  This can either be a relation, or a nested 
+   subquery
+*)
 and source_t = 
- | Table of (*rel name*) string
- | SubQ  of select_t
+ | Table of string   (** A table *)
+ | SubQ  of select_t (** A subquery *)
 
+(**
+   A named member of a from clause.
+*)
 and labeled_source_t = string * source_t
 
+(**
+   A full SQL [SELECT] query.  Consists of [target clause] x [from clause] x 
+   [where clause] x [group by clause].  A non-group-by query has an empty group-
+   by clause.
+*)
 and select_t =
    (* SELECT   *) target_t list *
    (* FROM     *) labeled_source_t list *
    (* WHERE    *) cond_t *
    (* GROUP BY *) sql_var_t list
 
+(**
+   A SQL statement.  This can be either a [CREATE TABLE] statement or a [SELECT]
+   statement 
+*)
 type t = 
  | Create_Table of table_t
  | Select       of select_t
 
+(**
+   The content of a SQL file.  This includes all the tables defined in the file
+   and all select statements appearing in the file
+*)
 type file_t = table_t list * select_t list
 
 (* Construction Helpers *)
+(**
+   Generate a SQL file from a provided statememnt.
+   @param stmt  A SQL statement
+   @return      A SQL file containing only [stmt]
+*)
 let mk_file (stmt:t): file_t =
    match stmt with
     | Create_Table(table) -> ([table], [])
     | Select(select)      -> ([], [select])
 
+(**
+   Merge the content of two SQL files.
+   @param lhs  A SQL file
+   @param rhs  A SQL file
+   @return     A SQL file containing everything in both [lhs] and [rhs]
+*)
 let merge_files (lhs:file_t) (rhs:file_t): file_t =
    ((fst lhs) @ (fst rhs), (snd lhs) @ (snd rhs))
 
+(**
+   An empty SQL file
+*)
 let empty_file:file_t = ([],[])
 
-
+(**
+   Add a statement to a SQL file
+   @param stmt A SQL statement
+   @param file A SQL file
+   @return     A SQL file containing [stmt] and everything in [file]
+*)
 let add_to_file (stmt:t) (file:file_t): file_t =
    merge_files file (mk_file stmt)
 
+(**
+   Create a conjunction between two terms.  If either term is a boolean
+   constant, then evaluate the conjunction in-place.
+   @param lhs  A condition
+   @param rhs  A condition
+   @return     [lhs]^[rhs] if neither is a boolean constant, [false] if either
+               is [false], or if either is [true] then return the other.
+*)
 let mk_and (lhs:cond_t) (rhs:cond_t): cond_t =
    match lhs with
     | ConstB(true) -> rhs
@@ -92,6 +195,14 @@ let mk_and (lhs:cond_t) (rhs:cond_t): cond_t =
        | _ -> And(lhs, rhs)
     )
 
+(**
+   Create a disjunction between two terms.  If either term is a boolean
+   constant, then evaluate the disjunction in-place.
+   @param lhs  A condition
+   @param rhs  A condition
+   @return     [lhs]V[rhs] if neither is a boolean constant, [true] if either
+               is [true], or if either is [false] then return the other.
+*)
 let mk_or (lhs:cond_t) (rhs:cond_t): cond_t =
    match lhs with
     | ConstB(true) -> ConstB(true)

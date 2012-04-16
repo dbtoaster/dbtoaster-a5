@@ -21,6 +21,15 @@
    
    This guarantee is used by DBToaster.CalculusDecomposition
 *)
+
+(**
+   Compute the {b set} of connected edges in the provided hypergraph
+   @param get_nodes  A function for obtaining the nodes that each edge is 
+                     connected to
+   @param hypergraph The list of edges in the hypergraph
+   @return           A list of list {b sets}, describing each edge in the
+                     hypergraph, with duplicates eliminated.
+*)
 let rec connected_unique_components (get_nodes: 'edge_t -> 'node_t list)
                                     (hypergraph: 'edge_t list): 
                                        ('edge_t list list) =
@@ -39,6 +48,14 @@ let rec connected_unique_components (get_nodes: 'edge_t -> 'node_t list)
       [c] @ (connected_unique_components get_nodes
                                          (ListAsSet.diff hypergraph c))
 
+(**
+   Compute the {b bag} of connected edges in teh provided hypergraph
+   @param get_nodes  A function for obtaining the nodes that each edge is 
+                     connected to
+   @param hypergraph The list of edges in the hypergraph
+   @return           A list of list {b bags}, describing each edge in the
+                     hypergraph, without duplicates eliminated.
+*)
 let connected_components (get_nodes: 'edge_t -> 'node_t list)
                          (hypergraph: 'edge_t list): 
                             ('edge_t list list) =
