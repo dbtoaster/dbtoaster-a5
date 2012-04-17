@@ -131,7 +131,7 @@ valueLeaf:
 | functionDefn                { ValueRing.mk_val $1 }
 
 calculusExpr:
-| ivcCalculusExpr             { Calculus.strip_calc_metadata $1 }
+| ivcCalculusExpr             { (* Calculus.strip_calc_metadata *) $1 }
 
 ivcCalculusExpr:
 | LPAREN ivcCalculusExpr RPAREN   { $2 }

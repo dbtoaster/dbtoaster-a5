@@ -14,10 +14,13 @@
 
 open Types
 
+(**
+   Precursor for the base type for the Arithmetic ring
+*)
 type 'term arithmetic_leaf_t =
-   | AConst of const_t
-   | AVar   of var_t
-   | AFn    of string * 'term list * type_t
+   | AConst of const_t                       (** A constant value *)
+   | AVar   of var_t                         (** A variable *)
+   | AFn    of string * 'term list * type_t  (** A function application *)
 
 module rec 
 ValueBase : sig
@@ -29,21 +32,43 @@ ValueBase : sig
       let zero = AConst(CInt(0))
       let one  = AConst(CInt(1))
    end and
+(**
+   The value ring
+*)
 ValueRing : Ring.Ring with type leaf_t = ValueBase.t
          = Ring.Make(ValueBase)
 
+(**
+   The base type for the Arithmetic ring (see [arithmetic_leaf_t] above)
+*)
 type value_leaf_t = ValueRing.leaf_t
+
+(**
+   Values, or elements of the Arithmetic ring
+*)
 type value_t      = ValueRing.expr_t
 
 (**** Constructors ****)
+(** Produce the value equivalent of a boolean *)
 let mk_bool   (b:bool   ):value_t = ValueRing.mk_val (AConst(CBool(b)))
+(** Produce the value equivalent of an integer *)
 let mk_int    (i:int    ):value_t = ValueRing.mk_val (AConst(CInt(i)))
+(** Produce the value equivalent of a floating point number *)
 let mk_float  (f:float  ):value_t = ValueRing.mk_val (AConst(CFloat(f)))
+(** Produce the value equivalent of a string *)
 let mk_string (s:string ):value_t = ValueRing.mk_val (AConst(CString(s)))
+(** Produce the value equivalent of an arbitrary constant *)
 let mk_const  (c:const_t):value_t = ValueRing.mk_val (AConst(c))
+(** Produce the value equivalent of a variable *)
 let mk_var    (v:var_t  ):value_t = ValueRing.mk_val (AVar(v))
 
 (**** Stringifiers ****)
+(**
+   Generate the (Calculusparser-compatible) string representation of a base 
+   type in the Arithmetic ring
+   @param leaf   A base (leaf) element of the Arithmetic ring
+   @return       The string representation of [leaf]
+*)
 let rec string_of_value_leaf (leaf:value_leaf_t): string =
    begin match leaf with
       | AConst(c) -> string_of_const c
@@ -51,6 +76,12 @@ let rec string_of_value_leaf (leaf:value_leaf_t): string =
       | AFn(fname,fargs,ftype) ->
          fname^"("^(ListExtras.string_of_list string_of_value fargs)^")"
    end
+
+(**
+   Generate the (Calculusparser-compatible) string representation of a value.
+   @param v       A value (Arithmetic ring expression)
+   @return        The string representation of [v]
+*)
 and string_of_value (a_value:value_t): string = 
    ValueRing.fold
       (fun sum_list  -> "("^(String.concat " + " sum_list )^")")
@@ -60,6 +91,11 @@ and string_of_value (a_value:value_t): string =
       a_value
 
 (**** Variable Operations ****)
+(**
+   Obtain the set of variables that appear in the specified value.
+   @param v    A value
+   @return     The set of variables that appear in [v] as a list
+*)
 let rec vars_of_value (v: value_t): var_t list =
    ValueRing.fold
       ListAsSet.multiunion
@@ -72,6 +108,12 @@ let rec vars_of_value (v: value_t): var_t list =
       end)
       v
 
+(**
+   Apply the provided mapping to the variables appearing in the specified value.
+   @param mapping The mapping to apply to [v]
+   @param v       A value
+   @return        [v] with [mapping] applied to all of its variables
+*)
 let rec rename_vars (mapping:(var_t,var_t)Function.table_fn_t) (v: value_t): 
                     value_t =
    ValueRing.fold
@@ -86,8 +128,12 @@ let rec rename_vars (mapping:(var_t,var_t)Function.table_fn_t) (v: value_t):
       v
 
 (**** Typechecker ****)
-
-let rec type_of_value ?(default_type = TAny) (a_value: value_t): type_t =
+(**
+   Compute the type of the specified value.
+   @param v   A value
+   @return    The type of [v]
+*)
+let rec type_of_value (a_value: value_t): type_t =
    ValueRing.fold
       (escalate_type_list ~opname:"+")
       (escalate_type_list ~opname:"*")
@@ -97,15 +143,24 @@ let rec type_of_value ?(default_type = TAny) (a_value: value_t): type_t =
          | AConst(c)  -> type_of_const c
          | AVar(_,vt) -> vt
          | AFn(_,fn_args,fn_type) ->
-            List.iter (fun x -> let _ = type_of_value 
-                                             ~default_type:default_type 
-                                             x in ())
+            List.iter (fun x -> let _ = type_of_value x in ())
                       fn_args;
             fn_type
       )
       a_value
 
 (**** Arithmetic ****)
+(**
+   Perform a type-escalating binary arithmetic operation over two constants
+   @param b_op   The operation to apply to boolean constants
+   @param i_op   The operation to apply to integer constants
+   @param f_op   The operation to apply to floating point constants
+   @param a      A constant
+   @param b      A constant
+   @return       The properly wrapped result of applying [b_op], [i_op], or 
+                 [f_op] to [a] and [b], as appropriate.
+   @raise Failure If [a] or [b] is a string.
+*)
 let binary_op (b_op: bool   -> bool   -> bool)
               (i_op: int    -> int    -> int)
               (f_op: float  -> float  -> float)
@@ -124,21 +179,39 @@ let binary_op (b_op: bool   -> bool   -> bool)
          failwith "Binary math op over a string"
    end
 
+(** Perform type-escalating addition over two constants *)
 let sum  = binary_op ( fun x->failwith "sum of booleans" ) ( + ) ( +. )
+(** Perform type-escalating addition over an arbitrary number of constants *)
 let suml = List.fold_left sum (CInt(0))
+(** Perform type-escalating multiplication over two constants *)
 let prod = binary_op ( && ) ( * ) ( *. )
+(** Perform type-escalating multiplication over an arbitrary number of 
+    constants *)
 let prodl= List.fold_left prod (CInt(1))
+(** Negate a constant *)
 let neg  = binary_op (fun x y -> failwith "Negation of a boolean") 
                      ( * ) ( *. ) (CInt(-1))
+(** Compute the multiplicative inverse of a constant *)
 let div1 a   = binary_op (fun x->failwith "Dividing a boolean 1") 
                          (/) (/.) (CInt(1)) a
+(** Perform type-escalating division of two constants *)
 let div2 a b = binary_op (fun x->failwith "Dividing a boolean 2")
                          (/) (/.) a b
 
 (**** Functions ****)
+(**
+   An internally maintained set of arithmetic functions (Arithmetic ring 
+   elements of type [AFn]) for doing inline evaluation.
+   
+   Initially, a single function "/" is defined, which computes 1/x if it is 
+   invoked with one parameter, or x/y if invoked with two parameters.
+*)
 let arithmetic_functions: 
    (type_t * (const_t list -> const_t)) StringMap.t ref = ref StringMap.empty
 
+(**
+   Declare a new arithmetic function.
+*)
 let declare_arithmetic_function (name:string) (out_type:type_t) 
                                 (fn:const_t list -> const_t): unit =
    arithmetic_functions := 
@@ -153,7 +226,11 @@ declare_arithmetic_function "/" TFloat
             failwith "Invalid arguments to division function"
    )
 ;;
+
 (**** Evaluation ****)
+(**
+   Evaluate the specified value to a constant
+*)
 let rec eval ?(scope=StringMap.empty) (v:value_t): const_t = 
    ValueRing.fold suml prodl neg (fun lf ->
       match lf with 

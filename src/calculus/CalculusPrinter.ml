@@ -138,7 +138,14 @@ let rec format_expr (expr:expr_t) =
          !fmt.bopen 0;
          format_list (dump string_of_var) "," ovars;
          !fmt.bclose ();
-         !fmt.string "]"
+         !fmt.string "]";
+         begin match extivc with
+            | None -> ()
+            | Some(ivcexpr) -> 
+               !fmt.string "(";
+               format_expr ivcexpr;
+               !fmt.string ")"
+         end
       
       | CalcRing.Val(Cmp(cmpop, lhs, rhs)) ->
          !fmt.string "[";

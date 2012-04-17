@@ -23,8 +23,8 @@ exception SqlException of string
 
 (**
    An error associating a given variable with a relation or pseudorelation that
-   is the result of a nested select statement.  The first field is the name of
-   the variable, and the second field is the number of candidates that may be
+   is the result of a nested select statement.  The first field is the error
+   string, and the second field is the number of candidates that may be
    associated with the variable.  0 means no relation/pseudorelation has a
    variable by that name in its schema, while a number greater than 1 means that
    more than 1 relation/pseudorelation can be associated with the variable
@@ -214,19 +214,41 @@ let mk_or (lhs:cond_t) (rhs:cond_t): cond_t =
        | _ -> Or(lhs, rhs)
     )
 
-(* Printing *)
-
+(**** Printing ****)
+(**
+   Produce the (Sqlparser-compatible) symbol of the specified arithmetic 
+   operator.
+   @param op  An arithmetic operator
+   @return    The symbol corresponding to [op]
+*)
 let string_of_arith_op (op:arith_t): string =
    match op with
       | Sum -> "+" | Prod -> "*" | Sub -> "-" | Div -> "/"
 
+(**
+   Produce the (Sqlparser-compatible) name of the specified aggregate function 
+   (without parenthesis).
+   @param agg   An aggregate function
+   @return      The function name of [var]
+*)
 let string_of_agg (agg:agg_t): string =
    match agg with SumAgg -> "SUM"
 
+(**
+   Produce the (Sqlparser-compatible) fully qualified (if possible) name of the
+   specified variable.
+   @param var  A SQL variable
+   @return     The fully qualified (if possble) string form of [var]
+*)
 let string_of_var ((s,v,_):sql_var_t): string =
    match s with Some(source) -> source^"."^v | None -> v
-    (*^":"^(string_of_type t)*)
 
+(**
+   Produce the (Sqlparser-compatible) representation of the specified SQL 
+   expression.
+   @param expr  A SQL expression
+   @return      The string representation of [expr]
+*)
 let rec string_of_expr (expr:expr_t): string =
    match expr with
       | Const(c) -> string_of_const c
@@ -239,6 +261,12 @@ let rec string_of_expr (expr:expr_t): string =
       | Aggregate(agg,a) -> (string_of_agg agg)^"("^
                             (string_of_expr a)^")"
 
+(**
+   Produce the (Sqlprser-compatible) representation of the specified SQL 
+   condition
+   @param cond  A SQL condition
+   @return      The string representation of [cond]
+*)
 and string_of_cond (cond:cond_t): string =
    match cond with 
       | Comparison(a,cmp,b) -> "("^(string_of_expr a)^")"^
@@ -251,6 +279,12 @@ and string_of_cond (cond:cond_t): string =
       | ConstB(true)  -> "TRUE"
       | ConstB(false) -> "FALSE"
 
+(**
+   Produce the (Sqlparser-compatible) representation of the specified SQL 
+   [SELECT] query.
+   @param stmt  A SQL [SELECT] statement
+   @return      The string representation of [stmt]
+*)
 and string_of_select (stmt:select_t): string =
    let (target,from,where,gb) = stmt in
    "SELECT "^(ListExtras.string_of_list ~sep:", " 
@@ -272,6 +306,12 @@ and string_of_select (stmt:select_t): string =
       else "")^
    ";"
 
+(**
+   Produce the (Sqlparser-compatible) representation of the specified [CREATE
+   TABLE] statement.
+   @param stmt   A SQL [CREATE TABLE] statement
+   @return       The string representation of [stmt]
+*)
 let string_of_table ((name, vars, reltype, (source, adaptor)):table_t): string =
    
    "CREATE "^(if reltype == Schema.TableRel then "TABLE" else "STREAM")^
@@ -282,7 +322,13 @@ let string_of_table ((name, vars, reltype, (source, adaptor)):table_t): string =
       ");"
 
 (* Misc Utility *)
-
+(**
+   Given a list of tables, return the table with the specified name
+   @param t       The table to find in [tables]
+   @param tables  A list of tables
+   @return        The table in [tables] with name [t]
+   @raise SqlException If [tables] contains no table named [t]
+*)
 let find_table (t:string) (tables:table_t list): table_t =
    try 
       List.find (fun (t2,_,_,_) -> t = t2) tables
@@ -291,6 +337,14 @@ let find_table (t:string) (tables:table_t list): table_t =
 
 ;;
 
+(**
+   Compute the type of a SQL expression.
+   @param expr    A SQL expression
+   @param tables  The database schema (a list of all tables)
+   @param sources All members of the [FROM] clause in the [SELECT] statement
+                  in the context of which [expr] is being evaluated.
+   @return        The type of [expr]
+*)
 let rec expr_type (expr:expr_t) (tables:table_t list) 
                   (sources:labeled_source_t list): type_t =
    let tree_err msg = 
@@ -318,13 +372,32 @@ let rec expr_type (expr:expr_t) (tables:table_t list)
             | SumAgg -> return_if_numeric (rcr subexp) "Aggregate of "
          end
          
-      
+(**
+   Compute the schema of a [SELECT] statement
+   @param tables  The database schema (a list of all tables)
+   @param stmt    The [SELECT] statement
+   @return        The schema (types/names) of the result of [stmt]
+*)
 and select_schema (tables:table_t list) (stmt:select_t): schema_t =
    let (targets, sources, _, _) = stmt in
    List.map (fun (name, expr) -> 
       (None, string_of_expr expr, expr_type expr tables sources)
    ) targets
-   
+
+(**
+   Find the member of a [FROM] clause that a specified SQL variable's name 
+   should be associated with.
+   @param v       A SQL variable's name
+   @param tables  The database schema (a list of all tables)
+   @param sources All members of the [FROM] clause in the [SELECT] statement
+                  in the context of which the variable named [v] is being 
+                  evaluated.
+   @return        The element of [sources] that has a schema with a column
+                  named [v]
+   @raise Variable_binding_err If no element of [sources] has a schema with a
+                               column named [v], or if multiple elements of 
+                               [sources] have columns named [v]
+*)
 and source_for_var_name (v:string) (tables:table_t list) 
                         (sources:labeled_source_t list): labeled_source_t =
    let candidates =
@@ -345,7 +418,20 @@ and source_for_var_name (v:string) (tables:table_t list)
          raise (Variable_binding_err(v,List.length candidates))
       else
          List.hd candidates
-      
+(**
+   Find the member of a [FROM] clause that a specified variable should be 
+   associated with.  If the variable is already associated with a source, the
+   source name is validated and the corresponding source is returned.
+   @param var    A SQL variable
+   @param tables  The database schema (a list of all tables)
+   @param sources All members of the [FROM] clause in the [SELECT] statement
+                  in the context of which [var] is being evaluated.
+   @return        The element of [sources] that [var] is associated with.
+   @raise Variable_binding_error If [var] can not be associated with a source, 
+                                 can be associated with multiple sources, or
+                                 has already been associated with a source, 
+                                 which is not present in [sources]
+*)
 and source_for_var ((s,v,_):sql_var_t) (tables:table_t list) 
                    (sources:labeled_source_t list): labeled_source_t =
    match s with 
@@ -360,7 +446,17 @@ and source_for_var ((s,v,_):sql_var_t) (tables:table_t list)
             ))
       | None -> source_for_var_name v tables sources
       
-
+(**
+   Obtain the type of the specified variable.  If the variable has the wildcard
+   type [TAny], attempt to dereference the variable and obtain the variable's 
+   type from schema information.
+   @param v       A SQL variable
+   @param tables  The database schema (a list of all tables)
+   @param sources All members of the [FROM] clause in the [SELECT] statement
+                  in the context of which [v] is being evaluated.
+   @return        The variable's type as encoded in [v], or if that type is 
+                  [TAny], the variable's type information from the schema.
+*)
 and var_type (v:sql_var_t) (tables:table_t list) 
              (sources:labeled_source_t list): type_t =
    let (_,vn,t) = v in
@@ -388,6 +484,18 @@ and var_type (v:sql_var_t) (tables:table_t list)
 
 ;;
 
+(**
+   Ensure that all variables in a SQL [SELECT] statement have been associated
+   with one of the sources in the statement or one of its parents.  This is
+   a deep rewriting.
+   @param parent_sources (optional) A list of sources in the context of which
+                         [stmt] is being evaluated.
+   @param stmt           A SQL [SELECT] statement.
+   @param tables         The database schema (a list of all tables)
+   @return               [stmt] recursively rewritten with all of its variables 
+                         bound to a source in the [FROM] clause of an enclosing
+                         [SELECT] statement.
+*)
 let rec bind_select_vars ?(parent_sources = [])
                          ((targets,inner_sources,conds,gb):select_t)
                          (tables:table_t list): select_t =
@@ -408,6 +516,17 @@ let rec bind_select_vars ?(parent_sources = [])
       ) gb
    )
 
+(**
+   Ensure that all variables in a SQL condition have been associated with
+   one of the sources in the statement or one of its parents
+   @param cond    A SQL condition
+   @param tables  The database schema (a list of all tables)
+   @param sources All members of the [FROM] clause in the [SELECT] statement
+                  in the context of which [cond] is being evaluated.
+   @return        [cond] recursively rewritten with all of its variables bound
+                  to a source in [sources] or (as appropriate) a source nested
+                  within [cond].
+*)
 and bind_cond_vars (cond:cond_t) (tables:table_t list)
                    (sources:labeled_source_t list): cond_t =
    let rcr_c c = bind_cond_vars c tables sources in
@@ -421,7 +540,17 @@ and bind_cond_vars (cond:cond_t) (tables:table_t list)
       | Exists(q) -> Exists(rcr_q q)
       | ConstB(_) -> cond
    
-
+(**
+   Ensure that all variables in a SQL expression have been associated with
+   one of the sources in the statement or one of its parents
+   @param expr    A SQL expression
+   @param tables  The database schema (a list of all tables)
+   @param sources All members of the [FROM] clause in the [SELECT] statement
+                  in the context of which [expr] is being evaluated.
+   @return        [expr] recursively rewritten with all of its variables bound
+                  to a source in [sources] or (as appropriate) a source nested
+                  within [expr].
+*)
 and bind_expr_vars (expr:expr_t) (tables:table_t list) 
                    (sources:labeled_source_t list): expr_t =
    let rcr_e e = bind_expr_vars e tables sources in
@@ -439,6 +568,11 @@ and bind_expr_vars (expr:expr_t) (tables:table_t list)
       | NestedQ(q) -> NestedQ(rcr_q q)
       | Aggregate(agg,a) -> Aggregate(agg, rcr_e a)
 
+(**
+   Determine whether the indicated expression requires an aggregate computation.
+   @param expr   A SQL expression
+   @return       True if evaluating [expr] requires an aggregate computation.
+*)
 let rec is_agg_expr (expr:expr_t): bool =
    match expr with 
       | Const(_) -> false
@@ -448,12 +582,20 @@ let rec is_agg_expr (expr:expr_t): bool =
       | NestedQ(_) -> false
       | Aggregate(_,_) -> true
 
+(**
+   Determine whether the indicated SQL query is an aggregate query.
+   @param stmt   A SQL [SELECT] statement
+   @return       True if [stmt] describes an aggregate query
+*)
 let is_agg_query ((targets,_,_,_):select_t): bool =
    List.exists is_agg_expr (List.map snd targets)
 ;;
+
+(**/**)
 let global_table_defs:(string * table_t) list ref = ref []
 ;;
 let reset_table_defs () = 
    (*print_endline ("Resetting tables; Old Tables Are: "^(
       string_of_list0 ", " fst !global_table_defs));*)
    global_table_defs := []
+(**/**)
