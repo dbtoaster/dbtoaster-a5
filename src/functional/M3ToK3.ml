@@ -6,7 +6,7 @@ open Calculus
 module T = Types
 module V = Arithmetic.ValueRing
 module C = Calculus.CalcRing
-module K = K3.SR
+module K = K3
 
 
 

@@ -1,5 +1,5 @@
 open Types
-module K = K3.SR
+module K = K3
 
 (***************************
 * Typechecking:
@@ -69,7 +69,7 @@ let expr_error (expr: K.expr_t) (msg: string) = (
 		Debug.print "K3-TYPECHECK-DETAIL" (fun () -> msg ^"\n\n"^ (K.code_of_expr expr));
 		failwith msg
 	)
-let type_error (t: K3.SR.type_t) (msg: string) = (
+let type_error (t: K.type_t) (msg: string) = (
 		Debug.print "K3-TYPECHECK-DETAIL" (fun () -> msg ^"\n\n"^ (K.string_of_type t));
 		failwith msg
 	)

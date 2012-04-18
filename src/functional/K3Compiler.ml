@@ -1,4 +1,4 @@
-module K = K3.SR
+module K = K3
 
 module Make = functor (CG : K3Codegen.CG) ->
 struct
@@ -122,7 +122,7 @@ let compile_triggers trigs : code_t list =
     trigs
     
 let compile_k3_to_code (dbschema:Schema.t)
-                       ((schema,patterns,trigs) : K3.SR.prog_t)
+                       ((schema,patterns,trigs) : K3.prog_t)
                        (toplevel_queries : string list): code_t =
    let rels = List.map (fun (reln,relv,_) -> (reln,relv))
                        (Schema.rels dbschema) in

@@ -1,5 +1,5 @@
 open Types
-open K3.SR
+open K3
 open Values
 open Values.K3Value
 open Sources
@@ -53,7 +53,7 @@ struct
         | Trigger(x,y) -> (x,y)
         | _ -> failwith "unable to eval trigger"
 
-    let rec is_flat (t:K3.SR.type_t) = match t with
+    let rec is_flat (t:K3.type_t) = match t with
         | TBase _ -> true
         | TTuple t -> List.for_all is_flat t
         | _ -> false

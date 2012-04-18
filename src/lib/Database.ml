@@ -213,7 +213,7 @@ sig
    type db_key_t       = map_name_t list
 
    type dom_t          = value_t list
-   type schema_t       = K3.SR.map_t list
+   type schema_t       = K3.map_t list
    type pattern_t      = int list
    type patterns_t     = Patterns.pattern_map
 
@@ -291,7 +291,7 @@ struct
    type db_key_t       = map_name_t list
       
    type dom_t          = value_t list
-   type schema_t       = K3.SR.map_t list
+   type schema_t       = K3.map_t list
    type pattern_t      = S.pattern_t
    type patterns_t     = Patterns.pattern_map
 
@@ -365,7 +365,7 @@ struct
    let get_out_patterns mapn (_,pats) =
       M3CP.get_out_patterns pats (map_name_to_string mapn)
 
-   let make_empty_db (schema:K3.SR.map_t list) (patterns:Patterns.pattern_map): 
+   let make_empty_db (schema:K3.map_t list) (patterns:Patterns.pattern_map): 
                      db_t =
         let f (mapn, itypes, _) =
            let (in_patterns, out_patterns) = get_patterns patterns mapn in
@@ -524,7 +524,7 @@ struct
    let get_out_patterns mapn (_,_,_,pats) =
       M3CP.get_out_patterns pats (map_name_to_string mapn)
 
-   let make_empty_db (schema:K3.SR.map_t list) (patterns:Patterns.pattern_map):
+   let make_empty_db (schema:K3.map_t list) (patterns:Patterns.pattern_map):
                      db_t =
         let io_f (mapn, itypes, _) =
            let (in_patterns, _) = get_patterns patterns mapn in
@@ -794,7 +794,7 @@ struct
    let get_out_patterns mapn (_,pats) =
       M3CP.get_out_patterns pats (map_name_to_string mapn)
 
-   let make_empty_db (schema:K3.SR.map_t list) (patterns:Patterns.pattern_map):
+   let make_empty_db (schema:K3.map_t list) (patterns:Patterns.pattern_map):
                      db_t =
        let f (mapn, itypes, otypes) =
           let (in_pat, out_pat) = get_patterns patterns mapn in

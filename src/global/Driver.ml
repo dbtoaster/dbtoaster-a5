@@ -268,7 +268,7 @@ let dm_program:(M3DM.dm_prog_t ref) = ref( ref ([]));;
    set of triggers, each of which causes the execution of a k3 expression. 
    The K3 program also includes a list of map patterns.
    *)
-let k3_program:(K3.SR.prog_t ref) = ref ([],[],[]);;
+let k3_program:(K3.prog_t ref) = ref ([],[],[]);;
 
 (* If we're running in interpreter mode, we'll need to compile the query into
    an ocaml-executable form.  This is where that executable ``code'' goes. 
@@ -276,7 +276,7 @@ let k3_program:(K3.SR.prog_t ref) = ref ([],[],[]);;
    k3 program that generated this so that we can properly initialize the 
    database *)
 let interpreter_program:
-   (K3.SR.map_t list * Patterns.pattern_map * K3Interpreter.K3CG.code_t) ref = 
+   (K3.map_t list * Patterns.pattern_map * K3Interpreter.K3CG.code_t) ref = 
       ref ([], [], K3Interpreter.K3CG.const(Types.CInt(0)))
 
 (* String representation of the source code being produced *)
@@ -452,7 +452,7 @@ if stage_is_active StageOptimizeK3 then (
 )
 ;;
 if stage_is_active StagePrintK3 then (
-   output_endline (K3.SR.code_of_prog !k3_program)
+   output_endline (K3.code_of_prog !k3_program)
 )
 ;;
 module K3InterpreterCG = K3Compiler.Make(K3Interpreter.K3CG)

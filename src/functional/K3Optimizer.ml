@@ -388,7 +388,7 @@
  *)
 
 open Types
-open K3.SR
+open K3
 
 type optimization_t = CSE | Beta | NoFilter
 
@@ -711,7 +711,7 @@ let rec conservative_beta_reduction substitutions expr =
  *    bound variables, i.e. trigger vars and variables bound by lambdas.
  *)
 let rec lift_ifs bindings expr =
-   Debug.print "LOG-K3-OPT-LIFTIF" (fun () -> K3.SR.string_of_expr expr);
+   Debug.print "LOG-K3-OPT-LIFTIF" (fun () -> K3.string_of_expr expr);
     let lift_branches e =
         let rec expand_children acc_branches rem_branches
                                 (branch : expr_t list) acc_branch : expr_t =
@@ -1402,7 +1402,7 @@ let optimize ?(optimizations=[]) trigger_vars expr =
 type ds_trig_decl = Schema.event_t * id_t * id_t list 
 type ds_map_decls = map_t list * Patterns.pattern_map 
 
-type ds_statement = ds_map_decls * K3.SR.expr_t list
+type ds_statement = ds_map_decls * K3.expr_t list
 type ds_trigger = ds_trig_decl * ds_statement list
 type ds_program = ds_map_decls * ds_trigger list
 
