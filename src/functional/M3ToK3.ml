@@ -71,14 +71,15 @@ let compatible_types t1 t2 = begin match t1, t2 with
 	end
 
 let numerical_type t = begin match t with
+	| K.TBase(T.TBool)  -> true
 	| K.TBase(T.TInt)   -> true
 	| K.TBase(T.TFloat) -> true
 	| _ -> false
 	end
 
 let init_val_from_type ret_type = begin match ret_type with
-	| T.TInt   -> one_int_val
-	| T.TFloat -> one_flt_val
+	| T.TInt   -> zero_int_val
+	| T.TFloat -> zero_flt_val
 	| _ -> failwith "invalid return type."
 	end
 		
@@ -175,13 +176,11 @@ let map_access_to_expr mapn ins outs map_ret_t theta_vars_el init_expr_opt =
 		let map_ret_k = K.TBase(map_ret_t) in
 		let map_out_t = if outs_tl = [] then map_ret_k
 										else K.Collection(K.TTuple(outs_tl@[map_ret_k])) in
-		let map_t     = if ins_tl = [] then map_out_t
-								    else K.Collection(K.TTuple(ins_tl@[map_out_t])) in
 		
 		let map_ret_ve = K.Var("map_ret",map_ret_k) in
 		let map_out_ve = K.Var("slice",map_out_t) in
-		let map_ve     = K.Var("m",map_t) in
-		
+		let iv_e = K.Var("init_val", map_out_t) in
+					
 		let slice_and_project coll_ve : K.expr_t =
 			assert (free_vars_el <> []);
 			if free_vars_el = outs_el then coll_ve
@@ -189,30 +188,31 @@ let map_access_to_expr mapn ins outs map_ret_t theta_vars_el init_expr_opt =
 				K.Map( project_fn (outs_el@[map_ret_ve]) (free_vars_el@[map_ret_ve]), 
 							 K.Slice(coll_ve, outs_k, keys_from_kvars bound_vars_el))
 		in
-		let single_access_and_init_expr sch_el =	
-				if init_expr_opt = None then K.Lookup(map_ve,sch_el)
-	      else 
-						let init_expr = extract_opt init_expr_opt in						
-						let iv_e = K.Var("init_val", map_ret_k) in
-						K.IfThenElse(K.Member(map_ve,sch_el), 
-												 K.Lookup(map_ve,sch_el), 
-												 apply_lambda [iv_e] [init_expr] 
-														(K.Block([K.PCValueUpdate(map_ve, ins_el, outs_el, iv_e); 
-																		iv_e])))
-		in
+		
 		let expr = begin match ins, outs with
 	  | ([],[]) -> K.SingletonPC(mapn, map_ret_k)
 	  | ([], y) ->       
 			let map_expr = K.OutPC(mapn, outs_k, map_ret_k) in
-			let access_expr =	
-				if free_vars_el = [] then single_access_and_init_expr outs_el      		
-	      else                      slice_and_project map_ve
-			in 
-			apply_lambda [map_ve] [map_expr] access_expr
-				
+			if free_vars_el = [] then 
+				if init_expr_opt = None then K.Lookup(map_expr,outs_el)
+	      else 
+						let _,init_expr = extract_opt init_expr_opt in						
+						K.IfThenElse(K.Member(map_expr,outs_el), 
+												 K.Lookup(map_expr,outs_el), init_expr)											     		
+      else
+				slice_and_project map_expr
+							
 	  | ( x,[]) -> 
 			let map_expr = K.InPC(mapn, ins_k, map_ret_k) in
-			apply_lambda [map_ve] [map_expr] (single_access_and_init_expr ins_el)
+			if init_expr_opt = None then K.Lookup(map_expr,ins_el)
+      else 
+				let _,init_expr = extract_opt init_expr_opt in						
+				K.IfThenElse(K.Member(map_expr,ins_el), 
+										 K.Lookup(map_expr,ins_el), 
+										 apply_lambda [iv_e] [init_expr] 
+												(K.Block(
+													[K.PCValueUpdate(map_expr, ins_el, outs_el, iv_e);
+													iv_e])) )
 											
   	| ( x, y) ->
 			let map_expr = K.PC(mapn, ins_k, outs_k, map_ret_k) in
@@ -222,20 +222,21 @@ let map_access_to_expr mapn ins outs map_ret_t theta_vars_el init_expr_opt =
 	      else                      slice_and_project coll_ve
 			in
 			
-			let access_expr = 
-				if init_expr_opt = None then 
-						apply_lambda [map_out_ve] [K.Lookup(map_ve,ins_el)] (out_access_expr map_out_ve)
-	      else 
-						let init_expr = extract_opt init_expr_opt in						
-						let iv_e = K.Var("init_val", map_out_t) in
-						let init_block = K.Block([K.PCUpdate(map_expr, ins_el, iv_e);
-																			out_access_expr iv_e])
-						in
-						K.IfThenElse( K.Member(map_ve,ins_el), 
-							apply_lambda [map_out_ve] [K.Lookup(map_ve,ins_el)] (out_access_expr map_out_ve), 
-							apply_lambda       [iv_e]              [init_expr]      init_block)
-      in 
-			apply_lambda [map_ve] [map_expr] access_expr
+			if init_expr_opt = None then 
+					apply_lambda [map_out_ve] [K.Lookup(map_expr,ins_el)] (out_access_expr map_out_ve)
+      else 
+					let init_outs_el,ie = extract_opt init_expr_opt in	
+					let init_expr = 
+						if init_outs_el = outs_el then ie
+						else K.Map( project_fn (init_outs_el@[map_ret_ve]) (outs_el@[map_ret_ve]), ie)
+					in
+					let init_block = 
+							K.Block([K.PCUpdate(map_expr, ins_el, iv_e); out_access_expr iv_e])
+					in
+					K.IfThenElse( K.Member(map_expr,ins_el), 
+						apply_lambda [map_out_ve] [K.Lookup(map_expr,ins_el)] (out_access_expr map_out_ve), 
+						apply_lambda       [iv_e]              [init_expr]      init_block)
+      
 	  end
 		in (free_vars_el, map_ret_ve, expr)
 
@@ -265,15 +266,13 @@ let rec value_to_k3_expr (value_calc : V.expr_t) : K.type_t * K.expr_t =
 							| _ -> failwith "Negation type should be int or float." 
 						end in
 						neg_t, K.Mult (neg_cst, neg_e)
-				| V.Sum( c1::c2::sum_args_tl )	->
+				| V.Sum( c1::sum_args_tl )	->
 						let add_fun e1 e2 = K.Add(e1,e2) in
-						let r = bin_fn add_fun (value_to_k3_expr c1) c2 in
-						List.fold_left (bin_fn add_fun) r sum_args_tl		    
-				| V.Prod( c1::c2::prod_args_tl )	->	  
+						List.fold_left (bin_fn add_fun) (value_to_k3_expr c1) sum_args_tl    
+				| V.Prod( c1::prod_args_tl )	->	  
 						let mult_fun e1 e2 = K.Mult(e1,e2) in
-						let r = bin_fn mult_fun (value_to_k3_expr c1) c2 in
-						List.fold_left (bin_fn mult_fun) r prod_args_tl
-				| _  -> failwith "Empty or Single operand to V.Sum or Prod."
+						List.fold_left (bin_fn mult_fun) (value_to_k3_expr c1) prod_args_tl
+				| _  -> failwith "Empty V.Sum or V.Prod."
 	end
 
 
@@ -323,6 +322,36 @@ let rec calc_to_k3_expr meta theta_vars_el calc :
 				| Cmp( T.Gte,c1, c2 )     -> bin_fn ( fun e1 e2 -> K.Lt  (e1,e2) ) c2 c1
 				| Cmp( T.Neq,c1, c2 )     -> bin_fn ( fun e1 e2 -> K.Neq (e1,e2) ) c1 c2
 				
+				| Rel(reln, rel_schema) -> 
+						let rel_outs_el, rel_ret_ve, expr = 
+								map_access_to_expr reln [] rel_schema T.TInt theta_vars_el None in
+					  ((rel_outs_el, rel_ret_ve, expr), meta)
+				
+				| External(mapn, eins, eouts, ext_type, init_calc_opt) ->
+						let nm, init_expr_opt = begin match eins, eouts with
+							| [],[] -> meta, None
+							| [],_  ->  if (Debug.active "M3ToK3-GENERATE-INIT") 
+													then meta, Some([],init_val_from_type ext_type)
+							           	else meta, None
+							| _,_   -> 
+								if (Debug.active "M3ToK3-GENERATE-INIT") && 
+									 init_calc_opt != None && not (meta_has_init_pattern meta (mapn, eins)) then
+											let init_calc = extract_opt init_calc_opt in
+											let eouts_el = varIdType_to_k3_expr eouts in
+											let init_theta_vars_el = ListAsSet.diff  theta_vars_el eouts_el in
+											let (init_outs_el, init_ret_ve, init_expr), nm_1 = 
+													calc_to_k3_expr meta  init_theta_vars_el init_calc in
+											assert (ListAsSet.seteq init_outs_el eouts_el);
+											assert ((type_of_kvar init_ret_ve) = K.TBase(ext_type));
+											(meta_append_init_pattern nm_1 (mapn, eins)), 
+											Some(init_outs_el,init_expr)
+								else meta, None
+						end					
+						in					  
+					  let (map_outs_el, map_ret_ve, expr) = 
+							map_access_to_expr mapn eins eouts ext_type theta_vars_el init_expr_opt in
+					  ((map_outs_el, map_ret_ve, expr), nm)
+						
 				| AggSum( agg_vars0, aggsum_calc ) ->
 						let agg_vars0_el = varIdType_to_k3_expr agg_vars0 in
 						
@@ -336,14 +365,16 @@ let rec calc_to_k3_expr meta theta_vars_el calc :
 										K.Aggregate(agg_fn, init_val ret_ve, aggsum_e)
 								else
 										let gb_fn = project_fn (aggsum_outs_el@[ret_ve]) agg_vars_el in 
-										K.GroupByAggregate(agg_fn, init_val ret_ve, gb_fn, aggsum_e)
+										let gb_aggsum_e = 
+												K.Slice(aggsum_e, k3_expr_to_k3_idType aggsum_outs_el,[]) in
+										K.GroupByAggregate(agg_fn, init_val ret_ve, gb_fn, gb_aggsum_e)
 						in
 						((agg_vars_el, ret_ve, expr), nm)
 										
 				| Lift(lift_v, lift_calc) 	      -> 
 						let (lift_outs_el,ret_ve,lift_e),nm = rcr lift_calc in
 						let lift_ve = K.Var("lift_v",type_of_kvar ret_ve) in
-						let lift_ret_ve = K.Var("v",K.TBase(T.TFloat)) in
+						let lift_ret_ve = K.Var("v",K.TBase(T.TInt)) in
 						let expr =
 								if lift_outs_el = [] then
 										K.Singleton(K.Tuple([lift_e;one_flt_val]))
@@ -353,41 +384,10 @@ let rec calc_to_k3_expr meta theta_vars_el calc :
 													lift_e)
 						in
 						((lift_outs_el@[lift_ve], lift_ret_ve, expr), nm)
-						
-				| Rel(reln, rel_schema) -> 
-						let rel_outs_el, rel_ret_ve, expr = 
-								map_access_to_expr reln [] rel_schema T.TFloat theta_vars_el None in
-					  ((rel_outs_el, rel_ret_ve, expr), meta)
-				
-				| External(mapn, eins, eouts, ext_type, init_calc_opt) ->
-						let nm, init_expr_opt = begin match eins, eouts with
-							| [],[] -> meta, None
-							| [],_  -> if meta_has_init_pattern meta (mapn, eouts) 
-													then meta, None
-							           	else (meta_append_init_pattern meta (mapn, eouts)), 
-															 Some(init_val_from_type ext_type)
-							| _,_   -> 
-								if (Debug.active "M3ToK3-GENERATE-INIT") && 
-									 init_calc_opt != None && not (meta_has_init_pattern meta (mapn, eins)) then
-											let init_calc = extract_opt init_calc_opt in
-											let eouts_el = varIdType_to_k3_expr eouts in
-											let init_theta_vars_el = ListAsSet.diff  theta_vars_el eouts_el in
-											let (init_outs_el, init_ret_ve, init_expr), nm_1 = 
-													calc_to_k3_expr meta  init_theta_vars_el init_calc in
-											assert (init_outs_el = eouts_el);
-											assert ((type_of_kvar init_ret_ve) = K.TBase(ext_type));
-											(meta_append_init_pattern nm_1 (mapn, eins)), 
-											Some(init_expr)
-								else meta, None
-						end					
-						in					  
-					  let (map_outs_el, map_ret_ve, expr) = 
-							map_access_to_expr mapn eins eouts ext_type theta_vars_el init_expr_opt in
-					  ((map_outs_el, map_ret_ve, expr), nm)
 			end
 			
     | C.Sum( sum_args )	->
-				let outs_el = varIdType_to_k3_expr outs in
+				let outs_el = ListAsSet.diff (varIdType_to_k3_expr outs) theta_vars_el in
 				let prepare_fn old_meta old_ret_t c = 
 					let (e_outs_el,e_ret_ve,e),new_meta = rcr2 old_meta c in
 					assert (ListAsSet.seteq e_outs_el outs_el);
@@ -465,7 +465,9 @@ let rec calc_to_k3_expr meta theta_vars_el calc :
 				let prod_expr_hd = List.hd prod_exprs in
 				let prod_exprs_tl = List.tl prod_exprs in
 				
-				let prod_fn (p1_outs_el,p1_ret_ve,p1) (p2_outs_el,p2_ret_ve,p2) =
+				let prod_fn (p1_outs_el,_p1_ret_ve,p1) (p2_outs_el,_p2_ret_ve,p2) =
+					let p1_ret_ve = K.Var("p1_ret",type_of_kvar _p1_ret_ve) in
+					let p2_ret_ve = K.Var("p2_ret",type_of_kvar _p2_ret_ve) in 
 					let p_outs_el,p = begin match p1_outs_el,p2_outs_el with
 					| [],[] -> [], K.Mult(p1,p2)
 					|  _,[] -> p1_outs_el,
@@ -532,8 +534,16 @@ let collection_stmt (meta: meta_t) trig_args (m3_stmt: Plan.stmt_t) : K.statemen
 		(* to a particular output variables key. *)
 		let existing_v, nm0 =
 				if update_type = Plan.ReplaceStmt then (init_val_from_type map_type), meta
-				else if lhs_outs_el = []          then existing_out_tier, meta
-				else
+				else 
+				begin match lhs_ins_el,lhs_outs_el with
+					|  _,[] ->  existing_out_tier, meta
+					| [], y ->  if (Debug.active "M3ToK3-GENERATE-INIT") then 
+													K.IfThenElse( K.Member(existing_out_tier, lhs_outs_el),
+	           														K.Lookup(existing_out_tier, lhs_outs_el),
+	           														(init_val_from_type map_type) ), meta
+							        else 
+													K.Lookup(existing_out_tier, lhs_outs_el), meta
+					|  x, y ->
 						if (Debug.active "M3ToK3-GENERATE-INIT") && init_calc_opt != None then
 							let init_calc = extract_opt init_calc_opt in
 							let init_result, init_meta = calc_to_k3_expr meta trig_w_lhs_el init_calc in
@@ -546,6 +556,7 @@ let collection_stmt (meta: meta_t) trig_args (m3_stmt: Plan.stmt_t) : K.statemen
 	           								init_expr ), init_meta
 						else
 							K.Lookup(existing_out_tier, lhs_outs_el), meta
+				end
 		in
 		
 		let incr_result, nm = calc_to_k3_expr nm0 trig_w_ins_el incr_calc in
@@ -601,5 +612,5 @@ let m3_to_k3 ({M3.maps = m3_prog_schema;
 				!m3_prog_trigs 
 	
 	in
-	( k3_prog_schema@sum_maps, patterns_map,	k3_prog_trigs )
+	( k3_prog_schema@sum_maps, patterns_map, k3_prog_trigs )
 

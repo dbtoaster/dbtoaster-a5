@@ -101,7 +101,7 @@ let ocaml_of_type (ty: type_t): string =
    begin match ty with
       | TAny             -> "TAny"
       | TBool            -> "TBool"
-      | TInt             -> "TIng"
+      | TInt             -> "TInt"
       | TFloat           -> "TFloat"
       | TString(len)     -> "TString("^(string_of_int len)^")"
       | TExternal(etype) -> "TExternal(\""^etype^"\")"

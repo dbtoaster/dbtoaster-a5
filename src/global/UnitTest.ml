@@ -68,7 +68,9 @@ let log_collection_test (title:string) (result:Values.K3Value.t)
                         (expected:(float list * float) list): unit = 
    let k3_expected = 
       List.map (fun (k,v) -> 
-                  (  List.map (fun x -> Values.K3Value.BaseValue(CFloat(x))) k, 
+                  (  List.map 
+												(fun x -> Values.K3Value.BaseValue(CFloat(x))) 
+												k, 
                      Values.K3Value.BaseValue(CFloat(v)))) 
                expected 
    in
@@ -76,6 +78,13 @@ let log_collection_test (title:string) (result:Values.K3Value.t)
       match result with
          | Values.K3Value.SingleMap(m) ->
             Values.K3ValuationMap.to_list m
+         | Values.K3Value.DoubleMap(dm) ->
+					  List.flatten
+							(List.map (fun (k1,m) -> 
+										List.map
+												(fun (k2,v) -> (k1@k2,v) ) 
+												(Values.K3ValuationMap.to_list m) )
+		        	(Values.K3ValuationMap.to_list dm) )
          | Values.K3Value.TupleList(tlist) -> 
             List.map (fun tuple ->
                match tuple with
@@ -150,6 +159,18 @@ let parse_calc ?(opt=false) (expr:string):Calculus.expr_t =
       let _ = Parsing.set_trace true in
       Calculusparser.calculusExpr Calculuslexer.tokenize 
                                      (Lexing.from_string expr)
+   )
+;;      
+
+let parse_stmt (m3_stmt:string) = 
+   try  
+      Calculusparser.mapTriggerStmt Calculuslexer.tokenize 
+                                     (Lexing.from_string m3_stmt)
+   with Parsing.Parse_error -> (
+      print_endline ("Error parsing :'"^m3_stmt^"'");
+      let _ = Parsing.set_trace true in
+      Calculusparser.mapTriggerStmt Calculuslexer.tokenize 
+                                     (Lexing.from_string m3_stmt)
    )
 ;;      
 

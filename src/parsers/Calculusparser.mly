@@ -38,9 +38,10 @@ type map_metadata =
 %token LIFT SETVALUE INCREMENT
 
 // start
-%start statementList calculusExpr mapProgram
+%start statementList calculusExpr mapProgram mapTriggerStmt
 %type < Schema.t * (string * Calculus.expr_t) list > statementList
 %type < M3.prog_t > mapProgram
+%type < Plan.stmt_t > mapTriggerStmt
 %type < Calculus.expr_t > calculusExpr
 %type < Calculus.expr_t > ivcCalculusExpr
 

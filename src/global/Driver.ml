@@ -417,7 +417,7 @@ if stage_is_active StagePrintM3DomainMaintenance then (
 (************ K3 Stages ************)
 
 if stage_is_active StageM3ToK3 then (
-   bug "M3ToK3 hasn't been completed yet"
+   k3_program := M3ToK3.m3_to_k3 !m3_program
 )
 ;;
 if stage_is_active StageParseK3 then (
