@@ -419,7 +419,7 @@ if stage_is_active StagePrintM3DomainMaintenance then (
 (************ K3 Stages ************)
 
 if stage_is_active StageM3ToK3 then (
-   Debug.activate "M3TOK3-GENERATE-INIT"; (*temporary hack until we get M3DM set up *)
+   Debug.activate "M3TOK3-GENERATE-INIT"; (* Temporary hack until we get M3DM set up *)
    k3_program := M3ToK3.m3_to_k3 !m3_program
 )
 ;;
