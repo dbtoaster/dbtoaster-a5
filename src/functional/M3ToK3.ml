@@ -330,11 +330,11 @@ let rec calc_to_k3_expr meta theta_vars_el calc :
 				| External(mapn, eins, eouts, ext_type, init_calc_opt) ->
 						let nm, init_expr_opt = begin match eins, eouts with
 							| [],[] -> meta, None
-							| [],_  ->  if (Debug.active "M3ToK3-GENERATE-INIT") 
+							| [],_  ->  if (Debug.active "M3TOK3-GENERATE-INIT") 
 													then meta, Some([],init_val_from_type ext_type)
 							           	else meta, None
 							| _,_   -> 
-								if (Debug.active "M3ToK3-GENERATE-INIT") && 
+								if (Debug.active "M3TOK3-GENERATE-INIT") && 
 									 init_calc_opt != None && not (meta_has_init_pattern meta (mapn, eins)) then
 											let init_calc = extract_opt init_calc_opt in
 											let eouts_el = varIdType_to_k3_expr eouts in
@@ -537,14 +537,14 @@ let collection_stmt (meta: meta_t) trig_args (m3_stmt: Plan.stmt_t) : K.statemen
 				else 
 				begin match lhs_ins_el,lhs_outs_el with
 					|  _,[] ->  existing_out_tier, meta
-					| [], y ->  if (Debug.active "M3ToK3-GENERATE-INIT") then 
+					| [], y ->  if (Debug.active "M3TOK3-GENERATE-INIT") then 
 													K.IfThenElse( K.Member(existing_out_tier, lhs_outs_el),
 	           														K.Lookup(existing_out_tier, lhs_outs_el),
 	           														(init_val_from_type map_type) ), meta
 							        else 
 													K.Lookup(existing_out_tier, lhs_outs_el), meta
 					|  x, y ->
-						if (Debug.active "M3ToK3-GENERATE-INIT") && init_calc_opt != None then
+						if (Debug.active "M3TOK3-GENERATE-INIT") && init_calc_opt != None then
 							let init_calc = extract_opt init_calc_opt in
 							let init_result, init_meta = calc_to_k3_expr meta trig_w_lhs_el init_calc in
 							let (init_outs_el, init_ret_ve, init_expr) = init_result in

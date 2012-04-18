@@ -15,21 +15,37 @@
 open Types
 open Arithmetic
 
+(**
+   Template for the base type for externals (maps).  Consists of (respectively):
+      - The external's name
+      - The external's input variables
+      - The external's output variables
+      - The external's type
+      - Initial value computation metadata
+*)
 type 'meta_t external_leaf_t = 
-   string *       (* The external's name *)
-   var_t list *   (* The external's input variables *)
-   var_t list *   (* The external's output variables *)
-   type_t *       (* The external's type (return value) *)
-   'meta_t option (* Metadata associated with the external *)
+   string *       
+   var_t list *   
+   var_t list *   
+   type_t *       
+   'meta_t option 
 
+(**
+   Template for the base type for the Calculus ring.
+*)
 type ('term_t) calc_leaf_t = 
-   | Value    of value_t
-   | AggSum   of var_t list * 'term_t (* vars listed are group-by vars (i.e., 
-                                         the schema of this AggSum) *)
-   | Rel      of string * var_t list
-   | External of 'term_t external_leaf_t
-   | Cmp      of cmp_t * value_t * value_t
-   | Lift     of var_t * 'term_t
+   | Value    of value_t                     (** A value expression *)
+   | AggSum   of var_t list * 'term_t        (** A sum aggregate, consisting of
+                                                 group-by variables and the 
+                                                 nested sub-term being 
+                                                 aggregated over *)
+   | Rel      of string * var_t list         (** A base relation *)
+   | External of 'term_t external_leaf_t     (** An external (map) *)
+   | Cmp      of cmp_t * value_t * value_t   (** A comparison between two 
+                                                 values *)
+   | Lift     of var_t * 'term_t             (** A Lift expression.  The nested
+                                                 sub-term's value is lifted
+                                                 into the indicated variable *)
 
 module rec
 CalcBase : sig
@@ -41,17 +57,27 @@ CalcBase : sig
       let zero = Value(mk_int 0)
       let one  = Value(mk_int 1)
    end and
+(** The Calculus ring *)
 CalcRing : Ring.Ring with type leaf_t = CalcBase.t
          = Ring.Make(CalcBase)
 
+(** Elements of the Calculus ring. *)
 type expr_t = CalcRing.expr_t
-                (* Scope:   Available Input Variables
-                   x
-                   Schema:  Expected Output Variables *)
+(** Base type for describing an External (map). *)
 type external_t = CalcRing.expr_t external_leaf_t
+
+(** The scope and schema of an expression, the available input variables when
+    an expression is evaluated, and the set of output variables that the 
+    expression is expected to produce. *)
 type schema_t = (var_t list * var_t list)
 
 (*** Stringifiers ***)
+(** 
+   Generate the (Calculusparser-compatible) string representation of a base
+   element of the Calculus ring.
+   @param leaf  A base element of the Calculus ring
+   @return      The string representation of [leaf]
+*)
 let rec string_of_leaf (leaf:CalcRing.leaf_t): string = 
    begin match leaf with
       | Value(v)                -> "["^(Arithmetic.string_of_value v)^"]"
@@ -74,6 +100,12 @@ let rec string_of_leaf (leaf:CalcRing.leaf_t): string =
       | Lift(target, subexp)    -> 
          "("^(string_of_var target)^" ^= "^(string_of_expr subexp)^")"
    end
+(**
+   Generate the (Calculusparser-compatible) string representation of an
+   element of the Calculus ring.
+   @param expr  An element of the Calculus ring
+   @return      The string representation of [expr]
+*)
 and string_of_expr (expr:expr_t): string =
    let (sum_op, prod_op, neg_op) = 
       if Debug.active "PRINT-VERBOSE" then (" U ", " |><| ", "(<>:-1)*")
@@ -87,13 +119,22 @@ and string_of_expr (expr:expr_t): string =
       expr
 
 (*** Utility ***)
-
+(** A generic exception pertaining to Calculus.  The first parameter is the 
+    Calculus expression that triggered the failure *)
 exception CalculusException of expr_t * string
 ;;
+(**/**)
 let bail_out expr msg = 
    raise (CalculusException(expr, msg))
 ;;
+(**/**)
+
 (*** Informational Operations ***)
+(** 
+   Compute the schema of a given expression
+   @param expr  A Calculus expression
+   @return      A pair of the set of input and output variables of [expr]
+*)
 let rec schema_of_expr (expr:expr_t):(var_t list * var_t list) =
    let rcr a = schema_of_expr a in
    CalcRing.fold 
@@ -147,6 +188,11 @@ let rec schema_of_expr (expr:expr_t):(var_t list * var_t list) =
       end)
       expr 
 
+(**
+   Compute the type of the specified Calculus expression
+   @param expr  A Calculus expression
+   @return      The type that [expr] evaluates to
+*)
 let rec type_of_expr (expr:expr_t): type_t =
    let rcr a = type_of_expr a in
    CalcRing.fold
@@ -163,6 +209,12 @@ let rec type_of_expr (expr:expr_t): type_t =
       end)
       expr
 
+(**
+   Obtain the set of all relations appearing in the specified Calculus 
+   expression
+   @param expr  A Calculus expression
+   @return      The set of all relation names that appear in [expr]
+*)
 let rec rels_of_expr (expr:expr_t): string list =
    let rcr a = rels_of_expr a in
       CalcRing.fold
@@ -180,6 +232,12 @@ let rec rels_of_expr (expr:expr_t): string list =
          end)
          expr
 
+(**
+   Compute the degree (as defined by the DBtoaster PODS paper) of the
+   specified Calculus expression
+   @param expr  A Calculus expression
+   @return      The degree of [expr]
+*)
 let rec degree_of_expr (expr:expr_t): int =
    let rcr a = degree_of_expr a in
       CalcRing.fold
@@ -196,12 +254,22 @@ let rec degree_of_expr (expr:expr_t): int =
          end)
          expr
 
-(************
- * Like Ring.fold, except it computes the scope and schema at each node.
- *
- * WARNING: Calculus.fold does NOT descend into AggSums, Lifts, or 
- * externals.  This must be done manually
- *************)
+(**
+   Recursively fold over the elements of a Calculus ring expression.  This is
+   equivalent to the behavior of CalcRing.fold, except that the fold functions
+   are provided with the scope and schema of the expression at each node.
+
+   {b WARNING}: [Calculus.fold] does {b NOT} descend into AggSums, Lifts, or 
+   externals.  This must be done manually.
+   @param scope    (optional) The scope in which [e] is evaluated
+   @param schema   (optional) The schema expected of [e]
+   @param sum_fn   The function to fold down elements joined by a sum
+   @param prod_fn  The function to fold down elements joined by a product
+   @param neg_fn   The function to fold down a negated element
+   @param leaf_fn  The function to transform a leaf element
+   @param e        A Calculus expression
+   @return         The final folded value
+*)
 let rec fold ?(scope = []) ?(schema = [])
              (sum_fn:   schema_t -> 'a list         -> 'a)
              (prod_fn:  schema_t -> 'a list         -> 'a)
@@ -230,15 +298,33 @@ let rec fold ?(scope = []) ?(schema = [])
       | CalcRing.Val(leaf) -> leaf_fn (scope,schema) leaf
    end
 
+(**
+   Determine whether the indicated expression is a singleton (i.e., it evaluates
+   to a constant value, rather than a collection)
+   @param scope   (optional) The scope in which [expr] is evaluated
+   @param expr    A Calculus expression
+   @return        True if [expr] evaluates to a constant
+*)
 let expr_is_singleton ?(scope=[]) (expr:expr_t): bool =
     (ListAsSet.diff  (snd (schema_of_expr expr))  scope ) = []
-		
-(************
- * Like Ring.fold, except it computes the scope and schema at each node.
- *
- * WARNING: Calculus.rewrite DOES descend into AggSums, Lifts, and 
- * externals.  This is UNLIKE Calculus.fold
- *************)
+
+(**
+   Recursively rewrite the elements of a Calculus ring expression.  This is
+   similar to the behavior of CalcRing.fold, except that the fold functions
+   are provided with the scope and schema of the expression at each node, and 
+   that the folded value is a Calculus expression.
+
+   {b WARNING}: [Calculus.rewrite] {b does} descend into AggSums, Lifts, and 
+   externals.  This {b UNLIKE} [Calculs.fold].
+   @param scope    (optional) The scope in which [e] is evaluated
+   @param schema   (optional) The schema expected of [e]
+   @param sum_fn   The function to fold down elements joined by a sum
+   @param prod_fn  The function to fold down elements joined by a product
+   @param neg_fn   The function to fold down a negated element
+   @param leaf_fn  The function to transform a leaf element
+   @param e        A Calculus expression
+   @return         The final folded value
+*)
 let rec rewrite ?(scope = []) ?(schema = [])
              (sum_fn:   schema_t -> expr_t list     -> expr_t)
              (prod_fn:  schema_t -> expr_t list     -> expr_t)
@@ -263,12 +349,21 @@ let rec rewrite ?(scope = []) ?(schema = [])
          end)
    ) e
 
-(************
- * Like Ring.fold, except it computes the scope and schema at each node.
- *
- * WARNING: Calculus.rewrite_leaves DOES descend into AggSums, Lifts, and 
- * externals.  This is UNLIKE Calculus.fold
- *************)
+
+(**
+   Recursively rewrite the leaf elements of a Calculus ring expression.  This is
+   similar to the behavior of CalcRing.fold, except that the fold functions
+   are provided with the scope and schema of the expression at each node, and 
+   that the folded value is a Calculus expression.
+
+   {b WARNING}: [Calculus.rewrite_leaves] {b does} descend into AggSums, Lifts, 
+   and externals.  This {b UNLIKE} [Calculs.fold].
+   @param scope    (optional) The scope in which [e] is evaluated
+   @param schema   (optional) The schema expected of [e]
+   @param leaf_fn  The function to transform a leaf element
+   @param e        A Calculus expression
+   @return         The final folded value
+*)
 let rewrite_leaves ?(scope = []) ?(schema = [])
                    (leaf_fn:schema_t -> CalcRing.leaf_t -> expr_t)
                    (e: expr_t): expr_t =
@@ -278,6 +373,11 @@ let rewrite_leaves ?(scope = []) ?(schema = [])
       (fun _ e -> CalcRing.mk_neg e)
       leaf_fn e
 
+(**
+   Erase all the IVC metadata from externals in the specified expression
+   @param expr  A Calculus expression
+   @return      [expr] with all Externals rewritten to eliminate IVC metadata
+*)
 let strip_calc_metadata:(expr_t -> expr_t) =
    rewrite_leaves (fun _ lf -> match lf with
       | External(en, eiv, eov, et, em) ->
@@ -285,6 +385,13 @@ let strip_calc_metadata:(expr_t -> expr_t) =
       | _ -> CalcRing.mk_val lf
    )
 
+(**
+   Obtain a list of all variables that appear in the specified expression, even 
+   if those variables are projected away or otherwise invisible from the 
+   outside.
+   @param expr  A Calculus expression
+   @return      A list set of all variables that appear somewhere in [expr]
+*)
 let rec all_vars (expr:expr_t): var_t list =
    CalcRing.fold (ListAsSet.multiunion) (ListAsSet.multiunion) (fun x->x)
       (fun lf -> begin match lf with
@@ -300,6 +407,15 @@ let rec all_vars (expr:expr_t): var_t list =
       end)
       expr
 
+(**
+   Given an expression and a variable mapping, generate an extended mapping that
+   ensures that existing variable names don't get clobbered (by remapping those 
+   names to new, distinct ones).
+   @param mapping    A variable mapping
+   @param expr       A Calculus expression
+   @return           [mapping] extended such that it doesn't clobber any 
+                     existing variables in [expr]
+*)
 let find_safe_var_mapping (mapping:(var_t,var_t) Function.table_fn_t) 
                           (expr:expr_t): (var_t,var_t) Function.table_fn_t =
    let expr_vars = all_vars expr in
@@ -328,6 +444,12 @@ let find_safe_var_mapping (mapping:(var_t,var_t) Function.table_fn_t)
    in
       safe_mapping
 
+(**
+   Apply a given variable mapping to the specified Calculus expression.
+   @param mapping    A variable mapping
+   @param expr       A Calculus expression
+   @return           [expr] with all variables subjected to [mapping]
+*)
 let rename_vars (mapping:(var_t,var_t)Function.table_fn_t) 
                 (expr:expr_t):expr_t = 
    let remap_one = (Function.apply_if_present mapping) in

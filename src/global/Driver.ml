@@ -137,7 +137,8 @@ type stage_t =
 
 let output_stages = 
    [  StagePrintSQL; StagePrintSchema; StagePrintCalc; StagePrintPlan;
-      StagePrintM3; StagePrintM3DomainMaintenance ]
+      StagePrintM3; StagePrintM3DomainMaintenance; StagePrintK3; 
+      StageRunInterpreter; StageOutputSource; StageCompileSource ]
 let input_stages = 
    [  StageParseSQL; StageParseM3; StageParseK3 ]
 
@@ -150,8 +151,9 @@ let input_stages =
    input format (e.g., StageSQLToCalc if Calculus is the input format), and all 
    stages after the stage that produces the desired output format. *)
 let core_stages = 
-   [  StageSQLToCalc; StageCompileCalc; StagePlanToM3; StageM3DomainMaintenance;
-      StageM3ToK3; StageOptimizeK3; StageK3ToImp
+   [  StageSQLToCalc; StageCompileCalc; StagePlanToM3; 
+      (* StageM3DomainMaintenance; *)
+      StageM3ToK3; (* StageOptimizeK3; *) StageK3ToTargetLanguage
    ]
 
 let stages_from (stage:stage_t): stage_t list =
@@ -417,6 +419,7 @@ if stage_is_active StagePrintM3DomainMaintenance then (
 (************ K3 Stages ************)
 
 if stage_is_active StageM3ToK3 then (
+   Debug.activate "M3TOK3-GENERATE-INIT"; (*temporary hack until we get M3DM set up *)
    k3_program := M3ToK3.m3_to_k3 !m3_program
 )
 ;;
@@ -457,6 +460,7 @@ module K3InterpreterCG = K3Compiler.Make(K3Interpreter.K3CG)
 if stage_is_active StageK3ToTargetLanguage then (
    match !output_language with
       | Interpreter -> (
+         StandardAdaptors.initialize ();
          let (maps, patterns, _) = !k3_program in
          interpreter_program := (
             maps, patterns, 
@@ -467,16 +471,13 @@ if stage_is_active StageK3ToTargetLanguage then (
       )   
       | Ocaml       -> bug "Ocaml codegen not implemented yet"
       | Scala       -> bug "Scala codegen not implemented yet"
+      | CPP         -> bug "K3 to IMP not implemented yet"
       | _ -> bug "Unexpected K3 target language"
 )
 ;;
 
 (************ Imperative Stages ************)
 
-if stage_is_active StageK3ToImp then (
-   bug "K3ToImp hasn't been completed yet"
-)
-;;
 if stage_is_active StageImpToTargetLanguage then (
    bug "ImpToTargetLanguage hasn't been completed yet"
 )

@@ -1,6 +1,6 @@
 (**
-   Transforming a SQL parse tree (SQL.expr_t) and database definition into 
-   Calculus expressions, and DBToaster's internal Schema.t representation.
+   Tools for transforming a SQL parse tree (SQL.expr_t) and database definition 
+   into Calculus expressions, and DBToaster's internal Schema.t representation.
 *)
 
 open Ring
@@ -8,6 +8,7 @@ open Types
 open Arithmetic
 open Calculus
 
+(**/**)
 module C = Calculus
 
 let tmp_var_id = ref 0
@@ -15,6 +16,7 @@ let tmp_var_id = ref 0
 let tmp_var (vn:string) (vt:type_t): var_t = 
    tmp_var_id := !tmp_var_id + 1;
    (vn^(string_of_int !tmp_var_id), vt)
+(**/**)
 
 (** 
    This utility function performs conversion from arbitrary calculus expressions 
@@ -43,9 +45,23 @@ let lift_if_necessary ?(t="agg") (calc:C.expr_t):
                                (C.type_of_expr calc) in
             (mk_var tmp_var, CalcRing.mk_val (Lift(tmp_var, calc)))
 
+(**
+   [preprocess file]
+   
+   Do some basic preprocessing to ensure that all variables in the Sql file
+   are properly bound
+*)
 let rec preprocess ((tables, queries):Sql.file_t): Sql.file_t =
    (tables, List.map (fun q -> Sql.bind_select_vars q tables) queries)
 
+(**
+   [var_of_sql_var var]
+   
+   Translate a bound SQL variable to a standard DBToaster variable.  This 
+   involves (a consistent) renaming (of) the variable to ensure its uniqueness.
+   @param var  A SQL variable
+   @return     The [Types]-style variable corresponding to [var]
+*)
 let var_of_sql_var ((rel,vn,vt):Sql.sql_var_t):var_t = 
    begin match rel with
       (* If preprocess has been called, all the vars should be bound to a
@@ -54,6 +70,21 @@ let var_of_sql_var ((rel,vn,vt):Sql.sql_var_t):var_t =
       | None       -> failwith ("Unbound var "^vn)
    end
 
+(**
+   [calc_of_query tables stmt]
+   
+   Translate a SQL query to the corresponding calculus expression(s).  If the 
+   query is a non-aggregate query, the Calculus expression computes the bag 
+   corresponding to the query result (i.e., the query is cast to an aggregate
+   by adding an implicit [COUNT( * )]).  If the query is an aggregate, then 
+   all non-group-by target columns generate a separate Calculus expression 
+   (hence, it is possible for this function to return multiple Calculus
+   expressions).
+   @param tables The schema of the database on which the query is being run
+   @param stmt   A SQL query
+   @return       A Calculus expression for every non-group-by target in [stmt], 
+                 and the name of the corresponding target
+*)
 let rec calc_of_query (tables:Sql.table_t list) 
                         ((targets,sources,cond,gb_vars):Sql.select_t): 
                         (string * C.expr_t) list = 
@@ -95,6 +126,16 @@ let rec calc_of_query (tables:Sql.table_t list)
       )
    ) agg_tgts
 
+(**
+   [calc_of_sources tables sources]
+   
+   Translate the [FROM] clause of a SQL query to its corresponding Calculus
+   form.  Tables are transformed into their corresponding Rel() terms, while
+   nested subqueries are lifted into appropriately named variables.
+   @param tables  The schema of the database on which the query is being run
+   @param sources All members of the [FROM] clause of a SQL query
+   @return        A Calculus expression implementing [sources].
+*)
 and calc_of_sources (tables:Sql.table_t list) 
                     (sources:Sql.labeled_source_t list):
                     C.expr_t =
@@ -126,6 +167,15 @@ and calc_of_sources (tables:Sql.table_t list)
       ) subqs
    ])
 
+(**
+   [calc_of_condition tables cond]
+   
+   Translate the [WHERE] clause of a SQL query to its corresponding Calculus
+   form.
+   @param tables The schema of the database on which the query is being run
+   @param cond   The [WHERE] clause of a SQL query
+   @return       A Calculus expression implementing [cond].
+*)
 and calc_of_condition (tables:Sql.table_t list) (cond:Sql.cond_t):
                       C.expr_t =
    let rcr_e e = calc_of_sql_expr tables e in
@@ -185,6 +235,39 @@ and calc_of_condition (tables:Sql.table_t list) (cond:Sql.cond_t):
             CalcRing.mk_val (Value(mk_bool b))
       end
 
+(**
+   [calc_of_sql_expr ~materialize_query:(...) tables expr]
+   
+   Translate a SQL expression into a Calculus expression.  The behavior of this
+   function differs from the expected in one noticeable way: Aggregate functions
+   can not be materialized inline, as they require the full context of the
+   query surrounding the aggregate function.
+   
+   Specifically, consider the query:
+
+   {[SELECT (SUM(x) / (COUNT( * ))) FROM R WHERE y > 0]}
+
+   This query needs two separate aggregates, as it would be translated to:
+
+   {[AggSum(R(x) * [y>0] * x) / AggSum(R(x) * [y>0])]}
+
+   Apart from the elipses, [AggSum(R(x) * [y>0] * ...)] comes entirely from 
+   outside of the expression itself.
+   
+   Thus, [calc_of_sql_expr] takes an optional materialize_query operator, which
+   will be invoked at any Aggregate node to materialize the query at that point.
+   If the operator is not present when calc_of_sql_expr is called on an 
+   expression with Aggregates, an exception will be raised.
+   @param materialize_query (optional) An operator to materialize the query when
+                            an aggregate function is encountered
+   @param tables            The schema of the database on which the query is 
+                            being run
+   @param expr              A SQL expression
+   @return                  The Calculus form of [expr]
+   @raise Failure If the SQL expression is invalid (e.g., it contains a nested
+                  subquery with >1 target or if it contains an aggregate
+                  function where none is expected).
+*)
 and calc_of_sql_expr ?(materialize_query = None)
                      (tables:Sql.table_t list) 
                      (expr:Sql.expr_t): C.expr_t =
@@ -226,6 +309,13 @@ and calc_of_sql_expr ?(materialize_query = None)
          end
    end
 
+(**
+   [extract_sql_schema db tables]
+   
+   Extract a SQL database schema into a [Schema.t] schema.
+   @param db      The schema to extract [tables] into.
+   @param tables  A SQL schema
+*)
 let extract_sql_schema (db:Schema.t) (tables:Sql.table_t list) = 
    List.iter (fun (reln, relsch, reltype, (relsource, reladaptor)) ->
       Schema.add_rel db ~source:relsource ~adaptor:reladaptor 

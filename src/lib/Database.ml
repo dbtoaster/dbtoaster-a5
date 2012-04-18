@@ -139,7 +139,9 @@ module InOutMaps(M : SliceableInOutMap) : M3MapSpec
          type map_t        = M.map_t
 =
 struct
+    (**/**)
     include M
+    (**/**)
 
     type value_t   = t
     type key_t     = value_t list
@@ -341,7 +343,9 @@ module SimpleNameableM3Database(N : MapName)(S : M3MapSpec) : M3DB
          type map_t        = S.map_t
 =
 struct
+   (**/**)
    include DBCommon(N)(S)
+   (**/**)
 
    type db_t = map_t DBM.t * patterns_t
 
@@ -495,7 +499,9 @@ module NameableM3Database(N : MapName)(S : M3MapSpec) : M3DB
          type map_t        = S.map_t
 =
 struct
+   (**/**)
    include DBCommon(N)(S)
+   (**/**)
 
    (* mutable value *)
    type mv_t           = value_t ref
@@ -707,8 +713,10 @@ module K3Maps : K3MapSpec
          type nested_map_t = K3Value.t K3ValuationMap.t
 =
 struct
+   (**/**)
     module Map = K3ValuationMap
     include MK3Maps
+   (**/**)
     open K3Value
 
     (* Additional K3 spec functions *)
@@ -762,7 +770,9 @@ module NameableK3Database(N : MapName)(S : K3MapSpec) : K3DB
     and  type nested_map_t = S.nested_map_t
 =
 struct
+   (**/**)
    include DBCommon(N)(S)
+   (**/**)
 
    type nested_map_t   = S.nested_map_t
    type db_t           = (value_t DBM.t) * patterns_t  

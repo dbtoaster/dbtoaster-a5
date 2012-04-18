@@ -15,7 +15,7 @@
 open Types
 
 (**
-   Precursor for the base type for the Arithmetic ring
+   Template for the base type for the Arithmetic ring
 *)
 type 'term arithmetic_leaf_t =
    | AConst of const_t                       (** A constant value *)
@@ -230,6 +230,12 @@ declare_arithmetic_function "/" TFloat
 (**** Evaluation ****)
 (**
    Evaluate the specified value to a constant
+   @param scope (optional) A set of variable->value mappings
+   @param v     The value to evaluate
+   @return      The constant value that v evaluates to
+   @raise Failure If [v] contains a variable that is not defined in [scope] or
+                  if [v] contains a function that is not defined in the globally
+                  maintained set of [arithmetic_functions].
 *)
 let rec eval ?(scope=StringMap.empty) (v:value_t): const_t = 
    ValueRing.fold suml prodl neg (fun lf ->
@@ -245,6 +251,13 @@ let rec eval ?(scope=StringMap.empty) (v:value_t): const_t =
             else failwith ("Function "^fn^" is undefined")
    ) v
 
+(**
+   Evaluate/reduce the specified value as far as possible
+   @param scope (optional) A set of variable->value mappings
+   @param v     The value to evaluate
+   @return      A value representing the most aggressively reduced/evaluated
+                form of [v] possible.
+*)
 let rec eval_partial ?(scope=[]) (v:value_t): value_t = 
    let merge v_op c_op (term_list:value_t list): value_t = 
       let (v, c) = List.fold_right (fun (term) (v,c) ->
@@ -284,6 +297,15 @@ let rec eval_partial ?(scope=[]) (v:value_t): value_t =
       )
       v
 
+(**
+   Compare two values for equivalence under an undefined mapping from variable
+   names in one value to variable names in the other.
+   @param val1   A value
+   @param val2   A value
+   @return       [None] if no variable mapping exists to transform [val1] into 
+                 [val2].  If such a mapping exists, it is returned wrapped in
+                 a [Some]
+*)
 let rec cmp_values (val1:value_t) (val2:value_t):((var_t * var_t) list option) =
    ValueRing.cmp_exprs Function.multimerge Function.multimerge 
                       (fun lf1 lf2 ->

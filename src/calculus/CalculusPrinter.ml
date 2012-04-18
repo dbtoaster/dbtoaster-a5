@@ -1,11 +1,23 @@
+(**
+   A module for pretty-printing Calculus expressions and Arithmetic values.
+   
+   {b WARNING}: [CalculusPrinter] is not threadsafe.  Only one thread may be
+   using it at any given time.
+*)
+
 open Types
 open Arithmetic
 open Calculus
 open Format
 ;;
 
+
+(**/**)
+(** The number of spaces used to indent the second and following lines of a 
+    term *)
 let line_indent = ref 2;
 
+(** Shorthand record for invoking relevant functions from [Format] *)
 type formatter_t = {
    bopen  : int -> unit;
    bclose : unit -> unit;
@@ -16,6 +28,7 @@ type formatter_t = {
    flush  : unit -> unit;
 }
 
+(** Generate a [formatter_t] shorthand record from a formatter. *)
 let wrap_formatter (f:formatter) = {
    bopen  = pp_open_box     f;
    bclose = pp_close_box    f;
@@ -26,12 +39,23 @@ let wrap_formatter (f:formatter) = {
    flush  = pp_print_flush  f;
 };;
 
+(** The globally used formatter *)
 let fmt:formatter_t ref = ref (wrap_formatter str_formatter);;
 
+(** Shorthand function for transforming stringifiers into methods that output to
+    a formatter. *)
 let rec dump (stringifier: 'a -> string) (thing:'a): unit =
    !fmt.string (stringifier thing)
 ;;
 
+(**
+   Dump a list of elements to the formatter.
+   @param default          (optional) The string to dump if [l] is empty 
+                           (default: "")
+   @param format_element   The function for formatting elements of the list
+   @param sep              The string to separate elements of the list by
+   @param l                The list to dump
+*)
 let rec format_list ?(default = "") (format_element:'a -> unit) (sep:string) 
                     (l:'a list): unit =
    if l = [] then !fmt.string default
@@ -43,6 +67,10 @@ let rec format_list ?(default = "") (format_element:'a -> unit) (sep:string)
    )
 ;;
 
+(**
+   Dump a value expression to the formatter
+   @param v   The value to dump
+*)
 let rec format_value (v:value_t) =
    !fmt.bopen 0;
    begin match v with
@@ -76,6 +104,10 @@ let rec format_value (v:value_t) =
    !fmt.bclose ();
 ;;
 
+(**
+   Dump a Calculus expression to the formatter
+   @param expr   The Calculus expression to dump
+*)
 let rec format_expr (expr:expr_t) = 
    !fmt.bopen 0;
    begin match expr with
@@ -167,14 +199,27 @@ let rec format_expr (expr:expr_t) =
    end;
    !fmt.bclose();;
 
+(**/**)
 
 (******************************* API **************************)
 
+(**
+   Generate the pretty-printed (Calculusparser-compatible) representation of a 
+   value expression.
+   @param v    A value expression
+   @return     The pretty-printed string representation of [v]
+*)
 let string_of_value v =
    format_value v;
    flush_str_formatter ()
 ;;
 
+(**
+   Generate the pretty-printed (Calculusparser-compatible) representation of a 
+   Calculus expression.
+   @param e    A Calculus expression
+   @return     The pretty-printed string representation of [e]
+*)
 let string_of_expr e =
    format_expr e;
    flush_str_formatter ()

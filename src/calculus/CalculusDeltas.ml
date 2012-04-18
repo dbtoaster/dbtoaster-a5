@@ -7,16 +7,28 @@ open Ring
 open Arithmetic
 open Calculus
 
+(**/**)
 module C = Calculus
 
-let delta_var_id = ref 0
+let delta_var_id = ref 0;;
 
+let error expr msg = raise (CalculusException(expr, msg));;
+(**/**)
+
+(**
+   [delta_of_expr delta_event expr]
+   
+   Compute the delta of a Calculus expression with respect to a specific event
+   @param delta_event   The event with respect to which the delta is being taken
+   @param expr          A Calculus expression without Externals
+   @return              The delta of [expr] with respect to [delta_event]
+*)
 let rec delta_of_expr (delta_event:Schema.event_t) (expr:C.expr_t): C.expr_t=
    let (apply_sign, (delta_reln,delta_relv,_)) =
       begin match delta_event with
          | Schema.InsertEvent(rel) -> ((fun x -> x),    rel)
          | Schema.DeleteEvent(rel) -> (CalcRing.mk_neg, rel)
-         | _ -> failwith "Error: Can not take delta of a non relation event"
+         | _ -> error expr "Error: Can not take delta of a non relation event"
       end
    in
    let rcr = delta_of_expr delta_event in
@@ -39,9 +51,9 @@ let rec delta_of_expr (delta_event:Schema.event_t) (expr:C.expr_t): C.expr_t=
                if delta_reln = reln then 
                   if (List.length relv) <> (List.length delta_relv)
                   then
-                     raise (CalculusException(expr,
+                     error expr (
                         "Relation '"^reln^"' has an inconsistent number of vars"
-                     ))
+                     )
                   else
                   let definition_terms = 
                      CalcRing.mk_prod (
@@ -53,7 +65,7 @@ let rec delta_of_expr (delta_event:Schema.event_t) (expr:C.expr_t): C.expr_t=
                   in apply_sign definition_terms
                else CalcRing.zero
          (*****************************************)
-            | External(_) -> failwith "Can not take delta of an external"
+            | External(_) -> error expr "Can not take delta of an external"
          (*****************************************)
             | Cmp(_,_,_) -> CalcRing.zero
          (*****************************************)
@@ -97,4 +109,11 @@ let rec delta_of_expr (delta_event:Schema.event_t) (expr:C.expr_t): C.expr_t=
 
 ;;
 
+(**
+   [has_no_deltas expr]
+   
+   Determine if the provided expression has a (nonzero) delta or not.
+   @param expr A Calculus expression
+   @return     True if the Calculus expression has no nonzero deltas
+*)
 let has_no_deltas (expr:C.expr_t): bool = (C.rels_of_expr expr = [])

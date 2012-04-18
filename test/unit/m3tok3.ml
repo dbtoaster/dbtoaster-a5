@@ -230,7 +230,7 @@ in
 				      ];
 		
 		
-		Debug.activate "M3ToK3-GENERATE-INIT";
+		Debug.activate "M3TOK3-GENERATE-INIT";
 		test_expr " External - OutPC - Singleton Init " 
 							~env:["A", (T.CFloat(2.));"B", (T.CFloat(3.))]
 							"R[][A,B]" (VK.BaseValue(T.CFloat(0.)));
@@ -255,7 +255,7 @@ in
 							[  [2.], 12.;
 				         [1.], 6.;
 				      ];
-		Debug.deactivate "M3ToK3-GENERATE-INIT";
+		Debug.deactivate "M3TOK3-GENERATE-INIT";
 		
 		
 		
@@ -420,7 +420,7 @@ in
 								 [3.; 3.; 1.; 3.], 3.; [3.; 3.; 1.; 1.], 4.; [3.; 3.; 1.; 2.], 8.;  
 				      ];
 		
-		Debug.activate "M3ToK3-GENERATE-INIT";
+		Debug.activate "M3TOK3-GENERATE-INIT";
 		test_stmt_coll " Update - PC - Singleton Init "
 							~env:["A", (T.CFloat(2.));
 										"B", (T.CFloat(2.));"C", (T.CFloat(1.));]
@@ -443,5 +443,5 @@ in
 				         [2.; 2.; 2.; 1.], 8.; [2.; 2.; 2.; 2.], 16.; [2.; 2.; 1.; 1.], 1.; [2.; 2.; 1.; 2.], 2.;
 								 [3.; 3.; 1.; 3.], 3.; [3.; 3.; 1.; 1.], 1.; [3.; 3.; 1.; 2.], 2.; [3.; 3.; 2.; 1.], 12.; [3.; 3.; 2.; 2.], 24.;
 				      ];		
-		Debug.deactivate "M3ToK3-GENERATE-INIT";
+		Debug.deactivate "M3TOK3-GENERATE-INIT";
 		()

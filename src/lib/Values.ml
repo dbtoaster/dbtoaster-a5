@@ -1,15 +1,15 @@
-(* Values.
- * A module implementing categories of basic values used in compiled programs.
- * Currently these categories are:
- * -- ConstTValue: M3.const_t
- * -- FloatValue: float
- * -- K3Value: floats, ints, tuples, list + map collections
- *
- * Description of module usage:
- * -- variables are bound to values.
- * -- maps are keyed by values.
- * -- databases store values.
- * -- interpreted code yields values.
+(** Values.
+  A module implementing categories of basic values used in compiled programs.
+  Currently these categories are:
+   - ConstTValue: M3.const_t
+   - FloatValue: float
+   - K3Value: floats, ints, tuples, list + map collections
+ 
+  Description of module usage:
+   - variables are bound to values.
+   - maps are keyed by values.
+   - databases store values.
+   - interpreted code yields values.
  *)
 
 open Types
@@ -45,7 +45,9 @@ end
 module AbstractValuation : Valuation = functor(V : Value) ->
 struct
    (* the keys are variable names *)
+   (**/**)
    module StringMap = Map.Make (String)
+   (**/**)
 
    type key = StringMap.key
    type value_t = V.t

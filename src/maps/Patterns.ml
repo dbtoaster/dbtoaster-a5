@@ -1,3 +1,39 @@
+(**
+   Tools for managing indices over datastructures that DBToaster runtimes 
+   maintain.  
+   
+   All datastructures used in M3 have a map-style interface.  The datastructure
+   describes a (potentially infinite) set of mappings from tuples to values.
+   For example we could have the map [M1[][A,B]] assigned values as follows:
+   {[
+      [1,2] -> 2
+      [2,3] -> 6
+      [1,3] -> 4
+   ]}
+   If [M1[][A,B]] is evaluated in a scope where both [A] and [B] are bound, then
+   we will read only a single value.  For example:
+   [(A ^= 1)*(B ^= 2)*M1[][A,B]]
+   evaluates to [2].  This is easy to implement (e.g., with a HashMap).  
+   Similarly, if none of the variables are bound, then we simply iterate over 
+   all of the elements of the datastructure (also easy).  However, it might be 
+   the case that only some (but not all) of the variables are bound.  For 
+   example:
+   [(A ^= 1)*M1[][A,B]] evaluates to the set [{[1,2] -> 2, [1,3] -> 4}]. 
+   
+   In order to implement this sort of access efficiently in the runtime (in the 
+   general case), we need to build and maintain special index structures.  For
+   example, if only [A] is bound, we need to be able to efficiently iterate over 
+   the keys in the set that have the corresponding value of A.  For this 
+   example, we would create the secondary index:
+   {[
+      [1] -> { [1,2], [1,3] }
+      [2] -> { [2,3] }
+   ]}
+   Similarly, if we wanted to be able to iterate over the elements of the set 
+   with [B] bound
+*)
+   
+
 (******************* Patterns *******************)
 
   type pattern =
