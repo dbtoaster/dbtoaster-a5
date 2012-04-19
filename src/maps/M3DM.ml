@@ -195,7 +195,9 @@ let rec maintain (context: Calculus.expr_t)
         | Rel(rname, rvars)    -> 
             ([], CalcRing.mk_prod ([context; formula]))
         | Cmp(op,subexp1,subexp2) -> 
-            failwith ("comparison not supported!") (*TODO*)
+            let right_context = CalcRing.Val(leaf) in
+                ([], CalcRing.mk_prod ([context; right_context]))
+           (* failwith ("comparison not supported!") *) (*TODO*)
         | Lift(target, subexp)    -> 
             let (trlist, context1) = maintain(context)(subexp) in
                 (trlist, context1) (*FIXME*)
@@ -241,9 +243,11 @@ let make_DM_triggers (m3_triggers: trigger_t list): dm_prog_t =
     let dm_triggers = ref [] in
     let dm_prog:dm_prog_t = dm_triggers in
         List.iter (fun (trigger:trigger_t) ->
-            let relation = get_relation_of_event (trigger.event) in
-            let dm_trigger = maintain_all (relation) (!(trigger.statements)) (trigger.event) in
-            dm_triggers := dm_trigger :: !dm_triggers
+            try
+                let relation = get_relation_of_event (trigger.event) in
+            	let dm_trigger = maintain_all (relation) (!(trigger.statements)) (trigger.event) in
+            	dm_triggers := dm_trigger :: !dm_triggers
+            with _ -> ()
         ) m3_triggers;
     dm_prog
 

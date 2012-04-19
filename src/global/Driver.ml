@@ -152,7 +152,7 @@ let input_stages =
    stages after the stage that produces the desired output format. *)
 let core_stages = 
    [  StageSQLToCalc; StageCompileCalc; StagePlanToM3; 
-      (* StageM3DomainMaintenance; *)
+      StageM3DomainMaintenance; 
       StageM3ToK3; (* StageOptimizeK3; *) StageK3ToTargetLanguage
    ]
 
@@ -167,13 +167,14 @@ let compile_stages target_stage final_stage target_compiler =
 let functional_stages =
    compile_stages StageK3ToTargetLanguage StageM3ToK3
 let imperative_stages =
-   compile_stages StageImpToTargetLanguage StageK3ToImp
+   compile_stages StageImpToTargetLanguage StageK3ToImp;;
 
 let active_stages = ref (ListAsSet.inter
    ((match !input_language with
       | Auto -> bug "input language still auto"
       | SQL  -> StageParseSQL::(stages_from StageSQLToCalc)
       | M3   -> StageParseM3::[]
+      | K3   -> StageParseK3::[]
       | _    -> error "Unsupported input language"
     )@output_stages)
    ((match !output_language with
@@ -424,7 +425,15 @@ if stage_is_active StageM3ToK3 then (
 )
 ;;
 if stage_is_active StageParseK3 then (
-   bug "ParseK3 hasn't been completed yet"
+   if List.length !files > 1 then
+      error "Multiple K3 files not supported yet"
+   else 
+   let f = List.hd !files in
+   let lexbuff = Lexing.from_channel 
+      (if f <> "-" then (open_in f) else stdin)
+   in 
+      k3_program := 
+            K3parser.dbtoasterK3Program K3lexer.tokenize lexbuff
 )
 ;;
 if stage_is_active StageOptimizeK3 then (

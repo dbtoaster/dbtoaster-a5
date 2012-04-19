@@ -46,10 +46,12 @@ TOPLEVEL_FILES=\
 LEXERS=\
 	src/parsers/Sqllexer\
 	src/parsers/Calculuslexer\
+	src/parsers/K3lexer\
 
 PARSERS=\
 	src/parsers/Sqlparser\
 	src/parsers/Calculusparser\
+	src/parsers/K3parser\
 
 DIRS=\
 	src/util\
