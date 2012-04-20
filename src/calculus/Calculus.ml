@@ -204,7 +204,9 @@ let rec type_of_expr (expr:expr_t): type_t =
          | External(_,_,_,etype,_) -> etype
          | AggSum(_, subexp)       -> rcr subexp
          | Rel(_,_)                -> TInt
-         | Cmp(_,_,_)              -> TBool
+         | Cmp(_,_,_)              -> TInt (* Since we're not using truth, but
+                                              rather truthiness: the # of
+                                              truths encountered thus far *)
          | Lift(_,_)               -> TInt
       end)
       expr

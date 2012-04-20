@@ -80,7 +80,7 @@ let numerical_type t = begin match t with
 let init_val_from_type ret_type = begin match ret_type with
 	| T.TInt   -> zero_int_val
 	| T.TFloat -> zero_flt_val
-	| _ -> failwith "invalid return type."
+	| _ -> failwith ("invalid return type ("^(T.string_of_type ret_type)^".")
 	end
 		
 let init_val ret_e = begin match ret_e with
@@ -308,7 +308,7 @@ let rec calc_to_k3_expr meta theta_vars_el calc :
 	let bin_fn op_fn c1 c2 =
 		let ((ret1_t, e1),(ret2_t, e2)) = pair_map value_to_k3_expr (c1,c2) in
 		assert (compatible_types ret1_t ret2_t);
-		([], K.Var("v",K.TBase(T.TBool)), (op_fn e1 e2)), meta
+		([], K.Var("v",K.TBase(T.TInt)), (op_fn e1 e2)), meta
 	in
   begin match calc with
 		| C.Val( calc_val ) -> begin match calc_val with

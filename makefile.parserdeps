@@ -5,7 +5,8 @@
 CALC_PARSER_DEPS =\
   src/global/Types\
   src/ring/Arithmetic\
-  src/calculus/Calculus
+  src/calculus/Calculus\
+  src/compiler/Plan
 
 SQL_PARSER_DEPS =\
   src/global/Types\

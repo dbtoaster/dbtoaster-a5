@@ -88,16 +88,16 @@ in
       "M1(int)[][A] * [A < C]";
 	test "Extending output schema due to an input variable"
 			"AggSum([A], R(A,B) * [B < C])"
-      "M1(int)[][A,B] * [B < C]";
+      "AggSum([A],M1(int)[][A,B] * [B < C])";
 	test "Graph Decomposition"
 			"AggSum([A], R(A,B) * S(C))"
       "M1(int)[][A] * M2(int)[][]";
 	test "Map reuse"
 			"AggSum([A], R(A,B) + R(A,B))"
-      "(M1(int)[][A] * 2)";
+      "(M1(int)[][A] + M1(int)[][A])";
 	test "Map reuse with renaming"
 			"AggSum([A], R(A,B) * (S(C) + S(D)))"
-      "M2(int)[][] * M1(int)[][A] * 2";
+      "(M1(int)[][A] * M2(int)[][]) + (M1(int)[][A] * M2(int)[][])";
 	test "Map reuse with renaming"
 			"(R(A,B) * S(C)) + (R(B,C) * S(A))"
       "(M1(int)[][A,B] * M2(int)[][C]) + (M1(int)[][B,C] * M2(int)[][A])";
@@ -116,19 +116,19 @@ in
       "M1(int)[][A]";
 	test "Aggregation with a lift containing a relevant relation"
 			"AggSum([A], R(A,B) * (E ^= R(C,D) * B))"
-      "(M1_L1_1(int)[][A,B] * (E ^= M1_L1_1(int)[][C, D] * B))";
+      "AggSum([A], (M1_L1_1(int)[][A,B] * (E ^= M1_L1_1(int)[][C, D] * AggSum([], B))))";
 	test "Aggregation with a lift containing a relevant relation and a condition"
 			"AggSum([A], R(A,B) * (E ^= R(C,D) * B) * [E > 0])"
-      "(M1_L1_1(int)[][A,B] * (E ^= M1_L1_1(int)[][C,D] * B) * [E > 0])"; 	
+      "AggSum([A], (M1_L1_1(int)[][A,B] * (E ^= M1_L1_1(int)[][C,D] * AggSum([],B)) * [E > 0]))"; 	
 	test "Aggregation with a lift containing a relevant relation and a variable"
 			"AggSum([A], R(A,B) * (E ^= R(C,D) * B) * E)"
-      "(M1_L1_1(int)[][A,B] * (E ^= M1_L1_1(int)[][C,D] * B) * E)";	
+      "AggSum([A], (M1_L1_1(int)[][A,B] * (E ^= M1_L1_1(int)[][C,D] * AggSum([], B)) * E))";	
   test "Aggregation with a lift containing a relevant relation and a common variable"
       "AggSum([A], R(A,B) * (E ^= R(C,D) * [A = C]) * [E > 0])"
-      "(E ^= M1_L1_1(int)[][A,D]) * M1(int)[][A] * [E > 0]";
+      "AggSum([A], M1(int)[][A] * (E ^= M1_L1_1(int)[][A,D]) * [E > 0])";
   	test "Extending schema due to a lift"
 			"AggSum([A], R(A) * S(C) * (D ^= R(B) * C))"		
-			"(M1(int)[][A] * M2(int)[][C] * (D ^= M1(int)[][B] * C))";
+			"(M1(int)[][A] * AggSum([], M2(int)[][C] * (D ^= M1(int)[][B] * AggSum([], C))))";
 	test "Mapping example"
 			"R(A) * S(C) * (E ^= R(B) * S(D)) * 5"		
 			"(E ^= M1_L1_1(int)[][B] * M1_L1_2(int)[][D]) * 
