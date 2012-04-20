@@ -96,7 +96,7 @@ let compile_map (db_schema:Schema.t) (history:Heuristics.ds_history_t)
       end
    in
 	 (*Debug.activate "IGNORE-DELETES";*)
-	 Debug.activate "LOG-COMPILE-DETAIL";
+	 (*Debug.activate "LOG-COMPILE-DETAIL"; *)
    Debug.print "LOG-COMPILE-DETAIL" (fun () ->
       "Optimizing: \n"^(CalculusPrinter.string_of_expr todo.ds_definition)
    );

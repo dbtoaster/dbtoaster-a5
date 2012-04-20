@@ -143,7 +143,7 @@ let rec materialize ?(scope:var_t list = [])
 										: (ds_t list * expr_t) = 
 		
 
-		Debug.activate "LOG-HEURISTICS-DETAIL"; 
+		(*Debug.activate "LOG-HEURISTICS-DETAIL"; *)
 		Debug.activate "IGNORE-FINAL-OPTIMIZATION"; 
 		
 		Debug.print "LOG-HEURISTICS-DETAIL" (fun () ->
@@ -207,8 +207,6 @@ and materialize_expr (history:ds_history_t) (prefix:string)
                      (scope:var_t list) (schema:var_t list) 
 										 (expr:expr_t) : (ds_t list * expr_t) =
 
-		(*if (rels_of_expr expr) = [] then ([], expr) else*)
-
 		(* Divide the expression into three parts *)
 		let (rel_exprs, lift_exprs, rest_exprs) = split_expr event scope expr in 		
 
@@ -240,7 +238,8 @@ and materialize_expr (history:ds_history_t) (prefix:string)
 		                                      (ListAsSet.multiunion [ schema; 
 																					                       lift_exprs_ivars;
 																																 (* handling a special case when (A ^= dB) * (A ^= 5) *)
-																																 lift_exprs_ovars;
+																																 (* the above case should be removed by the transform module *)
+																																 (*lift_exprs_ovars;*) 
 																																 rest_exprs_ivars]) in
 		(* If necessary, add aggregation to the relation term *)
 		let agg_rel_expr = 
