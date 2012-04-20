@@ -1,10 +1,13 @@
 
-all: ocaml
+all: dependencies
 
-ocaml: 
-	@make -C ocaml
+dependencies:
+
+runtimelibs: 
+	@make -C dbt_ocaml
 
 clean:
-	make -C ocaml clean
+	make -C dbt_ocaml clean
+	make -C xml-light clean
 
-.PHONY: all ocaml clean
+.PHONY: all ocaml clean dependencies

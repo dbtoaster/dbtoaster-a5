@@ -1,0 +1,13 @@
+{
+  :path => "test/queries/simple/rst.sql",
+  :datasets => {
+    "standard" => {
+      :toplevels => {
+        "AtimesD" => {
+          :type => :singleton,
+          :expected => 18753367048934.0
+        }
+      }
+    }
+  }
+}

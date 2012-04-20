@@ -123,7 +123,7 @@ let compile_triggers trigs : code_t list =
     
 let compile_k3_to_code (dbschema:Schema.t)
                        ((schema,patterns,trigs) : K3.prog_t)
-                       (toplevel_queries : string list): code_t =
+                       (toplevel_queries :  string list): code_t =
    let rels = List.map (fun (reln,relv,_) -> (reln,relv))
                        (Schema.rels dbschema) in
    let ctrigs = compile_triggers_noopt trigs in

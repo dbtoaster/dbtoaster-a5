@@ -11,6 +11,7 @@ FILES=\
 	src/global/Types\
 	src/global/Schema\
 	src/sql/Sql\
+	src/sql/SqlClient\
 	src/ring/Ring\
 	src/ring/Arithmetic\
 	src/calculus/Calculus\
@@ -91,28 +92,36 @@ OPT_FLAGS +=\
 
 #################################################
 
-all: bin/dbtoaster_top bin/dbtoaster_debug bin/dbtoaster lib
+all: bin/dbtoaster_top bin/dbtoaster_debug bin/dbtoaster runtimelibs
 
-lib: $(O_FILES) $(C_FILES)
-	@echo Making Libraries
-	@make -C lib
+runtimelibs: $(O_FILES) $(C_FILES)
+	@echo Making Runtime Libraries
+	@make -C lib runtimelibs
 
-bin/dbtoaster: $(O_FILES) src/global/Driver.ml
+lib/.deps:
+	@echo Making Library Dependencies
+	@make -C lib dependencies
+	@touch lib/.deps
+
+bin/dbtoaster: $(O_FILES) lib/.deps src/global/Driver.ml
 	@echo "Linking DBToaster (Optimized)"
 	@$(OCAMLOPT) $(OPT_FLAGS) -o $@ $(O_FILES) src/global/Driver.ml
 
-bin/dbtoaster_debug: $(C_FILES) src/global/Driver.ml
+bin/dbtoaster_debug: $(C_FILES) lib/.deps src/global/Driver.ml
 	@echo "Linking DBToaster (Debug)"
 	@$(OCAMLCC) $(OCAML_FLAGS) -o $@ $(C_FILES) src/global/Driver.ml
 
-bin/dbtoaster_top: $(C_FILES) src/global/UnitTest.ml
+bin/dbtoaster_top: $(C_FILES) lib/.deps src/global/UnitTest.ml
 	@echo "Linking DBToaster Top"
 	@$(OCAMLMKTOP) $(OCAML_FLAGS) -o $@ $(C_FILES) src/global/UnitTest.ml
 
 states: $(patsubst %,%.states,$(PARSERS))
 
 test: bin/dbtoaster_top
-	@DIRS="$(DIRS)" make -C test
+	@make -C test unit
+
+querytest: bin/dbtoaster
+	@make -C test query
 	
 queries: bin/dbtoaster
 	make -C test/queries
@@ -183,6 +192,7 @@ clean:
 	rm -f doc/*.aux doc/*.synctex.gz doc/*.log
 	rm -f makefile.deps
 	make -C lib clean
+	rm -f lib/.deps
 
 distclean: clean
 	make -C doc clean
@@ -190,5 +200,5 @@ distclean: clean
 
 #################################################
 
-.PHONY: all clean distclean test states doc lib
+.PHONY: all clean distclean test states doc runtimelibs
 

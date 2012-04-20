@@ -1,61 +1,98 @@
-(***********************************************
- * K3, a simple collection language
- * admitting structural recursion optimizations
- ************************************************)
-(* Notes:
- * -- K3 is a simple functional language with tuples, temporary and persistent
- *    collections, collection operators (iterate, map, flatten, aggregate,
- *    group-by aggregate), and persistence operations (get, update).
- * -- Here "persistent" means global for now, as needed by DBToaster triggers,
- *    rather than being long-lived over multiple program invocations. This
- *    suffices because DBToaster's continuous queries are long-running themselves.
- * -- Maps are persistent collections, where the collection is a tuple of
- *    keys and value. 
- * -- For tuple collection accessors:
- *   ++ we assume a call-by-value semantics, thus for persistent collections,
- *      the collections are repeatedly retrieved from the persistent store,
- *      and our code explicitly avoids this by passing them as arguments to
- *      functions.
- *   ++ these can operate on either temporary or persistent collections.
- *      It is the responsibility of the code generator to produce the correct
- *      implementation on the actual datatype representing the collection.
- * -- For persistent collections based on SliceableMaps:
- *   ++ code generator should instantiate the collection datastructure used
- *      during evaluation, whether they are lists or ValuationMaps.
- *   ++ code generator should strip any secondary indexes as needed.
- *   ++ currently in the interpreter, during slicing we convert a persistent
- *      collection into a temporary one, from a SliceableMap to TupleList
- *   ++ updates should add any secondary indexes as needed
- *)
+(**
+   A simple collection language (K3) admitting structural recursion 
+   optimizations
+
+  Notes:
+    - K3 is a simple functional language with tuples, temporary and persistent
+      collections, collection operators (iterate, map, flatten, aggregate,
+      group-by aggregate), and persistence operations (get, update).
+    - Here "persistent" means global for now, as needed by DBToaster triggers,
+      rather than being long-lived over multiple program invocations. This
+      suffices because DBToaster's continuous queries are long-running 
+      themselves.
+    - Maps are persistent collections, where the collection is a tuple of
+      keys and value. 
+    - For tuple collection accessors: {ul
+       {- we assume a call-by-value semantics, thus for persistent collections,
+          the collections are repeatedly retrieved from the persistent store,
+          and our code explicitly avoids this by passing them as arguments to
+          functions.}
+       {- these can operate on either temporary or persistent collections.
+          It is the responsibility of the code generator to produce the correct
+          implementation on the actual datatype representing the collection.}
+      }
+    - For persistent collections based on SliceableMaps: {ul
+       {- code generator should instantiate the collection datastructure used
+          during evaluation, whether they are lists or ValuationMaps.}
+       {- code generator should strip any secondary indexes as needed.}
+       {- currently in the interpreter, during slicing we convert a persistent
+          collection into a temporary one, from a SliceableMap to TupleList}
+       {- updates should add any secondary indexes as needed}
+      }
+*) 
 
 open Format
 
 
 (* Metadata for code generation *)
 
+(** Variable identifiers.  This is distinct from [Types.var_t] because K3 
+    variables can have more complex types ([K3.type_t], rather than 
+    [Types.type_t]) *)
 type id_t = string
+
+(** Collection identifiers *)
 type coll_id_t = string
 
-(* K3 Typing.
- * -- collection type is used for both persistent and temporary collections.
- * -- maps are collections of tuples, where the tuple includes key types
- *    and the value type. 
+(**K3 Typing primitives.  This needs to be more extensive than the primitive
+   types defined in the Types module.  We include those via TBase.
+
+   Note that the collection type is used for both persistent and temporary 
+   collections.  Maps are collections of tuples, where the tuple includes key 
+   types and the value type. 
+   
+   Note also that the function type is compositional, and thus a little bit 
+   ambiguous.  Specifically:
+   [Fn([A, B], Fn([C], t))]
+   is equivalent to
+   [Fn([A, B, C], t)]
+   which is also equivalent to
+   [Fn([A], Fn([B, C], t))]
+   
+   Also note that Collections of Tuples are treated as HashMaps (specifically
+   by the operations [Member], [Lookup], and [Slice]).  For collections of 
+   n-field tuples, the first n-1 fields are the "key", and the remaining field
+   is the "value".  Note that for arbitrary collections, uniqueness of keys is 
+   not implicitly guaranteed.  Only Persistent Collections as defined below 
+   guarantee uniqueness for the keys provided as arguments to [PCUpdate]/
+   [PCValueUpdate].
  *)
 type type_t =
-      TUnit 
-		| TBase      of Types.type_t
-    | TTuple     of type_t list
-    | Collection of type_t
-    | Fn         of type_t list * type_t
+    | TUnit                               (** Unit type; No data content *)
+    | TBase      of Types.type_t          (** Primitive type, see Types *)
+    | TTuple     of type_t list           (** Tuples of nested objects *)
+    | Collection of type_t                (** Collections (typically bags) *)
+    | Fn         of type_t list * type_t  (** Function type *)
 
-(* Schemas are carried along with persistent map references,
- * and temporary slices *)
+(** Schemas are carried along with persistent map references, and temporary 
+    slices *)
 type schema = (id_t * type_t) list
 
+(** A function argument *)
+type arg_t = 
+   | AVar of id_t * type_t          (** The function accepts a single variable 
+                                        of any type.  Within the scope of the 
+                                        function the parameter is referenced by 
+                                        the specified identifier *)
+   | ATuple of (id_t * type_t) list (** The function accepts a single variable
+                                        which must be of tuple type, with a 
+                                        width and type corresponding to the 
+                                        provided types.  Within the scope of the 
+                                        function, the fields of the tuple can be 
+                                        referenced individually by the specified 
+                                        identifiers *)
 
-type arg_t = AVar of id_t * type_t | ATuple of (id_t * type_t) list
-
-(* External functions *)
+(* External functions (Not implemented yet) *)
 (*
 type ext_fn_type_t = type_t list * type_t   (* arg, ret type *)
 
@@ -66,63 +103,188 @@ type symbol_table = (fn_id_t, ext_fn_type_t) Hashtbl.t
 let ext_fn_symbols : symbol_table = Hashtbl.create 100
 *)
 
-(* Expression AST *)
+(** Expression AST *)
 type expr_t =
    
    (* Terminals *)
-     Const         of Types.const_t
-   | Var           of id_t        * type_t
+     Const         of Types.const_t          (** 
+         Constants of primitive types.
+      *)
+   | Var           of id_t        * type_t   (**
+         Variable references.  
+      *)
+   
 
    (* Tuples, i.e. unnamed records *)
-   | Tuple         of expr_t list
-   | Project       of expr_t      * int list
+   | Tuple         of expr_t list            (**
+         Tuple constructor
+      *)
+   | Project       of expr_t      * int list (**
+         Tuple projection {b NOT IMPLEMENTED IN RUNTIMES}
+      *)
 
    (* Collection construction *)
-   | Singleton     of expr_t
-   | Combine       of expr_t      * expr_t 
+   | Singleton     of expr_t                 (**
+         Constructor for singleton collections (collections with only one 
+         element)
+      *)
+   | Combine       of expr_t      * expr_t   (**
+         Combine two or more collections together {b NOT FULLY SUPPORTED BY 
+         RUNTIMES}
+      *)
 
    (* Arithmetic and comparison operators, conditionals *) 
-   | Add           of expr_t      * expr_t
-   | Mult          of expr_t      * expr_t
-   | Eq            of expr_t      * expr_t
-   | Neq           of expr_t      * expr_t
-   | Lt            of expr_t      * expr_t
-   | Leq           of expr_t      * expr_t
-   | IfThenElse0   of expr_t      * expr_t
+   | Add           of expr_t      * expr_t   (** Add two primitives *)
+   | Mult          of expr_t      * expr_t   (** Multiply two primitives *)
+   | Eq            of expr_t      * expr_t   (** Equality test *)
+   | Neq           of expr_t      * expr_t   (** Inequality test *)
+   | Lt            of expr_t      * expr_t   (** Less than test *)
+   | Leq           of expr_t      * expr_t   (** Greater than test *)
+   | IfThenElse0   of expr_t      * expr_t   (** 
+         If the first field is nonzero/true, evaluate and return the second
+         field.  Otherwise return 0.
+       *)
 
    (* Control flow: conditionals, sequences, side-effecting iterations *)
-   | Comment       of string      * expr_t
-   | IfThenElse    of expr_t      * expr_t   * expr_t
-   | Block         of expr_t list 
-   | Iterate       of expr_t      * expr_t  
+   | Comment       of string      * expr_t   (**
+         Ignored syntax node, used primarilly for debugging
+      *)
+   | IfThenElse    of expr_t      * expr_t   * expr_t (** 
+         If the first field is nonzero/true, evaluate and return the second
+         field.  Otherwise evaluate and return the third field.
+      *)
+   | Block         of expr_t list            (**
+         Evaluate each expression in the list in turn and return the return
+         value of the last expression.  All other expressions must evaluate to
+         TUnit
+      *)
+   | Iterate       of expr_t      * expr_t   (**
+         Iterate over elements of the collection provided in the second field
+         using the lambda function provided in the first field
+      *)
      
    (* Functions *)
-   | Lambda        of arg_t       * expr_t
-   | AssocLambda   of arg_t       * arg_t    * expr_t
-   | Apply         of expr_t      * expr_t
+   | Lambda        of arg_t       * expr_t   (**
+         Defines a single-argument function.  When the function is [Apply]ed, 
+         the second field expression is evaluated with the first field's 
+         variable(s) in scope, bound to the applied value, and the return value
+         of the expression is returned from the [Apply].
+      *)
+   | AssocLambda   of arg_t       * arg_t    * expr_t (**
+         Defines a two-argument function.  This is equivalent to
+         [Lambda(arg1, Lambda(arg2, expr))].  Mostly here for utility, because
+         Aggregate and GroupByAggregate expect the aggregate function to take
+         two parameters.
+      *)
+   | Apply         of expr_t      * expr_t (**
+         Evaluate a [Lambda] function on a value, or curry the outermost 
+         parameter of an [AssocLambda] function.  The first field must be a 
+         function who's leftmost argument type is the type of the second field.  
+         The function will be evaluated with the second field as its argument, 
+         and the return value of the function will be returned by the [Apply].
+      *)
 
    (* Structural recursion operators *)
-   | Map              of expr_t      * expr_t 
-   | Flatten          of expr_t
-   | Aggregate        of expr_t      * expr_t   * expr_t
-   | GroupByAggregate of expr_t      * expr_t   * expr_t * expr_t
+   | Map              of expr_t      * expr_t (**
+         Transform the collection provided in the second field, by applying the 
+         function provided in the first field to every element of the 
+         collection.
+      *)
+   | Flatten          of expr_t              (**
+         Flatten a collection of collections into a single-level collection
+      *)
+   | Aggregate        of expr_t      * expr_t   * expr_t (**
+         Fold the elements of the collection provided in the third field, by 
+         applying the two-argument function provided in the first field, using 
+         the second field as an initial value for the fold.  The first parameter
+         of the provided function should be the tuple being folded, and the
+         second is the current fold value.
+      *)
+   | GroupByAggregate of expr_t      * expr_t   * expr_t * expr_t (**
+         Fold the elements of the collection provided in the fourth field, by
+         applying the two-argument function provided in the first field, using
+         the second field as an initial value for the fold.  Before folding, 
+         elements of the collection are classified into groups labeled by the
+         return value of the function provided in the third field.  If this
+         return value is of tuple type, the return value of the aggregate is
+         a collection of this tuple type extended by the fold value type.  If 
+         the classifier's return value is not a tuple type, then the return 
+         value of the aggregate is a collection of tuples of this type and the
+         fold value's type
+      *)
 
    (* Tuple collection accessors *)
-   | Member      of expr_t      * expr_t list  
-   | Lookup      of expr_t      * expr_t list
-   | Slice       of expr_t      * schema      * (id_t * expr_t) list
+   | Member      of expr_t      * expr_t list  (**
+         Determine if values obtained by evaluating the expressions in the 
+         second field are a key that has been defined in the tuple collection 
+         provided in the first field.
+      *)
+   | Lookup      of expr_t      * expr_t list  (**
+         Find the value corresponding to the key formed by evaluating the 
+         expressions in the second field in the tuple collection provided in the 
+         first field.  This operation will cause an error if the value is not
+         already present in the collection.
+      *)
+   
+   | Slice       of expr_t      * schema      * (id_t * expr_t) list (**
+         Perform a partial key access on the tuple collection provided in the 
+         first field.  Key fields provided in the third field are bound 
+         according to the schema provided in the second field, and all unbound 
+         keys are treated as wildcards.  All matching tuples in the collection 
+         are returned.
+      *)
    
    (* Persistent collection types w.r.t in/out vars *)
-   | SingletonPC   of coll_id_t   * type_t
-   | OutPC         of coll_id_t   * schema   * type_t
-   | InPC          of coll_id_t   * schema   * type_t
-   | PC            of coll_id_t   * schema   * schema    * type_t
+   | SingletonPC   of coll_id_t   * type_t (**
+         A reference to a persistent global variable.  The value of this 
+         variable may be changed by calling PCValueUpdate with no keys.  The 
+         reference acts as the value itself otherwise.
+      *)
+   | OutPC         of coll_id_t   * schema   * type_t (**
+         A reference to a persistent global collection optimized for slicing.  
+         The value of this collection may be changed in two ways: The entire 
+         collection may be replaced in bulk by calling PCUpdate with no keys or 
+         individual elements of this collection may be updated by calling 
+         PCValueUpdate with the "key" (as defined above under Tuple collection 
+         operators) in the {b second} (output variable) field.
+      *)
+   | InPC          of coll_id_t   * schema   * type_t (** 
+         A reference to a persistent global collection optimized for membership 
+         testing. The value of this collection may be changed in two ways: The 
+         entire collection may be replaced in bulk by calling PCUpdate with no 
+         keys or individual elements of this collection may be updated by 
+         calling PCValueUpdate with the "key" (as defined above under Tuple 
+         collection operators) in the {b first} (input variable) field.
+      *)
+   | PC            of coll_id_t   * schema   * schema    * type_t (**
+         A reference to a persistent global collection consisting of an OutPC 
+         nested inside an InPC.  An entire OutPC may be replaced by calling 
+         PCUpdate with the "key" (as defined above under Tuple collection 
+         operators) if the InPC element to be replaced.  Individual values may 
+         be replaced by calling PCValueUpdate with the "key"s of the InPC and 
+         the OutPC respectively.
+      *)
 
    (* map, key (optional, used for double-tiered), tier *)
-   | PCUpdate      of expr_t      * expr_t list * expr_t
+   | PCUpdate      of expr_t      * expr_t list * expr_t (**
+         Bulk replace the contents of an OutPC, InPC or the OutPC component of a 
+         PC.  If the collection provided in the first field is an OutPC or InPC, 
+         then the key provided in the second field must be empty and the entire 
+         collection will be replaced by the collection provided in the third 
+         field.  If the collection provided in the first field is a PC, then the 
+         key in the second field is evaluated used to determine which InPC 
+         element to set/replace.
+      *)
 
    (* map, in key (optional), out key, value *)   
-   | PCValueUpdate of expr_t      * expr_t list * expr_t list * expr_t 
+   | PCValueUpdate of expr_t      * expr_t list * expr_t list * expr_t (**
+         Replace a single element of a SingletonPC, OutPC, InPC or PC provided 
+         in the first field with the value resulting from evaluating the fourth 
+         field.  The second field is used to index into an InPC or the InPC 
+         component of a PC.  The third field is used to index into an OutPC or 
+         the OutPC component of a PC.  If either field is not relevant, it must 
+         be left blank.
+      *)
 
    (*| External      of ext_fn_id*)
 
@@ -525,6 +687,8 @@ type statement_t = expr_t * expr_t
 type map_t = string * (Types.type_t list) * (Types.type_t list)
 type trigger_t = Schema.event_t * statement_t list
 type prog_t = map_t list * Patterns.pattern_map * trigger_t list
+(** [Query name] x [Query expr] *)
+type toplevel_query_t = string * expr_t
     
 let code_of_prog ((maps,_,triggers):prog_t): string = (
    "--------------------- MAPS ----------------------\n"^

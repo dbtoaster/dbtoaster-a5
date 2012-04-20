@@ -1,7 +1,7 @@
 
 DBTOASTER_TOP=../bin/dbtoaster_unit
 UNIT_TEST=sh -c 'echo ==== $$1 ====; $(DBTOASTER_TOP) $$1' --
-
+QUERY_TEST=scripts/query_test.rb
 
 all: unit
 
@@ -15,7 +15,7 @@ unit:
 	@$(UNIT_TEST) unit/compiler.ml
 	@$(UNIT_TEST) unit/k3interpreter.ml
 
-queries:
-	make -C queries
+query:
+	@$(QUERY_TEST) rst
 
-.PHONY: all unit development queries
+.PHONY: all unit development query

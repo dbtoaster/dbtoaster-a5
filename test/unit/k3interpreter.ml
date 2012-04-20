@@ -1,7 +1,7 @@
 open UnitTest
 open Database
 open Patterns
-open K3.SR
+open K3
 open K3Compiler
 open Values.K3Value
 open Types
@@ -143,7 +143,7 @@ in
                         (Lambda((ATuple(["X", TBase(TFloat); 
                                          "Y", TBase(TFloat);
                                          "v", TBase(TFloat)])),
-                                (K3.SR.Tuple[Var("X", TBase(TFloat))]))),
+                                (K3.Tuple[Var("X", TBase(TFloat))]))),
                         (Slice(pc_b, ["X", TBase(TFloat); "Y", TBase(TFloat)], 
                                      []))))
       [  [ 1. ], 6.;
