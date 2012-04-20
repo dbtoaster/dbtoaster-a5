@@ -28,6 +28,7 @@ let schema_of_expr ?(scope:var_t list = []) (expr:expr_t) :
 		(ListAsSet.diff expr_ivars new_ovars, ListAsSet.union expr_ovars new_ovars) 
 
 
+let string_of_expr = CalculusPrinter.string_of_expr
 let string_of_vars = ListExtras.string_of_list string_of_var
 
 (* Push rels to the left, cmps and values to the right *)
@@ -97,6 +98,43 @@ let split_expr (event:Schema.event_t option)
 
 
 (******************************************************************************)
+(*let eval_as_update_expr (event:Schema.event_t option) 
+                        (scope:var_t list) (schema:var_t list) 
+                        (expr:expr_t) : bool =
+
+    if (rels_of_expr expr) = [] then (true) else
+
+		(* Divide the expression into three parts *)
+    let (rel_exprs, lift_exprs, rest_exprs) = split_expr event scope expr in        
+    
+		let (rel_exprs_ivars, rel_exprs_ovars) = schema_of_expr ~scope:scope rel_exprs in
+    let (lift_exprs_ivars, _) = schema_of_expr ~scope:scope lift_exprs in
+
+    (* Iterate over all lift expressions *)
+      let scope_lifts = ListAsSet.union scope rel_exprs_ovars in
+        let (todo_lifts, mat_lifts) = fst ( 
+                List.fold_left (fun ((todos, mats), j) lift ->
+                        match (CalcRing.get_val lift) with
+                                | Lift(v, subexp) ->
+                                    let (todo, mat) = materialize ~scope:scope_lifts history 
+                                                     (prefix^"_L"^(string_of_int j)^"_") event subexp in
+                                    ((todos @ todo, CalcRing.mk_prod [mats; CalcRing.mk_val (Lift(v, mat))]), j + 1)            
+                                | _  -> ((todos, mats), j)
+                ) (([], CalcRing.one), 1) (CalcRing.prod_list lift_exprs)
+        )   in  
+
+
+    (true)
+
+let eval_as_update (event:Schema.event_t option) (expr:expr_t) : bool =
+	
+    let expr_scope = extract_event_vars event in
+	
+    (* Polynomial decomposition. Note: all the terms have the same schema *)
+    List.fold_left ( fun update (term_schema, term) ->
+        (update && eval_as_update_expr event expr_scope term_schema term)
+    ) (true) (decompose_poly expr_scope expr)
+*)
 
 (* Returns a todo list with the current expression *)
 let rec materialize ?(scope:var_t list = [])
@@ -105,8 +143,8 @@ let rec materialize ?(scope:var_t list = [])
 										: (ds_t list * expr_t) = 
 		
 
-		(*Debug.activate "LOG-HEURISTICS-DETAIL";*)
-		(*Debug.activate "IGNORE-FINAL-OPTIMIZATION";*) 
+		Debug.activate "LOG-HEURISTICS-DETAIL"; 
+		Debug.activate "IGNORE-FINAL-OPTIMIZATION"; 
 		
 		Debug.print "LOG-HEURISTICS-DETAIL" (fun () ->
 			 "[Heuristics] Raw expression: "^(string_of_expr expr)^
@@ -169,13 +207,13 @@ and materialize_expr (history:ds_history_t) (prefix:string)
                      (scope:var_t list) (schema:var_t list) 
 										 (expr:expr_t) : (ds_t list * expr_t) =
 
-		if (rels_of_expr expr) = [] then ([], expr) else
+		(*if (rels_of_expr expr) = [] then ([], expr) else*)
 
 		(* Divide the expression into three parts *)
 		let (rel_exprs, lift_exprs, rest_exprs) = split_expr event scope expr in 		
 
     let (rel_exprs_ivars, rel_exprs_ovars) = schema_of_expr ~scope:scope rel_exprs in
-		let (lift_exprs_ivars, _) = schema_of_expr ~scope:scope lift_exprs in
+		let (lift_exprs_ivars, lift_exprs_ovars) = schema_of_expr ~scope:scope lift_exprs in
 		let (rest_exprs_ivars, _) = schema_of_expr ~scope:scope rest_exprs in
 					
 		(* Sanity check - mat_exprs should not contain any input variables *)
@@ -196,59 +234,75 @@ and materialize_expr (history:ds_history_t) (prefix:string)
 								| _  -> ((todos, mats), j)
 				) (([], CalcRing.one), 1) (CalcRing.prod_list lift_exprs)
 		)	in	
-
-		if (rels_of_expr rel_exprs) = [] then 
-			(todo_lifts, CalcRing.mk_prod [ rel_exprs; mat_lifts; rest_exprs])
-		else
+		
+		(* Extended the schema with the input variables of other expressions *) 
+		let rel_expected_schema = ListAsSet.inter rel_exprs_ovars 
+		                                      (ListAsSet.multiunion [ schema; 
+																					                       lift_exprs_ivars;
+																																 (* handling a special case when (A ^= dB) * (A ^= 5) *)
+																																 lift_exprs_ovars;
+																																 rest_exprs_ivars]) in
+		(* If necessary, add aggregation to the relation term *)
+		let agg_rel_expr = 
+			if ListAsSet.seteq rel_exprs_ovars rel_expected_schema then 
+				rel_exprs
+			else CalcRing.mk_val (AggSum(rel_expected_schema, rel_exprs)) 
+		in
+		Debug.print "LOG-HEURISTICS-DETAIL" (fun () -> 
+			"[Heuristics]  Relation AggSum expression: "^(string_of_expr agg_rel_expr)^
+	    "\n\t Scope: ["^(string_of_vars scope)^"]"^
+	    "\n\t Lift InpVars: ["^(string_of_vars lift_exprs_ivars)^"]"^
+	    "\n\t Rest InpVars: ["^(string_of_vars rest_exprs_ivars)^"]"^
+      "\n\t Schema org: ["^(string_of_vars schema)^"]"^
+	    "\n\t Schema: ["^(string_of_vars rel_exprs_ovars)^"]"^
+	    "\n\t Relation expected schema: ["^(string_of_vars rel_expected_schema)^"]"
+	  ); 
+		
+	  let (todos, complete_mat_exprs) =					 
+		  if (rels_of_expr rel_exprs) = [] then 
+	        (todo_lifts, CalcRing.mk_prod [ agg_rel_expr; mat_lifts; rest_exprs])
+	    else		
 				
-			(* Extended the schema with the input variables of other expressions *) 
-			let expected_schema = ListAsSet.inter rel_exprs_ovars 
-															(ListAsSet.multiunion [scope; schema; lift_exprs_ivars; 
-																										 rest_exprs_ivars]) in
-			(* Add an aggregation if necessary *)
-			let agg_rel_expr = if ListAsSet.seteq rel_exprs_ovars expected_schema then rel_exprs
-													else CalcRing.mk_val (AggSum(expected_schema, rel_exprs)) in
-			
-      Debug.print "LOG-HEURISTICS-DETAIL" (fun () ->
-			     	"[Heuristics]  Materializing AggSum expression: "^(string_of_expr agg_rel_expr)^
-						"\n\t Scope: ["^(string_of_vars scope)^"]"^
-						"\n\t Lift InpVars: ["^(string_of_vars lift_exprs_ivars)^"]"^
-            "\n\t Rest InpVars: ["^(string_of_vars rest_exprs_ivars)^"]"^
-            "\n\t Schema org: ["^(string_of_vars schema)^"]"^
-						"\n\t Schema: ["^(string_of_vars rel_exprs_ovars)^"]"^
-            "\n\t Expected schema: ["^(string_of_vars expected_schema)^"]"
-		  ); 
-			
-			(* Try to found an already existing map *)
-			let (found_ds, mapping_if_found) = 
-				List.fold_left (fun result i ->
-            (*print_string ("  DS_DEFINITION: "^(string_of_expr i.ds_definition)^"\n");*)
-						if (snd result) <> None then result else
-						(i, (cmp_exprs i.ds_definition agg_rel_expr))
-	  			) ({ds_name = CalcRing.one; ds_definition = CalcRing.one}, None) !history
-			in begin match mapping_if_found with
-				| None -> 
-					let new_ds = {
-							ds_name = CalcRing.mk_val (
-									External(
-					            prefix,
-			                rel_exprs_ivars,
-											expected_schema,
-			                type_of_expr agg_rel_expr,
-			                None
-			            )
-			        );
-			        ds_definition = agg_rel_expr;
-			    } in
-						history := new_ds :: !history;
-			      ([new_ds] @ todo_lifts, CalcRing.mk_prod [new_ds.ds_name; mat_lifts; rest_exprs])
-			         
-				| Some(mapping) ->
-					Debug.print "LOG-HEURISTICS-DETAIL" (fun () -> 
-			   						"[Heuristics] Found Mapping to: "^(string_of_expr found_ds.ds_name)^
-			   						"      With: "^
-										(ListExtras.ocaml_of_list (fun ((a,_),(b,_))->a^"->"^b) mapping)
-					);
-					(todo_lifts, CalcRing.mk_prod [(rename_vars mapping found_ds.ds_name); mat_lifts; rest_exprs])
-			end
+				(* Try to found an already existing map *)
+				let (found_ds, mapping_if_found) = 
+					List.fold_left (fun result i ->
+	            (*print_string ("  DS_DEFINITION: "^(string_of_expr i.ds_definition)^"\n");*)
+							if (snd result) <> None then result else
+							(i, (cmp_exprs i.ds_definition agg_rel_expr))
+		  			) ({ds_name = CalcRing.one; ds_definition = CalcRing.one}, None) !history
+				in begin match mapping_if_found with
+					| None -> 
+						let new_ds = {
+								ds_name = CalcRing.mk_val (
+										External(
+						            prefix,
+				                rel_exprs_ivars,
+												rel_expected_schema,
+				                type_of_expr agg_rel_expr,
+				                None
+				            )
+				        );
+				        ds_definition = agg_rel_expr;
+				    } in
+							history := new_ds :: !history;
+				      ([new_ds] @ todo_lifts, CalcRing.mk_prod [new_ds.ds_name; mat_lifts; rest_exprs])
+				         
+					| Some(mapping) ->
+						Debug.print "LOG-HEURISTICS-DETAIL" (fun () -> 
+				   						"[Heuristics] Found Mapping to: "^(string_of_expr found_ds.ds_name)^
+				   						"      With: "^
+											(ListExtras.ocaml_of_list (fun ((a,_),(b,_))->a^"->"^b) mapping)
+						);
+						(todo_lifts, CalcRing.mk_prod [(rename_vars mapping found_ds.ds_name); mat_lifts; rest_exprs])
+				end
+		in
+    (* If necessary, add aggregation to the relation term *)
+		let (mat_expr_ivars, mat_expr_ovars) = schema_of_expr ~scope:scope complete_mat_exprs in
+    let agg_mat_expr = 
+			if ListAsSet.seteq mat_expr_ovars schema then 
+				complete_mat_exprs
+      else CalcRing.mk_val (AggSum(schema, complete_mat_exprs)) 
+		in
+		  (todos, agg_mat_expr) 
+
 		

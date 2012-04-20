@@ -68,7 +68,7 @@ let string_of_statement (stmt:stmt_t): string =
    (if stmt.update_type = UpdateStmt
       then " += "
       else " := ")^
-   (string_of_expr (stmt.update_expr))
+   (CalculusPrinter.string_of_expr (stmt.update_expr))
 
 (******************* Compiled Datastructures *******************)
 (** A compiled datastructure *)
