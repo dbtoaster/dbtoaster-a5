@@ -153,7 +153,7 @@ let input_stages =
 let core_stages = 
    [  StageSQLToCalc; StageCompileCalc; StagePlanToM3; 
       StageM3DomainMaintenance; 
-      StageM3ToK3; (* StageOptimizeK3; *) StageK3ToTargetLanguage
+      StageM3ToK3; StageOptimizeK3; StageK3ToTargetLanguage
    ]
 
 let stages_from (stage:stage_t): stage_t list =
@@ -173,8 +173,8 @@ let active_stages = ref (ListAsSet.inter
    ((match !input_language with
       | Auto -> bug "input language still auto"
       | SQL  -> StageParseSQL::(stages_from StageSQLToCalc)
-      | M3   -> StageParseM3::[]
-      | K3   -> StageParseK3::[]
+      | M3   -> StageParseM3::(stages_from StageM3DomainMaintenance)
+      | K3   -> StageParseK3::(stages_from StageOptimizeK3)
       | _    -> error "Unsupported input language"
     )@output_stages)
    ((match !output_language with
@@ -290,6 +290,7 @@ let source_code:string ref = ref "";;
 (************ SQL Stages ************)
 
 if stage_is_active StageParseSQL then (
+   Debug.print "LOG-DRIVER" (fun () -> "Running Stage: ParseSQL");
    List.iter (fun f ->
       let lexbuff = 
          Lexing.from_channel (if f <> "-" then (open_in f) else stdin) 
@@ -299,6 +300,7 @@ if stage_is_active StageParseSQL then (
 )
 ;;
 if stage_is_active StagePrintSQL then (
+   Debug.print "LOG-DRIVER" (fun () -> "Running Stage: PrintSQL");
    let (tables, queries) = !sql_program in
       output_endline (
          (ListExtras.string_of_list ~sep:"\n" Sql.string_of_table tables)^
@@ -312,6 +314,7 @@ if stage_is_active StagePrintSQL then (
 let query_id = ref 0;;
 
 if stage_is_active StageSQLToCalc then (
+   Debug.print "LOG-DRIVER" (fun () -> "Running Stage: SQLToCalc");
    let (tables, queries) = SqlToCalculus.preprocess (!sql_program) in
       (* Convert the tables into a more friendly format that we'll use 
          throughout the rest of the program.  (Sql should be able to use this
@@ -339,10 +342,12 @@ if stage_is_active StageSQLToCalc then (
 )
 ;;
 if stage_is_active StagePrintSchema then (
+   Debug.print "LOG-DRIVER" (fun () -> "Running Stage: PrintSchema");
    output_endline (Schema.string_of_schema db_schema)
 )
 ;;
 if stage_is_active StagePrintCalc then (
+   Debug.print "LOG-DRIVER" (fun () -> "Running Stage: PrintCalc");
    output_endline (
       (ListExtras.string_of_list ~sep:"\n" 
          (fun (name, calc) -> name^": \n"^
@@ -352,6 +357,7 @@ if stage_is_active StagePrintCalc then (
 )
 ;; 				
 if stage_is_active StageCompileCalc then (
+   Debug.print "LOG-DRIVER" (fun () -> "Running Stage: CompileCalc");
    let query_ds_list = List.map (fun (qname,qexpr) -> {
       Plan.ds_name = Plan.mk_ds_name qname 
                                      (Calculus.schema_of_expr qexpr)
@@ -382,12 +388,14 @@ if stage_is_active StageCompileCalc then (
 )
 ;;
 if stage_is_active StagePrintPlan then (
+   Debug.print "LOG-DRIVER" (fun () -> "Running Stage: PrintPlan");
    output_endline (Compiler.string_of_plan !materialization_plan)
 )
 ;;
 
 (************ M3 Stages ************)
 if stage_is_active StagePlanToM3 then (
+   Debug.print "LOG-DRIVER" (fun () -> "Running Stage: PlanToM3");
    m3_program := M3.plan_to_m3 db_schema !materialization_plan;
    List.iter (fun (qname,qexpr) ->
       M3.add_query !(m3_program) qname qexpr
@@ -395,6 +403,7 @@ if stage_is_active StagePlanToM3 then (
 )
 ;;
 if stage_is_active StageParseM3 then (
+   Debug.print "LOG-DRIVER" (fun () -> "Running Stage: ParseM3");
    if List.length !files > 1 then
       error "Multiple M3 files not supported yet"
    else 
@@ -407,16 +416,20 @@ if stage_is_active StageParseM3 then (
 )
 ;;
 if stage_is_active StagePrintM3 then (
+   Debug.print "LOG-DRIVER" (fun () -> "Running Stage: PrintM3");
    output_endline (M3.string_of_m3 !m3_program)
 )
 ;;
 
 (************ M3 Domain Maintenance Stages ************)
 if stage_is_active StageM3DomainMaintenance then (
+   Debug.print "LOG-DRIVER" (fun () -> "Running Stage: M3DomainMaintenance");
    dm_program := M3DM.make_DM_triggers (M3.get_triggers !m3_program) 
 )
 ;;
 if stage_is_active StagePrintM3DomainMaintenance then (
+   Debug.print "LOG-DRIVER" 
+               (fun () -> "Running Stage: PrintM3DomainMaintenance");
    output_endline (M3DM.string_of_m3DM !dm_program)
 )
 ;;
@@ -424,6 +437,7 @@ if stage_is_active StagePrintM3DomainMaintenance then (
 (************ K3 Stages ************)
 
 if stage_is_active StageM3ToK3 then (
+   Debug.print "LOG-DRIVER" (fun () -> "Running Stage: M3ToK3");
    Debug.activate "M3TOK3-GENERATE-INIT"; (* Temporary hack until we get M3DM set up *)
    
    (* Translate the K3 program *)
@@ -437,10 +451,11 @@ if stage_is_active StageM3ToK3 then (
          in
             (name, k3_query_compiled)
       )
-      !toplevel_queries
+      !((!m3_program).M3.queries)
 )
 ;;
 if stage_is_active StageParseK3 then (
+   Debug.print "LOG-DRIVER" (fun () -> "Running Stage: ParseK3");
    if List.length !files > 1 then
       error "Multiple K3 files not supported yet"
    else 
@@ -452,7 +467,10 @@ if stage_is_active StageParseK3 then (
             K3parser.dbtoasterK3Program K3lexer.tokenize lexbuff
 )
 ;;
+(* Disabled for now.  Will reactivate once we've successfully tested 
+   everything else
 if stage_is_active StageOptimizeK3 then (
+   Debug.print "LOG-DRIVER" (fun () -> "Running Stage: OptimizeK3");
    let optimizations = ref [] in
    if not (Debug.active "NO-CSE-OPT")
       then optimizations := K3Optimizer.CSE :: !optimizations;
@@ -475,14 +493,16 @@ if stage_is_active StageOptimizeK3 then (
       ) triggers
    )
 )
-;;
+;;*)
 if stage_is_active StagePrintK3 then (
+   Debug.print "LOG-DRIVER" (fun () -> "Running Stage: PrintK3");
    output_endline (K3.code_of_prog !k3_program)
 )
 ;;
 module K3InterpreterCG = K3Compiler.Make(K3Interpreter.K3CG)
 ;;
 if stage_is_active StageK3ToTargetLanguage then (
+   Debug.print "LOG-DRIVER" (fun () -> "Running Stage: K3ToTargetLanguage");
    match !output_language with
       | Interpreter -> (
          StandardAdaptors.initialize ();
@@ -505,6 +525,7 @@ if stage_is_active StageK3ToTargetLanguage then (
 (************ Imperative Stages ************)
 
 if stage_is_active StageImpToTargetLanguage then (
+   Debug.print "LOG-DRIVER" (fun () -> "Running Stage: ImpToTargetLanguage");
    bug "ImpToTargetLanguage hasn't been completed yet"
 )
 ;;
@@ -512,18 +533,22 @@ if stage_is_active StageImpToTargetLanguage then (
 (************ Program Management Stages ************)
 
 if stage_is_active StageRunInterpreter then (
+   Debug.print "LOG-DRIVER" (fun () -> "Running Stage: RunInterpreter");
    StandardAdaptors.initialize ();
    let (maps,patterns,compiled) = !interpreter_program in
    let db = Database.NamedK3Database.make_empty_db maps patterns in
    let result = K3Interpreter.K3CG.eval compiled [] [] db in
    if result <> Values.K3Value.Unit then
-      output_endline (Values.K3Value.string_of_value result)
+      output_endline (  "UNEXPECTED RESULT: "^
+                        (Values.K3Value.string_of_value result) )
 )
 ;;
 if stage_is_active StageOutputSource then (
+   Debug.print "LOG-DRIVER" (fun () -> "Running Stage: OutputSource");
   output_endline (!source_code)
 )
 ;;
 if stage_is_active StageCompileSource then (
+   Debug.print "LOG-DRIVER" (fun () -> "Running Stage: CompileSource");
    (!compiler).ExternalCompiler.compile !output_file !binary_file
 )

@@ -71,7 +71,7 @@ let mk_var    (v:var_t  ):value_t = ValueRing.mk_val (AVar(v))
 *)
 let rec string_of_value_leaf (leaf:value_leaf_t): string =
    begin match leaf with
-      | AConst(c) -> string_of_const c
+      | AConst(c) -> sql_of_const c
       | AVar(v)   -> string_of_var v
       | AFn(fname,fargs,ftype) ->
          fname^"("^(ListExtras.string_of_list string_of_value fargs)^")"

@@ -119,7 +119,8 @@ let string_of_type (ty: type_t): string =
       | TBool            -> "bool"
       | TInt             -> "int"
       | TFloat           -> "float"
-      | TString(len)     -> "string("^(string_of_int len)^")"
+      | TString(0)       -> "string"
+      | TString(len)     -> "varchar("^(string_of_int len)^")"
       | TExternal(etype) -> "external<"^etype^">"
    end
 
@@ -150,6 +151,21 @@ let ocaml_of_const (a: const_t): string =
       | CInt(i)      -> "CInt("^(string_of_int i)^")"
       | CFloat(f)    -> "CInt("^(string_of_float f)^")"
       | CString(s)   -> "CString(\""^s^"\")"
+   end
+
+(**
+   Get the string representation (corresponding to what the Sql and Calculus 
+   parsers expect) of a constant
+   @param a   A constant
+   @return    The string representation of the SQL constant form of [a]
+*)
+let sql_of_const (a: const_t): string =
+   begin match a with
+      | CBool(true)  -> "TRUE"
+      | CBool(false) -> "FALSE"
+      | CInt(i)      -> (string_of_int i)
+      | CFloat(f)    -> (string_of_float f)
+      | CString(s)   -> "'"^s^"'"
    end
 
 (**

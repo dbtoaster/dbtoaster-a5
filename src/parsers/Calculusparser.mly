@@ -31,7 +31,7 @@ type map_metadata =
 %token CREATE TABLE STREAM
 %token LPAREN RPAREN LBRACKET RBRACKET LBRACE RBRACE
 %token COMMA COLON PLUS TIMES MINUS DIVIDE POUND
-%token AS FROM ON DO
+%token AS FROM ON DO SYSTEM READY
 %token DECLARE QUERY MAP PARTIAL INITIALIZED
 %token FILE SOCKET FIXEDWIDTH LINE DELIMITED
 %token AGGSUM
@@ -266,7 +266,7 @@ mapTrigger:
 mapEvent:
 | PLUS  schemaRelationDefn { Schema.InsertEvent($2) }
 | MINUS schemaRelationDefn { Schema.DeleteEvent($2) }
-| INITIALIZED              { Schema.SystemInitializedEvent }
+| SYSTEM READY             { Schema.SystemInitializedEvent }
 
 schemaRelationDefn:
 | relationDefn {
@@ -275,7 +275,7 @@ schemaRelationDefn:
 
 mapTriggerStmtList:
 | mapTriggerStmt EOSTMT mapTriggerStmtList { $1 :: $3 }
-| mapTriggerStmt EOSTMT                    { [$1] }
+|                                          { [] }
 
 mapTriggerStmt:
 | externalDefn mapTriggerType ivcCalculusExpr { 

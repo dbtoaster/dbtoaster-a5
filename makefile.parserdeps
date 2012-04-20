@@ -1,0 +1,31 @@
+# It's necessary to have a separate (hand-generated) include file for the 
+# parser dependencies, because ocamldep ends up creating a cyclical dependency
+# for the generated parser files.
+
+CALC_PARSER_DEPS =\
+  src/global/Types\
+  src/ring/Arithmetic\
+  src/calculus/Calculus
+
+SQL_PARSER_DEPS =\
+  src/global/Types\
+  src/sql/Sql
+
+K3_PARSER_DEPS =\
+  src/global/Types\
+  src/functional/K3
+
+src/parsers/Calculusparser.cmo: $(patsubst %,%.cmo,$(CALC_PARSER_DEPS))
+src/parsers/Calculusparser.cmx: $(patsubst %,%.cmx,$(CALC_PARSER_DEPS))
+src/parsers/Calculuslexer.cmo: src/parsers/Calculusparser.cmo
+src/parsers/Calculuslexer.cmx: src/parsers/Calculusparser.cmx
+
+src/parsers/Sqlparser.cmo: $(patsubst %,%.cmo,$(SQL_PARSER_DEPS))
+src/parsers/Sqlparser.cmx: $(patsubst %,%.cmx,$(SQL_PARSER_DEPS))
+src/parsers/Sqllexer.cmo: src/parsers/Sqlparser.cmo
+src/parsers/Sqllexer.cmx: src/parsers/Sqlparser.cmx
+
+src/parsers/K3parser.cmo: $(patsubst %,%.cmo,$(K3_PARSER_DEPS))
+src/parsers/K3parser.cmx: $(patsubst %,%.cmx,$(K3_PARSER_DEPS))
+src/parsers/K3lexer.cmo: src/parsers/K3parser.cmo
+src/parsers/K3lexer.cmx: src/parsers/K3parser.cmx

@@ -43,6 +43,8 @@ let keywords =
       "LINE",       LINE;
       "DELIMITED",  DELIMITED;
       "AGGSUM",     AGGSUM;
+      "SYSTEM",     SYSTEM;
+      "READY",      READY;
       "INT",        TYPE(TInt);
       "INTEGER",    TYPE(TInt);
       "FLOAT",      TYPE(TFloat);

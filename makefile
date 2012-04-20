@@ -175,6 +175,7 @@ makefile.deps: makefile $(patsubst %,%.ml,$(BASE_FILES))
 			$(patsubst %,%.ml,$(BASE_FILES)) > $@
 
 include makefile.deps
+include makefile.parserdeps
 
 #################################################
 

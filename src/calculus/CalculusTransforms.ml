@@ -411,26 +411,46 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
             let (lhs_deletable, lhs_nested_term) = 
                rcr scope (schema@schema_extensions) ctx term in
             let ( lift_already_occurs, 
-                  previous_lift_is_identical ) =
+                  previous_lift_is_identical,
+                  candidate_equality ) =
                if List.mem_assoc v ctx
-               then (true, (List.assoc v ctx) = lhs_nested_term)
-               else (false, false)
+               then (true, (List.assoc v ctx) = lhs_nested_term,
+                     match (lhs_nested_term, (List.assoc v ctx)) with 
+                        | (CalcRing.Val(Value(curr_val)),
+                           CalcRing.Val(Value(prev_val))) -> 
+                           Some(CalcRing.mk_val (Cmp(Eq, curr_val, prev_val)))
+                        | _ -> None
+               )
+               else (false, false, None)
             in
-            let ((rhs_deletable, rhs_term), lhs_term) = 
+            let ((rhs_deletable, rhs_term), lhs_term, succeeded_at_unifying) = 
                (* If the variable is part of the output schema, then we're not
                   allowed to delete the lift.  Additionally, we do not want to
                   unify away full expressions, since doing so breaks an 
                   optimization that we're able to perform in the delta 
-                  computation.  See CalculusDeltas.delta_of_expr's Lift case. *)
+                  computation.  See CalculusDeltas.delta_of_expr's Lift case. 
+                  
+                  Finally, there are some things we can do if the variable in 
+                  question has already been lifted (to the left and/or up).  
+                  Specifically, if the same lift expression has already occurred
+                  then we can simply eliminate this term, as it is not needed.
+                  If a different expression has been lifted into the same 
+                  variable, then that instead denotes an equality comparison
+                  that we should put here. (which we can only do if the two
+                  lifted expressions are values)
+               *)
                if (previous_lift_is_identical) || (
                      (not (List.mem v schema)) && (not (List.mem v scope)) && (
                       (Debug.active "UNIFY-EXPRESSIONS") ||
                       (match term with CalcRing.Val(Value(_))->true |_->false)
-                     ) && (not lift_already_occurs)
+                     ) && (
+                        (not lift_already_occurs) ||
+                        (candidate_equality <> None)
+                     )
                   )
                then
                   let rhs_ctx = 
-                     if previous_lift_is_identical
+                     if lift_already_occurs
                      then ctx
                      else (v, lhs_nested_term)::ctx
                   in
@@ -442,20 +462,28 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
                         (List.mem v rhs_deletable_optimistic)
                   then (
                      Debug.print "LOG-UNIFY-LIFTS" (fun () -> 
-                        if previous_lift_is_identical
-                        then "Removing "^(string_of_var v)^" due to identical prior"
+                        if lift_already_occurs
+                        then "Substituting "^(string_of_var v)^
+                              " with comparison to prior"
                         else "Unify of "^(string_of_var v)^" succeeded"
                      );
                      (  (  rhs_deletable_optimistic, 
                            rhs_term_optimistic),
-                        CalcRing.one)
+                           (if lift_already_occurs && 
+                              not previous_lift_is_identical
+                           then begin match candidate_equality with Some(s) -> s
+                                 | None -> failwith "Should not reach this line"
+                                end
+                           else CalcRing.one),
+                           true)
                   ) else (
                      Debug.print "LOG-UNIFY-LIFTS" (fun () -> 
                         "Not unifying "^(string_of_var v)^
                         " because an RHS term decided it was a bad idea"
                      );
                      ((rcr (v::rhs_scope) schema ctx (CalcRing.mk_prod pl)), 
-                        (CalcRing.mk_val (Lift(v,lhs_nested_term))))
+                        (CalcRing.mk_val (Lift(v,lhs_nested_term))),
+                        false)
                   )
                else (
                   Debug.print "LOG-UNIFY-LIFTS" (fun () -> 
@@ -463,10 +491,11 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
                      " because Lift is an expression or in the schema"
                   );
                   ((rcr (v::rhs_scope) schema ctx (CalcRing.mk_prod pl)),
-                   (CalcRing.mk_val (Lift(v,lhs_nested_term))))
+                   (CalcRing.mk_val (Lift(v,lhs_nested_term))),
+                   false)
                )
             in
-               (  (if previous_lift_is_identical
+               (  (if lift_already_occurs && succeeded_at_unifying
                      then (ListAsSet.inter lhs_deletable rhs_deletable)
                      else ListAsSet.diff 
                            (ListAsSet.inter lhs_deletable rhs_deletable) [v]),
@@ -550,26 +579,40 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
                contain any relations, then we can safely delete this lift term 
             *)
             let (deletable, new_l_term) = rcr scope schema ctx l_term in
-            let no_previous_distinct_lift = 
-               (List.for_all (fun (ctx_v, ctx_term) -> 
-                  Debug.print "LOG-UNIFY-LIFTS" (fun () ->
-                     "Testing : "^(string_of_var v)^" ^= "^
-                     (string_of_expr new_l_term)
-                  );
-                  (ctx_v <> v) || (new_l_term = ctx_term)
-               ) ctx)
+            let ( lift_already_occurs,
+                  prior_lift_identical,
+                  candidate_equality ) = 
+               if List.mem_assoc v ctx
+               then if (List.assoc v ctx) = new_l_term
+                    then ( true, true, None )
+                    else ( true, false,
+                           match ((new_l_term),(List.assoc v ctx)) with
+                              | (CalcRing.Val(Value(curr_val)),
+                                 CalcRing.Val(Value(prev_val))) -> 
+                                    Some(CalcRing.mk_val 
+                                          (Cmp(Eq, curr_val, prev_val)))
+                              | _ -> None
+                         )
+               else ( false, false, None )
             in
             if ((C.rels_of_expr l_term) = []) &&
                (not (List.mem v schema)) && (not (List.mem v scope)) &&
-               no_previous_distinct_lift
+               (  (not lift_already_occurs) || prior_lift_identical ||
+                  (candidate_equality <> None) )
             then (
                Debug.print "LOG-UNIFY-LIFTS" (fun () -> 
-                  "Allowed to unify standalone lift into "^(string_of_var v)
-               ); (ctx_vars, CalcRing.one)
+                  if (candidate_equality <> None) then
+                     "Allowed to unify standalone lift into "^(string_of_var v)
+                  else
+                     "Transforming lift into equality with prior"
+               ); (  ctx_vars, 
+                     if lift_already_occurs && not prior_lift_identical
+                     then match candidate_equality with 
+                        | Some(s) -> s
+                        | None -> failwith "Should not reach this line (2)"
+                     else CalcRing.one)
             ) else (
-                  (  (  if no_previous_distinct_lift
-                        then deletable
-                        else (List.filter (fun x -> x <> v) deletable)), 
+                  (  (List.filter (fun x -> x <> v) deletable), 
                      (CalcRing.mk_val (Lift(v, new_l_term))))
             )
          | CalcRing.Val(Value(ValueRing.Val(AVar(v)))) ->

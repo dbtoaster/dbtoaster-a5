@@ -187,7 +187,14 @@ in
       "AggSum([dOK],(
          (AggSum([dOK],(LINEITEM(dOK, L3_Q)))) +
          (AggSum([dOK],(LINEITEM(dOK, L3_Q))))
-       ))"
+       ))";
+   test "Double lifts into an equality" [var "B"; var "C"]
+      "AggSum([],(A ^= B) * (A ^= C))"
+      "AggSum([],[C = B])";
+   test "TPCH3 lifts" [var "CUSTOMER_MKTSEGMENT"]
+      "AggSum([],((CUSTOMER_MKTSEGMENT_1 ^= [CUSTOMER_MKTSEGMENT]) * 
+                  (CUSTOMER_MKTSEGMENT_1 ^= ['BUILDING'])))"
+      "AggSum([],['BUILDING' = CUSTOMER_MKTSEGMENT])"
       
 ;;
 let test msg input output =
