@@ -172,6 +172,12 @@ let map_access_to_expr mapn ins outs map_ret_t theta_vars_el init_expr_opt =
 		let free_vars_el  = ListAsSet.diff outs_el theta_vars_el in
 		let bound_vars_el = ListAsSet.diff outs_el free_vars_el in
 		
+		(*print_endline( "MapAccess: "^mapn^" - "^
+											(ListExtras.string_of_list K.string_of_expr ins_el)^" - "^
+											(ListExtras.string_of_list K.string_of_expr outs_el)^" - "^
+											(T.string_of_type map_ret_t) );*)
+		
+		
 		let (ins_tl,outs_tl) = pair_map varIdType_to_k3_type (ins,outs) in
 		let map_ret_k = K.TBase(map_ret_t) in
 		let map_out_t = if outs_tl = [] then map_ret_k
@@ -311,6 +317,7 @@ let rec calc_to_k3_expr meta theta_vars_el calc :
 	
 	let bin_fn op_fn c1 c2 =
 		let ((ret1_t, e1),(ret2_t, e2)) = pair_map value_to_k3_expr (c1,c2) in
+		(*print_endline ("    binop types: "^(K.string_of_type ret1_t)^" - "^(K.string_of_type ret2_t));*)
 		assert (compatible_types ret1_t ret2_t);
 		([], K.Var("v",K.TBase(T.TInt)), (op_fn e1 e2)), meta
 	in

@@ -102,8 +102,12 @@ let flat t = if is_flat t then t else type_error t "invalid flat expression"
 let promote t1 t2 =
 	let open Types in
 	match t1, t2 with
-	| (K.TBase(TFloat), K.TBase(TInt)) | (K.TBase(TInt), K.TBase(TFloat)) -> K.TBase(TFloat)
-	| (K.TBase(TInt), K.TBase(TInt)) -> K.TBase(TInt)
+	| (K.TBase(TFloat), K.TBase(TInt)) 
+	| (K.TBase(TInt), K.TBase(TFloat)) -> K.TBase(TFloat)
+	| (K.TBase(TInt), K.TBase(TBool)) 
+	| (K.TBase(TBool), K.TBase(TInt)) -> K.TBase(TInt)
+	| (K.TBase(TFloat), K.TBase(TBool)) 
+	| (K.TBase(TBool), K.TBase(TFloat)) -> K.TBase(TFloat)
 	| (x, y) -> if x = y then x
 			else type_error (K.TTuple[x; y]) "could not promote types"
 
@@ -147,7 +151,7 @@ let tc_op t1 t2 =
 	match t1, t2 with
 	| (K.TUnit, _) | (_, K.TUnit) -> type_error (K.TTuple[t1; t2]) "invalid operands"
 	| (a, b) -> promote (flat a) (flat b)
-
+	
 (* checks function declarations, ensuring consistent usage of arg in body *)
 let tc_fn_arg ae e : K.type_t list =
 	let aux (v, v_t) =
@@ -363,10 +367,10 @@ let rec typecheck_expr e : K.type_t =
 		(* promote(t1,t2)                                                      *)
 		| K.Add (ce1, ce2) -> tc_op (recur ce1) (recur ce2)
 		| K.Mult (ce1, ce2) -> tc_op (recur ce1) (recur ce2)
-		| K.Eq (ce1, ce2) -> tc_op (recur ce1) (recur ce2)
-		| K.Neq (ce1, ce2) -> tc_op (recur ce1) (recur ce2)
-		| K.Lt (ce1, ce2) -> tc_op (recur ce1) (recur ce2)
-		| K.Leq (ce1, ce2) -> tc_op (recur ce1) (recur ce2)
+		| K.Eq (ce1, ce2) -> ignore(tc_op (recur ce1) (recur ce2)); K.TBase(Types.TInt)
+		| K.Neq (ce1, ce2) -> ignore(tc_op (recur ce1) (recur ce2)); K.TBase(Types.TInt)
+		| K.Lt (ce1, ce2) -> ignore(tc_op (recur ce1) (recur ce2)); K.TBase(Types.TInt)
+		| K.Leq (ce1, ce2) -> ignore(tc_op (recur ce1) (recur ce2)); K.TBase(Types.TInt)
 		
 		(* e1 : t1 e2 : t2 * t1 <> Unit, t2 <> Unit, flat(t1) *                *)
 		(* -------------------------------------------- * op(e1,e2) : t2       *)

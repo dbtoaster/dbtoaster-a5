@@ -10,6 +10,7 @@ module Interpreter = K3Compiler.Make(K3Interpreter.K3CG)
 let maps = [
    "S", [], [];
    "R", [], [T.TFloat; T.TFloat];
+	 "R_STR", [], [T.TString(3); T.TString(4)];
 	 "T", [T.TFloat; T.TFloat], [];
 	 "W", [T.TFloat; T.TFloat], [T.TFloat; T.TFloat];
 	 
@@ -30,6 +31,7 @@ let patterns = [
 let init_code = 
 	let pc_s = K.SingletonPC("S", K.TBase(T.TFloat)) in
 	let pc_r = K.OutPC("R", ["X", K.TBase(T.TFloat); "Y", K.TBase(T.TFloat)], K.TBase(T.TFloat)) in
+	let pc_r_str = K.OutPC("R_STR", ["X", K.TBase(T.TString(3)); "Y", K.TBase(T.TString(4))], K.TBase(T.TFloat)) in
 	let pc_t = K.InPC("T", ["X", K.TBase(T.TFloat); "Y", K.TBase(T.TFloat)], K.TBase(T.TFloat)) in
 	let pc_w = K.PC("W", ["X", K.TBase(T.TFloat); "Y", K.TBase(T.TFloat)], 
 											 ["Z", K.TBase(T.TFloat); "ZZ", K.TBase(T.TFloat)], K.TBase(T.TFloat)) in
@@ -51,6 +53,8 @@ let init_code =
  		K.PCValueUpdate(pc_r, [], to_kconsts [2.; 2.;], to_kconst 4.);
  		K.PCValueUpdate(pc_r, [], to_kconsts [1.; 3.;], to_kconst 3.);
  		
+		K.PCValueUpdate(pc_r_str, [], [K.Const(T.CString("aha")); K.Const(T.CString("ahaa"));], to_kconst 1.);
+ 				
 		K.PCValueUpdate(pc_t, to_kconsts [1.; 1.;], [], to_kconst 1.);
  		K.PCValueUpdate(pc_t, to_kconsts [1.; 2.;], [], to_kconst 2.);
  		K.PCValueUpdate(pc_t, to_kconsts [2.; 1.;], [], to_kconst 2.);
@@ -151,6 +155,11 @@ let test_stmt_coll ?(env = []) msg stmt_s rval =
    test_code_coll env msg code rval
 in
 
+		(*
+		Debug.activate "K3-TYPECHECK-DETAIL";
+		test_expr_coll " Cmp Eq String = String" 
+							"R_STR[][A : STRING, B : STRING ] * [A : STRING = B  : STRING]" [0.]		;*)
+		
 
 		test_expr " AConst " 
 							"[3]" (VK.BaseValue(T.CInt(3)))		;
@@ -177,10 +186,7 @@ in
 							"[ A = B:INT ]" (VK.BaseValue(T.CInt(1)))		;
 		test_expr " Cmp Eq Varchar(3) = Varchar(3)" 
 							~env:["A", (T.CString("aha"));"B", (T.CString("aha"))]
-							"[ A:VARCHAR(3) = B:VARCHAR(3) ]" (VK.BaseValue(T.CInt(1)))		;
-		test_expr " Cmp Eq String = String" 
-							~env:["A", (T.CString("aha"));"B", (T.CString("ahaa"))]
-							"[ A:STRING = B:STRING ]" (VK.BaseValue(T.CInt(0)))		;*)
+							"[ A:VARCHAR(3) = B:VARCHAR(3) ]" (VK.BaseValue(T.CInt(1)))		;*)
 							
 		test_expr " Cmp Lt " 
 							~env:["A", (T.CFloat(3.));"B", (T.CFloat(3.))]
