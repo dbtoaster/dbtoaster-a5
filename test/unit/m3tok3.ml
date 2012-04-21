@@ -1,5 +1,5 @@
 module T = Types
-module K = K3.SR
+module K = K3
 module MK = M3ToK3
 module U = UnitTest
 module Vs = Values
@@ -168,9 +168,20 @@ in
 							~env:["A", (T.CFloat(3.));"B", (T.CFloat(3.))]
 							"[A*B*A*B]" (VK.BaseValue(T.CFloat(81.)))		;
 		
-		test_expr " Cmp Eq " 
+		test_expr " Cmp Eq Float = Float" 
 							~env:["A", (T.CFloat(3.));"B", (T.CFloat(3.))]
 							"[A=B]" (VK.BaseValue(T.CInt(1)))		;
+		(*
+		test_expr " Cmp Eq Float = Int" 
+							~env:["A", (T.CFloat(3.));"B", (T.CInt(3))]
+							"[ A = B:INT ]" (VK.BaseValue(T.CInt(1)))		;
+		test_expr " Cmp Eq Varchar(3) = Varchar(3)" 
+							~env:["A", (T.CString("aha"));"B", (T.CString("aha"))]
+							"[ A:VARCHAR(3) = B:VARCHAR(3) ]" (VK.BaseValue(T.CInt(1)))		;
+		test_expr " Cmp Eq String = String" 
+							~env:["A", (T.CString("aha"));"B", (T.CString("ahaa"))]
+							"[ A:STRING = B:STRING ]" (VK.BaseValue(T.CInt(0)))		;*)
+							
 		test_expr " Cmp Lt " 
 							~env:["A", (T.CFloat(3.));"B", (T.CFloat(3.))]
 							"[A<B]" (VK.BaseValue(T.CInt(0)))		;
@@ -259,7 +270,9 @@ in
 		
 		
 		
-		test_expr " AggSum Singleton "
+		test_expr " AggSum Singleton from Singleton "
+							"AggSum([], [5.])" (VK.BaseValue(T.CFloat(5.)));
+		test_expr " AggSum Singleton from Collection "
 							"AggSum([], R[][A,B] * [A = B])" (VK.BaseValue(T.CFloat(5.)));
 		test_expr_coll " AggSum Collection "
 							"AggSum([B], R[][A,B])" 

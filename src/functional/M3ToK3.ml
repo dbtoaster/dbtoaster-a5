@@ -303,6 +303,10 @@ let rec calc_to_k3_expr meta theta_vars_el calc :
 	
 	let (ins,outs) = schema_of_expr calc in
 	let ins_el = varIdType_to_k3_expr ins in
+	if (ListAsSet.diff ins_el theta_vars_el) != [] then
+		(print_endline ("Error: All inputs of "^(string_of_expr calc)^" should be bound!");
+		 print_endline ("    ins: "^(ListExtras.string_of_list K.string_of_expr ins_el));
+		 print_endline ("    scope: "^(ListExtras.string_of_list K.string_of_expr theta_vars_el)));
 	assert ((ListAsSet.diff ins_el theta_vars_el) = []) ;
 	
 	let bin_fn op_fn c1 c2 =
@@ -356,13 +360,17 @@ let rec calc_to_k3_expr meta theta_vars_el calc :
 						let agg_vars0_el = varIdType_to_k3_expr agg_vars0 in
 						
 						let (aggsum_outs_el,ret_ve,aggsum_e),nm = rcr aggsum_calc in
+						
+						assert( (ListAsSet.diff agg_vars0_el aggsum_outs_el) = []);
 						let agg_vars_el = ListAsSet.inter agg_vars0_el aggsum_outs_el in
 						
 						
 						let agg_fn = aggregate_fn aggsum_outs_el ret_ve in
 						let expr = 
 								if agg_vars_el = [] then
-										K.Aggregate(agg_fn, init_val ret_ve, aggsum_e)
+										let agg_e =	if aggsum_outs_el = [] then K.Singleton(aggsum_e)
+																else                        aggsum_e in
+										K.Aggregate(agg_fn, init_val ret_ve, agg_e)
 								else
 										let gb_fn = project_fn (aggsum_outs_el@[ret_ve]) agg_vars_el in 
 										let gb_aggsum_e = 
@@ -512,6 +520,8 @@ let rec calc_to_k3_expr meta theta_vars_el calc :
 let collection_stmt (meta: meta_t) trig_args (m3_stmt: Plan.stmt_t) : K.statement_t * meta_t =
 		let (mapn, lhs_ins, lhs_outs, map_type, init_calc_opt) = Plan.expand_ds_name m3_stmt.Plan.target_map in
 		let {Plan.update_type = update_type; Plan.update_expr = incr_calc} = m3_stmt in 
+		
+		(*print_endline ("collection_stmt : '"^(string_of_expr incr_calc)^"'");*)
 		
 		(* all lhs input variables must be free, they cannot be bound by trigger args *)
 		assert ((ListAsSet.inter trig_args  lhs_ins) = []);

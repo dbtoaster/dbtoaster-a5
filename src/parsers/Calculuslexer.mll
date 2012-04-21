@@ -131,6 +131,7 @@ rule tokenize = parse
 | singlecm      { tokenize lexbuf}
 | multicmst     { comment 1 lexbuf }
 | ';'           { EOSTMT }
+| ':'           { COLON }
 | eof           { EOF }
 
 and comment depth = parse
