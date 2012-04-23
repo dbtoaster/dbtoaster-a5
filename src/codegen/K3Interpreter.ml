@@ -648,6 +648,42 @@ struct
         DB.update_map id (get_update_key th db in_kl)
            (get_update_map ((get_eval collection) th db) out_pats) db;
         Unit)
+
+    (* Database remove methods *)    
+    (* persistent collection id, in key -> remove *)
+    let remove_in_map_element ?(expr = None) id in_kl = Eval(fun th db ->
+      let key = (get_update_key th db in_kl) in
+        Debug.print "LOG-INTERPRETER-UPDATES" (fun () -> 
+           "\nREMOVE '"^id^"'["^
+            (String.concat "; " (List.map K3Value.to_string key))^
+            "][-]"
+        );
+        DB.remove_in_map_element id key db; Unit)
+    
+    (* persistent collection id, out key -> remove *)
+    let remove_out_map_element ?(expr = None) id out_kl = Eval(fun th db ->
+      let key = (get_update_key th db out_kl) in
+        Debug.print "LOG-INTERPRETER-UPDATES" (fun () -> 
+           "\nREMOVE '"^id^"'[-]["^
+           (String.concat "; " (List.map K3Value.to_string key))^
+           "]"
+        ); 
+        DB.remove_out_map_element id key db; Unit)
+  
+
+    (* persistent collection id, in key, out key -> remove *)
+    let remove_map_element ?(expr = None) id in_kl out_kl = 
+      Eval(fun th db ->
+      let in_key = (get_update_key th db in_kl) in
+      let out_key = (get_update_key th db out_kl) in
+        Debug.print "LOG-INTERPRETER-UPDATES" (fun () -> 
+           "\nREMOVE '"^id^"'["^
+           (String.concat "; " (List.map K3Value.to_string in_key))^
+           "]["^
+           (String.concat "; " (List.map K3Value.to_string out_key))^
+           "]"
+        );
+        DB.remove_map_element id in_key out_key db; Unit)  
     
     (*
     let ext_fn fn_id = failwith "External functions not yet supported"

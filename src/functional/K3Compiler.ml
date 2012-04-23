@@ -105,6 +105,16 @@ let rec compile_k3_expr e =
             (rcr u_e)
         | _ -> failwith "invalid map value to update"
         end
+    | K.PCElementRemove(m_e, ine_l, oute_l) ->
+        begin match (m_e, ine_l, oute_l) with    
+        | (K.OutPC(id,_,_), [], e_l) -> remove_out_map_element ~expr:(debug e) id
+            (List.map rcr e_l)
+        | (K.InPC(id,_,_), e_l, []) -> remove_in_map_element ~expr:(debug e) id
+            (List.map rcr e_l)
+        | (K.PC(id,_,_,_), ie_l, oe_l) -> remove_map_element ~expr:(debug e) id
+            (List.map rcr ie_l) (List.map rcr oe_l)
+        | _ -> failwith "invalid map value to remove"
+        end
     end
 
 let compile_triggers_noopt trigs : code_t list =

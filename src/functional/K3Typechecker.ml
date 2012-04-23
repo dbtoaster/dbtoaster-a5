@@ -563,7 +563,20 @@ let rec typecheck_expr e : K.type_t =
 							ignore(aux ins t ine ve); ignore(aux outs t oute ve); K.TUnit
 					| _ -> failwith "invalid target for map value update"
 				end
-	
+      | K.PCElementRemove(me,ine,oute)     ->
+            let aux sch ke =
+               try tc_schema_exprs sch (List.map recur ke)
+                  with Failure x -> failwith ("map element remove: "^x)
+            in 
+            begin match me with
+               | K.SingletonPC(id,t) -> K.TUnit
+               | K.OutPC (id,outs,t) -> ignore(aux outs oute); K.TUnit 
+               | K.InPC (id,ins,t) -> ignore(aux ins ine); K.TUnit
+               | K.PC(id,ins,outs,t) ->
+                     ignore(aux ins ine); ignore(aux outs oute); K.TUnit
+               | _ -> failwith "invalid target for map element remove"
+            end
+
 	(*| External     efn_id ->
 	begin match efn_id with
 	| Symbol(id) ->

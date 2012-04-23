@@ -151,6 +151,19 @@ sig
         K3.coll_id -> code_t list list -> code_t -> code_t
     *)
 
+    (* Database remove methods *)    
+    (* persistent collection id, in key -> remove *)
+    val remove_in_map_element  : ?expr:K3.expr_t option ->
+        K3.coll_id_t -> code_t list -> code_t
+    
+    (* persistent collection id, out key -> remove *)
+    val remove_out_map_element : ?expr:K3.expr_t option -> 
+        K3.coll_id_t -> code_t list -> code_t
+    
+    (* persistent collection id, in key, out key -> remove *)
+    val remove_map_element     : ?expr:K3.expr_t option -> 
+        K3.coll_id_t -> code_t list -> code_t list -> code_t
+
     (* fn id -> code
      * -- code generator should be able to hooks to implementations of
      *    external functions, e.g. invoke function call *)

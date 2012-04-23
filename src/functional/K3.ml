@@ -285,6 +285,14 @@ type expr_t =
          the OutPC component of a PC.  If either field is not relevant, it must 
          be left blank.
       *)
+   (* map, in key (optional), out key *) 
+   | PCElementRemove of expr_t      * expr_t list * expr_t list (** 
+         Removes a single element of an OutPC, InPC or PC.  inKey
+         is used to index into an InPC or the InPC component of a PC.  outKey 
+         is used to index into an OutPC or the OutPC component of a PC.  If
+         either field is not relevant, it must be left blank.
+      *)
+    
 
    (*| External      of ext_fn_id*)
 
@@ -326,6 +334,7 @@ let get_branches (e : expr_t) : expr_t list list =
     | Slice            (me,sch,pat_ve)      -> [[me];List.map snd pat_ve]
     | PCUpdate         (me,ke,te)           -> [[me];ke;[te]]
     | PCValueUpdate    (me,ine,oute,ve)     -> [[me];ine;oute;[ve]]
+    | PCElementRemove  (me,ine,oute)        -> [[me];ine;oute]
     (*| External         efn_id               -> [] *)
     end
 
@@ -378,6 +387,7 @@ let rebuild_expr e (parts : expr_t list list) =
         Slice(sfst(),sch,List.map2 (fun (id,_) e -> id,e) pat_ve (snd()))
     | PCUpdate         (me,ke,te)           -> PCUpdate(sfst(), snd(), sthd())
     | PCValueUpdate    (me,ine,oute,ve)     -> PCValueUpdate(sfst(),snd(),thd(),sfth())
+    | PCElementRemove  (me,ine,oute)        -> PCElementRemove(sfst(),snd(),thd())
     (*| External         efn_id               -> sfst() *)
     end
 
@@ -417,6 +427,7 @@ let descend_expr (f : expr_t -> expr_t) e =
     | Slice            (me,sch,pat_ve)      -> Slice(f me, sch, List.map (fun (id,e) -> id, f e) pat_ve)
     | PCUpdate         (me,ke,te)           -> PCUpdate(f me, List.map f ke, f te)
     | PCValueUpdate    (me,ine,oute,ve)     -> PCValueUpdate(f me, List.map f ine, List.map f oute, f ve)
+    | PCElementRemove  (me,ine,oute)        -> PCElementRemove(f me, List.map f ine, List.map f oute)
     (*| External         efn_id               -> e *)
     end
 
@@ -572,6 +583,7 @@ let string_of_expr e =
     | Lookup _            -> pop ~lb:[1] "Lookup"
     | PCUpdate _          -> pop ~lb:[1] "PCUpdate"
     | PCValueUpdate   _   -> pop ~lb:[1;2] "PCValueUpdate"
+    | PCElementRemove _   -> pop ~lb:[1;2] "PCElementRemove"
     (*| External         efn_id               -> pop "External" *)
     in pp_set_margin str_formatter 80; flush_str_formatter (aux e)
 
@@ -669,6 +681,9 @@ let rec code_of_expr e =
             "K3.SR.PCValueUpdate("^(rcr me)^","^(ListExtras.ocaml_of_list rcr ine)^
                                  ","^(ListExtras.ocaml_of_list rcr oute)^","^
                                  (rcr ve)^")"
+      | PCElementRemove(me,ine,oute) -> 
+            "K3.SR.PCElementRemove("^(rcr me)^","^(ListExtras.ocaml_of_list rcr ine)^
+                                ","^(ListExtras.ocaml_of_list rcr oute)^")"
 
 (* Native collection constructors *)
 let collection_of_list (l : expr_t list) =

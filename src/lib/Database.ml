@@ -111,6 +111,12 @@ sig
 
    val add_smap_entry : key_t -> value_t -> single_map_t -> single_map_t
    val add_map_entry : key_t -> single_map_t -> map_t -> map_t
+
+   val remove_smap_entry : key_t -> single_map_t -> single_map_t
+   val remove_map_entry : key_t -> map_t -> map_t
+
+   val smap_is_empty: single_map_t -> bool
+   val map_is_empty: map_t -> bool
 end
 
 
@@ -162,6 +168,12 @@ struct
 
     let add_smap_entry key value smap = Map.add key value smap
     let add_map_entry key slice map = Map.add key slice map
+
+    let remove_smap_entry key smap = Map.remove key smap
+    let remove_map_entry key map = Map.remove key map
+
+    let smap_is_empty smap = Map.empty smap
+    let map_is_empty map = Map.empty map
 end
 
 module CInOut : SliceableInOutMap
@@ -704,6 +716,7 @@ sig
    val nested_map_has_entry : key_t -> nested_map_t -> bool
    val get_nested_map_entry : key_t -> nested_map_t -> value_t
    val add_nested_map_entry : key_t -> value_t -> nested_map_t -> nested_map_t
+   val remove_nested_map_entry : key_t -> nested_map_t -> nested_map_t
 end
 
 module K3Maps : K3MapSpec 
@@ -746,6 +759,7 @@ struct
     let nested_map_has_entry key nmap = Map.mem key nmap
     let get_nested_map_entry key nmap = Map.find key nmap
     let add_nested_map_entry key value nmap = Map.add key value nmap
+    let remove_nested_map_entry key nmap = Map.remove key nmap
 end
 
 module type K3DB =
@@ -759,6 +773,13 @@ sig
    val get_nested_map : map_name_t -> db_t -> nested_map_t
    val update_nested_map :
       map_name_t -> key_t list -> pattern_t list list -> value_t -> db_t -> unit
+
+
+   (* Remove elements *)
+   val remove_map_element : map_name_t -> key_t -> key_t -> db_t -> unit
+   val remove_in_map_element : map_name_t -> key_t -> db_t -> unit
+   val remove_out_map_element : map_name_t -> key_t -> db_t -> unit
+
 end
 
 module NameableK3Database(N : MapName)(S : K3MapSpec) : K3DB
@@ -903,6 +924,48 @@ struct
     let update_value = update_db_value
 
     let update_nested_map = update_db_value_chain
+
+    (* Database remove methods *)
+
+    let remove_db_smap_entry mapn img (db,_) =
+       let m = S.smap_of_value (DBM.find [mapn] db) in
+       ignore(DBM.add [mapn] (S.value_of_smap (S.remove_smap_entry img m)) db)
+
+    (* Generic nested remove *)
+    let remove_db_element_chain mapn imgs patterns (db,_) =
+      let rec aux rem_imgs rem_pats v =
+        match rem_imgs, rem_pats with
+        | ([x],_) -> S.value_of_smap
+           (S.remove_smap_entry x (S.smap_of_value v))
+        | ([h;t],[h2;t2]) ->
+            let m = S.map_of_value v in
+            let new_nested = aux [t] [t2] (S.value_of_smap (S.get_map_entry h m)) in 
+                let new_map = 
+                        if (S.smap_is_empty (S.smap_of_value new_nested)) then
+                            S.remove_map_entry h m
+                        else
+                            S.add_map_entry h (S.smap_of_value new_nested) m in
+                S.value_of_map (new_map)
+        | (h::t,h2::t2) ->
+            let nm = S.nested_map_of_value v in
+            let new_nested = aux t t2 (S.get_nested_map_entry h nm) in 
+                let new_map = 
+                        if (S.map_is_empty (S.map_of_value new_nested)) then
+                            S.remove_nested_map_entry h nm
+                        else
+                            S.add_nested_map_entry h new_nested nm in
+                S.value_of_nested_map (new_map)
+        | _,_ -> failwith "invalid nested remove"
+      in ignore(DBM.add [mapn] (aux imgs patterns (DBM.find [mapn] db)) db) 
+
+    let remove_db_nested_entry mapn inv_img outv_img (db,pats) =
+      let (in_pats,out_pats) = get_patterns pats (map_name_to_string mapn) in
+      remove_db_element_chain
+         mapn [inv_img; outv_img] [in_pats;out_pats] (db,pats)
+
+    let remove_map_element = remove_db_nested_entry
+    let remove_in_map_element = remove_db_smap_entry    
+    let remove_out_map_element = remove_db_smap_entry
 
     (* Debugging and testing helpers *)
     let showdb_f show_f db = failwith "NYI"

@@ -18,6 +18,7 @@ sig
    val find : key -> 'a t -> 'a
    val add  : key -> 'a -> 'a t -> 'a t
    val safe_add : key -> 'a -> 'a t -> 'a t
+   val remove: key -> 'a t -> 'a t
    
    val fold : (key -> 'a -> 'b -> 'b) -> 'b -> 'a t -> 'b   
    
@@ -99,6 +100,15 @@ struct
       let existing = if SecondaryIndex.mem pk si
          then SecondaryIndex.find pk si else []
       in SecondaryIndex.add pk (k::existing) si
+
+
+   (* Removes a pk->key mapping from a secondary index *)
+   let remove_secondary k pat si =
+      let pk = project k pat in
+      let prev_list = SecondaryIndex.find pk si in
+      let new_list = List.filter (fun (x) -> x <> k) prev_list in
+      SecondaryIndex.add pk new_list si
+
 
    (* Check k exists in some kl for the secondary *) 
    let mem_secondary si k =
@@ -206,6 +216,16 @@ struct
       in
          Hashtbl.replace (fst m) k v;
          (fst m, new_second)
+
+    (* CHECKME!: remove_secondary stuffs! *)
+    let remove k m = 
+        let new_second = 
+            let aux pat si acc =
+                IndexMap.add pat (remove_secondary k pat si) acc
+            in IndexMap.fold aux (snd m) IndexMap.empty
+        in
+            Hashtbl.remove (fst m) k;
+            (fst m, new_second)
 
    (* f must accept secondaries as first argument *)
    let fold f acc m = Hashtbl.fold f (fst m) acc

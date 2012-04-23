@@ -98,8 +98,34 @@ in
       [  [1.; 3.], 3.;
          [1.; 2.], 2.;
          [2.; 2.], 4.;
-         [1.; 1.], 1.;
          [2.; 1.], 2.;
+         [1.; 1.], 1.;
+      ];
+   test_map "Removing an existing element from a collection"
+      (Block[
+         PCElementRemove(pc_b, [],
+            [Const(CFloat(1.)); Const(CFloat(1.))]);
+         pc_b
+      ])
+      [  [1.; 3.], 3.;
+         [1.; 2.], 2.;
+         [2.; 2.], 4.;
+         [2.; 1.], 2.;
+      ];
+   test_map "Removing a non-existing element from a collection"
+      (Block[
+         PCValueUpdate(pc_b, [],
+            [Const(CFloat(1.)); Const(CFloat(1.))],
+            (Const(CFloat(1.))));
+         PCElementRemove(pc_b, [],
+            [Const(CFloat(1.)); Const(CFloat(10.))]);
+         pc_b
+      ])
+      [  [1.; 3.], 3.;
+         [1.; 2.], 2.;
+         [2.; 2.], 4.;
+         [2.; 1.], 2.;
+         [1.; 1.], 1.;
       ];
    test "Aggregation"
       (Aggregate((AssocLambda((ATuple(["X", TBase(TFloat); 
