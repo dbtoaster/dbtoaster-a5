@@ -464,7 +464,10 @@ if stage_is_active StageParseK3 then (
       (if f <> "-" then (open_in f) else stdin)
    in 
       k3_program := 
-            K3parser.dbtoasterK3Program K3lexer.tokenize lexbuff
+            K3parser.dbtoasterK3Program K3lexer.tokenize lexbuff;
+      let (_, pats, _) = !k3_program
+      in
+         Debug.print "PATTERNS" (fun () -> Patterns.patterns_to_string pats)
 )
 ;;
 (* Disabled for now.  Will reactivate once we've successfully tested 

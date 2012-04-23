@@ -1,18 +1,19 @@
 %{    
-    open Calculus
+   open Calculus
    open Types
-    open K3
-    exception K3ParseError of string
-    exception K3TypeError of string
-    exception K3FeatureUnsupported of string
+   open K3
+   exception K3ParseError of string
+   exception K3TypeError of string
+   exception K3FeatureUnsupported of string
     
-    type k3_statement_t = K3.statement_t
-    type k3_trigger_t = K3.trigger_t
-    type k3_program_t = K3.prog_t
-    type m3_map_t = K3.map_t
+   type k3_statement_t = K3.statement_t
+   type k3_trigger_t = K3.trigger_t
+   type k3_program_t = K3.prog_t
+   type m3_map_t = K3.map_t
+   type map_schema_t = ((string * Types.type_t) list * (string * Types.type_t) list)
 
     
-    let parse_error s =
+   let parse_error s =
         let lex_pos = symbol_end_pos () in
         let line_pos_str = string_of_int (lex_pos.Lexing.pos_lnum) in
         let char_pos_str = string_of_int
@@ -23,33 +24,134 @@
                     " char: "^(char_pos_str));
             flush stdout
 
-    let empty_output_k3 = ([], [], [])
+   let empty_output_k3 = ([], [], [])
 
-    (* table name -> fields *)
-    let maps:((string, m3_map_t) Hashtbl.t) = Hashtbl.create 10
+   let maps:((string, m3_map_t) Hashtbl.t) = Hashtbl.create 10
+   let maps_schema:((string, map_schema_t) Hashtbl.t) = Hashtbl.create 10
 
-		let add_map name (new_map: m3_map_t) =
-        Hashtbl.replace maps (String.uppercase name) new_map
+   let add_map name (new_map: m3_map_t) =
+      Hashtbl.replace maps (String.uppercase name) new_map
 
-		let get_map name : m3_map_t= 
-				try Hashtbl.find maps name
-					with _ -> raise (K3TypeError("Map '"^name^"' is not defined!"))
+   let add_map_schema name (new_schema: map_schema_t) =
+      Hashtbl.replace maps_schema (String.uppercase name) new_schema
+
+   let get_map name : m3_map_t= 
+      try Hashtbl.find maps (String.uppercase name)
+         with _ -> raise (K3TypeError("Map '"^name^"' is not defined!"))
+
+   let get_map_schema name : map_schema_t= 
+      try Hashtbl.find maps_schema (String.uppercase name)
+         with _ -> raise (K3TypeError("Map '"^name^"' is not defined!"))
 
 
-    let create_map name input_types output_types =
-        let f = fun l -> List.map (fun x -> x) l      (* was (fun x -> ("", x)) *)
+(*   let patterns:((string, Patterns.pattern list) Hashtbl.t) = Hashtbl.create 10
+
+   let get_patterns name : Patterns.pattern list= 
+      let map_name = (String.uppercase name) in
+         try 
+            Hashtbl.find patterns map_name 
+         with 
+            _ -> raise (K3TypeError("Map '"^name^"' is not defined!"))
+
+   let add_pattern name (new_pattern: Patterns.pattern) =
+      let pattern_list =
+         try 
+            get_patterns name
+         with 
+            _ -> []
+      in
+         let new_pattern_list = 
+            if List.exists (fun x -> x == new_pattern) pattern_list then 
+               pattern_list
+            else
+               new_pattern::pattern_list
+         in
+            Hashtbl.replace patterns (String.uppercase name) new_pattern_list
+*)
+   let patterns:(Patterns.pattern_map ref) = ref []
+
+   let add_pattern name (new_pattern: Patterns.pattern) = 
+      patterns := Patterns.add_pattern !patterns (name, new_pattern)
+
+
+
+   let create_map name input_var_types output_var_types =
+        let f = fun l -> List.map (fun (_,x) -> x) l      (* was (fun x -> ("", x)) *)
+         in
+            let input_types = f input_var_types in
+            let output_types = f output_var_types
             in
-                let new_map = (name, (f input_types), (f output_types))
+                let new_map = (name, input_types, output_types)
                     in
                         add_map name new_map; 
+                        add_map_schema name (input_var_types, output_var_types);
                         (name, input_types, output_types) 
    
-		let concat_stmt (m,t) (map_list,pat_list,trig_list) =
+   let concat_stmt (m,t) (map_list,pat_list,trig_list) =
 				let new_map = if m = [] then map_list else m @ map_list
 					in
 						let new_trig = if t = [] then trig_list else t @ trig_list
 							in
-								(new_map, pat_list,new_trig) 
+								(new_map, !patterns,new_trig) 
+
+   let slice_infering statement var_bind_list = 
+      let map_name = match statement with 
+         | PC(n, _, _, _) -> n
+         | OutPC(n, _, _) -> n
+         | InPC(n, _, _)  -> n
+         | SingletonPC(n, _) -> n
+         | _ -> raise (K3TypeError("First argument of Slice should be a Collection!"))
+      in
+         let (in_var_types, out_var_types) = get_map_schema map_name in
+         let get_vars l = List.map fst l in
+         let in_vars = get_vars in_var_types in
+         let out_vars = get_vars out_var_types 
+         in
+            let var_list = get_vars var_bind_list
+            in
+(*
+               let infer_pattern desired_var_list = 
+                  let result_pattern: ((string list * int list) ref) = ref ([],[]) in
+                  let counter = ref 0 in
+                  List.iter 
+                  (fun d_var ->
+                     (
+                     if (List.exists (fun x -> x == d_var) var_list) then
+                        let ids = fst !result_pattern in
+                        let nums = snd !result_pattern in
+                           result_pattern := (ids@[d_var], nums@[!counter])
+                     ); counter := !counter + 1
+                  ) desired_var_list; !result_pattern;
+               in
+                  let infer_in_pattern = infer_pattern in_vars in
+                  let infer_out_pattern = infer_pattern out_vars 
+                  in
+                     (
+                        if (infer_in_pattern <> ([],[])) then 
+                           let result = Patterns.In(infer_in_pattern) in
+                              print_endline (Patterns.string_of_pattern result);
+                              add_pattern map_name result
+                     );
+                     (
+                        if (infer_out_pattern <> ([],[])) then 
+                           let result = Patterns.Out(infer_out_pattern) in
+                              print_endline (Patterns.string_of_pattern result);
+                              add_pattern map_name result
+                     );
+*)
+               let in_filt = ListAsSet.inter in_vars var_list in
+               let out_filt = ListAsSet.inter out_vars var_list in
+               let in_pattern = Patterns.make_in_pattern in_vars in_filt in
+               let out_pattern = Patterns.make_out_pattern out_vars out_filt in
+(*
+                  print_endline (Patterns.string_of_pattern in_pattern);
+                  print_endline (Patterns.string_of_pattern out_pattern);
+*)
+                  add_pattern map_name in_pattern;
+                  add_pattern map_name out_pattern;
+                     in_var_types@out_var_types
+               
+         
 		
 
    let create_k3_statement expr = 
@@ -66,9 +168,9 @@
    let types_to_vartypes types = 
       List.map 
          (
-            fun (t) -> let nt = TBase(t)
+            fun (n, t) -> let nt = TBase(t)
             in 
-               ("", nt)
+               (n, nt)
          )
       types
 %}
@@ -119,15 +221,15 @@ mapDeclarationList:
 | mapDeclaration                                            { [$1] }
 
 mapDeclaration:
-| ID LBRACK typeList RBRACK LBRACK typeList RBRACK EOSTMT   { let col = PC($1, types_to_vartypes $3, types_to_vartypes $6, TBase(Types.TFloat))
+| ID LBRACK mapVarList RBRACK LBRACK mapVarList RBRACK EOSTMT   { let col = PC($1, types_to_vartypes $3, types_to_vartypes $6, TBase(Types.TFloat))
                                                                in
                                                                   add_collection $1 col;
                                                                      create_map $1 $3 $6 }
-| ID LBRACK RBRACK LBRACK typeList RBRACK EOSTMT            { let col = OutPC($1, types_to_vartypes $5, TBase(Types.TFloat))
+| ID LBRACK RBRACK LBRACK mapVarList RBRACK EOSTMT            { let col = OutPC($1, types_to_vartypes $5, TBase(Types.TFloat))
                                                                in
                                                                   add_collection $1 col;
                                                                      create_map $1 [] $5 }
-| ID LBRACK typeList RBRACK LBRACK RBRACK EOSTMT            { let col = InPC($1, types_to_vartypes $3, TBase(Types.TFloat))
+| ID LBRACK mapVarList RBRACK LBRACK RBRACK EOSTMT            { let col = InPC($1, types_to_vartypes $3, TBase(Types.TFloat))
                                                                in
                                                                   add_collection $1 col;
                                                                      create_map $1 $3 [] }
@@ -136,9 +238,12 @@ mapDeclaration:
                                                                   add_collection $1 col;
                                                                      create_map $1 [] [] }
 
-typeList:
-| typeItem COMMA typeList                                   { $1::$3 }
-| typeItem                                                  { [$1] }
+mapVarList:
+| mapVarItem COMMA mapVarList                               { $1::$3 }
+| mapVarItem                                                { [$1] }
+
+mapVarItem:
+| ID COLON typeItem                                        { ($1, $3) }
 
 typeItem:
 | INT                                                       { Types.TInt }
@@ -288,8 +393,10 @@ lookupStatement:
                                                             { Lookup($3, $6) }
 
 sliceStatement:
-| SLICE LPAREN statement COMMA LBRACK varList RBRACK COMMA LBRACK 
-         varBindList RBRACK RPAREN                          { Slice($3, $6, $10) }
+| SLICE LPAREN statement COMMA LBRACK 
+         varBindList RBRACK RPAREN                          { let var_list = slice_infering $3 $6 
+                                                               in
+                                                                  Slice($3, types_to_vartypes var_list, $6) }
 
 varBindList:
 | varBindItem EOSTMT varBindList                            { $1::$3 }
