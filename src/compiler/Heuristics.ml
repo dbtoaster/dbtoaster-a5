@@ -144,7 +144,7 @@ let rec materialize ?(scope:var_t list = [])
 		
 
 		(*Debug.activate "LOG-HEURISTICS-DETAIL"; *)
-		Debug.activate "IGNORE-FINAL-OPTIMIZATION"; 
+		(*Debug.activate "IGNORE-FINAL-OPTIMIZATION";*) 
 		
 		Debug.print "LOG-HEURISTICS-DETAIL" (fun () ->
 			 "[Heuristics] Raw expression: "^(string_of_expr expr)^
