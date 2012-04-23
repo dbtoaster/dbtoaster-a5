@@ -17,17 +17,34 @@ module C = Calculus
    
    Perform polynomial expansion on a given expression, erasing all intermediate 
    AggSums.
-   @param scope The scope in which [expr] is evaluated
    @param expr  A calculus expression
    @return      A list of terms that can be summed together to re-create an
                 expression equivalent to [expr], together with the schema of
                 each element.  This schema can be used as the group-by variables
                 of an AggSum to re-create the schema of the original expression.
 *)
-let decompose_poly (scope:var_t list) (expr:C.expr_t):
-                   (var_t list * C.expr_t) list = 
+let decompose_poly (expr:C.expr_t):(var_t list * C.expr_t) list = 
 (* TODO: ensure that different expessions under AggSum have disjunct schemas *)
-   let schema = snd (C.schema_of_expr expr) in
+
+  let rec erase_aggsums e = 
+		C.CalcRing.fold C.CalcRing.mk_sum C.CalcRing.mk_prod C.CalcRing.mk_neg
+		  (fun lf -> begin match lf with
+        | AggSum(s, subexp) -> erase_aggsums subexp
+        | _ -> C.CalcRing.mk_val lf
+      end) e
+  in
+	let rec decompose_term term =
+		let schema = snd (C.schema_of_expr term) in 
+    List.map (fun x -> (schema, x))
+               (C.CalcRing.sum_list 
+                  (C.CalcRing.polynomial_expr (erase_aggsums term)))
+	in 
+    List.fold_left (fun result term ->
+	    result @ (decompose_term term)
+		) [] (C.CalcRing.sum_list (C.CalcRing.polynomial_expr expr))
+    
+(*    
+   let schema = snd (C.schema_of_expr expr) in 
    let rec erase_aggsums e = 
       C.CalcRing.fold C.CalcRing.mk_sum C.CalcRing.mk_prod C.CalcRing.mk_neg
          (fun lf -> begin match lf with
@@ -38,7 +55,8 @@ let decompose_poly (scope:var_t list) (expr:C.expr_t):
       List.map (fun x -> (schema, x))
                (C.CalcRing.sum_list 
                   (C.CalcRing.polynomial_expr (erase_aggsums expr)))
-
+*)
+		
 (******************************************************************************)
 (**
    [decompose_graph scope (schema,expr)]
