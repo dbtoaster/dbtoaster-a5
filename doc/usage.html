@@ -1,0 +1,167 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>DBToaster</title>
+
+<style type="text/css">
+h1 {
+  text-align: center;
+}
+h2 {
+  text-align: center;
+}
+h3 {
+  text-align: center;
+}
+.wrapper {
+  margin: 0 auto;
+  width: 600px;
+}
+.code {
+  font-family: Courier, Monospace;
+  font-weight: bold;
+}
+.codeblock {
+  font-family: Courier, Monospace;
+  margin: 10px 20px;
+  padding: 10px;
+  background-color: #cccccc;
+}
+.todo {
+  margin: 10px 20px;
+  color: red;
+  font-weight: bold;
+  text-align: center;
+}
+</style>
+</head><body>
+
+<div class="wrapper">
+<h1>DBToaster User Reference</h1>
+
+<h2>Compiling Queries</h2>
+<p>
+DBToaster operates in three modes: (1) Interpreter mode, which compiles and processes queries internally, within the DBToaster binary.  (2) Standalone Binary mode, which compiles queries into binaries.  (3) Source Code mode which compiles queries into datastructures that can be linked into and instantiated within separate projects.
+</p>
+
+<h3>Interpreter Mode</h3>
+<p>
+To use DBToaster in interpreter mode, invoke it with the <tt>-r</tt> flag and one or more SQL query files.  The output of all queries in the file will be printed once all data has been processed.  If any of the queries do not terminate (e.g., one or more data sources are sockets), then pressing control-c will terminate the process and print the most recent query results.
+
+<div class="codeblock">
+$&gt; dbtoaster -r test/queries/simple/rst.sql<br/>
+Processing time: 0.0309669971466<br/>
+AtimesD: 1.87533670489e+13
+</div>
+</p>
+
+<h3>Standalone Binary mode</h3>
+<p>
+To use DBToaster to create a standalone binary, invoke it with the <tt>-c [binary name]</tt> flag.  The binary can be invoked directly, and like the interpreter, will print the results of all queries once all data has been processed.  If any queries do not terminate, then pressing control-c will terminate the query binary and print the most recent query results.
+
+<div class="codeblock">
+$&gt; dbtoaster test/queries/simple/rst.sql -c rst<br/>
+$&gt; ./rst<br/>
+Processing time: 0.0309669971466<br/>
+AtimesD: 1.87533670489e+13
+</div>
+</p>
+
+<h3>Source Code Mode</h3>
+<div class="todo">Source code mode has not been implemented yet.</div>
+
+<hr/>
+<h2>Command-Line Reference</h2>
+<div class="codeblock">
+$&gt; dbtoaster [options] &lt;input file 1&gt; [&lt;input file 2&gt; [...]]
+</div>
+
+<h3>Command Line Options</h3>
+<dl>
+<dt class="code">-c &lt;target file&gt;</dt>
+<dd>Compile the query into a standalone binary.  By default, the C++ code generator will be used with G++ to generate the binary.  An alternate compiled target language (currently, C++, OCaml, or Scala) may be selected using the <tt>-l</tt> flag.</dd>
+
+<dt class="code">-i &lt;language&gt;</dt>
+<dd>Specify the language of the input files.  By default, this language will be auto-detected from the file extensions, or assumed to be SQL if the compiler can not guess it.<dd>
+
+<dt class="code">-l &lt;language&gt;</dt>
+<dd>Compile the query into the specified target language (see below for a list of valid languages).  By default, the query will be compiled to M3.</dd>
+
+<dt class="code">-o &lt;output file&gt;</dt>
+<dd>Redirect the compiler's output to the specified file.  If used in conjunction with <tt>-c</tt>, the source code for the compiled binary will be directed to this file.  Passing in <tt>-</tt> as the output file will direct output to stdout.  By default, output is directed to stdout, or discarded if the <tt>-c</tt> flag is used.
+
+<dt class="code">-r</dt>
+<dd>Run the query (queries) in interpreter mode.</dd>
+</dl>
+
+<h3>Supported Languages</h3>
+<center>
+<table border=1>
+  <tr>
+    <th align="center">Language</th>
+    <th align="center">Commandline Name</th>
+    <th align="center">Valid for Input/Output</th>
+    <th align="center">Description</th>
+  </tr>
+
+  <tr>
+    <td>DBT Relational Calculus</td>
+    <td class="code">calc</td>
+    <td>output-only</td>
+    <td>DBToaster's internal query representation.  This is a direct translation of the input queries.</td>
+  </tr>
+
+  <tr>
+    <td>Compilation Plan</td>
+    <td class="code">plan</td>
+    <td>output-only</td>
+    <td>A materialization plan: a list of datastructures required to incrementally maintain the input queries.</td>
+  </tr>
+
+  <tr>
+    <td>M3</td>
+    <td class="code">m3</td>
+    <td>input-or-output</td>
+    <td>A map-mantenance messages program.  This is the set of triggers (written in DBT Relational Calculus) that will incrementally maintain the input queries and all supporting datastructures.</td>
+  </tr>
+
+  <tr>
+    <td>K3</td>
+    <td class="code">k3</td>
+    <td>input-or-output</td>
+    <td>The execution plan generated for an M3 program.  This is a simple functional language that admits a set of useful functional optimizations.</td>
+  </tr>
+
+  <tr>
+    <td>OCaml</td>
+    <td class="code">ocaml</td>
+    <td>output-or-compiled</td>
+    <td>An OCaml implementation of the K3 execution plan.</td>
+  </tr>
+
+  <tr>
+    <td>C++</td>
+    <td class="code">cpp</td>
+    <td>output-or-compiled</td>
+    <td>A C++ implementation of the K3 execution plan.</td>
+  </tr>
+
+  <tr>
+    <td>Scala</td>
+    <td class="code">scala</td>
+    <td>output-or-compiled</td>
+    <td>A Scala implementation of the K3 execution plan.</td>
+  </tr>
+
+</table>
+</center>
+
+<hr/>
+<h2>DBT-SQL Reference</h2>
+
+
+<hr/>
+<h2>Optional Optimization Features</h2>
+</div>
+
+</body></html>
