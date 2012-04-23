@@ -302,6 +302,7 @@ statement:
 | collectionStatement                                       { $1 }
 | pcUpdateStatement                                         { $1 }
 | pcValueUpdateStatement                                    { $1 }
+| pcElementRemoveStatement                                  { $1 }
 
 constStatement:
 | CONST_FLOAT                                               { Const(Types.CFloat($1)) }
@@ -411,6 +412,10 @@ collectionStatement:
 pcUpdateStatement:
 | PCUPDATE LPAREN statement COMMA LBRACK statementElementListOpt RBRACK
    COMMA statement RPAREN                                   { PCUpdate($3, $6, $9) }
+
+pcElementRemoveStatement:
+| PCELEMENTREMOVE LPAREN statement COMMA LBRACK statementElementListOpt RBRACK
+   COMMA LBRACK statementElementListOpt RBRACK RPAREN       { PCElementRemove($3, $6, $10) }
 
 pcValueUpdateStatement:
 | PCVALUEUPDATE LPAREN statement COMMA LBRACK statementElementListOpt RBRACK
