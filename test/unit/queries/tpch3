@@ -5,7 +5,7 @@
       :toplevels => {
         "query3" => {
           :type => :onelevel,
-          :answer => results_file("test/results/tpch/query3.csv"),
+          :expected => results_file("test/results/tpch/query3.csv"),
         }
       }
     },
@@ -15,7 +15,7 @@
       :toplevels => {
         "query3" => {
           :type => :onelevel,
-          :answer => results_file("test/results/tpch/query3_tiny.csv")
+          :expected => results_file("test/results/tpch/query3_tiny.csv")
         }
       }
     },
@@ -25,7 +25,7 @@
       :toplevels => {
         "query3" => {
           :type => :onelevel,
-          :answer => results_file("test/results/tpch/query3_100M.csv")
+          :expected => results_file("test/results/tpch/query3_100M.csv")
         }
       }
     }

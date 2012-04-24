@@ -64,6 +64,8 @@ class GenericUnitTest
         when :onelevel then
           expected = query[:expected];
           result = query[:result]
+          raise "Got nil result" if result.nil?;
+          raise "Metadata has nil expected results" if expected.nil?;
           not ((expected.keys + result.keys).uniq.find do |k|
             (not ((expected.has_key? k) && (result.has_key? k))) ||
             (diff(expected[k], result[k]) == "Different")
@@ -88,7 +90,9 @@ class GenericUnitTest
     result = query[:result];
     case query[:type]
       when :singleton then [["*", expected, result, diff(expected, result)]]
-      when :onelevel then      
+      when :onelevel then
+        p expected;
+        p result;
         (expected.keys + result.keys).uniq.sort.
           map do |k| 
             [ k.join("/"), 
@@ -309,6 +313,7 @@ queries.each do |tquery|
       end
     rescue Exception => e
       puts "Failure: #{e}";
+      puts e.backtrace.join("\n");
       $ret = -1;
       exit -1 if $strict;
     end

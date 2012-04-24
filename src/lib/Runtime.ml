@@ -64,8 +64,9 @@ let synch_main
            (DB.smap_to_string (DB.get_out_map q db))))
      
      else (q,"value", (fun () ->
-        DB.value_to_string
-           (match DB.get_value q db with | Some(x) -> x | _ -> DB.zero)))
+        (DB.map_name_to_string q)^": "^(
+           DB.value_to_string
+              (match DB.get_value q db with | Some(x) -> x | _ -> DB.zero))))
      ) toplevel_queries
   in
   let log_evt = 
@@ -111,7 +112,7 @@ let synch_main
   let finish = Unix.gettimeofday () in
   print_endline ("Processing time: "^(string_of_float (finish -. start)));
   print_endline (String.concat "\n"
-     (List.map (fun (q,_,f) -> (DB.map_name_to_string q)^": "^(f())) db_access_f))
+     (List.map (fun (q,_,f) -> f()) db_access_f))
 
 end
 ;;
