@@ -715,7 +715,7 @@ let code_of_prog ((maps,_,triggers):prog_t): string = (
    "--------------------- TRIGGERS ----------------------\n"^
    (ListExtras.string_of_list ~sep:"\n\n" (fun (event, stmts) ->
       "ON "^(Schema.string_of_event event)^" : {"^
-      (ListExtras.string_of_list ~sep:"\n\t" code_of_expr
+      (ListExtras.string_of_list ~sep:"\n\t" string_of_expr
                                  (List.map snd stmts))^
       "}"
    ) triggers)^"\n"

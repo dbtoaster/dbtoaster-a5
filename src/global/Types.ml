@@ -18,7 +18,7 @@ type type_t =
    | TBool                 (** Boolean *)
    | TInt                  (** Integer *)
    | TFloat                (** Floating point number *)
-   | TString   of int      (** A string of bounded length n (0 is infinite) *)
+   | TString               (** A string of bounded length n (0 is infinite) *)
    | TAny                  (** An unspecified type *)
    | TExternal of string   (** An externally defined type *)
 
@@ -43,7 +43,7 @@ let type_of_const (a:const_t): type_t =
       | CBool(_)   -> TBool
       | CInt(_)    -> TInt
       | CFloat(_)  -> TFloat
-      | CString(s) -> TString(String.length s)
+      | CString(s) -> TString
    end
 
 (** 
@@ -59,7 +59,7 @@ let int_of_const (a:const_t): int =
       | CBool(false) -> 0
       | CInt(av)     -> av
       | CFloat(av)   -> int_of_float av
-      | CString(av)  -> failwith "Cannot produce string of integer"
+      | CString(av)  -> failwith ("Cannot produce integer of string '"^av^"'")
    end
 
 (**
@@ -75,7 +75,7 @@ let float_of_const (a:const_t): float =
       | CBool(false) -> 0.
       | CInt(av)     -> float_of_int av
       | CFloat(av)   -> av
-      | CString(av)  -> failwith "Cannot produce string of float"
+      | CString(av)  -> failwith ("Cannot produce float of string '"^av^"'")
    end
    
 (**** Conversion to Strings ****)
@@ -103,7 +103,7 @@ let ocaml_of_type (ty: type_t): string =
       | TBool            -> "TBool"
       | TInt             -> "TInt"
       | TFloat           -> "TFloat"
-      | TString(len)     -> "TString("^(string_of_int len)^")"
+      | TString          -> "TString"
       | TExternal(etype) -> "TExternal(\""^etype^"\")"
    end
 
@@ -119,9 +119,8 @@ let string_of_type (ty: type_t): string =
       | TBool            -> "bool"
       | TInt             -> "int"
       | TFloat           -> "float"
-      | TString(0)       -> "string"
-      | TString(len)     -> "varchar("^(string_of_int len)^")"
-      | TExternal(etype) -> "external<"^etype^">"
+      | TString          -> "string"
+      | TExternal(etype) -> etype
    end
 
 (**
@@ -187,10 +186,6 @@ let string_of_var ?(verbose = Debug.active "PRINT-VERBOSE")
       {- [TAny] can be escalated to any other type}
       {- [TBool] can be escalated to [TInt]}
       {- [TInt] can be escalated to [TFloat]}
-      {- [TString]s of finite length can be escalated to [TStrings] of infinite 
-         length}
-      {- [TString]s of finite length can be escalated to any [TString] of 
-         greater length}
       {- Two types that can not be escalated will trigger an error.}
    }
    @param opname  (optional) The operation name to include in error messages
@@ -205,8 +200,6 @@ let escalate_type ?(opname="<op>") (a:type_t) (b:type_t): type_t =
       | (TInt,TBool) | (TBool,TInt) -> TInt
       | (TBool,TFloat) | (TFloat,TBool) -> TFloat
       | (TInt,TFloat) | (TFloat,TInt) -> TFloat
-      | (TString(0),TString(_)) | (TString(_),TString(0)) -> TString(0)
-      | (TString(alen),TString(blen)) -> TString(max alen blen)
       | _ -> failwith ("Can not compute type of "^(string_of_type a)^" "^
                        opname^" "^(string_of_type b))
    end

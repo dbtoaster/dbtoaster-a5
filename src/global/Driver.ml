@@ -470,9 +470,7 @@ if stage_is_active StageParseK3 then (
          Debug.print "PATTERNS" (fun () -> Patterns.patterns_to_string pats)
 )
 ;;
-(* Disabled for now.  Will reactivate once we've successfully tested 
-   everything else
-if stage_is_active StageOptimizeK3 then (
+if (stage_is_active StageOptimizeK3) && (Debug.active "OPTIMIZE-K3") then (
    Debug.print "LOG-DRIVER" (fun () -> "Running Stage: OptimizeK3");
    let optimizations = ref [] in
    if not (Debug.active "NO-CSE-OPT")
@@ -496,7 +494,7 @@ if stage_is_active StageOptimizeK3 then (
       ) triggers
    )
 )
-;;*)
+;;
 if stage_is_active StagePrintK3 then (
    Debug.print "LOG-DRIVER" (fun () -> "Running Stage: PrintK3");
    output_endline (K3.code_of_prog !k3_program)
@@ -537,7 +535,6 @@ if stage_is_active StageImpToTargetLanguage then (
 
 if stage_is_active StageRunInterpreter then (
    Debug.print "LOG-DRIVER" (fun () -> "Running Stage: RunInterpreter");
-   StandardAdaptors.initialize ();
    let (maps,patterns,compiled) = !interpreter_program in
    let db = Database.NamedK3Database.make_empty_db maps patterns in
    let result = K3Interpreter.K3CG.eval compiled [] [] db in

@@ -25,6 +25,8 @@ let keyword_table = Hashtbl.create 60
 let keywords =   
     [   
       "VARCHAR",    VARCHAR;
+      "CHAR",       CHAR;
+      "DATE",       DATE;
       "CREATE",     CREATE;
       "TABLE",      TABLE;
       "STREAM",     STREAM;
@@ -50,7 +52,7 @@ let keywords =
       "FLOAT",      TYPE(TFloat);
       "DOUBLE",     TYPE(TFloat);
       "DECIMAL",    TYPE(TFloat);
-      "STRING",     TYPE(TString(0));
+      "STRING",     TYPE(TString);
       "TRUE",       BOOL(true);
       "FALSE",      BOOL(false);
     ]

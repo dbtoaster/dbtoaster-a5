@@ -26,7 +26,7 @@ type map_metadata =
 %token <float> FLOAT
 %token <bool> BOOL
 %token EQ NEQ LT LTE GT GTE
-%token VARCHAR
+%token VARCHAR CHAR DATE
 %token EOF EOSTMT
 %token CREATE TABLE STREAM
 %token LPAREN RPAREN LBRACKET RBRACKET LBRACE RBRACE
@@ -101,7 +101,11 @@ adaptorParams:
 
 dbtType:
 | TYPE                      { $1 }
-| VARCHAR LPAREN INT RPAREN { TString($3) }
+| CHAR LPAREN INT RPAREN    { TString }
+| VARCHAR LPAREN INT RPAREN { TString }
+| VARCHAR                   { TString }
+| CHAR                      { TString }
+| DATE                      { TInt    }
 
 queryStatement:
 | DECLARE QUERY STRING AS calculusExpr { ($3, $5) }

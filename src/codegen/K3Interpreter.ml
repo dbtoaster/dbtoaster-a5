@@ -59,7 +59,11 @@ struct
         | _ -> false
 
     let value_of_float x = BaseValue(CFloat(x))
-    let value_of_const_t x = BaseValue(x)
+    let value_of_const_t x = 
+      if Debug.active "HASH-STRINGS" then
+         match x with | CString(s) -> BaseValue(CInt(Hashtbl.hash s))
+                      | _          -> BaseValue(x)
+      else BaseValue(x)
     
     let float_of_value x = match x with
         | BaseValue(c) -> float_of_const c
@@ -67,16 +71,19 @@ struct
 
     let float_of_const_t x = 
       match x with CFloat(f)    -> f 
-                 | CString(s)   -> (float_of_int (Hashtbl.hash s))
+                 | CString(s)   -> 
+                     if Debug.active "HASH-STRINGS" then 
+                        (float_of_int (Hashtbl.hash s))
+                     else failwith ("invalid float: "^(string_of_const x))
                  | CInt(i)      -> float_of_int i
                  | CBool(true)  -> 1.
                  | CBool(false) -> 0.
 
-    let const_t_of_value x = match x with
+    let const_of_value x = match x with
       | BaseValue(c) -> c
       | _ -> failwith ("invalid const_t: "^(string_of_value x))
 
-    let const_t_of_float x = CFloat(x)
+    let const_of_float x = CFloat(x)
 
     let value_of_tuple x = Tuple(x)
     let tuple_of_value x = match x with
@@ -144,11 +151,13 @@ struct
     (* TODO:
      * -- collection comparisons have list semantics here, e.g. element order
      * matters. Generalize to support set/bag semantics as needed. *)
-    let int_op (op : 'a -> 'a -> bool) x y =
+    let int_op (op : const_t -> const_t -> const_t) x y =
         match (x,y) with
         | Unit,_ | _,Unit -> failwith "invalid comparison to unit"
-        | _,_ -> if op x y then BaseValue(CInt(1))
-                           else BaseValue(CInt(0))
+        | _,_ -> if (op (const_of_value x) 
+                        (const_of_value y)) = CBool(true)
+                 then BaseValue(CInt(1))
+                 else BaseValue(CInt(0))
     
     let bin_op (op : const_t -> const_t -> const_t) x y =
       match (x,y) with
@@ -157,10 +166,10 @@ struct
     
     let add_op  = bin_op Arithmetic.sum
     let mult_op = bin_op Arithmetic.prod
-    let lt_op   = (int_op (< ))
-    let leq_op  = (int_op (<=))
-    let eq_op   = (int_op (= ))
-    let neq_op  = (int_op (<>))
+    let lt_op   = (int_op Arithmetic.cmp_lt)
+    let leq_op  = (int_op Arithmetic.cmp_lte)
+    let eq_op   = (int_op Arithmetic.cmp_eq)
+    let neq_op  = (int_op Arithmetic.cmp_neq)
     
     let ifthenelse0_op cond v = 
         let aux v = match v with
@@ -691,9 +700,24 @@ struct
     
     (* Top level code generation *)
     let trigger event stmt_block =
+      let translate_tuple = 
+         if Debug.active "HASH-STRINGS" then
+            List.fold_right (fun (_,vart) translate_rest ->
+               match vart with 
+                  | TString -> (fun x -> 
+                     (BaseValue(match List.hd x with
+                        | CString(s) -> CInt(Hashtbl.hash s)
+                        | _ -> failwith "Expecting a string as input"
+                     ))::(translate_rest (List.tl x)))
+                  | _ -> (fun x -> (BaseValue(List.hd x))::
+                                       (translate_rest (List.tl x)))
+            ) (Schema.event_vars event) (fun _ -> [])
+         else
+            (List.map (fun x -> BaseValue(x)))
+      in
       Trigger (event, (fun tuple db -> 
         let theta = Env.make (List.map fst (Schema.event_vars event))
-                             (List.map value_of_const_t tuple), [] in
+                             (translate_tuple tuple), [] in
           List.iter (fun cstmt -> 
             Debug.print "LOG-INTERPRETER-TRIGGERS" (fun () -> 
                "Processing trigger "^(Schema.string_of_event event));

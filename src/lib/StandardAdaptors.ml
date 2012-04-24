@@ -103,7 +103,7 @@ let preprocessors : (string * (string -> string list -> string list)) list =
    [("project", preproject); ("case", change_case); ("substring", substring);
     ("skiplines", skiplines); ("trimwhitespace", trimwhitespace)]
 
-(* param_val: (int|float|date|hash) list
+(* param_val: (int|float|date|hash|string) list
  * Builds a tuple, i.e. a const_t list from a string list given the expected
  * types of fields.
  * -- if there are more fields than types, we use the last type to construct
@@ -137,6 +137,7 @@ let build_tuple param_val =
                   CFloat(float((y * 10000) + (m * 100) + (d * 1)))
             ) else failwith ("Invalid date string: "^x)
          )
+        | "string" -> (fun x -> CString(x))
         | "hash" -> (fun x -> CFloat(float(Hashtbl.hash x)))
         | _ -> failwith ("invalid const_t type "^t)) types in
    let num_fns = List.length build_fns in
@@ -390,16 +391,16 @@ let orderbook_generator params =
 
 (* TPC-H *)
 let li_schema =
-   "int,int,int,int,int,float,float,float,hash,hash,date,date,date,hash,hash,hash"
+   "int,int,int,int,int,float,float,float,string,string,date,date,date,string,string,string"
 
 let lineitem_params = csv_params "|" li_schema "insert"
-let order_params    = csv_params "|" "int,int,hash,float,date,hash,hash,int,hash" "insert"
-let part_params     = csv_params "|" "int,hash,hash,hash,hash,int,hash,float,hash" "insert"
-let partsupp_params = csv_params "|" "int,int,int,float,hash" "insert"
-let customer_params = csv_params "|" "int,hash,hash,int,hash,float,hash,hash" "insert"
-let supplier_params = csv_params "|" "int,hash,hash,int,hash,float,hash" "insert"
-let nation_params   = csv_params "|" "int,hash,int,hash" "insert"
-let region_params   = csv_params "|" "int,hash,hash" "insert"
+let order_params    = csv_params "|" "int,int,string,float,date,string,string,int,string" "insert"
+let part_params     = csv_params "|" "int,string,string,string,string,int,string,float,string" "insert"
+let partsupp_params = csv_params "|" "int,int,int,float,string" "insert"
+let customer_params = csv_params "|" "int,string,string,int,string,float,string,string" "insert"
+let supplier_params = csv_params "|" "int,string,string,int,string,float,string" "insert"
+let nation_params   = csv_params "|" "int,string,int,string" "insert"
+let region_params   = csv_params "|" "int,string,string" "insert"
 
 (* TODO: handle "deletions" parameter for TPCH
  * Requires a staged multiplexer. *)

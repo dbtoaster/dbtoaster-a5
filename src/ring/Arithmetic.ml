@@ -189,14 +189,44 @@ let prod = binary_op ( && ) ( * ) ( *. )
     constants *)
 let prodl= List.fold_left prod (CInt(1))
 (** Negate a constant *)
-let neg  = binary_op (fun x y -> failwith "Negation of a boolean") 
+let neg  = binary_op (fun _-> failwith "Negation of a boolean") 
                      ( * ) ( *. ) (CInt(-1))
 (** Compute the multiplicative inverse of a constant *)
-let div1 a   = binary_op (fun x->failwith "Dividing a boolean 1") 
+let div1 a   = binary_op (fun _->failwith "Dividing a boolean 1") 
                          (/) (/.) (CInt(1)) a
 (** Perform type-escalating division of two constants *)
-let div2 a b = binary_op (fun x->failwith "Dividing a boolean 2")
+let div2 a b = binary_op (fun _->failwith "Dividing a boolean 2")
                          (/) (/.) a b
+
+let comparison_op (opname:string) (iop:int -> int -> bool) 
+                  (fop:float -> float -> bool) (a:const_t) (b:const_t):const_t =
+   begin match (escalate_type ~opname:opname (type_of_const a) 
+                                             (type_of_const b)) with
+      | TInt -> CBool(iop (int_of_const a) (int_of_const b))
+      | TFloat -> CBool(fop (float_of_const a) (float_of_const b))
+      | _ -> failwith (opname^" over invalid types")
+   end
+
+(** Perform a type-escalating less-than comparison *)
+let cmp_lt  = comparison_op "<"  (<)  (<)
+(** Perform a type-escalating less-than or equals comparison *)
+let cmp_lte = comparison_op "<=" (<=) (<=)
+(** Perform a type-escalating greater-than comparison *)
+let cmp_gt  = comparison_op ">"  (>)  (>)
+(** Perform a type-escalating greater-than or equals comparison *)
+let cmp_gte = comparison_op ">=" (>=) (>=)
+(** Perform a type-escalating equals comparison *)
+let cmp_eq a b = 
+   CBool(begin match (a,b) with
+      | (CBool(av), CBool(bv))        -> av = bv
+      | (CBool(_), _)  | (_,CBool(_)) -> failwith "= of boolean and other"
+      | (CString(av), CString(bv))    -> av = bv
+      | (CString(_), _) | (_,CString(_))-> failwith "= of string and other"
+      | (CFloat(_), _) | (_,CFloat(_))-> (float_of_const a) = (float_of_const b)
+      | (CInt(av), CInt(bv))          -> av = bv
+   end)
+(** Perform a type-escalating not-equals comparison *)
+let cmp_neq a b = CBool((cmp_eq a b) = CBool(false))
 
 (**** Functions ****)
 (**

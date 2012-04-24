@@ -48,8 +48,7 @@ module Postgres : Interface = struct
               TAny | TExternal(_) -> failwith "Unsupported type in Sql client"
             | TBool | TInt -> "int"
             | TFloat -> "float"
-            | TString(0) -> "varchar(1000)"
-            | TString(len) -> "varchar("^(string_of_int len)^")"
+            | TString -> "varchar(1000)"
             )
          ) sch)^
       ")"   

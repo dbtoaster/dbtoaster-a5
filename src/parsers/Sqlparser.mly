@@ -134,9 +134,11 @@ sourceStmt:
 
 typeDefn:
 | TYPE                      { $1 }
-| CHAR LPAREN INT RPAREN    { TString($3) }
-| VARCHAR LPAREN INT RPAREN { TString($3) }
-| DATE                      { TInt        }
+| CHAR LPAREN INT RPAREN    { TString }
+| VARCHAR LPAREN INT RPAREN { TString }
+| VARCHAR                   { TString }
+| CHAR                      { TString }
+| DATE                      { TInt    }
 
 fieldList:
 | ID typeDefn                    { [None, String.uppercase $1, $2] }
