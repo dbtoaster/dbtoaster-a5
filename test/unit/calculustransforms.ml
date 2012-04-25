@@ -194,8 +194,32 @@ in
    test "TPCH3 lifts" [var "CUSTOMER_MKTSEGMENT"]
       "AggSum([],((CUSTOMER_MKTSEGMENT_1 ^= [CUSTOMER_MKTSEGMENT]) * 
                   (CUSTOMER_MKTSEGMENT_1 ^= ['BUILDING'])))"
-      "AggSum([],['BUILDING' = CUSTOMER_MKTSEGMENT])"
-      
+      "AggSum([],['BUILDING' = CUSTOMER_MKTSEGMENT])";
+   test "Lift into a lifted aggsum of a lift" []
+      "(A ^= B) * (C ^= (AggSum([A], R(D) * (A ^= D))))"
+      "(C ^= (AggSum([B], R(D) * (B ^= D))))";
+   test "TPCH11 nested query" [var "P_NATIONKEY"]
+      "(N_NATIONKEY ^= [P_NATIONKEY]) * 
+       (N_VALUE ^= AggSum([N_NATIONKEY],(
+         PARTSUPP(PS_PARTKEY, PS_SUPPKEY, PS_AVAILQTY, PS_SUPPLYCOST, 
+                   PS_COMMENT) * 
+         (S_SUPPKEY ^= [PS_SUPPKEY]) * 
+         SUPPLIER(S_SUPPKEY, S_NAME, S_ADDRESS, S_NATIONKEY, S_PHONE, S_ACCTBAL, 
+                  S_COMMENT) * 
+         (N_NATIONKEY ^= [S_NATIONKEY]) * 
+         [PS_SUPPLYCOST] * [PS_AVAILQTY]
+      )))"
+      "(N_VALUE ^= AggSum([P_NATIONKEY],(
+         PARTSUPP(PS_PARTKEY, PS_SUPPKEY, PS_AVAILQTY, PS_SUPPLYCOST, 
+                   PS_COMMENT) * 
+         SUPPLIER(PS_SUPPKEY, S_NAME, S_ADDRESS, S_NATIONKEY, S_PHONE, 
+                  S_ACCTBAL, S_COMMENT) * 
+         (P_NATIONKEY ^= [S_NATIONKEY]) * 
+         [PS_SUPPLYCOST] * [PS_AVAILQTY]
+      )))";
+   test "Materialized terminal lift" [var "B"]
+      "AggSum([A], (M1_L1_1(int)[][A,B] * (E ^= M1_L1_1(int)[][] * B)))"
+      "AggSum([A], M1_L1_1(int)[][A,B])"
 ;;
 let test msg input output =
    log_test ("Nesting Rewrites ("^msg^")")

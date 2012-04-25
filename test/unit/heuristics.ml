@@ -122,10 +122,7 @@ in
       "M1(int)[][A]";
 	test "Aggregation with a lift containing a relevant relation"
 			"AggSum([A], R(A,B) * (E ^= R(C,D) * B))"
-			(if (Debug.active "HEURISTICS-IGNORE-FINAL-OPTIMIZATION") then
-         "AggSum([A], (M1_L1_1(int)[][A,B] * (E ^= M1_L1_1(int)[][C, D] * B)))"
-       else
-         "AggSum([A], (M1_L1_1(int)[][A,B]))");
+         "AggSum([A], (M1_L1_1(int)[][A,B] * (E ^= M1_L1_1(int)[][C, D] * B)))";
 	test "Aggregation with a lift containing a relevant relation and a condition"
 			"AggSum([A], R(A,B) * (E ^= R(C,D) * B) * [E > 0])"
       "AggSum([A], (M1_L1_1(int)[][A,B] * (E ^= M1_L1_1(int)[][C,D] * B) * [E > 0]))"; 	
@@ -140,10 +137,7 @@ in
 				 "M1(int)[][A] * AggSum([A], (E ^= M1_L1_1(int)[][A,D]) * [E > 0])");
   	test "Extending schema due to a lift"
 			"AggSum([A], R(A) * S(C) * (D ^= R(B) * C))"		
-			(if (Debug.active "HEURISTICS-IGNORE-FINAL-OPTIMIZATION") then
-				 "(M1(int)[][A] * AggSum([], M2(int)[][C] * (D ^= M1(int)[][B] * C)))"
-			 else
-				 "(M1(int)[][A] * AggSum([], M2(int)[][C]))");
+				 "(M1(int)[][A] * AggSum([], M2(int)[][C] * (D ^= M1(int)[][B] * C)))";
 	test "Mapping example"
 			"R(A) * S(C) * (E ^= R(B) * S(D)) * 5"		
 			"(E ^= M1_L1_1(int)[][B] * M1_L1_2(int)[][D]) * 

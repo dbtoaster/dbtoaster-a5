@@ -407,6 +407,23 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
                   (snd (C.schema_of_expr (term)))
                   (ListAsSet.union (fst rhs_schema) (snd rhs_schema))
             in
+            (* There is a quick and simple optimization we can do at this 
+               point.  If v is entirely irrelevant, and the nested expression 
+               is a singleton, then the entire thing can be discarded without 
+               effect. *)
+            if (not (List.mem v (ListAsSet.multiunion [schema; scope;
+                                                       ctx_vars;
+                                                       (fst rhs_schema);
+                                                       (snd rhs_schema)]))) &&
+               (C.expr_is_singleton ~scope:scope term)
+            then (
+               Debug.print "LOG-UNIFY-LIFTS" (fun () ->
+                  "Decided that it was possible to discard "^
+                  (C.string_of_expr expr)
+               );
+               rcr scope schema ctx (CalcRing.mk_prod pl)
+            )
+            else
             let rhs_scope = (ListAsSet.union schema_extensions scope) in
             let (lhs_deletable, lhs_nested_term) = 
                rcr scope (schema@schema_extensions) ctx term in
@@ -416,6 +433,14 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
                if List.mem_assoc v ctx
                then (true, (List.assoc v ctx) = lhs_nested_term,
                      match (lhs_nested_term, (List.assoc v ctx)) with 
+                        | (_, CalcRing.Val(Value(
+                                 ValueRing.Val(AVar(prev_v))))) 
+                           when List.mem prev_v schema ->
+                           (* It's possible that we're renaming the variable,
+                              that's being lifted into.  In this case, we need
+                              to keep the variable around in the schema *)
+                           Some(CalcRing.mk_val 
+                                 (Lift(prev_v, lhs_nested_term)))
                         | (CalcRing.Val(Value(curr_val)),
                            CalcRing.Val(Value(prev_val))) -> 
                            Some(CalcRing.mk_val (Cmp(Eq, curr_val, prev_val)))
@@ -572,49 +597,12 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
             in
                (deletable, (CalcRing.mk_val (AggSum(new_gb_vars, subbed_term))))
          | CalcRing.Val(Lift(v, l_term)) ->
-            (* Standalone lifts extend the schema of the current expression, so
-               it's difficult to figure out whether or not the variable can 
-               actually be unified.  However if the variable we're lifting into 
-               is not part of the schema, AND the term being lifted doesn't 
-               contain any relations, then we can safely delete this lift term 
-            *)
-            let (deletable, new_l_term) = rcr scope schema ctx l_term in
-            let ( lift_already_occurs,
-                  prior_lift_identical,
-                  candidate_equality ) = 
-               if List.mem_assoc v ctx
-               then if (List.assoc v ctx) = new_l_term
-                    then ( true, true, None )
-                    else ( true, false,
-                           match ((new_l_term),(List.assoc v ctx)) with
-                              | (CalcRing.Val(Value(curr_val)),
-                                 CalcRing.Val(Value(prev_val))) -> 
-                                    Some(CalcRing.mk_val 
-                                          (Cmp(Eq, curr_val, prev_val)))
-                              | _ -> None
-                         )
-               else ( false, false, None )
-            in
-            if ((C.rels_of_expr l_term) = []) &&
-               (not (List.mem v schema)) && (not (List.mem v scope)) &&
-               (  (not lift_already_occurs) || prior_lift_identical ||
-                  (candidate_equality <> None) )
-            then (
-               Debug.print "LOG-UNIFY-LIFTS" (fun () -> 
-                  if (candidate_equality <> None) then
-                     "Allowed to unify standalone lift into "^(string_of_var v)
-                  else
-                     "Transforming lift into equality with prior"
-               ); (  ctx_vars, 
-                     if lift_already_occurs && not prior_lift_identical
-                     then match candidate_equality with 
-                        | Some(s) -> s
-                        | None -> failwith "Should not reach this line (2)"
-                     else CalcRing.one)
-            ) else (
-                  (  (List.filter (fun x -> x <> v) deletable), 
-                     (CalcRing.mk_val (Lift(v, new_l_term))))
-            )
+            (* To avoid code duplication, we use the (more general)
+               non-terminal lift case.  We do not use Ring.Make.mk_prod here, 
+               because it automatically applies the transform (A * 1) => A. *)
+            rcr scope schema ctx 
+                (CalcRing.Prod[CalcRing.mk_val (Lift(v, l_term));
+                               CalcRing.one])
          | CalcRing.Val(Value(ValueRing.Val(AVar(v)))) ->
             (  ctx_vars, 
                if List.mem_assoc v ctx then List.assoc v ctx
