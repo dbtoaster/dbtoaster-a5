@@ -146,6 +146,10 @@ let compile_map (db_schema:Schema.t) (history:Heuristics.ds_history_t)
             (todo_ivars @ prefixed_relv,todo_ovars) 
             delta_expr_unoptimized
       in
+      Debug.print "LOG-COMPILE-DETAIL" (fun () ->
+         "Optimized, Unextracted Delta: \n"^(Schema.string_of_event delta_event)^
+            " DO "^(CalculusPrinter.string_of_expr delta_expr_unextracted)
+      );
       let (delta_renamings, delta_expr) = 
          extract_renamings (prefixed_relv, todo_ovars) delta_expr_unextracted
       in

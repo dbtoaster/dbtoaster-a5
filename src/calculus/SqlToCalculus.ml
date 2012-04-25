@@ -41,7 +41,7 @@ let lift_if_necessary ?(t="agg") (calc:C.expr_t):
    match calc with
       | CalcRing.Val(Value(x)) -> (x, CalcRing.one)
       | _ -> 
-         let tmp_var = tmp_var ("__sql_"^t^"_tmp_") 
+         let tmp_var = tmp_var ("__sql_inline_"^t^"_") 
                                (C.type_of_expr calc) in
             (mk_var tmp_var, CalcRing.mk_val (Lift(tmp_var, calc)))
 

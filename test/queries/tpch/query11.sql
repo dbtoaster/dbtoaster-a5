@@ -20,7 +20,7 @@ CREATE STREAM SUPPLIER (
   FROM FILE '../../experiments/data/tpch/supplier.csv'
   LINE DELIMITED csv ( deletions := 'true' );
 
-SELECT p.nationkey, p.partkey, SUM(p.value)
+SELECT p.nationkey, p.partkey, SUM(p.value) AS QUERY11
 FROM
   (
     SELECT s.nationkey, ps.partkey, sum(ps.supplycost * ps.availqty) AS value
