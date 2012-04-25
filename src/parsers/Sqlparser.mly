@@ -161,8 +161,8 @@ createTableStmt:
 // Select statements
 
 targetItem:
-| expression       { (Sql.string_of_expr $1, $1) }
-| expression AS ID { ($3, $1) }
+| expression       { (String.uppercase (Sql.name_of_expr $1), $1) }
+| expression AS ID { (String.uppercase $3, $1) }
 
 targetList:
 | targetItem                  { [$1] }

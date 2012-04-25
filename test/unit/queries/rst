@@ -3,7 +3,7 @@
   :datasets => {
     "standard" => {
       :toplevels => {
-        "AtimesD" => {
+        "ATIMESD" => {
           :type => :singleton,
           :expected => 18753367048934.0
         }

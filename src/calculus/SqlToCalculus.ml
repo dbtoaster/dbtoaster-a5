@@ -80,25 +80,63 @@ let var_of_sql_var ((rel,vn,vt):Sql.sql_var_t):var_t =
    all non-group-by target columns generate a separate Calculus expression 
    (hence, it is possible for this function to return multiple Calculus
    expressions).
+   @param query_name (optional) If this string is not None, then the expected
+                     output schema of the group-by variables of this query will 
+                     be rebound to a relation with the specified name (e.g., 
+                     [query_name,target_name,target_type])
    @param tables The schema of the database on which the query is being run
    @param stmt   A SQL query
    @return       A Calculus expression for every non-group-by target in [stmt], 
                  and the name of the corresponding target
 *)
-let rec calc_of_query (tables:Sql.table_t list) 
-                        ((targets,sources,cond,gb_vars):Sql.select_t): 
-                        (string * C.expr_t) list = 
-   let gb_var_names = List.map Sql.string_of_var gb_vars in
+let rec calc_of_query ?(query_name = None)
+                      (tables:Sql.table_t list) 
+                      ((targets,sources,cond,gb_vars):Sql.select_t): 
+                      (string * C.expr_t) list = 
    let source_calc = calc_of_sources tables sources in
    let cond_calc = calc_of_condition tables cond in
    let (agg_tgts, noagg_tgts) = 
       List.partition (fun (_,expr) -> Sql.is_agg_expr expr)
                      targets in
-   let noagg_calc = CalcRing.mk_prod (List.map (fun (tgt_name, tgt_expr) ->
-      if not (List.mem tgt_name gb_var_names) then
-         failwith ("Non-aggregate term '"^tgt_name^"' not in group by clause")
-      else match tgt_expr with
-         | Sql.Var(v) when (Sql.string_of_var v) = tgt_name -> 
+   let check_gb_var_list tgt_name tgt_expr = 
+      match tgt_expr with
+         (* If the target expression is just a variable, then the variable might 
+            be present directly in the group-by variables list.  In this case, 
+            we return true. *)
+         | Sql.Var(v_source,v_name,_) when
+            (List.exists (fun (cmp_source, cmp_name, _) ->
+               (v_name = cmp_name) && 
+               (  (v_source = None) || (cmp_source = None) || 
+                  (v_source = cmp_source) )
+            ) gb_vars) -> true
+         (* If the target expression is not a variable, or is not present 
+            directly in the group-by variables list, then it might be present
+            by its target name. *)
+         | _ -> 
+            List.exists (fun (cmp_source,cmp_name,_) ->
+               (tgt_name = cmp_name) && (cmp_source = None)
+            ) gb_vars
+   in
+   let noagg_calc = CalcRing.mk_prod (List.map (fun (base_tgt_name, tgt_expr) ->
+      if not (check_gb_var_list base_tgt_name tgt_expr) then
+         Sql.error ("Non-aggregate term '"^base_tgt_name^"' ("^
+                    (Sql.string_of_expr tgt_expr)^
+                    ") not in group by clause:"^
+                    (ListExtras.ocaml_of_list Sql.string_of_var gb_vars))
+      else
+      let tgt_name = 
+         if query_name = None then base_tgt_name
+         else fst (var_of_sql_var (query_name,base_tgt_name,TAny)) 
+      in
+      Debug.print "LOG-SQL-TO-CALC" (fun () -> 
+         "Computing lift for target "^
+         tgt_name^
+         " with expression: "^
+         (Sql.string_of_expr tgt_expr)
+      );
+      match tgt_expr with
+         | Sql.Var(v) when (query_name = None) ||
+                           (fst (var_of_sql_var v) = tgt_name) ->
             (* If we're being asked to group by a variable (with no renaming)
                then we don't actually need to include the variable in any way
                shape and/or form *)
@@ -117,9 +155,15 @@ let rec calc_of_query (tables:Sql.table_t list)
             begin match agg_type with
                | Sql.SumAgg -> 
                   CalcRing.mk_val 
-                     (AggSum(List.map var_of_sql_var gb_vars, 
-                             CalcRing.mk_prod 
-                                [source_calc; cond_calc; agg_calc; noagg_calc]
+                     (AggSum(
+                        List.map (fun (vs,vn,vt) ->
+                           var_of_sql_var (
+                              if query_name = None then (vs,vn,vt)
+                              else (query_name,vn,vt)
+                           )
+                        ) gb_vars,
+                        CalcRing.mk_prod 
+                           [source_calc; cond_calc; agg_calc; noagg_calc]
                      ))
             end
          )) tables tgt_expr
@@ -139,7 +183,7 @@ let rec calc_of_query (tables:Sql.table_t list)
 and calc_of_sources (tables:Sql.table_t list) 
                     (sources:Sql.labeled_source_t list):
                     C.expr_t =
-   let rcr_q q = calc_of_query tables q in
+   let rcr_q q qn = calc_of_query ~query_name:(Some(qn)) tables q in
    let (rels,subqs) = List.fold_right (fun (sname,source) (tables,subqs) ->
       begin match source with
          | Sql.Table(reln) -> ((sname,reln)::tables, subqs)
@@ -163,7 +207,7 @@ and calc_of_sources (tables:Sql.table_t list)
                                (C.type_of_expr subq)),
                subq
             ))
-         ) (rcr_q q))
+         ) (rcr_q q ref_name))
       ) subqs
    ])
 

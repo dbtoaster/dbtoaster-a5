@@ -243,6 +243,32 @@ let string_of_agg (agg:agg_t): string =
 let string_of_var ((s,v,_):sql_var_t): string =
    match s with Some(source) -> source^"."^v | None -> v
 
+(**/**)
+let arbitrary_name_id = ref 0
+(**/**)
+
+(**
+   Produce a name for the expression.  This is used primarilly by Sqlparser to
+   generate unique target names for expressions.  If the expression is a single 
+   variable, then the name of the variable is the name of the expression.  
+   Otherwise, we generate a name based on the root level operand.
+   @param expr  A SQL expression
+   @return      A unique name for the expression
+*)
+let name_of_expr (expr:expr_t): string =
+   let arbitrary basename = 
+      arbitrary_name_id := !arbitrary_name_id + 1;
+      basename^"_"^(string_of_int !arbitrary_name_id)
+   in
+   begin match expr with
+      | Const(c)            -> arbitrary "constant"
+      | Var(_,vn,_)         -> vn
+      | SQLArith(_,_,_)     -> arbitrary "expression"
+      | Negation(_)         -> arbitrary "expression"
+      | NestedQ(_)          -> arbitrary "nested_query"
+      | Aggregate(SumAgg,_) -> arbitrary "sum_aggregate"
+   end
+
 (**
    Produce the (Sqlparser-compatible) representation of the specified SQL 
    expression.
@@ -381,7 +407,7 @@ let rec expr_type (expr:expr_t) (tables:table_t list)
 and select_schema (tables:table_t list) (stmt:select_t): schema_t =
    let (targets, sources, _, _) = stmt in
    List.map (fun (name, expr) -> 
-      (None, string_of_expr expr, expr_type expr tables sources)
+      (  None, name, expr_type expr tables sources)
    ) targets
 
 (**

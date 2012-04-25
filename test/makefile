@@ -17,5 +17,6 @@ unit:
 
 query:
 	@$(QUERY_TEST) rst
+	@$(QUERY_TEST) tpch3
 
 .PHONY: all unit development query
