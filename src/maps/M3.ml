@@ -297,19 +297,23 @@ let empty_prog (): prog_t =
 (**[plan_to_m3 db plan]
    
    Translate a compiler plan into an M3 program.  This involves grouping each
-   datastructure's maintenance triggers by the triggering event.
+   datastructure's maintenance triggers by the triggering event. Update 
+   statements are placed before replace statements for correctness; the total
+   order of each type is preserved.
    @param db   The database schema
    @param plan A compiler plan
    @return     The M3 program representation of [plan]
 *)
 let plan_to_m3 (db:Schema.t) (plan:Plan.plan_t):prog_t =
    let prog = init db in
-      List.iter (fun (ds:Plan.compiled_ds_t) ->
-         add_view prog ds.description;
-         List.iter (fun (event, stmt) ->
-            add_stmt prog event stmt
-         ) (ds.ds_triggers)
-      ) plan;
+     (* Make two passes over the compiled datastructures *)
+     List.iter (fun stmt_type -> List.iter (fun (ds:Plan.compiled_ds_t) ->
+       (* Register maps only during the first pass *)
+       if (stmt_type = Plan.UpdateStmt) then add_view prog ds.description;
+       List.iter (fun (event, stmt) ->
+         if (stmt.update_type = stmt_type) then add_stmt prog event stmt
+       ) (ds.ds_triggers)
+     ) plan) [Plan.UpdateStmt; Plan.ReplaceStmt];
    prog
 ;;
 

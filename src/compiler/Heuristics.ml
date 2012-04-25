@@ -42,6 +42,7 @@ let reorganize_expr (expr:expr_t) : (expr_t) =
 	in
 	   CalcRing.mk_prod (rels @ lifts @ rest)
 
+
 (* Divide the expression into three parts:                                     *)
 (* lift_exprs: lifts containing the event relation or input variables          *)
 (* rest_expr: subexpressions with input variables and the above lift variables *)
@@ -101,13 +102,56 @@ let split_expr (event:Schema.event_t option) (expr:expr_t) :
 
 (******************************************************************************)
 
+let should_update (event:Schema.event_t) (expr:expr_t)  : bool =
+	
+	  if (Debug.active "HEURISTICS-ALWAYS-UPDATE") then true
+		else 
+			if (Debug.active "HEURISTICS-ALWAYS-REPLACE") then false
+		else
+	    let expr_scope = Schema.event_vars event in
+			let (do_update, do_replace) = 
+		    (* Polynomial decomposition *)
+		    List.fold_left ( fun (do_update, do_replace) (term_schema, term) ->
+		
+		        let term_opt = optimize_expr (expr_scope, term_schema) term in
+	
+			      (* Graph decomposition *)
+		        let (do_update_graphs, do_replace_graphs) =  
+		          List.fold_left ( fun (do_update_graph, do_replace_graph) (subexpr_schema, subexpr) ->
+			                
+				        (* Subexpression optimization *)                    
+				        let subexpr_opt = optimize_expr (expr_scope, subexpr_schema) subexpr in
+	
+	              (* Split the expression into three parts *)
+								let (rel_exprs, lift_exprs, _) = split_expr (Some(event)) subexpr_opt in
+		            let rel_exprs_ovars = snd (schema_of_expr rel_exprs) in
+								(* TODO: Get variables appearing in the lift expressions and not all variables *) 
+		            let lift_exprs_vars = all_vars lift_exprs in
+								let local_update_graph = ((rel_exprs_ovars = []) || (lift_exprs_vars = []) ||
+								                          ((ListAsSet.inter rel_exprs_ovars lift_exprs_vars) <> [])) in
+								(do_update_graph || local_update_graph, 
+								 do_replace_graph || (not local_update_graph))
+			
+		          ) (false, false)
+		            (snd (decompose_graph expr_scope (term_schema, term_opt)))
+		        in
+		          (do_update || do_update_graphs, do_replace || do_replace_graphs)
+			                
+		    ) (false, false) (decompose_poly expr)
+			in
+			  if (do_update && do_replace) || (not do_update && not do_replace) then
+				  (Debug.active "HEURISTICS-PREFER-UPDATE")
+				else do_update	
+    
+(******************************************************************************)
+
 (* Returns a todo list with the current expression *)
 let rec materialize ?(scope:var_t list = [])
                     (history:ds_history_t) (prefix:string) 
 							      (event:Schema.event_t option) (expr:expr_t) 
 										: (ds_t list * expr_t) = 
 		
-		(* Debug.activate "LOG-HEURISTICS-DETAIL"; *)
+		(* Debug.activate "LOG-HEURISTICS-DETAIL"; *) 
 		(* Debug.activate "HEURISTICS-IGNORE-FINAL-OPTIMIZATION";  *)
 		
 		Debug.print "LOG-HEURISTICS-DETAIL" (fun () ->

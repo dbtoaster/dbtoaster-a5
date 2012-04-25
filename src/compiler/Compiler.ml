@@ -132,48 +132,69 @@ let compile_map (db_schema:Schema.t) (history:Heuristics.ds_history_t)
       (***** THE FUN STUFF HAPPENS HERE *****)
       
       let map_prefix = todo_name^evt_prefix^reln in
-      let prefixed_relv = List.map (fun (n,t) -> (map_prefix^n, t)) relv in
+      let prefixed_relv = List.map (fun (n,t) -> (map_prefix^n, t)) relv in			
       let delta_event = mk_evt (reln, prefixed_relv, Schema.StreamRel) in
-      let delta_expr_unoptimized = 
-         (CalculusDeltas.delta_of_expr delta_event optimized_defn)
-      in
-      Debug.print "LOG-COMPILE-DETAIL" (fun () ->
-         "Unoptimized Delta: "^(Schema.string_of_event delta_event)^
-            " DO \n"^(CalculusPrinter.string_of_expr delta_expr_unoptimized)
-      );
-      let delta_expr_unextracted = 
-         CalculusTransforms.optimize_expr 
-            (todo_ivars @ prefixed_relv,todo_ovars) 
-            delta_expr_unoptimized
-      in
-      Debug.print "LOG-COMPILE-DETAIL" (fun () ->
-         "Optimized, Unextracted Delta: \n"^(Schema.string_of_event delta_event)^
-            " DO "^(CalculusPrinter.string_of_expr delta_expr_unextracted)
-      );
-      let (delta_renamings, delta_expr) = 
-         extract_renamings (prefixed_relv, todo_ovars) delta_expr_unextracted
-      in
-      Debug.print "LOG-COMPILE-DETAIL" (fun () ->
-         "Optimized Delta: \n"^(Schema.string_of_event delta_event)^
-            " DO "^(CalculusPrinter.string_of_expr delta_expr)
-      );
+			
+			if (Heuristics.should_update delta_event optimized_defn) then
+				 
+				(* The expression is to be incrementally maintained *)
+	      let delta_expr_unoptimized = 
+	         (CalculusDeltas.delta_of_expr delta_event optimized_defn)
+	      in
+	      Debug.print "LOG-COMPILE-DETAIL" (fun () ->
+	         "Unoptimized Delta: "^(Schema.string_of_event delta_event)^
+	            " DO \n"^(CalculusPrinter.string_of_expr delta_expr_unoptimized)
+	      );
+	      let delta_expr_unextracted = 
+	         CalculusTransforms.optimize_expr 
+	            (todo_ivars @ prefixed_relv,todo_ovars) 
+	            delta_expr_unoptimized
+	      in
+	      Debug.print "LOG-COMPILE-DETAIL" (fun () ->
+	         "Optimized, Unextracted Delta: \n"^(Schema.string_of_event delta_event)^
+	            " DO "^(CalculusPrinter.string_of_expr delta_expr_unextracted)
+	      );
+	      let (delta_renamings, delta_expr) = 
+	         extract_renamings (prefixed_relv, todo_ovars) delta_expr_unextracted
+	      in
+	      Debug.print "LOG-COMPILE-DETAIL" (fun () ->
+	         "Optimized Delta: \n"^(Schema.string_of_event delta_event)^
+	            " DO "^(CalculusPrinter.string_of_expr delta_expr)
+	      );
+	
+	      let (new_todos, materialized_delta) = 
+	         Heuristics.materialize history map_prefix (Some(delta_event)) delta_expr
+	      in
+	         Debug.print "LOG-COMPILE-DETAIL" (fun () ->
+	            "Materialized: \n"^
+	            (CalculusPrinter.string_of_expr materialized_delta)
+	         );
+	         trigger_todos := new_todos @ !trigger_todos;
+	         triggers      := 
+	            (delta_event, {
+	               Plan.target_map = 
+	                  Calculus.rename_vars delta_renamings todo.ds_name;
+	               Plan.update_type = Plan.UpdateStmt;
+	               Plan.update_expr = materialized_delta
+	            }) :: !triggers
+      else	
+        (* The expression is to be reevaluated *)
+	      let (new_todos, materialized_expr) = 
+	         Heuristics.materialize history map_prefix (Some(delta_event)) optimized_defn
+	      in
+	         Debug.print "LOG-COMPILE-DETAIL" (fun () ->
+	            "Materialized expr: \n"^
+	            (CalculusPrinter.string_of_expr materialized_expr)
+	         );
+	         trigger_todos := new_todos @ !trigger_todos;
+	         triggers      := 
+	            (delta_event, {
+	               Plan.target_map = todo.ds_name;
+	               Plan.update_type = Plan.ReplaceStmt;
+	               Plan.update_expr = materialized_expr
+	            }) :: !triggers
 
-      let (new_todos, materialized_delta) = 
-         Heuristics.materialize history map_prefix (Some(delta_event)) delta_expr
-      in
-         Debug.print "LOG-COMPILE-DETAIL" (fun () ->
-            "Materialized: \n"^
-            (CalculusPrinter.string_of_expr materialized_delta)
-         );
-         trigger_todos := new_todos @ !trigger_todos;
-         triggers      := 
-            (delta_event, {
-               Plan.target_map = 
-                  Calculus.rename_vars delta_renamings todo.ds_name;
-               Plan.update_type = Plan.UpdateStmt;
-               Plan.update_expr = materialized_delta
-            }) :: !triggers
-      
+				      
       (**************************************)
 
    ) events) stream_rels;
