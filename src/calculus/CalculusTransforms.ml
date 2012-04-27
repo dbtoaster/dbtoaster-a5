@@ -1003,6 +1003,12 @@ let default_optimizations =
 *)
 let optimize_expr ?(optimizations = default_optimizations)
                   ((scope,schema):C.schema_t) (expr:C.expr_t): C.expr_t =
+   Debug.print "LOG-CALCOPT-STEPS" (fun () ->
+      "CalculusTransforms asked to optimize: "^
+      (ListExtras.ocaml_of_list string_of_var scope)^
+      (ListExtras.ocaml_of_list string_of_var schema)^"\n"^
+      (CalculusPrinter.string_of_expr expr)
+   );
    let fp_1 = Fixpoint.noop () in
    let include_opt o new_fn = Fixpoint.build_if optimizations fp_1 o new_fn in
       include_opt OptAdvanceLifts            (advance_lifts scope);

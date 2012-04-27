@@ -33,21 +33,37 @@
 let rec connected_unique_components (get_nodes: 'edge_t -> 'node_t list)
                                     (hypergraph: 'edge_t list): 
                                        ('edge_t list list) =
-   let rec complete_component c g =
-      if (g = []) then c
-      else if (c = []) then c
-      else
-         let relevant_set = (List.flatten (List.map get_nodes c)) in
-         let neighbor e = ((ListAsSet.inter relevant_set (get_nodes e)) !=[])
-         in
-         let newset = (List.filter neighbor g) in
-         c @ (complete_component newset (ListAsSet.diff g newset)) in
    if hypergraph = [] then []
    else
-      let c = complete_component [List.hd hypergraph] (List.tl hypergraph) in
-      [c] @ (connected_unique_components get_nodes
-                                         (ListAsSet.diff hypergraph c))
-
+   (* Given a horizon of (connected) nodes and a set of edges, find the full set
+      of nodes connected to at least one node in the horizon *)
+   let rec expand_node_horizon horizon graph_edge_nodes = 
+      let horizon_extensions =
+         List.filter (fun edge_nodes -> 
+                        (ListAsSet.inter horizon edge_nodes) <> [])
+                     graph_edge_nodes
+      in
+         (* Base case, if we're not expanding the horizon then we're done *)
+         if horizon_extensions = [] then horizon
+         (* Otherwise, recur with a horizon containing all extensions, and a
+            graph with those nodes deleted *)
+         else expand_node_horizon (ListAsSet.multiunion ([horizon]@
+                                                         horizon_extensions))
+                                  (ListAsSet.diff graph_edge_nodes
+                                                  horizon_extensions)
+   in
+   let first_component_nodes = 
+      expand_node_horizon (get_nodes (List.hd hypergraph))
+                          (List.map get_nodes (List.tl hypergraph))
+   in
+   let (first_component,rest) =
+      (List.partition (fun edge -> 
+         (ListAsSet.inter first_component_nodes (get_nodes edge)) <> [])
+         (List.tl hypergraph))
+   in
+      (  ((List.hd hypergraph)::first_component)
+         ::(connected_unique_components get_nodes rest))
+;;
 (**
    Compute the {b bag} of connected edges in teh provided hypergraph
    @param get_nodes  A function for obtaining the nodes that each edge is 
