@@ -154,13 +154,10 @@ let test_stmt_coll ?(env = []) msg stmt_s rval =
    let code = stmt_string_to_code env stmt_s in	
    test_code_coll env msg code rval
 in
-
 		(*
-		Debug.activate "K3-TYPECHECK-DETAIL";
-		test_expr_coll " Cmp Eq String = String" 
-							"R_STR[][A : STRING, B : STRING ] * [A : STRING = B  : STRING]" [0.]		;*)
-		
-
+		calc_string_to_code (["LINEITEM_QUANTITY",(T.CFloat(3.));"LINEITEM_PARTKEY",(T.CFloat(3.))])
+		("(	(delta_32 ^= ([0.005] * [LINEITEM_QUANTITY])) *	(__sql_agg_tmp_1 ^= ((QUERY17_mLINEITEM1_L1_1[][LINEITEM_PARTKEY] * [0.005]) + [delta_32])) * [LINEITEM_QUANTITY < __sql_agg_tmp_1] )");
+		*)
 		test_expr " AConst " 
 							"[3]" (VK.BaseValue(T.CInt(3)))		;
 		test_expr " AVar " 
@@ -184,10 +181,7 @@ in
 		test_expr " Cmp Eq Float = Int" 
 							~env:["A", (T.CFloat(3.));"B", (T.CInt(3))]
 							"[ A = B:INT ]" (VK.BaseValue(T.CInt(1)))		;
-		test_expr " Cmp Eq Varchar(3) = Varchar(3)" 
-							~env:["A", (T.CString("aha"));"B", (T.CString("aha"))]
-							"[ A:VARCHAR(3) = B:VARCHAR(3) ]" (VK.BaseValue(T.CInt(1)))		;*)
-							
+		*)
 		test_expr " Cmp Lt " 
 							~env:["A", (T.CFloat(3.));"B", (T.CFloat(3.))]
 							"[A<B]" (VK.BaseValue(T.CInt(0)))		;
@@ -287,15 +281,17 @@ in
 								 [3.], 3.;
 				      ];
 		
-		test_expr_coll " Lift Singleton "
+		test_expr " Lift Singleton "
 							~env:["A", (T.CFloat(2.));"B", (T.CFloat(2.));]
-							"( L ^= ( R[][A,B] ) )" [ [4.], 1.;];
-		test_expr_coll " Lift Collection "
+							"AggSum([], ( L ^= ( R[][A,B] ) ))" (VK.BaseValue(T.CFloat(1.)));
+		test_expr " Lift Collection "
 							~env:["A", (T.CFloat(2.));]
-							"( L ^= ( R[][A,B] ) )" 
-							[  [2.; 4.], 1.;
-				         [1.; 2.], 1.;
+							"AggSum([], ( L ^= ( R[][A,B] ) ) )" (VK.BaseValue(T.CFloat(2.)));
+							(*
+							[  [2.; 4.], 1;
+				         [1.; 2.], 1;
 				      ];
+							*)
 		
 		
 		test_expr " Sum Singleton "

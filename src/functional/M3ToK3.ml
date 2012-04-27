@@ -374,10 +374,9 @@ let rec calc_to_k3_expr meta theta_vars_el calc :
 						
 						let agg_fn = aggregate_fn aggsum_outs_el ret_ve in
 						let expr = 
-								if agg_vars_el = [] then
-										let agg_e =	if aggsum_outs_el = [] then K.Singleton(aggsum_e)
-																else                        aggsum_e in
-										K.Aggregate(agg_fn, init_val ret_ve, agg_e)
+								if aggsum_outs_el = [] then aggsum_e
+								else if agg_vars_el = [] then
+										K.Aggregate(agg_fn, init_val ret_ve, aggsum_e)
 								else
 										let gb_fn = project_fn (aggsum_outs_el@[ret_ve]) agg_vars_el in 
 										let gb_aggsum_e = 
@@ -388,14 +387,15 @@ let rec calc_to_k3_expr meta theta_vars_el calc :
 										
 				| Lift(lift_v, lift_calc) 	      -> 
 						let (lift_outs_el,ret_ve,lift_e),nm = rcr lift_calc in
-						let lift_ve = K.Var("lift_v",type_of_kvar ret_ve) in
+						assert(compatible_types (K.TBase(snd lift_v)) (type_of_kvar ret_ve));
+						let lift_ve = K.Var((fst lift_v),type_of_kvar ret_ve) in
 						let lift_ret_ve = K.Var("v",K.TBase(T.TInt)) in
 						let expr =
 								if lift_outs_el = [] then
-										K.Singleton(K.Tuple([lift_e;one_flt_val]))
+										K.Singleton(K.Tuple([lift_e;one_int_val]))
 								else
 										K.Map(lambda (lift_outs_el@[ret_ve]) 
-															(K.Tuple(lift_outs_el@[ret_ve;one_flt_val])),
+															(K.Tuple(lift_outs_el@[ret_ve;one_int_val])),
 													lift_e)
 						in
 						((lift_outs_el@[lift_ve], lift_ret_ve, expr), nm)
