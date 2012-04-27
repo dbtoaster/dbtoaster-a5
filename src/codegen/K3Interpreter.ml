@@ -361,6 +361,13 @@ struct
             in (get_eval body) new_th db
         in let fn1 vl1 = Fun(fun vl2 -> aux vl1 vl2)
         in Fun fn1)
+				
+		(* arg, external function id, external function return type -> external fn *)
+    let external_lambda ?(expr = None) arg fn_id fn_t = 
+			failwith "K3Interpreter -> external lambda not implemented"
+			(*Eval(fun th db ->
+        let fn v = (get_eval body) (bind_arg expr arg th v) db
+        in Fun fn)*)
 
     (* fn, arg -> evaluated fn *)
     let apply ?(expr = None) fn arg = Eval(fun th db ->

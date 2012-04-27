@@ -176,6 +176,13 @@ type expr_t =
          Aggregate and GroupByAggregate expect the aggregate function to take
          two parameters.
       *)
+   | ExternalLambda of arg_t       * id_t    * type_t (**
+         Defines a single-argument function.  When the function is [Apply]ed, 
+         the second field external function is evaluated with the first field's 
+         variable(s) in scope, bound to the applied value, and the return value
+         of the function is returned from the [Apply]. The type of the return
+				 value is defined by the third field.
+      *)
    | Apply         of expr_t      * expr_t (**
          Evaluate a [Lambda] function on a value, or curry the outermost 
          parameter of an [AssocLambda] function.  The first field must be a 
@@ -320,6 +327,7 @@ let get_branches (e : expr_t) : expr_t list list =
     | Iterate          (fn_e, ce)           -> [[fn_e];[ce]]
     | Lambda           (arg_e,be)           -> [[be]]
     | AssocLambda      (arg1_e,arg2_e,be)   -> [[be]]
+		| ExternalLambda   (arg_e,fn_id,fn_t)   -> []
     | Apply            (fn_e,arg_e)         -> [[fn_e];[arg_e]]
     | Map              (fn_e,ce)            -> [[fn_e];[ce]]
     | Flatten          ce                   -> [[ce]]
@@ -372,6 +380,7 @@ let rebuild_expr e (parts : expr_t list list) =
     | Iterate          (fn_e, ce)           -> Iterate(sfst(),ssnd())
     | Lambda           (arg_e,ce)           -> Lambda (arg_e,sfst())
     | AssocLambda      (arg1_e,arg2_e,be)   -> AssocLambda(arg1_e,arg2_e,sfst())
+    | ExternalLambda   (arg_e,fn_id,fn_t)   -> e
     | Apply            (fn_e,arg_e)         -> Apply(sfst(),ssnd())
     | Map              (fn_e,ce)            -> Map(sfst(),ssnd())
     | Flatten          ce                   -> Flatten(sfst())
@@ -413,6 +422,7 @@ let descend_expr (f : expr_t -> expr_t) e =
     | Iterate          (fn_e, ce)           -> Iterate (f fn_e, f ce)
     | Lambda           (arg_e,ce)           -> Lambda (arg_e, f ce)
     | AssocLambda      (arg1_e,arg2_e,be)   -> AssocLambda (arg1_e, arg2_e, f be)
+    | ExternalLambda   (arg_e,fn_id,fn_t)   -> e
     | Apply            (fn_e,arg_e)         -> Apply (f fn_e, f arg_e)
     | Map              (fn_e,ce)            -> Map (f fn_e, f ce)
     | Flatten          ce                   -> Flatten (f ce)
@@ -552,6 +562,11 @@ let string_of_expr e =
         ps (string_of_arg arg1_e); ps ","; ps (string_of_arg arg2_e); 
         ps ","; recur []; ps ")"; cb()
     
+    | ExternalLambda      (arg_e,fn_id,fn_t)   ->
+        ob(); ps "ExternalLambda(";
+        ps (string_of_arg arg_e); ps ","; pid fn_id; 
+        ps ","; ps (string_of_type fn_t); ps ")"; cb()
+    
     | Slice(pc, sch, vars) ->
         ob(); ps "Slice("; aux pc; ps ","; ps (schema sch); ps ",["; 
         (List.iter (fun (x,v) -> pid x; ps ",("; aux v; ps ");") vars); 
@@ -645,6 +660,8 @@ let rec code_of_expr e =
       | AssocLambda(arg1,arg2,be) ->
             "K3.SR.AssocLambda("^(argstr arg1)^","^(argstr arg2)^","^
                                (rcr be)^")"
+      | ExternalLambda(arg,fn_id,fn_t) ->
+            "K3.SR.ExternalLambda("^(argstr arg)^",\""^fn_id^"\","^(ttostr fn_t)^")"
       | Apply(fn_e,arg_e) -> 
             "K3.SR.Apply("^(rcr fn_e)^","^(rcr arg_e)^")"
       | Map(fn_e,ce) -> 

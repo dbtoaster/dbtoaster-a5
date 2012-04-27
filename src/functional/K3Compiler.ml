@@ -46,6 +46,9 @@ let rec compile_k3_expr e =
     | K.AssocLambda(arg1_e,arg2_e,b_e) ->
         assoc_lambda ~expr:(debug e) arg1_e arg2_e (rcr b_e)
     
+		| K.ExternalLambda(arg_e,fn_id,fn_t) ->
+        external_lambda ~expr:(debug e) arg_e fn_id fn_t
+    
     | K.Apply(fn_e, arg_e) -> apply ~expr:(debug e) (rcr fn_e) (rcr arg_e)
     
     | K.Map(fn_e, c_e) -> map ~expr:(debug e) (rcr fn_e) (tc_fn_rt fn_e) (rcr c_e) 

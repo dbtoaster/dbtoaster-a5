@@ -521,8 +521,6 @@ let rec calc_to_k3_expr meta theta_vars_el calc :
 
 
 
-
-
 (** Converts a M3 statement into a K3 statement. *)
 let collection_stmt (meta: meta_t) trig_args (m3_stmt: Plan.stmt_t) : K.statement_t * meta_t =
 		let (mapn, lhs_ins, lhs_outs, map_type, init_calc_opt) = Plan.expand_ds_name m3_stmt.Plan.target_map in

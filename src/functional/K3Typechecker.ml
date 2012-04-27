@@ -437,6 +437,9 @@ let rec typecheck_expr e : K.type_t =
 		(* for v1, v2                                                          *)
 				K.Fn(tc_fn_arg arg1_e be, K.Fn(tc_fn_arg arg2_e be, recur be))
 		
+		| K.ExternalLambda (arg_e, fn_id, fn_t) -> 
+				K.Fn(tc_fn_arg arg_e (K.Const(CInt(0))), fn_t)		
+		
 		(* f : fn ([x],y) arg : x f : fn([x;y],z) arg : tuple(x,y) *           *)
 		(* ----------------------- ----------------------------------- *       *)
 		(* apply(f, arg) : y apply(f, arg) : y                                 *)
