@@ -65,15 +65,8 @@ let log_list_test (title:string) (to_s:'a -> string)
    );;
 
 let log_collection_test (title:string) (result:Values.K3Value.t)
-                        (expected:(float list * float) list): unit = 
-   let k3_expected = 
-      List.map (fun (k,v) -> 
-                  (  List.map 
-												(fun x -> Values.K3Value.BaseValue(CFloat(x))) 
-												k, 
-                     Values.K3Value.BaseValue(CFloat(v)))) 
-               expected 
-   in
+                        (expected:(Values.K3Value.t list * 
+                                   Values.K3Value.t) list): unit = 
    let collection_entries = 
       match result with
          | Values.K3Value.SingleMap(m) ->
@@ -101,14 +94,14 @@ let log_collection_test (title:string) (result:Values.K3Value.t)
                      (Values.K3Value.string_of_value result);
             exit 1
    in 
-   let dom = ListAsSet.union (fst (List.split k3_expected))
+   let dom = ListAsSet.union (fst (List.split expected))
                              (fst (List.split collection_entries))
    in
    let (expected_strings,found_strings) = 
       List.fold_left (fun (expected_strings,found_strings) k ->
       let k_string = 
          ListExtras.string_of_list Values.K3Value.string_of_value k in
-      if not (List.mem_assoc k k3_expected) then
+      if not (List.mem_assoc k expected) then
          (  (k_string^" -> n/a")::expected_strings,
             (k_string^" -> "^(Values.K3Value.string_of_value 
                                  (List.assoc k collection_entries)))::
@@ -116,12 +109,12 @@ let log_collection_test (title:string) (result:Values.K3Value.t)
          )
       else if not (List.mem_assoc k collection_entries) then
          (  (k_string^" -> "^(Values.K3Value.string_of_value 
-                                 (List.assoc k k3_expected)))::
+                                 (List.assoc k expected)))::
                                     expected_strings,
             (k_string^" -> n/a")::found_strings
          )
       else 
-         let expected_val = List.assoc k k3_expected in
+         let expected_val = List.assoc k expected in
          let found_val    = List.assoc k collection_entries in
          if found_val = expected_val
             then (expected_strings,found_strings)
@@ -191,6 +184,14 @@ let mk_db rels = (
    ) rels;
    ret_db
 );;
+
+let mk_float_collection elems = 
+   List.map (fun (k,v) ->
+      (  List.map 
+            (fun x -> Values.K3Value.BaseValue(CFloat(x))) k,
+            Values.K3Value.BaseValue(CFloat(v))
+      )
+   ) elems
 
 (*************************** Shorthand Operations ****************************)
 let compile (db:Schema.t) (name:string) (expr:string) =

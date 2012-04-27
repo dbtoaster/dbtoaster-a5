@@ -42,7 +42,7 @@ let test_map ?(env = []) msg code rval =
                compiled 
                vars vals
                db)
-         rval
+         (mk_float_collection rval)
 in
    test "A simple number"
       (Const(CInt(42)))
