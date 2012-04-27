@@ -430,7 +430,7 @@ let rec calc_to_k3_expr meta theta_vars_el calc :
 					let sum_coll,sum_map = next_sum_tmp_coll outs ret_t in
 					
 					let reset_update = 
-							K.PCValueUpdate(sum_coll, [], outs_el, init_val ret_ve) in
+							K.PCElementRemove(sum_coll, [], outs_el) in
 					let reset_stmt = 
 							K.Iterate( lambda (outs_el@[ret_ve]) reset_update,	sum_coll) in
 					

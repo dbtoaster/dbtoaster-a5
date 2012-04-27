@@ -10,7 +10,7 @@ module Interpreter = K3Compiler.Make(K3Interpreter.K3CG)
 let maps = [
    "S", [], [];
    "R", [], [T.TFloat; T.TFloat];
-	 "R_STR", [], [T.TString(3); T.TString(4)];
+	 "R_STR", [], [T.TString; T.TString];
 	 "T", [T.TFloat; T.TFloat], [];
 	 "W", [T.TFloat; T.TFloat], [T.TFloat; T.TFloat];
 	 
@@ -31,7 +31,7 @@ let patterns = [
 let init_code = 
 	let pc_s = K.SingletonPC("S", K.TBase(T.TFloat)) in
 	let pc_r = K.OutPC("R", ["X", K.TBase(T.TFloat); "Y", K.TBase(T.TFloat)], K.TBase(T.TFloat)) in
-	let pc_r_str = K.OutPC("R_STR", ["X", K.TBase(T.TString(3)); "Y", K.TBase(T.TString(4))], K.TBase(T.TFloat)) in
+	let pc_r_str = K.OutPC("R_STR", ["X", K.TBase(T.TString); "Y", K.TBase(T.TString)], K.TBase(T.TFloat)) in
 	let pc_t = K.InPC("T", ["X", K.TBase(T.TFloat); "Y", K.TBase(T.TFloat)], K.TBase(T.TFloat)) in
 	let pc_w = K.PC("W", ["X", K.TBase(T.TFloat); "Y", K.TBase(T.TFloat)], 
 											 ["Z", K.TBase(T.TFloat); "ZZ", K.TBase(T.TFloat)], K.TBase(T.TFloat)) in
@@ -143,6 +143,10 @@ let test_expr ?(env = []) msg calc_s rval =
 in
 let test_expr_coll ?(env = []) msg calc_s rval =
    let code = calc_string_to_code env calc_s in	
+   test_code_coll env msg code (U.mk_float_collection rval)
+in
+let test_expr_coll2 ?(env = []) msg calc_s rval =
+   let code = calc_string_to_code env calc_s in	
    test_code_coll env msg code rval
 in
 
@@ -152,12 +156,10 @@ let test_stmt ?(env = []) msg stmt_s rval =
 in
 let test_stmt_coll ?(env = []) msg stmt_s rval =
    let code = stmt_string_to_code env stmt_s in	
-   test_code_coll env msg code rval
+   test_code_coll env msg code (U.mk_float_collection rval)
 in
-		(*
-		calc_string_to_code (["LINEITEM_QUANTITY",(T.CFloat(3.));"LINEITEM_PARTKEY",(T.CFloat(3.))])
-		("(	(delta_32 ^= ([0.005] * [LINEITEM_QUANTITY])) *	(__sql_agg_tmp_1 ^= ((QUERY17_mLINEITEM1_L1_1[][LINEITEM_PARTKEY] * [0.005]) + [delta_32])) * [LINEITEM_QUANTITY < __sql_agg_tmp_1] )");
-		*)
+		
+		
 		test_expr " AConst " 
 							"[3]" (VK.BaseValue(T.CInt(3)))		;
 		test_expr " AVar " 
@@ -177,11 +179,10 @@ in
 		test_expr " Cmp Eq Float = Float" 
 							~env:["A", (T.CFloat(3.));"B", (T.CFloat(3.))]
 							"[A=B]" (VK.BaseValue(T.CInt(1)))		;
-		(*
 		test_expr " Cmp Eq Float = Int" 
 							~env:["A", (T.CFloat(3.));"B", (T.CInt(3))]
 							"[ A = B:INT ]" (VK.BaseValue(T.CInt(1)))		;
-		*)
+		
 		test_expr " Cmp Lt " 
 							~env:["A", (T.CFloat(3.));"B", (T.CFloat(3.))]
 							"[A<B]" (VK.BaseValue(T.CInt(0)))		;
@@ -281,19 +282,17 @@ in
 								 [3.], 3.;
 				      ];
 		
-		test_expr " Lift Singleton "
+		test_expr_coll2 " Lift Singleton "
 							~env:["A", (T.CFloat(2.));"B", (T.CFloat(2.));]
-							"AggSum([], ( L ^= ( R[][A,B] ) ))" (VK.BaseValue(T.CFloat(1.)));
-		test_expr " Lift Collection "
+							"( L ^= ( R[][A,B] ) )"
+							[ [(VK.BaseValue(T.CFloat(4.)))], (VK.BaseValue(T.CInt(1)))];
+		test_expr_coll2 " Lift Collection "
 							~env:["A", (T.CFloat(2.));]
-							"AggSum([], ( L ^= ( R[][A,B] ) ) )" (VK.BaseValue(T.CFloat(2.)));
-							(*
-							[  [2.; 4.], 1;
-				         [1.; 2.], 1;
-				      ];
-							*)
-		
-		
+							"( L ^= ( R[][A,B] ) )"
+							[ [(VK.BaseValue(T.CFloat(2.)));(VK.BaseValue(T.CFloat(4.)))], (VK.BaseValue(T.CInt(1)));
+								[(VK.BaseValue(T.CFloat(1.)));(VK.BaseValue(T.CFloat(2.)))], (VK.BaseValue(T.CInt(1)));
+							];
+							
 		test_expr " Sum Singleton "
 							~env:["A", (T.CFloat(1.));"B", (T.CFloat(3.));
 										"C", (T.CFloat(2.));"D", (T.CFloat(2.));
