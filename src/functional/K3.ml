@@ -176,9 +176,9 @@ type expr_t =
          Aggregate and GroupByAggregate expect the aggregate function to take
          two parameters.
       *)
-   | ExternalLambda of arg_t       * id_t    * type_t (**
+   | ExternalLambda of id_t       * arg_t    * type_t (**
          Defines a single-argument function.  When the function is [Apply]ed, 
-         the second field external function is evaluated with the first field's 
+         the first field external function is evaluated with the seconds field's 
          variable(s) in scope, bound to the applied value, and the return value
          of the function is returned from the [Apply]. The type of the return
 				 value is defined by the third field.
@@ -562,9 +562,9 @@ let string_of_expr e =
         ps (string_of_arg arg1_e); ps ","; ps (string_of_arg arg2_e); 
         ps ","; recur []; ps ")"; cb()
     
-    | ExternalLambda      (arg_e,fn_id,fn_t)   ->
+    | ExternalLambda      (fn_id,arg_e,fn_t)   ->
         ob(); ps "ExternalLambda(";
-        ps (string_of_arg arg_e); ps ","; pid fn_id; 
+        pid fn_id; ps ","; ps (string_of_arg arg_e); 
         ps ","; ps (string_of_type fn_t); ps ")"; cb()
     
     | Slice(pc, sch, vars) ->
@@ -660,8 +660,8 @@ let rec code_of_expr e =
       | AssocLambda(arg1,arg2,be) ->
             "K3.SR.AssocLambda("^(argstr arg1)^","^(argstr arg2)^","^
                                (rcr be)^")"
-      | ExternalLambda(arg,fn_id,fn_t) ->
-            "K3.SR.ExternalLambda("^(argstr arg)^",\""^fn_id^"\","^(ttostr fn_t)^")"
+      | ExternalLambda(fn_id,arg,fn_t) ->
+            "K3.SR.ExternalLambda(\""^fn_id^"\","^(argstr arg)^","^(ttostr fn_t)^")"
       | Apply(fn_e,arg_e) -> 
             "K3.SR.Apply("^(rcr fn_e)^","^(rcr arg_e)^")"
       | Map(fn_e,ce) -> 

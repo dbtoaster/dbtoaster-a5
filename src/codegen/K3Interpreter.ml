@@ -363,11 +363,24 @@ struct
         in Fun fn1)
 				
 		(* arg, external function id, external function return type -> external fn *)
-    let external_lambda ?(expr = None) arg fn_id fn_t = 
-			failwith "K3Interpreter -> external lambda not implemented"
-			(*Eval(fun th db ->
-        let fn v = (get_eval body) (bind_arg expr arg th v) db
-        in Fun fn)*)
+    let external_lambda ?(expr = None) fn_id arg fn_t = Eval(fun th db ->
+        let fn v = 
+						let fn_args = begin match v with
+		        | BaseValue(c) -> [c]
+		        | Tuple t -> List.map const_of_value t
+		        | _ -> failwith "Arguments of external functions can be only values or tuple of values"
+		        end in
+						try 
+							let external_fn = 
+								StringMap.find fn_id (!Arithmetic.arithmetic_functions) in
+							let ret_c = (snd external_fn) fn_args in
+							let ret_t = K3.TBase(Types.type_of_const ret_c) in
+							if( fn_t <> ret_t) then
+									 failwith ("Unexpected return value type for external function: "^
+											fn_id^" : "^(K3.string_of_type fn_t)^" <> "^(K3.string_of_type ret_t));
+							BaseValue(ret_c)
+			      with Not_found -> failwith ("No external function named: "^fn_id)
+        in Fun fn)
 
     (* fn, arg -> evaluated fn *)
     let apply ?(expr = None) fn arg = Eval(fun th db ->

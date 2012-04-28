@@ -115,15 +115,15 @@ let lambda_args v_el =
 			else
 			K.ATuple(v_l)
 		end
-		
+
 let lambda v_el body = K.Lambda( lambda_args v_el, body)
 let assoc_lambda v1_el v2_el body = 
 		K.AssocLambda( lambda_args v1_el, lambda_args v2_el, body )
-						
+
 let apply_lambda v_el el body = 
 		assert ((List.length v_el) = (List.length el));
 		K.Apply(lambda v_el body, (exprs_to_tuple el))
-		
+
 let project_fn from_v_el to_v_el = 
 		lambda from_v_el (exprs_to_tuple to_v_el)	
 							
@@ -137,7 +137,31 @@ let aggregate_fn v_el multpl_e =
 		let multpl_t = snd (List.hd (k3_expr_to_k3_idType [multpl_e])) in
 		let acce = K.Var( accv, multpl_t ) in
 		assoc_lambda (v_el@[multpl_e]) [acce] (K.Add(acce, multpl_e))
-													
+
+
+let external_lambda_args fn te_l =
+		begin match te_l with
+		| [] -> failwith "invalid empty variables list" 
+		| [t,e] -> K.AVar(fn^"_arg1",t)
+		| _ -> 
+			let arg_prefix  = fn^"_arg_" in
+			let arg_counter = ref 0 in
+			let next_arg_var() = incr arg_counter;
+			   									  arg_prefix^(string_of_int !arg_counter) in
+			K.ATuple(List.map (fun (t,e) -> next_arg_var(),t) te_l)
+		end
+
+let external_lambda fn te_l ftype =
+		K.ExternalLambda( fn, external_lambda_args fn te_l, ftype)
+		
+let apply_external_lambda fn te_l ftype =
+		let el = List.map snd te_l in
+		K.Apply( external_lambda fn te_l ftype, (exprs_to_tuple el))
+						
+
+
+
+
 (**********************************************************************)
 
 let map_to_expr mapn ins outs map_type =
@@ -263,7 +287,10 @@ let rec value_to_k3_expr (value_calc : V.expr_t) : K.type_t * K.expr_t =
 	begin match value_calc with
 				| V.Val( AConst(i) )  -> K.TBase(T.type_of_const i), K.Const(i)
 		    | V.Val( AVar(v,t) )  -> K.TBase(t),                 K.Var(v,K.TBase(t))
-		    | V.Val( AFn(fn,fargs,ftype) ) -> failwith "(* TODO: function M3 -> K3 *)"
+		    | V.Val( AFn(fn,fargs,ftype) ) -> 
+						let ret_t = K.TBase(ftype) in
+						let te_l = List.map value_to_k3_expr fargs in 
+						ret_t, apply_external_lambda fn te_l ret_t
 				| V.Neg( neg_arg ) -> 
 						let neg_t, neg_e = value_to_k3_expr neg_arg in
 						let neg_cst = begin match neg_t with

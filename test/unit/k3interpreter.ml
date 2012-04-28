@@ -55,6 +55,17 @@ in
                      (Var("aparam", TBase(TFloat))))),
              (Const(CFloat(42.)))))
       (BaseValue(CFloat(42.)));
+   test "An external function invocation - single argument"
+      (Apply((ExternalLambda("/",(AVar("aparam", TBase(TFloat))),
+                     TBase(TFloat))),
+             (Const(CFloat(2.)))))
+      (BaseValue(CFloat(0.5)));
+   test "An external function invocation - multiple arguments"
+      (Apply((ExternalLambda("/",
+										 (ATuple(["aparam0", TBase(TFloat);"aparam1", TBase(TFloat)])),
+                     TBase(TFloat))),
+             (K3.Tuple([Const(CFloat(2.));Const(CFloat(5.))])) ))
+      (BaseValue(CFloat(0.4)));
    test "Arithmetic"
       (Add((Mult((Const(CFloat(6.))), (Const(CFloat(9.))))),
            (Const(CFloat(-12.)))))

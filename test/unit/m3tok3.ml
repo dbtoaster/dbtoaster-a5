@@ -165,6 +165,9 @@ in
 		test_expr " AVar " 
 							~env:["A", (T.CFloat(3.))]
 							"[A]" (VK.BaseValue(T.CFloat(3.)))		;
+		test_expr " AFn " 
+							~env:["A", (T.CFloat(3.));"B", (T.CFloat(2.))]
+							"[ [ / : FLOAT ] ( A, B ) ]" (VK.BaseValue(T.CFloat(1.5)))		;
 		
 		test_expr " Singleton Negation " 
 							~env:["A", (T.CFloat(3.))]
