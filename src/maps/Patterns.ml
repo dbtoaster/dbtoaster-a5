@@ -249,6 +249,114 @@ let patterns_to_string pm =
          acc^"\n"^mapn^": "^(patlist_to_string pats)) "" pm
 
 
+(**[create_pattern_map_from_access mapname scope_vars key_vars]
+   
+   Creates a pattern map containing a single out pattern corresponding
+	to a map access.
+   @param mapname    Name of the map being accessed pattern map.
+	@param scope_vars List of variables that are in scope at the time of the access
+	@param key_vars   List of variables used as key for the map access.
+   @return           A pattern map with a single pattern corresponding to the access.
+*)
+let create_pattern_map_from_access mapn theta_vars outv =
+	let bound_outv = ListAsSet.inter outv theta_vars in 
+	let valid_pattern = List.length bound_outv < List.length outv in
+	if valid_pattern then 
+	      singleton_pattern_map (mapn, (make_out_pattern (List.map fst outv) 
+	                                                     (List.map fst 
+	                                                            bound_outv)))
+	else
+	      empty_pattern_map()
+				
+(**[extract_from_calc scope_vars calc]
+
+   Extract a pattern map for all of the map accesses in a calculus expression
+   @param scope_vars  List of variables that are in scope when the calculus
+		expression gets evaluated.
+	@param calc        An M3 calculus expression.
+   @return            The pattern map for all map accesses in [calc]
+*)				
+let rec extract_from_calc (theta_vars: Types.var_t list) 
+                           (calc: Calculus.expr_t) : pattern_map = 
+   let sum_pattern_fn _ sum_pats : pattern_map = 
+        List.fold_left merge_pattern_maps (empty_pattern_map()) sum_pats 
+   in
+   let prod_pattern_fn _ prod_pats : pattern_map = 
+      List.fold_left merge_pattern_maps (empty_pattern_map()) prod_pats 
+   in
+   let neg_pattern_fn _ neg_pat : pattern_map = neg_pat
+   in
+   let leaf_pattern_fn (tvars,_) lf_calc : pattern_map = 
+            
+	   begin match lf_calc with
+	      | Calculus.Value _ 
+	      | Calculus.Cmp   _ -> empty_pattern_map()
+	      | Calculus.AggSum( gb_vars, agg_calc ) -> 
+	            extract_from_calc tvars agg_calc
+	      | Calculus.Lift( v, lift_calc ) -> 				
+	            extract_from_calc tvars lift_calc
+	      | Calculus.Rel( reln, relv ) -> 
+	            create_pattern_map_from_access reln tvars relv
+	      | Calculus.External( mapn, inv, outv, _, init_calc_opt ) -> 
+	        (* all input variables must be bound at this point in order 
+				to be able to evaluate the expression *)
+	        assert( List.length (ListAsSet.diff inv tvars) = 0 );
+	        let incr_pat = create_pattern_map_from_access mapn tvars 
+	                                                       outv in
+	        let init_pat = begin match init_calc_opt with
+	           | Some(init_calc) -> extract_from_calc tvars init_calc
+	           | None -> empty_pattern_map()
+	        end in
+	        merge_pattern_maps init_pat incr_pat						
+	   end
+   in
+   Calculus.fold ~scope:theta_vars	
+                       sum_pattern_fn prod_pattern_fn 
+                       neg_pattern_fn leaf_pattern_fn calc
+
+(**[extract_from_stmt scope_vars statement]
+
+   Extract a pattern map for all of the map accesses in a statement
+   @param scope_vars  List of variables that are in scope when the statement
+	 gets executed (aka. trigger arguments.)
+	@param statement   An M3 statement
+   @return            The pattern map for all map accesses in [statement]
+*)
+let extract_from_stmt theta_vars (stmt : Plan.stmt_t) : pattern_map =      
+	let (lmapn, linv, loutv, ret_type, init_calc_opt) = 
+	         Plan.expand_ds_name stmt.Plan.target_map 
+	in
+	let incr_calc = stmt.Plan.update_expr in
+	
+	(* all lhs input variables must be free, they cannot be bound by trigger 
+	   args *)
+	assert (List.length (ListAsSet.inter theta_vars linv) = 0);
+	let theta_w_linv = ListAsSet.union theta_vars   linv  in
+	let theta_w_lhs  = ListAsSet.union theta_w_linv loutv in
+	  
+	let stmt_patterns = create_pattern_map_from_access lmapn theta_vars loutv 		in
+	let init_patterns = begin match init_calc_opt with
+	      | Some(init_calc) -> extract_from_calc theta_w_lhs init_calc 
+	      | None            -> empty_pattern_map()
+	      end
+	in
+	let incr_patterns = extract_from_calc theta_w_linv incr_calc in
+	List.fold_left merge_pattern_maps 
+	                        stmt_patterns
+	                        ([init_patterns; incr_patterns])
+
+(**[extract_from_trigger trigger]
+
+   Extract a pattern map for all of the map accesses in a trigger
+   @param trigger   An M3 trigger
+   @return          The pattern map for all map accesses in [trigger]
+*)
+let extract_from_trigger (trig : M3.trigger_t) : pattern_map =
+   let trig_args = Schema.event_vars trig.M3.event	in
+   List.fold_left merge_pattern_maps 
+                        (empty_pattern_map()) 
+                        (List.map (extract_from_stmt trig_args) 
+                                  !(trig.M3.statements))
 (**[extract_patterns triggers]
 
    Extract a pattern map for all of the map accesses in a set of triggers
@@ -256,84 +364,6 @@ let patterns_to_string pm =
    @return           The pattern map for all map accesses in [triggers]
 *)
 let extract_patterns (triggers : M3.trigger_t list) : pattern_map =
-   let create_pattern_map_from_access mapn theta_vars outv =
-      let bound_outv = ListAsSet.inter outv theta_vars in 
-      let valid_pattern = List.length bound_outv < List.length outv in
-      if valid_pattern then 
-            singleton_pattern_map (mapn, (make_out_pattern (List.map fst outv) 
-                                                           (List.map fst 
-                                                                  bound_outv)))
-      else
-            empty_pattern_map()
-   in
-   let rec extract_from_calc (theta_vars: Types.var_t list) 
-                             (calc: Calculus.expr_t) : pattern_map = 
-      let sum_pattern_fn _ sum_pats : pattern_map = 
-            List.fold_left merge_pattern_maps (empty_pattern_map()) sum_pats 
-      in
-      let prod_pattern_fn _ prod_pats : pattern_map = 
-            List.fold_left merge_pattern_maps (empty_pattern_map()) prod_pats 
-      in
-      let neg_pattern_fn _ neg_pat : pattern_map = neg_pat
-      in
-      let leaf_pattern_fn (tvars,_) lf_calc : pattern_map = 
-            
-            begin match lf_calc with
-               | Calculus.Value _ 
-               | Calculus.Cmp   _ -> empty_pattern_map()
-               | Calculus.AggSum( gb_vars, agg_calc ) -> 
-                     extract_from_calc tvars agg_calc
-               | Calculus.Lift( v, lift_calc ) -> 				
-                     extract_from_calc tvars lift_calc
-               | Calculus.Rel( reln, relv ) -> 
-                     create_pattern_map_from_access reln tvars relv
-               | Calculus.External( mapn, inv, outv, _, init_calc_opt ) -> 
-                     (* all input variables must be bound at this point in order 
-                        to be able to evaluate the expression *)
-                     assert( List.length (ListAsSet.diff inv tvars) = 0 );
-                     let incr_pat = create_pattern_map_from_access mapn tvars 
-                                                                   outv in
-                     let init_pat = begin match init_calc_opt with
-                        | Some(init_calc) -> extract_from_calc tvars init_calc
-                        | None -> empty_pattern_map()
-                     end in
-                     merge_pattern_maps init_pat incr_pat						
-            end
-      in
-      Calculus.fold ~scope:theta_vars	
-                           sum_pattern_fn prod_pattern_fn 
-                           neg_pattern_fn leaf_pattern_fn calc
-   in  
-   let extract_from_stmt theta_vars (stmt : Plan.stmt_t) : pattern_map =      
-      let (lmapn, linv, loutv, ret_type, init_calc_opt) = 
-               Plan.expand_ds_name stmt.Plan.target_map 
-      in
-      let incr_calc = stmt.Plan.update_expr in
-      
-      (* all lhs input variables must be free, they cannot be bound by trigger 
-         args *)
-      assert (List.length (ListAsSet.inter theta_vars linv) = 0);
-   let theta_w_linv = ListAsSet.union theta_vars   linv  in
-   let theta_w_lhs  = ListAsSet.union theta_w_linv loutv in
-   
-   let stmt_patterns = create_pattern_map_from_access lmapn theta_vars loutv 		in
-   let init_patterns = begin match init_calc_opt with
-         | Some(init_calc) -> extract_from_calc theta_w_lhs init_calc 
-         | None            -> empty_pattern_map()
-         end
-      in
-   let incr_patterns = extract_from_calc theta_w_linv incr_calc in
-      List.fold_left merge_pattern_maps 
-                               stmt_patterns
-                           ([init_patterns; incr_patterns])
-   in
-   let extract_from_trigger (trig : M3.trigger_t) : pattern_map =
-      let trig_args = Schema.event_vars trig.M3.event	in
-      List.fold_left merge_pattern_maps 
-                            (empty_pattern_map()) 
-                            (List.map (extract_from_stmt trig_args) 
-                                      !(trig.M3.statements))   
-   in
    List.fold_left merge_pattern_maps 
                         (empty_pattern_map()) 
                         (List.map extract_from_trigger triggers)
