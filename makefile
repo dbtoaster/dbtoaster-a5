@@ -8,6 +8,7 @@ FILES=\
 	src/util/HyperGraph\
 	src/util/Fixpoint\
 	src/util/ExternalCompiler\
+	src/util/SourceCode\
 	src/global/Types\
 	src/global/Schema\
 	src/sql/Sql\
@@ -32,6 +33,9 @@ FILES=\
 	src/functional/K3Optimizer\
 	src/functional/K3Codegen\
 	src/functional/K3Compiler\
+	src/imperative/Imperative\
+	src/imperative/K3ToImperative\
+	src/imperative/ImperativeCompiler\
 	src/lib/Sources\
 	src/lib/StandardAdaptors\
 	src/lib/SliceableMap\
@@ -64,6 +68,7 @@ DIRS=\
 	src/compiler\
 	src/maps\
 	src/functional\
+	src/imperative\
 	src/codegen\
 	src/lib\
 

@@ -174,6 +174,38 @@ let string_of_rel ((reln,relsch,_):rel_t): string =
 let name_of_rel ((reln,_,_):rel_t): string = reln
 
 (**
+   Obtain a whitespace-free identifier useable to describe an event.
+*)
+let name_of_event (event:event_t):string =
+   begin match event with
+      | InsertEvent(reln,_,_) -> "insert_"^reln
+      | DeleteEvent(reln,_,_) -> "delete_"^reln
+      | SystemInitializedEvent -> "system_ready_event"
+   end
+
+(**
+   Obtain a whitespace-free identifier useable to describe the general type of 
+   an event.
+*)
+let class_name_of_event (event:event_t):string =
+   begin match event with
+      | InsertEvent(reln,_,_) -> "insert"
+      | DeleteEvent(reln,_,_) -> "delete"
+      | SystemInitializedEvent -> "system_ready"
+   end
+
+(**
+   Obtain a whitespace-free identifier useable to describe the 'relation' 
+   triggering an event.
+*)
+let rel_name_of_event (event:event_t):string =
+   begin match event with
+      | InsertEvent(reln,_,_) 
+      | DeleteEvent(reln,_,_) -> reln
+      | SystemInitializedEvent -> "none"
+   end
+
+(**
    Obtain the human-readable representation of an event.  The output of this 
    function is compatible with Calculusparser.
 *)
