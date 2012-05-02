@@ -140,7 +140,7 @@ let get_pattern_vars = function | In(x,y) | Out(x,y) -> x
 let empty_pattern_map() = []
 
 (**/**)
-(**[get_filtered_patterns filter_f patternmap mapn]
+(**[get_filtered_patterns filter_f pm mapn]
    
    Utility accessor for pattern maps.  Return the pattern component of the
    patterns in a pattern map that satisfy a specified filter function.
@@ -154,23 +154,23 @@ let get_filtered_patterns filter_f pm mapn =
    in List.map get_pattern (List.filter filter_f map_patterns)
 (**/**)
 
-(**[get_in_patterns patternmap mapn]
+(**[get_in_patterns pm mapn]
    
    Get the input patterns of a specific map in a patternmap
-   @param patternmap A patternmap
-   @param mapn       The name of a map in patternmap
-   @return           The input patterns of [mapn] in [patternmap] or [[]] if
+   @param pm         A patternmap
+   @param mapn       The name of a map in [pm]
+   @return           The input patterns of [mapn] in [pm] or [[]] if
                      no such map exists.
 *)
 let get_in_patterns (pm:pattern_map) mapn = get_filtered_patterns
 (function | In _ -> true | _ -> false) pm mapn
 
-(**[get_out_patterns patternmap mapn]
+(**[get_out_patterns pm mapn]
    
    Get the input patterns of a specific map in a patternmap
-   @param patternmap A patternmap
-   @param mapn       The name of a map in patternmap
-   @return           The output patterns of [mapn] in [patternmap] or [[]] if
+   @param pm         A patternmap
+   @param mapn       The name of a map in [pm]
+   @return           The output patterns of [mapn] in [pm] or [[]] if
                      no such map exists.
 *)
 let get_out_patterns (pm:pattern_map) mapn = get_filtered_patterns
@@ -184,15 +184,16 @@ let get_out_patterns (pm:pattern_map) mapn = get_filtered_patterns
    @return                    [patternmap] extended with [pattern] associated
                               with [mapname].
 *)
-let add_pattern pm (mapn,pat) =
+let add_pattern patternmap mapname_pattern =
+	let (mapn,pat) = mapname_pattern in	
    let existing = 
-      if List.mem_assoc mapn pm 
-      then List.assoc mapn pm else [] 
+      if List.mem_assoc mapn patternmap 
+      then List.assoc mapn patternmap else [] 
    in
    let new_pats = 
       pat::(List.filter (fun x -> not(equal_pat x pat)) existing) 
    in
-      (mapn, new_pats)::(List.remove_assoc mapn pm)
+      (mapn, new_pats)::(List.remove_assoc mapn patternmap)
 
 (**[merge_pattern_maps p1 p2]
    
@@ -214,7 +215,8 @@ let merge_pattern_maps p1 p2 =
    @param mapname_pattern   A tuple consisting of a map name and a pattern
    @return                  A patternmap containing [mapname] and [pattern]
 *)
-let singleton_pattern_map (mapn,pat) = [(mapn, [pat])]
+let singleton_pattern_map mapname_pattern =
+	let (mapn,pat) = mapname_pattern in	[(mapn, [pat])]
 
 (**[string_of_pattern p]
    
@@ -230,11 +232,11 @@ let string_of_pattern (p:pattern) =
       | In(x,y) -> "in{"^(String.concat "," (f x y))^"}"
       | Out(x,y) -> "out{"^(String.concat "," (f x y))^"}"
 
-(**[patterns_to_string patternmap]
+(**[patterns_to_string pm]
    
    Generate a human-readable string representation of a pattern map
-   @param patternmap A pattern map
-   @return           The string representation of [patternmap]
+   @param pm A pattern map
+   @return   The string representation of [pm]
 *)
 let patterns_to_string pm =
    let patlist_to_string pl = List.fold_left (fun acc pat ->
@@ -249,29 +251,29 @@ let patterns_to_string pm =
          acc^"\n"^mapn^": "^(patlist_to_string pats)) "" pm
 
 
-(**[create_pattern_map_from_access mapname scope_vars key_vars]
+(**[create_pattern_map_from_access mapn theta_vars key_vars]
    
    Creates a pattern map containing a single out pattern corresponding
 	to a map access.
-   @param mapname    Name of the map being accessed pattern map.
-	@param scope_vars List of variables that are in scope at the time of the access
+   @param mapn       Name of the map being accessed pattern map.
+	@param theta_vars List of variables that are in scope at the time of the access
 	@param key_vars   List of variables used as key for the map access.
    @return           A pattern map with a single pattern corresponding to the access.
 *)
-let create_pattern_map_from_access mapn theta_vars outv =
-	let bound_outv = ListAsSet.inter outv theta_vars in 
-	let valid_pattern = List.length bound_outv < List.length outv in
+let create_pattern_map_from_access mapn theta_vars key_vars =
+	let bound_vars = ListAsSet.inter key_vars theta_vars in 
+	let valid_pattern = List.length bound_vars < List.length key_vars in
 	if valid_pattern then 
-	      singleton_pattern_map (mapn, (make_out_pattern (List.map fst outv) 
+	      singleton_pattern_map (mapn, (make_out_pattern (List.map fst key_vars) 
 	                                                     (List.map fst 
-	                                                            bound_outv)))
+	                                                            bound_vars)))
 	else
 	      empty_pattern_map()
 				
-(**[extract_from_calc scope_vars calc]
+(**[extract_from_calc theta_vars calc]
 
-   Extract a pattern map for all of the map accesses in a calculus expression
-   @param scope_vars  List of variables that are in scope when the calculus
+   Extracts a pattern map for all of the map accesses in a calculus expression
+   @param theta_vars  List of variables that are in scope when the calculus
 		expression gets evaluated.
 	@param calc        An M3 calculus expression.
    @return            The pattern map for all map accesses in [calc]
@@ -314,13 +316,13 @@ let rec extract_from_calc (theta_vars: Types.var_t list)
                        sum_pattern_fn prod_pattern_fn 
                        neg_pattern_fn leaf_pattern_fn calc
 
-(**[extract_from_stmt scope_vars statement]
+(**[extract_from_stmt theta_vars stmt]
 
-   Extract a pattern map for all of the map accesses in a statement
-   @param scope_vars  List of variables that are in scope when the statement
+   Extracts a pattern map for all of the map accesses in a statement
+   @param theta_vars  List of variables that are in scope when the statement
 	 gets executed (aka. trigger arguments.)
-	@param statement   An M3 statement
-   @return            The pattern map for all map accesses in [statement]
+	@param stmt   An M3 statement
+   @return            The pattern map for all map accesses in [stmt]
 *)
 let extract_from_stmt theta_vars (stmt : Plan.stmt_t) : pattern_map =      
 	let (lmapn, linv, loutv, ret_type, init_calc_opt) = 
@@ -345,11 +347,11 @@ let extract_from_stmt theta_vars (stmt : Plan.stmt_t) : pattern_map =
 	                        stmt_patterns
 	                        ([init_patterns; incr_patterns])
 
-(**[extract_from_trigger trigger]
+(**[extract_from_trigger trig]
 
-   Extract a pattern map for all of the map accesses in a trigger
-   @param trigger   An M3 trigger
-   @return          The pattern map for all map accesses in [trigger]
+   Extracts a pattern map for all of the map accesses in a trigger
+   @param trig   An M3 trigger
+   @return          The pattern map for all map accesses in [trig]
 *)
 let extract_from_trigger (trig : M3.trigger_t) : pattern_map =
    let trig_args = Schema.event_vars trig.M3.event	in
@@ -359,7 +361,7 @@ let extract_from_trigger (trig : M3.trigger_t) : pattern_map =
                                   !(trig.M3.statements))
 (**[extract_patterns triggers]
 
-   Extract a pattern map for all of the map accesses in a set of triggers
+   Extracts a pattern map for all of the map accesses in a set of triggers
    @param triggers   A set of M3 triggers
    @return           The pattern map for all map accesses in [triggers]
 *)

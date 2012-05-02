@@ -109,7 +109,7 @@ in
 let stmt_string_to_code env stmt_s =
 	 let stmt = U.parse_stmt stmt_s in
 	 let env_vars = List.map (fun (vn,vl) -> (vn,T.type_of_const vl)) env in
-	 let (target_coll,code),_ = MK.collection_stmt MK.empty_meta env_vars stmt in
+	 let (target_coll,code),_ = MK.m3_stmt_to_k3_stmt MK.empty_meta env_vars stmt in
 	 (*
 	 print_endline "\n--------------\n--------------";
 	 print_endline ("Calculus: "^(Calculus.string_of_expr calc));
@@ -159,15 +159,24 @@ let test_stmt_coll ?(env = []) msg stmt_s rval =
    test_code_coll env msg code (U.mk_float_collection rval)
 in
 		
-		
+	
 		test_expr " AConst " 
 							"[3]" (VK.BaseValue(T.CInt(3)))		;
 		test_expr " AVar " 
 							~env:["A", (T.CFloat(3.))]
-							"[A]" (VK.BaseValue(T.CFloat(3.)))		;
+							"[A]" (VK.BaseValue(T.CFloat(3.)))	;
 		test_expr " AFn " 
 							~env:["A", (T.CFloat(3.));"B", (T.CFloat(2.))]
-							"[ [ / : FLOAT ] ( A, B ) ]" (VK.BaseValue(T.CFloat(1.5)))		;
+							"[ [ / : FLOAT ] ( A, B ) ]" (VK.BaseValue(T.CFloat(1.5)));
+		test_expr " AFn " 
+							~env:["A", (T.CFloat(3.));"B", (T.CInt(2))]
+							"[ [ / : FLOAT ] ( A, B : INT) ]" (VK.BaseValue(T.CFloat(1.5)));
+		test_expr " AFn " 
+							~env:["A", (T.CInt(3));"B", (T.CFloat(2.))]
+							"[ [ / : FLOAT ] ( A : INT, B ) ]" (VK.BaseValue(T.CFloat(1.5)));
+		test_expr " AFn " 
+							~env:["A", (T.CInt(2));"B", (T.CInt(2))]
+							"[ [ / : INT ] ( A : INT, B : INT ) ]" (VK.BaseValue(T.CInt(1)));
 		
 		test_expr " Singleton Negation " 
 							~env:["A", (T.CFloat(3.))]
