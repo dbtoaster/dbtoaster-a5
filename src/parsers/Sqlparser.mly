@@ -73,7 +73,7 @@ let bind_select_vars q =
 %token AND OR NOT BETWEEN
 %token COMMA LPAREN RPAREN PERIOD
 %token AS
-%token JOIN INNER OUTER LEFT RIGHT ON NATURAL EXISTS
+%token JOIN INNER OUTER LEFT RIGHT ON NATURAL EXISTS IN SOME ALL
 %token CREATE TABLE FROM USING DELIMITER SELECT WHERE GROUP BY HAVING ORDER
 %token SOCKET FILE FIXEDWIDTH VARSIZE OFFSET ADJUSTBY SETVALUE LINE DELIMITED
 %token POSTGRES RELATION PIPE
@@ -82,7 +82,7 @@ let bind_select_vars q =
 %token EOSTMT
 %token EOF
 
-%left AND OR NOT BETWEEN
+%left AND OR NOT
 %left EQ NE LT LE GT GE
 %left SUM MINUS
 %left PRODUCT DIVIDE
@@ -269,6 +269,8 @@ expression:
 | ID LPAREN expression RPAREN   {
              if (String.uppercase $1) = "SUM" then
                Sql.Aggregate(Sql.SumAgg, $3)
+             else if (String.uppercase $1) = "COUNT" then
+               Sql.Aggregate(Sql.SumAgg, Sql.Const(CInt(1)))
              else
                bail ("Unknown Aggregate Function '"^$1^"'")
            }
@@ -308,4 +310,5 @@ condition:
 | TRUE                            { Sql.ConstB(true) }
 | FALSE                           { Sql.ConstB(false) }
 | EXISTS LPAREN selectStmt RPAREN { Sql.Exists($3) }
+| expression BETWEEN expression AND expression { Sql.And(Sql.Comparison($1, Gte, $3), Sql.Comparison($1, Lte, $5)) }
 
