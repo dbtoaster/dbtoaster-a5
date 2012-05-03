@@ -92,7 +92,7 @@
 					in
 						let new_trig = if t = [] then trig_list else t @ trig_list
 							in
-								(new_map, !patterns,new_trig) 
+								((new_map, !patterns), new_trig, []) 
 
    let slice_infering statement var_bind_list = 
       let map_name = match statement with 
@@ -150,12 +150,7 @@
                   add_pattern map_name in_pattern;
                   add_pattern map_name out_pattern;
                      in_var_types@out_var_types
-               
-         
-		
 
-   let create_k3_statement expr = 
-      (Const(Types.CFloat(0.)), expr)
 
    let collections:((string, expr_t) Hashtbl.t) = Hashtbl.create 10
 
@@ -277,8 +272,8 @@ argumentList:
 | ID                                                        { [$1] }
 
 statementList:
-| statement EOSTMT statementList                            { (create_k3_statement $1)::$3 }
-| statement EOSTMT                                          { [create_k3_statement $1] }
+| statement EOSTMT statementList                            { $1::$3 }
+| statement EOSTMT                                          { [$1] }
 
 statement:
 | constStatement                                            { $1 }

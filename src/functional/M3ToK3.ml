@@ -787,7 +787,7 @@ let m3_stmt_to_k3_stmt (meta: meta_t) trig_args (m3_stmt: Plan.stmt_t) : K.state
 			if lhs_ins_el = [] then K.Apply(  outer_loop_body,lhs_collection)
 			else          					K.Iterate(outer_loop_body,lhs_collection)
 	in
-		(lhs_collection, statement_expr), nm
+		(statement_expr, nm)
 
 
 (**[m3_trig_to_k3_trig meta m3_trig]
@@ -807,7 +807,7 @@ let m3_trig_to_k3_trig (meta: meta_t) (m3_trig: M3.trigger_t) : K.trigger_t * me
 				([],([],snd meta))
 				!(m3_trig.M3.statements) 
 	in
-  (m3_trig.M3.event, k3_trig_stmts), new_meta
+     ((m3_trig.M3.event, k3_trig_stmts), new_meta)
 
 (**[m3_to_k3 m3_program]
 
@@ -816,7 +816,8 @@ let m3_trig_to_k3_trig (meta: meta_t) (m3_trig: M3.trigger_t) : K.trigger_t * me
 	@return The [m3_program] translated into K3.
 *)
 let m3_to_k3 (m3_program : M3.prog_t) : (K.prog_t) =
-	let {M3.maps = m3_prog_schema; M3.triggers = m3_prog_trigs } = m3_program in
+	let {M3.maps = m3_prog_schema; M3.triggers = m3_prog_trigs;
+	     M3.queries = m3_prog_tlqs } = m3_program in
 	let k3_prog_schema = List.map m3_map_to_k3_map !m3_prog_schema in
 	let patterns_map = Patterns.extract_patterns !m3_prog_trigs in
 	let k3_prog_trigs, (_,sum_maps) = 
@@ -826,9 +827,16 @@ let m3_to_k3 (m3_program : M3.prog_t) : (K.prog_t) =
 							(old_trigs@[k3_trig], nm) )
 				([],empty_meta) 
 				!m3_prog_trigs 
-	
 	(* The list of temporary maps required for performing sum operations is *)
 	(* appended to the K3 program schema. *)
 	in
-	( k3_prog_schema@sum_maps, patterns_map, k3_prog_trigs )
+	let k3_prog_tlqs = 
+	  List.map (fun (name, query) ->
+	     let ((_,k3_query_compiled,_),_) =
+	        calc_to_k3_expr empty_meta [] query
+	     in
+	        (name, k3_query_compiled)
+	  ) !m3_prog_tlqs
+	in
+	( (k3_prog_schema@sum_maps, patterns_map), k3_prog_trigs, k3_prog_tlqs )
 

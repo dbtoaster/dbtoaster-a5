@@ -120,44 +120,47 @@ let rec compile_k3_expr e =
         end
     end
 
-let compile_triggers_noopt trigs : code_t list =
+let compile_triggers_noopt (trigs:K3.trigger_t list) : code_t list =
    List.map (fun (event, cs) ->
-      let stmts = List.map compile_k3_expr (List.map snd cs) in
+      let stmts = List.map compile_k3_expr cs in
          trigger event stmts
    ) trigs
 
-let compile_triggers trigs : code_t list =
+let compile_triggers (trigs:K3.trigger_t list) : code_t list =
   List.map (fun (event, cs) ->
       let args = List.map fst (event_vars event) in
       let stmts = List.map compile_k3_expr
-        (List.map (fun (_,e) -> K3Optimizer.optimize args e) cs) 
+        (List.map (K3Optimizer.optimize args) cs) 
       in trigger event stmts)
     trigs
     
 let compile_k3_to_code (dbschema:Schema.t)
-                       ((schema,patterns,trigs) : K3.prog_t)
-                       (toplevel_queries :  string list): code_t =
+                       (((schema,patterns),trigs,toplevel_queries) : K3.prog_t): 
+                          code_t =
    let rels = List.map (fun (reln,relv,_) -> (reln,relv))
                        (Schema.rels dbschema) in
    let ctrigs = compile_triggers_noopt trigs in
    let csource =
      List.map (fun (s,ra) -> CG.source s ra) !dbschema
    in
-      (main rels schema patterns csource ctrigs toplevel_queries)
+      (main rels schema patterns csource ctrigs 
+         (List.map fst toplevel_queries))
 
 ;;
 
-let compile_query_to_string schema prog tlqs: string =
-  to_string (compile_k3_to_code schema prog tlqs)
+let compile_query_to_string schema prog: string =
+  to_string (compile_k3_to_code schema prog)
 
 end
 
 
 let optimize_prog ?(optimizations=[]) (schema, patterns, trigs) =
-  let opt_trigs = List.map (fun (event, rel, args, cs) ->
+  let opt_trigs = List.map (fun (event, _, cs) ->
     let opt_cs = List.map (fun (i,e) ->
-      i, K3Optimizer.optimize ~optimizations:optimizations args e) cs
-    in (event,rel,args,opt_cs)) trigs
+      i, K3Optimizer.optimize ~optimizations:optimizations 
+                              (List.map fst (Schema.event_vars event))
+                              e) cs
+    in (event,opt_cs)) trigs
   in (schema, patterns, opt_trigs)
 
 (* TODO

@@ -715,14 +715,15 @@ let collection_of_float_list (l : float list) =
 
 
 (* Incremental section *)
-type statement_t = expr_t * expr_t
 type map_t = string * (Types.type_t list) * (Types.type_t list)
+type schema_t = (map_t list * Patterns.pattern_map)
+type statement_t = expr_t
 type trigger_t = Schema.event_t * statement_t list
-type prog_t = map_t list * Patterns.pattern_map * trigger_t list
 (** [Query name] x [Query expr] *)
 type toplevel_query_t = string * expr_t
+type prog_t = schema_t * trigger_t list * toplevel_query_t list
     
-let code_of_prog ((maps,_,triggers):prog_t): string = (
+let code_of_prog (((maps,_),triggers,_):prog_t): string = (
    "--------------------- MAPS ----------------------\n"^
    (ListExtras.string_of_list ~sep:"\n\n" (fun (mapn, mapiv, mapov) ->
       "DECLARE "^mapn^
@@ -732,8 +733,7 @@ let code_of_prog ((maps,_,triggers):prog_t): string = (
    "--------------------- TRIGGERS ----------------------\n"^
    (ListExtras.string_of_list ~sep:"\n\n" (fun (event, stmts) ->
       "ON "^(Schema.string_of_event event)^" : {"^
-      (ListExtras.string_of_list ~sep:"\n\t" string_of_expr
-                                 (List.map snd stmts))^
+      (ListExtras.string_of_list ~sep:"\n\t" string_of_expr stmts)^
       "}"
    ) triggers)^"\n"
 )

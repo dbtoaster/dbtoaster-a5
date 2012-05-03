@@ -113,7 +113,7 @@ sig
     Schema.rel_t list -> (string * int) list * source_code_t
 
   val declare_sources_and_adaptors :
-    Schema.source_info_t list -> 
+    Schema.t -> 
       (ext_type, ext_fn) typed_expr_t list * source_code_t
 
   val declare_main :
@@ -2278,7 +2278,7 @@ end (* Typing *)
       [] schema
     in cscl ~delim:"\n" (size_l@ty_l), i_l
 
-  let declare_sources_and_adaptors (sources:Schema.source_info_t list) =
+  let declare_sources_and_adaptors (sources:Schema.t) =
     let quote s = "\""^(String.escaped s)^"\"" in
     let valid_adaptors = ["csv"      , "csv_adaptor";
                           "orderbook", "order_books::order_book_adaptor";
@@ -2376,7 +2376,7 @@ end (* Typing *)
           
         | _ -> failwith "unsupported data source and framing types" 
       in source_var, (List.flatten (List.map snd adaptor_meta))@source_decl)
-      sources
+      !sources
     in 
     let rsc = cscl ~delim:"\n" (List.map (fun sd ->
         cscl (List.map source_code_of_imp sd)) (List.map snd decls))
@@ -2609,12 +2609,9 @@ struct
          (ep^"_tuple"), 
          ("unwrap_"^tnm), 
          exec_ids)
-        
 
   (* Top-level K3 trigger program compilation *)
-  let compile_triggers (opts:compiler_options) 
-                       (dbschema:Schema.rel_t list)
-                       ((schema,patterns,trigs):K3.prog_t):
+  let compile_triggers opts dbschema ((schema,patterns),trigs,tlqs) :
     (source_code_t list * compiler_trig_t) list * trigger_setup_t 
   =
     let ivc_counters, compiler_trigs = snd (
@@ -2622,7 +2619,7 @@ struct
         let local_decl_f schema patterns stmt = schema, patterns, [] in
         let nivc_cnt, r =
           compile_k3_trigger opts dbschema local_decl_f schema patterns
-            gcnt ivc_cnt event (List.map snd k3stmts)
+            gcnt ivc_cnt event k3stmts
         in gcnt+(List.length k3stmts),
            (nivc_cnt, acc@[r]))
       (0,((0,[]),[])) trigs)
@@ -2630,20 +2627,14 @@ struct
     let trigger_setup =
       snd (List.fold_left (fun (gcnt, acc) (event,stmts) ->
         gcnt+(List.length stmts),
-        acc@[build_trigger_setup_info gcnt event (List.map snd stmts)])
+        acc@[build_trigger_setup_info gcnt event stmts])
       (0, []) trigs)
     in compiler_trigs, (trigger_setup, snd ivc_counters)
 
 
-  (* Driver interface functions *)
-  let compile_query_to_string opts dbschema k3prog sources tlqs =
-    String.concat "\n\n"
-      (List.map (fun (_,(_,imp)) -> string_of_ext_imp imp)
-        (fst (compile_triggers opts dbschema k3prog)))
-
-  let compile_imp opts dbschema (schema,patterns,(triggers,trig_reg_info))
-                  sources tlqs chan =
-    
+  let compile_imp opts (schema,patterns,(triggers,trig_reg_info))
+                  sources tlqs =
+    let dbschema = Schema.rels sources in
     let map_decls =
       let x,y = declare_maps_of_schema schema patterns
       in cdsc "\n" x (cscl ~delim:"\n" (List.map source_code_of_imp y))
@@ -2666,19 +2657,19 @@ struct
     in
       (program^"\n")
 
-  let compile_query opts dbschema (schema,patterns,trigs) sources tlqs chan =
+  let compile_query opts ((schema,patterns),trigs,tlqs) sources =
     compile_imp 
       opts 
-      dbschema 
       (  schema,patterns,
-         compile_triggers opts dbschema (schema,patterns,trigs) )
+         compile_triggers opts (Schema.rels sources) 
+                          ((schema,patterns),trigs,tlqs) )
       sources
-      tlqs
-      chan
+      (List.map fst tlqs)
 
   (* DS program compilation *)
   
-  let compile_ds_triggers opts dbschema ((schema, patterns), dstrigs) :
+  let compile_ds_triggers opts dbschema 
+                          (((schema, patterns), dstrigs, tlqs)) :
     (source_code_t list * compiler_trig_t) list * trigger_setup_t 
   =
     let ivc_counters, compiler_trigs = snd (
@@ -2686,7 +2677,7 @@ struct
         (* Retrieve statement-specific declarations during compilation *)
         let stmt_decls = List.fold_left (fun acc ((lsch, lpats), stmts) ->
           let ltd, ld = declare_maps_of_schema lsch lpats in
-          acc@(List.map (fun s -> s, (lsch, lpats, ltd, ld)) stmts)) [] ds_stmts
+          acc@[stmts, (lsch, lpats, ltd, ld)]) [] ds_stmts
         in
         let local_decl_f schema patterns stmt =
           if not(List.mem_assoc stmt stmt_decls) then schema, patterns, []
@@ -2695,8 +2686,8 @@ struct
             in schema@ls, Patterns.merge_pattern_maps patterns lp, ld
         in
         let ds_type_decls = List.map (fun (_,s) ->
-          let _,_,td,_ = List.assoc (List.hd s) stmt_decls in td) ds_stmts in
-        let k3stmts = List.flatten (List.map snd ds_stmts) in
+          let _,_,td,_ = List.assoc s stmt_decls in td) ds_stmts in
+        let k3stmts = (List.map snd ds_stmts) in
         let nivc_cnt, (sc_l, t) = compile_k3_trigger opts
           dbschema local_decl_f schema patterns gcnt ivc_cnt event k3stmts
         in gcnt+(List.length k3stmts),
@@ -2710,14 +2701,13 @@ struct
       (0, []) dstrigs)
     in compiler_trigs, (trigger_setup, snd ivc_counters)
 
-  let compile_ds_query opts dbsch ((mapsch,pats),dstrigs) srcs tlqs chan =
+  let compile_ds_query opts ((mapsch,pats),dstrigs,tlqs) sources =
     compile_imp 
       opts
-      dbsch 
       (  mapsch,pats,
-         compile_ds_triggers opts dbsch ((mapsch,pats),dstrigs) )
-      srcs
-      tlqs
-      chan
+         compile_ds_triggers opts (Schema.rels sources) 
+                             ((mapsch,pats),dstrigs,tlqs) )
+      sources
+      (List.map fst tlqs)
 
 end

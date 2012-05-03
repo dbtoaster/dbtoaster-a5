@@ -113,25 +113,31 @@ if !output_language = Auto
 
 type stage_t = 
    | StageParseSQL
+ | SQLMarker
    | StagePrintSQL
    | StageSQLToCalc
+ | CalcMarker
    | StagePrintCalc
    | StagePrintSchema
    | StageCompileCalc
+ | PlanMarker
    | StagePrintPlan
    | StagePlanToM3
    | StageParseM3
+ | M3Marker
    | StageM3DomainMaintenance
    | StagePrintM3
    | StagePrintM3DomainMaintenance
    | StageM3ToK3
    | StageParseK3
+ | K3Marker
    | StageOptimizeK3
    | StagePrintK3
    | StageK3ToTargetLanguage
-   | StageRunInterpreter
-   | StageK3ToImp
+ | FunctionalTargetMarker
    | StageImpToTargetLanguage
+ | ImperativeTargetMarker
+   | StageRunInterpreter
    | StageOutputSource
    | StageCompileSource
 
@@ -151,9 +157,15 @@ let input_stages =
    input format (e.g., StageSQLToCalc if Calculus is the input format), and all 
    stages after the stage that produces the desired output format. *)
 let core_stages = 
-   [  StageSQLToCalc; StageCompileCalc; StagePlanToM3; 
-      StageM3DomainMaintenance; 
-      StageM3ToK3; StageOptimizeK3; StageK3ToTargetLanguage
+   [  SQLMarker;   (* -> *) StageSQLToCalc; 
+      CalcMarker;  (* -> *) StageCompileCalc; 
+      PlanMarker;  (* -> *) StagePlanToM3;
+      M3Marker;    (* -> *) StageM3DomainMaintenance; StageM3ToK3; 
+      K3Marker;    (* -> *) StageOptimizeK3; StageK3ToTargetLanguage;
+      FunctionalTargetMarker;
+      (* Normally, we'd do a functional -> imperative translation here, but
+         there's no isolated imperative stage, so for now we skip it *)
+      ImperativeTargetMarker; 
    ]
 
 let stages_from (stage:stage_t): stage_t list =
@@ -161,34 +173,37 @@ let stages_from (stage:stage_t): stage_t list =
 let stages_to   (stage:stage_t): stage_t list =
    ListExtras.sublist 0 ((ListExtras.index_of stage core_stages)+1) core_stages
 
-let compile_stages target_stage final_stage target_compiler =
+let compile_stages final_stage target_compiler =
    compiler := target_compiler;
-   StageOutputSource::target_stage::(stages_to final_stage)
-let functional_stages =
-   compile_stages StageK3ToTargetLanguage StageM3ToK3
-let imperative_stages =
-   compile_stages StageImpToTargetLanguage StageK3ToImp;;
+   StageOutputSource::(stages_to final_stage);;
+let functional_stages = compile_stages FunctionalTargetMarker;;
+let imperative_stages = compile_stages ImperativeTargetMarker;;
 
 let active_stages = ref (ListAsSet.inter
    ((match !input_language with
       | Auto -> bug "input language still auto"
-      | SQL  -> StageParseSQL::(stages_from StageSQLToCalc)
-      | M3   -> StageParseM3::(stages_from StageM3DomainMaintenance)
-      | K3   -> StageParseK3::(stages_from StageOptimizeK3)
+      | SQL  -> StageParseSQL::(stages_from SQLMarker)
+      | M3   -> StageParseM3::(stages_from M3Marker)
+      | K3   -> StageParseK3::(stages_from K3Marker)
       | _    -> error "Unsupported input language"
     )@output_stages)
    ((match !output_language with
       | Auto  -> bug "output language still auto"
-      | SQL   -> StagePrintSQL::[]
-      | Calc  -> StagePrintCalc::(stages_to StageSQLToCalc)
-      | MPlan -> StagePrintPlan::(stages_to StageCompileCalc)
-      | M3    -> StagePrintM3::(stages_to StagePlanToM3)
+      | SQL   -> StagePrintSQL::(stages_to SQLMarker)
+      | Calc  -> StagePrintCalc::(stages_to CalcMarker)
+      | MPlan -> StagePrintPlan::(stages_to PlanMarker)
+      | M3    -> StagePrintM3::(stages_to M3Marker)
       | M3DM  -> StagePrintM3DomainMaintenance::
                      (stages_to StageM3DomainMaintenance)
-      | K3    -> StagePrintK3::(stages_to StageM3ToK3)
+      | K3    -> StagePrintK3::(stages_to K3Marker)
       | Scala -> functional_stages ExternalCompiler.null_compiler
       | Ocaml -> functional_stages ExternalCompiler.ocaml_compiler
-      | CPP   -> imperative_stages ExternalCompiler.cpp_compiler
+      | CPP   -> functional_stages ExternalCompiler.cpp_compiler
+         (* CPP is defined as a functional stage because the IMP implementation
+            desperately needs to be redone before we can actually use it as an 
+            reasonable intermediate representation.  For now, we avoid the
+            imperative stage and produce C++ code directly after the 
+            functional stage. *)
       | Interpreter
               -> StageRunInterpreter::StageK3ToTargetLanguage::
                      (stages_to StageM3ToK3)
@@ -269,11 +284,7 @@ let dm_program:(M3DM.dm_prog_t ref) = ref( ref ([]));;
    set of triggers, each of which causes the execution of a k3 expression. 
    The K3 program also includes a list of map patterns.
    *)
-let k3_program:(K3.prog_t ref) = ref ([],[],[]);;
-
-(**The K3 representation of the toplevel queries.
-   *)
-let k3_toplevel_queries:(K3.toplevel_query_t list ref) = ref []
+let k3_program:(K3.prog_t ref) = ref (([],[]),[],[]);;
 
 (**If we're running in interpreter mode, we'll need to compile the query into
    an ocaml-executable form.  This is where that executable ``code'' goes. 
@@ -283,6 +294,7 @@ let k3_toplevel_queries:(K3.toplevel_query_t list ref) = ref []
 let interpreter_program:
    (K3.map_t list * Patterns.pattern_map * K3Interpreter.K3CG.code_t) ref = 
       ref ([], [], K3Interpreter.K3CG.const(Types.CInt(0)))
+   
 
 (* String representation of the source code being produced *)
 let source_code:string ref = ref "";;
@@ -440,18 +452,7 @@ if stage_is_active StageM3ToK3 then (
    Debug.print "LOG-DRIVER" (fun () -> "Running Stage: M3ToK3");
    Debug.activate "M3TOK3-GENERATE-INIT"; (* Temporary hack until we get M3DM set up *)
    
-   (* Translate the K3 program *)
    k3_program := M3ToK3.m3_to_k3 !m3_program;
-   
-   (* As well as the toplevel queries *)
-   k3_toplevel_queries := 
-      List.map (fun (name, query) ->
-         let ((_,k3_query_compiled,_),_) = 
-            M3ToK3.calc_to_k3_expr M3ToK3.empty_meta [] query
-         in
-            (name, k3_query_compiled)
-      )
-      !((!m3_program).M3.queries)
 )
 ;;
 if stage_is_active StageParseK3 then (
@@ -465,7 +466,7 @@ if stage_is_active StageParseK3 then (
    in 
       k3_program := 
             K3parser.dbtoasterK3Program K3lexer.tokenize lexbuff;
-      let (_, pats, _) = !k3_program
+      let ((_, pats), _, _) = !k3_program
       in
          Debug.print "PATTERNS" (fun () -> Patterns.patterns_to_string pats)
 )
@@ -477,21 +478,19 @@ if (stage_is_active StageOptimizeK3) && (Debug.active "OPTIMIZE-K3") then (
       then optimizations := K3Optimizer.CSE :: !optimizations;
    if not (Debug.active "NO-BETA-OPT")
       then optimizations := K3Optimizer.Beta :: !optimizations;
-   let (maps,patterns,triggers) = !k3_program in
+   let ((maps,patterns),triggers,tlqs) = !k3_program in
    k3_program := (
-      maps, patterns,
+      (maps, patterns),
       List.map (fun (event, stmts) ->
          let trigger_vars = Schema.event_vars event in (
             event, 
-            List.map (fun (description, statement) ->
-               (  description, 
-                  K3Optimizer.optimize ~optimizations:!optimizations
-                                       (List.map fst trigger_vars)
-                                       statement
-               )
+            List.map (
+               K3Optimizer.optimize ~optimizations:!optimizations
+                                    (List.map fst trigger_vars)
             ) stmts
          )
-      ) triggers
+      ) triggers,
+      tlqs
    )
 )
 ;;
@@ -507,18 +506,31 @@ if stage_is_active StageK3ToTargetLanguage then (
    match !output_language with
       | Interpreter -> (
          StandardAdaptors.initialize ();
-         let (maps, patterns, _) = !k3_program in
+         let ((maps, patterns), _, _) = !k3_program in
          interpreter_program := (
             maps, patterns, 
             K3InterpreterCG.compile_k3_to_code db_schema
                                                !k3_program
-                                               (List.map fst 
-                                                         !k3_toplevel_queries)
          )
       )   
       | Ocaml       -> bug "Ocaml codegen not implemented yet"
       | Scala       -> bug "Scala codegen not implemented yet"
-      | CPP         -> bug "K3 to IMP not implemented yet"
+      | CPP         -> 
+         (* THE FOLLOWING IS A HACK.  DO NOT USE THE CODE THAT FOLLOWS AS A 
+            MODEL FOR HOW TO EXTEND DRIVER.
+            
+            The imperative stage desperately needs to be rewritten, and is at
+            present unsuitable as an intermediate representation.  Instead, 
+            we compile directly to C++ after the functional stage.
+         *)
+         let ic_opts = {
+            ImperativeCompiler.desugar = false;
+            ImperativeCompiler.profile = Debug.active "ENABLE-PROFILING"
+         } in
+         source_code := 
+            ImperativeCompiler.Compiler.compile_query ic_opts 
+                                                      !k3_program
+                                                      db_schema
       | _ -> bug "Unexpected K3 target language"
 )
 ;;

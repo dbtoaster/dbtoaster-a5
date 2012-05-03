@@ -283,3 +283,4 @@ struct
     | Trigger of ('a, 'ext_type, 'ext_fn) trigger_t
     | Main of ('a, 'ext_type, 'ext_fn) trigger_t list * source_code_t
 end
+
