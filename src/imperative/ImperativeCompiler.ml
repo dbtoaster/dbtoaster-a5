@@ -1482,7 +1482,21 @@ end (* Typing *)
          Block(unit, insert_and_flush))]
 
 
-  (* Expression desugaring *)
+  (** Expression desugaring:
+      Imp supports certain forms of syntactic sugar, allowing certain 
+      expressions to be defined inline.  For example, we can have a For loop 
+      that iterates over a collection rather by incrementing a constant.  When
+      these are not supported in the target language, we need to remove them
+      from the syntax tree.
+      
+      This function desugars an expression into two components: A set of
+      initialization statements (that evaluate the inline expression) and 
+      a single return value that now stores the value of the inlined 
+      expression.  These values are returned inline in optional wrappers --
+      the first if there is no initialization to be done, and I think the 
+      second is None if it is not possible to desugar the expression?
+      
+    *)
   let rec desugar_expr opts env e =
     let recur l = flatten_desugaring (List.map (desugar_expr opts env) l) in
     let result x y = (if x = [] then None else Some(x)), Some(y) in
@@ -2231,12 +2245,12 @@ end (* Typing *)
         "#include <boost/multi_index/sequenced_index.hpp>";
         "#include <boost/multi_index/composite_key.hpp>";
         "#include <boost/multi_index/member.hpp>";
-        "#include <lib/c++/util.hpp>";
-        "#include <lib/c++/streams.hpp>";
-        "#include <lib/c++/runtime.hpp>";
-        "#include <lib/c++/standard_adaptors.hpp>"]@
+        "#include <lib/dbt_c++/util.hpp>";
+        "#include <lib/dbt_c++/streams.hpp>";
+        "#include <lib/dbt_c++/runtime.hpp>";
+        "#include <lib/dbt_c++/standard_adaptors.hpp>"]@
        (if not opts.profile then [] else
-       ["#include <lib/c++/statistics.hpp>"])@
+       ["#include <lib/dbt_c++/statistics.hpp>"])@
        ["using namespace ::std;";
         "using namespace ::boost;";
         "using namespace ::boost::chrono;";
@@ -2538,8 +2552,8 @@ struct
   type imp_prog_t =
     (  K3.map_t list *              (*   Schema *)
        Patterns.pattern_map *       (*   Schema patterns *)
-       (  (  source_code_t list *   (*        ?? *)
-             compiler_trig_t        (*        Trigger code *)
+       (  (  source_code_t list *   (*       ?? *)
+             compiler_trig_t        (*       Trigger code *)
           ) list *                  (*     List of all triggers =^ *)
           trigger_setup_t           (*     Trigger setup code *)
        )                            (*   Imperative Program Triggers *)

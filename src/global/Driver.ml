@@ -60,12 +60,6 @@ let output s =
 ;;
 let output_endline s = output (s^"\n");;
 
-(************ Optimization Choices ************)
-let imperative_opts:ImperativeCompiler.compiler_options ref = ref {
-   ImperativeCompiler.desugar = false;
-   ImperativeCompiler.profile = false;
-}
-
 (************ Command Line Parsing ************)
 let specs:(Arg.key * Arg.spec * Arg.doc) list  = Arg.align [ 
    (  "-l", 
@@ -95,6 +89,13 @@ if List.length !files < 1 then (
    error "No Files Specified; Exiting"
 )
 ;;
+
+(************ Optimization Choices ************)
+let imperative_opts:ImperativeCompiler.compiler_options ref = ref {
+   ImperativeCompiler.desugar = not (Debug.active "IMP-NO-DESUGAR");
+   ImperativeCompiler.profile = Debug.active "ENABLE-PROFILING";
+};;
+
 (************ Stage Planning ************)
 
 if !input_language == Auto then (
@@ -532,6 +533,7 @@ if stage_is_active StageK3ToTargetLanguage then (
       | Scala       -> bug "Scala codegen not implemented yet"
 
          (* All imperative languages now produce IMP *)
+      | IMP
       | CPP         -> 
          imperative_program := 
             ImperativeCompiler.Compiler.imp_of_k3 !imperative_opts 

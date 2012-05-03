@@ -191,7 +191,7 @@
 %left PRODUCT
 
 // start   
-%start dbtoasterK3Program
+%start dbtoasterK3Program statement
 /* 
   List of
     List of Query Expressions       : target terms
@@ -205,6 +205,7 @@
 */
 
 %type < K3.prog_t > dbtoasterK3Program
+%type < K3.expr_t > statement
     
 %%
 

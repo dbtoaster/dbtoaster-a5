@@ -53,7 +53,7 @@ let ocaml_compiler = {
       let dbt_lib_ext = ".cmx" in
       let ocaml_libs = [ "unix"; "str" ] in
       let dbt_lib_path = Filename.dirname binary_base_dir in
-      let dbt_includes = [ "util"; "stages"; "stages/maps"; "lib/ocaml";
+      let dbt_includes = [ "util"; "stages"; "stages/maps"; "lib/dbt_ocaml";
                            "stages/functional" ] in
       let dbt_libs = [ "util/Util";
                        "stages/maps/M3";
@@ -84,7 +84,9 @@ let cpp_compiler = {
    extension = ".cpp";
    compile = (fun in_file_name out_file_name ->
      let compile_flags  flag_name env_name =
-        ( StringMap.find flag_name !compile_env ) @
+        ( if StringMap.mem flag_name !compile_env
+          then StringMap.find flag_name !compile_env
+          else [] ) @
         ( try (Str.split (Str.regexp ":") (Unix.getenv env_name)) 
           with Not_found -> [] ) in
      let cpp_cc = "g++" in

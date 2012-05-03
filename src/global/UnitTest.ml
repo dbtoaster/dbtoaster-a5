@@ -167,6 +167,18 @@ let parse_stmt (m3_stmt:string) =
    )
 ;;      
 
+let parse_k3 (expr:string):K3.expr_t =
+   try  
+      K3parser.statement K3lexer.tokenize 
+                         (Lexing.from_string expr)
+   with Parsing.Parse_error -> (
+      print_endline ("Error parsing :'"^expr^"'");
+      let _ = Parsing.set_trace true in
+      K3parser.statement K3lexer.tokenize 
+                         (Lexing.from_string expr)
+   )
+;;   
+
 (*************************** Type constructors ****************************)
 let var v = (v,Types.TFloat);;
 let rel rn rv = (Calculus.Rel(rn, List.map var rv));;
