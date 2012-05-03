@@ -306,9 +306,21 @@ struct
         end)
 
     (* Functions *)
-    let bind_float expr arg th f =
+    let bind_constant expr arg th f =
         begin match arg with
-        | AVar(var,_) -> Env.add (fst th) var (BaseValue(CFloat(f))), snd th
+        | AVar(var,vt) -> 
+          let const_val = 
+             begin match (vt,f) with
+               | (TBase(base_vt),_) when (Types.type_of_const f) = base_vt -> f
+               | ((TBase(TFloat)), CBool(true)) -> CFloat(1.)
+               | ((TBase(TFloat)), CBool(false)) -> CFloat(0.)
+               | ((TBase(TFloat)), CInt(i)) -> CFloat(float_of_int i)
+               | ((TBase(TInt)), CBool(true)) -> CInt(1)
+               | ((TBase(TInt)), CBool(false)) -> CInt(0)
+               | _ -> failwith "binding invalid constant"
+             end
+           in
+             Env.add (fst th) var (BaseValue(const_val)), snd th
         | ATuple(vt_l) -> 
             failwith ("cannot bind a float to a tuple"^(get_expr expr))
         end
@@ -336,8 +348,7 @@ struct
         end
 
     let bind_arg expr arg th v = begin match v with
-        | BaseValue(CFloat(x)) -> bind_float expr arg th x
-        | BaseValue(CInt(x)) -> bind_float expr arg th (float_of_int x)
+        | BaseValue(x) -> bind_constant expr arg th x
         | Tuple t -> bind_tuple expr arg th t
         | _ -> bind_value expr arg th v
         end

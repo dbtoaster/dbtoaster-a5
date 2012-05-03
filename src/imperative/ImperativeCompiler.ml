@@ -2535,6 +2535,22 @@ struct
 
   type compiler_trig_t = (ext_type type_t, ext_type, ext_fn) Program.trigger_t
 
+  type imp_prog_t =
+    (  K3.map_t list *              (*   Schema *)
+       Patterns.pattern_map *       (*   Schema patterns *)
+       (  (  source_code_t list *   (*        ?? *)
+             compiler_trig_t        (*        Trigger code *)
+          ) list *                  (*     List of all triggers =^ *)
+          trigger_setup_t           (*     Trigger setup code *)
+       )                            (*   Imperative Program Triggers *)
+    ) *                             (* Imperative Program =^ *)
+    Schema.t *                      (* Database Schema *)
+    string list                     (* Toplevel Queries *)
+      
+  let empty_prog ():imp_prog_t = 
+    (([], Patterns.empty_pattern_map (), ([], ([], []))), 
+     Schema.empty_db (), [])
+   
   (* Internal type conversion helper function *)
   let imp_type_of_calc_type t = Host(K3.TBase(t))
   
@@ -2632,8 +2648,8 @@ struct
     in compiler_trigs, (trigger_setup, snd ivc_counters)
 
 
-  let compile_imp opts (schema,patterns,(triggers,trig_reg_info))
-                  sources tlqs =
+  let compile_imp opts (((schema,patterns,(triggers,trig_reg_info)),
+                        sources, tlqs):imp_prog_t) =
     let dbschema = Schema.rels sources in
     let map_decls =
       let x,y = declare_maps_of_schema schema patterns
@@ -2657,14 +2673,18 @@ struct
     in
       (program^"\n")
 
-  let compile_query opts ((schema,patterns),trigs,tlqs) sources =
+  let imp_of_k3 opts ((schema,patterns),trigs,tlqs) sources:imp_prog_t =
+      (  (  schema,patterns,
+            compile_triggers opts (Schema.rels sources) 
+                             ((schema,patterns),trigs,tlqs) ),
+         sources,
+         (List.map fst tlqs)
+      )
+
+  let compile_query opts k3_prog sources =
     compile_imp 
       opts 
-      (  schema,patterns,
-         compile_triggers opts (Schema.rels sources) 
-                          ((schema,patterns),trigs,tlqs) )
-      sources
-      (List.map fst tlqs)
+      (imp_of_k3 opts k3_prog sources)
 
   (* DS program compilation *)
   
@@ -2704,10 +2724,10 @@ struct
   let compile_ds_query opts ((mapsch,pats),dstrigs,tlqs) sources =
     compile_imp 
       opts
-      (  mapsch,pats,
-         compile_ds_triggers opts (Schema.rels sources) 
-                             ((mapsch,pats),dstrigs,tlqs) )
-      sources
-      (List.map fst tlqs)
+      (  (  mapsch,pats,
+            compile_ds_triggers opts (Schema.rels sources) 
+                                ((mapsch,pats),dstrigs,tlqs) ),
+         sources,
+         (List.map fst tlqs))
 
 end

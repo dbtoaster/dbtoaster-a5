@@ -10,7 +10,7 @@ let bug   msg = failwith ("BUG : "^msg)
 
 (************ Language Names ************)
 type language_t =
-   | Auto | SQL | Calc | MPlan | M3 | M3DM | K3 | CPP | Scala | Ocaml 
+   | Auto | SQL | Calc | MPlan | M3 | M3DM | K3 | IMP | CPP | Scala | Ocaml
    | Interpreter
 
 let languages =
@@ -21,6 +21,7 @@ let languages =
       "M3"   , (M3         , "M3 Program"                   );
       "M3DM" , (M3DM       , "M3 Domain Maintenance Program");
       "K3"   , (K3         , "K3 Program"                   );
+      "IMP"  , (IMP        , "Abstract Imperative Program"  );
       "SCALA", (Scala      , "Scala Code"                   );
       "OCAML", (Ocaml      , "Ocaml Code"                   );
       "RUN",   (Interpreter, "Ocaml Interpreter"            );
@@ -37,6 +38,7 @@ let parse_language lang =
       raise (Arg.Bad("Unknown language "^lang))
 ;;
 
+(************ Output Formatting ************)
 let (files:string list ref) = ref [];;
 let output_file = ref "-";;
 let output_filehandle = ref None;;
@@ -58,6 +60,11 @@ let output s =
 ;;
 let output_endline s = output (s^"\n");;
 
+(************ Optimization Choices ************)
+let imperative_opts:ImperativeCompiler.compiler_options ref = ref {
+   ImperativeCompiler.desugar = false;
+   ImperativeCompiler.profile = false;
+}
 
 (************ Command Line Parsing ************)
 let specs:(Arg.key * Arg.spec * Arg.doc) list  = Arg.align [ 
@@ -136,6 +143,7 @@ type stage_t =
    | StageK3ToTargetLanguage
  | FunctionalTargetMarker
    | StageImpToTargetLanguage
+   | StagePrintImp
  | ImperativeTargetMarker
    | StageRunInterpreter
    | StageOutputSource
@@ -143,8 +151,8 @@ type stage_t =
 
 let output_stages = 
    [  StagePrintSQL; StagePrintSchema; StagePrintCalc; StagePrintPlan;
-      StagePrintM3; StagePrintM3DomainMaintenance; StagePrintK3; 
-      StageRunInterpreter; StageOutputSource; StageCompileSource ]
+      StagePrintM3; StagePrintM3DomainMaintenance; StagePrintK3; StagePrintImp;
+      StageRunInterpreter; StageOutputSource; StageCompileSource;  ]
 let input_stages = 
    [  StageParseSQL; StageParseM3; StageParseK3 ]
 
@@ -162,9 +170,7 @@ let core_stages =
       PlanMarker;  (* -> *) StagePlanToM3;
       M3Marker;    (* -> *) StageM3DomainMaintenance; StageM3ToK3; 
       K3Marker;    (* -> *) StageOptimizeK3; StageK3ToTargetLanguage;
-      FunctionalTargetMarker;
-      (* Normally, we'd do a functional -> imperative translation here, but
-         there's no isolated imperative stage, so for now we skip it *)
+      FunctionalTargetMarker; StageImpToTargetLanguage; 
       ImperativeTargetMarker; 
    ]
 
@@ -196,9 +202,10 @@ let active_stages = ref (ListAsSet.inter
       | M3DM  -> StagePrintM3DomainMaintenance::
                      (stages_to StageM3DomainMaintenance)
       | K3    -> StagePrintK3::(stages_to K3Marker)
+      | IMP   -> StagePrintImp::(stages_to FunctionalTargetMarker)
       | Scala -> functional_stages ExternalCompiler.null_compiler
       | Ocaml -> functional_stages ExternalCompiler.ocaml_compiler
-      | CPP   -> functional_stages ExternalCompiler.cpp_compiler
+      | CPP   -> imperative_stages ExternalCompiler.cpp_compiler
          (* CPP is defined as a functional stage because the IMP implementation
             desperately needs to be redone before we can actually use it as an 
             reasonable intermediate representation.  For now, we avoid the
@@ -293,8 +300,16 @@ let k3_program:(K3.prog_t ref) = ref (([],[]),[],[]);;
    database *)
 let interpreter_program:
    (K3.map_t list * Patterns.pattern_map * K3Interpreter.K3CG.code_t) ref = 
-      ref ([], [], K3Interpreter.K3CG.const(Types.CInt(0)))
-   
+      ref ([], [], K3Interpreter.K3CG.const(Types.CInt(0)));;
+
+(**If we're compiling to an imperative language, we have one final stage before
+   producing source code: The imperative stage is a flattening of the K3
+   representation of the program.  No optimization happens at this stage, but
+   because this transformation is likely to be common to all imperative 
+   languages, we use this intermediate stage to make the final target language
+   compilers as trivial as possible. *)
+let imperative_program:(ImperativeCompiler.Compiler.imp_prog_t ref)
+   = ref (ImperativeCompiler.Compiler.empty_prog ());;
 
 (* String representation of the source code being produced *)
 let source_code:string ref = ref "";;
@@ -515,23 +530,24 @@ if stage_is_active StageK3ToTargetLanguage then (
       )   
       | Ocaml       -> bug "Ocaml codegen not implemented yet"
       | Scala       -> bug "Scala codegen not implemented yet"
+
+         (* All imperative languages now produce IMP *)
       | CPP         -> 
-         (* THE FOLLOWING IS A HACK.  DO NOT USE THE CODE THAT FOLLOWS AS A 
-            MODEL FOR HOW TO EXTEND DRIVER.
-            
-            The imperative stage desperately needs to be rewritten, and is at
-            present unsuitable as an intermediate representation.  Instead, 
-            we compile directly to C++ after the functional stage.
-         *)
-         let ic_opts = {
-            ImperativeCompiler.desugar = false;
-            ImperativeCompiler.profile = Debug.active "ENABLE-PROFILING"
-         } in
-         source_code := 
-            ImperativeCompiler.Compiler.compile_query ic_opts 
-                                                      !k3_program
-                                                      db_schema
+         imperative_program := 
+            ImperativeCompiler.Compiler.imp_of_k3 !imperative_opts 
+                                                  !k3_program 
+                                                  db_schema
+
       | _ -> bug "Unexpected K3 target language"
+)
+;;
+if stage_is_active StagePrintImp then (
+   Debug.print "LOG-DRIVER" (fun () -> "Running Stage: PrintImp");
+   let ((_,_,(imp_core, _)),_,_) = !imperative_program in
+      List.iter (fun (_,(_,expr)) ->
+         output_endline 
+            ((ImperativeCompiler.CPPTarget.string_of_ext_imp expr)^"\n\n")
+      ) imp_core            
 )
 ;;
 
@@ -539,7 +555,9 @@ if stage_is_active StageK3ToTargetLanguage then (
 
 if stage_is_active StageImpToTargetLanguage then (
    Debug.print "LOG-DRIVER" (fun () -> "Running Stage: ImpToTargetLanguage");
-   bug "ImpToTargetLanguage hasn't been completed yet"
+   source_code := 
+      ImperativeCompiler.Compiler.compile_imp !imperative_opts
+                                              !imperative_program
 )
 ;;
 
