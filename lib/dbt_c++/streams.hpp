@@ -21,7 +21,7 @@ namespace dbtoaster {
     using namespace boost::iostreams;
     using namespace boost::lambda;
 
-    enum stream_event_type { delete_tuple, insert_tuple };
+    enum stream_event_type { delete_tuple, insert_tuple, system_ready_event };
 
     typedef int stream_id;
     typedef vector<boost::any> event_data;

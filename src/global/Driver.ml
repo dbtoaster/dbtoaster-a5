@@ -58,7 +58,13 @@ let output s =
    in
       output_string fh s
 ;;
+
 let output_endline s = output (s^"\n");;
+
+let flush_output () = 
+   match !output_filehandle with None -> ()
+   | Some(fh) -> flush fh;;
+   
 
 (************ Command Line Parsing ************)
 let specs:(Arg.key * Arg.spec * Arg.doc) list  = Arg.align [ 
@@ -202,7 +208,7 @@ let active_stages = ref (ListAsSet.inter
       | M3    -> StagePrintM3::(stages_to M3Marker)
       | M3DM  -> StagePrintM3DomainMaintenance::
                      (stages_to StageM3DomainMaintenance)
-      | K3    -> StagePrintK3::(stages_to K3Marker)
+      | K3    -> StagePrintK3::StageOptimizeK3::(stages_to K3Marker)
       | IMP   -> StagePrintImp::(stages_to FunctionalTargetMarker)
       | Scala -> functional_stages ExternalCompiler.null_compiler
       | Ocaml -> functional_stages ExternalCompiler.ocaml_compiler
@@ -313,7 +319,7 @@ let imperative_program:(ImperativeCompiler.Compiler.imp_prog_t ref)
    = ref (ImperativeCompiler.Compiler.empty_prog ());;
 
 (* String representation of the source code being produced *)
-let source_code:string ref = ref "";;
+let source_code:string list ref = ref [];;
 
 (************ SQL Stages ************)
 
@@ -487,26 +493,28 @@ if stage_is_active StageParseK3 then (
          Debug.print "PATTERNS" (fun () -> Patterns.patterns_to_string pats)
 )
 ;;
-if (stage_is_active StageOptimizeK3) && (Debug.active "OPTIMIZE-K3") then (
-   Debug.print "LOG-DRIVER" (fun () -> "Running Stage: OptimizeK3");
-   let optimizations = ref [] in
-   if not (Debug.active "NO-CSE-OPT")
-      then optimizations := K3Optimizer.CSE :: !optimizations;
-   if not (Debug.active "NO-BETA-OPT")
-      then optimizations := K3Optimizer.Beta :: !optimizations;
-   let ((maps,patterns),triggers,tlqs) = !k3_program in
-   k3_program := (
-      (maps, patterns),
-      List.map (fun (event, stmts) ->
-         let trigger_vars = Schema.event_vars event in (
-            event, 
-            List.map (
-               K3Optimizer.optimize ~optimizations:!optimizations
-                                    (List.map fst trigger_vars)
-            ) stmts
-         )
-      ) triggers,
-      tlqs
+if (stage_is_active StageOptimizeK3) then (
+   if not (Debug.active "K3-NO-OPTIMIZE") then (
+      Debug.print "LOG-DRIVER" (fun () -> "Running Stage: OptimizeK3");
+      let optimizations = ref [] in
+      if not (Debug.active "NO-CSE-OPT")
+         then optimizations := K3Optimizer.CSE :: !optimizations;
+      if not (Debug.active "NO-BETA-OPT")
+         then optimizations := K3Optimizer.Beta :: !optimizations;
+      let ((maps,patterns),triggers,tlqs) = !k3_program in
+      k3_program := (
+         (maps, patterns),
+         List.map (fun (event, stmts) ->
+            let trigger_vars = Schema.event_vars event in (
+               event, 
+               List.map (
+                  K3Optimizer.optimize ~optimizations:!optimizations
+                                       (List.map fst trigger_vars)
+               ) stmts
+            )
+         ) triggers,
+         tlqs
+      )
    )
 )
 ;;
@@ -577,10 +585,11 @@ if stage_is_active StageRunInterpreter then (
 ;;
 if stage_is_active StageOutputSource then (
    Debug.print "LOG-DRIVER" (fun () -> "Running Stage: OutputSource");
-  output_endline (!source_code)
+   List.iter output_endline !source_code
 )
 ;;
 if stage_is_active StageCompileSource then (
    Debug.print "LOG-DRIVER" (fun () -> "Running Stage: CompileSource");
+   flush_output ();
    (!compiler).ExternalCompiler.compile !output_file !binary_file
 )

@@ -189,9 +189,9 @@ let name_of_event (event:event_t):string =
 *)
 let class_name_of_event (event:event_t):string =
    begin match event with
-      | InsertEvent(reln,_,_) -> "insert"
-      | DeleteEvent(reln,_,_) -> "delete"
-      | SystemInitializedEvent -> "system_ready"
+      | InsertEvent(_,_,_) -> "insert_tuple"
+      | DeleteEvent(_,_,_) -> "insert_tuple"
+      | SystemInitializedEvent -> "system_ready_event"
    end
 
 (**
@@ -202,7 +202,7 @@ let rel_name_of_event (event:event_t):string =
    begin match event with
       | InsertEvent(reln,_,_) 
       | DeleteEvent(reln,_,_) -> reln
-      | SystemInitializedEvent -> "none"
+      | SystemInitializedEvent -> "NULL_RELATION"
    end
 
 (**

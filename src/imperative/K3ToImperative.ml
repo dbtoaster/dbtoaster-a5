@@ -461,9 +461,9 @@ struct
    *   (sym * 'ext_type Imperative.type_t) ir_t 
    *)
   let ir_of_expr e : ('exp_type imp_metadata) ir_t =
-    let dummy_init =
-      Leaf(mk_meta "" (Host(TBase(TInt))), 
-                       Undecorated(K.Const(CFloat(0.0)))) in
+    let dummy_init t =
+      Leaf(mk_meta "" (Host(TBase(t))), 
+                      (Undecorated(K.Const(zero_of_type t)))) in
     let fold_f _ parts e =
       let meta e =
         let error s =
@@ -567,7 +567,7 @@ struct
       | K.ExternalLambda(_,_,_) ->
          failwith "K3ToImperative: ExternalLambda unsupported"
 
-    in K.fold_expr fold_f (fun x _ -> x) None dummy_init e
+    in K.fold_expr fold_f (fun x _ -> x) None (dummy_init TInt) e
 end
 
 
@@ -917,13 +917,22 @@ struct
       in
 
       let imp, imp_meta_used = match t with
-      | AK.Op(AK.If0) when (valid_sym_of_meta meta) <> None ->
-        let valid_var = Var(None, (unwrap (valid_sym_of_meta meta), Host(TBase(TFloat)))) in
+      | AK.Op(AK.If0) when (valid_sym_of_meta meta) <> None -> 
+        let valid_type = 
+          begin match (type_of_meta meta) with
+           | Host(TBase(t)) -> t
+           | _ -> failwith "op of non-base type"
+          end
+        in
+        let valid_var = Var(None, (unwrap (valid_sym_of_meta meta),
+                                   (Host(TBase(valid_type))))) in
         let meta_var = Var(None, (sym_of_meta meta, type_of_meta meta)) in
         Some([IfThenElse(None,
           BinOp(None, Neq, cexpri 0, Const(None, CFloat(0.0))),
           Block(None,
-            [Expr(None, BinOp(None, Assign, valid_var, Const(None, CFloat(1.0))));
+            [Expr(None, BinOp(None, Assign, valid_var, Const(None, 
+               (* Type escalate the 1 by using Arithmetic *)
+               (Arithmetic.sum (CInt(1)) (Types.zero_of_type valid_type)))));
              Expr(None, BinOp(None, Assign, meta_var, cexpri 1))]),
           Block(None, []))]),
         true
@@ -1006,7 +1015,14 @@ struct
             | AVar(id,ty) -> id, Host(ty), true, []
             | ATuple(it_l) ->
               let t = Host(K.TTuple(List.map snd it_l)) in 
-              let x = gensym() in x, t, false, bind_arg arg (Var (None,(x,t)))
+              let x = gensym() in 
+               Debug.print "LOG-K3-TO-IMP" (fun () -> 
+                  "Tuple Types for "^x^": "^
+                  (ListExtras.ocaml_of_list (function 
+                        TBase(bt) -> Types.string_of_type bt
+                        | _ -> "Non-base-type") (List.map snd it_l))
+               );
+               x, t, false, bind_arg arg (Var (None,(x,t)))
         in
         (* Loops must define any declarations used by the map/ext lambda, such as
          * nested map temporary collection declarations, inside the loop body.
@@ -1025,7 +1041,7 @@ struct
               let d = sym_of_meta (cmetai 0), d_t in [Decl(None, d, None)] in
             let valid_decl = match valid_sym_of_meta meta with
               | None -> []
-              | Some(vsym) -> [Decl(None, (vsym, Host(TBase(TFloat))), None)] 
+              | Some(vsym) -> [Decl(None, (vsym, (type_of_meta meta)), None)] 
             in valid_decl@fn_rv_decl
         in
         let mk_body e =
@@ -1033,10 +1049,18 @@ struct
           let append_imp =
             Expr(None, Fn(None, op, [Var (None, (meta_sym, meta_ty)); e])) in
           if is_filter then
+            let valid_type = 
+              begin match (type_of_meta meta) with
+               | Host(TBase(t)) -> t
+               | _ -> failwith "collection of non-base type"
+              end
+            in
             let valid_var =
-              Var(None, (unwrap (valid_sym_of_meta meta), Host(TBase(TFloat))))
+              Var(None, (unwrap (valid_sym_of_meta meta), 
+                         Host(TBase(valid_type))))
             in [IfThenElse(None,
-                  BinOp(None, Neq, valid_var, Const(None, CFloat(0.0))),
+                  BinOp(None, Neq, valid_var, Const(None, 
+                                    Types.zero_of_type valid_type)),
                   append_imp, Block(None,[]))]
           else if (is_ext && not(cused 0)) || not(is_ext) then [append_imp]
           else []
@@ -1049,7 +1073,9 @@ struct
                     else failwith "invalid ext expression body")
         in
         let loop_body = imp_of_list (elem_decls@body_decls@fn_body) in
-        let mk_loop e = For(None, ((elem, elem_ty), elem_f), e, loop_body) in
+        let mk_loop e = 
+          For(None, ((elem, elem_ty), elem_f), e, loop_body)
+        in
           Some(match_ie 1 "invalid map/ext collection"
              (fun i -> i@[mk_loop (cdecli 1)]) (fun e -> [mk_loop e])),
           (if is_ext then (cused 0) else true)

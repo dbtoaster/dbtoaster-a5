@@ -6,6 +6,12 @@ type source_code_id_t = string
 type source_code_op_t = string
 type source_code_t = Lines of string list | Inline of string
 
+let strings_of_source_code bc = 
+   begin match bc with
+      | Lines l -> l
+      | Inline i -> [i]
+   end
+   
 let string_of_source_code bc =
   begin match bc with
   | Lines l -> String.concat "\n" l

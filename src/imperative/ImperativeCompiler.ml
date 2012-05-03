@@ -579,7 +579,7 @@ struct
       (* Single tier maps only have entry_t defined *)
       let entry_t, extra_entry_t =
         let in_fields = snd (fields_of_var_types in_tl) in
-        let out_fields = (snd (fields_of_var_types out_tl))@["__av", Host(TBase(TFloat))]
+        let out_fields = (snd (fields_of_var_types out_tl))@["__av", Host(TBase(mapt))]
         in match in_fields, out_fields with
           | [], _ -> Target(EntryStructDef(entry_t_id, out_fields)), None
           | _, [x] -> Target(EntryStructDef(entry_t_id, in_fields@out_fields)), None
@@ -651,7 +651,7 @@ struct
       let mindex_t, mindex_decls =
         mk_mindex t_id (out_mindex_decls <> []) entry_t entry_idx_meta
       in id, mindex_t, (out_mindex_decls@mindex_decls)
-    in if (in_tl@out_tl) = [] then (id, Host(TBase(TFloat)), []) else aux()
+    in if (in_tl@out_tl) = [] then (id, Host(TBase(mapt)), []) else aux()
 
 
   (* Returns a type env containing global variable, and type declarations *)
@@ -1190,8 +1190,9 @@ end (* Typing *)
               "  try {";
               "    if ( logger && logger->has_sink() ) {";
               "      (logger->log_event("^(quote rel)^", "^evt_type^"))"^
-                    " << setprecision(15) << "^
-                     (String.concat " << \",\" << " evt_fields)^" << endl;";
+                    " << setprecision(15) "^
+                     (String.concat " << \",\" " 
+                        (List.map (fun x -> "<<"^x) evt_fields))^" << endl;";
               "    }";
               "    on_"^trig_name^"("^(String.concat "," evt_fields)^");";
               "  } catch (boost::bad_any_cast& bc) {";
@@ -2339,7 +2340,7 @@ end (* Typing *)
               if List.mem_assoc (fst a) adaptor_ctor_args
               then [List.assoc (fst a) adaptor_ctor_args] else []
             in  
-            String.concat "," ([r^"id"]@extra_args@
+            String.concat "," ([r^"_relation_id"]@extra_args@
                                [string_of_int (List.length (snd a)); param_id])
           in
           let d = Decl(unit, (a_id, a_t), 
@@ -2400,8 +2401,9 @@ end (* Typing *)
   let declare_streams (dbschema:Schema.rel_t list) = 
     let x,y = snd (List.fold_left
       (fun (i,(id_acc,sc_acc)) (rel,_,_) -> (i+1,(id_acc@[rel,i], sc_acc@
-        [Lines(["int "^rel^"id = "^(string_of_int i)^";"])])))
-      (0,([], [Lines ["map<string, int> stream_identifiers;"]])) dbschema)
+        [Lines(["int "^rel^"_relation_id = "^(string_of_int i)^";"])])))
+      (0,([], [Lines ["map<string, int> stream_identifiers;"]])) 
+         (("NULL_RELATION",[],Schema.StreamRel)::dbschema))
     in x, cscl y
   
   (* Main function generation *)
@@ -2635,8 +2637,8 @@ struct
     let exec_ids = snd (List.fold_left (fun (i,acc) _ ->
       let x = string_of_int (counter+i)
       in i+1, acc@[x, tnm^"_s"^(string_of_int i)]) (0,[]) stmts)
-    in (((Schema.rel_name_of_event event)^"id"), 
-         (ep^"_tuple"), 
+    in (((Schema.rel_name_of_event event)^"_relation_id"), 
+         (ep), 
          ("unwrap_"^tnm), 
          exec_ids)
 
@@ -2681,11 +2683,11 @@ struct
     let global_decls, main_fn =
       declare_main opts stream_ids schema source_vars trig_reg_info tlqs
     in
-    let program = ssc (cscl ~delim:"\n"
-      ([preamble opts; map_decls; global_decls; profiling; flat_triggers;
-        stream_id_decls; source_and_adaptor_decls; main_fn;]))
-    in
-      (program^"\n")
+      strings_of_source_code (
+         concat_and_delim_source_code_list ~delim:"\n"
+            [preamble opts; map_decls; global_decls; profiling; flat_triggers;
+              stream_id_decls; source_and_adaptor_decls; main_fn;]
+      )
 
   let imp_of_k3 opts ((schema,patterns),trigs,tlqs) sources:imp_prog_t =
       (  (  schema,patterns,
