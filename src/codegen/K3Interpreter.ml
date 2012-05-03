@@ -58,7 +58,6 @@ struct
         | TTuple t -> List.for_all is_flat t
         | _ -> false
 
-    let value_of_float x = BaseValue(CFloat(x))
     let value_of_const_t x = 
       if Debug.active "HASH-STRINGS" then
          match x with | CString(s) -> BaseValue(CInt(Hashtbl.hash s))
@@ -82,8 +81,6 @@ struct
     let const_of_value x = match x with
       | BaseValue(c) -> c
       | _ -> failwith ("invalid const_t: "^(string_of_value x))
-
-    let const_of_float x = CFloat(x)
 
     let value_of_tuple x = Tuple(x)
     let tuple_of_value x = match x with
@@ -206,10 +203,7 @@ struct
                 if List.for_all is_flat t then TupleList([v])
                 else ListCollection([v])
             | TBase(TFloat)    -> FloatList([v])
-            | TBase(TInt)      -> 
-               FloatList([BaseValue(CFloat(float_of_value v))])
-            | TBase(TBool)     -> 
-               FloatList([BaseValue(CFloat(float_of_value v))])
+            | TBase(TInt)      -> FloatList([v])
             | TBase(_)         -> failwith "Unsupported base type in K3"
             | Collection _ -> ListCollection([v])
             | Fn (args_t,body_t) ->
@@ -397,8 +391,7 @@ struct
     let map ?(expr = None) map_fn map_rt collection =
         let rv_f v = match map_rt with
             | TBase(TFloat) -> FloatList(v) 
-            | TBase(TInt)   -> FloatList(List.map (fun x -> 
-                                       BaseValue(CFloat(float_of_value x))) v)
+            | TBase(TInt)   -> FloatList(v)
             | TBase(_)      -> failwith "Unsupported base type in K3"
             | TTuple tl ->
                 if is_flat map_rt then TupleList(v)
