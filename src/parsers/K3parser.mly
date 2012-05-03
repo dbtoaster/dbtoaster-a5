@@ -75,17 +75,17 @@
 
 
 
-   let create_map name input_var_types output_var_types =
+   let create_map name input_var_types output_var_types map_type =
         let f = fun l -> List.map (fun (_,x) -> x) l      (* was (fun x -> ("", x)) *)
          in
             let input_types = f input_var_types in
             let output_types = f output_var_types
             in
-                let new_map = (name, input_types, output_types)
+                let new_map = (name, input_types, output_types, map_type)
                     in
                         add_map name new_map; 
                         add_map_schema name (input_var_types, output_var_types);
-                        (name, input_types, output_types) 
+                        (name, input_types, output_types, map_type) 
    
    let concat_stmt (m,t) (map_list,pat_list,trig_list) =
 				let new_map = if m = [] then map_list else m @ map_list
@@ -160,7 +160,7 @@
    let get_collection c_id = 
       Hashtbl.find collections c_id
 
-   let types_to_vartypes types = 
+	let types_to_vartypes types = 
       List.map 
          (
             fun (n, t) -> let nt = TBase(t)
@@ -210,29 +210,34 @@
 %%
 
 dbtoasterK3Program:
-| mapDeclarationList triggerList         { let _ = $1 in
-                                                               concat_stmt ($1, $2) empty_output_k3 }
+| mapDeclarationList triggerList         
+	{ let _ = $1 in
+     concat_stmt ($1, $2) empty_output_k3 }
 mapDeclarationList:
 | mapDeclaration mapDeclarationList                         { $1::$2 }
 | mapDeclaration                                            { [$1] }
 
 mapDeclaration:
-| ID LBRACK mapVarList RBRACK LBRACK mapVarList RBRACK EOSTMT   { let col = PC($1, types_to_vartypes $3, types_to_vartypes $6, TBase(Types.TFloat))
-                                                               in
-                                                                  add_collection $1 col;
-                                                                     create_map $1 $3 $6 }
-| ID LBRACK RBRACK LBRACK mapVarList RBRACK EOSTMT            { let col = OutPC($1, types_to_vartypes $5, TBase(Types.TFloat))
-                                                               in
-                                                                  add_collection $1 col;
-                                                                     create_map $1 [] $5 }
-| ID LBRACK mapVarList RBRACK LBRACK RBRACK EOSTMT            { let col = InPC($1, types_to_vartypes $3, TBase(Types.TFloat))
-                                                               in
-                                                                  add_collection $1 col;
-                                                                     create_map $1 $3 [] }
-| ID LBRACK RBRACK LBRACK RBRACK EOSTMT                     { let col = SingletonPC($1, TBase(Types.TFloat))
-                                                               in
-                                                                  add_collection $1 col;
-                                                                     create_map $1 [] [] }
+| ID LPAREN typeItem RPAREN LBRACK mapVarList RBRACK LBRACK mapVarList RBRACK EOSTMT   
+	{ let col = PC($1, types_to_vartypes $6, types_to_vartypes $9, TBase($3))
+	   in
+	      add_collection $1 col;
+	         create_map $1 $6 $9 $3}
+| ID LPAREN typeItem RPAREN LBRACK RBRACK LBRACK mapVarList RBRACK EOSTMT            
+	{ let col = OutPC($1, types_to_vartypes $8, TBase($3))
+	   in
+	      add_collection $1 col;
+	         create_map $1 [] $8 $3}
+| ID LPAREN typeItem RPAREN LBRACK mapVarList RBRACK LBRACK RBRACK EOSTMT            
+	{ let col = InPC($1, types_to_vartypes $6, TBase($3))
+	   in
+	      add_collection $1 col;
+	         create_map $1 $6 [] $3}
+| ID LPAREN typeItem RPAREN LBRACK RBRACK LBRACK RBRACK EOSTMT                     
+	{ let col = SingletonPC($1,TBase($3))
+	   in
+	      add_collection $1 col;
+	         create_map $1 [] [] $3}
 
 mapVarList:
 | mapVarItem COMMA mapVarList                               { $1::$3 }

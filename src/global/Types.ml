@@ -76,8 +76,8 @@ let float_of_const (a:const_t): float =
       | CInt(av)     -> float_of_int av
       | CFloat(av)   -> av
       | CString(av)  -> failwith ("Cannot produce float of string '"^av^"'")
-   end
-   
+   end	
+	
 (**** Conversion to Strings ****)
 (**
    Get the string representation (according to SQL syntax) of a comparison 
@@ -179,6 +179,21 @@ let string_of_var ?(verbose = Debug.active "PRINT-VERBOSE")
    if verbose then name^":"^(string_of_type vt)
               else name
 
+(**** Zero Constants ****)
+(**
+   Returns a constant reprezenting zero of type [zt].
+   @param [zt] A type. Can be TBool, TInt or TFloat.
+   @return     The constant zero of type [zt]
+   @raise Failure If there is no zero constant corrsponding to [zt]
+*)  
+let zero_of_type zt : const_t = 
+	begin match zt with
+		| TBool -> CBool(false)
+		| TInt  -> CInt(0)
+		| TFloat -> CFloat(0.)
+		| _ -> failwith ("Cannot produce zero of type '"^(string_of_type zt)^"'")
+	end
+	
 (**** Escalation ****)
 (**
    Given two types, return the "greater" of the two.  

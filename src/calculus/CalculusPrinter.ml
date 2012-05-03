@@ -92,9 +92,12 @@ let rec format_value (v:value_t) =
       | ValueRing.Val(AConst(_)) | ValueRing.Val(AVar(_)) -> 
          !fmt.string (string_of_value v)
          
-      | ValueRing.Val(AFn(fname, fargs, _)) ->
+      | ValueRing.Val(AFn(fname, fargs, ftype)) ->
+         !fmt.string "[";
          !fmt.string fname;
-         !fmt.string "(";
+			!fmt.string ":";
+         !fmt.string (string_of_type ftype);
+         !fmt.string "](";
          !fmt.bopen 0;
          format_list format_value "," fargs;
          !fmt.bclose ();

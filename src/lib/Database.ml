@@ -82,7 +82,7 @@ end
 
 module type M3MapSpec =
 sig
-   type value_t
+	type value_t
    type key_t     = value_t list
    type pattern_t = int list
 
@@ -91,7 +91,8 @@ sig
 
    (* initializer *)
    val zero : value_t
-
+	val zero_of_type : Types.type_t -> value_t
+	
    val string_of_value : value_t -> string
    val string_of_smap : single_map_t -> string
    val string_of_map : map_t -> string
@@ -134,6 +135,7 @@ sig
     type map_t = single_map_t Map.t
 
     val zero : t
+    val zero_of_type : Types.type_t -> t
     val string_of_value : t -> string
     val string_of_smap : single_map_t -> string
     val string_of_map : map_t -> string
@@ -189,6 +191,7 @@ struct
     type map_t        = single_map_t Map.t
 
     let zero               = ConstTValue.zero
+    let zero_of_type       = ConstTValue.zero_of_type
     let string_of_value    = ConstTValue.to_string
     let key_to_string k    = ListExtras.ocaml_of_list string_of_value k
     let string_of_smap sm  = Map.to_string key_to_string string_of_value sm
@@ -379,7 +382,7 @@ struct
 
    let make_empty_db (schema:K3.map_t list) (patterns:Patterns.pattern_map): 
                      db_t =
-        let f (mapn, itypes, _) =
+        let f (mapn, itypes, _, _) =
            let (in_patterns, out_patterns) = get_patterns patterns mapn in
            let init_slice =
               if(List.length itypes = 0) then
@@ -538,27 +541,27 @@ struct
 
    let make_empty_db (schema:K3.map_t list) (patterns:Patterns.pattern_map):
                      db_t =
-        let io_f (mapn, itypes, _) =
+        let io_f (mapn, itypes, _, _) =
            let (in_patterns, _) = get_patterns patterns mapn in
            (* We defer adding out var indexes to init value computation *)
            let init_slice = S.make_map in_patterns 
            in ([N.of_string mapn], init_slice)
         in
-        let s_f (mapn, itypes, otypes) =
+        let s_f (mapn, itypes, otypes,_) =
            let (in_pat, out_pat) = get_patterns patterns mapn in
            let init_slice =
               S.make_smap [] (if itypes = [] then out_pat else in_pat)
            in ([N.of_string mapn], init_slice)
         in 
-        let val_f (mapn, _, _) = ([N.of_string mapn], ref(S.zero)) in
+        let val_f (mapn, _, _, _) = ([N.of_string mapn], ref(S.zero)) in
         let io_maps = 
-            List.filter (fun (_,i,o) -> i <> [] && o <> []) schema in
+            List.filter (fun (_,i,o,_) -> i <> [] && o <> []) schema in
         let in_maps = 
-            List.filter (fun (_,i,o) -> i = [] && o <> []) schema in 
+            List.filter (fun (_,i,o,_) -> i = [] && o <> []) schema in 
         let out_maps = 
-            List.filter (fun (_,i,o) -> i <> [] && o = []) schema in
+            List.filter (fun (_,i,o,_) -> i <> [] && o = []) schema in
         let values = 
-            List.filter (fun (_,i,o) -> i = [] && o = []) schema in
+            List.filter (fun (_,i,o,_) -> i = [] && o = []) schema in
             (DBM.from_list (List.map io_f io_maps) [],
              DBM.from_list (List.map s_f (in_maps@out_maps)) [],
              DBM.from_list (List.map val_f values) [],
@@ -817,10 +820,10 @@ struct
 
    let make_empty_db (schema:K3.map_t list) (patterns:Patterns.pattern_map):
                      db_t =
-       let f (mapn, itypes, otypes) =
+       let f (mapn, itypes, otypes, mapt) =
           let (in_pat, out_pat) = get_patterns patterns mapn in
           let init_slice = match (itypes,otypes) with
-            | ([],[]) -> S.zero
+            | ([],[]) -> S.zero_of_type mapt
             | (x,[]) -> S.value_of_smap (S.make_smap [] in_pat)
             | ([],x) -> S.value_of_smap (S.make_smap [] out_pat)
             | (x,y) ->  S.value_of_map (S.make_map in_pat)

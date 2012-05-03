@@ -337,13 +337,26 @@ and calc_of_sql_expr ?(materialize_query = None)
       | Sql.SQLArith(e1, Sql.Sub, e2) ->
          CalcRing.mk_sum [rcr_e e1; CalcRing.mk_neg (rcr_e e2)]
       | Sql.SQLArith(e1, Sql.Div, e2) ->
-         let (e2_val, e2_calc) = lift_if_necessary (rcr_e e2) in
-         CalcRing.mk_val (AggSum([], 
-            CalcRing.mk_prod [rcr_e e1; e2_calc; 
-               CalcRing.mk_val (Value(ValueRing.mk_val (
-                  AFn("/", [e2_val], TFloat)
-               )))]
-         ))
+			let ce1 = rcr_e e1 in
+         let ce2 = rcr_e e2 in			
+			let t1 = type_of_expr ce1 in
+         let t2 = type_of_expr ce2 in
+			let (e2_val, e2_calc) = lift_if_necessary ce2 in
+			if t1 = TInt && t2 = TInt then
+				let (e1_val, e1_calc) = lift_if_necessary ce1 in
+				CalcRing.mk_val (AggSum([], 
+	            CalcRing.mk_prod [e1_calc; e2_calc; 
+	               CalcRing.mk_val (Value(ValueRing.mk_val (
+	                  AFn("/", [e1_val;e2_val], TInt)
+	               )))]
+	         ))
+			else
+	         CalcRing.mk_val (AggSum([], 
+	            CalcRing.mk_prod [ce1; e2_calc; 
+	               CalcRing.mk_val (Value(ValueRing.mk_val (
+	                  AFn("/", [e2_val], TFloat)
+	               )))]
+	         ))
       | Sql.Negation(e) -> CalcRing.mk_neg (rcr_e e)
       | Sql.NestedQ(q)  -> 
          begin match rcr_q q with

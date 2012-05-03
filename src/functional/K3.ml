@@ -74,6 +74,11 @@ type type_t =
     | Collection of type_t                (** Collections (typically bags) *)
     | Fn         of type_t list * type_t  (** Function type *)
 
+let base_type_of t = begin match t with
+	| TBase(bt) -> bt
+	| _ -> failwith "Invalid argument: not a K3 base type!"
+end
+
 (** Schemas are carried along with persistent map references, and temporary 
     slices *)
 type schema = (id_t * type_t) list
@@ -715,7 +720,7 @@ let collection_of_float_list (l : float list) =
 
 
 (* Incremental section *)
-type map_t = string * (Types.type_t list) * (Types.type_t list)
+type map_t = string * (Types.type_t list) * (Types.type_t list) * Types.type_t
 type schema_t = (map_t list * Patterns.pattern_map)
 type statement_t = expr_t
 type trigger_t = Schema.event_t * statement_t list
@@ -725,8 +730,8 @@ type prog_t = schema_t * trigger_t list * toplevel_query_t list
     
 let code_of_prog (((maps,_),triggers,_):prog_t): string = (
    "--------------------- MAPS ----------------------\n"^
-   (ListExtras.string_of_list ~sep:"\n\n" (fun (mapn, mapiv, mapov) ->
-      "DECLARE "^mapn^
+   (ListExtras.string_of_list ~sep:"\n\n" (fun (mapn, mapiv, mapov, mapt) ->
+      "DECLARE "^mapn^"("^(Types.string_of_type mapt)^")"^
       (ListExtras.ocaml_of_list Types.string_of_type mapiv)^
       (ListExtras.ocaml_of_list Types.string_of_type mapov)
    ) maps)^"\n\n"^

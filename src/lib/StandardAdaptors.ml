@@ -115,7 +115,7 @@ let build_tuple param_val =
    let types = Str.split (Str.regexp ",") param_val in
    let build_fns = 
        List.map (fun t -> match t with
-        | "int" -> (fun x -> try CFloat(float(int_of_string x)) with 
+        | "int" -> (fun x -> try CInt(int_of_string x) with 
                     Failure(_) -> failwith ("Could not convert int: '"^x^"'"))
         | "float" -> (fun x -> try CFloat(float_of_string x) with
                     Failure(_) -> failwith ("Could not convert float: '"^x^"'"))
@@ -134,11 +134,11 @@ let build_tuple param_val =
                         "Invalid day ("^(string_of_int d)^
                         ") in date: "^x
                      );
-                  CFloat(float((y * 10000) + (m * 100) + (d * 1)))
+                  CInt((y * 10000) + (m * 100) + (d * 1))
             ) else failwith ("Invalid date string: "^x)
          )
         | "string" -> (fun x -> CString(x))
-        | "hash" -> (fun x -> CFloat(float(Hashtbl.hash x)))
+        | "hash" -> (fun x -> CInt(Hashtbl.hash x))
         | _ -> failwith ("invalid const_t type "^t)) types in
    let num_fns = List.length build_fns in
    let extend_fn = List.hd (List.rev build_fns) in

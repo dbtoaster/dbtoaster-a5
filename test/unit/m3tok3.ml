@@ -8,17 +8,18 @@ module Interpreter = K3Compiler.Make(K3Interpreter.K3CG)
 ;;
 
 let maps = [
-   "S", [], [];
-   "R", [], [T.TFloat; T.TFloat];
-	 "R_STR", [], [T.TString; T.TString];
-	 "T", [T.TFloat; T.TFloat], [];
-	 "W", [T.TFloat; T.TFloat], [T.TFloat; T.TFloat];
+   "S", [], [], T.TFloat;
+   "S_I", [], [], T.TInt;
+   "R", [], [T.TFloat; T.TFloat], T.TFloat;
+	 "R_STR", [], [T.TString; T.TString], T.TFloat;
+	 "T", [T.TFloat; T.TFloat], [], T.TFloat;
+	 "W", [T.TFloat; T.TFloat], [T.TFloat; T.TFloat], T.TFloat;
 	 
-	 "sum_tmp_1", [],[T.TFloat];
-	 "QS", [], [];
-   "QR", [], [T.TFloat; T.TFloat];
-	 "QT", [T.TFloat; T.TFloat], [];
-	 "QW", [T.TFloat; T.TFloat], [T.TFloat; T.TFloat];
+	 "sum_tmp_1", [],[T.TFloat], T.TFloat;
+	 "QS", [], [], T.TFloat;
+   "QR", [], [T.TFloat; T.TFloat], T.TFloat;
+	 "QT", [T.TFloat; T.TFloat], [], T.TFloat;
+	 "QW", [T.TFloat; T.TFloat], [T.TFloat; T.TFloat], T.TFloat;
 ]
 ;;
 
@@ -30,6 +31,7 @@ let patterns = [
 
 let init_code = 
 	let pc_s = K.SingletonPC("S", K.TBase(T.TFloat)) in
+	let pc_si = K.SingletonPC("S_I", K.TBase(T.TInt)) in
 	let pc_r = K.OutPC("R", ["X", K.TBase(T.TFloat); "Y", K.TBase(T.TFloat)], K.TBase(T.TFloat)) in
 	let pc_r_str = K.OutPC("R_STR", ["X", K.TBase(T.TString); "Y", K.TBase(T.TString)], K.TBase(T.TFloat)) in
 	let pc_t = K.InPC("T", ["X", K.TBase(T.TFloat); "Y", K.TBase(T.TFloat)], K.TBase(T.TFloat)) in
@@ -46,8 +48,9 @@ let init_code =
 	let to_kconsts csts = List.map to_kconst csts in
 	Interpreter.compile_k3_expr (K.Block([
 		K.PCValueUpdate(pc_s, [], [], to_kconst 5.);
+		K.PCValueUpdate(pc_si, [], [], K.Const(T.CInt(5)));
 		
-	  K.PCValueUpdate(pc_r, [], to_kconsts [1.; 1.;], to_kconst 1.);
+	  	K.PCValueUpdate(pc_r, [], to_kconsts [1.; 1.;], to_kconst 1.);
  		K.PCValueUpdate(pc_r, [], to_kconsts [1.; 2.;], to_kconst 2.);
  		K.PCValueUpdate(pc_r, [], to_kconsts [2.; 1.;], to_kconst 2.);
  		K.PCValueUpdate(pc_r, [], to_kconsts [2.; 2.;], to_kconst 4.);
@@ -61,21 +64,22 @@ let init_code =
  		K.PCValueUpdate(pc_t, to_kconsts [2.; 2.;], [], to_kconst 4.);
  		K.PCValueUpdate(pc_t, to_kconsts [1.; 3.;], [], to_kconst 3.);
  		
-	  K.PCValueUpdate(pc_w, to_kconsts [1.; 1.;], to_kconsts [1.; 1.;], to_kconst 1.);
+	  	K.PCValueUpdate(pc_w, to_kconsts [1.; 1.;], to_kconsts [1.; 1.;], to_kconst 1.);
  		K.PCValueUpdate(pc_w, to_kconsts [1.; 1.;], to_kconsts [1.; 2.;], to_kconst 2.);
  		K.PCValueUpdate(pc_w, to_kconsts [2.; 2.;], to_kconsts [2.; 1.;], to_kconst 2.);
  		K.PCValueUpdate(pc_w, to_kconsts [2.; 2.;], to_kconsts [2.; 2.;], to_kconst 4.);
  		K.PCValueUpdate(pc_w, to_kconsts [3.; 3.;], to_kconsts [1.; 3.;], to_kconst 3.);
  		
+		
 		K.PCValueUpdate(pc_qs, [], [], to_kconst 5.);
 		
-	  K.PCValueUpdate(pc_qr, [], to_kconsts [1.; 1.;], to_kconst 1.);
+	  	K.PCValueUpdate(pc_qr, [], to_kconsts [1.; 1.;], to_kconst 1.);
  		K.PCValueUpdate(pc_qr, [], to_kconsts [1.; 2.;], to_kconst 2.);
  		K.PCValueUpdate(pc_qr, [], to_kconsts [2.; 1.;], to_kconst 2.);
  		K.PCValueUpdate(pc_qr, [], to_kconsts [2.; 2.;], to_kconst 4.);
  		K.PCValueUpdate(pc_qr, [], to_kconsts [1.; 3.;], to_kconst 3.);
  		
-	  K.PCValueUpdate(pc_qt, to_kconsts [1.; 1.;], [], to_kconst 1.);
+	  	K.PCValueUpdate(pc_qt, to_kconsts [1.; 1.;], [], to_kconst 1.);
  		K.PCValueUpdate(pc_qt, to_kconsts [1.; 2.;], [], to_kconst 2.);
  		K.PCValueUpdate(pc_qt, to_kconsts [2.; 1.;], [], to_kconst 2.);
  		K.PCValueUpdate(pc_qt, to_kconsts [2.; 2.;], [], to_kconst 4.);
@@ -109,7 +113,8 @@ in
 let stmt_string_to_code env stmt_s =
 	 let stmt = U.parse_stmt stmt_s in
 	 let env_vars = List.map (fun (vn,vl) -> (vn,T.type_of_const vl)) env in
-	 let (target_coll,code),_ = MK.m3_stmt_to_k3_stmt MK.empty_meta env_vars stmt in
+	 let code,_ = MK.m3_stmt_to_k3_stmt MK.empty_meta env_vars stmt in
+	 let target_coll = MK.target_of_statement code in
 	 (*
 	 print_endline "\n--------------\n--------------";
 	 print_endline ("Calculus: "^(Calculus.string_of_expr calc));
@@ -159,6 +164,9 @@ let test_stmt_coll ?(env = []) msg stmt_s rval =
    test_code_coll env msg code (U.mk_float_collection rval)
 in
 		
+		test_expr " Lift and Divide "
+				"[ [ / : INT ] (0, 0) ]"
+				(VK.BaseValue(T.CFloat(0.125)));
 	
 		test_expr " AConst " 
 							"[3]" (VK.BaseValue(T.CInt(3)))		;

@@ -18,6 +18,7 @@ module type Value =
 sig
     type t
     val zero : t
+    val zero_of_type : type_t -> t
     val compare : t -> t -> int
     val to_string : t -> string
 end
@@ -104,6 +105,7 @@ module FloatValue : Value with type t = float =
 struct
     type t = float
     let zero = 0.0
+    let zero_of_type zt =  0.0
     let compare = Pervasives.compare
     let to_string = string_of_float
 end
@@ -112,6 +114,7 @@ module ConstTValue : Value with type t = const_t =
 struct
     type t = const_t
     let zero = CFloat(0.0)
+    let zero_of_type = Types.zero_of_type
     let compare = Pervasives.compare
     let to_string = Types.string_of_const
 end
@@ -202,6 +205,7 @@ sig
     | ListCollection of t list
 
     val zero : t
+    val zero_of_type : type_t -> t
     val compare : t -> t -> int
     val to_string : t -> string
 end =
@@ -215,6 +219,11 @@ struct
     | ListCollection of t list
   
   let zero = Float(0.0)
+  let zero_of_type zt = begin match zt with
+	| TInt -> Int(0)
+	| TFloat -> Float(0.0)
+	| _ -> failwith "Invalid type for zero_of_type"
+  end
   let compare = Pervasives.compare
 
   let rec string_of_value v =
@@ -291,6 +300,7 @@ sig
             type 'a t = 'a K3ValuationMap.t
 
     val zero : t
+    val zero_of_type : type_t -> t
     val compare : t -> t -> int
     val string_of_value : t -> string
     val string_of_smap : single_map_t -> string
@@ -316,7 +326,8 @@ struct
     | MapCollection  of t K3ValuationMap.t
 
     let zero = BaseValue(CFloat(0.0))
-    let compare = Pervasives.compare
+	 let zero_of_type zt = BaseValue(Types.zero_of_type zt)
+	 let compare = Pervasives.compare
 
     let rec key_to_string k = ListExtras.ocaml_of_list string_of_value k
     and string_of_vmap sm   = K3ValuationMap.to_string key_to_string string_of_value sm

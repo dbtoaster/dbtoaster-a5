@@ -74,7 +74,7 @@ let rec string_of_value_leaf (leaf:value_leaf_t): string =
       | AConst(c) -> sql_of_const c
       | AVar(v)   -> string_of_var v
       | AFn(fname,fargs,ftype) ->
-         fname^"("^(ListExtras.string_of_list string_of_value fargs)^")"
+         "["^fname^" : "^(string_of_type ftype)^"]("^(ListExtras.string_of_list string_of_value fargs)^")"
    end
 
 (**
@@ -164,39 +164,44 @@ let rec type_of_value (a_value: value_t): type_t =
 let binary_op (b_op: bool   -> bool   -> bool)
               (i_op: int    -> int    -> int)
               (f_op: float  -> float  -> float)
+				  (op_type: type_t)
               (a: const_t) (b: const_t): const_t =
-   begin match (a,b) with
-      | (CBool(av),  CBool(bv)) -> 
-         CBool(b_op av bv)
-      | (CBool(_),   CInt(_))
-      | (CInt(_),    CBool(_)) 
-      | (CInt(_),    CInt(_)) -> 
-         CInt(i_op (int_of_const a) (int_of_const b))
-      | (CFloat(_), (CBool(_)|CInt(_)|(CFloat(_))))
-      | ((CBool(_)|CInt(_)), CFloat(_)) ->
-         CFloat(f_op (float_of_const a) (float_of_const b))
-      | (CString(_), _) | (_, CString(_)) -> 
-         failwith "Binary math op over a string"
+   begin match (a,b,op_type) with
+      | (CBool(av),  CBool(bv), (TBool|TAny)) -> CBool(b_op av bv)
+		| (CBool(_),   CBool(_),  TInt)
+      | (CBool(_),   CInt(_),   (TInt|TAny))
+      | (CInt(_),    CBool(_),  (TInt|TAny)) 
+      | (CInt(_),    CInt(_),   (TInt|TAny))  -> CInt(i_op (int_of_const a) (int_of_const b))
+      
+		| (CBool(_),   CBool(_),  TFloat)
+      | (CInt(_),    CInt(_),   TFloat)      
+		| (CFloat(_), (CBool(_)|CInt(_)|(CFloat(_))), (TFloat|TAny))
+      | ((CBool(_)|CInt(_)), CFloat(_), (TFloat|TAny)) -> CFloat(f_op (float_of_const a) (float_of_const b))
+      | (CString(_), _, _) | (_, CString(_), _) -> failwith "Binary math op over a string"
+		| (_,   _,  _) -> 
+			failwith ("Binary math op with incompatible return type: "^
+		             (string_of_const a)^" "^(string_of_const b)^
+						 " -> "^(string_of_type op_type))
    end
 
 (** Perform type-escalating addition over two constants *)
-let sum  = binary_op ( fun x->failwith "sum of booleans" ) ( + ) ( +. )
+let sum  = binary_op ( fun x->failwith "sum of booleans" ) ( + ) ( +. ) TAny
 (** Perform type-escalating addition over an arbitrary number of constants *)
 let suml = List.fold_left sum (CInt(0))
 (** Perform type-escalating multiplication over two constants *)
-let prod = binary_op ( && ) ( * ) ( *. )
+let prod = binary_op ( && ) ( * ) ( *. ) TAny
 (** Perform type-escalating multiplication over an arbitrary number of 
     constants *)
 let prodl= List.fold_left prod (CInt(1))
 (** Negate a constant *)
 let neg  = binary_op (fun _-> failwith "Negation of a boolean") 
-                     ( * ) ( *. ) (CInt(-1))
+                     ( * ) ( *. ) TAny (CInt(-1))
 (** Compute the multiplicative inverse of a constant *)
-let div1 a   = binary_op (fun _->failwith "Dividing a boolean 1") 
-                         (/) (/.) (CInt(1)) a
+let div1 dtype a   = binary_op (fun _->failwith "Dividing a boolean 1") 
+                         (/) (/.) dtype (CInt(1)) a
 (** Perform type-escalating division of two constants *)
-let div2 a b = binary_op (fun _->failwith "Dividing a boolean 2")
-                         (/) (/.) a b
+let div2 dtype a b = binary_op (fun _->failwith "Dividing a boolean 2")
+                         (/) (/.) dtype a b
 
 let comparison_op (opname:string) (iop:int -> int -> bool) 
                   (fop:float -> float -> bool) (a:const_t) (b:const_t):const_t =
@@ -237,21 +242,21 @@ let cmp_neq a b = CBool((cmp_eq a b) = CBool(false))
    invoked with one parameter, or x/y if invoked with two parameters.
 *)
 let arithmetic_functions: 
-   (type_t * (const_t list -> const_t)) StringMap.t ref = ref StringMap.empty
+   (const_t list -> type_t -> const_t) StringMap.t ref = ref StringMap.empty
 
 (**
    Declare a new arithmetic function.
 *)
-let declare_arithmetic_function (name:string) (out_type:type_t) 
-                                (fn:const_t list -> const_t): unit =
+let declare_arithmetic_function (name:string)  
+                                (fn:const_t list -> type_t -> const_t): unit =
    arithmetic_functions := 
-      StringMap.add name (out_type, fn) !arithmetic_functions
+      StringMap.add name fn !arithmetic_functions
 ;;
-declare_arithmetic_function "/" TFloat 
-   (fun arglist -> 
-      match arglist with
-         | [v] -> div1 v
-         | [v1;v2] -> div2 v1 v2
+declare_arithmetic_function "/" 
+   (fun arglist ftype -> 
+		match arglist with
+         | [v] -> div1 ftype v
+         | [v1;v2] -> div2 ftype v1 v2
          | _ ->
             failwith "Invalid arguments to division function"
    )
@@ -274,10 +279,10 @@ let rec eval ?(scope=StringMap.empty) (v:value_t): const_t =
          | AVar(v,_) -> 
             if StringMap.mem v scope then StringMap.find v scope
             else failwith ("Variable "^v^" not found while evaluating arithmetic")
-         | AFn(fn,fargs,_) ->
+         | AFn(fn,fargs,ftype) ->
             if StringMap.mem fn !arithmetic_functions then
-               let (_,fn_def) = StringMap.find fn !arithmetic_functions
-               in fn_def (List.map (eval ~scope:scope) fargs)
+               let fn_def = StringMap.find fn !arithmetic_functions
+               in fn_def (List.map (eval ~scope:scope) fargs) ftype
             else failwith ("Function "^fn^" is undefined")
    ) v
 
@@ -314,8 +319,8 @@ let rec eval_partial ?(scope=[]) (v:value_t): value_t =
                                       | ValueRing.Val(AConst(c)) -> c
                                       | _ -> raise Not_found) fargs)
                in
-               let (_,fn_def) = StringMap.find fname !arithmetic_functions in
-                  mk_const (fn_def farg_vals)
+               let fn_def = StringMap.find fname !arithmetic_functions in
+                  mk_const (fn_def farg_vals ftype)
             with Not_found ->
                ValueRing.mk_val (AFn(fname, fargs, ftype))
             end

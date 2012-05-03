@@ -45,11 +45,11 @@ let type_of_kvar kvar = begin match kvar with
 
 let m3_map_to_k3_map (m3_map: M3.map_t) : K.map_t = match m3_map with
 		| M3.DSView(ds)                    -> 
-				let (map_name, input_vars, output_vars, _, _) = Plan.expand_ds_name ds.Plan.ds_name 
+				let (map_name, input_vars, output_vars, map_type, _) = Plan.expand_ds_name ds.Plan.ds_name 
 				in 
-				(map_name, List.map snd input_vars, List.map snd output_vars )
+				(map_name, List.map snd input_vars, List.map snd output_vars, map_type )
 		| M3.DSTable(rel_name, rel_schema,_) -> 
-				(rel_name, [], List.map snd rel_schema )
+				(rel_name, [], List.map snd rel_schema, Types.TInt )
 
 (**/**)
 
@@ -68,6 +68,10 @@ let minus_one_flt_val = K.Const(T.CFloat(-1.0))
 
 
 let compatible_types t1 t2 = begin match t1, t2 with
+	| K.TBase(T.TInt), K.TBase(T.TBool) -> true
+	| K.TBase(T.TBool), K.TBase(T.TInt) -> true
+	| K.TBase(T.TFloat), K.TBase(T.TBool) -> true
+	| K.TBase(T.TBool), K.TBase(T.TFloat) -> true
 	| K.TBase(T.TInt), K.TBase(T.TFloat) -> true
 	| K.TBase(T.TFloat), K.TBase(T.TInt) -> true
 	| _,_ -> (t1 = t2)
@@ -78,6 +82,29 @@ let numerical_type t = begin match t with
 	| K.TBase(T.TInt)   -> true
 	| K.TBase(T.TFloat) -> true
 	| _ -> false
+	end
+
+let arithmetic_return_types t1 t2 = begin match t1, t2 with
+	| K.TBase(T.TBool), K.TBase(T.TBool) 
+	| K.TBase(T.TBool), K.TBase(T.TInt)
+	| K.TBase(T.TInt), K.TBase(T.TInt) 
+	| K.TBase(T.TInt), K.TBase(T.TBool) -> K.TBase(T.TInt)
+	| K.TBase(T.TBool), K.TBase(T.TFloat) 
+	| K.TBase(T.TInt), K.TBase(T.TFloat)
+	| K.TBase(T.TFloat), K.TBase(T.TFloat) 
+	| K.TBase(T.TFloat), K.TBase(T.TBool) 
+	| K.TBase(T.TFloat), K.TBase(T.TInt) -> K.TBase(T.TFloat)
+	| _,_ -> failwith "arguments must be of numerical type."
+	end
+
+let escalate_type from_t to_t = begin match from_t, to_t with
+	| K.TBase(T.TBool), K.TBase(T.TInt) -> K.TBase(T.TInt)
+	| K.TBase(T.TBool), K.TBase(T.TFloat) -> K.TBase(T.TFloat)
+	| K.TBase(T.TInt), K.TBase(T.TFloat) -> K.TBase(T.TFloat)
+	| _,_ -> 
+		if from_t = to_t then to_t
+		else failwith ("Unable to escalate type "^(K.string_of_type from_t)
+							^" to type "^(K.string_of_type to_t))
 	end
 
 let init_val_from_type ret_type = begin match ret_type with
@@ -244,7 +271,7 @@ let next_sum_tmp_coll outs sum_type_k =
 		begin match outs with
 	  | [] -> failwith "sum_tmp collection required only if 'outs' is not empty!"
 	  |  x -> K.OutPC(colln, outs_k,sum_type_k),
-		        (colln, [], List.map snd outs)
+		        (colln, [], List.map snd outs, K.base_type_of sum_type_k)
 	  end
 (**/**)		
 (**********************************************************************)
@@ -363,8 +390,7 @@ let rec value_to_k3_expr (value_calc : V.expr_t) : K.type_t * K.expr_t =
 		let ret1_t, e1 = r1 in
 		let ret2_t, e2 = value_to_k3_expr c2 in
 		assert ((numerical_type ret1_t) && (numerical_type ret2_t));
-		let ret_t =	if ret1_t = ret2_t  then	  ret1_t
-						else                        K.TBase(T.TFloat) 
+		let ret_t = arithmetic_return_types ret1_t ret2_t
 		in 
 		ret_t, (op_fn e1 e2)
 	in	
@@ -543,16 +569,18 @@ let rec calc_to_k3_expr meta theta_vars_el calc :
 									
 			| Lift(lift_v, lift_calc) 	      -> 
 					let (lift_outs_el,ret_ve,lift_e),nm = rcr lift_calc in
-					assert(compatible_types (K.TBase(snd lift_v)) (type_of_kvar ret_ve));
-					let lift_ve = K.Var((fst lift_v),type_of_kvar ret_ve) in
+					let lift_ve = K.Var((fst lift_v),
+												(escalate_type (type_of_kvar ret_ve) 
+																	(K.TBase(snd lift_v)))) in
 					let lift_ret_ve = K.Var("v",K.TBase(T.TInt)) in
 					let expr =
+							let lift_lambda = lambda (lift_outs_el@[ret_ve]) 
+														(K.Tuple(lift_outs_el@[ret_ve;one_int_val]))
+							in
 							if lift_outs_el = [] then
-									K.Singleton(K.Tuple([lift_e;one_int_val]))
+									K.Singleton( K.Apply(lift_lambda,lift_e) )
 							else
-									K.Map(lambda (lift_outs_el@[ret_ve]) 
-														(K.Tuple(lift_outs_el@[ret_ve;one_int_val])),
-												lift_e)
+									K.Map(lift_lambda,lift_e)
 					in
 					((lift_outs_el@[lift_ve], lift_ret_ve, expr), nm)
 		end
@@ -568,8 +596,7 @@ let rec calc_to_k3_expr meta theta_vars_el calc :
 					assert (ListAsSet.seteq e_outs_el outs_el);
 					let e_ret_t = type_of_kvar e_ret_ve in
 					assert (numerical_type e_ret_t);
-					let new_ret_t =	if old_ret_t = e_ret_t  then old_ret_t
-													else                         K.TBase(T.TFloat) 
+					let new_ret_t = arithmetic_return_types old_ret_t e_ret_t 
 					in
 					((e_outs_el,e_ret_ve,e),new_meta,new_ret_t)					
 				in
@@ -632,8 +659,7 @@ let rec calc_to_k3_expr meta theta_vars_el calc :
 					let new_scope = ListAsSet.union old_scope e_outs_el in
 					let e_ret_t = type_of_kvar e_ret_ve in
 					assert (numerical_type e_ret_t);
-					let new_ret_t =	if old_ret_t = e_ret_t  then old_ret_t
-													else                         K.TBase(T.TFloat)
+					let new_ret_t = arithmetic_return_types old_ret_t e_ret_t
 					in
 					((e_outs_el,e_ret_ve,e),(new_meta,new_scope,new_ret_t))
 				in
@@ -789,6 +815,19 @@ let m3_stmt_to_k3_stmt (meta: meta_t) trig_args (m3_stmt: Plan.stmt_t) : K.state
 	in
 		(statement_expr, nm)
 
+
+(**[target_of_statement stmt]
+
+   Returns an K3 expression representing the collection being updated by the statement. 
+	@param stmt    A K3 statement.	
+	@return        The collection updated by [stmt].
+*)
+let target_of_statement (stmt : K.statement_t) : K.expr_t =
+	begin match stmt with
+		| K.Apply( _,lhs_collection)   -> lhs_collection
+		| K.Iterate( _,lhs_collection) -> lhs_collection
+		| _ -> failwith "Invalid statement expression"
+	end
 
 (**[m3_trig_to_k3_trig meta m3_trig]
 

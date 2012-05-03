@@ -317,7 +317,7 @@ struct
                | ((TBase(TFloat)), CInt(i)) -> CFloat(float_of_int i)
                | ((TBase(TInt)), CBool(true)) -> CInt(1)
                | ((TBase(TInt)), CBool(false)) -> CInt(0)
-               | _ -> failwith "binding invalid constant"
+               | _ -> failwith ("binding invalid constant "^(string_of_type vt)^" "^(string_of_const f))
              end
            in
              Env.add (fst th) var (BaseValue(const_val)), snd th
@@ -370,7 +370,7 @@ struct
 		(* arg, external function id, external function return type -> external fn *)
     let external_lambda ?(expr = None) fn_id arg fn_t = Eval(fun th db ->
         let fn v = 
-						let fn_args = begin match v with
+					let fn_args = begin match v with
 		        | BaseValue(c) -> [c]
 		        | Tuple t -> List.map const_of_value t
 		        | _ -> failwith "Arguments of external functions can be only values or tuple of values"
@@ -378,7 +378,11 @@ struct
 						try 
 							let external_fn = 
 								StringMap.find fn_id (!Arithmetic.arithmetic_functions) in
-							let ret_c = (snd external_fn) fn_args in
+							(*
+							print_endline ("External Function call "^fn_id^
+												" with arguments: "^(ListExtras.string_of_list string_of_const fn_args));
+							*)
+							let ret_c = external_fn fn_args (base_type_of fn_t) in
 							let ret_t = K3.TBase(Types.type_of_const ret_c) in
 							if( fn_t <> ret_t) then
 									 failwith ("Unexpected return value type for external function: "^

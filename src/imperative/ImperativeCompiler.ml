@@ -560,7 +560,7 @@ struct
    * -- multi_index_container types for in and out tiers.
    * -- pattern tag types and index typedefs.
    *)
-  let type_of_map_schema patterns (id, in_tl, out_tl) =
+  let type_of_map_schema patterns ((id, in_tl, out_tl, mapt):K3.map_t) =
     let k3vartype_of_m3vartype t = TBase(t) in
     let attri i = "__a"^(string_of_int i) in
     let fields_of_var_types tl = List.fold_left (fun (i,acc) ty ->
@@ -655,7 +655,7 @@ struct
 
 
   (* Returns a type env containing global variable, and type declarations *)
-  let type_env_of_declarations arg_types schema patterns =
+  let type_env_of_declarations arg_types (schema: K3.map_t list) patterns =
      List.fold_left (fun (vacc,tacc) (id,t,t_decls) ->
         vacc@[id,t], tacc@(List.flatten (List.map type_decl_of_type t_decls))) 
       (arg_types,[]) (List.map (type_of_map_schema patterns) schema)
@@ -2118,8 +2118,8 @@ end (* Typing *)
     in Lines(indirect_sc@direct_sc)
 
 
-  let declare_profiling schema =
-    cscl ~delim:"\n" (List.flatten (List.map (fun (id, in_tl, out_tl) ->
+  let declare_profiling (schema: K3.map_t list) =
+    cscl ~delim:"\n" (List.flatten (List.map (fun (id, in_tl, out_tl,_) ->
       match in_tl, out_tl with
         | [],[] -> []
         | (x as i),([] as o) | ([] as i),(x as o) ->
@@ -2131,8 +2131,8 @@ end (* Typing *)
            profile_map_update id x y])
      schema))
 
-  let profile_ivc schema map_ivc_ids stmt_name imp =
-    let is_schema_map id = List.exists (fun (x,y,z) -> x=id) schema in
+  let profile_ivc (schema : K3.map_t list) map_ivc_ids stmt_name imp =
+    let is_schema_map id = List.exists (fun (x,y,z,t) -> x=id) schema in
     let mii_ref = ref map_ivc_ids in 
     let bui_f _ _ i = match i with
       | IfThenElse(if_t,
@@ -2171,7 +2171,7 @@ end (* Typing *)
         None (Block(unit, [])) imp
     in !mii_ref, new_imp
 
-  let profile_stmt schema sid_offset ivc_offsets stmt_id
+  let profile_stmt (schema : K3.map_t list) sid_offset ivc_offsets stmt_id
                    trig_name iarg_decls iargs imp =
     let sid = string_of_int stmt_id in
     let prof_begin = Expr(unit, Fn(unit, Ext(Inline(
@@ -2195,7 +2195,7 @@ end (* Typing *)
         Expr(unit, Fn(unit, Ext(Apply(stmt_name)), iargs)); 
         prof_end]
 
-  let profile_trigger sid_offset ivc_offsets dbschema schema (event,imp) =
+  let profile_trigger sid_offset ivc_offsets dbschema (schema : K3.map_t list) (event,imp) =
     let trig_name = Schema.name_of_event event in
     let iarg_decls, iargs = List.split (List.map
         (fun (a,ty) ->
@@ -2269,9 +2269,9 @@ end (* Typing *)
 
   (* Generates source code for map declarations, based on the
    * type_of_map_schema function above *)
-  let declare_maps_of_schema schema patterns =
-    let ty_l, i_l = List.fold_left (fun (ty_acc, i_acc) (id,in_tl,out_tl) ->
-        let (_,t,t_decls) = type_of_map_schema patterns (id, in_tl, out_tl) in 
+  let declare_maps_of_schema (schema: K3.map_t list) patterns =
+    let ty_l, i_l = List.fold_left (fun (ty_acc, i_acc) (id,in_tl,out_tl,mapt) ->
+        let (_,t,t_decls) = type_of_map_schema patterns (id, in_tl, out_tl, mapt) in 
         let imp_decl = match t with 
           | Host(TBase(TFloat)) -> 
             Decl(unit, (id,t), Some(Const(unit, CFloat(0.0)))) 
@@ -2283,7 +2283,7 @@ end (* Typing *)
       ([], []) schema
     in
     (* Declare map size constraint macros for garbage collection. *)
-    let size_l = List.fold_left (fun macro_acc (id, in_tl, _) ->
+    let size_l = List.fold_left (fun macro_acc (id, in_tl, _, _) ->
         if in_tl <> [] then macro_acc@[Lines [
           "#ifndef "^id^"_map_SIZE";
           "#define "^id^"_map_SIZE DEFAULT_MAP_SIZE";
@@ -2405,7 +2405,7 @@ end (* Typing *)
     in x, cscl y
   
   (* Main function generation *)
-  let declare_main opts stream_ids map_schema source_vars
+  let declare_main opts stream_ids (map_schema : K3.map_t list) source_vars
                    (trig_reg_info, ivc_counters) tlqs =
     let mt = Target(Type("stream_multiplexer")) in
     let dt = Target(Type("stream_dispatcher")) in
@@ -2443,7 +2443,7 @@ end (* Typing *)
         "  dispatcher.add_trigger("^args^");") trig_reg_info
       in
       let map_outputs opts_id archive_id =
-        List.flatten (List.map (fun (map_id,_,_) ->
+        List.flatten (List.map (fun (map_id,_,_,_) ->
           ["  if ( (!debug && "^opts_id^".is_output_map( \""^
                                             (String.escaped map_id)^"\" )) "^
                   " || (debug && "^opts_id^".is_traced_map( \""^
