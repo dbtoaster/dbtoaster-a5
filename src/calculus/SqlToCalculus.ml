@@ -250,7 +250,9 @@ and calc_of_condition (tables:Sql.table_t list) (cond:Sql.cond_t):
          | Sql.Not(Sql.Exists(q)) ->
             begin match rcr_q q with
             | [_,q_calc_unlifted] ->
-            let (q_val,q_calc) = lift_if_necessary q_calc_unlifted in
+            let (q_val,q_calc) = 
+               lift_if_necessary (CalcRing.mk_val (AggSum([],q_calc_unlifted)))
+            in
                CalcRing.mk_val (AggSum([], 
                   CalcRing.mk_prod [q_calc; 
                      CalcRing.mk_val (Cmp(Eq, q_val, mk_int 0))]
@@ -260,7 +262,9 @@ and calc_of_condition (tables:Sql.table_t list) (cond:Sql.cond_t):
          | Sql.Exists(q) ->
             begin match rcr_q q with
             | [_,q_calc_unlifted] ->
-            let (q_val,q_calc) = lift_if_necessary q_calc_unlifted in
+            let (q_val,q_calc) = 
+               lift_if_necessary (CalcRing.mk_val (AggSum([],q_calc_unlifted)))
+            in
                CalcRing.mk_val (AggSum([], 
                   CalcRing.mk_prod [q_calc; 
                      CalcRing.mk_val (Cmp(Gt, q_val, mk_int 0))]
