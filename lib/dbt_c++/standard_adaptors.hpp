@@ -123,7 +123,8 @@ namespace dbtoaster {
           string field = copy_range<std::string>(*field_it);
           istringstream iss(field);
           bool ins; unsigned int o;
-          int i,y,m,d; double f;
+          int y,m,d; double f;
+          long i;
           vector<string> date_fields;
           switch (*schema_it) {
             case 'e': iss >> ins; insert = ins; break;

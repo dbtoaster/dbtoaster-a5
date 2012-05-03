@@ -404,7 +404,12 @@ struct
 
     begin match t with
       Host K.TUnit -> "void"
-    | Host(K.TBase(base_type)) -> Types.string_of_type base_type
+    | Host(K.TBase(TFloat)) -> "double"
+    | Host(K.TBase(TInt)) -> "long"
+    | Host(K.TBase(TString)) -> "string"
+    | Host(K.TBase(TBool)) -> "bool"
+    | Host(K.TBase(TAny)) -> "??"
+    | Host(K.TBase(TExternal(ext_type))) -> ext_type
     | Host(K.TTuple(tl)) -> 
         if List.length tl = 1 then of_host_list tl
         else mk_tuple_ty (List.map string_of_type (types_of_host_list tl))
@@ -1185,20 +1190,27 @@ end (* Typing *)
           acc@["any_cast<"^ty^">("^evt_arg^"["^(string_of_int i)^"])"]))
         (0,[]) trig_types)
       in 
-      [Lines ["void unwrap_"^trig_name^"(const event_data& e, "^
+      [Lines (["void unwrap_"^trig_name^"(const event_data& e, "^
                 "shared_ptr<dbt_trigger_log> logger) {";
-              "  try {";
+              "  try {";] @
+              ( if Debug.active "CPP-TRACE" then [
+                  "cout << \""^trig_name^": \" "^
+                  (String.concat " << \",\" " 
+                     (List.map (fun x -> "<< "^x) evt_fields))^" << endl;";
+                  ]
+                else [])
+              @ [ 
               "    if ( logger && logger->has_sink() ) {";
               "      (logger->log_event("^(quote rel)^", "^evt_type^"))"^
                     " << setprecision(15) "^
                      (String.concat " << \",\" " 
-                        (List.map (fun x -> "<<"^x) evt_fields))^" << endl;";
+                        (List.map (fun x -> "<< "^x) evt_fields))^" << endl;";
               "    }";
               "    on_"^trig_name^"("^(String.concat "," evt_fields)^");";
               "  } catch (boost::bad_any_cast& bc) {";
               "    cout << \"bad cast on "^trig_name^": \" << bc.what() << endl;";
               "  }";
-              "}"; ""]]
+              "}"; ""])]
     in trigger_fn@unwrapper
 
 
@@ -2462,13 +2474,19 @@ end (* Typing *)
         @(map_outputs "run_opts" "oa")@
         ["}";
          "";
-         "void trace(const path& trace_file, bool debug) {";
-         "  if(strcmp(trace_file.c_str(), \"-\")){";
-         "    std::ofstream ofs(trace_file.c_str());";
-         "    trace(ofs, debug);";
-         "  } else {";
-         "    trace(cout, debug);";
-         "  }";
+         "void trace(const path& trace_file, bool debug) {";] @
+         (if Debug.active "CPP-TRACE"
+         then [
+            "  trace(cout, false);"
+         ]
+         else [
+            "  if(strcmp(trace_file.c_str(), \"-\")){";
+            "    std::ofstream ofs(trace_file.c_str());";
+            "    trace(ofs, debug);";
+            "  } else {";
+            "    trace(cout, debug);";
+            "  }";
+         ]) @ [
          "}";
          "";
          "void process_event(stream_event& evt) {";
