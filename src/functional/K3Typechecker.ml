@@ -555,7 +555,8 @@ let rec typecheck_expr e : K.type_t =
 				let aux sch v_t ke ve =
 					if (promote v_t (recur ve)) = v_t then
 						try tc_schema_exprs sch (List.map recur ke)
-						with Failure x -> failwith ("map value update: "^x)
+						with Failure x | Invalid_argument x
+						    -> failwith ("map value update: "^x)
 					else failwith "map value update: invalid update value expression"
 				in
 				begin match me with
@@ -569,7 +570,8 @@ let rec typecheck_expr e : K.type_t =
       | K.PCElementRemove(me,ine,oute)     ->
             let aux sch ke =
                try tc_schema_exprs sch (List.map recur ke)
-                  with Failure x -> failwith ("map element remove: "^x)
+                  with Failure x | Invalid_argument x
+                      -> failwith ("map element remove: "^x)
             in 
             begin match me with
                | K.SingletonPC(id,t) -> K.TUnit

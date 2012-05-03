@@ -18,6 +18,9 @@ let varIdType_to_k3_idType (vars : T.var_t list) = List.map (fun (v,t) -> v,K.TB
 let varIdType_to_k3_expr   (vars : T.var_t list) = List.map (fun (v,t) -> K.Var(v,K.TBase(t))) vars
 let k3_idType_to_k3_expr   (vars : (K.id_t * K.type_t) list) = List.map (fun (v,t) -> K.Var(v,t)) vars
 let k3_idType_to_k3_type   (vars : (K.id_t * K.type_t) list) = List.map snd vars
+let k3_idType_to_varIdType (vars : K.expr_t list) = 
+   List.map (function | (K.Var(v,K.TBase(t))) -> (v,t) 
+                      | _ ->  failwith "expected variable of base type") vars
 let k3_expr_to_k3_idType   (var_el : K.expr_t list ) =
 	List.map (fun v_e -> 
 							begin match v_e with
@@ -621,7 +624,10 @@ let rec calc_to_k3_expr meta theta_vars_el calc :
 					(* corresponding to the first term.*)
 					(* 3. Update the temporary collection with the contents of the collections *)
 					(* corresponding to the rest of the sum terms.*)
-					let sum_coll,sum_map = next_sum_tmp_coll outs ret_t in
+					let result_outs = 
+					  ListAsSet.diff outs (k3_idType_to_varIdType theta_vars_el) in
+					
+					let sum_coll,sum_map = next_sum_tmp_coll result_outs ret_t in
 					
 					let reset_update = 
 							K.PCElementRemove(sum_coll, [], outs_el) in

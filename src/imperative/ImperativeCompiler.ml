@@ -2474,26 +2474,26 @@ end (* Typing *)
         @(map_outputs "run_opts" "oa")@
         ["}";
          "";
-         "void trace(const path& trace_file, bool debug) {";] @
+         "void trace(const path& trace_file, bool debug) {";
+         "  if(strcmp(trace_file.c_str(), \"-\")){";
+         "    std::ofstream ofs(trace_file.c_str());";
+         "    trace(ofs, debug);";
+         "  } else {";
+         "    trace(cout, debug);";
+         "  }";
+         "}";
+         "";
+         "void process_event(stream_event& evt) {";]@
          (if Debug.active "CPP-TRACE"
          then [
             "  trace(cout, false);"
          ]
          else [
-            "  if(strcmp(trace_file.c_str(), \"-\")){";
-            "    std::ofstream ofs(trace_file.c_str());";
-            "    trace(ofs, debug);";
-            "  } else {";
-            "    trace(cout, debug);";
+            "  if ( run_opts.is_traced() ) {";
+            "    path trace_file = run_opts.get_trace_file();";
+            "    trace(trace_file, true);";
             "  }";
-         ]) @ [
-         "}";
-         "";
-         "void process_event(stream_event& evt) {";
-         "  if ( run_opts.is_traced() ) {";
-         "    path trace_file = run_opts.get_trace_file();";
-         "    trace(trace_file, true);";
-         "  }";
+         ])@[
          "  dispatcher.dispatch(evt);";
          "}";
          ""] 
