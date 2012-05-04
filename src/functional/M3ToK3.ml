@@ -560,15 +560,18 @@ let rec calc_to_k3_expr meta theta_vars_el calc :
 					
 			| AggSum( agg_vars0, aggsum_calc ) ->
 					(* Convert group by variables to K3 variables. *)
-					let agg_vars0_el = varIdType_to_k3_expr agg_vars0 in
+					let agg_vars0_el = ListAsSet.diff (varIdType_to_k3_expr agg_vars0) theta_vars_el in
 					
 					let (aggsum_outs_el,ret_ve,aggsum_e),nm = rcr aggsum_calc in
 					
 					(* Make sure that all the group by variables are included in the output*)
 					(* schema of the "aggsum" expression. *)
 					if not ( (ListAsSet.diff agg_vars0_el aggsum_outs_el) = []) then
+						(print_endline(CalculusPrinter.string_of_expr calc);
+						print_endline("GB vars: "^K3.string_of_exprs agg_vars0_el);
+						print_endline("AggSum outs: "^K3.string_of_exprs aggsum_outs_el);
 						failwith ("M3ToK3: The group by variables of aggsum should be included in "^
-									 " the schema of the aggsum expression.");
+									 " the schema of the aggsum expression."));
 					let agg_vars_el = ListAsSet.inter agg_vars0_el aggsum_outs_el in
 										
 					let agg_fn = aggregate_fn aggsum_outs_el ret_ve in
@@ -611,8 +614,12 @@ let rec calc_to_k3_expr meta theta_vars_el calc :
 				let prepare_fn old_meta old_ret_t c = 
 					let (e_outs_el,e_ret_ve,e),new_meta = rcr2 old_meta c in
 					if not (ListAsSet.seteq e_outs_el outs_el) then
+						(print_endline("Expression:\n"^CalculusPrinter.string_of_expr calc);
+						 print_endline("Scope: "^K3.string_of_exprs theta_vars_el);
+						 print_endline("Output vars: "^K3.string_of_exprs e_outs_el);
+						 print_endline("Sum output vars: "^K3.string_of_exprs outs_el);
 						failwith ("M3ToK3: The schema of a sum term should be the same as "^
-									 "the schema of the entire sum.");
+									 "the schema of the entire sum."));
 					let e_ret_t = type_of_kvar e_ret_ve in
 					let new_ret_t = arithmetic_return_types old_ret_t e_ret_t 
 					in
