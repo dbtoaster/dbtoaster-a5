@@ -5,17 +5,7 @@
       :toplevels => {
         "QUERY11" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query11_100M.csv"),
-        }
-      }
-    },
-    "tiny" => {
-      :subs => [ [/test\/data\/tpch_100M\//, "test/data/tpch_tiny/"],
-                 [/0\.001/, "0.01" ] ],
-      :toplevels => {
-        "QUERY11" => {
-          :type => :onelevel,
-          :expected => results_file("test/results/tpch/query11_tiny.csv")
+          :expected => results_file("test/results/tpch/query11.csv"),
         }
       }
     }
