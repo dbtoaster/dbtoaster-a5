@@ -535,7 +535,7 @@ let rec bind_select_vars ?(parent_sources = [])
          (sn, (match s with Table(_) -> s | SubQ(subq) -> SubQ(rcr_q subq)))
       ) inner_sources,
       rcr_c conds,
-			List.map (fun (s,v,t) -> 
+      List.map (fun (s,v,t) -> 
         ((Some(fst (source_for_var (s,v,t) tables sources))),
          v,
          var_type (s,v,t) tables sources)	

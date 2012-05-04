@@ -95,6 +95,9 @@ let cast_query_to_aggregate (tables:Sql.table_t list)
          Debug.print "LOG-SQL-TO-CALC" (fun () -> 
             "Casting to Aggregate: "^(Sql.string_of_select query)
          );
+         if gb_vars <> [] then (
+            Sql.error "Non-aggregate query with group-by variables";
+         );
          (  targets @ ["COUNT", Sql.Aggregate(  Sql.SumAgg, 
                                                 (Sql.Const(CInt(1))))],
             (List.map (fun (target_name, target_expr) ->
@@ -112,6 +115,86 @@ let cast_query_to_aggregate (tables:Sql.table_t list)
       )
    in
       (new_targets, sources, cond, new_gb_vars)
+
+(**
+   [normalize_agg_target_expr gb_vars expr]
+   
+   Transform a SQL aggregate expression into a calculus-friendly form.  This 
+   entails rewriting the expression so that terms that appear outside of the
+   aggregate(s) follow these properties: 
+   - Variables appearing outside of the aggregate are all group-by variables.
+     (this isn't so much a rewrite as a sanity check, as the SQL expression is
+     invalid otherwise).
+   - Products of aggregates and non-aggregates have the non-aggregate on the
+     right-hand side so that (group-by) variables appearing in the non-aggregate 
+     terms will be bound by the aggregate
+   - A sum/subtraction operation with at least one non-aggregate child must 
+     have a parent that is a product with an aggregate (so that the sum will 
+     appear on the right hand side and have all variables bound).  At present,
+     we will not support sums at the root level (because that makes the default 
+     value of the root map something other than zero), although it should be 
+     easy to support this once we have support for toplevel queries defined as 
+     arbitrary expressions.
+   
+   @param gb_vars The group-by variables of the select statement in the context
+                  of which [expr] is being evaluated
+   @param expr    A SQL expression with an aggregate in it.
+   @return        The normalized form of [expr].
+*)
+let rec normalize_agg_target_expr ?(vars_bound = false) gb_vars expr =
+   let rcr ?(b = vars_bound) e =
+      normalize_agg_target_expr ~vars_bound:b gb_vars e
+   in
+   begin match expr with 
+     | Sql.Const(_) -> expr
+     | Sql.Aggregate(_,_) -> expr
+         
+     | Sql.Var(v)   -> 
+         if not (List.mem v gb_vars) then (
+            Sql.error ("Non Group-by Variable "^(Sql.string_of_var v)^
+                       " used outside of an aggregate expression")
+         ) else expr
+         
+     | Sql.SQLArith(lhs, op, rhs) ->
+         let rcr_into_arithmetic bind = 
+            let new_lhs = rcr lhs in
+            let new_rhs = if bind then rcr ~b:true rhs else rcr rhs in
+            Sql.SQLArith(new_lhs, op, new_rhs)
+         in
+         begin match op with
+            | Sql.Sum | Sql.Sub ->
+               (* Permit things like Sum(A) * (1 + 2), but not things like
+                  1 + Sum(A) *)
+               if (vars_bound) &&
+                  (not (Sql.is_agg_expr lhs)) &&
+                  (not (Sql.is_agg_expr rhs))
+               then rcr_into_arithmetic false
+               else Sql.error ("Sums are not supported outside of aggregates.")
+            | Sql.Prod ->
+               (* If the lhs (or a parent) binds the group by variables, then
+                  we're set. *)
+               if vars_bound || (Sql.is_agg_expr lhs)
+               then rcr_into_arithmetic true
+               (* Otherwise, if the rhs is an aggregate, then we can just 
+                  flip the order of ops (This is straight product, which 
+                  commutes) *)
+               else if Sql.is_agg_expr rhs
+                    then Sql.SQLArith(rcr rhs, op, rcr ~b:true lhs)
+               (* Finally, if we get to this point, something's wrong, because
+                  we should have seen an aggregate by now *)
+                    else Sql.error ("Non-aggregate masqurading as aggregate");
+            | Sql.Div ->
+               (* Pass these through unchanged.  We ensure ordering while doing 
+                  the lifting in calc_of_expr *)
+               rcr_into_arithmetic false
+         end
+     | Sql.Negation(sub) -> Sql.Negation(rcr sub)
+     
+     | Sql.NestedQ(_) ->
+         Sql.error ("Nested subqueries not supported outside of aggregates.")
+              
+   end
+
 (**
    [calc_of_query tables stmt]
    
@@ -201,7 +284,10 @@ let rec calc_of_query ?(query_name = None)
             let tgt_var = (tgt_name, (Sql.expr_type tgt_expr tables sources)) in
             CalcRing.mk_val (Lift(tgt_var, calc_of_sql_expr tables tgt_expr))
    ) noagg_tgts) in
-   List.map (fun (tgt_name, tgt_expr) ->
+   List.map (fun (tgt_name, unnormalized_tgt_expr) ->
+      let tgt_expr = 
+         normalize_agg_target_expr gb_vars unnormalized_tgt_expr
+      in
       Debug.print "LOG-SQL-TO-CALC" (fun () -> 
          "Compiling aggregate target: "^(tgt_name)^
          " with expression: "^(Sql.string_of_expr tgt_expr)
@@ -354,8 +440,8 @@ and calc_of_condition (tables:Sql.table_t list) (cond:Sql.cond_t):
                   CalcRing.mk_prod [not_calc; 
                      CalcRing.mk_val (Cmp(Eq, not_val, mk_int 0))]
                ))
-         | Sql.ConstB(b) -> 
-            CalcRing.mk_val (Value(mk_bool b))
+         | Sql.ConstB(true)  -> CalcRing.one
+         | Sql.ConstB(false) -> CalcRing.zero
       end
 
 (**
@@ -417,17 +503,42 @@ and calc_of_sql_expr ?(materialize_query = None)
 			let t1 = type_of_expr ce1 in
          let t2 = type_of_expr ce2 in
 			let (e2_val, e2_calc) = lift_if_necessary ce2 in
+			
+			(* The ordering of ce1/e1_calc and e2_calc needs to pay attention to
+			   which variables are bound where.  Specifically, if e2 is an 
+			   aggregate expression and e1 is not (i.e., the entire thing is an
+			   aggregate expression, but there are computations going on outside
+			   of the aggregate), then it's possible that e2 will bind group by
+			   variables that are used in e1.  In this case, we need to flip the
+			   order of the lift operations.  
+			   
+			   The equivalent operations are performed for the other arithmetic
+			   operators in [normalize_agg_target_expr] above, since the correct
+			   rewrite behavior for some of those can not be determined locally.
+			*)
+			let needs_order_flip = 
+			   (not (Sql.is_agg_expr e1)) && (Sql.is_agg_expr e2)
+         in 
+         			
 			if t1 = TInt && t2 = TInt then
 				let (e1_val, e1_calc) = lift_if_necessary ce1 in
 				CalcRing.mk_val (AggSum([], 
-	            CalcRing.mk_prod [e1_calc; e2_calc; 
+	            CalcRing.mk_prod [
+	               ( if needs_order_flip 
+	                 then CalcRing.mk_prod [e2_calc; e1_calc]
+	                 else CalcRing.mk_prod [e1_calc; e2_calc]
+	               );
 	               CalcRing.mk_val (Value(ValueRing.mk_val (
 	                  AFn("/", [e1_val;e2_val], TInt)
 	               )))]
 	         ))
 			else
 	         CalcRing.mk_val (AggSum([], 
-	            CalcRing.mk_prod [ce1; e2_calc; 
+	            CalcRing.mk_prod [
+	               ( if needs_order_flip 
+	                 then CalcRing.mk_prod [e2_calc; ce1]
+	                 else CalcRing.mk_prod [ce1; e2_calc]
+	               );
 	               CalcRing.mk_val (Value(ValueRing.mk_val (
 	                  AFn("/", [e2_val], TFloat)
 	               )))]

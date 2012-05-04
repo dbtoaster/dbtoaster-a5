@@ -1,0 +1,13 @@
+{
+  :path => "test/queries/simple/r_count.sql",
+  :datasets => {
+    "standard" => {
+      :toplevels => {
+        "SUM_AGGREGATE_1" => {
+          :type => :singleton,
+          :expected => 10.0
+        }
+      }
+    }
+  }
+}
