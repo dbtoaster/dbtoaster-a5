@@ -308,17 +308,18 @@ let orderbook_generator params =
     * otherwise action, order_id, broker_id-price-volume triple *)
    let ff l i = float_of_string (List.nth l i) in
    let fi l i = int_of_string (List.nth l i) in
+	 let fs l i = List.nth l i in
    let get_order_fields tup =
       let t = Str.split (Str.regexp ",") tup in
       let ts,i,a,v,p =
-        (ff t 0, fi t 1, List.nth t 2, ff t 3, ff t 4)
+        (ff t 0, fi t 1, fs t 2, ff t 3, ff t 4)
       in if num_brokers > 0 then
            let broker_id = 
              if deterministic_broker 
-             then float_of_int (i mod num_brokers)
-             else float_of_int(Random.int(num_brokers))
-           in (a,i,[ts;float_of_int i;broker_id;v;p])
-         else a,i,[ts;float_of_int i;v;p]
+             then i mod num_brokers
+             else Random.int(num_brokers)
+           in (a,i,[CFloat(ts); CInt(i);CInt(broker_id);CFloat(v);CFloat(p)])
+         else a,i,[CFloat(ts); CInt(i);CFloat(v);CFloat(p)]
    in
    
    (* helpers for trigger input construction *)
@@ -334,8 +335,7 @@ let orderbook_generator params =
 
    let insert tuple = (AInsert, tuple) in
    let delete tuple = (ADelete, tuple) in
-   let const_t tuple = List.map (fun x -> CFloat(x)) tuple in
-   
+	   
    (* Common actions across book types *)
    let adaptor_common action order_id tuple =
       let existing_tuple = if Hashtbl.mem book_orders order_id
@@ -367,8 +367,7 @@ let orderbook_generator params =
        | (_,_) -> failwith ("invalid orderbook message type "^action)
    in
    let add_to_book order_id tuple =
-      let ctuple = const_t tuple
-      in Hashtbl.replace book_orders order_id ctuple; [insert ctuple] 
+      Hashtbl.replace book_orders order_id tuple; [insert tuple] 
    in
    match book_type with
     | "bids" -> (fun tuple ->
@@ -376,7 +375,7 @@ let orderbook_generator params =
       begin match action with
        | "B" -> add_to_book order_id t
        | "S" -> []
-       | _ -> adaptor_common action order_id (const_t t)
+       | _ -> adaptor_common action order_id t
       end)
     
     | "asks" -> (fun tuple ->
@@ -384,7 +383,7 @@ let orderbook_generator params =
       begin match action with
        | "B" -> []
        | "S" -> add_to_book order_id t
-       | _ -> adaptor_common action order_id (const_t t)
+       | _ -> adaptor_common action order_id t
       end)
     
     | _ -> failwith ("invalid orderbook type: "^book_type)
