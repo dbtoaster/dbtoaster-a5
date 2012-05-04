@@ -184,7 +184,8 @@ class InterpreterUnitTest < GenericUnitTest
       @runtime = "unknown"
       qin.each do |l|
         case l
-          when /Processing time: ([0-9]+\.?[0-9]*)/ then @runtime = $1.to_f
+          when /Processing time: ([0-9]+\.?[0-9]*)(e-?[0-9]+)?/ then 
+            @runtime = "#{$1}#{$2}".to_f
           when /([a-zA-Z0-9_-]+): (.*)$/ then
             query = $1;
             results = $2;

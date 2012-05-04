@@ -71,6 +71,48 @@ let var_of_sql_var ((rel,vn,vt):Sql.sql_var_t):var_t =
    end
 
 (**
+   [cast_query_to_aggregate tables query]
+   
+   Cast an arbitrary query into an aggregate query.  If the query is already an
+   aggregate query, it is returned unchanged.  Otherwise, the query is turned
+   into a count query.
+   @param tables The schema of the database on which the query is being run
+   @param stmt   A SQL query
+   @return       [stmt] rewritten to be an aggregate query.
+*)
+let cast_query_to_aggregate (tables:Sql.table_t list)
+                            (query:Sql.select_t):Sql.select_t =
+   let (targets,sources,cond,gb_vars) = query in
+   let (new_targets,new_gb_vars) = 
+      if Sql.is_agg_query query 
+      then (
+         Debug.print "LOG-SQL-TO-CALC" (fun () -> 
+            "Compiling Unchanged: "^(Sql.string_of_select query)
+         );
+         (targets, gb_vars)
+      )
+      else (
+         Debug.print "LOG-SQL-TO-CALC" (fun () -> 
+            "Casting to Aggregate: "^(Sql.string_of_select query)
+         );
+         (  targets @ ["COUNT", Sql.Aggregate(  Sql.SumAgg, 
+                                                (Sql.Const(CInt(1))))],
+            (List.map (fun (target_name, target_expr) ->
+               let target_source = begin match target_expr with
+                  | Sql.Var(v_source,v_name,_) when v_name = target_name ->
+                     v_source
+                  | _ -> None
+               end in
+               (  target_source, 
+                  target_name, 
+                  (Sql.expr_type target_expr tables sources)
+               )
+            ) targets)
+         )
+      )
+   in
+      (new_targets, sources, cond, new_gb_vars)
+(**
    [calc_of_query tables stmt]
    
    Translate a SQL query to the corresponding calculus expression(s).  If the 
@@ -91,13 +133,19 @@ let var_of_sql_var ((rel,vn,vt):Sql.sql_var_t):var_t =
 *)
 let rec calc_of_query ?(query_name = None)
                       (tables:Sql.table_t list) 
-                      ((targets,sources,cond,gb_vars):Sql.select_t): 
+                      (query:Sql.select_t): 
                       (string * C.expr_t) list = 
+   let (targets,sources,cond,gb_vars) = 
+      cast_query_to_aggregate tables query 
+   in
+   Debug.print "LOG-SQL-TO-CALC" (fun () -> 
+      "Cast query is now : "^
+      (Sql.string_of_select (targets,sources,cond,gb_vars))
+   );
    let source_calc = calc_of_sources tables sources in
    let cond_calc = calc_of_condition tables cond in
    let (agg_tgts, noagg_tgts) = 
-      List.partition (fun (_,expr) -> Sql.is_agg_expr expr)
-                     targets in
+      List.partition (fun (_,expr) -> Sql.is_agg_expr expr) targets in
    let check_gb_var_list tgt_name tgt_expr = 
       match tgt_expr with
          (* If the target expression is just a variable, then the variable might 
@@ -117,6 +165,10 @@ let rec calc_of_query ?(query_name = None)
                (tgt_name = cmp_name) && (cmp_source = None)
             ) gb_vars
    in
+   (* Generate expressions to pull the group-by targets into the schema. 
+      This gets used below, within the generation of the aggregate targets, 
+      since each aggregate target might need to include this expression multiple
+      times. (e.g., if a single target composes multiple aggregates) *)
    let noagg_calc = CalcRing.mk_prod (List.map (fun (base_tgt_name, tgt_expr) ->
       if not (check_gb_var_list base_tgt_name tgt_expr) then
          Sql.error ("Non-aggregate term '"^base_tgt_name^"' ("^
@@ -150,17 +202,40 @@ let rec calc_of_query ?(query_name = None)
             CalcRing.mk_val (Lift(tgt_var, calc_of_sql_expr tables tgt_expr))
    ) noagg_tgts) in
    List.map (fun (tgt_name, tgt_expr) ->
+      Debug.print "LOG-SQL-TO-CALC" (fun () -> 
+         "Compiling aggregate target: "^(tgt_name)^
+         " with expression: "^(Sql.string_of_expr tgt_expr)
+      );
       (tgt_name, 
          calc_of_sql_expr ~materialize_query:(Some(fun agg_type agg_calc ->
+            Debug.print "LOG-SQL-TO-CALC" (fun () -> 
+               "Materializing target: "^(tgt_name)^
+               " with calculus: "^(Calculus.string_of_expr agg_calc)
+            );
             begin match agg_type with
                | Sql.SumAgg -> 
                   CalcRing.mk_val 
                      (AggSum(
+                        (** Get the schema of the lifted variables as follows:
+                           1 - If the query is unnamed (i.e., the root query)
+                               then we take the gb variable name as written.
+                               If the gb variable is unbound, we take it as
+                               written.
+                           2 - If the query is unnamed and the gb variable is
+                               bound to a source, we include the source's name
+                               in the variable's name
+                           3 - Otherwise, we've rebound the variable name above,
+                               when coputing noagg_calc, and we include the
+                               query name in the variable's name
+                           Note that all of this must match the construction
+                           of noagg_calc above.
+                        *)
                         List.map (fun (vs,vn,vt) ->
-                           var_of_sql_var (
-                              if query_name = None then (vs,vn,vt)
-                              else (query_name,vn,vt)
-                           )
+                           if query_name = None
+                           then if vs = None 
+                                then (vn,vt)
+                                else var_of_sql_var (vs,vn,vt)
+                           else var_of_sql_var (query_name,vn,vt)
                         ) gb_vars,
                         CalcRing.mk_prod 
                            [source_calc; cond_calc; agg_calc; noagg_calc]

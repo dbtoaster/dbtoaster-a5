@@ -4,7 +4,7 @@ class OcamlDB < Hash
   def initialize(db_string)
     tok = Tokenizer.new(
       db_string,
-      /\[|\]|->|[a-zA-Z][a-zA-Z0-9_]*|[0-9]+.[0-9]*|<pat=[^>]*>|;/
+      /\[|\]|->|[a-zA-Z][a-zA-Z0-9_]*|[0-9]+\.[0-9]*|[0-9]|<pat=[^>]*>|;/
     )
     raise "Not A Database (Got '#{tok.peek}')" unless tok.peek == "[";
     tree = TreeBuilder.new(tok) do |tree, t|
