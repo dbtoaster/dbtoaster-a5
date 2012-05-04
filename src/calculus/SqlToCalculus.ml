@@ -52,7 +52,19 @@ let lift_if_necessary ?(t="agg") (calc:C.expr_t):
    are properly bound
 *)
 let rec preprocess ((tables, queries):Sql.file_t): Sql.file_t =
-   (tables, List.map (fun q -> Sql.bind_select_vars q tables) queries)
+   try 
+      (tables, List.map (fun q -> Sql.bind_select_vars q tables) queries)
+   with 
+      | Sql.Variable_binding_err(var,0) ->
+         Sql.error (
+            "Unable to bind variable "^var^"; No matching variables in scope"
+         )
+      | Sql.Variable_binding_err(var,x) ->
+         Sql.error (
+            "Unable to bind variable "^var^"; The name is ambiguous, try "^ 
+            "using a fully qualified name."
+         )
+      
 
 (**
    [var_of_sql_var var]
