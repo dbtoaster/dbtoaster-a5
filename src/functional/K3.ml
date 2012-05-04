@@ -727,9 +727,9 @@ type statement_t = expr_t
 type trigger_t = Schema.event_t * statement_t list
 (** [Query name] x [Query expr] *)
 type toplevel_query_t = string * expr_t
-type prog_t = schema_t * trigger_t list * toplevel_query_t list
+type prog_t = Schema.t * schema_t * trigger_t list * toplevel_query_t list
     
-let code_of_prog (((maps,_),triggers,_):prog_t): string = (
+let code_of_prog ((_,(maps,_),triggers,_):prog_t): string = (
    "--------------------- MAPS ----------------------\n"^
    (ListExtras.string_of_list ~sep:"\n\n" (fun (mapn, mapiv, mapov, mapt) ->
       "DECLARE "^mapn^"("^(Types.string_of_type mapt)^")"^

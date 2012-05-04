@@ -134,8 +134,8 @@ let compile_triggers (trigs:K3.trigger_t list) : code_t list =
       in trigger event stmts)
     trigs
     
-let compile_k3_to_code (dbschema:Schema.t)
-                       (((schema,patterns),trigs,toplevel_queries) : K3.prog_t): 
+let compile_k3_to_code ((dbschema,(schema,patterns),trigs,
+                         toplevel_queries) : K3.prog_t): 
                           code_t =
    let rels = List.map (fun (reln,relv,_) -> (reln,relv))
                        (Schema.rels dbschema) in
@@ -148,8 +148,8 @@ let compile_k3_to_code (dbschema:Schema.t)
 
 ;;
 
-let compile_query_to_string schema prog: string =
-  to_string (compile_k3_to_code schema prog)
+let compile_query_to_string prog: string =
+  to_string (compile_k3_to_code prog)
 
 end
 

@@ -520,10 +520,15 @@ and calc_of_sql_expr ?(materialize_query = None)
 			let needs_order_flip = 
 			   (not (Sql.is_agg_expr e1)) && (Sql.is_agg_expr e2)
          in 
+         
+         let nested_schema = 
+            (ListAsSet.union (snd (Calculus.schema_of_expr ce1))
+                             (snd (Calculus.schema_of_expr ce2)))
+         in
          			
 			if t1 = TInt && t2 = TInt then
 				let (e1_val, e1_calc) = lift_if_necessary ce1 in
-				CalcRing.mk_val (AggSum([], 
+				CalcRing.mk_val (AggSum(nested_schema, 
 	            CalcRing.mk_prod [
 	               ( if needs_order_flip 
 	                 then CalcRing.mk_prod [e2_calc; e1_calc]
@@ -534,7 +539,7 @@ and calc_of_sql_expr ?(materialize_query = None)
 	               )))]
 	         ))
 			else
-	         CalcRing.mk_val (AggSum([], 
+	         CalcRing.mk_val (AggSum(nested_schema, 
 	            CalcRing.mk_prod [
 	               ( if needs_order_flip 
 	                 then CalcRing.mk_prod [e2_calc; ce1]

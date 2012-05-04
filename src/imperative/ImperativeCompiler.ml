@@ -2707,7 +2707,7 @@ struct
               stream_id_decls; source_and_adaptor_decls; main_fn;]
       )
 
-  let imp_of_k3 opts ((schema,patterns),trigs,tlqs) sources:imp_prog_t =
+  let imp_of_k3 opts (sources,(schema,patterns),trigs,tlqs):imp_prog_t =
       (  (  schema,patterns,
             compile_triggers opts (Schema.rels sources) 
                              ((schema,patterns),trigs,tlqs) ),
@@ -2715,10 +2715,10 @@ struct
          (List.map fst tlqs)
       )
 
-  let compile_query opts k3_prog sources =
+  let compile_query opts k3_prog =
     compile_imp 
       opts 
-      (imp_of_k3 opts k3_prog sources)
+      (imp_of_k3 opts k3_prog)
 
   (* DS program compilation *)
   

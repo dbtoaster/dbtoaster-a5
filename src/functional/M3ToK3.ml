@@ -897,7 +897,7 @@ let m3_trig_to_k3_trig (meta: meta_t) (m3_trig: M3.trigger_t) : K.trigger_t * me
 *)
 let m3_to_k3 (m3_program : M3.prog_t) : (K.prog_t) =
 	let {M3.maps = m3_prog_schema; M3.triggers = m3_prog_trigs;
-	     M3.queries = m3_prog_tlqs } = m3_program in
+	     M3.queries = m3_prog_tlqs; M3.db = k3_database } = m3_program in
 	let k3_prog_schema = List.map m3_map_to_k3_map !m3_prog_schema in
 	let patterns_map = Patterns.extract_patterns !m3_prog_trigs in
 	let k3_prog_trigs, (_,sum_maps) = 
@@ -918,5 +918,9 @@ let m3_to_k3 (m3_program : M3.prog_t) : (K.prog_t) =
 	        (name, k3_query_compiled)
 	  ) !m3_prog_tlqs
 	in
-	( (k3_prog_schema@sum_maps, patterns_map), k3_prog_trigs, k3_prog_tlqs )
+	( k3_database, 
+	  (k3_prog_schema@sum_maps, patterns_map), 
+	  k3_prog_trigs, 
+	  k3_prog_tlqs 
+   )
 

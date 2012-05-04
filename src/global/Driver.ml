@@ -298,7 +298,7 @@ let dm_program:(M3DM.dm_prog_t ref) = ref( ref ([]));;
    set of triggers, each of which causes the execution of a k3 expression. 
    The K3 program also includes a list of map patterns.
    *)
-let k3_program:(K3.prog_t ref) = ref (([],[]),[],[]);;
+let k3_program:(K3.prog_t ref) = ref (Schema.empty_db (), ([],[]),[],[]);;
 
 (**If we're running in interpreter mode, we'll need to compile the query into
    an ocaml-executable form.  This is where that executable ``code'' goes. 
@@ -488,7 +488,7 @@ if stage_is_active StageParseK3 then (
    in 
       k3_program := 
             K3parser.dbtoasterK3Program K3lexer.tokenize lexbuff;
-      let ((_, pats), _, _) = !k3_program
+      let (_,(_, pats), _, _) = !k3_program
       in
          Debug.print "PATTERNS" (fun () -> Patterns.patterns_to_string pats)
 )
@@ -501,8 +501,9 @@ if (stage_is_active StageOptimizeK3) then (
          then optimizations := K3Optimizer.CSE :: !optimizations;
       if not (Debug.active "NO-BETA-OPT")
          then optimizations := K3Optimizer.Beta :: !optimizations;
-      let ((maps,patterns),triggers,tlqs) = !k3_program in
+      let (db,(maps,patterns),triggers,tlqs) = !k3_program in
       k3_program := (
+         db,
          (maps, patterns),
          List.map (fun (event, stmts) ->
             let trigger_vars = Schema.event_vars event in (
@@ -530,11 +531,10 @@ if stage_is_active StageK3ToTargetLanguage then (
    match !output_language with
       | Interpreter -> (
          StandardAdaptors.initialize ();
-         let ((maps, patterns), _, _) = !k3_program in
+         let (_, (maps, patterns), _, _) = !k3_program in
          interpreter_program := (
             maps, patterns, 
-            K3InterpreterCG.compile_k3_to_code db_schema
-                                               !k3_program
+            K3InterpreterCG.compile_k3_to_code !k3_program
          )
       )   
       | Ocaml       -> bug "Ocaml codegen not implemented yet"
@@ -546,7 +546,6 @@ if stage_is_active StageK3ToTargetLanguage then (
          imperative_program := 
             ImperativeCompiler.Compiler.imp_of_k3 !imperative_opts 
                                                   !k3_program 
-                                                  db_schema
 
       | _ -> bug "Unexpected K3 target language"
 )

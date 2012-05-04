@@ -92,7 +92,7 @@
 					in
 						let new_trig = if t = [] then trig_list else t @ trig_list
 							in
-								((new_map, !patterns), new_trig, []) 
+								(Schema.empty_db (), (new_map, !patterns), new_trig, []) 
 
    let slice_infering statement var_bind_list = 
       let map_name = match statement with 
