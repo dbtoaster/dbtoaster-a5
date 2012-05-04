@@ -18,14 +18,14 @@ let varIdType_to_k3_idType (vars : T.var_t list) = List.map (fun (v,t) -> v,K.TB
 let varIdType_to_k3_expr   (vars : T.var_t list) = List.map (fun (v,t) -> K.Var(v,K.TBase(t))) vars
 let k3_idType_to_k3_expr   (vars : (K.id_t * K.type_t) list) = List.map (fun (v,t) -> K.Var(v,t)) vars
 let k3_idType_to_k3_type   (vars : (K.id_t * K.type_t) list) = List.map snd vars
-let k3_idType_to_varIdType (vars : K.expr_t list) = 
+let k3_expr_to_varIdType (var_el : K.expr_t list ) = 
    List.map (function | (K.Var(v,K.TBase(t))) -> (v,t) 
-                      | _ ->  failwith "expected variable of base type") vars
+                      | _ ->  failwith "M3ToK3: expected variable of base type") var_el
 let k3_expr_to_k3_idType   (var_el : K.expr_t list ) =
 	List.map (fun v_e -> 
 							begin match v_e with
 								| K.Var(v_name,vtype) -> (v_name,vtype)
-								| _ -> failwith "K.Var expected."
+								| _ -> failwith "M3ToK3: K.Var expected."
 							end )
 					 var_el
 					
@@ -33,17 +33,17 @@ let k3_expr_to_k3_type   (var_el : K.expr_t list ) =
 	List.map (fun v_e -> 
 							begin match v_e with
 								| K.Var(v_name,vtype) -> vtype
-								| _ -> failwith "K.Var expected."
+								| _ -> failwith "M3ToK3: K.Var expected."
 							end )
 					 var_el
 					
 let name_of_kvar kvar = begin match kvar with
 		| K.Var(v_name,vtype) -> v_name
-		| _ -> failwith "K.Var expected."
+		| _ -> failwith "M3ToK3: K.Var expected."
 	end
 let type_of_kvar kvar = begin match kvar with
 		| K.Var(v_name,vtype) -> vtype
-		| _ -> failwith "K.Var expected."
+		| _ -> failwith "M3ToK3: K.Var expected."
 	end
 
 let m3_map_to_k3_map (m3_map: M3.map_t) : K.map_t = match m3_map with
@@ -97,32 +97,32 @@ let arithmetic_return_types t1 t2 = begin match t1, t2 with
 	| K.TBase(T.TFloat), K.TBase(T.TFloat) 
 	| K.TBase(T.TFloat), K.TBase(T.TBool) 
 	| K.TBase(T.TFloat), K.TBase(T.TInt) -> K.TBase(T.TFloat)
-	| _,_ -> failwith "arguments must be of numerical type."
+	| _,_ -> failwith "M3ToK3: arguments must be of numerical type."
 	end
 
 let escalate_type from_t to_t = begin match from_t, to_t with
 	| K.TBase(T.TBool), K.TBase(T.TInt) -> K.TBase(T.TInt)
-	| K.TBase(T.TBool), K.TBase(T.TFloat) -> K.TBase(T.TFloat)
+	| K.TBase(T.TBool), K.TBase(T.TFloat) 
 	| K.TBase(T.TInt), K.TBase(T.TFloat) -> K.TBase(T.TFloat)
 	| _,_ -> 
 		if from_t = to_t then to_t
-		else failwith ("Unable to escalate type "^(K.string_of_type from_t)
+		else failwith ("M3ToK3: Unable to escalate type "^(K.string_of_type from_t)
 							^" to type "^(K.string_of_type to_t))
 	end
 
 let init_val_from_type ret_type = begin match ret_type with
 	| T.TInt   -> zero_int_val
 	| T.TFloat -> zero_flt_val
-	| _ -> failwith ("invalid return type ("^(T.string_of_type ret_type)^".")
+	| _ -> failwith ("M3ToK3: invalid return type ("^(T.string_of_type ret_type)^".")
 	end
 		
 let init_val ret_e = begin match ret_e with
 	| K.Var(_,K.TBase(ret_type))   -> init_val_from_type ret_type
-	| _ -> failwith "invalid return expression."
+	| _ -> failwith "M3ToK3: invalid return expression."
 	end
 
 let extract_opt opt =  begin match opt with
-	| None -> failwith "Trying to extract some from None"
+	| None -> failwith "M3ToK3: Trying to extract some from None"
 	| Some(s) -> s
 	end
 (**/**)
@@ -134,7 +134,7 @@ let keys_from_kvars kvars  = List.map (fun kv -> (name_of_kvar kv,kv)) kvars
 
 let exprs_to_tuple (el: K.expr_t list) = 
 	begin match el with
-	|  [] -> failwith "invalid empty expressions list"  
+	|  [] -> failwith "M3ToK3: invalid empty expressions list"  
 	| [e] -> e
 	| _   -> K.Tuple(el)
 	end
@@ -148,12 +148,12 @@ let exprs_to_tuple (el: K.expr_t list) =
 	@return     The K3 lambda argument corresponding to [v_el] *)
 let lambda_args v_el =
 	begin match v_el with
-	| [] -> failwith "invalid empty variables list" 
+	| [] -> failwith "M3ToK3: invalid empty variables list" 
 	| [K.Var(v_name,vtype)] -> K.AVar(v_name,vtype)
 	| _ ->
 		let v_l = k3_expr_to_k3_idType v_el in 
 		let vars = List.map fst v_l in
-  		if (unique vars) <> vars then failwith "invalid lambda with duplicate variables"
+  		if (unique vars) <> vars then failwith "M3ToK3: invalid lambda with duplicate variables"
 		else
 			K.ATuple(v_l)
 	end
@@ -183,7 +183,8 @@ let assoc_lambda v1_el v2_el body =
    Evaluates the K3 expression [body] by binding the list of expressions in [el]
 	to the list of K3 variables in [v_el]. *)
 let apply_lambda v_el el body = 
-	assert ((List.length v_el) = (List.length el));
+	if (List.length v_el) != (List.length el) then
+		failwith "M3ToK3: Applying lambda to expression with different size schema!";
 	K.Apply(lambda v_el body, (exprs_to_tuple el))
 
 (**[project_fn from_v_el to_v_el]
@@ -218,7 +219,7 @@ let aggregate_fn v_el multpl_e =
 	@return     The K3 lambda argument corresponding to [t_l] *)
 let external_lambda_args fn t_l =
 	begin match t_l with
-	| [] -> failwith "invalid empty variables list" 
+	| [] -> failwith "M3ToK3: invalid empty variables list" 
 	| [t] -> K.AVar(fn^"_arg1",t)
 	| _ -> 
 		let arg_prefix  = fn^"_arg_" in
@@ -267,14 +268,14 @@ let map_to_expr mapn ins outs map_type =
 (* Utility function for generating temporary maps used in computing sums. *)
 let sum_tmp_prefix  = "sum_tmp_"
 let sum_tmp_counter = ref 0
-let next_sum_tmp_coll outs sum_type_k = 
+let next_sum_tmp_coll outs_el sum_type_k = 
 		incr sum_tmp_counter;
    	let colln = sum_tmp_prefix^(string_of_int !sum_tmp_counter) in
-		let outs_k  = varIdType_to_k3_idType outs in
-		begin match outs with
-	  | [] -> failwith "sum_tmp collection required only if 'outs' is not empty!"
-	  |  x -> K.OutPC(colln, outs_k,sum_type_k),
-		        (colln, [], List.map snd outs, K.base_type_of sum_type_k)
+		let outs_k  = k3_expr_to_k3_idType outs_el in
+		begin match outs_el with
+	  | [] -> failwith "M3ToK3: sum_tmp collection required only if 'outs_el' is not empty!"
+	  |  x -> K.OutPC(colln, outs_k, sum_type_k),
+		       (colln, [], List.map K.base_type_of (List.map snd outs_k), K.base_type_of sum_type_k)
 	  end
 (**/**)		
 (**********************************************************************)
@@ -315,7 +316,9 @@ let map_access_to_expr mapn ins outs map_ret_t theta_vars_el init_expr_opt =
 		(* Given a collection it slices it according to the bound variables *)
 		(* and projects only the free variables *)
 		let slice_and_project coll_ve : K.expr_t =
-			assert (free_vars_el <> []);
+			if free_vars_el = [] then
+				failwith ("M3ToK3: We shouldn't slice if all variables are bound."^
+							" We should Lookup instead.");
 			if free_vars_el = outs_el then coll_ve
 			else 
 				K.Map( project_fn (outs_el@[map_ret_ve]) (free_vars_el@[map_ret_ve]), 
@@ -392,7 +395,9 @@ let rec value_to_k3_expr (value_calc : V.expr_t) : K.type_t * K.expr_t =
 	let bin_fn op_fn r1 c2 =
 		let ret1_t, e1 = r1 in
 		let ret2_t, e2 = value_to_k3_expr c2 in
-		assert ((numerical_type ret1_t) && (numerical_type ret2_t));
+		if not ((numerical_type ret1_t) && (numerical_type ret2_t)) then
+			failwith ("M3ToK3: ValueRing.Sum or Prod arguments should be of "^
+						"numerical type.");
 		let ret_t = arithmetic_return_types ret1_t ret2_t
 		in 
 		ret_t, (op_fn e1 e2)
@@ -409,7 +414,7 @@ let rec value_to_k3_expr (value_calc : V.expr_t) : K.type_t * K.expr_t =
 				let neg_cst = begin match neg_t with
 					| K.TBase( T.TInt )   -> minus_one_int_val
 					| K.TBase( T.TFloat ) -> minus_one_flt_val
-					| _ -> failwith "Negation type should be int or float." 
+					| _ -> failwith "M3ToK3: Negation type should be int or float." 
 				end in
 				neg_t, K.Mult (neg_cst, neg_e)
 		| V.Sum( c1::sum_args_tl )	->
@@ -418,7 +423,7 @@ let rec value_to_k3_expr (value_calc : V.expr_t) : K.type_t * K.expr_t =
 		| V.Prod( c1::prod_args_tl )	->	  
 				let mult_fun e1 e2 = K.Mult(e1,e2) in
 				List.fold_left (bin_fn mult_fun) (value_to_k3_expr c1) prod_args_tl
-		| _  -> failwith "Empty V.Sum or V.Prod."
+		| _  -> failwith "M3ToK3: Empty V.Sum or V.Prod."
 	end
 
 
@@ -490,14 +495,17 @@ let rec calc_to_k3_expr meta theta_vars_el calc :
 	let (ins,outs) = schema_of_expr calc in
 	let ins_el = varIdType_to_k3_expr ins in
 	if (ListAsSet.diff ins_el theta_vars_el) != [] then
-		(print_endline ("Error: All inputs of "^(string_of_expr calc)^" should be bound!");
-		 print_endline ("    ins: "^(ListExtras.string_of_list K.string_of_expr ins_el));
-		 print_endline ("    scope: "^(ListExtras.string_of_list K.string_of_expr theta_vars_el)));
-	assert ((ListAsSet.diff ins_el theta_vars_el) = []) ;
+		(print_endline ("Expr: \n"^(CalculusPrinter.string_of_expr calc));
+		 print_endline ("\ninput_vars: "^(K.string_of_exprs ins_el));
+		 print_endline ("scope_vars: "^(K.string_of_exprs theta_vars_el));
+		 failwith ("M3ToK3: Error: All inputs of calculus expression should be bound!"));
+		 				
 	
-	let bin_fn op_fn c1 c2 =
+	let cmp_fn op_fn c1 c2 =
 		let ((ret1_t, e1),(ret2_t, e2)) = pair_map value_to_k3_expr (c1,c2) in
-		assert (compatible_types ret1_t ret2_t);
+		if not (compatible_types ret1_t ret2_t) then
+			failwith ("M3ToK3: Error: Incompatible argument types for comparison operation: "^
+							(K.string_of_type ret1_t)^" <> "^(K.string_of_type ret2_t));
 		([], K.Var("v",K.TBase(T.TInt)), (op_fn e1 e2)), meta
 	in
   	begin match calc with
@@ -505,12 +513,12 @@ let rec calc_to_k3_expr meta theta_vars_el calc :
 			| Value( calc_val_value ) ->
 					let ret_t, expr = value_to_k3_expr calc_val_value in
 					([], K.Var("v",ret_t), expr), meta
-			| Cmp( T.Eq, c1, c2 )     -> bin_fn ( fun e1 e2 -> K.Eq  (e1,e2) ) c1 c2
-			| Cmp( T.Lt, c1, c2 )     -> bin_fn ( fun e1 e2 -> K.Lt  (e1,e2) ) c1 c2
-	    	| Cmp( T.Lte,c1, c2 )     -> bin_fn ( fun e1 e2 -> K.Leq (e1,e2) ) c1 c2
-			| Cmp( T.Gt, c1, c2 )     -> bin_fn ( fun e1 e2 -> K.Leq (e1,e2) ) c2 c1
-			| Cmp( T.Gte,c1, c2 )     -> bin_fn ( fun e1 e2 -> K.Lt  (e1,e2) ) c2 c1
-			| Cmp( T.Neq,c1, c2 )     -> bin_fn ( fun e1 e2 -> K.Neq (e1,e2) ) c1 c2
+			| Cmp( T.Eq, c1, c2 )     -> cmp_fn ( fun e1 e2 -> K.Eq  (e1,e2) ) c1 c2
+			| Cmp( T.Lt, c1, c2 )     -> cmp_fn ( fun e1 e2 -> K.Lt  (e1,e2) ) c1 c2
+	    	| Cmp( T.Lte,c1, c2 )     -> cmp_fn ( fun e1 e2 -> K.Leq (e1,e2) ) c1 c2
+			| Cmp( T.Gt, c1, c2 )     -> cmp_fn ( fun e1 e2 -> K.Leq (e1,e2) ) c2 c1
+			| Cmp( T.Gte,c1, c2 )     -> cmp_fn ( fun e1 e2 -> K.Lt  (e1,e2) ) c2 c1
+			| Cmp( T.Neq,c1, c2 )     -> cmp_fn ( fun e1 e2 -> K.Neq (e1,e2) ) c1 c2
 			
 			| Rel(reln, rel_schema) -> 
 					let rel_outs_el, rel_ret_ve, expr = 
@@ -535,8 +543,12 @@ let rec calc_to_k3_expr meta theta_vars_el calc :
 										let init_theta_vars_el = ListAsSet.diff  theta_vars_el eouts_el in
 										let (init_outs_el, init_ret_ve, init_expr), nm_1 = 
 												calc_to_k3_expr meta  init_theta_vars_el init_calc in
-										assert (ListAsSet.seteq init_outs_el eouts_el);
-										assert ((type_of_kvar init_ret_ve) = K.TBase(ext_type));
+										
+										if not (ListAsSet.seteq init_outs_el eouts_el) then
+											failwith ("M3ToK3: Schema of intialization expression should span "^
+														"the entire out tier of the map.");
+										let _ = escalate_type (type_of_kvar init_ret_ve) (K.TBase(ext_type)) in
+										
 										(meta_append_init_keys nm_1 (mapn, eins)), 
 										Some(init_outs_el,init_expr)
 							else meta, None
@@ -554,7 +566,9 @@ let rec calc_to_k3_expr meta theta_vars_el calc :
 					
 					(* Make sure that all the group by variables are included in the output*)
 					(* schema of the "aggsum" expression. *)
-					assert( (ListAsSet.diff agg_vars0_el aggsum_outs_el) = []);
+					if not ( (ListAsSet.diff agg_vars0_el aggsum_outs_el) = []) then
+						failwith ("M3ToK3: The group by variables of aggsum should be included in "^
+									 " the schema of the aggsum expression.");
 					let agg_vars_el = ListAsSet.inter agg_vars0_el aggsum_outs_el in
 										
 					let agg_fn = aggregate_fn aggsum_outs_el ret_ve in
@@ -596,9 +610,10 @@ let rec calc_to_k3_expr meta theta_vars_el calc :
 				(* values have numerical types *)
 				let prepare_fn old_meta old_ret_t c = 
 					let (e_outs_el,e_ret_ve,e),new_meta = rcr2 old_meta c in
-					assert (ListAsSet.seteq e_outs_el outs_el);
+					if not (ListAsSet.seteq e_outs_el outs_el) then
+						failwith ("M3ToK3: The schema of a sum term should be the same as "^
+									 "the schema of the entire sum.");
 					let e_ret_t = type_of_kvar e_ret_ve in
-					assert (numerical_type e_ret_t);
 					let new_ret_t = arithmetic_return_types old_ret_t e_ret_t 
 					in
 					((e_outs_el,e_ret_ve,e),new_meta,new_ret_t)					
@@ -624,10 +639,7 @@ let rec calc_to_k3_expr meta theta_vars_el calc :
 					(* corresponding to the first term.*)
 					(* 3. Update the temporary collection with the contents of the collections *)
 					(* corresponding to the rest of the sum terms.*)
-					let result_outs = 
-					  ListAsSet.diff outs (k3_idType_to_varIdType theta_vars_el) in
-					
-					let sum_coll,sum_map = next_sum_tmp_coll result_outs ret_t in
+					let sum_coll,sum_map = next_sum_tmp_coll outs_el ret_t in
 					
 					let reset_update = 
 							K.PCElementRemove(sum_coll, [], outs_el) in
@@ -664,7 +676,6 @@ let rec calc_to_k3_expr meta theta_vars_el calc :
 					let (e_outs_el,e_ret_ve,e),new_meta = calc_to_k3_expr old_meta old_scope c in
 					let new_scope = ListAsSet.union old_scope e_outs_el in
 					let e_ret_t = type_of_kvar e_ret_ve in
-					assert (numerical_type e_ret_t);
 					let new_ret_t = arithmetic_return_types old_ret_t e_ret_t
 					in
 					((e_outs_el,e_ret_ve,e),(new_meta,new_scope,new_ret_t))
@@ -734,7 +745,11 @@ let m3_stmt_to_k3_stmt (meta: meta_t) trig_args (m3_stmt: Plan.stmt_t) : K.state
 	let {Plan.update_type = update_type; Plan.update_expr = incr_calc} = m3_stmt in 
 	
 	(* all lhs input variables must be free, they cannot be bound by trigger args *)
-	assert ((ListAsSet.inter trig_args  lhs_ins) = []);
+	if not ((ListAsSet.inter trig_args  lhs_ins) = []) then
+		(print_endline ("Trigger Arguments: "^(T.string_of_vars ~verbose:true trig_args));
+		 print_endline ("Lhs Input Variables: "^(T.string_of_vars ~verbose:true lhs_ins));
+		 failwith ("M3ToK3: All lhs input variables must be free. "^
+					"They cannot be bound by trigger args."));
 	(* K3 collection used for storing the result of the statement.*)
 	let lhs_collection  = map_to_expr mapn lhs_ins lhs_outs map_type in
     
@@ -780,8 +795,12 @@ let m3_stmt_to_k3_stmt (meta: meta_t) trig_args (m3_stmt: Plan.stmt_t) : K.state
 					let init_calc = extract_opt init_calc_opt in
 					let init_result, init_meta = calc_to_k3_expr meta trig_w_lhs_el init_calc in
 					let (init_outs_el, init_ret_ve, init_expr) = init_result in
-					assert (init_outs_el = []);
-					assert (compatible_types (type_of_kvar init_ret_ve) map_k3_type);
+					if not (init_outs_el = []) then
+						(print_endline ("Initialization Calculus:\n"^
+											(CalculusPrinter.string_of_expr init_calc));
+						failwith ("M3ToK3: Initialization expression of lhs map should produce "^
+									 "a singleton."));
+					let _ = escalate_type (type_of_kvar init_ret_ve) map_k3_type in
 					
 					K.IfThenElse( K.Member(existing_out_tier, lhs_outs_el),
        								K.Lookup(existing_out_tier, lhs_outs_el),
@@ -797,9 +816,14 @@ let m3_stmt_to_k3_stmt (meta: meta_t) trig_args (m3_stmt: Plan.stmt_t) : K.state
 	(* update "lhs_collection" while iterating over all lhs input variables. *)
 	let incr_result, nm = calc_to_k3_expr nm0 trig_w_ins_el incr_calc in
 	let (rhs_outs_el, rhs_ret_ve, incr_expr) = incr_result in
+	
 	(* Make sure that the lhs collection and the incr_expr have the same schema. *)
-	assert (ListAsSet.seteq (ListAsSet.diff lhs_outs_el trig_args_el) rhs_outs_el);
-	assert (compatible_types (type_of_kvar rhs_ret_ve) map_k3_type);
+	let free_lhs_outs_el = ListAsSet.diff lhs_outs_el trig_args_el in
+	if not (ListAsSet.seteq free_lhs_outs_el rhs_outs_el) then
+		(print_endline ("Lhs Output Variables: "^(K.string_of_exprs free_lhs_outs_el));
+		 print_endline ("Rhs Output Variables: "^(K.string_of_exprs rhs_outs_el));
+		 failwith ("M3ToK3: The lhs and rhs must have the same set of free out variables. "));
+	let _ = escalate_type (type_of_kvar rhs_ret_ve) map_k3_type in
 		
 	(* Iterate over all the tuples in "incr_expr" collection and update the *)
 	(* lhs_collection accordingly. *)
@@ -832,7 +856,7 @@ let target_of_statement (stmt : K.statement_t) : K.expr_t =
 	begin match stmt with
 		| K.Apply( _,lhs_collection)   -> lhs_collection
 		| K.Iterate( _,lhs_collection) -> lhs_collection
-		| _ -> failwith "Invalid statement expression"
+		| _ -> failwith "M3ToK3: Invalid statement expression"
 	end
 
 (**[m3_trig_to_k3_trig meta m3_trig]

@@ -607,6 +607,7 @@ let string_of_expr e =
     (*| External         efn_id               -> pop "External" *)
     in pp_set_margin str_formatter 80; flush_str_formatter (aux e)
 
+let string_of_exprs e_l = ListExtras.string_of_list string_of_expr e_l
 
 let rec code_of_expr e =
    let rcr ex = "("^(code_of_expr ex)^")" in

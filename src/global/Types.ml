@@ -179,6 +179,17 @@ let string_of_var ?(verbose = Debug.active "PRINT-VERBOSE")
    if verbose then name^":"^(string_of_type vt)
               else name
 
+(**
+   Get the string representation of a list of variables.  If the PRINT-VERBOSE
+   debug mode is active, the variable will be printed with its full type using
+   syntax accepted by Calculusparser.
+   @param vars  A list of variables
+   @return      The string representation of [vars]
+*)
+let string_of_vars ?(verbose = Debug.active "PRINT-VERBOSE")
+						 (vars : var_t list): string = 
+	ListExtras.string_of_list (string_of_var ~verbose:verbose) vars
+
 (**** Zero Constants ****)
 (**
    Returns a constant reprezenting zero of type [zt].
