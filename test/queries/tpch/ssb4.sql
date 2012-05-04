@@ -17,7 +17,7 @@ CREATE STREAM LINEITEM (
         comment        VARCHAR(44)
     )
   FROM FILE '../../experiments/data/tpch/lineitem.csv'
-  LINE DELIMITED csv (deletions := 'true');
+  LINE DELIMITED lineitem (deletions := 'false');
 
 
 CREATE STREAM ORDERS (
@@ -32,7 +32,7 @@ CREATE STREAM ORDERS (
         comment        VARCHAR(79)
     )
   FROM FILE '../../experiments/data/tpch/orders.csv'
-  LINE DELIMITED csv (deletions := 'true');
+  LINE DELIMITED orders (deletions := 'false');
 
 CREATE STREAM PART (
         partkey      INT,
@@ -46,7 +46,7 @@ CREATE STREAM PART (
         comment      VARCHAR(23)
     )
   FROM FILE '../../experiments/data/tpch/part.csv'
-  LINE DELIMITED csv (deletions := 'true');
+  LINE DELIMITED part (deletions := 'false');
 
 
 CREATE STREAM CUSTOMER (
@@ -60,7 +60,7 @@ CREATE STREAM CUSTOMER (
         comment      VARCHAR(117)
     )
   FROM FILE '../../experiments/data/tpch/customer.csv'
-  LINE DELIMITED csv (deletions := 'true');
+  LINE DELIMITED customer (deletions := 'false');
 
 CREATE STREAM SUPPLIER (
         suppkey      INT,
@@ -72,16 +72,16 @@ CREATE STREAM SUPPLIER (
         comment      VARCHAR(101)
     )
   FROM FILE '../../experiments/data/tpch/supplier.csv'
-  LINE DELIMITED csv (deletions := 'true');
+  LINE DELIMITED supplier (deletions := 'false');
   
-CREATE TABLE NATION (
+CREATE STREAM NATION (
         nationkey    INT,
         name         CHAR(25),
         regionkey    INT,
         comment      VARCHAR(152)
     )
   FROM FILE '../../experiments/data/tpch/nation.csv'
-  LINE DELIMITED csv (deletions := 'true');
+  LINE DELIMITED nation (deletions := 'false');
 
 
  SELECT sn.regionkey, 

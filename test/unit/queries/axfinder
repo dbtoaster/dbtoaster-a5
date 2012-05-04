@@ -1,0 +1,23 @@
+{
+  :path => "test/queries/finance/axfinder.sql",
+  :datasets => {
+    "standard" => {
+      :toplevels => {
+        "AXFINDER" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/finance/axfinder.csv"),        
+        }
+      } 
+    },
+    
+    "tiny" => {
+      :subs => [ [/vwap5k/, "vwap100"] ],
+      :toplevels => {
+        "AXFINDER" => {
+          :type => :onelevel,          
+          :expected => results_file("test/results/finance/axfinder_100.csv"),
+        }
+      }    
+    }
+  }
+}

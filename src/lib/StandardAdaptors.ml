@@ -287,7 +287,7 @@ let orderbook_generator params =
    (* Only add broker ids if # brokers > 0 *)
    let num_brokers = try
       let r = int_of_string (List.assoc "brokers" optionals) in
-      print_endline ("Orderbook # brokers: "^(string_of_int r)); r
+      (*print_endline ("Orderbook # brokers: "^(string_of_int r)); *) r
       with Invalid_argument _ -> 0 in
    
    let deterministic_broker = 

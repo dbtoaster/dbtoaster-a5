@@ -1,0 +1,23 @@
+{
+  :path => "test/queries/finance/brokerspread.sql",
+  :datasets => {
+    "standard" => {
+      :toplevels => {
+        "BSP" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/finance/brokerspread.csv"),        
+        }
+      } 
+    },
+    
+    "tiny" => {
+      :subs => [ [/vwap5k/, "vwap100"] ],
+      :toplevels => {
+        "BSP" => {
+          :type => :onelevel,          
+          :expected => results_file("test/results/finance/brokerspread_100.csv"),
+        }
+      }    
+    }
+  }
+}

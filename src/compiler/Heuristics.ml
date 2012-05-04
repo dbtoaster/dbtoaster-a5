@@ -1,3 +1,16 @@
+(**
+   A module for deciding on how to materialize a given (delta) query. It is used
+	 by the Compiler module to produce a Plan.plan_t datastructure.
+	 	
+	 Driven by a set of heuristics rules, this module provides two main functions: 
+	 {ul
+	   {- {b should_update} decides whether it is more efficient to incrementally 
+		    maintain the given query, or to reevaluate it upon each trigger call }  
+	   {- {b materialize} transforms the input (delta) expression by replacing all
+		    relations with data structures (maps) }
+	 }
+  *)
+
 open Types
 open Arithmetic
 open Calculus
@@ -8,18 +21,23 @@ open Plan
 type ds_history_t = ds_t list ref
 
 (******************************************************************************)
-		 
+
+(** A helper function for obtaining the variable list from the optional event parameter. 
+    It calls Schema.event_vars if the event is passed. *)
 let extract_event_vars (event:Schema.event_t option) : (var_t list) =
   match event with 
 		| Some(ev) ->  Schema.event_vars ev
 	  | None -> []
 
+(** A helper function for extracting the relations from the optional event parameter. *)
 let extract_event_reln (event:Schema.event_t option) : (string option) =
 	match event with
 		| Some(Schema.InsertEvent((reln,_,_))) 
 		| Some(Schema.DeleteEvent((reln,_,_))) -> Some(reln)
 		| _  -> None
 
+(** Obtain the human-readable representation of the optional event parameter. 
+    It calls Schema.string_of_event if the event is passed. *) 
 let string_of_event (event:Schema.event_t option) : string =
 	match event with
 		| Some(evt) -> Schema.string_of_event evt
@@ -28,7 +46,10 @@ let string_of_event (event:Schema.event_t option) : string =
 let string_of_expr = CalculusPrinter.string_of_expr
 let string_of_vars = ListExtras.string_of_list string_of_var
 
-(* Push rels to the left, cmps and values to the right *)
+(** Reorganize a given expression such that the relation terms are pushed to 
+    the left while comparisons and values are pushed to the right. The partial 
+		order inside each of the group (relations, lifts, and rests) is preserved. 
+		The method assumes an aggsum-free product-only representation of the expression. *)
 let reorganize_expr (expr:expr_t) : (expr_t) =
 	let (rels, lifts, rest) = 
 		List.fold_left ( fun (rel,lift,rest) term ->
@@ -43,10 +64,14 @@ let reorganize_expr (expr:expr_t) : (expr_t) =
 	   CalcRing.mk_prod (rels @ lifts @ rest)
 
 
-(* Divide the expression into three parts:                                     *)
-(* lift_exprs: lifts containing the event relation or input variables          *)
-(* rest_expr: subexpressions with input variables and the above lift variables *)
-(* rel_exprs: relations, irrelevant lifts, comparisons, variables, constants   *)
+(** Split an expression into three parts: 
+	  {ol
+	    {li base relations, irrelevant lift expressions with respect to the 
+	        event relation that also contain no input variables, and subexpressions 
+	        with no input variables (comparisons, variables and constants) }  
+	    {li lift expressions containing the event relation or input variables }
+	    {li subexpressions with input variables and the above lift variables } 
+	   } *)
 let split_expr (event:Schema.event_t option) (expr:expr_t) :
 							 (expr_t * expr_t * expr_t) =
 
@@ -101,8 +126,44 @@ let split_expr (event:Schema.event_t option) (expr:expr_t) :
 
 
 (******************************************************************************)
-
+(** For a given expression and a trigger event, decides whether it is more 
+    efficient to incrementally maintain the expression or to reevaluate it 
+		upon each trigger call. 
+		
+		The reason for making this decision is the following: If an expression 
+		contains 	a lift subexpression (nested aggregate) with nonzero delta, 
+		the overall delta expression is not simpler than the original expression.
+		In such cases, it might be beneficial to maintain the expression 
+		non-incrementally, recomputing it on every update.
+				
+		In general, the subexpressions of the given expression can be divided into 
+		three categories:  
+		  {ol
+        {li base relations, irrelevant lift expressions with respect to the 
+            event relation that also contain no input variables, and subexpressions 
+            with no input variables (comparisons, variables and constants) }  
+        {li lift expressions containing the event relation or input variables }
+        {li subexpressions with input variables and the above lift variables } 
+       }
+		The rule for making the decision is the following:
+		If there is an equality constraint between the base relations (category I) 
+		and lift subexpressions (category II), i.e. the variables of the lift 
+		subexpressions are also output variables of the base relations, then 
+		the expression should be incrementally maintained. The rationale	behind 
+		this decision is that deltas of the lift subexpressions affect only a subset
+		of the tuples, thus bounding the variables used in the outside expression
+		and avoiding the need to iterate over the whole domain of values.
+		Otherwise, if there is no overlapping between the set of variables used 
+		inside the lift subexpressions and the rest of the query, the expression 
+		is more efficient to reevalute on each trigger call.
+		
+		Two special cases arise when the given expression does not contain lift
+		subexpressions, or it does not contain relation subexpressions. In both 
+		cases, this method suggests the incremental maintenance.
+*)
 let should_update (event:Schema.event_t) (expr:expr_t)  : bool =
+	
+	   Debug.activate "HEURISTICS-ALWAYS-UPDATE";
 	
 	  if (Debug.active "HEURISTICS-ALWAYS-UPDATE") then true
 		else 
@@ -145,7 +206,28 @@ let should_update (event:Schema.event_t) (expr:expr_t)  : bool =
     
 (******************************************************************************)
 
-(* Returns a todo list with the current expression *)
+(** Perform partial materialization of a given expression according to the following rules:
+      {ol
+        {li {b Polynomial expansion}: Before materializing, an expression is expanded into 
+				    a flat ("polynomial") form with unions at the top. The materialization procedure 
+						is performed over each individual term. }
+			  {li {b Graph decomposition}: If some parts of the expression are disconnected in 
+				    the join graph, it is always better to materialise them piecewise.}
+				{li {b Decorrelation of nested subexpressions}: Lift expressions with non-zero 
+				    delta are always materialized separetely. } 
+        {li {b No input variables}: No map includes input variables in order to prevent 
+				    creation of large expensive-to-maintain domains. } 
+				{li {b Factorization} is performed after the partial materialization in order to 
+				    maximise reuse of common subexpressions. }
+       }
+   @param scope   The scope in which [expr] is materialized
+   @param history The history of used data structures
+	 @param prefix  A prefix string used to name newly created maps
+	 @param event   A trigger event
+	 @param expr    A calculus expression
+   @return        A list of data structures that needs to be materialized afterwards 
+	                (a todo list) together with the materialized form of the expression. 
+*)									
 let rec materialize ?(scope:var_t list = [])
                     (history:ds_history_t) (prefix:string) 
 							      (event:Schema.event_t option) (expr:expr_t) 

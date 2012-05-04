@@ -1,0 +1,33 @@
+{
+  :path => "test/queries/tpch/query22.sql",
+  :datasets => {
+    "standard" => {
+      :toplevels => {
+        "QUERY22" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query22.csv"),
+        }
+      }
+    },
+    
+    "tiny" => {
+      :subs => [ [/test\/data\/tpch\//, "test/data/tpch_tiny/"] ],
+      :toplevels => {
+        "QUERY22" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query22_tiny.csv")
+        }
+      }
+    },
+
+    "big" => {
+      :subs => [ [/test\/data\/tpch\//, "test/data/tpch_100M/"] ],
+      :toplevels => {
+        "QUERY22" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query22_100M.csv")
+        }
+      }
+    }
+  }
+}

@@ -91,18 +91,31 @@ let rec delta_of_expr (delta_event:Schema.event_t) (expr:C.expr_t): C.expr_t=
                      statements.  In this case, the optimizations (specifically 
                      unify_lifts) will unnest the lift statements, and 
                      substitute the (now) constant dB in for deltaVar. *)
-                  CalcRing.mk_prod [
-                     CalcRing.mk_val (Lift(delta_var, delta_term));
-                     CalcRing.mk_sum [
-                        CalcRing.mk_val (
-                           Lift(v, CalcRing.mk_sum [
-                              sub_t; 
-                              CalcRing.mk_val (Value(mk_var delta_var))
-                           ])
-                        );
-                        CalcRing.mk_neg (CalcRing.mk_val (Lift(v, sub_t)))
-                     ]
-                  ]
+							
+							(* The original delta expression is used to obtain *)
+							(* the group-by variables to project away deltaVar *) 
+							let delta_org = CalcRing.mk_sum [
+		                CalcRing.mk_val (
+		                   Lift(v, CalcRing.mk_sum [ sub_t; delta_term ])
+		                );
+		                CalcRing.mk_neg (CalcRing.mk_val (Lift(v, sub_t)))
+		              ]
+							 in
+							 let gb_vars = snd (schema_of_expr (delta_org)) in
+                  CalcRing.mk_val(AggSum(gb_vars,
+	                  CalcRing.mk_prod [
+	                     CalcRing.mk_val (Lift(delta_var, delta_term));
+	                     CalcRing.mk_sum [
+	                        CalcRing.mk_val (
+	                           Lift(v, CalcRing.mk_sum [
+	                              sub_t;
+	                              CalcRing.mk_val (Value(mk_var delta_var))
+	                           ])
+	                        );
+	                        CalcRing.mk_neg (CalcRing.mk_val (Lift(v, sub_t)))
+	                     ]
+	                  ]
+									))
                )
          (*****************************************) 
       ) expr

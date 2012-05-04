@@ -1,0 +1,23 @@
+{
+  :path => "test/queries/finance/pricespread.sql",
+  :datasets => {
+    "standard" => {
+      :toplevels => {
+        "PSP" => {
+          :type => :singleton,
+          :expected => 76452380068302.0,
+        }
+      } 
+    },
+    
+    "tiny" => {
+      :subs => [ [/vwap5k/, "vwap100"] ],
+      :toplevels => {
+        "PSP" => {
+          :type => :singleton,
+          :expected => 389562600,
+        }
+      }    
+    }
+  }
+}

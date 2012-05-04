@@ -24,7 +24,7 @@ CREATE STREAM LINEITEM (
         comment        VARCHAR(44)
     )
   FROM FILE '../../experiments/data/tpch/lineitem.csv'
-  LINE DELIMITED csv (deletions := 'true');
+  LINE DELIMITED lineitem (deletions := 'false');
 
 CREATE STREAM PART (
         partkey      INT,
@@ -38,7 +38,7 @@ CREATE STREAM PART (
         comment      VARCHAR(23)
     )
   FROM FILE '../../experiments/data/tpch/part.csv'
-  LINE DELIMITED csv (deletions := 'true');
+  LINE DELIMITED part (deletions := 'false');
 
 SELECT sum(l.extendedprice) AS query17
 FROM   lineitem l, part p

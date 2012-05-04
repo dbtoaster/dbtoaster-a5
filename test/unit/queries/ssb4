@@ -1,0 +1,23 @@
+{
+  :path => "test/queries/tpch/ssb4.sql",
+  :datasets => {
+    "standard" => {
+      :toplevels => {
+        "SSB4" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/ssb4.csv"),
+        }
+      }
+    },
+    
+    "tiny" => {
+      :subs => [ [/test\/data\/tpch\//, "test/data/tpch_tiny/"] ],
+      :toplevels => {
+        "SSB4" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/ssb4_tiny.csv")
+        }
+      }
+    }
+  }
+}

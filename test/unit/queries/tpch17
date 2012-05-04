@@ -1,0 +1,13 @@
+{
+  :path => "test/queries/tpch/query17.sql",
+  :datasets => {
+    "standard" => {
+      :toplevels => {
+        "QUERY17" => {
+          :type => :singleton,
+          :expected => 898778.73
+        }
+      }
+    }
+  }
+}

@@ -1,29 +1,29 @@
 CREATE STREAM ORDERS (
         orderkey       INT,
         custkey        INT,
-        orderstatus    CHAR(1),
-        totalprice     DECIMAL,
-        orderdate      DATE,
-        orderpriority  CHAR(15),
-        clerk          CHAR(15),
+        orderstatus    FLOAT,
+        totalprice     FLOAT,
+        orderdate      FLOAT,
+        orderpriority  FLOAT,
+        clerk          FLOAT,
         shippriority   INT,
-        comment        VARCHAR(79)
+        comment        FLOAT
     )
   FROM FILE '../../experiments/data/tpch/orders.csv'
-  LINE DELIMITED csv (deletions := 'true');
+  LINE DELIMITED orders (deletions := 'false');
 
 CREATE STREAM CUSTOMER (
         custkey      INT,
-        name         VARCHAR(25),
-        address      VARCHAR(40),
+        name         FLOAT,
+        address      FLOAT,
         nationkey    INT,
-        phone        CHAR(15),
-        acctbal      DECIMAL,
-        mktsegment   CHAR(10),
-        comment      VARCHAR(117)
+        phone        FLOAT,
+        acctbal      FLOAT,
+        mktsegment   FLOAT,
+        comment      FLOAT
     )
   FROM FILE '../../experiments/data/tpch/customer.csv'
-  LINE DELIMITED csv (deletions := 'true');
+  LINE DELIMITED customer (deletions := 'false');
 
 SELECT c1.nationkey, sum(c1.acctbal) AS query22
 FROM customer c1

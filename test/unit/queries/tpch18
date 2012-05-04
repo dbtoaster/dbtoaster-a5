@@ -1,0 +1,23 @@
+{
+  :path => "test/queries/tpch/query18.sql",
+  :datasets => {
+    "standard" => {
+      :toplevels => {
+        "QUERY18" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query18.csv"),
+        }
+      }
+    },
+    
+    "tiny" => {
+      :subs => [ [/test\/data\/tpch\//, "test/data/tpch_tiny/"] ],
+      :toplevels => {
+        "QUERY18" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query18_tiny.csv")
+        }
+      }
+    }
+  }
+}
