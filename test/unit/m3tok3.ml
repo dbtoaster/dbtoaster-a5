@@ -163,10 +163,10 @@ let test_stmt_coll ?(env = []) msg stmt_s rval =
    let code = stmt_string_to_code env stmt_s in	
    test_code_coll env msg code (U.mk_float_collection rval)
 in
-		
+		(*
 		test_expr " Lift and Divide "
 				"[ [ / : INT ] (0, 0) ]"
-				(VK.BaseValue(T.CFloat(0.125)));
+				(VK.BaseValue(T.CFloat(0.125)));*)
 	
 		test_expr " AConst " 
 							"[3]" (VK.BaseValue(T.CInt(3)))		;

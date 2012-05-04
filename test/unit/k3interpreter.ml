@@ -9,8 +9,8 @@ open Types
 module Interpreter = K3Compiler.Make(K3Interpreter.K3CG)
 ;;
 let maps = [
-   "A", [], [];
-   "B", [], [TFloat; TFloat];
+   "A", [], [], TFloat;
+   "B", [], [TFloat; TFloat], TFloat;
 ]
 ;;
 let pc_a = SingletonPC("A", TBase(TFloat))

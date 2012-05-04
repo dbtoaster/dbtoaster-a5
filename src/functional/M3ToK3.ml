@@ -559,7 +559,7 @@ let rec calc_to_k3_expr meta theta_vars_el calc :
 				  ((map_outs_el, map_ret_ve, expr), nm)
 					
 			| AggSum( agg_vars0, aggsum_calc ) ->
-					(* Convert group by variables to K3 variables. *)
+					(* Convert group by variables to K3 variables and eliminate those that are bound. *)
 					let agg_vars0_el = ListAsSet.diff (varIdType_to_k3_expr agg_vars0) theta_vars_el in
 					
 					let (aggsum_outs_el,ret_ve,aggsum_e),nm = rcr aggsum_calc in
@@ -593,16 +593,22 @@ let rec calc_to_k3_expr meta theta_vars_el calc :
 												(escalate_type (type_of_kvar ret_ve) 
 																	(K.TBase(snd lift_v)))) in
 					let lift_ret_ve = K.Var("v",K.TBase(T.TInt)) in
-					let expr =
-							let lift_lambda = lambda (lift_outs_el@[ret_ve]) 
-														(K.Tuple(lift_outs_el@[ret_ve;one_int_val]))
-							in
-							if lift_outs_el = [] then
-									K.Singleton( K.Apply(lift_lambda,lift_e) )
-							else
-									K.Map(lift_lambda,lift_e)
-					in
-					((lift_outs_el@[lift_ve], lift_ret_ve, expr), nm)
+					if not (List.mem lift_ve theta_vars_el) then
+						let expr =
+								let lift_body = exprs_to_tuple (lift_outs_el@[ret_ve;one_int_val]) in
+								let lift_lambda = lambda (lift_outs_el@[ret_ve]) lift_body	in
+								if lift_outs_el = [] then	   K.Singleton( K.Apply(lift_lambda,lift_e) )
+								else									K.Map(lift_lambda,lift_e)
+						in
+						((lift_outs_el@[lift_ve], lift_ret_ve, expr), nm)
+					else
+						let expr =
+								let lift_body = exprs_to_tuple (lift_outs_el@[K.Eq(ret_ve,lift_ve)]) in
+								let lift_lambda = lambda (lift_outs_el@[ret_ve]) lift_body	in
+								if lift_outs_el = [] then    K.Apply(lift_lambda,lift_e)
+								else								   K.Map(lift_lambda,lift_e)
+						in
+						((lift_outs_el, lift_ret_ve, expr), nm)
 		end
 			
     | C.Sum( sum_args )	->
