@@ -1,0 +1,13 @@
+{
+  :path => "test/queries/simple/r_sumadivsumb.sql",
+  :datasets => {
+    "standard" => {
+      :toplevels => {
+        "EXPRESSION_1" => {
+          :type => :singleton,
+          :expected => 1.0
+        }
+      }
+    }
+  }
+}

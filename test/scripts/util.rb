@@ -107,6 +107,10 @@ class TreeBuilder
     @stack.pop;
   end
   
+  def peek
+    @tok.peek
+  end
+  
   def backtrack
     @stack[-1].pop;
   end

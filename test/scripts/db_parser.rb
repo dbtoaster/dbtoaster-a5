@@ -17,8 +17,10 @@ class OcamlDB < Hash
           tree.insert [lhs, rhs]
         when "." then 
           lhs = tree.backtrack;
-          rhs = tree.next_leaf;
-          tree.insert "#{lhs}.#{rhs}"
+          if /[0-9]+/ =~ tree.peek 
+            then tree.insert "#{lhs}.#{tree.next_leaf}"
+            else tree.insert lhs
+          end
         when /<pat=.*/, ";" then #ignore
         else tree.insert t 
       end

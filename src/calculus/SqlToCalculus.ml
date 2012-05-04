@@ -163,11 +163,10 @@ let rec normalize_agg_target_expr ?(vars_bound = false) gb_vars expr =
          in
          begin match op with
             | Sql.Sum | Sql.Sub ->
-               (* Permit things like Sum(A) * (1 + 2), but not things like
-                  1 + Sum(A) *)
-               if (vars_bound) &&
-                  (not (Sql.is_agg_expr lhs)) &&
-                  (not (Sql.is_agg_expr rhs))
+               (* Permit things like Sum(A) * (1 + 2), and Sum(A) + Sum(B)
+                  but not things like 1 + Sum(A) *)
+               if (vars_bound) || 
+                  ((Sql.is_agg_expr lhs) && (Sql.is_agg_expr rhs))
                then rcr_into_arithmetic false
                else Sql.error ("Sums are not supported outside of aggregates.")
             | Sql.Prod ->
@@ -186,7 +185,9 @@ let rec normalize_agg_target_expr ?(vars_bound = false) gb_vars expr =
             | Sql.Div ->
                (* Pass these through unchanged.  We ensure ordering while doing 
                   the lifting in calc_of_expr *)
-               rcr_into_arithmetic false
+               if vars_bound || (Sql.is_agg_expr lhs)
+               then rcr_into_arithmetic true
+               else rcr_into_arithmetic false
          end
      | Sql.Negation(sub) -> Sql.Negation(rcr sub)
      
