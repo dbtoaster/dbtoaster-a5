@@ -9,7 +9,7 @@ CREATE STREAM ORDERS (
         shippriority   INT,
         comment        FLOAT
     )
-  FROM FILE '../../experiments/data/tpch/orders.csv'
+  FROM FILE '../../experiments/data/tpch_tiny/orders.csv'
   LINE DELIMITED orders (deletions := 'false');
 
 CREATE STREAM CUSTOMER (
@@ -22,7 +22,7 @@ CREATE STREAM CUSTOMER (
         mktsegment   FLOAT,
         comment      FLOAT
     )
-  FROM FILE '../../experiments/data/tpch/customer.csv'
+  FROM FILE '../../experiments/data/tpch_tiny/customer.csv'
   LINE DELIMITED customer (deletions := 'false');
 
 SELECT c1.nationkey, sum(c1.acctbal) AS query22
