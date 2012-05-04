@@ -685,29 +685,27 @@ let rec calc_to_k3_expr meta theta_vars_el calc :
 		| C.Prod( prod_args )	->	
 				(* Translate all terms of the product int K3 and make sure their return *)
 				(* values have numerical types *)
-				let prepare_fn (old_meta, old_scope, old_ret_t) c = 
+				let prepare_fn (old_meta, old_scope) c = 
 					let (e_outs_el,e_ret_ve,e),new_meta = calc_to_k3_expr old_meta old_scope c in
 					let new_scope = ListAsSet.union old_scope e_outs_el in
-					let e_ret_t = type_of_kvar e_ret_ve in
-					let new_ret_t = arithmetic_return_types old_ret_t e_ret_t
-					in
-					((e_outs_el,e_ret_ve,e),(new_meta,new_scope,new_ret_t))
+					((e_outs_el,e_ret_ve,e),(new_meta,new_scope))
 				in
-				let (nm,_,ret_t),prod_exprs = 
+				let (nm,_),prod_exprs = 
 					List.fold_left (fun (old_extra,old_el) c -> 
 															let result,new_extra = prepare_fn old_extra c in
 															new_extra,old_el@[result]
 													)
-													((meta,theta_vars_el,(K.TBase(T.TInt))),[]) 
+													((meta,theta_vars_el),[]) 
 													prod_args in
 				
-				let ret_ve = K.Var("prod",ret_t) in
 				let prod_expr_hd = List.hd prod_exprs in
 				let prod_exprs_tl = List.tl prod_exprs in
 				
 				let prod_fn (p1_outs_el,_p1_ret_ve,p1) (p2_outs_el,_p2_ret_ve,p2) =
 					let p1_ret_ve = K.Var("p1_ret",type_of_kvar _p1_ret_ve) in
 					let p2_ret_ve = K.Var("p2_ret",type_of_kvar _p2_ret_ve) in 
+					let ret_ve = K.Var("prod",arithmetic_return_types 
+								(type_of_kvar _p1_ret_ve) (type_of_kvar _p2_ret_ve)) in
 					let p_outs_el,p = begin match p1_outs_el,p2_outs_el with
 					| [],[] -> [], K.Mult(p1,p2)
 					|  _,[] -> p1_outs_el,

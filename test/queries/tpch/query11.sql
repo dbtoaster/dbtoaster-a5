@@ -6,7 +6,7 @@ CREATE STREAM PARTSUPP (
         comment      VARCHAR(199)
     )
   FROM FILE '../../experiments/data/tpch/partsupp.csv'
-  LINE DELIMITED csv ( deletions := 'true' );
+  LINE DELIMITED partsupp ( deletions := 'true' );
 
 CREATE STREAM SUPPLIER (
         suppkey      INT,
@@ -18,7 +18,7 @@ CREATE STREAM SUPPLIER (
         comment      VARCHAR(199)
     )
   FROM FILE '../../experiments/data/tpch/supplier.csv'
-  LINE DELIMITED csv ( deletions := 'true' );
+  LINE DELIMITED supplier ( deletions := 'true' );
 
 SELECT p.nationkey, p.partkey, SUM(p.value) AS QUERY11
 FROM
