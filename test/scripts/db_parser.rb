@@ -1,7 +1,7 @@
 require "#{File.dirname($0)}/util.rb"
 
 class OcamlDB < Hash
-  def initialize(db_string)
+  def initialize(db_string, reverse_key = true)
     tok = Tokenizer.new(
       db_string,
         /\[|\]|->|[a-zA-Z][a-zA-Z0-9_]*|[\-\+]?[0-9]+\.?[0-9]*e?[\-\+]?[0-9]*|<pat=[^>]*>|;/
@@ -25,10 +25,10 @@ class OcamlDB < Hash
         else tree.insert t 
       end
     end
-    OcamlDB.parse_named_forest(tree.pop.pop, self);
+    OcamlDB.parse_named_forest(tree.pop.pop, reverse_key, self);
   end
   
-  def OcamlDB.parse_named_forest(elements, into = Hash.new)
+  def OcamlDB.parse_named_forest(elements, reverse, into = Hash.new)
     elements.each do |k, contents|
       val = 
         case contents
@@ -40,7 +40,9 @@ class OcamlDB < Hash
             v unless v == 0.0;
           else raise "Unknown value type"
         end
-      into[k.map { |k_elem| k_elem.to_f }.reverse] = val unless val.nil?;
+      k = k.map { |k_elem| k_elem.to_f }
+      k = k.reverse if reverse;
+      into[k] = val unless val.nil?;
     end
     into;
   end

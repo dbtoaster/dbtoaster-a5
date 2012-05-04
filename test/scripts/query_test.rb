@@ -183,6 +183,7 @@ class InterpreterUnitTest < GenericUnitTest
     IO.popen(cmd, "r") do |qin|
       @runtime = "unknown"
       qin.each do |l|
+        p l;
         case l
           when /Processing time: ([0-9]+\.?[0-9]*)(e-?[0-9]+)?/ then 
             @runtime = "#{$1}#{$2}".to_f
