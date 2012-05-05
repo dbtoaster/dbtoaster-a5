@@ -187,6 +187,21 @@ let apply_lambda v_el el body =
 		failwith "M3ToK3: Applying lambda to expression with different size schema!";
 	K.Apply(lambda v_el body, (exprs_to_tuple el))
 
+(**[apply_lambda_to_expr lambda_e expr]
+
+   Applies the lambda expression [lambda_e] to the contents of [expr].
+	[expr] must be either a singleton expression or a K3 collection (ie. a mapping
+	from keys to values, no collection with just values are allowed). If [expr] is
+	singleton and lambda_e outputs a tuple the result is wrapped in a Singleton
+	collection. *)
+let apply_lambda_to_expr lambda_e expr =
+	begin match lambda_e with
+		| K.Lambda( K.AVar(_,_), K.Tuple(_)) -> K.Singleton( K.Apply(lambda_e, expr) )
+		| K.Lambda( K.AVar(_,_), _) -> K.Apply(lambda_e, expr)
+		| K.Lambda( K.ATuple(_), _) -> K.Map(  lambda_e, expr)
+		| _ -> failwith "M3ToK3: Invalid arguments to apply_lambda_to_expr."
+	end
+
 (**[project_fn from_v_el to_v_el]
 
    Projects the list of variables [from_v_el] to the list of variables [to_v_el].
@@ -516,8 +531,8 @@ let rec calc_to_k3_expr meta theta_vars_el calc :
 			| Cmp( T.Eq, c1, c2 )     -> cmp_fn ( fun e1 e2 -> K.Eq  (e1,e2) ) c1 c2
 			| Cmp( T.Lt, c1, c2 )     -> cmp_fn ( fun e1 e2 -> K.Lt  (e1,e2) ) c1 c2
 	    	| Cmp( T.Lte,c1, c2 )     -> cmp_fn ( fun e1 e2 -> K.Leq (e1,e2) ) c1 c2
-			| Cmp( T.Gt, c1, c2 )     -> cmp_fn ( fun e1 e2 -> K.Leq (e1,e2) ) c2 c1
-			| Cmp( T.Gte,c1, c2 )     -> cmp_fn ( fun e1 e2 -> K.Lt  (e1,e2) ) c2 c1
+			| Cmp( T.Gt, c1, c2 )     -> cmp_fn ( fun e1 e2 -> K.Lt  (e1,e2) ) c2 c1
+			| Cmp( T.Gte,c1, c2 )     -> cmp_fn ( fun e1 e2 -> K.Leq (e1,e2) ) c2 c1
 			| Cmp( T.Neq,c1, c2 )     -> cmp_fn ( fun e1 e2 -> K.Neq (e1,e2) ) c1 c2
 			
 			| Rel(reln, rel_schema) -> 
@@ -588,27 +603,23 @@ let rec calc_to_k3_expr meta theta_vars_el calc :
 					((agg_vars_el, ret_ve, expr), nm)
 									
 			| Lift(lift_v, lift_calc) 	      -> 
-					let (lift_outs_el,ret_ve,lift_e),nm = rcr lift_calc in
+					let (lift_outs_el,lift_ret_ve,lift_e),nm = rcr lift_calc in
 					let lift_ve = K.Var((fst lift_v),
-												(escalate_type (type_of_kvar ret_ve) 
+												(escalate_type (type_of_kvar lift_ret_ve) 
 																	(K.TBase(snd lift_v)))) in
-					let lift_ret_ve = K.Var("v",K.TBase(T.TInt)) in
-					if not (List.mem lift_ve theta_vars_el) then
-						let expr =
-								let lift_body = exprs_to_tuple (lift_outs_el@[ret_ve;one_int_val]) in
-								let lift_lambda = lambda (lift_outs_el@[ret_ve]) lift_body	in
-								if lift_outs_el = [] then	   K.Singleton( K.Apply(lift_lambda,lift_e) )
-								else									K.Map(lift_lambda,lift_e)
-						in
-						((lift_outs_el@[lift_ve], lift_ret_ve, expr), nm)
-					else
-						let expr =
-								let lift_body = exprs_to_tuple (lift_outs_el@[K.Eq(ret_ve,lift_ve)]) in
-								let lift_lambda = lambda (lift_outs_el@[ret_ve]) lift_body	in
-								if lift_outs_el = [] then    K.Apply(lift_lambda,lift_e)
-								else								   K.Map(lift_lambda,lift_e)
-						in
-						((lift_outs_el, lift_ret_ve, expr), nm)
+					let is_bound = List.mem lift_ve theta_vars_el in
+					let extra_ve, ret_ve, lift_body = 
+						if is_bound then 
+							[], K.Var("lift_v",K.TBase(T.TBool)),
+							(exprs_to_tuple (lift_outs_el@[K.Eq(lift_ret_ve,lift_ve)]))
+						else
+							[lift_ve], K.Var("lift_v",K.TBase(T.TInt)),
+							(exprs_to_tuple (lift_outs_el@[lift_ret_ve;one_int_val]))
+					in
+					let lift_lambda = lambda (lift_outs_el@[lift_ret_ve]) lift_body	in
+					let expr = apply_lambda_to_expr lift_lambda lift_e	
+					in	
+					((lift_outs_el@extra_ve, ret_ve, expr), nm)
 		end
 			
     | C.Sum( sum_args )	->
@@ -702,10 +713,10 @@ let rec calc_to_k3_expr meta theta_vars_el calc :
 				let prod_exprs_tl = List.tl prod_exprs in
 				
 				let prod_fn (p1_outs_el,_p1_ret_ve,p1) (p2_outs_el,_p2_ret_ve,p2) =
-					let p1_ret_ve = K.Var("p1_ret",type_of_kvar _p1_ret_ve) in
-					let p2_ret_ve = K.Var("p2_ret",type_of_kvar _p2_ret_ve) in 
-					let ret_ve = K.Var("prod",arithmetic_return_types 
-								(type_of_kvar _p1_ret_ve) (type_of_kvar _p2_ret_ve)) in
+					let p1_ret_t,p2_ret_t = pair_map type_of_kvar (_p1_ret_ve,_p2_ret_ve) in
+					let p1_ret_ve = K.Var("p1_ret",p1_ret_t) in
+					let p2_ret_ve = K.Var("p2_ret",p2_ret_t) in 
+					let ret_ve = K.Var("prod",arithmetic_return_types p1_ret_t p2_ret_t) in
 					let p_outs_el,p = begin match p1_outs_el,p2_outs_el with
 					| [],[] -> [], K.Mult(p1,p2)
 					|  _,[] -> p1_outs_el,
