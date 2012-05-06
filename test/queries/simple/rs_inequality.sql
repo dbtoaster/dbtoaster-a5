@@ -1,8 +1,8 @@
-CREATE TABLE R(A int, B int) 
+CREATE STREAM R(A int, B int) 
   FROM FILE '../../experiments/data/r.dat' LINE DELIMITED
   csv (fields := ',', schema := 'int,int', eventtype := 'insert');
 
-CREATE TABLE S(C int, D int) 
+CREATE STREAM S(C int, D int) 
   FROM FILE '../../experiments/data/s.dat' LINE DELIMITED
   csv (fields := ',', schema := 'int,int', eventtype := 'insert');
 
