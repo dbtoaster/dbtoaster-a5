@@ -303,8 +303,8 @@ sig
     val zero_of_type : type_t -> t
     val compare : t -> t -> int
     val string_of_value : t -> string
-    val string_of_smap : single_map_t -> string
-    val string_of_map : map_t -> string
+    val string_of_smap : ?sep:string -> single_map_t -> string
+    val string_of_map : ?sep:string -> map_t -> string
     val to_string : t -> string
 end =
 struct
@@ -330,9 +330,9 @@ struct
 	 let compare = Pervasives.compare
 
     let rec key_to_string k = ListExtras.ocaml_of_list string_of_value k
-    and string_of_vmap sm   = K3ValuationMap.to_string key_to_string string_of_value sm
-    and string_of_smap sm   = string_of_vmap sm 
-    and string_of_map m     = K3ValuationMap.to_string key_to_string string_of_smap m 
+    and string_of_vmap ?(sep = ";\n") sm   = K3ValuationMap.to_string ~sep:sep key_to_string string_of_value sm
+    and string_of_smap ?(sep = ";\n") sm   = string_of_vmap ~sep:sep sm 
+    and string_of_map  ?(sep = ";\n") m    = K3ValuationMap.to_string ~sep:sep key_to_string string_of_smap m 
 
     and string_of_value v =
       begin match v with

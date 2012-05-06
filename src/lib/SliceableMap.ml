@@ -52,7 +52,7 @@ sig
    val from_list : (key * 'a) list -> pattern list -> 'a t
    val to_list : 'a t -> (key * 'a) list
    
-   val to_string : (key -> string) -> ('a -> string) -> 'a t -> string
+   val to_string : ?sep:string -> (key -> string) -> ('a -> string) -> 'a t -> string
    
    (* Secondary index methods *)
    val slice : pattern -> partial_key -> 'a t -> 'a t
@@ -353,9 +353,9 @@ struct
 
 
    (* Stringification *)
-   let to_string ks vs m =
+   let to_string ?(sep = ";\n") ks vs m =
       let f k v acc =
-        (if acc = "" then "" else acc^" ")^(ks k)^"->"^(vs v)^";"
+        (if acc = "" then "" else acc^" ")^(ks k)^"->"^(vs v)^sep
       in 
       "["^(fold f "" m)^"]<pat="^(string_of_patterns m)^">"
 

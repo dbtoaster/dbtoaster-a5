@@ -94,8 +94,8 @@ sig
 	val zero_of_type : Types.type_t -> value_t
 	
    val string_of_value : value_t -> string
-   val string_of_smap : single_map_t -> string
-   val string_of_map : map_t -> string
+   val string_of_smap : ?sep:string -> single_map_t -> string
+   val string_of_map : ?sep:string -> map_t -> string
 
    val make_smap : (key_t * value_t) list -> pattern_t list -> single_map_t
    val make_map  : pattern_t list -> map_t  
@@ -137,8 +137,8 @@ sig
     val zero : t
     val zero_of_type : Types.type_t -> t
     val string_of_value : t -> string
-    val string_of_smap : single_map_t -> string
-    val string_of_map : map_t -> string
+    val string_of_smap : ?sep:string -> single_map_t -> string
+    val string_of_map : ?sep:string -> map_t -> string
 end
 
 module InOutMaps(M : SliceableInOutMap) : M3MapSpec
@@ -194,8 +194,8 @@ struct
     let zero_of_type       = ConstTValue.zero_of_type
     let string_of_value    = ConstTValue.to_string
     let key_to_string k    = ListExtras.ocaml_of_list string_of_value k
-    let string_of_smap sm  = Map.to_string key_to_string string_of_value sm
-    let string_of_map m    = Map.to_string key_to_string string_of_smap m 
+    let string_of_smap ?(sep = ";\n") sm  = Map.to_string ~sep:sep key_to_string string_of_value sm
+    let string_of_map  ?(sep = ";\n") m   = Map.to_string ~sep:sep key_to_string string_of_smap m 
 end
 
 (* ConstTMaps are used in M3 databases *)
@@ -249,8 +249,8 @@ sig
 
    (* Content to strings *)
    val value_to_string : value_t -> string 
-   val smap_to_string : single_map_t -> string
-   val map_to_string : map_t -> string
+   val smap_to_string : ?sep:string -> single_map_t -> string
+   val map_to_string : ?sep:string -> map_t -> string
    val db_to_string : db_t -> string
 
    val get_in_patterns : map_name_t -> db_t -> pattern_t list
@@ -325,8 +325,8 @@ struct
    let value_to_string    = S.string_of_value
    let key_to_string k    = ListExtras.ocaml_of_list value_to_string k
 
-   let smap_to_string (m: single_map_t) = S.string_of_smap m
-   let map_to_string (m: map_t) = S.string_of_map m
+   let smap_to_string ?(sep = ";\n") (m: single_map_t) = S.string_of_smap ~sep:sep m
+   let map_to_string ?(sep = ";\n") (m: map_t) = S.string_of_map ~sep:sep m
 
    (* Debugging and testing helpers *)
    let showsmap (s: single_map_t) = S.smap_to_list s

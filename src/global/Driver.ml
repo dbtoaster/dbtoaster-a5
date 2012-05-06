@@ -592,3 +592,4 @@ if stage_is_active StageCompileSource then (
    flush_output ();
    (!compiler).ExternalCompiler.compile !output_file !binary_file
 )
+;;
