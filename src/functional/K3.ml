@@ -612,22 +612,22 @@ let string_of_exprs e_l = ListExtras.string_of_list string_of_expr e_l
 let rec code_of_expr e =
    let rcr ex = "("^(code_of_expr ex)^")" in
    let rec ttostr t = "("^(match t with
-      | TUnit -> "K3.SR.TUnit"
-      | TBase( b_t ) -> "Types."^(Types.ocaml_of_type b_t)
+      | TUnit -> "K3.TUnit"
+      | TBase( b_t ) -> "K3.TBase(Types."^(Types.ocaml_of_type b_t)^")"
       | TTuple(tlist) -> 
-         "K3.SR.TTuple("^(ListExtras.ocaml_of_list ttostr tlist)^")"
-      | Collection(subt) -> "K3.SR.Collection("^(ttostr subt)^")"
+         "K3.TTuple("^(ListExtras.ocaml_of_list ttostr tlist)^")"
+      | Collection(subt) -> "K3.Collection("^(ttostr subt)^")"
       | Fn(argt,rett) -> 
-         "K3.SR.Fn("^(ListExtras.ocaml_of_list ttostr argt)^","^(ttostr rett)^")"
+         "K3.Fn("^(ListExtras.ocaml_of_list ttostr argt)^","^(ttostr rett)^")"
    )^")" in
    let string_of_vpair (v,vt) = "\""^v^"\","^(ttostr vt) in
    let vltostr = ListExtras.ocaml_of_list string_of_vpair in
    let argstr arg = 
       match arg with
          | AVar(v,vt) -> 
-            "K3.SR.AVar("^(string_of_vpair (v,vt))^")"
+            "K3.AVar("^(string_of_vpair (v,vt))^")"
          | ATuple(vlist) -> 
-            "K3.SR.ATuple("^(vltostr vlist)^")"
+            "K3.ATuple("^(vltostr vlist)^")"
    in
    match e with
       | Const c -> 
@@ -636,76 +636,76 @@ let rec code_of_expr e =
           | Types.CString _ -> "CString" 
 					| Types.CInt _ -> "CInt"
           | Types.CBool _ -> "CBool" 
-        in "K3.SR.Const(M3."^const_ts^"("^(Types.string_of_const c)^"))"
-      | Var (id,t) -> "K3.SR.Var(\""^id^"\","^(ttostr t)^")"
-      | Tuple e_l -> "K3.SR.Tuple("^(ListExtras.ocaml_of_list rcr e_l)^")"
+        in "K3.Const(Types."^const_ts^"("^(Types.string_of_const c)^"))"
+      | Var (id,t) -> "K3.Var(\""^id^"\","^(ttostr t)^")"
+      | Tuple e_l -> "K3.Tuple("^(ListExtras.ocaml_of_list rcr e_l)^")"
       
-      | Project (ce, idx) -> "K3.SR.Project("^(rcr ce)^","^
+      | Project (ce, idx) -> "K3.Project("^(rcr ce)^","^
                            (ListExtras.ocaml_of_list string_of_int idx)^")"
       
-      | Singleton ce      -> "K3.SR.Singleton("^(rcr ce)^")"
-      | Combine (ce1,ce2) -> "K3.SR.Combine("^(rcr ce1)^","^(rcr ce2)^")"
-      | Add  (ce1,ce2)    -> "K3.SR.Add("^(rcr ce1)^","^(rcr ce2)^")"
-      | Mult (ce1,ce2)    -> "K3.SR.Mult("^(rcr ce1)^","^(rcr ce2)^")"
-      | Eq   (ce1,ce2)    -> "K3.SR.Eq("^(rcr ce1)^","^(rcr ce2)^")"
-      | Neq  (ce1,ce2)    -> "K3.SR.Neq("^(rcr ce1)^","^(rcr ce2)^")"
-      | Lt   (ce1,ce2)    -> "K3.SR.Lt("^(rcr ce1)^","^(rcr ce2)^")"
-      | Leq  (ce1,ce2)    -> "K3.SR.Leq("^(rcr ce1)^","^(rcr ce2)^")"
+      | Singleton ce      -> "K3.Singleton("^(rcr ce)^")"
+      | Combine (ce1,ce2) -> "K3.Combine("^(rcr ce1)^","^(rcr ce2)^")"
+      | Add  (ce1,ce2)    -> "K3.Add("^(rcr ce1)^","^(rcr ce2)^")"
+      | Mult (ce1,ce2)    -> "K3.Mult("^(rcr ce1)^","^(rcr ce2)^")"
+      | Eq   (ce1,ce2)    -> "K3.Eq("^(rcr ce1)^","^(rcr ce2)^")"
+      | Neq  (ce1,ce2)    -> "K3.Neq("^(rcr ce1)^","^(rcr ce2)^")"
+      | Lt   (ce1,ce2)    -> "K3.Lt("^(rcr ce1)^","^(rcr ce2)^")"
+      | Leq  (ce1,ce2)    -> "K3.Leq("^(rcr ce1)^","^(rcr ce2)^")"
       
       | IfThenElse0 (ce1,ce2)  -> 
-            "K3.SR.IfThenElse0("^(rcr ce1)^","^(rcr ce2)^")"
+            "K3.IfThenElse0("^(rcr ce1)^","^(rcr ce2)^")"
       | Comment(c, cexpr) ->
             "(*** "^c^" ***) "^(rcr cexpr)
       | IfThenElse  (pe,te,ee) -> 
-            "K3.SR.IfThenElse("^(rcr pe)^","^(rcr te)^","^(rcr ee)^")"
+            "K3.IfThenElse("^(rcr pe)^","^(rcr te)^","^(rcr ee)^")"
       
-      | Block   e_l        -> "K3.SR.Block("^(ListExtras.ocaml_of_list rcr e_l)^")"
-      | Iterate (fn_e, ce) -> "K3.SR.Iterate("^(rcr fn_e)^","^(rcr ce)^")"
-      | Lambda  (arg_e,ce) -> "K3.SR.Lambda("^(argstr arg_e)^","^(rcr ce)^")"
+      | Block   e_l        -> "K3.Block("^(ListExtras.ocaml_of_list rcr e_l)^")"
+      | Iterate (fn_e, ce) -> "K3.Iterate("^(rcr fn_e)^","^(rcr ce)^")"
+      | Lambda  (arg_e,ce) -> "K3.Lambda("^(argstr arg_e)^","^(rcr ce)^")"
       
       | AssocLambda(arg1,arg2,be) ->
-            "K3.SR.AssocLambda("^(argstr arg1)^","^(argstr arg2)^","^
+            "K3.AssocLambda("^(argstr arg1)^","^(argstr arg2)^","^
                                (rcr be)^")"
       | ExternalLambda(fn_id,arg,fn_t) ->
-            "K3.SR.ExternalLambda(\""^fn_id^"\","^(argstr arg)^","^(ttostr fn_t)^")"
+            "K3.ExternalLambda(\""^fn_id^"\","^(argstr arg)^","^(ttostr fn_t)^")"
       | Apply(fn_e,arg_e) -> 
-            "K3.SR.Apply("^(rcr fn_e)^","^(rcr arg_e)^")"
+            "K3.Apply("^(rcr fn_e)^","^(rcr arg_e)^")"
       | Map(fn_e,ce) -> 
-            "K3.SR.Map("^(rcr fn_e)^","^(rcr ce)^")"
+            "K3.Map("^(rcr fn_e)^","^(rcr ce)^")"
       | Flatten(ce) -> 
-            "K3.SR.Flatten("^(rcr ce)^")"
+            "K3.Flatten("^(rcr ce)^")"
       | Aggregate(fn_e,i_e,ce) -> 
-            "K3.SR.Aggregate("^(rcr fn_e)^","^(rcr i_e)^","^(rcr ce)^")"
+            "K3.Aggregate("^(rcr fn_e)^","^(rcr i_e)^","^(rcr ce)^")"
       | GroupByAggregate(fn_e,i_e,ge,ce) -> 
-            "K3.SR.GroupByAggregate("^(rcr fn_e)^","^(rcr i_e)^","^(rcr ge)^
+            "K3.GroupByAggregate("^(rcr fn_e)^","^(rcr i_e)^","^(rcr ge)^
                                     ","^(rcr ce)^")"
       | SingletonPC(id,t) -> 
-            "K3.SR.SingletonPC(\""^id^"\","^(ttostr t)^")"
+            "K3.SingletonPC(\""^id^"\","^(ttostr t)^")"
       | OutPC(id,outs,t) -> 
-            "K3.SR.OutPC(\""^id^"\","^(vltostr outs)^","^(ttostr t)^")"
+            "K3.OutPC(\""^id^"\","^(vltostr outs)^","^(ttostr t)^")"
       | InPC(id,ins,t) -> 
-            "K3.SR.InPC(\""^id^"\","^(vltostr ins)^","^(ttostr t)^")"
+            "K3.InPC(\""^id^"\","^(vltostr ins)^","^(ttostr t)^")"
       | PC(id,ins,outs,t) -> 
-            "K3.SR.PC(\""^id^"\","^(vltostr ins)^","^(vltostr ins)^","^
+            "K3.PC(\""^id^"\","^(vltostr ins)^","^(vltostr ins)^","^
                       (ttostr t)^")"
       | Member(me,ke) -> 
-            "K3.SR.Member("^(rcr me)^","^(ListExtras.ocaml_of_list rcr ke)^")"  
+            "K3.Member("^(rcr me)^","^(ListExtras.ocaml_of_list rcr ke)^")"  
       | Lookup(me,ke) -> 
-            "K3.SR.Lookup("^(rcr me)^","^(ListExtras.ocaml_of_list rcr ke)^")"
+            "K3.Lookup("^(rcr me)^","^(ListExtras.ocaml_of_list rcr ke)^")"
       | Slice(me,sch,pat_ve) -> 
             let pat_str = ListExtras.ocaml_of_list (fun (id,expr) ->
                "\""^id^"\","^(rcr expr)
             ) pat_ve in
-            "K3.SR.Slice("^(rcr me)^","^(vltostr sch)^",("^pat_str^"))"
+            "K3.Slice("^(rcr me)^","^(vltostr sch)^",("^pat_str^"))"
       | PCUpdate(me,ke,te) -> 
-            "K3.SR.PCUpdate("^(rcr me)^","^(ListExtras.ocaml_of_list rcr ke)^","^
+            "K3.PCUpdate("^(rcr me)^","^(ListExtras.ocaml_of_list rcr ke)^","^
                             (rcr te)^")"
       | PCValueUpdate(me,ine,oute,ve) -> 
-            "K3.SR.PCValueUpdate("^(rcr me)^","^(ListExtras.ocaml_of_list rcr ine)^
+            "K3.PCValueUpdate("^(rcr me)^","^(ListExtras.ocaml_of_list rcr ine)^
                                  ","^(ListExtras.ocaml_of_list rcr oute)^","^
                                  (rcr ve)^")"
       | PCElementRemove(me,ine,oute) -> 
-            "K3.SR.PCElementRemove("^(rcr me)^","^(ListExtras.ocaml_of_list rcr ine)^
+            "K3.PCElementRemove("^(rcr me)^","^(ListExtras.ocaml_of_list rcr ine)^
                                 ","^(ListExtras.ocaml_of_list rcr oute)^")"
 
 (* Native collection constructors *)

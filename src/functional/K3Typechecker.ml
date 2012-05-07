@@ -560,7 +560,7 @@ let rec typecheck_expr e : K.type_t =
 					else failwith "map value update: invalid update value expression"
 				in
 				begin match me with
-					| K.SingletonPC(id, t) -> K.TUnit
+					| K.SingletonPC(id, t) -> ignore(aux [] t [] ve); K.TUnit
 					| K.OutPC (id, outs, t) -> ignore(aux outs t oute ve); K.TUnit
 					| K.InPC (id, ins, t) -> ignore(aux ins t ine ve); K.TUnit
 					| K.PC(id, ins, outs, t) ->
@@ -594,6 +594,6 @@ let rec typecheck_expr e : K.type_t =
 	*)
 	with Failure x ->
 			Debug.print "K3-TYPECHECK-DETAIL" (fun () ->
-							"--------- Expression trace ----------\n"^(K.code_of_expr e)
+							"--------- Expression trace ----------\n"^(K.string_of_expr e)
 				);
 			failwith ("K3 Typecheck Error: "^x^"\n(use '-d k3-typecheck-detail' for more information)")

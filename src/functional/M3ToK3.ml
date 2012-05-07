@@ -865,7 +865,8 @@ let m3_stmt_to_k3_stmt (meta: meta_t) trig_args (m3_stmt: Plan.stmt_t) : K.state
 			if lhs_ins_el = [] then K.Apply(  outer_loop_body,lhs_collection)
 			else          					K.Iterate(outer_loop_body,lhs_collection)
 	in
-		(statement_expr, nm)
+	let _ = K3Typechecker.typecheck_expr statement_expr in
+	(statement_expr, nm)
 
 
 (**[target_of_statement stmt]

@@ -671,33 +671,39 @@ let rec conservative_beta_reduction substitutions expr =
        if List.length occurrences = 1 then reduce() else preserve()
   in
   begin match expr with
-  | Add(Const(CFloat(0.0)), x) | Add(x, Const(CFloat(0.0))) -> recid x
-  | Add(Const(CFloat(x)), Const(CFloat(y))) -> Const(CFloat(x +. y)) (* TODO create a generic c_sum function *)
-
-  | Mult(Const(CFloat(1.0)), x) | Mult(x, Const(CFloat(1.0))) -> recid x
-  | Mult(Const(CFloat(x)), Const(CFloat(y))) -> Const(CFloat(x *. y)) (* TODO create a generic c_prod function *)
-
-  | Apply(Lambda(AVar(v,t), body) as lambda_e, arg) ->
-    let free_vars = get_free_vars [] body in
-    let remaining, _, new_e =
-      beta_reduce free_vars ([], substitutions, lambda_e) ((v,t), arg) in
-    if remaining <> [] then recid expr else snd (get_fun_parts new_e)
-
-  | Apply(Lambda(ATuple(vt_l), body) as lambda_e, Tuple(fields)) ->
-    let free_vars = get_free_vars [] body in
-    let reml, _, new_e = List.fold_left (beta_reduce free_vars)
-        ([], substitutions, lambda_e) (List.combine vt_l fields) in
-    let rem_vt_l, rem_fields = List.split reml in
-    if rem_fields = fields then recid expr
-    else Apply(Lambda(ATuple(rem_vt_l), snd (get_fun_parts new_e)), Tuple(rem_fields))
- 
-  (* TODO: handle Apply(AssocLambda(...)) *)
-
-  | Var(v,t) -> if List.mem_assoc (v,t) substitutions
-                then List.assoc (v,t) substitutions else expr
-  | _ -> recid expr
-  end
-
+	  | Add(Const(CFloat(0.0)), x) | Add(x, Const(CFloat(0.0))) -> recid x
+	  | Add(Const(CFloat(x)), Const(CFloat(y))) -> Const(CFloat(x +. y)) (* TODO create a generic c_sum function *)
+	
+	  | Mult(Const(CFloat(1.0)), x) | Mult(x, Const(CFloat(1.0))) -> recid x
+	  | Mult(Const(CFloat(x)), Const(CFloat(y))) -> Const(CFloat(x *. y)) (* TODO create a generic c_prod function *)
+	
+	  | Apply(Lambda(AVar(v,t), body) as lambda_e, arg) ->
+	    let free_vars = get_free_vars [] body in
+	    let remaining, _, new_e =
+	      beta_reduce free_vars ([], substitutions, lambda_e) ((v,t), arg) in
+	    if remaining <> [] then recid expr else snd (get_fun_parts new_e)
+	
+	  | Apply(Lambda(ATuple(vt_l), body) as lambda_e, Tuple(fields)) ->
+	    let free_vars = get_free_vars [] body in
+	    let reml, _, new_e = List.fold_left (beta_reduce free_vars)
+	        ([], substitutions, lambda_e) (List.combine vt_l fields) in
+	    let rem_vt_l, rem_fields = List.split reml in
+	    if rem_fields = fields then recid expr
+	    else 
+			begin match rem_fields with
+				| [] -> snd (get_fun_parts new_e)
+				| [rem_field] ->
+					let (rem_v,rem_t) = List.hd rem_vt_l in
+					Apply(Lambda(AVar(rem_v,rem_t), snd (get_fun_parts new_e)), rem_field)
+				| _ -> Apply(Lambda(ATuple(rem_vt_l), snd (get_fun_parts new_e)), Tuple(rem_fields))
+	 		end
+	  (* TODO: handle Apply(AssocLambda(...)) *)
+	
+	  | Var(v,t) -> if List.mem_assoc (v,t) substitutions
+	                then List.assoc (v,t) substitutions else expr
+	  | _ -> recid expr
+	  end	
+  
 (* Performs dependency tests at lambda-if boundaries *)
 (* Avoids spinning on reordering at if-chains
  * -- if-reordering-spinning can be an arbitrarily deep problem, thus
@@ -938,7 +944,7 @@ let common_subexpression_elim expr =
         try K3Typechecker.typecheck_expr arg
         with Failure msg ->
           (print_endline ("invalid cse: "^msg);
-           print_endline ("cse: "^(string_of_expr arg));
+           print_endline ("cse["^expr_id^"]: "^(string_of_expr arg));
            failwith ("invalid cse: "^msg))
       in
       let cse_var = Var(cse_id, cse_ty) in
@@ -1025,10 +1031,11 @@ let common_subexpression_elim expr =
   in
 
   let fold_f pre acc expr : expr_t list list * expr_t =
-    let parts = List.map (fun x -> List.map snd x) acc in
+	 let parts = List.map (fun x -> List.map snd x) acc in
     let sub_parts = List.map (fun x -> List.map fst x) acc in
     let rebuilt_expr = rebuild_expr expr parts in
-    let lambda_common body f = 
+	
+	 let lambda_common body f = 
       let r_expr =
         let body = List.hd (List.hd parts) in
         let cses = List.filter
@@ -1386,10 +1393,12 @@ let optimize ?(optimizations=[]) trigger_vars expr =
     if e = new_e then e else fixpoint new_e    
   in 
   Debug.print "LOG-K3-OPT" (fun () -> "INLINE COLLECTION FNS");
-  let r = fixpoint (inline_collection_functions [] expr) in
+  let r = fixpoint (inline_collection_functions [] expr) 
+  in
   Debug.print "LOG-K3-OPT" (fun () -> "BETA OTIMIZATIONS");
   let r1 = if List.mem Beta optimizations
-             then conservative_beta_reduction [] r else r in
+             then conservative_beta_reduction [] r else r 
+  in
   Debug.print "LOG-K3-OPT" (fun () -> "CSE OPTIMIZATIONS");
      if not(List.mem CSE optimizations)  then r1
      else (lift_if0s
