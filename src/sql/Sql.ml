@@ -23,13 +23,24 @@ exception SqlException of string
 
 (**
    An error associating a given variable with a relation or pseudorelation that
-   is the result of a nested select statement.  The first field is the error
-   string, and the second field is the number of candidates that may be
+   is the result of a nested select statement.  The first field is the affected 
+   variable, and the second field is the number of candidates that may be
    associated with the variable.  0 means no relation/pseudorelation has a
    variable by that name in its schema, while a number greater than 1 means that
    more than 1 relation/pseudorelation can be associated with the variable
 *)
 exception Variable_binding_err of string * int
+
+(**
+   Obtain the human-parseable interpretation of a Variable_binding_error.
+*)
+let string_of_var_binding_err = function
+   | Variable_binding_err(var,0) ->
+      "Unable to bind variable '"^var^"'; No matching variables in scope"
+   | Variable_binding_err(var,x) ->
+      "Unable to bind variable '"^var^"'; The name is ambiguous, try "^ 
+      "using a fully qualified name."
+   | _ -> "BUG: Not a variable binding error in Sql module"
 
 (**/**)
 let error msg = raise (SqlException(msg))

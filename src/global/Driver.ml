@@ -1,9 +1,7 @@
 open Calculus
 open Plan
 
-exception DriverError of string
-
-let error msg = raise (DriverError(msg))
+let error msg = (prerr_endline msg; exit (-1))
 let bug   msg = failwith ("BUG : "^msg)
 
 ;;
@@ -324,12 +322,19 @@ let source_code:string list ref = ref [];;
 
 if stage_is_active StageParseSQL then (
    Debug.print "LOG-DRIVER" (fun () -> "Running Stage: ParseSQL");
-   List.iter (fun f ->
-      let lexbuff = 
-         Lexing.from_channel (if f <> "-" then (open_in f) else stdin) 
-      in sql_program := Sql.merge_files !sql_program
-            (Sqlparser.dbtoasterSqlList Sqllexer.tokenize lexbuff)
-   ) !files
+   try 
+      List.iter (fun f ->
+         let lexbuff = 
+            Lexing.from_channel (if f <> "-" then (open_in f) else stdin) 
+         in sql_program := Sql.merge_files !sql_program
+               (Sqlparser.dbtoasterSqlList Sqllexer.tokenize lexbuff)
+      ) !files
+   with 
+      | Sql.SqlException(msg) ->
+         error ("Sql Error: "^msg)
+      | Sql.Variable_binding_err(_,_) as vb_err ->
+         error ("Sql Error: "^(Sql.string_of_var_binding_err vb_err))
+   
 )
 ;;
 if stage_is_active StagePrintSQL then (
