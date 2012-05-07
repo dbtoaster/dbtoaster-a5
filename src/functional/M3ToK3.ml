@@ -610,7 +610,7 @@ let rec calc_to_k3_expr meta theta_vars_el calc :
 					let is_bound = List.mem lift_ve theta_vars_el in
 					let extra_ve, ret_ve, lift_body = 
 						if is_bound then 
-							[], K.Var("lift_v",K.TBase(T.TBool)),
+							[], K.Var("lift_v",K.TBase(T.TInt)),
 							(exprs_to_tuple (lift_outs_el@[K.Eq(lift_ret_ve,lift_ve)]))
 						else
 							[lift_ve], K.Var("lift_v",K.TBase(T.TInt)),
