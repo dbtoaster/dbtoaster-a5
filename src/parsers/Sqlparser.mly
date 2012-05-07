@@ -73,7 +73,7 @@ let bind_select_vars q =
 %token AND OR NOT BETWEEN
 %token COMMA LPAREN RPAREN PERIOD
 %token AS
-%token JOIN INNER OUTER LEFT RIGHT ON NATURAL EXISTS IN SOME ALL
+%token JOIN INNER OUTER LEFT RIGHT ON NATURAL EXISTS IN SOME ALL UNION
 %token CREATE TABLE FROM USING DELIMITER SELECT WHERE GROUP BY HAVING ORDER
 %token SOCKET FILE FIXEDWIDTH VARSIZE OFFSET ADJUSTBY SETVALUE LINE DELIMITED
 %token POSTGRES RELATION PIPE
@@ -241,15 +241,20 @@ selectStmt:
     groupByClause
     {
       let (from, join_conds) = $3 in
-         ($2, from, Sql.mk_and join_conds $4, $5)
+         Sql.expand_wildcard_targets (List.map snd !table_defs)
+            ($2, from, Sql.mk_and join_conds $4, $5)
     }
 
 //
 // Expressions
 
 variable:
-| ID           { (None, String.uppercase $1, TAny) }
-| ID PERIOD ID { ((Some(String.uppercase $1)), String.uppercase $3, TAny) }
+| ID              { (None, String.uppercase $1, TAny) }
+| ID PERIOD ID    { ((Some(String.uppercase $1)),String.uppercase $3, TAny) }
+//These wildcard targets will get expanded out in selectStmt
+| PRODUCT                { (None, "*", TAny) }
+| PRODUCT PERIOD PRODUCT { (None, "*", TAny) }
+| ID PERIOD PRODUCT      { (Some(String.uppercase $1), "*", TAny) }
 
 op:
 | SUM     { Sql.Sum }

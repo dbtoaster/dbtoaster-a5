@@ -109,8 +109,8 @@ and cond_t   =
    subquery
 *)
 and source_t = 
- | Table of string   (** A table *)
- | SubQ  of select_t (** A subquery *)
+ | Table of string                       (** A table *)
+ | SubQ  of select_t                     (** A subquery *)
 
 (**
    A named member of a from clause.
@@ -123,10 +123,10 @@ and labeled_source_t = string * source_t
    by clause.
 *)
 and select_t =
-   (* SELECT   *) target_t list *
-   (* FROM     *) labeled_source_t list *
-   (* WHERE    *) cond_t *
-   (* GROUP BY *) sql_var_t list
+   (* SELECT      *) target_t list *
+   (* FROM        *) labeled_source_t list *
+   (* WHERE       *) cond_t *
+   (* GROUP BY    *) sql_var_t list
 
 (**
    A SQL statement.  This can be either a [CREATE TABLE] statement or a [SELECT]
@@ -397,7 +397,34 @@ let rec expr_type (expr:expr_t) (tables:table_t list)
          begin match agg with
             | SumAgg -> return_if_numeric (rcr subexp) "Aggregate of "
          end
-         
+    
+(**
+   Compute the schema of a labeled source.  Like source_schema, but the schema
+   variables will be bound to the labeled identifier.
+   
+   @param tables  The database schema (a list of all tables)
+   @param source  The labeled source
+   @return        The schema (types/names) of the result of [stmt]
+*)
+and labeled_source_schema (tables:table_t list) 
+                          ((label,source):labeled_source_t): schema_t =
+   List.map (fun (_,varn,vart) -> ((Some(label)),varn,vart))
+            (source_schema tables source)
+
+(**
+   Compute the schema of a source
+   @param tables  The database schema (a list of all tables)
+   @param source  The source
+   @return        The schema (types/names) of the result of [stmt]
+*)
+and source_schema (tables:table_t list) (source:source_t): schema_t =
+   match source with 
+      | Table(table_name) -> 
+         let (_,sch,_,_) = 
+            List.find (fun (cmp_name,_,_,_) -> cmp_name=table_name) tables
+         in sch
+      | SubQ(stmt) -> select_schema (tables) stmt
+
 (**
    Compute the schema of a [SELECT] statement
    @param tables  The database schema (a list of all tables)
@@ -616,6 +643,31 @@ let rec is_agg_expr (expr:expr_t): bool =
 let is_agg_query ((targets,_,_,_):select_t): bool =
    List.exists is_agg_expr (List.map snd targets)
 ;;
+
+(**
+   Expand all targets of type * and *.* and something.*.  Does not recur into
+   nested select statements.
+   @param stmt    A SQL [SELECT] statement
+   @param tables  The database schema (a list of all tables)
+   @return        [stmt] rewritten with all targets consisting of AVar(_,*,_)
+                  replaced by the corresponding wildcard expansion
+*)
+let expand_wildcard_targets (tables:table_t list) 
+                            ((targets,sources,cond,gb):select_t) =
+   (  List.flatten (List.map (fun (tname, texpr) ->
+         match texpr with
+            | Var(None, "*", _) ->
+               List.map (fun expr -> (name_of_expr (Var(expr)), (Var(expr)))) (
+                  List.flatten (List.map (labeled_source_schema tables) sources)
+               )
+            | Var(Some(source), "*", _) ->
+               List.map (fun expr -> (name_of_expr (Var(expr)), (Var(expr))))
+                        (labeled_source_schema tables
+                           (source,(List.assoc source sources)))
+            | _ -> [tname,texpr]
+            
+      ) targets),
+      sources, cond, gb)
 
 (**/**)
 let global_table_defs:(string * table_t) list ref = ref []

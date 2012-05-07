@@ -219,8 +219,7 @@ let active_stages = ref (ListAsSet.inter
             imperative stage and produce C++ code directly after the 
             functional stage. *)
       | Interpreter
-              -> StageRunInterpreter::StageK3ToTargetLanguage::
-                     (stages_to StageM3ToK3)
+              -> StageRunInterpreter::(stages_to FunctionalTargetMarker)
 (*    | _     -> error "Unsupported output language"*)
     )@input_stages))
 ;;
