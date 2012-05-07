@@ -283,12 +283,17 @@ let rec calc_of_query ?(query_name = None)
          (Sql.string_of_expr tgt_expr)
       );
       match tgt_expr with
-         | Sql.Var(v) when (query_name = None) ||
-                           (fst (var_of_sql_var v) = tgt_name) ->
-            (* If we're being asked to group by a variable (with no renaming)
-               then we don't actually need to include the variable in any way
-               shape and/or form *)
-            CalcRing.one
+         | Sql.Var((_,vn,_) as v) when ((query_name = None) && (vn = tgt_name))
+                                       || ((fst (var_of_sql_var v)) = tgt_name) 
+            ->
+               Debug.print "LOG-SQL-TO-CALC" (fun () -> 
+                  "Just a variable where '"^(fst (var_of_sql_var v))^"' = '"^
+                  tgt_name^"'"
+               );
+               (* If we're being asked to group by a variable (with no renaming)
+                  then we don't actually need to include the variable in any way
+                  shape and/or form *)
+               CalcRing.one
          | _ -> 
             (* If we're being asked to group by something more complex than
                just a simple variable, then we need to lift the expression
