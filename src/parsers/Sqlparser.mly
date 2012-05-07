@@ -81,6 +81,7 @@ let bind_select_vars q =
 %token SOURCE ARGS INSTANCE TUPLE ADAPTOR BINDINGS STREAM
 %token EOSTMT
 %token EOF
+%token SUMAGG COUNTAGG
 
 %left AND OR NOT
 %left EQ NE LT LE GT GE
@@ -271,14 +272,11 @@ expression:
 | expression op expression      { Sql.SQLArith($1, $2, $3) }
 | MINUS expression %prec UMINUS { Sql.Negation($2) }
 | LPAREN selectStmt RPAREN      { Sql.NestedQ($2) }
-| ID LPAREN expression RPAREN   {
-             if (String.uppercase $1) = "SUM" then
-               Sql.Aggregate(Sql.SumAgg, $3)
-             else if (String.uppercase $1) = "COUNT" then
-               Sql.Aggregate(Sql.SumAgg, Sql.Const(CInt(1)))
-             else
-               bail ("Unknown Aggregate Function '"^$1^"'")
-           }
+| SUMAGG LPAREN expression RPAREN { Sql.Aggregate(Sql.SumAgg, $3) }
+| COUNTAGG LPAREN PRODUCT RPAREN  { Sql.Aggregate(Sql.SumAgg, 
+                                                     Sql.Const(CInt(1))) }
+| COUNTAGG LPAREN RPAREN          { Sql.Aggregate(Sql.SumAgg, 
+                                                     Sql.Const(CInt(1))) }
 | DATE LPAREN STRING RPAREN     {
             if (Str.string_match
                 (Str.regexp "\\([0-9]+\\)-\\([0-9]+\\)-\\([0-9]+\\)") $3 0)

@@ -81,6 +81,9 @@ $&gt; dbtoaster [options] &lt;input file 1&gt; [&lt;input file 2&gt; [...]]
 <dt class="code">-c &lt;target file&gt;</dt>
 <dd>Compile the query into a standalone binary.  By default, the C++ code generator will be used with G++ to generate the binary.  An alternate compiled target language (currently, C++, OCaml, or Scala) may be selected using the <tt>-l</tt> flag.</dd>
 
+<dt class="code">-d &lt;debug mode&gt;</dt>
+<dd>Activate the specified debugging mode.  These should generally not be used by end users, but documentation for developers is provided below.</dd>
+
 <dt class="code">-i &lt;language&gt;</dt>
 <dd>Specify the language of the input files.  By default, this language will be auto-detected from the file extensions, or assumed to be SQL if the compiler can not guess it.<dd>
 
@@ -156,12 +159,251 @@ $&gt; dbtoaster [options] &lt;input file 1&gt; [&lt;input file 2&gt; [...]]
 </table>
 </center>
 
+<h3>Examples</h3>
+
+To run the query <tt>rst.sql</tt> in the interpreter:
+<div class="codeblock">
+$&gt; dbtoaster -r rst.sql<br/>
+Processing time: 0.0424609184265<br/>
+ATIMESD: 18753367048934
+</div>
+
+To compile the query <tt>rst.sql</tt> using the C++ code generator and produce a binary named <tt>rst</tt>:
+<div class="codeblock">
+$&gt; dbtoaster rst.sql -c rst<br/>
+$&gt; ./rst<br/>
+&lt;?xml version="1.0" encoding="UTF-8" standalone="yes" ?&gt;<br/>
+&lt;!DOCTYPE boost_serialization&gt;<br/>
+&lt;boost_serialization signature="serialization::archive" version="9"&gt;<br/>
+&lt;ATIMESD&gt;18753367048934&lt;/ATIMESD&gt;<br/>
+&lt;/boost_serialization&gt;
+</div>
+
+To compile the query <tt>rst.sql</tt> using the C++ code generator, put the source in the file "rst.cpp" and produce a binary named <tt>rst</tt>:
+<div class="codeblock">
+$&gt; dbtoaster rst.sql -o rst.cpp -c rst<br/>
+</div>
+
+To compile the query <tt>rst.sql</tt> using the Scala code generator and produce a binary named <tt>rst</tt>:
+<div class="codeblock">
+$&gt; dbtoaster rst.sql -l scala -c rst<br/>
+</div>
+
 <hr/>
 <h2>DBT-SQL Reference</h2>
 
+<h3 class="code">CREATE</h3>
+Declare a relation for use in the query.
+<div class="codeblock">
+create_statement := <br/>
+&nbsp;&nbsp;CREATE { TABLE | STREAM } &lt;name&gt; ( &lt;schema&gt; ) [&lt;source_declaration&gt;]<br/>
+<br/>
+schema := [&lt;var_1&gt; &lt;type_1&gt; [, &lt;var_2&gt; &lt;type_2&gt; [, ...]]]<br/>
+<br/>
+source_declaration := <br/>
+&nbsp;&nbsp;FROM FILE '&lt;path&gt;' {<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;FIXEDWIDTH &lt;bytes_per_row&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;LINE DELIMITED<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;'&lt;delim_string&gt;' DELIMITED<br/>
+&nbsp;&nbsp;} &lt;adaptor_name&gt; (<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;[&lt;param_1&gt; := '&lt;value&gt;' [, &lt;param_2&gt; := '&lt;value&gt;' [, ...]]]<br/>
+&nbsp;&nbsp;)
+</div>
+
+<p>A create statement defines a relation named <tt>name</tt> with the indicated schema and declares how rows of that relation should be populated/updated.   DBToaster supports two types of relations: Streams and Tables. 
+<ul>
+<li>Tables are static data sources.  A table is read in prior to query monitoring, and remains constant throughout query evaluation and monitoring.</li>
+<li>Streams are dynamic data sources.  Stream updates are read in one tuple at a time as data becomes available, and the query views are refreshed (monitored) after every update.
+</ul></p>
+
+<p>At present, DBToaster only supports reading tuples from files.  We hope to add support for exec pipes and sockets soon.</p>
+
+<p>The contents of data sources are first partitioned into records, either based on a fixed-width record size, or using a delimiter character.  Records are parsed into tuples using the specified adaptor.  DBToaster's runtimes currently support the following adaptors:</p>
+
+<p>If multiple stream relations read from the same file (but with different adaptors), the file will be read only once, and events for each relation will be performed in the order in which they appear in the file</p>
+
+<table border>
+<tr><th>Adaptor</th><th>Valid Parameters</th><th>Description</th></tr>
+
+<tr><td>CSV</td>
+<td>fields,<br/>schema
+</td><td>
+A simple string-delimited adaptor.  Fields are separated using the delimiter passed in the <b>fields</b> parameter.  The <b>schema</b> is a comma-separated list that dictates how each field is parsed in: <i>int</i>, <i>float</i>, and <i>string</i> produce elements of the corresponding type.  <i>date</i> parses in strings of the form [yyyy]-[mm]-[dd] and produces the integer [yyyymmdd]. The special type <i>event</i> can be used to interleave insertion and deletion events.  A 1 in this field creates an insertion, a 0 creates a deletion.  In either case, the field will not be present in the generated tuple.
+</td></tr>
+</table>
+
+<h3 class="code">SELECT</h3>
+Declare a query to monitor
+
+<div class="codeblock">
+select_statement := <br/>
+&nbsp;&nbsp;SELECT &lt;target_1&gt; [, &lt;target_2&gt; [, ...]] <br/>
+&nbsp;&nbsp;FROM &lt;source_1&gt; [, &lt;source_2&gt; [, ...]]<br/>
+&nbsp;&nbsp;WHERE &lt;condition&gt;<br/>
+&nbsp;&nbsp;[GROUP BY &lt;group_vars&gt;]<br/>
+<br/>
+target := &lt;expression&gt; [[AS] &lt;target_name&gt;] | * | *.* | &lt;source_name&gt;.*<br/>
+<br/>
+source := <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&lt;relation_name&gt; [[AS] &lt;source_name&gt;]<br/>
+&nbsp;&nbsp;|&nbsp;(&lt;select_statement&gt;) [AS] &lt;source_name&gt;<br/>
+&nbsp;&nbsp;|&nbsp;&lt;source&gt; [NATURAL] JOIN &lt;source&gt; [ON &lt;condition&gt;]<br/>
+<br/>
+expression := <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(&lt;expression&gt;) |&nbsp;&lt;int&gt; | &lt;float&gt; | '&lt;string&gt;' | &lt;var&gt; | &lt;source&gt;.&lt;var&gt;<br/>
+&nbsp;&nbsp;|&nbsp;&lt;expression&gt; { + | - | * | / } &lt;expression&gt;<br/>
+&nbsp;&nbsp;|&nbsp;-&lt;expression&gt;<br/>
+&nbsp;&nbsp;|&nbsp;(SELECT &lt;expression&gt; FROM ...)<br/>
+&nbsp;&nbsp;|&nbsp;SUM(&lt;expression&gt;) | COUNT([*])<br/>
+&nbsp;&nbsp;|&nbsp;DATE('yyyy-mm-dd')<br/>
+<br/>
+condition := <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;(&lt;condition&gt;) | true | false | not (&lt;condition&gt;)<br/>
+&nbsp;&nbsp;|&nbsp;&lt;expression&gt; { < | <= | > | >= | = | <> } &lt;expression&gt;<br/>
+&nbsp;&nbsp;|&nbsp;&lt;condition&gt; AND &lt;condition&gt; | &lt;condition&gt; OR &lt;condition&gt;<br/>
+&nbsp;&nbsp;|&nbsp;EXISTS (SELECT ...)<br/>
+&nbsp;&nbsp;|&nbsp;&lt;expression&gt; BETWEEN &lt;expression&gt; AND &lt;expression&gt;<br/>
+<br/>
+</div>
+
+<p>DBToaster SQL differs minimally from the SQL standard.  Currently UNION and the HAVING clause are not supported.  Variable scoping rules are slightly stricter than the SQL standard (you may need to use fully qualified names in some cases).  Additionally, addition and subtraction (+/-) is not presently supported outside of aggregate expressions.</p>
+
+<p>DBToaster processes queries internally as aggregates, and produces output in the form of either a [multi-key] => value dictionary/hashmap, or a single value.  SQL queries are interpreted as follows:
+<ul>
+<li>Non-aggregate queries use all target fields for the key of the output dictionary.  The mapped value is the number of occurrences of the tuple in the output (i.e., the COUNT(*) aggregate).  The result has an arbitrarilly generated name).</li>
+<li>Singleton (non-grouping) aggregate queries produce a single value result for each target.  The result is named based on the name of the target (the name following "AS" in the target definition, or an arbitrarilly generated name otherwise).</li>
+<li>Group-by aggregate queries produce a dictionary for each aggregate target.  The non-aggregate (group-by) targets are used as keys for the dictionary, and the value is the aggregate value.</li>
+</ul></p>
 
 <hr/>
 <h2>Optional Optimization Features</h2>
+
+<hr/>
+<h2>Debugging Flags</h2>
+
+<h3>Optimization</h3>
+<dl>
+
+<dt class="code">UNIFY-EXPRESSIONS</dt>
+<dd>Attempt to unify entire lifted expressions, and not just lifted variables/values.  This usually produces tighter calculus expressions, but can slow down compilation.</dd>
+
+<dt class="code">IGNORE-DELETES</dt>
+<dd>Do not produce delete triggers.  For some queries, this results in plans with fewer maps, but the resultant trigger program will not support deletions.</dd>
+
+<dt class="code">M3TOK3-GENERATE-INIT</dt>
+<dd>When activated the map accesses in K3 expressions will contain membership tests and initialization code, otherwise only Lookup operations will get generated.</dd>
+
+<dt class="code">HEURISTICS-ALWAYS-UPDATE</dt>
+<dd>In some cases, it is slightly more efficient to re-evaluate parts of the map hierarchy rather than computing an incremental update.  If this flag is on, the compiler will always compute updates incrementally, regardless.</dd>
+
+<dt class="code">HEURISTICS-PREFER-UPDATE</dt>
+<dd>In some cases, it is slightly more efficient to re-evaluate parts of the map hierarchy rather than computing an incremental update.  If this flag is on, the compiler will be less aggressive about finding such cases. <div class="todo">milos, confirm this?</div></dd>
+
+<dt class="code">HEURISTICS-ALWAYS-REPLACE</dt>
+<dd>In some cases, it is slightly more efficient to re-evaluate parts of the expression tree rather than computing an incremental update.  If this flag is on, the compiler will always re-evaluate the expression.  This is usually a bad idea to turn on.</dd>
+
+<dt class="code">HEURISTICS-ALWAYS-UPDATE</dt>
+<dd>In some cases, it is slightly more efficient to re-evaluate parts of the expression tree rather than computing an incremental update.  If this flag is on, the compiler will always compute updates incrementally, regardless.</dd>
+
+<dt class="code">HEURISTICS-IGNORE-FINAL-OPTIMIZATION</dt>
+<dd>Do not attempt to optimize materialized expressions further.  This is typically only useful to see the exact expression produced by the materializer.</dd>
+
+<dt class="code">K3-NO-OPTIMIZE</dt>
+<dd>Do not perform functional optimization.</dd>
+
+<dt class="code">K3-NO-CSE-OPT</dt>
+<dd>Do not perform common subexpression elimination in the functional stage.</dd>
+
+<dt class="code">K3-NO-BETA-OPT</dt>
+<dd>Do not perform beta-reduction in the functional stage.</dd>
+
+<dt class="code">ENABLE-PROFILING</dt>
+<dd>Enable dbtoaster-specific profiling features in the code generators that support it. See also COMPILE-WITH-PROFILE.</dd>
+
+<dt class="code">IMP-NO-DESUGAR</dt>
+<dd>Do not attempt to desugar the imperative code representation.  This is only useful when viewing the imperative representation directly, as desugaring is required by the final stages of the imperative code generators.</dd>
+
+<dt class="code">HASH-STRINGS</dt>
+<dd>All strings are replaced by integer hashes of their matching string.  This should make query evalation slightly faster, but is not guaranteed to produce correct results if a hash collision occurs.</dd>
+
+<dt class="code">COMPILE-WITH-GDB</dt>
+<dd>For second-stage compilers that support it, request that the second-stage compiler produce a binary with debugging metadata (e.g., compile with GCC's <tt>-g</tt> flag)</dd>
+
+<dt class="code">COMPILE-WITH-PROFILE</dt>
+<dd>For second-stage compilers that support it, request that the second-stage compiler produce a binary with profiling support (e.g., compile with GCC's <tt>-pg</tt> flag)</dd>
+
+<dt class="code">COMPILE-WITHOUT-OPT</dt>
+<dd>Request that the second-stage compiler disable any unnecessary optimizations (e.g., by default, GCC is invoked with <tt>-O3</tt>, but not if this flag is active).</dd>
+
+</dl>
+
+<h3>K3 Execution Debugging</h3>
+<dl>
+<dt class="code">LOG-INTERPRETER-UPDATES</dt>
+<dd>If running in interpreter mode, print every change that is applied to the database (every PCValueUpdate, PCUpdate, or PCRemove operation that executes).</dd>
+
+<dt class="code">LOG-INTERPRETER-UPDATES</dt>
+<dd>If running in interpreter mode, print the full sequence of update events that occur.</dd>
+
+<dt class="code">STEP-INTERPRETER</dt>
+<dd>If running in interpreter mode, pause before dispatching each update, and display the update and current state of the database.</dd>
+</dl>
+
+<h3>Logging</h3>
+<dl>
+<dt class="code">LOG-DRIVER</dt>
+<dd>Print a quick message before commencing every stage of the compilation process.</dd>
+
+<dt class="code">LOG-SQL-TO-CALC</dt>
+<dd>Print detailed progress information during the transformation from SQL to Calculus.</dd>
+
+<dt class="code">LOG-DELTA-DETAIL</dt>
+<dd>When computing a delta, print the expression and delta.</dd>
+
+<dt class="code">LOG-CALCOPT-DETAIL</dt>
+<dd>Print detailed progress information about the process of optimizing a calculus expression.</dd>
+
+<dt class="code">LOG-CALCOPT-STEPS</dt>
+<dd>Print the calculus expression after every optimization step.</dd>
+
+<dt class="code">LOG-LIFT-EQUALITIES</dt>
+<dd>Print detailed progress information during application of the LIFT-EQUALITIES optimization.</dd>
+
+<dt class="code">LOG-UNIFY-LIFTS</dt>
+<dd>Print detailed progress information during application of the UNIFY-LIFTS optimization.</dd>
+
+<dt class="code">LOG-NESTINGREWRITES-DETAIL</dt>
+<dd>Print detailed progress information during application of the NESTINGREWRITES optimization.</dd>
+
+<dt class="code">LOG-FACTORIZE</dt>
+<dd>Print detailed progress information while factorizing calculus expressions.</dd>
+
+<dt class="code">LOG-COMPILE-DETAIL</dt>
+<dd>Print detailed progress about the compiler's internal planning and datastructure construction process</dd>
+
+<dt class="code">LOG-HEURISTICS-DETAIL</dt>
+<dd>Print detailed progress about the process of deciding how to maintain individual datastructures and how to materialize queries.</dd>
+
+<dt class="code">LOG-K3-OPT</dt>
+<dd>Print progress information while applying the major K3 optimizations</dd>
+
+<dt class="code">LOG-K3-OPT</dt>
+<dd>Print progress information while applying the minor K3 optimizations</dd>
+
+<dt class="code">K3-TYPECHECK-DETAIL</dt>
+<dd>Print detailed information if a typecheck failure occurs in K3.</dd>
+
+<dt class="code">LOG-SQL, LOG-CALC, LOG-SCHEMA, LOG-PLAN, LOG-M3, LOG-K3</dt>
+<dd>After the corresponding phase, print the generated representation before continuing on.</dd>
+
+<dt class="code">LOG-PARSER</dt>
+<dd>Enable parser logging in ocamlyacc.  At present, this is the simplest way to track down the cause of parser errors.</dd>
+
+<dt class="code">LOG-GCC</dt>
+<dd>Print the full command being used to invoke the second-stage compiler</dd>
+
+</dl>
+
 </div>
 
 </body></html>

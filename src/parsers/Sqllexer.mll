@@ -79,6 +79,8 @@ let keywords =
         "VARCHAR", VARCHAR;
         "STRING", VARCHAR;
         "STREAM", STREAM;
+        "SUM", SUMAGG;
+        "COUNT", COUNTAGG
     ]
 let _ = hashtbl_of_pair_list keyword_table keywords
 

@@ -120,7 +120,11 @@ if !input_language == Auto then (
    
 ;;
 if !output_language = Auto
-   then output_language := M3
+   then (
+      if (!binary_file) = "" 
+      then output_language := M3
+      else output_language := CPP
+   )
 ;;
 
 type stage_t = 
@@ -501,9 +505,9 @@ if (stage_is_active StageOptimizeK3) then (
    if not (Debug.active "K3-NO-OPTIMIZE") then (
       Debug.print "LOG-DRIVER" (fun () -> "Running Stage: OptimizeK3");
       let optimizations = ref [] in
-      if not (Debug.active "NO-CSE-OPT")
+      if not (Debug.active "K3-NO-CSE-OPT")
          then optimizations := K3Optimizer.CSE :: !optimizations;
-      if not (Debug.active "NO-BETA-OPT")
+      if not (Debug.active "K3-NO-BETA-OPT")
          then optimizations := K3Optimizer.Beta :: !optimizations;
       let (db,(maps,patterns),triggers,tlqs) = !k3_program in
       k3_program := (

@@ -483,8 +483,7 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
                      this variable at all. *)
                   let (rhs_deletable_optimistic, rhs_term_optimistic) = 
                      rcr rhs_scope schema rhs_ctx (CalcRing.mk_prod pl)
-                  in if (Debug.active "AGGRESSIVE-UNIFY") ||
-                        (List.mem v rhs_deletable_optimistic)
+                  in if (List.mem v rhs_deletable_optimistic)
                   then (
                      Debug.print "LOG-UNIFY-LIFTS" (fun () -> 
                         if lift_already_occurs

@@ -44,26 +44,6 @@ let lift_if_necessary ?(t="agg") (calc:C.expr_t):
          let tmp_var = tmp_var ("__sql_inline_"^t^"_") 
                                (C.type_of_expr calc) in
             (mk_var tmp_var, CalcRing.mk_val (Lift(tmp_var, calc)))
-
-(**
-   [preprocess file]
-   
-   Do some basic preprocessing to ensure that all variables in the Sql file
-   are properly bound
-*)
-let rec preprocess ((tables, queries):Sql.file_t): Sql.file_t =
-   try 
-      (tables, List.map (fun q -> Sql.bind_select_vars q tables) queries)
-   with 
-      | Sql.Variable_binding_err(var,0) ->
-         Sql.error (
-            "Unable to bind variable "^var^"; No matching variables in scope"
-         )
-      | Sql.Variable_binding_err(var,x) ->
-         Sql.error (
-            "Unable to bind variable "^var^"; The name is ambiguous, try "^ 
-            "using a fully qualified name."
-         )
       
 
 (**
