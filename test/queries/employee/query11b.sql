@@ -1,4 +1,4 @@
---  List out the employees who are working in department 10 or 20.
+--  List out the employees who are working in department 20 or 30.
 
 CREATE STREAM EMPLOYEE(
     employee_id     INT, 

@@ -1,4 +1,4 @@
---  List out the employees who are working in department 20 or 30.
+-- List out the employees who earn more than every employee in department 30.
 
 CREATE STREAM EMPLOYEE(
     employee_id     INT, 
@@ -16,5 +16,7 @@ CREATE STREAM EMPLOYEE(
   csv (fields := ',', schema := 'int,string,string,string,int,int,date,float,float,int', eventtype := 'insert');
 
 SELECT * 
-FROM employee 
-WHERE department_id IN (20,30);
+FROM employee e1
+WHERE e1.salary > ALL (SELECT e2.salary 
+                       FROM employee e2 
+                       WHERE e2.department_id=30)

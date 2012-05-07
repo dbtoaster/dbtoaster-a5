@@ -1,4 +1,4 @@
---  List out the employees who are working in department 20 or 30.
+-- How many employees who are joined in 1985.
 
 CREATE STREAM EMPLOYEE(
     employee_id     INT, 
@@ -15,6 +15,7 @@ CREATE STREAM EMPLOYEE(
   FROM FILE '../../experiments/data/employee/employee.dat' LINE DELIMITED
   csv (fields := ',', schema := 'int,string,string,string,int,int,date,float,float,int', eventtype := 'insert');
 
-SELECT * 
+SELECT year(hire_date), count(*) 
 FROM employee 
-WHERE department_id IN (20,30);
+GROUP BY year(hire_date) 
+HAVING year(hire_date)=1985

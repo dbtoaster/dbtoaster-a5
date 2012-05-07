@@ -1,4 +1,4 @@
---  List out the employees who are working in department 20 or 30.
+-- Display the employees who are working as "Clerk".
 
 CREATE STREAM EMPLOYEE(
     employee_id     INT, 
@@ -15,6 +15,17 @@ CREATE STREAM EMPLOYEE(
   FROM FILE '../../experiments/data/employee/employee.dat' LINE DELIMITED
   csv (fields := ',', schema := 'int,string,string,string,int,int,date,float,float,int', eventtype := 'insert');
 
+CREATE STREAM JOB(
+    job_id      INT,
+    function    VARCHAR(20)
+    ) 
+  FROM FILE '../../experiments/data/employee/job.dat' LINE DELIMITED
+  csv (fields := ',', schema := 'int,string', eventtype := 'insert');
+
+
 SELECT * 
-FROM employee 
-WHERE department_id IN (20,30);
+FROM (SELECT job_id 
+      FROM job 
+      WHERE function='CLERK') j 
+JOIN employee e 
+ON j.job_id = e.job_id 

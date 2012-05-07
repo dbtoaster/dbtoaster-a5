@@ -1,4 +1,4 @@
---  List out the employees who are working in department 20 or 30.
+-- List out the employee details according to their last_name in ascending order and then on department_id in descending order.
 
 CREATE STREAM EMPLOYEE(
     employee_id     INT, 
@@ -15,6 +15,6 @@ CREATE STREAM EMPLOYEE(
   FROM FILE '../../experiments/data/employee/employee.dat' LINE DELIMITED
   csv (fields := ',', schema := 'int,string,string,string,int,int,date,float,float,int', eventtype := 'insert');
 
-SELECT * 
+SELECT employee_id, last_name, salary
 FROM employee 
-WHERE department_id IN (20,30);
+ORDER BY last_name, department_id DESC

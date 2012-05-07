@@ -1,4 +1,4 @@
---  List out the employees who are working in department 20 or 30.
+-- Display the second highest salary drawing employee details.
 
 CREATE STREAM EMPLOYEE(
     employee_id     INT, 
@@ -16,5 +16,8 @@ CREATE STREAM EMPLOYEE(
   csv (fields := ',', schema := 'int,string,string,string,int,int,date,float,float,int', eventtype := 'insert');
 
 SELECT * 
-FROM employee 
-WHERE department_id IN (20,30);
+FROM employee e1
+WHERE e1.salary=(SELECT max(e2.salary) 
+                 FROM employee e2 
+                 WHERE e2.salary < (SELECT max(e3.salary) 
+                                    FROM employee e3))

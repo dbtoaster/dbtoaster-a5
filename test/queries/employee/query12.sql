@@ -17,4 +17,4 @@ CREATE STREAM EMPLOYEE(
 
 SELECT last_name, salary, commission, department_id 
 FROM employee
-WHERE department_id not in (10,30);
+WHERE department_id NOT IN (10,30);

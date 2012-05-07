@@ -1,4 +1,4 @@
---  List out the employees who are working in department 20 or 30.
+-- Display the employee who got the maximum salary.
 
 CREATE STREAM EMPLOYEE(
     employee_id     INT, 
@@ -17,4 +17,4 @@ CREATE STREAM EMPLOYEE(
 
 SELECT * 
 FROM employee 
-WHERE department_id IN (20,30);
+WHERE salary = (SELECT max(salary) FROM employee)

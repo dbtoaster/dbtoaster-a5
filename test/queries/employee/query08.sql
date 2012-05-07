@@ -17,4 +17,4 @@ CREATE STREAM EMPLOYEE(
 
 SELECT * 
 FROM employee 
-WHERE last_name=ÕSMITHÕ;
+WHERE last_name='SMITH';
