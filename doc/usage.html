@@ -62,8 +62,11 @@ To use DBToaster to create a standalone binary, invoke it with the <tt>-c [binar
 <div class="codeblock">
 $&gt; dbtoaster test/queries/simple/rst.sql -c rst<br/>
 $&gt; ./rst<br/>
-Processing time: 0.0309669971466<br/>
-AtimesD: 1.87533670489e+13
+&lt;?xml version="1.0" encoding="UTF-8" standalone="yes" ?&gt;<br/>
+&lt;!DOCTYPE boost_serialization&gt;<br/>
+&lt;boost_serialization signature="serialization::archive" version="9"&gt;<br/>
+&lt;ATIMESD&gt;18753367048934&lt;/ATIMESD&gt;<br/>
+&lt;/boost_serialization&gt;
 </div>
 </p>
 
@@ -347,12 +350,18 @@ condition := <br/>
 
 <dt class="code">STEP-INTERPRETER</dt>
 <dd>If running in interpreter mode, pause before dispatching each update, and display the update and current state of the database.</dd>
+
+<dt class="code">SINGLE-LINE-MAP-OUTPUT</dt>
+<dd>Instruct the interpreter to place all map output on a single line rather than the (more human-readable, but harder to parse) multi-line output format that it uses by default.</dd>
 </dl>
 
 <h3>Logging</h3>
 <dl>
 <dt class="code">LOG-DRIVER</dt>
 <dd>Print a quick message before commencing every stage of the compilation process.</dd>
+
+<dt class="code">DETAIL</dt>
+<dd>Include detailed information associated with bug, error, warning, or informational messages.</dd>
 
 <dt class="code">LOG-SQL-TO-CALC</dt>
 <dd>Print detailed progress information during the transformation from SQL to Calculus.</dd>

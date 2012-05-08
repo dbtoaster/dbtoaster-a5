@@ -6,6 +6,14 @@ open Sources
 open Sources.Adaptors
 open Database
 
+
+exception InterpreterException of K3.expr_t option * string
+
+(**/**)
+let bail ?(expr = None) msg =
+   raise (InterpreterException(expr, msg))
+(**/**)
+
 module K3CG : K3Codegen.CGI
     with type db_t = NamedK3Database.db_t and
          type value_t = K3Value.t
@@ -47,11 +55,11 @@ struct
 
     let get_eval e = match e with
         | Eval(e) -> e
-        | _ -> failwith "unable to eval expr"
+        | _ -> bail "unable to eval expr"
 
     let get_trigger e = match e with
         | Trigger(x,y) -> (x,y)
-        | _ -> failwith "unable to eval trigger"
+        | _ -> bail "unable to eval trigger"
 
     let rec is_flat (t:K3.type_t) = match t with
         | TBase _ -> true
@@ -66,26 +74,26 @@ struct
     
     let float_of_value x = match x with
         | BaseValue(c) -> float_of_const c
-        | _ -> failwith ("invalid float: "^(string_of_value x))
+        | _ -> bail ("invalid float: "^(string_of_value x))
 
     let float_of_const_t x = 
       match x with CFloat(f)    -> f 
                  | CString(s)   -> 
                      if Debug.active "HASH-STRINGS" then 
                         (float_of_int (Hashtbl.hash s))
-                     else failwith ("invalid float: "^(string_of_const x))
+                     else bail ("invalid float: "^(string_of_const x))
                  | CInt(i)      -> float_of_int i
                  | CBool(true)  -> 1.
                  | CBool(false) -> 0.
 
     let const_of_value x = match x with
       | BaseValue(c) -> c
-      | _ -> failwith ("invalid const_t: "^(string_of_value x))
+      | _ -> bail ("invalid const_t: "^(string_of_value x))
 
     let value_of_tuple x = Tuple(x)
     let tuple_of_value x = match x with
         | Tuple(y) -> y
-        | _ -> failwith ("invalid tuple: "^(string_of_value x))
+        | _ -> bail ("invalid tuple: "^(string_of_value x))
 
     let pop_back l =
         let x,y = List.fold_left
@@ -98,7 +106,7 @@ struct
 
     let kv_of_tuple t = match t with
         | Tuple(t_v) -> pop_back t_v 
-        | _ -> failwith ("invalid tuple: "^(string_of_value t))
+        | _ -> bail ("invalid tuple: "^(string_of_value t))
 
     (* Map/aggregate tuple+multivariate function evaluation helpers.
      * uses fields of a tuple to evaluate a multivariate function if the
@@ -111,7 +119,7 @@ struct
         | (Fun _, []) -> fv
         | (v, []) -> v
         | (Fun f, h::t) -> apply_list (f h) t
-        | (_,_) -> failwith "invalid schema application"
+        | (_,_) -> bail "invalid schema application"
     
     let apply_fn_list th db l = List.map (fun f -> (get_eval f) th db) l
 
@@ -150,7 +158,7 @@ struct
      * matters. Generalize to support set/bag semantics as needed. *)
     let int_op (op : const_t -> const_t -> const_t) x y =
         match (x,y) with
-        | Unit,_ | _,Unit -> failwith "invalid comparison to unit"
+        | Unit,_ | _,Unit -> bail "invalid comparison to unit"
         | _,_ -> if (op (const_of_value x) 
                         (const_of_value y)) = CBool(true)
                  then BaseValue(CInt(1))
@@ -159,7 +167,7 @@ struct
     let bin_op (op : const_t -> const_t -> const_t) x y =
       match (x,y) with
          | (BaseValue(cx), BaseValue(cy)) -> BaseValue(op cx cy)
-         | (_,_) -> failwith "invalid arithmetic operation"
+         | (_,_) -> bail "invalid arithmetic operation"
     
     let add_op  = bin_op Arithmetic.sum
     let mult_op = bin_op Arithmetic.prod
@@ -172,11 +180,11 @@ struct
         let aux v = match v with
             | BaseValue(CInt(_)) -> BaseValue(CInt(0))
             | BaseValue(CFloat(_)) -> BaseValue(CFloat(0.))
-            | _ -> failwith "invalid then clause value"
+            | _ -> bail "invalid then clause value"
         in match cond with
         | BaseValue(CFloat(bcond)) -> if bcond <> 0.0 then v else aux v
         | BaseValue(CInt(bcond)) -> if bcond <> 0 then v else aux v
-        | _ -> failwith "invalid predicate value"
+        | _ -> bail "invalid predicate value"
 
 
     (* Terminals *)
@@ -184,7 +192,7 @@ struct
     let var ?(expr = None) v _ = Eval(fun th db -> 
         if (Env.bound v (fst th)) then Env.value v (fst th)
         else if is_env_value v th then get_env_value v th 
-        else failwith ("Var("^v^"): theta="^(Env.to_string (fst th))))
+        else bail ~expr:expr ("Var("^v^"): theta="^(Env.to_string (fst th))))
 
     (* Tuples *)
     let tuple ?(expr = None) field_l = Eval(fun th db ->
@@ -193,7 +201,7 @@ struct
     let project ?(expr = None) tuple idx = Eval(fun th db ->
         match (get_eval tuple) th db with
         | Tuple(t_v) -> Tuple(tuple_fields t_v idx)
-        | _ -> failwith ("invalid tuple for projection"^(get_expr expr)))
+        | _ -> bail ~expr:expr ("invalid tuple for projection"^(get_expr expr)))
 
     (* Native collections *)
     
@@ -204,12 +212,13 @@ struct
                 else ListCollection([v])
             | TBase(TFloat)    -> FloatList([v])
             | TBase(TInt)      -> FloatList([v])
-            | TBase(_)         -> failwith "Unsupported base type in K3"
+            | TBase(_)         -> bail ~expr:expr "Unsupported base type in K3"
             | Collection _ -> ListCollection([v])
             | Fn (args_t,body_t) ->
                 (* TODO: ListCollection(v) ? *)
-                failwith "first class functions not supported yet"
-            | TUnit -> failwith "cannot create singleton of unit expression"
+                bail ~expr:expr "first class functions not supported yet"
+            | TUnit -> 
+                bail ~expr:expr "cannot create singleton of unit expression"
         in Eval(fun th db ->
         begin match (get_eval el) th db with
         | Tuple _ | BaseValue _ 
@@ -218,7 +227,7 @@ struct
         | SingleMapList l -> rv_f (ListCollection(smlc_to_c l))
         | SingleMap m -> rv_f (TupleList(smc_to_tlc m))
         | DoubleMap m -> rv_f (ListCollection(dmc_to_c m))
-        | v -> failwith ("invalid singleton value: "^
+        | v -> bail ~expr:expr ("invalid singleton value: "^
                          (string_of_value v)^(get_expr expr))
         end)
     
@@ -240,7 +249,8 @@ struct
         | MapCollection(m1), MapCollection(m2) ->
             ListCollection((nmc_to_c m1)@(nmc_to_c m2))
 
-        | _,_ -> failwith ("invalid collections to combine"^(get_expr expr))
+        | _,_ -> bail ~expr:expr
+                      ("invalid collections to combine"^(get_expr expr))
         end
 
     let combine ?(expr = None) c1 c2 = Eval(fun th db ->
@@ -257,7 +267,7 @@ struct
         let valid = match ((get_eval pred) th db) with
             | BaseValue(CFloat(x)) -> x <> 0.0 
             | BaseValue(CInt(x))   -> x <> 0
-            | _ -> failwith ("invalid predicate value"^(get_expr expr))
+            | _ -> bail ~expr:expr ("invalid predicate value"^(get_expr expr))
         in if valid then (get_eval t) th db else (get_eval e) th db)
 
     (* statements -> block *)    
@@ -279,7 +289,8 @@ struct
           );
           match fn v with
             | Unit -> ()
-            | _ -> failwith ("invalid iteration"^(get_expr expr))) l); Unit)
+            | _ -> bail ~expr:expr
+                       ("invalid iteration"^(get_expr expr))) l); Unit)
         in
         begin match function_value, collection_value with
         | (_, EmptyList) -> Unit
@@ -294,15 +305,17 @@ struct
              );
             match f (Tuple(k@[SingleMap m])) with
             | Unit -> ()
-            | _ -> failwith ("invalid iteration"^(get_expr expr))) l); Unit
+            | _ -> bail ~expr:expr ("invalid iteration"^(get_expr expr))) l); 
+                   Unit
 
         (* Currently we convert to a list since SliceableMap doesn't implement
          * an 'iter' function. TODO: we could easily add this. *)
         | (Fun f, SingleMap m) -> aux f (smc_to_tlc m)
         | (Fun f, DoubleMap m) -> aux f (dmc_to_c m)
         | (Fun f, MapCollection m) -> aux f (nmc_to_c m)
-        | (Fun _, _) -> failwith ("invalid iterate collection"^(get_expr expr))
-        | _ -> failwith ("invalid iterate function"^(get_expr expr))
+        | (Fun _, _) -> bail ~expr:expr
+                             ("invalid iterate collection")
+        | _ -> bail ~expr:expr ("invalid iterate function")
         end)
 
     (* Functions *)
@@ -317,34 +330,36 @@ struct
                | ((TBase(TFloat)), CInt(i)) -> CFloat(float_of_int i)
                | ((TBase(TInt)), CBool(true)) -> CInt(1)
                | ((TBase(TInt)), CBool(false)) -> CInt(0)
-               | _ -> failwith ("binding invalid constant "^(string_of_type vt)^" "^(string_of_const f))
+               | _ -> bail ~expr:expr
+                          ("binding invalid constant "^(string_of_type vt)^" "^
+                           (string_of_const f))
              end
            in
              Env.add (fst th) var (BaseValue(const_val)), snd th
         | ATuple(vt_l) -> 
-            failwith ("cannot bind a float to a tuple"^(get_expr expr))
+            bail ~expr:expr ("cannot bind a float to a tuple")
         end
 
     let bind_tuple expr arg th t = begin match arg with
         | AVar(v,vt) ->
             begin match vt with
             | TTuple(_) -> fst th, (v,value_of_tuple t)::(snd th)
-            | _ -> failwith ("cannot bind tuple to "^v^(get_expr expr))
+            | _ -> bail ~expr:expr ("cannot bind tuple to "^v)
             end
         | ATuple(vt_l) ->
             begin try 
             (List.fold_left2 (fun acc (v,_) tf -> Env.add acc v tf)
                 (fst th) vt_l t, snd th)
             with Invalid_argument _ ->
-                failwith ("could not bind tuple arg to value: "^
-                          (string_of_value (value_of_tuple t))^(get_expr expr))
+                bail ~expr:expr ("could not bind tuple arg to value: "^
+                                 (string_of_value (value_of_tuple t)))
             end
          end
 
     let bind_value expr arg th m = begin match arg with
         | AVar(var,_) -> fst th, (var,m)::(snd th)
         | ATuple(vt_l) ->
-            failwith ("cannot bind a value to a tuple"^(get_expr expr))
+            bail ~expr:expr ("cannot bind a value to a tuple")
         end
 
     let bind_arg expr arg th v = begin match v with
@@ -373,7 +388,9 @@ struct
 					let fn_args = begin match v with
 		        | BaseValue(c) -> [c]
 		        | Tuple t -> List.map const_of_value t
-		        | _ -> failwith "Arguments of external functions can be only values or tuple of values"
+		        | _ -> bail ~expr:expr
+		                    ("Arguments of external functions can be only values"^
+		                     " or tuple of values")
 		        end in
 						try 
 							let external_fn = 
@@ -385,17 +402,21 @@ struct
 							let ret_c = external_fn fn_args (base_type_of fn_t) in
 							let ret_t = K3.TBase(Types.type_of_const ret_c) in
 							if( fn_t <> ret_t) then
-									 failwith ("Unexpected return value type for external function: "^
-											fn_id^" : "^(K3.string_of_type fn_t)^" <> "^(K3.string_of_type ret_t));
+									 bail ~expr:expr
+									      ("Unexpected return value type for external "^
+									       "function: "^fn_id^" : "^
+									       (K3.string_of_type fn_t)^" <> "^
+									       (K3.string_of_type ret_t));
 							BaseValue(ret_c)
-			      with Not_found -> failwith ("No external function named: "^fn_id)
+			      with Not_found -> bail ~expr:expr
+			                             ("No external function named: "^fn_id)
         in Fun fn)
 
     (* fn, arg -> evaluated fn *)
     let apply ?(expr = None) fn arg = Eval(fun th db ->
         begin match (get_eval fn) th db, (get_eval arg) th db with
         | Fun f, x -> f x
-        | _ -> failwith ("invalid function for fn app"^(get_expr expr))
+        | _ -> bail ~expr:expr ("invalid function for fn app"^(get_expr expr))
         end)
     
     (* Collection operations *)
@@ -407,15 +428,15 @@ struct
         let rv_f v = match map_rt with
             | TBase(TFloat) -> FloatList(v) 
             | TBase(TInt)   -> FloatList(v)
-            | TBase(_)      -> failwith "Unsupported base type in K3"
+            | TBase(_)      -> bail ~expr:expr "Unsupported base type in K3"
             | TTuple tl ->
                 if is_flat map_rt then TupleList(v)
                 else ListCollection(v)
             | Collection t -> ListCollection(v)
             | Fn (args_t,body_t) ->
                 (* TODO: ListCollection(v) ? *)
-                failwith "first class functions not supported yet"
-            | TUnit -> failwith "map function cannot return unit type"
+                bail ~expr:expr "first class functions not supported yet"
+            | TUnit -> bail ~expr:expr "map function cannot return unit type"
         in
         Eval(fun th db ->
         let aux fn  = List.map (fun v -> fn v) in
@@ -428,9 +449,9 @@ struct
         | Fun f, SingleMapList s -> rv_f (aux f (smlc_to_c s))
         | Fun f, ListCollection l -> rv_f (aux f l)
         | Fun f, MapCollection m -> rv_f (aux f (nmc_to_c m))
-        | (Fun _, x) -> failwith ("invalid map collection: "^
+        | (Fun _, x) -> bail ~expr:expr ("invalid map collection: "^
                                   (string_of_value x)^(get_expr expr))
-        | _ -> failwith ("invalid map function"^(get_expr expr)))
+        | _ -> bail ~expr:expr ("invalid map function"^(get_expr expr)))
     
     (* agg fn, initial agg, collection -> agg *)
     (* Note: accumulator is the last arg to agg_fn *)
@@ -449,9 +470,9 @@ struct
         | Fun _ as f, SingleMap m -> aux f (fun x -> x) (smc_to_tlc m)
         | Fun _ as f, DoubleMap m -> aux f (fun x -> x) (dmc_to_c m)
         | Fun _ as f, MapCollection m -> aux f (fun x -> x) (nmc_to_c m)
-        | Fun _, v -> failwith ("invalid agg collection: "^
+        | Fun _, v -> bail ~expr:expr ("invalid agg collection: "^
                                   (string_of_value v)^(get_expr expr))        
-        | _ -> failwith ("invalid agg function"^(get_expr expr)))
+        | _ -> bail ~expr:expr ("invalid agg function"^(get_expr expr)))
 
     (* agg fn, initial agg, grouping fn, collection -> agg *)
     (* Perform group-by aggregation by using a temporary SliceableMap,
@@ -479,13 +500,13 @@ struct
         
         | Fun f, Fun g, EmptyList -> TupleList([])
 
-        | Fun _, Fun _, v -> failwith ("invalid gb-agg collection: "^
+        | Fun _, Fun _, v -> bail ~expr:expr ("invalid gb-agg collection: "^
             (string_of_value v)^(get_expr expr))
         
-        | Fun _, gb, _ -> failwith ("invalid group-by function: "^
+        | Fun _, gb, _ -> bail ~expr:expr ("invalid group-by function: "^
             (string_of_value gb)^(get_expr expr))
         
-        | f,_,_ -> failwith ("invalid group by agg fn: "^
+        | f,_,_ -> bail ~expr:expr ("invalid group by agg fn: "^
             (string_of_value f)^(get_expr expr)))
 
 
@@ -499,13 +520,13 @@ struct
         Eval(fun th db ->
         match ((get_eval nested_collection) th db) with
         | FloatList _ ->
-            failwith ("cannot flatten a FloatList"^(get_expr expr))
+            bail ~expr:expr ("cannot flatten a FloatList"^(get_expr expr))
         
         | TupleList _ ->
-            failwith ("cannot flatten a TupleList"^(get_expr expr))
+            bail ~expr:expr ("cannot flatten a TupleList"^(get_expr expr))
         
         | SingleMap _ ->
-            failwith ("cannot flatten a SingleMap"^(get_expr expr))
+            bail ~expr:expr ("cannot flatten a SingleMap"^(get_expr expr))
 
         | ListCollection l -> 
             if (List.length l) > 0 then
@@ -531,7 +552,7 @@ struct
             in TupleList(r)
         *)
 
-        | _ -> failwith ("invalid collection to flatten"^(get_expr expr)))
+        | _ -> bail ~expr:expr ("invalid collection to flatten"^(get_expr expr)))
         
         
 
@@ -546,17 +567,15 @@ struct
             | SingleMap m -> smc_f m k
             | DoubleMap m -> dmc_f m k
             | MapCollection m -> nmc_f m k
-            | v -> failwith ("invalid tuple collection: "^(string_of_value v))
+            | v -> bail ~expr:expr ("invalid tuple collection: "^(string_of_value v))
             end
         with Not_found ->
             print_string
                ("Collection operation failed: "^
                 (ListExtras.ocaml_of_list string_of_value k)^" in "^
-                (string_of_value ((get_eval tcollection) th db))^
-                "\n"^(get_expr expr)^"\n");
-            failwith "Collection Operation Failed"
+                (string_of_value ((get_eval tcollection) th db)));
+            bail ~expr:expr "Collection Operation Failed"
         )
-            (* failwith ("collection operation failed: "^ex_s^(get_expr expr)))*)
 
     (* map, key -> bool/float *)
     let exists ?(expr = None) tcollection key_l =
@@ -619,7 +638,7 @@ struct
     let get_update_map c pats = match c with
         | TupleList(l) -> MC.from_list (List.map kv_of_tuple l) pats
         | SingleMap(m) -> List.fold_left MC.add_secondary_index m pats
-        | _ -> failwith "invalid single_map_t" 
+        | _ -> bail "invalid single_map_t" 
 
     (* persistent collection id, value -> update *)
     let update_value ?(expr = None) id value = Eval(fun th db ->
@@ -722,10 +741,6 @@ struct
         );
         DB.remove_map_element id in_key out_key db; Unit)  
     
-    (*
-    let ext_fn fn_id = failwith "External functions not yet supported"
-    *)
-    
     (* Top level code generation *)
     let trigger event stmt_block =
       let translate_tuple = 
@@ -735,7 +750,7 @@ struct
                   | TString -> (fun x -> 
                      (BaseValue(match List.hd x with
                         | CString(s) -> CInt(Hashtbl.hash s)
-                        | _ -> failwith "Expecting a string as input"
+                        | _ -> bail "Expecting a string as input"
                      ))::(translate_rest (List.tl x)))
                   | _ -> (fun x -> (BaseValue(List.hd x))::
                                        (translate_rest (List.tl x)))
@@ -751,7 +766,7 @@ struct
                "Processing trigger "^(Schema.string_of_event event));
             match (get_eval cstmt) theta db with
             | Unit -> ()
-            | _ as d -> failwith 
+            | _ as d -> bail  
                ("trigger "^(Schema.string_of_event event)^
                 " returned non-unit datum: "^
                   (Values.K3Value.string_of_value d)
@@ -768,9 +783,9 @@ struct
                    (rel, (Adaptors.create_adaptor adaptor))) rel_adaptors)
                (ListExtras.ocaml_of_list (fun (_,x) -> Schema.string_of_rel x) 
                                          rel_adaptors)
-           | Schema.SocketSource(_) -> failwith "Sockets not yet implemented."
-           | Schema.PipeSource(_)   -> failwith "Pipes not yet implemented."
-           | Schema.NoSource        -> failwith "Unsourced relation"
+           | Schema.SocketSource(_) -> bail "Sockets not yet implemented."
+           | Schema.PipeSource(_)   -> bail "Pipes not yet implemented."
+           | Schema.NoSource        -> bail "Unsourced relation"
        in (src_impl, None, None)
 
     let main dbschema schema patterns sources triggers toplevel_queries =
@@ -811,13 +826,13 @@ struct
     let output main out_chan = match main with
       | Main(main_f) ->
           Unix.dup2 Unix.stdout (Unix.descr_of_out_channel out_chan); main_f ()
-      | _ -> failwith "invalid M3 interpreter main code"
+      | _ -> bail "invalid M3 interpreter main code"
       
    let to_string (code:code_t): string =
-      failwith "Interpreter can't output a string"
+      bail "Interpreter can't output a string"
 
    let debug_string (code:code_t): string =
-      failwith "Interpreter can't output a string"
+      bail "Interpreter can't output a string"
  
     let rec eval c vars vals db = match c with
       | Eval(f) -> f (Env.make vars (List.map value_of_const_t vals), []) db

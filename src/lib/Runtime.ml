@@ -12,7 +12,7 @@ let string_of_stream_event evt =
  end
 ;;
 
-module Make = functor(DB : M3DB) ->
+module Make = functor(DB : K3DB) ->
 struct
 
 type args_t = { 
@@ -50,18 +50,23 @@ let synch_main
       (dispatcher:(stream_event_t option) -> bool)
       (arguments:args_t)
       (): unit = 
+  let (output_separator,title_separator) = 
+    if Debug.active "SINGLE-LINE-MAP-OUTPUT" then (";",": ") else (";\n",":\n")
+  in
   let db_access_f = List.map (fun q ->
      if DB.has_map q db then
-        (q,"map", (fun () -> DB.map_to_string (DB.get_map q db)))
+        (q,"map", (fun () -> (DB.map_name_to_string q)^title_separator^
+           (DB.map_to_string ~sep:output_separator (DB.get_map q db))))
      
-     (* Note: no distinction between in/out maps... fix in db if really needed *)
+     (* Note: no distinction between in/out maps... 
+              fix in db if really needed *)
      else if (DB.has_in_map q db) then
-        (q,"map", (fun () -> (DB.map_name_to_string q)^":\n"^
-           (DB.smap_to_string (DB.get_in_map q db))))
+        (q,"map", (fun () -> (DB.map_name_to_string q)^title_separator^
+           (DB.smap_to_string ~sep:output_separator (DB.get_in_map q db))))
 
      else if DB.has_out_map q db then
-        (q,"map", (fun () -> (DB.map_name_to_string q)^":\n"^
-           (DB.smap_to_string (DB.get_out_map q db))))
+        (q,"map", (fun () -> (DB.map_name_to_string q)^title_separator^
+           (DB.smap_to_string ~sep:output_separator (DB.get_out_map q db))))
      
      else (q,"value", (fun () ->
         (DB.map_name_to_string q)^": "^(

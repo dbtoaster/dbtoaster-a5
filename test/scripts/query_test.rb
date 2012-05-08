@@ -178,12 +178,11 @@ class InterpreterUnitTest < GenericUnitTest
   def run
     cmd = "OCAMLRUNPARAM='#{$ocamlrunparam}';"+
        "#{dbt_base_cmd.join(" ")}"+
-       (if $compile_only then " -l k3" else "" end)+
+       " -d SINGLE-LINE-MAP-OUTPUT"+
        " -r 2>&1";
     IO.popen(cmd, "r") do |qin|
       @runtime = "unknown"
       qin.each do |l|
-        p l;
         case l
           when /Processing time: ([0-9]+\.?[0-9]*)(e-?[0-9]+)?/ then 
             @runtime = "#{$1}#{$2}".to_f

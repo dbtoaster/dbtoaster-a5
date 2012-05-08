@@ -1,8 +1,17 @@
 open Calculus
 open Plan
 
-let error msg = (prerr_endline msg; exit (-1))
-let bug   msg = failwith ("BUG : "^msg)
+let log t post ?(detail=None) msg =
+   (prerr_endline (t^": "^msg); 
+    begin match detail with 
+      | Some(s) -> if Debug.active "DETAIL" then prerr_endline s
+      | None -> ()
+    end; match post with Some(s) -> (s ()) | None -> ())
+
+let inform = log "INFO"  None
+let warn   = log "WARN"  None
+let error  = log "ERROR" (Some(fun _ -> exit (-1)))
+let bug    = log "BUG"   (Some(fun _ -> exit (-1)))
 
 ;;
 
@@ -196,14 +205,14 @@ let imperative_stages = compile_stages ImperativeTargetMarker;;
 
 let active_stages = ref (ListAsSet.inter
    ((match !input_language with
-      | Auto -> bug "input language still auto"
+      | Auto -> bug "input language still auto"; []
       | SQL  -> StageParseSQL::(stages_from SQLMarker)
       | M3   -> StageParseM3::(stages_from M3Marker)
       | K3   -> StageParseK3::(stages_from K3Marker)
-      | _    -> error "Unsupported input language"
+      | _    -> error "Unsupported input language"; []
     )@output_stages)
    ((match !output_language with
-      | Auto  -> bug "output language still auto"
+      | Auto  -> bug "output language still auto"; []
       | SQL   -> StagePrintSQL::(stages_to SQLMarker)
       | Calc  -> StagePrintCalc::(stages_to CalcMarker)
       | MPlan -> StagePrintPlan::(stages_to PlanMarker)
@@ -538,12 +547,19 @@ if stage_is_active StageK3ToTargetLanguage then (
    Debug.print "LOG-DRIVER" (fun () -> "Running Stage: K3ToTargetLanguage");
    match !output_language with
       | Interpreter -> (
-         StandardAdaptors.initialize ();
-         let (_, (maps, patterns), _, _) = !k3_program in
-         interpreter_program := (
-            maps, patterns, 
-            K3InterpreterCG.compile_k3_to_code !k3_program
-         )
+         try 
+            StandardAdaptors.initialize ();
+            let (_, (maps, patterns), _, _) = !k3_program in
+            interpreter_program := (
+               maps, patterns, 
+               K3InterpreterCG.compile_k3_to_code !k3_program
+            )
+         with K3Interpreter.InterpreterException(expr,msg) ->
+            (begin match expr with 
+               | Some(s) -> error ~detail:(Some(K3.string_of_expr s)) msg
+               | None    -> error msg
+            end)
+               
       )   
       | Ocaml       -> bug "Ocaml codegen not implemented yet"
       | Scala       -> bug "Scala codegen not implemented yet"
@@ -582,12 +598,18 @@ if stage_is_active StageImpToTargetLanguage then (
 
 if stage_is_active StageRunInterpreter then (
    Debug.print "LOG-DRIVER" (fun () -> "Running Stage: RunInterpreter");
-   let (maps,patterns,compiled) = !interpreter_program in
-   let db = Database.NamedK3Database.make_empty_db maps patterns in
-   let result = K3Interpreter.K3CG.eval compiled [] [] db in
-   if result <> Values.K3Value.Unit then
-      output_endline (  "UNEXPECTED RESULT: "^
-                        (Values.K3Value.string_of_value result) )
+   try 
+      let (maps,patterns,compiled) = !interpreter_program in
+      let db = Database.NamedK3Database.make_empty_db maps patterns in
+      let result = K3Interpreter.K3CG.eval compiled [] [] db in
+      if result <> Values.K3Value.Unit then
+         output_endline (  "UNEXPECTED RESULT: "^
+                           (Values.K3Value.string_of_value result) )
+   with K3Interpreter.InterpreterException(expr,msg) ->
+      (begin match expr with 
+         | Some(s) -> error ~detail:(Some(K3.string_of_expr s)) msg
+         | None -> error msg
+      end)
 )
 ;;
 if stage_is_active StageOutputSource then (
