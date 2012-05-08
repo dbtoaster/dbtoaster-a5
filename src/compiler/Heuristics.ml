@@ -50,7 +50,7 @@ let string_of_vars = ListExtras.string_of_list string_of_var
     the left while comparisons and values are pushed to the right. The partial 
 		order inside each of the group (relations, lifts, and rests) is preserved. 
 		The method assumes an aggsum-free product-only representation of the expression. *)
-let reorganize_expr (expr:expr_t) : (expr_t) =
+let reorganize_expr (expr:expr_t) : (expr_t list * expr_t list * expr_t list) =
 	let (rels, lifts, rest) = 
 		List.fold_left ( fun (rel,lift,rest) term ->
         match CalcRing.get_val term with
@@ -61,7 +61,7 @@ let reorganize_expr (expr:expr_t) : (expr_t) =
 							failwith "[reorganize] Error: AggSums are supposed to be removed."
     ) ([], [], []) (CalcRing.prod_list expr)
 	in
-	   CalcRing.mk_prod (rels @ lifts @ rest)
+	   (rels, lifts, rest)
 
 
 (** Split an expression into three parts: 
@@ -72,58 +72,63 @@ let reorganize_expr (expr:expr_t) : (expr_t) =
 	    {li lift expressions containing the event relation or input variables }
 	    {li subexpressions with input variables and the above lift variables } 
 	   } *)
-let split_expr (event:Schema.event_t option) (expr:expr_t) :
+let partition_expr (event:Schema.event_t option) (expr:expr_t) :
 							 (expr_t * expr_t * expr_t) =
 
-    let schema_of_expr ?(scope:var_t list = []) 
-		                    (expr:expr_t) :  
+    let schema_of_expr ?(scope:var_t list = []) (expr:expr_t) :  
                         (var_t list * var_t list) =
 	    let (expr_ivars, expr_ovars) = Calculus.schema_of_expr expr in
 	    let new_ovars = ListAsSet.inter expr_ivars scope in
 	        (ListAsSet.diff expr_ivars new_ovars, ListAsSet.union expr_ovars new_ovars) 
-    in								
-		fst (
-			List.fold_left ( fun ((rel, lift, rest), scope_acc) term ->
+    in
+		let (rel_part, lift_part, rest_part) = reorganize_expr expr in
+		let has_root_relation = (rel_part <> []) in 
+		
+		(* Relations, irrelevant lifts, relevant lifts, and the remainder *)
+		let (rels, lifts, rests) = fst (
+			List.fold_left ( fun ((rel, lift, rest), scope_rel) term ->
 					
 					match CalcRing.get_val term with
 						| Value(v) -> 
-									let v_ivars = fst (schema_of_expr ~scope:scope_acc term) in
+									let v_ivars = fst (schema_of_expr ~scope:scope_rel term) in
 									if (v_ivars = []) then
-											((CalcRing.mk_prod [rel; term], lift, rest), scope_acc)
+											((rel @ [term], lift, rest), scope_rel)
 									else 
-											((rel, lift, CalcRing.mk_prod [rest; term]), scope_acc)
+											((rel, lift, rest @ [term]), scope_rel)
 						| AggSum (v, subexp) ->
-									failwith "[split_expr] Error: AggSums are supposed to be removed."																	
+									failwith "[partition_expr] Error: AggSums are supposed to be removed."																	
 						| Rel (reln, relv) ->								
-									((CalcRing.mk_prod [rel; term], lift, rest), (ListAsSet.union scope_acc relv))
+									((rel @ [term], lift, rest), (ListAsSet.union scope_rel relv))
 						| External (_) -> 
-									((rel, lift, CalcRing.mk_prod [rest; term]), scope_acc) 
+									((rel, lift, rest @ [term]), scope_rel) 
 						| Cmp (_, v1, v2) -> 
-									let cmp_ivars = fst (schema_of_expr ~scope:scope_acc term) in
+									let cmp_ivars = fst (schema_of_expr ~scope:scope_rel term) in
 									if (cmp_ivars = []) then
-											((CalcRing.mk_prod [rel; term], lift, rest), scope_acc)
+											((rel @ [term], lift, rest), scope_rel)
 									else 
-											((rel, lift, CalcRing.mk_prod [rest; term]), scope_acc)
+											((rel, lift, rest @ [term]), scope_rel)
 						| Lift (v, subexpr) ->						
-									let subexpr_ivars = fst (schema_of_expr ~scope:scope_acc subexpr) in
+									let subexpr_ivars = fst (schema_of_expr ~scope:scope_rel subexpr) in
 									let subexpr_rels = rels_of_expr subexpr in
 									let lift_contains_event_rel =
 										match extract_event_reln event with 
 											| Some(reln) -> List.mem reln subexpr_rels
 											| None -> false
 									in
-									if ((lift_contains_event_rel) || (subexpr_ivars <> [])) then
-										((rel, CalcRing.mk_prod [lift; term], rest), scope_acc)
+									if ((lift_contains_event_rel) || (subexpr_ivars <> []) ||
+									    (not has_root_relation)) then
+										((rel, lift @ [term], rest), scope_rel)
 									else
 										(* The expression does not include input variables *)
 										(* and does not involve the relation for which the *)
 										(* trigger function is being created.*)
-										((CalcRing.mk_prod [rel; term], lift, rest), scope_acc @ [v])		
+										((rel @ [term], lift, rest), scope_rel @ [v])		
 																					
-			) ((CalcRing.one, CalcRing.one, CalcRing.one), []) 
-			  (CalcRing.prod_list (reorganize_expr expr))
+			) (([], [], []), []) (rel_part @ lift_part @ rest_part)
 		) 
-
+    in 
+		  (CalcRing.mk_prod rels, CalcRing.mk_prod lifts, CalcRing.mk_prod rests)
+				
 
 (******************************************************************************)
 (** For a given expression and a trigger event, decides whether it is more 
@@ -163,8 +168,6 @@ let split_expr (event:Schema.event_t option) (expr:expr_t) :
 *)
 let should_update (event:Schema.event_t) (expr:expr_t)  : bool =
 	
-	   Debug.activate "HEURISTICS-ALWAYS-UPDATE";
-	
 	  if (Debug.active "HEURISTICS-ALWAYS-UPDATE") then true
 		else 
 			if (Debug.active "HEURISTICS-ALWAYS-REPLACE") then false
@@ -184,7 +187,7 @@ let should_update (event:Schema.event_t) (expr:expr_t)  : bool =
 				        let subexpr_opt = optimize_expr (expr_scope, subexpr_schema) subexpr in
 	
 	              (* Split the expression into three parts *)
-								let (rel_exprs, lift_exprs, _) = split_expr (Some(event)) subexpr_opt in
+								let (rel_exprs, lift_exprs, _) = partition_expr (Some(event)) subexpr_opt in
 		            let rel_exprs_ovars = snd (schema_of_expr rel_exprs) in
 								(* TODO: Get variables appearing in the lift expressions and not all variables *) 
 		            let lift_exprs_vars = all_vars lift_exprs in
@@ -299,7 +302,7 @@ and materialize_expr (history:ds_history_t) (prefix:string)
 										 (expr:expr_t) : (ds_t list * expr_t) =
 
 		(* Divide the expression into three parts *)
-		let (rel_exprs, lift_exprs, rest_exprs) = split_expr event expr in 		
+		let (rel_exprs, lift_exprs, rest_exprs) = partition_expr event expr in 		
 
     let (rel_exprs_ivars, rel_exprs_ovars) = schema_of_expr rel_exprs in
 		let (lift_exprs_ivars, lift_exprs_ovars) = schema_of_expr lift_exprs in
@@ -307,7 +310,8 @@ and materialize_expr (history:ds_history_t) (prefix:string)
 					
 		(* Sanity check - rel_exprs should not contain any input variables *)
 		if rel_exprs_ivars <> [] then  
-		    failwith ("The materialized expression has input variables: "^(string_of_expr rel_exprs)) 
+        (print_endline (string_of_expr rel_exprs);
+		     failwith ("The materialized expression has input variables")) 
 		else
 										
 		(* Lifts are always materialized separately *)
