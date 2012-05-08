@@ -71,7 +71,10 @@ let reorganize_expr (expr:expr_t) : (expr_t list * expr_t list * expr_t list) =
 	        with no input variables (comparisons, variables and constants) }  
 	    {li lift expressions containing the event relation or input variables }
 	    {li subexpressions with input variables and the above lift variables } 
-	   } *)
+	   } 
+		 Note: lift subexpressions containing irrelevant relations are materialized 
+		 separately in order to avoid the problem with IVC. 
+		 TODO: consider removing this rule in the future *)
 let partition_expr (event:Schema.event_t option) (expr:expr_t) :
 							 (expr_t * expr_t * expr_t) =
 

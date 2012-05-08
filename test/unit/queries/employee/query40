@@ -1,0 +1,15 @@
+{
+  :path => "test/queries/employee/query40.sql",
+  :datasets => {
+    "standard" => {
+      :toplevels => {
+        "COUNT" => {
+          :type => :onelevel,
+          :expected => {
+            [7507, 'BAKER', 'LESLIE', 'D', 671, 7839, 19850610, 2200.0, 0.0, 40] => 1.0
+          }
+        }
+      }
+    }
+  }
+}
