@@ -357,7 +357,7 @@ let query_id = ref 0;;
 
 if stage_is_active StageSQLToCalc then (
    Debug.print "LOG-DRIVER" (fun () -> "Running Stage: SQLToCalc");
-   let (tables, queries) = SqlToCalculus.preprocess (!sql_program) in
+   let (tables, queries) = !sql_program in
       (* Convert the tables into a more friendly format that we'll use 
          throughout the rest of the program.  (Sql should be able to use this
          format directly.  TODO: Recode Sql to do so) *)
