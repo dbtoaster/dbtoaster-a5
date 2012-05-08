@@ -359,14 +359,32 @@ and calc_of_sources (tables:Sql.table_t list)
             ))
       ) rels;
       List.map (fun (ref_name, q) ->
-         CalcRing.mk_prod (List.map (fun (tgt_name,subq) ->
-            CalcRing.mk_val (Lift(
-               var_of_sql_var ((Some(ref_name)),
-                               tgt_name,
-                               (C.type_of_expr subq)),
-               subq
-            ))
-         ) (rcr_q q ref_name))
+         if Sql.is_agg_query q
+         then 
+            (* For aggregate queries, calc_of_query gives us a list of 
+               target name, target_expression pairs, each of which computes the
+               value of one of the aggregate targets.  These aggregates should
+               be lifted into variables and passed further into the expression*)
+            CalcRing.mk_prod (List.map (fun (tgt_name,subq) ->
+               CalcRing.mk_val (Lift(
+                  var_of_sql_var ((Some(ref_name)),
+                                  tgt_name,
+                                  (C.type_of_expr subq)),
+                  subq
+               ))
+            ) (rcr_q q ref_name))
+         else
+            (* For non-aggregate queries, calc_of_query instead produces a
+               single target named [*_]COUNT, which specifies the count of the
+               each tuple in the result set.  (the query is cast to a count).  
+               For this, we should not lift the expression, but rather just
+               include it inline. *)
+            match (rcr_q q ref_name) with
+               | [_,count_expr] -> count_expr
+               | _ -> Sql.error (
+                  "BUG: calc_of_query produced unexpected number "^
+                  "of targets for a non-aggregate nested query"
+               )
       ) subqs
    ])
 

@@ -408,14 +408,21 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
                   (ListAsSet.union (fst rhs_schema) (snd rhs_schema))
             in
             (* There is a quick and simple optimization we can do at this 
-               point.  If v is entirely irrelevant, and the nested expression 
-               is a singleton, then the entire thing can be discarded without 
-               effect. *)
+               point.  If v is entirely irrelevant (i.e., it isn't used further
+               in the expression, and does not appear in the schema), AND
+               the domain of the nested expression is irrelevant, we can
+               drop the entire term right here.
+               
+               What exactly makes the domain of the nested expression 
+               "relevant"?   There's likely a tighter definition, but for now,
+               we'll say that an expression is relevant if it contains any
+               relations nested inside it. *)
             if (not (List.mem v (ListAsSet.multiunion [schema; scope;
                                                        ctx_vars;
                                                        (fst rhs_schema);
                                                        (snd rhs_schema)]))) &&
-               (C.expr_is_singleton ~scope:scope term)
+               (((C.rels_of_expr term) = []) &&
+                ((C.externals_of_expr term) = []))
             then (
                Debug.print "LOG-UNIFY-LIFTS" (fun () ->
                   "Decided that it was possible to discard "^

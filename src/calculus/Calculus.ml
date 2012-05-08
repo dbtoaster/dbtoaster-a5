@@ -235,6 +235,28 @@ let rec rels_of_expr (expr:expr_t): string list =
          expr
 
 (**
+   Obtain the set of all externals appearing in the specified Calculus 
+   expression
+   @param expr  A Calculus expression
+   @return      The set of all external names that appear in [expr]
+*)
+let rec externals_of_expr (expr:expr_t): string list =
+   let rcr a = rels_of_expr a in
+      CalcRing.fold
+         ListAsSet.multiunion
+         ListAsSet.multiunion
+         (fun x -> x)
+         (fun lf -> begin match lf with
+            | Value(_)            -> []
+            | External(en,_,_,_,_) -> [en]
+            | AggSum(_, subexp)   -> rcr subexp
+            | Rel(_,_)           -> []
+            | Cmp(_,_,_)          -> []
+            | Lift(_,subexp)      -> rcr subexp
+         end)
+         expr
+
+(**
    Compute the degree (as defined by the DBtoaster PODS paper) of the
    specified Calculus expression
    @param expr  A Calculus expression
