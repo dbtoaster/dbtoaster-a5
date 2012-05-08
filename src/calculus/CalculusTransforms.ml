@@ -421,8 +421,7 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
                                                        ctx_vars;
                                                        (fst rhs_schema);
                                                        (snd rhs_schema)]))) &&
-               (((C.rels_of_expr term) = []) &&
-                ((C.externals_of_expr term) = []))
+               (C.expr_is_singleton ~scope:scope term)
             then (
                Debug.print "LOG-UNIFY-LIFTS" (fun () ->
                   "Decided that it was possible to discard "^
