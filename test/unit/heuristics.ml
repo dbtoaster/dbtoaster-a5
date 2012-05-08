@@ -145,14 +145,14 @@ in
 	
 	test "Aggregation with a lift containing an irrelevant relation"
 			"AggSum([A], R(A,B) * (C ^= S(D)))"
-      "M1(int)[][] * M2(int)[][A]";		
+      "AggSum([], (C ^= M1_L1_1(int)[][D])) * M2(int)[][A]";
 	test "Aggregation with a lift containing an irrelevant relation and a common variable"
 			"AggSum([A], R(A,B) * (C ^= S(B)))"
-      "M1(int)[][A]";		
-	test "Aggregation with a lift containing an irrelevant relation"
+      "M1(int)[][A]";
+	test "Aggregation with a lift containing an irrelevant relation and comparison"
 			"AggSum([A], R(A,B) * (C ^= S(D)) * [C > 0])"
-      "M1(int)[][] * M2(int)[][A]";
+      "AggSum([], (C ^= M1_L1_1(int)[][D]) * [C > 0]) * M2(int)[][A]";
 	test "Aggregation with a lift containing an irrelevant relation and a common variable"
 			"AggSum([A], R(A,B) * (C ^= S(A)) * [C > 0])"
-      "M1(int)[][A]";  
+      "M1(int)[][A]";
 ;;
