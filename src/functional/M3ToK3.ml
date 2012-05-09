@@ -536,212 +536,214 @@ let rec calc_to_k3_expr meta theta_vars_el calc :
 			| Cmp( T.Neq,c1, c2 )     -> cmp_fn ( fun e1 e2 -> K.Neq (e1,e2) ) c1 c2
 			
 			| Rel(reln, rel_schema) -> 
-					let rel_outs_el, rel_ret_ve, expr = 
-							map_access_to_expr reln [] rel_schema T.TInt theta_vars_el None in
-				  ((rel_outs_el, rel_ret_ve, expr), meta)
+				let rel_outs_el, rel_ret_ve, expr = 
+						map_access_to_expr reln [] rel_schema T.TInt theta_vars_el None in
+			  ((rel_outs_el, rel_ret_ve, expr), meta)
 			
 			| External(mapn, eins, eouts, ext_type, init_calc_opt) ->
-					(* init_expr_opt will contain if required the schema of the intialization expression *)
-					(* and the intialization expression itself. *)
-					let nm, init_expr_opt = begin match eins, eouts with
-						| [],[] -> meta, None
-						| [],_  ->  if (Debug.active "M3TOK3-GENERATE-INIT") then 
-												meta, Some([],init_val_from_type ext_type)
-						           	else meta, None
-						| _,_   -> 
-							if (Debug.active "M3TOK3-GENERATE-INIT") && 
-								 init_calc_opt != None && not (meta_has_init_keys meta (mapn, eins)) then
-										let init_calc = extract_opt init_calc_opt in
-										let eouts_el = varIdType_to_k3_expr eouts in
-										(* Since we want to initialize on entire output tier at once we remove *)
-										(*  output variables from the list of variables that are in scope. *)
-										let init_theta_vars_el = ListAsSet.diff  theta_vars_el eouts_el in
-										let (init_outs_el, init_ret_ve, init_expr), nm_1 = 
-												calc_to_k3_expr meta  init_theta_vars_el init_calc in
-										
-										if not (ListAsSet.seteq init_outs_el eouts_el) then
-											failwith ("M3ToK3: Schema of intialization expression should span "^
-														"the entire out tier of the map.");
-										let _ = escalate_type (type_of_kvar init_ret_ve) (K.TBase(ext_type)) in
-										
-										(meta_append_init_keys nm_1 (mapn, eins)), 
-										Some(init_outs_el,init_expr)
-							else meta, None
-					end					
-					in					  
-				  let (map_outs_el, map_ret_ve, expr) = 
-						map_access_to_expr mapn eins eouts ext_type theta_vars_el init_expr_opt in
-				  ((map_outs_el, map_ret_ve, expr), nm)
+				(* init_expr_opt will contain if required the schema of the intialization expression *)
+				(* and the intialization expression itself. *)
+				let nm, init_expr_opt = 
+					let meta_keys = if eins = [] then eouts 
+										 else               eins in
+					if ((eins = []) && (eouts = [])) ||
+						not (Debug.active "M3TOK3-GENERATE-INIT") ||
+						(meta_has_init_keys meta (mapn, meta_keys)) then
+						meta, None
+					else if init_calc_opt != None then
+						let init_calc = extract_opt init_calc_opt in
+						let eouts_el = varIdType_to_k3_expr eouts in
+						(* Since we want to initialize on entire output tier at once we remove *)
+						(*  output variables from the list of variables that are in scope. *)
+						let init_theta_vars_el = ListAsSet.diff  theta_vars_el eouts_el in
+						let (init_outs_el, init_ret_ve, init_expr), nm_1 = 
+								calc_to_k3_expr meta  init_theta_vars_el init_calc in
+						
+						if not (ListAsSet.seteq init_outs_el eouts_el) then
+							failwith ("M3ToK3: Schema of intialization expression should span "^
+										"the entire out tier of the map.");
+						let _ = escalate_type (type_of_kvar init_ret_ve) (K.TBase(ext_type)) 
+						in						
+						(meta_append_init_keys nm_1 (mapn, meta_keys)), 
+						Some(init_outs_el,init_expr)
+					else if eins = [] then
+						meta, Some([],init_val_from_type ext_type)
+					else
+						meta, None
+			  	in					  
+			  	let (map_outs_el, map_ret_ve, expr) = 
+					map_access_to_expr mapn eins eouts ext_type theta_vars_el init_expr_opt in
+			  	((map_outs_el, map_ret_ve, expr), nm)
 					
 			| AggSum( agg_vars0, aggsum_calc ) ->
-					(* Convert group by variables to K3 variables and eliminate those that are bound. *)
-					let agg_vars0_el = ListAsSet.diff (varIdType_to_k3_expr agg_vars0) theta_vars_el in
-					
-					let (aggsum_outs_el,ret_ve,aggsum_e),nm = rcr aggsum_calc in
-					
-					(* Make sure that all the group by variables are included in the output*)
-					(* schema of the "aggsum" expression. *)
-					if not ( (ListAsSet.diff agg_vars0_el aggsum_outs_el) = []) then
-						(print_endline(CalculusPrinter.string_of_expr calc);
-						print_endline("GB vars: "^K3.string_of_exprs agg_vars0_el);
-						print_endline("AggSum outs: "^K3.string_of_exprs aggsum_outs_el);
-						failwith ("M3ToK3: The group by variables of aggsum should be included in "^
-									 " the schema of the aggsum expression."));
-					let agg_vars_el = ListAsSet.inter agg_vars0_el aggsum_outs_el in
-										
-					let agg_fn = aggregate_fn aggsum_outs_el ret_ve in
-					let expr = 
-							if aggsum_outs_el = [] then aggsum_e
-							else if agg_vars_el = [] then
-									K.Aggregate(agg_fn, init_val ret_ve, aggsum_e)
-							else
-									let gb_fn = project_fn (aggsum_outs_el@[ret_ve]) agg_vars_el in 
-									let gb_aggsum_e = 
-											K.Slice(aggsum_e, k3_expr_to_k3_idType aggsum_outs_el,[]) in
-									K.GroupByAggregate(agg_fn, init_val ret_ve, gb_fn, gb_aggsum_e)
-					in
-					((agg_vars_el, ret_ve, expr), nm)
+				(* Convert group by variables to K3 variables and eliminate those that are bound. *)
+				let agg_vars0_el = ListAsSet.diff (varIdType_to_k3_expr agg_vars0) theta_vars_el in
+				
+				let (aggsum_outs_el,ret_ve,aggsum_e),nm = rcr aggsum_calc in
+				
+				(* Make sure that all the group by variables are included in the output*)
+				(* schema of the "aggsum" expression. *)
+				if not ( (ListAsSet.diff agg_vars0_el aggsum_outs_el) = []) then
+					(print_endline(CalculusPrinter.string_of_expr calc);
+					print_endline("GB vars: "^K3.string_of_exprs agg_vars0_el);
+					print_endline("AggSum outs: "^K3.string_of_exprs aggsum_outs_el);
+					failwith ("M3ToK3: The group by variables of aggsum should be included in "^
+								 " the schema of the aggsum expression."));
+				let agg_vars_el = ListAsSet.inter agg_vars0_el aggsum_outs_el in
+									
+				let agg_fn = aggregate_fn aggsum_outs_el ret_ve in
+				let expr = 
+						if aggsum_outs_el = [] then aggsum_e
+						else if agg_vars_el = [] then
+								K.Aggregate(agg_fn, init_val ret_ve, aggsum_e)
+						else
+								let gb_fn = project_fn (aggsum_outs_el@[ret_ve]) agg_vars_el in 
+								let gb_aggsum_e = 
+										K.Slice(aggsum_e, k3_expr_to_k3_idType aggsum_outs_el,[]) in
+								K.GroupByAggregate(agg_fn, init_val ret_ve, gb_fn, gb_aggsum_e)
+				in
+				((agg_vars_el, ret_ve, expr), nm)
 									
 			| Lift(lift_v, lift_calc) 	      -> 
-					let (lift_outs_el,lift_ret_ve,lift_e),nm = rcr lift_calc in
-					let lift_ve = K.Var((fst lift_v),
-												(escalate_type (type_of_kvar lift_ret_ve) 
-																	(K.TBase(snd lift_v)))) in
-					let is_bound = List.mem lift_ve theta_vars_el in
-					let extra_ve, ret_ve, lift_body = 
-						if is_bound then 
-							[], K.Var("lift_v",K.TBase(T.TInt)),
-							(exprs_to_tuple (lift_outs_el@[K.Eq(lift_ret_ve,lift_ve)]))
-						else
-							[lift_ve], K.Var("lift_v",K.TBase(T.TInt)),
-							(exprs_to_tuple (lift_outs_el@[lift_ret_ve;one_int_val]))
-					in
-					let lift_lambda = lambda (lift_outs_el@[lift_ret_ve]) lift_body	in
-					let expr = apply_lambda_to_expr lift_lambda lift_e	
-					in	
-					((lift_outs_el@extra_ve, ret_ve, expr), nm)
+				let (lift_outs_el,lift_ret_ve,lift_e),nm = rcr lift_calc in
+				let lift_ve = K.Var((fst lift_v),
+											(escalate_type (type_of_kvar lift_ret_ve) 
+																(K.TBase(snd lift_v)))) in
+				let is_bound = List.mem lift_ve theta_vars_el in
+				let extra_ve, ret_ve, lift_body = 
+					if is_bound then 
+						[], K.Var("lift_v",K.TBase(T.TInt)),
+						(exprs_to_tuple (lift_outs_el@[K.Eq(lift_ret_ve,lift_ve)]))
+					else
+						[lift_ve], K.Var("lift_v",K.TBase(T.TInt)),
+						(exprs_to_tuple (lift_outs_el@[lift_ret_ve;one_int_val]))
+				in
+				let lift_lambda = lambda (lift_outs_el@[lift_ret_ve]) lift_body	in
+				let expr = apply_lambda_to_expr lift_lambda lift_e	
+				in	
+				((lift_outs_el@extra_ve, ret_ve, expr), nm)
 		end
 			
     | C.Sum( sum_args )	->
-				(* Compute the schema of the resulting sum expression *)
-				let outs_el = ListAsSet.diff (varIdType_to_k3_expr outs) theta_vars_el in
-				(* Translate all terms of the sum int K3 and make sure their schema *)
-				(* corresponds to the sum expression's schema and that their return *)
-				(* values have numerical types *)
-				let prepare_fn old_meta old_ret_t c = 
-					let (e_outs_el,e_ret_ve,e),new_meta = rcr2 old_meta c in
-					if not (ListAsSet.seteq e_outs_el outs_el) then
-						(print_endline("Expression:\n"^CalculusPrinter.string_of_expr calc);
-						 print_endline("Scope: "^K3.string_of_exprs theta_vars_el);
-						 print_endline("Output vars: "^K3.string_of_exprs e_outs_el);
-						 print_endline("Sum output vars: "^K3.string_of_exprs outs_el);
-						failwith ("M3ToK3: The schema of a sum term should be the same as "^
-									 "the schema of the entire sum."));
-					let e_ret_t = type_of_kvar e_ret_ve in
-					let new_ret_t = arithmetic_return_types old_ret_t e_ret_t 
-					in
-					((e_outs_el,e_ret_ve,e),new_meta,new_ret_t)					
+			(* Compute the schema of the resulting sum expression *)
+			let outs_el = ListAsSet.diff (varIdType_to_k3_expr outs) theta_vars_el in
+			(* Translate all terms of the sum int K3 and make sure their schema *)
+			(* corresponds to the sum expression's schema and that their return *)
+			(* values have numerical types *)
+			let prepare_fn old_meta old_ret_t c = 
+				let (e_outs_el,e_ret_ve,e),new_meta = rcr2 old_meta c in
+				if not (ListAsSet.seteq e_outs_el outs_el) then
+					(print_endline("Expression:\n"^CalculusPrinter.string_of_expr calc);
+					 print_endline("Scope: "^K3.string_of_exprs theta_vars_el);
+					 print_endline("Output vars: "^K3.string_of_exprs e_outs_el);
+					 print_endline("Sum output vars: "^K3.string_of_exprs outs_el);
+					failwith ("M3ToK3: The schema of a sum term should be the same as "^
+								 "the schema of the entire sum."));
+				let e_ret_t = type_of_kvar e_ret_ve in
+				let new_ret_t = arithmetic_return_types old_ret_t e_ret_t 
 				in
-								
-				let nm,ret_t,sum_exprs = 
-						List.fold_left 
-								(fun (old_meta,old_ret_t,old_el) c -> 
-										 let result,new_meta,new_ret_t = prepare_fn old_meta old_ret_t c in
-										 new_meta,new_ret_t,old_el@[result]) 
-								(meta,(K.TBase(T.TInt)),[]) 
-								sum_args in
-								
-				let ret_ve = K.Var("sum",ret_t) in
-				let (hd_outs_el,hd_ret_ve,hd_s) = List.hd sum_exprs in
-				let sum_exprs_tl = List.tl sum_exprs in
+				((e_outs_el,e_ret_ve,e),new_meta,new_ret_t)					
+			in
+							
+			let nm,ret_t,sum_exprs = 
+					List.fold_left 
+							(fun (old_meta,old_ret_t,old_el) c -> 
+									 let result,new_meta,new_ret_t = prepare_fn old_meta old_ret_t c in
+									 new_meta,new_ret_t,old_el@[result]) 
+							(meta,(K.TBase(T.TInt)),[]) 
+							sum_args in
+							
+			let ret_ve = K.Var("sum",ret_t) in
+			let (hd_outs_el,hd_ret_ve,hd_s) = List.hd sum_exprs in
+			let sum_exprs_tl = List.tl sum_exprs in
+			
+			let sum_result, nm2 = if outs_el <> [] then 
+				(* For computing sums between collections we use temporary maps. *)
+				(* The operation has 3 steps:*)
+				(* 1. Reset the temporary collection. *)
+				(* 2. Insert into the temporary collection the contents of the collection *)
+				(* corresponding to the first term.*)
+				(* 3. Update the temporary collection with the contents of the collections *)
+				(* corresponding to the rest of the sum terms.*)
+				let sum_coll,sum_map = next_sum_tmp_coll outs_el ret_t in
 				
-				let sum_result, nm2 = if outs_el <> [] then 
-					(* For computing sums between collections we use temporary maps. *)
-					(* The operation has 3 steps:*)
-					(* 1. Reset the temporary collection. *)
-					(* 2. Insert into the temporary collection the contents of the collection *)
-					(* corresponding to the first term.*)
-					(* 3. Update the temporary collection with the contents of the collections *)
-					(* corresponding to the rest of the sum terms.*)
-					let sum_coll,sum_map = next_sum_tmp_coll outs_el ret_t in
-					
-					let reset_update = 
-							K.PCElementRemove(sum_coll, [], outs_el) in
-					let reset_stmt = 
-							K.Iterate( lambda (outs_el@[ret_ve]) reset_update,	sum_coll) in
-					
-					let head_update = 
-							K.PCValueUpdate(sum_coll, [], outs_el, hd_ret_ve) in									
-					let head_stmt =
-							K.Iterate(lambda (hd_outs_el@[hd_ret_ve])	head_update, hd_s) in
-					
-					let sum_fn (s_outs_el,s_ret_ve,s) =							
-							let sum_update =
-								K.PCValueUpdate(sum_coll, [], outs_el, 
-									K.IfThenElse(K.Member(sum_coll,outs_el), 
-															 K.Add(s_ret_ve,K.Lookup(sum_coll,outs_el)), 
-															 s_ret_ve) ) in
-							K.Iterate(lambda (s_outs_el@[s_ret_ve])	sum_update,	s) in
-					let tail_stmts = List.map sum_fn sum_exprs_tl in
-					
-					(K.Block( reset_stmt::head_stmt::tail_stmts@[sum_coll] )),
-					(meta_append_sum_map nm sum_map)
-				else
-					let sum_fn sum_e (s_outs_el,s_ret_ve,s)	= K.Add(sum_e,s) in
-					(List.fold_left sum_fn hd_s sum_exprs_tl), 
-					nm
-				in
-				((outs_el, ret_ve, sum_result), nm2)				
+				let reset_update = 
+						K.PCElementRemove(sum_coll, [], outs_el) in
+				let reset_stmt = 
+						K.Iterate( lambda (outs_el@[ret_ve]) reset_update,	sum_coll) in
+				
+				let head_update = 
+						K.PCValueUpdate(sum_coll, [], outs_el, hd_ret_ve) in									
+				let head_stmt =
+						K.Iterate(lambda (hd_outs_el@[hd_ret_ve])	head_update, hd_s) in
+				
+				let sum_fn (s_outs_el,s_ret_ve,s) =							
+						let sum_update =
+							K.PCValueUpdate(sum_coll, [], outs_el, 
+								K.IfThenElse(K.Member(sum_coll,outs_el), 
+														 K.Add(s_ret_ve,K.Lookup(sum_coll,outs_el)), 
+														 s_ret_ve) ) in
+						K.Iterate(lambda (s_outs_el@[s_ret_ve])	sum_update,	s) in
+				let tail_stmts = List.map sum_fn sum_exprs_tl in
+				
+				(K.Block( reset_stmt::head_stmt::tail_stmts@[sum_coll] )),
+				(meta_append_sum_map nm sum_map)
+			else
+				let sum_fn sum_e (s_outs_el,s_ret_ve,s)	= K.Add(sum_e,s) in
+				(List.fold_left sum_fn hd_s sum_exprs_tl), 
+				nm
+			in
+			((outs_el, ret_ve, sum_result), nm2)				
     
 		| C.Prod( prod_args )	->	
-				(* Translate all terms of the product int K3 and make sure their return *)
-				(* values have numerical types *)
-				let prepare_fn (old_meta, old_scope) c = 
-					let (e_outs_el,e_ret_ve,e),new_meta = calc_to_k3_expr old_meta old_scope c in
-					let new_scope = ListAsSet.union old_scope e_outs_el in
-					((e_outs_el,e_ret_ve,e),(new_meta,new_scope))
+			(* Translate all terms of the product int K3 and make sure their return *)
+			(* values have numerical types *)
+			let prepare_fn (old_meta, old_scope) c = 
+				let (e_outs_el,e_ret_ve,e),new_meta = calc_to_k3_expr old_meta old_scope c in
+				let new_scope = ListAsSet.union old_scope e_outs_el in
+				((e_outs_el,e_ret_ve,e),(new_meta,new_scope))
+			in
+			let (nm,_),prod_exprs = 
+				List.fold_left (fun (old_extra,old_el) c -> 
+														let result,new_extra = prepare_fn old_extra c in
+														new_extra,old_el@[result]
+												)
+												((meta,theta_vars_el),[]) 
+												prod_args in
+			
+			let prod_expr_hd = List.hd prod_exprs in
+			let prod_exprs_tl = List.tl prod_exprs in
+			
+			let prod_fn (p1_outs_el,_p1_ret_ve,p1) (p2_outs_el,_p2_ret_ve,p2) =
+				let p1_ret_t,p2_ret_t = pair_map type_of_kvar (_p1_ret_ve,_p2_ret_ve) in
+				let p1_ret_ve = K.Var("p1_ret",p1_ret_t) in
+				let p2_ret_ve = K.Var("p2_ret",p2_ret_t) in 
+				let ret_ve = K.Var("prod",arithmetic_return_types p1_ret_t p2_ret_t) in
+				let p_outs_el,p = begin match p1_outs_el,p2_outs_el with
+				| [],[] -> [], K.Mult(p1,p2)
+				|  _,[] -> p1_outs_el,
+									 K.Map( lambda (p1_outs_el@[p1_ret_ve])	
+																 (K.Tuple(p1_outs_el@[K.Mult(p1_ret_ve,p2)])),						
+													p1)
+				| [], _ -> p2_outs_el,
+									 K.Map( lambda (p2_outs_el@[p2_ret_ve])	
+																 (K.Tuple(p2_outs_el@[K.Mult(p2_ret_ve,p1)])),						
+													p2)
+				|  _, _ -> 
+					let union_el = (ListAsSet.union p1_outs_el p2_outs_el) in
+					let prod_e = K.Tuple(union_el@[K.Mult(p1_ret_ve,p2_ret_ve)]) in
+					let nested = K.Map(lambda (p2_outs_el@[p2_ret_ve]) prod_e, p2) in 
+         		union_el, K.Flatten( K.Map(lambda (p1_outs_el@[p1_ret_ve]) nested, p1) )
+				end
 				in
-				let (nm,_),prod_exprs = 
-					List.fold_left (fun (old_extra,old_el) c -> 
-															let result,new_extra = prepare_fn old_extra c in
-															new_extra,old_el@[result]
-													)
-													((meta,theta_vars_el),[]) 
-													prod_args in
-				
-				let prod_expr_hd = List.hd prod_exprs in
-				let prod_exprs_tl = List.tl prod_exprs in
-				
-				let prod_fn (p1_outs_el,_p1_ret_ve,p1) (p2_outs_el,_p2_ret_ve,p2) =
-					let p1_ret_t,p2_ret_t = pair_map type_of_kvar (_p1_ret_ve,_p2_ret_ve) in
-					let p1_ret_ve = K.Var("p1_ret",p1_ret_t) in
-					let p2_ret_ve = K.Var("p2_ret",p2_ret_t) in 
-					let ret_ve = K.Var("prod",arithmetic_return_types p1_ret_t p2_ret_t) in
-					let p_outs_el,p = begin match p1_outs_el,p2_outs_el with
-					| [],[] -> [], K.Mult(p1,p2)
-					|  _,[] -> p1_outs_el,
-										 K.Map( lambda (p1_outs_el@[p1_ret_ve])	
-																	 (K.Tuple(p1_outs_el@[K.Mult(p1_ret_ve,p2)])),						
-														p1)
-					| [], _ -> p2_outs_el,
-										 K.Map( lambda (p2_outs_el@[p2_ret_ve])	
-																	 (K.Tuple(p2_outs_el@[K.Mult(p2_ret_ve,p1)])),						
-														p2)
-					|  _, _ -> 
-						let union_el = (ListAsSet.union p1_outs_el p2_outs_el) in
-						let prod_e = K.Tuple(union_el@[K.Mult(p1_ret_ve,p2_ret_ve)]) in
-						let nested = K.Map(lambda (p2_outs_el@[p2_ret_ve]) prod_e, p2) in 
-             		union_el, K.Flatten( K.Map(lambda (p1_outs_el@[p1_ret_ve]) nested, p1) )
-					end
-					in
-					(p_outs_el, ret_ve, p)
-				in
-				
-				let prod_result = List.fold_left prod_fn prod_expr_hd prod_exprs_tl in		
-				(prod_result, nm)
+				(p_outs_el, ret_ve, p)
+			in
+			
+			let prod_result = List.fold_left prod_fn prod_expr_hd prod_exprs_tl in		
+			(prod_result, nm)
 				
 		| C.Neg( neg_arg ) ->
-				rcr (C.Prod( [(C.Val(Value(V.Val(AConst(T.CInt(-1))))));neg_arg] ))
+			rcr (C.Prod( [(C.Val(Value(V.Val(AConst(T.CInt(-1))))));neg_arg] ))
   end 
 
 
@@ -796,24 +798,18 @@ let m3_stmt_to_k3_stmt (meta: meta_t) trig_args (m3_stmt: Plan.stmt_t) : K.state
 	(* - if there aren't any output variables then "existing_out_tier" is a singleton and *)
 	(*   can be used directly in the updating expression. *)
 	(* - if we only have output variables then we Lookup for the desired value and we use *)
-	(*   zero for initialization, if required. *)
+	(*   zero or init_calc_opt for initialization, if required. *)
 	(* - If we have a full map and initialization is not required then a simple Lookup *)
 	(*   suffices. Otherwise we use the initialization expression if the desired value *)
 	(*   is not found in "existing_out_tier". The scope of the initialization expression*)
 	(*   will also include the lhs output variables and it will return a singleton. *)
 	let existing_v, nm0 =
 		if update_type = Plan.ReplaceStmt then (init_val_from_type map_type), meta
-		else 
-		begin match lhs_ins_el,lhs_outs_el with
-			|  _,[] ->  existing_out_tier, meta
-			| [], y ->  if (Debug.active "M3TOK3-GENERATE-INIT") then 
-											K.IfThenElse( K.Member(existing_out_tier, lhs_outs_el),
-       														K.Lookup(existing_out_tier, lhs_outs_el),
-       														(init_val_from_type map_type) ), meta
-					        else 
-											K.Lookup(existing_out_tier, lhs_outs_el), meta
-			|  x, y ->
-				if (Debug.active "M3TOK3-GENERATE-INIT") && init_calc_opt != None then
+		else if lhs_outs_el = []          then existing_out_tier, meta
+		else
+			let init_expr_opt = 
+				if not (Debug.active "M3TOK3-GENERATE-INIT") then None
+				else if init_calc_opt != None then(
 					let init_calc = extract_opt init_calc_opt in
 					let init_result, init_meta = calc_to_k3_expr meta trig_w_lhs_el init_calc in
 					let (init_outs_el, init_ret_ve, init_expr) = init_result in
@@ -823,13 +819,18 @@ let m3_stmt_to_k3_stmt (meta: meta_t) trig_args (m3_stmt: Plan.stmt_t) : K.state
 						failwith ("M3ToK3: Initialization expression of lhs map should produce "^
 									 "a singleton."));
 					let _ = escalate_type (type_of_kvar init_ret_ve) map_k3_type in
-					
-					K.IfThenElse( K.Member(existing_out_tier, lhs_outs_el),
-       								K.Lookup(existing_out_tier, lhs_outs_el),
-       								init_expr ), init_meta
-				else
-					K.Lookup(existing_out_tier, lhs_outs_el), meta
-		end
+					Some(init_expr))
+				else if lhs_ins_el = [] then
+					Some(init_val_from_type map_type)
+				else 
+					None
+			in 
+			if init_expr_opt != None then 
+				K.IfThenElse( K.Member(existing_out_tier, lhs_outs_el),
+   							  K.Lookup(existing_out_tier, lhs_outs_el),
+   							  (extract_opt init_expr_opt) ), meta
+			else 
+				K.Lookup(existing_out_tier, lhs_outs_el), meta
 	in
 	
 	(* Translate the rhs calculus expression into a k3 expression and its *)
