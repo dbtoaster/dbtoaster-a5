@@ -50,9 +50,9 @@ let m3_map_to_k3_map (m3_map: M3.map_t) : K.map_t = match m3_map with
 		| M3.DSView(ds)                    -> 
 				let (map_name, input_vars, output_vars, map_type, _) = Plan.expand_ds_name ds.Plan.ds_name 
 				in 
-				(map_name, List.map snd input_vars, List.map snd output_vars, map_type )
+				(map_name, input_vars, output_vars, map_type )
 		| M3.DSTable(rel_name, rel_schema,_) -> 
-				(rel_name, [], List.map snd rel_schema, Types.TInt )
+				(rel_name, [], rel_schema, Types.TInt )
 
 (**/**)
 
@@ -290,7 +290,7 @@ let next_sum_tmp_coll outs_el sum_type_k =
 		begin match outs_el with
 	  | [] -> failwith "M3ToK3: sum_tmp collection required only if 'outs_el' is not empty!"
 	  |  x -> K.OutPC(colln, outs_k, sum_type_k),
-		       (colln, [], List.map K.base_type_of (List.map snd outs_k), K.base_type_of sum_type_k)
+		       (colln, [], List.combine (List.map fst outs_k) (List.map K.base_type_of (List.map snd outs_k)), K.base_type_of sum_type_k)
 	  end
 (**/**)		
 (**********************************************************************)

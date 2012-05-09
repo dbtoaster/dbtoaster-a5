@@ -583,8 +583,8 @@ struct
     
       (* Single tier maps only have entry_t defined *)
       let entry_t, extra_entry_t =
-        let in_fields = snd (fields_of_var_types in_tl) in
-        let out_fields = (snd (fields_of_var_types out_tl))@["__av", Host(TBase(mapt))]
+        let in_fields = snd (fields_of_var_types (List.map snd in_tl)) in
+        let out_fields = (snd (fields_of_var_types (List.map snd out_tl)))@["__av", Host(TBase(mapt))]
         in match in_fields, out_fields with
           | [], _ -> Target(EntryStructDef(entry_t_id, out_fields)), None
           | _, [x] -> Target(EntryStructDef(entry_t_id, in_fields@out_fields)), None
@@ -602,8 +602,8 @@ struct
           else (List.assoc id patterns) in
         let it_of_idx l idxl = List.combine idxl (List.map (List.nth l) idxl) in
         let r = List.fold_left (fun (in_acc, out_acc) p -> match p with
-            | Patterns.In(v,i) -> in_acc@[it_of_idx in_tl i], out_acc
-            | Patterns.Out(v,i) -> in_acc, out_acc@[it_of_idx out_tl i])
+            | Patterns.In(v,i) -> in_acc@[it_of_idx (List.map snd in_tl) i], out_acc
+            | Patterns.Out(v,i) -> in_acc, out_acc@[it_of_idx (List.map snd out_tl) i])
           ([], []) id_pats
         in unique (List.filter (fun x -> x <> []) (fst r)),
            unique (List.filter (fun x -> x <> []) (snd r))
@@ -2133,7 +2133,7 @@ end (* Typing *)
 
   let declare_profiling (schema: K3.map_t list) =
     cscl ~delim:"\n" (List.flatten (List.map (fun (id, in_tl, out_tl,_) ->
-      match in_tl, out_tl with
+      match List.map snd in_tl, List.map snd out_tl with
         | [],[] -> []
         | (x as i),([] as o) | ([] as i),(x as o) ->
           [profile_map_value_update id x;

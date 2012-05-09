@@ -9,7 +9,7 @@
    type k3_statement_t = K3.statement_t
    type k3_trigger_t = K3.trigger_t
    type k3_program_t = K3.prog_t
-   type m3_map_t = K3.map_t
+   type m3_map_t = string * (Types.type_t list) * (Types.type_t list) * Types.type_t
    type map_schema_t = ((string * Types.type_t) list * (string * Types.type_t) list)
 
     
@@ -76,7 +76,7 @@
 
 
    let create_map name input_var_types output_var_types map_type =
-        let f = fun l -> List.map (fun (_,x) -> x) l      (* was (fun x -> ("", x)) *)
+        let f = fun l -> List.map snd l      (* was (fun x -> ("", x)) *)
          in
             let input_types = f input_var_types in
             let output_types = f output_var_types
@@ -85,7 +85,7 @@
                     in
                         add_map name new_map; 
                         add_map_schema name (input_var_types, output_var_types);
-                        (name, input_types, output_types, map_type) 
+                        (name, input_var_types, input_var_types, map_type) 
    
    let concat_stmt (m,t) (map_list,pat_list,trig_list) =
 				let new_map = if m = [] then map_list else m @ map_list

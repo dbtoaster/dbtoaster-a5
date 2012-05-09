@@ -971,7 +971,7 @@ let collection_of_float_list (l : float list) =
 
 
 (* Incremental section *)
-type map_t = string * (Types.type_t list) * (Types.type_t list) * Types.type_t
+type map_t = string * (Types.var_t list) * (Types.var_t list) * Types.type_t
 type schema_t = (map_t list * Patterns.pattern_map)
 type statement_t = expr_t
 type trigger_t = Schema.event_t * statement_t list
@@ -983,8 +983,8 @@ let code_of_prog ((_,(maps,_),triggers,_):prog_t): string = (
    "--------------------- MAPS ----------------------\n"^
    (ListExtras.string_of_list ~sep:"\n\n" (fun (mapn, mapiv, mapov, mapt) ->
       "DECLARE "^mapn^"("^(Types.string_of_type mapt)^")"^
-      (ListExtras.ocaml_of_list Types.string_of_type mapiv)^
-      (ListExtras.ocaml_of_list Types.string_of_type mapov)
+      (ListExtras.ocaml_of_list Types.string_of_type (List.map snd mapiv))^
+      (ListExtras.ocaml_of_list Types.string_of_type (List.map snd mapov))
    ) maps)^"\n\n"^
    "--------------------- TRIGGERS ----------------------\n"^
    (ListExtras.string_of_list ~sep:"\n\n" (fun (event, stmts) ->
@@ -997,9 +997,9 @@ let code_of_prog ((_,(maps,_),triggers,_):prog_t): string = (
 let nice_code_of_prog ((_,(maps,_),triggers,_):prog_t): string = (
    "--------------------- MAPS ----------------------\n"^
    (ListExtras.string_of_list ~sep:"\n\n" (fun (mapn, mapiv, mapov, mapt) ->
-      "DECLARE "^mapn^
-      (ListExtras.ocaml_of_list Types.string_of_type mapiv)^
-      (ListExtras.ocaml_of_list Types.string_of_type mapov)
+      mapn^"("^(Types.string_of_type mapt)^")"^
+      (ListExtras.ocaml_of_list Types.string_of_type (List.map snd mapiv))^
+      (ListExtras.ocaml_of_list Types.string_of_type (List.map snd mapov))
    ) maps)^"\n\n"^
    "--------------------- TRIGGERS ----------------------\n"^
    (ListExtras.string_of_list ~sep:"\n\n" (fun (event, stmts) ->

@@ -10,16 +10,16 @@ module Interpreter = K3Compiler.Make(K3Interpreter.K3CG)
 let maps = [
    "S", [], [], T.TFloat;
    "S_I", [], [], T.TInt;
-   "R", [], [T.TFloat; T.TFloat], T.TFloat;
-	 "R_STR", [], [T.TString; T.TString], T.TFloat;
-	 "T", [T.TFloat; T.TFloat], [], T.TFloat;
-	 "W", [T.TFloat; T.TFloat], [T.TFloat; T.TFloat], T.TFloat;
+   "R", [], ["X", T.TFloat; "Y", T.TFloat], T.TFloat;
+	 "R_STR", [], ["X", T.TString; "Y", T.TString], T.TFloat;
+	 "T", ["X", T.TFloat; "Y", T.TFloat], [], T.TFloat;
+	 "W", ["X", T.TFloat; "Y", T.TFloat], ["Z", T.TFloat; "ZZ", T.TFloat], T.TFloat;
 	 
-	 "sum_tmp_1", [],[T.TFloat], T.TFloat;
+	 "sum_tmp_1", [],["X", T.TFloat], T.TFloat;
 	 "QS", [], [], T.TFloat;
-   "QR", [], [T.TFloat; T.TFloat], T.TFloat;
-	 "QT", [T.TFloat; T.TFloat], [], T.TFloat;
-	 "QW", [T.TFloat; T.TFloat], [T.TFloat; T.TFloat], T.TFloat;
+   "QR", [], ["X", T.TFloat; "Y", T.TFloat], T.TFloat;
+	 "QT", ["X", T.TFloat; "Y", T.TFloat], [], T.TFloat;
+	 "QW", ["X", T.TFloat; "Y", T.TFloat], ["Z", T.TFloat; "ZZ", T.TFloat], T.TFloat;
 ]
 ;;
 
