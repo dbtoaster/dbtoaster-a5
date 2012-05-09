@@ -85,7 +85,7 @@ let partition_expr (event:Schema.event_t option) (expr:expr_t) :
 	        (ListAsSet.diff expr_ivars new_ovars, ListAsSet.union expr_ovars new_ovars) 
     in
 		let (rel_part, lift_part, rest_part) = reorganize_expr expr in
-		let has_root_relation = (rel_part <> []) in 
+(*		let has_root_relation = (rel_part <> []) in *)
 		
 		(* Relations, irrelevant lifts, relevant lifts, and the remainder *)
 		let (rels, lifts, rests) = fst (
@@ -118,8 +118,8 @@ let partition_expr (event:Schema.event_t option) (expr:expr_t) :
 											| Some(reln) -> List.mem reln subexpr_rels
 											| None -> false
 									in
-									if ((lift_contains_event_rel) || (subexpr_ivars <> []) ||
-									    (not has_root_relation)) then
+									if ((lift_contains_event_rel) || (subexpr_ivars <> []) (*||
+									    (not has_root_relation) *)) then
 										((rel, lift @ [term], rest), scope_rel)
 									else
 										(* The expression does not include input variables *)
@@ -226,15 +226,16 @@ let should_update (event:Schema.event_t) (expr:expr_t)  : bool =
 				{li {b Factorization} is performed after the partial materialization in order to 
 				    maximise reuse of common subexpressions. }
        }
-   @param scope   The scope in which [expr] is materialized
-   @param history The history of used data structures
-	 @param prefix  A prefix string used to name newly created maps
-	 @param event   A trigger event
-	 @param expr    A calculus expression
-   @return        A list of data structures that needs to be materialized afterwards 
-	                (a todo list) together with the materialized form of the expression. 
+   @param scope     The scope in which [expr] is materialized
+	 @param db_schema Schema of the database
+   @param history   The history of used data structures
+	 @param prefix    A prefix string used to name newly created maps
+	 @param event     A trigger event
+	 @param expr      A calculus expression
+   @return          A list of data structures that needs to be materialized afterwards 
+	                  (a todo list) together with the materialized form of the expression. 
 *)									
-let rec materialize ?(scope:var_t list = [])
+let rec materialize ?(scope:var_t list = []) (db_schema:Schema.t) 
                     (history:ds_history_t) (prefix:string) 
 							      (event:Schema.event_t option) (expr:expr_t) 
 										: (ds_t list * expr_t) = 
@@ -277,7 +278,8 @@ let rec materialize ?(scope:var_t list = [])
 						);
 				
 						let (todos_subexpr, mat_subexpr) = 
-							materialize_expr history subexpr_name event expr_scope subexpr_schema subexpr_opt 
+							materialize_expr db_schema history subexpr_name event 
+							                 expr_scope subexpr_schema subexpr_opt 
 					  in
 						  Debug.print "LOG-HEURISTICS-DETAIL" (fun () -> 
                   "[Heuristics] Materialized form: "^(string_of_expr mat_subexpr)
@@ -299,8 +301,8 @@ let rec materialize ?(scope:var_t list = [])
 			(todos, optimize_expr (expr_scope, schema) mat_expr))
 	
 (* Materialization of an expression of the form mk_prod [ ...] *)	
-and materialize_expr (history:ds_history_t) (prefix:string)
-										 (event:Schema.event_t option)
+and materialize_expr (db_schema:Schema.t) (history:ds_history_t) 
+                     (prefix:string) (event:Schema.event_t option)
                      (scope:var_t list) (schema:var_t list) 
 										 (expr:expr_t) : (ds_t list * expr_t) =
 
@@ -323,7 +325,7 @@ and materialize_expr (history:ds_history_t) (prefix:string)
 				List.fold_left (fun ((todos, mats), (j, scope_acc)) lift ->
 						match (CalcRing.get_val lift) with
 								| Lift(v, subexp) ->
-									let (todo, mat) = materialize ~scope:scope_acc history 
+									let (todo, mat) = materialize ~scope:scope_acc db_schema history 
 									                 (prefix^"_L"^(string_of_int j)^"_") event subexp in
 									let mat_ovars = snd(schema_of_expr mat) in 
 									   ((todos @ todo, CalcRing.mk_prod [mats; CalcRing.mk_val (Lift(v, mat))]), 
@@ -372,7 +374,20 @@ and materialize_expr (history:ds_history_t) (prefix:string)
 							(i, (cmp_exprs i.ds_definition agg_rel_expr))
 		  			) ({ds_name = CalcRing.one; ds_definition = CalcRing.one}, None) !history
 				in begin match mapping_if_found with
-					| None -> 
+					| None ->
+						(* Compute the IVC expression *) 
+						let ivc = IVC.derive_initializer ~scope:scope 
+						                                 (Schema.table_rels db_schema) 
+																						agg_rel_expr 
+            in
+            let ivc_expr = if (ivc = CalcRing.zero) then None else Some(ivc) in
+						
+            Debug.print "LOG-HEURISTICS-DETAIL" (fun () ->
+               begin match ivc_expr with
+                 | None -> "[Heuristics]  ===> NO IVC <==="
+                 | Some(s) -> "[Heuristics]  IVC: \n"^(string_of_expr s)
+               end
+            );
 						let new_ds = {
 								ds_name = CalcRing.mk_val (
 										External(
@@ -380,7 +395,7 @@ and materialize_expr (history:ds_history_t) (prefix:string)
 				                rel_exprs_ivars,
 												rel_expected_schema,
 				                type_of_expr agg_rel_expr,
-				                None
+				                ivc_expr
 				            )
 				        );
 				        ds_definition = agg_rel_expr;

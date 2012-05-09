@@ -61,60 +61,6 @@ let extract_renamings ((scope,schema):schema_t) (expr:expr_t):
 
 (******************************************************************************)
 
-(** Compute the IVC of a given expression without input variables.  This should
-    probably get pulled out into Heuristics. *)
-let derive_initializer ?(scope = [])
-                       (table_rels:Schema.rel_t list) 
-                       (expr:expr_t): expr_t =
-   let table_names = List.map (fun (rn,_,_) -> rn) table_rels in
-   let optimized_expr = (CalculusTransforms.optimize_expr 
-                              (Calculus.schema_of_expr expr) expr)
-   in 
-   Debug.print "LOG-DERIVE-INITIALIZER" (fun () ->
-      "[Initializer] Input is (scope: "^(ListExtras.ocaml_of_list fst scope)^
-      "): "^(CalculusPrinter.string_of_expr optimized_expr)
-   ); 
-   let init_expr = 
-      Calculus.rewrite_leaves ~scope:scope (fun lf_scope lf -> 
-         Debug.print "LOG-DERIVE-INITIALIZER" (fun () -> 
-            "[Initializer] Deriving Initializer for : "^(string_of_leaf lf)
-         );
-         match lf with
-         | Rel(rn, rv) ->
-            if List.mem rn table_names
-            then CalcRing.mk_val (Rel(rn,rv))
-            else CalcRing.zero
-         | AggSum(gb_vars, subexp) ->
-            (* If the subexpression is zero, then the aggsum is zero *)
-            if subexp = CalcRing.zero then CalcRing.zero else
-            
-            (* It's also possible that the subexpression will have a narrower
-               schema than before without becoming zero.  For example
-                  AggSum([A], (B ^= R(A)) 
-               would become
-                  AggSum([A], (B ^= 0)) 
-               In this case, there will be no rows in the output schema of this
-               expression, and we can replace the nested expression by zero.
-               
-               Also note that this is not the case if any of those variables are
-               bound on the outside (i.e., in the scope)
-            *)
-            let subexp_ovars = (snd (schema_of_expr subexp)) in
-            let bound_schema = ListAsSet.union scope subexp_ovars in
-            let unbound_schema = ListAsSet.diff gb_vars bound_schema in
-               if unbound_schema = [] 
-               then CalcRing.mk_val lf
-               else CalcRing.zero
-         | _ -> CalcRing.mk_val lf
-      ) (CalculusTransforms.optimize_expr (Calculus.schema_of_expr expr) expr)
-   in
-      Debug.print "LOG-DERIVE-INITIALIZER" (fun () ->
-         "[Initializer] Initializer is "^
-            (CalculusPrinter.string_of_expr init_expr)
-      ); init_expr
-
-(******************************************************************************)
-
 let compile_map (db_schema:Schema.t) (history:Heuristics.ds_history_t)
                 (todo: ds_t): todo_list_t * compiled_ds_t =
    (* Sanity check: Deltas of non-numeric types don't make sense and it doesn't
@@ -198,7 +144,8 @@ let compile_map (db_schema:Schema.t) (history:Heuristics.ds_history_t)
 	      );
 	
 	      let (new_todos, materialized_delta) = 
-	         Heuristics.materialize history map_prefix (Some(delta_event)) delta_expr
+	         Heuristics.materialize db_schema history map_prefix 
+					                        (Some(delta_event)) delta_expr
 	      in
 	         Debug.print "LOG-COMPILE-DETAIL" (fun () ->
 	            "Materialized: \n"^
@@ -210,7 +157,7 @@ let compile_map (db_schema:Schema.t) (history:Heuristics.ds_history_t)
                then failwith "TODO: Implement IVC for maps with ivars."
                else if (todo_ovars <> [])
                then let todo_ivc = 
-                     derive_initializer ~scope:todo_ovars
+                     IVC.derive_initializer ~scope:todo_ovars
                                         (Schema.table_rels db_schema)
                                         todo.ds_definition
                   in if todo_ivc = CalcRing.zero then None
@@ -244,7 +191,8 @@ let compile_map (db_schema:Schema.t) (history:Heuristics.ds_history_t)
       else	
         (* The expression is to be reevaluated *)
 	      let (new_todos, materialized_expr) = 
-	         Heuristics.materialize history map_prefix (Some(delta_event)) optimized_defn
+	         Heuristics.materialize db_schema history map_prefix 
+					                        (Some(delta_event)) optimized_defn
 	      in
 	         Debug.print "LOG-COMPILE-DETAIL" (fun () ->
 	            "Materialized expr: \n"^
@@ -275,7 +223,7 @@ let compile_map (db_schema:Schema.t) (history:Heuristics.ds_history_t)
       ... and in both cases, there are no stream relations multiplying the 
       outermost terms to make the expression zero at the start. *)
    let system_init_expr =
-      derive_initializer (Schema.table_rels db_schema)
+      IVC.derive_initializer (Schema.table_rels db_schema)
                          todo.ds_definition
    in (
       if system_init_expr <> CalcRing.zero
@@ -292,8 +240,8 @@ let compile_map (db_schema:Schema.t) (history:Heuristics.ds_history_t)
       if todo_ivars <> [] then
          (* If the todo has input variables, it needs a default initializer *)
          let (init_todos,init_expr) =
-            Heuristics.materialize history (todo_name^"_init") None 
-                                     optimized_defn
+            Heuristics.materialize db_schema history (todo_name^"_init") 
+						                       None optimized_defn
          in (init_todos, Some(init_expr))
       else
          ([], None)
