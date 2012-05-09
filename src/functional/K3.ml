@@ -708,6 +708,256 @@ let rec code_of_expr e =
             "K3.PCElementRemove("^(rcr me)^","^(ListExtras.ocaml_of_list rcr ine)^
                                 ","^(ListExtras.ocaml_of_list rcr oute)^")"
 
+let nice_string_of_expr ?(type_is_needed = false) e =
+  let ob () = pp_open_box str_formatter 2 in
+  let cb () = pp_close_box str_formatter () in
+  let pc () = pp_print_cut str_formatter () in
+  let ps s = pp_print_string str_formatter s in
+  let psp () = pp_print_space str_formatter () in
+  let fnl () = pp_force_newline str_formatter () in
+  let rec ttostr t = (match t with
+      | TUnit -> "unit"
+      | TBase( b_t ) -> begin match b_t with
+            | Types.TInt -> "int"
+            | Types.TFloat -> "float"
+            | Types.TString -> "string"
+            | _ -> "unknown!"
+            end
+      | TTuple(tlist) -> 
+         "<"^(ListExtras.string_of_list ttostr tlist)^">"
+      | Collection(subt) -> "Collection("^(ttostr subt)^")"
+      | Fn(argt,rett) -> 
+         "("^(ListExtras.string_of_list ttostr argt)^") -> "^(ttostr rett)^")"
+   ) in
+   let string_of_vpair (v,vt) = v^":"^(ttostr vt) in
+   let vltostr = ListExtras.string_of_list string_of_vpair in
+   let argstr arg = 
+      match arg with
+         | AVar(v,vt) -> 
+            (string_of_vpair (v,vt))
+         | ATuple(vlist) -> 
+            "<"^(vltostr vlist)^">" in
+  let is_single_statement e = 
+    match e with
+      | Const _ -> true
+      | Var _ -> true
+      | SingletonPC _ -> true
+      | OutPC _ -> true
+      | InPC _ -> true
+      | PC _ -> true
+      | _ -> false
+  in
+  let rec aux e =
+    let print_list l delim =
+      let list_size = List.length l in
+      ignore( List.fold_left ( 
+            fun cnt elem ->
+               pc ();
+               aux elem; 
+               if cnt <> list_size-1 then
+                  ps delim
+               else 
+                  ();
+               cnt + 1
+         ) 0 l
+      )
+    in
+    let recur ?(delim = ",") list_branches = 
+      let br = (get_branches e) in
+      let nb = List.length br in
+        ignore(List.fold_left
+           (fun cnt l -> pc();
+             if l = [] then ps "[]"
+             else if List.mem cnt list_branches then
+                (ps "["; print_list l ";"; ps "]") 
+             else List.iter aux l;
+             if cnt < (nb-1) then ps delim else (); cnt+1)
+           0 br)
+    in
+    let pid id = ps (id) in
+    let ppc pcid = ps ("$"^pcid) in
+    let paroperand e1 = if is_single_statement e1 then aux e1 else begin ps "("; aux e1; ps ")" end in
+    let par e1 e2 op = ob(); ps "("; paroperand e1; pc(); psp (); ps (op); psp(); pc(); paroperand e2; ps ")"; cb() in
+    let pop ?(lb = []) s = ob(); ps s; ps "("; recur lb; ps ")"; cb() in 
+    let ppar sname earg e1 = ob(); ps (sname^"("); aux earg; ps ")"; pc(); aux e1; cb() in
+    let schema args = 
+      "[" ^
+      (String.concat ";"
+        (List.map (fun (x,y) -> "\""^x^"\","^(string_of_type y)) args)) ^
+      "]"
+    in
+    match e with
+    | Const c -> 
+      let const_ts = match c with
+        | Types.CFloat _ -> "float"
+        | Types.CString _ -> "string"
+				| Types.CInt _ -> "int"
+				| Types.CBool _ -> "bool" 
+      in ob(); ps (Types.string_of_const c);
+         if type_is_needed then ps (":"^(const_ts));
+         cb()
+    | Var (id,t) -> 
+         ob(); pid id; 
+         if type_is_needed then ps (":"^(ttostr t));
+         cb()
+
+    | SingletonPC(id,t) -> ob(); ppc id; cb()
+    | OutPC(id,outs,t)  -> ob(); ppc id; cb()
+    | InPC(id,ins,t)    -> ob(); ppc id; cb()
+    | PC(id,ins,outs,t) -> ob(); ppc id; cb()
+
+    | Project (_, idx) ->
+        ob(); ps "Project("; recur []; ps ",";
+        ps ("["^(String.concat "," (List.map string_of_int idx))^"]");
+        ps")"; cb()
+
+    | Lambda           (arg_e,ce)           ->
+        ob(); ps "Lambda("; ps (argstr arg_e); ps ") "; pc(); aux ce; cb()
+
+    | AssocLambda      (arg1_e,arg2_e,be)   ->
+        ob(); ps "Lambda(";
+        ps (argstr arg1_e); ps ","; pc(); ps (argstr arg2_e); 
+        ps ") "; pc (); aux be; cb()
+    
+    | ExternalLambda      (fn_id,arg_e,fn_t)   ->
+        ob(); ps "ExternalLambda(";
+        pid fn_id; ps ","; ps (string_of_arg arg_e); 
+        ps ","; ps (string_of_type fn_t); ps ")"; cb()
+    
+    | Slice(pce, sch, vars) ->
+        ob(); ps "Slice("; aux pce; 
+        if type_is_needed then 
+            begin
+               ps ","; pc (); ps (schema sch) 
+            end
+        else 
+            ();
+        ps ",["; 
+        (List.iter (fun (x,v) -> pid x; ps " => ("; aux v; ps ");") vars); 
+        ps "])"; cb()
+    | Comment(c, cexpr) ->
+        ob(); ps "(***"; ps c; ps "***)"; recur []; cb()
+    
+    | Tuple _             -> ob(); ps "<"; recur ~delim:";" []; ps ">"; cb()
+    | Singleton _         -> pop "Singleton"
+    | Combine _           -> pop "Combine"
+    | Add(e1, e2)         -> par e1 e2 "+"
+    | Mult(e1, e2)        -> par e1 e2 "*"
+    | Eq(e1, e2)          -> par e1 e2 "=="
+    | Neq(e1, e2)         -> par e1 e2 "!="
+    | Lt(e1, e2)          -> par e1 e2 "<"
+    | Leq(e1, e2)         -> par e1 e2 "<="
+    | IfThenElse0(c, ie)  -> ob(); ps "if0( "; aux c; ps " )"; fnl(); aux ie; cb();
+    | IfThenElse(c,ie,ee) -> ob(); ps "if( "; aux c; ps " )"; fnl(); aux ie; cb(); fnl(); ob();  ps "else"; fnl(); aux ee; cb();
+    | Iterate(e1, e2)     -> ppar "Iterate" e1 e2
+    | Apply _             -> pop "Apply"
+    | Map _               -> pop "Map"
+    | Flatten _           -> pop "Flatten"
+    | Aggregate _         -> pop "Aggregate"
+    | GroupByAggregate _  -> pop "GroupByAggregate"
+
+    (* Pretty-print with list branches *)
+    | Block _             -> pop ~lb:[0] "Block"
+    | Member _            -> pop ~lb:[1] "Member"  
+    | Lookup _            -> pop ~lb:[1] "Lookup"
+    | PCUpdate _          -> pop ~lb:[1] "PCUpdate"
+    | PCValueUpdate   _   -> pop ~lb:[1;2] "PCValueUpdate"
+    | PCElementRemove _   -> pop ~lb:[1;2] "PCElementRemove"
+    (*| External         efn_id               -> pop "External" *)
+    in pp_set_margin str_formatter 80; flush_str_formatter (aux e)
+
+let rec nice_code_of_expr e =
+   let rcr ex = (nice_code_of_expr ex) in
+   let rec ttostr t = (match t with
+      | TUnit -> "unit"
+      | TBase( b_t ) -> (Types.ocaml_of_type b_t)
+      | TTuple(tlist) -> 
+         "<"^(ListExtras.string_of_list ttostr tlist)^">"
+      | Collection(subt) -> "Collection("^(ttostr subt)^")"
+      | Fn(argt,rett) -> 
+         "("^(ListExtras.string_of_list ttostr argt)^") -> "^(ttostr rett)^")"
+   ) in
+   let string_of_vpair (v,vt) = v^":"^(ttostr vt) in
+   let vltostr = ListExtras.string_of_list string_of_vpair in
+   let argstr arg = 
+      match arg with
+         | AVar(v,vt) -> 
+            "("^(string_of_vpair (v,vt))^")"
+         | ATuple(vlist) -> 
+            "<"^(vltostr vlist)^">"
+   in
+   match e with
+      | Const c -> Types.string_of_const c
+      | Var (id,t) -> id
+      | Tuple e_l -> "<"^(ListExtras.string_of_list rcr e_l)^">"
+      
+      | Project (ce, idx) -> "K3.SR.Project("^(rcr ce)^","^
+                           (ListExtras.ocaml_of_list string_of_int idx)^")"
+      
+      | Singleton ce      -> "Singleton("^(rcr ce)^")"
+      | Combine (ce1,ce2) -> "Combine("^(rcr ce1)^","^(rcr ce2)^")"
+      | Add  (ce1,ce2)    -> "("^(rcr ce1)^"+"^(rcr ce2)^")"
+      | Mult (ce1,ce2)    -> "("^(rcr ce1)^"*"^(rcr ce2)^")"
+      | Eq   (ce1,ce2)    -> "("^(rcr ce1)^"=="^(rcr ce2)^")"
+      | Neq  (ce1,ce2)    -> "("^(rcr ce1)^"!="^(rcr ce2)^")"
+      | Lt   (ce1,ce2)    -> "("^(rcr ce1)^"<"^(rcr ce2)^")"
+      | Leq  (ce1,ce2)    -> "("^(rcr ce1)^"<="^(rcr ce2)^")"
+      
+      | IfThenElse0 (ce1,ce2)  -> 
+            "if0("^(rcr ce1)^")"^(rcr ce2)
+      | Comment(c, cexpr) ->
+            "(*** "^c^" ***) "^(rcr cexpr)
+      | IfThenElse  (pe,te,ee) -> 
+            "if("^(rcr pe)^")"^(rcr te)^"else"^(rcr ee)
+      
+      | Block   e_l        -> "{"^(ListExtras.string_of_list rcr e_l)^"}"
+      | Iterate (fn_e, ce) -> "Iterate("^(rcr fn_e)^")"^(rcr ce)
+      | Lambda  (arg_e,ce) -> "Lambda("^(argstr arg_e)^")"^(rcr ce)
+      
+      | AssocLambda(arg1,arg2,be) ->
+            "AssocLambda("^(argstr arg1)^","^(argstr arg2)^")"^
+                               (rcr be)
+      | ExternalLambda(fn_id,arg,fn_t) ->
+            "ExternalLambda(\""^fn_id^"\","^(argstr arg)^","^(ttostr fn_t)^")"
+      | Apply(fn_e,arg_e) -> 
+            "Apply("^(rcr fn_e)^","^(rcr arg_e)^")"
+      | Map(fn_e,ce) -> 
+            "Map("^(rcr fn_e)^","^(rcr ce)^")"
+      | Flatten(ce) -> 
+            "Flatten("^(rcr ce)^")"
+      | Aggregate(fn_e,i_e,ce) -> 
+            "Aggregate("^(rcr fn_e)^","^(rcr i_e)^","^(rcr ce)^")"
+      | GroupByAggregate(fn_e,i_e,ge,ce) -> 
+            "GroupByAggregate("^(rcr fn_e)^","^(rcr i_e)^","^(rcr ge)^
+                                    ","^(rcr ce)^")"
+      | SingletonPC(id,t) -> 
+            "$"^id
+      | OutPC(id,outs,t) -> 
+            "$"^id
+      | InPC(id,ins,t) -> 
+            "$"^id
+      | PC(id,ins,outs,t) -> 
+            "$"^id
+      | Member(me,ke) -> 
+            "Member("^(rcr me)^","^(ListExtras.ocaml_of_list rcr ke)^")"  
+      | Lookup(me,ke) -> 
+            "Lookup("^(rcr me)^","^(ListExtras.ocaml_of_list rcr ke)^")"
+      | Slice(me,sch,pat_ve) -> 
+            let pat_str = ListExtras.ocaml_of_list (fun (id,expr) ->
+               id^" => "^(rcr expr)
+            ) pat_ve in
+            "Slice("^(rcr me)^","^(vltostr sch)^",("^pat_str^"))"
+      | PCUpdate(me,ke,te) -> 
+            "PCUpdate("^(rcr me)^","^(ListExtras.ocaml_of_list rcr ke)^","^
+                            (rcr te)^")"
+      | PCValueUpdate(me,ine,oute,ve) -> 
+            "PCValueUpdate("^(rcr me)^","^(ListExtras.ocaml_of_list rcr ine)^
+                                 ","^(ListExtras.ocaml_of_list rcr oute)^","^
+                                 (rcr ve)^")"
+      | PCElementRemove(me,ine,oute) -> 
+            "PCElementRemove("^(rcr me)^","^(ListExtras.ocaml_of_list rcr ine)^
+                                ","^(ListExtras.ocaml_of_list rcr oute)^")"
+
 (* Native collection constructors *)
 let collection_of_list (l : expr_t list) =
     if l = [] then failwith "invalid list for construction" else
@@ -740,6 +990,21 @@ let code_of_prog ((_,(maps,_),triggers,_):prog_t): string = (
    (ListExtras.string_of_list ~sep:"\n\n" (fun (event, stmts) ->
       "ON "^(Schema.string_of_event event)^" : {"^
       (ListExtras.string_of_list ~sep:"\n\t" string_of_expr stmts)^
+      "}"
+   ) triggers)^"\n"
+)
+
+let nice_code_of_prog ((_,(maps,_),triggers,_):prog_t): string = (
+   "--------------------- MAPS ----------------------\n"^
+   (ListExtras.string_of_list ~sep:"\n\n" (fun (mapn, mapiv, mapov, mapt) ->
+      "DECLARE "^mapn^
+      (ListExtras.ocaml_of_list Types.string_of_type mapiv)^
+      (ListExtras.ocaml_of_list Types.string_of_type mapov)
+   ) maps)^"\n\n"^
+   "--------------------- TRIGGERS ----------------------\n"^
+   (ListExtras.string_of_list ~sep:"\n\n" (fun (event, stmts) ->
+      (Schema.string_of_event event)^" : {\n"^
+      (ListExtras.string_of_list ~sep:";\n\t" nice_string_of_expr stmts)^
       "}"
    ) triggers)^"\n"
 )

@@ -15,7 +15,7 @@ let get_map_output_domain (expr: Calculus.expr_t): Calculus.expr_t =
             end in
         begin match target_leaf with
         | External(ename,eins,eouts,etype,emeta) ->
-            CalcRing.Val(Rel(ename^"_output",eouts))
+            CalcRing.Val(External(ename^"_output", [], eouts, Types.TInt, None))
         | _ -> failwith "Expression should be map!"
         end
         
@@ -27,25 +27,16 @@ let get_map_input_domain (expr: Calculus.expr_t): Calculus.expr_t =
             end in
         begin match target_leaf with
         | External(ename,eins,eouts,etype,emeta) ->
-            CalcRing.Val(Rel(ename^"_input",eins))
+            CalcRing.Val(External(ename^"_input", [], eins, Types.TInt, None))
         | _ -> failwith "Expression should be map!"
         end
         
 let get_singleton_tuple (relation: Schema.rel_t): Calculus.expr_t =
     let (rname, rvars, _) = relation in
-        CalcRing.Val(Rel(rname^"_singleton", rvars))
+        CalcRing.Val(Rel(rname^"_singleton", rvars)) 
         
 let get_relation_vars (expr: Calculus.expr_t): var_t list = 
-    let leaf = 
-            begin match expr with
-            | CalcRing.Val(x) -> x
-            | _ -> failwith "Expression should be leaf!"
-            end in
-        begin match leaf with
-        | Rel(_, rvars) ->
-            rvars
-        | _ -> failwith "Expression should be relation!"
-        end
+    snd (Calculus.schema_of_expr expr)
         
 let is_calculus_relation (expr: Calculus.expr_t): bool = 
     let leaf = 
@@ -61,6 +52,7 @@ let is_calculus_relation (expr: Calculus.expr_t): bool =
 
       
 let rec simplify_formula(expr: Calculus.expr_t): Calculus.expr_t * bool = (* First return is the simplified query and the second one is whether it should be removed or not! *)
+    let should_be_removed = (CalcRing.zero, false) in
     begin match expr with
         | CalcRing.Sum([q1;q2]) -> 
             let (rq1, rb1) = simplify_formula(q1) in
@@ -74,7 +66,7 @@ let rec simplify_formula(expr: Calculus.expr_t): Calculus.expr_t * bool = (* Fir
                 if rb2 = true then
                     (rq2, true)
                 else
-                    (CalcRing.zero, false) 
+                    should_be_removed 
         | CalcRing.Sum(q1::qo) -> 
             let (rq1, rb1) = simplify_formula(q1) in
             let (rq2, rb2) = simplify_formula(CalcRing.mk_sum(qo)) in
@@ -87,7 +79,7 @@ let rec simplify_formula(expr: Calculus.expr_t): Calculus.expr_t * bool = (* Fir
                 if rb2 = true then
                     (rq2, true)
                 else
-                    (CalcRing.zero, false) 
+                    should_be_removed
         | CalcRing.Prod([q1;q2]) -> 
             let (rq1, rb1) = simplify_formula(q1) in
             let (rq2, rb2) = simplify_formula(q2) in
@@ -100,7 +92,7 @@ let rec simplify_formula(expr: Calculus.expr_t): Calculus.expr_t * bool = (* Fir
                 if rb2 = true then
                     (rq2, true)
                 else
-                    (CalcRing.zero, false) 
+                    should_be_removed
         | CalcRing.Prod(q1::qo) -> 
             let (rq1, rb1) = simplify_formula(q1) in
             let (rq2, rb2) = simplify_formula(CalcRing.mk_prod(qo)) in
@@ -113,20 +105,22 @@ let rec simplify_formula(expr: Calculus.expr_t): Calculus.expr_t * bool = (* Fir
                 if rb2 = true then
                     (rq2, true)
                 else
-                    (CalcRing.zero, false)         
+                    should_be_removed         
         | CalcRing.Val(leaf) ->
             begin match leaf with
             | AggSum(gb_vars, subexp) -> 
                 if gb_vars = [] then 
-                    (CalcRing.zero, false)
+                    should_be_removed
                 else 
                     let (rq, rb) = simplify_formula(subexp) in
                         if rb = true then 
                             (CalcRing.Val(AggSum(gb_vars, rq)), true) 
                         else 
-                            (CalcRing.zero, false)
+                            should_be_removed
             | Rel(rname, rvars)    -> 
-                if rvars = [] then (CalcRing.zero, false) else (expr, true)
+                if rvars = [] then should_be_removed else (expr, true)
+            | External(ename,eins,eouts,etype,emeta) ->
+                if eouts = [] then should_be_removed else (expr, true)
             | _ -> failwith ("Incorrect leaf")
             end
         | _ -> failwith ("Incorrect formula")
@@ -151,7 +145,8 @@ let simplify_dm_trigger (trigger: Plan.stmt_t): Plan.stmt_t list =
     
 
 let simplify_dm_triggers (trigger_list: Plan.stmt_t list): Plan.stmt_t list = 
-    List.fold_left (fun (x) (y) -> x@(simplify_dm_trigger y)) [] trigger_list
+   List.fold_left (fun (x) (y) -> x@(simplify_dm_trigger y)) [] trigger_list
+   (*trigger_list*)
     
         
 

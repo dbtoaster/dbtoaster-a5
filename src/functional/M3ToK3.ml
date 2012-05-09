@@ -936,3 +936,100 @@ let m3_to_k3 (m3_program : M3.prog_t) : (K.prog_t) =
 	  k3_prog_tlqs 
    )
 
+(** Converts a M3DM statement into a K3 statement. *)
+let dm_collection_stmt trig_args (m3_stmt: Plan.stmt_t) : K.statement_t =
+      let is_ivc_constant = one_int_val in
+      let is_gc_constant  = minus_one_int_val in
+      let is_normal_constant = zero_int_val in
+		let (mapn, lhs_ins, lhs_outs, map_type, init_calc_opt) = Plan.expand_ds_name m3_stmt.Plan.target_map in
+		let {Plan.update_type = update_type; Plan.update_expr = incr_calc} = m3_stmt in 
+		
+		(* K3 collection used for storing the result of the statement.*)
+      let lhs_collection  = map_to_expr mapn lhs_ins lhs_outs map_type in
+    
+		let map_k3_type = K.TBase(map_type) in
+      let collection_ivc_gc_t  = 
+			K.Collection(K.TTuple( (varIdType_to_k3_type lhs_outs)@[K.TBase(Types.TInt)] )) in
+			  
+		let lhs_outs_el = varIdType_to_k3_expr lhs_outs in
+		let trig_args_el = varIdType_to_k3_expr trig_args in
+		
+		let incr_result, _ = calc_to_k3_expr empty_meta trig_args_el incr_calc in
+		let (rhs_outs_el, rhs_ret_ve, incr_expr) = incr_result in
+		assert (ListAsSet.seteq (ListAsSet.diff lhs_outs_el trig_args_el) rhs_outs_el);
+		assert (compatible_types (type_of_kvar rhs_ret_ve) map_k3_type);
+
+      let collection_ivc_gc = 
+         let zero_value = init_val_from_type map_type in
+         let previous_value = 
+            K.IfThenElse(  K.Member(lhs_collection, rhs_outs_el),
+                           K.Lookup(lhs_collection, rhs_outs_el),
+                           zero_value 
+            ) in
+         let delta_value = rhs_ret_ve in
+         let ivc_gc_specifier =
+            K.IfThenElse(  K.Eq(previous_value, zero_value), 
+                           K.IfThenElse(  K.Neq(delta_value, zero_value), 
+                                          is_ivc_constant,
+                                          is_normal_constant
+                           ),
+                           K.IfThenElse(  K.Eq(delta_value, zero_value), 
+                                          is_gc_constant,
+                                          is_normal_constant
+                           )
+            )
+            in
+         let inner_loop_body = lambda (rhs_outs_el@[rhs_ret_ve]) ivc_gc_specifier in
+         K.Map(inner_loop_body, incr_expr)
+      in
+
+      let statement_expr =
+         let lambda_arg = K.Var("collection_ivc_gc", collection_ivc_gc_t) in
+         let lambda_body = lambda_arg in
+         let outer_loop_body = lambda [lambda_arg] lambda_body in
+            K.Apply(outer_loop_body, collection_ivc_gc)
+    in
+		(statement_expr)
+
+
+(** Transforms a M3DM trigger into a K3 trigger. *)
+let dm_collection_trig (m3dm_trig: M3.trigger_t) : K.trigger_t =
+	let trig_args = Schema.event_vars m3dm_trig.M3.event in
+	let k3_trig_stmts = 
+		List.fold_left 
+				(fun (old_stms) m3dm_stmt -> 
+							let k3_stmt = dm_collection_stmt trig_args m3dm_stmt in 
+							(old_stms@[k3_stmt]) )
+				([])
+				!(m3dm_trig.M3.statements) 
+	in
+  (m3dm_trig.M3.event, k3_trig_stmts)
+
+
+(** Transforms a M3DM program into a K3 program. *)
+let m3dm_to_k3 (m3_program : M3.prog_t) (m3dm_prog: M3DM.dm_prog_t) : (K.prog_t) =
+   let {M3.maps = m3_prog_schema; M3.triggers = m3_prog_trigs;
+        M3.queries = m3_prog_tlqs; M3.db = k3_database } = m3_program in
+   let k3_prog_schema = List.map m3_map_to_k3_map !m3_prog_schema in
+	let patterns_map = Patterns.extract_patterns !m3_prog_trigs in
+	let k3_prog_trigs = 
+		List.fold_left
+				(fun (old_trigs) m3dm_trig -> 
+							let k3_trig = dm_collection_trig m3dm_trig in
+							(old_trigs@[k3_trig]) )
+				([])
+				!m3dm_prog 
+	in
+	let k3_prog_tlqs = 
+	  List.map (fun (name, query) ->
+	     let ((_,k3_query_compiled,_),_) =
+	        calc_to_k3_expr empty_meta [] query
+	     in
+	        (name, k3_query_compiled)
+	  ) !m3_prog_tlqs
+	in
+	( k3_database, 
+	  (k3_prog_schema, patterns_map), 
+	  k3_prog_trigs, 
+	  k3_prog_tlqs 
+   )

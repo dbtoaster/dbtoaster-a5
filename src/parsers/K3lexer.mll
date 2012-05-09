@@ -77,7 +77,7 @@ let _ = hashtbl_of_pair_list ops_table ops
 let char        = ['a'-'z' 'A'-'Z']   
 let digit       = ['0'-'9']   
 let decint      = digit+
-let int         = decint
+let int         = ('-')?decint
 let decimal     = digit+ '.' digit+
 let number     	= ('-'|'+')?digit+ '.' digit*
 let float       = (int|decimal)'E'('+'|'-')?digit+
@@ -85,7 +85,7 @@ let identifier  = char(char|digit|'_')*
 let whitespace  = [' ' '\t']   
 let newline     = "\n\r" | '\n' | '\r'  
 let cmp_op      = "<" | "<=" | "==" | "!=" | '>'
-let arith_op    = '+' | '*'
+let arith_op    = '+' | '*' | '-'
 let strconst    = ('\"'[^'\"']*'\"') | ('\''[^'\'']*'\'')
 let singlecm    = "--"[^'\n' '\r']*
 let multicmst   = "/*"

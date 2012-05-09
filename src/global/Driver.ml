@@ -475,7 +475,12 @@ if stage_is_active StagePrintM3 then (
 (************ M3 Domain Maintenance Stages ************)
 if stage_is_active StageM3DomainMaintenance then (
    Debug.print "LOG-DRIVER" (fun () -> "Running Stage: M3DomainMaintenance");
-   dm_program := M3DM.make_DM_triggers (M3.get_triggers !m3_program) 
+   dm_program := M3DM.make_DM_triggers (M3.get_triggers !m3_program);
+   if (Debug.active "LOG-DM") then
+   begin
+      let k3_queries = M3ToK3.m3dm_to_k3 !m3_program !dm_program in
+      Debug.print "LOG-DM" (fun () -> K3.nice_code_of_prog k3_queries)
+   end
 )
 ;;
 if stage_is_active StagePrintM3DomainMaintenance then (

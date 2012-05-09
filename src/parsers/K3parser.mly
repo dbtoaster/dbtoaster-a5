@@ -255,6 +255,19 @@ triggerList:
 | trigger                                                   { [$1] }
 
 trigger:
+| ON triggerType ID LPAREN argumentList RPAREN COLON LBRACE statementList RBRACE 
+                                                            {
+                                                            let args = List.map (fun x -> (x, Types.TFloat)) $5
+                                                            in
+                                                               let r = ($3, args,Schema.StreamRel)
+                                                               in
+                                                                  let ev = 
+                                                                        if $2 then 
+                                                                           Schema.InsertEvent(r)
+                                                                        else
+                                                                           Schema.DeleteEvent(r)
+                                                                  in
+                                                                     (ev, $9) }
 | ON triggerType ID LBRACK argumentList RBRACK COLON LBRACE statementList RBRACE 
                                                             {
                                                             let args = List.map (fun x -> (x, Types.TFloat)) $5
@@ -282,6 +295,7 @@ statementList:
 | statement EOSTMT                                          { [$1] }
 
 statement:
+| LPAREN statement RPAREN                                   { $2 }
 | constStatement                                            { $1 }
 | varStatement                                              { $1 }
 | tupleStatement                                            { $1 }
@@ -345,6 +359,7 @@ lambdaStatement:
 lambdaArgument:
 | varItem                                                   { AVar(fst $1, snd $1) }
 | LT varList GT                                             { ATuple($2) }
+| LPAREN lambdaArgument RPAREN                              { $2 }
 
 varItem:
 | ID COLON varType                                          { ($1, $3) }
@@ -403,6 +418,7 @@ sliceStatement:
 varBindList:
 | varBindItem EOSTMT varBindList                            { $1::$3 }
 | varBindItem                                               { [$1] }
+|                                                           { [] }
 
 varBindItem:
 | ID BOUND statement                                        { ($1, $3) }
