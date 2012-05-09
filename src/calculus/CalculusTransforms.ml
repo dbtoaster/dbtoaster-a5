@@ -415,8 +415,8 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
                
                What exactly makes the domain of the nested expression 
                "relevant"?   There's likely a tighter definition, but for now,
-               we'll say that an expression is relevant if it contains any
-               relations nested inside it. *)
+               we'll say that an expression is relevant it has a schema (i.e., 
+               if the domain extension isn't limited to the lift variable. *)
             if (not (List.mem v (ListAsSet.multiunion [schema; scope;
                                                        ctx_vars;
                                                        (fst rhs_schema);

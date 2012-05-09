@@ -130,6 +130,27 @@ let rel (db:t) (reln:string): rel_t =
    List.find (fun (cmpn,_,_) -> reln = cmpn) (rels db)
 
 (**
+   Partition the sources in a database schema by type of relation they generate.  
+   All the sources that generate stream relations will be grouped together and
+   all the sources that generate table relations will be grouped together.  
+   Sources that generate both will be included in both groups, but each 
+   [source_info_t] will contain only the appropriate relations.
+   
+   @param db   The database schema
+   @return     A pair (table_sources, stream_sources) of [source_info_t]s 
+               containing every source in [db], grouped accordingly
+*)
+let partition_sources_by_type (db:t): (source_info_t list * source_info_t list)=
+   ListExtras.flatten_list_pair (List.map (fun (source, all_rels) ->
+      let (table_rels, stream_rels) = 
+         List.partition (fun (_,(_,_,t)) -> t = TableRel) all_rels
+      in
+         (  (if table_rels  = [] then [] else [source, table_rels ]), 
+            (if stream_rels = [] then [] else [source, stream_rels])
+         )
+   ) !db)
+
+(**
    Obtain the parameter list for the indicated event
    @param event An event
    @return      A list of all parameters taken by [event]

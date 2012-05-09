@@ -61,20 +61,57 @@ let extract_renamings ((scope,schema):schema_t) (expr:expr_t):
 
 (******************************************************************************)
 
-let compute_init_at_start (table_rels:Schema.rel_t list) (expr:expr_t): expr_t =
+(** Compute the IVC of a given expression without input variables.  This should
+    probably get pulled out into Heuristics. *)
+let derive_initializer ?(scope = [])
+                       (table_rels:Schema.rel_t list) 
+                       (expr:expr_t): expr_t =
    let table_names = List.map (fun (rn,_,_) -> rn) table_rels in
-   Calculus.rewrite_leaves (fun _ lf -> match lf with
-      | Rel(rn, rv) ->
-         if List.mem rn table_names
-         then CalcRing.mk_val (Rel(rn,rv))
-         else CalcRing.zero
-      | AggSum(gb_vars, subexp) ->
-         if subexp <> CalcRing.zero 
-         then CalcRing.mk_val (AggSum(gb_vars, subexp))
-         else CalcRing.zero				
-      | _ -> CalcRing.mk_val lf
-   ) (CalculusTransforms.optimize_expr (Calculus.schema_of_expr expr) expr)
-
+   let optimized_expr = (CalculusTransforms.optimize_expr 
+                              (Calculus.schema_of_expr expr) expr)
+   in 
+   Debug.print "LOG-DERIVE-INITIALIZER" (fun () ->
+      "[Initializer] Input is (scope: "^(ListExtras.ocaml_of_list fst scope)^
+      "): "^(CalculusPrinter.string_of_expr optimized_expr)
+   ); 
+   let init_expr = 
+      Calculus.rewrite_leaves ~scope:scope (fun lf_scope lf -> 
+         Debug.print "LOG-DERIVE-INITIALIZER" (fun () -> 
+            "[Initializer] Deriving Initializer for : "^(string_of_leaf lf)
+         );
+         match lf with
+         | Rel(rn, rv) ->
+            if List.mem rn table_names
+            then CalcRing.mk_val (Rel(rn,rv))
+            else CalcRing.zero
+         | AggSum(gb_vars, subexp) ->
+            (* If the subexpression is zero, then the aggsum is zero *)
+            if subexp = CalcRing.zero then CalcRing.zero else
+            
+            (* It's also possible that the subexpression will have a narrower
+               schema than before without becoming zero.  For example
+                  AggSum([A], (B ^= R(A)) 
+               would become
+                  AggSum([A], (B ^= 0)) 
+               In this case, there will be no rows in the output schema of this
+               expression, and we can replace the nested expression by zero.
+               
+               Also note that this is not the case if any of those variables are
+               bound on the outside (i.e., in the scope)
+            *)
+            let subexp_ovars = (snd (schema_of_expr subexp)) in
+            let bound_schema = ListAsSet.union scope subexp_ovars in
+            let unbound_schema = ListAsSet.diff gb_vars bound_schema in
+               if unbound_schema = [] 
+               then CalcRing.mk_val lf
+               else CalcRing.zero
+         | _ -> CalcRing.mk_val lf
+      ) (CalculusTransforms.optimize_expr (Calculus.schema_of_expr expr) expr)
+   in
+      Debug.print "LOG-DERIVE-INITIALIZER" (fun () ->
+         "[Initializer] Initializer is "^
+            (CalculusPrinter.string_of_expr init_expr)
+      ); init_expr
 
 (******************************************************************************)
 
@@ -95,8 +132,6 @@ let compile_map (db_schema:Schema.t) (history:Heuristics.ds_history_t)
          | _ -> failwith "Error: Compiling map with unsupported type"
       end
    in
-	 (*Debug.activate "IGNORE-DELETES";*)
-	 (*Debug.activate "LOG-COMPILE-DETAIL"; *)
    Debug.print "LOG-COMPILE-DETAIL" (fun () ->
       "Optimizing: \n"^(CalculusPrinter.string_of_expr todo.ds_definition)
    );
@@ -169,11 +204,40 @@ let compile_map (db_schema:Schema.t) (history:Heuristics.ds_history_t)
 	            "Materialized: \n"^
 	            (CalculusPrinter.string_of_expr materialized_delta)
 	         );
+	         
+	         let todo_ivc = 
+               if (todo_ivars <> [])
+               then failwith "TODO: Implement IVC for maps with ivars."
+               else if (todo_ovars <> [])
+               then let todo_ivc = 
+                     derive_initializer ~scope:todo_ovars
+                                        (Schema.table_rels db_schema)
+                                        todo.ds_definition
+                  in if todo_ivc = CalcRing.zero then None
+                     else Some(Calculus.rename_vars delta_renamings todo_ivc)
+               else None
+	         in
+	         
+	         Debug.print "LOG-COMPILE-DETAIL" (fun () ->
+	            begin match todo_ivc with
+	              | None -> "===> NO IVC <==="
+	              | Some(s) -> "IVC: \n"^(CalculusPrinter.string_of_expr s)
+	            end
+	         );
+	         
 	         trigger_todos := new_todos @ !trigger_todos;
 	         triggers      := 
 	            (delta_event, {
 	               Plan.target_map = 
-	                  Calculus.rename_vars delta_renamings todo.ds_name;
+	                 CalcRing.mk_val (External(
+	                    todo_name, 
+	                    List.map (Function.apply_if_present delta_renamings) 
+	                             todo_ivars,
+                       List.map (Function.apply_if_present delta_renamings) 
+                                todo_ovars,
+                       todo_base_type,
+                       todo_ivc  
+                    ));
 	               Plan.update_type = Plan.UpdateStmt;
 	               Plan.update_expr = materialized_delta
 	            }) :: !triggers
@@ -199,13 +263,21 @@ let compile_map (db_schema:Schema.t) (history:Heuristics.ds_history_t)
 
    ) events) stream_rels;
    
-   if table_rels <> [] then ( 
-      (* If the expression contains tables, we need to initialize it at 
-         startup *)
-      let system_init_expr =
-         compute_init_at_start (Schema.table_rels db_schema)
-                               todo.ds_definition
-      in
+   (* Compute the initialization code to run at system start.  This is 
+      required when the root-level expression is nonzero at the start (and
+      barring changes in the deltas) will continue to be so throughout 
+      execution.  There are two reasons that this might happen
+         - The expression contains one or more Table relations, which will be
+           nonzero at the start.
+         - The expression contains one or more Lift expressions where the
+           nested expression has no output variables (which will always have a
+           value of 1).  
+      ... and in both cases, there are no stream relations multiplying the 
+      outermost terms to make the expression zero at the start. *)
+   let system_init_expr =
+      derive_initializer (Schema.table_rels db_schema)
+                         todo.ds_definition
+   in (
       if system_init_expr <> CalcRing.zero
       then triggers := 
          (Schema.SystemInitializedEvent, {

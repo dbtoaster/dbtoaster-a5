@@ -12,9 +12,7 @@ let string_of_stream_event evt =
  end
 ;;
 
-module Make = functor(DB : K3DB) ->
-struct
-
+module DB = NamedK3Database
 type args_t = { 
    verbose : bool ref; 
    result  : string option ref; 
@@ -26,6 +24,38 @@ let default_args (): args_t = {
    result = ref None;
    output = ref "-"
 }
+
+let synch_init (table_sources:FileSource.t list) (db:DB.db_t): unit =
+   List.iter (fun initial_source ->
+      let source = ref initial_source in
+      let not_done = ref true in
+      let update_map map_name fields change =
+         let map = (DB.get_out_map map_name db) in
+         let key = (List.map (fun x -> K3Value.BaseValue(x)) fields) in
+         let old_val =
+            if not (K3ValuationMap.mem key map) then 0 else
+               begin match (K3ValuationMap.find key map) with
+                  | K3Value.BaseValue(CInt(i)) -> i
+                  | _ -> failwith ("Interpreter error: static map has "^
+                                   "non-integer value")
+               end
+         in
+         DB.update_out_map_value 
+            map_name key (K3Value.BaseValue(CInt(old_val + change))) db
+      in
+      while !not_done do 
+         let (new_source,event) = FileSource.next !source in
+         begin match event with
+            | Some(Schema.InsertEvent(reln,_,_),fields) -> 
+                  update_map reln fields 1
+            | Some(Schema.DeleteEvent(reln,_,_),fields) -> 
+                  update_map reln fields (-1)
+            | None -> not_done := false
+            | _ -> failwith "Unexpected event during initialization"
+         end; 
+         source := new_source
+      done
+   ) table_sources
 
 let main_args (): args_t =
    let (args:args_t) = default_args () in
@@ -47,6 +77,7 @@ let synch_main
       (db:DB.db_t)
       (initial_mux:FileMultiplexer.t)
       (toplevel_queries:DB.map_name_t list)
+      (init:(DB.db_t -> unit))
       (dispatcher:(stream_event_t option) -> bool)
       (arguments:args_t)
       (): unit = 
@@ -99,6 +130,7 @@ let synch_main
   in
   let mux = ref initial_mux in
   let start = Unix.gettimeofday() in
+    let _ = dispatcher (Some(Schema.SystemInitializedEvent, [])) in
     while FileMultiplexer.has_next !mux do
       let (new_mux,(evt:stream_event_t option)) = 
          try 
@@ -119,7 +151,6 @@ let synch_main
   print_endline (String.concat "\n"
      (List.map (fun (q,_,f) -> f()) db_access_f))
 
-end
 ;;
 
 let run_adaptors output_dir sources =

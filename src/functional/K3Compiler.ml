@@ -137,13 +137,14 @@ let compile_triggers (trigs:K3.trigger_t list) : code_t list =
 let compile_k3_to_code ((dbschema,(schema,patterns),trigs,
                          toplevel_queries) : K3.prog_t): 
                           code_t =
-   let rels = List.map (fun (reln,relv,_) -> (reln,relv))
-                       (Schema.rels dbschema) in
    let ctrigs = compile_triggers_noopt trigs in
-   let csource =
-     List.map (fun (s,ra) -> CG.source s ra) !dbschema
+   let (tables,streams) =
+      Schema.partition_sources_by_type dbschema
    in
-      (main rels schema patterns csource ctrigs 
+   let compiled_tables  = List.map (fun (s,ra) -> CG.source s ra) tables  in
+   let compiled_streams = List.map (fun (s,ra) -> CG.source s ra) streams in
+
+      (main  schema patterns compiled_tables compiled_streams ctrigs 
          (List.map fst toplevel_queries))
 
 ;;

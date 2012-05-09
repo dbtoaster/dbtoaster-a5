@@ -187,10 +187,11 @@ sig
     val source: Schema.source_t -> (Schema.adaptor_t * Schema.rel_t) list ->
                 source_impl_t * code_t option * code_t option
 
-    (* db schema, map schema, patterns, source decls and inits, triggers, toplevel queries
+    (* map schema, patterns, table source decls and inits, stream source decls 
+       and inits, triggers, toplevel queries
        -> top level code *)
-    val main : (string * var_t list) list ->
-               K3.map_t list -> pattern_map ->
+    val main : K3.map_t list -> pattern_map ->
+               (source_impl_t * code_t option * code_t option) list ->
                (source_impl_t * code_t option * code_t option) list ->
                code_t list -> string list -> code_t
 

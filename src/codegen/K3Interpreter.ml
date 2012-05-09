@@ -28,7 +28,7 @@ struct
     module DB  = NamedK3Database
 
     (* Use runtime for main method *)
-    module RT  = Runtime.Make(DB)
+    module RT  = Runtime
     open RT
 
     type slice_env_t = (string * value_t) list
@@ -567,6 +567,7 @@ struct
             | SingleMap m -> smc_f m k
             | DoubleMap m -> dmc_f m k
             | MapCollection m -> nmc_f m k
+            | EmptyList -> EmptyList
             | v -> bail ~expr:expr ("invalid tuple collection: "^(string_of_value v))
             end
         with Not_found ->
@@ -788,10 +789,16 @@ struct
            | Schema.NoSource        -> bail "Unsourced relation"
        in (src_impl, None, None)
 
-    let main dbschema schema patterns sources triggers toplevel_queries =
+    let main schema patterns table_sources stream_sources triggers 
+             toplevel_queries =
       Main (fun () ->
         Random.init(12345);
         let db = DB.make_empty_db schema patterns in
+        
+        let init_fn = 
+          Runtime.synch_init (List.map (fun (x,_,_) -> x) table_sources)
+        in
+        
         let trigger_exec = 
           List.fold_left 
             (fun trigger_exec trig -> (get_trigger trig)::trigger_exec)
@@ -816,10 +823,17 @@ struct
         in
         let mux = List.fold_left
           (fun m (source,_,_) -> FileMultiplexer.add_stream m source)
-          (FileMultiplexer.create ()) sources
+          (FileMultiplexer.create ()) stream_sources
         in
         let db_tlq = List.map DB.string_to_map_name toplevel_queries in
-          synch_main db mux db_tlq dispatcher (RT.default_args ()) ())
+          Runtime.synch_main db 
+                             mux 
+                             db_tlq 
+                             init_fn
+                             dispatcher 
+                             (RT.default_args ()) 
+                             ()
+       )
 
     (* For the interpreter, output evaluates the main function and redirects
      * stdout to the desired channel. *)
