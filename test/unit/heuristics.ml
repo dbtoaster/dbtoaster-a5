@@ -4,7 +4,15 @@ open Calculus
 open UnitTest
 ;;
 
-(*Debug.activate "LOG-HEURISTICS-DETAIL";;  *)
+(*Debug.active "HEURISTICS-IGNORE-FINAL-OPTIMIZATION"*)
+(*Debug.activate "HEURISTICS-MINIMIZE-IVC"*)
+(*Debug.activate "IVC-OPTIMIZE-EXPR"*)
+
+let test_db = mk_db [
+   ("R", ["A"; "B"]);
+   ("S", ["B"; "C"]);
+   ("T", ["D"]);
+];;
 
 let test msg input output =
    log_test ("Decomposition ("^msg^")")
@@ -65,7 +73,7 @@ let test msg input output =
 	let expr = parse_calc input in 
 	   log_test ("Materialization ("^msg^")")
      	string_of_expr
-     	(snd(Heuristics.materialize history "M" event expr))
+     	(snd(Heuristics.materialize test_db history "M" event expr))
       (parse_calc output) 
 in 
 	test "Simple"
@@ -78,7 +86,7 @@ in
       "AggSum([A], R(A,B) + S(A,C))"
       "(M1(int)[][A] + M2(int)[][A])";
 	test "Join with an aggregation"
-      "AggSum([A], R(A,B) * S(B))"
+      "AggSum([A], R(A,B) * S(B,C))"
       "M1(int)[][A]";		
 	test "Aggregation with a condition"
 			"AggSum([A], R(A,B) * [A < B])"
@@ -90,7 +98,7 @@ in
 			"AggSum([A], R(A,B) * [B < C])"
       "AggSum([A],M1(int)[][A,B] * [B < C])";
 	test "Graph Decomposition"
-			"AggSum([A], R(A,B) * S(C))"
+			"AggSum([A], R(A,B) * S(C,D))"
       "M1(int)[][A] * M2(int)[][]";
 	test "Map reuse"
 			"AggSum([A], R(A,B) + R(A,B))"
@@ -99,14 +107,14 @@ in
 			 else
         "(M1(int)[][A] * 2)"); 
 	test "Map reuse with renaming"
-			"AggSum([A], R(A,B) * (S(C) + S(D)))"
+			"AggSum([A], R(A,B) * (S(C,E) + S(D,E)))"
 			(if (Debug.active "HEURISTICS-IGNORE-FINAL-OPTIMIZATION") then
         "(M1(int)[][A] * M2(int)[][]) + (M1(int)[][A] * M2(int)[][])"
 			 else
     			"M2(int)[][] * M1(int)[][A] * 2"); 
 	test "Map reuse with renaming"
-			"(R(A,B) * S(C)) + (R(B,C) * S(A))"
-      "(M1(int)[][A,B] * M2(int)[][C]) + (M1(int)[][B,C] * M2(int)[][A])";
+			"(R(A,B) * S(C,D)) + (R(B,C) * S(A,D))"
+      "(M1(int)[][A,B] * M2(int)[][C,D]) + (M1(int)[][B,C] * M2(int)[][A,D])";
 			
 	test "Aggregation with a lift containing no relations"
 			"AggSum([A], R(A,B) * (C ^= (A + B)))"
@@ -135,9 +143,11 @@ in
 				 "AggSum([A], M1(int)[][A] * (E ^= M1_L1_1(int)[][A,D]) * [E > 0])"
 			 else
 				 "M1(int)[][A] * AggSum([A], (E ^= M1_L1_1(int)[][A,D]) * [E > 0])");
-  	test "Extending schema due to a lift"
-			"AggSum([A], R(A) * S(C) * (D ^= R(B) * C))"		
-				 "(M1(int)[][A] * AggSum([], M2(int)[][C] * (D ^= M1(int)[][B] * C)))";
+  	
+  test "Extending schema due to a lift"
+			"AggSum([A], R(A,B) * S(C,D) * (E ^= R(F,G) * C))"
+		  "(M1(int)[][A] * AggSum([], M2(int)[][C] * (E ^= M2_L1_1(int)[][F,G] * C)))";
+
 	test "Mapping example"
 			"R(A) * S(C) * (E ^= R(B) * S(D)) * 5"		
 			"(E ^= M1_L1_1(int)[][B] * M1_L1_2(int)[][D]) * 
@@ -145,13 +155,26 @@ in
 	
 	test "Aggregation with a lift containing an irrelevant relation"
 			"AggSum([A], R(A,B) * (C ^= S(D)))"
-      "AggSum([], (C ^= M1_L1_1(int)[][D])) * M2(int)[][A]";
+       (if (Debug.active "HEURISTICS-MINIMIZE-IVC") then
+          "AggSum([], (C ^= M1_L1_1(int)[][D])) * M2(int)[][A]"     
+				else if (Debug.active "IVC-OPTIMIZE-EXPR") then
+					"M1(int)[][](1) * M2(int)[][A]"
+				else
+			    "M1(int)[][](AggSum([],((C ^= [0])))) * M2(int)[][A]");
+					
 	test "Aggregation with a lift containing an irrelevant relation and a common variable"
 			"AggSum([A], R(A,B) * (C ^= S(B)))"
       "M1(int)[][A]";
+	
 	test "Aggregation with a lift containing an irrelevant relation and comparison"
 			"AggSum([A], R(A,B) * (C ^= S(D)) * [C > 0])"
-      "AggSum([], (C ^= M1_L1_1(int)[][D]) * [C > 0]) * M2(int)[][A]";
+			(if (Debug.active "HEURISTICS-MINIMIZE-IVC") then
+         "AggSum([], (C ^= M1_L1_1(int)[][D]) * [C > 0]) * M2(int)[][A]"
+			 else if (Debug.active "IVC-OPTIMIZE-EXPR") then
+         "M1(int)[][] * M2(int)[][A]"
+       else
+				 "M1(int)[][](AggSum([],(((C ^= [0]) * [C > 0])))) * M2(int)[][A]");
+	
 	test "Aggregation with a lift containing an irrelevant relation and a common variable"
 			"AggSum([A], R(A,B) * (C ^= S(A)) * [C > 0])"
       "M1(int)[][A]";

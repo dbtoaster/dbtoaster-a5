@@ -297,19 +297,22 @@ condition := <br/>
 <dd>When activated the map accesses in K3 expressions will contain membership tests and initialization code, otherwise only Lookup operations will get generated.</dd>
 
 <dt class="code">HEURISTICS-ALWAYS-UPDATE</dt>
-<dd>In some cases, it is slightly more efficient to re-evaluate parts of the map hierarchy rather than computing an incremental update.  If this flag is on, the compiler will always compute updates incrementally, regardless.</dd>
-
-<dt class="code">HEURISTICS-PREFER-UPDATE</dt>
-<dd>In some cases, it is slightly more efficient to re-evaluate parts of the map hierarchy rather than computing an incremental update.  If this flag is on, the compiler will be less aggressive about finding such cases. <div class="todo">milos, confirm this?</div></dd>
+<dd>In some cases, it is slightly more efficient to re-evaluate parts of the expression tree rather than computing an incremental update.  If this flag is on, the compiler will always compute updates incrementally, regardless.</dd>
 
 <dt class="code">HEURISTICS-ALWAYS-REPLACE</dt>
 <dd>In some cases, it is slightly more efficient to re-evaluate parts of the expression tree rather than computing an incremental update.  If this flag is on, the compiler will always re-evaluate the expression.  This is usually a bad idea to turn on.</dd>
 
-<dt class="code">HEURISTICS-ALWAYS-UPDATE</dt>
-<dd>In some cases, it is slightly more efficient to re-evaluate parts of the expression tree rather than computing an incremental update.  If this flag is on, the compiler will always compute updates incrementally, regardless.</dd>
+<dt class="code">HEURISTICS-PREFER-UPDATE</dt>
+<dd>In some cases, heuristics rules do not provide a clear decision whether it is more efficient to re-evaluate parts of the expression tree than to compute an incremental update. If this flag is on, the compiler will break the tie by computing updates incrementally.</dd>
 
 <dt class="code">HEURISTICS-IGNORE-FINAL-OPTIMIZATION</dt>
-<dd>Do not attempt to optimize materialized expressions further.  This is typically only useful to see the exact expression produced by the materializer.</dd>
+<dd>Do not attempt to optimize materialized expressions further. This is typically only useful to see the exact expression produced by the materializer.</dd>
+
+<dt class="code">HEURISTICS-MINIMIZE-IVC</dt>
+<dd>Materialize parts of the expression tree such that the need for initial value computation is minimized. In particular, if there is no relation at the root level, lift subexpressions containing irrelevant relations are materialized separately.</dd>
+
+<dt class="code">IVC-OPTIMIZE-EXPR</dt>
+<dd>Optimize the initial value computation (IVC) expression. This is typically only useful to see the exact expression produced by the IVC module.</dd>
 
 <dt class="code">K3-NO-OPTIMIZE</dt>
 <dd>Do not perform functional optimization.</dd>

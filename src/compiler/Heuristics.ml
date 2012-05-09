@@ -72,9 +72,9 @@ let reorganize_expr (expr:expr_t) : (expr_t list * expr_t list * expr_t list) =
 	    {li lift expressions containing the event relation or input variables }
 	    {li subexpressions with input variables and the above lift variables } 
 	   } 
-		 Note: lift subexpressions containing irrelevant relations are materialized 
-		 separately in order to avoid the problem with IVC. 
-		 TODO: consider removing this rule in the future *)
+		 Note: In order to minimize the need for IVC, if there is no relation at the 
+		 root level, then lift subexpressions containing irrelevant relations are 
+		 materialized separately. *)
 let partition_expr (event:Schema.event_t option) (expr:expr_t) :
 							 (expr_t * expr_t * expr_t) =
 
@@ -85,7 +85,8 @@ let partition_expr (event:Schema.event_t option) (expr:expr_t) :
 	        (ListAsSet.diff expr_ivars new_ovars, ListAsSet.union expr_ovars new_ovars) 
     in
 		let (rel_part, lift_part, rest_part) = reorganize_expr expr in
-(*		let has_root_relation = (rel_part <> []) in *)
+		let minimize_ivc = Debug.active "HEURISTICS-MINIMIZE-IVC" in
+		let has_root_relation = (rel_part <> []) in 
 		
 		(* Relations, irrelevant lifts, relevant lifts, and the remainder *)
 		let (rels, lifts, rests) = fst (
@@ -118,8 +119,8 @@ let partition_expr (event:Schema.event_t option) (expr:expr_t) :
 											| Some(reln) -> List.mem reln subexpr_rels
 											| None -> false
 									in
-									if ((lift_contains_event_rel) || (subexpr_ivars <> []) (*||
-									    (not has_root_relation) *)) then
+									if ((lift_contains_event_rel) || (subexpr_ivars <> []) ||
+									    (minimize_ivc && (not has_root_relation))) then
 										((rel, lift @ [term], rest), scope_rel)
 									else
 										(* The expression does not include input variables *)

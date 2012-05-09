@@ -62,6 +62,9 @@ let derive_initializer ?(scope = [])
       Debug.print "LOG-DERIVE-INITIALIZER" (fun () ->
          "[Initializer] Initializer is "^
             (CalculusPrinter.string_of_expr init_expr)
-      ); init_expr
+      ); 
+			if (Debug.active "IVC-OPTIMIZE-EXPR") then
+	   		CalculusTransforms.optimize_expr (Calculus.schema_of_expr init_expr) init_expr
+			else init_expr
 
 (******************************************************************************)
