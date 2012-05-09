@@ -4,7 +4,7 @@ class OcamlDB < Hash
   def initialize(db_string, reverse_key = true)
     tok = Tokenizer.new(
       db_string,
-        /\[|\]|->|[a-zA-Z][a-zA-Z0-9_]*|[\-\+]?[0-9]+\.?[0-9]*e?[\-\+]?[0-9]*|<pat=[^>]*>|;/
+        /\[|\]|->|[a-zA-Z][a-zA-Z0-9_\s]*|[\-\+]?[0-9]+\.?[0-9]*e?[\-\+]?[0-9]*|<pat=[^>]*>|;/
     )
     raise "Not A Database (Got '#{tok.peek}')" unless tok.peek == "[";
     tree = TreeBuilder.new(tok) do |tree, t|
@@ -35,12 +35,23 @@ class OcamlDB < Hash
           when Array then
             v = parse_named_forest(contents);
             v unless v.length == 0;
-          when String then
+          when /nan/ then
+            v = 0;
+          when /[\-\+]?[0-9]+\.[0-9]*e?[\-\+]?[0-9]*/ then 
             v = contents.to_f;
             v unless v == 0.0;
+          when /[\-\+]?[0-9]+/ then
+            v = contents.to_i;
+            v unless v == 0;
           else raise "Unknown value type"
         end
-      k = k.map { |k_elem| k_elem.to_f }
+      k = k.map { |k_elem| 
+        case k_elem
+            when /[a-zA-Z][a-zA-Z0-9_]*/ then k_elem;
+            when /[\-\+]?[0-9]+\.[0-9]*e?[\-\+]?[0-9]*/ then k_elem.to_f;
+            when /[\-\+]?[0-9]+/ then k_elem.to_i;
+        end
+      }
       k = k.reverse if reverse;
       into[k] = val unless val.nil?;
     end

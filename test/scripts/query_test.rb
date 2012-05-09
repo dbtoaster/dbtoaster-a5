@@ -195,7 +195,7 @@ class InterpreterUnitTest < GenericUnitTest
             case @toplevels[query][:type]
               when :singleton then @toplevels[query][:result] = results.to_f
               when :onelevel then
-                @toplevels[query][:result] = OcamlDB.new(results)
+                @toplevels[query][:result] = OcamlDB.new(results, false)
             end
         end
       end
