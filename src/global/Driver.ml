@@ -417,17 +417,10 @@ if stage_is_active StageCompileCalc then (
    }) !calc_queries in
 
       (* Compile things *)
-      if Debug.active "LOG-ERROR-DETAIL" then (
-         try 
+      (  try 
             materialization_plan := Compiler.compile db_schema query_ds_list
          with Calculus.CalculusException(expr, msg) ->
-            Debug.print "LOG-ERROR-DETAIL" (fun () ->
-               msg^" while processing: \n"^
-               (CalculusPrinter.string_of_expr expr)
-            );
-            failwith msg
-      ) else (
-         materialization_plan := Compiler.compile db_schema query_ds_list
+            bug ~detail:(Some(CalculusPrinter.string_of_expr expr)) msg
       );
       
 
@@ -543,7 +536,6 @@ if (stage_is_active StageOptimizeK3) then (
 ;;
 if stage_is_active StagePrintK3 then (
    Debug.print "LOG-DRIVER" (fun () -> "Running Stage: PrintK3");
-
    if Debug.active "NICE-K3" then
       output_endline (K3.nice_code_of_prog !k3_program)
    else

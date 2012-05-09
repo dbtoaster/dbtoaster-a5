@@ -5,7 +5,7 @@
       :toplevels => {
         "EXPRESSION_1" => {
           :type => :singleton,
-          :expected => 1.0
+          :expected => 1
         }
       }
     }

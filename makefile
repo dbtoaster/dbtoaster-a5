@@ -124,10 +124,10 @@ bin/dbtoaster_top: $(C_FILES) lib/.deps src/global/UnitTest.ml
 states: $(patsubst %,%.states,$(PARSERS))
 
 test: bin/dbtoaster_top
-	@make -C test unit
+	@make -C test unit query
 
 querytest: bin/dbtoaster
-	@make -C test query
+	@make -C test query bigquery
 	
 queries: bin/dbtoaster
 	make -C test/queries

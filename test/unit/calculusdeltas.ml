@@ -32,7 +32,7 @@ test "TPCH17 simple: +Lineitem" (InsertEvent(schema_rel "L" ["dPK"; "dQTY"]))
             ((L(PK, QTY) + (PK ^= dPK) * (QTY ^= dQTY)) * 
             AggSum([nested, PK],
 						(delta_2 ^= (AggSum([PK],(
-               ((PK ^= [dPK]) * (QTY2 ^= [dQTY]) * [QTY2]))))) * 
+               ((PK ^= dPK) * (QTY2 ^= dQTY) * QTY2))))) * 
             (
                (nested ^= AggSum([PK], L(PK, QTY2) * QTY2) + delta_2)
                 - (nested ^= AggSum([PK], L(PK, QTY2) * QTY2))

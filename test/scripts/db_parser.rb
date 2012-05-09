@@ -21,6 +21,7 @@ class OcamlDB < Hash
             then tree.insert "#{lhs}.#{tree.next_leaf}"
             else tree.insert lhs
           end
+          
         when /<pat=.*/, ";" then #ignore
         else tree.insert t 
       end
@@ -46,10 +47,10 @@ class OcamlDB < Hash
           else raise "Unknown value type"
         end
       k = k.map { |k_elem| 
-        case k_elem
-            when /[a-zA-Z][a-zA-Z0-9_]*/ then k_elem;
-            when /[\-\+]?[0-9]+\.[0-9]*e?[\-\+]?[0-9]*/ then k_elem.to_f;
-            when /[\-\+]?[0-9]+/ then k_elem.to_i;
+        case k_elem.chomp
+          when / *([\-\+]?[0-9]+\.[0-9]*e?[\-\+]?[0-9]*)/ then $1.to_f;
+          when / *([\-\+]?[0-9]+)/ then $1.to_i;
+          when /([a-zA-Z][a-zA-Z0-9_]*)/ then $1;
         end
       }
       k = k.reverse if reverse;

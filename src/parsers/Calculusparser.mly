@@ -147,7 +147,7 @@ ivcCalculusExpr:
 | ivcCalculusExpr MINUS ivcCalculusExpr 
                                   { CalcRing.mk_sum [$1; CalcRing.mk_neg $3] }
 | MINUS ivcCalculusExpr           { CalcRing.mk_neg $2 }
-| LBRACKET valueExpr RBRACKET     { CalcRing.mk_val (Value $2) }
+| LBRACE valueExpr RBRACE         { CalcRing.mk_val (Value $2) }
 | valueLeaf                       { CalcRing.mk_val (Value $1) }
 | AGGSUM LPAREN LBRACKET emptyVariableList RBRACKET COMMA ivcCalculusExpr RPAREN
                                   { CalcRing.mk_val (AggSum($4, $7)) }
@@ -155,7 +155,7 @@ ivcCalculusExpr:
                                     CalcRing.mk_val (Rel(reln, relv)) }
 | externalDefn                    { let (en, iv, ov, et, em) = $1 in
                                     CalcRing.mk_val (External(en,iv,ov,et,em)) }
-| LBRACKET valueExpr comparison valueExpr RBRACKET
+| LBRACE valueExpr comparison valueExpr RBRACE
                                   { CalcRing.mk_val (Cmp($3,$2,$4)) }
 | LPAREN variable LIFT ivcCalculusExpr RPAREN
                                   { CalcRing.mk_val (Lift($2, $4)) }

@@ -20,7 +20,7 @@ log_test "Stringification"
 
 log_test "Parsing"
    string_of_expr
-   (parse_calc "R(A,B) * S(B,C) * [A+C] * [A < C]")
+   (parse_calc "R(A,B) * S(B,C) * {A+C} * {A < C}")
    (CalcRing.mk_prod [
       CalcRing.mk_val (rel "R" ["A"; "B"]);
       CalcRing.mk_val (rel "S" ["B"; "C"]);
@@ -69,30 +69,30 @@ test_schema "TPCH18 simplified funny business"
    "( ( AggSum([],(
       ( (delta_143 ^= 
           (
-            [-1] * 
-            [query18_mLINEITEMLINEITEM_QUANTITY]
+            {-1} * 
+            query18_mLINEITEMLINEITEM_QUANTITY
           )
         ) * 
         ( (__sql_agg_tmp_1 ^= 
             ( AggSum([O_ORDERKEY],(
                 ( LINEITEM(O_ORDERKEY, L3_QUANTITY) * 
-                  [L3_QUANTITY]
+                  L3_QUANTITY
                 )
               )) + 
-              [delta_143]
+              delta_143
             )
           ) + 
           ( (__sql_agg_tmp_1 ^= 
               AggSum([O_ORDERKEY],(
                 ( LINEITEM(O_ORDERKEY, L3_QUANTITY) * 
-                  [L3_QUANTITY]
+                  L3_QUANTITY
                 )
               ))
             ) * 
-            [-1]
+            {-1}
           )
         ) * 
-        [100 < __sql_agg_tmp_1]
+        {100 < __sql_agg_tmp_1}
       )
     )) * 
     AggSum([O_ORDERKEY],(

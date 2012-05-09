@@ -5,7 +5,7 @@
       :toplevels => {
         "SUM_AGGREGATE_1" => {
           :type => :singleton,
-          :expected => 10.0
+          :expected => 10
         }
       }
     }

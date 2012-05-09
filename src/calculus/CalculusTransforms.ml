@@ -593,12 +593,26 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
                      fst (C.schema_of_expr sub_expr)) ctx)))
                new_ovars)
             in
+            let gb_deletions = 
+               (* Deletions from the group-by schema can come from output
+                  variables that are in-scope, and thus only capable of 
+                  producing singletons.  If such a singleton is lifted, then
+                  the query result is not going to depend on the multiplicity of
+                  the nested expression, and will have a flat multiplicity of
+                  one. 
+                  We can detect such events by identifying all of the in-scope
+                  group-by variables, and pulling out those that are still
+                  outputs of the nested expression.
+                  *)
+               ListAsSet.diff (ListAsSet.inter scope gb_vars) new_ovars
+            in
             (Debug.print "LOG-UNIFY-LIFTS" (fun () ->
                "Group-By Extension: "^
                (ListExtras.string_of_list fst gb_extension)
             ));
             let new_gb_vars = 
-               ListAsSet.union gb_extension subbed_gb_vars
+               ListAsSet.diff (ListAsSet.union gb_extension subbed_gb_vars)
+                              gb_deletions
             in
                (deletable, (CalcRing.mk_val (AggSum(new_gb_vars, subbed_term))))
          | CalcRing.Val(Lift(v, l_term)) ->

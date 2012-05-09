@@ -15,14 +15,21 @@ unit:
 	@$(UNIT_TEST) unit/compiler.ml
 	@$(UNIT_TEST) unit/k3interpreter.ml
 	@$(UNIT_TEST) unit/m3tok3.ml
-	
+
+bigquery:	
+#	@$(QUERY_TEST) missedtrades -d K3-NO-OPTIMIZE #results incorrect
+	@$(QUERY_TEST) axfinder
+	@$(QUERY_TEST) pricespread
+	@$(QUERY_TEST) brokerspread
+	@$(QUERY_TEST) tpch17
+#	@$(QUERY_TEST) ssb4 -d K3-NO-OPTIMIZE #slow
+#	@$(QUERY_TEST) tpch11 -d K3-NO-OPTIMIZE #results incorrect
+#	@$(QUERY_TEST) tpch18  #results incorrect
+#	@$(QUERY_TEST) tpch22  #results incorrect
+#	@$(QUERY_TEST) vwap    #slow
 	
 query:
-	@$(QUERY_TEST) axfinder
-	@$(QUERY_TEST) brokerspread
 	@$(QUERY_TEST) brokervariance
-#	@$(QUERY_TEST) missedtrades -d K3-NO-OPTIMIZE #results incorrect
-	@$(QUERY_TEST) pricespread
 	@$(QUERY_TEST) r_agtb
 	@$(QUERY_TEST) r_bigsumstar
 	@$(QUERY_TEST) r_btimesa
@@ -34,13 +41,33 @@ query:
 	@$(QUERY_TEST) r_sumadivsumb
 	@$(QUERY_TEST) r_sumstar
 	@$(QUERY_TEST) rst
-#	@$(QUERY_TEST) ssb4 -d K3-NO-OPTIMIZE #slow
-#	@$(QUERY_TEST) tpch11 -d K3-NO-OPTIMIZE #results incorrect
-	@$(QUERY_TEST) tpch17
-#	@$(QUERY_TEST) tpch18  #results incorrect
-#	@$(QUERY_TEST) tpch22  #results incorrect
+	@$(QUERY_TEST) employee/query01
+	@$(QUERY_TEST) employee/query01a
+	@$(QUERY_TEST) employee/query02
+	@$(QUERY_TEST) employee/query02a
+	@$(QUERY_TEST) employee/query03
+	@$(QUERY_TEST) employee/query03a
+	@$(QUERY_TEST) employee/query05
+	@$(QUERY_TEST) employee/query06
+	@$(QUERY_TEST) employee/query07
+	@$(QUERY_TEST) employee/query08
+	@$(QUERY_TEST) employee/query08a
+	@$(QUERY_TEST) employee/query09
+	@$(QUERY_TEST) employee/query09a
+	@$(QUERY_TEST) employee/query10
+	@$(QUERY_TEST) employee/query10a
+	@$(QUERY_TEST) employee/query11b
+	@$(QUERY_TEST) employee/query12a
+	@$(QUERY_TEST) employee/query16
+	@$(QUERY_TEST) employee/query16a
+	@$(QUERY_TEST) employee/query17a
+	@$(QUERY_TEST) employee/query22
+	@$(QUERY_TEST) employee/query35b   
+	@$(QUERY_TEST) employee/query35c
+	@$(QUERY_TEST) employee/query36b  
+	@$(QUERY_TEST) employee/query36c 
+	@$(QUERY_TEST) employee/query48
 	@$(QUERY_TEST) tpch3
-#	@$(QUERY_TEST) vwap    #slow
 
 employee:
 	@$(QUERY_TEST) employee/query01

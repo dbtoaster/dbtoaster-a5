@@ -131,10 +131,13 @@ let rec format_expr (expr:expr_t) =
                         element ];
          !fmt.string ")"
 
-      | CalcRing.Val(Value(v)) ->
-         !fmt.string "[";
+      | CalcRing.Val(Value(ValueRing.Val(AVar(_) | AConst(_)) as v)) ->
          format_value v;
-         !fmt.string "]"
+      
+      | CalcRing.Val(Value(v)) ->
+         !fmt.string "{";
+         format_value v;
+         !fmt.string "}"
 
       | CalcRing.Val(AggSum(gb_vars, subexp)) ->
          !fmt.string "AggSum([";
@@ -183,13 +186,13 @@ let rec format_expr (expr:expr_t) =
          end
       
       | CalcRing.Val(Cmp(cmpop, lhs, rhs)) ->
-         !fmt.string "[";
+         !fmt.string "{";
          format_value lhs;
          !fmt.string " ";
          !fmt.string (string_of_cmp cmpop);
          !fmt.space ();
          format_value rhs;
-         !fmt.string "]";
+         !fmt.string "}";
          
       | CalcRing.Val(Lift(v, subexp)) ->
          !fmt.string "(";

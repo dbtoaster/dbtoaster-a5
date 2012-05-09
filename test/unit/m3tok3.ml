@@ -169,55 +169,55 @@ in
 				"[ [ / : INT ] (0, 0) ]"
 				(VK.BaseValue(T.CFloat(0.125)));*)
 		test_expr " AConst " 
-							"[3]" (VK.BaseValue(T.CInt(3)))		;
+							"3" (VK.BaseValue(T.CInt(3)))		;
 		test_expr " AVar " 
 							~env:["A", (T.CFloat(3.))]
-							"[A]" (VK.BaseValue(T.CFloat(3.)))	;
+							"A" (VK.BaseValue(T.CFloat(3.)))	;
 		test_expr " AFn " 
 							~env:["A", (T.CFloat(3.));"B", (T.CFloat(2.))]
-							"[ [ / : FLOAT ] ( A, B ) ]" (VK.BaseValue(T.CFloat(1.5)));
+							"{ [ / : FLOAT ] ( A, B ) }" (VK.BaseValue(T.CFloat(1.5)));
 		test_expr " AFn " 
 							~env:["A", (T.CFloat(3.));"B", (T.CInt(2))]
-							"[ [ / : FLOAT ] ( A, B : INT) ]" (VK.BaseValue(T.CFloat(1.5)));
+							"{ [/ : FLOAT ] ( A, B : INT) }" (VK.BaseValue(T.CFloat(1.5)));
 		test_expr " AFn " 
 							~env:["A", (T.CInt(3));"B", (T.CFloat(2.))]
-							"[ [ / : FLOAT ] ( A : INT, B ) ]" (VK.BaseValue(T.CFloat(1.5)));
+							"{ [ / : FLOAT ] ( A : INT, B ) }" (VK.BaseValue(T.CFloat(1.5)));
 		test_expr " AFn " 
 							~env:["A", (T.CInt(2));"B", (T.CInt(2))]
-							"[ [ / : INT ] ( A : INT, B : INT ) ]" (VK.BaseValue(T.CInt(1)));
+							"{ [ / : INT ] ( A : INT, B : INT ) }" (VK.BaseValue(T.CInt(1)));
 		
 		test_expr " Singleton Negation " 
 							~env:["A", (T.CFloat(3.))]
-							"[-A]" (VK.BaseValue(T.CFloat(-3.)))		;
+							"{-A}" (VK.BaseValue(T.CFloat(-3.)))		;
 		test_expr " Singleton Sum " 
 							~env:["A", (T.CFloat(3.));"B", (T.CFloat(3.))]
-							"[A+B+A+B]" (VK.BaseValue(T.CFloat(12.)))		;
+							"{A+B+A+B}" (VK.BaseValue(T.CFloat(12.)))		;
 		test_expr " Singleton Prod " 
 							~env:["A", (T.CFloat(3.));"B", (T.CFloat(3.))]
-							"[A*B*A*B]" (VK.BaseValue(T.CFloat(81.)))		;
+							"{A*B*A*B}" (VK.BaseValue(T.CFloat(81.)))		;
 		
 		test_expr " Cmp Eq Float = Float" 
 							~env:["A", (T.CFloat(3.));"B", (T.CFloat(3.))]
-							"[A=B]" (VK.BaseValue(T.CInt(1)))		;
+							"{A=B}" (VK.BaseValue(T.CInt(1)))		;
 		test_expr " Cmp Eq Float = Int" 
 							~env:["A", (T.CFloat(3.));"B", (T.CInt(3))]
-							"[ A = B:INT ]" (VK.BaseValue(T.CInt(1)))		;
+							"{ A = B:INT }" (VK.BaseValue(T.CInt(1)))		;
 		
 		test_expr " Cmp Lt " 
 							~env:["A", (T.CFloat(3.));"B", (T.CFloat(3.))]
-							"[A<B]" (VK.BaseValue(T.CInt(0)))		;
+							"{A<B}" (VK.BaseValue(T.CInt(0)))		;
 		test_expr " Cmp Lte " 
 							~env:["A", (T.CFloat(3.));"B", (T.CFloat(3.))]
-							"[A<=B]" (VK.BaseValue(T.CInt(1)))		;
+							"{A<=B}" (VK.BaseValue(T.CInt(1)))		;
 		test_expr " Cmp Gt " 
 							~env:["A", (T.CFloat(3.));"B", (T.CFloat(3.))]
-							"[A>B - 1]" (VK.BaseValue(T.CInt(1)))		;
+							"{A>B - 1}" (VK.BaseValue(T.CInt(1)))		;
 		test_expr " Cmp Gte " 
 							~env:["A", (T.CFloat(3.));"B", (T.CFloat(3.))]
-							"[A>=B+1]" (VK.BaseValue(T.CInt(0)))		;
+							"{A>=B+1}" (VK.BaseValue(T.CInt(0)))		;
 		test_expr " Cmp Neq " 
 							~env:["A", (T.CFloat(3.));"B", (T.CFloat(3.))]
-							"[A!=B]" (VK.BaseValue(T.CInt(0)))		;
+							"{A!=B}" (VK.BaseValue(T.CInt(0)))		;
 		
 		
 		test_expr " External - SingletonPC - Singleton " 
@@ -268,13 +268,13 @@ in
 							"R[][A,B]" (VK.BaseValue(T.CFloat(0.)));
 		test_expr " External - InPC - Singleton Init " 
 							~env:["A", (T.CFloat(2.));"B", (T.CFloat(3.));"D", (T.CFloat(1.))]
-							"T[A,B][]( R[][A,D] * [3] )" (VK.BaseValue(T.CFloat(6.)));
+							"T[A,B][]( R[][A,D] * 3 )" (VK.BaseValue(T.CFloat(6.)));
 		test_expr " External - PC - Singleton Init " 
 							~env:["A", (T.CFloat(2.));"B", (T.CFloat(3.));"C", (T.CFloat(1.));"D", (T.CFloat(3.))]
-							"W[A,B][C,D]( R[][C,D] * [3] )" (VK.BaseValue(T.CFloat(9.)));
+							"W[A,B][C,D]( R[][C,D] * 3 )" (VK.BaseValue(T.CFloat(9.)));
 		test_expr_coll " External - PC - Collection Init " 
 							~env:["A", (T.CFloat(2.));"B", (T.CFloat(3.))]
-							"W[A,B][C,D]( R[][C,D] * [3] )" 
+							"W[A,B][C,D]( R[][C,D] * 3 )" 
 							[  [1.; 3.], 9.;
 				         [1.; 2.], 6.;
 				         [2.; 2.], 12.;
@@ -283,7 +283,7 @@ in
 				      ];
 		test_expr_coll " External - PC - Slice Init " 
 							~env:["A", (T.CFloat(2.));"B", (T.CFloat(3.));"C", (T.CFloat(2.))]
-							"W[A,B][C,D]( R[][C,D] * [3] )" 
+							"W[A,B][C,D]( R[][C,D] * 3 )" 
 							[  [2.], 12.;
 				         [1.], 6.;
 				      ];
@@ -292,9 +292,9 @@ in
 		
 		
 		test_expr " AggSum Singleton from Singleton "
-							"AggSum([], [5.])" (VK.BaseValue(T.CFloat(5.)));
+							"AggSum([], {5.})" (VK.BaseValue(T.CFloat(5.)));
 		test_expr " AggSum Singleton from Collection "
-							"AggSum([], R[][A,B] * [A = B])" (VK.BaseValue(T.CFloat(5.)));
+							"AggSum([], R[][A,B] * {A = B})" (VK.BaseValue(T.CFloat(5.)));
 		test_expr_coll " AggSum Collection "
 							"AggSum([B], R[][A,B])" 
 							[  [2.], 6.;
@@ -347,12 +347,12 @@ in
 				      ];
 		
 		test_stmt " Replace - SingletonPC - Singleton"
-							" QS[][] := [12.] " 
+							" QS[][] := {12.} " 
 							(VK.BaseValue(T.CFloat(12.)));
 		test_stmt_coll " Replace - OutPC - Singleton"
 							~env:["A", (T.CFloat(1.));
 										"B", (T.CFloat(1.));"C", (T.CFloat(2.));]
-							" QR[][B,C] := W[A,A][B,C] * [3.] " 
+							" QR[][B,C] := W[A,A][B,C] * 3. " 
 							[  [1.; 1.], 1.;
 				         [1.; 2.], 6.;
 				         [1.; 3.], 3.;
@@ -360,7 +360,7 @@ in
 				         [2.; 2.], 4.;
 				      ];
 		test_stmt_coll " Replace - InPC - Singleton"
-							" QT[X,Y][] := [X  + Y] " 
+							" QT[X,Y][] := {X  + Y} " 
 							[  [1.; 1.], 2.;
 				         [1.; 2.], 3.;
 				         [1.; 3.], 4.;
@@ -370,14 +370,14 @@ in
 		test_stmt_coll " Replace - PC - Singleton"
 							~env:["A", (T.CFloat(1.));
 										"B", (T.CFloat(1.));"C", (T.CFloat(2.));]
-							" QW[X,Y][B,C] := W[A,A][B,C] * [3.] " 
+							" QW[X,Y][B,C] := W[A,A][B,C] * 3. " 
 							[  [1.; 1.; 1.; 1.], 1.; [1.; 1.; 1.; 2.], 6.;
 				         [2.; 2.; 2.; 1.], 2.; [2.; 2.; 2.; 2.], 4.; [2.; 2.; 1.; 1.], 1.; [2.; 2.; 1.; 2.], 6.;
 								 [3.; 3.; 1.; 3.], 3.; [3.; 3.; 1.; 1.], 1.; [3.; 3.; 1.; 2.], 6.;  
 				      ];		
 		test_stmt_coll " Replace - OutPC - Collection"
 							~env:["A", (T.CFloat(2.));]
-							" QR[][B,C] := W[A,A][B,C] * [3.] " 
+							" QR[][B,C] := W[A,A][B,C] * 3. " 
 							[  [1.; 1.], 1.;
 				         [1.; 2.], 2.;
 				         [1.; 3.], 3.;
@@ -386,19 +386,19 @@ in
 				      ];
 		test_stmt_coll " Replace - PC - Collection"
 							~env:["A", (T.CFloat(1.));]
-							" QW[X,Y][B,C] := W[A,A][B,C] * [3.] " 
+							" QW[X,Y][B,C] := W[A,A][B,C] * 3. " 
 							[  [1.; 1.; 1.; 1.], 3.; [1.; 1.; 1.; 2.], 6.;
 				         [2.; 2.; 2.; 1.], 2.; [2.; 2.; 2.; 2.], 4.; [2.; 2.; 1.; 1.], 3.; [2.; 2.; 1.; 2.], 6.;
 								 [3.; 3.; 1.; 3.], 3.; [3.; 3.; 1.; 1.], 3.; [3.; 3.; 1.; 2.], 6.;  
 				      ];		
 		
 		test_stmt " Update - SingletonPC - Singleton"
-							" QS[][] += [12.] " 
+							" QS[][] += 12. " 
 							(VK.BaseValue(T.CFloat(17.)));
 		test_stmt_coll " Update - OutPC - Singleton"
 							~env:["A", (T.CFloat(1.));
 										"B", (T.CFloat(1.));"C", (T.CFloat(2.));]
-							" QR[][B,C] += W[A,A][B,C] * [3.] " 
+							" QR[][B,C] += W[A,A][B,C] * 3. " 
 							[  [1.; 1.], 1.;
 				         [1.; 2.], 8.;
 				         [1.; 3.], 3.;
@@ -406,7 +406,7 @@ in
 				         [2.; 2.], 4.;
 				      ];
 		test_stmt_coll " Update - InPC - Singleton"
-							" QT[X,Y][] += [X  + Y] " 
+							" QT[X,Y][] += {X  + Y} " 
 							[  [1.; 1.], 3.;
 				         [1.; 2.], 5.;
 				         [1.; 3.], 7.;
@@ -416,14 +416,14 @@ in
 		test_stmt_coll " Update - PC - Singleton"
 							~env:["A", (T.CFloat(1.));
 										"B", (T.CFloat(1.));"C", (T.CFloat(2.));]
-							" QW[X,Y][B,C] += W[A,A][B,C] * [3.] " 
+							" QW[X,Y][B,C] += W[A,A][B,C] * 3. " 
 							[  [1.; 1.; 1.; 1.], 1.; [1.; 1.; 1.; 2.], 8.;
 				         [2.; 2.; 2.; 1.], 2.; [2.; 2.; 2.; 2.], 4.; [2.; 2.; 1.; 1.], 1.; [2.; 2.; 1.; 2.], 8.;
 								 [3.; 3.; 1.; 3.], 3.; [3.; 3.; 1.; 1.], 1.; [3.; 3.; 1.; 2.], 8.;
 				      ];		
 		test_stmt_coll " Update - OutPC - Collection"
 							~env:["A", (T.CFloat(2.));]
-							" QR[][B,C] += W[A,A][B,C] * [3.] " 
+							" QR[][B,C] += W[A,A][B,C] * 3. " 
 							[  [1.; 1.], 1.;
 				         [1.; 2.], 2.;
 				         [1.; 3.], 3.;
@@ -432,14 +432,14 @@ in
 				      ];
 		test_stmt_coll " Update - PC - Collection"
 							~env:["A", (T.CFloat(1.));]
-							" QW[X,Y][B,C] += W[A,A][B,C] * [3.] " 
+							" QW[X,Y][B,C] += W[A,A][B,C] * 3. " 
 							[  [1.; 1.; 1.; 1.], 4.; [1.; 1.; 1.; 2.], 8.;
 				         [2.; 2.; 2.; 1.], 2.; [2.; 2.; 2.; 2.], 4.; [2.; 2.; 1.; 1.], 4.; [2.; 2.; 1.; 2.], 8.;
 								 [3.; 3.; 1.; 3.], 3.; [3.; 3.; 1.; 1.], 4.; [3.; 3.; 1.; 2.], 8.;  
 				      ];		
 		test_stmt_coll " Update - OutPC - Slice"
 							~env:["A", (T.CFloat(2.));"B", (T.CFloat(2.));]
-							" QR[][B,C] += W[A,A][B,C] * [3.] " 
+							" QR[][B,C] += W[A,A][B,C] * 3. " 
 							[  [1.; 1.], 1.;
 				         [1.; 2.], 2.;
 				         [1.; 3.], 3.;
@@ -448,7 +448,7 @@ in
 				      ];
 		test_stmt_coll " Update - PC - Slice"
 							~env:["A", (T.CFloat(1.));"B", (T.CFloat(1.));]
-							" QW[X,Y][B,C] += W[A,A][B,C] * [3.] " 
+							" QW[X,Y][B,C] += W[A,A][B,C] * 3. " 
 							[  [1.; 1.; 1.; 1.], 4.; [1.; 1.; 1.; 2.], 8.;
 				         [2.; 2.; 2.; 1.], 2.; [2.; 2.; 2.; 2.], 4.; [2.; 2.; 1.; 1.], 4.; [2.; 2.; 1.; 2.], 8.;
 								 [3.; 3.; 1.; 3.], 3.; [3.; 3.; 1.; 1.], 4.; [3.; 3.; 1.; 2.], 8.;  
@@ -458,21 +458,21 @@ in
 		test_stmt_coll " Update - PC - Singleton Init "
 							~env:["A", (T.CFloat(2.));
 										"B", (T.CFloat(2.));"C", (T.CFloat(1.));]
-							" QW[X,Y][B,C] ( R[][B,C] * [3] ) += W[A,A][B,C] * [3.] " 
+							" QW[X,Y][B,C] ( R[][B,C] * 3 ) += W[A,A][B,C] * 3. " 
 							[  [1.; 1.; 1.; 1.], 1.; [1.; 1.; 1.; 2.], 2.; [1.; 1.; 2.; 1.], 12.;
 				         [2.; 2.; 2.; 1.], 8.; [2.; 2.; 2.; 2.], 4.; [2.; 2.; 1.; 1.], 1.; [2.; 2.; 1.; 2.], 2.;
 								 [3.; 3.; 1.; 3.], 3.; [3.; 3.; 1.; 1.], 1.; [3.; 3.; 1.; 2.], 2.; [3.; 3.; 2.; 1.], 12.;
 				      ];		
 		test_stmt_coll " Update - PC - Collection Init "
 							~env:["A", (T.CFloat(2.));"B", (T.CFloat(2.));]
-							" QW[X,Y][B,C] ( R[][B,C] * [3] ) += W[A,A][B,C] * [3.] " 
+							" QW[X,Y][B,C] ( R[][B,C] * 3 ) += W[A,A][B,C] * 3. " 
 							[  [1.; 1.; 1.; 1.], 1.; [1.; 1.; 1.; 2.], 2.; [1.; 1.; 2.; 1.], 12.; [1.; 1.; 2.; 2.], 24.;
 				         [2.; 2.; 2.; 1.], 8.; [2.; 2.; 2.; 2.], 16.; [2.; 2.; 1.; 1.], 1.; [2.; 2.; 1.; 2.], 2.;
 								 [3.; 3.; 1.; 3.], 3.; [3.; 3.; 1.; 1.], 1.; [3.; 3.; 1.; 2.], 2.; [3.; 3.; 2.; 1.], 12.; [3.; 3.; 2.; 2.], 24.;
 				      ];		
 		test_stmt_coll " Update - PC - Slice Init "
 							~env:["A", (T.CFloat(2.));]
-							" QW[X,Y][B,C] ( R[][B,C] * [3] ) += W[A,A][B,C] * [3.] " 
+							" QW[X,Y][B,C] ( R[][B,C] * 3 ) += W[A,A][B,C] * 3. " 
 							[  [1.; 1.; 1.; 1.], 1.; [1.; 1.; 1.; 2.], 2.; [1.; 1.; 2.; 1.], 12.; [1.; 1.; 2.; 2.], 24.;
 				         [2.; 2.; 2.; 1.], 8.; [2.; 2.; 2.; 2.], 16.; [2.; 2.; 1.; 1.], 1.; [2.; 2.; 1.; 2.], 2.;
 								 [3.; 3.; 1.; 3.], 3.; [3.; 3.; 1.; 1.], 1.; [3.; 3.; 1.; 2.], 2.; [3.; 3.; 2.; 1.], 12.; [3.; 3.; 2.; 2.], 24.;

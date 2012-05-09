@@ -89,14 +89,14 @@ in
       "AggSum([A], R(A,B) * S(B,C))"
       "M1(int)[][A]";		
 	test "Aggregation with a condition"
-			"AggSum([A], R(A,B) * [A < B])"
+			"AggSum([A], R(A,B) * {A < B})"
       "M1(int)[][A]";
 	test "Aggregation with an input variable"
-			"AggSum([A], R(A,B) * [A < C])"
-      "M1(int)[][A] * [A < C]";
+			"AggSum([A], R(A,B) * {A < C})"
+      "M1(int)[][A] * {A < C}";
 	test "Extending output schema due to an input variable"
-			"AggSum([A], R(A,B) * [B < C])"
-      "AggSum([A],M1(int)[][A,B] * [B < C])";
+			"AggSum([A], R(A,B) * {B < C})"
+      "AggSum([A],M1(int)[][A,B] * {B < C})";
 	test "Graph Decomposition"
 			"AggSum([A], R(A,B) * S(C,D))"
       "M1(int)[][A] * M2(int)[][]";
@@ -120,29 +120,29 @@ in
 			"AggSum([A], R(A,B) * (C ^= (A + B)))"
       "M1(int)[][A]";		
 	test "Aggregation with a lift containing no relations and a comparison"
-			"AggSum([A], R(A,B) * (C ^= (A + B)) * [C > 0])"
+			"AggSum([A], R(A,B) * (C ^= (A + B)) * {C > 0})"
       "M1(int)[][A]";		
 	test "Aggregation with a lift containing an irrelevant relation"
 			"AggSum([A], R(A,B) * (C ^= S(A)))"
       "M1(int)[][A]";		
 	test "Aggregation with a lift containing an irrelevant relation and a comparison"
-			"AggSum([A], R(A,B) * (C ^= S(A)) * [C > 0])"
+			"AggSum([A], R(A,B) * (C ^= S(A)) * {C > 0})"
       "M1(int)[][A]";
 	test "Aggregation with a lift containing a relevant relation"
 			"AggSum([A], R(A,B) * (E ^= R(C,D) * B))"
          "AggSum([A], (M1_L1_1(int)[][A,B] * (E ^= M1_L1_1(int)[][C, D] * B)))";
 	test "Aggregation with a lift containing a relevant relation and a condition"
-			"AggSum([A], R(A,B) * (E ^= R(C,D) * B) * [E > 0])"
-      "AggSum([A], (M1_L1_1(int)[][A,B] * (E ^= M1_L1_1(int)[][C,D] * B) * [E > 0]))"; 	
+			"AggSum([A], R(A,B) * (E ^= R(C,D) * B) * {E > 0})"
+      "AggSum([A], (M1_L1_1(int)[][A,B] * (E ^= M1_L1_1(int)[][C,D] * B) * {E > 0}))"; 	
 	test "Aggregation with a lift containing a relevant relation and a variable"
 			"AggSum([A], R(A,B) * (E ^= R(C,D) * B) * E)"
       "AggSum([A], (M1_L1_1(int)[][A,B] * (E ^= M1_L1_1(int)[][C,D] * B) * E))";	
   test "Aggregation with a lift containing a relevant relation and a common variable"
-      "AggSum([A], R(A,B) * (E ^= R(C,D) * [A = C]) * [E > 0])"
+      "AggSum([A], R(A,B) * (E ^= R(C,D) * {A = C}) * {E > 0})"
       (if (Debug.active "HEURISTICS-IGNORE-FINAL-OPTIMIZATION") then
-				 "AggSum([A], M1(int)[][A] * (E ^= M1_L1_1(int)[][A,D]) * [E > 0])"
+				 "AggSum([A], M1(int)[][A] * (E ^= M1_L1_1(int)[][A,D]) * {E > 0})"
 			 else
-				 "M1(int)[][A] * AggSum([A], (E ^= M1_L1_1(int)[][A,D]) * [E > 0])");
+				 "M1(int)[][A] * AggSum([A], (E ^= M1_L1_1(int)[][A,D]) * {E > 0})");
   	
   test "Extending schema due to a lift"
 			"AggSum([A], R(A,B) * S(C,D) * (E ^= R(F,G) * C))"
@@ -160,22 +160,22 @@ in
 				else if (Debug.active "IVC-OPTIMIZE-EXPR") then
 					"M1(int)[][](1) * M2(int)[][A]"
 				else
-			    "M1(int)[][](AggSum([],((C ^= [0])))) * M2(int)[][A]");
+			    "M1(int)[][](AggSum([],((C ^= 0)))) * M2(int)[][A]");
 					
 	test "Aggregation with a lift containing an irrelevant relation and a common variable"
 			"AggSum([A], R(A,B) * (C ^= S(B)))"
       "M1(int)[][A]";
 	
 	test "Aggregation with a lift containing an irrelevant relation and comparison"
-			"AggSum([A], R(A,B) * (C ^= S(D)) * [C > 0])"
+			"AggSum([A], R(A,B) * (C ^= S(D)) * {C > 0})"
 			(if (Debug.active "HEURISTICS-MINIMIZE-IVC") then
-         "AggSum([], (C ^= M1_L1_1(int)[][D]) * [C > 0]) * M2(int)[][A]"
+         "AggSum([], (C ^= M1_L1_1(int)[][D]) * {C > 0}) * M2(int)[][A]"
 			 else if (Debug.active "IVC-OPTIMIZE-EXPR") then
          "M1(int)[][] * M2(int)[][A]"
        else
-				 "M1(int)[][](AggSum([],(((C ^= [0]) * [C > 0])))) * M2(int)[][A]");
+				 "M1(int)[][](AggSum([],(((C ^= 0) * {C > 0})))) * M2(int)[][A]");
 	
 	test "Aggregation with a lift containing an irrelevant relation and a common variable"
-			"AggSum([A], R(A,B) * (C ^= S(A)) * [C > 0])"
+			"AggSum([A], R(A,B) * (C ^= S(A)) * {C > 0})"
       "M1(int)[][A]";
 ;;

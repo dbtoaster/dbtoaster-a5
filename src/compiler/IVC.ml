@@ -54,7 +54,9 @@ let derive_initializer ?(scope = [])
             let bound_schema = ListAsSet.union scope subexp_ovars in
             let unbound_schema = ListAsSet.diff gb_vars bound_schema in
                if unbound_schema = [] 
-               then CalcRing.mk_val lf
+               then CalcRing.mk_val (AggSum(ListAsSet.inter gb_vars
+                                                            subexp_ovars,
+                                            subexp))
                else CalcRing.zero
          | _ -> CalcRing.mk_val lf
       ) (CalculusTransforms.optimize_expr (Calculus.schema_of_expr expr) expr)

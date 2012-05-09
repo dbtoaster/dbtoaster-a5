@@ -27,19 +27,19 @@ let test msg input output =
       (parse_calc output)
 in
    test "Constants and Var"
-      "(R(A,B) * [-1]) * ([22-1] + [3]) * [A]"
-      "R(A,B)* [-24] * A";
+      "(R(A,B) * {-1}) * ({22-1} + {3}) * {A}"
+      "R(A,B)* {-24} * A";
    test "Vars across relations"
       "R(A) * S(B) * A * B"
       "R(A) * S(B) * A * B";
    test "Vars already combined"
-      "R(A) * S(B) * [A+B] * A * B"
-      "R(A) * S(B) * [(A+B)* A * B]";
+      "R(A) * S(B) * {A+B} * A * B"
+      "R(A) * S(B) * {(A+B)* A * B}";
    test "Self-comparison"
-      "R(A) * [A = A]"
+      "R(A) * {A = A}"
       "R(A)";
    test "Self-anticomparison"
-      "R(A) * ([A != A] + [A < A])"
+      "R(A) * ({A != A} + {A < A})"
       "0"
 ;;
 
@@ -50,29 +50,29 @@ let test msg scope input output =
       (parse_calc output)
 in 
    test "Empty Scope, Unliftable" [] 
-      "R(A,B) * [A = B]"
-      "R(A,B) * [A = B]";
+      "R(A,B) * {A = B}"
+      "R(A,B) * {A = B}";
    test "Empty Scope, Liftable" []
-      "R(A,B) * S(B,C) * [A = C]"
-      "R(A,B) * (C ^= [A]) * S(B,C)";
+      "R(A,B) * S(B,C) * {A = C}"
+      "R(A,B) * (C ^= A) * S(B,C)";
    test "Liftable due to scope" [var "B"]
-      "R(A,B) * [A = B]"
-      "(A ^= [B]) * R(A,B)";
+      "R(A,B) * {A = B}"
+      "(A ^= B) * R(A,B)";
    test "Unliftable due to scope" [var "A"; var "B"]
-      "R(A,B) * [A = B]"
-      "[A = B] * R(A,B)";
+      "R(A,B) * {A = B}"
+      "{A = B} * R(A,B)";
    test "Liftable due to nested scope" []
-      "S(B) * AggSum([], R(A,B) * [A = B])"
-      "S(B) * AggSum([], (A ^= [B]) * R(A,B))";
+      "S(B) * AggSum([], R(A,B) * {A = B})"
+      "S(B) * AggSum([], (A ^= B) * R(A,B))";
    test "Unliftable due to nested scope" []
-      "S(A, B) * AggSum([], R(A,B) * [A = B])"
-      "S(A, B) * AggSum([], [A = B] * R(A,B))";
+      "S(A, B) * AggSum([], R(A,B) * {A = B})"
+      "S(A, B) * AggSum([], {A = B} * R(A,B))";
    test "TPCH17" [var "dPK"]
-      "LI(PK, QTY) * (nested ^= AggSum([PK],((LI(PK, QTY2) * [QTY2])))) * 
-         [PK = dPK] * [QTY < (0.5 * nested)]"
+      "LI(PK, QTY) * (nested ^= AggSum([PK],((LI(PK, QTY2) * QTY2)))) * 
+         {PK = dPK} * {QTY < (0.5 * nested)}"
       "(PK ^= dPK) * LI(PK, QTY) * 
-         (nested ^= AggSum([PK],((LI(PK, QTY2) * [QTY2])))) * 
-         [QTY < (0.5 * nested)]"
+         (nested ^= AggSum([PK],((LI(PK, QTY2) * QTY2)))) * 
+         {QTY < (0.5 * nested)}"
 ;;
 
 let test msg scope input output =
@@ -88,11 +88,11 @@ in
       "R(A) * (B ^= A)"
       "R(A) * (B ^= A)";
    test "Schema-Forbidden with Nested Agg" []
-      "R(A) * (B ^= AggSum([], R(C) * [C < A]))"
-      "R(A) * (B ^= AggSum([], R(C) * [C < A]))";
+      "R(A) * (B ^= AggSum([], R(C) * {C < A}))"
+      "R(A) * (B ^= AggSum([], R(C) * {C < A}))";
    test "Schema-Permitted with Nested Agg" [var "A"]
-      "R(A) * (B ^= AggSum([], R(C) * [C < A]))"
-      "(B ^= AggSum([], R(C) * [C < A])) * R(A)";
+      "R(A) * (B ^= AggSum([], R(C) * {C < A}))"
+      "(B ^= AggSum([], R(C) * {C < A})) * R(A)";
 ;;
 
 let test ?(scope=[]) msg schema input output =
@@ -107,8 +107,8 @@ in
       "AggSum([C],R(B,C)*B)";
    *)
    test "Empty schema, Full expression into value" []
-      "(A ^= AggSum([C],R(B,C)*B)) * [2*A]"
-      "(A ^= AggSum([C],R(B,C)*B)) * [2*A]";
+      "(A ^= AggSum([C],R(B,C)*B)) * {2*A}"
+      "(A ^= AggSum([C],R(B,C)*B)) * {2*A}";
    test "Empty schema, Full expression into relation" []
       "(A ^= AggSum([C],R(B,C)*B)) * R(A)"
       "(A ^= AggSum([C],R(B,C)*B)) * R(A)";
@@ -116,29 +116,29 @@ in
       "(A ^= AggSum([C],R(B,C)*B)) * E[A][]"
       "(A ^= AggSum([C],R(B,C)*B)) * E[A][]";
    test "Empty schema, Full expression into all" []
-      "(A ^= AggSum([C],R(B,C)*B)) * A * [2*A] * R(A)"
-      "(A ^= AggSum([C],R(B,C)*B)) * A * [2*A] * R(A)";
+      "(A ^= AggSum([C],R(B,C)*B)) * A * {2*A} * R(A)"
+      "(A ^= AggSum([C],R(B,C)*B)) * A * {2*A} * R(A)";
    test "Empty schema, Value into variable" []
-      "(A ^= [2*B]) * A"
-      "[2*B]";
+      "(A ^= {2*B}) * A"
+      "{2*B}";
    test "Empty schema, Value into value" []
-      "(A ^= [2*B]) * [2*A]"
-      "[2*2*B]";
+      "(A ^= {2*B}) * {2*A}"
+      "{2*2*B}";
    test "Empty schema, Value into relation" []
-      "(A ^= [2*B]) * R(A)"
-      "(A ^= [2*B]) * R(A)";
+      "(A ^= {2*B}) * R(A)"
+      "(A ^= {2*B}) * R(A)";
    test "Empty schema, Value into external" []
-      "(A ^= [2*B]) * E[A][]"
-      "(A ^= [2*B]) * E[A][]";
+      "(A ^= {2*B}) * E[A][]"
+      "(A ^= {2*B}) * E[A][]";
    test "Empty schema, Value into all" []
-      "(A ^= [2*B]) * A * [2*A] * R(A)"
-      "(A ^= [2*B]) * A * [2*A] * R(A)";
+      "(A ^= {2*B}) * A * {2*A} * R(A)"
+      "(A ^= {2*B}) * A * {2*A} * R(A)";
    test "Empty schema, Variable into variable" []
       "(A ^= B) * A"
       "B";
    test "Empty schema, Variable into value" []
-      "(A ^= B) * [2*A]"
-      "[2*B]";
+      "(A ^= B) * {2*A}"
+      "{2*B}";
    test "Empty schema, Variable into relation" []
       "(A ^= B) * R(A)"
       "R(B)";
@@ -146,20 +146,20 @@ in
       "(A ^= B) * E[A][]"
       "E[B][]";
    test "Empty schema, Variable into all" []
-      "(A ^= B) * A * [2*A] * R(A)"
-      "B * [2*B] * R(B)";
+      "(A ^= B) * A * {2*A} * R(A)"
+      "B * {2*B} * R(B)";
    test "Variable into all made invalid by schema" [var "A"]
-      "(A ^= B) * A * [2*A] * R(A)"
-      "(A ^= B) * A * [2*A] * R(A)";
+      "(A ^= B) * A * {2*A} * R(A)"
+      "(A ^= B) * A * {2*A} * R(A)";
    test "Cascading pair with nesting" []
-      "(A ^= B) * AggSum([], (C ^= [A*2])*C)"
-      "AggSum([], [2*B])";
+      "(A ^= B) * AggSum([], (C ^= {A*2})*C)"
+      "AggSum([], {2*B})";
    test "Cascading pair made partly invalid by nested schema" []
-      "(A ^= B) * AggSum([C], (C ^= [A*2])*C)"
-      "AggSum([C], (C ^= [2*B])*C)";
+      "(A ^= B) * AggSum([C], (C ^= {A*2})*C)"
+      "AggSum([C], (C ^= {2*B})*C)";
    test "Full expression and value into comparison" []
-      "(A ^= [2*B]) * (C ^= AggSum([], R(D))) * [A < C]"
-      "(C ^= AggSum([], R(D))) * [2*B < C]";
+      "(A ^= {2*B}) * (C ^= AggSum([], R(D))) * {A < C}"
+      "(C ^= AggSum([], R(D))) * {2*B < C}";
    test "Dropping unnecessary lifts 1" []
       "AggSum([], (A ^= B))"
       "AggSum([], 1)"; (* The aggsum would be deleted by nesting_rewrites *)
@@ -180,9 +180,9 @@ in
       "(A ^= 0) * (A ^= AggSum([], B)) * 2"
       "(A ^= 0) * (A ^= AggSum([], B)) * 2";
    test "Query18 funny business" [var "query18_mLINEITEMLINEITEM_ORDERKEY"; var "query18_mLINEITEMLINEITEM_QUANTITY"]
-      "(O_OK ^= [dOK]) * AggSum([O_OK],(
+      "(O_OK ^= dOK) * AggSum([O_OK],(
          (AggSum([O_OK],(LINEITEM(O_OK, L3_Q)))) +
-            ( (O_OK ^= [dOK]) * AggSum([O_OK],(LINEITEM(O_OK, L3_Q)))
+            ( (O_OK ^= dOK) * AggSum([O_OK],(LINEITEM(O_OK, L3_Q)))
        )))"
       "AggSum([dOK],(
          (AggSum([dOK],(LINEITEM(dOK, L3_Q)))) +
@@ -190,32 +190,32 @@ in
        ))";
    test "Double lifts into an equality" [var "B"; var "C"]
       "AggSum([],(A ^= B) * (A ^= C))"
-      "AggSum([],[C = B])";
+      "AggSum([],{C = B})";
    test "TPCH3 lifts" [var "CUSTOMER_MKTSEGMENT"]
-      "AggSum([],((CUSTOMER_MKTSEGMENT_1 ^= [CUSTOMER_MKTSEGMENT]) * 
-                  (CUSTOMER_MKTSEGMENT_1 ^= ['BUILDING'])))"
-      "AggSum([],['BUILDING' = CUSTOMER_MKTSEGMENT])";
+      "AggSum([],((CUSTOMER_MKTSEGMENT_1 ^= CUSTOMER_MKTSEGMENT) * 
+                  (CUSTOMER_MKTSEGMENT_1 ^= 'BUILDING')))"
+      "AggSum([],{'BUILDING' = CUSTOMER_MKTSEGMENT})";
    test "Lift into a lifted aggsum of a lift" []
       "(A ^= B) * (C ^= (AggSum([A], R(D) * (A ^= D))))"
       "(C ^= (AggSum([B], R(D) * (B ^= D))))";
    test "TPCH11 nested query" [var "P_NATIONKEY"]
-      "(N_NATIONKEY ^= [P_NATIONKEY]) * 
+      "(N_NATIONKEY ^= P_NATIONKEY) * 
        (N_VALUE ^= AggSum([N_NATIONKEY],(
          PARTSUPP(PS_PARTKEY, PS_SUPPKEY, PS_AVAILQTY, PS_SUPPLYCOST, 
                    PS_COMMENT) * 
-         (S_SUPPKEY ^= [PS_SUPPKEY]) * 
+         (S_SUPPKEY ^= PS_SUPPKEY) * 
          SUPPLIER(S_SUPPKEY, S_NAME, S_ADDRESS, S_NATIONKEY, S_PHONE, S_ACCTBAL, 
                   S_COMMENT) * 
-         (N_NATIONKEY ^= [S_NATIONKEY]) * 
-         [PS_SUPPLYCOST] * [PS_AVAILQTY]
+         (N_NATIONKEY ^= S_NATIONKEY) * 
+         PS_SUPPLYCOST * PS_AVAILQTY
       )))"
       "(N_VALUE ^= AggSum([P_NATIONKEY],(
          PARTSUPP(PS_PARTKEY, PS_SUPPKEY, PS_AVAILQTY, PS_SUPPLYCOST, 
                    PS_COMMENT) * 
          SUPPLIER(PS_SUPPKEY, S_NAME, S_ADDRESS, S_NATIONKEY, S_PHONE, 
                   S_ACCTBAL, S_COMMENT) * 
-         (P_NATIONKEY ^= [S_NATIONKEY]) * 
-         [PS_SUPPLYCOST] * [PS_AVAILQTY]
+         (P_NATIONKEY ^= S_NATIONKEY) * 
+         PS_SUPPLYCOST * PS_AVAILQTY
       )))";
    test "Materialized terminal lift" [var "B"]
       "AggSum([A], (M1_L1_1(int)[][A,B] * (E ^= M1_L1_1(int)[][] * B)))"
@@ -241,10 +241,10 @@ in
       "0";
    test "A Lifted Value"
       "(A ^= A)"
-      "[A = A]";
+      "{A = A}";
    test "A Lifted More Complex Value"
-      "(A ^= [A*B*C])"
-      "[A = (A*B*C)]";
+      "(A ^= {A*B*C})"
+      "{A = (A*B*C)}";
    test "Aggsum of a lifted value - schema changed"
       "AggSum([A], (A ^= B))"
       "(A ^= B)";
@@ -311,36 +311,36 @@ in
    test "TPCH17 simple raw" [] []
       "AggSum([], (
          P(PPK) * LI(LPK, LQTY) * 
-         AggSum([], ([PPK = LPK])) *
+         AggSum([], ({PPK = LPK})) *
          AggSum([], (
             (nested ^= (0.5 * AggSum([], LI(LPK2, LQTY2) * 
-               AggSum([], [LPK2 = PPK]) * [LQTY2]))) *
-            [LQTY < nested]
+               AggSum([], {LPK2 = PPK}) * LQTY2))) *
+            {LQTY < nested}
          ))
       ))"
       "AggSum([], (
          P(PPK) * LI(PPK, LQTY) * 
          AggSum([PPK], (
-            (nested ^= AggSum([PPK], LI(PPK, LQTY2) * [LQTY2]) * 
+            (nested ^= AggSum([PPK], LI(PPK, LQTY2) * LQTY2) * 
                0.5) *
-            [LQTY < nested]
+            {LQTY < nested}
          ))
       ))";
    test "TPCH17 full raw" [] []
       "AggSum([],(
          (  LINEITEM(L_PARTKEY, L_QUANTITY, L_EXTENDEDPRICE) * 
             PART(P_PARTKEY) * 
-            AggSum([],([P_PARTKEY = L_PARTKEY])) * 
+            AggSum([],({P_PARTKEY = L_PARTKEY})) * 
             AggSum([],(
-               (  (__sql_agg_tmp_1 ^= ([0.005] * AggSum([],(
+               (  (__sql_agg_tmp_1 ^= (0.005 * AggSum([],(
                      (LINEITEM(L2_PARTKEY, L2_QUANTITY, L2_EXTENDEDPRICE) * 
-                     AggSum([],([L2_PARTKEY = P_PARTKEY])) * 
-                     [L2_QUANTITY]
+                     AggSum([],({L2_PARTKEY = P_PARTKEY})) * 
+                     L2_QUANTITY
                   ))))) * 
-                  [L_QUANTITY < __sql_agg_tmp_1]
+                  {L_QUANTITY < __sql_agg_tmp_1}
                )
             )) * 
-            [L_EXTENDEDPRICE]
+            L_EXTENDEDPRICE
          )
       ))"
       "AggSum([],(
@@ -349,19 +349,19 @@ in
             AggSum([L_PARTKEY],(
                (  (__sql_agg_tmp_1 ^= (AggSum([L_PARTKEY],(
                      (LINEITEM(L_PARTKEY, L2_QUANTITY, L2_EXTENDEDPRICE) * 
-                     [L2_QUANTITY]
-                  )))) * [0.005] ) * 
-                  [L_QUANTITY < __sql_agg_tmp_1]
+                     L2_QUANTITY
+                  )))) * 0.005 ) * 
+                  {L_QUANTITY < __sql_agg_tmp_1}
                )
             )) * 
-            [L_EXTENDEDPRICE]
+            L_EXTENDEDPRICE
          )
       ))";
    test "TPCH17 dPart Tricky Term" ["dPK"] []
       "(PK ^= dPK) * LI(PK, QTY) * (alpha ^= 0) * (
          (nested ^= (AggSum([PK], LI(PK, QTY2) * QTY2) + alpha))
          - (nested ^= (AggSum([PK], LI(PK, QTY2) * QTY2)))
-       ) * [QTY < 0.5 * nested]"
+       ) * {QTY < 0.5 * nested}"
       "0";
    test "TPCH17 dPart Full" ["dPK"] [] 
       "( ((PK ^= dPK) * LI(PK, QTY) *
@@ -376,16 +376,16 @@ in
             (nested ^= (AggSum([PK], LI(PK, QTY2) * QTY2) + alpha))
             - (nested ^= (AggSum([PK], LI(PK, QTY2) * QTY2)))
          ))
-      ) * [QTY < 0.5 * nested]"
+      ) * {QTY < 0.5 * nested}"
       "(nested ^= (AggSum([dPK], LI(dPK,QTY2) * QTY2))) * LI(dPK,QTY) *
-         [QTY < 0.5 * nested]";
+         {QTY < 0.5 * nested}";
    test "TPCH17 dLineitem" ["dPK"; "dQTY"] []
       "P(PK) * (((PK ^= dPK) * (QTY ^= dQTY) * 
                   (nested ^= AggSum([PK], L(PK, QTY2) * QTY2)))
             + 
             ((L(PK, QTY) + (PK ^= dPK) * (QTY ^= dQTY)) * 
             (delta_2 ^= (AggSum([PK],(
-               ((PK ^= [dPK]) * (QTY2 ^= [dQTY]) * [QTY2]))))) * 
+               ((PK ^= dPK) * (QTY2 ^= dQTY) * QTY2))))) * 
             (
                (nested ^= AggSum([PK], L(PK, QTY2) * QTY2) + delta_2)
                 - (nested ^= AggSum([PK], L(PK, QTY2) * QTY2))
@@ -396,5 +396,5 @@ in
             ((L(dPK, QTY) + (QTY ^= dQTY)) * 
             (
                (nested ^= AggSum([dPK], L(dPK, QTY2) * QTY2) + dQTY) +
-               (nested ^= AggSum([dPK], L(dPK, QTY2) * QTY2)) * [-1]
+               (nested ^= AggSum([dPK], L(dPK, QTY2) * QTY2)) * {-1}
             )))";
