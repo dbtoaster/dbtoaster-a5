@@ -1,0 +1,17 @@
+{
+  :path => "test/queries/employee/query10.sql",
+  :datasets => {
+    "standard" => {
+      :toplevels => {
+        "COUNT" => {
+          :type => :onelevel,
+          :expected => {                     
+            [7506, 'DENNIS', 'LYNN', 'S', 671, 7839, 19850515, 2750.0, 0.0, 30] => 1,
+            [7505, 'DOYLE',  'JEAN', 'K', 671, 7839, 19850404, 2850.0, 0.0, 30] => 1
+          }
+        }
+      }
+    }
+  }
+}
+

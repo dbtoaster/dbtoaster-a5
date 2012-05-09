@@ -1,0 +1,19 @@
+{
+  :path => "test/queries/employee/query04.sql",
+  :datasets => {
+    "standard" => {
+      :toplevels => {
+        "COUNT" => {
+          :type => :onelevel,
+          :expected => {
+            [124,  'CHICAGO'] => 1,
+            [123,   'DALLAS'] => 1,
+            [122, 'NEW YORK'] => 1,
+            [167,   'BOSTON'] => 1
+          }
+        }
+      }
+    }
+  }
+}
+

@@ -17,4 +17,4 @@ CREATE STREAM EMPLOYEE(
 
 SELECT * 
 FROM employee 
-WHERE commission IS Null
+WHERE commission IS NULL

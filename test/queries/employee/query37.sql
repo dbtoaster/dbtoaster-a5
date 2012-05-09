@@ -36,5 +36,5 @@ WHERE e.department_id=(SELECT d.department_id
                        FROM department d 
                        WHERE d.location_id=(SELECT l.location_id 
                                             FROM location l 
-                                            WHERE l.regional_group='NEW YORK'))
+                                            WHERE l.regional_group='CHICAGO'))
                                             

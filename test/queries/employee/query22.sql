@@ -15,6 +15,6 @@ CREATE STREAM EMPLOYEE(
   FROM FILE '../../experiments/data/employee/employee.dat' LINE DELIMITED
   csv (fields := ',', schema := 'int,string,string,string,int,int,date,float,float,int', eventtype := 'insert');
 
-SELECT department_id, count(*) 
+SELECT department_id, count(*)
 FROM employee 
 GROUP BY department_id

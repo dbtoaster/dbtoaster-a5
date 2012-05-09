@@ -15,6 +15,7 @@ CREATE STREAM EMPLOYEE(
   FROM FILE '../../experiments/data/employee/employee.dat' LINE DELIMITED
   csv (fields := ',', schema := 'int,string,string,string,int,int,date,float,float,int', eventtype := 'insert');
 
-SELECT job_id, count(*), sum(salary), sum(salary)/count(*) 
+SELECT job_id, count(*) AS job_count, sum(salary) AS total_salary, 
+       sum(salary)/count(*) AS avg_salary 
 FROM employee 
 GROUP BY job_id

@@ -1,0 +1,34 @@
+{
+  :path => "test/queries/employee/query23a.sql",
+  :datasets => {
+    "standard" => {
+      :toplevels => {
+        "TOTAL_EMPLOYEES" => {
+          :type => :onelevel,
+          :expected => {
+            [20] => 1,
+            [30] => 4,
+            [40] => 1
+          }
+        },
+        "TOTAL_SALARY" => {
+          :type => :onelevel,
+          :expected => {
+            [20] => 800.0,
+            [30] => 8450.0,
+            [40] => 2200.0
+          }
+        },
+        "AVG_SALARY" => {
+          :type => :onelevel,
+          :expected => {
+            [20] => 800,
+            [30] => 2112.5,
+            [40] => 2200
+          }        
+        }        
+      }
+    }
+  }
+}
+

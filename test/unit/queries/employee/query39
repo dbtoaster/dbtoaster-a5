@@ -6,7 +6,7 @@
         "COUNT" => {
           :type => :onelevel,
           :expected => {
-            [1136.0] => 1.0
+            [1136.0] => 1
           }
         }
       }

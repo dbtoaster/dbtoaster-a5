@@ -1,15 +1,18 @@
 {
-  :path => "test/queries/employee/query40.sql",
+  :path => "test/queries/employee/query22.sql",
   :datasets => {
     "standard" => {
       :toplevels => {
-        "COUNT" => {
+        "SUM_AGGREGATE_1" => {
           :type => :onelevel,
           :expected => {
-            [7507, 'BAKER', 'LESLIE', 'D', 671, 7839, 19850610, 2200.0, 0.0, 40] => 1
+            [20] => 1,
+            [30] => 4,
+            [40] => 1
           }
         }
       }
     }
   }
 }
+

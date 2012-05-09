@@ -1,0 +1,21 @@
+{
+  :path => "test/queries/employee/query03a.sql",
+  :datasets => {
+    "standard" => {
+      :toplevels => {
+        "COUNT" => {
+          :type => :onelevel,
+          :expected => {
+            [671,     'MANAGER'] => 1,
+            [667,       'CLERK'] => 1,
+            [670, 'SALESPERSON'] => 1,
+            [669,     'ANALYST'] => 1,
+            [672,   'PRESIDENT'] => 1,
+            [668,       'STAFF'] => 1
+          }
+        }
+      }
+    }
+  }
+}
+

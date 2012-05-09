@@ -15,7 +15,13 @@ def results_file(path, delim = /,/)
   File.open(path).readlines.
     delete_if { |l| l.chomp == "" }.  
     map do |l|
-      k = l.split(delim).map { |i| i.to_f }
+      k = l.split(delim).map { |i| 
+        case i 
+            when /[a-zA-Z][a-zA-Z0-9_]*/ then i;
+            when /[\-\+]?[0-9]+\.[0-9]*e?[\-\+]?[0-9]*/ then i.to_f;
+            when /[\-\+]?[0-9]+/ then i.to_i;
+        end 
+      }
       [k, k.pop];
     end.to_h
 end

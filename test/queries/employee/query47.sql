@@ -24,7 +24,7 @@ CREATE STREAM DEPARTMENT(
   csv (fields := ',', schema := 'int,string,int', eventtype := 'insert');
 
 SELECT e1.employee_id, e1.last_name, e1.salary, e1.department_id 
-FROM employee e 
+FROM employee e1 
 WHERE e1.salary > (SELECT avg(e2.salary) 
                    FROM employee e2 
                    WHERE e1.department_id=e2.department_id)
