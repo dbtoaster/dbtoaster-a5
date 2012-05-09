@@ -9,8 +9,8 @@
    type k3_statement_t = K3.statement_t
    type k3_trigger_t = K3.trigger_t
    type k3_program_t = K3.prog_t
-   type m3_map_t = string * (Types.type_t list) * (Types.type_t list) * Types.type_t
-   type map_schema_t = ((string * Types.type_t) list * (string * Types.type_t) list)
+   type k3_map_t = K3.map_t
+   type map_schema_t = (Types.var_t list * Types.var_t list)
 
     
    let parse_error s =
@@ -26,66 +26,28 @@
 
    let empty_output_k3 = ([], [], [])
 
-   let maps:((string, m3_map_t) Hashtbl.t) = Hashtbl.create 10
-   let maps_schema:((string, map_schema_t) Hashtbl.t) = Hashtbl.create 10
+   let maps:((string, k3_map_t) Hashtbl.t) = Hashtbl.create 10
 
-   let add_map name (new_map: m3_map_t) =
+   let add_map name (new_map: k3_map_t) =
       Hashtbl.replace maps (String.uppercase name) new_map
 
-   let add_map_schema name (new_schema: map_schema_t) =
-      Hashtbl.replace maps_schema (String.uppercase name) new_schema
-
-   let get_map name : m3_map_t= 
+   let get_map name : k3_map_t= 
       try Hashtbl.find maps (String.uppercase name)
          with _ -> raise (K3TypeError("Map '"^name^"' is not defined!"))
 
-   let get_map_schema name : map_schema_t= 
-      try Hashtbl.find maps_schema (String.uppercase name)
-         with _ -> raise (K3TypeError("Map '"^name^"' is not defined!"))
+   let get_map_schema name : map_schema_t = 
+      let (_, input_var_types, output_var_types, _) = get_map name in
+         input_var_types, output_var_types
 
-
-(*   let patterns:((string, Patterns.pattern list) Hashtbl.t) = Hashtbl.create 10
-
-   let get_patterns name : Patterns.pattern list= 
-      let map_name = (String.uppercase name) in
-         try 
-            Hashtbl.find patterns map_name 
-         with 
-            _ -> raise (K3TypeError("Map '"^name^"' is not defined!"))
-
-   let add_pattern name (new_pattern: Patterns.pattern) =
-      let pattern_list =
-         try 
-            get_patterns name
-         with 
-            _ -> []
-      in
-         let new_pattern_list = 
-            if List.exists (fun x -> x == new_pattern) pattern_list then 
-               pattern_list
-            else
-               new_pattern::pattern_list
-         in
-            Hashtbl.replace patterns (String.uppercase name) new_pattern_list
-*)
    let patterns:(Patterns.pattern_map ref) = ref []
 
    let add_pattern name (new_pattern: Patterns.pattern) = 
       patterns := Patterns.add_pattern !patterns (name, new_pattern)
 
-
-
    let create_map name input_var_types output_var_types map_type =
-        let f = fun l -> List.map snd l      (* was (fun x -> ("", x)) *)
-         in
-            let input_types = f input_var_types in
-            let output_types = f output_var_types
-            in
-                let new_map = (name, input_types, output_types, map_type)
-                    in
-                        add_map name new_map; 
-                        add_map_schema name (input_var_types, output_var_types);
-                        (name, input_var_types, input_var_types, map_type) 
+        let new_map = (name, input_var_types, output_var_types, map_type) in
+            add_map name new_map; 
+            new_map
    
    let concat_stmt (m,t) (map_list,pat_list,trig_list) =
 				let new_map = if m = [] then map_list else m @ map_list
@@ -109,44 +71,10 @@
          in
             let var_list = get_vars var_bind_list
             in
-(*
-               let infer_pattern desired_var_list = 
-                  let result_pattern: ((string list * int list) ref) = ref ([],[]) in
-                  let counter = ref 0 in
-                  List.iter 
-                  (fun d_var ->
-                     (
-                     if (List.exists (fun x -> x == d_var) var_list) then
-                        let ids = fst !result_pattern in
-                        let nums = snd !result_pattern in
-                           result_pattern := (ids@[d_var], nums@[!counter])
-                     ); counter := !counter + 1
-                  ) desired_var_list; !result_pattern;
-               in
-                  let infer_in_pattern = infer_pattern in_vars in
-                  let infer_out_pattern = infer_pattern out_vars 
-                  in
-                     (
-                        if (infer_in_pattern <> ([],[])) then 
-                           let result = Patterns.In(infer_in_pattern) in
-                              print_endline (Patterns.string_of_pattern result);
-                              add_pattern map_name result
-                     );
-                     (
-                        if (infer_out_pattern <> ([],[])) then 
-                           let result = Patterns.Out(infer_out_pattern) in
-                              print_endline (Patterns.string_of_pattern result);
-                              add_pattern map_name result
-                     );
-*)
                let in_filt = ListAsSet.inter in_vars var_list in
                let out_filt = ListAsSet.inter out_vars var_list in
                let in_pattern = Patterns.make_in_pattern in_vars in_filt in
                let out_pattern = Patterns.make_out_pattern out_vars out_filt in
-(*
-                  print_endline (Patterns.string_of_pattern in_pattern);
-                  print_endline (Patterns.string_of_pattern out_pattern);
-*)
                   add_pattern map_name in_pattern;
                   add_pattern map_name out_pattern;
                      in_var_types@out_var_types
@@ -255,7 +183,7 @@ triggerList:
 | trigger                                                   { [$1] }
 
 trigger:
-| ON triggerType ID LPAREN argumentList RPAREN COLON LBRACE statementList RBRACE 
+| ON triggerType ID LPAREN argumentList RPAREN LBRACE statementList RBRACE 
                                                             {
                                                             let args = List.map (fun x -> (x, Types.TFloat)) $5
                                                             in
@@ -267,8 +195,8 @@ trigger:
                                                                         else
                                                                            Schema.DeleteEvent(r)
                                                                   in
-                                                                     (ev, $9) }
-| ON triggerType ID LBRACK argumentList RBRACK COLON LBRACE statementList RBRACE 
+                                                                     (ev, $8) }
+| ON triggerType ID LBRACK argumentList RBRACK LBRACE statementList RBRACE 
                                                             {
                                                             let args = List.map (fun x -> (x, Types.TFloat)) $5
                                                             in
@@ -280,7 +208,7 @@ trigger:
                                                                         else
                                                                            Schema.DeleteEvent(r)
                                                                   in
-                                                                     (ev, $9) }
+                                                                     (ev, $8) }
 
 triggerType:
 | SUM                                                       { true }

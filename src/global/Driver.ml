@@ -543,7 +543,11 @@ if (stage_is_active StageOptimizeK3) then (
 ;;
 if stage_is_active StagePrintK3 then (
    Debug.print "LOG-DRIVER" (fun () -> "Running Stage: PrintK3");
-   output_endline (K3.code_of_prog !k3_program)
+
+   if Debug.active "NICE-K3" then
+      output_endline (K3.nice_code_of_prog !k3_program)
+   else
+      output_endline (K3.code_of_prog !k3_program)
 )
 ;;
 module K3InterpreterCG = K3Compiler.Make(K3Interpreter.K3CG)

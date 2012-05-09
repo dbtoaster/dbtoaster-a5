@@ -995,16 +995,17 @@ let code_of_prog ((_,(maps,_),triggers,_):prog_t): string = (
 )
 
 let nice_code_of_prog ((_,(maps,_),triggers,_):prog_t): string = (
+   let string_of_var_type (n, t) = n ^ " : " ^ (Types.string_of_type t) in
    "--------------------- MAPS ----------------------\n"^
    (ListExtras.string_of_list ~sep:"\n\n" (fun (mapn, mapiv, mapov, mapt) ->
       mapn^"("^(Types.string_of_type mapt)^")"^
-      (ListExtras.ocaml_of_list Types.string_of_type (List.map snd mapiv))^
-      (ListExtras.ocaml_of_list Types.string_of_type (List.map snd mapov))
+      "["^(ListExtras.string_of_list ~sep:"," string_of_var_type mapiv)^"]"^
+      "["^(ListExtras.string_of_list ~sep:"," string_of_var_type mapov)^"];"
    ) maps)^"\n\n"^
    "--------------------- TRIGGERS ----------------------\n"^
    (ListExtras.string_of_list ~sep:"\n\n" (fun (event, stmts) ->
-      (Schema.string_of_event event)^" : {\n"^
+      (Schema.string_of_event event)^"\n{\n"^
       (ListExtras.string_of_list ~sep:";\n\t" nice_string_of_expr stmts)^
-      "}"
+      ";\n}"
    ) triggers)^"\n"
 )
