@@ -202,8 +202,8 @@ sig
       
       A positive result (Some(x)) is guaranteed to be an equivalent expr, while
       a negative result (None) only indicates that we were not able to establish
-      equivalence.  Among other things, form normalization, double-negation,
-      and Product/Sum commutability are not handled properly (yet).
+      equivalence.  Among other things, form normalization and double-negation  
+			are not handled properly (yet).
    *)
    val cmp_exprs: ?cmp_opts:cmp_opt_t list -> 
 		              ('a list -> 'a option) ->
