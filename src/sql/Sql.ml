@@ -17,9 +17,17 @@
 open Types
 
 (**
-   A generic exception pertaining to SQL
+   A generic exception pertaining to SQL.
 *)
 exception SqlException of string
+(**
+   An error that occurs during parsing.
+*)
+exception SQLParseError of string
+(**
+   A feature of SQL that is unsupported is encountered.
+*)
+exception FeatureUnsupported of string
 
 (**
    An error associating a given variable with a relation or pseudorelation that

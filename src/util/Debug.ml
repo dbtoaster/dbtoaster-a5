@@ -114,7 +114,7 @@ module Logger = struct
    let log (level:level) ?(continuation=None) (m:string)
            ?(detail=(fun () -> "")) ?(exc=false) (msg:string) =
       prerr_endline ("["^(string_of_level level)^
-                     (if m = "" then "" else "::"^m)^"]: "^msg);
+                     (if m = "" then "" else "::"^m)^"]  "^msg);
       if exc && (active "DETAIL") then Printexc.print_backtrace stderr;
       if active "DETAIL" then prerr_endline (detail ());
       match continuation with Some(s) -> (s ()) | None -> ()

@@ -1,7 +1,7 @@
 open Calculus
 open Plan
 
-let (inform, warn, error, bug) = Debug.Logger.functions_for_module "DRIVER"
+let (inform, warn, error, bug) = Debug.Logger.functions_for_module ""
 
 ;;
 
@@ -333,10 +333,16 @@ if stage_is_active StageParseSQL then (
                (Sqlparser.dbtoasterSqlList Sqllexer.tokenize lexbuff)
       ) !files
    with 
+      | Sql.SQLParseError(msg)
       | Sql.SqlException(msg) ->
          error ("Sql Error: "^msg)
       | Sql.Variable_binding_err(_,_) as vb_err ->
          error ("Sql Error: "^(Sql.string_of_var_binding_err vb_err))
+      | Parsing.Parse_error ->
+         error ("Sql Parse Error.  (try using '-d log-parser' to track the "^
+                "error)")
+      | Sys_error(msg) ->
+         error msg
    
 )
 ;;

@@ -1,10 +1,7 @@
 %{
 open Types
 
-exception SQLParseError of string
-exception FeatureUnsupported of string
-
-let bail msg = raise (SQLParseError(msg))
+let bail msg = raise (Sql.SQLParseError(msg))
 
 let (table_defs:((string * Sql.table_t) list ref)) = Sql.global_table_defs
 
