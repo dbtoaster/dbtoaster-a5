@@ -5,7 +5,7 @@ open UnitTest
 ;;
 
 (*Debug.active "HEURISTICS-IGNORE-FINAL-OPTIMIZATION"*)
-(*Debug.activate "HEURISTICS-MINIMIZE-IVC"*)
+(*Debug.activate "HEURISTICS-IGNORE-IVC-OPTIMIZATION"*)
 (*Debug.activate "IVC-OPTIMIZE-EXPR"*)
 
 let test_db = mk_db [
@@ -155,7 +155,7 @@ in
 	
 	test "Aggregation with a lift containing an irrelevant relation"
 			"AggSum([A], R(A,B) * (C ^= S(D)))"
-       (if (Debug.active "HEURISTICS-MINIMIZE-IVC") then
+       (if (not (Debug.active "HEURISTICS-IGNORE-IVC-OPTIMIZATION")) then
           "AggSum([], (C ^= M1_L1_1(int)[][D])) * M2(int)[][A]"     
 				else if (Debug.active "IVC-OPTIMIZE-EXPR") then
 					"M1(int)[][](1) * M2(int)[][A]"
@@ -168,7 +168,7 @@ in
 	
 	test "Aggregation with a lift containing an irrelevant relation and comparison"
 			"AggSum([A], R(A,B) * (C ^= S(D)) * {C > 0})"
-			(if (Debug.active "HEURISTICS-MINIMIZE-IVC") then
+			(if (not (Debug.active "HEURISTICS-IGNORE-IVC-OPTIMIZATION")) then
          "AggSum([], (C ^= M1_L1_1(int)[][D]) * {C > 0}) * M2(int)[][A]"
 			 else if (Debug.active "IVC-OPTIMIZE-EXPR") then
          "M1(int)[][] * M2(int)[][A]"
