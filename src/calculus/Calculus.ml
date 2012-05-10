@@ -241,7 +241,7 @@ let rec rels_of_expr (expr:expr_t): string list =
    @return      The set of all external names that appear in [expr]
 *)
 let rec externals_of_expr (expr:expr_t): string list =
-   let rcr a = rels_of_expr a in
+   let rcr a = externals_of_expr a in
       CalcRing.fold
          ListAsSet.multiunion
          ListAsSet.multiunion
@@ -503,9 +503,10 @@ let commutes ?(scope = []) (e1:expr_t) (e2:expr_t): bool =
          a parameter).  *)
    (ListAsSet.inter (ListAsSet.diff ovar1 scope) ivar2) = []
 
-let rec cmp_exprs (e1:expr_t) (e2:expr_t):((var_t * var_t) list option) = 
+
+let rec cmp_exprs_pure (e1:expr_t) (e2:expr_t):((var_t * var_t) list option) =
    let rcr a b = 
-      cmp_exprs a b
+      cmp_exprs_pure a b
    in
    CalcRing.cmp_exprs Function.multimerge Function.multimerge
                      (fun lf1 lf2 -> 
@@ -524,8 +525,10 @@ let rec cmp_exprs (e1:expr_t) (e2:expr_t):((var_t * var_t) list option) =
          
          | ((Rel(rn1,rv1)), (Rel(rn2,rv2))) ->
             if (rn1 <> rn2) then None else
-               Some(List.combine rv1 rv2)
-            
+						  if ((List.length rv1) = (List.length rv2)) then
+                Some(List.combine rv1 rv2)
+							else None
+							            
          | ((External(en1,eiv1,eov1,et1,em1)), 
             (External(en2,eiv2,eov2,et2,em2))) ->
             if ((en1 <> en2) || (et1 <> et2))
@@ -540,8 +543,11 @@ let rec cmp_exprs (e1:expr_t) (e2:expr_t):((var_t * var_t) list option) =
                begin match mapping with
                   | None -> None
                   | Some(s) -> 
-                     Function.multimerge 
-                        [s; (List.combine eiv1 eiv2); (List.combine eov1 eov2)]
+                     if ((List.length eiv1) = (List.length eiv2)) &&
+										    ((List.length eov1) = (List.length eov2)) then
+	                     Function.multimerge 
+	                        [s; (List.combine eiv1 eiv2); (List.combine eov1 eov2)]
+										else None
                end
             else None
 
@@ -564,3 +570,91 @@ let rec cmp_exprs (e1:expr_t) (e2:expr_t):((var_t * var_t) list option) =
       end
    ) e1 e2
 
+let cmp_exprs_sum (e1:expr_t) (e2:expr_t):
+                  ((var_t, var_t) Function.table_fn_t option) =
+   let sum_terms1 = CalcRing.sum_list e1 in
+	 let sum_terms2 = CalcRing.sum_list e2 in
+	 if (List.length sum_terms1 <> List.length sum_terms2) then None
+	 else
+      (* Find the first term of sum_terms2 equivalent to the sum_term1 *)
+	    let find_equivalent sum_term1 sum_terms2 = 
+         List.fold_left (fun (term, mapping) sum_term2 ->
+            if (mapping = None) then 
+               (sum_term2, cmp_exprs_pure sum_term1 sum_term2)
+            else (term, mapping);
+         ) (CalcRing.zero, None) sum_terms2	
+			in
+      try
+				let mappings_found = fst(
+           (* For each term of the first expression find the equivalent yet *)
+           (* unmatched term from the second expression, if such exists *)
+				   List.fold_left (fun (mappings, sum_terms2_matched) sum_term1 ->
+	            let sum_terms2_unmatched = 
+	               ListAsSet.diff sum_terms2 sum_terms2_matched in					
+						  let (found_term, mapping_if_found) = 
+	               find_equivalent sum_term1 sum_terms2_unmatched
+						  in 
+						     match (mapping_if_found) with 
+							  	   | Some(new_mapping) -> (mappings @ [new_mapping], 
+										                       sum_terms2_matched @ [found_term]);
+	                 | None -> raise Not_found
+	         ) ([],[]) sum_terms1)
+			  in 
+			     Function.multimerge mappings_found
+		with Not_found -> None	
+		
+let cmp_exprs_prod ?(scope = []) (e1:expr_t) (e2:expr_t):
+                   ((var_t, var_t) Function.table_fn_t option) =
+   let prod_terms1 = CalcRing.prod_list e1 in
+   let prod_terms2 = CalcRing.prod_list e2 in
+   if (List.length prod_terms1 <> List.length prod_terms2) then None
+   else
+      (* Check that skipped elements commute *)
+		  let skipped_terms_commute prod_term skipped_terms = snd (
+		     List.fold_left (fun (s, result) skipped_term ->
+            if (result) then
+               let ovars = snd (schema_of_expr skipped_term) in
+               (s @ ovars, commutes ~scope:s skipped_term prod_term)
+            else ([], false)
+         ) (scope, true) skipped_terms)
+		  in
+	    (* Find the first term of prod_terms2 equivalent to the prod_term1 *)
+      let find_equivalent prod_term1 prod_terms2 = 
+         List.fold_left (fun (term, mapping) prod_term2 ->
+            if (mapping = None) then 
+(*               if (skipped_terms_commute prod_term2 prod_terms2) then*)
+                  (prod_term2, cmp_exprs_pure prod_term1 prod_term2)
+(*               else (term, mapping)*)
+            else (term, mapping);
+         ) (CalcRing.zero, None) prod_terms2
+      in
+      try
+         let mappings_found = fst(
+            (* For each term of the first expression find the equivalent yet *)
+            (* unmatched term from the second expression, if such exists *)
+            List.fold_left (fun (mappings, prod_terms2_matched) prod_term1 ->
+						   let prod_terms2_unmatched = 
+							    ListAsSet.diff prod_terms2 prod_terms2_matched in
+               let (found_term, mapping_if_found) = 
+                  find_equivalent prod_term1 prod_terms2_unmatched
+               in 
+                  match (mapping_if_found) with 
+                     | Some(new_mapping) -> (mappings @ [new_mapping],
+										                         prod_terms2_matched @ [found_term]);
+                     | None -> raise Not_found
+            ) ([],[]) prod_terms1)
+					in
+					  Function.multimerge mappings_found 
+      with Not_found -> None  
+
+
+type opt_t = 
+   | OptSumOrderIndependent
+   | OptProdOrderIndependent
+;;
+let default_options = [ OptSumOrderIndependent; OptProdOrderIndependent ]
+;;
+
+let cmp_exprs (e1:expr_t) (e2:expr_t):((var_t * var_t) list option) =
+	cmp_exprs_pure e1 e2
+	

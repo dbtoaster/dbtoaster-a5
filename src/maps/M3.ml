@@ -163,6 +163,22 @@ let get_triggers (prog:prog_t) : trigger_t list =
     !(prog.triggers)
 ;;
 
+(** 
+   [get_statement prog event target_map]
+
+   Obtain the statement of the given name for the specified event from an M3 program.
+   @param prog    An M3 program
+   @param event   An event
+	 @param name    A statement name
+   @return        The trigger for [event] in [prog].
+*)
+let get_statement (prog:prog_t) (event:Schema.event_t) 
+                  (name:string): stmt_t =
+	let trigger = get_trigger prog event in
+	List.find (fun stmt ->
+		List.hd (externals_of_expr stmt.target_map) = name
+	) !(trigger.statements)
+
 (**
    [add_rel prog ~source:(...) ~adaptor:(...) rel]
    
@@ -293,6 +309,60 @@ let empty_prog (): prog_t =
       db = Schema.empty_db () }
 ;;
 
+(* TODO: move the following methods into some other (new) module *)
+exception CycleFound
+
+let dfs graph visited start_node =
+    let rec explore path visited node =
+        if List.mem node path then raise CycleFound else
+        if List.mem node visited then visited else					  
+            let new_path = node::path in
+            let child_nodes = try List.assoc node graph with Not_found -> [] in
+            let visited = List.fold_left (explore new_path) visited child_nodes in
+            node :: visited
+    in explore [] visited start_node
+
+let toposort graph =
+   List.fold_left (fun visited (node, _) -> dfs graph visited node) [] graph
+
+let sort_prog (prog:prog_t):prog_t =
+	 List.iter (fun (trigger:trigger_t) ->
+		  (* The fact that all update statements must precede *)
+			(* replace statements is represented within the graph *)
+		  let replace_stmts = 
+				 List.filter (fun stmt -> stmt.update_type = Plan.ReplaceStmt) 
+				             !(trigger.statements) 
+			in
+			(* The list of names of all maps that are being re-evaluated *) 
+			let replace_target_names = 
+			 	 List.map (fun stmt -> List.hd (externals_of_expr stmt.target_map)) 
+					        replace_stmts 
+			in
+			(* Create a graph to encode dependencies between maps *)
+      let graph = 
+				 List.map (fun stmt ->
+					  let target_name = List.hd (externals_of_expr stmt.target_map) in
+            let update_names = externals_of_expr stmt.update_expr in
+						if (stmt.update_type = Plan.UpdateStmt) then
+						   (target_name, ListAsSet.union update_names replace_target_names)
+						else
+							 (target_name, ListAsSet.inter update_names replace_target_names)
+			   ) !(trigger.statements)	
+			in	
+						
+			(* Topologically sort the graph and create a new order of statements *)
+			let new_stmt_order = 
+			   List.fold_left (fun stmt_order name ->
+				    try
+               let next_stmt = get_statement prog trigger.event name in
+					     (stmt_order @ [next_stmt])
+				    with Not_found -> stmt_order 
+		     ) [] (toposort graph) 
+			in
+			  trigger.statements := new_stmt_order;
+	 ) (get_triggers prog);
+   prog
+
 (**[plan_to_m3 db plan]
    
    Translate a compiler plan into an M3 program.  This involves grouping each
@@ -305,14 +375,12 @@ let empty_prog (): prog_t =
 *)
 let plan_to_m3 (db:Schema.t) (plan:Plan.plan_t):prog_t =
    let prog = init db in
-     (* Make two passes over the compiled datastructures *)
-     List.iter (fun stmt_type -> List.iter (fun (ds:Plan.compiled_ds_t) ->
-       (* Register maps only during the first pass *)
-       if (stmt_type = Plan.UpdateStmt) then add_view prog ds.description;
-       List.iter (fun (event, stmt) ->
-         if (stmt.update_type = stmt_type) then add_stmt prog event stmt
-       ) (ds.ds_triggers)
-     ) plan) [Plan.UpdateStmt; Plan.ReplaceStmt];
-   prog
+		 List.iter (fun (ds:Plan.compiled_ds_t) -> 
+        add_view prog ds.description;
+        List.iter (fun (event, stmt) ->
+           add_stmt prog event stmt
+        ) (ds.ds_triggers)
+		) plan;		 
+   sort_prog prog	
 ;;
 
