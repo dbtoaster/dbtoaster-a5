@@ -1,17 +1,7 @@
 open Calculus
 open Plan
 
-let log t post ?(detail=None) msg =
-   (prerr_endline (t^": "^msg); 
-    begin match detail with 
-      | Some(s) -> if Debug.active "DETAIL" then prerr_endline s
-      | None -> ()
-    end; match post with Some(s) -> (s ()) | None -> ())
-
-let inform = log "INFO"  None
-let warn   = log "WARN"  None
-let error  = log "ERROR" (Some(fun _ -> exit (-1)))
-let bug    = log "BUG"   (Some(fun _ -> exit (-1)))
+let (inform, warn, error, bug) = Debug.Logger.functions_for_module "DRIVER"
 
 ;;
 
@@ -420,7 +410,9 @@ if stage_is_active StageCompileCalc then (
       (  try 
             materialization_plan := Compiler.compile db_schema query_ds_list
          with Calculus.CalculusException(expr, msg) ->
-            bug ~detail:(Some(CalculusPrinter.string_of_expr expr)) msg
+            bug ~exc:true 
+                ~detail:(fun () -> CalculusPrinter.string_of_expr expr) 
+                msg
       );
       
 
@@ -488,8 +480,13 @@ if stage_is_active StagePrintM3DomainMaintenance then (
 if stage_is_active StageM3ToK3 then (
    Debug.print "LOG-DRIVER" (fun () -> "Running Stage: M3ToK3");
    Debug.activate "M3TOK3-GENERATE-INIT"; (* Temporary hack until we get M3DM set up *)
-   
-   k3_program := M3ToK3.m3_to_k3 !m3_program;
+   try
+      k3_program := M3ToK3.m3_to_k3 !m3_program;
+   with 
+      | Failure(msg) ->
+         bug ~exc:true ~detail:(fun () -> M3.string_of_m3 !m3_program) msg
+      | K3Typechecker.K3TypecheckError(stack,msg) ->
+         bug ~detail:(fun () -> K3Typechecker.string_of_k3_stack stack) msg
 )
 ;;
 if stage_is_active StageParseK3 then (
@@ -557,7 +554,7 @@ if stage_is_active StageK3ToTargetLanguage then (
             )
          with K3Interpreter.InterpreterException(expr,msg) ->
             (begin match expr with 
-               | Some(s) -> error ~detail:(Some(K3.string_of_expr s)) msg
+               | Some(s) -> error ~detail:(fun () -> K3.string_of_expr s) msg
                | None    -> error msg
             end)
                
@@ -608,7 +605,7 @@ if stage_is_active StageRunInterpreter then (
                            (Values.K3Value.string_of_value result) )
    with K3Interpreter.InterpreterException(expr,msg) ->
       (begin match expr with 
-         | Some(s) -> error ~detail:(Some(K3.string_of_expr s)) msg
+         | Some(s) -> error ~detail:(fun () -> K3.string_of_expr s) msg
          | None -> error msg
       end)
 )

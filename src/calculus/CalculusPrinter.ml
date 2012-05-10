@@ -180,7 +180,7 @@ let rec format_expr (expr:expr_t) =
          begin match extivc with
             | None -> ()
             | Some(ivcexpr) -> 
-               !fmt.string "(";
+               !fmt.string ":(";
                format_expr ivcexpr;
                !fmt.string ")"
          end

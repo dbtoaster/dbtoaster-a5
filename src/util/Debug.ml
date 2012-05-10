@@ -80,3 +80,66 @@ let os () =
    let _ = (Unix.close_process_in fdes) in
       ostr
 
+(** Tools for detailed logging. *)
+module Logger = struct
+
+   type level =
+      | Inform
+      | Warn
+      | Error
+      | Bug
+   (** [string_of_level level]
+   
+      Generate a human-readable string representation of a debug level
+   *)
+   let string_of_level = function
+      | Inform -> "INFO"
+      | Warn   -> "WARNING"
+      | Error  -> "ERROR"
+      | Bug    -> "BUG"
+
+   (** [log level ~continuation ~detail ~exc m msg]
+   
+      Log a message of a specified class, for a specified module 
+      
+      @param m            The module to associate with this warning, or an empty 
+                          string for an unassociated message
+      @param level        The log level to post the message at
+      @param continuation (optional) A function that will be invoked after the
+                          log message has been printed (for inlined functions)
+      @param detail       A detailed description of the log message
+      @param exc          True if the last recorded backtrace should be printed
+      @param msg          The log message
+   *)
+   let log (level:level) ?(continuation=None) (m:string)
+           ?(detail=(fun () -> "")) ?(exc=false) (msg:string) =
+      prerr_endline ("["^(string_of_level level)^
+                     (if m = "" then "" else "::"^m)^"]: "^msg);
+      if exc && (active "DETAIL") then Printexc.print_backtrace stderr;
+      if active "DETAIL" then prerr_endline (detail ());
+      match continuation with Some(s) -> (s ()) | None -> ()
+
+   (** Log a message at the informational level *)
+   let inform = log Inform ~continuation:None
+
+   (** Log a message at the warning level *)
+   let warn = log Warn ~continuation:None
+
+   (** Log a message at the error level and exit with status -1 *)
+   let error = log Error ~continuation:(Some(fun _ -> exit (-1)))
+
+   (** Log a message at the bug level and exit with status -1 *)
+   let bug = log Bug ~continuation:(Some(fun _ -> exit (-1)))
+
+   (** Generate a set of logging functions for a specific module 
+   
+      Typical usage for a module m is:
+      
+      [let (inform, warn, error, bug) = Debug.Logger.functions_for_module m]
+      @param m    The name of a module
+      @return     A set of functions [(inform, warn, error, bug)] identical to
+                  those in the logger module, but with the module parameter 
+                  bound to [m].
+   *)
+   let functions_for_module m = (inform m, warn m, error m, bug m)
+end

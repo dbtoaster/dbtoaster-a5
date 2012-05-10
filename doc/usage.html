@@ -88,13 +88,13 @@ $&gt; dbtoaster [options] &lt;input file 1&gt; [&lt;input file 2&gt; [...]]
 <dd>Activate the specified debugging mode.  These should generally not be used by end users, but documentation for developers is provided below.</dd>
 
 <dt class="code">-i &lt;language&gt;</dt>
-<dd>Specify the language of the input files.  By default, this language will be auto-detected from the file extensions, or assumed to be SQL if the compiler can not guess it.<dd>
+<dd>Specify the language of the input files.  By default, this language will be auto-detected from the file extensions, or assumed to be SQL if the compiler can not guess it.</dd>
 
 <dt class="code">-l &lt;language&gt;</dt>
 <dd>Compile the query into the specified target language (see below for a list of valid languages).  By default, the query will be compiled to M3.</dd>
 
 <dt class="code">-o &lt;output file&gt;</dt>
-<dd>Redirect the compiler's output to the specified file.  If used in conjunction with <tt>-c</tt>, the source code for the compiled binary will be directed to this file.  Passing in <tt>-</tt> as the output file will direct output to stdout.  By default, output is directed to stdout, or discarded if the <tt>-c</tt> flag is used.
+<dd>Redirect the compiler's output to the specified file.  If used in conjunction with <tt>-c</tt>, the source code for the compiled binary will be directed to this file.  Passing in <tt>-</tt> as the output file will direct output to stdout.  By default, output is directed to stdout, or discarded if the <tt>-c</tt> flag is used.</dd>
 
 <dt class="code">-r</dt>
 <dd>Run the query (queries) in interpreter mode.</dd>
@@ -216,7 +216,7 @@ source_declaration := <br/>
 <p>A create statement defines a relation named <tt>name</tt> with the indicated schema and declares how rows of that relation should be populated/updated.   DBToaster supports two types of relations: Streams and Tables. 
 <ul>
 <li>Tables are static data sources.  A table is read in prior to query monitoring, and remains constant throughout query evaluation and monitoring.</li>
-<li>Streams are dynamic data sources.  Stream updates are read in one tuple at a time as data becomes available, and the query views are refreshed (monitored) after every update.
+<li>Streams are dynamic data sources.  Stream updates are read in one tuple at a time as data becomes available, and the query views are refreshed (monitored) after every update.</li>
 </ul></p>
 
 <p>At present, DBToaster only supports reading tuples from files.  We hope to add support for exec pipes and sockets soon.</p>
@@ -360,6 +360,9 @@ condition := <br/>
 
 <h3>Logging</h3>
 <dl>
+<dt class="code">DETAIL</dt>
+<dd>Log errors/warnings/informational messages with detailed information.  This will include the stack trace of the triggering exception (if relevant) and the calculus/k3/etc... expression that triggered the error.</dd>
+
 <dt class="code">LOG-DRIVER</dt>
 <dd>Print a quick message before commencing every stage of the compilation process.</dd>
 

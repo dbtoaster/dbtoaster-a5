@@ -80,14 +80,18 @@ type schema_t = (var_t list * var_t list)
 *)
 let rec string_of_leaf (leaf:CalcRing.leaf_t): string = 
    begin match leaf with
-      | Value(v)                -> "["^(Arithmetic.string_of_value v)^"]"
+      | Value(ValueRing.Val(AVar(_)|AConst(_)) as v) -> 
+         (Arithmetic.string_of_value v)
+      | Value(v) -> 
+         "{"^(Arithmetic.string_of_value v)^"}"
+         
       | External(ename,eins,eouts,etype,emeta) ->
          ename^
          "("^(string_of_type etype)^")"^"["^
          (ListExtras.string_of_list ~sep:", " string_of_var eins)^"]["^
          (ListExtras.string_of_list ~sep:", " string_of_var eouts)^"]"^
          (match emeta with | None -> "" 
-                           | Some(s) -> "("^(string_of_expr s)^")")
+                           | Some(s) -> ":("^(string_of_expr s)^")")
       | AggSum(gb_vars, subexp) -> 
          "AggSum(["^(ListExtras.string_of_list ~sep:", " string_of_var gb_vars)^
          "],("^(string_of_expr subexp)^"))"

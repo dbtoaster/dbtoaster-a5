@@ -65,14 +65,22 @@ module K = K3
 (* effect * of optimizations. Conditions should not admit lambda lifting.  *)
 
 (* Helpers *)
-let expr_error (expr: K.expr_t) (msg: string) = (
-		Debug.print "K3-TYPECHECK-DETAIL" (fun () -> msg ^"\n\n"^ (K.code_of_expr expr));
-		failwith msg
-	)
-let type_error (t: K.type_t) (msg: string) = (
-		Debug.print "K3-TYPECHECK-DETAIL" (fun () -> msg ^"\n\n"^ (K.string_of_type t));
-		failwith msg
-	)
+
+exception K3TypecheckError of K.expr_t list * string
+
+let string_of_k3_stack (stack:K.expr_t list) = 
+   (List.fold_left (fun rest expr ->
+      rest^
+      "--------- Expression trace ----------\n"^
+      (K3.string_of_expr expr)^"\n"
+   ) "" stack)
+
+let expr_error ?(old_stack:K.expr_t list=[]) (expr: K.expr_t) (msg: string) = 
+   raise (K3TypecheckError((expr::old_stack), msg))
+
+let type_error (t: K.type_t) (msg: string) = 
+   raise (K3TypecheckError([],(msg^" ("^(K.string_of_type t)^")")))
+
 let sch_error (sch) (msg: string) = type_error (K.TTuple(List.map snd sch)) msg
 
 let find_vars v e =
@@ -592,8 +600,7 @@ let rec typecheck_expr e : K.type_t =
 	| _ -> failwith "externals not yet supported"
 	end
 	*)
-	with Failure x ->
-			Debug.print "K3-TYPECHECK-DETAIL" (fun () ->
-							"--------- Expression trace ----------\n"^(K.string_of_expr e)
-				);
-			failwith ("K3 Typecheck Error: "^x^"\n(use '-d k3-typecheck-detail' for more information)")
+	with 
+      | Failure(x)                -> expr_error e x
+      | K3TypecheckError(stack,x) -> expr_error ~old_stack:stack e x
+

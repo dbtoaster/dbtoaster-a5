@@ -170,10 +170,14 @@ relationDefn:
 
 externalDefn:
 | externalDefnWithoutMeta { $1 }
-| externalDefnWithoutMeta LPAREN ivcCalculusExpr RPAREN {
+| externalDefnWithoutMeta optionalColon LPAREN ivcCalculusExpr RPAREN {
       let (name, ivars, ovars, extType, _) = $1 in
-         (name, ivars, ovars, extType, (Some($3)))
+         (name, ivars, ovars, extType, (Some($4)))
    }
+
+optionalColon:
+| COLON { () }
+|       { () }
 
 externalDefnWithoutMeta:
 | ID LBRACKET emptyVariableList RBRACKET LBRACKET emptyVariableList RBRACKET

@@ -193,8 +193,8 @@ let string_of_vars ?(verbose = Debug.active "PRINT-VERBOSE")
 (**** Zero Constants ****)
 (**
    Returns a constant reprezenting zero of type [zt].
-   @param zt A type. Can be TBool, TInt or TFloat.
-   @return     The constant zero of type [zt]
+   @param zt    A type. Can be TBool, TInt or TFloat.
+   @return      The constant zero of type [zt]
    @raise Failure If there is no zero constant corrsponding to [zt]
 *)  
 let zero_of_type zt : const_t = 
