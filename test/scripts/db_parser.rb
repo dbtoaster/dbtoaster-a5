@@ -50,7 +50,7 @@ class OcamlDB < Hash
         case k_elem.chomp
           when / *([\-\+]?[0-9]+\.[0-9]*e?[\-\+]?[0-9]*)/ then $1.to_f;
           when / *([\-\+]?[0-9]+)/ then $1.to_i;
-          when /([a-zA-Z][a-zA-Z0-9_]*)/ then $1;
+          when /([a-zA-Z][a-zA-Z0-9_ ]*)/ then $1;
         end
       }
       k = k.reverse if reverse;
