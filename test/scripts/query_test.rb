@@ -5,7 +5,7 @@ require 'getoptlong'
 require 'tempfile'
 
 $dbt_path = "#{File.dirname($0)}/../.."
-$dbt = "bin/dbtoaster"
+$dbt = "bin/dbtoaster_debug"
 $ocamlrunparam = "b,l=20M"
 Dir.chdir $dbt_path
 
