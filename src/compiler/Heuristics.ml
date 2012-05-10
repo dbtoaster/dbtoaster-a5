@@ -85,7 +85,7 @@ let partition_expr (event:Schema.event_t option) (expr:expr_t) :
 	        (ListAsSet.diff expr_ivars new_ovars, ListAsSet.union expr_ovars new_ovars) 
     in
 		let (rel_part, lift_part, rest_part) = reorganize_expr expr in
-		let minimize_ivc = Debug.active "HEURISTICS-MINIMIZE-IVC" in
+		let ivc_disabled = Debug.active "HEURISTICS-IGNORE-IVC-OPTIMIZATION" in
 		let has_root_relation = (rel_part <> []) in 
 		
 		(* Relations, irrelevant lifts, relevant lifts, and the remainder *)
@@ -120,7 +120,7 @@ let partition_expr (event:Schema.event_t option) (expr:expr_t) :
 											| None -> false
 									in
 									if ((lift_contains_event_rel) || (subexpr_ivars <> []) ||
-									    (minimize_ivc && (not has_root_relation))) then
+									    ((not ivc_disabled) && (not has_root_relation))) then
 										((rel, lift @ [term], rest), scope_rel)
 									else
 										(* The expression does not include input variables *)
@@ -208,7 +208,7 @@ let should_update (event:Schema.event_t) (expr:expr_t)  : bool =
 		    ) (false, false) (decompose_poly expr)
 			in
 			  if (do_update && do_replace) || (not do_update && not do_replace) then
-				  (Debug.active "HEURISTICS-PREFER-UPDATE")
+				  (not (Debug.active "HEURISTICS-PREFER-REPLACE"))
 				else do_update	
     
 (******************************************************************************)
@@ -240,10 +240,7 @@ let rec materialize ?(scope:var_t list = []) (db_schema:Schema.t)
                     (history:ds_history_t) (prefix:string) 
 							      (event:Schema.event_t option) (expr:expr_t) 
 										: (ds_t list * expr_t) = 
-		
-		(* Debug.activate "LOG-HEURISTICS-DETAIL"; *) 
-		(* Debug.activate "HEURISTICS-IGNORE-FINAL-OPTIMIZATION";  *)
-		
+				
 		Debug.print "LOG-HEURISTICS-DETAIL" (fun () ->
 			 "[Heuristics] "^(string_of_event event)^
 			 "\n\t Expr: "^(string_of_expr expr)^

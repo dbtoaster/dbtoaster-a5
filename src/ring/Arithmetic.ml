@@ -341,8 +341,10 @@ let rec eval_partial ?(scope=[]) (v:value_t): value_t =
                  [val2].  If such a mapping exists, it is returned wrapped in
                  a [Some]
 *)
-let rec cmp_values (val1:value_t) (val2:value_t):((var_t * var_t) list option) =
-   ValueRing.cmp_exprs Function.multimerge Function.multimerge 
+let rec cmp_values ?(cmp_opts:ValueRing.cmp_opt_t list = ValueRing.default_cmp_opts) 
+                    (val1:value_t) (val2:value_t):((var_t * var_t) list option) =
+   let rcr = cmp_values ~cmp_opts:cmp_opts in											
+   ValueRing.cmp_exprs ~cmp_opts:cmp_opts Function.multimerge Function.multimerge 
                       (fun lf1 lf2 ->
       match (lf1,lf2) with 
       | ((AConst(c1)),(AConst(c2))) ->
@@ -355,7 +357,7 @@ let rec cmp_values (val1:value_t) (val2:value_t):((var_t * var_t) list option) =
          if (fn1 <> fn2) || (ft1 <> ft2) then None
          else begin try 
             Function.multimerge (List.map2 (fun a b -> 
-            begin match cmp_values a b with 
+            begin match rcr a b with 
                | None -> raise Not_found
                | Some(s) -> s
             end) subt1 subt2)

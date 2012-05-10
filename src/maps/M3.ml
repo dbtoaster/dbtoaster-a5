@@ -309,22 +309,6 @@ let empty_prog (): prog_t =
       db = Schema.empty_db () }
 ;;
 
-(* TODO: move the following methods into some other (new) module *)
-exception CycleFound
-
-let dfs graph visited start_node =
-    let rec explore path visited node =
-        if List.mem node path then raise CycleFound else
-        if List.mem node visited then visited else					  
-            let new_path = node::path in
-            let child_nodes = try List.assoc node graph with Not_found -> [] in
-            let visited = List.fold_left (explore new_path) visited child_nodes in
-            node :: visited
-    in explore [] visited start_node
-
-let toposort graph =
-   List.fold_left (fun visited (node, _) -> dfs graph visited node) [] graph
-
 let sort_prog (prog:prog_t):prog_t =
 	 List.iter (fun (trigger:trigger_t) ->
 		  (* The fact that all update statements must precede *)
@@ -357,7 +341,7 @@ let sort_prog (prog:prog_t):prog_t =
                let next_stmt = get_statement prog trigger.event name in
 					     (stmt_order @ [next_stmt])
 				    with Not_found -> stmt_order 
-		     ) [] (toposort graph) 
+		     ) [] (ListExtras.toposort graph) 
 			in
 			  trigger.statements := new_stmt_order;
 	 ) (get_triggers prog);
