@@ -2,8 +2,9 @@
 DBTOASTER_TOP=../bin/dbtoaster_unit
 UNIT_TEST=sh -c 'echo ==== $$1 ====; $(DBTOASTER_TOP) $$1' --
 QUERY_TEST=scripts/query_test.rb
+ERROR_TEST=scripts/error_test.sh
 
-all: unit query
+all: unit query err
 
 unit: 
 	@$(UNIT_TEST) unit/ring.ml
@@ -68,6 +69,12 @@ query:
 	@$(QUERY_TEST) employee/query36c 
 	@$(QUERY_TEST) employee/query48
 	@$(QUERY_TEST) tpch3
+
+err:
+	@$(ERROR_TEST) ambiguous_names
+#	@$(ERROR_TEST) ambiguous_sources bug
+	@$(ERROR_TEST) scope_from
+	@$(ERROR_TEST) scope_nesting
 
 employee:
 	@$(QUERY_TEST) employee/query01
@@ -139,4 +146,4 @@ employee:
 #	@$(QUERY_TEST) employee/query47   # unsupported AVG aggregate
 	@$(QUERY_TEST) employee/query48
 
-.PHONY: all unit development query
+.PHONY: all unit development query bigquery employee err
