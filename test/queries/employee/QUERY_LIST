@@ -82,10 +82,10 @@ Simple join
 52. How many employees who are working in sales department.
 53. Which is the department having greater than or equal to 5 employees and display the department names in ascending order.
 54. How many jobs in the organization with designations.
-55. How many employees working in "New York".
+55. How many employees working in "Boston".
 
 
-Non Ð Equi Join:
+Non - Equi Join:
 
 56. Display employee details with salary grades.
 57. List out the no. of employees on grade wise.
@@ -101,15 +101,15 @@ Self Join:
 
 Outer Join:
 
-61. Display employee details with all departments.
-62. Display all employees in sales or operation departments.
+62. Display employee details with all departments.
+63. Display all employees in sales or operation departments.
 
 
 Set Operators:
 
-63. List out the distinct jobs in Sales and Accounting Departments.
-64. List out the ALL jobs in Sales and Accounting Departments.
-65. List out the common jobs in Research and Accounting Departments in ascending order.
+64. List out the distinct jobs in Sales and Accounting Departments.
+65. List out the ALL jobs in Sales and Accounting Departments.
+66. List out the common jobs in Research and Accounting Departments in ascending order.
 
 
 ----------------------------------------------------
@@ -168,7 +168,7 @@ Set Operators:
 52. Select name, count(*) from employee e, department d where d.department_id=e.department_id group by name having name=ÕSALESÕ
 53. Select name, count(*) from employee e, department d where d.department_id=e.department_id group by name having count (*)>=5 order by name
 54. Select function, count(*) from employee e, job j where j.job_id=e.job_id group by function
-55. Select regional_group, count(*) from employee e, department d, location l where e.department_id=d.department_id and d.location_id=l.location_id and regional_group=ÕNEW YORKÕ group by regional_group
+55. Select regional_group, count(*) from employee e, department d, location l where e.department_id=d.department_id and d.location_id=l.location_id and regional_group="BOSTON" group by regional_group
 56. Select employee_id, last_name, grade_id from employee e, salary_grade s where salary between lower_bound and upper_bound order by last_name
 57. Select grade_id, count(*) from employee e, salary_grade s where salary between lower_bound and upper_bound group by grade_id order by grade_id desc
 58. Select grade_id, count(*) from employee e, salary_grade s where salary between lower_bound and upper_bound and lower_bound>=2000 and lower_bound<=5000 group by grade_id order by grade_id desc
@@ -176,7 +176,7 @@ Set Operators:
 60. Select e.last_name emp_name, e.salary emp_salary, m.last_name, mgr_name, m.salary mgr_salary from employee e, employee m where e.manager_id=m.employee_id and m.salary<e.salary
 61. Select m.manager_id, count(*) from employee e, employee m where e.employee_id=m.manager_id group by m.manager_id
 62. Select last_name, d.department_id, d.name from employee e, department d where e.department_id(+)=d.department_id
-63. Select last_name, d.department_id, d.name from employee e, department d where e.department_id(+)=d.department_id and d.department_idin (select department_id from department where name IN (ÔSALESÕ,ÕOPERATIONSÕ))
-64. Select function from job where job_id in (Select job_id from employee where department_id=(select department_id from department where name=ÕSALESÕ)) union Select function from job where job_id in (Select job_id from employee where department_id=(select department_id from department where name=ÕACCOUNTINGÕ))
-65. Select function from job where job_id in (Select job_id from employee where department_id=(select department_id from department where name=ÕSALESÕ)) union all Select function from job where job_id in (Select job_id from employee where department_id=(select department_id from department where name=ÕACCOUNTINGÕ))
-66. Select function from job where job_id in (Select job_id from employee where department_id=(select department_id from department where name=ÕRESEARCHÕ)) intersect Select function from job where job_id in (Select job_id from employee where department_id=(select department_id from department where name=ÕACCOUNTINGÕ)) order by function
+63. Select last_name, d.department_id, d.name from employee e, department d where e.department_id(+)=d.department_id and d.department_idin (select department_id from department where name IN ('SALES','OPERATIONS'))
+64. Select function from job where job_id in (Select job_id from employee where department_id=(select department_id from department where name='SALES')) union Select function from job where job_id in (Select job_id from employee where department_id=(select department_id from department where name='ACCOUNTING'))
+65. Select function from job where job_id in (Select job_id from employee where department_id=(select department_id from department where name='SALES')) union all Select function from job where job_id in (Select job_id from employee where department_id=(select department_id from department where name='ACCOUNTING'))
+66. Select function from job where job_id in (Select job_id from employee where department_id=(select department_id from department where name='RESEARCH')) intersect Select function from job where job_id in (Select job_id from employee where department_id=(select department_id from department where name='ACCOUNTING')) order by function

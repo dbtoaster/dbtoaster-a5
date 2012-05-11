@@ -1,4 +1,4 @@
--- List our employees with their department names.
+-- Display all employees in sales or operation departments.
 
 CREATE STREAM EMPLOYEE(
     employee_id     INT, 
@@ -23,6 +23,11 @@ CREATE STREAM DEPARTMENT(
   FROM FILE '../../experiments/data/employee/department.dat' LINE DELIMITED
   csv (fields := ',', schema := 'int,string,int', eventtype := 'insert');
 
-SELECT employee_id, last_name, name 
-FROM employee e, department d
-WHERE e.department_id=d.department_id
+
+SELECT last_name, d1.department_id, d1.name 
+FROM employee e, department d1, 
+     (SELECT d3.department_id
+      FROM department d3
+      WHERE d3.name = 'SALES' OR d3.name = 'OPERATIONS') d2
+WHERE e.department_id = d1.department_id AND
+      d1.department_id = d2.department_id

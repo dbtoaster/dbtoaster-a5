@@ -1,0 +1,16 @@
+{
+  :path => "test/queries/employee/query58a.sql",
+  :datasets => {
+    "standard" => {
+      :toplevels => {
+        "SUM_AGGREGATE_1" => {
+          :type => :onelevel,
+          :expected => {
+            [1] => 2
+          }
+        }
+      }
+    }
+  }
+}
+

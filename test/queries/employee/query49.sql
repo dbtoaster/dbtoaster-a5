@@ -1,4 +1,4 @@
--- List our employees with their department names.
+-- Display employees with their designations (jobs).
 
 CREATE STREAM EMPLOYEE(
     employee_id     INT, 
@@ -15,14 +15,13 @@ CREATE STREAM EMPLOYEE(
   FROM FILE '../../experiments/data/employee/employee.dat' LINE DELIMITED
   csv (fields := ',', schema := 'int,string,string,string,int,int,date,float,float,int', eventtype := 'insert');
 
-CREATE STREAM DEPARTMENT(
-    department_id   INT,
-    name            VARCHAR(20),
-    location_id     INT
+CREATE STREAM JOB(
+    job_id      INT,
+    function    VARCHAR(20)
     ) 
-  FROM FILE '../../experiments/data/employee/department.dat' LINE DELIMITED
-  csv (fields := ',', schema := 'int,string,int', eventtype := 'insert');
+  FROM FILE '../../experiments/data/employee/job.dat' LINE DELIMITED
+  csv (fields := ',', schema := 'int,string', eventtype := 'insert');
 
-SELECT employee_id, last_name, name 
-FROM employee e, department d
-WHERE e.department_id=d.department_id
+SELECT employee_id, last_name, function 
+FROM employee e, job j
+WHERE e.job_id=j.job_id

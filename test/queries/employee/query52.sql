@@ -1,4 +1,4 @@
--- List our employees with their department names.
+--  How many employees who are working in sales department.
 
 CREATE STREAM EMPLOYEE(
     employee_id     INT, 
@@ -23,6 +23,9 @@ CREATE STREAM DEPARTMENT(
   FROM FILE '../../experiments/data/employee/department.dat' LINE DELIMITED
   csv (fields := ',', schema := 'int,string,int', eventtype := 'insert');
 
-SELECT employee_id, last_name, name 
+
+SELECT name, count(*) 
 FROM employee e, department d
-WHERE e.department_id=d.department_id
+WHERE d.department_id=e.department_id 
+GROUP BY name 
+HAVING name='SALES'

@@ -1,4 +1,4 @@
--- List our employees with their department names.
+--  Which is the department having greater than or equal to 2 employees and display the department names in ascending order.
 
 CREATE STREAM EMPLOYEE(
     employee_id     INT, 
@@ -23,6 +23,9 @@ CREATE STREAM DEPARTMENT(
   FROM FILE '../../experiments/data/employee/department.dat' LINE DELIMITED
   csv (fields := ',', schema := 'int,string,int', eventtype := 'insert');
 
-SELECT employee_id, last_name, name 
-FROM employee e, department d
-WHERE e.department_id=d.department_id
+SELECT a.name, a.count_number
+FROM (SELECT name, count(*) AS count_number 
+      FROM employee e, department d
+      WHERE d.department_id = e.department_id 
+      GROUP BY name) a
+WHERE a.count_number >= 2

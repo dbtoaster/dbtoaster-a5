@@ -1,4 +1,4 @@
--- List our employees with their department names.
+-- List out the no. of employees on grade wise.
 
 CREATE STREAM EMPLOYEE(
     employee_id     INT, 
@@ -15,14 +15,15 @@ CREATE STREAM EMPLOYEE(
   FROM FILE '../../experiments/data/employee/employee.dat' LINE DELIMITED
   csv (fields := ',', schema := 'int,string,string,string,int,int,date,float,float,int', eventtype := 'insert');
 
-CREATE STREAM DEPARTMENT(
-    department_id   INT,
-    name            VARCHAR(20),
-    location_id     INT
+CREATE STREAM SALARY_GRADE(
+    grade_id     INT, 
+    lower_bound  FLOAT,
+    upper_bound  FLOAT
     ) 
-  FROM FILE '../../experiments/data/employee/department.dat' LINE DELIMITED
-  csv (fields := ',', schema := 'int,string,int', eventtype := 'insert');
+  FROM FILE '../../experiments/data/employee/salary_grade.dat' LINE DELIMITED
+  csv (fields := ',', schema := 'int,float,float', eventtype := 'insert');
 
-SELECT employee_id, last_name, name 
-FROM employee e, department d
-WHERE e.department_id=d.department_id
+SELECT grade_id, count(*) 
+FROM employee e, salary_grade s
+WHERE salary BETWEEN lower_bound AND upper_bound 
+GROUP BY grade_id 

@@ -1,0 +1,15 @@
+{
+  :path => "test/queries/employee/query66.sql",
+  :datasets => {
+    "standard" => {
+      :toplevels => {
+        "COUNT" => {
+          :type => :onelevel,
+          :expected => {
+          }
+        }
+      }
+    }
+  }
+}
+

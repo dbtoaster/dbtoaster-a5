@@ -1,4 +1,4 @@
--- List our employees with their department names.
+-- Find out the employees who earn greater than the average salary for their department.
 
 CREATE STREAM EMPLOYEE(
     employee_id     INT, 
@@ -23,6 +23,8 @@ CREATE STREAM DEPARTMENT(
   FROM FILE '../../experiments/data/employee/department.dat' LINE DELIMITED
   csv (fields := ',', schema := 'int,string,int', eventtype := 'insert');
 
-SELECT employee_id, last_name, name 
-FROM employee e, department d
-WHERE e.department_id=d.department_id
+SELECT e1.employee_id, e1.last_name, e1.salary, e1.department_id 
+FROM employee e1
+WHERE e1.salary > (SELECT sum(e2.salary) / sum(1) 
+                   FROM employee e2 
+                   WHERE e1.department_id=e2.department_id)

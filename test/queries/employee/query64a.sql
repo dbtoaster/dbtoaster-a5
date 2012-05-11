@@ -1,4 +1,4 @@
--- List our employees with their department names.
+-- List out the distinct jobs in Sales and Accounting Departments.
 
 CREATE STREAM EMPLOYEE(
     employee_id     INT, 
@@ -23,6 +23,18 @@ CREATE STREAM DEPARTMENT(
   FROM FILE '../../experiments/data/employee/department.dat' LINE DELIMITED
   csv (fields := ',', schema := 'int,string,int', eventtype := 'insert');
 
-SELECT employee_id, last_name, name 
-FROM employee e, department d
-WHERE e.department_id=d.department_id
+CREATE STREAM JOB(
+    job_id      INT,
+    function    VARCHAR(20)
+    ) 
+  FROM FILE '../../experiments/data/employee/job.dat' LINE DELIMITED
+  csv (fields := ',', schema := 'int,string', eventtype := 'insert');
+
+
+SELECT function 
+FROM job j1, (SELECT job_id 
+              FROM employee e1, (SELECT department_id 
+                                 FROM department 
+                                 WHERE name = 'SALES' OR name = 'ACCOUNTING') d1 
+              WHERE e1.department_id = d1.department_id) j2 
+WHERE j1.job_id = j2.job_id

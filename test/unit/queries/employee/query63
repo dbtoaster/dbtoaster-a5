@@ -1,0 +1,20 @@
+{
+  :path => "test/queries/employee/query63.sql",
+  :datasets => {
+    "standard" => {
+      :toplevels => {
+        "COUNT" => {
+          :type => :onelevel,
+          :expected => {
+            ['ALLEN',  30, 'SALES'     ] => 1,
+            ['DOYLE',  30, 'SALES'     ] => 1,
+            ['DENNIS', 30, 'SALES'     ] => 1,
+            ['BAKER',  40, 'OPERATIONS'] => 1,
+            ['WARK',   30, 'SALES'     ] => 1
+          }
+        }
+      }
+    }
+  }
+}
+

@@ -1,4 +1,4 @@
--- List our employees with their department names.
+-- Display the employees with their department name and regional groups.
 
 CREATE STREAM EMPLOYEE(
     employee_id     INT, 
@@ -23,6 +23,14 @@ CREATE STREAM DEPARTMENT(
   FROM FILE '../../experiments/data/employee/department.dat' LINE DELIMITED
   csv (fields := ',', schema := 'int,string,int', eventtype := 'insert');
 
-SELECT employee_id, last_name, name 
-FROM employee e, department d
-WHERE e.department_id=d.department_id
+CREATE STREAM LOCATION(
+    location_id      INT,
+    regional_group   VARCHAR(20)
+    ) 
+  FROM FILE '../../experiments/data/employee/location.dat' LINE DELIMITED
+  csv (fields := ',', schema := 'int,string', eventtype := 'insert');
+
+
+SELECT employee_id, last_name, name, regional_group 
+FROM employee e, department d, location l
+WHERE e.department_id=d.department_id AND d.location_id=l.location_id

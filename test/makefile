@@ -68,6 +68,23 @@ query:
 	@$(QUERY_TEST) employee/query36b  
 	@$(QUERY_TEST) employee/query36c 
 	@$(QUERY_TEST) employee/query48
+	@$(QUERY_TEST) employee/query49
+	@$(QUERY_TEST) employee/query50
+	@$(QUERY_TEST) employee/query51
+	@$(QUERY_TEST) employee/query52a
+	@$(QUERY_TEST) employee/query54
+	@$(QUERY_TEST) employee/query55
+	@$(QUERY_TEST) employee/query56a
+	@$(QUERY_TEST) employee/query57a
+	@$(QUERY_TEST) employee/query58a
+	@$(QUERY_TEST) employee/query59
+	@$(QUERY_TEST) employee/query60
+	@$(QUERY_TEST) employee/query61
+	@$(QUERY_TEST) employee/query62a
+	@$(QUERY_TEST) employee/query63a
+	@$(QUERY_TEST) employee/query64a
+	@$(QUERY_TEST) employee/query65a
+	@$(QUERY_TEST) employee/query66a
 	@$(QUERY_TEST) tpch3
 
 err:
@@ -141,9 +158,37 @@ employee:
 #	@$(QUERY_TEST) employee/query41   # unsupported MAX aggregate
 #	@$(QUERY_TEST) employee/query43   # unsupported ALL operator
 #	@$(QUERY_TEST) employee/query44   # unsupported ANY operator
-#	@$(QUERY_TEST) employee/query45   # BUG: IVC
-#	@$(QUERY_TEST) employee/query46   # BUG: IVC
+	@$(QUERY_TEST) employee/query45   
+	@$(QUERY_TEST) employee/query46   
 #	@$(QUERY_TEST) employee/query47   # unsupported AVG aggregate
 	@$(QUERY_TEST) employee/query48
+	@$(QUERY_TEST) employee/query49
+	@$(QUERY_TEST) employee/query50
+	@$(QUERY_TEST) employee/query51
+#	@$(QUERY_TEST) employee/query52   # unsupported HAVING
+	@$(QUERY_TEST) employee/query52a
+#	@$(QUERY_TEST) employee/query53   # unsupported HAVING and ORDER BY
+#	@$(QUERY_TEST) employee/query53a  # BUG
+	@$(QUERY_TEST) employee/query54
+	@$(QUERY_TEST) employee/query55
+#	@$(QUERY_TEST) employee/query56   # unsupported ORDER BY
+	@$(QUERY_TEST) employee/query56a
+#	@$(QUERY_TEST) employee/query57   # unsupported ORDER BY
+	@$(QUERY_TEST) employee/query57a
+#	@$(QUERY_TEST) employee/query58   # unsupported ORDER BY
+	@$(QUERY_TEST) employee/query58a
+	@$(QUERY_TEST) employee/query59
+	@$(QUERY_TEST) employee/query60
+	@$(QUERY_TEST) employee/query61
+#	@$(QUERY_TEST) employee/query62   # unsupported LEFT JOIN operator
+	@$(QUERY_TEST) employee/query62a
+#	@$(QUERY_TEST) employee/query63   # unsupported LEFT JOIN and IN  
+	@$(QUERY_TEST) employee/query63a
+#	@$(QUERY_TEST) employee/query64   # unsupported LEFT JOIN and UNION
+	@$(QUERY_TEST) employee/query64a
+#	@$(QUERY_TEST) employee/query65   # unsupported IN and UNION ALL operators
+	@$(QUERY_TEST) employee/query65a
+#	@$(QUERY_TEST) employee/query66   # unsupported IN and INTERSECTION operators
+	@$(QUERY_TEST) employee/query66a
 
 .PHONY: all unit development query bigquery employee err

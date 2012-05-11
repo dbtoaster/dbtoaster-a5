@@ -1,0 +1,21 @@
+{
+  :path => "test/queries/employee/query50.sql",
+  :datasets => {
+    "standard" => {
+      :toplevels => {
+        "COUNT" => {
+          :type => :onelevel,
+          :expected => {
+            [7521, 'WARK',   'SALES',      'DALLAS' ] => 1,
+            [7506, 'DENNIS', 'SALES',      'DALLAS' ] => 1,
+            [7505, 'DOYLE',  'SALES',      'DALLAS' ] => 1,
+            [7499, 'ALLEN',  'SALES',      'DALLAS' ] => 1,
+            [7369, 'SMITH',  'RESEARCH',   'CHICAGO'] => 1,
+            [7507, 'BAKER',  'OPERATIONS', 'BOSTON' ] => 1
+          }
+        }
+      }
+    }
+  }
+}
+
