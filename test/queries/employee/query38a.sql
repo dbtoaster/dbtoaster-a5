@@ -25,6 +25,6 @@ CREATE STREAM DEPARTMENT(
 
 SELECT * 
 FROM employee e
-WHERE e.department_id=(SELECT d.department_id  
+WHERE e.department_id IN (SELECT d.department_id  
                        FROM department d
                        WHERE d.name='SALES')

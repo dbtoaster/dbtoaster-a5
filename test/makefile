@@ -68,6 +68,9 @@ query:
 	@$(FAST_QUERY_TEST) employee/query35c
 	@$(FAST_QUERY_TEST) employee/query36b  
 	@$(FAST_QUERY_TEST) employee/query36c 
+	@$(FAST_QUERY_TEST) employee/query38a
+	@$(FAST_QUERY_TEST) employee/query39
+	@$(FAST_QUERY_TEST) employee/query40
 	@$(FAST_QUERY_TEST) employee/query48
 	@$(FAST_QUERY_TEST) employee/query49
 	@$(FAST_QUERY_TEST) employee/query50

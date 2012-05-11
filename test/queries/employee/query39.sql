@@ -24,6 +24,6 @@ CREATE STREAM JOB(
 
 SELECT e.salary * 142 / 100 
 FROM employee e
-WHERE e.job_id=(SELECT j.job_id 
+WHERE e.job_id IN (SELECT j.job_id 
                 FROM job j 
                 WHERE j.function='CLERK')
