@@ -89,7 +89,7 @@ query:
 
 err:
 	@$(ERROR_TEST) ambiguous_names
-#	@$(ERROR_TEST) ambiguous_sources bug
+	@$(ERROR_TEST) ambiguous_sources bug
 	@$(ERROR_TEST) scope_from
 	@$(ERROR_TEST) scope_nesting
 

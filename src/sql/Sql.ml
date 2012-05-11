@@ -559,7 +559,8 @@ and var_type (v:sql_var_t) (tables:table_t list)
 (**
    Ensure that all variables in a SQL [SELECT] statement have been associated
    with one of the sources in the statement or one of its parents.  This is
-   a deep rewriting.
+   a deep rewriting.  Also ensures that sources are uniquely named in 
+   a given scope.
    @param parent_sources (optional) A list of sources in the context of which
                          [stmt] is being evaluated.
    @param stmt           A SQL [SELECT] statement.
@@ -578,6 +579,10 @@ let rec bind_select_vars ?(parent_sources = [])
    (
       List.map (fun (tn,te) -> (tn,rcr_e te)) targets,
       List.map (fun (sn,s) -> 
+         if List.length (List.filter (fun x -> x = sn)
+                           (List.map fst sources)) > 1 then (
+            error ("Duplicated source name: '"^sn^"'")
+         );
          (sn, (match s with Table(_) -> s | SubQ(subq) -> SubQ(rcr_q subq)))
       ) inner_sources,
       rcr_c conds,
@@ -590,7 +595,8 @@ let rec bind_select_vars ?(parent_sources = [])
 
 (**
    Ensure that all variables in a SQL condition have been associated with
-   one of the sources in the statement or one of its parents
+   one of the sources in the statement or one of its parents.  Also
+   ensures that sources are uniquely named in a given scope.
    @param cond    A SQL condition
    @param tables  The database schema (a list of all tables)
    @param sources All members of the [FROM] clause in the [SELECT] statement
@@ -614,7 +620,8 @@ and bind_cond_vars (cond:cond_t) (tables:table_t list)
    
 (**
    Ensure that all variables in a SQL expression have been associated with
-   one of the sources in the statement or one of its parents
+   one of the sources in the statement or one of its parents.  Also
+   ensures that sources are uniquely named in a given scope.
    @param expr    A SQL expression
    @param tables  The database schema (a list of all tables)
    @param sources All members of the [FROM] clause in the [SELECT] statement
