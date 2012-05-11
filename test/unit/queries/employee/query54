@@ -3,7 +3,7 @@
   :datasets => {
     "standard" => {
       :toplevels => {
-        "SUM_AGGREGATE_1" => {
+        "COUNT_AGGREGATE_1" => {
           :type => :onelevel,
           :expected => {
             ['CLERK'      ] => 1,

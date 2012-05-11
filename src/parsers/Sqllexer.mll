@@ -80,7 +80,8 @@ let keywords =
         "STRING", VARCHAR;
         "STREAM", STREAM;
         "SUM", SUMAGG;
-        "COUNT", COUNTAGG
+        "COUNT", COUNTAGG;
+        "AVG", AVGAGG
     ]
 let _ = hashtbl_of_pair_list keyword_table keywords
 

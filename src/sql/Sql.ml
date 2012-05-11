@@ -82,7 +82,7 @@ type arith_t = Sum | Prod | Sub | Div
 (**
    Sql aggregate types
 *)
-type agg_t = SumAgg
+type agg_t = SumAgg | CountAgg | AvgAgg
 
 (**
    A Sql expression (which appears in either the target clause, or as part of a 
@@ -96,6 +96,8 @@ type expr_t =
  | NestedQ    of select_t                   (** A single-target nested query 
                                                 (which evaluates to a constant 
                                                 value) *)
+ | ExternalFn of string * expr_t list       (** A reference to an external 
+                                                function. *)
  | Aggregate  of agg_t * expr_t             (** An aggregate operator.  This
                                                 only makes sense if this
                                                 expression appears in the target 
@@ -251,7 +253,9 @@ let string_of_arith_op (op:arith_t): string =
    @return      The function name of [var]
 *)
 let string_of_agg (agg:agg_t): string =
-   match agg with SumAgg -> "SUM"
+   match agg with SumAgg   -> "SUM"
+                | CountAgg -> "COUNT"
+                | AvgAgg   -> "AVG"
 
 (**
    Produce the (Sqlparser-compatible) fully qualified (if possible) name of the
@@ -282,10 +286,14 @@ let name_of_expr (expr:expr_t): string =
    begin match expr with
       | Const(c)            -> arbitrary "constant"
       | Var(_,vn,_)         -> vn
-      | SQLArith(_,_,_)     -> arbitrary "expression"
+      | SQLArith(_,_,_)
+      | ExternalFn(_,_)
       | Negation(_)         -> arbitrary "expression"
       | NestedQ(_)          -> arbitrary "nested_query"
-      | Aggregate(SumAgg,_) -> arbitrary "sum_aggregate"
+      | Aggregate(a,_)      -> arbitrary (
+                                    (String.lowercase (string_of_agg a))^
+                                    "_aggregate"
+                               )
    end
 
 (**
@@ -305,6 +313,8 @@ let rec string_of_expr (expr:expr_t): string =
       | NestedQ(q) -> "("^(string_of_select q)^")"
       | Aggregate(agg,a) -> (string_of_agg agg)^"("^
                             (string_of_expr a)^")"
+      | ExternalFn(fn,fargs) -> fn^"("^(ListExtras.string_of_list ~sep:", "
+                                          string_of_expr fargs)^")"
 
 (**
    Produce the (Sqlprser-compatible) representation of the specified SQL 
@@ -396,7 +406,9 @@ let rec expr_type (expr:expr_t) (tables:table_t list)
       error (msg^": "^(string_of_expr expr))
    in
    let return_if_numeric st msg = 
-      begin match st with TString(_) -> tree_err (msg^"string") | _ -> st end
+      begin match st with | TInt | TFloat -> st
+                          | _ -> tree_err (msg^(string_of_type st))
+      end
    in
    let rcr e = expr_type e tables sources in
    match expr with
@@ -414,7 +426,20 @@ let rec expr_type (expr:expr_t) (tables:table_t list)
                   t
       | Aggregate(agg,subexp) -> 
          begin match agg with
+            (* Sum takes its type from the nested expression *)
             | SumAgg -> return_if_numeric (rcr subexp) "Aggregate of "
+            (* Count ignores the nested expression *)
+            | CountAgg -> TInt
+            (* Average must have numeric inputs but always returns float *)
+            | AvgAgg -> 
+               let _ = return_if_numeric (rcr subexp) "Aggregate of " in TFloat
+         end
+      | ExternalFn(fn,fargs) ->
+         let arg_types = List.map rcr fargs in
+         begin match (String.lowercase fn) with
+            | "min" -> Types.escalate_type_list arg_types
+            | "max" -> Types.escalate_type_list arg_types
+            | _ -> error ("Undefined external function :"^fn)
          end
     
 (**
@@ -646,6 +671,7 @@ and bind_expr_vars (expr:expr_t) (tables:table_t list)
       | Negation(a) -> Negation(rcr_e a)
       | NestedQ(q) -> NestedQ(rcr_q q)
       | Aggregate(agg,a) -> Aggregate(agg, rcr_e a)
+      | ExternalFn(fn,fargs) -> ExternalFn(fn, List.map rcr_e fargs)
 
 (**
    Determine whether the indicated expression requires an aggregate computation.
@@ -660,6 +686,8 @@ let rec is_agg_expr (expr:expr_t): bool =
       | Negation(e) -> is_agg_expr e
       | NestedQ(_) -> false
       | Aggregate(_,_) -> true
+      | ExternalFn(fn,fargs) -> 
+         List.fold_left (||) false (List.map is_agg_expr fargs)
 
 (**
    Determine whether the indicated SQL query is an aggregate query.

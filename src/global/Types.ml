@@ -77,7 +77,7 @@ let float_of_const (a:const_t): float =
       | CFloat(av)   -> av
       | CString(av)  -> failwith ("Cannot produce float of string '"^av^"'")
    end	
-	
+
 (**** Conversion to Strings ****)
 (**
    Get the string representation (according to SQL syntax) of a comparison 
@@ -241,3 +241,19 @@ let escalate_type_list ?(opname="<op>") tlist =
    else 
       List.fold_left (escalate_type ~opname:opname) 
                      (List.hd tlist) (List.tl tlist)
+
+(**
+   Type-cast a constant to a specified type.  Raise an error if the type 
+   conversion is not permitted.
+   @param t  A type
+   @param a  A constant
+   @return   [a] cast to [t]
+*)
+let type_cast (t:type_t) (a:const_t) =
+   begin match (t,a) with
+      | (TInt, (CInt(_) | CBool(_))) -> CInt(int_of_const a)
+      | (TFloat, (CInt(_) | CBool(_) | CFloat(_))) -> CFloat(float_of_const a)
+      | (_, _) when t = (type_of_const a) -> a
+      | (_, _) ->
+         failwith ("Cannot cast "^(string_of_const a)^" to "^(string_of_type t))
+   end

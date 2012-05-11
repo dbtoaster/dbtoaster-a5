@@ -380,12 +380,17 @@ if stage_is_active StageSQLToCalc then (
             "QUERY_"^(string_of_int !query_id)^"_"^q
          ) else (fun q -> q)
       in
-      List.iter (fun q -> 
-         List.iter (fun (tgt_name, tgt_calc) ->
-            calc_queries := (rename_query tgt_name, tgt_calc)::!calc_queries
-         ) (List.rev (SqlToCalculus.calc_of_query tables q))
-         (* Reverse the order to use :: to build up the query list *)
-      ) queries;
+      try 
+         List.iter (fun q -> 
+            List.iter (fun (tgt_name, tgt_calc) ->
+               calc_queries := (rename_query tgt_name, tgt_calc)::!calc_queries
+            ) (List.rev (SqlToCalculus.calc_of_query tables q))
+            (* Reverse the order to use :: to build up the query list *)
+         ) queries;
+      with 
+         | Sql.SqlException(msg) ->
+            error ~exc:true ("Sql Error: "^msg)
+
 )
 ;;
 if stage_is_active StagePrintSchema then (

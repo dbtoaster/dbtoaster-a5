@@ -185,7 +185,14 @@ let rec normalize_agg_target_expr ?(vars_bound = false) gb_vars expr =
      
      | Sql.NestedQ(_) ->
          Sql.error ("Nested subqueries not supported outside of aggregates.")
-              
+      
+     | Sql.ExternalFn(fn, fargs) ->
+         (* Like division, we pass these through unchanged.  We will do our own
+            reordering during calc_of_expr, so we simply assume that all non-
+            aggregate targets will be moved to the end where the gb vars are
+            bound. *)
+         Sql.ExternalFn(fn, 
+            List.map (fun arg -> rcr ~b:(not (Sql.is_agg_expr arg)) arg) fargs)
    end
 
 (**
@@ -296,34 +303,70 @@ let rec calc_of_query ?(query_name = None)
                "Materializing target: "^(tgt_name)^
                " with calculus: "^(Calculus.string_of_expr agg_calc)
             );
-            begin match agg_type with
-               | Sql.SumAgg -> 
-                  CalcRing.mk_val 
-                     (AggSum(
-                        (** Get the schema of the lifted variables as follows:
-                           1 - If the query is unnamed (i.e., the root query)
-                               then we take the gb variable name as written.
-                               If the gb variable is unbound, we take it as
-                               written.
-                           2 - If the query is unnamed and the gb variable is
-                               bound to a source, we include the source's name
-                               in the variable's name
-                           3 - Otherwise, we've rebound the variable name above,
-                               when coputing noagg_calc, and we include the
-                               query name in the variable's name
-                           Note that all of this must match the construction
-                           of noagg_calc above.
-                        *)
-                        List.map (fun (vs,vn,vt) ->
+            (** Get the schema of the lifted variables as follows:
+               1 - If the query is unnamed (i.e., the root query) then we take 
+                   the gb variable name as written.   If the gb variable is 
+                   unbound, we take it as written.
+               2 - If the query is unnamed and the gb variable is bound to a 
+                   source, we include the source's name in the variable's name.
+               3 - Otherwise, we've rebound the variable name above, when 
+                   computing noagg_calc, and we include the query name in the 
+                   variable's name.
+               Note that all of this must match the construction of noagg_calc 
+               above.
+            *)
+            let new_gb_vars = 
+               List.map (fun (vs,vn,vt) ->
                            if query_name = None
                            then if vs = None 
                                 then (vn,vt)
                                 else var_of_sql_var (vs,vn,vt)
                            else var_of_sql_var (query_name,vn,vt)
-                        ) gb_vars,
+                        ) gb_vars
+            in
+            begin match agg_type with
+               | Sql.SumAgg -> 
+                  CalcRing.mk_val 
+                     (AggSum(new_gb_vars,
                         CalcRing.mk_prod 
                            [source_calc; cond_calc; agg_calc; noagg_calc]
                      ))
+               | Sql.CountAgg -> 
+                  CalcRing.mk_val 
+                     (AggSum(new_gb_vars,
+                        CalcRing.mk_prod 
+                           [source_calc; cond_calc; noagg_calc]
+                     ))
+               | Sql.AvgAgg -> 
+                  let count_var = tmp_var "average_count" TInt in
+                  CalcRing.mk_val (AggSum(new_gb_vars,
+                     CalcRing.mk_prod [
+                        (** The value being averaged *)
+                        CalcRing.mk_val
+                           (AggSum(new_gb_vars,
+                              CalcRing.mk_prod 
+                                 [source_calc; cond_calc; agg_calc; noagg_calc]
+                           ));
+                        (* The (lifted) count of the value being averaged *)
+                        CalcRing.mk_val (Lift(count_var, 
+                           (CalcRing.mk_val 
+                              (AggSum(new_gb_vars,
+                                 CalcRing.mk_prod 
+                                    [source_calc; cond_calc; noagg_calc]
+                              )))));
+                        (* 1/COUNT *)
+                        CalcRing.mk_val (Value(
+                           ValueRing.mk_val (AFn("/", [
+                              (* Hack to ensure that we don't ever get NAN:
+                                 make sure that the count is always >= 1 *)
+                              ValueRing.mk_val(AFn("max", [
+                                 ValueRing.mk_val(AConst(CInt(1)));
+                                 ValueRing.mk_val(AVar(count_var))
+                              ], TInt))
+                           ], TFloat))
+                        ))
+                     ]
+                  ))
             end
          )) tables tgt_expr
       )
@@ -502,6 +545,7 @@ and calc_of_sql_expr ?(materialize_query = None)
                             tables e
    in
    let rcr_q q = calc_of_query tables q in
+   let rcr_c c = calc_of_condition tables c in
    begin match expr with
       | Sql.Const(c) -> 
          CalcRing.mk_val (Value(mk_const c))
@@ -551,15 +595,43 @@ and calc_of_sql_expr ?(materialize_query = None)
 			
       | Sql.Negation(e) -> CalcRing.mk_neg (rcr_e e)
       | Sql.NestedQ(q)  -> 
-         begin match rcr_q q with
-         | [_,q_calc] -> q_calc
-         | _ -> (failwith "Nested subqueries must have exactly 1 argument")
-         end
+         let (q_targets,q_sources,q_cond,q_gb_vars) = q in
+         if (q_gb_vars <> []) || (* Group-by not allowed *)
+            (List.length q_targets <> 1) || (* Only one target *)
+            ((not (Sql.is_agg_query q)) && (q_sources <> [])) 
+                         (* And if it has any sources, it had better be an
+                            aggregate query *)
+         then
+            (* This should get caught much earlier... but let's be safe *)
+            Sql.error "Nested subqueries must have exactly 1 argument"
+         else
+            (* If it's an aggregate query, then we do the standard thing, but
+               only return the one (nameless) target. *)
+            if Sql.is_agg_query q then snd (List.hd (rcr_q q))
+            (* If it's not an aggregate query, then all we care about is the 
+               condition and the single target that we have. *)
+            else 
+               CalcRing.mk_prod 
+                  [rcr_c q_cond; rcr_e (snd (List.hd (q_targets)))]
+
       | Sql.Aggregate(agg, expr) -> 
          begin match materialize_query with
             | Some(mq) -> (mq agg (rcr_e ~is_agg:true expr))
             | None -> failwith "Unexpected aggregation operator"
          end
+      | Sql.ExternalFn(fn, fargs) ->
+         let lifted_args, arg_calc = List.split (List.map (fun arg ->
+            let (arg_val, arg_calc) = lift_if_necessary (rcr_e arg) in
+               (arg_val, (Sql.is_agg_expr arg, arg_calc))
+         ) fargs) in
+         let (agg_args,non_agg_args) = 
+            List.partition fst arg_calc
+         in
+            CalcRing.mk_prod ((List.map snd (agg_args@non_agg_args))@[
+               CalcRing.mk_val (Value(
+                  ValueRing.mk_val (AFn(fn, lifted_args, TAny))
+               ))
+            ])
    end
 
 (**

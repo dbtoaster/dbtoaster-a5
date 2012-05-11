@@ -261,6 +261,25 @@ declare_arithmetic_function "/"
             failwith "Invalid arguments to division function"
    )
 ;;
+declare_arithmetic_function "min"
+   (fun arglist ftype ->
+      let (start,cast_type) = 
+         match ftype with TInt -> (CInt(max_int), TInt)
+                        | TAny 
+                        | TFloat -> (CFloat(max_float), TFloat)
+                        | _ -> failwith ("min of "^(string_of_type ftype))
+      in List.fold_left min start (List.map (Types.type_cast cast_type) arglist)
+   )
+;;
+declare_arithmetic_function "max"
+   (fun arglist ftype ->
+      let (start,cast_type) = 
+         match ftype with TInt -> (CInt(min_int), TInt)
+                        | TAny 
+                        | TFloat -> (CFloat(min_float), TFloat)
+                        | _ -> failwith ("max of "^(string_of_type ftype))
+      in List.fold_left max start (List.map (Types.type_cast cast_type) arglist)
+   )
 
 (**** Evaluation ****)
 (**

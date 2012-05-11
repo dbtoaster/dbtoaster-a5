@@ -1,7 +1,8 @@
 
 DBTOASTER_TOP=../bin/dbtoaster_unit
 UNIT_TEST=sh -c 'echo ==== $$1 ====; $(DBTOASTER_TOP) $$1' --
-QUERY_TEST=scripts/query_test.rb
+FAST_QUERY_TEST=scripts/query_test.rb -d weak-expr-equiv
+QUERY_TEST="scripts/query_test.rb"
 ERROR_TEST=scripts/error_test.sh
 
 all: unit query err
@@ -30,68 +31,68 @@ bigquery:
 #	@$(QUERY_TEST) vwap    #slow
 	
 query:
-	@$(QUERY_TEST) brokervariance
-	@$(QUERY_TEST) r_agtb
-	@$(QUERY_TEST) r_bigsumstar
-	@$(QUERY_TEST) r_btimesa
-	@$(QUERY_TEST) r_btimesacorrelated
-	@$(QUERY_TEST) r_count
-	@$(QUERY_TEST) r_gbasumb
-	@$(QUERY_TEST) r_nogroupby
-	@$(QUERY_TEST) r_smallstar
-	@$(QUERY_TEST) r_sumadivsumb
-	@$(QUERY_TEST) r_sumstar
-	@$(QUERY_TEST) rst
-	@$(QUERY_TEST) employee/query01
-	@$(QUERY_TEST) employee/query01a
-	@$(QUERY_TEST) employee/query02
-	@$(QUERY_TEST) employee/query02a
-	@$(QUERY_TEST) employee/query03
-	@$(QUERY_TEST) employee/query03a
-	@$(QUERY_TEST) employee/query05
-	@$(QUERY_TEST) employee/query06
-	@$(QUERY_TEST) employee/query07
-	@$(QUERY_TEST) employee/query08
-	@$(QUERY_TEST) employee/query08a
-	@$(QUERY_TEST) employee/query09
-	@$(QUERY_TEST) employee/query09a
-	@$(QUERY_TEST) employee/query10
-	@$(QUERY_TEST) employee/query10a
-	@$(QUERY_TEST) employee/query11b
-	@$(QUERY_TEST) employee/query12a
-	@$(QUERY_TEST) employee/query16
-	@$(QUERY_TEST) employee/query16a
-	@$(QUERY_TEST) employee/query17a
-	@$(QUERY_TEST) employee/query22
-	@$(QUERY_TEST) employee/query35b   
-	@$(QUERY_TEST) employee/query35c
-	@$(QUERY_TEST) employee/query36b  
-	@$(QUERY_TEST) employee/query36c 
-	@$(QUERY_TEST) employee/query48
-	@$(QUERY_TEST) employee/query49
-	@$(QUERY_TEST) employee/query50
-	@$(QUERY_TEST) employee/query51
-	@$(QUERY_TEST) employee/query52a
-	@$(QUERY_TEST) employee/query54
-	@$(QUERY_TEST) employee/query55
-	@$(QUERY_TEST) employee/query56a
-	@$(QUERY_TEST) employee/query57a
-	@$(QUERY_TEST) employee/query58a
-	@$(QUERY_TEST) employee/query59
-	@$(QUERY_TEST) employee/query60
-	@$(QUERY_TEST) employee/query61
-	@$(QUERY_TEST) employee/query62a
-	@$(QUERY_TEST) employee/query63a
-	@$(QUERY_TEST) employee/query64a
-	@$(QUERY_TEST) employee/query65a
-	@$(QUERY_TEST) employee/query66a
-	@$(QUERY_TEST) tpch3
+	@$(FAST_QUERY_TEST) brokervariance
+	@$(FAST_QUERY_TEST) r_agtb
+	@$(FAST_QUERY_TEST) r_bigsumstar
+	@$(FAST_QUERY_TEST) r_btimesa
+	@$(FAST_QUERY_TEST) r_btimesacorrelated
+	@$(FAST_QUERY_TEST) r_count
+	@$(FAST_QUERY_TEST) r_gbasumb
+	@$(FAST_QUERY_TEST) r_nogroupby
+	@$(FAST_QUERY_TEST) r_smallstar
+	@$(FAST_QUERY_TEST) r_sumadivsumb
+	@$(FAST_QUERY_TEST) r_sumstar
+	@$(FAST_QUERY_TEST) rst
+	@$(FAST_QUERY_TEST) employee/query01
+	@$(FAST_QUERY_TEST) employee/query01a
+	@$(FAST_QUERY_TEST) employee/query02
+	@$(FAST_QUERY_TEST) employee/query02a
+	@$(FAST_QUERY_TEST) employee/query03
+	@$(FAST_QUERY_TEST) employee/query03a
+	@$(FAST_QUERY_TEST) employee/query05
+	@$(FAST_QUERY_TEST) employee/query06
+	@$(FAST_QUERY_TEST) employee/query07
+	@$(FAST_QUERY_TEST) employee/query08
+	@$(FAST_QUERY_TEST) employee/query08a
+	@$(FAST_QUERY_TEST) employee/query09
+	@$(FAST_QUERY_TEST) employee/query09a
+	@$(FAST_QUERY_TEST) employee/query10
+	@$(FAST_QUERY_TEST) employee/query10a
+	@$(FAST_QUERY_TEST) employee/query11b
+	@$(FAST_QUERY_TEST) employee/query12a
+	@$(FAST_QUERY_TEST) employee/query16
+	@$(FAST_QUERY_TEST) employee/query16a
+	@$(FAST_QUERY_TEST) employee/query17a
+	@$(FAST_QUERY_TEST) employee/query22
+	@$(FAST_QUERY_TEST) employee/query35b   
+	@$(FAST_QUERY_TEST) employee/query35c
+	@$(FAST_QUERY_TEST) employee/query36b  
+	@$(FAST_QUERY_TEST) employee/query36c 
+	@$(FAST_QUERY_TEST) employee/query48
+	@$(FAST_QUERY_TEST) employee/query49
+	@$(FAST_QUERY_TEST) employee/query50
+	@$(FAST_QUERY_TEST) employee/query51
+	@$(FAST_QUERY_TEST) employee/query52a
+	@$(FAST_QUERY_TEST) employee/query54
+	@$(FAST_QUERY_TEST) employee/query55
+	@$(FAST_QUERY_TEST) employee/query56a
+	@$(FAST_QUERY_TEST) employee/query57a
+	@$(FAST_QUERY_TEST) employee/query58a
+	@$(FAST_QUERY_TEST) employee/query59
+	@$(FAST_QUERY_TEST) employee/query60
+	@$(FAST_QUERY_TEST) employee/query61
+	@$(FAST_QUERY_TEST) employee/query62a
+	@$(FAST_QUERY_TEST) employee/query63a
+	@$(FAST_QUERY_TEST) employee/query64a
+	@$(FAST_QUERY_TEST) employee/query65a
+	@$(FAST_QUERY_TEST) tpch3
 
 err:
 	@$(ERROR_TEST) ambiguous_names
 	@$(ERROR_TEST) ambiguous_sources bug
 	@$(ERROR_TEST) scope_from
 	@$(ERROR_TEST) scope_nesting
+	@$(ERROR_TEST) multitargetnestedtarget
 
 employee:
 	@$(QUERY_TEST) employee/query01
