@@ -24,6 +24,12 @@
                     " char: "^(char_pos_str));
             flush stdout
 
+   let addSchema rel old_rels = 
+      let (name, schema, reltype, source, adaptor) = rel in
+         Schema.add_rel old_rels ~source:source ~adaptor:adaptor
+                        (name, schema, reltype);
+         old_rels
+
    let empty_output_k3 = ([], [], [])
 
    let maps:((string, k3_map_t) Hashtbl.t) = Hashtbl.create 10
@@ -48,13 +54,18 @@
         let new_map = (name, input_var_types, output_var_types, map_type) in
             add_map name new_map; 
             new_map
+
+   let tl_queries: (toplevel_query_t list ref) = ref []
+
+   let add_tl qname qexp = 
+      tl_queries := (qname, qexp)::(!tl_queries)
    
-   let concat_stmt (m,t) (map_list,pat_list,trig_list) =
+   let concat_stmt (schema, m,t) (map_list,pat_list,trig_list) =
 				let new_map = if m = [] then map_list else m @ map_list
 					in
 						let new_trig = if t = [] then trig_list else t @ trig_list
 							in
-								(Schema.empty_db (), (new_map, !patterns), new_trig, []) 
+								(schema, (new_map, !patterns), new_trig, !tl_queries) 
 
    let slice_infering statement var_bind_list = 
       let map_name = match statement with 
@@ -98,17 +109,18 @@
       types
 %}
 
+%token <Types.type_t> TYPE
 %token <int> INTEGER
 %token <string> ID CONST_STRING 
 %token <float> CONST_FLOAT
 %token EQ NE LT LE GT
 %token SUM MINUS PRODUCT
 %token COMMA LPAREN RPAREN LBRACK RBRACK PERIOD COLON DOLLAR
-%token ON
+%token ON SYSTEM READY QUERY
 %token IF IF0 ELSE ITERATE LAMBDA APPLY MAP FLATTEN AGGREGATE GROUPBYAGGREGATE MEMBER LOOKUP SLICE
-%token CREATE TABLE FROM SOCKET FILE PIPE FIXEDWIDTH DELIMITED LINE VARSIZE OFFSET ADJUSTBY SETVALUE
+%token CREATE TABLE STREAM FROM SOCKET FILE PIPE FIXEDWIDTH DELIMITED LINE VARSIZE OFFSET ADJUSTBY SETVALUE
 %token PCUPDATE PCVALUEUPDATE PCELEMENTREMOVE
-%token INT UNIT FLOAT COLLECTION
+%token INT UNIT FLOAT COLLECTION STRINGTYPE CHAR VARCHAR DATE
 %token EOSTMT
 %token EOF
 %token LBRACE RBRACE
@@ -138,9 +150,9 @@
 %%
 
 dbtoasterK3Program:
-| mapDeclarationList triggerList         
-	{ let _ = $1 in
-     concat_stmt ($1, $2) empty_output_k3 }
+| relStatementList mapDeclarationList queryDeclarationList triggerList         
+	{ let _ = $3 in
+     concat_stmt ($1, $2, $4) empty_output_k3 }
 mapDeclarationList:
 | mapDeclaration mapDeclarationList                         { $1::$2 }
 | mapDeclaration                                            { [$1] }
@@ -167,6 +179,13 @@ mapDeclaration:
 	      add_collection $1 col;
 	         create_map $1 [] [] $3}
 
+queryDeclarationList:
+| queryDeclaration EOSTMT queryDeclarationList              { let _ = $1 in () }
+|                                                           { () }
+
+queryDeclaration:
+| QUERY ID SETVALUE statement                               { add_tl $2 $4 }
+
 mapVarList:
 | mapVarItem COMMA mapVarList                               { $1::$3 }
 | mapVarItem                                                { [$1] }
@@ -177,6 +196,7 @@ mapVarItem:
 typeItem:
 | INT                                                       { Types.TInt }
 | FLOAT                                                     { Types.TFloat }
+| STRINGTYPE                                                    { Types.TString }
 
 triggerList:
 | trigger triggerList                                       { $1::$2 }
@@ -209,6 +229,7 @@ trigger:
                                                                            Schema.DeleteEvent(r)
                                                                   in
                                                                      (ev, $8) }
+| ON SYSTEM READY LBRACE statementList RBRACE               { (Schema.SystemInitializedEvent, $5) }
 
 triggerType:
 | SUM                                                       { true }
@@ -220,7 +241,7 @@ argumentList:
 
 statementList:
 | statement EOSTMT statementList                            { $1::$3 }
-| statement EOSTMT                                          { [$1] }
+|                                                           { [] }
 
 statement:
 | LPAREN statement RPAREN                                   { $2 }
@@ -369,3 +390,59 @@ pcValueUpdateStatement:
 statementElementListOpt:
 | statementElementList                                      { $1 }
 |                                                           { [] }
+
+relStatementList:
+| relStatement EOSTMT relStatementList                      { addSchema $1 $3 }
+|                                                           { Schema.empty_db () }
+
+relStatement:
+| CREATE tableOrStream ID LPAREN emptyFieldList RPAREN
+   { (String.uppercase $3, $5, $2, Schema.NoSource, ("",[])) }
+| CREATE tableOrStream ID LPAREN emptyFieldList RPAREN FROM sourceStmt
+   { (String.uppercase $3, $5, $2, fst $8, snd $8) }
+
+tableOrStream:
+| TABLE  { Schema.TableRel  }
+| STREAM { Schema.StreamRel }
+
+emptyFieldList:
+|                             { [] }
+| fieldList                   { $1 }
+
+fieldList:
+| ID dbtType                  { [$1,$2] }
+| ID dbtType COMMA fieldList  { ($1,$2)::$4 }
+
+sourceStmt:
+|   FILE CONST_STRING bytestreamParams 
+  { (Schema.FileSource($2, fst $3), snd $3) }
+|   SOCKET CONST_STRING INTEGER bytestreamParams
+  { (Schema.SocketSource(Unix.inet_addr_of_string $2, $3, fst $4), snd $4) }
+|   SOCKET INTEGER bytestreamParams
+  { (Schema.SocketSource(Unix.inet_addr_any, $2, fst $3), snd $3) }
+
+bytestreamParams: 
+|   framingStmt adaptorStmt { ($1, $2) }
+
+framingStmt:
+|   FIXEDWIDTH INTEGER                  { Schema.FixedSize($2) }
+|   LINE DELIMITED                  { Schema.Delimited("\n") }
+|   CONST_STRING DELIMITED                { Schema.Delimited($1) }
+
+adaptorStmt:
+|   ID LPAREN RPAREN               { (String.lowercase $1, []) }
+|   ID LPAREN adaptorParams RPAREN { (String.lowercase $1, $3) }
+|   ID                             { (String.lowercase $1, []) }
+
+adaptorParams:
+|   ID SETVALUE CONST_STRING                     { [(String.lowercase $1,$3)] }
+|   ID SETVALUE CONST_STRING COMMA adaptorParams { (String.lowercase $1,$3)::$5 }
+
+dbtType:
+| TYPE                      { $1 }
+| typeItem                       { $1 }
+| CHAR LPAREN INTEGER RPAREN    { TString }
+| VARCHAR LPAREN INTEGER RPAREN { TString }
+| VARCHAR                   { TString }
+| CHAR                      { TString }
+| DATE                      { TInt    }

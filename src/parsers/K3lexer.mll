@@ -23,6 +23,9 @@ let keyword_table = Hashtbl.create 35
 let keywords =   
    [   
          "ON", ON;
+         "SYSTEM", SYSTEM;
+         "READY", READY;
+         "QUERY", QUERY;
          "IF", IF;
          "ELSE", ELSE;
          "IF0", IF0;
@@ -43,8 +46,10 @@ let keywords =
          "UNIT", UNIT;
          "FLOAT", FLOAT;
          "COLLECTION", COLLECTION;
+
          "CREATE", CREATE;
          "TABLE", TABLE;
+         "STREAM", STREAM;
          "FROM", FROM;
          "SOCKET", SOCKET;
          "FILE", FILE;
@@ -55,6 +60,13 @@ let keywords =
          "VARSIZE", VARSIZE;
          "OFFSET", OFFSET;
          "ADJUSTBY", ADJUSTBY;
+         "VARCHAR",    VARCHAR;
+         "CHAR",       CHAR;
+         "DATE",       DATE;
+         "STRING", STRINGTYPE;
+         "INTEGER", TYPE(Types.TInt);
+         "DOUBLE", TYPE(Types.TFloat);
+         "DECIMAL", TYPE(Types.TFloat);
    ]
 let _ = hashtbl_of_pair_list keyword_table keywords
 
@@ -81,7 +93,7 @@ let int         = ('-')?decint
 let decimal     = digit+ '.' digit+
 let number     	= ('-'|'+')?digit+ '.' digit*
 let float       = (int|decimal)'E'('+'|'-')?digit+
-let identifier  = char(char|digit|'_')*
+let identifier  = (char|('_'+(digit|char)))(char|digit|'_')*
 let whitespace  = [' ' '\t']   
 let newline     = "\n\r" | '\n' | '\r'  
 let cmp_op      = "<" | "<=" | "==" | "!=" | '>'

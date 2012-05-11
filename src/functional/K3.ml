@@ -708,7 +708,23 @@ let rec code_of_expr e =
             "K3.PCElementRemove("^(rcr me)^","^(ListExtras.ocaml_of_list rcr ine)^
                                 ","^(ListExtras.ocaml_of_list rcr oute)^")"
 
-let nice_string_of_expr ?(type_is_needed = false) e =
+let get_pc_schema pce maps = 
+   let pc_name = match pce with
+      | OutPC(id,outs,t) -> 
+            id
+      | InPC(id,ins,t) -> 
+            id
+      | PC(id,ins,outs,t) -> 
+            id
+      | _ -> failwith "First element of Slice must be PC!"
+      in
+      let (mapn, mapiv, mapov, mapt) = 
+         List.hd (
+            List.filter (fun (mapn, mapiv, mapov, mapt) -> mapn = pc_name) maps
+         ) in
+         List.map fst (mapiv@mapov)
+
+let nice_string_of_expr ?(type_is_needed = false) e maps =
   let ob () = pp_open_box str_formatter 2 in
   let cb () = pp_close_box str_formatter () in
   let pc () = pp_print_cut str_formatter () in
@@ -825,6 +841,7 @@ let nice_string_of_expr ?(type_is_needed = false) e =
         ps ","; ps (string_of_type fn_t); ps ")"; cb()
     
     | Slice(pce, sch, vars) ->
+        let orig_sch = get_pc_schema pce maps in
         ob(); ps "Slice("; aux pce; 
         if type_is_needed then 
             begin
@@ -833,8 +850,11 @@ let nice_string_of_expr ?(type_is_needed = false) e =
         else 
             ();
         ps ",["; 
-        (List.iter (fun (x,v) -> pid x; ps " => ("; aux v; ps ");") vars); 
-        ps "])"; cb()
+        let convert_each_var_to_new_var each_var = List.nth orig_sch (ListExtras.index_of each_var (List.map fst sch)) in
+        let new_vars = List.map (fun (x, v) -> (convert_each_var_to_new_var x, v)) vars
+            in
+               (List.iter (fun (x,v) -> pid x; ps " => ("; aux v; ps ");") new_vars); 
+               ps "])"; cb()
     | Comment(c, cexpr) ->
         ob(); ps "(***"; ps c; ps "***)"; recur []; cb()
     
@@ -994,18 +1014,25 @@ let code_of_prog ((_,(maps,_),triggers,_):prog_t): string = (
    ) triggers)^"\n"
 )
 
-let nice_code_of_prog ((_,(maps,_),triggers,_):prog_t): string = (
+let nice_code_of_prog ((db_schema,(maps,_),triggers,tl_queries):prog_t): string = (
    let string_of_var_type (n, t) = n ^ " : " ^ (Types.string_of_type t) in
+   "--------------------- SCHEMA ----------------------\n"^
+   Schema.code_of_schema db_schema ^ "\n" ^
    "--------------------- MAPS ----------------------\n"^
    (ListExtras.string_of_list ~sep:"\n\n" (fun (mapn, mapiv, mapov, mapt) ->
+(*      (if (List.mem mapn (List.map fst tl_query)) then "QUERY " else "") ^ *)
       mapn^"("^(Types.string_of_type mapt)^")"^
       "["^(ListExtras.string_of_list ~sep:"," string_of_var_type mapiv)^"]"^
       "["^(ListExtras.string_of_list ~sep:"," string_of_var_type mapov)^"];"
    ) maps)^"\n\n"^
+   "-------------------- QUERIES --------------------\n"^
+   (ListExtras.string_of_list ~sep:"\n\n" (fun (qname,qdefn) ->
+      "QUERY "^qname^" := "^(nice_string_of_expr qdefn maps)^";"
+   ) tl_queries)^"\n\n"^
    "--------------------- TRIGGERS ----------------------\n"^
    (ListExtras.string_of_list ~sep:"\n\n" (fun (event, stmts) ->
       (Schema.string_of_event event)^"\n{\n"^
-      (ListExtras.string_of_list ~sep:";\n\t" nice_string_of_expr stmts)^
-      ";\n}"
+      (ListExtras.string_of_list ~sep:"\n\t" (fun e -> (nice_string_of_expr e maps)^";") stmts)^
+      "\n}"
    ) triggers)^"\n"
 )

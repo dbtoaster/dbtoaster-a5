@@ -492,7 +492,9 @@ if stage_is_active StageM3ToK3 then (
    Debug.print "LOG-DRIVER" (fun () -> "Running Stage: M3ToK3");
    Debug.activate "M3TOK3-GENERATE-INIT"; (* Temporary hack until we get M3DM set up *)
    try
-      k3_program := M3ToK3.m3_to_k3 !m3_program;
+      k3_program := M3ToK3.m3_to_k3 !m3_program; 
+      let (_,(_, pats), _, _) = !k3_program in
+         Debug.print "LOG-PATTERNS" (fun () -> Patterns.patterns_to_string pats)
    with 
       | Failure(msg) ->
          bug ~exc:true ~detail:(fun () -> M3.string_of_m3 !m3_program) msg
@@ -513,7 +515,7 @@ if stage_is_active StageParseK3 then (
             K3parser.dbtoasterK3Program K3lexer.tokenize lexbuff;
       let (_,(_, pats), _, _) = !k3_program
       in
-         Debug.print "PATTERNS" (fun () -> Patterns.patterns_to_string pats)
+         Debug.print "LOG-PATTERNS" (fun () -> Patterns.patterns_to_string pats)
 )
 ;;
 if (stage_is_active StageOptimizeK3) then (
