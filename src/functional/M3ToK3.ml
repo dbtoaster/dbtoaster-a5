@@ -292,6 +292,8 @@ let next_sum_tmp_coll outs_el sum_type_k =
 	  |  x -> K.OutPC(colln, outs_k, sum_type_k),
 		       (colln, [], List.combine (List.map fst outs_k) (List.map K.base_type_of (List.map snd outs_k)), K.base_type_of sum_type_k)
 	  end
+	
+let prod_ret_counter = ref 0
 (**/**)		
 (**********************************************************************)
 
@@ -326,7 +328,6 @@ let map_access_to_expr mapn ins outs map_ret_t theta_vars_el init_expr_opt =
 		
 		let map_ret_ve = K.Var("map_ret",map_ret_k) in
 		let map_out_ve = K.Var("slice",map_out_t) in
-		let iv_e = K.Var("init_val", map_out_t) in
 		
 		(* Given a collection it slices it according to the bound variables *)
 		(* and projects only the free variables *)
@@ -341,13 +342,16 @@ let map_access_to_expr mapn ins outs map_ret_t theta_vars_el init_expr_opt =
 		in
 		
 		let expr = begin match ins, outs with
-		  | ([],[]) -> K.SingletonPC(mapn, map_ret_k)
+		  | ([],[]) ->
+				(*No need to perform initial value computation. This should have *)
+				(*already been initialized at system start-up.*) 
+				K.SingletonPC(mapn, map_ret_k)
 		  | ([], y) ->       
 				let map_expr = K.OutPC(mapn, outs_k, map_ret_k) in
 				if free_vars_el = [] then 
 					if init_expr_opt = None then K.Lookup(map_expr,outs_el)
 		      	else 
-						let _,init_expr = extract_opt init_expr_opt in						
+						let _,init_expr = extract_opt init_expr_opt in
 						K.IfThenElse(K.Member(map_expr,outs_el), 
 												 K.Lookup(map_expr,outs_el), init_expr)											     		
 	      	else
@@ -357,13 +361,17 @@ let map_access_to_expr mapn ins outs map_ret_t theta_vars_el init_expr_opt =
 				let map_expr = K.InPC(mapn, ins_k, map_ret_k) in
 				if init_expr_opt = None then K.Lookup(map_expr,ins_el)
 	      	else 
-					let _,init_expr = extract_opt init_expr_opt in						
+					let iv_e = K.Var("init_val", map_ret_k) in
+					let _,init_expr = extract_opt init_expr_opt in	
+					let init_lambda = 
+						if Debug.active "M3TOK3-RETURN-INIT" then iv_e
+						else
+							K.Block(
+								[K.PCValueUpdate(map_expr, ins_el, outs_el, iv_e);iv_e])
+					in
 					K.IfThenElse(K.Member(map_expr,ins_el), 
 									 K.Lookup(map_expr,ins_el), 
-									 apply_lambda [iv_e] [init_expr] 
-											(K.Block(
-												[K.PCValueUpdate(map_expr, ins_el, outs_el, iv_e);
-												iv_e])) )
+									 apply_lambda [iv_e] [init_expr] init_lambda )
 											
 		  	| ( x, y) ->
 				let map_expr = K.PC(mapn, ins_k, outs_k, map_ret_k) in
@@ -376,20 +384,26 @@ let map_access_to_expr mapn ins outs map_ret_t theta_vars_el init_expr_opt =
 				if init_expr_opt = None then 
 					apply_lambda [map_out_ve] [K.Lookup(map_expr,ins_el)] (out_access_expr map_out_ve)
 		      else 
-					let init_outs_el,ie = extract_opt init_expr_opt in	
-					let init_expr = 
-						if init_outs_el = outs_el then ie
+					let init_outs_el,ie = extract_opt init_expr_opt in
+					let iv_e = K.Var("init_val", map_out_t) in	
+					let init_expr, init_block = 
+						if ListAsSet.seteq init_outs_el outs_el then
+							((if init_outs_el = outs_el then ie
+							else
+								(* Use projection to change the order of output variables from 'init_outs_el' *)
+								(* to 'outs_el' *) 
+								K.Map( project_fn (init_outs_el@[map_ret_ve]) (outs_el@[map_ret_ve]), ie)),
+							K.Block([K.PCUpdate(map_expr, ins_el, iv_e); out_access_expr iv_e]))
+						else if not (ListAsSet.seteq init_outs_el free_vars_el) then
+							(failwith ("Initialization expressions that span more than the free vars of the "^
+										"expression are not supported for full pcs."))
 						else
-							(* Use projection to change the order of output variables from 'init_outs_el' *)
-							(* to 'outs_el' *) 
-							K.Map( project_fn (init_outs_el@[map_ret_ve]) (outs_el@[map_ret_ve]), ie)
-					in
-					let init_block = 
-						K.Block([K.PCUpdate(map_expr, ins_el, iv_e); out_access_expr iv_e])
+							(failwith ("Initialization expressions that span the free vars of the "^
+										"expression are not supported for full pcs."))
 					in
 					K.IfThenElse( K.Member(map_expr,ins_el), 
 						apply_lambda [map_out_ve] [K.Lookup(map_expr,ins_el)] (out_access_expr map_out_ve), 
-						apply_lambda       [iv_e]              [init_expr]      init_block)
+						apply_lambda       [iv_e]              [init_expr]      init_block )
 		      
 		end
 		in (free_vars_el, map_ret_ve, expr)
@@ -523,6 +537,7 @@ let rec calc_to_k3_expr meta theta_vars_el calc :
 							(K.string_of_type ret1_t)^" <> "^(K.string_of_type ret2_t));
 		([], K.Var("v",K.TBase(T.TInt)), (op_fn e1 e2)), meta
 	in
+	let (k3_out_el, k3_ret_v, k3_expr), k3_meta = 
   	begin match calc with
 		| C.Val( calc_val ) -> begin match calc_val with
 			| Value( calc_val_value ) ->
@@ -540,36 +555,60 @@ let rec calc_to_k3_expr meta theta_vars_el calc :
 						map_access_to_expr reln [] rel_schema T.TInt theta_vars_el None in
 			  ((rel_outs_el, rel_ret_ve, expr), meta)
 			
-			| External(mapn, eins, eouts, ext_type, init_calc_opt) ->
+			| External(mapn, eins, eouts, ext_type, einit_calc_opt) ->
 				(* init_expr_opt will contain if required the schema of the intialization expression *)
 				(* and the intialization expression itself. *)
-				let nm, init_expr_opt = 
-					let meta_keys = if eins = [] then eouts 
-										 else               eins in
-					if ((eins = []) && (eouts = [])) ||
-						not (Debug.active "M3TOK3-GENERATE-INIT") ||
-						(meta_has_init_keys meta (mapn, meta_keys)) then
-						meta, None
-					else if init_calc_opt != None then
-						let init_calc = extract_opt init_calc_opt in
-						let eouts_el = varIdType_to_k3_expr eouts in
-						(* Since we want to initialize on entire output tier at once we remove *)
-						(*  output variables from the list of variables that are in scope. *)
-						let init_theta_vars_el = ListAsSet.diff  theta_vars_el eouts_el in
-						let (init_outs_el, init_ret_ve, init_expr), nm_1 = 
-								calc_to_k3_expr meta  init_theta_vars_el init_calc in
-						
-						if not (ListAsSet.seteq init_outs_el eouts_el) then
-							failwith ("M3ToK3: Schema of intialization expression should span "^
-										"the entire out tier of the map.");
-						let _ = escalate_type (type_of_kvar init_ret_ve) (K.TBase(ext_type)) 
-						in						
-						(meta_append_init_keys nm_1 (mapn, meta_keys)), 
-						Some(init_outs_el,init_expr)
-					else if eins = [] then
-						meta, Some([],init_val_from_type ext_type)
+				let eouts_el = varIdType_to_k3_expr eouts in
+				let free_eouts_el = ListAsSet.diff eouts_el theta_vars_el in
+					
+				let get_init_expr init_calc_opt = 
+					let init_calc = extract_opt init_calc_opt in
+					
+					if eins = [] && (eouts = [] || free_eouts_el <> []) then
+						(print_endline ("External: "^(CalculusPrinter.string_of_expr calc));
+						failwith ("M3ToK3: No initialization should be required for "^
+									"singleton maps or slice accesses of out maps."));
+					
+					let init_theta_vars_el = 
+						if eins <> [] && eouts <> [] then 
+							ListAsSet.diff theta_vars_el eouts_el
+						else
+							theta_vars_el
+					in
+					let (init_outs_el, init_ret_ve, init_expr), nm_1 = 
+							calc_to_k3_expr meta  init_theta_vars_el init_calc in
+					if not (eins <> [] && eouts <> []) &&
+						not (ListAsSet.seteq free_eouts_el init_outs_el) then
+						(print_endline ("External: "^(CalculusPrinter.string_of_expr calc));
+						failwith ("M3ToK3: Schema of intialization expression should coincide "^
+									" with the free out vars of the map access."));
+					if eins <> [] && eouts <> [] &&
+						(ListAsSet.diff free_eouts_el init_outs_el) <> [] then
+						(print_endline ("External: "^(CalculusPrinter.string_of_expr calc));
+						failwith ("M3ToK3: Schema of intialization expression should include "^
+									"the free out vars of the map access."));
+					if eins <> [] && eouts <> [] &&
+						(ListAsSet.diff init_outs_el eouts_el) <> [] then
+						(print_endline ("External: "^(CalculusPrinter.string_of_expr calc));
+						failwith ("M3ToK3: Schema of intialization expression should be included "^
+									" in the out vars of the map access."));
+					let _ = escalate_type (type_of_kvar init_ret_ve) (K.TBase(ext_type)) 
+					in
+					nm_1,Some(init_outs_el,init_expr)
+				in
+				let nm, init_expr_opt =
+					if not (Debug.active "M3TOK3-GENERATE-INIT") then meta, None
 					else
-						meta, None
+						if einit_calc_opt != None then
+							get_init_expr einit_calc_opt
+						else
+							let default_init = 
+								if eins = [] && free_eouts_el = [] then 
+									Some([],init_val_from_type ext_type)
+								else 
+									None
+							in						
+							meta, default_init					
 			  	in					  
 			  	let (map_outs_el, map_ret_ve, expr) = 
 					map_access_to_expr mapn eins eouts ext_type theta_vars_el init_expr_opt in
@@ -608,7 +647,8 @@ let rec calc_to_k3_expr meta theta_vars_el calc :
 				let (lift_outs_el,lift_ret_ve,lift_e),nm = rcr lift_calc in
 				let lift_ve = K.Var((fst lift_v),
 											(escalate_type (type_of_kvar lift_ret_ve) 
-																(K.TBase(snd lift_v)))) in
+																(K.TBase(snd lift_v)))
+											) in
 				let is_bound = List.mem lift_ve theta_vars_el in
 				let extra_ve, ret_ve, lift_body = 
 					if is_bound then 
@@ -716,8 +756,8 @@ let rec calc_to_k3_expr meta theta_vars_el calc :
 			
 			let prod_fn (p1_outs_el,_p1_ret_ve,p1) (p2_outs_el,_p2_ret_ve,p2) =
 				let p1_ret_t,p2_ret_t = pair_map type_of_kvar (_p1_ret_ve,_p2_ret_ve) in
-				let p1_ret_ve = K.Var("p1_ret",p1_ret_t) in
-				let p2_ret_ve = K.Var("p2_ret",p2_ret_t) in 
+				let p1_ret_ve = K.Var("p1_ret_"^(incr prod_ret_counter;(string_of_int !prod_ret_counter)),p1_ret_t) in
+				let p2_ret_ve = K.Var("p2_ret_"^(incr prod_ret_counter;(string_of_int !prod_ret_counter)),p2_ret_t) in 
 				let ret_ve = K.Var("prod",arithmetic_return_types p1_ret_t p2_ret_t) in
 				let p_outs_el,p = begin match p1_outs_el,p2_outs_el with
 				| [],[] -> [], K.Mult(p1,p2)
@@ -744,7 +784,22 @@ let rec calc_to_k3_expr meta theta_vars_el calc :
 				
 		| C.Neg( neg_arg ) ->
 			rcr (C.Prod( [(C.Val(Value(V.Val(AConst(T.CInt(-1))))));neg_arg] ))
-  end 
+	end 
+	in
+	
+	let _ = 
+	try
+      K3Typechecker.typecheck_expr k3_expr
+   with 
+      | K3Typechecker.K3TypecheckError(stack,msg) ->
+			let (inform, warn, error, bug) = Debug.Logger.functions_for_module "" in
+			(print_endline ("Calc Expr: "^(CalculusPrinter.string_of_expr calc));
+         bug ~detail:(fun () -> K3Typechecker.string_of_k3_stack stack) msg;
+			raise (K3Typechecker.K3TypecheckError(stack,msg)))
+			 
+  in
+  (k3_out_el, k3_ret_v, k3_expr), k3_meta
+	
 
 
 (**********************************************************************)
@@ -843,7 +898,9 @@ let m3_stmt_to_k3_stmt (meta: meta_t) trig_args (m3_stmt: Plan.stmt_t) : K.state
 	(* Make sure that the lhs collection and the incr_expr have the same schema. *)
 	let free_lhs_outs_el = ListAsSet.diff lhs_outs_el trig_args_el in
 	if not (ListAsSet.seteq free_lhs_outs_el rhs_outs_el) then
-		(print_endline ("Lhs Output Variables: "^(K.string_of_exprs free_lhs_outs_el));
+		(print_endline ("Stmt: "^(Plan.string_of_statement m3_stmt));
+		 print_endline ("Trigger Variables: "^(K.string_of_exprs trig_args_el));
+		 print_endline ("Lhs Output Variables: "^(K.string_of_exprs free_lhs_outs_el));
 		 print_endline ("Rhs Output Variables: "^(K.string_of_exprs rhs_outs_el));
 		 failwith ("M3ToK3: The lhs and rhs must have the same set of free out variables. "));
 	let _ = escalate_type (type_of_kvar rhs_ret_ve) map_k3_type in
@@ -852,10 +909,10 @@ let m3_stmt_to_k3_stmt (meta: meta_t) trig_args (m3_stmt: Plan.stmt_t) : K.state
 	(* lhs_collection accordingly. *)
 	let coll_update_expr =	
 		let single_update_expr = K.PCValueUpdate( lhs_collection, lhs_ins_el, lhs_outs_el, 
-																					 		K.Add(existing_v,rhs_ret_ve) ) in
+																K.Add(existing_v,rhs_ret_ve) ) in
 		let inner_loop_body = lambda (rhs_outs_el@[rhs_ret_ve]) single_update_expr in
 		if rhs_outs_el = [] then K.Apply(  inner_loop_body,incr_expr)	
-		else          					 K.Iterate(inner_loop_body,incr_expr)	
+		else          				  K.Iterate(inner_loop_body,incr_expr)	
 	in
 	
 	(* In order to implement a statement we iterate over all the values *)
@@ -864,7 +921,7 @@ let m3_stmt_to_k3_stmt (meta: meta_t) trig_args (m3_stmt: Plan.stmt_t) : K.state
 	let statement_expr = 
 			let outer_loop_body = lambda (lhs_ins_el@[existing_out_tier]) coll_update_expr in
 			if lhs_ins_el = [] then K.Apply(  outer_loop_body,lhs_collection)
-			else          					K.Iterate(outer_loop_body,lhs_collection)
+			else          				K.Iterate(outer_loop_body,lhs_collection)
 	in
 	let _ = K3Typechecker.typecheck_expr statement_expr in
 	(statement_expr, nm)

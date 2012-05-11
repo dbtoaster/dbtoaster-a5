@@ -459,8 +459,8 @@ let rec typecheck_expr e : K.type_t =
 							let valid = match expected with
 								| [x] -> arg_t = x
 								| _ -> arg_t = K.TTuple(expected)
-							in if valid then ret else failwith "invalid function application"
-					| _ -> failwith "invalid function application"
+							in if valid then ret else failwith "invalid function application [1]"
+					| _ -> failwith "invalid function application [2]"
 				end
 		
 		(* f : fn(x,y), c : f : fn(x,y), c : fn() * ----------------------     *)

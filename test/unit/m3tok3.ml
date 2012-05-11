@@ -163,7 +163,6 @@ let test_stmt_coll ?(env = []) msg stmt_s rval =
    let code = stmt_string_to_code env stmt_s in	
    test_code_coll env msg code (U.mk_float_collection rval)
 in
-
 		(*
 		test_expr " Lift and Divide "
 				"[ [ / : INT ] (0, 0) ]"
@@ -478,4 +477,5 @@ in
 								 [3.; 3.; 1.; 3.], 3.; [3.; 3.; 1.; 1.], 1.; [3.; 3.; 1.; 2.], 2.; [3.; 3.; 2.; 1.], 12.; [3.; 3.; 2.; 2.], 24.;
 				      ];		
 		Debug.deactivate "M3TOK3-GENERATE-INIT";
+		(**)
 		()
