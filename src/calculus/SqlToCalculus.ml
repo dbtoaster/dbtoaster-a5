@@ -603,7 +603,9 @@ and calc_of_sql_expr ?(materialize_query = None)
                             aggregate query *)
          then
             (* This should get caught much earlier... but let's be safe *)
-            Sql.error "Nested subqueries must have exactly 1 argument"
+            Sql.error ("Target-nested subqueries must produce exactly 1 "^
+                       "column, and either be aggregate queries or not read "^
+                       "from any relations")
          else
             (* If it's an aggregate query, then we do the standard thing, but
                only return the one (nameless) target. *)
