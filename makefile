@@ -121,6 +121,8 @@ bin/dbtoaster_top: $(C_FILES) lib/.deps src/global/UnitTest.ml
 	@echo "Linking DBToaster Top"
 	@$(OCAMLMKTOP) $(OCAML_FLAGS) -o $@ $(C_FILES) src/global/UnitTest.ml
 
+fast: bin/dbtoaster_debug bin/dbtoaster_top
+
 states: $(patsubst %,%.states,$(PARSERS))
 
 test: bin/dbtoaster_top bin/dbtoaster
@@ -207,5 +209,5 @@ distclean: clean
 
 #################################################
 
-.PHONY: all clean distclean test states doc runtimelibs
+.PHONY: all clean distclean test states doc runtimelibs fast querytest queries
 

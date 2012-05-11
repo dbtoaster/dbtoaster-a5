@@ -257,19 +257,33 @@ expression := <br/>
 &nbsp;&nbsp;|&nbsp;&lt;expression&gt; { + | - | * | / } &lt;expression&gt;<br/>
 &nbsp;&nbsp;|&nbsp;-&lt;expression&gt;<br/>
 &nbsp;&nbsp;|&nbsp;(SELECT &lt;expression&gt; FROM ...)<br/>
-&nbsp;&nbsp;|&nbsp;SUM(&lt;expression&gt;) | COUNT([*])<br/>
+&nbsp;&nbsp;|&nbsp;SUM(&lt;expression&gt;) | COUNT(* | &lt;expression&gt;) | AVG(&lt;expression&gt;)<br/>
+&nbsp;&nbsp;|&nbsp;&lt;inline_function&gt;([&lt;expression_1&gt; [, &lt;expression_2&gt; [, ...]]])<br/>
 &nbsp;&nbsp;|&nbsp;DATE('yyyy-mm-dd')<br/>
 <br/>
 condition := <br/>
 &nbsp;&nbsp;&nbsp;&nbsp;(&lt;condition&gt;) | true | false | not (&lt;condition&gt;)<br/>
 &nbsp;&nbsp;|&nbsp;&lt;expression&gt; { < | <= | > | >= | = | <> } &lt;expression&gt;<br/>
+&nbsp;&nbsp;|&nbsp;&lt;expression&gt; { < | <= | > | >= | = | <> } { SOME | ALL } &lt;select_statement&gt;<br/>
 &nbsp;&nbsp;|&nbsp;&lt;condition&gt; AND &lt;condition&gt; | &lt;condition&gt; OR &lt;condition&gt;<br/>
-&nbsp;&nbsp;|&nbsp;EXISTS (SELECT ...)<br/>
+&nbsp;&nbsp;|&nbsp;EXISTS &lt;select_statement&gt;<br/>
 &nbsp;&nbsp;|&nbsp;&lt;expression&gt; BETWEEN &lt;expression&gt; AND &lt;expression&gt;<br/>
+&nbsp;&nbsp;|&nbsp;&lt;expression&gt; IN &lt;select_statement&gt;<br/>
 <br/>
 </div>
 
-<p>DBToaster SQL differs minimally from the SQL standard.  Currently UNION and the HAVING clause are not supported.  Variable scoping rules are slightly stricter than the SQL standard (you may need to use fully qualified names in some cases).  Additionally, addition and subtraction (+/-) is not presently supported outside of aggregate expressions.</p>
+<p>DBToaster SQL's SELECT operation differs slightly from the SQL-92 standard.
+<ul>
+<li>UNION, LIMIT, ORDER BY, HAVING and IN are not supported.</li>
+<li>The only supported types are int, float, and string/varchar.</li>
+<li>Variable scoping rules are slightly stricter than the SQL standard (you may need to use fully qualified names in some additional cases).</li>
+<li>Support for division is limited.  DBToaster does not currently check for, or react to divide by zero errors.  If a result value ever becomes NAN or INFTY, it will no longer be possible to incrementally maintain it.</li>
+<li>DBToaster's aggregate functions all produce results when evaluated over empty sets (as opposed to the NULL required by the SQL standard).  The default values for SUM, COUNT, and AVERAGE are all 0.</li>
+<li>DBToaster performs cardinality tests on SELECT statements (e.g., for subqueries nested in a value expression) at compile time.  This means that some queries will need to use IN, rather than a simple equality test</li>
+<li>Additionally, addition and subtraction (+/-) is not presently supported outside of aggregate expressions.</li>
+
+</ul>
+</p>
 
 <p>DBToaster processes queries internally as aggregates, and produces output in the form of either a [multi-key] => value dictionary/hashmap, or a single value.  SQL queries are interpreted as follows:
 <ul>
@@ -289,6 +303,9 @@ condition := <br/>
 
 <dt class="code">UNIFY-EXPRESSIONS</dt>
 <dd>Attempt to unify entire lifted expressions, and not just lifted variables/values.  This usually produces tighter calculus expressions, but can slow down compilation.</dd>
+
+<dt class="code">WEAK-EXPR-EQUIV</dt>
+<dd>Test for expression equivalence naively.  This may result in duplicate maps being created on some queries, but can substantially reduce compile times.</dd>
 
 <dt class="code">IGNORE-DELETES</dt>
 <dd>Do not produce delete triggers.  For some queries, this results in plans with fewer maps, but the resultant trigger program will not support deletions.</dd>

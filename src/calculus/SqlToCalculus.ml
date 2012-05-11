@@ -604,8 +604,8 @@ and calc_of_sql_expr ?(materialize_query = None)
          then
             (* This should get caught much earlier... but let's be safe *)
             Sql.error ("Target-nested subqueries must produce exactly 1 "^
-                       "column, and either be aggregate queries or not read "^
-                       "from any relations")
+                       "column, and either be aggregate queries or not have "^
+                       "a FROM clause")
          else
             (* If it's an aggregate query, then we do the standard thing, but
                only return the one (nameless) target. *)

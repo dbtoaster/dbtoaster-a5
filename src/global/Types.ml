@@ -78,6 +78,14 @@ let float_of_const (a:const_t): float =
       | CString(av)  -> failwith ("Cannot produce float of string '"^av^"'")
    end	
 
+(**
+   Identify the inverse of a comparison operation (Eq -> Neq, etc...)
+*)
+let inverse_of_cmp = function
+ | Eq -> Neq | Neq -> Eq
+ | Lt -> Gte | Lte -> Gt
+ | Gt -> Lte | Gte -> Lt
+ 
 (**** Conversion to Strings ****)
 (**
    Get the string representation (according to SQL syntax) of a comparison 

@@ -50,6 +50,15 @@ let natural_join lhs rhs =
    in
       (cond, lhs @ (List.map snd sch))
 
+let scan_for_existence (op_name:string) (q:Sql.select_t) (cmp_op:cmp_t) 
+                       (expr:Sql.expr_t) =
+   let (targets, sources, cond, gb_vars) = q in
+   let (_,tgt) = match targets with [tgt] -> tgt | _ -> 
+      bail ("Target of "^op_name^" clause should produce a single column")
+   in Sql.Exists(["unused", Sql.Const(CInt(1))], sources, 
+         (Sql.And(cond, Sql.Comparison(expr, cmp_op, tgt))), gb_vars)
+
+
 let bind_select_vars q =
    Sql.bind_select_vars q (List.map snd !table_defs)
 
@@ -319,5 +328,14 @@ condition:
 | TRUE                            { Sql.ConstB(true) }
 | FALSE                           { Sql.ConstB(false) }
 | EXISTS LPAREN selectStmt RPAREN { Sql.Exists($3) }
-| expression BETWEEN expression AND expression { Sql.And(Sql.Comparison($1, Gte, $3), Sql.Comparison($1, Lte, $5)) }
-
+| expression BETWEEN expression AND expression 
+   { Sql.And(Sql.Comparison($1, Gte, $3), Sql.Comparison($1, Lte, $5)) }
+| expression IN LPAREN selectStmt RPAREN { 
+      scan_for_existence "IN" $4 Eq $1 
+   }
+| expression cmpOp SOME LPAREN selectStmt RPAREN { 
+      scan_for_existence "SOME" $5 $2 $1 
+   }
+| expression cmpOp ALL LPAREN selectStmt RPAREN { 
+      Sql.Not(scan_for_existence "ALL" $5 (inverse_of_cmp $2) $1)
+   }
