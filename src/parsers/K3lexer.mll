@@ -46,6 +46,8 @@ let keywords =
          "UNIT", UNIT;
          "FLOAT", FLOAT;
          "COLLECTION", COLLECTION;
+         "IN", IN;
+         "OUT", OUT;
 
          "CREATE", CREATE;
          "TABLE", TABLE;

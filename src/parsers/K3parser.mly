@@ -67,6 +67,8 @@
 							in
 								(schema, (new_map, !patterns), new_trig, !tl_queries) 
 
+   let must_infer_from_slice: (bool ref) = ref true
+
    let slice_infering statement var_bind_list = 
       let map_name = match statement with 
          | PC(n, _, _, _) -> n
@@ -76,19 +78,24 @@
          | _ -> raise (K3TypeError("First argument of Slice should be a Collection!"))
       in
          let (in_var_types, out_var_types) = get_map_schema map_name in
-         let get_vars l = List.map fst l in
-         let in_vars = get_vars in_var_types in
-         let out_vars = get_vars out_var_types 
-         in
-            let var_list = get_vars var_bind_list
+         if (!must_infer_from_slice) then
+         begin
+            let get_vars l = List.map fst l in
+            let in_vars = get_vars in_var_types in
+            let out_vars = get_vars out_var_types 
             in
-               let in_filt = ListAsSet.inter in_vars var_list in
-               let out_filt = ListAsSet.inter out_vars var_list in
-               let in_pattern = Patterns.make_in_pattern in_vars in_filt in
-               let out_pattern = Patterns.make_out_pattern out_vars out_filt in
-                  add_pattern map_name in_pattern;
-                  add_pattern map_name out_pattern;
-                     in_var_types@out_var_types
+               let var_list = get_vars var_bind_list
+               in
+                  let in_filt = ListAsSet.inter in_vars var_list in
+                  let out_filt = ListAsSet.inter out_vars var_list in
+                  let in_pattern = Patterns.make_in_pattern in_vars in_filt in
+                  let out_pattern = Patterns.make_out_pattern out_vars out_filt in
+                     if in_filt <> [] then (add_pattern map_name in_pattern) else ();
+                     if out_filt <> [] then (add_pattern map_name out_pattern) else ()
+         end
+         else
+            ();
+         in_var_types@out_var_types
 
 
    let collections:((string, expr_t) Hashtbl.t) = Hashtbl.create 10
@@ -121,6 +128,7 @@
 %token CREATE TABLE STREAM FROM SOCKET FILE PIPE FIXEDWIDTH DELIMITED LINE VARSIZE OFFSET ADJUSTBY SETVALUE
 %token PCUPDATE PCVALUEUPDATE PCELEMENTREMOVE
 %token INT UNIT FLOAT COLLECTION STRINGTYPE CHAR VARCHAR DATE
+%token IN OUT
 %token EOSTMT
 %token EOF
 %token LBRACE RBRACE
@@ -150,9 +158,9 @@
 %%
 
 dbtoasterK3Program:
-| relStatementList mapDeclarationList queryDeclarationList triggerList         
+| relStatementList mapDeclarationList queryDeclarationList patternDeclarationList triggerList         
 	{ let _ = $3 in
-     concat_stmt ($1, $2, $4) empty_output_k3 }
+     concat_stmt ($1, $2, $5) empty_output_k3 }
 mapDeclarationList:
 | mapDeclaration mapDeclarationList                         { $1::$2 }
 | mapDeclaration                                            { [$1] }
@@ -185,6 +193,37 @@ queryDeclarationList:
 
 queryDeclaration:
 | QUERY ID SETVALUE statement                               { add_tl $2 $4 }
+
+patternDeclarationList:
+| patternDeclarationItem EOSTMT patternDeclarationList      { let _ = $1, $3 in () }
+|                                                           { ()}
+
+patternDeclarationItem:
+| ID COLON patternList                                      { must_infer_from_slice := false;
+                                                               let mapname = $1 in
+                                                               let patts = $3 in
+                                                                  List.iter 
+                                                                  (
+                                                                     fun p -> 
+                                                                        add_pattern mapname p
+                                                                  ) patts
+                                                            }
+
+patternList:
+| patternItem COMMA patternList                             { $1::$3 }
+| patternItem                                               { [$1] }
+
+patternItem:
+| OUT LBRACE patternElementList RBRACE                      { Patterns.Out($3) }
+| IN LBRACE patternElementList RBRACE                       { Patterns.In($3) }
+
+patternElementList:
+| patternElementItem COMMA patternElementList               { ( (fst $1)::(fst $3) ),  ( (snd $1)::(snd $3) )}
+| patternElementItem                                        { [fst $1], [snd $1] } 
+|                                                           { [], [] }
+
+patternElementItem:
+| INTEGER COLON ID                                          { $3, $1 }
 
 mapVarList:
 | mapVarItem COMMA mapVarList                               { $1::$3 }
@@ -270,9 +309,10 @@ statement:
 
 constStatement:
 | CONST_FLOAT                                               { Const(Types.CFloat($1)) }
-| INTEGER                                                   { Const(Types.CFloat(float_of_int $1)) }
+| INTEGER                                                   { Const(Types.CInt($1)) }
 
 varStatement:
+| ID COLON typeItem                                         { Var($1, TBase( $3 ) ) }
 | ID                                                        { Var($1, TBase(Types.TFloat)) }
 
 tupleStatement:

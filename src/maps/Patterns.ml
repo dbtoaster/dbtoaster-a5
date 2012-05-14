@@ -232,6 +232,19 @@ let string_of_pattern (p:pattern) =
       | In(x,y) -> "in{"^(String.concat "," (f x y))^"}"
       | Out(x,y) -> "out{"^(String.concat "," (f x y))^"}"
 
+(**[patterns_to_nice_string pm]
+   
+   Generate a nice human-readable string representation of a pattern map
+   @param pm A pattern map
+   @return   The string representation of [pm]
+*)
+let patterns_to_nice_string pm =
+   let patlist_to_string pl = List.fold_left (fun acc pat ->
+      acc^(if acc = "" then acc else " , ")^(string_of_pattern pat)) "" pl
+   in
+      List.fold_left (fun acc (mapn, pats) ->
+         acc^"\n"^mapn^": "^(patlist_to_string pats)^";") "" pm
+
 (**[patterns_to_string pm]
    
    Generate a human-readable string representation of a pattern map

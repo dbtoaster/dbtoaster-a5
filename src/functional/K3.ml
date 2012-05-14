@@ -814,7 +814,7 @@ let nice_string_of_expr ?(type_is_needed = false) e maps =
          cb()
     | Var (id,t) -> 
          ob(); pid id; 
-         if type_is_needed then ps (":"^(ttostr t));
+         ps (":"^(ttostr t));
          cb()
 
     | SingletonPC(id,t) -> ob(); ppc id; cb()
@@ -1014,13 +1014,12 @@ let code_of_prog ((_,(maps,_),triggers,_):prog_t): string = (
    ) triggers)^"\n"
 )
 
-let nice_code_of_prog ((db_schema,(maps,_),triggers,tl_queries):prog_t): string = (
+let nice_code_of_prog ((db_schema,(maps,patts),triggers,tl_queries):prog_t): string = (
    let string_of_var_type (n, t) = n ^ " : " ^ (Types.string_of_type t) in
    "--------------------- SCHEMA ----------------------\n"^
    Schema.code_of_schema db_schema ^ "\n" ^
    "--------------------- MAPS ----------------------\n"^
    (ListExtras.string_of_list ~sep:"\n\n" (fun (mapn, mapiv, mapov, mapt) ->
-(*      (if (List.mem mapn (List.map fst tl_query)) then "QUERY " else "") ^ *)
       mapn^"("^(Types.string_of_type mapt)^")"^
       "["^(ListExtras.string_of_list ~sep:"," string_of_var_type mapiv)^"]"^
       "["^(ListExtras.string_of_list ~sep:"," string_of_var_type mapov)^"];"
@@ -1029,10 +1028,23 @@ let nice_code_of_prog ((db_schema,(maps,_),triggers,tl_queries):prog_t): string 
    (ListExtras.string_of_list ~sep:"\n\n" (fun (qname,qdefn) ->
       "QUERY "^qname^" := "^(nice_string_of_expr qdefn maps)^";"
    ) tl_queries)^"\n\n"^
+   "-------------------- PATTERNS --------------------\n"^
+   (
+      if Debug.active "USE-PATTERNS" then
+         ""
+      else
+         "/*"
+   )^(Patterns.patterns_to_nice_string patts)^"\n"^
+   (
+      if Debug.active "USE-PATTERNS" then
+         ""
+      else
+         "*/\n"
+   )^
    "--------------------- TRIGGERS ----------------------\n"^
    (ListExtras.string_of_list ~sep:"\n\n" (fun (event, stmts) ->
       (Schema.string_of_event event)^"\n{\n"^
-      (ListExtras.string_of_list ~sep:"\n\t" (fun e -> (nice_string_of_expr e maps)^";") stmts)^
+      (ListExtras.string_of_list ~sep:"\n\t" (fun e -> (nice_string_of_expr e maps)^";\n") stmts)^
       "\n}"
    ) triggers)^"\n"
 )
