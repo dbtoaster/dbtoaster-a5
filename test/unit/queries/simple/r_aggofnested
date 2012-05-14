@@ -1,0 +1,13 @@
+{
+  :path => "test/queries/simple/r_aggofnested.sql",
+  :datasets => {
+    "standard" => {
+      :toplevels => {
+        "COUNT_AGGREGATE_1" => {
+          :type => :singleton,
+          :expected => 10
+        }
+      }
+    }
+  }
+}

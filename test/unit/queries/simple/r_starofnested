@@ -1,0 +1,22 @@
+{
+  :path => "test/queries/simple/r_starofnested.sql",
+  :datasets => {
+    "standard" => {
+      :toplevels => {
+        "COUNT" => {
+          :type => :onelevel,
+          :expected => {
+            [1, 3] => 1,
+            [2, 1] => 1,
+            [2, 3] => 2,
+            [3, 4] => 1,
+            [4, 2] => 2,
+            [4, 5] => 1,
+            [5, 3] => 1,
+            [5, 5] => 1,
+         }
+        }
+      }
+    }
+  }
+}

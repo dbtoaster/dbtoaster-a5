@@ -1,0 +1,19 @@
+{
+  :path => "test/queries/simple/r_divb.sql",
+  :datasets => {
+    "standard" => {
+      :toplevels => {
+        "EXPRESSION_1" => {
+          :type => :onelevel,
+          :expected => {
+            [1] => 100000.0,
+            [2] => 100000.0,
+            [3] => 133333.333333,
+            [4] => 25000.0,
+            [5] => 40000.0
+          }
+        }
+      }
+    }
+  }
+}

@@ -452,6 +452,7 @@ let rec expr_type (expr:expr_t) (tables:table_t list)
 *)
 and labeled_source_schema (tables:table_t list) 
                           ((label,source):labeled_source_t): schema_t =
+   Debug.print "LOG-SQL" (fun () -> "Labeled sources of : "^label);
    List.map (fun (_,varn,vart) -> ((Some(label)),varn,vart))
             (source_schema tables source)
 
@@ -708,21 +709,27 @@ let is_agg_query ((targets,_,_,_):select_t): bool =
 *)
 let expand_wildcard_targets (tables:table_t list) 
                             ((targets,sources,cond,gb):select_t) =
-   (  List.flatten (List.map (fun (tname, texpr) ->
-         match texpr with
-            | Var(None, "*", _) ->
-               List.map (fun expr -> (name_of_expr (Var(expr)), (Var(expr)))) (
-                  List.flatten (List.map (labeled_source_schema tables) sources)
-               )
-            | Var(Some(source), "*", _) ->
-               List.map (fun expr -> (name_of_expr (Var(expr)), (Var(expr))))
-                        (labeled_source_schema tables
-                           (source,(List.assoc source sources)))
-            | _ -> [tname,texpr]
-            
-      ) targets),
-      sources, cond, gb)
-
+   let expanded_q = 
+      (  List.flatten (List.map (fun (tname, texpr) ->
+            match texpr with
+               | Var(None, "*", _) ->
+                  List.map 
+                     (fun expr -> (name_of_expr (Var(expr)), (Var(expr)))) (
+                        List.flatten (List.map (labeled_source_schema tables) 
+                                               sources)
+                     )
+               | Var(Some(source), "*", _) ->
+                  List.map (fun expr -> (name_of_expr (Var(expr)), (Var(expr))))
+                           (labeled_source_schema tables
+                              (source,(List.assoc source sources)))
+               | _ -> [tname,texpr]
+               
+         ) targets),
+         sources, cond, gb)
+   in
+      Debug.print "LOG-SQL" (fun () -> "Expanded query: "^
+                                       (string_of_select expanded_q));
+      expanded_q
 (**/**)
 let global_table_defs:(string * table_t) list ref = ref []
 ;;

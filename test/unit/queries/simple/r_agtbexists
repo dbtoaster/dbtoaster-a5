@@ -1,0 +1,18 @@
+{
+  :path => "test/queries/simple/r_agtbexists.sql",
+  :datasets => {
+    "standard" => {
+      :toplevels => {
+        "SUM_AGGREGATE_1" => {
+          :type => :onelevel,
+          :expected => {
+            [2] => 3,
+            [3] => 1,
+            [4] => 3, 
+            [5] => 2
+          }
+        }
+      }
+    }
+  }
+}

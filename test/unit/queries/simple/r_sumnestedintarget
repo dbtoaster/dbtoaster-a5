@@ -1,0 +1,13 @@
+{
+  :path => "test/queries/simple/r_sumnestedintarget.sql",
+  :datasets => {
+    "standard" => {
+      :toplevels => {
+        "SUM_AGGREGATE_2" => {
+          :type => :singleton,
+          :expected => 100
+        }
+      }
+    }
+  }
+}

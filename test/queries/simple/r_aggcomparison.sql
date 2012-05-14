@@ -4,5 +4,5 @@ CREATE STREAM R(A int, B int)
   csv (fields := ',', schema := 'int,int', eventtype := 'insert');
 
 SELECT *
-FROM R, (SELECT SUM(B) AS C FROM R) S
-WHERE A > (SELECT SUM(C) FROM R)
+FROM R r1, (SELECT SUM(B) AS C FROM R) S
+WHERE A > (SELECT SUM(C) FROM R r2);

@@ -1,0 +1,19 @@
+{
+  :path => "test/queries/simple/r_multinest.sql",
+  :datasets => {
+    "standard" => {
+      :toplevels => {
+        "Expr" => {
+          :type => :onelevel,
+          :expected => {
+            [5] => 8,
+            [1] => 3,
+            [3] => 4,
+            [4] => 9,
+            [2] => 7,
+          }
+        }
+      }
+    }
+  }
+}

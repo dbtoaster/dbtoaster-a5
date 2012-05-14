@@ -1,0 +1,15 @@
+{
+  :path => "test/queries/simple/r_starofnestedagg.sql",
+  :datasets => {
+    "standard" => {
+      :toplevels => {
+        "COUNT" => {
+          :type => :onelevel,
+          :expected => {
+            [10] => 1
+          }
+        }
+      }
+    }
+  }
+}

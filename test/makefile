@@ -32,17 +32,42 @@ bigquery:
 	
 query:
 	@$(FAST_QUERY_TEST) brokervariance
-	@$(FAST_QUERY_TEST) r_agtb
-	@$(FAST_QUERY_TEST) r_bigsumstar
-	@$(FAST_QUERY_TEST) r_btimesa
-	@$(FAST_QUERY_TEST) r_btimesacorrelated
-	@$(FAST_QUERY_TEST) r_count
-	@$(FAST_QUERY_TEST) r_gbasumb
-	@$(FAST_QUERY_TEST) r_nogroupby
-	@$(FAST_QUERY_TEST) r_smallstar
-	@$(FAST_QUERY_TEST) r_sumadivsumb
-	@$(FAST_QUERY_TEST) r_sumstar
-	@$(FAST_QUERY_TEST) rst
+	@$(FAST_QUERY_TEST) simple/r_aggcomparison
+	@$(FAST_QUERY_TEST) simple/r_aggofnested
+	@$(FAST_QUERY_TEST) simple/r_aggofnestedagg
+	@$(FAST_QUERY_TEST) simple/r_agtb
+	@$(FAST_QUERY_TEST) simple/r_agtbexists
+	@$(FAST_QUERY_TEST) simple/r_avg
+	@$(FAST_QUERY_TEST) simple/r_bigsumstar
+	@$(FAST_QUERY_TEST) simple/r_btimesa
+	@$(FAST_QUERY_TEST) simple/r_btimesacorrelated
+	@$(FAST_QUERY_TEST) simple/r_count
+	@$(FAST_QUERY_TEST) simple/r_divb
+#	@$(FAST_QUERY_TEST) simple/r_existsnestedagg # scoping issues in SQL
+	@$(FAST_QUERY_TEST) simple/r_gbasumb
+	@$(FAST_QUERY_TEST) simple/r_gtealldynamic
+	@$(FAST_QUERY_TEST) simple/r_gtesomedynamic
+	@$(FAST_QUERY_TEST) simple/r_gtsomedynamic
+	@$(FAST_QUERY_TEST) simple/r_indynamic
+	@$(FAST_QUERY_TEST) simple/r_instatic
+	@$(FAST_QUERY_TEST) simple/r_ltallagg
+	@$(FAST_QUERY_TEST) simple/r_ltallavg
+	@$(FAST_QUERY_TEST) simple/r_ltallcorravg
+	@$(FAST_QUERY_TEST) simple/r_ltalldynamic
+#	@$(FAST_QUERY_TEST) simple/r_multinest # bad IVC computation
+	@$(FAST_QUERY_TEST) simple/r_natselfjoin
+	@$(FAST_QUERY_TEST) simple/r_nogroupby
+	@$(FAST_QUERY_TEST) simple/r_selectstar
+	@$(FAST_QUERY_TEST) simple/r_simplenest
+	@$(FAST_QUERY_TEST) simple/r_smallstar
+	@$(FAST_QUERY_TEST) simple/r_starofnested
+	@$(FAST_QUERY_TEST) simple/r_starofnestedagg
+	@$(FAST_QUERY_TEST) simple/r_sumadivsumb
+	@$(FAST_QUERY_TEST) simple/r_sumdivgrp
+	@$(FAST_QUERY_TEST) simple/r_sumnestedintarget
+	@$(FAST_QUERY_TEST) simple/r_sumnestedintargetwitheq
+	@$(FAST_QUERY_TEST) simple/r_sumstar
+	@$(FAST_QUERY_TEST) simple/rst
 	@$(FAST_QUERY_TEST) employee/query01
 	@$(FAST_QUERY_TEST) employee/query01a
 	@$(FAST_QUERY_TEST) employee/query02
@@ -96,6 +121,10 @@ err:
 	@$(ERROR_TEST) scope_from
 	@$(ERROR_TEST) scope_nesting
 	@$(ERROR_TEST) multitargetnestedtarget
+	@$(ERROR_TEST) dupsource
+	@$(ERROR_TEST) multitargetin
+	@$(ERROR_TEST) multitargetall
+	@$(ERROR_TEST) multitargetwherels 
 
 employee:
 	@$(QUERY_TEST) employee/query01

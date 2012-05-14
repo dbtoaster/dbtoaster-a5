@@ -21,12 +21,12 @@ let mk_tbl table_def =
          table_defs := (relname, new_def) :: !table_defs;
          new_def
 ;;
-let get_schema name = 
-   if List.mem_assoc name !table_defs then
-      let (_,sch,_,_) = List.assoc name !table_defs in
-         sch
+let get_schema table_name source_name = 
+   if List.mem_assoc table_name !table_defs then
+      let (_,sch,_,_) = List.assoc table_name !table_defs in
+         List.map (fun (_,v,vt) -> (Some(source_name),v,vt)) sch
    else
-      bail ("Reference to Undefined Table '"^name^"'")
+      bail ("Reference to Undefined Table '"^table_name^"'")
 
 let select_schema name q = 
    re_source_vars name (Sql.select_schema (List.map snd !table_defs) q)
@@ -55,8 +55,11 @@ let scan_for_existence (op_name:string) (q:Sql.select_t) (cmp_op:cmp_t)
    let (targets, sources, cond, gb_vars) = q in
    let (_,tgt) = match targets with [tgt] -> tgt | _ -> 
       bail ("Target of "^op_name^" clause should produce a single column")
-   in Sql.Exists(["unused", Sql.Const(CInt(1))], sources, 
-         (Sql.And(cond, Sql.Comparison(expr, cmp_op, tgt))), gb_vars)
+   in 
+   if Sql.is_agg_expr tgt
+   then Sql.Comparison(expr, cmp_op, Sql.NestedQ(q))
+   else Sql.Exists(["unused", Sql.Const(CInt(1))], sources, 
+              (Sql.And(cond, Sql.Comparison(expr, cmp_op, tgt))), gb_vars)
 
 
 let bind_select_vars q =
@@ -177,11 +180,11 @@ targetList:
 
 fromItem: // ((source, name), schema)
 | ID        { ((String.uppercase $1, (Sql.Table(String.uppercase $1))), 
-               get_schema (String.uppercase $1)) }
+               get_schema (String.uppercase $1) (String.uppercase $1)) }
 | ID ID     { ((String.uppercase $2, (Sql.Table(String.uppercase $1))), 
-               get_schema (String.uppercase $1)) }
+               get_schema (String.uppercase $1) (String.uppercase $2)) }
 | ID AS ID  { ((String.uppercase $3, (Sql.Table(String.uppercase $1))), 
-               get_schema (String.uppercase $1)) }
+               get_schema (String.uppercase $1) (String.uppercase $3)) }
 | LPAREN selectStmt RPAREN ID
             { ((String.uppercase $4, (Sql.SubQ($2))), 
                select_schema (String.uppercase $4) $2) }

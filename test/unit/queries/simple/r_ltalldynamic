@@ -1,0 +1,14 @@
+{
+  :path => "test/queries/simple/r_ltalldynamic.sql",
+  :datasets => {
+    "standard" => {
+      :toplevels => {
+        "COUNT" => {
+          :type => :onelevel,
+          :expected => {
+          }
+        }
+      }
+    }
+  }
+}
