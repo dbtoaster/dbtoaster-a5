@@ -1064,27 +1064,17 @@ let dm_collection_trig (m3dm_trig: M3.trigger_t) : K.trigger_t =
   (m3dm_trig.M3.event, k3_trig_stmts)
 
 
-(** Transforms a M3DM program into a K3 program. *)
-let m3dm_to_k3 (m3_program : M3.prog_t) (m3dm_prog: M3DM.dm_prog_t) : (K.prog_t) =
-   let {M3.maps = m3_prog_schema; M3.triggers = m3_prog_trigs;
-        M3.queries = m3_prog_tlqs; M3.db = k3_database } = m3_program in
-   let k3_prog_schema = List.map m3_map_to_k3_map !m3_prog_schema in
-	let patterns_map = Patterns.extract_patterns !m3_prog_trigs in
+(** Transforms an existing K3 program with its corresponding M3DM program into a K3 program. *)
+let m3dm_to_k3 (m3tok3_program : K.prog_t) (m3dm_prog: M3DM.prog_t) : (K.prog_t) =
+   let ( k3_database, (old_k3_prog_schema, patterns_map), m3tok3_prog_trigs, k3_prog_tlqs) = m3tok3_program in
+   let k3_prog_schema = List.map m3_map_to_k3_map !(m3dm_prog.M3DM.maps) in
 	let k3_prog_trigs = 
 		List.fold_left
 				(fun (old_trigs) m3dm_trig -> 
 							let k3_trig = dm_collection_trig m3dm_trig in
 							(old_trigs@[k3_trig]) )
 				([])
-				!m3dm_prog 
-	in
-	let k3_prog_tlqs = 
-	  List.map (fun (name, query) ->
-	     let ((_,k3_query_compiled,_),_) =
-	        calc_to_k3_expr empty_meta [] query
-	     in
-	        (name, k3_query_compiled)
-	  ) !m3_prog_tlqs
+				!(m3dm_prog.M3DM.triggers)
 	in
 	( k3_database, 
 	  (k3_prog_schema, patterns_map), 

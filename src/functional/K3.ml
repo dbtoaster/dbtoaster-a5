@@ -709,15 +709,19 @@ let rec code_of_expr e =
                                 ","^(ListExtras.ocaml_of_list rcr oute)^")"
 
 let get_pc_schema pce maps = 
-   let pc_name = match pce with
+   let rec get_pc_name expression = match expression with
       | OutPC(id,outs,t) -> 
             id
       | InPC(id,ins,t) -> 
             id
       | PC(id,ins,outs,t) -> 
             id
+      | Map(_, e) -> get_pc_name e
+      | Slice(e, _, _) -> get_pc_name e
       | _ -> failwith "First element of Slice must be PC!"
-      in
+   in
+   let pc_name =  get_pc_name pce    
+   in
       let (mapn, mapiv, mapov, mapt) = 
          List.hd (
             List.filter (fun (mapn, mapiv, mapov, mapt) -> mapn = pc_name) maps
