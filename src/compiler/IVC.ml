@@ -61,12 +61,26 @@ let derive_initializer ?(scope = [])
          | _ -> CalcRing.mk_val lf
       ) (CalculusTransforms.optimize_expr (Calculus.schema_of_expr expr) expr)
    in
-      Debug.print "LOG-DERIVE-INITIALIZER" (fun () ->
-         "[Initializer] Initializer is "^
-            (CalculusPrinter.string_of_expr init_expr)
-      ); 
-			if (Debug.active "IVC-OPTIMIZE-EXPR") then
-	   		CalculusTransforms.optimize_expr (Calculus.schema_of_expr init_expr) init_expr
+      (* It's possible that a zero will narrow the schema of an expression 
+         without zeroing out the entire expression thanks to a lift.  We need
+         to detect this here, rather than above, since we don't have schema
+         information in rewrite_leaves (And for AggSum, it actually matters that
+         the group-by vars be a superset of the schema). *)
+      if ListAsSet.diff (snd (Calculus.schema_of_expr expr))
+                        (snd (Calculus.schema_of_expr init_expr)) <> []
+      then (
+         Debug.print "LOG-DERIVE-INITIALIZER" (fun () -> 
+            "[Initializer] Initializer is zero");
+         CalcRing.zero
+      ) else (
+         Debug.print "LOG-DERIVE-INITIALIZER" (fun () ->
+            "[Initializer] Initializer is "^
+               (CalculusPrinter.string_of_expr init_expr)
+         ); 
+         if (Debug.active "IVC-OPTIMIZE-EXPR") then
+            CalculusTransforms.optimize_expr (Calculus.schema_of_expr init_expr) 
+                                             init_expr
 			else init_expr
+      )
 
 (******************************************************************************)
