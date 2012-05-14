@@ -725,8 +725,8 @@ let get_pc_schema pce maps =
          List.map fst (mapiv@mapov)
 
 let nice_string_of_expr ?(type_is_needed = false) e maps =
-  let ob () = pp_open_box str_formatter 2 in
-  let cb () = pp_close_box str_formatter () in
+  let ob () = pp_open_hovbox str_formatter 2(*; pp_print_string str_formatter "{"*) in
+  let cb () = (*pp_print_string str_formatter "}";*)pp_close_box str_formatter () in
   let pc () = pp_print_cut str_formatter () in
   let ps s = pp_print_string str_formatter s in
   let psp () = pp_print_space str_formatter () in
@@ -1044,7 +1044,7 @@ let nice_code_of_prog ((db_schema,(maps,patts),triggers,tl_queries):prog_t): str
    "--------------------- TRIGGERS ----------------------\n"^
    (ListExtras.string_of_list ~sep:"\n\n" (fun (event, stmts) ->
       (Schema.string_of_event event)^"\n{\n"^
-      (ListExtras.string_of_list ~sep:"\n\t" (fun e -> (nice_string_of_expr e maps)^";\n") stmts)^
+      (ListExtras.string_of_list ~sep:"\n" (fun e -> (nice_string_of_expr e maps)^";\n") stmts)^
       "\n}"
    ) triggers)^"\n"
 )

@@ -244,7 +244,7 @@ triggerList:
 trigger:
 | ON triggerType ID LPAREN argumentList RPAREN LBRACE statementList RBRACE 
                                                             {
-                                                            let args = List.map (fun x -> (x, Types.TFloat)) $5
+                                                            let args = List.map (fun x -> (x, Types.TInt)) $5
                                                             in
                                                                let r = ($3, args,Schema.StreamRel)
                                                                in
@@ -257,7 +257,7 @@ trigger:
                                                                      (ev, $8) }
 | ON triggerType ID LBRACK argumentList RBRACK LBRACE statementList RBRACE 
                                                             {
-                                                            let args = List.map (fun x -> (x, Types.TFloat)) $5
+                                                            let args = List.map (fun x -> (x, Types.TInt)) $5
                                                             in
                                                                let r = ($3, args,Schema.StreamRel)
                                                                in
