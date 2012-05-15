@@ -82,7 +82,10 @@ let specs:(Arg.key * Arg.spec * Arg.doc) list  = Arg.align [
       "file  Invoke the appropriate second stage compiler on the source file");
    (  "-r",
       (Arg.Unit(fun () -> output_language := Interpreter)),
-      "      Run the query in the internal interpreter")
+      "      Run the query in the internal interpreter");
+   (  "--custom-prefix",
+      (Arg.String(FreshVariable.set_prefix)),
+      "      Use a custom prefix for generated symbols (default:'__')")
 ];;
 
 Arg.parse specs (fun x -> files := !files @ [x]) 
