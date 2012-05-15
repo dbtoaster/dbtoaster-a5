@@ -1,4 +1,4 @@
--- Display the employees who are working in "New York".
+-- Display the employees who are working in "Chicago".
 
 CREATE STREAM EMPLOYEE(
     employee_id     INT, 
@@ -32,9 +32,9 @@ CREATE STREAM LOCATION(
 
 SELECT * 
 FROM employee e
-WHERE e.department_id=(SELECT d.department_id 
+WHERE e.department_id IN (SELECT d.department_id 
                        FROM department d 
-                       WHERE d.location_id=(SELECT l.location_id 
+                       WHERE d.location_id IN (SELECT l.location_id 
                                             FROM location l 
                                             WHERE l.regional_group='CHICAGO'))
                                             

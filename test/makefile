@@ -44,7 +44,7 @@ query:
 	@$(FAST_QUERY_TEST) simple/r_btimesacorrelated
 	@$(FAST_QUERY_TEST) simple/r_count
 	@$(FAST_QUERY_TEST) simple/r_divb
-#	@$(FAST_QUERY_TEST) simple/r_existsnestedagg # scoping issues in SQL
+	@$(FAST_QUERY_TEST) simple/r_existsnestedagg # scoping issues in SQL
 	@$(FAST_QUERY_TEST) simple/r_gbasumb
 	@$(FAST_QUERY_TEST) simple/r_gtealldynamic
 	@$(FAST_QUERY_TEST) simple/r_gtesomedynamic
@@ -93,6 +93,7 @@ query:
 	@$(FAST_QUERY_TEST) employee/query35c
 	@$(FAST_QUERY_TEST) employee/query36b  
 	@$(FAST_QUERY_TEST) employee/query36c 
+	@$(FAST_QUERY_TEST) employee/query37
 	@$(FAST_QUERY_TEST) employee/query38a
 	@$(FAST_QUERY_TEST) employee/query39
 	@$(FAST_QUERY_TEST) employee/query40
