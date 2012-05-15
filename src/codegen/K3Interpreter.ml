@@ -817,7 +817,7 @@ struct
            | Schema.FileSource(_) ->
                FileSource.create src 
                (List.map (fun (adaptor, rel) -> 
-                   (rel, (Adaptors.create_adaptor adaptor))) rel_adaptors)
+                   (rel, (Adaptors.create_adaptor rel adaptor))) rel_adaptors)
                (ListExtras.ocaml_of_list (fun (_,x) -> Schema.string_of_rel x) 
                                          rel_adaptors)
            | Schema.SocketSource(_) -> bail "Sockets not yet implemented."

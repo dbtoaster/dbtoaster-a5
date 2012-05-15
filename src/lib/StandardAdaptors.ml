@@ -111,15 +111,28 @@ let preprocessors : (string * (string -> string list -> string list)) list =
  *) 
 (* TODO: better hashing function control *)
 (* TODO: handle "event" and "order" schema elements, as seen in C++ adaptors *)
-let build_tuple param_val =
+let build_tuple (reln,relv,_) param_val =
    let types = Str.split (Str.regexp ",") param_val in
+   let assert_type vn vt scht cmpt= 
+      if vt <> cmpt then failwith (
+         "Mismatch between schema of "^reln^" and schema provided to CSV "^
+         "adaptor: '"^param_val^"'.  Adaptor schema is "^scht^
+         ", but relation schema says "^(Types.string_of_type vt)^
+         " for variable "^vn
+      )
+   in
    let build_fns = 
-       List.map (fun t -> match t with
-        | "int" -> (fun x -> try CInt(int_of_string x) with 
+     try 
+       List.map2 (fun t (vn,vt) -> match t with
+        | "int" -> assert_type vn vt t TInt;
+                   (fun x -> try CInt(int_of_string x) with 
                     Failure(_) -> failwith ("Could not convert int: '"^x^"'"))
-        | "float" -> (fun x -> try CFloat(float_of_string x) with
+        | "float" -> assert_type vn vt t TFloat;
+                   (fun x -> try CFloat(float_of_string x) with
                     Failure(_) -> failwith ("Could not convert float: '"^x^"'"))
-        | "date" -> (fun x -> 
+        | "date" -> 
+          assert_type vn vt t TInt;
+          (fun x -> 
             if (Str.string_match 
                   (Str.regexp "\\([0-9]+\\)-\\([0-9]+\\)-\\([0-9]+\\)") x 0)
             then (
@@ -137,9 +150,18 @@ let build_tuple param_val =
                   CInt((y * 10000) + (m * 100) + (d * 1))
             ) else failwith ("Invalid date string: "^x)
          )
-        | "string" -> (fun x -> CString(x))
-        | "hash" -> (fun x -> CInt(Hashtbl.hash x))
-        | _ -> failwith ("invalid const_t type "^t)) types in
+        | "string" -> 
+           assert_type vn vt t TString;
+           (fun x -> CString(x))
+        | "hash" -> 
+           assert_type vn vt t TInt;
+           (fun x -> CInt(Hashtbl.hash x))
+        | _ -> failwith ("invalid const_t type "^t)) types relv 
+     with | Invalid_argument("List.map2") ->
+               failwith ("Schema mismatch: Adaptor got ["^param_val^"]; while "^
+                         "expecting schema: "^
+                         (ListExtras.ocaml_of_list Types.string_of_var relv))
+   in
    let num_fns = List.length build_fns in
    let extend_fn = List.hd (List.rev build_fns) in
    let rec sub acc l off len =
@@ -163,9 +185,16 @@ let build_tuple param_val =
          List.map extend_fn (sub [] fields num_fns (nf - num_fns)) else []
       in common@extension)
 
+let build_rel_tuple (reln,relv,relt) =
+   let synthesized_schema =
+      ListExtras.string_of_list ~sep:"," 
+         (fun (_,t) -> Types.string_of_type t) relv
+   in build_tuple (reln,relv,relt) synthesized_schema
+
 (* Constructors: param key, const fn *)
-let constructors : (string * (string -> string list -> const_t list)) list =
-   [("schema", build_tuple)]
+let constructors rel_sch : 
+      (string * (string -> string list -> const_t list)) list =
+   [("schema", (build_tuple rel_sch))]
 
 (* TODO: precision management transformations *)
 
@@ -209,7 +238,7 @@ let event_constructors :
    [("eventtype", constant_event); ("triggers", parametrized_event)]
 
 (* Standard generator, applying above transformations *)
-let standard_generator params =
+let standard_generator rel_sch params =
    let match_keys l = List.map (fun (k,v) -> (List.assoc k l) v)
       (List.filter (fun (k,v) -> List.mem_assoc k l) params) in
    let match_unique_default l fn_class default =
@@ -218,16 +247,13 @@ let standard_generator params =
        | [] -> default
        | _ -> failwith ("Multiple "^fn_class^"s specified for CSV adaptor")
    in
-   let match_unique l fn_class =
-      let m = match_keys l in match m with
-       | [f] -> f
-       | [] -> failwith ("No "^fn_class^" specified for CSV adaptor")
-       | _ -> failwith ("Multiple "^fn_class^"s specified for CSV adaptor")
-   in
    let token_fn = 
      match_unique_default tokenizers "tokenizer" (field_tokens ",") in
    let prep_fns = match_keys preprocessors in
-   let const_fn = match_unique constructors "constructor" in
+   let const_fn = 
+      match_unique_default (constructors rel_sch) "constructor" 
+                           (build_rel_tuple rel_sch) 
+   in
    let post_fns = match_keys postprocessors in
    let event_const_fn = 
      match_unique_default event_constructors "event constructor" 
@@ -240,7 +266,9 @@ let standard_generator params =
           let pre_fields = List.fold_left
              (fun acc_fields prf -> prf acc_fields) (token_fn tuple) prep_fns in
           let post_fields = List.fold_left
-             (fun acc_fields postf -> postf acc_fields) (const_fn pre_fields) post_fns
+             (fun acc_fields postf -> postf acc_fields) 
+             (const_fn pre_fields) 
+             post_fns
           in event_const_fn post_fields
         )
       with AbortEventConstruction -> []
@@ -256,17 +284,17 @@ let insert_csv delim = csv_params delim "" ""
 let delete_csv delim = csv_params delim "" "delete"
 
 let csv_generator = standard_generator
-let csv_generator_wrapper default_params extra_params =
+let csv_generator_wrapper default_params rel_sch extra_params =
   let p = (List.filter (fun (k,v) ->
     not(List.mem_assoc k extra_params)) default_params)@extra_params
-  in csv_generator p
+  in csv_generator rel_sch p
 
 (* Order books *)
 (* TODO: generalize usage of fixed order book schema through field bindings *)
 let bids_params = [("book", "bids")]
 let asks_params = [("book", "asks")]
 
-let orderbook_generator params =
+let orderbook_generator rel_sch params =
    let required = ["book"] in
    let optional = [("brokers", "0"); ("insert-only", "false")] in
    
@@ -390,7 +418,7 @@ let orderbook_generator params =
 
 (* TPC-H *)
 let li_schema =
-   "int,int,int,int,int,float,float,float,string,string,date,date,date,string,string,string"
+   "int,int,int,int,float,float,float,float,string,string,date,date,date,string,string,string"
 
 let lineitem_params = csv_params "|" li_schema "insert"
 let order_params    = csv_params "|" "int,int,string,float,date,string,string,int,string" "insert"

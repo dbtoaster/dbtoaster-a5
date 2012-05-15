@@ -179,7 +179,7 @@ let run_adaptors output_dir sources =
       | Schema.FileSource _ ->
         FileSource.create src 
           (List.map (fun (rel,adaptor) -> 
-             (rel, (Adaptors.create_adaptor adaptor))) rel_adaptors)
+             (rel, (Adaptors.create_adaptor rel adaptor))) rel_adaptors)
           (ListExtras.ocaml_of_list (fun (x,_) -> Schema.string_of_rel x)
                                     rel_adaptors)
       | Schema.SocketSource _ -> failwith "Sockets not yet implemented."

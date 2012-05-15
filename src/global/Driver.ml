@@ -574,11 +574,14 @@ if stage_is_active StageK3ToTargetLanguage then (
                maps, patterns, 
                K3InterpreterCG.compile_k3_to_code !k3_program
             )
-         with K3Interpreter.InterpreterException(expr,msg) ->
+         with 
+         | K3Interpreter.InterpreterException(expr,msg) ->
             (begin match expr with 
                | Some(s) -> error ~detail:(fun () -> K3.string_of_expr s) msg
                | None    -> error msg
             end)
+         | Failure(msg) ->
+            error msg
                
       )   
       | Ocaml       -> bug "Ocaml codegen not implemented yet"

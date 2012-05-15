@@ -18,7 +18,7 @@ type adaptor_event_t = AInsert | ADelete
 module Adaptors =
 struct
    type adaptor = string -> (adaptor_event_t * const_t list) list
-   type adaptor_generator = (string * string) list -> adaptor
+   type adaptor_generator = Schema.rel_t -> (string * string) list -> adaptor
    type adaptor_registry = (string, adaptor_generator) Hashtbl.t
    
    let adaptors = Hashtbl.create 10
@@ -26,8 +26,9 @@ struct
    let get_source_type a = fst a
    let get_adaptor a = snd a
 
-   let create_adaptor (name, params) : adaptor =
-      if Hashtbl.mem adaptors name then ((Hashtbl.find adaptors name) params)
+   let create_adaptor rel_sch (name, params) : adaptor =
+      if Hashtbl.mem adaptors name 
+      then ((Hashtbl.find adaptors name) rel_sch params)
       else failwith ("No adaptor named "^name^" found")
 
    let add name (generator : adaptor_generator) =
