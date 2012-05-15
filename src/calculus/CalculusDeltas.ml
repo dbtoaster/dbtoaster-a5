@@ -10,7 +10,9 @@ open Calculus
 (**/**)
 module C = Calculus
 
-let delta_var_id = ref 0;;
+let mk_delta_var = 
+   FreshVariable.declare_class "calculus/CalculusDeltas"
+                               "delta"
 
 let error expr msg = raise (CalculusException(expr, msg));;
 (**/**)
@@ -72,8 +74,7 @@ let rec delta_of_expr (delta_event:Schema.event_t) (expr:C.expr_t): C.expr_t=
             | Lift(v, sub_t) ->
                let delta_term = rcr sub_t in
                if delta_term = CalcRing.zero then CalcRing.zero else (
-               delta_var_id := !delta_var_id + 1; 
-               let delta_var = ("delta_"^(string_of_int !delta_var_id),
+               let delta_var = (mk_delta_var (),
                                 C.type_of_expr delta_term) in
                   (* We do a slightly non-standard delta rewrite here.  Rather
                      than the standard 

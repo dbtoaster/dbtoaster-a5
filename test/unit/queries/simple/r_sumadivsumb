@@ -3,7 +3,7 @@
   :datasets => {
     "standard" => {
       :toplevels => {
-        "EXPRESSION_1" => {
+        "__SQL_EXPRESSION_1" => {
           :type => :singleton,
           :expected => 1
         }

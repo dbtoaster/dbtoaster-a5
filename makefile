@@ -9,6 +9,7 @@ FILES=\
 	src/util/Fixpoint\
 	src/util/ExternalCompiler\
 	src/util/SourceCode\
+	src/util/FreshVariable\
 	src/global/Types\
 	src/global/Schema\
 	src/sql/Sql\
@@ -22,7 +23,7 @@ FILES=\
 	src/calculus/CalculusDecomposition\
 	src/calculus/SqlToCalculus\
 	src/compiler/Plan\
-        src/compiler/IVC\
+	src/compiler/IVC\
 	src/compiler/Heuristics\
 	src/compiler/Compiler\
 	src/maps/M3\

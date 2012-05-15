@@ -3,7 +3,7 @@
   :datasets => {
     "standard" => {
       :toplevels => {
-        "AVG_AGGREGATE_1" => {
+        "__SQL_AVG_AGGREGATE_1" => {
           :type => :singleton,
           :expected => 3.2
         }

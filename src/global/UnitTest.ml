@@ -1,14 +1,13 @@
+(**
+  Generic tools for implementing the unit tests that live in
+  test/unit.  This includes both a set of generic logging functions
+  as well as a few utility functions for calling into things like
+  parsers, etc...
+*)
+
 open Types
 open Ring
 open Arithmetic
-
-
-(****************************************************************
- * Generic tools for implementing the unit tests that live in
- * test/unit.  This includes both a set of generic logging functions
- * as well as a few utility functions for calling into things like
- * parsers, etc...
- ****************************************************************)
 
 let showdiff exp_str fnd_str = 
    print_string ("--Expected--\n"^exp_str^
@@ -214,3 +213,9 @@ let compile (db:Schema.t) (name:string) (expr:string) =
          Plan.ds_name = Plan.mk_ds_name name q_schema q_type;
          Plan.ds_definition = q_expr
       }]
+
+;;
+(*************************** Standard Debug Prefs ****************************)
+FreshVariable.set_prefix "";;
+
+

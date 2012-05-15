@@ -209,8 +209,9 @@ let apply_lambda_to_expr lambda_e expr =
 	in [to_v_el]. *)
 let project_fn from_v_el to_v_el = 
 	lambda from_v_el (exprs_to_tuple to_v_el)	
-							
-let accum_counter = ref 0
+
+let gen_accum_var = 
+   FreshVariable.declare_class "functional/M3ToK3" "accv"
 (**[aggregate_fn v_el multpl_e]
 
    Constructs an aggregation function.
@@ -218,9 +219,7 @@ let accum_counter = ref 0
 	@param multpl_e Variable expression used for accessing the values associated
 						 with each tuple in the aggregated collection. *)												
 let aggregate_fn v_el multpl_e =
-	let next_accum_var() = incr accum_counter;
-   							  "accv_"^(string_of_int !accum_counter) in
-	let accv = next_accum_var () in 
+	let accv = gen_accum_var () in 
 	let multpl_t = snd (List.hd (k3_expr_to_k3_idType [multpl_e])) in
 	let acce = K.Var( accv, multpl_t ) in
 	assoc_lambda (v_el@[multpl_e]) [acce] (K.Add(acce, multpl_e))
@@ -281,19 +280,20 @@ let map_to_expr mapn ins outs map_type =
 
 
 (* Utility function for generating temporary maps used in computing sums. *)
-let sum_tmp_prefix  = "sum_tmp_"
-let sum_tmp_counter = ref 0
+let gen_sum_var_sym = 
+   FreshVariable.declare_class "functional/M3ToK3" "sum_tmp"
 let next_sum_tmp_coll outs_el sum_type_k = 
-		incr sum_tmp_counter;
-   	let colln = sum_tmp_prefix^(string_of_int !sum_tmp_counter) in
+   	let colln = gen_sum_var_sym () in
 		let outs_k  = k3_expr_to_k3_idType outs_el in
 		begin match outs_el with
 	  | [] -> failwith "M3ToK3: sum_tmp collection required only if 'outs_el' is not empty!"
 	  |  x -> K.OutPC(colln, outs_k, sum_type_k),
 		       (colln, [], List.combine (List.map fst outs_k) (List.map K.base_type_of (List.map snd outs_k)), K.base_type_of sum_type_k)
 	  end
-	
-let prod_ret_counter = ref 0
+
+let gen_prod_ret_sym = 
+   FreshVariable.declare_class "functional/M3ToK3" "prod_ret_"
+   
 (**/**)		
 (**********************************************************************)
 
@@ -756,8 +756,8 @@ let rec calc_to_k3_expr meta theta_vars_el calc :
 			
 			let prod_fn (p1_outs_el,_p1_ret_ve,p1) (p2_outs_el,_p2_ret_ve,p2) =
 				let p1_ret_t,p2_ret_t = pair_map type_of_kvar (_p1_ret_ve,_p2_ret_ve) in
-				let p1_ret_ve = K.Var("p1_ret_"^(incr prod_ret_counter;(string_of_int !prod_ret_counter)),p1_ret_t) in
-				let p2_ret_ve = K.Var("p2_ret_"^(incr prod_ret_counter;(string_of_int !prod_ret_counter)),p2_ret_t) in 
+				let p1_ret_ve = K.Var(gen_prod_ret_sym ~inline:"1" (), p1_ret_t) in
+				let p2_ret_ve = K.Var(gen_prod_ret_sym ~inline:"2" (), p2_ret_t) in 
 				let ret_ve = K.Var("prod",arithmetic_return_types p1_ret_t p2_ret_t) in
 				let p_outs_el,p = begin match p1_outs_el,p2_outs_el with
 				| [],[] -> [], K.Mult(p1,p2)

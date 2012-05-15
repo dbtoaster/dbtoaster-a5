@@ -93,8 +93,7 @@ struct
   type 'a linear_code_t = ('a * (ir_tag_t * ('a list))) list
 
   (* Helpers *)
-  let sym_counter = ref 0
-  let gensym () = incr sym_counter; "__v"^(string_of_int (!sym_counter))
+  let gensym = FreshVariable.declare_class "imperative/K3ToImperative" "v"
   let tag_of_ir ir = match ir with | Leaf(_,t) -> t | Node (_,t,_) -> t 
   let meta_of_ir ir = match ir with | Leaf(m,_) -> m | Node (m,_,_) -> m
   let children_of_ir ir = match ir with | Leaf _ -> [] | Node (_,_,c) -> c

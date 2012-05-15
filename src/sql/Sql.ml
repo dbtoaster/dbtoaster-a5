@@ -268,7 +268,7 @@ let string_of_var ((s,v,_):sql_var_t): string =
    match s with Some(source) -> source^"."^v | None -> v
 
 (**/**)
-let arbitrary_name_id = ref 0
+let mk_sym = FreshVariable.declare_class "sql/Sql" "sql"
 (**/**)
 
 (**
@@ -280,10 +280,7 @@ let arbitrary_name_id = ref 0
    @return      A unique name for the expression
 *)
 let name_of_expr (expr:expr_t): string =
-   let arbitrary basename = 
-      arbitrary_name_id := !arbitrary_name_id + 1;
-      basename^"_"^(string_of_int !arbitrary_name_id)
-   in
+   let arbitrary basename = mk_sym ~inline:("_"^basename) () in
    begin match expr with
       | Const(c)            -> arbitrary "constant"
       | Var(_,vn,_)         -> vn

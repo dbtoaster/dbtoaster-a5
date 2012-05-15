@@ -11,11 +11,11 @@ open Calculus
 (**/**)
 module C = Calculus
 
-let tmp_var_id = ref 0
+let mk_var_name = 
+   FreshVariable.declare_class "calculus/SqlToCalculus" "sql_inline"
 
 let tmp_var (vn:string) (vt:type_t): var_t = 
-   tmp_var_id := !tmp_var_id + 1;
-   (vn^(string_of_int !tmp_var_id), vt)
+   (mk_var_name ~inline:("_"^vn) (), vt)
 (**/**)
 
 (** 
@@ -41,9 +41,8 @@ let lift_if_necessary ?(t="agg") (calc:C.expr_t):
    match calc with
       | CalcRing.Val(Value(x)) -> (x, CalcRing.one)
       | _ -> 
-         let tmp_var = tmp_var ("__sql_inline_"^t^"_") 
-                               (C.type_of_expr calc) in
-            (mk_var tmp_var, CalcRing.mk_val (Lift(tmp_var, calc)))
+         let v = tmp_var t (C.type_of_expr calc) in
+         (  mk_var v, CalcRing.mk_val (Lift(v, calc))  )
       
 
 (**

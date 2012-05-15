@@ -10,11 +10,11 @@ open Calculus
 (**/**)
 module C = Calculus
 
-let next_temp_var = ref 0;;
+let next_temp_name = 
+   FreshVariable.declare_class "calculus/CalculusTransforms"
+                               "calc_transform_temp_var"
 let mk_temp_var term = 
-   next_temp_var := !next_temp_var + 1; 
-   (  "calc_transform_temp_var_"^(string_of_int !next_temp_var), 
-      C.type_of_expr term)
+   (next_temp_name (), C.type_of_expr term)
 (**/**)
 ;;
 (**

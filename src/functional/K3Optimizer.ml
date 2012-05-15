@@ -392,8 +392,14 @@ open K3
 
 type optimization_t = CSE | Beta | NoFilter
 
-let var_counter = ref 0
-let gen_var_sym() = incr var_counter; "var"^(string_of_int (!var_counter))
+let gen_var_sym = 
+   FreshVariable.declare_class "functional/K3Optimizer" "opt_var"
+let gen_cse_sym = 
+   FreshVariable.declare_class "functional/K3Optimizer" "cse_var"
+let gen_ds_sym = 
+   FreshVariable.declare_class "functional/K3Optimizer" "ds"
+let gen_alpha_sym = 
+   FreshVariable.declare_class "functional/K3Optimizer" "alpha"
 
 let mk_var (id,ty) = Var(id,ty)
 let mk_block l = match l with [x] -> x | _ -> Block(l)
@@ -949,8 +955,6 @@ let rec simplify_collections filter expr =
  *)
 
 let common_subexpression_elim expr =
-  let symref = ref 0 in
-  let gensym () = incr symref; "__cse"^(string_of_int !symref) in
   let unique l = List.fold_left (fun acc e ->
     if List.mem e acc then acc else acc@[e]) [] l
   in
@@ -975,7 +979,7 @@ let common_subexpression_elim expr =
     List.fold_left (fun acc cse -> substitute_expr [cse, cse_var] acc) expr cl
   in
   let mk_cse expr_id expr eqv = List.fold_left (fun acc_expr cl ->
-      let cse_id = gensym() in
+      let cse_id = gen_cse_sym () in
       let arg = List.hd cl in
       let cse_ty =
         try K3Typechecker.typecheck_expr arg
@@ -992,15 +996,13 @@ let common_subexpression_elim expr =
   
   (* Alpha renaming based equivalence, and equivalence class helpers *)
   let alpha_rename expr =
-    let sym = ref 0 in
-    let renamed_var () = incr sym; "__alpha"^(string_of_int !sym) in
     let add_subs subs src dest =
       (if List.mem_assoc src subs then List.remove_assoc src subs else subs)@
       [src, dest] in
     let sub_of_id subs id =
       if List.mem_assoc id subs then List.assoc id subs else id in
     let subs_of_args subs a_l = List.fold_left (fun acc v ->
-        add_subs acc v (renamed_var())) subs
+        add_subs acc v (gen_alpha_sym ())) subs
       (List.flatten (List.map get_arg_vars a_l)) in
     let rebuild_arg subs arg = 
       let nv = List.map (sub_of_id subs) (get_arg_vars arg) in
@@ -1137,7 +1139,7 @@ let common_subexpression_elim expr =
               let r_expr =
                 let cse_id_tys, np = List.fold_left
                   (fun (sub_acc, acc_expr) cl ->
-                    let cse_id = gensym() in
+                    let cse_id = gen_cse_sym() in
                     let arg = List.hd cl in
                     let cse_t = K3Typechecker.typecheck_expr arg in
                     let cse_var = Var(cse_id,cse_t) in
@@ -1524,9 +1526,6 @@ let extract_predicates env schema e =
       (List.filter (fun (_, e_l) -> List.length e_l = 1) bp_groups)
   in unambiguous_bp, conservative_beta_reduction [] re
 
-
-let ds_sym = ref 0 
-let gen_ds_sym () = incr ds_sym; "__ds"^(string_of_int !ds_sym)
 
 let back l = let x = List.rev l in List.rev (List.tl x), List.hd x
 

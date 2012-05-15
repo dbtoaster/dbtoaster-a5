@@ -3,7 +3,7 @@
   :datasets => {
     "standard" => {
       :toplevels => {
-        "SUM_AGGREGATE_2" => {
+        "__SQL_SUM_AGGREGATE_2" => {
           :type => :onelevel,
           :expected => {
             [1.0] => 96.0,
