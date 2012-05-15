@@ -29,6 +29,7 @@ bigquery:
 #	@$(QUERY_TEST) tpch18  #results incorrect
 #	@$(QUERY_TEST) tpch22  #results incorrect
 #	@$(QUERY_TEST) vwap    #slow
+	@$(QUERY_TEST) simple/r_ltallcorravg
 	
 query:
 	@$(FAST_QUERY_TEST) brokervariance
@@ -52,7 +53,6 @@ query:
 	@$(FAST_QUERY_TEST) simple/r_instatic
 	@$(FAST_QUERY_TEST) simple/r_ltallagg
 	@$(FAST_QUERY_TEST) simple/r_ltallavg
-	@$(FAST_QUERY_TEST) simple/r_ltallcorravg
 	@$(FAST_QUERY_TEST) simple/r_ltalldynamic
 #	@$(FAST_QUERY_TEST) simple/r_multinest # bad IVC computation
 	@$(FAST_QUERY_TEST) simple/r_natselfjoin

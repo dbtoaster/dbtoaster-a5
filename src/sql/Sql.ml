@@ -50,6 +50,7 @@ let string_of_var_binding_err = function
       "using a fully qualified name."
    | _ -> "BUG: Not a variable binding error in Sql module"
 
+
 (**/**)
 let error msg = raise (SqlException(msg))
 (**/**)
@@ -394,31 +395,37 @@ let find_table (t:string) (tables:table_t list): table_t =
 
 (**
    Compute the type of a SQL expression.
+   @param strict  (optional) If explicitly set to false, expr_type will not 
+                  attempt to coerce TAny to an exact type.  Normally, this would
+                  raise an error whenever this coersion is not possible, which
+                  is the case during parsing.
    @param expr    A SQL expression
    @param tables  The database schema (a list of all tables)
    @param sources All members of the [FROM] clause in the [SELECT] statement
                   in the context of which [expr] is being evaluated.
    @return        The type of [expr]
 *)
-let rec expr_type (expr:expr_t) (tables:table_t list) 
+let rec expr_type ?(strict = true) (expr:expr_t) (tables:table_t list) 
                   (sources:labeled_source_t list): type_t =
    let tree_err msg = 
       error (msg^": "^(string_of_expr expr))
    in
    let return_if_numeric st msg = 
       begin match st with | TInt | TFloat -> st
+                          | TAny when not strict -> st
                           | _ -> tree_err (msg^(string_of_type st))
       end
    in
-   let rcr e = expr_type e tables sources in
+   let rcr e = expr_type ~strict:strict e tables sources in
    match expr with
       | Const(c)        -> type_of_const c
-      | Var(v)          -> var_type v tables sources
+      | Var(v)          -> var_type ~strict:strict v tables sources
       | SQLArith(a,_,b) -> (escalate_type (rcr a) (rcr b))
       | Negation(subexp) ->
          return_if_numeric (rcr subexp) "Negation of "
       | NestedQ(stmt) -> 
-         let subsch = select_schema tables stmt in
+         let subsch = select_schema ~strict:strict ~parent_sources:sources
+                                    tables stmt in
             if (List.length subsch) != 1 then
                tree_err "Nested query must return a single value"
             else 
@@ -446,40 +453,67 @@ let rec expr_type (expr:expr_t) (tables:table_t list)
    Compute the schema of a labeled source.  Like source_schema, but the schema
    variables will be bound to the labeled identifier.
    
+   @param strict  (optional) If explicitly set to false, schema elements with 
+                  type TAny will not be coerced to normal types.  Normally,
+                  an error would be raised if this coersion is not possible,
+                  which is the case during parsing.
+   @param parent_souces (optional) A list of named sources, which are in-scope 
+                        when [stmt] is evaluated
    @param tables  The database schema (a list of all tables)
    @param source  The labeled source
    @return        The schema (types/names) of the result of [stmt]
 *)
-and labeled_source_schema (tables:table_t list) 
+and labeled_source_schema ?(strict=true) ?(parent_sources = []) 
+                          (tables:table_t list) 
                           ((label,source):labeled_source_t): schema_t =
-   Debug.print "LOG-SQL" (fun () -> "Labeled sources of : "^label);
+   Debug.print "LOG-SQL" (fun () -> "[SQL] Labeled sources of : "^label);
    List.map (fun (_,varn,vart) -> ((Some(label)),varn,vart))
-            (source_schema tables source)
+            (source_schema ~strict:strict ~parent_sources:parent_sources
+                           tables source)
 
 (**
    Compute the schema of a source
+
+   @param strict  (optional) If explicitly set to false, schema elements with 
+                  type TAny will not be coerced to normal types.  Normally,
+                  an error would be raised if this coersion is not possible,
+                  which is the case during parsing.
+   @param parent_souces (optional) A list of named sources, which are in-scope 
+                        when [stmt] is evaluated
    @param tables  The database schema (a list of all tables)
    @param source  The source
    @return        The schema (types/names) of the result of [stmt]
 *)
-and source_schema (tables:table_t list) (source:source_t): schema_t =
+and source_schema ?(strict=true) ?(parent_sources = []) (tables:table_t list) 
+                  (source:source_t): schema_t =
    match source with 
       | Table(table_name) -> 
          let (_,sch,_,_) = 
             List.find (fun (cmp_name,_,_,_) -> cmp_name=table_name) tables
          in sch
-      | SubQ(stmt) -> select_schema (tables) stmt
+      | SubQ(stmt) -> select_schema ~strict:strict 
+                                    ~parent_sources:parent_sources 
+                                    tables 
+                                    stmt
 
 (**
    Compute the schema of a [SELECT] statement
+   @param strict  (optional) If explicitly set to false, schema elements with 
+                  type TAny will not be coerced to normal types.  Normally,
+                  an error would be raised if this coersion is not possible,
+                  which is the case during parsing.
+   @param parent_souces (optional) A list of named sources, which are in-scope 
+                        when [stmt] is evaluated
    @param tables  The database schema (a list of all tables)
    @param stmt    The [SELECT] statement
    @return        The schema (types/names) of the result of [stmt]
 *)
-and select_schema (tables:table_t list) (stmt:select_t): schema_t =
+and select_schema ?(strict=true) ?(parent_sources = []) (tables:table_t list) 
+                  (stmt:select_t): schema_t =
    let (targets, sources, _, _) = stmt in
    List.map (fun (name, expr) -> 
-      (  None, name, expr_type expr tables sources)
+      (  None, name, expr_type ~strict:strict expr tables 
+                               (sources@parent_sources))
    ) targets
 
 (**
@@ -498,14 +532,23 @@ and select_schema (tables:table_t list) (stmt:select_t): schema_t =
 *)
 and source_for_var_name (v:string) (tables:table_t list) 
                         (sources:labeled_source_t list): labeled_source_t =
+   Debug.print "LOG-SQL-BIND" (fun () ->
+      "Tracking source for variable '"^v^"' in: "^
+      (ListExtras.ocaml_of_list fst sources)
+   );
    let candidates =
-      List.find_all (fun (_,sd) ->
+      List.find_all (fun (sn,sd) ->
          let sch = 
             match sd with
                | Table(t) -> 
+                  Debug.print "LOG-SQL-BIND" 
+                     (fun () -> "  (table "^t^":"^sn^")");
                   let (_,sch,_,_) = find_table t tables in sch
                | SubQ(s) -> 
-                  select_schema tables s
+                  Debug.print "LOG-SQL-BIND" (fun () -> "  (query "^sn^")");
+                  select_schema ~parent_sources:
+                     (List.filter (fun (cmp_name,_) -> cmp_name <> sn) sources)
+                     tables s
          in
             List.exists (fun (_,v2,_) -> v2 = v) sch
       ) sources
@@ -537,17 +580,21 @@ and source_for_var ((s,v,_):sql_var_t) (tables:table_t list)
          if List.mem_assoc sn sources then
             (sn,List.assoc sn sources)
          else
-            raise (Variable_binding_err(
-               "Unable to find source '"^sn^"' in list: "^
-               (ListExtras.string_of_list ~sep:", " fst sources), 
-               0
-            ))
+            error (
+               "Unable to find source '"^sn^"' of variable '"^v^"' in scope: "^
+               (ListExtras.ocaml_of_list fst sources)
+            )
       | None -> source_for_var_name v tables sources
       
 (**
    Obtain the type of the specified variable.  If the variable has the wildcard
-   type [TAny], attempt to dereference the variable and obtain the variable's 
-   type from schema information.
+   type [TAny] and the optional [strict] parameter isn't explicitly set to 
+   false, attempt to dereference the variable and obtain the variable's type 
+   from schema information.
+   @param strict  (optional) If explicitly set to false, schema elements with 
+                  type TAny will not be coerced to normal types.  Normally,
+                  an error would be raised if this coersion is not possible,
+                  which is the case during parsing.
    @param v       A SQL variable
    @param tables  The database schema (a list of all tables)
    @param sources All members of the [FROM] clause in the [SELECT] statement
@@ -555,28 +602,29 @@ and source_for_var ((s,v,_):sql_var_t) (tables:table_t list)
    @return        The variable's type as encoded in [v], or if that type is 
                   [TAny], the variable's type information from the schema.
 *)
-and var_type (v:sql_var_t) (tables:table_t list) 
+and var_type ?(strict = true) (v:sql_var_t) (tables:table_t list) 
              (sources:labeled_source_t list): type_t =
    let (_,vn,t) = v in
    match t with
-      | TAny -> 
+      | TAny when strict -> 
          (* Try to dereference the variable and figure out its type *)
          let (_,source) = source_for_var v tables sources in
          let sch = (
             match source with 
                | Table(table) -> 
                      let (_,sch,_,_) = find_table table tables in sch
-               | SubQ(subq) -> select_schema tables subq 
+               | SubQ(subq) -> 
+                     select_schema ~parent_sources:sources tables subq 
          )
          in
          (
             try 
                let (_,_,t) = List.find (fun (_,vn2,_) -> vn2 = vn) sch in t
             with Not_found ->
-               failwith ("Bug in Sql.var_type: Found schema for variable '"^
-                         (string_of_var v)^"': "^
-                         (ListExtras.string_of_list ~sep:", " string_of_var sch)^
-                         "; but variable not found inside")
+               error ("Bug in Sql.var_type: Found schema for variable '"^
+                      (string_of_var v)^"': "^
+                      (ListExtras.string_of_list ~sep:", " string_of_var sch)^
+                      "; but variable not found inside")
          )
       | _ -> t
 
@@ -601,7 +649,17 @@ let rec bind_select_vars ?(parent_sources = [])
    let sources = parent_sources @ inner_sources in
    let rcr_c c = bind_cond_vars c tables sources in
    let rcr_e e = bind_expr_vars e tables sources in
-   let rcr_q q = bind_select_vars q tables in
+   let rcr_q ?(qn = "") q = 
+      (* When recurring on a subquery, we filter out the subquery itself *)
+      bind_select_vars 
+         ~parent_sources:(List.filter (fun (sn,_) -> sn <> qn) sources)
+         q tables 
+   in
+   Debug.print "LOG-SQL-BIND" (fun () ->
+      "[SQL-BIND] Binding query with sources: "^
+      (ListExtras.ocaml_of_list fst sources)^"\n\t"^
+      (string_of_select (targets,inner_sources,conds,gb))
+   );
    (
       List.map (fun (tn,te) -> (tn,rcr_e te)) targets,
       List.map (fun (sn,s) -> 
@@ -609,7 +667,8 @@ let rec bind_select_vars ?(parent_sources = [])
                            (List.map fst sources)) > 1 then (
             error ("Duplicated source name: '"^sn^"'")
          );
-         (sn, (match s with Table(_) -> s | SubQ(subq) -> SubQ(rcr_q subq)))
+         (sn, (match s with Table(_) -> s 
+                          | SubQ(subq) -> SubQ(rcr_q ~qn:sn subq)))
       ) inner_sources,
       rcr_c conds,
       List.map (fun (s,v,t) -> 
@@ -636,6 +695,11 @@ and bind_cond_vars (cond:cond_t) (tables:table_t list)
    let rcr_c c = bind_cond_vars c tables sources in
    let rcr_e e = bind_expr_vars e tables sources in
    let rcr_q q = bind_select_vars ~parent_sources:sources q tables in
+   Debug.print "LOG-SQL-BIND" (fun () ->
+      "[SQL-BIND] Binding condition with sources: "^
+      (ListExtras.ocaml_of_list fst sources)^"\n\t"^
+      (string_of_cond cond)
+   );
    match cond with
       | Comparison(a,op,b) -> Comparison(rcr_e a,op,rcr_e b)
       | And(a,b) -> And(rcr_c a,rcr_c b)
@@ -660,6 +724,11 @@ and bind_expr_vars (expr:expr_t) (tables:table_t list)
                    (sources:labeled_source_t list): expr_t =
    let rcr_e e = bind_expr_vars e tables sources in
    let rcr_q q = bind_select_vars ~parent_sources:sources q tables in
+   Debug.print "LOG-SQL-BIND" (fun () ->
+      "[SQL-BIND] Binding expression with sources: "^
+      (ListExtras.ocaml_of_list fst sources)^"\n\t"^
+      (string_of_expr expr)
+   );
    match expr with 
       | Const(_) -> expr
       | Var(s,v,t) -> 
@@ -709,6 +778,9 @@ let is_agg_query ((targets,_,_,_):select_t): bool =
 *)
 let expand_wildcard_targets (tables:table_t list) 
                             ((targets,sources,cond,gb):select_t) =
+   Debug.print "LOG-SQL" (fun () -> "[SQL] Expanding query: "^
+                                    (string_of_select 
+                                       (targets,sources,cond,gb)));
    let expanded_q = 
       (  List.flatten (List.map (fun (tname, texpr) ->
             match texpr with
@@ -727,7 +799,7 @@ let expand_wildcard_targets (tables:table_t list)
          ) targets),
          sources, cond, gb)
    in
-      Debug.print "LOG-SQL" (fun () -> "Expanded query: "^
+      Debug.print "LOG-SQL" (fun () -> "[SQL] Expanded query: "^
                                        (string_of_select expanded_q));
       expanded_q
 (**/**)

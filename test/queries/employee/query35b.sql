@@ -24,7 +24,7 @@ CREATE STREAM DEPARTMENT(
   csv (fields := ',', schema := 'int,string,int', eventtype := 'insert');
 
 SELECT * 
-FROM (SELECT department_id 
+FROM (SELECT department.department_id 
       FROM department 
       WHERE name='SALES') d 
 JOIN employee e 

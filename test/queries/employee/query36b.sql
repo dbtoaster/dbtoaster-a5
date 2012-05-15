@@ -24,7 +24,7 @@ CREATE STREAM JOB(
 
 
 SELECT * 
-FROM (SELECT job_id 
+FROM (SELECT job.job_id 
       FROM job 
       WHERE function='CLERK') j 
 JOIN employee e 

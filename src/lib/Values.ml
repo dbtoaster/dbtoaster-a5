@@ -60,7 +60,7 @@ struct
          StringMap.empty (List.combine vars values)
 
    let to_string theta : string =
-      StringMap.fold (fun k v acc -> acc^(if acc = "" then "" else " ")^
+      StringMap.fold (fun k v acc -> acc^(if acc = "" then "" else "\n")^
          k^"->"^(V.to_string v)) theta ""
 
    (* Note: ordered result *)
@@ -119,59 +119,6 @@ struct
     let to_string = Types.string_of_const
 end
 
-(* Simplified K3 value *)
-module rec SimpleK3Value :
-sig
-  type t =
-    | Unit
-    | Float          of float
-    | Int            of int
-    | Tuple          of t list
-    | Fun            of (t -> t) 
-    | ListCollection of t list
-
-    val zero : t
-    val zero_of_type : type_t -> t
-    val compare : t -> t -> int
-    val to_string : t -> string
-end =
-struct
-  type t =
-    | Unit
-    | Float          of float
-    | Int            of int
-    | Tuple          of t list
-    | Fun            of (t -> t) 
-    | ListCollection of t list
-  
-  let zero = Float(0.0)
-  let zero_of_type zt = begin match zt with
-	| TInt -> Int(0)
-	| TFloat -> Float(0.0)
-	| _ -> failwith "Invalid type for zero_of_type"
-  end
-  let compare = Pervasives.compare
-
-  let rec string_of_value v =
-    begin match v with
-    | Unit -> "unit"
-    | Float(f) -> string_of_float f
-    | Int(i) -> string_of_int i
-    | Tuple(fl) -> "("^(String.concat "," (List.map string_of_value fl))^")"
-    | Fun(f) -> "<fun>"
-    | ListCollection(vl) ->
-      "ListCollection("^(String.concat ","
-        (List.map string_of_value vl))^")"
-    end
-    
-  let to_string = string_of_value
-end
-and K3SValuationMap : SliceableMap.S with type key_elt = SimpleK3Value.t
-    = SliceableMap.Make(SimpleK3Value)
-
-module K3SValuation = AbstractValuation(SimpleK3Value)
-
-
 (* K3 values, includes base types, unit, tuples and several types of collections,
  * including named simple lists, such as FloatList and TupleList, whose contents
  * are always flat elements, 1- and 2-level persistent collections
@@ -204,14 +151,7 @@ sig
      *    by tuple collection accessors (mem/lookup/slice) *)
     | FloatList      of t list (* float list *)
     | TupleList      of t list (* float list list *)
-    
-   (* In some cases, we'll have empty lists.  Due to the lack of strict typing, 
-      it's sometimes possible for the code to be unable to figure out what the
-      list's type is if it has no content.  Thus, we have an empty list type.
-      This type is happy to merge/connect with/do anything with any other type
-      of list, since it's empty *)
-    | EmptyList
-     
+         
     (* slicing a double map yields a SingleMapList of key * smap entries *)
     | SingleMapList  of (t list * single_map_t) list
 
@@ -246,7 +186,6 @@ struct
     | DoubleMap      of map_t
     | FloatList      of t list
     | TupleList      of t list
-    | EmptyList
     | SingleMapList  of (t list * single_map_t) list
     | ListCollection of t list
     | MapCollection  of t K3ValuationMap.t
@@ -282,7 +221,6 @@ struct
                 (string_of_value (Tuple k))^","^
                 (string_of_value (SingleMap m)))
                "" sml)^"]")
-      | EmptyList -> "EmptyList[]"
       | ListCollection(vl) -> "ListCollection("^(String.concat ","
                             (List.map string_of_value vl))^")"
 

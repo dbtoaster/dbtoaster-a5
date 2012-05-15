@@ -371,6 +371,9 @@ condition := <br/>
 <dt class="code">STEP-INTERPRETER</dt>
 <dd>If running in interpreter mode, pause before dispatching each update, and display the update and current state of the database.</dd>
 
+<dt class="code">TRACE-INTERPRETER</dt>
+<dd>If running in interpreter mode, print a full trace of the execution path of a K3 program.  At every stage of execution, the expression being evaluated, current environment, and value of the expression are printed.  Traces are printed in order of execution (i.e., depth-first with respect to the K3 syntax tree).  If <tt>STEP-INTERPRETER</tt> is also set, then pause before proceeding to the next step.</dd>
+
 <dt class="code">SINGLE-LINE-MAP-OUTPUT</dt>
 <dd>Instruct the interpreter to place all map output on a single line rather than the (more human-readable, but harder to parse) multi-line output format that it uses by default.</dd>
 </dl>

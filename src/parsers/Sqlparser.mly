@@ -29,7 +29,9 @@ let get_schema table_name source_name =
       bail ("Reference to Undefined Table '"^table_name^"'")
 
 let select_schema name q = 
-   re_source_vars name (Sql.select_schema (List.map snd !table_defs) q)
+   re_source_vars name (Sql.select_schema ~strict:false
+                                          (List.map snd !table_defs) 
+                                          q)
 
 let natural_join lhs rhs = 
    let assoc_rhs = List.map (fun (tbl,v,t) -> (v,(tbl,v,t))) rhs in

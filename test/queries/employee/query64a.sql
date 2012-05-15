@@ -32,8 +32,8 @@ CREATE STREAM JOB(
 
 
 SELECT function 
-FROM job j1, (SELECT job_id 
-              FROM employee e1, (SELECT department_id 
+FROM job j1, (SELECT e1.job_id 
+              FROM employee e1, (SELECT department.department_id 
                                  FROM department 
                                  WHERE name = 'SALES' OR name = 'ACCOUNTING') d1 
               WHERE e1.department_id = d1.department_id) j2 

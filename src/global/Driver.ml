@@ -337,9 +337,9 @@ if stage_is_active StageParseSQL then (
    with 
       | Sql.SQLParseError(msg)
       | Sql.SqlException(msg) ->
-         error ("Sql Error: "^msg)
+         error ~exc:true ("Sql Error: "^msg)
       | Sql.Variable_binding_err(_,_) as vb_err ->
-         error ("Sql Error: "^(Sql.string_of_var_binding_err vb_err))
+         error ~exc:true ("Sql Error: "^(Sql.string_of_var_binding_err vb_err))
       | Parsing.Parse_error ->
          error ("Sql Parse Error.  (try using '-d log-parser' to track the "^
                 "error)")
@@ -625,11 +625,16 @@ if stage_is_active StageRunInterpreter then (
       if result <> Values.K3Value.Unit then
          output_endline (  "UNEXPECTED RESULT: "^
                            (Values.K3Value.string_of_value result) )
-   with K3Interpreter.InterpreterException(expr,msg) ->
+   with 
+   | K3Interpreter.InterpreterException(expr,msg) ->
       (begin match expr with 
-         | Some(s) -> error ~detail:(fun () -> K3.string_of_expr s) msg
-         | None -> error msg
+         | Some(s) -> error ~exc:true 
+                            ~detail:(fun () -> K3.string_of_expr s) 
+                            msg
+         | None -> error ~exc:true msg
       end)
+   | Failure(msg) ->
+      bug ~exc:true msg
 )
 ;;
 if stage_is_active StageOutputSource then (
