@@ -245,6 +245,15 @@ let arithmetic_functions:
    (const_t list -> type_t -> const_t) StringMap.t ref = ref StringMap.empty
 
 (**
+   Determine whether an arithmetic function is defined internally.
+   
+   @param name   The name of a cuntion
+   @return       True if [name] is defined
+*)
+let function_is_defined (name:string) =
+   StringMap.mem name !arithmetic_functions
+
+(**
    Declare a new arithmetic function.
 *)
 let declare_arithmetic_function (name:string)  

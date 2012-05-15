@@ -1,103 +1,103 @@
-(*************************************
- * K3 normalization and optimization
- *************************************)
+(**
+  K3 normalization and optimization
 
-(* Lifting (aka K3 expression normalization):
- * -- conditionals:
- *   ++ the point of lifting is to enable optimization of pre, post code in
- *      the context of each branch.
- *   ++ we lift conditionals to the top of their dependency block, pushing
- *      parent code into both branches as necessary.
- *   ++ lifting increases code size, thus we may want a lowering transformation
- *      at the very end if no other optimizations have been applied to either
- *      branch.
- *
- * -- functions: overall goal is to simplify any partially evaluted function to
- *    a normalized form, of lambda x -> lambda y -> ... , where x,y are the
- *    remaining variables to be bound before evaluation can complete 
- *
- * -- collection functions:
- *   ++ we lift collection operations applied to partially evaluated functions,
- *   ++ two cases:
- *     -- partially evaluated collections, e.g.:
- *        map(lambda y -> ..., lambda x -> collection...)
- *        => lambda x -> map(lambda y -> ..., collection ...)
- *     -- partially evaluated apply-each
- *        map(lambda a -> lambda b c -> ..., collection(b;c))
- *        => lambda a -> map(lambda b c -> ..., collection(b;c))
- *   ++ transformation order: pe-coll first, then pe-appeach 
- *   ++ when can we not lift? see notes on lifting in typechecking:
- *     i.  collections of functions, e.g.
- *         map(lambda x ..., collection(lambda y -> ...))
- *   ++ cases not handled:
- *     i. partially evaluted init aggregate values
- *     ii. partially evaluted group-by functions
- *
- * -- regular functions:
- *   ++ we lift lambdas above partial function applications, e.g.:
- *      apply(lambda a -> lambda b -> ..., x)
- *      => lambda b -> apply (lambda a -> ..., x)
- * 
- * -- what about interaction of conditionals and lifting?
- *   ++ must respect data dependencies, i.e. conditionals using bindings cannot
- *      be lifted above the relevant lambda
- *   ++ otherwise everything else is fair game, provided we duplicate code as
- *      necessary.
- * 
- * -- expression normalization algorithm:
- *  ++ recursively turn every sub expression into the form:
- *    lambda ... ->
- *        independent ifs
- *        then (... dependent ifs ... collection ops (..., collection) ... )
- *        else (... dependent ifs ... collection ops (..., collection) ... )
- *    where the outer most lambdas are for any free variables in the body
- *    and the independent ifs are those if statements that depend only on these
- *    free variables. Dependent ifs are those whose predicates are bound by
- *    some enclosed expression.
- *
- *  ++ lifting lambdas:
- *    -- cannot lift lambda above apply without changing typing of
- *       surrounding code
- *      ++ we could inline the application instead, but this will blow up
- *         code size, or could lead to multiple recomputations of the
- *         argument. In K3, since applies used for accessing maps, this would
- *         mean multiple conversions of maps to our internal temporary
- *         collections.
- *      ++ we'll only eliminate lambdas (i.e. inline) for flat arguments.
- * 
- *    -- lifting algorithm:
- *      ++ this is not standard lambda lifting, which aims at optimizing
- *         closure construction, etc, rather it is to create a normalized
- *         form for partially evaluated K3. This ensures other optimizations
- *         can fully apply to the curried function's body.
- *      ++ in general, lift any remaining lambdas from all child expressions in
- *         left-to-right AST order
- *      ++ pattern match on:
- *        -- collection ops, yield lifted form.
- *           this will fully lift lambdas out of collection operation chains.
- *        -- project, singletons
- *        -- binops: lambdas down each branch get lifted outside the binop, e.g.
- *           (lambda x -> ...) * (lambda y -> ...)
- *           => lambda x -> lambda y -> ... * ...
- *        -- blocks: lambdas for each stmt get lifted
- *        -- lambda, assoc lambda: lambdas from bodies get lifted to create
- *           nested form
- *        -- apply: partial evaluations get lifted
- *          ++ we must be careful not to change application order of args
- *          ++ apply binds from left-to-right, thus nested lambdas from partials
- *             must stay inner-most (i.e. right-most) until lifted outside 
- *             the apply
- *        -- tuple collection ops: map expr and key lambdas get lifted
- *        -- persistent collections: cannot contain lambdas
- *        -- updates: lift from all children
- *
- *    -- let's defer this since the M3 generated will not contain opportunities
- *       to apply this immediately... BUT can it occur in an intermediate
- *       form after some other optimization we apply?
- *
- *  ++ lifting ifs: TODO
- *
- *)
+{b Lifting (aka K3 expression normalization):}
+
+- conditionals:
+  - the point of lifting is to enable optimization of pre, post code in
+     the context of each branch.
+  - we lift conditionals to the top of their dependency block, pushing
+     parent code into both branches as necessary.
+  - lifting increases code size, thus we may want a lowering transformation
+     at the very end if no other optimizations have been applied to either
+     branch.
+
+- functions: overall goal is to simplify any partially evaluted function to
+  a normalized form, of lambda x -> lambda y -> ... , where x,y are the
+  remaining variables to be bound before evaluation can complete 
+
+- collection functions:
+  - we lift collection operations applied to partially evaluated functions,
+  - two cases:
+    - partially evaluated collections, e.g.:
+      map(lambda y -> ..., lambda x -> collection...)
+      => lambda x -> map(lambda y -> ..., collection ...)
+    - partially evaluated apply-each
+      map(lambda a -> lambda b c -> ..., collection(b;c))
+      => lambda a -> map(lambda b c -> ..., collection(b;c))
+  - transformation order: pe-coll first, then pe-appeach 
+  - when can we not lift? see notes on lifting in typechecking:
+    -  collections of functions, e.g.
+        map(lambda x ..., collection(lambda y -> ...))
+  - cases not handled:
+    - partially evaluted init aggregate values
+    - partially evaluted group-by functions
+
+- regular functions:
+  - we lift lambdas above partial function applications, e.g.:
+     apply(lambda a -> lambda b -> ..., x)
+     => lambda b -> apply (lambda a -> ..., x)
+
+- what about interaction of conditionals and lifting?
+  - must respect data dependencies, i.e. conditionals using bindings cannot
+    be lifted above the relevant lambda
+  - otherwise everything else is fair game, provided we duplicate code as
+    necessary.
+
+- expression normalization algorithm:
+ - recursively turn every sub expression into the form:
+   lambda ... ->
+       independent ifs
+       then (... dependent ifs ... collection ops (..., collection) ... )
+       else (... dependent ifs ... collection ops (..., collection) ... )
+   where the outer most lambdas are for any free variables in the body
+   and the independent ifs are those if statements that depend only on these
+   free variables. Dependent ifs are those whose predicates are bound by
+   some enclosed expression.
+
+ - lifting lambdas:
+   - cannot lift lambda above apply without changing typing of
+     surrounding code
+     - we could inline the application instead, but this will blow up
+       code size, or could lead to multiple recomputations of the
+       argument. In K3, since applies used for accessing maps, this would
+       mean multiple conversions of maps to our internal temporary
+        collections.
+     - we'll only eliminate lambdas (i.e. inline) for flat arguments.
+
+   - lifting algorithm:
+     - this is not standard lambda lifting, which aims at optimizing
+        closure construction, etc, rather it is to create a normalized
+        form for partially evaluated K3. This ensures other optimizations
+        can fully apply to the curried function's body.
+     - in general, lift any remaining lambdas from all child expressions in
+        left-to-right AST order
+     - pattern match on:
+       - collection ops, yield lifted form.
+         this will fully lift lambdas out of collection operation chains.
+       - project, singletons
+       - binops: lambdas down each branch get lifted outside the binop, e.g.
+         (lambda x -> ...) * (lambda y -> ...)
+         => lambda x -> lambda y -> ... * ...
+       - blocks: lambdas for each stmt get lifted
+       - lambda, assoc lambda: lambdas from bodies get lifted to create
+         nested form
+       - apply: partial evaluations get lifted
+         - we must be careful not to change application order of args
+         - apply binds from left-to-right, thus nested lambdas from partials
+           must stay inner-most (i.e. right-most) until lifted outside 
+           the apply
+       - tuple collection ops: map expr and key lambdas get lifted
+       - persistent collections: cannot contain lambdas
+       - updates: lift from all children
+
+   - let's defer this since the M3 generated will not contain opportunities
+     to apply this immediately... BUT can it occur in an intermediate
+     form after some other optimization we apply?
+
+ - lifting ifs: TODO
+*)
+
 
 (* Collection operation transformations
  *
@@ -671,12 +671,49 @@ let rec conservative_beta_reduction substitutions expr =
        if List.length occurrences = 1 then reduce() else preserve()
   in
   begin match expr with
+  
+      (* Adding 0 to a number leaves it unchanged *)
+	  | Add(Const(CInt(0)), x)     | Add(x, Const(CInt(0)))
 	  | Add(Const(CFloat(0.0)), x) | Add(x, Const(CFloat(0.0))) -> recid x
-	  | Add(Const(CFloat(x)), Const(CFloat(y))) -> Const(CFloat(x +. y)) (* TODO create a generic c_sum function *)
-	
+
+      (* Adding two numbers can be inlined *)
+	  | Add(Const(x), Const(y)) -> Const(Arithmetic.sum x y)
+
+      (* Multiplying by 0 makes the number 0 *)	
+	  | Mult(Const(CInt(0) as x), _)     | Mult(_, Const(CInt(0) as x)) 
+	  | Mult(Const(CFloat(0.0) as x), _) | Mult(_, Const(CFloat(0.0) as x)) -> 	                                                                 Const(x)
+
+      (* Multiplying by 1 leaves the number unchanged *)
+	  | Mult(Const(CInt(1)), x)     | Mult(x, Const(CInt(1)))
 	  | Mult(Const(CFloat(1.0)), x) | Mult(x, Const(CFloat(1.0))) -> recid x
-	  | Mult(Const(CFloat(x)), Const(CFloat(y))) -> Const(CFloat(x *. y)) (* TODO create a generic c_prod function *)
+	  
+	   (* Multiplying two numbers can be inlined *)
+	  | Mult(Const(x), Const(y)) -> Const(Arithmetic.prod x y)
 	
+	   (* External function application to constants *)
+     | Apply(ExternalLambda(fn_name, AVar(_,_), TBase(fn_type)), Const(x)) 
+          when Arithmetic.function_is_defined fn_name ->
+       Const(Arithmetic.eval (
+         Arithmetic.ValueRing.mk_val (
+             Arithmetic.AFn(fn_name, [Arithmetic.mk_const x], fn_type))))
+	
+	   (* External function application to constant tuples *)
+     | Apply(ExternalLambda(fn_name, ATuple(vt_l), TBase(fn_type)), Tuple(fields)) 
+          when ((List.length vt_l) = (List.length fields)) &&
+               (Arithmetic.function_is_defined fn_name) &&
+               (List.for_all (function Const(_)->true | _->false) fields) ->
+       Const (Arithmetic.eval (
+         Arithmetic.ValueRing.mk_val (
+             Arithmetic.AFn(fn_name, 
+               List.map (function Const(x) -> Arithmetic.mk_const x
+                  (* We should have filtered this case out in the case stmt. *)
+                    | _ -> failwith "BUG: I thought I had only constants"
+               ) fields,
+               fn_type
+            )
+         )
+      ))
+
 	  | Apply(Lambda(AVar(v,t), body) as lambda_e, arg) ->
 	    let free_vars = get_free_vars [] body in
 	    let remaining, _, new_e =
