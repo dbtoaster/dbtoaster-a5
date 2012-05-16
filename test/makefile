@@ -140,6 +140,7 @@ err:
 	@$(ERROR_TEST) multitargetin
 	@$(ERROR_TEST) multitargetall
 	@$(ERROR_TEST) multitargetwherels 
+	@$(ERROR_TEST) adaptormismatch
 
 employee: testdatahash
 	@$(QUERY_TEST) employee/query01
