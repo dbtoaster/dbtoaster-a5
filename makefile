@@ -99,7 +99,15 @@ OPT_FLAGS +=\
 
 #################################################
 
-all: bin/dbtoaster_top bin/dbtoaster_debug bin/dbtoaster runtimelibs
+all: versioncheck bin/dbtoaster_top bin/dbtoaster_debug bin/dbtoaster\
+     runtimelibs
+
+versioncheck:
+	@if [ $(shell ocaml -vnum | \
+	                  awk -F. '{print ($$1+1000) ($$2+1000) ($$3+1000)}')\
+	     -lt 100310121001 ] ; then \
+	  echo "Your OCaml version is too low.  OCaml 3.12.1 is required, you have"\
+	       $(shell ocaml -vnum); exit -1; fi
 
 runtimelibs: $(O_FILES) $(C_FILES)
 	@echo Making Runtime Libraries
@@ -210,5 +218,6 @@ distclean: clean
 
 #################################################
 
-.PHONY: all clean distclean test states doc runtimelibs fast querytest queries
+.PHONY: all clean distclean test states doc runtimelibs fast querytest queries\
+        versioncheck
 
