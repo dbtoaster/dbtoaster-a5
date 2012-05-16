@@ -1099,7 +1099,11 @@ let dm_collection_stmt trig_args (m3_stmt: Plan.stmt_t) (k3_prog_schema: K.map_t
                else
                   lambda_arg 
             in
-            let dummy_statement = K.PCUpdate(lhs_collection, [], lhs_collection)
+            let dummy_statement = 
+               let collection_status = get_collection_status mapn k3_prog_schema in
+               let is_gc_result = K.Tuple(lhs_outs_el@[is_gc_constant]) in
+                  K.PCUpdate(collection_status, [], K.Map(lambda (lhs_outs_el@[K.Var("prev_status", domain_type)]) is_gc_result, collection_status)) 
+(*                  K.PCUpdate(collection_status, [], collection_status)                *)
             in
                K.Block([update_domain_statement; update_status; dummy_statement])
                (*update_domain_statement*)
