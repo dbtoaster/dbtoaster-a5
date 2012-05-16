@@ -4,8 +4,22 @@ UNIT_TEST=sh -c 'echo ==== $$1 ====; $(DBTOASTER_TOP) $$1' --
 FAST_QUERY_TEST=scripts/query_test.rb -d weak-expr-equiv
 QUERY_TEST="scripts/query_test.rb"
 ERROR_TEST=scripts/error_test.sh
+DATA_FILES=$(shell echo \
+	../../../experiments/data/employee/*.dat\
+	../../../experiments/data/tpch_tiny/*.csv\
+	| sort)
 
 all: unit query err
+
+datahash:
+	@echo "Data file hash is:" $(shell cat $(DATA_FILES) | md5)
+
+testdatahash:
+	@if [ $(shell cat ../../../experiments/data/employee/*.dat \
+	                 ../../../experiments/data/tpch_tiny/*.csv \
+	                    | md5) != 4aafddbcd29e2e52a053651761605ea4 ] ; then \
+	echo "Your test data is out of date, update your experiments directory";\
+	exit -1; fi
 
 unit: 
 	@$(UNIT_TEST) unit/ring.ml
@@ -18,7 +32,7 @@ unit:
 	@$(UNIT_TEST) unit/k3interpreter.ml
 	@$(UNIT_TEST) unit/m3tok3.ml
 
-bigquery:	
+bigquery:	testdatahash
 #	@$(QUERY_TEST) missedtrades -d K3-NO-OPTIMIZE #results incorrect
 	@$(QUERY_TEST) axfinder
 	@$(QUERY_TEST) pricespread
@@ -31,7 +45,7 @@ bigquery:
 #	@$(QUERY_TEST) vwap    #slow
 	@$(QUERY_TEST) simple/r_ltallcorravg
 	
-query:
+query: testdatahash
 	@$(FAST_QUERY_TEST) brokervariance
 	@$(FAST_QUERY_TEST) simple/r_aggcomparison
 	@$(FAST_QUERY_TEST) simple/r_aggofnested
@@ -127,7 +141,7 @@ err:
 	@$(ERROR_TEST) multitargetall
 	@$(ERROR_TEST) multitargetwherels 
 
-employee:
+employee: testdatahash
 	@$(QUERY_TEST) employee/query01
 	@$(QUERY_TEST) employee/query01a
 	@$(QUERY_TEST) employee/query02
@@ -225,4 +239,4 @@ employee:
 #	@$(QUERY_TEST) employee/query66   # unsupported IN and INTERSECTION operators
 	@$(QUERY_TEST) employee/query66a
 
-.PHONY: all unit development query bigquery employee err
+.PHONY: all unit development query bigquery employee err datahash testdatahash
