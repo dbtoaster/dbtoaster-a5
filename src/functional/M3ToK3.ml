@@ -1102,8 +1102,8 @@ let dm_collection_stmt trig_args (m3_stmt: Plan.stmt_t) (k3_prog_schema: K.map_t
             let dummy_statement = 
                let collection_status = get_collection_status mapn k3_prog_schema in
                let is_gc_result = K.Tuple(lhs_outs_el@[is_gc_constant]) in
-                  K.PCUpdate(collection_status, [], K.Map(lambda (lhs_outs_el@[K.Var("prev_status", domain_type)]) is_gc_result, collection_status)) 
-(*                  K.PCUpdate(collection_status, [], collection_status)                *)
+(*                  K.PCUpdate(collection_status, [], K.Map(lambda (lhs_outs_el@[K.Var("prev_status", domain_type)]) is_gc_result, collection_status)) *)
+                  K.PCUpdate(collection_status, [], collection_status)                
             in
                K.Block([update_domain_statement; update_status; dummy_statement])
                (*update_domain_statement*)
@@ -1130,9 +1130,10 @@ let dm_collection_trig (m3dm_trig: M3.trigger_t) (k3_prog_schema: K.map_t list) 
 
 (** Transforms an existing K3 program with its corresponding M3DM program into a K3 program. *)
 let m3dm_to_k3 (m3tok3_program : K.prog_t) (m3dm_prog: M3DM.prog_t) : (K.prog_t) =
-   let ( k3_database, (old_k3_prog_schema, patterns_map), m3tok3_prog_trigs, old_k3_prog_tlqs) = m3tok3_program in
+   let ( k3_database, (old_k3_prog_schema, old_patterns_map), m3tok3_prog_trigs, old_k3_prog_tlqs) = m3tok3_program in
    let k3_prog_tlqs = if (Debug.active "DEBUG-DM") then [] else old_k3_prog_tlqs in
    let k3_prog_schema = List.map m3_map_to_k3_map !(m3dm_prog.M3DM.maps) in
+   let patterns_map = Patterns.extract_patterns !(m3dm_prog.M3DM.triggers) in
 	let k3_prog_trigs = 
 		List.fold_left
 				(fun (old_trigs) m3dm_trig -> 
