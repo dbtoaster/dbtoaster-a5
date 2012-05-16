@@ -12,6 +12,64 @@
       outermost terms to make the expression zero at the start *)
 
 open Calculus
+open Types
+
+type domain_source_t = StreamSource | TableSource | InlineSource
+
+let string_of_domain_source = function 
+   StreamSource -> "stream" | TableSource  -> "table" | InlineSource -> "inline"
+
+let rec schema_domains (table_rels:Schema.rel_t list) (expr:expr_t): 
+                       ((var_t * domain_source_t) list * domain_source_t) =
+   let rcr e = schema_domains table_rels e in
+   let merge_domains merge_fn child_domains =
+      let (var_domains, val_domains) = List.split child_domains in
+      (  List.map (fun (var, source_list) -> 
+            (  var, 
+               match source_list with 
+               | [] -> 
+                  failwith "BUG: ListExtras.reduce_assoc returned an empty list"
+               | x::rest -> List.fold_left merge_fn x rest
+            )
+         ) (ListExtras.reduce_assoc (List.flatten var_domains)), 
+         (match val_domains with 
+            | [] -> 
+               failwith "BUG: Sum/Product of zero elements"
+            | x::rest -> List.fold_left merge_fn x rest
+         )
+      )
+   in
+   CalcRing.fold
+      (* Addition takes the worse of the domain types *)
+      (merge_domains (fun l r -> match (l,r) with  
+         | (InlineSource, _) | (_, InlineSource) -> InlineSource
+         | (TableSource, _)  | (_, TableSource)  -> TableSource
+         | (StreamSource, StreamSource)          -> StreamSource))
+      (* Multiplication takes the better of the domain types *)
+      (merge_domains (fun l r -> match (l,r) with 
+         | (StreamSource, _) | (_, StreamSource) -> StreamSource
+         | (TableSource, _)  | (_, TableSource)  -> TableSource
+         | (InlineSource, InlineSource)          -> InlineSource))
+      (fun x -> x)
+      (function
+         | Value(v) -> ([], InlineSource)
+         | AggSum(gb_vars, subexp) ->
+            let (var_domains, val_domain) = rcr subexp in
+               (  (List.filter (fun (x,_) -> List.mem x gb_vars) var_domains),
+                  val_domain)
+         | Rel(reln, relv) ->
+            if (List.exists (fun (x,_,_) -> reln = x) table_rels) 
+            then ((List.map (fun x -> (x, TableSource )) relv), TableSource )
+            else ((List.map (fun x -> (x, StreamSource)) relv), StreamSource)
+         | External(_) ->
+            failwith "Cannot compute the domain sources of an external"
+         | Cmp(_,_,_) -> ([], InlineSource)
+         | Lift(v, subexp) -> 
+            let (var_domains, val_domain) = rcr subexp in
+               ((v, val_domain)::var_domains, InlineSource)
+      )
+      expr
+
 
 (** Compute the IVC of a given expression without input variables. *)
 let derive_initializer ?(scope = [])

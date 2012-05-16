@@ -60,7 +60,7 @@ struct
                print_endline "\n------------------------------";
                if comment <> "" then print_endline comment;
                print_endline (match expr with 
-                              | Some(s) -> K3.string_of_expr s
+                              | Some(s) -> K3.nice_string_of_expr s []
                               | None    -> "[Expression unavailable]");
                print_endline ("\n=> Value: "^(K3Value.string_of_value ret));
                print_endline ("=> Environment <=\n"^

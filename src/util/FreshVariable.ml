@@ -48,6 +48,13 @@ let declare_class (source_file:string) (prefix:string) =
       source_file = source_file;
       prefix      = prefix
    } in
+   if StringMap.mem prefix !classes then (
+      Debug.Logger.bug "FRESHVARIABLE" ~detail:(fun () ->
+         let {source_file = original_file} = StringMap.find prefix !classes in
+            "Original declaration in file '"^original_file^
+            "'\nDuplicate declaration  in file '"^source_file^"'"
+      ) ("Duplicate declaration of symbol generator with prefix "^prefix)
+   );
    classes := StringMap.add prefix decl !classes;
    (fun ?(inline="") () -> 
       decl.counter := !(decl.counter) + 1; 

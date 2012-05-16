@@ -499,7 +499,7 @@ if stage_is_active StagePrintM3DomainMaintenance then (
 
 if stage_is_active StageM3ToK3 then (
    Debug.print "LOG-DRIVER" (fun () -> "Running Stage: M3ToK3");
-   Debug.activate "M3TOK3-GENERATE-INIT"; (* Temporary hack until we get M3DM set up *)
+   if not (Debug.active "DEBUG-DM") then Debug.activate "M3TOK3-GENERATE-INIT";
    try
       k3_program := M3ToK3.m3_to_k3 !m3_program; 
       let (_,(_, pats), _, _) = !k3_program in
@@ -514,14 +514,12 @@ if stage_is_active StageM3ToK3 then (
 
 if stage_is_active StageM3DMToK3 then (
    Debug.print "LOG-DRIVER" (fun () -> "Running Stage: M3DMToK3");
-   if (Debug.active "LOG-DMTOK3") then
+   if (Debug.active "DEBUG-DM") then
    begin
       let k3_printer = if (Debug.active "NICE-K3") then K3.nice_code_of_prog else K3.code_of_prog in
       let k3_queries = M3ToK3.m3dm_to_k3 !k3_program !dm_program in
       Debug.print "LOG-DMTOK3" (fun () -> k3_printer k3_queries);
-      if (Debug.active "DEBUG-DM") then
-         k3_program := k3_queries
-      else ();
+      k3_program := k3_queries
    end
 )
 ;;
@@ -570,10 +568,10 @@ if (stage_is_active StageOptimizeK3) then (
 ;;
 if stage_is_active StagePrintK3 then (
    Debug.print "LOG-DRIVER" (fun () -> "Running Stage: PrintK3");
-   if Debug.active "NICE-K3" then
-      output_endline (K3.nice_code_of_prog !k3_program)
-   else
+   if Debug.active "ORIGINAL-K3" then
       output_endline (K3.code_of_prog !k3_program)
+   else
+      output_endline (K3.nice_code_of_prog !k3_program)
 )
 ;;
 module K3InterpreterCG = K3Compiler.Make(K3Interpreter.K3CG)
