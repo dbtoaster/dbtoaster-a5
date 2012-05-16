@@ -15,11 +15,13 @@ datahash:
 	@echo "Data file hash is:" $(shell cat $(DATA_FILES) | md5)
 
 testdatahash:
-	@if [ $(shell cat ../../../experiments/data/employee/*.dat \
-	                 ../../../experiments/data/tpch_tiny/*.csv \
+	@if [ $(shell basename $(shell which md5)) = md5 ] ; then \
+	  if [ $(shell cat ../../../experiments/data/employee/*.dat \
+	                   ../../../experiments/data/tpch_tiny/*.csv \
 	                    | md5) != 4aafddbcd29e2e52a053651761605ea4 ] ; then \
 	echo "Your test data is out of date, update your experiments directory";\
-	exit -1; fi
+	exit -1; fi;\
+	else echo "Warning, MD5 is installed, cannot check test data integrity"; fi
 
 unit: 
 	@$(UNIT_TEST) unit/ring.ml
