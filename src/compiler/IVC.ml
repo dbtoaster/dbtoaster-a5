@@ -14,7 +14,10 @@
 open Calculus
 open Types
 
-type domain_source_t = StreamSource | TableSource | InlineSource
+(*
+type domain_source_t = 
+   | StreamSource of (string * int) list 
+   | TableSource | InlineSource
 
 let string_of_domain_source = function 
    StreamSource -> "stream" | TableSource  -> "table" | InlineSource -> "inline"
@@ -70,6 +73,9 @@ let rec schema_domains (table_rels:Schema.rel_t list) (expr:expr_t):
       )
       expr
 
+let needs_static_initializer (table_rels:Schema.rel_t list) (expr:expr_t):
+                             bool =
+  *) 
 
 (** Compute the IVC of a given expression without input variables. *)
 let derive_initializer ?(scope = [])

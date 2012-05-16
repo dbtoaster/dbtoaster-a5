@@ -22,7 +22,7 @@ type todo_list_t = ds_t list
 
 let extract_renamings ((scope,schema):schema_t) (expr:expr_t): 
                       ((var_t * var_t) list * expr_t) =
-   let (mappings, expr_terms) = 
+   let (raw_mappings, expr_terms) = 
       List.fold_left (fun (mappings, expr_terms) term ->
          begin match term with
          | CalcRing.Val(Lift(v1, 
@@ -33,6 +33,31 @@ let extract_renamings ((scope,schema):schema_t) (expr:expr_t):
          | _ ->  (mappings, expr_terms @ [term])
          end
       ) ([], []) (CalcRing.prod_list expr)
+   in
+   let (mappings, mapping_conditions) =
+      (* It's possible that we might receive multiple renamings for the same
+         output variables (e.g. for the delta of R(A,B)*(A=B)).  In this case,
+         we need to pick (an arbitrary) one of the renamings, and put the
+         remaining renamings back in as equality predicates over the inputs.
+         
+         We do this by doing an associative reduce to pair each original name
+         with the full set of names that it can take.  We pick the head of
+         that list, and add back in an equality predicate between the chosen
+         name and the remaining names.
+       *)
+      List.split (
+         List.map (fun (orig_var, new_var_list) ->
+               match new_var_list with
+                | [] -> failwith "BUG: reduce returned an empty list"
+                | x::rest -> 
+                  (  (orig_var, x), 
+                     CalcRing.mk_prod (List.map (fun y -> 
+                        CalcRing.mk_val (Cmp(Eq, mk_var x, mk_var y))
+                     ) rest)
+                  )
+            )
+            (ListExtras.reduce_assoc raw_mappings)
+      )
    in
    let rec fix_schemas expr =
       (* We can't just leave the result of the standard rename_vars approach 
@@ -57,7 +82,7 @@ let extract_renamings ((scope,schema):schema_t) (expr:expr_t):
    in
       (  mappings, 
          fix_schemas (Calculus.rename_vars mappings 
-                                           (CalcRing.mk_prod expr_terms)))
+                         (CalcRing.mk_prod (mapping_conditions@expr_terms))))
 
 (******************************************************************************)
 

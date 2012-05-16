@@ -845,7 +845,6 @@ let nice_string_of_expr ?(type_is_needed = false) e maps =
         ps ","; ps (string_of_type fn_t); ps ")"; cb()
     
     | Slice(pce, sch, vars) ->
-        let orig_sch = get_pc_schema pce maps in
         ob(); ps "Slice("; aux pce; 
         if type_is_needed then 
             begin
@@ -854,11 +853,17 @@ let nice_string_of_expr ?(type_is_needed = false) e maps =
         else 
             ();
         ps ",["; 
-        let convert_each_var_to_new_var each_var = List.nth orig_sch (ListExtras.index_of each_var (List.map fst sch)) in
-        let new_vars = List.map (fun (x, v) -> (convert_each_var_to_new_var x, v)) vars
-            in
-               (List.iter (fun (x,v) -> pid x; ps " => ("; aux v; ps ");") new_vars); 
-               ps "])"; cb()
+        let convert_each_var_to_new_var = 
+           try 
+              let orig_sch = get_pc_schema pce maps in
+              (fun each_var -> List.nth orig_sch (ListExtras.index_of each_var (List.map fst sch)))
+           with Failure("hd") ->
+             (fun each_var -> each_var)
+        in
+           let new_vars = List.map (fun (x, v) -> (convert_each_var_to_new_var x, v)) vars
+               in
+                  (List.iter (fun (x,v) -> pid x; ps " => ("; aux v; ps ");") new_vars); 
+                  ps "])"; cb()
     | Comment(c, cexpr) ->
         ob(); ps "(***"; ps c; ps "***)"; recur []; cb()
     

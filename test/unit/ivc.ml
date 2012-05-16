@@ -20,7 +20,8 @@ let test msg expr exp_val_domain exp_var_domains =
                  ((("::VALUE::", TAny), exp_val_domain)::
                      (List.map (fun (vn,dt) -> (var vn, dt)) exp_var_domains))
 in
-   test "rel"  "R(A)" StreamSource [
+   test "rel"  
+        "R(A)" StreamSource [
       "A", StreamSource
    ];
    test "lift" "(X ^= R(A))" InlineSource [
@@ -38,3 +39,27 @@ in
    test "sum of stream v lift" "R(A)+(A ^= 1)" InlineSource [
       "A", InlineSource
    ];
+   test "sum of stream v lift of rel" 
+        "R(A)+AggSum([],(X ^= R(A)))" 
+         InlineSource [
+      "A", StreamSource
+   ];
+   test "aggsum of rel" "AggSum([],R(A))" 
+         StreamSource [];
+   test "product of stream v lift of rel" 
+      "R(A)*AggSum([],(X ^= R(A)))" 
+         StreamSource [
+      "A", StreamSource
+   ];
+   test "lift of full aggsum of stuff"
+        "(D ^= AggSum([], R(A)*S(B)*T1(C)))" 
+        InlineSource [
+          "D", StreamSource;
+        ];
+   test "lift of partial aggsum of stuff"
+        "(D ^= AggSum([A,C], R(A)*S(B)*T1(C)))" 
+        InlineSource [
+          "D", StreamSource;
+          "A", StreamSource;
+          "C", TableSource;
+        ];
