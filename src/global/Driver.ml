@@ -501,14 +501,15 @@ if stage_is_active StageM3ToK3 then (
    Debug.print "LOG-DRIVER" (fun () -> "Running Stage: M3ToK3");
    if not (Debug.active "DEBUG-DM") then Debug.activate "M3TOK3-GENERATE-INIT";
    try
-      k3_program := M3ToK3.m3_to_k3 !m3_program; 
+		let gen_init = (Debug.active "M3TOK3-GENERATE-INIT") in
+      k3_program := M3ToK3.m3_to_k3 ~generate_init:gen_init !m3_program; 
       let (_,(_, pats), _, _) = !k3_program in
          Debug.print "LOG-PATTERNS" (fun () -> Patterns.patterns_to_nice_string pats)
    with 
       | Failure(msg) ->
          bug ~exc:true ~detail:(fun () -> M3.string_of_m3 !m3_program) msg
       | K3Typechecker.K3TypecheckError(stack,msg) ->
-         bug ~detail:(fun () -> K3Typechecker.string_of_k3_stack stack) msg
+			bug ~detail:(fun () -> K3Typechecker.string_of_k3_stack stack) msg
 )
 ;;
 

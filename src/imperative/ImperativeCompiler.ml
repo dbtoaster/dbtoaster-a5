@@ -9,7 +9,7 @@ struct
   include SourceCode
 
   let sym_counter = ref 0
-  let gensym () = incr sym_counter; "__y"^(string_of_int (!sym_counter))
+  let gensym () = incr sym_counter; "___y"^(string_of_int (!sym_counter))
 
   (* Source code stringification aliases *)
   let inl x = Inline x

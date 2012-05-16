@@ -97,11 +97,11 @@ let init_code =
 ]))
 in
 
-let calc_string_to_code env calc_s =
+let calc_string_to_code env generate_init calc_s =
 	 let calc = U.parse_calc calc_s in
 	 let env_vars = List.map (fun (vn,vl) -> (vn,T.type_of_const vl)) env in
 	 let env_el = MK.varIdType_to_k3_expr env_vars in
-	 let (_,_,code),_ = MK.calc_to_k3_expr MK.empty_meta env_el calc in
+	 let (_,_,code),_ = MK.calc_to_k3_expr MK.empty_meta ~generate_init:generate_init env_el calc in
 	 (*
 	 print_endline "\n--------------\n--------------";
 	 print_endline ("Calculus: "^(Calculus.string_of_expr calc));
@@ -110,10 +110,10 @@ let calc_string_to_code env calc_s =
 	 *)
 	 Interpreter.compile_k3_expr code
 in
-let stmt_string_to_code env stmt_s =
+let stmt_string_to_code env generate_init stmt_s =
 	 let stmt = U.parse_stmt stmt_s in
 	 let env_vars = List.map (fun (vn,vl) -> (vn,T.type_of_const vl)) env in
-	 let code,_ = MK.m3_stmt_to_k3_stmt MK.empty_meta env_vars stmt in
+	 let code,_ = MK.m3_stmt_to_k3_stmt MK.empty_meta ~generate_init:generate_init env_vars stmt in
 	 let target_coll = MK.target_of_statement code in
 	 (*
 	 print_endline "\n--------------\n--------------";
@@ -142,25 +142,25 @@ let test_code_coll env msg code rval =
       rval
 in
 
-let test_expr ?(env = []) msg calc_s rval =
-	 let code = calc_string_to_code env calc_s in	
+let test_expr ?(env = []) ?(generate_init = false) msg calc_s rval =
+	 let code = calc_string_to_code env generate_init calc_s in	
    test_code env msg code rval
 in
-let test_expr_coll ?(env = []) msg calc_s rval =
-   let code = calc_string_to_code env calc_s in	
+let test_expr_coll ?(env = []) ?(generate_init = false) msg calc_s rval =
+   let code = calc_string_to_code env generate_init calc_s in	
    test_code_coll env msg code (U.mk_float_collection rval)
 in
-let test_expr_coll2 ?(env = []) msg calc_s rval =
-   let code = calc_string_to_code env calc_s in	
+let test_expr_coll2 ?(env = []) ?(generate_init = false) msg calc_s rval =
+   let code = calc_string_to_code env generate_init calc_s in	
    test_code_coll env msg code rval
 in
 
-let test_stmt ?(env = []) msg stmt_s rval =
-	 let code = stmt_string_to_code env stmt_s in	
+let test_stmt ?(env = []) ?(generate_init = false) msg stmt_s rval =
+	 let code = stmt_string_to_code env generate_init stmt_s in	
    test_code env msg code rval
 in
-let test_stmt_coll ?(env = []) msg stmt_s rval =
-   let code = stmt_string_to_code env stmt_s in	
+let test_stmt_coll ?(env = []) ?(generate_init = false) msg stmt_s rval =
+   let code = stmt_string_to_code env generate_init stmt_s in	
    test_code_coll env msg code (U.mk_float_collection rval)
 in
 		(*
@@ -261,18 +261,21 @@ in
 				      ];
 		
 		
-		Debug.activate "M3TOK3-GENERATE-INIT";
 		test_expr " External - OutPC - Singleton Init " 
 							~env:["A", (T.CFloat(2.));"B", (T.CFloat(3.))]
+							~generate_init:true
 							"R[][A,B]" (VK.BaseValue(T.CFloat(0.)));
 		test_expr " External - InPC - Singleton Init " 
 							~env:["A", (T.CFloat(2.));"B", (T.CFloat(3.));"D", (T.CFloat(1.))]
+							~generate_init:true
 							"T[A,B][]( R[][A,D] * 3 )" (VK.BaseValue(T.CFloat(6.)));
 		test_expr " External - PC - Singleton Init " 
 							~env:["A", (T.CFloat(2.));"B", (T.CFloat(3.));"C", (T.CFloat(1.));"D", (T.CFloat(3.))]
+							~generate_init:true
 							"W[A,B][C,D]( R[][C,D] * 3 )" (VK.BaseValue(T.CFloat(9.)));
 		test_expr_coll " External - PC - Collection Init " 
 							~env:["A", (T.CFloat(2.));"B", (T.CFloat(3.))]
+							~generate_init:true
 							"W[A,B][C,D]( R[][C,D] * 3 )" 
 							[  [1.; 3.], 9.;
 				         [1.; 2.], 6.;
@@ -282,12 +285,12 @@ in
 				      ];
 		test_expr_coll " External - PC - Slice Init " 
 							~env:["A", (T.CFloat(2.));"B", (T.CFloat(3.));"C", (T.CFloat(2.))]
+							~generate_init:true
 							"W[A,B][C,D]( R[][C,D] * 3 )" 
 							[  [2.], 12.;
 				         [1.], 6.;
 				      ];
-		Debug.deactivate "M3TOK3-GENERATE-INIT";
-		
+				
 		
 		
 		test_expr " AggSum Singleton from Singleton "
@@ -453,10 +456,10 @@ in
 								 [3.; 3.; 1.; 3.], 3.; [3.; 3.; 1.; 1.], 4.; [3.; 3.; 1.; 2.], 8.;  
 				      ];
 		
-		Debug.activate "M3TOK3-GENERATE-INIT";
 		test_stmt_coll " Update - PC - Singleton Init "
 							~env:["A", (T.CFloat(2.));
 										"B", (T.CFloat(2.));"C", (T.CFloat(1.));]
+							~generate_init:true
 							" QW[X,Y][B,C] ( R[][B,C] * 3 ) += W[A,A][B,C] * 3. " 
 							[  [1.; 1.; 1.; 1.], 1.; [1.; 1.; 1.; 2.], 2.; [1.; 1.; 2.; 1.], 12.;
 				         [2.; 2.; 2.; 1.], 8.; [2.; 2.; 2.; 2.], 4.; [2.; 2.; 1.; 1.], 1.; [2.; 2.; 1.; 2.], 2.;
@@ -464,6 +467,7 @@ in
 				      ];		
 		test_stmt_coll " Update - PC - Collection Init "
 							~env:["A", (T.CFloat(2.));"B", (T.CFloat(2.));]
+							~generate_init:true
 							" QW[X,Y][B,C] ( R[][B,C] * 3 ) += W[A,A][B,C] * 3. " 
 							[  [1.; 1.; 1.; 1.], 1.; [1.; 1.; 1.; 2.], 2.; [1.; 1.; 2.; 1.], 12.; [1.; 1.; 2.; 2.], 24.;
 				         [2.; 2.; 2.; 1.], 8.; [2.; 2.; 2.; 2.], 16.; [2.; 2.; 1.; 1.], 1.; [2.; 2.; 1.; 2.], 2.;
@@ -471,11 +475,11 @@ in
 				      ];		
 		test_stmt_coll " Update - PC - Slice Init "
 							~env:["A", (T.CFloat(2.));]
+							~generate_init:true
 							" QW[X,Y][B,C] ( R[][B,C] * 3 ) += W[A,A][B,C] * 3. " 
 							[  [1.; 1.; 1.; 1.], 1.; [1.; 1.; 1.; 2.], 2.; [1.; 1.; 2.; 1.], 12.; [1.; 1.; 2.; 2.], 24.;
 				         [2.; 2.; 2.; 1.], 8.; [2.; 2.; 2.; 2.], 16.; [2.; 2.; 1.; 1.], 1.; [2.; 2.; 1.; 2.], 2.;
 								 [3.; 3.; 1.; 3.], 3.; [3.; 3.; 1.; 1.], 1.; [3.; 3.; 1.; 2.], 2.; [3.; 3.; 2.; 1.], 12.; [3.; 3.; 2.; 2.], 24.;
 				      ];		
-		Debug.deactivate "M3TOK3-GENERATE-INIT";
 		(**)
 		()

@@ -92,20 +92,20 @@ let cpp_compiler = {
      let cpp_cc = "g++" in
      let cpp_args = (
          cpp_cc ::
-         (List.map (fun x->"-I"^x) (compile_flags "INCLUDE_HDR" "DBT_HDR")) @
-         (List.map (fun x->"-L"^x) (compile_flags "INCLUDE_LIB" "DBT_LIB")) @
+			[ in_file_name; "-o"; out_file_name; ] @
          (if Debug.active "COMPILE-WITH-PROFILE" then ["-pg"] else []) @
          (if Debug.active "COMPILE-WITH-GDB" then ["-g"] else []) @
          (if Debug.active "COMPILE-WITHOUT-OPT" then [] else ["-O3"]) @
-         [ "-I"; "." ;
-           "-lboost_program_options";
+			(if Debug.active "COMPILE-WITHOUT-STATIC" then [] else ["-static"]) @
+			[ "-I."; ] @
+         (List.map (fun x->"-I"^x) (compile_flags "INCLUDE_HDR" "DBT_HDR")) @
+         (List.map (fun x->"-L"^x) (compile_flags "INCLUDE_LIB" "DBT_LIB")) @
+         [ "-lboost_program_options";
            "-lboost_serialization";
            "-lboost_system";
            "-lboost_filesystem";
            "-lboost_chrono";
-           "-DFUSION_MAX_VECTOR_SIZE=50";
-           in_file_name ;
-           "-o"; out_file_name
+           "-DFUSION_MAX_VECTOR_SIZE=50";           
          ] @ (!compiler_flags)
       ) in
          Debug.print "LOG-GCC" (fun () -> (

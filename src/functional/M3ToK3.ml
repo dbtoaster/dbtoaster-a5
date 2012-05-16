@@ -499,11 +499,13 @@ let meta_append_init_keys meta init_keys =
 (**********************************************************************)
 
 
-(**[calc_to_k3_expr meta theta_vars calc]
+(**[calc_to_k3_expr meta generate_init theta_vars calc]
 
    Converts a calculus ring expression into a K3 expression.
 	@param meta       Metadata associated with the translation process. See 
 							[meta_t] definition above.	
+	@param generate_init Flag specifying whether to generate initial value computation
+							or not. By default is set to false.
 	@param theta_vars The variables that are in scope when evaluating the expression.
 	@param calc       The calculus expression being translated.
 	@return           The [calc] translated into K3 and the updated meta. For the K3 
@@ -516,10 +518,10 @@ let meta_append_init_keys meta init_keys =
 							associated with each tuple in the collection represented
 							by the expression.
 							- the K3 expression itself *)
-let rec calc_to_k3_expr meta theta_vars_el calc : 
+let rec calc_to_k3_expr meta ?(generate_init = false) theta_vars_el calc : 
 				((K.expr_t list * K.expr_t * K.expr_t) * meta_t) =
-	let rcr        = calc_to_k3_expr meta  theta_vars_el in
-	let rcr2 meta2 = calc_to_k3_expr meta2 theta_vars_el in
+	let rcr        = calc_to_k3_expr meta  ~generate_init:generate_init theta_vars_el in
+	let rcr2 meta2 = calc_to_k3_expr meta2 ~generate_init:generate_init theta_vars_el in
 	
 	let (ins,outs) = schema_of_expr calc in
 	let ins_el = varIdType_to_k3_expr ins in
@@ -576,7 +578,7 @@ let rec calc_to_k3_expr meta theta_vars_el calc :
 							theta_vars_el
 					in
 					let (init_outs_el, init_ret_ve, init_expr), nm_1 = 
-							calc_to_k3_expr meta  init_theta_vars_el init_calc in
+							calc_to_k3_expr meta ~generate_init:generate_init init_theta_vars_el init_calc in
 					if not (eins <> [] && eouts <> []) &&
 						not (ListAsSet.seteq free_eouts_el init_outs_el) then
 						(print_endline ("External: "^(CalculusPrinter.string_of_expr calc));
@@ -597,7 +599,7 @@ let rec calc_to_k3_expr meta theta_vars_el calc :
 					nm_1,Some(init_outs_el,init_expr)
 				in
 				let nm, init_expr_opt =
-					if not (Debug.active "M3TOK3-GENERATE-INIT") then meta, None
+					if not generate_init then meta, None
 					else
 						if einit_calc_opt != None then
 							get_init_expr einit_calc_opt
@@ -739,7 +741,7 @@ let rec calc_to_k3_expr meta theta_vars_el calc :
 			(* Translate all terms of the product int K3 and make sure their return *)
 			(* values have numerical types *)
 			let prepare_fn (old_meta, old_scope) c = 
-				let (e_outs_el,e_ret_ve,e),new_meta = calc_to_k3_expr old_meta old_scope c in
+				let (e_outs_el,e_ret_ve,e),new_meta = calc_to_k3_expr old_meta ~generate_init:generate_init old_scope c in
 				let new_scope = ListAsSet.union old_scope e_outs_el in
 				((e_outs_el,e_ret_ve,e),(new_meta,new_scope))
 			in
@@ -788,14 +790,11 @@ let rec calc_to_k3_expr meta theta_vars_el calc :
 	in
 	
 	let _ = 
-	try
-      K3Typechecker.typecheck_expr k3_expr
-   with 
+		try K3Typechecker.typecheck_expr k3_expr
+   	with 
       | K3Typechecker.K3TypecheckError(stack,msg) ->
-			let (inform, warn, error, bug) = Debug.Logger.functions_for_module "" in
 			(print_endline ("Calc Expr: "^(CalculusPrinter.string_of_expr calc));
-         bug ~detail:(fun () -> K3Typechecker.string_of_k3_stack stack) msg;
-			raise (K3Typechecker.K3TypecheckError(stack,msg)))
+         raise (K3Typechecker.K3TypecheckError(stack,msg)))
 			 
   in
   (k3_out_el, k3_ret_v, k3_expr), k3_meta
@@ -812,14 +811,17 @@ let rec calc_to_k3_expr meta theta_vars_el calc :
 
 
 
-(**[m3_stmt_to_k3_stmt meta trig_args m3_stmt]
+(**[m3_stmt_to_k3_stmt meta generate_init trig_args m3_stmt]
 
    Converts a M3 statement into a K3 statement.
 	@param meta      Metadata associated with the translation process. See [meta_t] definition above.	
+	@param generate_init Flag specifying whether to generate initial value computation
+						  or not. By default is set to false.
 	@param m3_stmt   The M3 statement being translated.
 	@param trig_args The arguments of the trigger to which this statement belongs to.
 	@return          The [m3_stmt] translated into K3 and the updated meta. *)
-let m3_stmt_to_k3_stmt (meta: meta_t) trig_args (m3_stmt: Plan.stmt_t) : K.statement_t * meta_t =
+let m3_stmt_to_k3_stmt (meta: meta_t) ?(generate_init = false) trig_args (m3_stmt: Plan.stmt_t)
+	 : K.statement_t * meta_t =
 	let (mapn, lhs_ins, lhs_outs, map_type, init_calc_opt) = Plan.expand_ds_name m3_stmt.Plan.target_map in
 	let {Plan.update_type = update_type; Plan.update_expr = incr_calc} = m3_stmt in 
 	
@@ -863,10 +865,10 @@ let m3_stmt_to_k3_stmt (meta: meta_t) trig_args (m3_stmt: Plan.stmt_t) : K.state
 		else if lhs_outs_el = []          then existing_out_tier, meta
 		else
 			let init_expr_opt = 
-				if not (Debug.active "M3TOK3-GENERATE-INIT") then None
+				if not generate_init then None
 				else if init_calc_opt != None then(
 					let init_calc = extract_opt init_calc_opt in
-					let init_result, init_meta = calc_to_k3_expr meta trig_w_lhs_el init_calc in
+					let init_result, init_meta = calc_to_k3_expr meta ~generate_init:generate_init trig_w_lhs_el init_calc in
 					let (init_outs_el, init_ret_ve, init_expr) = init_result in
 					if not (init_outs_el = []) then
 						(print_endline ("Initialization Calculus:\n"^
@@ -892,7 +894,8 @@ let m3_stmt_to_k3_stmt (meta: meta_t) trig_args (m3_stmt: Plan.stmt_t) : K.state
 	(* corresponding schema. Beside the trigger variables we also have *)
 	(* the input variables of the "lhs_collection" in scope as we will *)
 	(* update "lhs_collection" while iterating over all lhs input variables. *)
-	let incr_result, nm = calc_to_k3_expr nm0 trig_w_ins_el incr_calc in
+	let incr_result, nm = 
+		calc_to_k3_expr nm0 ~generate_init:generate_init trig_w_ins_el incr_calc in
 	let (rhs_outs_el, rhs_ret_ve, incr_expr) = incr_result in
 	
 	(* Make sure that the lhs collection and the incr_expr have the same schema. *)
@@ -940,50 +943,59 @@ let target_of_statement (stmt : K.statement_t) : K.expr_t =
 		| _ -> failwith "M3ToK3: Invalid statement expression"
 	end
 
-(**[m3_trig_to_k3_trig meta m3_trig]
+(**[m3_trig_to_k3_trig meta generate_init m3_trig]
 
    Transforms a M3 trigger into a K3 trigger. 
 	@param meta    Metadata associated with the translation process. See [meta_t] definition above.	
+	@param generate_init Flag specifying whether to generate initial value computation
+						  or not. By default is set to false.
 	@param m3_trig The M3 trigger being translated.
 	@return        The [m3_trig] translated into K3 and the updated meta.
 *)
-let m3_trig_to_k3_trig (meta: meta_t) (m3_trig: M3.trigger_t) : K.trigger_t * meta_t =
+let m3_trig_to_k3_trig (meta: meta_t) ?(generate_init = false) (m3_trig: M3.trigger_t) 
+	: K.trigger_t * meta_t =
 	let trig_args = Schema.event_vars m3_trig.M3.event in
 	let k3_trig_stmts, new_meta = 
 		List.fold_left 
-				(fun (old_stms,om) m3_stmt -> 
-							let k3_stmt, nm = m3_stmt_to_k3_stmt om trig_args m3_stmt in 
-							(old_stms@[k3_stmt], nm) )
-				([],([],snd meta))
-				!(m3_trig.M3.statements) 
+			(fun (old_stms,om) m3_stmt -> 
+				let k3_stmt, nm = 
+					m3_stmt_to_k3_stmt om ~generate_init:generate_init trig_args m3_stmt in 
+				(old_stms@[k3_stmt], nm) )
+			([],([],snd meta))
+		!(m3_trig.M3.statements) 
 	in
      ((m3_trig.M3.event, k3_trig_stmts), new_meta)
 
-(**[m3_to_k3 m3_program]
+(**[m3_to_k3 generate_init m3_program]
 
    Transforms a M3 program into a K3 program. 
+	@param generate_init Flag specifying whether to generate initial value computation
+						  or not. By default is set to false.
 	@param  m3_program The M3 program being translated.
 	@return The [m3_program] translated into K3.
 *)
-let m3_to_k3 (m3_program : M3.prog_t) : (K.prog_t) =
+let m3_to_k3 ?(generate_init = false) (m3_program : M3.prog_t) : (K.prog_t) =
+	if generate_init then
+		print_endline ("generate_init");
 	let {M3.maps = m3_prog_schema; M3.triggers = m3_prog_trigs;
 	     M3.queries = m3_prog_tlqs; M3.db = k3_database } = m3_program in
 	let k3_prog_schema = List.map m3_map_to_k3_map !m3_prog_schema in
 	let patterns_map = Patterns.extract_patterns !m3_prog_trigs in
 	let k3_prog_trigs, (_,sum_maps) = 
 		List.fold_left
-				(fun (old_trigs,om) m3_trig -> 
-							let k3_trig,nm = m3_trig_to_k3_trig om m3_trig in
-							(old_trigs@[k3_trig], nm) )
-				([],empty_meta) 
-				!m3_prog_trigs 
+			(fun (old_trigs,om) m3_trig -> 
+				let k3_trig,nm = 
+					m3_trig_to_k3_trig om ~generate_init:generate_init m3_trig in
+				(old_trigs@[k3_trig], nm) )
+			([],empty_meta) 
+			!m3_prog_trigs 
 	(* The list of temporary maps required for performing sum operations is *)
 	(* appended to the K3 program schema. *)
 	in
 	let k3_prog_tlqs = 
 	  List.map (fun (name, query) ->
 	     let ((_,k3_query_compiled,_),_) =
-	        calc_to_k3_expr empty_meta [] query
+	        calc_to_k3_expr empty_meta ~generate_init:generate_init [] query
 	     in
 	        (name, k3_query_compiled)
 	  ) !m3_prog_tlqs
