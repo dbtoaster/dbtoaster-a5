@@ -104,29 +104,38 @@ let imperative_opts:ImperativeCompiler.compiler_options ref = ref {
 
 (************ Stage Planning ************)
 
-if !input_language == Auto then (
-   let suffix_regexp = Str.regexp ".*\\.\\([^.]*\\)$" in
-   let first_file = (List.hd !files) in
-   if Str.string_match suffix_regexp first_file 0 then 
-      input_language := (
-         let suffix = (Str.matched_group 1 first_file) in
-         match String.lowercase suffix with
-            | "sql" -> SQL
-            | "m3"  -> M3
-            | "k3"  -> K3
-            | _     -> SQL
-      )
-   else (* If you can't autodetect it from the suffix, fall back to SQL *)
-      input_language := SQL
-)
-   
-;;
-if !output_language = Auto
-   then (
-      if (!binary_file) = "" 
-      then output_language := M3
-      else output_language := CPP
-   )
+let suffix_regexp = Str.regexp ".*\\.\\([^.]*\\)$" in
+   if !input_language == Auto then (
+      let first_file = (List.hd !files) in
+      if Str.string_match suffix_regexp first_file 0 then 
+         input_language := (
+            let suffix = (Str.matched_group 1 first_file) in
+            match String.lowercase suffix with
+               | "sql" -> SQL
+               | "m3"  -> M3
+               | "k3"  -> K3
+               | _     -> SQL
+         )
+      else (* If you can't autodetect it from the suffix, fall back to SQL *)
+         input_language := SQL
+   );
+   if !output_language = Auto then (
+      output_language := 
+         if !output_file = "-" then Interpreter else
+         if Str.string_match suffix_regexp !output_file 0
+         then let suffix = (Str.matched_group 1 !output_file) in
+            begin match suffix with
+             | "sql"   -> SQL
+             | "m3"    -> M3
+             | "k3"    -> K3
+             | "cpp"   -> CPP
+             | "scala" -> Scala
+             | _       -> K3
+            end
+         else if (!binary_file) = "" 
+         then Interpreter
+         else CPP
+   )            
 ;;
 
 type stage_t = 

@@ -5,14 +5,14 @@ CREATE STREAM R(A int, B int)
 
 SELECT *
 FROM
-  ( SELECT D, SUM(C)
+  ( SELECT y.D, SUM(y.C)
     FROM 
-      ( SELECT C, SUM(A) AS D
+      ( SELECT x.C, SUM(x.A) AS D
         FROM
-          ( SELECT A, SUM(B) AS C
-            FROM R
-            GROUP BY A ) x
-        GROUP BY C
+          ( SELECT r1.A, SUM(r1.B) AS C
+            FROM R r1
+            GROUP BY r1.A ) x
+        GROUP BY x.C
       ) y
     GROUP BY D
   ) z;
