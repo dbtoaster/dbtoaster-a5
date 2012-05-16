@@ -37,29 +37,36 @@ type prog_t = {
 let empty_prog (): prog_t = 
    {  maps = ref []; triggers = ref (default_triggers ()) }
 
+let get_map_information_from_expr (expr: Calculus.expr_t): Calculus.external_t = 
+   begin match expr with
+   | CalcRing.Val(v) -> 
+      begin match v with
+      | External(ename,eins,eouts,etype,emeta) ->
+         (ename,eins,eouts,etype,emeta)
+      | _ -> failwith "Expression should be map!"
+      end
+   | _ -> failwith "Expression should be leaf!"
+   end
+
+let get_map_postfix postfix (expr: Calculus.expr_t): Calculus.expr_t =
+   let (ename,eins,eouts,etype,emeta) = get_map_information_from_expr expr in
+      CalcRing.Val(External(ename^postfix, eins, eouts, Types.TInt, None))
+
+let get_map_status (expr: Calculus.expr_t): Calculus.expr_t = 
+   get_map_postfix "_status" expr
+
+let get_map_input_output_domain ?(input = false) (expr: Calculus.expr_t): Calculus.expr_t = 
+   let (ename,eins,eouts,etype,emeta) = get_map_information_from_expr expr in
+   let out_vars = if input then  []       else eouts     in
+   let in_vars  = if input then eins      else  []       in
+   let postfix  = if input then "_input"  else "_output" in
+      CalcRing.Val(External(ename^postfix, in_vars, out_vars, Types.TInt, None))
+
 let get_map_output_domain (expr: Calculus.expr_t): Calculus.expr_t =
-    let target_leaf = 
-            begin match expr with
-            | CalcRing.Val(x) -> x
-            | _ -> failwith "Expression should be leaf!"
-            end in
-        begin match target_leaf with
-        | External(ename,eins,eouts,etype,emeta) ->
-            CalcRing.Val(External(ename^"_output", [], eouts, Types.TInt, None))
-        | _ -> failwith "Expression should be map!"
-        end
+   get_map_input_output_domain ~input:false expr
         
 let get_map_input_domain (expr: Calculus.expr_t): Calculus.expr_t =
-    let target_leaf = 
-            begin match expr with
-            | CalcRing.Val(x) -> x
-            | _ -> failwith "Expression should be leaf!"
-            end in
-        begin match target_leaf with
-        | External(ename,eins,eouts,etype,emeta) ->
-            CalcRing.Val(External(ename^"_input", [], eins, Types.TInt, None))
-        | _ -> failwith "Expression should be map!"
-        end
+   get_map_input_output_domain ~input:true expr
 
 let get_relation_of_event (event_input: Schema.event_t): Schema.rel_t =
     begin match event_input with
@@ -71,7 +78,6 @@ let get_relation_of_event (event_input: Schema.event_t): Schema.rel_t =
 let get_singleton_tuple (relation: Schema.rel_t): Calculus.expr_t =
     let (rname, rvars, _) = relation in
         CalcRing.Val(External(rname^"_singleton", [], rvars, Types.TInt, None))
-(*        CalcRing.Val(Rel(rname^"_singleton", rvars)) *)
 
 let singleton_tuple_is_for_event (event_input: Schema.event_t) (test_singleton_tuple: Calculus.expr_t): bool = 
    let single_tuple = get_singleton_tuple (get_relation_of_event event_input) in
@@ -178,7 +184,13 @@ let rec simplify_formula (event_input: Schema.event_t) (expr: Calculus.expr_t): 
                         if (singleton_tuple_is_for_event event_input e) then
                            (get_calc_for_event event_input, true)
                         else
-                           (e, true)
+(*
+                           let trigger_args = Schema.event_vars event_input in
+                              if (ListAsSet.diff eouts trigger_args = []) then
+                                 should_be_removed
+                              else
+*)
+                                 (e, true)
                | _ -> failwith ("Incorrect leaf")
                end
            | _ -> failwith ("Incorrect formula")
@@ -287,10 +299,13 @@ let maintain_all (relation: Schema.rel_t)
     let dm_statements = ref [] in
     let dm_trigger: trigger_t = {event = event_input; statements = dm_statements} in
     let singleton_tuple = get_singleton_tuple relation in
-    dm_statements := [mk_dm_trigger singleton_tuple singleton_tuple]; 
+    if not (Debug.active "DEBUG-DM") then
+      dm_statements := [mk_dm_trigger singleton_tuple singleton_tuple]
+    else
+      ();
     List.iter (fun (statement:Plan.stmt_t) ->
             let dm_statement = maintain_statement (statement) (relation) in
-            dm_statements := dm_statement @ !dm_statements
+            dm_statements := !dm_statements@dm_statement
         ) stmts;
         if not (Debug.active "NOOPT-M3DM") then
             dm_statements := simplify_dm_triggers event_input !dm_statements
@@ -306,7 +321,7 @@ let make_DM_triggers (m3_triggers: trigger_t list): trigger_t list =
             try
                 let relation = get_relation_of_event (trigger.event) in
             	let dm_trigger = maintain_all (relation) (!(trigger.statements)) (trigger.event) in
-            	dm_triggers := dm_trigger :: !dm_triggers
+            	dm_triggers := !dm_triggers@[dm_trigger]
             with _ -> ()
         ) m3_triggers;
     !dm_triggers
@@ -320,11 +335,19 @@ let make_DM_maps (m3_db: Schema.t) (m3_maps: map_t list): map_t list =
          | DSView(ds) ->
             let (ename,eins,eouts,etype,emeta) = Plan.expand_ds_name ds.ds_name in
                if eins <> [] then
-                  add_map (get_map_input_domain ds.ds_name)
+                  let map_input = get_map_input_domain ds.ds_name in
+                  add_map map_input; 
+                  if Debug.active "DEBUG-DM" then
+                     add_map (get_map_status map_input)
+                  else ()
                else
                   ();
                if eouts <> [] then
-                  add_map (get_map_output_domain ds.ds_name)
+                  let map_output = get_map_output_domain ds.ds_name in
+                  add_map map_output;
+                  if Debug.active "DEBUG-DM" then
+                     add_map (get_map_status map_output)
+                  else ()
                else 
                   ();
          | DSTable(rel) ->

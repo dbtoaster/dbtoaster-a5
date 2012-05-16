@@ -879,9 +879,11 @@ let nice_string_of_expr ?(type_is_needed = false) e maps =
     | Flatten _           -> pop "Flatten"
     | Aggregate _         -> pop "Aggregate"
     | GroupByAggregate _  -> pop "GroupByAggregate"
+    | Block(expr_list)    -> ob(); ps "{"; ob();
+                             List.iter (fun (expr) -> fnl(); aux expr;) expr_list;
+                             cb(); cb(); fnl(); ps "}"
 
     (* Pretty-print with list branches *)
-    | Block _             -> pop ~lb:[0] "Block"
     | Member _            -> pop ~lb:[1] "Member"  
     | Lookup _            -> pop ~lb:[1] "Lookup"
     | PCUpdate _          -> pop ~lb:[1] "PCUpdate"
