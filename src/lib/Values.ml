@@ -168,7 +168,7 @@ sig
     val zero : t
     val zero_of_type : type_t -> t
     val compare : t -> t -> int
-    val string_of_value : t -> string
+    val string_of_value : ?sep:string -> t -> string
     val string_of_smap : ?sep:string -> single_map_t -> string
     val string_of_map : ?sep:string -> map_t -> string
     val to_string : t -> string
@@ -199,35 +199,36 @@ struct
     and string_of_smap ?(sep = ";\n") sm   = string_of_vmap ~sep:sep sm 
     and string_of_map  ?(sep = ";\n") m    = K3ValuationMap.to_string ~sep:sep key_to_string string_of_smap m 
 
-    and string_of_value v =
+    and string_of_value ?(sep = ";\n") v =
       begin match v with
       | Unit -> "unit"
       | BaseValue(c) -> string_of_const c
-      | Tuple(fl) -> "("^(String.concat "," (List.map string_of_value fl))^")"
+      | Tuple(fl) -> "("^(String.concat "," (List.map (string_of_value ~sep:sep)
+                                                       fl))^")"
       | Fun(f) -> "<fun>"
 
-      | SingleMap(sm) -> "SingleMap("^(string_of_smap sm)^")"
-      | DoubleMap(dm) -> "DoubleMap("^(string_of_map dm)^")"
+      | SingleMap(sm) -> "SingleMap("^(string_of_smap ~sep:sep sm)^")"
+      | DoubleMap(dm) -> "DoubleMap("^(string_of_map ~sep:sep dm)^")"
 
       | FloatList(fl) ->
-          "["^(String.concat ";" (List.map string_of_value fl))^"]"
+          "["^(String.concat ";" (List.map (string_of_value ~sep:sep) fl))^"]"
       
       | TupleList(kvl) ->
-          "["^(String.concat ";" (List.map string_of_value kvl))^"]"
+          "["^(String.concat ";" (List.map (string_of_value ~sep:sep) kvl))^"]"
 
       | SingleMapList(sml) ->
           ("["^(List.fold_left (fun acc (k,m) ->
                 (if acc = "" then "" else acc^";")^
-                (string_of_value (Tuple k))^","^
-                (string_of_value (SingleMap m)))
+                (string_of_value ~sep:sep (Tuple k))^","^
+                (string_of_value ~sep:sep (SingleMap m)))
                "" sml)^"]")
       | ListCollection(vl) -> "ListCollection("^(String.concat ","
-                            (List.map string_of_value vl))^")"
+                            (List.map (string_of_value ~sep:sep) vl))^")"
 
-      | MapCollection(m) -> "MapCollection("^(string_of_vmap m)^")"
+      | MapCollection(m) -> "MapCollection("^(string_of_vmap ~sep:sep m)^")"
       end
 
-    let to_string = string_of_value
+    let to_string v = string_of_value v
 end
 and K3ValuationMap : SliceableMap.S with type key_elt = K3Value.t
     = SliceableMap.Make(K3Value)

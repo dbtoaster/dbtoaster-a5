@@ -143,9 +143,10 @@ let compile_k3_to_code ((dbschema,(schema,patterns),trigs,
    in
    let compiled_tables  = List.map (fun (s,ra) -> CG.source s ra) tables  in
    let compiled_streams = List.map (fun (s,ra) -> CG.source s ra) streams in
-
+   let compiled_tlqs    = List.map (fun (n,q) -> (n,q,compile_k3_expr q)) 
+                                   toplevel_queries in
       (main  schema patterns compiled_tables compiled_streams ctrigs 
-         (List.map fst toplevel_queries))
+             compiled_tlqs)
 
 ;;
 

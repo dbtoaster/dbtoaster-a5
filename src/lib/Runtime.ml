@@ -76,7 +76,7 @@ let main_args (): args_t =
 let synch_main 
       (db:DB.db_t)
       (initial_mux:FileMultiplexer.t)
-      (toplevel_queries:DB.map_name_t list)
+      (toplevel_query_accessors:(string * (DB.db_t -> K3Value.t)) list)
       (init:(DB.db_t -> unit))
       (dispatcher:(stream_event_t option) -> bool)
       (arguments:args_t)
@@ -84,26 +84,12 @@ let synch_main
   let (output_separator,title_separator) = 
     if Debug.active "SINGLE-LINE-MAP-OUTPUT" then (";",": ") else (";\n",":\n")
   in
-  let db_access_f = List.map (fun q ->
-     if DB.has_map q db then
-        (q,"map", (fun () -> (DB.map_name_to_string q)^title_separator^
-           (DB.map_to_string ~sep:output_separator (DB.get_map q db))))
-     
-     (* Note: no distinction between in/out maps... 
-              fix in db if really needed *)
-     else if (DB.has_in_map q db) then
-        (q,"map", (fun () -> (DB.map_name_to_string q)^title_separator^
-           (DB.smap_to_string ~sep:output_separator (DB.get_in_map q db))))
-
-     else if DB.has_out_map q db then
-        (q,"map", (fun () -> (DB.map_name_to_string q)^title_separator^
-           (DB.smap_to_string ~sep:output_separator (DB.get_out_map q db))))
-     
-     else (q,"value", (fun () ->
-        (DB.map_name_to_string q)^": "^(
-           DB.value_to_string
-              (match DB.get_value q db with | Some(x) -> x | _ -> DB.zero))))
-     ) toplevel_queries
+  let db_access_f = List.map (fun (q_name,q_access_f) ->
+         (String.lowercase q_name, (fun () -> 
+           q_name^title_separator^(K3Value.string_of_value ~sep:output_separator
+                                                           (q_access_f db))
+         ))
+     ) toplevel_query_accessors
   in
   let log_evt = 
     if !(arguments.verbose) 
@@ -122,11 +108,14 @@ let synch_main
       let y = String.lowercase x in
       if y = "db" then
          (fun chan -> output_endline chan ("db: "^(DB.db_to_string db)))
-      else
-         let valid_f = List.filter (fun (_,z,_) -> y = z) db_access_f in
+      else if y = "tlqs" then
          (fun chan -> output_endline chan
-         (String.concat "\n"
-            (List.map (fun (q,_,f) -> f()) valid_f)))
+            (String.concat "\n"
+               (List.map (fun (_,f) -> f()) db_access_f)))
+      else
+         let desired_tlq_accessor = List.assoc y db_access_f in
+         (fun chan -> output_endline chan (desired_tlq_accessor ()))
+             
   in
   let mux = ref initial_mux in
   let start = Unix.gettimeofday() in
@@ -149,7 +138,7 @@ let synch_main
   let finish = Unix.gettimeofday () in
   print_endline ("Processing time: "^(string_of_float (finish -. start)));
   print_endline (String.concat "\n"
-     (List.map (fun (q,_,f) -> f()) db_access_f))
+     (List.map (fun (_,f) -> f()) db_access_f))
 
 ;;
 

@@ -995,8 +995,6 @@ let m3_trig_to_k3_trig (meta: meta_t) ?(generate_init = false) (m3_trig: M3.trig
 	@return The [m3_program] translated into K3.
 *)
 let m3_to_k3 ?(generate_init = false) (m3_program : M3.prog_t) : (K.prog_t) =
-	if generate_init then
-		print_endline ("generate_init");
 	let {M3.maps = m3_prog_schema; M3.triggers = m3_prog_trigs;
 	     M3.queries = m3_prog_tlqs; M3.db = k3_database } = m3_program in
 	let k3_prog_schema = List.map m3_map_to_k3_map !m3_prog_schema in
@@ -1014,7 +1012,7 @@ let m3_to_k3 ?(generate_init = false) (m3_program : M3.prog_t) : (K.prog_t) =
 	in
 	let k3_prog_tlqs = 
 	  List.map (fun (name, query) ->
-	     let ((_,k3_query_compiled,_),_) =
+	     let ((_,_,k3_query_compiled),_) =
 	        calc_to_k3_expr empty_meta ~generate_init:generate_init [] query
 	     in
 	        (name, k3_query_compiled)

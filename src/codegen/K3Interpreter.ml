@@ -825,8 +825,14 @@ struct
            | Schema.NoSource        -> bail "Unsourced relation"
        in (src_impl, None, None)
 
-    let main schema patterns table_sources stream_sources triggers 
-             toplevel_queries =
+    let main (schema:K3.map_t list) 
+             (patterns:Patterns.pattern_map)
+             (table_sources:(source_impl_t * code_t option * code_t option) 
+                                       list)
+             (stream_sources:(source_impl_t * code_t option * code_t option) 
+                                       list)
+             (triggers:code_t list)
+             (toplevel_queries:(string * K3.expr_t * code_t) list) =
       Main (fun () ->
         Random.init(12345);
         let db = DB.make_empty_db schema patterns in
@@ -861,10 +867,15 @@ struct
           (fun m (source,_,_) -> FileMultiplexer.add_stream m source)
           (FileMultiplexer.create ()) stream_sources
         in
-        let db_tlq = List.map DB.string_to_map_name toplevel_queries in
+        let tlq_access = List.map (fun (q_name, q_expr, q_eval) ->
+          print_endline ("EXPRESSION:"^(K3.nice_code_of_expr q_expr));
+          let q_access_f = get_eval (Some(q_expr)) q_eval in
+            (q_name, (fun db -> q_access_f ((Env.make [] []),[]) db))
+        ) toplevel_queries
+        in
           Runtime.synch_main db 
                              mux 
-                             db_tlq 
+                             tlq_access
                              init_fn
                              dispatcher 
                              (RT.default_args ()) 

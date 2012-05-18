@@ -193,7 +193,7 @@ sig
     val main : K3.map_t list -> pattern_map ->
                (source_impl_t * code_t option * code_t option) list ->
                (source_impl_t * code_t option * code_t option) list ->
-               code_t list -> string list -> code_t
+               code_t list -> (string * K3.expr_t * code_t) list -> code_t
 
     val output : code_t -> out_channel -> unit
 
