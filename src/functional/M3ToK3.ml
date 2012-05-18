@@ -895,7 +895,9 @@ let m3_stmt_to_k3_stmt (meta: meta_t) ?(generate_init = false) trig_args (m3_stm
 	(* the input variables of the "lhs_collection" in scope as we will *)
 	(* update "lhs_collection" while iterating over all lhs input variables. *)
 	let incr_result, nm = 
-		calc_to_k3_expr nm0 ~generate_init:generate_init trig_w_ins_el incr_calc in
+		calc_to_k3_expr nm0 
+			~generate_init:(generate_init || (Debug.active "DEBUG-DM-WITH-M3"))  
+			trig_w_ins_el incr_calc in
 	let (rhs_outs_el, rhs_ret_ve, incr_expr) = incr_result in
 	
 	(* Make sure that the lhs collection and the incr_expr have the same schema. *)
@@ -914,8 +916,26 @@ let m3_stmt_to_k3_stmt (meta: meta_t) ?(generate_init = false) trig_args (m3_stm
 		let single_update_expr = K.PCValueUpdate( lhs_collection, lhs_ins_el, lhs_outs_el, 
 																K.Add(existing_v,rhs_ret_ve) ) in
 		let inner_loop_body = lambda (rhs_outs_el@[rhs_ret_ve]) single_update_expr in
-		if rhs_outs_el = [] then K.Apply(  inner_loop_body,incr_expr)	
-		else          				  K.Iterate(inner_loop_body,incr_expr)	
+		let update_expression = 
+			if rhs_outs_el = [] then K.Apply(  inner_loop_body,incr_expr)	
+			else          				  K.Iterate(inner_loop_body,incr_expr)
+		in
+		if not (Debug.active "DEBUG-DM-WITH-M3") then
+			update_expression
+		else
+			let dummy_statement =
+				K.PCUpdate(lhs_collection, lhs_ins_el, lhs_collection)
+			in
+			if lhs_ins_el = [] && lhs_outs_el = [] then
+				update_expression 
+			else if (free_lhs_outs_el = []) then
+				K.IfThenElse(
+					K.Member(existing_out_tier, lhs_outs_el),
+					update_expression,
+					dummy_statement (* no effect! *)
+				)
+			else
+				update_expression
 	in
 	
 	(* In order to implement a statement we iterate over all the values *)
@@ -1005,18 +1025,64 @@ let m3_to_k3 ?(generate_init = false) (m3_program : M3.prog_t) : (K.prog_t) =
 	  k3_prog_trigs, 
 	  k3_prog_tlqs 
    )
+   
+let get_map_from_schema (map_name: string) (k3_prog_schema: K.map_t list): K.map_t =
+	let (mapn, lhs_ins, lhs_outs, map_type) = 
+	List.find 
+	(  
+		fun (mapn, input_vars, output_vars, map_type ) -> 
+		mapn = map_name
+	) k3_prog_schema
+	in 
+		(mapn, lhs_ins, lhs_outs, map_type)
+		
+let get_map_expr_from_schema (collection_name: string) (k3_prog_schema: K.map_t list): K.expr_t =
+	let (mapn, lhs_ins, lhs_outs, map_type) = 
+  		get_map_from_schema (collection_name) (k3_prog_schema) 
+	in
+		map_to_expr mapn lhs_ins lhs_outs map_type
 
 let get_collection_status (collection_name: string) (k3_prog_schema: K.map_t list): K.expr_t =
    let collection_status_name = collection_name ^ "_status" in
       let (mapn, lhs_ins, lhs_outs, map_type) = 
-      List.find 
-      (  
-         fun (map_name, input_vars, output_vars, map_type ) -> 
-            map_name = collection_status_name
-      ) k3_prog_schema
-      in 
+      	get_map_from_schema (collection_status_name) (k3_prog_schema) 
+      in
          map_to_expr mapn lhs_ins lhs_outs map_type
          
+let get_map_vars (collection_name: string) (k3_prog_schema: K.map_t list): T.var_t list * T.var_t list =
+	let (mapn, lhs_ins, lhs_outs, map_type) = 
+		get_map_from_schema (collection_name) (k3_prog_schema) 
+	in
+		lhs_ins, lhs_outs
+		
+let string_ends_with (source: string) (test: string): bool = 
+	let source_length = String.length source in
+	let test_length 	= String.length test in
+	if source_length < test_length then
+		false
+	else
+		let source_last_part = String.sub source (source_length - test_length) test_length in
+		source_last_part = test
+         
+let ivc_statement_generate (map_name_domain: string) (vars: K.expr_t list)  (k3_prog_schema: K.map_t list): K.expr_t =
+	Debug.print "DEBUG-DM-LOG" (fun () -> "ivc_statement_generate: "^map_name_domain);
+	let input_postfix = "_input" in let output_postfix = "_output" in
+	(* in_out is true if it's an input, otherwise false*)  
+	let in_out = (string_ends_with map_name_domain input_postfix) in
+	let postfix = if in_out then input_postfix else output_postfix in
+	let map_name = 
+		String.sub map_name_domain 0 
+			(
+				(String.length map_name_domain) -
+				(String.length postfix)
+			) in
+	let map_schema = get_map_vars 					(map_name) 		(k3_prog_schema) in
+	let (_, _, _, map_type)=get_map_from_schema	(map_name)		(k3_prog_schema) in
+	let map_expr   = get_map_expr_from_schema		(map_name)		(k3_prog_schema) in
+	match (pair_map varIdType_to_k3_expr map_schema) with
+	| x,	[]	-> K.PCValueUpdate(map_expr, vars, [], init_val_from_type map_type) 
+	| [],	y	-> K.PCValueUpdate(map_expr, [], vars, init_val_from_type map_type)
+	| x,	y	-> failwith "Map with both variables is not supported"
 
 (** Converts a M3DM statement into a K3 statement. *)
 let dm_collection_stmt trig_args (m3_stmt: Plan.stmt_t) (k3_prog_schema: K.map_t list) : K.statement_t =
@@ -1043,7 +1109,7 @@ let dm_collection_stmt trig_args (m3_stmt: Plan.stmt_t) (k3_prog_schema: K.map_t
             let free_lhs_outs = ListAsSet.diff lhs_outs trig_args in
             K.Collection(K.TTuple( (varIdType_to_k3_type (free_lhs_outs))@[domain_type] )) in
 		
-		let incr_result, _ = calc_to_k3_expr empty_meta trig_args_el incr_calc in
+		let incr_result, _ = calc_to_k3_expr ~generate_init:true empty_meta trig_args_el incr_calc in
 		let (rhs_outs_el, rhs_ret_ve, incr_expr) = incr_result in
 		assert (ListAsSet.seteq (ListAsSet.diff lhs_outs_el trig_args_el) rhs_outs_el);
 		assert (compatible_types (type_of_kvar rhs_ret_ve) map_k3_type);
@@ -1083,6 +1149,15 @@ let dm_collection_stmt trig_args (m3_stmt: Plan.stmt_t) (k3_prog_schema: K.map_t
       let statement_expr =
          let lambda_arg = K.Var("collection_ivc_gc", collection_ivc_gc_t) in
          let lambda_body = 
+				let dummy_statement = 
+               let collection_status = get_collection_status mapn k3_prog_schema in
+(*
+               let is_gc_result = K.Tuple(lhs_outs_el@[is_gc_constant]) in
+                  K.PCUpdate(collection_status, [], K.Map(lambda (lhs_outs_el@[K.Var("prev_status", domain_type)]) is_gc_result, collection_status)) 
+					K.Var("dummy_var", K.TUnit)
+*)
+                  K.PCUpdate(collection_status, [], collection_status)
+            in
             let update_domain_statement = 
                let update_domain_lambda_body = 
                   K.PCValueUpdate(lhs_collection, [], lhs_outs_el, new_value)
@@ -1094,12 +1169,11 @@ let dm_collection_stmt trig_args (m3_stmt: Plan.stmt_t) (k3_prog_schema: K.map_t
                   K.Iterate( update_domain_lambda, incr_expr )
             in
             let update_status = 
-               if Debug.active "DEBUG-DM" then
+               if Debug.active "DEBUG-DM-STATUS" then
                   let collection_status = get_collection_status mapn k3_prog_schema in
                   let update_status_lambda_body = 
                      let new_status_value = rhs_ret_ve in
                      K.PCValueUpdate(collection_status, [], lhs_outs_el, 
-                        (*K.Lookup(lambda_arg, rhs_outs_el)*)
                         new_status_value
                      )
                   in
@@ -1109,15 +1183,29 @@ let dm_collection_stmt trig_args (m3_stmt: Plan.stmt_t) (k3_prog_schema: K.map_t
                   else                       
                      K.Iterate(update_status_lambda,lambda_arg)	
                else
-                  lambda_arg 
+                  dummy_statement 
             in
-            let dummy_statement = 
-               let collection_status = get_collection_status mapn k3_prog_schema in
-               let is_gc_result = K.Tuple(lhs_outs_el@[is_gc_constant]) in
-(*                  K.PCUpdate(collection_status, [], K.Map(lambda (lhs_outs_el@[K.Var("prev_status", domain_type)]) is_gc_result, collection_status)) *)
-                  K.PCUpdate(collection_status, [], collection_status)                
+            let ivc_statement =
+            	if Debug.active "DEBUG-DM-IVC" then
+                  let ivc_statement_main = ivc_statement_generate mapn lhs_outs_el k3_prog_schema in
+                  let ivc_statement_lambda_body = 
+                     let new_status_value = rhs_ret_ve in
+                     K.IfThenElse(
+                     	K.Eq(new_status_value, is_ivc_constant), 
+                     	ivc_statement_main,
+                     	dummy_statement
+                     )
+                  in
+                  let ivc_statement_lambda = lambda (rhs_outs_el@[rhs_ret_ve]) ivc_statement_lambda_body in
+                  if rhs_outs_el = [] then   
+                     K.Apply(  ivc_statement_lambda,lambda_arg)	
+                  else                       
+                     K.Iterate(ivc_statement_lambda,lambda_arg)	
+               else
+                  dummy_statement 
             in
-               K.Block([update_domain_statement; update_status; dummy_statement])
+
+               K.Block([update_domain_statement; update_status; ivc_statement; dummy_statement])
                (*update_domain_statement*)
          in
          let outer_loop_body = lambda [lambda_arg] lambda_body in
@@ -1127,7 +1215,7 @@ let dm_collection_stmt trig_args (m3_stmt: Plan.stmt_t) (k3_prog_schema: K.map_t
 
 
 (** Transforms a M3DM trigger into a K3 trigger. *)
-let dm_collection_trig (m3dm_trig: M3.trigger_t) (k3_prog_schema: K.map_t list) : K.trigger_t =
+let dm_collection_trig (m3dm_trig: M3.trigger_t) (k3_prog_schema: K.map_t list) (m3_to_k3_trig: K.trigger_t) : K.trigger_t =
 	let trig_args = Schema.event_vars m3dm_trig.M3.event in
 	let k3_trig_stmts = 
 		List.fold_left 
@@ -1137,19 +1225,28 @@ let dm_collection_trig (m3dm_trig: M3.trigger_t) (k3_prog_schema: K.map_t list) 
 				([])
 				!(m3dm_trig.M3.statements) 
 	in
-  (m3dm_trig.M3.event, k3_trig_stmts)
+	let other_stmts = if (Debug.active "DEBUG-DM-WITH-M3") then snd m3_to_k3_trig else [] in
+		(m3dm_trig.M3.event, k3_trig_stmts@other_stmts)
 
 
 (** Transforms an existing K3 program with its corresponding M3DM program into a K3 program. *)
 let m3dm_to_k3 (m3tok3_program : K.prog_t) (m3dm_prog: M3DM.prog_t) : (K.prog_t) =
    let ( k3_database, (old_k3_prog_schema, old_patterns_map), m3tok3_prog_trigs, old_k3_prog_tlqs) = m3tok3_program in
-   let k3_prog_tlqs = if (Debug.active "DEBUG-DM") then [] else old_k3_prog_tlqs in
-   let k3_prog_schema = List.map m3_map_to_k3_map !(m3dm_prog.M3DM.maps) in
-   let patterns_map = Patterns.extract_patterns !(m3dm_prog.M3DM.triggers) in
+   let with_m3 = Debug.active "DEBUG-DM-WITH-M3" in
+   let k3_prog_tlqs = if (with_m3) then old_k3_prog_tlqs else [] in
+   let k3_prog_schema = (if (with_m3) then old_k3_prog_schema else [])@(List.map m3_map_to_k3_map !(m3dm_prog.M3DM.maps)) in
+   let patterns_map = (if (with_m3) then old_patterns_map else [])@Patterns.extract_patterns !(m3dm_prog.M3DM.triggers) in
 	let k3_prog_trigs = 
 		List.fold_left
 				(fun (old_trigs) m3dm_trig -> 
-							let k3_trig = dm_collection_trig m3dm_trig k3_prog_schema in
+							let m3_to_k3_trig =
+								let ev = m3dm_trig.M3.event in
+								List.find 
+								(
+									fun (e, sl) -> e = ev
+								) m3tok3_prog_trigs
+							in
+							let k3_trig = dm_collection_trig m3dm_trig k3_prog_schema m3_to_k3_trig in
 							(old_trigs@[k3_trig]) )
 				([])
 				!(m3dm_prog.M3DM.triggers)
