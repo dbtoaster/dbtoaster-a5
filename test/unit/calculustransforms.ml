@@ -38,9 +38,11 @@ in
    test "Self-comparison"
       "R(A) * {A = A}"
       "R(A)";
+(* This optimization temporarilly disabled, until we figure out what to do about
+   the change in schema
    test "Self-anticomparison"
       "R(A) * ({A != A} + {A < A})"
-      "0"
+      "0" *)
 ;;
 
 let test msg scope input output =

@@ -22,6 +22,7 @@ FILES=\
 	src/calculus/CalculusDeltas\
 	src/calculus/CalculusDecomposition\
 	src/calculus/SqlToCalculus\
+	src/calculus/Provenance\
 	src/compiler/Plan\
 	src/compiler/IVC\
 	src/compiler/Heuristics\

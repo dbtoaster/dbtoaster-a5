@@ -6,7 +6,7 @@
         "COUNT" => {
           :type => :onelevel,
           :expected => {
-            ['SALES'] => 4
+            ['SALES', 4] => 1
           }
         }
       }

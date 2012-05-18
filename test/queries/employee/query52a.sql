@@ -23,8 +23,8 @@ CREATE STREAM DEPARTMENT(
   FROM FILE '../../experiments/data/employee/department.dat' LINE DELIMITED
   csv (fields := ',', schema := 'int,string,int', eventtype := 'insert');
 
-SELECT a.name 
-FROM (SELECT d.name, count(*) 
+SELECT a.name, a.c
+FROM (SELECT d.name, count(*) as c
       FROM employee e, department d
       WHERE d.department_id=e.department_id 
       GROUP BY name) a

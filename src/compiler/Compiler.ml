@@ -181,12 +181,11 @@ let compile_map (db_schema:Schema.t) (history:Heuristics.ds_history_t)
                if (todo_ivars <> [])
                then failwith "TODO: Implement IVC for maps with ivars."
                else if (todo_ovars <> [])
-               then let todo_ivc = 
-                     IVC.derive_initializer ~scope:todo_ovars
-                                        (Schema.table_rels db_schema)
-                                        todo.ds_definition
-                  in if todo_ivc = CalcRing.zero then None
-                     else Some(Calculus.rename_vars delta_renamings todo_ivc)
+               then if IVC.needs_runtime_ivc (Schema.table_rels db_schema)
+                                             todo.ds_definition
+                    then (Calculus.bail_out todo.ds_definition
+                            "Unsupported query.  Cannot materialize IVC (yet).")
+                    else None
                else None
 	         in
 	         
@@ -247,18 +246,18 @@ let compile_map (db_schema:Schema.t) (history:Heuristics.ds_history_t)
            value of 1).  
       ... and in both cases, there are no stream relations multiplying the 
       outermost terms to make the expression zero at the start. *)
-   let system_init_expr =
-      IVC.derive_initializer (Schema.table_rels db_schema)
-                         todo.ds_definition
-   in (
-      if system_init_expr <> CalcRing.zero
-      then triggers := 
-         (Schema.SystemInitializedEvent, {
-            Plan.target_map = todo.ds_name;
-            Plan.update_type = Plan.ReplaceStmt;
-            Plan.update_expr = system_init_expr
-         }) :: !triggers
-   );
+   begin match IVC.derive_initializer (Schema.table_rels db_schema)
+                                      todo.ds_definition
+   with
+      | x when x = CalcRing.zero -> ()
+      | system_init_expr ->
+         triggers := 
+            (Schema.SystemInitializedEvent, {
+               Plan.target_map = todo.ds_name;
+               Plan.update_type = Plan.ReplaceStmt;
+               Plan.update_expr = system_init_expr
+            }) :: !triggers
+   end;
    
    
    let (init_todos, init_expr) = 

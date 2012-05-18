@@ -374,11 +374,13 @@ and materialize_expr (db_schema:Schema.t) (history:ds_history_t)
 				in begin match mapping_if_found with
 					| None ->
 						(* Compute the IVC expression *) 
-						let ivc = IVC.derive_initializer ~scope:scope 
-						                                 (Schema.table_rels db_schema) 
-																						agg_rel_expr 
+						let ivc_expr = 
+						   if (IVC.needs_runtime_ivc (Schema.table_rels db_schema)
+                                              agg_rel_expr)
+                     then (Calculus.bail_out agg_rel_expr
+                            "Unsupported query.  Cannot materialize IVC (yet).")
+                     else None
             in
-            let ivc_expr = if (ivc = CalcRing.zero) then None else Some(ivc) in
 						
             Debug.print "LOG-HEURISTICS-DETAIL" (fun () ->
                begin match ivc_expr with

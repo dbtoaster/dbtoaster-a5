@@ -211,7 +211,7 @@ let name_of_event (event:event_t):string =
 let class_name_of_event (event:event_t):string =
    begin match event with
       | InsertEvent(_,_,_) -> "insert_tuple"
-      | DeleteEvent(_,_,_) -> "insert_tuple"
+      | DeleteEvent(_,_,_) -> "delete_tuple"
       | SystemInitializedEvent -> "system_ready_event"
    end
 

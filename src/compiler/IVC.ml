@@ -1,97 +1,158 @@
 (** 
-    A module for computing the initialization code of a given expression.  
-		  This is required when the root-level expression is nonzero at the start
-			(and barring changes in the deltas) will continue to be so throughout 
-      execution.  There are two reasons that this might happen
-         - The expression contains one or more Table relations, which will be
-           nonzero at the start.
-         - The expression contains one or more Lift expressions where the
-           nested expression has no output variables (which will always have a
-           value of 1).  
-      ... and in both cases, there are no stream relations multiplying the 
-      outermost terms to make the expression zero at the start *)
+   A module for computing initialization code for a given expression.
+   
+   This is required in two cases:
+      - When we acccess (on the RHS) a map with a set of input variables that
+        we have never encountered before (i.e., we extend the input domain of a
+        map).  Note that we will never update a map (i.e., on the LHS) in a way
+        that extends its input domain, because the input variables are, by 
+        definition, not bound within the defining expression.
+      - When we access or update an expression that does not have input 
+        variables, but still does not have finite support.  This can only happen
+        when the root level of the expression (or one of the terms of a sum 
+        at the root level of the expression) is a lift expression (or is the
+        product of several lifts).  In this case, there is a finite domain, 
+        but elements of the domain have nonzero initial values.
+   
+   For now, we ignore the case of input variables, as we never generate 
+   maps with input variables in the compiler (for now).  Our approach to 
+   performing IVC on output-only expressions is based around a reductive 
+   approach: For a specific type of IVC (of which there are several, each 
+   corresponding to one of the functions defined below), zero out any relations
+   which are guaranteed to be empty (or have an empty relevant slice), and then
+   propagate the zero as aggressively as possible.
+   
+   In general, there are three (and a half) cases:
+      - The expression has finite support. (no IVC is required)
+      - The expression produces a nonzero value for a fixed number of rows.
+        This is the case when the value is nonzero (as defined above), and
+        all of its output variables are defined either entirely by inlining or
+        in a static table. (IVC can be done entirely at startup)
+      - The expression produces a nonzero value for an infinite number of rows.
+        This is the case when the value is nonzero, and at least one of its 
+        output variables receives its domain (at least in part) from a stream.
+        (runtime IVC is required).  In this case, however, we might be able to
+        limit the set of delta queries for which IVC is actually required.
+      - The expression produces a nonzero value for an infinite number of rows,
+        but a finite number of these rows are known at startup.  This can happen
+        when the domain of a variable is derived from the union of the domain
+        of a table/inline expression and a stream (we do as much IVC at
+        startup as possible, and then do the rest at runtime)
+   
+*)
 
 open Calculus
 open Types
+open Provenance
 
-(*
-type domain_source_t = 
-   | StreamSource of (string * int) list 
-   | TableSource | InlineSource
+(**/**)
+let unsupported expr msg = Debug.Logger.error "IVC" 
+                     ~detail:(fun () -> CalculusPrinter.string_of_expr expr)
+                     ("Unsupported query: "^msg)
+let bug expr = Debug.Logger.bug "IVC" 
+                     ~detail:(fun () -> CalculusPrinter.string_of_expr expr)
 
-let string_of_domain_source = function 
-   StreamSource -> "stream" | TableSource  -> "table" | InlineSource -> "inline"
+let test_provenance = 
+   Provenance.fold (List.fold_left (||) false) (List.fold_left (&&) true) 
+                   (fun x->x)
+(**/**)
 
-let rec schema_domains (table_rels:Schema.rel_t list) (expr:expr_t): 
-                       ((var_t * domain_source_t) list * domain_source_t) =
-   let rcr e = schema_domains table_rels e in
-   let merge_domains merge_fn child_domains =
-      let (var_domains, val_domains) = List.split child_domains in
-      (  List.map (fun (var, source_list) -> 
-            (  var, 
-               match source_list with 
-               | [] -> 
-                  failwith "BUG: ListExtras.reduce_assoc returned an empty list"
-               | x::rest -> List.fold_left merge_fn x rest
-            )
-         ) (ListExtras.reduce_assoc (List.flatten var_domains)), 
-         (match val_domains with 
-            | [] -> 
-               failwith "BUG: Sum/Product of zero elements"
-            | x::rest -> List.fold_left merge_fn x rest
-         )
-      )
-   in
-   CalcRing.fold
-      (* Addition takes the worse of the domain types *)
-      (merge_domains (fun l r -> match (l,r) with  
-         | (InlineSource, _) | (_, InlineSource) -> InlineSource
-         | (TableSource, _)  | (_, TableSource)  -> TableSource
-         | (StreamSource, StreamSource)          -> StreamSource))
-      (* Multiplication takes the better of the domain types *)
-      (merge_domains (fun l r -> match (l,r) with 
-         | (StreamSource, _) | (_, StreamSource) -> StreamSource
-         | (TableSource, _)  | (_, TableSource)  -> TableSource
-         | (InlineSource, InlineSource)          -> InlineSource))
-      (fun x -> x)
-      (function
-         | Value(v) -> ([], InlineSource)
-         | AggSum(gb_vars, subexp) ->
-            let (var_domains, val_domain) = rcr subexp in
-               (  (List.filter (fun (x,_) -> List.mem x gb_vars) var_domains),
-                  val_domain)
-         | Rel(reln, relv) ->
-            if (List.exists (fun (x,_,_) -> reln = x) table_rels) 
-            then ((List.map (fun x -> (x, TableSource )) relv), TableSource )
-            else ((List.map (fun x -> (x, StreamSource)) relv), StreamSource)
-         | External(_) ->
-            failwith "Cannot compute the domain sources of an external"
-         | Cmp(_,_,_) -> ([], InlineSource)
-         | Lift(v, subexp) -> 
-            let (var_domains, val_domain) = rcr subexp in
-               ((v, val_domain)::var_domains, InlineSource)
-      )
-      expr
+(**
+   Compute the IVC of a given expression for use at startup 
 
-let needs_static_initializer (table_rels:Schema.rel_t list) (expr:expr_t):
-                             bool =
-  *) 
+   At startup, all stream relations are guaranteed to be empty.  This makes
+   for extremely trivial IVC generation.  We just replace all the stream
+   relations with zeroes, do some basic propagation, and we're done.
+   
+   Of course, we need to make sure that these zeroes get propagated down through
+   aggsums.
+   
+   Before we do this, however, we first determine whether or not we actually
+   need to perform IVC at startup.  This falls into the second of the three
+   cases.  There are two reasons why we wouldn't do IVC here:
+      - The expression's has a zero default value to begin with (in which case 
+        we never need to do IVC)
+      - One or more of the expression's output variables have a domain which
+        is defined entirely by a stream (in which case all IVC must be done at
+        runtime).
+   
+   Note that this IVC expression does not need any materialization.  The only 
+   relations it contains are static tables (which have already been individually
+   materialized), and there's no performance benefit to be gained by doing any
+   piecewise materialization on the expression itself -- The best we can do is
+   implement any relevant joins efficiently (which is not something that we're
+   able to do in Calculus).
+*)
+let needs_startup_ivc (table_rels:Schema.rel_t list) (expr:expr_t): bool =
+   let table_names = List.map Schema.name_of_rel table_rels in
+   let (var_provenance,val_provenance) =  Provenance.provenance_of_expr expr in
+   let at_startup = (function 
+      | RelSource(rn) -> (List.mem rn table_names)
+      | InlineSource -> true
+      | NoSource -> false
+      | AnySource -> true
+   ) in
+      (test_provenance at_startup val_provenance) &&
+      (List.for_all (fun (_,v) -> test_provenance at_startup v) var_provenance)
 
-(** Compute the IVC of a given expression without input variables. *)
+
+(**
+   Determine whether the expression needs runtime IVC (if so, we can't do 
+   anything clever to simplify the expression, we just need to materialize a 
+   simplified version).
+   
+   The expression will not need runtime IVC if one of two things is true:
+      - The expression's initial value is derived exclusively from stream
+        relations. (i.e., stream + stream, but not stream + table, or lift(...))
+        In this case, the expression's value will always be zero at init.
+      - All of the expression's output variables receive their domains from 
+        static (inline or table) sources.  In this case, the expression will 
+        have been entirely initialized at system ready.
+   
+   Because it's simpler, we test for the contrapositive of each case.  We first
+   determine if the value has any inline or table influences, and then test if
+   any of the expression's output variables have a domain that is influenced by
+   a stream relation.
+*)
+let needs_runtime_ivc (table_rels:Schema.rel_t list) (expr:expr_t): 
+                      bool =
+   let table_names = List.map Schema.name_of_rel table_rels in
+   let (var_provenance,val_provenance) =  Provenance.provenance_of_expr expr in
+   let for_inline_or_table_influence = (function 
+      | RelSource(rn) -> (List.mem rn table_names)
+      | InlineSource -> true
+      | NoSource -> false
+      | AnySource -> true
+   ) in
+   let for_stream_influence = (function
+      | RelSource(rn) -> not (List.mem rn table_names)
+      | InlineSource -> false
+      | NoSource -> false
+      | AnySource -> true
+   ) in
+      (test_provenance for_inline_or_table_influence val_provenance)
+          &&
+      (List.exists (fun (_,v) -> test_provenance for_stream_influence v)
+                   var_provenance)
+      
+
+
+
+
 let derive_initializer ?(scope = [])
-                       (table_rels:Schema.rel_t list) 
+                       (table_rels:Schema.rel_t list)
                        (expr:expr_t): expr_t =
    let table_names = List.map (fun (rn,_,_) -> rn) table_rels in
-   let optimized_expr = (CalculusTransforms.optimize_expr 
+   let optimized_expr = (CalculusTransforms.optimize_expr
                               (Calculus.schema_of_expr expr) expr)
-   in 
+   in
    Debug.print "LOG-DERIVE-INITIALIZER" (fun () ->
       "[Initializer] Input is (scope: "^(ListExtras.ocaml_of_list fst scope)^
       "): "^(CalculusPrinter.string_of_expr optimized_expr)
-   ); 
-   let init_expr = 
-      Calculus.rewrite_leaves ~scope:scope (fun lf_scope lf -> 
-         Debug.print "LOG-DERIVE-INITIALIZER" (fun () -> 
+   );
+   let init_expr =
+      Calculus.rewrite_leaves ~scope:scope (fun lf_scope lf ->
+         Debug.print "LOG-DERIVE-INITIALIZER" (fun () ->
             "[Initializer] Deriving Initializer for : "^(string_of_leaf lf)
          );
          match lf with
@@ -102,12 +163,12 @@ let derive_initializer ?(scope = [])
          | AggSum(gb_vars, subexp) ->
             (* If the subexpression is zero, then the aggsum is zero *)
             if subexp = CalcRing.zero then CalcRing.zero else
-            
+           
             (* It's also possible that the subexpression will have a narrower
                schema than before without becoming zero.  For example
-                  AggSum([A], (B ^= R(A)) 
+                  AggSum([A], (B ^= R(A))
                would become
-                  AggSum([A], (B ^= 0)) 
+                  AggSum([A], (B ^= 0))
                In this case, there will be no rows in the output schema of this
                expression, and we can replace the nested expression by zero.
                
@@ -117,7 +178,7 @@ let derive_initializer ?(scope = [])
             let subexp_ovars = (snd (schema_of_expr subexp)) in
             let bound_schema = ListAsSet.union scope subexp_ovars in
             let unbound_schema = ListAsSet.diff gb_vars bound_schema in
-               if unbound_schema = [] 
+               if unbound_schema = []
                then CalcRing.mk_val (AggSum(ListAsSet.inter gb_vars
                                                             subexp_ovars,
                                             subexp))
@@ -125,7 +186,7 @@ let derive_initializer ?(scope = [])
          | _ -> CalcRing.mk_val lf
       ) (CalculusTransforms.optimize_expr (Calculus.schema_of_expr expr) expr)
    in
-      (* It's possible that a zero will narrow the schema of an expression 
+      (* It's possible that a zero will narrow the schema of an expression
          without zeroing out the entire expression thanks to a lift.  We need
          to detect this here, rather than above, since we don't have schema
          information in rewrite_leaves (And for AggSum, it actually matters that
@@ -133,18 +194,17 @@ let derive_initializer ?(scope = [])
       if ListAsSet.diff (snd (Calculus.schema_of_expr expr))
                         (snd (Calculus.schema_of_expr init_expr)) <> []
       then (
-         Debug.print "LOG-DERIVE-INITIALIZER" (fun () -> 
+         Debug.print "LOG-DERIVE-INITIALIZER" (fun () ->
             "[Initializer] Initializer is zero");
          CalcRing.zero
       ) else (
          Debug.print "LOG-DERIVE-INITIALIZER" (fun () ->
             "[Initializer] Initializer is "^
                (CalculusPrinter.string_of_expr init_expr)
-         ); 
+         );
          if (Debug.active "IVC-OPTIMIZE-EXPR") then
-            CalculusTransforms.optimize_expr (Calculus.schema_of_expr init_expr) 
+            CalculusTransforms.optimize_expr (Calculus.schema_of_expr init_expr)
                                              init_expr
-			else init_expr
+                        else init_expr
       )
-
-(******************************************************************************)
+ 
