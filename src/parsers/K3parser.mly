@@ -313,6 +313,7 @@ constStatement:
 
 varStatement:
 | ID COLON typeItem                                         { Var($1, TBase( $3 ) ) }
+| ID COLON varType                                          { Var($1, $3 ) }
 | ID                                                        { Var($1, TBase(Types.TFloat)) }
 
 tupleStatement:
@@ -320,6 +321,7 @@ tupleStatement:
 
 statementElementList:
 | statement EOSTMT statementElementList                     { $1::$3 }
+| statement EOSTMT                                          { [$1] }
 | statement                                                 { [$1] }
 
 arithmeticStatement:

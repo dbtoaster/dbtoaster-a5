@@ -33,6 +33,7 @@ FILES=\
 	src/functional/K3\
 	src/functional/K3Typechecker\
 	src/functional/M3ToK3\
+	src/functional/DMToK3\
 	src/functional/K3Optimizer\
 	src/functional/K3Codegen\
 	src/functional/K3Compiler\

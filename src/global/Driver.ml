@@ -518,7 +518,7 @@ if stage_is_active StageM3DMToK3 then (
    if (Debug.active "DEBUG-DM") then
    begin
       let k3_printer = if (Debug.active "NICE-K3") then K3.nice_code_of_prog else K3.code_of_prog in
-      let k3_queries = M3ToK3.m3dm_to_k3 !k3_program !dm_program in
+      let k3_queries = DMToK3.m3dm_to_k3 !k3_program !dm_program in
       Debug.print "LOG-DMTOK3" (fun () -> k3_printer k3_queries);
       k3_program := k3_queries
    end

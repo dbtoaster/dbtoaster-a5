@@ -885,7 +885,7 @@ let nice_string_of_expr ?(type_is_needed = false) e maps =
     | Aggregate _         -> pop "Aggregate"
     | GroupByAggregate _  -> pop "GroupByAggregate"
     | Block(expr_list)    -> ob(); ps "{"; ob();
-                             List.iter (fun (expr) -> fnl(); aux expr;) expr_list;
+                             List.iter (fun (expr) -> fnl(); aux expr; ps ";") expr_list;
                              cb(); cb(); fnl(); ps "}"
 
     (* Pretty-print with list branches *)
