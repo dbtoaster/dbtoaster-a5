@@ -68,21 +68,26 @@ let get_map_output_domain (expr: Calculus.expr_t): Calculus.expr_t =
 let get_map_input_domain (expr: Calculus.expr_t): Calculus.expr_t =
    get_map_input_output_domain ~input:true expr
 
-let get_relation_of_event (event_input: Schema.event_t): Schema.rel_t =
+let get_relation_of_event (event_input: Schema.event_t): Schema.rel_t option =
     begin match event_input with
-        | Schema.InsertEvent(rel) -> rel
-        | Schema.DeleteEvent(rel) -> rel
-        | _ -> failwith ("incorrect event!")
+        | Schema.InsertEvent(rel) -> Some(rel)
+        | Schema.DeleteEvent(rel) -> Some(rel)
+        | _ -> None
     end
         
 let get_singleton_tuple (relation: Schema.rel_t): Calculus.expr_t =
     let (rname, rvars, _) = relation in
         CalcRing.Val(External(rname^"_singleton", [], rvars, Types.TInt, None))
 
-let singleton_tuple_is_for_event (event_input: Schema.event_t) (test_singleton_tuple: Calculus.expr_t): bool = 
-   let single_tuple = get_singleton_tuple (get_relation_of_event event_input) in
-   Debug.print "CHECK-M3DM" (fun () -> (Calculus.string_of_expr single_tuple)^" =?= "^(Calculus.string_of_expr test_singleton_tuple) );
-   single_tuple = test_singleton_tuple
+let singleton_tuple_is_for_event (event_input: Schema.event_t) (test_singleton_tuple: Calculus.expr_t): bool =
+    let relation = 
+        match (get_relation_of_event event_input) with
+        | Some(rel) -> rel
+        | None -> failwith "incorrect event"
+    in
+    let single_tuple = get_singleton_tuple (relation) in
+    Debug.print "CHECK-DM" (fun () -> (Calculus.string_of_expr single_tuple)^" =?= "^(Calculus.string_of_expr test_singleton_tuple) );
+    single_tuple = test_singleton_tuple
 
 let get_calc_for_event (event_input: Schema.event_t) = 
    begin match event_input with 
@@ -191,9 +196,13 @@ let rec simplify_formula (event_input: Schema.event_t) (expr: Calculus.expr_t): 
                               else
 *)
                                  (e, true)
-               | _ -> failwith ("Incorrect leaf")
-               end
-           | _ -> failwith ("Incorrect formula")
+                | Cmp(op,subexp1,subexp2) -> 
+		            (e, true)
+                | Lift(target, subexp)    -> 
+		            (e, true)
+                | _ -> failwith ("Incorrect leaf: "^(string_of_expr e))
+                end
+           | _ -> failwith ("Incorrect formula: "^(string_of_expr e))
        end
       in
          aux expr
@@ -226,21 +235,21 @@ let simplify_dm_triggers (event_input: Schema.event_t) (trigger_list: Plan.stmt_
 let rec maintain (context: Calculus.expr_t)
                 (formula: Calculus.expr_t) : Plan.stmt_t list * Calculus.expr_t =
     begin match formula with
-    | CalcRing.Sum([q1;q2]) -> 
+(*    | CalcRing.Sum([q1;q2]) -> 
         let (trlist1, context1) = maintain(context)(q1) in
             let (trlist2, context2) = maintain(context)(q2) in 
-                (trlist1 @ trlist2, CalcRing.mk_sum([context1; context2]))
+                (trlist1 @ trlist2, CalcRing.mk_sum([context1; context2])) *)
     | CalcRing.Sum(q1::qo) -> 
         let (trlist1, context1) = maintain(context)(q1) in
-            let (trlist2, context2) = maintain(context)(CalcRing.mk_sum qo) in 
+            let (trlist2, context2) = maintain(context)(if List.length qo = 1 then List.hd qo else CalcRing.mk_sum qo) in 
                 (trlist1 @ trlist2, CalcRing.mk_sum([context1; context2]))
-    | CalcRing.Prod([q1;q2]) -> 
+(*    | CalcRing.Prod([q1;q2]) -> 
         let (trlist1, context1) = maintain(context)(q1) in
             let (trlist2, context2) = maintain(context1)(q2) in 
-                (trlist1 @ trlist2, context2)
+                (trlist1 @ trlist2, context2) *)
     | CalcRing.Prod(q1::qo) -> 
         let (trlist1, context1) = maintain(context)(q1) in
-            let (trlist2, context2) = maintain(context1)(CalcRing.mk_prod qo) in 
+            let (trlist2, context2) = maintain(context1)(if List.length qo = 1 then List.hd qo else CalcRing.mk_prod qo) in 
                 (trlist1 @ trlist2, context2)
     | CalcRing.Neg(q1) ->
         maintain(context)(q1)
@@ -262,12 +271,12 @@ let rec maintain (context: Calculus.expr_t)
         | Rel(rname, rvars)    -> 
             ([], CalcRing.mk_prod ([context; formula]))
         | Cmp(op,subexp1,subexp2) -> 
-            let right_context = CalcRing.Val(leaf) in
+            let right_context = formula in
                 ([], CalcRing.mk_prod ([context; right_context]))
-           (* failwith ("comparison not supported!") *) (*TODO*)
         | Lift(target, subexp)    -> 
             let (trlist, context1) = maintain(context)(subexp) in
-                (trlist, context1) (*FIXME*)
+               (* (trlist, context1) *) (*FIXME*)
+               (trlist, CalcRing.mk_prod ([context; formula]))
         end
     | _ -> failwith ("Incorrect formula")
     end
@@ -299,7 +308,7 @@ let maintain_all (relation: Schema.rel_t)
     let dm_statements = ref [] in
     let dm_trigger: trigger_t = {event = event_input; statements = dm_statements} in
     let singleton_tuple = get_singleton_tuple relation in
-    if not (Debug.active "DEBUG-DM") then
+    if (Debug.active "DEBUG-DM-SINGLETON") then
       dm_statements := [mk_dm_trigger singleton_tuple singleton_tuple]
     else
       ();
@@ -307,7 +316,7 @@ let maintain_all (relation: Schema.rel_t)
             let dm_statement = maintain_statement (statement) (relation) in
             dm_statements := !dm_statements@dm_statement
         ) stmts;
-        if not (Debug.active "NOOPT-M3DM") then
+        if not (Debug.active "NOOPT-DM") then
             dm_statements := simplify_dm_triggers event_input !dm_statements
         else 
             ();
@@ -318,11 +327,12 @@ let maintain_all (relation: Schema.rel_t)
 let make_DM_triggers (m3_triggers: trigger_t list): trigger_t list =
     let dm_triggers = ref [] in
         List.iter (fun (trigger:trigger_t) ->
-            try
-                let relation = get_relation_of_event (trigger.event) in
+            let rel = get_relation_of_event (trigger.event) in
+            match rel with
+            | Some(relation) ->
             	let dm_trigger = maintain_all (relation) (!(trigger.statements)) (trigger.event) in
             	dm_triggers := !dm_triggers@[dm_trigger]
-            with _ -> ()
+            | None -> ()
         ) m3_triggers;
     !dm_triggers
 
@@ -337,7 +347,7 @@ let make_DM_maps (m3_db: Schema.t) (m3_maps: map_t list): map_t list =
                if eins <> [] then
                   let map_input = get_map_input_domain ds.ds_name in
                   add_map map_input; 
-                  if Debug.active "DEBUG-DM" then
+                  if Debug.active "DEBUG-DM-STATUS" then
                      add_map (get_map_status map_input)
                   else ()
                else
@@ -345,7 +355,7 @@ let make_DM_maps (m3_db: Schema.t) (m3_maps: map_t list): map_t list =
                if eouts <> [] then
                   let map_output = get_map_output_domain ds.ds_name in
                   add_map map_output;
-                  if Debug.active "DEBUG-DM" then
+                  if Debug.active "DEBUG-DM-STATUS" then
                      add_map (get_map_status map_output)
                   else ()
                else 
@@ -354,10 +364,21 @@ let make_DM_maps (m3_db: Schema.t) (m3_maps: map_t list): map_t list =
             (*add_map (get_singleton_tuple rel)*)
             ()
       ) m3_maps;
-      List.iter (
-         fun (rel: Schema.rel_t) ->
-            add_map (get_singleton_tuple rel)
-      ) (Schema.rels m3_db);
+      if Debug.active "DEBUG-DM-SINGLETON" then
+            List.iter (
+                fun (rel: Schema.rel_t) ->
+                    add_map (get_singleton_tuple rel)
+            ) (Schema.rels m3_db);
+      if Debug.active "DEBUG-DM-UNIT" then
+      begin
+            let unit_map = 
+                let dummy_m3_map = ("dummy_map", [], [], Types.TInt) in
+	            let (ename,eins,eouts,etype) = dummy_m3_map in
+	                CalcRing.Val(External(ename, eins, eouts, etype, None))
+	        in
+                add_map (unit_map);
+      end;
+      
 
       !dm_maps
 

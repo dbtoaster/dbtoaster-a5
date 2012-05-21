@@ -14,6 +14,12 @@ let is_ivc_constant = one_int_val
 let is_gc_constant  = minus_one_int_val
 let is_normal_constant = zero_int_val
 
+let dummy_k3_map =
+    K.SingletonPC("dummy_map", K.TBase(T.TInt))
+
+let get_unit_statement () = 
+    K.PCValueUpdate(dummy_k3_map, [], [], is_normal_constant)
+
 let get_map_from_schema (map_name: string) (k3_prog_schema: K.map_t list): K.map_t =
     let (mapn, lhs_ins, lhs_outs, map_type) = 
     List.find 
@@ -201,6 +207,9 @@ let ivc_statement_generate dm_stmt trig_args k3_prog_schema =
         incr_expr) = get_stmt_info dm_stmt trig_args in
      
     let dummy_statement = 
+        if Debug.active "DEBUG-DM-UNIT" then
+            get_unit_statement ()
+        else
             let collection_status = get_collection_status mapn k3_prog_schema in
                 K.PCUpdate(collection_status, [], collection_status)
     in
@@ -394,8 +403,11 @@ let dm_stmt_to_k3_stmt trig_args (dm_stmt: Plan.stmt_t) (k3_prog_schema: K.map_t
         let lambda_arg = collection_ivc_gc_var in
         let lambda_body = 
             let dummy_statement = 
-            let collection_status = get_collection_status mapn k3_prog_schema in
-                K.PCUpdate(collection_status, [], collection_status)
+	            if Debug.active "DEBUG-DM-UNIT" then
+		            get_unit_statement ()
+		        else
+		            let collection_status = get_collection_status mapn k3_prog_schema in
+		                K.PCUpdate(collection_status, [], collection_status)
             in
             let update_domain_statement = 
                 let update_domain_lambda_body = 
@@ -428,6 +440,7 @@ let dm_stmt_to_k3_stmt trig_args (dm_stmt: Plan.stmt_t) (k3_prog_schema: K.map_t
 
 
 let dm_trig_to_k3_trig (m3dm_trig: M3.trigger_t) (k3_prog_schema: K.map_t list) (m3_to_k3_trig: K.trigger_t) : K.trigger_t =
+    Debug.print "DEBUG-DM-LOG" (fun () -> "dm_trig_to_k3_trig for event: "^(Schema.name_of_event m3dm_trig.M3.event));
     let trig_args = Schema.event_vars m3dm_trig.M3.event in
     let m3_to_k3_stmts = if (Debug.active "DEBUG-DM-WITH-M3") then snd m3_to_k3_trig else [] in
     let k3_trig_stmts = 
@@ -446,8 +459,10 @@ let dm_trig_to_k3_trig (m3dm_trig: M3.trigger_t) (k3_prog_schema: K.map_t list) 
 
 (** Transforms an existing K3 program with its corresponding M3DM program into a K3 program. *)
 let m3dm_to_k3 (m3tok3_program : K.prog_t) (m3dm_prog: M3DM.prog_t) : (K.prog_t) =
-    let ( k3_database, (old_k3_prog_schema, old_patterns_map), m3tok3_prog_trigs, old_k3_prog_tlqs) = m3tok3_program in
+    if Debug.active "DEBUG-DM" then begin Debug.activate "DEBUG-DM-UNIT" end;
     let with_m3 = Debug.active "DEBUG-DM-WITH-M3" in
+    if with_m3 then begin Debug.activate "DEBUG-DM-IVC"; Debug.activate "K3-NO-OPTIMIZE" end; 
+    let ( k3_database, (old_k3_prog_schema, old_patterns_map), m3tok3_prog_trigs, old_k3_prog_tlqs) = m3tok3_program in
     let k3_prog_tlqs = if (with_m3) then old_k3_prog_tlqs else [] in
     let k3_prog_schema = (if (with_m3) then old_k3_prog_schema else [])@(List.map m3_map_to_k3_map !(m3dm_prog.M3DM.maps)) in
     let patterns_map = (if (with_m3) then old_patterns_map else [])@Patterns.extract_patterns !(m3dm_prog.M3DM.triggers) in
