@@ -718,6 +718,14 @@ let get_pc_schema pce maps =
             id
       | Map(_, e) -> get_pc_name e
       | Slice(e, _, _) -> get_pc_name e
+      | Block(el) -> 
+            let rec last_item l = 
+                if List.length l = 1 then
+                    List.hd l
+                else 
+                    last_item (List.tl l)
+            in
+                get_pc_name (last_item el)
       | _ -> failwith "First element of Slice must be PC!"
    in
    let pc_name =  get_pc_name pce    

@@ -216,6 +216,7 @@ end
 tests = [];
 $opts = []; 
 $debug_flags = [];
+#$debug_flags = ["DEBUG-DM", "DEBUG-DM-WITH-M3"];
 $skip_compile = false;
 $precision = 1e-4;
 $strict = false;

@@ -495,7 +495,15 @@ let meta_has_init_keys meta init_keys =
 
 let meta_append_init_keys meta init_keys =
 		(fst meta)@[init_keys],(snd meta)
-(**/**)		
+		
+(**/**)	
+
+let dummy_k3_map =
+    K.SingletonPC("dummy_map", K.TBase(T.TInt))
+
+let get_unit_statement () = 
+    K.PCValueUpdate(dummy_k3_map, [], [], zero_int_val)
+    	
 (**********************************************************************)
 
 
@@ -913,29 +921,36 @@ let m3_stmt_to_k3_stmt (meta: meta_t) ?(generate_init = false) trig_args (m3_stm
 	(* Iterate over all the tuples in "incr_expr" collection and update the *)
 	(* lhs_collection accordingly. *)
 	let coll_update_expr =	
-		let single_update_expr = K.PCValueUpdate( lhs_collection, lhs_ins_el, lhs_outs_el, 
-																K.Add(existing_v,rhs_ret_ve) ) in
+	    let single_update_statement = K.PCValueUpdate( lhs_collection, lhs_ins_el, lhs_outs_el, 
+                                                                K.Add(existing_v,rhs_ret_ve) ) in
+		let single_update_expr = 
+			if ( (not (Debug.active "DEBUG-DM-WITH-M3") ) || trig_args = [] ) then
+	            single_update_statement
+	        else
+	            let dummy_statement =
+	                get_unit_statement ()
+	            in
+	            if lhs_ins_el = [] && lhs_outs_el = [] then
+	                single_update_statement 
+	(*          else if (free_lhs_outs_el = []) then
+	                K.IfThenElse(
+	                    K.Member(existing_out_tier, lhs_outs_el),
+	                    update_expression,
+	                    dummy_statement  
+	                )
+	            else
+	                update_expression
+	*)
+	            else
+	                K.IfThenElse(
+	                    K.Member(existing_out_tier, lhs_outs_el),
+	                    single_update_statement,
+	                    dummy_statement  
+	                )
+	    in
 		let inner_loop_body = lambda (rhs_outs_el@[rhs_ret_ve]) single_update_expr in
-		let update_expression = 
-			if rhs_outs_el = [] then K.Apply(  inner_loop_body,incr_expr)	
-			else          				  K.Iterate(inner_loop_body,incr_expr)
-		in
-		if not (Debug.active "DEBUG-DM-WITH-M3") then
-			update_expression
-		else
-			let dummy_statement =
-				K.PCUpdate(lhs_collection, lhs_ins_el, lhs_collection)
-			in
-			if lhs_ins_el = [] && lhs_outs_el = [] then
-				update_expression 
-			else if (free_lhs_outs_el = []) then
-				K.IfThenElse(
-					K.Member(existing_out_tier, lhs_outs_el),
-					update_expression,
-					dummy_statement (* no effect! *)
-				)
-			else
-				update_expression
+    		if rhs_outs_el = [] then      K.Apply(  inner_loop_body,incr_expr)	
+           	else                          K.Iterate(inner_loop_body,incr_expr)
 	in
 	
 	(* In order to implement a statement we iterate over all the values *)

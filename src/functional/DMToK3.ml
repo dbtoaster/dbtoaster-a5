@@ -14,12 +14,6 @@ let is_ivc_constant = one_int_val
 let is_gc_constant  = minus_one_int_val
 let is_normal_constant = zero_int_val
 
-let dummy_k3_map =
-    K.SingletonPC("dummy_map", K.TBase(T.TInt))
-
-let get_unit_statement () = 
-    K.PCValueUpdate(dummy_k3_map, [], [], is_normal_constant)
-
 let get_map_from_schema (map_name: string) (k3_prog_schema: K.map_t list): K.map_t =
     let (mapn, lhs_ins, lhs_outs, map_type) = 
     List.find 
@@ -79,6 +73,7 @@ let get_stmt_info dm_stmt trig_args=
         rhs_ret_ve, 
         incr_expr)
         
+(*
 let collection_ivc_gc_var dm_stmt trig_args = 
     let (mapn, 
         trig_args_el,
@@ -89,6 +84,17 @@ let collection_ivc_gc_var dm_stmt trig_args =
         rhs_outs_el, 
         rhs_ret_ve, 
         incr_expr) = get_stmt_info dm_stmt trig_args in
+*)
+let collection_ivc_gc_var stmt_info =
+    let (mapn, 
+        trig_args_el,
+        lhs_collection, 
+        lhs_ins_el, 
+        lhs_outs_el, 
+        map_type, 
+        rhs_outs_el, 
+        rhs_ret_ve, 
+        incr_expr) = stmt_info in
     let domain_type = K.TBase(Types.TInt) in
     let free_lhs_outs_el = ListAsSet.diff lhs_outs_el trig_args_el in
     let collection_ivc_gc_t  = 
@@ -98,7 +104,7 @@ let collection_ivc_gc_var dm_stmt trig_args =
             K.Collection(K.TTuple( (k3_expr_to_k3_type (free_lhs_outs_el))@[domain_type] )) 
     in
         K.Var("cig_"^mapn, collection_ivc_gc_t)
-        
+(*        
 let collection_ivc_gc_generate dm_stmt trig_args =
     let (mapn, 
         trig_args_el,
@@ -109,7 +115,17 @@ let collection_ivc_gc_generate dm_stmt trig_args =
         rhs_outs_el, 
         rhs_ret_ve, 
         incr_expr) = get_stmt_info dm_stmt trig_args in
-
+*)
+let collection_ivc_gc_generate stmt_info =
+    let (mapn, 
+        trig_args_el,
+        lhs_collection, 
+        lhs_ins_el, 
+        lhs_outs_el, 
+        map_type, 
+        rhs_outs_el, 
+        rhs_ret_ve, 
+        incr_expr) = stmt_info in
     let map_k3_type = K.TBase(map_type) in
               
     assert (ListAsSet.seteq (ListAsSet.diff lhs_outs_el trig_args_el) rhs_outs_el);
@@ -147,7 +163,7 @@ let collection_ivc_gc_generate dm_stmt trig_args =
             K.Apply(inner_loop_body, incr_expr)
     in
         (collection_ivc_gc)
-        
+(*    
 let update_status_statement_generate dm_stmt trig_args k3_prog_schema =
     let (mapn, 
         trig_args_el,
@@ -158,9 +174,20 @@ let update_status_statement_generate dm_stmt trig_args k3_prog_schema =
         rhs_outs_el, 
         rhs_ret_ve, 
         incr_expr) = get_stmt_info dm_stmt trig_args in
+*)        
+let update_status_statement_generate stmt_info k3_prog_schema =
+    let (mapn, 
+        trig_args_el,
+        lhs_collection, 
+        lhs_ins_el, 
+        lhs_outs_el, 
+        map_type, 
+        rhs_outs_el, 
+        rhs_ret_ve, 
+        incr_expr) = stmt_info in
         
     let collection_ivc_gc_var = 
-        collection_ivc_gc_var dm_stmt trig_args in
+        collection_ivc_gc_var stmt_info in
 
     let collection_status = get_collection_status mapn k3_prog_schema in
     let update_status_lambda_body = 
@@ -190,11 +217,22 @@ let ivc_do (map_name_domain: string) (vars: K.expr_t list)  (k3_prog_schema: K.m
     let map_schema          =   get_map_vars                (map_name)  (k3_prog_schema) in
     let (_, _, _, map_type) =   get_map_from_schema         (map_name)  (k3_prog_schema) in
     let map_expr            =   get_map_expr_from_schema    (map_name)  (k3_prog_schema) in
-    match (pair_map varIdType_to_k3_expr map_schema) with
-    | x,    []    -> K.PCValueUpdate(map_expr, vars, [], init_val_from_type map_type) 
-    | [],    y    -> K.PCValueUpdate(map_expr, [], vars, init_val_from_type map_type)
-    | x,    y     -> failwith "Map with both variables is not supported"
-   
+    let ivc_statement = 
+	    match (pair_map varIdType_to_k3_expr map_schema) with
+	    | x,    []    -> K.PCValueUpdate(map_expr, vars, [], init_val_from_type map_type) 
+	    | [],    y    -> K.PCValueUpdate(map_expr, [], vars, init_val_from_type map_type)
+	    | x,    y     -> failwith "Map with both variables is not supported"
+	in
+	   (* in order to solve the problem when something is initiliazed in ON SYSTEM *)
+	   K.IfThenElse(K.Member(map_expr, vars),
+	       get_unit_statement (),
+	       ivc_statement
+	   )
+	    (*** FIXME ***) (*only supports maps with output *)
+	    (* that's not a good idea! another way should be used to handle this *)
+	   
+ 
+(*  
 let ivc_statement_generate dm_stmt trig_args k3_prog_schema =
     let (mapn, 
         trig_args_el,
@@ -205,6 +243,17 @@ let ivc_statement_generate dm_stmt trig_args k3_prog_schema =
         rhs_outs_el, 
         rhs_ret_ve, 
         incr_expr) = get_stmt_info dm_stmt trig_args in
+*)
+let ivc_statement_generate stmt_info k3_prog_schema =
+    let (mapn, 
+        trig_args_el,
+        lhs_collection, 
+        lhs_ins_el, 
+        lhs_outs_el, 
+        map_type, 
+        rhs_outs_el, 
+        rhs_ret_ve, 
+        incr_expr) = stmt_info in
      
     let dummy_statement = 
         if Debug.active "DEBUG-DM-UNIT" then
@@ -215,7 +264,7 @@ let ivc_statement_generate dm_stmt trig_args k3_prog_schema =
     in
     
     let collection_ivc_gc_var = 
-        collection_ivc_gc_var dm_stmt trig_args in
+        collection_ivc_gc_var stmt_info in
     
     let ivc_statement_main = ivc_do mapn lhs_outs_el k3_prog_schema in
     let ivc_statement_lambda_body = 
@@ -369,7 +418,8 @@ let dm_collection_trig (m3dm_trig: M3.trigger_t) (k3_prog_schema: K.map_t list) 
         (m3dm_trig.M3.event, k3_trig_stmts@other_stmts)
 *)
 
-let dm_stmt_to_k3_stmt trig_args (dm_stmt: Plan.stmt_t) (k3_prog_schema: K.map_t list) : K.statement_t =
+let dm_stmt_to_k3_stmt (meta: meta_t) trig_args (dm_stmt: Plan.stmt_t) (k3_prog_schema: K.map_t list)
+     : K.statement_t * meta_t =
     let (mapn, lhs_ins, lhs_outs, map_type, init_calc_opt) = Plan.expand_ds_name dm_stmt.Plan.target_map in
     let {Plan.update_type = update_type; Plan.update_expr = incr_calc} = dm_stmt in 
         
@@ -377,13 +427,26 @@ let dm_stmt_to_k3_stmt trig_args (dm_stmt: Plan.stmt_t) (k3_prog_schema: K.map_t
     
     let map_k3_type = K.TBase(map_type) in
               
+    let lhs_ins_el = varIdType_to_k3_expr lhs_ins in
     let lhs_outs_el = varIdType_to_k3_expr lhs_outs in
     let trig_args_el = varIdType_to_k3_expr trig_args in
 
-    let incr_result, _ = calc_to_k3_expr ~generate_init:true empty_meta trig_args_el incr_calc in
+    let incr_result, nm0 = calc_to_k3_expr ~generate_init:true meta trig_args_el incr_calc in
     let (rhs_outs_el, rhs_ret_ve, incr_expr) = incr_result in
     assert (ListAsSet.seteq (ListAsSet.diff lhs_outs_el trig_args_el) rhs_outs_el);
     assert (compatible_types (type_of_kvar rhs_ret_ve) map_k3_type);
+    
+    let stmt_info = 
+        (mapn, 
+        trig_args_el,
+        lhs_collection, 
+        lhs_ins_el, 
+        lhs_outs_el, 
+        map_type, 
+        rhs_outs_el, 
+        rhs_ret_ve, 
+        incr_expr)
+    in
 
     let zero_value = init_val_from_type map_type in
     let previous_value = 
@@ -395,9 +458,11 @@ let dm_stmt_to_k3_stmt trig_args (dm_stmt: Plan.stmt_t) (k3_prog_schema: K.map_t
     let new_value = K.Add(previous_value, delta_value) in
 
     let collection_ivc_gc       = 
-        collection_ivc_gc_generate  dm_stmt trig_args in
+(*        collection_ivc_gc_generate  dm_stmt trig_args in *)
+        collection_ivc_gc_generate  stmt_info in 
     let collection_ivc_gc_var   = 
-        collection_ivc_gc_var       dm_stmt trig_args in
+(*        collection_ivc_gc_var       dm_stmt trig_args in *)
+        collection_ivc_gc_var       stmt_info in
 
     let statement_expr =
         let lambda_arg = collection_ivc_gc_var in
@@ -421,13 +486,15 @@ let dm_stmt_to_k3_stmt trig_args (dm_stmt: Plan.stmt_t) (k3_prog_schema: K.map_t
             in
             let update_status = 
                 if Debug.active "DEBUG-DM-STATUS" then
-                    update_status_statement_generate dm_stmt trig_args k3_prog_schema 
+(*                    update_status_statement_generate dm_stmt trig_args k3_prog_schema *)
+                    update_status_statement_generate stmt_info k3_prog_schema 
                 else
                     dummy_statement 
             in
             let ivc_statement =
                 if Debug.active "DEBUG-DM-IVC" then
-                    ivc_statement_generate dm_stmt trig_args k3_prog_schema
+(*                    ivc_statement_generate dm_stmt trig_args k3_prog_schema *)
+                    ivc_statement_generate stmt_info k3_prog_schema
                 else
                     dummy_statement 
             in
@@ -436,24 +503,24 @@ let dm_stmt_to_k3_stmt trig_args (dm_stmt: Plan.stmt_t) (k3_prog_schema: K.map_t
         let outer_loop_body = lambda [lambda_arg] lambda_body in
             K.Apply(outer_loop_body, collection_ivc_gc)
     in
-        (statement_expr)
+        (statement_expr, nm0)
 
 
-let dm_trig_to_k3_trig (m3dm_trig: M3.trigger_t) (k3_prog_schema: K.map_t list) (m3_to_k3_trig: K.trigger_t) : K.trigger_t =
+let dm_trig_to_k3_trig (meta: meta_t) (m3dm_trig: M3.trigger_t) (k3_prog_schema: K.map_t list) (m3_to_k3_trig: K.trigger_t) : K.trigger_t * meta_t =
     Debug.print "DEBUG-DM-LOG" (fun () -> "dm_trig_to_k3_trig for event: "^(Schema.name_of_event m3dm_trig.M3.event));
     let trig_args = Schema.event_vars m3dm_trig.M3.event in
     let m3_to_k3_stmts = if (Debug.active "DEBUG-DM-WITH-M3") then snd m3_to_k3_trig else [] in
-    let k3_trig_stmts = 
+    let k3_trig_stmts, new_meta = 
         List.fold_left 
         (
-            fun (old_stms) m3dm_stmt -> 
-                    let k3_stmt = dm_stmt_to_k3_stmt trig_args m3dm_stmt k3_prog_schema in 
-                    (old_stms@[k3_stmt]) 
+            fun (old_stms, om) m3dm_stmt -> 
+                    let k3_stmt, nm = dm_stmt_to_k3_stmt om trig_args m3dm_stmt k3_prog_schema in 
+                    (old_stms@[k3_stmt], nm) 
         )
-        ([])
+        ([],([],snd meta))
         !(m3dm_trig.M3.statements) 
     in
-        (m3dm_trig.M3.event, k3_trig_stmts@m3_to_k3_stmts)
+        ((m3dm_trig.M3.event, k3_trig_stmts@m3_to_k3_stmts), new_meta)
 
 
 
@@ -466,25 +533,36 @@ let m3dm_to_k3 (m3tok3_program : K.prog_t) (m3dm_prog: M3DM.prog_t) : (K.prog_t)
     let k3_prog_tlqs = if (with_m3) then old_k3_prog_tlqs else [] in
     let k3_prog_schema = (if (with_m3) then old_k3_prog_schema else [])@(List.map m3_map_to_k3_map !(m3dm_prog.M3DM.maps)) in
     let patterns_map = (if (with_m3) then old_patterns_map else [])@Patterns.extract_patterns !(m3dm_prog.M3DM.triggers) in
-    let k3_prog_trigs = 
-        List.fold_left
-            (fun (old_trigs) m3dm_trig -> 
-                let m3_to_k3_trig =
-                    let ev = m3dm_trig.M3.event in
-                        List.find 
-                            (
-                                fun (e, sl) -> e = ev
-                            ) m3tok3_prog_trigs
-                        in
-(*                            let k3_trig = dm_collection_trig m3dm_trig k3_prog_schema m3_to_k3_trig in *)
-                        let k3_trig = dm_trig_to_k3_trig m3dm_trig k3_prog_schema m3_to_k3_trig in
-                            (old_trigs@[k3_trig]) 
-            )
-            ([])
-            !(m3dm_prog.M3DM.triggers)
+    let k3_prog_trigs, (_,sum_maps) = 
+        let dynamic_triggers, metas = 
+	        List.fold_left
+	            (fun (old_trigs,om) m3dm_trig -> 
+	                let m3_to_k3_trig =
+	                    let ev = m3dm_trig.M3.event in
+	                        List.find 
+	                            (
+	                                fun (e, sl) -> e = ev
+	                            ) m3tok3_prog_trigs
+	                in
+                        let k3_trig,nm = dm_trig_to_k3_trig om m3dm_trig k3_prog_schema m3_to_k3_trig in
+                            (old_trigs@[k3_trig], nm) 
+	            )
+	            ([],empty_meta) 
+	            !(m3dm_prog.M3DM.triggers)
+        in
+        let static_trigger = 
+            List.find 
+            (
+                fun (e, _) -> 
+                    match e with 
+                    | Schema.SystemInitializedEvent -> true
+                    | _ -> false
+            ) m3tok3_prog_trigs
+        in
+            (dynamic_triggers@[static_trigger], metas)
     in
     ( k3_database, 
-      (k3_prog_schema, patterns_map), 
+      (k3_prog_schema@sum_maps, patterns_map), 
       k3_prog_trigs, 
       k3_prog_tlqs 
    )
