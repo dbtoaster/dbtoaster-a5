@@ -39,12 +39,12 @@ bigquery:	testdatahash
 	@$(QUERY_TEST) axfinder
 	@$(QUERY_TEST) pricespread
 	@$(QUERY_TEST) brokerspread
-	@$(QUERY_TEST) tpch17
-#	@$(QUERY_TEST) ssb4 -d K3-NO-OPTIMIZE #slow
-#	@$(QUERY_TEST) tpch11 -d K3-NO-OPTIMIZE #results incorrect
-	@$(QUERY_TEST) tpch18
-#	@$(QUERY_TEST) tpch22  #results incorrect
 #	@$(QUERY_TEST) vwap    #slow
+#	@$(QUERY_TEST) tpch11 -d K3-NO-OPTIMIZE #results incorrect
+	@$(QUERY_TEST) tpch17
+	@$(QUERY_TEST) tpch18
+	@$(QUERY_TEST) tpch22 
+	@$(QUERY_TEST) ssb4 -d K3-NO-OPTIMIZE 
 	@$(QUERY_TEST) simple/r_ltallcorravg
 	
 query: testdatahash

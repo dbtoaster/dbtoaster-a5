@@ -1,26 +1,27 @@
 CREATE STREAM ORDERS (
         orderkey       INT,
         custkey        INT,
-        orderstatus    FLOAT,
-        totalprice     FLOAT,
-        orderdate      FLOAT,
-        orderpriority  FLOAT,
-        clerk          FLOAT,
+        orderstatus    CHAR(1),
+        totalprice     DECIMAL,
+        orderdate      DATE,
+        orderpriority  CHAR(15),
+        clerk          CHAR(15),
         shippriority   INT,
-        comment        FLOAT
+        comment        VARCHAR(79)
     )
   FROM FILE '../../experiments/data/tpch/orders.csv'
   LINE DELIMITED orders (deletions := 'false');
 
+
 CREATE STREAM CUSTOMER (
         custkey      INT,
-        name         FLOAT,
-        address      FLOAT,
+        name         VARCHAR(25),
+        address      VARCHAR(40),
         nationkey    INT,
-        phone        FLOAT,
-        acctbal      FLOAT,
-        mktsegment   FLOAT,
-        comment      FLOAT
+        phone        CHAR(15),
+        acctbal      DECIMAL,
+        mktsegment   CHAR(10),
+        comment      VARCHAR(117)
     )
   FROM FILE '../../experiments/data/tpch/customer.csv'
   LINE DELIMITED customer (deletions := 'false');
