@@ -115,60 +115,26 @@ let is_calculus_relation (expr: Calculus.expr_t): bool =
 let rec simplify_formula (event_input: Schema.event_t) (expr: Calculus.expr_t): Calculus.expr_t * bool = (* First return is the simplified query and the second one is whether it should be removed or not! *)
     Debug.print "CHECK-M3DM" (fun () -> "simplifying "^(Calculus.string_of_expr expr) );
     let should_be_removed = (CalcRing.zero, false) in
+    let handle_sum_prod aux calc_oper q1 qo = 
+        let (rq1, rb1) = aux(q1) in
+        let (rq2, rb2) = if List.length qo = 1 then aux(List.hd qo) else aux(calc_oper qo) in
+        if rb1 = true then 
+            if rb2 = true then
+                (calc_oper ([rq1; rq2]), true)
+            else
+                (rq1, true)
+        else
+            if rb2 = true then
+                (rq2, true)
+            else
+                should_be_removed
+    in
     let rec aux e = 
        begin match e with
-           | CalcRing.Sum([q1;q2]) -> 
-               let (rq1, rb1) = aux(q1) in
-               let (rq2, rb2) = aux(q2) in
-               if rb1 = true then 
-                   if rb2 = true then
-                       (CalcRing.mk_sum([rq1; rq2]), true)
-                   else
-                       (rq1, true)
-               else
-                   if rb2 = true then
-                       (rq2, true)
-                   else
-                       should_be_removed 
            | CalcRing.Sum(q1::qo) -> 
-               let (rq1, rb1) = aux(q1) in
-               let (rq2, rb2) = aux(CalcRing.mk_sum(qo)) in
-               if rb1 = true then 
-                   if rb2 = true then
-                       (CalcRing.mk_sum([rq1; rq2]), true)
-                   else
-                       (rq1, true)
-               else
-                   if rb2 = true then
-                       (rq2, true)
-                   else
-                       should_be_removed
-           | CalcRing.Prod([q1;q2]) -> 
-               let (rq1, rb1) = aux(q1) in
-               let (rq2, rb2) = aux(q2) in
-               if rb1 = true then 
-                   if rb2 = true then
-                       (CalcRing.mk_prod([rq1; rq2]), true)
-                   else
-                       (rq1, true)
-               else
-                   if rb2 = true then
-                       (rq2, true)
-                   else
-                       should_be_removed
+               handle_sum_prod aux CalcRing.mk_sum q1 qo
            | CalcRing.Prod(q1::qo) -> 
-               let (rq1, rb1) = aux(q1) in
-               let (rq2, rb2) = aux(CalcRing.mk_prod(qo)) in
-               if rb1 = true then 
-                   if rb2 = true then
-                       (CalcRing.mk_prod([rq1; rq2]), true)
-                   else
-                       (rq1, true)
-               else
-                   if rb2 = true then
-                       (rq2, true)
-                   else
-                       should_be_removed         
+               handle_sum_prod aux CalcRing.mk_prod q1 qo
            | CalcRing.Val(leaf) ->
                begin match leaf with
                | AggSum(gb_vars, subexp) -> 
@@ -187,15 +153,16 @@ let rec simplify_formula (event_input: Schema.event_t) (expr: Calculus.expr_t): 
                         should_be_removed 
                    else 
                         if (singleton_tuple_is_for_event event_input e) then
-                           (get_calc_for_event event_input, true)
+                            (get_calc_for_event event_input, true)
                         else
+                            (e, true)
 (*
                            let trigger_args = Schema.event_vars event_input in
                               if (ListAsSet.diff eouts trigger_args = []) then
                                  should_be_removed
                               else
-*)
                                  (e, true)
+*)
                 | Cmp(op,subexp1,subexp2) -> 
 		            (e, true)
                 | Lift(target, subexp)    -> 
@@ -235,18 +202,10 @@ let simplify_dm_triggers (event_input: Schema.event_t) (trigger_list: Plan.stmt_
 let rec maintain (context: Calculus.expr_t)
                 (formula: Calculus.expr_t) : Plan.stmt_t list * Calculus.expr_t =
     begin match formula with
-(*    | CalcRing.Sum([q1;q2]) -> 
-        let (trlist1, context1) = maintain(context)(q1) in
-            let (trlist2, context2) = maintain(context)(q2) in 
-                (trlist1 @ trlist2, CalcRing.mk_sum([context1; context2])) *)
     | CalcRing.Sum(q1::qo) -> 
         let (trlist1, context1) = maintain(context)(q1) in
             let (trlist2, context2) = maintain(context)(if List.length qo = 1 then List.hd qo else CalcRing.mk_sum qo) in 
                 (trlist1 @ trlist2, CalcRing.mk_sum([context1; context2]))
-(*    | CalcRing.Prod([q1;q2]) -> 
-        let (trlist1, context1) = maintain(context)(q1) in
-            let (trlist2, context2) = maintain(context1)(q2) in 
-                (trlist1 @ trlist2, context2) *)
     | CalcRing.Prod(q1::qo) -> 
         let (trlist1, context1) = maintain(context)(q1) in
             let (trlist2, context2) = maintain(context1)(if List.length qo = 1 then List.hd qo else CalcRing.mk_prod qo) in 
@@ -265,7 +224,8 @@ let rec maintain (context: Calculus.expr_t)
             let dm_statement = mk_dm_trigger (input_domain) (update_domain) in
                 ([dm_statement], context1)
         | AggSum(gb_vars, subexp) -> 
-            let (trlist, context1) = maintain (context) (subexp) in
+(*            let (trlist, context1) = maintain (context) (subexp) in *)
+            let (trlist, context1) = maintain (CalcRing.one) (subexp) in
                 let right_context = CalcRing.Val(AggSum(gb_vars, context1)) in
                     (trlist, CalcRing.mk_prod ([context; right_context]))
         | Rel(rname, rvars)    -> 
@@ -361,7 +321,8 @@ let make_DM_maps (m3_db: Schema.t) (m3_maps: map_t list): map_t list =
                else 
                   ();
          | DSTable(rel) ->
-            (*add_map (get_singleton_tuple rel)*)
+            (*add_map (get_singleton_tuple rel)*) 
+            (* this will be handled by using db schema*)
             ()
       ) m3_maps;
       if Debug.active "DEBUG-DM-SINGLETON" then
@@ -371,12 +332,12 @@ let make_DM_maps (m3_db: Schema.t) (m3_maps: map_t list): map_t list =
             ) (Schema.rels m3_db);
       if Debug.active "DEBUG-DM-UNIT" then
       begin
-            let unit_map = 
-                let dummy_m3_map = ("dummy_map", [], [], Types.TInt) in
-	            let (ename,eins,eouts,etype) = dummy_m3_map in
-	                CalcRing.Val(External(ename, eins, eouts, etype, None))
-	        in
-                add_map (unit_map);
+		let unit_map = 
+		    let dummy_m3_map = ("dummy_map", [], [], Types.TInt) in
+		    let (ename,eins,eouts,etype) = dummy_m3_map in
+		        CalcRing.Val(External(ename, eins, eouts, etype, None))
+		in
+		    add_map (unit_map);
       end;
       
 

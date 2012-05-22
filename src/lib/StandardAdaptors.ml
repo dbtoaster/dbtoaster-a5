@@ -222,13 +222,16 @@ let parametrized_event param_val =
         | _ -> failwith ("invalid event type field: "^rule)
     ) (Str.split (Str.regexp ",") param_val)
   in
+  let hash_constant cnst = 
+     CFloat(float(Hashtbl.hash (Types.string_of_const cnst) ) )
+  in
     (fun fields -> 
       if (List.length fields) <= 0 then raise AbortEventConstruction
       else try
-        [(List.assoc (List.hd fields) rules, List.tl fields)]
+        [(List.assoc (hash_constant(List.hd fields)) rules, List.tl fields)]
       with Not_found -> failwith ("No rule for identifying insert/delete")
     )
-
+    
 (* TODO: think of more complex event construction primitives?
  * -- determining event type from a field, equality, general comparison, etc *)
 

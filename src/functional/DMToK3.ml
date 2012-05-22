@@ -10,9 +10,46 @@ module V = Arithmetic.ValueRing
 module C = Calculus.CalcRing
 module K = K3
 
+type stmt_info_t = string * K.expr_t list * K.expr_t * K.expr_t list * K.expr_t list * T.type_t * K.expr_t list * K.expr_t * K.expr_t
+
 let is_ivc_constant = one_int_val
 let is_gc_constant  = minus_one_int_val
 let is_normal_constant = zero_int_val
+
+let stmt_info_list:((Plan.stmt_t, stmt_info_t) Hashtbl.t) = Hashtbl.create 10
+
+let get_stmt_info_from_dm_stmt (dm_stmt: Plan.stmt_t) : (stmt_info_t) = 
+    Hashtbl.find stmt_info_list dm_stmt
+
+let get_stmt_info (meta: meta_t) (dm_stmt: Plan.stmt_t) trig_args : (stmt_info_t * meta_t) = 
+    let (mapn, lhs_ins, lhs_outs, map_type, init_calc_opt) = Plan.expand_ds_name dm_stmt.Plan.target_map in
+    let {Plan.update_type = update_type; Plan.update_expr = incr_calc} = dm_stmt in 
+        
+    let lhs_collection  = map_to_expr mapn lhs_ins lhs_outs map_type in
+    
+    let map_k3_type = K.TBase(map_type) in
+              
+    let lhs_ins_el = varIdType_to_k3_expr lhs_ins in
+    let lhs_outs_el = varIdType_to_k3_expr lhs_outs in
+    let trig_args_el = varIdType_to_k3_expr trig_args in
+
+    let incr_result, new_meta = calc_to_k3_expr ~generate_init:true meta trig_args_el incr_calc in
+    let (rhs_outs_el, rhs_ret_ve, incr_expr) = incr_result in
+    assert (ListAsSet.seteq (ListAsSet.diff lhs_outs_el trig_args_el) rhs_outs_el);
+    assert (compatible_types (type_of_kvar rhs_ret_ve) map_k3_type);
+    let stmt_info = 
+        (mapn, 
+        trig_args_el,
+        lhs_collection, 
+        lhs_ins_el, 
+        lhs_outs_el, 
+        map_type, 
+        rhs_outs_el, 
+        rhs_ret_ve, 
+        incr_expr)
+    in
+    Hashtbl.replace stmt_info_list dm_stmt stmt_info;
+        stmt_info, new_meta
 
 let get_map_from_schema (map_name: string) (k3_prog_schema: K.map_t list): K.map_t =
     let (mapn, lhs_ins, lhs_outs, map_type) = 
@@ -51,40 +88,7 @@ let string_ends_with (source: string) (test: string): bool =
     else
         let source_last_part = String.sub source (source_length - test_length) test_length in
         source_last_part = test
-
-let get_stmt_info dm_stmt trig_args= 
-    let (mapn, lhs_ins, lhs_outs, map_type, init_calc_opt) = Plan.expand_ds_name dm_stmt.Plan.target_map in
-    let {Plan.update_type = update_type; Plan.update_expr = incr_calc} = dm_stmt in 
-    
-    let lhs_collection  = map_to_expr mapn lhs_ins lhs_outs map_type in
-    let lhs_ins_el = varIdType_to_k3_expr lhs_ins in
-    let lhs_outs_el = varIdType_to_k3_expr lhs_outs in
-    let trig_args_el = varIdType_to_k3_expr trig_args in
-    
-    let incr_result, _ = calc_to_k3_expr ~generate_init:true empty_meta trig_args_el incr_calc in
-    let (rhs_outs_el, rhs_ret_ve, incr_expr) = incr_result in
-        (mapn, 
-        trig_args_el,
-        lhs_collection, 
-        lhs_ins_el, 
-        lhs_outs_el, 
-        map_type, 
-        rhs_outs_el, 
-        rhs_ret_ve, 
-        incr_expr)
         
-(*
-let collection_ivc_gc_var dm_stmt trig_args = 
-    let (mapn, 
-        trig_args_el,
-        lhs_collection, 
-        lhs_ins_el, 
-        lhs_outs_el, 
-        map_type, 
-        rhs_outs_el, 
-        rhs_ret_ve, 
-        incr_expr) = get_stmt_info dm_stmt trig_args in
-*)
 let collection_ivc_gc_var stmt_info =
     let (mapn, 
         trig_args_el,
@@ -104,18 +108,7 @@ let collection_ivc_gc_var stmt_info =
             K.Collection(K.TTuple( (k3_expr_to_k3_type (free_lhs_outs_el))@[domain_type] )) 
     in
         K.Var("cig_"^mapn, collection_ivc_gc_t)
-(*        
-let collection_ivc_gc_generate dm_stmt trig_args =
-    let (mapn, 
-        trig_args_el,
-        lhs_collection, 
-        lhs_ins_el, 
-        lhs_outs_el, 
-        map_type, 
-        rhs_outs_el, 
-        rhs_ret_ve, 
-        incr_expr) = get_stmt_info dm_stmt trig_args in
-*)
+
 let collection_ivc_gc_generate stmt_info =
     let (mapn, 
         trig_args_el,
@@ -163,18 +156,7 @@ let collection_ivc_gc_generate stmt_info =
             K.Apply(inner_loop_body, incr_expr)
     in
         (collection_ivc_gc)
-(*    
-let update_status_statement_generate dm_stmt trig_args k3_prog_schema =
-    let (mapn, 
-        trig_args_el,
-        lhs_collection, 
-        lhs_ins_el, 
-        lhs_outs_el, 
-        map_type, 
-        rhs_outs_el, 
-        rhs_ret_ve, 
-        incr_expr) = get_stmt_info dm_stmt trig_args in
-*)        
+      
 let update_status_statement_generate stmt_info k3_prog_schema =
     let (mapn, 
         trig_args_el,
@@ -231,19 +213,6 @@ let ivc_do (map_name_domain: string) (vars: K.expr_t list)  (k3_prog_schema: K.m
 	    (*** FIXME ***) (*only supports maps with output *)
 	    (* that's not a good idea! another way should be used to handle this *)
 	   
- 
-(*  
-let ivc_statement_generate dm_stmt trig_args k3_prog_schema =
-    let (mapn, 
-        trig_args_el,
-        lhs_collection, 
-        lhs_ins_el, 
-        lhs_outs_el, 
-        map_type, 
-        rhs_outs_el, 
-        rhs_ret_ve, 
-        incr_expr) = get_stmt_info dm_stmt trig_args in
-*)
 let ivc_statement_generate stmt_info k3_prog_schema =
     let (mapn, 
         trig_args_el,
@@ -281,163 +250,8 @@ let ivc_statement_generate stmt_info k3_prog_schema =
     else                       
         K.Iterate(ivc_statement_lambda,collection_ivc_gc_var)
 
-(*
-let dm_collection_stmt trig_args (m3_stmt: Plan.stmt_t) (k3_prog_schema: K.map_t list) : K.statement_t =
-      let is_ivc_constant = one_int_val in
-      let is_gc_constant  = minus_one_int_val in
-      let is_normal_constant = zero_int_val in
-      let domain_type = K.TBase(Types.TInt) in
-        let (mapn, lhs_ins, lhs_outs, map_type, init_calc_opt) = Plan.expand_ds_name m3_stmt.Plan.target_map in
-        let {Plan.update_type = update_type; Plan.update_expr = incr_calc} = m3_stmt in 
-        
-      let lhs_collection  = map_to_expr mapn lhs_ins lhs_outs map_type in
-    
-        let map_k3_type = K.TBase(map_type) in
-              
-        let lhs_outs_el = varIdType_to_k3_expr lhs_outs in
-        let trig_args_el = varIdType_to_k3_expr trig_args in
-      let free_lhs_outs_el = ListAsSet.diff lhs_outs_el trig_args_el in
-
-      let collection_ivc_gc_t  = 
-         if free_lhs_outs_el = [] then
-            domain_type
-         else
-            let free_lhs_outs = ListAsSet.diff lhs_outs trig_args in
-            K.Collection(K.TTuple( (varIdType_to_k3_type (free_lhs_outs))@[domain_type] )) in
-        
-        let incr_result, _ = calc_to_k3_expr ~generate_init:true empty_meta trig_args_el incr_calc in
-        let (rhs_outs_el, rhs_ret_ve, incr_expr) = incr_result in
-        assert (ListAsSet.seteq (ListAsSet.diff lhs_outs_el trig_args_el) rhs_outs_el);
-        assert (compatible_types (type_of_kvar rhs_ret_ve) map_k3_type);
-
-      let zero_value = init_val_from_type map_type in
-      let previous_value = 
-         K.IfThenElse(  K.Member(lhs_collection, lhs_outs_el),
-                        K.Lookup(lhs_collection, lhs_outs_el),
-                        zero_value 
-         ) in
-      let delta_value = rhs_ret_ve in
-      let new_value = K.Add(previous_value, delta_value) in
-
-      let collection_ivc_gc = 
-         let is_ivc_result = if rhs_outs_el <> [] then K.Tuple(rhs_outs_el@[is_ivc_constant]) else is_ivc_constant in
-         let is_normal_result = if rhs_outs_el <> [] then K.Tuple(rhs_outs_el@[is_normal_constant]) else is_normal_constant in
-         let is_gc_result = if rhs_outs_el <> [] then K.Tuple(rhs_outs_el@[is_gc_constant]) else is_gc_constant in
-         let ivc_gc_specifier =
-            K.IfThenElse(  K.Eq(previous_value, zero_value), 
-                           K.IfThenElse(  K.Neq(delta_value, zero_value), 
-                                          is_ivc_result,
-                                          is_normal_result
-                           ),
-                           K.IfThenElse(  K.Eq(new_value, zero_value), 
-                                          is_gc_result,
-                                          is_normal_result
-                           )
-            )
-            in
-         let inner_loop_body = lambda (rhs_outs_el@[rhs_ret_ve]) ivc_gc_specifier in
-         if rhs_outs_el <> [] then
-            K.Map(inner_loop_body, incr_expr)
-         else
-            K.Apply(inner_loop_body, incr_expr)
-      in
-
-      let statement_expr =
-         let lambda_arg = K.Var("collection_ivc_gc", collection_ivc_gc_t) in
-         let lambda_body = 
-                let dummy_statement = 
-               let collection_status = get_collection_status mapn k3_prog_schema in
-                  K.PCUpdate(collection_status, [], collection_status)
-            in
-            let update_domain_statement = 
-               let update_domain_lambda_body = 
-                  K.PCValueUpdate(lhs_collection, [], lhs_outs_el, new_value)
-               in
-               let update_domain_lambda = lambda (rhs_outs_el@[rhs_ret_ve]) update_domain_lambda_body in
-               if rhs_outs_el = [] then
-                  K.Apply( update_domain_lambda, incr_expr )
-               else
-                  K.Iterate( update_domain_lambda, incr_expr )
-            in
-            let update_status = 
-               if Debug.active "DEBUG-DM-STATUS" then
-                  let collection_status = get_collection_status mapn k3_prog_schema in
-                  let update_status_lambda_body = 
-                     let new_status_value = rhs_ret_ve in
-                     K.PCValueUpdate(collection_status, [], lhs_outs_el, 
-                        new_status_value
-                     )
-                  in
-                  let update_status_lambda = lambda (rhs_outs_el@[rhs_ret_ve]) update_status_lambda_body in
-                  if rhs_outs_el = [] then   
-                     K.Apply(  update_status_lambda,lambda_arg)    
-                  else                       
-                     K.Iterate(update_status_lambda,lambda_arg)    
-               else
-                  dummy_statement 
-            in
-            let ivc_statement =
-                if Debug.active "DEBUG-DM-IVC" then
-                  let ivc_statement_main = ivc_statement_generate mapn lhs_outs_el k3_prog_schema in
-                  let ivc_statement_lambda_body = 
-                     let new_status_value = rhs_ret_ve in
-                     K.IfThenElse(
-                         K.Eq(new_status_value, is_ivc_constant), 
-                         ivc_statement_main,
-                         dummy_statement
-                     )
-                  in
-                  let ivc_statement_lambda = lambda (rhs_outs_el@[rhs_ret_ve]) ivc_statement_lambda_body in
-                  if rhs_outs_el = [] then   
-                     K.Apply(  ivc_statement_lambda,lambda_arg)    
-                  else                       
-                     K.Iterate(ivc_statement_lambda,lambda_arg)    
-               else
-                  dummy_statement 
-            in
-
-               K.Block([update_domain_statement; update_status; ivc_statement; dummy_statement])
-         in
-         let outer_loop_body = lambda [lambda_arg] lambda_body in
-            K.Apply(outer_loop_body, collection_ivc_gc)
-    in
-        (statement_expr)
-
-
-let dm_collection_trig (m3dm_trig: M3.trigger_t) (k3_prog_schema: K.map_t list) (m3_to_k3_trig: K.trigger_t) : K.trigger_t =
-    let trig_args = Schema.event_vars m3dm_trig.M3.event in
-    let k3_trig_stmts = 
-        List.fold_left 
-                (fun (old_stms) m3dm_stmt -> 
-                            let k3_stmt = dm_collection_stmt trig_args m3dm_stmt k3_prog_schema in 
-                            (old_stms@[k3_stmt]) )
-                ([])
-                !(m3dm_trig.M3.statements) 
-    in
-    let other_stmts = if (Debug.active "DEBUG-DM-WITH-M3") then snd m3_to_k3_trig else [] in
-        (m3dm_trig.M3.event, k3_trig_stmts@other_stmts)
-*)
-
-let dm_stmt_to_k3_stmt (meta: meta_t) trig_args (dm_stmt: Plan.stmt_t) (k3_prog_schema: K.map_t list)
-     : K.statement_t * meta_t =
-    let (mapn, lhs_ins, lhs_outs, map_type, init_calc_opt) = Plan.expand_ds_name dm_stmt.Plan.target_map in
-    let {Plan.update_type = update_type; Plan.update_expr = incr_calc} = dm_stmt in 
-        
-    let lhs_collection  = map_to_expr mapn lhs_ins lhs_outs map_type in
-    
-    let map_k3_type = K.TBase(map_type) in
-              
-    let lhs_ins_el = varIdType_to_k3_expr lhs_ins in
-    let lhs_outs_el = varIdType_to_k3_expr lhs_outs in
-    let trig_args_el = varIdType_to_k3_expr trig_args in
-
-    let incr_result, nm0 = calc_to_k3_expr ~generate_init:true meta trig_args_el incr_calc in
-    let (rhs_outs_el, rhs_ret_ve, incr_expr) = incr_result in
-    assert (ListAsSet.seteq (ListAsSet.diff lhs_outs_el trig_args_el) rhs_outs_el);
-    assert (compatible_types (type_of_kvar rhs_ret_ve) map_k3_type);
-    
-    let stmt_info = 
-        (mapn, 
+let update_domain_statement_generate stmt_info = 
+    let (mapn, 
         trig_args_el,
         lhs_collection, 
         lhs_ins_el, 
@@ -445,8 +259,7 @@ let dm_stmt_to_k3_stmt (meta: meta_t) trig_args (dm_stmt: Plan.stmt_t) (k3_prog_
         map_type, 
         rhs_outs_el, 
         rhs_ret_ve, 
-        incr_expr)
-    in
+        incr_expr) = stmt_info in
 
     let zero_value = init_val_from_type map_type in
     let previous_value = 
@@ -457,11 +270,33 @@ let dm_stmt_to_k3_stmt (meta: meta_t) trig_args (dm_stmt: Plan.stmt_t) (k3_prog_
     let delta_value = rhs_ret_ve in
     let new_value = K.Add(previous_value, delta_value) in
 
+	let update_domain_lambda_body = 
+	    K.PCValueUpdate(lhs_collection, [], lhs_outs_el, new_value)
+	in
+	let update_domain_lambda = lambda (rhs_outs_el@[rhs_ret_ve]) update_domain_lambda_body in
+	if rhs_outs_el = [] then
+	    K.Apply( update_domain_lambda, incr_expr )
+	else
+	    K.Iterate( update_domain_lambda, incr_expr )
+
+let dm_stmt_to_k3_stmt (meta: meta_t) trig_args (dm_stmt: Plan.stmt_t) (k3_prog_schema: K.map_t list)
+     : K.statement_t * meta_t =
+    let stmt_info, nm0 =
+        get_stmt_info meta dm_stmt trig_args
+    in
+    let (mapn, 
+        trig_args_el,
+        lhs_collection, 
+        lhs_ins_el, 
+        lhs_outs_el, 
+        map_type, 
+        rhs_outs_el, 
+        rhs_ret_ve, 
+        incr_expr) = stmt_info 
+    in
     let collection_ivc_gc       = 
-(*        collection_ivc_gc_generate  dm_stmt trig_args in *)
         collection_ivc_gc_generate  stmt_info in 
     let collection_ivc_gc_var   = 
-(*        collection_ivc_gc_var       dm_stmt trig_args in *)
         collection_ivc_gc_var       stmt_info in
 
     let statement_expr =
@@ -474,26 +309,17 @@ let dm_stmt_to_k3_stmt (meta: meta_t) trig_args (dm_stmt: Plan.stmt_t) (k3_prog_
 		            let collection_status = get_collection_status mapn k3_prog_schema in
 		                K.PCUpdate(collection_status, [], collection_status)
             in
-            let update_domain_statement = 
-                let update_domain_lambda_body = 
-                    K.PCValueUpdate(lhs_collection, [], lhs_outs_el, new_value)
-                in
-                let update_domain_lambda = lambda (rhs_outs_el@[rhs_ret_ve]) update_domain_lambda_body in
-                if rhs_outs_el = [] then
-                    K.Apply( update_domain_lambda, incr_expr )
-                else
-                    K.Iterate( update_domain_lambda, incr_expr )
+            let update_domain_statement =
+                update_domain_statement_generate stmt_info
             in
             let update_status = 
                 if Debug.active "DEBUG-DM-STATUS" then
-(*                    update_status_statement_generate dm_stmt trig_args k3_prog_schema *)
                     update_status_statement_generate stmt_info k3_prog_schema 
                 else
                     dummy_statement 
             in
             let ivc_statement =
                 if Debug.active "DEBUG-DM-IVC" then
-(*                    ivc_statement_generate dm_stmt trig_args k3_prog_schema *)
                     ivc_statement_generate stmt_info k3_prog_schema
                 else
                     dummy_statement 
