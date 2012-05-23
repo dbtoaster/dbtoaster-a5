@@ -103,9 +103,9 @@ let collection_ivc_gc_var stmt_info =
     let free_lhs_outs_el = ListAsSet.diff lhs_outs_el trig_args_el in
     let collection_ivc_gc_t  = 
         if free_lhs_outs_el = [] then
-            domain_type
+            K.TTuple([domain_type;domain_type])
         else
-            K.Collection(K.TTuple( (k3_expr_to_k3_type (free_lhs_outs_el))@[domain_type] )) 
+            K.Collection(K.TTuple( (k3_expr_to_k3_type (free_lhs_outs_el))@[domain_type; domain_type] )) 
     in
         K.Var("cig_"^mapn, collection_ivc_gc_t)
 
@@ -119,10 +119,6 @@ let collection_ivc_gc_generate stmt_info =
         rhs_outs_el, 
         rhs_ret_ve, 
         incr_expr) = stmt_info in
-    let map_k3_type = K.TBase(map_type) in
-              
-    assert (ListAsSet.seteq (ListAsSet.diff lhs_outs_el trig_args_el) rhs_outs_el);
-    assert (compatible_types (type_of_kvar rhs_ret_ve) map_k3_type);
 
     let zero_value = init_val_from_type map_type in
     let previous_value = 
@@ -132,10 +128,14 @@ let collection_ivc_gc_generate stmt_info =
          ) in
     let delta_value = rhs_ret_ve in
     let new_value = K.Add(previous_value, delta_value) in
-
+(*
     let is_ivc_result = if rhs_outs_el <> [] then K.Tuple(rhs_outs_el@[is_ivc_constant]) else is_ivc_constant in
     let is_normal_result = if rhs_outs_el <> [] then K.Tuple(rhs_outs_el@[is_normal_constant]) else is_normal_constant in
     let is_gc_result = if rhs_outs_el <> [] then K.Tuple(rhs_outs_el@[is_gc_constant]) else is_gc_constant in
+*)
+    let is_ivc_result = K.Tuple(rhs_outs_el@[is_ivc_constant;new_value]) in
+    let is_normal_result = K.Tuple(rhs_outs_el@[is_normal_constant;new_value]) in
+    let is_gc_result = K.Tuple(rhs_outs_el@[is_gc_constant;new_value]) in
     let ivc_gc_specifier =
         K.IfThenElse(  K.Eq(previous_value, zero_value), 
                        K.IfThenElse(  K.Neq(delta_value, zero_value), 
@@ -178,7 +178,9 @@ let update_status_statement_generate k3_prog_schema stmt_info =
             new_status_value
         )
     in
-    let update_status_lambda = lambda (rhs_outs_el@[rhs_ret_ve]) update_status_lambda_body in
+    let multi_ret = K.Var("multi_ret",K.TBase(T.TInt))
+    in
+    let update_status_lambda = lambda (rhs_outs_el@[rhs_ret_ve; multi_ret]) update_status_lambda_body in
     if rhs_outs_el = [] then   
         K.Apply(  update_status_lambda,collection_ivc_gc_var)    
     else                       
@@ -240,7 +242,9 @@ let ivc_statement_generate k3_prog_schema stmt_info =
             dummy_statement
         )
     in
-    let ivc_statement_lambda = lambda (rhs_outs_el@[rhs_ret_ve]) ivc_statement_lambda_body in
+    let multi_ret = K.Var("multi_ret",K.TBase(T.TInt))
+    in
+    let ivc_statement_lambda = lambda (rhs_outs_el@[rhs_ret_ve; multi_ret]) ivc_statement_lambda_body in
     if rhs_outs_el = [] then   
         K.Apply(  ivc_statement_lambda,collection_ivc_gc_var)    
     else                       
@@ -296,7 +300,9 @@ let gc_statement_generate k3_prog_schema stmt_info =
             dummy_statement
         )
     in
-    let gc_statement_lambda = lambda (rhs_outs_el@[rhs_ret_ve]) gc_statement_lambda_body in
+    let multi_ret = K.Var("multi_ret",K.TBase(T.TInt))
+    in
+    let gc_statement_lambda = lambda (rhs_outs_el@[rhs_ret_ve; multi_ret]) gc_statement_lambda_body in
     if rhs_outs_el = [] then   
         K.Apply(  gc_statement_lambda,collection_ivc_gc_var)    
     else                       
@@ -312,24 +318,19 @@ let update_domain_statement_generate stmt_info =
         rhs_outs_el, 
         rhs_ret_ve, 
         incr_expr) = stmt_info in
+    let collection_ivc_gc_var = 
+        collection_ivc_gc_var stmt_info in
 
-    let zero_value = init_val_from_type map_type in
-    let previous_value = 
-        K.IfThenElse(  K.Member(lhs_collection, lhs_outs_el),
-                        K.Lookup(lhs_collection, lhs_outs_el),
-                        zero_value 
-        ) in
-    let delta_value = rhs_ret_ve in
-    let new_value = K.Add(previous_value, delta_value) in
-
+    let multi_ret = K.Var("multi_ret",K.TBase(T.TInt))
+    in
 	let update_domain_lambda_body = 
-	    K.PCValueUpdate(lhs_collection, [], lhs_outs_el, new_value)
+	    K.PCValueUpdate(lhs_collection, [], lhs_outs_el, multi_ret)
 	in
-	let update_domain_lambda = lambda (rhs_outs_el@[rhs_ret_ve]) update_domain_lambda_body in
+	let update_domain_lambda = lambda (rhs_outs_el@[rhs_ret_ve; multi_ret]) update_domain_lambda_body in
 	if rhs_outs_el = [] then
-	    K.Apply( update_domain_lambda, incr_expr )
+	    K.Apply( update_domain_lambda, collection_ivc_gc_var )
 	else
-	    K.Iterate( update_domain_lambda, incr_expr )
+	    K.Iterate( update_domain_lambda, collection_ivc_gc_var )
 
 (*
 let dm_stmt_to_k3_stmt (meta: meta_t) trig_args (dm_stmt: Plan.stmt_t) (k3_prog_schema: K.map_t list)
@@ -406,25 +407,31 @@ let dm_trig_to_k3_trig (meta: meta_t) (m3dm_trig: M3.trigger_t) (k3_prog_schema:
         ((m3dm_trig.M3.event, m3_to_k3_stmts), meta)
     else    
 	    let m3_part = K.Block(m3_to_k3_stmts) in
-	    let update_domain_part = 
-	        K.Block(
-	            List.map (update_domain_statement_generate) stmt_infos
-	        )
+	    let update_domain_part =
+	        K.Comment("Updating domains", 
+		        K.Block(
+		            List.map (update_domain_statement_generate) stmt_infos
+		        )
+		    )
 	    in
 	    Debug.print "DEBUG-DM-LOG" (fun () -> "update domain part finished!");
 	    let update_status_part =
 	        if Debug.active "DEBUG-DM-STATUS" then
-	            K.Block(
-	                List.map (update_status_statement_generate k3_prog_schema) stmt_infos 
-	            )
+	            K.Comment("Updating status",  
+	                K.Block(
+		                List.map (update_status_statement_generate k3_prog_schema) stmt_infos 
+		            )
+		        )
 	        else
 	            get_unit_statement ()
 	    in
 	    Debug.print "DEBUG-DM-LOG" (fun () -> "update status part finished!");
 	    let ivc_part = 
 	        if Debug.active "DEBUG-DM-IVC" then
-	            K.Block(
-	                List.map (ivc_statement_generate k3_prog_schema) stmt_infos 
+	            K.Comment("IVC computation",
+		            K.Block(
+		                List.map (ivc_statement_generate k3_prog_schema) stmt_infos 
+		            )
 	            )
 	        else
 	            get_unit_statement ()
@@ -432,9 +439,11 @@ let dm_trig_to_k3_trig (meta: meta_t) (m3dm_trig: M3.trigger_t) (k3_prog_schema:
 	    Debug.print "DEBUG-DM-LOG" (fun () -> "IVC part finished!");
 	    let gc_part = 
             if not (Debug.active "DEBUG-DM-NO-GC") then
-                K.Block(
-                    List.map (gc_statement_generate k3_prog_schema) stmt_infos 
-                )
+                K.Comment("Garbage Collecting",
+	                K.Block(
+	                    List.map (gc_statement_generate k3_prog_schema) stmt_infos 
+	                )
+	            )
             else
                 get_unit_statement ()
         in
