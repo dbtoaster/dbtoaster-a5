@@ -245,6 +245,62 @@ let ivc_statement_generate k3_prog_schema stmt_info =
         K.Apply(  ivc_statement_lambda,collection_ivc_gc_var)    
     else                       
         K.Iterate(ivc_statement_lambda,collection_ivc_gc_var)
+        
+let gc_do (map_name_domain: string) (vars: K.expr_t list)  (k3_prog_schema: K.map_t list): K.expr_t =
+    Debug.print "DEBUG-DM-LOG" (fun () -> "gc_statement_generate: "^map_name_domain);
+    let input_postfix = "_input" in let output_postfix = "_output" in
+    (* in_out is true if it's an input, otherwise false*)  
+    let in_out = (string_ends_with map_name_domain input_postfix) in
+    let postfix = if in_out then input_postfix else output_postfix in
+    let map_name = 
+        String.sub map_name_domain 0 
+            (
+                (String.length map_name_domain) -
+                (String.length postfix)
+            ) in
+    let map_schema          =   get_map_vars                (map_name)  (k3_prog_schema) in
+    let map_expr            =   get_map_expr_from_schema    (map_name)  (k3_prog_schema) in
+    let gc_statement = 
+        match (pair_map varIdType_to_k3_expr map_schema) with
+        | x,    []    -> K.PCElementRemove(map_expr, vars, []) 
+        | [],    y    -> K.PCElementRemove(map_expr, [], vars)
+        | x,    y     -> failwith "Map with both variables is not supported"
+    in
+       gc_statement
+        (*** FIXME ***) (*only supports maps with output *)
+       
+let gc_statement_generate k3_prog_schema stmt_info =
+    let (mapn, 
+        trig_args_el,
+        lhs_collection, 
+        lhs_ins_el, 
+        lhs_outs_el, 
+        map_type, 
+        rhs_outs_el, 
+        rhs_ret_ve, 
+        incr_expr) = stmt_info in
+     
+    let dummy_statement = 
+        get_unit_statement ()
+    in
+    
+    let collection_ivc_gc_var = 
+        collection_ivc_gc_var stmt_info in
+    
+    let gc_statement_main = gc_do mapn lhs_outs_el k3_prog_schema in
+    let gc_statement_lambda_body = 
+        let new_status_value = rhs_ret_ve in
+        K.IfThenElse(
+            K.Eq(new_status_value, is_gc_constant), 
+            gc_statement_main,
+            dummy_statement
+        )
+    in
+    let gc_statement_lambda = lambda (rhs_outs_el@[rhs_ret_ve]) gc_statement_lambda_body in
+    if rhs_outs_el = [] then   
+        K.Apply(  gc_statement_lambda,collection_ivc_gc_var)    
+    else                       
+        K.Iterate(gc_statement_lambda,collection_ivc_gc_var)
 
 let update_domain_statement_generate stmt_info = 
     let (mapn, 
@@ -332,45 +388,6 @@ let dm_trig_to_k3_trig (meta: meta_t) (m3dm_trig: M3.trigger_t) (k3_prog_schema:
         ((m3dm_trig.M3.event, k3_trig_stmts@m3_to_k3_stmts), new_meta)
 *)
 
-let dm_stmt_to_k3_stmt (meta: meta_t) trig_args (dm_stmt: Plan.stmt_t) (k3_prog_schema: K.map_t list)
-     : K.statement_t * meta_t =
-    let stmt_info, nm0 =
-        get_stmt_info meta dm_stmt trig_args
-    in
-    let collection_ivc_gc       = 
-        collection_ivc_gc_generate  stmt_info in 
-    let collection_ivc_gc_var   = 
-        collection_ivc_gc_var       stmt_info in
-
-    let statement_expr =
-        let lambda_arg = collection_ivc_gc_var in
-        let lambda_body = 
-            let dummy_statement = 
-	            get_unit_statement ()
-            in
-            let update_domain_statement =
-                update_domain_statement_generate stmt_info
-            in
-            let update_status = 
-                if Debug.active "DEBUG-DM-STATUS" then
-                    update_status_statement_generate k3_prog_schema stmt_info  
-                else
-                    dummy_statement 
-            in
-            let ivc_statement =
-                if Debug.active "DEBUG-DM-IVC" then
-                    ivc_statement_generate k3_prog_schema stmt_info
-                else
-                    dummy_statement 
-            in
-                K.Block([update_domain_statement; update_status; ivc_statement; dummy_statement])
-        in
-        let outer_loop_body = lambda [lambda_arg] lambda_body in
-            K.Apply(outer_loop_body, collection_ivc_gc)
-    in
-        (statement_expr, nm0)
-
-
 let dm_trig_to_k3_trig (meta: meta_t) (m3dm_trig: M3.trigger_t) (k3_prog_schema: K.map_t list) (m3_to_k3_trig: K.trigger_t) : K.trigger_t * meta_t =
     Debug.print "DEBUG-DM-LOG" (fun () -> "dm_trig_to_k3_trig for event: "^(Schema.name_of_event m3dm_trig.M3.event));
     let trig_args = Schema.event_vars m3dm_trig.M3.event in
@@ -412,6 +429,16 @@ let dm_trig_to_k3_trig (meta: meta_t) (m3dm_trig: M3.trigger_t) (k3_prog_schema:
 	        else
 	            get_unit_statement ()
 	    in
+	    Debug.print "DEBUG-DM-LOG" (fun () -> "IVC part finished!");
+	    let gc_part = 
+            if not (Debug.active "DEBUG-DM-NO-GC") then
+                K.Block(
+                    List.map (gc_statement_generate k3_prog_schema) stmt_infos 
+                )
+            else
+                get_unit_statement ()
+        in
+        Debug.print "DEBUG-DM-LOG" (fun () -> "GC part finished!");
 	    let collection_ivc_gc_stmts = 
 	        if List.length stmt_infos = 1 then
 	            collection_ivc_gc_generate (List.hd stmt_infos)
@@ -426,7 +453,7 @@ let dm_trig_to_k3_trig (meta: meta_t) (m3dm_trig: M3.trigger_t) (k3_prog_schema:
 	    let k3_trig_stmt =
 	        let lambda_arg = collection_ivc_gc_vars in
 	        let lambda_body = 
-	            K.Block([update_domain_part; update_status_part; ivc_part; m3_part; get_unit_statement ()])
+	            K.Block([update_domain_part; update_status_part; ivc_part; m3_part; gc_part; get_unit_statement ()])
 	        in
 	        let apply_body = lambda lambda_arg lambda_body in
 	            K.Apply(apply_body, collection_ivc_gc_stmts)
