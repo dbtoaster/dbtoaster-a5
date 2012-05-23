@@ -157,7 +157,7 @@ let collection_ivc_gc_generate stmt_info =
     in
         (collection_ivc_gc)
       
-let update_status_statement_generate stmt_info k3_prog_schema =
+let update_status_statement_generate k3_prog_schema stmt_info =
     let (mapn, 
         trig_args_el,
         lhs_collection, 
@@ -213,7 +213,7 @@ let ivc_do (map_name_domain: string) (vars: K.expr_t list)  (k3_prog_schema: K.m
 	    (*** FIXME ***) (*only supports maps with output *)
 	    (* that's not a good idea! another way should be used to handle this *)
 	   
-let ivc_statement_generate stmt_info k3_prog_schema =
+let ivc_statement_generate k3_prog_schema stmt_info =
     let (mapn, 
         trig_args_el,
         lhs_collection, 
@@ -225,11 +225,7 @@ let ivc_statement_generate stmt_info k3_prog_schema =
         incr_expr) = stmt_info in
      
     let dummy_statement = 
-        if Debug.active "DEBUG-DM-UNIT" then
-            get_unit_statement ()
-        else
-            let collection_status = get_collection_status mapn k3_prog_schema in
-                K.PCUpdate(collection_status, [], collection_status)
+        get_unit_statement ()
     in
     
     let collection_ivc_gc_var = 
@@ -279,20 +275,11 @@ let update_domain_statement_generate stmt_info =
 	else
 	    K.Iterate( update_domain_lambda, incr_expr )
 
+(*
 let dm_stmt_to_k3_stmt (meta: meta_t) trig_args (dm_stmt: Plan.stmt_t) (k3_prog_schema: K.map_t list)
      : K.statement_t * meta_t =
     let stmt_info, nm0 =
         get_stmt_info meta dm_stmt trig_args
-    in
-    let (mapn, 
-        trig_args_el,
-        lhs_collection, 
-        lhs_ins_el, 
-        lhs_outs_el, 
-        map_type, 
-        rhs_outs_el, 
-        rhs_ret_ve, 
-        incr_expr) = stmt_info 
     in
     let collection_ivc_gc       = 
         collection_ivc_gc_generate  stmt_info in 
@@ -303,11 +290,7 @@ let dm_stmt_to_k3_stmt (meta: meta_t) trig_args (dm_stmt: Plan.stmt_t) (k3_prog_
         let lambda_arg = collection_ivc_gc_var in
         let lambda_body = 
             let dummy_statement = 
-	            if Debug.active "DEBUG-DM-UNIT" then
-		            get_unit_statement ()
-		        else
-		            let collection_status = get_collection_status mapn k3_prog_schema in
-		                K.PCUpdate(collection_status, [], collection_status)
+	            get_unit_statement ()
             in
             let update_domain_statement =
                 update_domain_statement_generate stmt_info
@@ -347,12 +330,111 @@ let dm_trig_to_k3_trig (meta: meta_t) (m3dm_trig: M3.trigger_t) (k3_prog_schema:
         !(m3dm_trig.M3.statements) 
     in
         ((m3dm_trig.M3.event, k3_trig_stmts@m3_to_k3_stmts), new_meta)
+*)
+
+let dm_stmt_to_k3_stmt (meta: meta_t) trig_args (dm_stmt: Plan.stmt_t) (k3_prog_schema: K.map_t list)
+     : K.statement_t * meta_t =
+    let stmt_info, nm0 =
+        get_stmt_info meta dm_stmt trig_args
+    in
+    let collection_ivc_gc       = 
+        collection_ivc_gc_generate  stmt_info in 
+    let collection_ivc_gc_var   = 
+        collection_ivc_gc_var       stmt_info in
+
+    let statement_expr =
+        let lambda_arg = collection_ivc_gc_var in
+        let lambda_body = 
+            let dummy_statement = 
+	            get_unit_statement ()
+            in
+            let update_domain_statement =
+                update_domain_statement_generate stmt_info
+            in
+            let update_status = 
+                if Debug.active "DEBUG-DM-STATUS" then
+                    update_status_statement_generate k3_prog_schema stmt_info  
+                else
+                    dummy_statement 
+            in
+            let ivc_statement =
+                if Debug.active "DEBUG-DM-IVC" then
+                    ivc_statement_generate k3_prog_schema stmt_info
+                else
+                    dummy_statement 
+            in
+                K.Block([update_domain_statement; update_status; ivc_statement; dummy_statement])
+        in
+        let outer_loop_body = lambda [lambda_arg] lambda_body in
+            K.Apply(outer_loop_body, collection_ivc_gc)
+    in
+        (statement_expr, nm0)
 
 
+let dm_trig_to_k3_trig (meta: meta_t) (m3dm_trig: M3.trigger_t) (k3_prog_schema: K.map_t list) (m3_to_k3_trig: K.trigger_t) : K.trigger_t * meta_t =
+    Debug.print "DEBUG-DM-LOG" (fun () -> "dm_trig_to_k3_trig for event: "^(Schema.name_of_event m3dm_trig.M3.event));
+    let trig_args = Schema.event_vars m3dm_trig.M3.event in
+    let m3_to_k3_stmts = if (Debug.active "DEBUG-DM-WITH-M3") then snd m3_to_k3_trig else [] in
+    let stmt_infos, new_meta = 
+        List.fold_left 
+        (
+            fun (old_stmt_infos, om) dm_stmt ->
+                let stmt_info, nm0 = get_stmt_info om dm_stmt trig_args in
+                    (old_stmt_infos@[stmt_info], nm0)
+        )
+        ([],([],snd meta))
+        !(m3dm_trig.M3.statements) 
+    in
+    if List.length stmt_infos = 0 then
+        ((m3dm_trig.M3.event, m3_to_k3_stmts), meta)
+    else    
+	    let m3_part = K.Block(m3_to_k3_stmts) in
+	    let update_domain_part = 
+	        K.Block(
+	            List.map (update_domain_statement_generate) stmt_infos
+	        )
+	    in
+	    Debug.print "DEBUG-DM-LOG" (fun () -> "update domain part finished!");
+	    let update_status_part =
+	        if Debug.active "DEBUG-DM-STATUS" then
+	            K.Block(
+	                List.map (update_status_statement_generate k3_prog_schema) stmt_infos 
+	            )
+	        else
+	            get_unit_statement ()
+	    in
+	    Debug.print "DEBUG-DM-LOG" (fun () -> "update status part finished!");
+	    let ivc_part = 
+	        if Debug.active "DEBUG-DM-IVC" then
+	            K.Block(
+	                List.map (ivc_statement_generate k3_prog_schema) stmt_infos 
+	            )
+	        else
+	            get_unit_statement ()
+	    in
+	    let collection_ivc_gc_stmts = 
+	        if List.length stmt_infos = 1 then
+	            collection_ivc_gc_generate (List.hd stmt_infos)
+	        else
+		        K.Tuple(
+		            List.map (collection_ivc_gc_generate) stmt_infos
+		        )
+	    in
+	    let collection_ivc_gc_vars = 
+	        List.map (collection_ivc_gc_var) stmt_infos
+	    in
+	    let k3_trig_stmt =
+	        let lambda_arg = collection_ivc_gc_vars in
+	        let lambda_body = 
+	            K.Block([update_domain_part; update_status_part; ivc_part; m3_part; get_unit_statement ()])
+	        in
+	        let apply_body = lambda lambda_arg lambda_body in
+	            K.Apply(apply_body, collection_ivc_gc_stmts)
+	    in
+	        ((m3dm_trig.M3.event, [k3_trig_stmt]), new_meta)
 
 (** Transforms an existing K3 program with its corresponding M3DM program into a K3 program. *)
 let m3dm_to_k3 (m3tok3_program : K.prog_t) (m3dm_prog: M3DM.prog_t) : (K.prog_t) =
-    if Debug.active "DEBUG-DM" then begin Debug.activate "DEBUG-DM-UNIT" end;
     let with_m3 = Debug.active "DEBUG-DM-WITH-M3" in
     if with_m3 then begin Debug.activate "DEBUG-DM-IVC"; Debug.activate "K3-NO-OPTIMIZE" end; 
     let ( k3_database, (old_k3_prog_schema, old_patterns_map), m3tok3_prog_trigs, old_k3_prog_tlqs) = m3tok3_program in

@@ -330,16 +330,12 @@ let make_DM_maps (m3_db: Schema.t) (m3_maps: map_t list): map_t list =
                 fun (rel: Schema.rel_t) ->
                     add_map (get_singleton_tuple rel)
             ) (Schema.rels m3_db);
-      if Debug.active "DEBUG-DM-UNIT" then
-      begin
-		let unit_map = 
-		    let dummy_m3_map = ("dummy_map", [], [], Types.TInt) in
-		    let (ename,eins,eouts,etype) = dummy_m3_map in
-		        CalcRing.Val(External(ename, eins, eouts, etype, None))
-		in
-		    add_map (unit_map);
-      end;
-      
+      let unit_map = 
+		  let dummy_m3_map = ("dummy_map", [], [], Types.TInt) in
+		  let (ename,eins,eouts,etype) = dummy_m3_map in
+		      CalcRing.Val(External(ename, eins, eouts, etype, None))
+      in
+          add_map (unit_map);
 
       !dm_maps
 
