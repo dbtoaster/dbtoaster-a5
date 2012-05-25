@@ -47,6 +47,7 @@ FILES=\
 	src/lib/Database\
 	src/lib/Runtime\
 	src/codegen/K3Interpreter\
+	src/codegen/K3Scalagen\
 
 TOPLEVEL_FILES=\
 	src/global/Driver\

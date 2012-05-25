@@ -224,7 +224,7 @@ let active_stages = ref (ListAsSet.inter
                      (stages_to StageM3DomainMaintenance)
       | K3    -> StagePrintK3::StageOptimizeK3::(stages_to K3Marker)
       | IMP   -> StagePrintImp::(stages_to FunctionalTargetMarker)
-      | Scala -> functional_stages ExternalCompiler.null_compiler
+      | Scala -> functional_stages ExternalCompiler.scala_compiler
       | Ocaml -> functional_stages ExternalCompiler.ocaml_compiler
       | CPP   -> imperative_stages ExternalCompiler.cpp_compiler
          (* CPP is defined as a functional stage because the IMP implementation
@@ -576,6 +576,7 @@ if stage_is_active StagePrintK3 then (
 )
 ;;
 module K3InterpreterCG = K3Compiler.Make(K3Interpreter.K3CG)
+module K3ScalaCompiler = K3Compiler.Make(K3Scalagen.K3CG)
 ;;
 if stage_is_active StageK3ToTargetLanguage then (
    Debug.print "LOG-DRIVER" (fun () -> "Running Stage: K3ToTargetLanguage");
@@ -599,8 +600,10 @@ if stage_is_active StageK3ToTargetLanguage then (
                
       )   
       | Ocaml       -> bug "Ocaml codegen not implemented yet"
-      | Scala       -> bug "Scala codegen not implemented yet"
-
+      | Scala       -> (
+		source_code := [K3ScalaCompiler.compile_query_to_string !k3_program]
+	  )
+	  
          (* All imperative languages now produce IMP *)
       | IMP
       | CPP         -> 

@@ -114,6 +114,32 @@ let cpp_compiler = {
    )
 };;
 
+let scala_compiler = {
+   extension = ".scala";
+   compile = (fun in_file_name out_file_name ->
+	let scalac = "scalac" in
+
+    let flags = [
+      ""; "-deprecation";
+      "-unchecked";
+      "-sourcepath";"lib/dbt_scala/src";
+      "-classpath";"lib/dbt_scala/dbtlib.jar";
+      "-d"; out_file_name ^ ".jar";
+    ] in
+
+    let sourcefiles = [
+      "lib/dbt_scala/src/org/dbtoaster/RunQuery.scala";
+      in_file_name
+    ] in
+
+    let args = flags @ sourcefiles in
+	Debug.print "LOG-SCALA" (fun () -> (
+	  ListExtras.string_of_list ~sep:" " (fun x->x) args));
+    Unix.system ("rm \"" ^ out_file_name ^ ".jar\"");
+    Unix.execvp scalac (Array.of_list args)
+   )
+};;
+
 (**
    A dummy "compiler" that will error if you try to compile something with it.
 *)
