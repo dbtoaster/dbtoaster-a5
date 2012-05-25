@@ -178,8 +178,8 @@ let compile_map (db_schema:Schema.t) (history:Heuristics.ds_history_t)
 	         );
 	         
 	         let todo_ivc = 
-               if (todo_ivars <> [])
-               then failwith "TODO: Implement IVC for maps with ivars."
+               if (todo_ivars <> []) then None
+(*               then failwith "TODO: Implement IVC for maps with ivars."*)
                else if (todo_ovars <> [])
                then if IVC.needs_runtime_ivc (Schema.table_rels db_schema)
                                              todo.ds_definition

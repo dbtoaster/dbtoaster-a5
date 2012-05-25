@@ -75,8 +75,8 @@ let reorganize_expr (expr:expr_t) : (expr_t list * expr_t list * expr_t list) =
 		 Note: In order to minimize the need for IVC, if there is no relation at the 
 		 root level, then lift subexpressions containing irrelevant relations are 
 		 materialized separately. *)
-let partition_expr (event:Schema.event_t option) (expr:expr_t) :
-							 (expr_t * expr_t * expr_t) =
+let partition_expr (scope:var_t list) (event:Schema.event_t option) 
+                   (expr:expr_t) : (expr_t * expr_t * expr_t) =
 
     let schema_of_expr ?(scope:var_t list = []) (expr:expr_t) :  
                         (var_t list * var_t list) =
@@ -86,6 +86,7 @@ let partition_expr (event:Schema.event_t option) (expr:expr_t) :
     in
 		let (rel_part, lift_part, rest_part) = reorganize_expr expr in
 		let ivc_disabled = Debug.active "HEURISTICS-IGNORE-IVC-OPTIMIZATION" in
+		let inputvar_allowed = Debug.active "HEURISTICS-IGNORE-INPUTVAR-RULE" in
 		let has_root_relation = (rel_part <> []) in 
 		
 		(* Relations, irrelevant lifts, relevant lifts, and the remainder *)
@@ -95,10 +96,11 @@ let partition_expr (event:Schema.event_t option) (expr:expr_t) :
 					match CalcRing.get_val term with
 						| Value(v) -> 
 									let v_ivars = fst (schema_of_expr ~scope:scope_rel term) in
-									if (v_ivars = []) then
-											((rel @ [term], lift, rest), scope_rel)
-									else 
-											((rel, lift, rest @ [term]), scope_rel)
+									if (v_ivars = []) ||
+									   (inputvar_allowed && ListAsSet.subset v_ivars scope)then
+											 ((rel @ [term], lift, rest), scope_rel)
+									else										 
+											 ((rel, lift, rest @ [term]), scope_rel)
 						| AggSum (v, subexp) ->
 									failwith "[partition_expr] Error: AggSums are supposed to be removed."																	
 						| Rel (reln, relv) ->								
@@ -107,10 +109,11 @@ let partition_expr (event:Schema.event_t option) (expr:expr_t) :
 									((rel, lift, rest @ [term]), scope_rel) 
 						| Cmp (_, v1, v2) -> 
 									let cmp_ivars = fst (schema_of_expr ~scope:scope_rel term) in
-									if (cmp_ivars = []) then
-											((rel @ [term], lift, rest), scope_rel)
+									if (cmp_ivars = []) || 
+									   (inputvar_allowed && ListAsSet.subset cmp_ivars scope) then
+											  ((rel @ [term], lift, rest), scope_rel)
 									else 
-											((rel, lift, rest @ [term]), scope_rel)
+											  ((rel, lift, rest @ [term]), scope_rel)
 						| Lift (v, subexpr) ->						
 									let subexpr_ivars = fst (schema_of_expr ~scope:scope_rel subexpr) in
 									let subexpr_rels = rels_of_expr subexpr in
@@ -120,7 +123,7 @@ let partition_expr (event:Schema.event_t option) (expr:expr_t) :
 											| None -> false
 									in
 									if ((lift_contains_event_rel) || (subexpr_ivars <> []) ||
-									    ((not ivc_disabled) && (not has_root_relation))) then
+									    ((not ivc_disabled) && (not has_root_relation))) then												
 										((rel, lift @ [term], rest), scope_rel)
 									else
 										(* The expression does not include input variables *)
@@ -191,12 +194,12 @@ let should_update (event:Schema.event_t) (expr:expr_t)  : bool =
 				        let subexpr_opt = optimize_expr (expr_scope, subexpr_schema) subexpr in
 	
 	              (* Split the expression into three parts *)
-								let (rel_exprs, lift_exprs, _) = partition_expr (Some(event)) subexpr_opt in
+								let (rel_exprs, lift_exprs, _) = partition_expr expr_scope (Some(event)) subexpr_opt in
 		            let rel_exprs_ovars = snd (schema_of_expr rel_exprs) in
-								(* TODO: Get variables appearing in the lift expressions and not all variables *) 
-		            let lift_exprs_vars = all_vars lift_exprs in
-								let local_update_graph = ((rel_exprs_ovars = []) || (lift_exprs_vars = []) ||
-								                          ((ListAsSet.inter rel_exprs_ovars lift_exprs_vars) <> [])) in
+                (* The next statement assumes that the optimization phase removed all equalities *)
+								let lift_exprs_ovars = snd (schema_of_expr lift_exprs) in
+								let local_update_graph = ((rel_exprs_ovars = []) || (lift_exprs_ovars = []) ||
+								                          ((ListAsSet.inter rel_exprs_ovars lift_exprs_ovars) <> [])) in
 								(do_update_graph || local_update_graph, 
 								 do_replace_graph || (not local_update_graph))
 			
@@ -305,17 +308,29 @@ and materialize_expr (db_schema:Schema.t) (history:ds_history_t)
 										 (expr:expr_t) : (ds_t list * expr_t) =
 
 		(* Divide the expression into three parts *)
-		let (rel_exprs, lift_exprs, rest_exprs) = partition_expr event expr in 		
+		let (rel_exprs, lift_exprs, rest_exprs) = partition_expr scope event expr in 		
 
     let (rel_exprs_ivars, rel_exprs_ovars) = schema_of_expr rel_exprs in
 		let (lift_exprs_ivars, lift_exprs_ovars) = schema_of_expr lift_exprs in
 		let (rest_exprs_ivars, _) = schema_of_expr rest_exprs in
 					
-		(* Sanity check - rel_exprs should not contain any input variables *)
-		if rel_exprs_ivars <> [] then  
-        (print_endline (string_of_expr rel_exprs);
-		     failwith ("The materialized expression has input variables")) 
-		else
+		if (Debug.active "HEURISTICS-IGNORE-INPUTVAR-RULE") then begin
+			(* Sanity check - rel_exprs input variables should be in the scope *)
+      if (ListAsSet.diff rel_exprs_ivars scope) <> [] then begin
+        print_endline ("Expr: "^string_of_expr rel_exprs);
+        print_endline ("InputVars: "^string_of_vars rel_exprs_ivars);
+        print_endline ("Scope: "^string_of_vars scope);
+        failwith ("The materialized expression has input variables not covered by the scope.")
+		  end
+		end 
+		else begin
+			(* Sanity check - rel_exprs should not contain any input variables *) 
+			if rel_exprs_ivars <> [] then begin  
+        print_endline ("Expr: "^string_of_expr rel_exprs);
+        print_endline ("InputVars: "^string_of_vars rel_exprs_ivars);
+		    failwith ("The materialized expression has input variables.") 
+		  end
+		end;
 										
 		(* Lifts are always materialized separately *)
 	  let scope_lifts = ListAsSet.union scope rel_exprs_ovars in

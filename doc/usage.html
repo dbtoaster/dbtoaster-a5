@@ -326,7 +326,10 @@ condition := <br/>
 <dd>Do not attempt to optimize materialized expressions further. This is typically only useful to see the exact expression produced by the materializer.</dd>
 
 <dt class="code">HEURISTICS-IGNORE-IVC-OPTIMIZATION</dt>
-<dd>Do not attempt to apply heuristic rules that try to minimize the need for initial value computation. If this flag is on and there is no relation at the root level, lift subexpressions containing irrelevant relations are materialized separately.</dd>
+<dd>Do not apply the heuristic rule that tries to minimize the need for initial value computation. If this flag is on and there is no relation at the root level, lift subexpressions containing irrelevant relations are materialized separately.</dd>
+
+<dt class="code">HEURISTICS-IGNORE-INPUTVAR-RULE</dt>
+<dd>Disable the heuristic rule that avoids materialization of expressions with input variables. Final materializations may have input variables. This is typically useful when the size of the domain to be maintained is small.
 
 <dt class="code">IVC-OPTIMIZE-EXPR</dt>
 <dd>Optimize the initial value computation (IVC) expression. This is typically only useful to see the exact expression produced by the IVC module.</dd>
