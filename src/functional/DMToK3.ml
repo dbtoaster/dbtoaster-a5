@@ -24,11 +24,11 @@ let get_stmt_info_from_dm_stmt (dm_stmt: Plan.stmt_t) : (stmt_info_t) =
 let get_stmt_info (meta: meta_t) (dm_stmt: Plan.stmt_t) trig_args : (stmt_info_t * meta_t) = 
     let (mapn, lhs_ins, lhs_outs, map_type, init_calc_opt) = Plan.expand_ds_name dm_stmt.Plan.target_map in
     let {Plan.update_type = update_type; Plan.update_expr = incr_calc} = dm_stmt in 
-        
+
     let lhs_collection  = map_to_expr mapn lhs_ins lhs_outs map_type in
-    
+
     let map_k3_type = K.TBase(map_type) in
-              
+
     let lhs_ins_el = varIdType_to_k3_expr lhs_ins in
     let lhs_outs_el = varIdType_to_k3_expr lhs_outs in
     let trig_args_el = varIdType_to_k3_expr trig_args in
@@ -128,11 +128,6 @@ let collection_ivc_gc_generate stmt_info =
          ) in
     let delta_value = rhs_ret_ve in
     let new_value = K.Add(previous_value, delta_value) in
-(*
-    let is_ivc_result = if rhs_outs_el <> [] then K.Tuple(rhs_outs_el@[is_ivc_constant]) else is_ivc_constant in
-    let is_normal_result = if rhs_outs_el <> [] then K.Tuple(rhs_outs_el@[is_normal_constant]) else is_normal_constant in
-    let is_gc_result = if rhs_outs_el <> [] then K.Tuple(rhs_outs_el@[is_gc_constant]) else is_gc_constant in
-*)
     let is_ivc_result = K.Tuple(rhs_outs_el@[is_ivc_constant;new_value]) in
     let is_normal_result = K.Tuple(rhs_outs_el@[is_normal_constant;new_value]) in
     let is_gc_result = K.Tuple(rhs_outs_el@[is_gc_constant;new_value]) in
@@ -296,7 +291,7 @@ let gc_statement_generate k3_prog_schema stmt_info =
         let new_status_value = rhs_ret_ve in
         K.IfThenElse(
             K.Eq(new_status_value, is_gc_constant), 
-            gc_statement_main,
+            K.Block([gc_statement_main; K.PCElementRemove(lhs_collection, [], lhs_outs_el)]),
             dummy_statement
         )
     in
@@ -307,7 +302,7 @@ let gc_statement_generate k3_prog_schema stmt_info =
         K.Apply(  gc_statement_lambda,collection_ivc_gc_var)    
     else                       
         K.Iterate(gc_statement_lambda,collection_ivc_gc_var)
-
+        
 let update_domain_statement_generate stmt_info = 
     let (mapn, 
         trig_args_el,

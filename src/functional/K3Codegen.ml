@@ -167,6 +167,9 @@ sig
     (* persistent collection id, in key, out key -> remove *)
     val remove_map_element     : ?expr:K3.expr_t option -> 
         K3.coll_id_t -> code_t list -> code_t list -> code_t
+        
+    (* unit operation which has no effect *)
+    val unit_operation : code_t 
 
     (* fn id -> code
      * -- code generator should be able to hooks to implementations of

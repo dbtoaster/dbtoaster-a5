@@ -563,6 +563,9 @@ struct
       | K.PCElementRemove(_,_,_) ->
          failwith "K3ToImperative: PCElementRemove unsupported"
          
+      | K.Unit -> 
+         failwith "K3ToImperative: Unit unsupported"
+         
       | K.ExternalLambda(_,_,_) ->
          failwith "K3ToImperative: ExternalLambda unsupported"
 

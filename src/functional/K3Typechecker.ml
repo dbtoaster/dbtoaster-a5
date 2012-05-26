@@ -589,6 +589,7 @@ let rec typecheck_expr e : K.type_t =
                      ignore(aux ins ine); ignore(aux outs oute); K.TUnit
                | _ -> failwith "invalid target for map element remove"
             end
+       | K.Unit                               -> K.TUnit
 
 	(*| External     efn_id ->
 	begin match efn_id with

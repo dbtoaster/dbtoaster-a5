@@ -777,6 +777,11 @@ struct
            "]"
         );
         DB.remove_map_element id in_key out_key db; Unit)  
+        
+        
+    (* unit operation which has no effect *)
+    let unit_operation =
+      Eval(fun th db -> Unit) 
     
     (* Top level code generation *)
     let trigger event stmt_block =

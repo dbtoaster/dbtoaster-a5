@@ -522,6 +522,9 @@ struct
   (* persistent collection id, in key, out key -> remove *)
   let remove_map_element ?(expr = None) (map:K3.coll_id_t) (inkey:code_t list) (outkey:code_t list) : code_t =
       ("", Unit)
+      
+  (* unit operation which has no effect *)
+  let unit_operation : code_t = ("()", Unit) 
    
   let trigger (eventt:Schema.event_t) (code:code_t list): code_t =
     let prefix, vars =

@@ -57,10 +57,9 @@ let get_map_status (expr: Calculus.expr_t): Calculus.expr_t =
 
 let get_map_input_output_domain ?(input = false) (expr: Calculus.expr_t): Calculus.expr_t = 
    let (ename,eins,eouts,etype,emeta) = get_map_information_from_expr expr in
-   let out_vars = if input then  []       else eouts     in
-   let in_vars  = if input then eins      else  []       in
+   let out_vars = if input then  eins       else eouts     in
    let postfix  = if input then "_input"  else "_output" in
-      CalcRing.Val(External(ename^postfix, in_vars, out_vars, Types.TInt, None))
+      CalcRing.Val(External(ename^postfix, [], out_vars, Types.TInt, None))
 
 let get_map_output_domain (expr: Calculus.expr_t): Calculus.expr_t =
    get_map_input_output_domain ~input:false expr

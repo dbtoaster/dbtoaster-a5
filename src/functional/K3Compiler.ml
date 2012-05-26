@@ -118,6 +118,7 @@ let rec compile_k3_expr e =
             (List.map rcr ie_l) (List.map rcr oe_l)
         | _ -> failwith "invalid map value to remove"
         end
+    | K.Unit -> unit_operation
     end
 
 let compile_triggers_noopt (trigs:K3.trigger_t list) : code_t list =

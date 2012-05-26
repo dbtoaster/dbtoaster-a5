@@ -9,8 +9,6 @@ module V = Arithmetic.ValueRing
 module C = Calculus.CalcRing
 module K = K3
 
-
-
 let pair_map pair_fn (a,b) = (pair_fn a, pair_fn b)
 
 let varIdType_to_k3_type   (vars : T.var_t list) = List.map (fun (v,t) -> K.TBase(t)) vars
@@ -502,7 +500,10 @@ let dummy_k3_map =
     K.SingletonPC("dummy_map", K.TBase(T.TInt))
 
 let get_unit_statement () = 
-    K.PCValueUpdate(dummy_k3_map, [], [], zero_int_val)
+    if not (Debug.active "DEBUG-DM-UNIT") then
+        K.Unit
+    else
+        K.PCValueUpdate(dummy_k3_map, [], [], zero_int_val)
     	
 (**********************************************************************)
 
@@ -616,7 +617,10 @@ let rec calc_to_k3_expr meta ?(generate_init = false) theta_vars_el calc :
 								if eins = [] && free_eouts_el = [] then 
 									Some([],init_val_from_type ext_type)
 								else 
-									None
+								    if (Debug.active "DEBUG-DM") || (Debug.active "M3TOK3-INIT-FOR-INS") then
+									   Some([],init_val_from_type ext_type)
+									else
+									   None
 							in						
 							meta, default_init					
 			  	in					  
@@ -921,34 +925,25 @@ let m3_stmt_to_k3_stmt (meta: meta_t) ?(generate_init = false) trig_args (m3_stm
 	(* Iterate over all the tuples in "incr_expr" collection and update the *)
 	(* lhs_collection accordingly. *)
 	let coll_update_expr =	
-	    let single_update_statement = K.PCValueUpdate( lhs_collection, lhs_ins_el, lhs_outs_el, 
+	    let single_update_expr = K.PCValueUpdate( lhs_collection, lhs_ins_el, lhs_outs_el, 
                                                                 K.Add(existing_v,rhs_ret_ve) ) in
-		let single_update_expr = 
+		let single_update_statement = 
 			if ( (not (Debug.active "DEBUG-DM-WITH-M3") ) || trig_args = [] ) then
-	            single_update_statement
+	            single_update_expr
 	        else
 	            let dummy_statement =
 	                get_unit_statement ()
 	            in
-	            if lhs_ins_el = [] && lhs_outs_el = [] then
-	                single_update_statement 
-	(*          else if (free_lhs_outs_el = []) then
-	                K.IfThenElse(
-	                    K.Member(existing_out_tier, lhs_outs_el),
-	                    update_expression,
-	                    dummy_statement  
-	                )
-	            else
-	                update_expression
-	*)
+	            if lhs_outs_el = [] then
+	                single_update_expr 
 	            else
 	                K.IfThenElse(
 	                    K.Member(existing_out_tier, lhs_outs_el),
-	                    single_update_statement,
+	                    single_update_expr,
 	                    dummy_statement  
 	                )
 	    in
-		let inner_loop_body = lambda (rhs_outs_el@[rhs_ret_ve]) single_update_expr in
+		let inner_loop_body = lambda (rhs_outs_el@[rhs_ret_ve]) single_update_statement in
     		if rhs_outs_el = [] then      K.Apply(  inner_loop_body,incr_expr)	
            	else                          K.Iterate(inner_loop_body,incr_expr)
 	in
@@ -956,8 +951,24 @@ let m3_stmt_to_k3_stmt (meta: meta_t) ?(generate_init = false) trig_args (m3_stm
 	(* In order to implement a statement we iterate over all the values *)
 	(* of the input variables of the lhs collection, and for each of them *)
 	(* we update the corresponding output tier. *)
-	let statement_expr = 
-			let outer_loop_body = lambda (lhs_ins_el@[existing_out_tier]) coll_update_expr in
+	let statement_expr =
+	    let coll_update_statement = 
+            if ( (not (Debug.active "DEBUG-DM-WITH-M3") ) || trig_args = [] ) then
+                coll_update_expr
+            else
+                let dummy_statement =
+                    get_unit_statement ()
+                in
+                if lhs_ins_el = [] then
+                    coll_update_expr 
+                else
+                    K.IfThenElse(
+                        K.Member(lhs_collection, lhs_ins_el),
+                        coll_update_expr,
+                        dummy_statement  
+                    )
+        in
+			let outer_loop_body = lambda (lhs_ins_el@[existing_out_tier]) coll_update_statement in
 			if lhs_ins_el = [] then K.Apply(  outer_loop_body,lhs_collection)
 			else          				K.Iterate(outer_loop_body,lhs_collection)
 	in

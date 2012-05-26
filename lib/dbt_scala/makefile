@@ -4,7 +4,7 @@ FILES := src/org/dbtoaster/dbtoasterlib/*
 
 all: 
 	-rm "$(LIBJAR)"
-	@$(SCALAC) -d "$(LIBJAR)" "$(FILES)"
+	@$(SCALAC) -d "$(LIBJAR)" $(FILES)
 
 clean: 
 	rm "$(LIBJAR)"

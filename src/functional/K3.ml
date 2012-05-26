@@ -304,6 +304,10 @@ type expr_t =
          is used to index into an OutPC or the OutPC component of a PC.  If
          either field is not relevant, it must be left blank.
       *)
+   (* no input *) 
+   | Unit (** 
+         Unit operation. Does nothing, only returns value with unit type
+      *)
     
 
    (*| External      of ext_fn_id*)
@@ -348,6 +352,7 @@ let get_branches (e : expr_t) : expr_t list list =
     | PCUpdate         (me,ke,te)           -> [[me];ke;[te]]
     | PCValueUpdate    (me,ine,oute,ve)     -> [[me];ine;oute;[ve]]
     | PCElementRemove  (me,ine,oute)        -> [[me];ine;oute]
+    | Unit                                  -> []
     (*| External         efn_id               -> [] *)
     end
 
@@ -402,6 +407,7 @@ let rebuild_expr e (parts : expr_t list list) =
     | PCUpdate         (me,ke,te)           -> PCUpdate(sfst(), snd(), sthd())
     | PCValueUpdate    (me,ine,oute,ve)     -> PCValueUpdate(sfst(),snd(),thd(),sfth())
     | PCElementRemove  (me,ine,oute)        -> PCElementRemove(sfst(),snd(),thd())
+    | Unit                                  -> e
     (*| External         efn_id               -> sfst() *)
     end
 
@@ -443,6 +449,7 @@ let descend_expr (f : expr_t -> expr_t) e =
     | PCUpdate         (me,ke,te)           -> PCUpdate(f me, List.map f ke, f te)
     | PCValueUpdate    (me,ine,oute,ve)     -> PCValueUpdate(f me, List.map f ine, List.map f oute, f ve)
     | PCElementRemove  (me,ine,oute)        -> PCElementRemove(f me, List.map f ine, List.map f oute)
+    | Unit                                  -> e
     (*| External         efn_id               -> e *)
     end
 
@@ -596,6 +603,7 @@ let string_of_expr e =
     | Flatten _           -> pop "Flatten"
     | Aggregate _         -> pop "Aggregate"
     | GroupByAggregate _  -> pop "GroupByAggregate"
+    | Unit                -> ob(); ps "Unit"; cb();
 
     (* Pretty-print with list branches *)
     | Block _             -> pop ~lb:[0] "Block"
@@ -707,6 +715,7 @@ let rec code_of_expr e =
       | PCElementRemove(me,ine,oute) -> 
             "K3.PCElementRemove("^(rcr me)^","^(ListExtras.ocaml_of_list rcr ine)^
                                 ","^(ListExtras.ocaml_of_list rcr oute)^")"
+      | Unit -> "K3.Unit"
 
 let get_pc_schema pce maps = 
    let rec get_pc_name expression = match expression with
@@ -895,6 +904,7 @@ let nice_string_of_expr ?(type_is_needed = false) e maps =
     | Block(expr_list)    -> ob(); ps "{"; ob();
                              List.iter (fun (expr) -> fnl(); aux expr; ps ";") expr_list;
                              cb(); cb(); fnl(); ps "}"
+    | Unit                -> ob(); ps "()"; cb()
 
     (* Pretty-print with list branches *)
     | Member _            -> pop ~lb:[1] "Member"  
@@ -996,6 +1006,7 @@ let rec nice_code_of_expr e =
       | PCElementRemove(me,ine,oute) -> 
             "PCElementRemove("^(rcr me)^","^(ListExtras.ocaml_of_list rcr ine)^
                                 ","^(ListExtras.ocaml_of_list rcr oute)^")"
+      | Unit -> "()"
 
 (* Native collection constructors *)
 let collection_of_list (l : expr_t list) =
