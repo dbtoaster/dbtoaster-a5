@@ -676,6 +676,11 @@ let rec conservative_beta_reduction substitutions expr =
         * argument may have side-effects, such as persistent collection updates. *)
        if List.length occurrences = 1 then reduce() else preserve()
   in
+  let zero_of_expr expr =
+    match K3Typechecker.typecheck_expr expr with
+      | TBase(TInt) | TBase(TBool) -> Const(CInt(0))
+      | _ -> Const(CFloat(0.0)) 
+  in
   begin match expr with
   
       (* Adding 0 to a number leaves it unchanged *)
@@ -686,8 +691,8 @@ let rec conservative_beta_reduction substitutions expr =
 	  | Add(Const(x), Const(y)) -> Const(Arithmetic.sum x y)
 
       (* Multiplying by 0 makes the number 0 *)	
-	  | Mult(Const(CInt(0) as x), _)     | Mult(_, Const(CInt(0) as x)) 
-	  | Mult(Const(CFloat(0.0) as x), _) | Mult(_, Const(CFloat(0.0) as x)) -> 	                                                                 Const(x)
+     | Mult(Const(CInt(0)), x)     | Mult(x, Const(CInt(0)))
+     | Mult(Const(CFloat(0.0)), x) | Mult(x, Const(CFloat(0.0))) ->  zero_of_expr expr
 
       (* Multiplying by 1 leaves the number unchanged *)
 	  | Mult(Const(CInt(1)), x)     | Mult(x, Const(CInt(1)))

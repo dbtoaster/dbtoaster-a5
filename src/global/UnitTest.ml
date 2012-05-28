@@ -206,13 +206,7 @@ let mk_float_collection elems =
 
 (*************************** Shorthand Operations ****************************)
 let compile (db:Schema.t) (name:string) (expr:string) =
-   let q_expr = parse_calc expr in
-   let q_schema = Calculus.schema_of_expr q_expr in
-   let q_type = Calculus.type_of_expr q_expr in
-      Compiler.compile db [{
-         Plan.ds_name = Plan.mk_ds_name name q_schema q_type;
-         Plan.ds_definition = q_expr
-      }]
+   Compiler.compile db [(name, parse_calc expr)]
 
 ;;
 (*************************** Standard Debug Prefs ****************************)

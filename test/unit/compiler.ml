@@ -15,7 +15,7 @@ let test_compile (name:string) (expr:string)
                            list) list) =
    log_list_test ("Compiling "^name)
       Compiler.string_of_ds
-      (compile test_db name expr)
+      (fst (compile test_db name expr))
       (List.map (fun (ds_name, ds_ovars, ds_defn, ds_type, ds_triggers) -> 
          let ds = {
             Plan.ds_name = 

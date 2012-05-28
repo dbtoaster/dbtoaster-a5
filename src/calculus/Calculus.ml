@@ -98,9 +98,9 @@ let rec string_of_leaf (leaf:CalcRing.leaf_t): string =
       | Rel(rname, rvars)       -> 
          rname^"("^(ListExtras.string_of_list ~sep:", " string_of_var rvars)^")"
       | Cmp(op,subexp1,subexp2) -> 
-         "["^(string_of_value subexp1)^" "^
+         "{"^(string_of_value subexp1)^" "^
              (string_of_cmp op)^
-         " "^(string_of_value subexp2)^"]"
+         " "^(string_of_value subexp2)^"}"
       | Lift(target, subexp)    -> 
          "("^(string_of_var target)^" ^= "^(string_of_expr subexp)^")"
    end

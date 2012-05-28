@@ -424,28 +424,16 @@ if stage_is_active StagePrintCalc then (
 ;; 				
 if stage_is_active StageCompileCalc then (
    Debug.print "LOG-DRIVER" (fun () -> "Running Stage: CompileCalc");
-   let query_ds_list = List.map (fun (qname,qexpr) -> {
-      Plan.ds_name = Plan.mk_ds_name qname 
-                                     (Calculus.schema_of_expr qexpr)
-                                     (Calculus.type_of_expr qexpr);
-      Plan.ds_definition = qexpr
-   }) !calc_queries in
 
-      (* Compile things *)
-      (  try 
-            materialization_plan := Compiler.compile db_schema query_ds_list
-         with Calculus.CalculusException(expr, msg) ->
-            bug ~exc:true 
-                ~detail:(fun () -> CalculusPrinter.string_of_expr expr) 
-                msg
-      );
-      
-
-      (* And save the accessor expressions *)
-      toplevel_queries := List.map (fun q_ds ->
-         let (q_name, _, _, _, _) = Plan.expand_ds_name q_ds.ds_name in
-            (q_name, q_ds.ds_name)
-      ) query_ds_list
+   (* Compile things and save the accessor expressions *)
+   try 
+      let mp, tlq = Compiler.compile db_schema !calc_queries in
+         materialization_plan := mp;
+         toplevel_queries := tlq
+   with Calculus.CalculusException(expr, msg) ->
+      bug ~exc:true
+          ~detail:(fun () -> CalculusPrinter.string_of_expr expr) 
+          msg
 )
 ;;
 if stage_is_active StagePrintPlan then (

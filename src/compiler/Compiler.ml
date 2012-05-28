@@ -17,6 +17,7 @@ open Plan
 (******************************************************************************)
 
 type todo_list_t = ds_t list
+type tlq_list_t = (string * expr_t) list
 
 (******************************************************************************)
 
@@ -87,7 +88,7 @@ let extract_renamings ((scope,schema):schema_t) (expr:expr_t):
 (******************************************************************************)
 
 let compile_map (db_schema:Schema.t) (history:Heuristics.ds_history_t)
-                (todo: ds_t): todo_list_t * compiled_ds_t =
+                (todo:ds_t) : todo_list_t * compiled_ds_t =
    (* Sanity check: Deltas of non-numeric types don't make sense and it doesn't
       make sense to compile a map that doesn't support deltas of some form. *)
    let (todo_name, todo_ivars, todo_ovars, todo_base_type, _) =
@@ -302,12 +303,44 @@ let compile_table ((reln, relv, relut):Schema.rel_t): compiled_ds_t =
    }
 
 (******************************************************************************)
+let compile_tlqs (db_schema:Schema.t) (history:Heuristics.ds_history_t) 
+                 (calc_queries:tlq_list_t) : todo_list_t * tlq_list_t =
+	 	
+   let todo_lists, toplevel_queries = List.split ( 			
+      if (Debug.active "COMPILE-WITHOUT-TLQ-MAP") then
+         List.map ( fun (qname, qexpr) ->
+            let qschema = Calculus.schema_of_expr qexpr in
+            let optimized_qexpr = CalculusTransforms.optimize_expr qschema 
+                                                                   qexpr in
+            let (todos, mat_expr) = Heuristics.materialize db_schema history
+                                                           (qname^"_") None 
+                                                           optimized_qexpr in
+               (todos, (qname, mat_expr))
+         ) calc_queries
+      else
+         List.map (fun (qname, qexpr) ->
+            let qschema = Calculus.schema_of_expr qexpr in
+            let qtype   = Calculus.type_of_expr qexpr in
+            let ds_name = Plan.mk_ds_name qname qschema qtype in
+               ( [ { Plan.ds_name = ds_name; 
+                     Plan.ds_definition = qexpr } ], 
+                 (qname, ds_name) )
+         ) calc_queries
+    ) in 
+      (List.flatten todo_lists, toplevel_queries)
+			
+(******************************************************************************)
 
-let compile (db_schema:Schema.t) (queries:todo_list_t): plan_t =
-   let todos  :todo_list_t ref           = ref queries in
-   let history:Heuristics.ds_history_t = ref [] in
+let compile (db_schema:Schema.t) (calc_queries:tlq_list_t): 
+            (plan_t * tlq_list_t) =
+	 
+	 (* First process the toplevel queries *)					
+   let history:Heuristics.ds_history_t   = ref [] in
    let plan   :plan_t ref                = ref [] in
-      
+	 let todo_list, tlq_list = compile_tlqs db_schema history calc_queries in	
+	 let todos  :todo_list_t ref           = ref todo_list in
+	 let toplevel_queries : tlq_list_t ref = ref tlq_list in
+				
    while List.length !todos > 0 do (
       let next_ds = List.hd !todos in todos := List.tl !todos;
       Debug.print "LOG-COMPILE-DETAIL" (fun () ->
@@ -326,7 +359,7 @@ let compile (db_schema:Schema.t) (queries:todo_list_t): plan_t =
       *)
       todos     := new_todos @ !todos;
       plan      := (!plan) @ [compiled_ds]
-   ) done; !plan
+   ) done; (!plan, !toplevel_queries)
 
 (******************************************************************************)
 
