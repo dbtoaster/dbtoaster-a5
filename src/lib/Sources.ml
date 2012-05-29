@@ -46,6 +46,7 @@ sig
                string -> t 
    val has_next: t -> bool
    val next: t -> t * (stream_event_t option)
+   val name_of_source: t -> string
 end
 
 module type SyncMultiplexer = functor (S : SyncSource) ->
@@ -155,6 +156,8 @@ struct
                  ((new_ns,ra,buf,name), None)
             else ((new_ns,ra,buf,name), None)
          end
+   
+   let name_of_source ((_,_,_,name):t) = name
 end
 
 module SM : SyncMultiplexer = functor (S : SyncSource) ->

@@ -25,11 +25,16 @@ let default_args (): args_t = {
    output = ref "-"
 }
 
-let synch_init (table_sources:FileSource.t list) (db:DB.db_t): unit =
+let synch_init (table_sources:FileSource.t list) (db:DB.db_t): unit = 
+   Debug.print "LOG-INTERPRETER-UPDATES" (fun () -> "Synchronous Init");
    List.iter (fun initial_source ->
       let source = ref initial_source in
       let not_done = ref true in
       let update_map map_name fields change =
+         Debug.print "LOG-INTERPRETER-UPDATES" (fun () ->
+            "INIT "^map_name^" <- "^(ListExtras.ocaml_of_list 
+                                       Types.string_of_const
+                                       fields));
          let map = (DB.get_out_map map_name db) in
          let key = (List.map (fun x -> K3Value.BaseValue(x)) fields) in
          let old_val =
@@ -43,6 +48,9 @@ let synch_init (table_sources:FileSource.t list) (db:DB.db_t): unit =
          DB.update_out_map_value 
             map_name key (K3Value.BaseValue(CInt(old_val + change))) db
       in
+      Debug.print "LOG-INTERPRETER-UPDATES" (fun () ->
+         "LOADING STREAM "^(FileSource.name_of_source !source)
+      );
       while !not_done do 
          let (new_source,event) = FileSource.next !source in
          begin match event with
@@ -77,7 +85,7 @@ let synch_main
       (db:DB.db_t)
       (initial_mux:FileMultiplexer.t)
       (toplevel_query_accessors:(string * (DB.db_t -> K3Value.t)) list)
-      (init:(DB.db_t -> unit))
+      (initialize_db:(DB.db_t -> unit))
       (dispatcher:(stream_event_t option) -> bool)
       (arguments:args_t)
       (): unit = 
@@ -118,7 +126,8 @@ let synch_main
              
   in
   let mux = ref initial_mux in
-  let start = Unix.gettimeofday() in
+  let start = Unix.gettimeofday() in 
+    initialize_db db;
     let _ = dispatcher (Some(Schema.SystemInitializedEvent, [])) in
     while FileMultiplexer.has_next !mux do
       let (new_mux,(evt:stream_event_t option)) = 
