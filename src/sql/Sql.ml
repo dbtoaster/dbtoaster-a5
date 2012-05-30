@@ -417,6 +417,7 @@ let rec expr_type ?(strict = true) (expr:expr_t) (tables:table_t list)
    match expr with
       | Const(c)        -> type_of_const c
       | Var(v)          -> var_type ~strict:strict v tables sources
+      | SQLArith(_,Div,_) -> TFloat
       | SQLArith(a,_,b) -> (escalate_type (rcr a) (rcr b))
       | Negation(subexp) ->
          return_if_numeric (rcr subexp) "Negation of "

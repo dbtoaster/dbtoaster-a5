@@ -24,6 +24,7 @@ testdatahash:
 #	else echo "Warning: MD5 is installed, cannot check test data integrity"; fi
 
 unit: 
+	@$(UNIT_TEST) unit/sql.ml
 	@$(UNIT_TEST) unit/ring.ml
 	@$(UNIT_TEST) unit/calculus.ml
 	@$(UNIT_TEST) unit/calculustransforms.ml

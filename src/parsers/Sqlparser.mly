@@ -101,8 +101,9 @@ let bind_select_vars q =
 %nonassoc UMINUS
 
 // start   
-%start dbtoasterSqlList
+%start dbtoasterSqlList expression
 %type < Sql.file_t > dbtoasterSqlList
+%type < Sql.expr_t > expression
     
 %%
 

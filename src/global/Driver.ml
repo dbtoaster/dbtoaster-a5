@@ -494,7 +494,11 @@ if stage_is_active StageM3ToK3 then (
       let (_,(_, pats), _, _) = !k3_program in
          Debug.print "LOG-PATTERNS" (fun () -> Patterns.patterns_to_nice_string pats)
    with 
-      | Failure(msg) ->
+      | M3ToK3.M3ToK3Failure(Some(calc), _, msg) ->
+         bug ~exc:true ~detail:(fun () -> Calculus.string_of_expr calc) msg
+      | M3ToK3.M3ToK3Failure(_, Some(k3), msg) ->
+         bug ~exc:true ~detail:(fun () -> K3.string_of_expr k3) msg
+      | M3ToK3.M3ToK3Failure(_, _, msg) ->
          bug ~exc:true ~detail:(fun () -> M3.string_of_m3 !m3_program) msg
       | K3Typechecker.K3TypecheckError(stack,msg) ->
 			bug ~detail:(fun () -> K3Typechecker.string_of_k3_stack stack) msg

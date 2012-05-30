@@ -166,3 +166,8 @@ in
                  "R(A) * (S(B) + T(C))" "(T(C) + S(B)) * R(A)" false;
   test_cmp_exprs "Sum/Prod case #1-3" ~cmp_opts:[OptProdOrderIndependent] 
                  "R(A) * (S(B) + T(C))" "(T(C) + S(B)) * R(A)" false;										
+  ()
+
+let test title expr exp_type = 
+   log_test ("Calculus Expression Types ( "^msg^" )") 
+            (Types.string_of_type)

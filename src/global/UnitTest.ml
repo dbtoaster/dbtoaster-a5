@@ -138,6 +138,18 @@ let log_collection_test (title:string) (result:Values.K3Value.t)
 
 (*************************** String parsers ****************************)
 
+let parse_sql_expr (expr:string):Sql.expr_t = 
+   try  
+      Sqlparser.expression Sqllexer.tokenize 
+                           (Lexing.from_string expr)
+   with Parsing.Parse_error -> (
+      print_endline ("Error parsing :'"^expr^"'");
+      let _ = Parsing.set_trace true in
+      Sqlparser.expression Sqllexer.tokenize 
+                           (Lexing.from_string expr)
+   )
+;;     
+
 let parse_calc ?(opt=false) (expr:string):Calculus.expr_t = 
    try  
       let ret = 

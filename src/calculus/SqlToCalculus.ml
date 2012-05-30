@@ -286,7 +286,21 @@ let rec calc_of_query ?(query_name = None)
                up into a variable of the appropriate name (this also covers
                simple renaming) *)
             let tgt_var = (tgt_name, (Sql.expr_type tgt_expr tables sources)) in
-            CalcRing.mk_val (Lift(tgt_var, calc_of_sql_expr tables tgt_expr))
+            let calc_expr = calc_of_sql_expr tables tgt_expr in
+               CalcRing.mk_val (Lift(tgt_var,
+                  match ((Calculus.type_of_expr calc_expr), (snd tgt_var)) with
+                  | (a, b) when a = b ->
+                     CalcRing.mk_val (Lift(tgt_var, calc_expr))
+                  | _ -> 
+                     Sql.error ("Sql target expression '"^
+                                (Sql.string_of_expr tgt_expr)^
+                                "' translated to different type ("^
+                                (Types.string_of_type 
+                                  (Calculus.type_of_expr calc_expr))^
+                                ") from its expected type ("^
+                                (Types.string_of_type (snd tgt_var))^
+                                ")"));
+               )
    ) noagg_tgts) in
    List.map (fun (tgt_name, unnormalized_tgt_expr) ->
       let tgt_expr = 
