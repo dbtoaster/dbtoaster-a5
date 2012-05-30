@@ -1,6 +1,7 @@
 #!/usr/bin/env ruby
 require "#{File.dirname($0)}/util.rb"
 require "tempfile"
+require "getoptlong"
 
 class String
   def String.rand_alpha_chr
@@ -102,7 +103,10 @@ class Relation
   end
   
   def to_defn
-    "CREATE #{is_stream ? "STREAM" : "TABLE"} #{name}(#{@fields.join(", ")});"
+    "CREATE #{@is_stream ? "STREAM" : "TABLE"} #{@name}(#{@fields.join(", ")})"+
+    " FROM FILE '#{@source}'"+
+    " LINE DELIMITED"+
+    " CSV();"
   end
   
   def to_from
@@ -211,12 +215,13 @@ class Condition
   def Condition.random_cmp(vars)
     Condition.new(:cmp,
       case rand(10)
-        when (1...5) then "="
+        when (0...5) then "="
         when 5       then "<"
         when 6       then "<="
         when 7       then ">"
         when 8       then ">="
         when 9       then "<>"
+        else raise "Unhandled comparison case"
       end,
       Expression.random(vars),
       Expression.random(vars)
@@ -371,7 +376,8 @@ class Query
     "SELECT #{targets.join(", ")}"+
     (if @sources.length > 0 then " FROM #{sources.map{|s|s.to_from}.join(", ")}" else "" end)+
     (if @condition.nil? then "" else " WHERE #{condition}" end)+
-    (if @group_by.nil? then "" else " GROUP BY #{group_by.join(", ")}" end)
+    (if @group_by.nil? then "" else " GROUP BY #{group_by.join(", ")}" end)+
+    ";"
   end
 end
 
@@ -390,29 +396,55 @@ $global_rels = [
   ], "../../experiments/data/tiny_t.dat", true)
 ];
 
-prng_seed = Time.now.to_i
-srand(prng_seed);
-puts "Using SEED: #{prng_seed}"
-puts "Creating Query"
-q = Query.random($global_rels)
 
-puts "  ====> ";
-puts q.to_s;
-
-query_string = "#{$global_rels.map { |rel| rel.to_defn }.join("\n\n")}\n\n#{q}\n"
-
-puts "Invoking DBToaster"
-Tempfile.open(["zeus_test_query", ".sql"]) do |f|
-  f.puts query_string;
-  f.flush;
-  cmd = "./bin/dbtoaster -r #{f.path}";
-  puts cmd;
-  if (system cmd) then 
-    puts "SUCCESS";
-  else
-    File.open("zeus_error_q.sql", "w+") do |ef|
-      ef.puts query_string;
-      ef.flush
+class Test
+  def Test.run(params)
+    iterations = params.fetch(:iterations, 1);
+    prng_seed  = params.fetch(:seed,       rand(100000000));
+    
+    (0...iterations).each do |i|
+      puts "Iteration #{i+1} of #{iterations}"
+      puts "Using SEED: #{prng_seed}"
+      srand(prng_seed);
+      puts "Creating Query"
+      q = Query.random($global_rels)
+      
+      puts q.to_s;
+      
+      query_string = "#{$global_rels.map { |rel| rel.to_defn }.join("\n\n")}\n\n#{q}\n"
+      
+      puts "Invoking DBToaster"
+      Tempfile.open(["zeus_test_query", ".sql"]) do |f|
+        f.puts query_string;
+        f.flush;
+        cmd = "./bin/dbtoaster -r #{f.path}";
+        puts cmd;
+        if (system cmd) then 
+          puts "SUCCESS";
+        else
+          File.open("zeus_error_q.sql", "w+") do |ef|
+            ef.puts query_string;
+            ef.flush
+          end
+          raise "ERROR";
+        end
+      end
+      prng_seed = rand(100000000);
     end
+  end 
+end
+
+$params = Hash.new;
+
+GetoptLong.new(
+  ['-s',    GetoptLong::REQUIRED_ARGUMENT],
+  ['-i',    GetoptLong::REQUIRED_ARGUMENT]
+).each do |opt,arg|
+  case opt
+    when '-s' then $params[:seed] = arg.to_i;
+    when '-i' then $params[:iterations] = arg.to_i;
   end
 end
+
+Test.run($params);
+
