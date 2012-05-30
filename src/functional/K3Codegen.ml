@@ -211,5 +211,6 @@ sig
 
     type value_t
 
-    val eval : code_t -> string list -> const_t list -> db_t -> value_t
+    val eval : DBChecker.DBAccess.db_session_t option -> code_t -> string list -> 
+               const_t list -> db_t -> value_t
 end

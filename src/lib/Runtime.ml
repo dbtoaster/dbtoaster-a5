@@ -13,6 +13,8 @@ let string_of_stream_event evt =
 ;;
 
 module DB = NamedK3Database
+module DBCheck = DBChecker.DBAccess
+
 type args_t = { 
    verbose : bool ref; 
    result  : string option ref; 
@@ -88,6 +90,7 @@ let synch_main
       (initialize_db:(DB.db_t -> unit))
       (dispatcher:(stream_event_t option) -> bool)
       (arguments:args_t)
+      (db_checker:DBCheck.db_session_t option)
       (): unit = 
   let (output_separator,title_separator) = 
     if Debug.active "SINGLE-LINE-MAP-OUTPUT" then (";",": ") else (";\n",":\n")
@@ -138,6 +141,16 @@ let synch_main
         (  log_evt evt;
            let output = dispatcher evt in
            try 
+              begin match db_checker with
+                 | Some(dbc) -> 
+                     let tlq_results = 
+                        List.map (fun (q_name,q_access_f) ->
+                           (q_name, q_access_f db)
+                        ) toplevel_query_accessors 
+                     in
+                        DBCheck.check_result dbc tlq_results
+                 | None -> ()
+              end;                               
               if output then log_results result_chan;
               mux := new_mux
            with Failure(x) -> failwith ("Dispatch Error ["^x^"]: "^

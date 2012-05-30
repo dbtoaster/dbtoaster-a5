@@ -29,6 +29,7 @@ let test ?(env = []) msg code rval =
    log_test ("K3Interpreter("^msg^")")
       Values.K3Value.string_of_value
       (  K3Interpreter.K3CG.eval 
+            None
             compiled 
             vars vals
             db)
@@ -38,7 +39,8 @@ let test_map ?(env = []) msg code rval =
    let compiled = Interpreter.compile_k3_expr code in
    let (vars, vals) = List.split env in
       log_collection_test ("K3Interpreter("^msg^")")
-         (  K3Interpreter.K3CG.eval 
+         (  K3Interpreter.K3CG.eval
+               None 
                compiled 
                vars vals
                db)

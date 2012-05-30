@@ -310,41 +310,38 @@ let empty_prog (): prog_t =
 ;;
 
 let sort_prog (prog:prog_t):prog_t =
-	 List.iter (fun (trigger:trigger_t) ->
-		  (* The fact that all update statements must precede *)
-			(* replace statements is represented within the graph *)
-		  let replace_stmts = 
-				 List.filter (fun stmt -> stmt.update_type = Plan.ReplaceStmt) 
-				             !(trigger.statements) 
-			in
-			(* The list of names of all maps that are being re-evaluated *) 
-			let replace_target_names = 
-			 	 List.map (fun stmt -> List.hd (externals_of_expr stmt.target_map)) 
-					        replace_stmts 
-			in
-			(* Create a graph to encode dependencies between maps *)
-      let graph = 
-				 List.map (fun stmt ->
-					  let target_name = List.hd (externals_of_expr stmt.target_map) in
-            let update_names = externals_of_expr stmt.update_expr in
-						if (stmt.update_type = Plan.UpdateStmt) then
-						   (target_name, ListAsSet.union update_names replace_target_names)
-						else
-							 (target_name, ListAsSet.inter update_names replace_target_names)
-			   ) !(trigger.statements)	
-			in	
-						
-			(* Topologically sort the graph and create a new order of statements *)
-			let new_stmt_order = 
-			   List.fold_left (fun stmt_order name ->
-				    try
+   List.iter (fun (trigger:trigger_t) ->
+      (* The fact that all update statements must precede *)
+      (* replace statements is represented within the graph *)
+      let replace_stmts = 
+         List.filter (fun stmt -> stmt.update_type = Plan.ReplaceStmt) 
+                     !(trigger.statements) 
+      in
+      (* The list of names of all maps that are being re-evaluated *) 
+      let replace_target_names = 
+         List.map (fun stmt -> List.hd (externals_of_expr stmt.target_map)) 
+                  replace_stmts 
+      in
+      (* Create a graph to encode dependencies between maps *)
+      let graph = List.map (fun stmt ->
+         let target_name = List.hd (externals_of_expr stmt.target_map) in
+         let update_names = externals_of_expr stmt.update_expr in
+            if (stmt.update_type = Plan.UpdateStmt)
+            then (target_name, ListAsSet.union update_names replace_target_names)
+            else (target_name, ListAsSet.inter update_names replace_target_names)
+      ) !(trigger.statements) in  
+                        
+      (* Topologically sort the graph and create a new order of statements *)
+      let new_stmt_order = 
+         List.fold_left (fun stmt_order name ->
+            try
                let next_stmt = get_statement prog trigger.event name in
-					     (stmt_order @ [next_stmt])
-				    with Not_found -> stmt_order 
-		     ) [] (ListExtras.toposort graph) 
-			in
-			  trigger.statements := new_stmt_order;
-	 ) (get_triggers prog);
+                  (stmt_order @ [next_stmt])
+            with Not_found -> stmt_order 
+         ) [] (ListExtras.toposort graph) 
+      in
+         trigger.statements := new_stmt_order;
+   ) (get_triggers prog);
    prog
 
 (**[plan_to_m3 db plan]

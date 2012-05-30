@@ -127,18 +127,18 @@ in
 let test_code env msg code rval =
 	 let (vars, vals) = List.split env in
    let db = Database.NamedK3Database.make_empty_db maps patterns in
-	 let _ = (K3Interpreter.K3CG.eval init_code [] [] db) in
+	 let _ = (K3Interpreter.K3CG.eval None init_code [] [] db) in
 	 U.log_test ("M3ToK3("^msg^")")
       Vs.K3Value.string_of_value
-      (K3Interpreter.K3CG.eval code vars vals db)
+      (K3Interpreter.K3CG.eval None code vars vals db)
       rval
 in
 let test_code_coll env msg code rval =
 	 let (vars, vals) = List.split env in
    let db = Database.NamedK3Database.make_empty_db maps patterns in
-	 let _ = (K3Interpreter.K3CG.eval init_code [] [] db) in
+	 let _ = (K3Interpreter.K3CG.eval None init_code [] [] db) in
 	 U.log_collection_test ("M3ToK3("^msg^")")
-      (K3Interpreter.K3CG.eval code vars vals db)
+      (K3Interpreter.K3CG.eval None code vars vals db)
       rval
 in
 

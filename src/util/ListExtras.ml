@@ -174,7 +174,9 @@ let sublist (start:int) (cnt:int) (l:'a list):'a list =
    ) (start,[]) l)
 
 (**
-   Partition a list, splitting at the position of a given pivot element.  This does not attempt to compare elements to the pivot element, but rather returns splits based on position in the input list.
+   Partition a list, splitting at the position of a given pivot element.  
+   This does not attempt to compare elements to the pivot element, but rather 
+   returns splits based on position in the input list.
    
    @param a  The pivot element
    @param l  The input list
@@ -185,6 +187,31 @@ let sublist (start:int) (cnt:int) (l:'a list):'a list =
 let split_at_pivot (a:'a) (l:'a list): 'a list * 'a list =
    let idx = index_of a l in
       (sublist 0 (idx) l, sublist (idx+1) (-1) l)
+
+(**
+   Partition a list, splitting at the given position.
+   
+   @param a  The split position
+   @param l  The input list
+   @return   The 3-tuple consisting of all elements that occur (positionally) in 
+             [l] before the split position, the element at the split position, 
+             and all the elements that occur after.
+*)
+let split_at_position (pos:int) (l:'a list): 'a list * 'a list * 'a list =
+   (sublist 0 (pos) l, sublist (pos) 1 l, sublist (pos+1) (-1) l)
+
+(**
+   Partition a list, splitting at the last position.
+   
+   @param l  The input list
+   @return   The 3-tuple consisting of all elements that occur (positionally) in 
+             [l] before the split position, the element at the split position, 
+             and all the elements that occur after.
+*)
+let split_at_last (l:'a list): 'a list * 'a list=
+   let (x, y, _) = split_at_position ((List.length l)-1) l in
+      (x, y)
+   
 
 (**
    Helper function for performing folds over associative lists.  Like 
@@ -233,7 +260,7 @@ let sum l = List.fold_left (+) 0 l
    @return    A 2-tuple containing the list
 *)
 let list_to_pair (l:'a list): 'a * 'a = 
-			(List.hd l, List.hd (List.tl l)) 
+   (List.hd l, List.hd (List.tl l)) 
 
 (**
    Creates all k-tuples of elements of the list src.

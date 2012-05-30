@@ -172,6 +172,7 @@ sig
     val string_of_smap : ?sep:string -> single_map_t -> string
     val string_of_map : ?sep:string -> map_t -> string
     val to_string : t -> string
+    val to_hashtbl : t -> (Types.const_t list, Types.const_t list) Hashtbl.t
 end =
 struct
     module Map = K3ValuationMap
@@ -210,18 +211,28 @@ struct
       | SingleMap(sm) -> "SingleMap("^(string_of_smap ~sep:sep sm)^")"
       | DoubleMap(dm) -> "DoubleMap("^(string_of_map ~sep:sep dm)^")"
 
-      | FloatList(fl) ->
-          "["^(String.concat ";" (List.map (string_of_value ~sep:sep) fl))^"]"
+      | FloatList(fl) -> 
+         "["^(String.concat ";" (List.map (string_of_value ~sep:sep) fl))^"]"
       
       | TupleList(kvl) ->
-          "["^(String.concat ";" (List.map (string_of_value ~sep:sep) kvl))^"]"
+         "TupleList([" ^ 
+         (String.concat sep (List.map (fun tuple -> 
+            match tuple with
+               | Tuple(fl) -> 
+                  let (keys, values) = ListExtras.split_at_last fl in
+                  (string_of_value ~sep:sep (FloatList keys))^"->"^
+                  (string_of_value ~sep:sep (if values <> []
+                                             then List.hd values
+                                             else BaseValue(Types.CInt(1))))
+               | _ -> failwith "TupleList contains elements other than tuples"
+         ) kvl)) ^ "])"
 
       | SingleMapList(sml) ->
-          ("["^(List.fold_left (fun acc (k,m) ->
+          ("SingleMapList(["^(List.fold_left (fun acc (k,m) ->
                 (if acc = "" then "" else acc^";")^
                 (string_of_value ~sep:sep (Tuple k))^","^
                 (string_of_value ~sep:sep (SingleMap m)))
-               "" sml)^"]")
+               "" sml)^"])")
       | ListCollection(vl) -> "ListCollection("^(String.concat ","
                             (List.map (string_of_value ~sep:sep) vl))^")"
 
@@ -229,6 +240,43 @@ struct
       end
 
     let to_string v = string_of_value v
+   
+    let base_const_of v = match v with
+      | BaseValue(c) -> c
+      | _ -> failwith "Invalid argument: not a K3 base value!"  
+   
+    let is_const_zero c = 
+       (c = Types.zero_of_type (type_of_const c))
+   
+    let to_hashtbl v = match v with
+       | Unit -> Hashtbl.create 10
+       | BaseValue(c) ->
+          let hashtbl = Hashtbl.create 10 in
+          if not (is_const_zero c) then Hashtbl.add hashtbl [] [c];
+          hashtbl
+       | SingleMap(sm) ->
+          K3ValuationMap.fold (fun keys value tbl ->
+             let key_consts = List.map base_const_of keys in
+             let value_const = base_const_of value in
+             if not (is_const_zero value_const) then
+                Hashtbl.replace tbl key_consts [value_const];
+             tbl
+         ) (Hashtbl.create 10) sm
+       | TupleList(kvl) -> 
+          List.fold_left (fun tbl tuple -> match tuple with
+             | Tuple(fl) -> 
+                let (keys, values) = ListExtras.split_at_last fl in
+                let key_consts = List.map base_const_of keys in
+                let value_consts = List.map base_const_of values in
+                (* TODO: allow zero tuples in the future *)
+                if value_consts <> [] && 
+                      not (is_const_zero (List.hd value_consts)) then
+                   Hashtbl.replace tbl key_consts value_consts;
+                tbl      
+             | _ -> failwith "TupleList contains elements other than tuples"
+          ) (Hashtbl.create 10) kvl
+      | _ -> failwith "Unsupported (yet) conversion of a K3Value into a hash table"   
+
 end
 and K3ValuationMap : SliceableMap.S with type key_elt = K3Value.t
     = SliceableMap.Make(K3Value)

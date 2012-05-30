@@ -45,6 +45,7 @@ FILES=\
 	src/lib/SliceableMap\
 	src/lib/Values\
 	src/lib/Database\
+	src/lib/DBChecker\
 	src/lib/Runtime\
 	src/codegen/K3Interpreter\
 	src/codegen/K3Scalagen\

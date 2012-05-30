@@ -627,16 +627,22 @@ if stage_is_active StageImpToTargetLanguage then (
 ;;
 
 (************ Program Management Stages ************)
-
+module DBCheck = DBChecker.DBAccess
+;;
 if stage_is_active StageRunInterpreter then (
    Debug.print "LOG-DRIVER" (fun () -> "Running Stage: RunInterpreter");
    try 
+      let db_checker = 
+         if Debug.active "DBCHECK-ON" 
+         then Some(DBCheck.init !sql_program)
+         else None 
+      in
       let (maps,patterns,compiled) = !interpreter_program in
       let db = Database.NamedK3Database.make_empty_db maps patterns in
-      let result = K3Interpreter.K3CG.eval compiled [] [] db in
+      let result = K3Interpreter.K3CG.eval db_checker compiled [] [] db in
       if result <> Values.K3Value.Unit then
          output_endline (  "UNEXPECTED RESULT: "^
-                           (Values.K3Value.string_of_value result) )
+                           (Values.K3Value.string_of_value result) )   
    with 
    | K3Interpreter.InterpreterException(expr,msg) ->
       (begin match expr with 

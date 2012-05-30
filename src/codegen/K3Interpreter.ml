@@ -26,6 +26,8 @@ struct
     
     module MC  = K3ValuationMap
     module DB  = NamedK3Database
+   
+    module DBCheck = DBChecker.DBAccess
 
     (* Use runtime for main method *)
     module RT  = Runtime
@@ -830,6 +832,8 @@ struct
            | Schema.NoSource        -> bail "Unsourced relation"
        in (src_impl, None, None)
 
+    let db_checker : DBCheck.db_session_t option ref = ref None;;
+       
     let main (schema:K3.map_t list) 
              (patterns:Patterns.pattern_map)
              (table_sources:(source_impl_t * code_t option * code_t option) 
@@ -865,7 +869,12 @@ struct
             );
             match evt with 
             | Some(event, tuple) when List.mem_assoc event trigger_exec ->
-               (List.assoc event trigger_exec) tuple db; true
+               (List.assoc event trigger_exec) tuple db;
+               begin match !db_checker with
+                  | Some(dbc) -> DBCheck.handle_tuple dbc event tuple
+                  | None -> ()
+               end;                               
+               true
             | Some _  | None -> false)
         in
         let mux = List.fold_left
@@ -883,7 +892,8 @@ struct
                              tlq_access
                              init_fn
                              dispatcher 
-                             (RT.default_args ()) 
+                             (RT.default_args ())
+                             !db_checker 
                              ()
        )
 
@@ -900,8 +910,8 @@ struct
    let debug_string (code:code_t): string =
       bail "Interpreter can't output a string"
  
-    let rec eval c vars vals db = match c with
+    let rec eval dbc c vars vals db = match c with
       | Eval(f) -> f (Env.make vars (List.map value_of_const_t vals), []) db
       | Trigger(evt,trig_fn) -> trig_fn vals db; Unit
-      | Main(f) -> f(); Unit
+      | Main(f) -> db_checker := dbc; f(); Unit
 end

@@ -293,6 +293,19 @@ let name_of_expr (expr:expr_t): string =
                                     "_aggregate"
                                )
    end
+   
+(** 
+   Produce the (SQL-compatible) string representation of a constant.
+   @param a   A constant
+   @return    The SQL-compatible string-representation of [a]
+*)
+let string_of_const (const:Types.const_t):string =
+   match const with
+     | CBool(true)  -> "1"
+     | CBool(false) -> "0"
+     | CInt(av) -> string_of_int av
+     | CFloat(av) -> string_of_float av
+     | CString(av) -> "'"^av^"'"   
 
 (**
    Produce the (Sqlparser-compatible) representation of the specified SQL 
@@ -356,8 +369,9 @@ and string_of_select (stmt:select_t): string =
       else "")^
    (if List.length gb > 0 then
          " GROUP BY "^(ListExtras.string_of_list ~sep:", " string_of_var gb)
-      else "")^
-   ";"
+      else "")
+(*      ^*)
+(*   ";" *)
 
 (**
    Produce the (Sqlparser-compatible) representation of the specified [CREATE
