@@ -135,7 +135,7 @@ let scala_compiler = {
     let args = flags @ sourcefiles in
 	Debug.print "LOG-SCALA" (fun () -> (
 	  ListExtras.string_of_list ~sep:" " (fun x->x) args));
-    Unix.system ("rm \"" ^ out_file_name ^ ".jar\"");
+    let _ = Unix.system ("rm \"" ^ out_file_name ^ ".jar\"") in
     Unix.execvp scalac (Array.of_list args)
    )
 };;
