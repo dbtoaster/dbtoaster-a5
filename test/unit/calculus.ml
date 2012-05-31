@@ -168,6 +168,3 @@ in
                  "R(A) * (S(B) + T(C))" "(T(C) + S(B)) * R(A)" false;										
   ()
 
-let test title expr exp_type = 
-   log_test ("Calculus Expression Types ( "^msg^" )") 
-            (Types.string_of_type)
