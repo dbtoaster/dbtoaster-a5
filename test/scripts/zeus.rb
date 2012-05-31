@@ -401,6 +401,7 @@ class Test
   def Test.run(params)
     iterations = params.fetch(:iterations, 1);
     prng_seed  = params.fetch(:seed,       rand(100000000));
+    save       = params.fetch(:save,       false);
     
     (0...iterations).each do |i|
       puts "Iteration #{i+1} of #{iterations}"
@@ -422,11 +423,14 @@ class Test
         if (system cmd) then 
           puts "SUCCESS";
         else
-          File.open("zeus_error_q.sql", "w+") do |ef|
+          savefile = 
+            if save then "test/queries/zeus/#{prng_seed}.sql"
+                    else "zeus_error_q.sql" end
+          File.open(savefile, "w+") do |ef|
             ef.puts query_string;
             ef.flush
           end
-          raise "ERROR";
+          raise "ERROR: Query dumped to '#{savefile}'";
         end
       end
       prng_seed = rand(100000000);
@@ -437,12 +441,14 @@ end
 $params = Hash.new;
 
 GetoptLong.new(
-  ['-s',    GetoptLong::REQUIRED_ARGUMENT],
-  ['-i',    GetoptLong::REQUIRED_ARGUMENT]
+  ['-s',     GetoptLong::REQUIRED_ARGUMENT],
+  ['-i',     GetoptLong::REQUIRED_ARGUMENT],
+  ['--save', GetoptLong::NO_ARGUMENT]
 ).each do |opt,arg|
   case opt
-    when '-s' then $params[:seed] = arg.to_i;
-    when '-i' then $params[:iterations] = arg.to_i;
+    when '-s'      then $params[:seed] = arg.to_i;
+    when '-i'      then $params[:iterations] = arg.to_i;
+    when '--save'  then $params[:save] = true;
   end
 end
 
