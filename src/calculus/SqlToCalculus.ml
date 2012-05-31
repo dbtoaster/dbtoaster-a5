@@ -289,8 +289,7 @@ let rec calc_of_query ?(query_name = None)
             let calc_expr = calc_of_sql_expr tables tgt_expr in
                CalcRing.mk_val (Lift(tgt_var,
                   match ((Calculus.type_of_expr calc_expr), (snd tgt_var)) with
-                  | (a, b) when a = b ->
-                     CalcRing.mk_val (Lift(tgt_var, calc_expr))
+                  | (a, b) when a = b -> calc_expr
                   | _ -> 
                      Sql.error ("Sql target expression '"^
                                 (Sql.string_of_expr tgt_expr)^
