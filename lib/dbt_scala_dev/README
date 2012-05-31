@@ -1,0 +1,4 @@
+This folder contains a version of the dbt scala runtime library under development.
+
+It is not compatible with the current scala code generator, but it will be merged
+into dbt_scala once the necessary changements in the code generator have been made.
