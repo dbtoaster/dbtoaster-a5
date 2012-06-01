@@ -113,7 +113,7 @@ let is_calculus_relation (expr: Calculus.expr_t): bool =
       
 let rec simplify_formula (event_input: Schema.event_t) (expr: Calculus.expr_t): Calculus.expr_t * bool = (* First return is the simplified query and the second one is whether it should be removed or not! *)
     Debug.print "CHECK-M3DM" (fun () -> "simplifying "^(Calculus.string_of_expr expr) );
-    let should_be_removed = (CalcRing.zero, false) in
+    let should_be_removed = (CalcRing.one, false) in
     let handle_sum_prod aux calc_oper q1 qo = 
         let (rq1, rb1) = aux(q1) in
         let (rq2, rb2) = if List.length qo = 1 then aux(List.hd qo) else aux(calc_oper qo) in
@@ -132,14 +132,17 @@ let rec simplify_formula (event_input: Schema.event_t) (expr: Calculus.expr_t): 
        begin match e with
            | CalcRing.Sum(q1::qo) -> 
                handle_sum_prod aux CalcRing.mk_sum q1 qo
+               (*           let (rq1, rb1) = aux(q1) in
+             let (rq2, rb2) = if List.length qo = 1 then aux(List.hd qo) else aux(CalcRing.mk_sum qo) in
+                  (CalcRing.mk_sum ([rq1; rq2]), rb1||rb2) *)
            | CalcRing.Prod(q1::qo) -> 
                handle_sum_prod aux CalcRing.mk_prod q1 qo
            | CalcRing.Val(leaf) ->
                begin match leaf with
                | AggSum(gb_vars, subexp) -> 
-                   if gb_vars = [] then 
+                   (*                 if gb_vars = [] then 
                        should_be_removed
-                   else 
+                      else *)
                        let (rq, rb) = aux(subexp) in
                            if rb = true then 
                                (CalcRing.Val(AggSum(gb_vars, rq)), true) 
@@ -165,10 +168,13 @@ let rec simplify_formula (event_input: Schema.event_t) (expr: Calculus.expr_t): 
                 | Cmp(op,subexp1,subexp2) -> 
 		            (e, true)
                 | Lift(target, subexp)    -> 
-		            (e, true)
-                | _ -> failwith ("Incorrect leaf: "^(string_of_expr e))
+                    (e, true)
+                (*                 (CalcRing.Val(Lift(target, fst (aux subexp))), true)*)
+                | Value(v) -> (e, true) 
                 end
-           | _ -> failwith ("Incorrect formula: "^(string_of_expr e))
+           | CalcRing.Neg(q) -> let (rq, rb) = aux(q) in
+             (CalcRing.Neg(rq),rb)
+           | _ -> failwith "incorrect formula for simplifying" 
        end
       in
          aux expr
@@ -195,8 +201,6 @@ let simplify_dm_triggers (event_input: Schema.event_t) (trigger_list: Plan.stmt_
    List.fold_left (fun (x) (y) -> x@(simplify_dm_trigger event_input y)) [] trigger_list
    (*trigger_list*)
     
-        
-
 
 let rec maintain (context: Calculus.expr_t)
                 (formula: Calculus.expr_t) : Plan.stmt_t list * Calculus.expr_t =
@@ -213,8 +217,13 @@ let rec maintain (context: Calculus.expr_t)
         maintain(context)(q1)
     | CalcRing.Val(leaf) ->
         begin match leaf with
-        | Value(v) -> ([], context)
-        | External(ename,eins,eouts,etype,emeta) ->
+          | Value(v) -> ([], context) (* Previous version *)
+            (*| Value(v) -> 
+            let value = Arithmetic.sign_of_value(v) in
+            let new_context = CalcRing.mk_prod ([context; CalcRing.Val(Value(value))])
+            in
+               ([], new_context) *)
+          | External(ename,eins,eouts,etype,emeta) ->
             let input_domain = get_map_input_domain (formula) in
             let output_domain = get_map_output_domain (formula) in
             let input_vars = get_relation_vars input_domain in
@@ -222,33 +231,36 @@ let rec maintain (context: Calculus.expr_t)
             let update_domain = CalcRing.Val(AggSum(input_vars, context))  in
             let dm_statement = mk_dm_trigger (input_domain) (update_domain) in
                 ([dm_statement], context1)
-        | AggSum(gb_vars, subexp) -> 
+          | AggSum(gb_vars, subexp) -> 
 (*            let (trlist, context1) = maintain (context) (subexp) in *)
             let (trlist, context1) = maintain (CalcRing.one) (subexp) in
                 let right_context = CalcRing.Val(AggSum(gb_vars, context1)) in
                     (trlist, CalcRing.mk_prod ([context; right_context]))
-        | Rel(rname, rvars)    -> 
+          | Rel(rname, rvars)    -> 
             ([], CalcRing.mk_prod ([context; formula]))
-        | Cmp(op,subexp1,subexp2) -> 
+          | Cmp(op,subexp1,subexp2) -> 
             let right_context = formula in
                 ([], CalcRing.mk_prod ([context; right_context]))
-        | Lift(target, subexp)    -> 
-            let (trlist, context1) = maintain(context)(subexp) in
-               (* (trlist, context1) *) (*FIXME*)
+          | Lift(target, subexp)    -> 
+            let (trlist, _) = maintain(context)(subexp) in
+          (*let (_, context1) = maintain(CalcRing.one)(subexp) in
+            let new_formula = CalcRing.Val(Lift(target, context1)) in
+              (trlist, CalcRing.mk_prod ([context; new_formula]))*)
                (trlist, CalcRing.mk_prod ([context; formula]))
         end
     | _ -> failwith ("Incorrect formula")
     end
 
 let maintain_statement (statement:Plan.stmt_t)
-                        (relation: Schema.rel_t):Plan.stmt_t list = 
-      let singleton_tuple = get_singleton_tuple (relation) in 
+  (relation: Schema.rel_t):Plan.stmt_t list = 
+    let singleton_tuple = get_singleton_tuple (relation) in 
 (*    let singleton_tuple = CalcRing.one in *)
     let left_input_domain = get_map_input_domain (statement.target_map) in
     let left_output_domain = get_map_output_domain (statement.target_map) in
     let left_output_vars = get_relation_vars left_output_domain in
     let (trigger_list, update_domain) = 
-        let context = CalcRing.mk_prod ([singleton_tuple; left_input_domain]) in
+        let context = CalcRing.mk_prod ([singleton_tuple; left_input_domain]) in (* previous version of DM *)
+        (*  let context = left_input_domain in *)
         let (trigger_list, query_domain) = maintain (context) (statement.update_expr) in
         let left_output_vars_wo_triggers = ListAsSet.diff left_output_vars (get_relation_vars singleton_tuple) in
          (trigger_list, 

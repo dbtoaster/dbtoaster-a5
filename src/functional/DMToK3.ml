@@ -467,7 +467,7 @@ let dm_trig_to_k3_trig (meta: meta_t) (m3dm_trig: M3.trigger_t) (k3_prog_schema:
 (** Transforms an existing K3 program with its corresponding M3DM program into a K3 program. *)
 let m3dm_to_k3 (m3tok3_program : K.prog_t) (m3dm_prog: M3DM.prog_t) : (K.prog_t) =
     let with_m3 = Debug.active "DEBUG-DM-WITH-M3" in
-    if with_m3 then begin Debug.activate "DEBUG-DM-IVC"; Debug.activate "K3-NO-OPTIMIZE" end; 
+    if with_m3 then ();(* begin Debug.activate "DEBUG-DM-IVC"; Debug.activate "K3-NO-OPTIMIZE"(* Debug.activate "K3-NO-OPTIMIZE-LIFT-UPDATES" *) end; *)
     let ( k3_database, (old_k3_prog_schema, old_patterns_map), m3tok3_prog_trigs, old_k3_prog_tlqs) = m3tok3_program in
     let k3_prog_tlqs = if (with_m3) then old_k3_prog_tlqs else [] in
     let k3_prog_schema = (if (with_m3) then old_k3_prog_schema else [])@(List.map m3_map_to_k3_map !(m3dm_prog.M3DM.maps)) in

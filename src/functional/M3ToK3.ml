@@ -903,7 +903,7 @@ let m3_stmt_to_k3_stmt (meta: meta_t) ?(generate_init = false) trig_args (m3_stm
 				else 
 					None
 			in 
-			if init_expr_opt != None then 
+            if (init_expr_opt != None && not(Debug.active "DEBUG-DM-LEFT")) then 
 				K.IfThenElse( K.Member(existing_out_tier, lhs_outs_el),
    							  K.Lookup(existing_out_tier, lhs_outs_el),
    							  (extract_opt init_expr_opt) ), meta
@@ -937,7 +937,7 @@ let m3_stmt_to_k3_stmt (meta: meta_t) ?(generate_init = false) trig_args (m3_stm
 	    let single_update_expr = K.PCValueUpdate( lhs_collection, lhs_ins_el, lhs_outs_el, 
                                                                 K.Add(existing_v,rhs_ret_ve) ) in
 		let single_update_statement = 
-			if ( (not (Debug.active "DEBUG-DM-WITH-M3") ) || trig_args = [] ) then
+            if ( (not (Debug.active "DEBUG-DM-LEFT") ) || trig_args = [] || update_type = Plan.ReplaceStmt ) then
 	            single_update_expr
 	        else
 	            let dummy_statement =
@@ -962,7 +962,7 @@ let m3_stmt_to_k3_stmt (meta: meta_t) ?(generate_init = false) trig_args (m3_stm
 	(* we update the corresponding output tier. *)
 	let statement_expr =
 	    let coll_update_statement = 
-            if ( (not (Debug.active "DEBUG-DM-WITH-M3") ) || trig_args = [] ) then
+            if ( (not (Debug.active "DEBUG-DM-LEFT") ) || trig_args = [] || update_type = Plan.ReplaceStmt) then
                 coll_update_expr
             else
                 let dummy_statement =

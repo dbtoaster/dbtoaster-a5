@@ -290,6 +290,36 @@ declare_arithmetic_function "max"
       in List.fold_left max start (List.map (Types.type_cast cast_type) arglist)
    )
 
+
+(**
+   Returns sign of a value.
+   @param a_value       A value (Arithmetic ring expression)
+   @return              Sign of [a_value]
+*)
+let rec sign_of_value (a_value:value_t): value_t =
+  let one_expr = ValueRing.Val(ValueBase.one) in
+  let zero_expr = ValueRing.Val(ValueBase.zero) in
+  let sign_of_leaf (a_leaf: value_leaf_t): value_t = 
+    match a_leaf with
+      | AConst(c) ->
+        begin match c with
+          | CInt(number) -> if number > 0 then one_expr else if number < 0 then ValueRing.Neg(one_expr) else zero_expr
+          | CFloat(number) -> if number > 0. then one_expr else if number < 0. then ValueRing.Neg(one_expr) else zero_expr
+          | _ -> one_expr
+        end
+      | AVar(v) -> a_value
+      | AFn(_, _, _) -> one_expr
+  in
+  match a_value with
+    | ValueRing.Val(v) -> sign_of_leaf(v)
+    | ValueRing.Sum(l) -> ValueRing.Sum(List.map (sign_of_value) l)
+    | ValueRing.Prod(l)-> ValueRing.Prod(List.map (sign_of_value) l)
+    | ValueRing.Neg(a) ->
+      let sign_of_a = sign_of_value a in
+      match sign_of_a with
+        | ValueRing.Neg(x) -> sign_of_value x
+        | _                -> ValueRing.Neg(sign_of_a)
+
 (**** Evaluation ****)
 (**
    Evaluate the specified value to a constant

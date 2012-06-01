@@ -247,6 +247,13 @@ Debug.exec "LOG-M3"     (fun () -> activate_stage StagePrintM3);;
 Debug.exec "LOG-M3DM"   (fun () -> activate_stage StagePrintM3DomainMaintenance);;
 Debug.exec "LOG-K3"     (fun () -> activate_stage StagePrintK3);;
 Debug.exec "LOG-PARSER" (fun () -> let _ = Parsing.set_trace true in ());;
+Debug.exec "DEBUG-DM"   (fun () -> Debug.activate "DEBUG-DM-IVC"; Debug.activate "K3-NO-OPTIMIZE";
+  Debug.activate "DEBUG-DM-WITH-M3";
+  if not (Debug.active "DEBUG-DM-NO-LEFT") then
+    Debug.activate "DEBUG-DM-LEFT"
+  else
+    Debug.activate "M3TOK3-GENERATE-INIT"
+);;
 
 (* If we're compiling to a binary (i.e., the second-stage compiler is being
    invoked), then we need to store the compiler output in a temporary file.
