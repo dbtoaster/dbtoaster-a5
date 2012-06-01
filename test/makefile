@@ -1,8 +1,19 @@
 
+include ../makefile.config
+
 DBTOASTER_TOP=../bin/dbtoaster_unit
 UNIT_TEST=sh -c 'echo ==== $$1 ====; $(DBTOASTER_TOP) $$1' --
-FAST_QUERY_TEST=scripts/query_test.rb -d weak-expr-equiv
-QUERY_TEST="scripts/query_test.rb"
+
+QUERY_TEST := scripts/query_test.rb -t interpreter
+
+ifeq ($(COMPILE_SCALA), 1)
+	QUERY_TEST += -t scala
+endif
+ifeq ($(COMPILE_CPP), 1)
+	QUERY_TEST += -t cpp
+endif
+
+FAST_QUERY_TEST=$(QUERY_TEST) -d weak-expr-equiv
 ERROR_TEST=scripts/error_test.sh
 DATA_FILES=$(shell echo \
 	../../../experiments/data/employee/*.dat\

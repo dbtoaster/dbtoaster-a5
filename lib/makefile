@@ -1,11 +1,13 @@
 
+include ../makefile.config
+
 all: dependencies
 
 dependencies:
 
 runtimelibs: 
 	@make -C dbt_ocaml
-	@make -C dbt_scala
+	@if [ COMPILE_SCALA = 1 ] ; then make -C dbt_scala; fi
 
 clean:
 	make -C dbt_ocaml clean

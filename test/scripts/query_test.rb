@@ -183,13 +183,15 @@ end
 class ScalaUnitTest < GenericUnitTest
   def run
     unless $skip_compile then
-	  File.delete("#{$dbt_path}/bin/#{@qname}.jar") if File::exists?("#{$dbt_path}/bin/#{@qname}.jar");
+    Dir.mkdir "bin/queries" unless File::exists? "bin/queries";
+	  File.delete("bin/queries/#{@qname}.jar") if 
+	       File::exists?("bin/queries/#{@qname}.jar");
       compile_cmd = 
         "OCAMLRUNPARAM='#{$ocamlrunparam}';" +
         (dbt_base_cmd + [
         "-l","scala",
-        "-o","#{$dbt_path}/bin/#{@qname}.scala",
-        "-c","#{$dbt_path}/bin/#{@qname}",
+        "-o","bin/queries/#{@qname}.scala",
+        "-c","bin/queries/#{@qname}",
       ]).join(" ") + "  2>&1";
       starttime = Time.now
       system(compile_cmd) or raise "Compilation Error";
@@ -198,7 +200,7 @@ class ScalaUnitTest < GenericUnitTest
     end
     return if $compile_only;
     starttime = Time.now;
-    IO.popen("scala -classpath \"#{$dbt_path}/bin/#{@qname}.jar;lib/dbt_scala/dbtlib.jar\" org.dbtoaster.RunQuery",
+    IO.popen("scala -classpath \"bin/queries/#{@qname}.jar;lib/dbt_scala/dbtlib.jar\" org.dbtoaster.RunQuery",
              "r") do |qin|
       output = qin.readlines;
       endtime = Time.now;

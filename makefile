@@ -1,4 +1,4 @@
-include makefile.inc
+include makefile.inc 
 
 FILES=\
 	src/util/Debug\
@@ -103,8 +103,8 @@ OPT_FLAGS +=\
 
 #################################################
 
-all: versioncheck bin/dbtoaster_top bin/dbtoaster_debug bin/dbtoaster\
-     runtimelibs
+all: makefile.config versioncheck bin/dbtoaster_top bin/dbtoaster_debug \
+		 bin/dbtoaster runtimelibs
 
 versioncheck:
 	@if [ $(shell ocaml -vnum | \
@@ -195,6 +195,10 @@ makefile.deps: makefile $(patsubst %,%.ml,$(BASE_FILES))
 	@$(OCAMLDEP) $(patsubst %, -I %,$(DIRS)) \
 			$(patsubst %,%.ml,$(BASE_FILES)) > $@
 
+makefile.config:
+	@echo Initializing local configuration file
+	@cp src/misc/makefile.config.default makefile.config
+
 include makefile.deps
 include makefile.parserdeps
 
@@ -224,4 +228,3 @@ distclean: clean
 
 .PHONY: all clean distclean test states doc runtimelibs fast querytest queries\
         versioncheck
-

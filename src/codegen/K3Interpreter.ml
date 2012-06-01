@@ -882,7 +882,7 @@ struct
           (FileMultiplexer.create ()) stream_sources
         in
         let tlq_access = List.map (fun (q_name, q_expr, q_eval) ->
-          print_endline ("EXPRESSION:"^(K3.nice_code_of_expr q_expr));
+          (* print_endline ("EXPRESSION:"^(K3.nice_code_of_expr q_expr));*)
           let q_access_f = get_eval (Some(q_expr)) q_eval in
             (q_name, (fun db -> q_access_f ((Env.make [] []),[]) db))
         ) toplevel_queries
