@@ -3,8 +3,6 @@ package org.dbtoaster.dbtoasterlib {
     sealed trait K3Tuple {
       def toList: List[Any]
       def append[V](v: V): K3Tuple
-      
-      //type appendType = 
     }
 
     final case class K3TupleCons[H, T <: K3Tuple](head: H, tail: T) extends K3Tuple {

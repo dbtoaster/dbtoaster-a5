@@ -1,4 +1,5 @@
 import org.dbtoaster.dbtoasterlib.dbtoasterExceptions._
+import xml._
 
 package org.dbtoaster.dbtoasterlib {
 
@@ -20,7 +21,7 @@ package org.dbtoaster.dbtoasterlib {
 
     trait Index[K, V] {
       def update(keyVal: Tuple2[K, V]): Unit
-	  def remove(key: K): Unit
+      def remove(key: K): Unit
       def slice[PK](keyPart: PK): Map[K, V]
     }
 
@@ -34,7 +35,6 @@ package org.dbtoaster.dbtoasterlib {
       }
 
       override def toString(): String = v.toString
-      def toXML(): String = v.toString
     }
 
     // KC = type of the complete key
@@ -51,15 +51,15 @@ package org.dbtoaster.dbtoasterlib {
           case None => index += ((keyPart, Map[K, V](keyVal)))
         }
       }
-	  
-	  def remove(key: K): Unit = {
-		val keyPart = project(key)
-		
-		index.get(keyPart) match {
-		  case Some(m) => m -= key
-		  case None => throw new ShouldNotHappenError("deletion of a non-existant key")
-		}
-	  }
+
+      def remove(key: K): Unit = {
+        val keyPart = project(key)
+
+        index.get(keyPart) match {
+          case Some(m) => m -= key
+          case None => throw new ShouldNotHappenError("deletion of a non-existant key")
+        }
+      }
 
       def slice[PK2](keyPart: PK2): Map[K, V] = {
         index.get(keyPart.asInstanceOf[PK]) match {
@@ -94,14 +94,14 @@ package org.dbtoaster.dbtoasterlib {
           }
         }
       }
-	  
-	  def remove(key: K): Unit = {
-		elems -= key
-		sndIdx match {
-		  case Some(x) => x foreach { case (k, v) => v.remove(key) }
-		  case None => ()
-		}
-	  }
+
+      def remove(key: K): Unit = {
+        elems -= key
+        sndIdx match {
+          case Some(x) => x foreach { case (k, v) => v.remove(key) }
+          case None => ()
+        }
+      }
 
       def foreach(f: Tuple2[K, V] => Unit): Unit = elems.foreach(f)
 
@@ -139,16 +139,23 @@ package org.dbtoaster.dbtoasterlib {
       override def toString = {
         elems.foldLeft("") {
           case (str, (k, v)) =>
-            try {
-              str + "<item>" + (k.asInstanceOf[Product].productIterator.foldLeft((0, "")) { case ((i, str), k) => (i + 1, str + "<__a" + i + ">" + k + "</__a" + i + ">") })._2 + "<__av>" + v + "</__av></item>\n"
+            str + k + " -> " + v + sys.props("line.separator")
+        }
+      }
+
+      def toXML(): List[Elem] = {
+        elems.foldLeft(List[Elem]()) {
+          case (l, (k, v)) =>
+            (try {
+              val keyXML: List[xml.Elem] = (k.asInstanceOf[Product].productIterator.foldLeft((0, List[xml.Elem]())) { case ((i, l), k) => (i + 1, <xml>{ k }</xml>.copy(label = ("__a" + i)) :: l) })._2
+              <item> { keyXML } <__av>{ v }</__av></item>
             } catch {
-              case e: java.lang.ClassCastException => str + "<item><__a0>" + k + "</__a0><__av>" + v + "</__av></item>\n"
-            }
+              case e: java.lang.ClassCastException => <item><__a0>{ k }</__a0><__av>{ v }</__av></item>
+            }) :: l
         }
       }
 
       def toPersistentCollection(): K3PersistentCollection[K, V] = this
-
     }
 
     class K3FullPersistentCollection[K1, K2, V](felems: Map[K1, K3PersistentCollection[K2, V]], fsndIdx: Option[Map[String, Index[K1, K3PersistentCollection[K2, V]]]]) extends K3PersistentCollection[K1, K3PersistentCollection[K2, V]](felems, fsndIdx) {
@@ -158,13 +165,13 @@ package org.dbtoaster.dbtoasterlib {
           case None => felems += ((inKey, new K3PersistentCollection[K2, V](Map((outKey -> value)), None)))
         }
       }
-	  
-	  def remove(inKey: K1, outKey: K2): Unit = {
-	    felems.get(inKey) match {
+
+      def remove(inKey: K1, outKey: K2): Unit = {
+        felems.get(inKey) match {
           case Some(outerMap) => outerMap.remove(outKey)
           case None => throw new ShouldNotHappenError("deletion of a non-existant element")
         }
-	  }
+      }
     }
 
     // Note that intermediate collections can have different values with the same key

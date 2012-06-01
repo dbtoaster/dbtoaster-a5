@@ -613,9 +613,12 @@ struct
         "def get" ^ n ^ "():" ^ (string_of_type ct) ^ " = {" ^ c ^ "}"
       ) tlqs))
     in
-    let print_results = "def printResults(): Unit = { " ^ 
-      (make_list ~sep:";" ~parens:("",";") (List.map (fun (x, _, (c, ct)) -> "println(\"<" ^ 
-        x ^ ">\n\"); println(get" ^ x ^ "()); println(\"\n</" ^ x ^ ">\n\");") tlqs)) ^ 
+    let print_results = "def printResults(): Unit = { " ^
+      "val pp = new PrettyPrinter(80, 2);" ^
+      (make_list ~sep:";" ~parens:("",";") (List.map (fun (x, _, (c, ct)) -> 
+        match ct with
+        | Collection(_, _, _) -> "println(pp.format(<" ^ x ^ ">{ get" ^ x ^ "().toXML() }</" ^ x ^ ">))"
+        | _ -> "println(pp.format(<" ^ x ^ ">{ get" ^ x ^ "() }</" ^ x ^ ">))") tlqs)) ^ 
       " }" in
     let str_schema =
       let make_type_list t: string = string_of_tuple_type (List.map (fun (n, t) -> string_of_type (map_base_type t)) t) in
@@ -665,7 +668,7 @@ struct
           (sndIdx id is str_val_t) ^ ") /* full */"
       ) schemas))
     in
-    let run = "def run(onEventProcessedHandler: Unit => Unit = (_ => ())): Unit = { fillTables(); dispatcher(Some(StreamEvent(SystemInitialized, 0, \"\", List())), onEventProcessedHandler) }"
+    let run = "def run(onEventProcessedHandler: Unit => Unit = (_ => ())): Unit = { fillTables(); dispatcher(StreamEvent(SystemInitialized, 0, \"\", List()), onEventProcessedHandler) }"
     in
     let imports = (make_list ~sep:";" ~parens:("",";") (List.map (fun x -> "import " ^ x)
       [ 
@@ -676,12 +679,13 @@ struct
         "org.dbtoaster.dbtoasterlib.dbtoasterExceptions._";
         "org.dbtoaster.dbtoasterlib.ImplicitConversions._";
         "org.dbtoaster.dbtoasterlib.StdFunctions._";
-        "scala.collection.mutable.Map"
+        "scala.collection.mutable.Map";
+        "xml._";
       ])
     )
     in
     let dispatcher = 
-      "def dispatcher(event: Option[StreamEvent], onEventProcessedHandler: Unit => Unit): Unit = {" ^ 
+      "def dispatcher(event: DBTEvent, onEventProcessedHandler: Unit => Unit): Unit = {" ^ 
       "event match { " ^
       (make_list ~parens:("",";") ~sep:";" 
         (List.map (fun x -> 
@@ -692,13 +696,13 @@ struct
                 | Schema.InsertEvent(rel, vars, tpe) -> ("InsertTuple", "Insert", rel, vars)
                 | Schema.DeleteEvent(rel, vars, tpe) -> ("DeleteTuple", "Delete", rel, vars)
                 | Schema.SystemInitializedEvent -> ("SystemInitialized", "SystemInitialized", "", []) in
-              "case Some(StreamEvent(" ^ event_type ^ ", o, \"" ^ rel ^ "\", " ^ 
+              "case StreamEvent(" ^ event_type ^ ", o, \"" ^ rel ^ "\", " ^ 
               (make_list ~parens:("List(", ")") (List.map (fun (n, t) -> 
-              "(var_" ^ n ^ ": " ^ (string_of_type (map_base_type t)) ^ ")") vars)) ^ ")) => on" ^ 
+              "(var_" ^ n ^ ": " ^ (string_of_type (map_base_type t)) ^ ")") vars)) ^ ") => on" ^ 
               trigger_type ^ rel ^ (make_list (List.map (fun (n, t) -> "var_" ^ n) vars))
           | t -> debugfail None ("Trigger expected but found " ^ (string_of_type t))
         )) triggers)) 
-      ^ "case None => ();"
+      ^ "case EndOfStream => ();"
       ^ "case _ => throw ShouldNotHappenError(\"Event could not be dispatched: \" + event)"
       ^ "} "
       ^ "onEventProcessedHandler();"

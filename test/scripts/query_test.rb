@@ -180,6 +180,74 @@ end
 #  end
 #end
 
+class ScalaUnitTest < GenericUnitTest
+  def run
+    unless $skip_compile then
+	  File.delete("#{$dbt_path}/bin/#{@qname}.jar") if File::exists?("#{$dbt_path}/bin/#{@qname}.jar");
+      compile_cmd = 
+        "OCAMLRUNPARAM='#{$ocamlrunparam}';" +
+        (dbt_base_cmd + [
+        "-l","scala",
+        "-o","#{$dbt_path}/bin/#{@qname}.scala",
+        "-c","#{$dbt_path}/bin/#{@qname}",
+      ]).join(" ") + "  2>&1";
+      starttime = Time.now
+      system(compile_cmd) or raise "Compilation Error";
+      print "(Compile: #{(Time.now - starttime).to_i}s) "
+      $stdout.flush;
+    end
+    return if $compile_only;
+    starttime = Time.now;
+    IO.popen("scala -classpath \"#{$dbt_path}/bin/#{@qname}.jar;lib/dbt_scala/dbtlib.jar\" org.dbtoaster.RunQuery",
+             "r") do |qin|
+      output = qin.readlines;
+      endtime = Time.now;
+      output = output.map { |l| l.chomp.strip }.join("");
+      @runtime = (endtime - starttime).to_f;
+      if(/<([^>]*)>(.*)<\/[^>]*>/ =~ output) then
+		query = $1;
+        output = $2;
+        case @toplevels[query][:type]
+          when :singleton then @toplevels[query][:result] = output.strip.to_f;
+          when :onelevel then
+            tok = Tokenizer.new(output, /<\/?[^>]+>|[^<]+/);
+            @toplevels[query][:result] = Hash.new;
+            loop do
+              tok.tokens_up_to(/<item[^>]*>/);
+              break unless /<item[^>]*>/ =~ tok.last;
+              fields = Hash.new("");
+              curr_field = nil;
+              tok.tokens_up_to("</item>").each do |t|
+                case t
+                  when /<\/.*>/ then curr_field = nil;
+                  when /<(.*)>/ then curr_field = $1;
+                  else 
+                    if curr_field then 
+                      fields[curr_field] = fields[curr_field] + t 
+                    end
+                end
+              end
+              keys = fields.keys.clone;
+              keys.delete("__av");
+              @toplevels[query][:result][
+                keys.
+                  map { |k| k[3..-1].to_i }.
+                  sort.
+                  map { |k| fields["__a#{k}"].to_i }
+              ] = fields["__av"].to_f unless fields["__av"].to_f == 0.0
+            end
+          else nil
+        end
+      else raise "Runtime Error"
+      end;
+    end
+  end
+
+  def to_s
+    "Scala Code generator"
+  end
+end
+
 class InterpreterUnitTest < GenericUnitTest
   def run
     cmd = "OCAMLRUNPARAM='#{$ocamlrunparam}';"+
@@ -253,6 +321,7 @@ GetoptLong.new(
       case arg
         when 'cpp'         then tests.push CppUnitTest
         when 'interpreter' then tests.push InterpreterUnitTest
+		when 'scala'       then tests.push ScalaUnitTest
         when 'all'         then tests = [CppUnitTest, InterpreterUnitTest]
       end
     when '-d' then $debug_flags.push(arg)

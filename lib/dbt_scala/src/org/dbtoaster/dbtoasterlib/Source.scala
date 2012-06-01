@@ -15,13 +15,13 @@ package org.dbtoaster.dbtoasterlib {
     abstract class Source() {
       def init(): Unit
       def hasInput(): Boolean
-      def nextInput(): Option[StreamEvent]
+      def nextInput(): DBTEvent
 	  
-	  def forEachEvent(f: StreamEvent => Unit): Unit = {
+	  def forEachEvent(f: DBTEvent => Unit): Unit = {
 		val event = nextInput()
 		event match {
-			case Some(e) => f(e); forEachEvent(f)
-			case None => ()
+			case StreamEvent(_, _, _, _) => f(event); forEachEvent(f)
+			case EndOfStream => ()
 		}
 	  }
     }
@@ -34,7 +34,7 @@ package org.dbtoaster.dbtoasterlib {
     }
 
     /**
-     * Reads events from an InputStream, assumes that the events are ordered
+     * Reads events from an InputStream, assumes that the events are DBTd
      *
      */
     case class DelimitedStreamSource(in: InputStream, adaptors: List[StreamAdaptor], delim: String) extends Source {
@@ -46,21 +46,21 @@ package org.dbtoaster.dbtoasterlib {
 
       def hasInput(): Boolean = scanner.hasNextLine() || !eventQueue.isEmpty
 
-      def nextInput(): Option[StreamEvent] = {
+      def nextInput(): DBTEvent = {
         if (eventQueue.isEmpty && scanner.hasNextLine()) {
           val eventStr: String = scanner.nextLine()
           adaptors.foreach(adaptor => adaptor.processTuple(eventStr).foreach(x => eventQueue.enqueue(x)))
         }
 
         if (eventQueue.isEmpty)
-          None
+          EndOfStream
         else
-          Some(eventQueue.dequeue())
+          eventQueue.dequeue()
       }
     }
 
     /**
-     * Multiplexes a list of sources while preserving the ordering of events (assuming
+     * Multiplexes a list of sources while preserving the orDBT of events (assuming
      * that the sources themselves are ordered)
      *
      */
@@ -72,15 +72,15 @@ package org.dbtoaster.dbtoasterlib {
 
       def hasInput(): Boolean = !sources.forall(s => !s.hasInput()) || !queue.isEmpty
 
-      def nextInput(): Option[StreamEvent] = {
+      def nextInput(): DBTEvent = {
         // Make sure to get an event from every source and return the one with the lowest
         // order number
         sources.foreach(x => {
           def getEvent(): Unit = {
             if (x.hasInput()) {
               x.nextInput() match {
-                case Some(e) => queue.enqueue(e)
-                case None => getEvent()
+                case e @ StreamEvent(_, _, _, _) => queue.enqueue(e)
+                case EndOfStream => getEvent()
               }
             } else ()
           }
@@ -88,9 +88,9 @@ package org.dbtoaster.dbtoasterlib {
         })
 
         if (!queue.isEmpty)
-          Some(queue.dequeue())
+          queue.dequeue()
         else
-          None
+          EndOfStream
       }
     }
   }

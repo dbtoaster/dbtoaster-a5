@@ -117,14 +117,15 @@ let cpp_compiler = {
 let scala_compiler = {
    extension = ".scala";
    compile = (fun in_file_name out_file_name ->
-	let scalac = "scalac" in
+    let out = out_file_name ^ ".jar" in
+    let scalac = "scalac" in
 
     let flags = [
       ""; "-deprecation";
       "-unchecked";
       "-sourcepath";"lib/dbt_scala/src";
       "-classpath";"lib/dbt_scala/dbtlib.jar";
-      "-d"; out_file_name ^ ".jar";
+      "-d"; out;
     ] in
 
     let sourcefiles = [
@@ -133,9 +134,10 @@ let scala_compiler = {
     ] in
 
     let args = flags @ sourcefiles in
-	Debug.print "LOG-SCALA" (fun () -> (
-	  ListExtras.string_of_list ~sep:" " (fun x->x) args));
-    let _ = Unix.system ("rm \"" ^ out_file_name ^ ".jar\"") in
+    Debug.print "LOG-SCALA" (fun () -> (
+      ListExtras.string_of_list ~sep:" " (fun x->x) args));
+    if Sys.file_exists out then
+      Sys.remove out;
     Unix.execvp scalac (Array.of_list args)
    )
 };;

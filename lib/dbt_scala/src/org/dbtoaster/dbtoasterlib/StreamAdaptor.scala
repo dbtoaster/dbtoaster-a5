@@ -12,7 +12,7 @@ package org.dbtoaster.dbtoasterlib {
     abstract trait EventType
     case object InsertTuple extends EventType
     case object DeleteTuple extends EventType
-	case object SystemInitialized extends EventType
+    case object SystemInitialized extends EventType
 
     abstract trait ColumnType
     case object IntColumn extends ColumnType
@@ -21,12 +21,12 @@ package org.dbtoaster.dbtoasterlib {
     case object DateColumn extends ColumnType
     case object HashColumn extends ColumnType
 
-	abstract trait StreamEventType
+    abstract trait DBTEvent
     case class StreamEvent(eventType: EventType, order: Int, relation: String, vals: List[Any])
-      extends Ordered[StreamEvent] with StreamEventType {
+      extends Ordered[StreamEvent] with DBTEvent {
       def compare(other: StreamEvent) = other.order.compareTo(this.order)
     }
-	case object EndOfStream
+    case object EndOfStream extends DBTEvent
 
     def createAdaptor(adaptorType: String, relation: String, params: List[(String, String)]): StreamAdaptor = {
       println("Create Adaptor: " + adaptorType + ", " + relation + ", " + params)
@@ -60,48 +60,48 @@ package org.dbtoaster.dbtoasterlib {
     abstract class StreamAdaptor {
       def processTuple(row: String): List[StreamEvent]
     }
-	
-	class lineitemAdaptor(relation: String, deletions: String = "false") extends CSVAdaptor(relation, fields = "\\|", eventtype = "insert", 
-	  schema = "int,int,int,int,float,float,float,float,hash,hash,date,date,date,hash,hash,hash") {}
-	class customerAdaptor(relation: String, deletions: String = "false") extends CSVAdaptor(relation, fields = "\\|", eventtype = "insert", 
-	  schema = "int,hash,hash,int,hash,float,hash,hash") {}	
-	class ordersAdaptor(relation: String, deletions: String = "false") extends CSVAdaptor(relation, fields = "\\|", eventtype = "insert", 
-	  schema = "int,int,hash,float,date,hash,hash,int,hash") {}	
-	class partAdaptor(relation: String, deletions: String = "false") extends CSVAdaptor(relation, fields = "\\|", eventtype = "insert", 
-	  schema = "int,hash,hash,hash,hash,int,hash,float,hash") {}	
-	class partsuppAdaptor(relation: String, deletions: String = "false") extends CSVAdaptor(relation, fields = "\\|", eventtype = "insert", 
-	  schema = "int,int,int,float,hash") {}	
-	class nationAdaptor(relation: String, deletions: String = "false") extends CSVAdaptor(relation, fields = "\\|", eventtype = "insert", 
-	  schema = "int,hash,int,hash") {}
-	class regionAdaptor(relation: String, deletions: String = "false") extends CSVAdaptor(relation, fields = "\\|", eventtype = "insert", 
-	  schema = "int,hash,hash") {}
-	class supplierAdaptor(relation: String, deletions: String = "false") extends CSVAdaptor(relation, fields = "\\|", eventtype = "insert", 
-	  schema = "int,hash,hash,int,hash,float,hash") {}
-	
+
+    class lineitemAdaptor(relation: String, deletions: String = "false") extends CSVAdaptor(relation, fields = "\\|", eventtype = "insert",
+      schema = "int,int,int,int,float,float,float,float,hash,hash,date,date,date,hash,hash,hash") {}
+    class customerAdaptor(relation: String, deletions: String = "false") extends CSVAdaptor(relation, fields = "\\|", eventtype = "insert",
+      schema = "int,hash,hash,int,hash,float,hash,hash") {}
+    class ordersAdaptor(relation: String, deletions: String = "false") extends CSVAdaptor(relation, fields = "\\|", eventtype = "insert",
+      schema = "int,int,hash,float,date,hash,hash,int,hash") {}
+    class partAdaptor(relation: String, deletions: String = "false") extends CSVAdaptor(relation, fields = "\\|", eventtype = "insert",
+      schema = "int,hash,hash,hash,hash,int,hash,float,hash") {}
+    class partsuppAdaptor(relation: String, deletions: String = "false") extends CSVAdaptor(relation, fields = "\\|", eventtype = "insert",
+      schema = "int,int,int,float,hash") {}
+    class nationAdaptor(relation: String, deletions: String = "false") extends CSVAdaptor(relation, fields = "\\|", eventtype = "insert",
+      schema = "int,hash,int,hash") {}
+    class regionAdaptor(relation: String, deletions: String = "false") extends CSVAdaptor(relation, fields = "\\|", eventtype = "insert",
+      schema = "int,hash,hash") {}
+    class supplierAdaptor(relation: String, deletions: String = "false") extends CSVAdaptor(relation, fields = "\\|", eventtype = "insert",
+      schema = "int,hash,hash,int,hash,float,hash") {}
+
     class CSVAdaptor(relation: String, eventtype: String = "insert", deletions: String = "false", schema: String = "", fields: String = ";") extends StreamAdaptor {
       val eventType = if (eventtype == "insert") InsertTuple else DeleteTuple
-	  val hasDeletions = (deletions == "true")
-	
-	  def parseColType(col: String): ColumnType = {
-	    col match {
-	      case "int" => IntColumn
-	      case "float" => FloatColumn
-	      case "order" => OrderColumn
-	      case "date" => DateColumn
-	      case "hash" => HashColumn
-	    }
+      val hasDeletions = (deletions == "true")
+
+      def parseColType(col: String): ColumnType = {
+        col match {
+          case "int" => IntColumn
+          case "float" => FloatColumn
+          case "order" => OrderColumn
+          case "date" => DateColumn
+          case "hash" => HashColumn
+        }
       }
-	  
-	  val colTypes: List[ColumnType] = schema.split(",").iterator.toList.map(x => parseColType(x))
-	  
+
+      val colTypes: List[ColumnType] = schema.split(",").iterator.toList.map(x => parseColType(x))
+
       def processTuple(row: String): List[StreamEvent] = {
         val cols = row.split(fields).toList
-        
-        val (valCols, insDel, order) = (if(hasDeletions) {
-          (cols.drop(2), (if(cols(1) == "1") InsertTuple else DeleteTuple), cols(0).toInt)
+
+        val (valCols, insDel, order) = (if (hasDeletions) {
+          (cols.drop(2), (if (cols(1) == "1") InsertTuple else DeleteTuple), cols(0).toInt)
         } else (cols, eventType, 0))
 
-        val vals:List[Any] = (valCols zip colTypes).map {
+        val vals: List[Any] = (valCols zip colTypes).map {
           x =>
             x match {
               case (v, IntColumn) => v.toInt
@@ -109,7 +109,7 @@ package org.dbtoaster.dbtoasterlib {
               case (v, OrderColumn) => v.toInt
               case (v, DateColumn) => v.replace("-", "").toInt
               case (v, HashColumn) => v //v.hashCode().toInt
-			  case _ => ""
+              case _ => ""
             }
         }
         List(StreamEvent(insDel, order, relation, vals))
