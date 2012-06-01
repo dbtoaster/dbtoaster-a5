@@ -20,6 +20,7 @@ package org.dbtoaster.dbtoasterlib {
 
     trait Index[K, V] {
       def update(keyVal: Tuple2[K, V]): Unit
+	  def remove(key: K): Unit
       def slice[PK](keyPart: PK): Map[K, V]
     }
 
@@ -50,6 +51,15 @@ package org.dbtoaster.dbtoasterlib {
           case None => index += ((keyPart, Map[K, V](keyVal)))
         }
       }
+	  
+	  def remove(key: K): Unit = {
+		val keyPart = project(key)
+		
+		index.get(keyPart) match {
+		  case Some(m) => m -= key
+		  case None => throw new ShouldNotHappenError("deletion of a non-existant key")
+		}
+	  }
 
       def slice[PK2](keyPart: PK2): Map[K, V] = {
         index.get(keyPart.asInstanceOf[PK]) match {
@@ -84,6 +94,14 @@ package org.dbtoaster.dbtoasterlib {
           }
         }
       }
+	  
+	  def remove(key: K): Unit = {
+		elems -= key
+		sndIdx match {
+		  case Some(x) => x foreach { case (k, v) => v.remove(key) }
+		  case None => ()
+		}
+	  }
 
       def foreach(f: Tuple2[K, V] => Unit): Unit = elems.foreach(f)
 
@@ -140,6 +158,13 @@ package org.dbtoaster.dbtoasterlib {
           case None => felems += ((inKey, new K3PersistentCollection[K2, V](Map((outKey -> value)), None)))
         }
       }
+	  
+	  def remove(inKey: K1, outKey: K2): Unit = {
+	    felems.get(inKey) match {
+          case Some(outerMap) => outerMap.remove(outKey)
+          case None => throw new ShouldNotHappenError("deletion of a non-existant element")
+        }
+	  }
     }
 
     // Note that intermediate collections can have different values with the same key

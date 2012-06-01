@@ -21,42 +21,17 @@ package org.dbtoaster.dbtoasterlib {
     case object DateColumn extends ColumnType
     case object HashColumn extends ColumnType
 
+	abstract trait StreamEventType
     case class StreamEvent(eventType: EventType, order: Int, relation: String, vals: List[Any])
-      extends Ordered[StreamEvent] {
+      extends Ordered[StreamEvent] with StreamEventType {
       def compare(other: StreamEvent) = other.order.compareTo(this.order)
     }
-
-    /*
-let li_schema =
-   "int,int,int,int,int,float,float,float,hash,hash,date,date,date,hash,hash,hash"
-
-let lineitem_params = csv_params "|" li_schema "insert"
-let order_params    = csv_params "|" "int,int,hash,float,date,hash,hash,int,hash" "insert"
-let part_params     = csv_params "|" "int,hash,hash,hash,hash,int,hash,float,hash" "insert"
-let partsupp_params = csv_params "|" "int,int,int,float,hash" "insert"
-let customer_params = csv_params "|" "int,hash,hash,int,hash,float,hash,hash" "insert"
-let supplier_params = csv_params "|" "int,hash,hash,int,hash,float,hash" "insert"
-let nation_params   = csv_params "|" "int,hash,int,hash" "insert"
-let region_params   = csv_params "|" "int,hash,hash" "insert"
-
-     */
-
-    val tpchparams = Map(
-      "lineitem" -> List(("fields", "\\|"), ("eventtype", "insert"), ("schema", "int,int,int,int,int,float,float,float,hash,hash,date,date,date,hash,hash,hash")),
-      "customer" -> List(("fields", "\\|"), ("eventtype", "insert"), ("schema", "int,hash,hash,int,hash,float,hash,hash")),
-      "orders" -> List(("fields", "\\|"), ("eventtype", "insert"), ("schema", "int,int,hash,float,date,hash,hash,int,hash")),
-      "part" -> List(("fields", "\\|"), ("eventtype", "insert"), ("schema", "int,hash,hash,hash,hash,int,hash,float,hash")),
-      "partsupp" -> List(("fields", "\\|"), ("eventtype", "insert"), ("schema", "int,int,int,float,hash")),
-      "nation" -> List(("fields", "\\|"), ("eventtype", "insert"), ("schema", "int,hash,int,hash")),
-      "region" -> List(("fields", "\\|"), ("eventtype", "insert"), ("schema", "int,hash,hash")),
-      "supplier" -> List(("fields", "\\|"), ("eventtype", "insert"), ("schema", "int,hash,hash,int,hash,float,hash")))
+	case object EndOfStream
 
     def createAdaptor(adaptorType: String, relation: String, params: List[(String, String)]): StreamAdaptor = {
       println("Create Adaptor: " + adaptorType + ", " + relation + ", " + params)
-      (adaptorType, tpchparams.get(adaptorType)) match {
-        case ("csv", _) => createCSVAdaptor(relation, params)
-        case ("orderbook", _) => createOrderbookAdaptor(relation, params)
-        case (_, Some(x)) => createCSVAdaptor(relation, (x ::: params))
+      adaptorType match {
+        case "orderbook" => createOrderbookAdaptor(relation, params)
         case _ => throw new IllegalArgumentException("No adaptor for: " + adaptorType)
       }
     }
@@ -82,53 +57,49 @@ let region_params   = csv_params "|" "int,hash,hash" "insert"
       parseParams(params)
     }
 
-    def createCSVAdaptor(relation: String, params: List[(String, String)]): CSVAdaptor = {
-      var eventType: Option[EventType] = None
-      var deletions: Boolean = false
-      var colTypes: List[ColumnType] = List()
-      var delimiter: Option[String] = None
-
-      def parseParams(params: List[(String, String)]): CSVAdaptor = params match {
-        case x :: xs => {
-          x match {
-            case ("fields", d) => delimiter = Some(d)
-            case ("schema", s) => {
-
-              def parseColType(col: String): Unit = {
-                colTypes = colTypes ::: List(col match {
-                  case "int" => IntColumn
-                  case "float" => FloatColumn
-                  case "order" => OrderColumn
-                  case "date" => DateColumn
-                  case "hash" => HashColumn
-                })
-              }
-
-              s.split(",").iterator.foreach(x => parseColType(x))
-            }
-            case ("eventtype", t) => eventType = Some(if (t == "insert") InsertTuple else DeleteTuple)
-            case ("deletions", t) => deletions = (t == "true")
-          }
-          parseParams(xs)
-        }
-        case Nil => new CSVAdaptor(relation, deletions, colTypes, delimiter.get)
-      }
-
-      parseParams(params)
-    }
-
     abstract class StreamAdaptor {
       def processTuple(row: String): List[StreamEvent]
     }
-
-    class CSVAdaptor(relation: String, deletions: Boolean, colTypes: List[ColumnType], delimiter: String) extends StreamAdaptor {
+	
+	class lineitemAdaptor(relation: String, deletions: String = "false") extends CSVAdaptor(relation, fields = "\\|", eventtype = "insert", 
+	  schema = "int,int,int,int,float,float,float,float,hash,hash,date,date,date,hash,hash,hash") {}
+	class customerAdaptor(relation: String, deletions: String = "false") extends CSVAdaptor(relation, fields = "\\|", eventtype = "insert", 
+	  schema = "int,hash,hash,int,hash,float,hash,hash") {}	
+	class ordersAdaptor(relation: String, deletions: String = "false") extends CSVAdaptor(relation, fields = "\\|", eventtype = "insert", 
+	  schema = "int,int,hash,float,date,hash,hash,int,hash") {}	
+	class partAdaptor(relation: String, deletions: String = "false") extends CSVAdaptor(relation, fields = "\\|", eventtype = "insert", 
+	  schema = "int,hash,hash,hash,hash,int,hash,float,hash") {}	
+	class partsuppAdaptor(relation: String, deletions: String = "false") extends CSVAdaptor(relation, fields = "\\|", eventtype = "insert", 
+	  schema = "int,int,int,float,hash") {}	
+	class nationAdaptor(relation: String, deletions: String = "false") extends CSVAdaptor(relation, fields = "\\|", eventtype = "insert", 
+	  schema = "int,hash,int,hash") {}
+	class regionAdaptor(relation: String, deletions: String = "false") extends CSVAdaptor(relation, fields = "\\|", eventtype = "insert", 
+	  schema = "int,hash,hash") {}
+	class supplierAdaptor(relation: String, deletions: String = "false") extends CSVAdaptor(relation, fields = "\\|", eventtype = "insert", 
+	  schema = "int,hash,hash,int,hash,float,hash") {}
+	
+    class CSVAdaptor(relation: String, eventtype: String = "insert", deletions: String = "false", schema: String = "", fields: String = ";") extends StreamAdaptor {
+      val eventType = if (eventtype == "insert") InsertTuple else DeleteTuple
+	  val hasDeletions = (deletions == "true")
+	
+	  def parseColType(col: String): ColumnType = {
+	    col match {
+	      case "int" => IntColumn
+	      case "float" => FloatColumn
+	      case "order" => OrderColumn
+	      case "date" => DateColumn
+	      case "hash" => HashColumn
+	    }
+      }
+	  
+	  val colTypes: List[ColumnType] = schema.split(",").iterator.toList.map(x => parseColType(x))
+	  
       def processTuple(row: String): List[StreamEvent] = {
-        // TODO: use fold instead of map and get rid of vars
-        val cols = row.split(delimiter).toList
+        val cols = row.split(fields).toList
         
-        val (valCols, insDel, order) = (if(deletions) {
+        val (valCols, insDel, order) = (if(hasDeletions) {
           (cols.drop(2), (if(cols(1) == "1") InsertTuple else DeleteTuple), cols(0).toInt)
-        } else (cols, InsertTuple, 0))
+        } else (cols, eventType, 0))
 
         val vals:List[Any] = (valCols zip colTypes).map {
           x =>
@@ -137,7 +108,7 @@ let region_params   = csv_params "|" "int,hash,hash" "insert"
               case (v, FloatColumn) => v.toDouble
               case (v, OrderColumn) => v.toInt
               case (v, DateColumn) => v.replace("-", "").toInt
-              case (v, HashColumn) => v.hashCode().toInt
+              case (v, HashColumn) => v //v.hashCode().toInt
 			  case _ => ""
             }
         }
@@ -150,7 +121,7 @@ let region_params   = csv_params "|" "int,hash,hash" "insert"
       val bids: Map[Int, OrderbookRow] = Map()
 
       case class OrderbookRow(t: Int, id: Int, brokerId: Int, volume: Double, price: Double) {
-        def toList: List[Any] = List[Any](t.toDouble, id.toDouble, brokerId.toDouble, volume, price)
+        def toList: List[Any] = List[Any](t.toDouble, id, brokerId, volume, price)
       }
 
       def processTuple(row: String): List[StreamEvent] = {

@@ -35,6 +35,7 @@ struct
   | External of string
   | Unit
   | Fn of argn_t * type_t * type_t
+  | ExtFn of string * type_t * type_t 
   | Tuple of type_t list
   | Collection of collection_type_t * type_t list * type_t
   | Trigger of Schema.event_t
@@ -47,6 +48,8 @@ struct
 
   let line_sep = "\n"
   let max_tuple_elems = 22
+  
+  let source_count = ref 0
   
   let list_split l n = 
     let rec _list_split l1 l2 n =
@@ -120,6 +123,7 @@ struct
     | External(s) -> s
     | Unit -> "Unit"
     | Fn(_, arg, ret) -> (string_of_type arg) ^ " => " ^ (string_of_type ret)
+    | ExtFn(_, arg, ret) -> (string_of_type arg) ^ " => " ^ (string_of_type ret)
     | Tuple(elems) -> (string_of_tuple_type (List.map string_of_type elems))
     | Collection(tpe, keys_t, val_t) -> 
       let type_string = match tpe with 
@@ -161,17 +165,18 @@ struct
     | K3.TTuple(tlist) -> Tuple(List.map map_type tlist)
     | K3.Collection(ctype) -> 
         begin match (map_type ctype) with 
-        | Tuple([]) -> Collection(Unknown, [], Unit)
+        | Tuple([]) -> Collection(Intermediate, [], Unit)
         | Tuple(klist) -> 
           Collection(Unknown, (List.rev (List.tl (List.rev klist))), 
             (List.hd (List.rev klist)))
-        | vtype -> Collection(Unknown, [],vtype)
+        | vtype -> Collection(Unknown, [], vtype)
         end
     | K3.Fn(argtlist,rett) -> Fn(ArgNTuple([]), map_type (List.hd argtlist), 
       map_type (K3.Fn(List.tl argtlist, rett)))
 
   let fn_ret_type fnt = match fnt with 
   | Fn(_, _, fnrett) -> fnrett
+  | ExtFn(_, _, fnrett) -> fnrett
   | _ -> debugfail None ("Function excpected found: " ^ (string_of_type fnt))
 
   type source_impl_t = source_code_t
@@ -190,6 +195,8 @@ struct
       | (Float, Int) -> ((num_op op_f), Float, None)
       | (Int, Float) -> ((num_op op_f), Float, None)
       | (Int, Int) -> ((num_op op_f), Int, None)
+      | (Int, Bool) -> ((num_op op_f), Int, None)
+      | (Bool, Int) -> ((num_op op_f), Int, None)
       | (_, _) -> 
           ((num_op op_f), Unit, 
           Some((string_of_type a) ^ " [" ^ op_f ^ "||" ^ op_b ^ "] " ^ 
@@ -203,8 +210,9 @@ struct
 
   let c_op op = (fun a b -> 
       match (a, b) with
-      | (Float, Float) -> ((num_op op), Bool, None)
-      | (Bool, Bool)   -> ((num_op op), Bool, None)
+      | (Float, Float) | (String, String) | (Bool, Bool) | (Int, Int)
+      | (Int, Float) | (Float, Int) -> 
+        ((num_op op), Bool, None)
       (* Sometimes there is K3 code that compares booleans to floats, so code
          is being generated to convert the boolean to a float
       *)
@@ -270,20 +278,17 @@ struct
         "; case _ => throw new IllegalArgumentException(\"boom\") }", Tuple(t))
 
   let singleton ?(expr = None) ((d,dt):code_t) (t:K3.type_t) : code_t =
-    if dt <> (map_type t) 
-    then debugfail expr "Type mismatch in singleton constructor"
-    else 
-      let kt, vt, v = 
-        match dt with
-        | Tuple(t) -> 
-          let vars = (list_vars "v._" (List.length t)) in
-          let kv, vv = list_split vars ((List.length vars) - 1) in
-          let kt, vt = list_split t ((List.length t) - 1) in
-          (kt, vt, make_tuple([make_tuple kv; List.hd vv]))
-        | _ -> [], [dt], "v"
-      in
-      let tpe = Collection(Intermediate, kt, List.hd vt) in
-      ("{ val v = " ^ d ^ ";" ^ (string_of_type tpe) ^ "(List(" ^ v ^ ")) }", tpe)
+    let kt, vt, v = 
+      match dt with
+      | Tuple(t) -> 
+        let vars = (list_vars "v._" (List.length t)) in
+        let kv, vv = list_split vars ((List.length vars) - 1) in
+        let kt, vt = list_split t ((List.length t) - 1) in
+        (kt, vt, make_tuple([make_tuple kv; List.hd vv]))
+      | _ -> [], [dt], "v"
+    in
+    let tpe = Collection(Intermediate, kt, List.hd vt) in
+    ("{ val v = " ^ d ^ ";" ^ (string_of_type tpe) ^ "(List(" ^ v ^ ")) }", tpe)
    
   let combine ?(expr = None) (a_code:code_t) (b_code:code_t): code_t =
     match (a_code, b_code) with 
@@ -318,6 +323,7 @@ struct
     | Fn(argsn, argst, rett) ->
       "(x:" ^ (string_of_type argt) ^ ") => { x match { case " ^ 
       (string_of_argn argsn) ^ " => {" ^ f ^ "} } }" 
+    | ExtFn(n, _, _) -> n ^ " _"
     | _ -> debugfail None "Expected a function"
 
   let wrap_function_key_val (kt:type_t list) (vt:type_t) fnt f: string = 
@@ -347,6 +353,7 @@ struct
       "(x:Tuple2[" ^ (string_of_type (Tuple(ktt))) ^ ", " ^ (string_of_type vtt) ^ 
       "]) => { x match { case " ^ (string_of_argn argsnkv) ^ 
       " => {" ^ f_body ^ "} } }" 
+    | ExtFn(n, _, _) -> n ^ " _"
     | _ -> debugfail None "Expected a function"
 
   let iterate ?(expr = None) ((fn,fnt):code_t) ((c, ct):code_t) : code_t =
@@ -355,21 +362,30 @@ struct
         (wrap_function_key_val kt vt fnt fn) ^ " }", Unit)
     | _ -> debugfail expr "Iteration of a non-collection"
 
-  let map_args_type args =       
+  let map_args_type args rt =       
     match args with
-    | K3.AVar(v, vt) -> (ArgN("var_" ^ v), map_type vt)
-    | K3.ATuple(tlist) -> (ArgNTuple(List.map (fun (v, _) -> ArgN("var_" ^ v)) tlist), 
-        Tuple(List.map (fun (_, t) -> map_type t) tlist))
+    | K3.AVar(v, vt) -> (ArgN("var_" ^ v), rt)
+    | K3.ATuple(tlist) -> (ArgNTuple(List.map (fun (v, _) -> ArgN("var_" ^ v)) tlist), rt)
   
   let lambda ?(expr = None) (args:K3.arg_t) ((b,bt):code_t) : code_t =
-    let argsn, argst = map_args_type args in
+    let argsn, argst = map_args_type args bt in
     (b, Fn(argsn, argst, bt))
 
   let assoc_lambda ?(expr = None) (arg1:K3.arg_t) (arg2:K3.arg_t) (b:code_t) : code_t =
     lambda arg1 (lambda arg2 b)
 	
   let external_lambda ?(expr = None) (name:K3.id_t) (args:K3.arg_t) (ret:K3.type_t) : code_t =
-    (name, map_type ret)
+    let strlen = String.length name in
+    let rec clean_name name i buffer: string =
+      if (strlen = i) then 
+        Buffer.contents buffer
+      else (
+        match name.[i] with
+        | '/' -> Buffer.add_string buffer "div"; clean_name name (i + 1) buffer
+        | c -> Buffer.add_char buffer c; clean_name name (i + 1) buffer
+      ) in
+    let _, argst = map_args_type args (map_type ret) in
+    ("", ExtFn(clean_name name 0 (Buffer.create 0), argst, map_type ret))
    
   let apply ?(expr = None) ((fn,fnt):code_t) ((arg,argt):code_t) : code_t =
     ("(" ^ (wrap_function argt fnt fn) ^ ").apply(" ^ arg ^ ")", fn_ret_type fnt)
@@ -513,15 +529,15 @@ struct
     (map ^ ".updateValue(" ^ (make_tuple (List.map fst inkey)) ^ ", " ^ v ^ conversion ^ ")",Unit)
 	
   let remove_in_map_element ?(expr = None) (map:K3.coll_id_t) (inkey:code_t list) : code_t =
-      ("", Unit)
+      (map ^ ".remove(" ^ (make_tuple (List.map fst inkey)) ^ ")", Unit)
   
   (* persistent collection id, out key -> remove *)
   let remove_out_map_element ?(expr = None) (map:K3.coll_id_t) (outkey:code_t list) : code_t =
-      ("", Unit)
+      (map ^ ".remove(" ^ (make_tuple (List.map fst outkey)) ^ ")", Unit)
   
   (* persistent collection id, in key, out key -> remove *)
   let remove_map_element ?(expr = None) (map:K3.coll_id_t) (inkey:code_t list) (outkey:code_t list) : code_t =
-      ("", Unit)
+      (map ^ ".remove(" ^ (make_tuple (List.map fst inkey)) ^ ", " ^ (make_tuple (List.map fst outkey)) ^ ")", Unit)
       
   (* unit operation which has no effect *)
   let unit_operation : code_t = ("()", Unit) 
@@ -540,16 +556,24 @@ struct
    
   let source (source:Schema.source_t) (adaptors:(Schema.adaptor_t * Schema.rel_t) list):
             (source_impl_t * code_t option * code_t option) =
+    let sc = source_count := !source_count + 1; string_of_int !source_count in 
     let string_of_framing_type framing = 
       match framing with
       | Schema.FixedSize(i) -> "FixedSize(" ^ (string_of_int i) ^ ")"
       | Schema.Delimited(str) -> "Delimited(\"" ^ str ^ "\")"
     in
     let adaptors_strings = (List.map (fun ((atype, akeys), (rel, _ , _)) -> 
+      match atype with
+      | "csv" -> "new CSVAdaptor(\"" ^ rel ^ "\", " ^ (make_list ~parens:("","") 
+        (List.map (fun (k, v) -> k ^ " = \"" ^ v ^ "\"") akeys)) ^ ")"
+      | "orders" | "part" | "partsupp" | "customer" | "supplier" | "nation" | "region" | "lineitem" -> 
+        "new " ^ atype ^ "Adaptor(\"" ^ rel ^ "\", " ^ (make_list ~parens:("","") 
+        (List.map (fun (k, v) -> k ^ " = \"" ^ v ^ "\"") akeys)) ^ ")"
+      | _ ->
           "createAdaptor(\"" ^ atype ^ "\", \"" ^ rel ^ "\", List" ^
             (make_list (List.map (fun (k,v) -> "(\"" ^ k ^ "\", \"" ^ v ^ "\")") akeys)) ^
           ")"
-       ) adaptors)
+    ) adaptors)
     in
     let source_init = 
       match source with 
@@ -565,16 +589,20 @@ struct
         "x => x match {" ^ 
         (make_list ~sep:";" ~parens:("",";") (List.map (fun (adaptor, (rel, vars, _)) -> 
           (*let k, v = (list_split (List.map (fun (n, t) -> "var_" ^ n) vars) ((List.length vars) - 1)) in*)
-          "case StreamEvent(InsertTuple, o, \"" ^ rel ^ "\", " ^ 
-          (make_list ~parens:("List(", ")") (List.map (fun (n, t) -> 
-            "(var_" ^ n ^ ": " ^ (string_of_type (map_base_type t)) ^ ")") vars)) ^ ") => " ^ rel ^ 
-            ".updateValue(" ^ (make_tuple (List.map (fun (n, t) -> "var_" ^ n) vars)) ^ ", 0)"
+          "case StreamEvent(InsertTuple, o, \"" ^ rel ^ "\", List" ^ 
+          let k = (make_list (List.map (fun (n, _) -> "var_" ^ n) vars)) in
+          let knt = (make_list (List.map (fun (n, t) -> "var_" ^ n ^ ":" ^ string_of_type (map_base_type t)) vars)) in
+          knt ^ ") => " ^ 
+          "if(" ^ rel ^ ".contains(" ^ k ^ ")) { val count = " ^ rel ^ ".lookup(" ^ k ^ ") + 1; " ^ 
+          rel ^ ".updateValue(" ^ k ^ ", count) } else { " ^
+          rel ^ ".updateValue(" ^ k ^ ", 1) }"
         ) adaptors)) ^
         "}"
       in
       ".forEachEvent({" ^ fn_event_to_tuple ^ "})"
     in
-    (source_init, Some(init_code, Unit), None)
+    let source_n = "s" ^ sc in 
+    ("val " ^ source_n ^ " = " ^ source_init, Some(init_code, Unit), Some(source_n, Unit))
 	   
   let main (schemas:K3.map_t list) (patterns:pattern_map) 
     (tables:(source_impl_t * code_t option * code_t option) list)
@@ -646,6 +674,8 @@ struct
         "org.dbtoaster.dbtoasterlib.K3Collection._";
         "org.dbtoaster.dbtoasterlib.Source._";
         "org.dbtoaster.dbtoasterlib.dbtoasterExceptions._";
+        "org.dbtoaster.dbtoasterlib.ImplicitConversions._";
+        "org.dbtoaster.dbtoasterlib.StdFunctions._";
         "scala.collection.mutable.Map"
       ])
     )
@@ -675,8 +705,17 @@ struct
       ^ "if(sources.hasInput()) dispatcher(sources.nextInput(), onEventProcessedHandler)"
       ^ "}" 
     in
-    let str_streams = "val sources = new SourceMultiplexer(List" ^ 
-      (make_list (List.map (fun (s, _, _) -> s) streams)) ^ ");"
+    let str_sources = 
+      (make_list ~parens:("",";") ~sep:";" (List.map (fun (s, _, _) -> s) streams)) ^
+      (make_list ~parens:("",";") ~sep:";" (List.map (fun (s, _, _) -> s) tables))
+    in
+    let str_streams = 
+      "val sources = new SourceMultiplexer(List" ^ 
+      (make_list (List.map (fun (_, _, os) -> 
+        match os with 
+        | Some(s, _) -> s 
+        | _ -> debugfail None "Missing source name"
+      ) streams)) ^ ");"
     in
     let triggers = (make_list ~parens:("",";") ~sep:";" (List.map (fun (b, bt) -> b) triggers)) in
     let filltables = 
@@ -690,8 +729,8 @@ struct
     in
     (imports ^
      " package org.dbtoaster { object Query { " ^
-     "implicit def boolToDouble(dbl: Boolean) = if(dbl) 1.0 else 0.0; " ^ 
-     str_streams ^ str_schema ^ str_tlqs ^ triggers ^ filltables ^ dispatcher ^ run ^ print_results ^ " }}", Unit)
+     str_sources ^ str_streams ^ str_schema ^ str_tlqs ^ triggers ^ filltables ^ dispatcher ^ run ^ print_results ^ " }}", 
+      Unit)
 
 
   (** This function formats a piece of scala code *)
