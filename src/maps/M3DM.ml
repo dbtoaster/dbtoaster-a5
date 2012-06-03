@@ -228,7 +228,10 @@ let rec maintain (context: Calculus.expr_t)
             let output_domain = get_map_output_domain (formula) in
             let input_vars = get_relation_vars input_domain in
             let context1 = CalcRing.mk_prod ([context; output_domain]) in
-            let update_domain = CalcRing.Val(AggSum(input_vars, context))  in
+            let update_domain = 
+              CalcRing.Val(AggSum(input_vars, context))
+              (*TODO, unnecessary usage of AggSum *)
+            in
             let dm_statement = mk_dm_trigger (input_domain) (update_domain) in
                 ([dm_statement], context1)
           | AggSum(gb_vars, subexp) -> 
@@ -262,13 +265,16 @@ let maintain_statement (statement:Plan.stmt_t)
         let context = CalcRing.mk_prod ([singleton_tuple; left_input_domain]) in (* previous version of DM *)
         (*  let context = left_input_domain in *)
         let (trigger_list, query_domain) = maintain (context) (statement.update_expr) in
-        let left_output_vars_wo_triggers = ListAsSet.diff left_output_vars (get_relation_vars singleton_tuple) in
-         (trigger_list, 
-            if left_output_vars_wo_triggers <> [] then 
-               CalcRing.Val(AggSum(left_output_vars_wo_triggers, query_domain)) 
-            else
-               query_domain
-         ) in
+      let left_output_vars_wo_triggers = ListAsSet.diff left_output_vars (get_relation_vars singleton_tuple) in
+      let update_domain = 
+        let query_domain_out = snd (Calculus.schema_of_expr query_domain) in
+        if left_output_vars_wo_triggers <> [] && not(ListAsSet.seteq left_output_vars_wo_triggers query_domain_out)then 
+          CalcRing.Val(AggSum(ListAsSet.inter query_domain_out left_output_vars_wo_triggers, query_domain)) 
+        else
+          query_domain
+      in
+      (trigger_list, update_domain) 
+    in
     let dm_statement = mk_dm_trigger (left_output_domain) (update_domain) in
         dm_statement :: trigger_list
 
@@ -287,7 +293,7 @@ let maintain_all (relation: Schema.rel_t)
             let dm_statement = maintain_statement (statement) (relation) in
             dm_statements := !dm_statements@dm_statement
         ) stmts;
-        if not (Debug.active "NOOPT-DM") then
+        if not (Debug.active "DM-NO-OPTIMIZE") then
             dm_statements := simplify_dm_triggers event_input !dm_statements
         else 
             ();
