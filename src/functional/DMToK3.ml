@@ -318,8 +318,12 @@ let update_domain_statement_generate stmt_info =
 
     let multi_ret = K.Var("multi_ret",K.TBase(T.TInt))
     in
-	let update_domain_lambda_body = 
-	    K.PCValueUpdate(lhs_collection, [], lhs_outs_el, multi_ret)
+    let update_domain_lambda_body = 
+      K.IfThenElse(
+                     K.Neq(multi_ret, zero_int_val),
+                   K.PCValueUpdate(lhs_collection, [], lhs_outs_el, multi_ret),
+                   get_unit_statement ()
+                  )
 	in
 	let update_domain_lambda = lambda (rhs_outs_el@[rhs_ret_ve; multi_ret]) update_domain_lambda_body in
 	if rhs_outs_el = [] then

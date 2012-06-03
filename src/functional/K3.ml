@@ -849,12 +849,14 @@ let nice_string_of_expr ?(type_is_needed = false) e maps =
         ps")"; cb()
 
     | Lambda           (arg_e,ce)           ->
-        ob(); ps "Lambda("; ps (argstr arg_e); ps ") "; pc(); aux ce; cb()
+      ob(); ps "Lambda("; ps (argstr arg_e); ps ") "; pc(); ps "{"; pc(); 
+      aux ce; pc(); ps "}"; cb()
 
     | AssocLambda      (arg1_e,arg2_e,be)   ->
         ob(); ps "Lambda(";
         ps (argstr arg1_e); ps ","; pc(); ps (argstr arg2_e); 
-        ps ") "; pc (); aux be; cb()
+        ps ") ";  pc(); ps "{"; pc(); 
+        aux be; pc(); ps "}"; cb()
     
     | ExternalLambda      (fn_id,arg_e,fn_t)   ->
         ob(); ps "ExternalLambda(";

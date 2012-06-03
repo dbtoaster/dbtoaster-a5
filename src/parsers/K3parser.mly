@@ -342,7 +342,7 @@ blockStatement:
 | LBRACE statementElementList RBRACE                        { Block($2) }
 
 iterateStatement:
-| ITERATE LPAREN statement RPAREN statement                 { Iterate($3, $5) }
+| ITERATE LPAREN statement COMMA statement RPAREN           { Iterate($3, $5) }
 
 lambdaStatement:
 | LAMBDA LPAREN lambdaArgument RPAREN statement             { Lambda($3, $5) }
