@@ -703,9 +703,10 @@ let rec calc_to_k3_expr meta ?(generate_init = false) theta_vars_el calc :
 					error ("M3ToK3: The schema of a sum term should be the same as "^
 								 "the schema of the entire sum."));
 				let e_ret_t = type_of_kvar e_ret_ve in
-				let new_ret_t = arithmetic_return_types old_ret_t e_ret_t 
+				let new_ret_t = arithmetic_return_types old_ret_t e_ret_t in
+				let e_txt = (CalculusPrinter.string_of_expr c)
 				in
-				((e_outs_el,e_ret_ve,e),new_meta,new_ret_t)					
+				((e_outs_el,e_ret_ve,e,e_txt),new_meta,new_ret_t)
 			in
 							
 			let nm,ret_t,sum_exprs = 
@@ -717,7 +718,7 @@ let rec calc_to_k3_expr meta ?(generate_init = false) theta_vars_el calc :
 							sum_args in
 							
 			let ret_ve = K.Var("sum",ret_t) in
-			let (hd_outs_el,hd_ret_ve,hd_s) = List.hd sum_exprs in
+			let (hd_outs_el,hd_ret_ve,hd_s,hd_txt) = List.hd sum_exprs in
 			let sum_exprs_tl = List.tl sum_exprs in
 			
 			let sum_result, nm2 = if outs_el <> [] then 
@@ -738,21 +739,23 @@ let rec calc_to_k3_expr meta ?(generate_init = false) theta_vars_el calc :
 				let head_update = 
 						K.PCValueUpdate(sum_coll, [], outs_el, hd_ret_ve) in									
 				let head_stmt =
-						K.Iterate(lambda (hd_outs_el@[hd_ret_ve])	head_update, hd_s) in
+				      K.Comment(hd_txt, 
+                     K.Iterate(lambda (hd_outs_el@[hd_ret_ve])	head_update, hd_s)) in
 				
-				let sum_fn (s_outs_el,s_ret_ve,s) =							
+				let sum_fn (s_outs_el,s_ret_ve,s,txt) =							
 						let sum_update =
 							K.PCValueUpdate(sum_coll, [], outs_el, 
 								K.IfThenElse(K.Member(sum_coll,outs_el), 
 														 K.Add(s_ret_ve,K.Lookup(sum_coll,outs_el)), 
 														 s_ret_ve) ) in
-						K.Iterate(lambda (s_outs_el@[s_ret_ve])	sum_update,	s) in
+                  K.Comment(txt, 
+                     K.Iterate(lambda (s_outs_el@[s_ret_ve])	sum_update,	s)) in
 				let tail_stmts = List.map sum_fn sum_exprs_tl in
 				
 				(K.Block( reset_stmt::head_stmt::tail_stmts@[sum_coll] )),
 				(meta_append_sum_map nm sum_map)
 			else
-				let sum_fn sum_e (s_outs_el,s_ret_ve,s)	= K.Add(sum_e,s) in
+				let sum_fn sum_e (s_outs_el,s_ret_ve,s,_)	= K.Add(sum_e,s) in
 				(List.fold_left sum_fn hd_s sum_exprs_tl), 
 				nm
 			in

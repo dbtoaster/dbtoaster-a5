@@ -1,6 +1,3 @@
-open Calculus
-open Plan
-
 let (inform, warn, error, bug) = Debug.Logger.functions_for_module ""
 
 ;;

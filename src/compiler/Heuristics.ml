@@ -258,7 +258,8 @@ let rec materialize ?(scope:var_t list = []) (db_schema:Schema.t)
     	    let term_opt = optimize_expr (expr_scope, term_schema) term in
 
         Debug.print "LOG-HEURISTICS-DETAIL" (fun () ->
-            "[Heuristics] PolyDecomposition + Optimization: "^(string_of_expr term_opt)^
+            "[Heuristics] PolyDecomposition Before Optimization: "^(string_of_expr term)^
+            "\n[Heuristics] PolyDecomposition + Optimization: "^(string_of_expr term_opt)^
             "\n\t Scope: ["^(string_of_vars expr_scope)^"]"^
             "\n\t Schema: ["^(string_of_vars term_schema)^"]"
         ); 

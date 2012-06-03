@@ -39,13 +39,27 @@ class GenericUnitTest
     
     raise "Invalid dataset" unless qdat[:datasets].has_key? @dataset;
     @toplevels = qdat[:datasets][@dataset][:toplevels]
+    if qdat[:datasets][@dataset].has_key? :subs then    
+      qfile = Tempfile.new(["query_test",".sql"]);
+      subs = qdat[:datasets][@dataset][:subs]
+      at_exit { qfile.close! }
+      qfile.puts(
+        File.open(@qpath) do |f| 
+          f.readlines.map do |l|
+            subs.fold(l) { |curr_l,s| curr_l.gsub(*s) };
+          end.join(""); 
+        end
+      );
+      qfile.flush;
+      @qpath = qfile.path;
+    end
 
     @compiler_flags =
       (qdat.has_key? :compiler_flags) ? qdat[:compiler_flags] : [];
   end
     
   def query
-    File.open(@qpath).readlines.join("");
+    File.open(@qpath) { |f| f.readlines.join("") };
   end
   
   def diff(e, r)

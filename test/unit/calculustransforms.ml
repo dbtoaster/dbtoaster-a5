@@ -302,7 +302,7 @@ let test ?(opts = CalculusTransforms.default_optimizations)
          ?(skip_opts = [])
          msg scope schema input output =
    log_test ("End-to-end ("^msg^")")
-      string_of_expr
+      CalculusPrinter.string_of_expr
       (CalculusTransforms.optimize_expr 
          ~optimizations:(ListAsSet.diff opts skip_opts)
          (List.map var scope, List.map var schema) 
