@@ -35,7 +35,8 @@ namespace dbtoaster {
       positional_options_description pos_options;
 
       vector<string> output_maps;
-      vector<string> logged_streams;
+      vector<string> logged_streams_v;
+      set<string> logged_streams;
 
       // Tracing
       string trace_opts;
@@ -56,7 +57,7 @@ namespace dbtoaster {
           ("help", "list available options")
           ("log-dir", value<string>(), "logging directory")
           ("log-triggers,l",
-            value<vector<string> >(&logged_streams), "log stream triggers")
+            value<vector<string> >(&logged_streams_v), "log stream triggers")
           ("unified,u", value<string>(), "unified logging [stream | global]")
           ("output-file,o", value<string>(), "output file")
           ("maps,m", value<vector<string> >(&output_maps), "output maps")
@@ -128,6 +129,8 @@ namespace dbtoaster {
         init_positional_options(pos_options);
         process_options(argc, argv, *opt_desc, pos_options, opt_map);
         setup_tracing(*opt_desc);
+        logged_streams = set<string>(logged_streams_v.begin(), logged_streams_v.end());
+        logged_streams_v.clear();
       }
       
       bool help() {
@@ -165,33 +168,20 @@ namespace dbtoaster {
       }
 
       path get_log_file(string stream_name, stream_event_type t) {
-        string ftype = (t == insert_tuple? "Insert" : "Delete");
-        return get_log_file(stream_name, ftype, true);
+        return get_log_file(stream_name, stream_event_name[t], true);
       }
 
       path get_log_file(string stream_name) {
         return get_log_file(stream_name, "Events", false);
       }
 
-      void log_dispatcher(stream_dispatcher& d, map<string, int>& stream_ids) {
-        if ( global() ) {
-          path global_file = get_log_file("", "Events", true);
-          d.add_logger(global_file);
-        } else {
-          vector<string>::iterator it = logged_streams.begin();
-          for (; it != logged_streams.end(); ++it) {
-            if ( stream_ids.find(*it) != stream_ids.end() ) {
-              int id = stream_ids[*it];
-              if ( unified() ) d.add_logger(id, get_log_file(*it));
-              else {
-                d.add_logger(id, insert_tuple, get_log_file(*it, insert_tuple));
-                d.add_logger(id, delete_tuple, get_log_file(*it, delete_tuple));
-              }
-            }
-          }
-        }
-        d.set_log_count_every(log_tuple_count_every);
-      }
+      path get_log_file(string stream_name, string ftype, bool prefix) {
+		path r;
+		if ( opt_map.count("log-dir") ) r = opt_map["log-dir"].as<string>();
+		else r = current_path();
+		r /= (prefix? ftype : "") + stream_name + (prefix? "" : ftype) + ".dbtdat";
+		return r.make_preferred();
+	  }
 
       // Statistics
       // Number of samples to collect per statitics period.
@@ -253,15 +243,6 @@ namespace dbtoaster {
         p /= "trace"+boost::lexical_cast<std::string>(trace_counter)+".txt";
         cout << "trace file " << p << endl;
         return p.make_preferred();
-      }
-
-      private:
-      path get_log_file(string stream_name, string ftype, bool prefix) {
-        path r;
-        if ( opt_map.count("log-dir") ) r = opt_map["log-dir"].as<string>();
-        else r = current_path();
-        r /= (prefix? ftype : "") + stream_name + (prefix? "" : ftype) + ".dbtdat";
-        return r.make_preferred();
       }
     };
 

@@ -105,6 +105,7 @@ let cpp_compiler = {
            "-lboost_system";
            "-lboost_filesystem";
            "-lboost_chrono";
+           "-lpthread";
            "-DFUSION_MAX_VECTOR_SIZE=50";           
          ] @ (!compiler_flags)
       ) in
