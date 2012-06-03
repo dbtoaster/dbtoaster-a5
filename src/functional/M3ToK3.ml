@@ -977,7 +977,7 @@ let m3_stmt_to_k3_stmt (meta: meta_t) ?(generate_init = false) trig_args (m3_stm
               if free_lhs_outs_el = [] then
                   K.TTuple([domain_type;domain_type])
               else
-                  K.Collection(K.TTuple( (k3_expr_to_k3_type (free_lhs_outs_el))@[domain_type; domain_type] )) 
+                  K.Collection(K.TTuple( (k3_expr_to_k3_type (rhs_outs_el))@[domain_type; domain_type] )) 
             in
             K.Var("cig_"^mapn^"_output", collection_ivc_gc_t)
           in

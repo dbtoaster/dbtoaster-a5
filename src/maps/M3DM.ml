@@ -235,8 +235,9 @@ let rec maintain (context: Calculus.expr_t)
             let dm_statement = mk_dm_trigger (input_domain) (update_domain) in
                 ([dm_statement], context1)
           | AggSum(gb_vars, subexp) -> 
-(*            let (trlist, context1) = maintain (context) (subexp) in *)
-            let (trlist, context1) = maintain (CalcRing.one) (subexp) in
+            (*            let (trlist, context1) = maintain (context) (subexp) in *)
+            let (trlist, _) = maintain (context) (subexp) in 
+            let (_, context1) = maintain (CalcRing.one) (subexp) in
                 let right_context = CalcRing.Val(AggSum(gb_vars, context1)) in
                     (trlist, CalcRing.mk_prod ([context; right_context]))
           | Rel(rname, rvars)    -> 
