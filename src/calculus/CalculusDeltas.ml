@@ -17,6 +17,30 @@ let mk_delta_var =
 let error expr msg = raise (CalculusException(expr, msg));;
 (**/**)
 
+(* Extract lifts containing Value subexpressions *)
+let extract_lifts scope expr =
+   (* Remove toplevel AggSum *)
+   let (gb, sumfree_expr) = match expr with
+      | CalcRing.Val(AggSum(gb, subexpr)) -> (gb, subexpr)
+      | _ -> (snd (schema_of_expr expr), expr)
+   in
+   (* Make Aggsum out of the given expr and gb_vars *)
+   let mk_aggsum gb_vars expr =    
+      let ovars = snd (schema_of_expr expr) in
+      if ListAsSet.subset ovars gb_vars then expr
+      else CalcRing.Val(AggSum(ListAsSet.inter gb_vars ovars, expr))
+   in
+   (* Extract lifts containing Value subexpressions *)
+   let (lhs, rhs) = List.fold_left (fun (lhs, rhs) term ->
+      match term with
+         | CalcRing.Val(Lift(_, CalcRing.Val(Value(_)))) -> 
+            if commutes ~scope:scope rhs term 
+            then (CalcRing.mk_prod [lhs; term], rhs)
+            else (lhs, CalcRing.mk_prod [rhs; term])
+         | _ -> (lhs, CalcRing.mk_prod [rhs; term])
+   ) (CalcRing.one, CalcRing.one) (CalcRing.prod_list sumfree_expr) in
+      (lhs, mk_aggsum gb rhs) 
+      
 (**
    [delta_of_expr delta_event expr]
    
@@ -74,8 +98,6 @@ let rec delta_of_expr (delta_event:Schema.event_t) (expr:C.expr_t): C.expr_t=
             | Lift(v, sub_t) ->
                let delta_term = rcr sub_t in
                if delta_term = CalcRing.zero then CalcRing.zero else (
-               let delta_var = (mk_delta_var (),
-                                C.type_of_expr delta_term) in
                   (* We do a slightly non-standard delta rewrite here.  Rather
                      than the standard 
                         d (A ^= B) ==> (A ^= (B + dB)) - (A ^= B)
@@ -92,31 +114,48 @@ let rec delta_of_expr (delta_event:Schema.event_t) (expr:C.expr_t): C.expr_t=
                      statements.  In this case, the optimizations (specifically 
                      unify_lifts) will unnest the lift statements, and 
                      substitute the (now) constant dB in for deltaVar. *)
-							
-							(* The original delta expression is used to obtain *)
-							(* the group-by variables to project away deltaVar *) 
-							let delta_org = CalcRing.mk_sum [
-		                CalcRing.mk_val (
-		                   Lift(v, CalcRing.mk_sum [ sub_t; delta_term ])
-		                );
-		                CalcRing.mk_neg (CalcRing.mk_val (Lift(v, sub_t)))
-		              ]
-							 in
-							 let gb_vars = snd (schema_of_expr (delta_org)) in
+
+                  (* Optimize the delta expression *)
+(*                  let delta_term_opt = CalculusTransforms.optimize_expr *)
+(*                        (schema_of_expr delta_term) delta_term          *)
+(*                  in                                                    *)
+                  let delta_term_opt = delta_term in
+                  
+                  (* The original delta expression is used to obtain *)
+                  (* the group-by variables to project away deltaVar *)
+                  let delta_expr = CalcRing.mk_sum [
+                     CalcRing.mk_val (
+                        Lift(v, CalcRing.mk_sum [ sub_t; delta_term_opt ])
+                     );
+                     CalcRing.mk_neg (CalcRing.mk_val (Lift(v, sub_t)))
+                  ] in                  
+                  let gb_vars = snd (schema_of_expr delta_expr) in
+                  
+                  (* Extract lifts containing Value subexpressions *)
+                  let scope = Schema.event_vars delta_event in
+                  let (delta_lhs, delta_rhs) = 
+                     extract_lifts scope delta_term_opt in               
+                  
+                  let delta_var = (mk_delta_var (),
+                                   C.type_of_expr delta_term_opt) in
+               
                   CalcRing.mk_val(AggSum(gb_vars,
 	                  CalcRing.mk_prod [
-	                     CalcRing.mk_val (Lift(delta_var, delta_term));
+	                     CalcRing.mk_val (Lift(delta_var, delta_lhs));
 	                     CalcRing.mk_sum [
 	                        CalcRing.mk_val (
 	                           Lift(v, CalcRing.mk_sum [
 	                              sub_t;
-	                              CalcRing.mk_val (Value(mk_var delta_var))
+                                 CalcRing.mk_prod [
+                                    delta_rhs;
+                                    CalcRing.mk_val (Value(mk_var delta_var))
+                                 ]
 	                           ])
 	                        );
 	                        CalcRing.mk_neg (CalcRing.mk_val (Lift(v, sub_t)))
 	                     ]
 	                  ]
-									))
+                  ))                 
                )
          (*****************************************) 
       ) expr
