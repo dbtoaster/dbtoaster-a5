@@ -740,8 +740,6 @@ let advance_lifts scope expr =
     
     [AggSum([...], A) = A]
         IF A is a constant term (i.e., has no output variables)
- 
-    [Lift(X, Lift(Y, A) * B) = Lift(Y,A) * Lift(X, B)]
     
     [Lift(A, A) = 1]
     
@@ -801,15 +799,7 @@ let rec nesting_rewrites (expr:C.expr_t) =
                      else CalcRing.mk_val e
                end
          | Lift(v, unprocessed_subterm) ->
-            let subterm = nesting_rewrites unprocessed_subterm in
-            let (unnested,nested) = List.fold_left (fun (unnested,nested) term->
-               begin match term with
-                  | CalcRing.Val(Lift(_,_)) when C.commutes term nested -> 
-                     (CalcRing.mk_prod [unnested; term], nested)
-                  | _ -> 
-                     (unnested, CalcRing.mk_prod [nested; term])
-               end
-            ) (CalcRing.one, CalcRing.one) (CalcRing.prod_list subterm) in
+            let nested = nesting_rewrites unprocessed_subterm in
             let (nested_ivars,nested_ovars) = C.schema_of_expr nested in
             (* Perform a few quick sanity checks.
                The variable being lifted should not occur in the nested 
@@ -838,8 +828,7 @@ let rec nesting_rewrites (expr:C.expr_t) =
                         ]
                   end
                else CalcRing.mk_val (Lift(v, nested))
-               in
-                  CalcRing.mk_prod [unnested; lift_expr]
+            in lift_expr
          | _ -> CalcRing.mk_val e
       end)
       expr

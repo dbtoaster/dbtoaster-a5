@@ -231,7 +231,7 @@ let test msg input output =
 in
    test "Lift of two Lifts"
       "(A ^= (B ^= (C ^= D)))"
-      "(C ^= D) * (B ^= 1) * (A ^= 1)";
+      "(A ^= (B ^= (C ^= D)))";
    test "AggSum of a partitionable expression"
       "AggSum([B,C], R(A, B) * S(B, C))"
       "S(B,C) * AggSum([B], R(A, B))";
@@ -385,15 +385,13 @@ in
       "P(PK) * (((PK ^= dPK) * (QTY ^= dQTY) * 
                   (nested ^= AggSum([PK], L(PK, QTY2) * QTY2)))
             + 
-            ((L(PK, QTY) + (PK ^= dPK) * (QTY ^= dQTY)) * 
-            (delta_2 ^= (AggSum([PK],(
-               ((PK ^= dPK) * (QTY2 ^= dQTY) * QTY2))))) * 
+            ((L(PK, QTY) + (PK ^= dPK) * (QTY ^= dQTY)) * (PK ^= dPK) *
             (
-               (nested ^= AggSum([PK], L(PK, QTY2) * QTY2) + delta_2)
+               (nested ^= AggSum([PK], L(PK, QTY2) * QTY2) + (AggSum([],((QTY2 ^= dQTY) * QTY2))))
                 - (nested ^= AggSum([PK], L(PK, QTY2) * QTY2))
             )))"
       "P(dPK) * (
-         ((nested ^= AggSum([dPK], L(dPK, QTY2) * QTY2)) * (QTY ^= dQTY))
+         ((QTY ^= dQTY) * (nested ^= AggSum([dPK], L(dPK, QTY2) * QTY2)))
             + 
             ((L(dPK, QTY) + (QTY ^= dQTY)) * 
             (
