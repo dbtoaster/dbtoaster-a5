@@ -140,22 +140,53 @@ let rec delta_of_expr (delta_event:Schema.event_t) (expr:C.expr_t): C.expr_t=
                                    C.type_of_expr delta_term_opt) in
                
                   CalcRing.mk_val(AggSum(gb_vars,
-	                  CalcRing.mk_prod [
-	                     CalcRing.mk_val (Lift(delta_var, delta_lhs));
-	                     CalcRing.mk_sum [
-	                        CalcRing.mk_val (
-	                           Lift(v, CalcRing.mk_sum [
-	                              sub_t;
-                                 CalcRing.mk_prod [
-                                    delta_rhs;
-                                    CalcRing.mk_val (Value(mk_var delta_var))
-                                 ]
-	                           ])
-	                        );
-	                        CalcRing.mk_neg (CalcRing.mk_val (Lift(v, sub_t)))
-	                     ]
-	                  ]
-                  ))                 
+                    CalcRing.mk_prod [
+                       CalcRing.mk_val (Lift(delta_var, delta_term));
+                       CalcRing.mk_sum [
+                          CalcRing.mk_val (
+                             Lift(v, CalcRing.mk_sum [
+                                sub_t;
+                                CalcRing.mk_val (Value(mk_var delta_var))
+                             ])
+                          );
+                          CalcRing.mk_neg (CalcRing.mk_val (Lift(v, sub_t)))
+                       ]
+                    ]
+                  ))
+(*                  CalcRing.mk_val(AggSum(gb_vars,                            *)
+(*	                  CalcRing.mk_prod [                                      *)
+(*	                     CalcRing.mk_val (Lift(delta_var, delta_lhs));        *)
+(*	                     CalcRing.mk_sum [                                    *)
+(*	                        CalcRing.mk_val (                                 *)
+(*	                           Lift(v, CalcRing.mk_sum [                      *)
+(*	                              sub_t;                                      *)
+(*                                 CalcRing.mk_prod [                          *)
+(*                                    delta_rhs;                               *)
+(*                                    CalcRing.mk_val (Value(mk_var delta_var))*)
+(*                                 ]                                           *)
+(*	                           ])                                             *)
+(*	                        );                                                *)
+(*	                        CalcRing.mk_neg (CalcRing.mk_val (Lift(v, sub_t)))*)
+(*	                     ]                                                    *)
+(*	                  ]                                                       *)
+(*                  ))                                                         *)
+(*                  CalcRing.mk_val(AggSum(gb_vars,                              *)
+(*                      CalcRing.mk_prod [                                       *)
+(*                         delta_lhs;                                            *)
+(*(*                         CalcRing.mk_val (Lift(delta_var, delta_term_opt));*)*)
+(*                         CalcRing.mk_sum [                                     *)
+(*                            CalcRing.mk_val (                                  *)
+(*                               Lift(v, CalcRing.mk_sum [                       *)
+(*                                  sub_t;                                       *)
+(*                                  delta_rhs                                    *)
+(*(*                                  CalcRing.mk_val (Value(mk_var delta_var))*)*)
+(*                               ])                                              *)
+(*                            );                                                 *)
+(*                            CalcRing.mk_neg (CalcRing.mk_val (Lift(v, sub_t))) *)
+(*                         ]                                                     *)
+(*                      ]                                                        *)
+(*                  ))                                                           *)
+
                )
          (*****************************************) 
       ) expr
