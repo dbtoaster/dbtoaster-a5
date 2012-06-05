@@ -19,10 +19,9 @@ class IProgram {
 public:
 	IProgram() :
 		running(false)
-		, tuple_count(0)
-		, refresh_request(false)
-		, view_ready(true)
-		, view_ts(-1)
+		, snapshot_request(false)
+		, snapshot_ready(true)
+		, snapshot_arg(0)
 	{
 	}
 	virtual ~IProgram() {
@@ -38,20 +37,17 @@ public:
 	void stop_running()
 	{
 		running_mtx.lock();
-		if( refresh_request )
+		if( snapshot_request )
 		{
-			assert( view_ready == false );
-			if( view_ts != tuple_count )
+			assert( snapshot_ready == false );
+			take_snapshot(snapshot_arg);
+			snapshot_request = false;
+
 			{
-				refresh_maps();
-				view_ts = tuple_count;
+				boost::lock_guard<boost::mutex> lock(snapshot_ready_mtx);
+				snapshot_ready=true;
 			}
-			refresh_request = false;
-			{
-				boost::lock_guard<boost::mutex> lock(view_ready_mtx);
-				view_ready=true;
-			}
-			view_ready_cond.notify_all();
+			snapshot_ready_cond.notify_all();
 		}
 		running = false;
 		running_mtx.unlock();
@@ -69,48 +65,46 @@ public:
 				(boost::detail::thread_move_t<boost::unique_future<int> >) f);
 	}
 
-	virtual void refresh_maps() = 0;
-
-	void request_refresh()
+	void request_snapshot(void* _snapshot_arg)
 	{
-		assert( refresh_request == false );
-		assert( view_ready == true );
+		assert( snapshot_request == false );
+		assert( snapshot_ready == true );
 
 		running_mtx.lock();
 		if( is_running() )
 		{
-			view_ready = false;
-			refresh_request = true;
+			snapshot_ready = false;
+			snapshot_request = true;
+			snapshot_arg = _snapshot_arg;
 		}
-		else if( view_ts != tuple_count )
+		else
 		{
-			refresh_maps();
-			view_ts = tuple_count;
+			take_snapshot(_snapshot_arg);
 		}
 		running_mtx.unlock();
 	}
 
-	void wait_for_refresh()
+	void wait_for_snapshot()
 	{
-		boost::unique_lock<boost::mutex> lock(view_ready_mtx);
-		while(!view_ready)
+		boost::unique_lock<boost::mutex> lock(snapshot_ready_mtx);
+		while(!snapshot_ready)
 		{
-			view_ready_cond.wait(lock);
+			snapshot_ready_cond.wait(lock);
 		}
 	}
 
 protected:
+	virtual void take_snapshot(void*) = 0;
+
 	bool running;
 	boost::mutex running_mtx;
 
-	boost::condition_variable view_ready_cond;
-	boost::mutex view_ready_mtx;
-	bool view_ready;
+	boost::condition_variable snapshot_ready_cond;
+	boost::mutex snapshot_ready_mtx;
+	bool snapshot_ready;
 
-	unsigned int tuple_count;
-
-	bool refresh_request;
-	unsigned int view_ts;
+	bool snapshot_request;
+	void* snapshot_arg;
 };
 }
 

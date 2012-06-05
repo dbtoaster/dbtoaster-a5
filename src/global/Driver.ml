@@ -333,8 +333,8 @@ let interpreter_program:
    because this transformation is likely to be common to all imperative 
    languages, we use this intermediate stage to make the final target language
    compilers as trivial as possible. *)
-let imperative_program:(ImperativeCompiler.Compiler.imp_prog_t ref)
-   = ref (ImperativeCompiler.Compiler.empty_prog ());;
+let imperative_program:(ImperativeCompiler.Target.imp_prog_t ref)
+   = ref (ImperativeCompiler.Target.empty_prog ());;
 
 (* String representation of the source code being produced *)
 let source_code:string list ref = ref [];;
@@ -615,7 +615,7 @@ if stage_is_active StagePrintImp then (
    let ((_,_,(imp_core, _)),_,_) = !imperative_program in
       List.iter (fun (_,(_,expr)) ->
          output_endline 
-            ((ImperativeCompiler.CPPTarget.string_of_ext_imp expr)^"\n\n")
+            ((ImperativeCompiler.Target.string_of_ext_imp expr)^"\n\n")
       ) imp_core            
 )
 ;;

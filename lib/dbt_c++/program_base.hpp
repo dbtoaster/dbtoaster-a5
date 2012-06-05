@@ -13,6 +13,7 @@
 #include <map>
 #include <utility>
 #include <boost/archive/xml_oarchive.hpp>
+#include <boost/archive/text_oarchive.hpp>
 #include <boost/array.hpp>
 #include <boost/chrono.hpp>
 #include <boost/filesystem.hpp>
@@ -37,6 +38,7 @@ using namespace ::std;
 using namespace ::boost;
 using namespace ::boost::chrono;
 using namespace ::boost::filesystem;
+using namespace ::boost::serialization;
 using namespace ::boost::fusion;
 using namespace ::boost::lambda;
 using namespace ::boost::multi_index;
@@ -51,49 +53,35 @@ namespace dbtoaster {
 
 class ProgramBase : public IProgram {
 public:
-	ProgramBase(int argc = 0, char* argv[] = 0) :
-			run_opts(argc,argv)
-			, multiplexer(12345, 10)
-			, next_stream_id(0)
-			, log_count_every(run_opts.log_tuple_count_every)
-#ifdef DBT_PROFILE
-			, window_size( run_opts.get_stats_window_size() )
-			, stats_period( run_opts.get_stats_period() )
-			, stats_file( run_opts.get_stats_file() )
-			, exec_stats(new trigger_exec_stats("exec", window_size, stats_period, stats_file))
-			, ivc_stats(new trigger_exec_stats("ivc", window_size, stats_period, stats_file))
-			, delta_stats(new delta_size_stats("delta_sz", window_size, stats_period, stats_file))
-#endif // DBT_PROFILE
-	{
-		if ( run_opts.help() ) { exit(1); };
-	}
 
-	virtual int run() {
-		start_running();
-		while( multiplexer.has_inputs() ) {
-			shared_ptr<std::list<stream_event> > events =
-					multiplexer.next_inputs();
-
-			if( !events )	continue;
-
-			std::list<stream_event>::iterator ev_it = events->begin();
-			for( ; ev_it != events->end(); ev_it++)
-				process_event(*ev_it);
+	typedef boost::function<void (boost::archive::xml_oarchive&)> serialize_fn_t;
+	struct serializer{
+		template<class T>
+		static
+		boost::archive::xml_oarchive& fn(
+				boost::archive::xml_oarchive& oa,
+				const nvp<T>& t)
+		{
+			return (oa << t);
 		}
-		stop_running();
+	};
+
+	struct map_t{
+		serialize_fn_t serialize_fn;
+
+		bool isOutput;
+		bool isTraced;
+
+		map_t(serialize_fn_t _serialize_fn) :
+			serialize_fn(_serialize_fn)
+			, isOutput(false)
+			, isTraced(false)
+		{}
+	};
+	typedef shared_ptr<map_t> map_ptr_t;
 
 
-		trace(run_opts.get_output_file(), false);
-
-#ifdef DBT_PROFILE
-		exec_stats->save_now();
-#endif // DBT_PROFILE
-	}
-
-
-protected:
-	typedef boost::function<
-		void (ProgramBase *p, const event_args&)> trigger_fn_t;
+	typedef boost::function<void (const event_args&)> trigger_fn_t;
 
 	struct logger_t{
 		typedef stream<file_sink> file_stream_t;
@@ -164,24 +152,23 @@ protected:
 	};
 	typedef shared_ptr<stream_t> stream_ptr_t;
 
-	runtime_options run_opts;
-	stream_multiplexer multiplexer;
 
-	map<string, stream_ptr_t > streams_by_name;
-	map<stream_id_t, stream_ptr_t > streams_by_id;
-	int next_stream_id;
 
-	unsigned int log_count_every;
 
-	#ifdef DBT_PROFILE
-	unsigned int window_size;
-	unsigned int stats_period;
-	string stats_file;
 
-	shared_ptr<trigger_exec_stats>  exec_stats;
-	shared_ptr<trigger_exec_stats>   ivc_stats;
-	shared_ptr<delta_size_stats>   delta_stats;
-	#endif // DBT_PROFILE
+	template<class T>
+	void add_map( string m_name, T& t )
+	{
+		if( maps_by_name.find(m_name) != maps_by_name.end() ) {
+			cerr << "Found existing map " << m_name << endl;
+			return;
+		}
+
+		serialize_fn_t fn = boost::bind( &serializer::fn<T>, ::boost::lambda::_1, make_nvp(m_name.c_str(),t) );
+		map_ptr_t m = shared_ptr<map_t>(new map_t(fn));
+		maps_by_name[m_name] = m;
+		return;
+	}
 
 	void add_stream( string s_name, stream_id_t s_id = -1 )
 	{
@@ -203,7 +190,7 @@ protected:
 
 	void add_trigger( string s_name, stream_event_type ev_type, trigger_fn_t fn )
 	{
-		map<string, stream_ptr_t >::iterator it = streams_by_name.find( s_name );
+		typename map<string, stream_ptr_t >::iterator it = streams_by_name.find( s_name );
 		if( it == streams_by_name.end() ) {
 			cerr << "Stream not found: " << s_name << endl;
 			return;
@@ -241,9 +228,69 @@ protected:
 	}
 
 
+
+
+
+	ProgramBase(int argc = 0, char* argv[] = 0) :
+		run_opts(argc,argv)
+		, multiplexer(12345, 10)
+		, next_stream_id(0)
+		, tuple_count(0)
+		, log_count_every(run_opts.log_tuple_count_every)
+#ifdef DBT_PROFILE
+		, window_size( run_opts.get_stats_window_size() )
+		, stats_period( run_opts.get_stats_period() )
+		, stats_file( run_opts.get_stats_file() )
+		, exec_stats(new trigger_exec_stats("exec", window_size, stats_period, stats_file))
+		, ivc_stats(new trigger_exec_stats("ivc", window_size, stats_period, stats_file))
+		, delta_stats(new delta_size_stats("delta_sz", window_size, stats_period, stats_file))
+#endif // DBT_PROFILE
+	{
+		if ( run_opts.help() ) { exit(1); };
+	}
+
+	virtual int run() {
+		start_running();
+		while( multiplexer.has_inputs() ) {
+			shared_ptr<std::list<stream_event> > events =
+					multiplexer.next_inputs();
+
+			if( !events )	continue;
+
+			std::list<stream_event>::iterator ev_it = events->begin();
+			for( ; ev_it != events->end(); ev_it++)
+			{
+				process_event(*ev_it);
+			}
+		}
+		stop_running();
+
+
+		trace(run_opts.get_output_file(), false);
+
+#ifdef DBT_PROFILE
+		exec_stats->save_now();
+#endif // DBT_PROFILE
+	}
+
+
+protected:
+	runtime_options run_opts;
+	stream_multiplexer multiplexer;
+
+	map<string, map_ptr_t> maps_by_name;
+
+	map<string, stream_ptr_t> streams_by_name;
+	map<stream_id_t, stream_ptr_t > streams_by_id;
+	int next_stream_id;
+
+	unsigned int tuple_count;
+	unsigned int log_count_every;
+
+
 	stream_id_t get_id( string s_name )
 	{
-		map<string, shared_ptr<stream_t> >::iterator
+		typename map<string, shared_ptr<stream_t> >::iterator
 			it = streams_by_name.find( s_name );
 		return ( it != streams_by_name.end() ) ? it->second->id : -1;
 	}
@@ -261,7 +308,7 @@ protected:
 			trace(run_opts.get_trace_file(), true);
 		#endif // DBT_TRACE
 
-		map<stream_id_t, shared_ptr<stream_t> >::iterator
+		typename map<stream_id_t, shared_ptr<stream_t> >::iterator
 			s_it = streams_by_id.find(evt.id);
 		if( s_it != streams_by_id.end() && s_it->second->trigger[evt.type] ) {
 			shared_ptr<trigger_t> trig = s_it->second->trigger[evt.type];
@@ -272,7 +319,7 @@ protected:
 				#endif // DBT_TRACE
 				trig->log( s_it->second->name, evt );
 
-				(trig->fn)(this, evt.data);
+				(trig->fn)(evt.data);
 			} catch (boost::bad_any_cast& bc) {
 				cout << "bad cast on " << trig->name << ": " << bc.what() << endl;
 			}
@@ -290,23 +337,20 @@ protected:
 		}
 		tuple_count += 1;
 
-		if( refresh_request )
+		if( snapshot_request )
 		{
-			assert( view_ready == false );
-			refresh_maps();
-			view_ts = tuple_count;
+			assert( snapshot_ready == false );
+			take_snapshot(snapshot_arg);
 
-			refresh_request = false;
+			snapshot_request = false;
 			{
-				boost::lock_guard<boost::mutex> lock(view_ready_mtx);
-				view_ready=true;
+				boost::lock_guard<boost::mutex> lock(snapshot_ready_mtx);
+				snapshot_ready=true;
 			}
-			view_ready_cond.notify_all();
+			snapshot_ready_cond.notify_all();
 		}
 	}
 
-
-	virtual void trace(std::ostream &ofs, bool debug){}
 
 	void trace(const path& trace_file, bool debug) {
 		if(strcmp(trace_file.c_str(), "-")){
@@ -316,6 +360,33 @@ protected:
 			trace(cout, debug);
 		}
 	}
+
+	void trace(std::ostream &ofs, bool debug) {
+		std::auto_ptr<boost::archive::xml_oarchive> oa;
+
+		for(map<string, map_ptr_t>::iterator it = maps_by_name.begin();
+				it != maps_by_name.end(); it++)
+			if( (!debug && it->second->isOutput) || (debug && it->second->isTraced))
+			{
+				if( !oa.get() )
+					oa = std::auto_ptr<boost::archive::xml_oarchive>( new boost::archive::xml_oarchive(ofs, 0));
+				it->second->serialize_fn( *oa );
+			}
+	}
+
+
+	#ifdef DBT_PROFILE
+public:
+	unsigned int window_size;
+	unsigned int stats_period;
+	string stats_file;
+
+	shared_ptr<trigger_exec_stats>  exec_stats;
+	shared_ptr<trigger_exec_stats>   ivc_stats;
+	shared_ptr<delta_size_stats>   delta_stats;
+	#endif // DBT_PROFILE
+
+
 };
 }
 

@@ -13,21 +13,16 @@
 #include <boost/lambda/lambda.hpp>
 #include <boost/lambda/bind.hpp>
 
-namespace dbtoaster {
-
-namespace streams {
 using namespace ::std;
 using namespace ::boost;
 using namespace boost::filesystem;
 using namespace boost::iostreams;
 using namespace boost::lambda;
 
-typedef int stream_id_t;
-enum stream_event_type { insert_tuple = 0, delete_tuple, system_ready_event };
-string stream_event_name[] = {string("insert"), string("delete"), string("system_ready")};
+namespace dbtoaster {
 
-
-
+// These need to be placed here as C++ doesn't search for overloaded
+// << operators in all the available namespaces
 std::ostream& operator<<(std::ostream &strm, const boost::any &a) {
 	try{
 		if( a.type() == typeid(int) )
@@ -40,8 +35,7 @@ std::ostream& operator<<(std::ostream &strm, const boost::any &a) {
 	return strm;
 }
 
-typedef vector<boost::any> event_args;
-std::ostream& operator<<(std::ostream &strm, const event_args &args) {
+std::ostream& operator<<(std::ostream &strm, const vector<boost::any> &args) {
 	if( !args.empty() )
 	{
 		strm << args[0];
@@ -50,6 +44,14 @@ std::ostream& operator<<(std::ostream &strm, const event_args &args) {
 	}
 	return strm;
 }
+
+namespace streams {
+
+typedef int stream_id_t;
+enum stream_event_type { insert_tuple = 0, delete_tuple, system_ready_event };
+string stream_event_name[] = {string("insert"), string("delete"), string("system_ready")};
+
+typedef vector<boost::any> event_args;
 
 struct stream_event
 {
@@ -90,11 +92,11 @@ struct frame_descriptor {
 	string delimiter;
 	int off_to_size;
 	int off_to_end;
-	frame_descriptor() : type(delimited), delimiter("\n") {}
-	frame_descriptor(string d) : type(delimited), delimiter(d) {}
+	frame_descriptor() : type(delimited), size(0), delimiter("\n") {}
+	frame_descriptor(string d) : type(delimited), size(0), delimiter(d) {}
 	frame_descriptor(int sz) : type(fixed_size), size(sz) {}
 	frame_descriptor(int os, int oe)
-	: type(variable_size), off_to_size(os), off_to_end(oe)
+	: type(variable_size), size(0), off_to_size(os), off_to_end(oe)
 	{}
 };
 
@@ -273,7 +275,9 @@ struct dbt_file_source : public source
 
 	shared_ptr<string> next_frame() {
 		shared_ptr<string> r;
-		char buf[frame_info.size<1024?1024:frame_info.size];
+
+		char buf[((frame_info.size<1024) ? 1024 : frame_info.size)];
+
 		if (frame_info.type == fixed_size) {
 			while ( source_stream->good() && !has_frame() ) {
 				source_stream->read(buf, frame_info.size);
@@ -281,18 +285,23 @@ struct dbt_file_source : public source
 			}
 		}
 		else if ( frame_info.type == delimited ) {
+
 			while ( source_stream->good() && !has_frame() ) {
+
 				source_stream->read(buf, sizeof(buf));
 				(*buffer) += string(buf, source_stream->gcount());
 			}
+
 			if( !source_stream->good() &&
 					buffer->find(frame_info.delimiter) != (buffer->size()-frame_info.delimiter.size()) )
 				(*buffer) += frame_info.delimiter;
+
 
 			size_t dd_index = 0;
 			string ddelimiter = frame_info.delimiter+frame_info.delimiter;
 			while ( (dd_index = buffer->find(ddelimiter,dd_index)) != string::npos )
 				buffer->replace( dd_index, ddelimiter.size(), frame_info.delimiter );
+
 		}
 		else if ( frame_info.type == variable_size ) {
 			cerr << "variable size frames not supported" << endl;
@@ -300,7 +309,9 @@ struct dbt_file_source : public source
 		else {
 			cerr << "invalid frame type" << endl;
 		}
+
 		if ( has_frame() ) r = frame_from_buffer();
+
 		return r;
 	}
 
@@ -350,7 +361,10 @@ struct dbt_file_source : public source
 
 	shared_ptr<list<stream_event> > next_inputs() {
 		shared_ptr<list<stream_event> > r;
+
 		if ( adaptors.empty() ) return r;
+
+
 		if ( has_inputs() ) {
 			// get the next frame of data based on the frame type.
 			shared_ptr<string> data = next_frame();
@@ -362,8 +376,10 @@ struct dbt_file_source : public source
 		} else if ( source_stream->is_open() ) {
 			source_stream->close();
 			r = shared_ptr<list<stream_event> >(new list<stream_event>());
+
 			finalize_adaptors(r);
 		}
+
 		return r;
 	}
 };
@@ -440,7 +456,8 @@ struct stream_multiplexer
 		// pick a random stream until we find one that's not done,
 		// and process its frame.
 		while ( !current || remaining <= 0 ) {
-			if ( inputs.order() < current_order ) {
+
+						if ( inputs.order() < current_order ) {
 				if(inputs.order() <= 0){ return r; }
 				cout << "non-monotonic source ordering "
 						<< inputs.order() << " vs " << current_order << endl;
@@ -468,6 +485,7 @@ struct stream_multiplexer
 		if ( !current ) return r;
 
 		r = current->next_inputs();
+
 		if ( r ) remaining -= r->size();
 		//        cout << "Preparing to reorder multiplexer elements for " << current_order << endl;
 		inputs.reorder_elements(current_order);

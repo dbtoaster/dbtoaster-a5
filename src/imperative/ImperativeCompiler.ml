@@ -34,112 +34,16 @@ struct
 end
 
 
-(* Type signature for target language functor *)
-module type ImpTarget =
-sig
-  open Imperative
-  open Common
-
-  type ext_type
-  type ext_fn
-  type type_env_t    
-
-  val string_of_ext_type : ext_type type_t -> string
-  val string_of_ext_fn : ext_fn -> string
-  val string_of_ext_imp : (ext_type, ext_fn) typed_imp_t -> string
-
-  (* Serialization code generation *)
-  
-  (* Generate source code that resides within an entry definition
-   * for serialization *)
-  val serialization_source_code_of_entry :
-    K3.id_t -> (K3.id_t * ext_type type_t) list -> source_code_t
-    
-  (* Map serialization invocation *)
-  val source_code_of_map_serialization :
-    K3.id_t -> K3.id_t -> source_code_t
-
-  (* Source code generation *)
-  val source_code_of_decl : ?gen_type:bool -> ?gen_init:bool ->
-                           (ext_type, ext_fn) typed_imp_t -> source_code_t
-  val source_code_of_imp : ?gen_init:bool -> 
-                           (ext_type, ext_fn) typed_imp_t -> source_code_t
-  val source_code_of_trigger :
-    Schema.rel_t list ->
-    (Schema.event_t * (ext_type, ext_fn) typed_imp_t) 
-    -> source_code_t list
-    
-  val desugar_expr :
-    compiler_options -> type_env_t
-    -> (ext_type, ext_fn)  typed_expr_t 
-    -> ((ext_type, ext_fn) typed_imp_t list) option * 
-       ((ext_type, ext_fn) typed_expr_t) option
-
-  val desugar_imp :
-    compiler_options -> type_env_t
-    -> (ext_type, ext_fn) typed_imp_t -> (ext_type, ext_fn) typed_imp_t
-
-  (* Typing interface *)
-  val var_type_env : type_env_t -> (K3.id_t * ext_type type_t) list
-  
-  val type_env_of_declarations :
-    (K3.id_t * ext_type type_t) list ->
-    K3.map_t list -> Patterns.pattern_map -> type_env_t
-
-  val infer_types :
-    type_env_t -> ('a option, ext_type, ext_fn) imp_t
-    -> (ext_type, ext_fn) typed_imp_t
-
-  (* Profiler code generation *)
-  val declare_profiling : K3.map_t list -> source_code_t
-  val profile_trigger :
-       int                         (* statement id offset, across all triggers *)
-    -> (int * (string * int list) list) (* map ivc offset, across all triggers *)
-    -> Schema.rel_t list
-    -> K3.map_t list
-    -> (ext_type type_t, ext_type, ext_fn) Program.trigger_t
-    -> (int * (string * int list) list) *
-       (source_code_t list  *
-         (ext_type type_t, ext_type, ext_fn) Program.trigger_t) 
-
-  (* Toplevel code generation *)
-
-  (* TODO: all of these should accept a compiler options record as input *)
-  val preamble : compiler_options -> source_code_t
-  val ending : source_code_t
-
-  (* map indentation -> schemas -> patterns *)
-  (* -> type declarations * instance + read_only declarations * initializers *) 
-  val declare_maps_of_schema : 
-    string -> K3.map_t list -> Patterns.pattern_map 
-    -> source_code_t * source_code_t * source_code_t * source_code_t
-
-  val declare_streams :
-    Schema.rel_t list -> string list
-
-  val declare_sources_and_adaptors :
-    Schema.t -> 
-      (ext_type, ext_fn) typed_expr_t list * source_code_t
-
-  val declare_main :
-    compiler_options
-    -> Schema.rel_t list -> source_code_t -> K3.map_t list
-    -> Schema.t
-       (* Trigger registration metadata *)
-    -> (string * string * string * (string * string) list) list *
-       (string * int list) list
-    -> string list -> source_code_t
-end
-
 
 
 (* A C++ compiler target implementation *)
-module CPPTarget : ImpTarget =
+module Target =
 struct
   module K = K3
 
   open Imperative
   open Common
+  
 
   type fields_t = (id_t * ext_type type_t) list
   and ext_type =
@@ -179,6 +83,29 @@ struct
     | BoostLambda of string
     | Inline of string
 
+
+	type trigger_setup_t =
+	    (string * string * string * (string * string) list) list *
+	    (string * int list) list
+
+  type compiler_trig_t = (ext_type type_t, ext_type, ext_fn) Program.trigger_t
+	
+  type imp_prog_t =
+	    (  K3.map_t list *              (*   Schema *)
+	       Patterns.pattern_map *       (*   Schema patterns *)
+	       (  (  source_code_t list *   (*       ?? *)
+	             compiler_trig_t        (*       Trigger code *)
+	          ) list *                  (*     List of all triggers =^ *)
+	          trigger_setup_t           (*     Trigger setup code *)
+	       )                            (*   Imperative Program Triggers *)
+	    ) *                             (* Imperative Program =^ *)
+	    Schema.t *                      (* Database Schema *)
+	    string list                     (* Toplevel Queries *)
+	      
+  let empty_prog ():imp_prog_t = 
+	    (([], Patterns.empty_pattern_map (), ([], ([], []))), 
+	     Schema.empty_db (), [])
+	    
 
   (* AST stringification *)
   let rec string_of_ext_type t =
@@ -1221,8 +1148,8 @@ end (* Typing *)
         (0,[]) trig_types)
       in
        
-      [Lines ["static void unwrap_"^trig_name^"(ProgramBase* p, const event_args& e) {";
-              tab^"((Program*)p)->on_"^trig_name^"("^(String.concat "," evt_fields)^");";
+      [Lines ["void unwrap_"^trig_name^"(const event_args& e) {";
+              tab^"on_"^trig_name^"("^(String.concat "," evt_fields)^");";
               "}"; ""];]
                
     in trigger_fn@unwrapper
@@ -2278,11 +2205,18 @@ end (* Typing *)
         "}";
         "";])
 
+  (* Stream identifier generation *)
+  let declare_streams (dbschema:Schema.rel_t list) = 
+    List.map (fun (rel,_,_) -> ("\""^(String.escaped rel)^"\"")) dbschema
+ 
   (* Generates source code for map declarations, based on the
    * type_of_map_schema function above *)
-  let declare_maps_of_schema indent (schema: K3.map_t list) patterns =
-    let t_l, ro_d_l, d_l, i_l = List.fold_left 
-      (fun (t_acc, ro_d_acc, d_acc, i_acc) (id,in_tl,out_tl,mapt) ->
+  let declare_maps_and_triggers opts indent (imp_prog:imp_prog_t) =
+    let (map_schema,patterns,(triggers,trig_reg_info)), sources, tlqs = imp_prog in
+    
+    let t_l, d_l, i_l, r_l, s_l = List.fold_left 
+      (fun (t_acc, d_acc, i_acc, r_acc, s_acc) (id,in_tl,out_tl,mapt) ->
+        let e_id = String.escaped id in 
         (* Declare map size constraint macros for garbage collection. *)
 		    let size_macro = 
           if in_tl = [] then []
@@ -2291,26 +2225,99 @@ end (* Typing *)
 		                   "#endif";"";]] in
         let (_,t,t_decls) = type_of_map_schema patterns (id, in_tl, out_tl, mapt) in
         let has_init = match t with 
-          | Host(TBase(TInt)) | Host(TBase(TFloat)) -> true 
+          | Host(TBase(TInt)) | Host(TBase(TFloat)) -> true
           | _ -> false
         in 
-        let imp_decl d_id = match t with 
+        let imp_decl = match t with 
           | Host(TBase(TFloat)) -> 
-            Decl(unit, (d_id,t), Some(Fn(t, Ext(Constructor(t)), [Const(unit, CFloat(0.0))]))) 
+            Decl(unit, (id,t), Some(Fn(t, Ext(Constructor(t)), [Const(unit, CFloat(0.0))]))) 
           | Host(TBase(TInt)) -> 
-            Decl(unit, (d_id,t), Some(Fn(t, Ext(Constructor(t)), [Const(unit, CInt(0))])))
-          | _ -> Decl(unit, (d_id,t), None)
+            Decl(unit, (id,t), Some(Fn(t, Ext(Constructor(t)), [Const(unit, CInt(0))])))
+          | _ -> Decl(unit, (id,t), None)
         in 
         t_acc@size_macro@(List.map source_code_of_type t_decls),
-        ro_d_acc@[source_code_of_imp ~gen_init:false (imp_decl ("ro"^id))],
-        d_acc@[source_code_of_imp ~gen_init:false (imp_decl id)],
-        i_acc@( if has_init then [source_code_of_decl ~gen_type:false (imp_decl id)] else [] ))
-      ([], [], [], []) schema
-    in 
-    isc indent (cscl t_l), 
-    isc indent (cscl ro_d_l), 
-    isc indent (cscl d_l), 
-    cscl ~delim:"," i_l
+        d_acc@[source_code_of_imp ~gen_init:false imp_decl],
+        i_acc@( if has_init then [source_code_of_decl ~gen_type:false imp_decl] else [] ),
+        r_acc@["pb.add_map<"^(string_of_type t)^">( \""^e_id^"\", "^e_id^" );"],
+        s_acc@(if List.mem e_id tlqs then ["ar & BOOST_SERIALIZATION_NVP("^e_id^");"] else []) )
+      ([], [], [], [], []) map_schema
+    in
+    
+    let dbschema = Schema.rels sources in
+    
+    let streams = declare_streams dbschema in
+	  let register_streams = Lines (
+	    List.map (fun rel -> ("pb.add_stream("^rel^");") ) streams)
+	  in
+	  let register_triggers = Lines 
+	    (List.map (fun (rel, evt_type, unwrap_fn_id,_) ->
+	        let args = String.concat ", " [rel; evt_type; ("boost::bind(&"^unwrap_fn_id^", this, ::boost::lambda::_1)")] in
+	        if evt_type = "insert_tuple" || evt_type = "delete_tuple" then 
+	            ("pb.add_trigger("^args^");") else ("")) 
+	    (fst trig_reg_info))
+	  in
+      
+      
+    let flat_triggers = List.flatten 
+        (List.map (fun (t_decls,t) -> 
+             t_decls@(source_code_of_trigger dbschema t))
+         triggers)
+    in
+    let profiling = if opts.profile then (declare_profiling map_schema) 
+                    else Lines([]) 
+    in
+    let init_stats =
+	    let stmt_ids = List.flatten (List.map (fun (_,_,_,sids) ->
+	        List.map (fun (i,n) ->
+	          "pb.exec_stats->register_probe("^i^", \""^(String.escaped n)^"\");")
+	        sids)
+	      (fst trig_reg_info))
+	    in
+	    let ivc_ids =
+	      List.fold_left (fun acc (n,cl) ->
+	        acc@(List.map (fun i ->
+	          "pb.ivc_stats->register_probe("^(string_of_int i)^", \""^
+	          (String.escaped n)^"\");") cl))
+	      [] (snd trig_reg_info)
+	    in
+	    Lines (["#ifdef DBT_PROFILE"]@stmt_ids@ivc_ids@["#endif // DBT_PROFILE"])
+	  in
+      
+      
+    isc indent (cscl ~delim:"\n" ([
+	    Lines ["struct data_t{";];
+	    isc tab (cscl t_l); 
+      Lines [
+        tab^"template<class Archive>";
+        tab^"void serialize(Archive& ar, const unsigned int version)";
+        tab^"{"];
+      isc (tab^tab) (Lines s_l);  
+      Lines [
+        tab^"}";
+        "";
+	      tab^"data_t()"^
+	        (if i_l <> [] then " : "^(ssc (cscl ~delim:"," i_l)) else "");
+	      tab^"{}";
+        "";
+        tab^"void register_data(ProgramBase& pb)";
+        tab^"{"];
+      isc (tab^tab) (Lines r_l);
+      isc (tab^tab) register_streams;
+      isc (tab^tab) register_triggers;
+      isc (tab^tab) init_stats;
+      Lines [
+        tab^"}";
+        "";
+        "private:";];
+      isc tab (cscl flat_triggers);
+      isc tab profiling;
+      isc tab (cscl d_l); 
+      Lines [
+        "};";
+        "";
+        "data_t data;"];
+    ])) 
+    
 
   let declare_sources_and_adaptors (sources:Schema.t) =
     let quote s = "\""^(String.escaped s)^"\"" in
@@ -2416,71 +2423,9 @@ end (* Typing *)
     in 
     let rsc = cscl ~delim:"\n" (List.map (fun sd ->
         cscl (List.map source_code_of_imp sd)) (List.map snd decls))
-    in (List.map fst decls), rsc
-
-  (* Stream identifier generation *)
-  let declare_streams (dbschema:Schema.rel_t list) = 
-    List.map (fun (rel,_,_) -> ("\""^(String.escaped rel)^"\"")) dbschema
-  
-  (* Main function generation *)
-  let declare_main opts dbschema (map_inits:source_code_t) 
-                   (map_schema : K3.map_t list) (sources:Schema.t)
-                   (trig_reg_info, ivc_counters) tlqs =
-                    
-      let streams = declare_streams dbschema in
-      let register_streams = Lines (
-        List.map (fun rel -> ("add_stream("^rel^");") ) streams)
-      in
-      let register_triggers = Lines 
-        (List.map (fun (rel, evt_type, unwrap_fn_id,_) ->
-            let args = String.concat ", " [rel; evt_type; ("&"^unwrap_fn_id)] in
-            if evt_type = "insert_tuple" || evt_type = "delete_tuple" then 
-                ("add_trigger("^args^");") else ("")) 
-        trig_reg_info)
-      in
+    in (List.map fst decls), rsc     
             
-      let source_vars, source_and_adaptor_decls = 
-                declare_sources_and_adaptors sources in
-    
-      let register_src = Lines (List.map (function
-        | Var(_,(id,_)) -> "multiplexer.add_source("^id^");"
-        | _ -> failwith "invalid source") source_vars)
-      in
-      let register_toplevel_queries = Lines
-        (List.map (fun q -> "run_opts.add_output_map(\""^q^"\");") tlqs)
-      in
-      
-      let init_stats =
-        let stmt_ids = List.flatten (List.map (fun (_,_,_,sids) ->
-            List.map (fun (i,n) ->
-              "exec_stats->register_probe("^i^", \""^(String.escaped n)^"\");")
-            sids)
-          trig_reg_info)
-        in
-        let ivc_ids =
-          List.fold_left (fun acc (n,cl) ->
-            acc@(List.map (fun i ->
-              "ivc_stats->register_probe("^(string_of_int i)^", \""^
-              (String.escaped n)^"\");") cl))
-          [] ivc_counters
-        in
-        Lines (["#ifdef DBT_PROFILE"]@stmt_ids@ivc_ids@["#endif // DBT_PROFILE"])
-      in
-      cscl ~delim:"\n"
-	      [Lines ["Program(int argc = 0, char* argv[] = 0) : "^
-	                (ssc (cdsc "," (SourceCode.Inline("ProgramBase(argc,argv)")) map_inits));
-	              "{";];
-	       isc tab register_streams;
-	       isc tab register_triggers;
-         isc tab source_and_adaptor_decls;
-	       isc tab register_src;        (* Add all sources to multiplexer *)
-	       isc tab register_toplevel_queries;
-         isc tab init_stats;                          
-	       Lines ["}";];]
-    
-     
-            
-end (* CPPTarget *)
+end (* Target *)
 
 
 (* An imperative compiler implementation *)
@@ -2490,33 +2435,11 @@ struct
   open K3ToImperative.Imp
   open Imperative
   open Common
-  open CPPTarget
+  open Target
 
   module IBK = K3ToImperative.AnnotatedK3
   module IBC = K3ToImperative.Common
   
-  type trigger_setup_t =
-    (string * string * string * (string * string) list) list *
-    (string * int list) list
-
-  type compiler_trig_t = (ext_type type_t, ext_type, ext_fn) Program.trigger_t
-
-  type imp_prog_t =
-    (  K3.map_t list *              (*   Schema *)
-       Patterns.pattern_map *       (*   Schema patterns *)
-       (  (  source_code_t list *   (*       ?? *)
-             compiler_trig_t        (*       Trigger code *)
-          ) list *                  (*     List of all triggers =^ *)
-          trigger_setup_t           (*     Trigger setup code *)
-       )                            (*   Imperative Program Triggers *)
-    ) *                             (* Imperative Program =^ *)
-    Schema.t *                      (* Database Schema *)
-    string list                     (* Toplevel Queries *)
-      
-  let empty_prog ():imp_prog_t = 
-    (([], Patterns.empty_pattern_map (), ([], ([], []))), 
-     Schema.empty_db (), [])
-   
   (* Internal type conversion helper function *)
   let imp_type_of_calc_type t = Host(K3.TBase(t))
   
@@ -2572,7 +2495,7 @@ struct
       let x = string_of_int (counter+i)
       in i+1, acc@[x, tnm^"_s"^(string_of_int i)]) (0,[]) stmts)
     in ( ("\""^(String.escaped (Schema.rel_name_of_event event))^"\""), 
-         ep,("Program::unwrap_"^tnm),exec_ids)
+         ep,("data_t::unwrap_"^tnm),exec_ids)
 
   (* Top-level K3 trigger program compilation *)
   let compile_triggers opts dbschema ((schema,patterns),trigs,tlqs) :
@@ -2593,62 +2516,38 @@ struct
     in compiler_trigs, (trigger_setup, snd ivc_counters)
 
 
-  let compile_imp opts (((map_schema,patterns,(triggers,trig_reg_info)),
-                        sources, tlqs):imp_prog_t) =
+  let compile_imp opts (imp_prog:imp_prog_t) =
     let indent = tab^tab in
-    let dbschema = Schema.rels sources in
-    let map_defs, ro_map_decls, map_decls, map_inits = 
-            declare_maps_of_schema indent map_schema patterns in
-    let profiling = if opts.profile then (isc indent (declare_profiling map_schema)) 
-                    else Lines([]) 
-    in
+    let (map_schema,patterns,(triggers,trig_reg_info)), sources, tlqs = imp_prog in
     
-    let map_outputs opts_id archive_id = Lines (List.flatten 
-        (List.map (fun (map_id,_,_,_) ->
-            ["if ( (!debug && "^opts_id^".is_output_map( \""^
-                                            (String.escaped map_id)^"\" )) "^
-                   " || (debug && "^opts_id^".is_traced_map( \""^
-                                            (String.escaped map_id)^"\" )) )";
-            tab^(ssc (source_code_of_map_serialization archive_id map_id))^";"])
-        map_schema))
-	  in
-	  let stepper = (isc indent (cscl [
-	    Lines ["void trace(std::ostream &ofs, bool debug) {";
-	           tab^"boost::archive::xml_oarchive oa(ofs, 0);"];
-	    isc tab (map_outputs "run_opts" "oa");
-	    Lines ["}";""]; ] ))
-	  in
-	  
-	  let refresher = (isc indent (cscl [
-	    Lines ["void refresh_maps() {";];
-	    (isc tab (Lines( 
-	      List.map 
-	        (fun (map_id,_,_,_) -> "ro"^map_id^" = "^map_id^";" ) 
-	        map_schema )));
-	    Lines ["}";""]; ] ))
+    let maps_and_triggers = declare_maps_and_triggers opts indent imp_prog in
+    
+    let refresher =   
+        Lines [indent^"void take_snapshot(void* snap){ *((data_t*)snap) = data; }";]
 	  in
       
-    let flat_triggers = (isc indent 
-      (cscl (List.flatten (List.map (fun (t_decls,t) -> 
-             t_decls@(source_code_of_trigger dbschema t))
-             triggers))))
+    let source_vars, source_and_adaptor_decls = 
+                declare_sources_and_adaptors sources in
+    
+	  let register_src = Lines (List.map (function
+	    | Var(_,(id,_)) -> "multiplexer.add_source("^id^");"
+	    | _ -> failwith "invalid source") source_vars)
+	  in
+	  
+    let main_fn = (isc indent (cscl ~delim:"\n"
+	      [Lines ["Program(int argc = 0, char* argv[] = 0) : ProgramBase(argc,argv) {";
+                tab^"data.register_data(*this);"];
+	       isc tab source_and_adaptor_decls;
+	       isc tab register_src;        (* Add all sources to multiplexer *)
+	       Lines ["}";];] ))
     in
     
-    let main_fn = (isc indent 
-        (declare_main opts dbschema map_inits map_schema sources trig_reg_info tlqs))
-    in
       strings_of_source_code (
          concat_and_delim_source_code_list ~delim:"\n"
             [preamble opts; 
-             map_defs; 
+             maps_and_triggers; 
              main_fn;
-             ro_map_decls;
-             Inline(tab^"private:");
-             map_decls; 
-             profiling; 
-             flat_triggers;
              refresher;
-             stepper;
              ending;]
       )
 
