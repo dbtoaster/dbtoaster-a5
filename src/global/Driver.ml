@@ -248,8 +248,8 @@ Debug.exec "DEBUG-DM"   (fun () -> Debug.activate "DEBUG-DM-IVC"; Debug.activate
   Debug.activate "DEBUG-DM-WITH-M3";
   if not (Debug.active "DEBUG-DM-NO-LEFT") then
     Debug.activate "DEBUG-DM-LEFT"
-  else
-    Debug.activate "M3TOK3-GENERATE-INIT"
+  (*else
+     Debug.activate "M3TOK3-GENERATE-INIT" *)
 );;
 
 (* If we're compiling to a binary (i.e., the second-stage compiler is being

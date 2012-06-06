@@ -70,6 +70,20 @@ $&gt; ./rst<br/>
 </div>
 </p>
 
+<p>
+To produce a scala binary, invoke dbtoaster with <tt>-l scala</tt>, and the <tt>-c [binary name]</tt> flag as above.  DBToaster will produce <tt>[binary name].jar</tt>, which can be run using java as a normal scala program.
+
+<div class="codeblock">
+$&gt; dbtoaster test/queries/simple/rst.sql -l scala -c rst<br/>
+$&gt; java -cp [path_to_dbt_lib]:[path_to_scala_lib] -jar rst.jar<br/>
+&lt;?xml version="1.0" encoding="UTF-8" standalone="yes" ?&gt;<br/>
+&lt;!DOCTYPE boost_serialization&gt;<br/>
+&lt;boost_serialization signature="serialization::archive" version="9"&gt;<br/>
+&lt;ATIMESD&gt;18753367048934&lt;/ATIMESD&gt;<br/>
+&lt;/boost_serialization&gt;
+</div>
+</p>
+
 <h3>Source Code Mode</h3>
 <div class="todo">Source code mode has not been implemented yet.</div>
 
