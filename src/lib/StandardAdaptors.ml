@@ -111,8 +111,10 @@ let preprocessors : (string * (string -> string list -> string list)) list =
  *) 
 (* TODO: better hashing function control *)
 (* TODO: handle "event" and "order" schema elements, as seen in C++ adaptors *)
-let build_tuple (reln,relv,_) param_val =
-   let types = Str.split (Str.regexp ",") param_val in
+let build_tuple (reln,relv,_) param_val support_sch =
+   let types = (List.map Types.string_of_type support_sch) @ 
+               (Str.split (Str.regexp ",") param_val) in
+   let full_sch = (List.map (fun x -> ("tmp",x)) support_sch) @ relv in
    let assert_type vn vt scht cmpt= 
       if vt <> cmpt then failwith (
          "Mismatch between schema of "^reln^" and schema provided to CSV "^
@@ -156,7 +158,7 @@ let build_tuple (reln,relv,_) param_val =
         | "hash" -> 
            assert_type vn vt t TInt;
            (fun x -> CInt(Hashtbl.hash x))
-        | _ -> failwith ("invalid const_t type "^t)) types relv 
+        | _ -> failwith ("invalid const_t type "^t)) types full_sch 
      with | Invalid_argument("List.map2") ->
                failwith ("Schema mismatch: Adaptor got ["^param_val^"]; while "^
                          "expecting schema: "^
@@ -172,28 +174,34 @@ let build_tuple (reln,relv,_) param_val =
    if num_fns = 1 then (fun fields -> List.map extend_fn fields)
    else 
    (fun fields ->
-      let nf = List.length fields in
-      let common =
-         if nf = num_fns then List.map2 (fun bf f -> bf f) build_fns fields
-         else if nf = 0 then
-           raise AbortEventConstruction (* no fields => no event *)
-         else if nf < num_fns then
-           List.map2 (fun bf f -> bf f) (sub [] build_fns 0 nf) fields
-         else List.map2 (fun bf f -> bf f) build_fns (sub [] fields 0 num_fns)
-      in
-      let extension = if nf > num_fns then
-         List.map extend_fn (sub [] fields num_fns (nf - num_fns)) else []
-      in common@extension)
+      try 
+         let nf = List.length fields in
+         let common =
+            if nf = num_fns then List.map2 (fun bf f -> bf f) build_fns fields
+            else if nf = 0 then
+              raise AbortEventConstruction (* no fields => no event *)
+            else if nf < num_fns then
+              List.map2 (fun bf f -> bf f) (sub [] build_fns 0 nf) fields
+            else List.map2 (fun bf f -> bf f) build_fns (sub [] fields 0 num_fns)
+         in
+         let extension = if nf > num_fns then
+            List.map extend_fn (sub [] fields num_fns (nf - num_fns)) else []
+         in common@extension
+      with Failure(msg) -> 
+         failwith (msg^" in tuple "^
+                   (ListExtras.ocaml_of_list (fun x->x) fields))
+   )
 
-let build_rel_tuple (reln,relv,relt) =
+let build_rel_tuple (reln,relv,relt) support_sch =
    let synthesized_schema =
       ListExtras.string_of_list ~sep:"," 
          (fun (_,t) -> Types.string_of_type t) relv
-   in build_tuple (reln,relv,relt) synthesized_schema
+   in build_tuple (reln,relv,relt) synthesized_schema support_sch 
 
 (* Constructors: param key, const fn *)
 let constructors rel_sch : 
-      (string * (string -> string list -> const_t list)) list =
+      (string * (string -> Types.type_t list -> string list -> const_t list)) 
+            list =
    [("schema", (build_tuple rel_sch))]
 
 (* TODO: precision management transformations *)
@@ -236,14 +244,22 @@ let parametrized_event param_val =
  * -- determining event type from a field, equality, general comparison, etc *)
 
 let event_constructors : 
-      (string * (string -> const_t list -> 
-                     (adaptor_event_t * const_t list) list)) list =
-   [("eventtype", constant_event); ("triggers", parametrized_event)]
+      (string * ((string -> const_t list -> 
+                     (adaptor_event_t * const_t list) list) * 
+                 Types.type_t list)) list =
+   [  ("eventtype", (constant_event,[])); 
+      ("triggers", (parametrized_event,[TInt]));
+      ("deletions", ((function "true" -> parametrized_event "0:insert,1:delete"
+                              | _     -> constant_event "insert"),[TInt]))
+   ]
+
 
 (* Standard generator, applying above transformations *)
 let standard_generator rel_sch params =
-   let match_keys l = List.map (fun (k,v) -> (List.assoc k l) v)
-      (List.filter (fun (k,v) -> List.mem_assoc k l) params) in
+
+   let match_keys l  = List.map (fun (k,v) -> (List.assoc k l) v)
+      (List.filter (fun (k,v) -> List.mem_assoc k l) params)
+   in
    let match_unique_default l fn_class default =
       let m = match_keys l in match m with
        | [f] -> f
@@ -253,15 +269,19 @@ let standard_generator rel_sch params =
    let token_fn = 
      match_unique_default tokenizers "tokenizer" (field_tokens ",") in
    let prep_fns = match_keys preprocessors in
-   let const_fn = 
+   let const_fn_template = 
       match_unique_default (constructors rel_sch) "constructor" 
                            (build_rel_tuple rel_sch) 
    in
    let post_fns = match_keys postprocessors in
-   let event_const_fn = 
-     match_unique_default event_constructors "event constructor" 
-                          (constant_event "insert")
+   let (event_const_fn_name, event_const_fn_args) = 
+      List.find (fun (k,_) -> List.mem_assoc k event_constructors) params
    in
+   let (event_const_fn_template, support_sch) = 
+      List.assoc event_const_fn_name event_constructors
+   in
+   let const_fn = const_fn_template support_sch in
+   let event_const_fn = event_const_fn_template event_const_fn_args in
    (fun tuple ->
       (*print_endline tuple;*)
       try
@@ -278,13 +298,17 @@ let standard_generator rel_sch params =
     ) 
 
 (* Generic CSV, w/ user-defined field delimiter *)
-let csv_params delim schema event =
+let csv_params ?(event = "none") delim schema =
    let schema_val = if schema = "" then "float" else schema in
-   let event_val = if event = "" then "insert" else event in
-   ("csv", [("fields", delim); ("schema", schema_val); ("eventtype", event_val) ])
+   ("csv", [("fields", delim); ("schema", schema_val)] @ 
+      (match event with ""     -> ["eventtype", "insert"]
+                      | "none" -> []
+                      | _      -> ["eventtype", event]
+      )
+   )
 
-let insert_csv delim = csv_params delim "" ""
-let delete_csv delim = csv_params delim "" "delete"
+let insert_csv delim = csv_params ~event:"insert" delim ""
+let delete_csv delim = csv_params ~event:"delete" delim ""
 
 let csv_generator = standard_generator
 let csv_generator_wrapper default_params rel_sch extra_params =
@@ -423,14 +447,14 @@ let orderbook_generator rel_sch params =
 let li_schema =
    "int,int,int,int,float,float,float,float,string,string,date,date,date,string,string,string"
 
-let lineitem_params = csv_params "|" li_schema "insert"
-let order_params    = csv_params "|" "int,int,string,float,date,string,string,int,string" "insert"
-let part_params     = csv_params "|" "int,string,string,string,string,int,string,float,string" "insert"
-let partsupp_params = csv_params "|" "int,int,int,float,string" "insert"
-let customer_params = csv_params "|" "int,string,string,int,string,float,string,string" "insert"
-let supplier_params = csv_params "|" "int,string,string,int,string,float,string" "insert"
-let nation_params   = csv_params "|" "int,string,int,string" "insert"
-let region_params   = csv_params "|" "int,string,string" "insert"
+let lineitem_params = csv_params "|" li_schema
+let order_params    = csv_params "|" "int,int,string,float,date,string,string,int,string"
+let part_params     = csv_params "|" "int,string,string,string,string,int,string,float,string"
+let partsupp_params = csv_params "|" "int,int,int,float,string"
+let customer_params = csv_params "|" "int,string,string,int,string,float,string,string"
+let supplier_params = csv_params "|" "int,string,string,int,string,float,string"
+let nation_params   = csv_params "|" "int,string,int,string"
+let region_params   = csv_params "|" "int,string,string"
 
 (* TODO: handle "deletions" parameter for TPCH
  * Requires a staged multiplexer. *)
