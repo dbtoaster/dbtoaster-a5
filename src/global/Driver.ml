@@ -434,10 +434,18 @@ if stage_is_active StageCompileCalc then (
       let mp, tlq = Compiler.compile db_schema !calc_queries in
          materialization_plan := mp;
          toplevel_queries := tlq
-   with Calculus.CalculusException(expr, msg) ->
+   with
+   | Calculus.CalculusException(expr, msg) ->
       bug ~exc:true
           ~detail:(fun () -> CalculusPrinter.string_of_expr expr) 
           msg
+   | Failure(msg) ->
+      bug ~exc:true
+          ~detail:(fun () -> ListExtras.string_of_list ~sep:"\n" 
+                                (fun (_,x) -> CalculusPrinter.string_of_expr x)
+                                !calc_queries)
+          msg
+          
 )
 ;;
 if stage_is_active StagePrintPlan then (

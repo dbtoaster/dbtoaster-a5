@@ -134,7 +134,7 @@ let lift_equalities (global_scope:var_t list) (big_expr:C.expr_t): C.expr_t =
                         "Scope of error is : " ^
                         (ListExtras.ocaml_of_list string_of_var local_scope)
                       );
-                      failwith "Error: lifted equality past scope of both vars")
+                      C.bail_out big_expr "Error: lifted equality past scope of both vars")
          | UnidirectionalLift(x, y) -> 
             if not (List.for_all (fun y_var -> List.mem y_var local_scope)
                                  (Arithmetic.vars_of_value y))
