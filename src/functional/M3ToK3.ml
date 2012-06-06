@@ -722,38 +722,44 @@ let rec calc_to_k3_expr meta ?(generate_init = false) theta_vars_el calc :
 			let sum_exprs_tl = List.tl sum_exprs in
 			
 			let sum_result, nm2 = if outs_el <> [] then 
-				(* For computing sums between collections we use temporary maps. *)
-				(* The operation has 3 steps:*)
-				(* 1. Reset the temporary collection. *)
-				(* 2. Insert into the temporary collection the contents of the collection *)
-				(* corresponding to the first term.*)
-				(* 3. Update the temporary collection with the contents of the collections *)
-				(* corresponding to the rest of the sum terms.*)
-				let sum_coll,sum_map = next_sum_tmp_coll outs_el ret_t in
-				
-				let reset_update = 
-						K.PCElementRemove(sum_coll, [], outs_el) in
-				let reset_stmt = 
-						K.Iterate( lambda (outs_el@[ret_ve]) reset_update,	sum_coll) in
-				
-				let head_update = 
-						K.PCValueUpdate(sum_coll, [], outs_el, hd_ret_ve) in									
-				let head_stmt =
-				      K.Comment(hd_txt, 
-                     K.Iterate(lambda (hd_outs_el@[hd_ret_ve])	head_update, hd_s)) in
-				
-				let sum_fn (s_outs_el,s_ret_ve,s,txt) =							
-						let sum_update =
-							K.PCValueUpdate(sum_coll, [], outs_el, 
-								K.IfThenElse(K.Member(sum_coll,outs_el), 
-														 K.Add(s_ret_ve,K.Lookup(sum_coll,outs_el)), 
-														 s_ret_ve) ) in
-                  K.Comment(txt, 
-                     K.Iterate(lambda (s_outs_el@[s_ret_ve])	sum_update,	s)) in
-				let tail_stmts = List.map sum_fn sum_exprs_tl in
-				
-				(K.Block( reset_stmt::head_stmt::tail_stmts@[sum_coll] )),
-				(meta_append_sum_map nm sum_map)
+        (if not (Debug.active "M3TOK3-SUM-WITH-COMBINE") then
+					(* For computing sums between collections we use temporary maps. *)
+					(* The operation has 3 steps:*)
+					(* 1. Reset the temporary collection. *)
+					(* 2. Insert into the temporary collection the contents of the collection *)
+					(* corresponding to the first term.*)
+					(* 3. Update the temporary collection with the contents of the collections *)
+					(* corresponding to the rest of the sum terms.*)
+					let sum_coll,sum_map = next_sum_tmp_coll outs_el ret_t in
+					
+					let reset_update = 
+							K.PCElementRemove(sum_coll, [], outs_el) in
+					let reset_stmt = 
+							K.Iterate( lambda (outs_el@[ret_ve]) reset_update,	sum_coll) in
+					
+					let head_update = 
+							K.PCValueUpdate(sum_coll, [], outs_el, hd_ret_ve) in									
+					let head_stmt =
+					      K.Comment(hd_txt, 
+	                     K.Iterate(lambda (hd_outs_el@[hd_ret_ve])	head_update, hd_s)) in
+					
+					let sum_fn (s_outs_el,s_ret_ve,s,txt) =							
+							let sum_update =
+								K.PCValueUpdate(sum_coll, [], outs_el, 
+									K.IfThenElse(K.Member(sum_coll,outs_el), 
+															 K.Add(s_ret_ve,K.Lookup(sum_coll,outs_el)), 
+															 s_ret_ve) ) in
+	                  K.Comment(txt, 
+	                     K.Iterate(lambda (s_outs_el@[s_ret_ve])	sum_update,	s)) in
+					let tail_stmts = List.map sum_fn sum_exprs_tl in
+					
+					(K.Block( reset_stmt::head_stmt::tail_stmts@[sum_coll] )),
+					(meta_append_sum_map nm sum_map)
+        else
+          let sum_fn sum_e (s_outs_el,s_ret_ve,s,_) = K.Combine(sum_e,s) in
+          (List.fold_left sum_fn hd_s sum_exprs_tl), 
+          nm
+        )
 			else
 				let sum_fn sum_e (s_outs_el,s_ret_ve,s,_)	= K.Add(sum_e,s) in
 				(List.fold_left sum_fn hd_s sum_exprs_tl), 

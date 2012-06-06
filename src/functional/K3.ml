@@ -745,6 +745,7 @@ let get_pc_schema pce maps =
          ) in
          List.map fst (mapiv@mapov)
 
+
 let nice_string_of_expr ?(type_is_needed = false) e maps =
   let ob () = pp_open_hovbox str_formatter 2(*; pp_print_string str_formatter "{"*) in
   let cb () = (*pp_print_string str_formatter "}";*)pp_close_box str_formatter () in
@@ -1030,7 +1031,26 @@ type trigger_t = Schema.event_t * statement_t list
 (** [Query name] x [Query expr] *)
 type toplevel_query_t = string * expr_t
 type prog_t = Schema.t * schema_t * trigger_t list * toplevel_query_t list
-    
+
+(* Returns all the persistent collections appearing in 'e' *)
+let rec get_expr_map_schema (e: expr_t) : map_t list =
+  let to_map_t (id,ins,outs,t) =
+    (id, List.map (fun v -> (fst v),(base_type_of (snd v))) ins,
+         List.map (fun v -> (fst v),(base_type_of (snd v))) outs,
+        base_type_of t) 
+  in
+    begin match e with
+    | Const            c                    -> []
+    | Var              (id,t)               -> []
+    | SingletonPC      (id,t)               -> [to_map_t (id,[],[],t)]
+    | OutPC            (id,outs,t)          -> [to_map_t (id,[],outs,t)]
+    | InPC             (id,ins,t)           -> [to_map_t (id,ins,[],t)]
+    | PC               (id,ins,outs,t)      -> [to_map_t (id,ins,outs,t)]
+    | _ -> List.flatten 
+            (List.map get_expr_map_schema 
+                (List.flatten (get_branches e)))
+    end
+
 let code_of_prog ((_,(maps,_),triggers,_):prog_t): string = (
    "--------------------- MAPS ----------------------\n"^
    (ListExtras.string_of_list ~sep:"\n\n" (fun (mapn, mapiv, mapov, mapt) ->

@@ -50,7 +50,7 @@ let init_code =
 		K.PCValueUpdate(pc_s, [], [], to_kconst 5.);
 		K.PCValueUpdate(pc_si, [], [], K.Const(T.CInt(5)));
 		
-	  	K.PCValueUpdate(pc_r, [], to_kconsts [1.; 1.;], to_kconst 1.);
+	  K.PCValueUpdate(pc_r, [], to_kconsts [1.; 1.;], to_kconst 1.);
  		K.PCValueUpdate(pc_r, [], to_kconsts [1.; 2.;], to_kconst 2.);
  		K.PCValueUpdate(pc_r, [], to_kconsts [2.; 1.;], to_kconst 2.);
  		K.PCValueUpdate(pc_r, [], to_kconsts [2.; 2.;], to_kconst 4.);
@@ -64,7 +64,7 @@ let init_code =
  		K.PCValueUpdate(pc_t, to_kconsts [2.; 2.;], [], to_kconst 4.);
  		K.PCValueUpdate(pc_t, to_kconsts [1.; 3.;], [], to_kconst 3.);
  		
-	  	K.PCValueUpdate(pc_w, to_kconsts [1.; 1.;], to_kconsts [1.; 1.;], to_kconst 1.);
+	  K.PCValueUpdate(pc_w, to_kconsts [1.; 1.;], to_kconsts [1.; 1.;], to_kconst 1.);
  		K.PCValueUpdate(pc_w, to_kconsts [1.; 1.;], to_kconsts [1.; 2.;], to_kconst 2.);
  		K.PCValueUpdate(pc_w, to_kconsts [2.; 2.;], to_kconsts [2.; 1.;], to_kconst 2.);
  		K.PCValueUpdate(pc_w, to_kconsts [2.; 2.;], to_kconsts [2.; 2.;], to_kconst 4.);
@@ -73,13 +73,13 @@ let init_code =
 		
 		K.PCValueUpdate(pc_qs, [], [], to_kconst 5.);
 		
-	  	K.PCValueUpdate(pc_qr, [], to_kconsts [1.; 1.;], to_kconst 1.);
+	  K.PCValueUpdate(pc_qr, [], to_kconsts [1.; 1.;], to_kconst 1.);
  		K.PCValueUpdate(pc_qr, [], to_kconsts [1.; 2.;], to_kconst 2.);
  		K.PCValueUpdate(pc_qr, [], to_kconsts [2.; 1.;], to_kconst 2.);
  		K.PCValueUpdate(pc_qr, [], to_kconsts [2.; 2.;], to_kconst 4.);
  		K.PCValueUpdate(pc_qr, [], to_kconsts [1.; 3.;], to_kconst 3.);
  		
-	  	K.PCValueUpdate(pc_qt, to_kconsts [1.; 1.;], [], to_kconst 1.);
+	  K.PCValueUpdate(pc_qt, to_kconsts [1.; 1.;], [], to_kconst 1.);
  		K.PCValueUpdate(pc_qt, to_kconsts [1.; 2.;], [], to_kconst 2.);
  		K.PCValueUpdate(pc_qt, to_kconsts [2.; 1.;], [], to_kconst 2.);
  		K.PCValueUpdate(pc_qt, to_kconsts [2.; 2.;], [], to_kconst 4.);
@@ -106,7 +106,7 @@ let calc_string_to_code env generate_init calc_s =
 	 print_endline "\n--------------\n--------------";
 	 print_endline ("Calculus: "^(Calculus.string_of_expr calc));
 	 print_endline "\n--------------";
-	 print_endline ("K3Expr: "^(K.code_of_expr code));
+	 print_endline ("K3Expr: "^(K.nice_code_of_expr code));
 	 *)
 	 Interpreter.compile_k3_expr code
 in
@@ -117,9 +117,9 @@ let stmt_string_to_code env generate_init stmt_s =
 	 let target_coll = MK.target_of_statement code in
 	 (*
 	 print_endline "\n--------------\n--------------";
-	 print_endline ("Calculus: "^(Calculus.string_of_expr calc));
+	 print_endline ("Calculus: "^(Plan.string_of_statement stmt));
 	 print_endline "\n--------------";
-	 print_endline ("K3Expr: "^(K.code_of_expr code));
+	 print_endline ("K3Expr: "^(K.nice_code_of_expr code));
 	 *)
 	 Interpreter.compile_k3_expr (K.Block([code;target_coll]))
 in

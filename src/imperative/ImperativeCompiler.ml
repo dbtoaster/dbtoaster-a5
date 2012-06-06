@@ -100,11 +100,13 @@ struct
 	       )                            (*   Imperative Program Triggers *)
 	    ) *                             (* Imperative Program =^ *)
 	    Schema.t *                      (* Database Schema *)
-	    string list                     (* Toplevel Queries *)
+	    (* Toplevel Queries *)
+      ( K3.map_t list * 
+        ((string * string) * source_code_t) list )
 	      
   let empty_prog ():imp_prog_t = 
 	    (([], Patterns.empty_pattern_map (), ([], ([], []))), 
-	     Schema.empty_db (), [])
+	     Schema.empty_db (), ([],[]))
 	    
 
   (* AST stringification *)
@@ -2186,24 +2188,10 @@ end (* Typing *)
       ( (if Debug.active "CPP-TRACE" then ["#define DBT_TRACE   1"] else [])@
         (if opts.profile             then ["#define DBT_PROFILE 1"] else [])@
         ["#include <lib/dbt_c++/program_base.hpp>";
-         "#ifdef DBT_PROFILE";
-         "#include <lib/dbt_c++/statistics.hpp>";
-         "using namespace ::dbtoaster::statistics;";
-         "#endif";
          "";
-         "namespace dbtoaster {";
-         tab^"class Program : public ProgramBase";
-         tab^"{";
-         tab^"public:";])
+         "namespace dbtoaster {";])
          
-  let ending = Lines
-      ([tab^"};";
-        "}";
-        "";
-        "int main(int argc, char* argv[]) {";
-        tab^"dbtoaster::Program().run();";
-        "}";
-        "";])
+  let ending = Lines ["}";]
 
   (* Stream identifier generation *)
   let declare_streams (dbschema:Schema.rel_t list) = 
@@ -2212,18 +2200,25 @@ end (* Typing *)
   (* Generates source code for map declarations, based on the
    * type_of_map_schema function above *)
   let declare_maps_and_triggers opts indent (imp_prog:imp_prog_t) =
-    let (map_schema,patterns,(triggers,trig_reg_info)), sources, tlqs = imp_prog in
+    let (map_schema,patterns,(triggers,trig_reg_info)), sources, (tlq_schema,tlqs) = imp_prog in
     
-    let t_l, d_l, i_l, r_l, s_l = List.fold_left 
-      (fun (t_acc, d_acc, i_acc, r_acc, s_acc) (id,in_tl,out_tl,mapt) ->
-        let e_id = String.escaped id in 
+    let compile_types = List.fold_left 
+      (fun acc (id,in_tl,out_tl,mapt) ->
         (* Declare map size constraint macros for garbage collection. *)
-		    let size_macro = 
+        let size_macro = 
           if in_tl = [] then []
           else [Lines ["#ifndef "^id^"_map_SIZE";
-		                   "#define "^id^"_map_SIZE DEFAULT_MAP_SIZE";
-		                   "#endif";"";]] in
-        let (_,t,t_decls) = type_of_map_schema patterns (id, in_tl, out_tl, mapt) in
+                           "#define "^id^"_map_SIZE DEFAULT_MAP_SIZE";
+                           "#endif";"";]] in
+        let (_,_,t_defs) = type_of_map_schema patterns (id, in_tl, out_tl, mapt) 
+        in        
+        acc@size_macro@(List.map source_code_of_type t_defs))
+      []
+    in
+    
+    let compile_decls = List.fold_left 
+      (fun (d_acc, i_acc) (id,in_tl,out_tl,mapt) ->
+        let (_,t,_) = type_of_map_schema patterns (id, in_tl, out_tl, mapt) in
         let has_init = match t with 
           | Host(TBase(TInt)) | Host(TBase(TFloat)) -> true
           | _ -> false
@@ -2235,13 +2230,32 @@ end (* Typing *)
             Decl(unit, (id,t), Some(Fn(t, Ext(Constructor(t)), [Const(unit, CInt(0))])))
           | _ -> Decl(unit, (id,t), None)
         in 
-        t_acc@size_macro@(List.map source_code_of_type t_decls),
         d_acc@[source_code_of_imp ~gen_init:false imp_decl],
-        i_acc@( if has_init then [source_code_of_decl ~gen_type:false imp_decl] else [] ),
-        r_acc@["pb.add_map<"^(string_of_type t)^">( \""^e_id^"\", "^e_id^" );"],
-        s_acc@(if List.mem e_id tlqs then ["ar & BOOST_SERIALIZATION_NVP("^e_id^");"] else []) )
-      ([], [], [], [], []) map_schema
+        i_acc@( if has_init then [source_code_of_decl ~gen_type:false imp_decl] else [] ) )
+      ([], [])
     in
+    
+    let compile_registration = List.fold_left 
+      (fun acc (id,in_tl,out_tl,mapt) ->
+        let e_id = String.escaped id in 
+        let (_,t,_) = type_of_map_schema patterns (id, in_tl, out_tl, mapt) in
+        acc@["pb.add_map<"^(string_of_type t)^">( \""^e_id^"\", "^e_id^" );"] )
+      []
+    in
+    
+    let compile_serialization = List.fold_left 
+      (fun acc (id,t) ->
+         acc@[t^" _"^id^" = compute"^id^"();";
+              "ar & BOOST_SERIALIZATION_NVP(_"^id^");"] )
+      []
+    in
+    
+    let tlq_d_l, tlq_i_l = compile_decls tlq_schema in
+    let tlq_s_l = compile_serialization (List.map fst tlqs) in
+    let flat_tlqs = List.map snd tlqs in
+    
+    let d_l, i_l = compile_decls (ListAsSet.diff map_schema tlq_schema) in
+    let r_l = compile_registration map_schema in
     
     let dbschema = Schema.rels sources in
     
@@ -2257,7 +2271,7 @@ end (* Typing *)
 	    (fst trig_reg_info))
 	  in
       
-      
+    
     let flat_triggers = List.flatten 
         (List.map (fun (t_decls,t) -> 
              t_decls@(source_code_of_trigger dbschema t))
@@ -2285,37 +2299,37 @@ end (* Typing *)
       
       
     isc indent (cscl ~delim:"\n" ([
-	    Lines ["struct data_t{";];
-	    isc tab (cscl t_l); 
-      Lines [
-        tab^"template<class Archive>";
-        tab^"void serialize(Archive& ar, const unsigned int version)";
-        tab^"{"];
-      isc (tab^tab) (Lines s_l);  
-      Lines [
-        tab^"}";
+      (cscl (compile_types map_schema));
+      Lines [ 
+        "struct tlq_t{";
+        tab^"tlq_t()"^(if tlq_i_l <> [] then " : "^(ssc (cscl ~delim:"," tlq_i_l)) else "");
+        tab^"{}";
         "";
-	      tab^"data_t()"^
+        tab^"template<class Archive>";
+	      tab^"void serialize(Archive& ar, const unsigned int version) {";];
+      isc (tab^tab) (Lines tlq_s_l);  
+      Lines [
+        tab^"}";];
+      isc tab (cscl flat_tlqs);      
+      isc tab (cscl tlq_d_l);
+      Lines [ 
+        "};";
+        "";
+        "struct data_t : tlq_t{";
+		    tab^"data_t()"^
 	        (if i_l <> [] then " : "^(ssc (cscl ~delim:"," i_l)) else "");
 	      tab^"{}";
         "";
-        tab^"void register_data(ProgramBase& pb)";
-        tab^"{"];
+        tab^"void register_data(ProgramBase<tlq_t>& pb) {";];
       isc (tab^tab) (Lines r_l);
       isc (tab^tab) register_streams;
       isc (tab^tab) register_triggers;
       isc (tab^tab) init_stats;
-      Lines [
-        tab^"}";
-        "";
-        "private:";];
+      Lines [tab^"}";];
       isc tab (cscl flat_triggers);
       isc tab profiling;
       isc tab (cscl d_l); 
-      Lines [
-        "};";
-        "";
-        "data_t data;"];
+      Lines ["};";];
     ])) 
     
 
@@ -2451,8 +2465,11 @@ struct
                       (stmt:K3.expr_t) =
     let lsch, lpats, ldecls = schema, patterns, [] in
     let type_env = type_env_of_declarations arg_types lsch lpats in
+    let ir = ir_of_expr stmt in
+    let meta_ir = IBK.meta_of_ir ir in
+    let stmt_var = (IBC.sym_of_meta meta_ir), (IBC.type_of_meta meta_ir) in
     let untyped_imp =
-      let i = imp_of_ir (var_type_env type_env) (ir_of_expr stmt)
+      let i = imp_of_ir (var_type_env type_env) ir
       in match i with | [x] -> x | _ -> Imperative.Block (None, i)
     in 
     let typed_imp =
@@ -2462,7 +2479,9 @@ struct
         | _, [] -> r
         | Imperative.Block(m, il), _ -> Imperative.Block(m, ldecls@il)
         | _, _ -> Imperative.Block(type_of_imp_t r, ldecls@[r])
-    in if opts.desugar then desugar_imp opts type_env typed_imp else typed_imp
+    in 
+    (if opts.desugar then desugar_imp opts type_env typed_imp else typed_imp),
+    stmt_var
 
   (* Compiles a K3 trigger, setting up a type environment based on the
    * given datastructure schemas and access patterns *)
@@ -2479,7 +2498,7 @@ struct
          (fun (vn,vt) -> vn, imp_type_of_calc_type vt)
          (Schema.event_vars event)
     in
-    let compile_f = compile_k3_stmt opts arg_types schema patterns in
+    let compile_f = fun stmt -> fst (compile_k3_stmt opts arg_types schema patterns stmt) in
     let i = Imperative.Block (Host TUnit, List.map compile_f k3stmts) in
     let t = (event,i) in
     if not opts.profile then (0,[]),([],t)
@@ -2515,17 +2534,31 @@ struct
       (0, []) trigs)
     in compiler_trigs, (trigger_setup, snd ivc_counters)
 
+  (* Top-level K3 queries compilation *)
+  let compile_tlqs opts schema patterns tlqs
+  =
+    let tlq_get_schema tlq = get_expr_map_schema (snd tlq) in
+    ListAsSet.multiunion (List.map tlq_get_schema tlqs)
+    ,
+    List.map ( fun (tlq_name,tlq_k3code) ->
+      let tlq_code,(tlq_var,_tlq_type) =
+        (compile_k3_stmt opts [] schema patterns tlq_k3code)
+      in
+      let tlq_type = Target.Typing.string_of_type _tlq_type
+      in      
+      (tlq_name,tlq_type),
+      cscl [
+        Lines [tlq_type^" compute"^tlq_name^"(){"];
+        isc tab (source_code_of_imp tlq_code);
+        Lines [tab^"return "^tlq_var^";";"}";];
+      ])
+    tlqs
 
   let compile_imp opts (imp_prog:imp_prog_t) =
-    let indent = tab^tab in
-    let (map_schema,patterns,(triggers,trig_reg_info)), sources, tlqs = imp_prog in
+    let (map_schema,patterns,(triggers,trig_reg_info)), sources, (tlq_schema,tlqs) = imp_prog in
     
-    let maps_and_triggers = declare_maps_and_triggers opts indent imp_prog in
+    let maps_and_triggers = declare_maps_and_triggers opts tab imp_prog in
     
-    let refresher =   
-        Lines [indent^"void take_snapshot(void* snap){ *((data_t*)snap) = data; }";]
-	  in
-      
     let source_vars, source_and_adaptor_decls = 
                 declare_sources_and_adaptors sources in
     
@@ -2534,12 +2567,25 @@ struct
 	    | _ -> failwith "invalid source") source_vars)
 	  in
 	  
-    let main_fn = (isc indent (cscl ~delim:"\n"
-	      [Lines ["Program(int argc = 0, char* argv[] = 0) : ProgramBase(argc,argv) {";
-                tab^"data.register_data(*this);"];
-	       isc tab source_and_adaptor_decls;
-	       isc tab register_src;        (* Add all sources to multiplexer *)
-	       Lines ["}";];] ))
+    let main_fn = (isc tab (cscl ~delim:"\n"
+	      [Lines [
+         "class Program : public ProgramBase<tlq_t>";
+         "{";
+         "public:";
+         tab^"Program(int argc = 0, char* argv[] = 0) : ProgramBase<tlq_t>(argc,argv) {";
+         tab^tab^"data.register_data(*this);";];
+	       isc (tab^tab) source_and_adaptor_decls;
+	       isc (tab^tab) register_src;
+	       Lines [
+          tab^"}";
+          tab^"snapshot_t take_snapshot(){";
+          tab^tab^"return snapshot_t( new tlq_t((tlq_t&)data) );";
+          tab^"}";
+          "";
+          "private:";
+          tab^"data_t data;";
+          "};";];
+        ] ))
     in
     
       strings_of_source_code (
@@ -2547,7 +2593,6 @@ struct
             [preamble opts; 
              maps_and_triggers; 
              main_fn;
-             refresher;
              ending;]
       )
 
@@ -2556,7 +2601,7 @@ struct
             compile_triggers opts (Schema.rels sources) 
                              ((schema,patterns),trigs,tlqs) ),
          sources,
-         (List.map fst tlqs)
+         compile_tlqs opts schema patterns tlqs
       )
 
   let compile_query opts k3_prog =

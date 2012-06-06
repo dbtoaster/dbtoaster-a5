@@ -49,9 +49,19 @@ using namespace ::dbtoaster::runtime;
 using namespace ::dbtoaster::streams;
 using namespace ::dbtoaster::util;
 
+#ifdef DBT_PROFILE
+#include "statistics.hpp"
+using namespace ::dbtoaster::statistics;
+#endif
+
+
+#define BOOST_SERIALIZATION_NVP_OF_PTR( name )  \
+	boost::serialization::make_nvp(BOOST_PP_STRINGIZE(name), *name)
+
 namespace dbtoaster {
 
-class ProgramBase : public IProgram {
+template<class TLQ_T>
+class ProgramBase : public IProgram<TLQ_T> {
 public:
 
 	typedef boost::function<void (boost::archive::xml_oarchive&)> serialize_fn_t;
@@ -155,7 +165,6 @@ public:
 
 
 
-
 	template<class T>
 	void add_map( string m_name, T& t )
 	{
@@ -164,7 +173,7 @@ public:
 			return;
 		}
 
-		serialize_fn_t fn = boost::bind( &serializer::fn<T>, ::boost::lambda::_1, make_nvp(m_name.c_str(),t) );
+		serialize_fn_t fn = boost::bind( &serializer::template fn<T>, ::boost::lambda::_1, make_nvp(m_name.c_str(),t) );
 		map_ptr_t m = shared_ptr<map_t>(new map_t(fn));
 		maps_by_name[m_name] = m;
 		return;
@@ -250,7 +259,7 @@ public:
 	}
 
 	virtual int run() {
-		start_running();
+		IProgram<TLQ_T>::start_running();
 		while( multiplexer.has_inputs() ) {
 			shared_ptr<std::list<stream_event> > events =
 					multiplexer.next_inputs();
@@ -263,7 +272,7 @@ public:
 				process_event(*ev_it);
 			}
 		}
-		stop_running();
+		IProgram<TLQ_T>::stop_running();
 
 
 		trace(run_opts.get_output_file(), false);
@@ -337,18 +346,7 @@ protected:
 		}
 		tuple_count += 1;
 
-		if( snapshot_request )
-		{
-			assert( snapshot_ready == false );
-			take_snapshot(snapshot_arg);
-
-			snapshot_request = false;
-			{
-				boost::lock_guard<boost::mutex> lock(snapshot_ready_mtx);
-				snapshot_ready=true;
-			}
-			snapshot_ready_cond.notify_all();
-		}
+		IProgram<TLQ_T>::process_snapshot();
 	}
 
 
@@ -364,8 +362,8 @@ protected:
 	void trace(std::ostream &ofs, bool debug) {
 		std::auto_ptr<boost::archive::xml_oarchive> oa;
 
-		for(map<string, map_ptr_t>::iterator it = maps_by_name.begin();
-				it != maps_by_name.end(); it++)
+		typename map<string, map_ptr_t>::iterator it = maps_by_name.begin();
+		for( ;it != maps_by_name.end(); it++)
 			if( (!debug && it->second->isOutput) || (debug && it->second->isTraced))
 			{
 				if( !oa.get() )

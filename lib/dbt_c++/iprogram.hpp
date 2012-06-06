@@ -15,13 +15,15 @@
 
 namespace dbtoaster {
 
+template<class TLQ_T>
 class IProgram {
 public:
+	typedef boost::shared_ptr<TLQ_T> snapshot_t;
+
 	IProgram() :
 		running(false)
 		, snapshot_request(false)
 		, snapshot_ready(true)
-		, snapshot_arg(0)
 	{
 	}
 	virtual ~IProgram() {
@@ -37,18 +39,7 @@ public:
 	void stop_running()
 	{
 		running_mtx.lock();
-		if( snapshot_request )
-		{
-			assert( snapshot_ready == false );
-			take_snapshot(snapshot_arg);
-			snapshot_request = false;
-
-			{
-				boost::lock_guard<boost::mutex> lock(snapshot_ready_mtx);
-				snapshot_ready=true;
-			}
-			snapshot_ready_cond.notify_all();
-		}
+		process_snapshot();
 		running = false;
 		running_mtx.unlock();
 	}
@@ -65,7 +56,7 @@ public:
 				(boost::detail::thread_move_t<boost::unique_future<int> >) f);
 	}
 
-	void request_snapshot(void* _snapshot_arg)
+	void request_snapshot()
 	{
 		assert( snapshot_request == false );
 		assert( snapshot_ready == true );
@@ -75,27 +66,53 @@ public:
 		{
 			snapshot_ready = false;
 			snapshot_request = true;
-			snapshot_arg = _snapshot_arg;
 		}
 		else
 		{
-			take_snapshot(_snapshot_arg);
+			snapshot = take_snapshot();
 		}
 		running_mtx.unlock();
 	}
 
-	void wait_for_snapshot()
+	snapshot_t wait_for_snapshot()
 	{
 		boost::unique_lock<boost::mutex> lock(snapshot_ready_mtx);
 		while(!snapshot_ready)
 		{
 			snapshot_ready_cond.wait(lock);
 		}
+
+		snapshot_t result = snapshot;
+		snapshot = snapshot_t();
+		return result;
+	}
+
+	virtual snapshot_t take_snapshot() = 0;
+
+	snapshot_t take_snapshot_async()
+	{
+		request_snapshot();
+		return wait_for_snapshot();
 	}
 
 protected:
-	virtual void take_snapshot(void*) = 0;
+	void process_snapshot()
+	{
+		if( snapshot_request )
+		{
+			assert( snapshot_ready == false );
+			snapshot = take_snapshot();
+			snapshot_request = false;
 
+			{
+				boost::lock_guard<boost::mutex> lock(snapshot_ready_mtx);
+				snapshot_ready=true;
+			}
+			snapshot_ready_cond.notify_all();
+		}
+	}
+
+private:
 	bool running;
 	boost::mutex running_mtx;
 
@@ -104,7 +121,7 @@ protected:
 	bool snapshot_ready;
 
 	bool snapshot_request;
-	void* snapshot_arg;
+	snapshot_t snapshot;
 };
 }
 

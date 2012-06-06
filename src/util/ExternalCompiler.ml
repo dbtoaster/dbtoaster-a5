@@ -81,7 +81,7 @@ let ocaml_compiler = {
    The External C++ compiler 
 *)
 let cpp_compiler = {
-   extension = ".cpp";
+   extension = ".hpp";
    compile = (fun in_file_name out_file_name ->
      let compile_flags  flag_name env_name =
         ( if StringMap.mem flag_name !compile_env
@@ -92,11 +92,13 @@ let cpp_compiler = {
      let cpp_cc = "g++" in
      let cpp_args = (
          cpp_cc ::
-			[ in_file_name; "-o"; out_file_name; ] @
+			[ "./lib/dbt_c++/main.cpp"; 
+        "-include";in_file_name; 
+        "-o"; out_file_name; ] @
          (if Debug.active "COMPILE-WITH-PROFILE" then ["-pg"] else []) @
          (if Debug.active "COMPILE-WITH-GDB" then ["-g"] else []) @
          (if Debug.active "COMPILE-WITHOUT-OPT" then [] else ["-O3"]) @
-			(if Debug.active "COMPILE-WITHOUT-STATIC" then [] else ["-static"]) @
+			   (if Debug.active "COMPILE-WITHOUT-STATIC" then [] else ["-static"]) @
 			[ "-I."; ] @
          (List.map (fun x->"-I"^x) (compile_flags "INCLUDE_HDR" "DBT_HDR")) @
          (List.map (fun x->"-L"^x) (compile_flags "INCLUDE_LIB" "DBT_LIB")) @
@@ -105,6 +107,7 @@ let cpp_compiler = {
            "-lboost_system";
            "-lboost_filesystem";
            "-lboost_chrono";
+           "-lboost_thread";
            "-lpthread";
            "-DFUSION_MAX_VECTOR_SIZE=50";           
          ] @ (!compiler_flags)
