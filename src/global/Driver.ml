@@ -8,18 +8,18 @@ type language_t =
    | Interpreter
 
 let languages =
-   [  "AUTO" , (Auto       , "automatic"                    ); 
-      "SQL",   (SQL        , "DBToaster SQL"                );
-      "CALC" , (Calc       , "DBToaster Relational Calculus");
-      "PLAN" , (MPlan      , "Materialization Plan"         );
-      "M3"   , (M3         , "M3 Program"                   );
-      "M3DM" , (M3DM       , "M3 Domain Maintenance Program");
-      "K3"   , (K3         , "K3 Program"                   );
-      "IMP"  , (IMP        , "Abstract Imperative Program"  );
-      "SCALA", (Scala      , "Scala Code"                   );
-      "OCAML", (Ocaml      , "Ocaml Code"                   );
-      "RUN",   (Interpreter, "Ocaml Interpreter"            );
-      "CPP"  , (CPP        , "C++ Code"                     );
+   [  "AUTO" , (Auto       , "automatic"                    , false); 
+      "SQL",   (SQL        , "DBToaster SQL"                , true);
+      "CALC" , (Calc       , "DBToaster Relational Calculus", true);
+      "PLAN" , (MPlan      , "Materialization Plan"         , false);
+      "M3"   , (M3         , "M3 Program"                   , true);
+      "M3DM" , (M3DM       , "M3 Domain Maintenance Program", false);
+      "K3"   , (K3         , "K3 Program"                   , true);
+      "IMP"  , (IMP        , "Abstract Imperative Program"  , false);
+      "SCALA", (Scala      , "Scala Code"                   , true);
+      "OCAML", (Ocaml      , "Ocaml Code"                   , false);
+      "RUN",   (Interpreter, "Ocaml Interpreter"            , false);
+      "CPP"  , (CPP        , "C++ Code"                     , true);
    ]
 
 let input_language  = ref Auto
@@ -27,7 +27,9 @@ let output_language = ref Auto
 
 let parse_language lang = 
    if List.mem_assoc (String.uppercase lang) languages then
-      fst (List.assoc (String.uppercase lang) languages)
+      let (l,_,_) = 
+         (List.assoc (String.uppercase lang) languages)
+      in l
    else 
       raise (Arg.Bad("Unknown language "^lang))
 ;;
@@ -58,35 +60,82 @@ let output_endline s = output (s^"\n");;
 let flush_output () = 
    match !output_filehandle with None -> ()
    | Some(fh) -> flush fh;;
-   
+
+(************ Optimizations ************)
+let optimizations_by_level = 
+   [  (** -O1 **) [
+         "WEAK-EXPR-EQUIV";
+         "K3-NO-OPTIMIZE";
+         "COMPILE-WITHOUT-OPT";
+      ]; 
+      (** -O2 **) [
+         "COMPILE-WITHOUT-OPT";
+      ];
+      (** -O3 **) [
+         "UNIFY-EXPRESSIONS";
+      ];
+   ]
+let optimizations = 
+   ListAsSet.union (ListAsSet.multiunion optimizations_by_level) [
+      "IGNORE-DELETES"; "HEURISTICS-ALWAYS-UPDATE"; "HEURISTICS-ALWAYS-REPLACE";
+      "HASH-STRINGS"
+   ]
+let opt_level = ref 2;;
 
 (************ Command Line Parsing ************)
 let specs:(Arg.key * Arg.spec * Arg.doc) list  = Arg.align [ 
    (  "-l", 
       (Arg.String(fun x -> output_language := parse_language x)), 
-      "lang  Set the compiler's output language to lang (default: auto)");
+      "lang   Set the compiler's output language to lang");
    (  "-i",
       (Arg.String(fun x -> input_language := parse_language x)),
-      "lang  Set the compiler's input language to lang (default: auto)");
+      "lang   Set the compiler's input language to lang");
    (  "-d",
       (Arg.String(fun x -> Debug.activate (String.uppercase x))),
-      "mode  Activate indicated debugging output mode");
+      "mode   Activate indicated debugging output mode");
    (  "-o",
       (Arg.Set_string(output_file)),
-      "file  Direct the output to the indicated file (default: '-'/stdout)" );
+      "file   Direct the output of dbtoaster (default: stdout)" );
    (  "-c",
       (Arg.Set_string(binary_file)),
-      "file  Invoke the appropriate second stage compiler on the source file");
+      "file   Invoke a second stage compiler on the source file");
    (  "-r",
       (Arg.Unit(fun () -> output_language := Interpreter)),
-      "      Run the query in the internal interpreter");
+      "       Run the query in the internal interpreter");
    (  "--custom-prefix",
       (Arg.String(FreshVariable.set_prefix)),
-      "      Use a custom prefix for generated symbols (default:'__')")
+      "pfx    Specify a prefix for generated symbols");
+   (  "-O1",
+      (Arg.Unit(fun () -> opt_level := 1)),
+      "       Produce less efficient code faster");
+   (  "-O2",
+      (Arg.Unit(fun () -> opt_level := 2)),
+      "       A balance between efficient code and compilation speed");
+   (  "-O3",
+      (Arg.Unit(fun () -> opt_level := 3)),
+      "       Produce the most efficient code possible");
+   (  "-F",
+      (Arg.String(fun opt -> 
+         if not (List.mem opt optimizations) then
+            raise (Arg.Bad("Invalid -F flag: "^opt))
+         else
+            Debug.activate opt)),
+      "flag   Activate the specified optimization flag");
+   (  "-?", 
+      (Arg.Unit(fun () -> raise (Arg.Bad("")) )), 
+      "       Display this list of options");
 ];;
 
-Arg.parse specs (fun x -> files := !files @ [x]) 
-          "dbtoaster [opts] file1 [file2 [...]]"
+Arg.parse specs (fun x -> files := !files @ [x]) (
+   "dbtoaster [opts] sourcefile1 [sourcefile2 [...]]"^
+   "\n---- Supported Languages ----"^
+   (ListExtras.string_of_list ~sep:"" (fun (short,(_,title,show)) ->
+      if not show then "" else 
+         "\n  "^short^(String.make (15-(String.length short)) ' ')^title
+   ) languages)^
+   "\n---- Options ----"
+)
+          
 ;;
 if List.length !files < 1 then (
    error "No Files Specified; Exiting"
@@ -94,6 +143,13 @@ if List.length !files < 1 then (
 ;;
 
 (************ Optimization Choices ************)
+if (!opt_level < 0) || (!opt_level > List.length optimizations_by_level) then 
+   bug ("Invalid -O flag :"^(string_of_int !opt_level))
+else
+   List.iter Debug.activate 
+             (List.nth optimizations_by_level (!opt_level - 1))
+;;
+
 let imperative_opts:ImperativeCompiler.compiler_options ref = ref {
    ImperativeCompiler.desugar = not (Debug.active "IMP-NO-DESUGAR");
    ImperativeCompiler.profile = Debug.active "ENABLE-PROFILING";
@@ -504,7 +560,8 @@ if stage_is_active StageM3ToK3 then (
 		let gen_init = (Debug.active "M3TOK3-GENERATE-INIT") in
       k3_program := M3ToK3.m3_to_k3 ~generate_init:gen_init !m3_program; 
       let (_,(_, pats), _, _) = !k3_program in
-         Debug.print "LOG-PATTERNS" (fun () -> Patterns.patterns_to_nice_string pats)
+         Debug.print "LOG-PATTERNS" 
+            (fun () -> Patterns.patterns_to_nice_string pats)
    with 
       | M3ToK3.M3ToK3Failure(Some(calc), _, msg) ->
          bug ~exc:true ~detail:(fun () -> Calculus.string_of_expr calc) msg
@@ -513,7 +570,8 @@ if stage_is_active StageM3ToK3 then (
       | M3ToK3.M3ToK3Failure(_, _, msg) ->
          bug ~exc:true ~detail:(fun () -> M3.string_of_m3 !m3_program) msg
       | K3Typechecker.K3TypecheckError(stack,msg) ->
-			bug ~exc:true ~detail:(fun () -> K3Typechecker.string_of_k3_stack stack) msg
+			bug ~exc:true ~detail:(fun () -> 
+			                      K3Typechecker.string_of_k3_stack stack) msg
 )
 ;;
 
@@ -521,7 +579,9 @@ if stage_is_active StageM3DMToK3 then (
    Debug.print "LOG-DRIVER" (fun () -> "Running Stage: M3DMToK3");
    if (Debug.active "DEBUG-DM") then
    begin
-      let k3_printer = if (Debug.active "NICE-K3") then K3.nice_code_of_prog else K3.code_of_prog in
+      let k3_printer = 
+         if (Debug.active "NICE-K3") then K3.nice_code_of_prog 
+                                     else K3.code_of_prog in
       let k3_queries = DMToK3.m3dm_to_k3 !k3_program !dm_program in
       Debug.print "LOG-DMTOK3" (fun () -> k3_printer k3_queries);
       k3_program := k3_queries
@@ -542,7 +602,8 @@ if stage_is_active StageParseK3 then (
             K3parser.dbtoasterK3Program K3lexer.tokenize lexbuff;
       let (_,(_, pats), _, _) = !k3_program
       in
-         Debug.print "LOG-PATTERNS" (fun () -> Patterns.patterns_to_nice_string pats)
+         Debug.print "LOG-PATTERNS" (fun () -> 
+            Patterns.patterns_to_nice_string pats)
 )
 ;;
 if (stage_is_active StageOptimizeK3) then (
@@ -639,14 +700,12 @@ if stage_is_active StageImpToTargetLanguage then (
 ;;
 
 (************ Program Management Stages ************)
-module DBCheck = DBChecker.DBAccess
-;;
 if stage_is_active StageRunInterpreter then (
    Debug.print "LOG-DRIVER" (fun () -> "Running Stage: RunInterpreter");
    try 
       let db_checker = 
          if Debug.active "DBCHECK-ON" 
-         then Some(DBCheck.init !sql_program)
+         then Some(DBChecker.DBAccess.init !sql_program)
          else None 
       in
       let (maps,patterns,compiled) = !interpreter_program in
