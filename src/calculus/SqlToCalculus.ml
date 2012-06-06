@@ -38,7 +38,8 @@ let tmp_var (vn:string) (vt:type_t): var_t =
    *)
 let lift_if_necessary ?(t="agg") (calc:C.expr_t):
                       (value_t * C.expr_t) = 
-   match calc with
+   match (CalculusTransforms.combine_values ~aggressive:true
+                                            calc) with
       | CalcRing.Val(Value(x)) -> (x, CalcRing.one)
       | _ -> 
          let v = tmp_var t (C.type_of_expr calc) in
