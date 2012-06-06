@@ -36,13 +36,16 @@ let tmp_var (vn:string) (vt:type_t): var_t =
    corner cases where a lift can occur outside of an aggregate, so it's better
    to be safe. 
    *)
-let lift_if_necessary ?(t="agg") (calc:C.expr_t):
+let lift_if_necessary ?(t="agg") ?(vt=TAny) (calc:C.expr_t):
                       (value_t * C.expr_t) = 
-   match (CalculusTransforms.combine_values ~aggressive:true
-                                            calc) with
+   (* We combine values together as aggressively as possible so as to avoid 
+      lifts at all costs. A lift will never be split apart anyway, so this  
+      condition will bridge sub(query)graphs regardless of whether we merge 
+      here or not. *)
+   match (CalculusTransforms.combine_values ~aggressive:true calc) with
       | CalcRing.Val(Value(x)) -> (x, CalcRing.one)
       | _ -> 
-         let v = tmp_var t (C.type_of_expr calc) in
+         let v = tmp_var t (Types.escalate_type vt (C.type_of_expr calc)) in
          (  mk_var v, CalcRing.mk_val (Lift(v, calc))  )
       
 
@@ -155,12 +158,8 @@ let rec normalize_agg_target_expr ?(vars_bound = false) gb_vars expr =
          in
          begin match op with
             | Sql.Sum | Sql.Sub ->
-               (* Permit things like Sum(A) * (1 + 2), and Sum(A) + Sum(B)
-                  but not things like 1 + Sum(A) *)
-               if (vars_bound) || 
-                  ((Sql.is_agg_expr lhs) && (Sql.is_agg_expr rhs))
-               then rcr_into_arithmetic false
-               else Sql.error ("Sums are not supported outside of aggregates.")
+               (* Order doesn't matter *)
+               rcr_into_arithmetic false
             | Sql.Prod ->
                (* If the lhs (or a parent) binds the group by variables, then
                   we're set. *)
@@ -460,8 +459,12 @@ and calc_of_condition (tables:Sql.table_t list) (cond:Sql.cond_t):
    let rcr_q q = calc_of_query tables q in
       begin match cond with
          | Sql.Comparison(e1,cmp,e2) -> 
-            let (e1_val, e1_calc) = lift_if_necessary (rcr_e e1) in
-            let (e2_val, e2_calc) = lift_if_necessary (rcr_e e2) in
+            let e1_calc = rcr_e e1 in
+            let e2_calc = rcr_e e2 in
+            let field_ty = Types.escalate_type (C.type_of_expr e1_calc)
+                                               (C.type_of_expr e2_calc) in
+            let (e1_val, e1_calc) = lift_if_necessary ~vt:field_ty (rcr_e e1) in
+            let (e2_val, e2_calc) = lift_if_necessary ~vt:field_ty (rcr_e e2) in
                CalcRing.mk_val (AggSum([], 
                   CalcRing.mk_prod [
                      e1_calc; e2_calc;
@@ -559,17 +562,44 @@ and calc_of_sql_expr ?(materialize_query = None)
    in
    let rcr_q q = calc_of_query tables q in
    let rcr_c c = calc_of_condition tables c in
+   
+   (* In order to support expressions like A + Sum(B) where A is a group-by 
+      variable, we need to extend the schema of the non-aggregate term to 
+      include the grouping terms.  For now, we do this by means of a lift into
+      a dummy variable *)
+   let extend_sum_with_agg calc_expr = 
+      begin match materialize_query with
+         | None -> failwith "Unexpected aggregation operator (1)"
+         | Some(m) -> 
+            let count_agg = m Sql.CountAgg CalcRing.one in
+            let (_,count_sch) = Calculus.schema_of_expr count_agg in
+            CalcRing.mk_prod [
+               CalcRing.mk_val (AggSum(count_sch,
+                  CalcRing.mk_val (Lift((tmp_var "dummy" TInt), count_agg))));
+               calc_expr
+            ]
+      end
+   in
+   
    begin match expr with
       | Sql.Const(c) -> 
          CalcRing.mk_val (Value(mk_const c))
       | Sql.Var(v)   -> 
          CalcRing.mk_val (Value(mk_var (var_of_sql_var v)))
-      | Sql.SQLArith(e1, Sql.Sum, e2) ->
-         CalcRing.mk_sum [rcr_e e1; rcr_e e2]
+      | Sql.SQLArith(e1, ((Sql.Sum | Sql.Sub) as op), e2) ->
+         let e1_calc, e2_base_calc =
+            begin match ((Sql.is_agg_expr e1), (Sql.is_agg_expr e2)) with
+               | (true, true) | (false,false) -> (rcr_e e1, rcr_e e2)
+               | (false,true) -> (extend_sum_with_agg (rcr_e e1), (rcr_e e2))
+               | (true,false) -> ((rcr_e e1), extend_sum_with_agg (rcr_e e2))
+            end
+         in
+         let e2_calc = if op = Sql.Sub then CalcRing.mk_neg e2_base_calc
+                                       else e2_base_calc 
+         in
+            CalcRing.mk_sum [e1_calc; e2_calc]
       | Sql.SQLArith(e1, Sql.Prod, e2) ->
          CalcRing.mk_prod [rcr_e e1; rcr_e e2]
-      | Sql.SQLArith(e1, Sql.Sub, e2) ->
-         CalcRing.mk_sum [rcr_e e1; CalcRing.mk_neg (rcr_e e2)]
       | Sql.SQLArith(e1, Sql.Div, e2) ->
 			let ce1 = rcr_e e1 in
          let ce2 = rcr_e e2 in			
@@ -632,7 +662,7 @@ and calc_of_sql_expr ?(materialize_query = None)
       | Sql.Aggregate(agg, expr) -> 
          begin match materialize_query with
             | Some(mq) -> (mq agg (rcr_e ~is_agg:true expr))
-            | None -> failwith "Unexpected aggregation operator"
+            | None -> failwith "Unexpected aggregation operator (2)"
          end
       | Sql.ExternalFn(fn, fargs) ->
          let lifted_args, arg_calc = List.split (List.map (fun arg ->

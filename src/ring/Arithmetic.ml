@@ -289,7 +289,7 @@ declare_arithmetic_function "max"
                         | _ -> failwith ("max of "^(string_of_type ftype))
       in List.fold_left max start (List.map (Types.type_cast cast_type) arglist)
    )
-
+;;
 
 (**
    Returns sign of a value.

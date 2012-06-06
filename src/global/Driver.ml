@@ -513,7 +513,7 @@ if stage_is_active StageM3ToK3 then (
       | M3ToK3.M3ToK3Failure(_, _, msg) ->
          bug ~exc:true ~detail:(fun () -> M3.string_of_m3 !m3_program) msg
       | K3Typechecker.K3TypecheckError(stack,msg) ->
-			bug ~detail:(fun () -> K3Typechecker.string_of_k3_stack stack) msg
+			bug ~exc:true ~detail:(fun () -> K3Typechecker.string_of_k3_stack stack) msg
 )
 ;;
 

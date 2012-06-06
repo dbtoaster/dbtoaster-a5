@@ -817,8 +817,7 @@ let rec calc_to_k3_expr meta ?(generate_init = false) theta_vars_el calc :
 		try K3Typechecker.typecheck_expr k3_expr
    	with 
       | K3Typechecker.K3TypecheckError(stack,msg) ->
-			(print_endline ("Calc Expr: "^(CalculusPrinter.string_of_expr calc));
-         raise (K3Typechecker.K3TypecheckError(stack,msg)))
+         raise (K3Typechecker.K3TypecheckError(stack,msg^("\nin calc expr: "^(CalculusPrinter.string_of_expr calc))))
 			 
   in
   (k3_out_el, k3_ret_v, k3_expr), k3_meta
