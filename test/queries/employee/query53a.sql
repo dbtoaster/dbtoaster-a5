@@ -24,8 +24,8 @@ CREATE STREAM DEPARTMENT(
   csv (fields := ',', schema := 'int,string,int', eventtype := 'insert');
 
 SELECT a.name, a.count_number
-FROM (SELECT name, count(*) AS count_number 
+FROM (SELECT d.name, count(*) AS count_number 
       FROM employee e, department d
       WHERE d.department_id = e.department_id 
-      GROUP BY name) a
+      GROUP BY d.name) a
 WHERE a.count_number >= 2
