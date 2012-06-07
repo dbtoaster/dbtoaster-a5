@@ -275,8 +275,11 @@ let standard_generator rel_sch params =
    in
    let post_fns = match_keys postprocessors in
    let (event_const_fn_name, event_const_fn_args) = 
-      List.find (fun (k,_) -> List.mem_assoc k event_constructors) params
-   in
+      try 
+         List.find (fun (k,_) -> List.mem_assoc k event_constructors) params
+      with Not_found ->
+         ("eventtype", "insert")
+   in      
    let (event_const_fn_template, support_sch) = 
       List.assoc event_const_fn_name event_constructors
    in

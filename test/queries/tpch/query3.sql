@@ -41,7 +41,7 @@ CREATE STREAM LINEITEM (
         comment        VARCHAR(44)
     )
   FROM FILE '../../experiments/data/tpch/lineitem.csv'
-  LINE DELIMITED lineitem (deletions := 'false');
+  LINE DELIMITED lineitem ();
 
 CREATE STREAM ORDERS (
         orderkey       INT,
@@ -55,7 +55,7 @@ CREATE STREAM ORDERS (
         comment        VARCHAR(79)
     )
   FROM FILE '../../experiments/data/tpch/orders.csv'
-  LINE DELIMITED orders (deletions := 'false');
+  LINE DELIMITED orders ();
 
 CREATE STREAM CUSTOMER (
         custkey      INT,
@@ -68,7 +68,7 @@ CREATE STREAM CUSTOMER (
         comment      VARCHAR(117)
     )
   FROM FILE '../../experiments/data/tpch/customer.csv'
-  LINE DELIMITED customer (deletions := 'false');
+  LINE DELIMITED customer ();
 
 SELECT ORDERS.orderkey, 
        ORDERS.orderdate,
