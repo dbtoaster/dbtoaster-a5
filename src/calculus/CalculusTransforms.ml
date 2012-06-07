@@ -677,8 +677,12 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
    @param expr    The calculus expression being processed
 *)
 let advance_lifts scope expr =
+   Debug.print "LOG-CALCOPT-DETAIL" (fun () -> 
+      "Advance Lifts: "^(C.string_of_expr expr));
    Calculus.rewrite ~scope:scope (fun _ x -> CalcRing.mk_sum x)
    (fun (scope, _) pl ->
+      Debug.print "LOG-ADVANCE-LIFTS" (fun () -> 
+         "Advance Lifts: processing "^(C.string_of_expr (CalcRing.mk_prod pl)));
       CalcRing.mk_prod (
          List.fold_left (fun curr_ret curr_term ->
             begin match curr_term with
@@ -706,7 +710,18 @@ let advance_lifts scope expr =
       )
    )
    (fun _ x -> CalcRing.mk_neg x)
-   (fun _ x -> CalcRing.mk_val x)
+   (fun _ x ->
+      CalcRing.mk_val (
+         begin match x with
+            | AggSum(gb_vars, subexp) ->
+               (* Advance lifts can turn output variables into input variables:
+                  e.g., for R(A) * AggSum([A], S(A) * (A ^= 2)) *)
+               let new_gb_vars = 
+                  ListAsSet.inter gb_vars (snd (C.schema_of_expr subexp))
+               in
+                  AggSum(new_gb_vars, subexp)
+            | _ -> x
+         end))
    expr
 ;;
 
@@ -1032,11 +1047,20 @@ let optimize_expr ?(optimizations = default_optimizations)
       include_opt OptCombineValuesAggressive (combine_values ~aggressive:true);
    if Debug.active "LOG-CALCOPT-STEPS" then Fixpoint.build fp_1 
       (fun x -> 
-         let (ivars,ovars) = C.schema_of_expr x in
-         print_endline ("OPTIMIZING: "^
-            (ListExtras.ocaml_of_list fst ivars)^
-            (ListExtras.ocaml_of_list fst ovars)^
-            " ::>> \n"^
-            (CalculusPrinter.string_of_expr x)); x);
+         let (fail,(ivars,ovars)) = 
+            try 
+               (None, (C.schema_of_expr x))
+            with Failure(msg) ->
+               ((Some(msg)), (scope,schema))
+         in
+            print_endline ("OPTIMIZING: "^
+               (ListExtras.ocaml_of_list fst ivars)^
+               (ListExtras.ocaml_of_list fst ovars)^
+               " ::>> \n"^
+               (CalculusPrinter.string_of_expr x)); 
+            begin match fail with
+             | None      -> x
+             | Some(msg) -> failwith ("Schema error: "^msg)
+            end);
    Fixpoint.compute_with_history !fp_1 expr
  
