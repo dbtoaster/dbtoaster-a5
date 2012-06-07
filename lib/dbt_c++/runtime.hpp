@@ -93,12 +93,12 @@ namespace dbtoaster {
               options(o).positional(p).run(), m);
             notify(m);
           } catch (unknown_option& o) {
-              cout << "unknown option: \"" << o.get_option_name() << "\"" << endl;
-              cout << *opt_desc << endl;
+              cerr << "unknown option: \"" << o.get_option_name() << "\"" << endl;
+              cerr << *opt_desc << endl;
               exit(1);
           } catch (error& e) {
-              cout << "error parsing command line options" << endl;
-              cout << *opt_desc << endl;
+              cerr << "error parsing command line options" << endl;
+              cerr << *opt_desc << endl;
               exit(1);
           }
       }
@@ -106,17 +106,22 @@ namespace dbtoaster {
       void setup_tracing(options_description& o) {
         try {
           trace_counter = 0;
-          if ( trace_step <= 0 ) trace_step = 1000;
-          cout << "tracing: " << trace_opts << endl;
-          if ( trace_opts != "" ) parse_tracing(trace_opts);
+          if ( trace_step <= 0 )
+        	  trace_step = 1000;
+          if ( trace_opts != "" )
+          {
+        	  if( __verbose )
+        		  cerr << "tracing: " << trace_opts << endl;
+        	  parse_tracing(trace_opts);
+          }
           else traced = false;
         } catch (unknown_option& uo) {
-            cout << "unknown option: \"" << uo.get_option_name() << "\"" << endl;
-            cout << o << endl;
+            cerr << "unknown option: \"" << uo.get_option_name() << "\"" << endl;
+            cerr << o << endl;
             exit(1);
         } catch (error& e) {
-            cout << "error parsing command line options" << endl;
-            cout << o << endl;
+            cerr << "error parsing command line options" << endl;
+            cerr << o << endl;
             exit(1);
         }
       }
@@ -134,7 +139,7 @@ namespace dbtoaster {
       }
       
       bool help() {
-        if ( opt_map.count("help") ) cout << *opt_desc << endl;
+        if ( opt_map.count("help") ) cerr << *opt_desc << endl;
         return opt_map.count("help");
       }
 
@@ -219,7 +224,7 @@ namespace dbtoaster {
 
         for (; it != end; ++it) {
           string param = copy_range<std::string>(*it);
-          cout << "tracing map " << param << endl;
+          cerr << "tracing map " << param << endl;
           traced_maps.insert(param);
         }
         traced = true;
@@ -241,7 +246,7 @@ namespace dbtoaster {
           p = opt_map["trace-dir"].as<string>();
         }
         p /= "trace"+boost::lexical_cast<std::string>(trace_counter)+".txt";
-        cout << "trace file " << p << endl;
+        cerr << "trace file " << p << endl;
         return p.make_preferred();
       }
     };

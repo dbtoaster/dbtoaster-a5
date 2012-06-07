@@ -49,7 +49,9 @@ namespace dbtoaster {
         for (int i = 0; i< num_params; ++i) {
           string k = params[i].first;
           string v = params[i].second;
-          cout << "csv params: " << k << ": " << v << endl;
+          if( __verbose )
+        	  cerr << "csv params: " << k << ": " << v << endl;
+
           if ( k == "fields" ) {
             delimiter = v;
           } else if ( k == "schema" ) {
@@ -146,7 +148,7 @@ namespace dbtoaster {
             case 'o':
                 iss >> o;
                 if ( o < current_order ) {
-                  cout << "invalid adaptor order " << o
+                  cerr << "invalid adaptor order " << o
                        << " (current " << current_order << ")" << endl;
                 } else {
                   current_order = o;
@@ -183,8 +185,8 @@ namespace dbtoaster {
               dest->push_back(e);
             }
           } else {
-            cout << "adaptor could not process " << data << endl;
-            cout << "schema: " << schema << endl;
+            cerr << "adaptor could not process " << data << endl;
+            cerr << "schema: " << schema << endl;
           }
         }
       }
@@ -304,8 +306,9 @@ namespace dbtoaster {
           for (int i = 0; i < num_params; ++i) {
             string k = params[i].first;
             string v = params[i].second;
-            cout << "order book adaptor params: "
-                 << params[i].first << ", " << params[i].second << endl;
+            if( __verbose )
+            	cerr << "order book adaptor params: "
+            		<< params[i].first << ", " << params[i].second << endl;
 
             if ( k == "book" ) {
               type = (v == "bids"? tbids : tasks);
@@ -408,7 +411,7 @@ namespace dbtoaster {
                   if ( r.volume <= 0.0 ) { asks->erase(ask_it); valid = false; }
                   else { (*asks)[msg.id] = r; }
                 } else {
-                  //cout << "unknown order id " << msg.id
+                  //cerr << "unknown order id " << msg.id
                   //     << " (neither bid nor ask)" << endl;
                   valid = false;
                   x_valid = false;
@@ -435,7 +438,7 @@ namespace dbtoaster {
                   r = ask_it->second;
                   asks->erase(ask_it);
                 } else {
-                  //cout << "unknown order id " << msg.id
+                  //cerr << "unknown order id " << msg.id
                   //     << " (neither bid nor ask)" << endl;
                   valid = false;
                 }
@@ -455,7 +458,7 @@ namespace dbtoaster {
                   r = ask_it->second;
                   asks->erase(ask_it);
                 } else {
-                  //cout << "unknown order id " << msg.id
+                  //cerr << "unknown order id " << msg.id
                   //     << " (neither bid nor ask)" << endl;
                   valid = false;
                 }
@@ -531,10 +534,10 @@ namespace dbtoaster {
               } else if ( current ){
                 current->second.push_back(make_pair(p_parts[0], p_parts[1]));
               } else {
-                cout << "must declare order book before parameter " << p << endl;
+                cerr << "must declare order book before parameter " << p << endl;
               }
             } else {
-              cout << "invalid order book adaptor parameter " << p << endl;
+              cerr << "invalid order book adaptor parameter " << p << endl;
             }
           }
 
@@ -555,14 +558,14 @@ namespace dbtoaster {
                   stream_identifiers[p.first] = sid;
                   ++sid;
                 } else {
-                  cout << "failed to initialize source for " << p.first << endl;
+                  cerr << "failed to initialize source for " << p.first << endl;
                 }
               } else {
-                cout << "failed to create adaptor for " << p.first << endl;
+                cerr << "failed to create adaptor for " << p.first << endl;
               }
             }
           } else {
-            cout << "No data file specified for order book streams" << endl;
+            cerr << "No data file specified for order book streams" << endl;
           }
         }
 
@@ -606,7 +609,8 @@ namespace dbtoaster {
           for (int i = 0; i< num_params; ++i) {
             string k = params[i].first;
             string v = params[i].second;
-            cout << "tpch adaptor params: " << k << ": " << v << endl;
+            if( __verbose )
+            	cerr << "tpch adaptor params: " << k << ": " << v << endl;
             if ( k == "deletions" ) {
               deletions = (v == "true");
             }
@@ -677,7 +681,7 @@ namespace dbtoaster {
             if ( k == "gap" ) {
               istringstream iss(v); iss >> gap_counter;
               if ( iss.fail() ) {
-                cout << "invalid gap parameter " << v << endl;
+                cerr << "invalid gap parameter " << v << endl;
                 gap_counter = 100;
               }
             } else if ( k == "reverse" ) {
@@ -711,7 +715,7 @@ namespace dbtoaster {
                 buffer->pop_front();
               }
             } else {
-              cout << "adaptor could not process " << data << endl;
+              cerr << "adaptor could not process " << data << endl;
             }
           }
         }

@@ -1143,18 +1143,19 @@ end (* Typing *)
       [source_code_of_imp stmts]@[Lines ([""])]
     in
     let unwrapper =
-      let evt_arg = "e" in
-      let evt_fields = snd (List.fold_left
-        (fun (i,acc) ty -> (i+1,
-          acc@["any_cast<"^ty^">("^evt_arg^"["^(string_of_int i)^"])"]))
-        (0,[]) trig_types)
-      in
-       
-      [Lines ["void unwrap_"^trig_name^"(const event_args& e) {";
-              tab^"on_"^trig_name^"("^(String.concat "," evt_fields)^");";
-              "}"; ""];]
+      if event = Schema.SystemInitializedEvent then []
+      else
+	      let evt_arg = "e" in
+	      let evt_fields = snd (List.fold_left
+	        (fun (i,acc) ty -> (i+1,
+	          acc@["any_cast<"^ty^">("^evt_arg^"["^(string_of_int i)^"])"]))
+	        (0,[]) trig_types)
+	      in	       
+	      [Lines ["void unwrap_"^trig_name^"(const event_args& e) {";
+	              tab^"on_"^trig_name^"("^(String.concat "," evt_fields)^");";
+	              "}"; ""];]
                
-    in trigger_fn@unwrapper
+  in trigger_fn@unwrapper
 
 
   (* Desugaring: rewriting function calls to an alternate API, e.g. for
@@ -2310,7 +2311,8 @@ end (* Typing *)
       isc (tab^tab) (Lines tlq_s_l);  
       Lines [
         tab^"}";];
-      isc tab (cscl flat_tlqs);      
+      isc tab (cscl flat_tlqs);
+      Lines ["protected:"];      
       isc tab (cscl tlq_d_l);
       Lines [ 
         "};";
@@ -2328,6 +2330,7 @@ end (* Typing *)
       Lines [tab^"}";];
       isc tab (cscl flat_triggers);
       isc tab profiling;
+      Lines ["private:"];
       isc tab (cscl d_l); 
       Lines ["};";];
     ])) 
@@ -2433,7 +2436,7 @@ end (* Typing *)
           
         | _ -> failwith "unsupported data source and framing types" 
       in source_var, (List.flatten (List.map snd adaptor_meta))@source_decl)
-      !sources
+      (List.filter (fun (s,_) -> (s <> NoSource) ) !sources)
     in 
     let rsc = cscl ~delim:"\n" (List.map (fun sd ->
         cscl (List.map source_code_of_imp sd)) (List.map snd decls))
@@ -2457,32 +2460,58 @@ struct
   (* Internal type conversion helper function *)
   let imp_type_of_calc_type t = Host(K3.TBase(t))
   
+  (* Compiles a single K3 expression with a return value, given a type environment *)
+  let compile_k3_expr (opts:compiler_options) 
+                      (arg_types:(string * ext_type type_t) list) 
+                      (schema:K3.map_t list) 
+                      (patterns:Patterns.pattern_map) 
+                      (expr:K3.expr_t) =
+    let type_env = type_env_of_declarations arg_types schema patterns in
+    let ir = ir_of_expr expr in
+    let expr_var = (IBC.sym_of_meta (IBK.meta_of_ir ir)) in
+    
+    let untyped_imp =
+        let i = imp_of_ir (var_type_env type_env) ir
+        in match i with 
+            | [x] -> x 
+            | _ -> Imperative.Block (None, i)
+      in
+          
+      Debug.print "UNTYPED-IMP" (fun () -> string_of_imp_noext untyped_imp);  
+      let _typed_imp = infer_types type_env untyped_imp in
+    let typed_imp = if opts.desugar then desugar_imp opts type_env _typed_imp else _typed_imp
+    in
+    
+    let rec type_of_expr s = match s with
+      | Imperative.Block (_, i_l) ->
+        List.fold_left (fun t_l bs -> t_l@(type_of_expr bs)) [] i_l
+      | Imperative.Decl (_,(expr_var,ty), _) -> [ty]
+      | _ -> []
+    in
+    let expr_type = match (type_of_expr typed_imp) with
+      | [ty] -> ty
+      | _ -> failwith "ImperativeCompiler: No type found for root variable of k3_expr."
+    in
+    (typed_imp),(expr_var,expr_type)
+  
   (* Compiles a single K3 statement given a type environment *)
   let compile_k3_stmt (opts:compiler_options) 
                       (arg_types:(string * ext_type type_t) list) 
                       (schema:K3.map_t list) 
                       (patterns:Patterns.pattern_map) 
                       (stmt:K3.expr_t) =
-    let lsch, lpats, ldecls = schema, patterns, [] in
-    let type_env = type_env_of_declarations arg_types lsch lpats in
-    let ir = ir_of_expr stmt in
-    let meta_ir = IBK.meta_of_ir ir in
-    let stmt_var = (IBC.sym_of_meta meta_ir), (IBC.type_of_meta meta_ir) in
+    let type_env = type_env_of_declarations arg_types schema patterns in
     let untyped_imp =
-      let i = imp_of_ir (var_type_env type_env) ir
-      in match i with | [x] -> x | _ -> Imperative.Block (None, i)
-    in 
-    let typed_imp =
-      Debug.print "UNTYPED-IMP" (fun () -> string_of_imp_noext untyped_imp);  
-      let r = infer_types type_env untyped_imp
-      in match r, ldecls with
-        | _, [] -> r
-        | Imperative.Block(m, il), _ -> Imperative.Block(m, ldecls@il)
-        | _, _ -> Imperative.Block(type_of_imp_t r, ldecls@[r])
-    in 
-    (if opts.desugar then desugar_imp opts type_env typed_imp else typed_imp),
-    stmt_var
-
+	    let i = imp_of_ir (var_type_env type_env) (ir_of_expr stmt)
+	    in match i with 
+	        | [x] -> x 
+	        | _ -> Imperative.Block (None, i)
+	  in
+          
+	  Debug.print "UNTYPED-IMP" (fun () -> string_of_imp_noext untyped_imp);  
+	  let typed_imp = infer_types type_env untyped_imp in
+    if opts.desugar then desugar_imp opts type_env typed_imp else typed_imp
+    
   (* Compiles a K3 trigger, setting up a type environment based on the
    * given datastructure schemas and access patterns *)
   let compile_k3_trigger (opts:compiler_options) 
@@ -2498,7 +2527,7 @@ struct
          (fun (vn,vt) -> vn, imp_type_of_calc_type vt)
          (Schema.event_vars event)
     in
-    let compile_f = fun stmt -> fst (compile_k3_stmt opts arg_types schema patterns stmt) in
+    let compile_f = fun stmt -> compile_k3_stmt opts arg_types schema patterns stmt in
     let i = Imperative.Block (Host TUnit, List.map compile_f k3stmts) in
     let t = (event,i) in
     if not opts.profile then (0,[]),([],t)
@@ -2540,9 +2569,9 @@ struct
     let tlq_get_schema tlq = get_expr_map_schema (snd tlq) in
     ListAsSet.multiunion (List.map tlq_get_schema tlqs)
     ,
-    List.map ( fun (tlq_name,tlq_k3code) ->
+    List.map ( fun (tlq_name,tlq_k3expr) ->
       let tlq_code,(tlq_var,_tlq_type) =
-        (compile_k3_stmt opts [] schema patterns tlq_k3code)
+        (compile_k3_expr opts [] schema patterns tlq_k3expr)
       in
       let tlq_type = Target.Typing.string_of_type _tlq_type
       in      
@@ -2578,6 +2607,11 @@ struct
 	       isc (tab^tab) register_src;
 	       Lines [
           tab^"}";
+          "";
+          tab^"void init() {";
+          tab^tab^"data.on_"^(Schema.name_of_event Schema.SystemInitializedEvent)^"();";
+          tab^"}";
+          "";
           tab^"snapshot_t take_snapshot(){";
           tab^tab^"return snapshot_t( new tlq_t((tlq_t&)data) );";
           tab^"}";

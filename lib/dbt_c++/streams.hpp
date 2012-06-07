@@ -21,16 +21,20 @@ using namespace boost::lambda;
 
 namespace dbtoaster {
 
+bool __verbose = false;
+
 // These need to be placed here as C++ doesn't search for overloaded
 // << operators in all the available namespaces
 std::ostream& operator<<(std::ostream &strm, const boost::any &a) {
 	try{
 		if( a.type() == typeid(int) )
 			return strm << any_cast<long>(a);
+		else if( a.type() == typeid(double) )
+			return strm << any_cast<double>(a);
 		else
-			cout << "event_arg: Unrecognized type in <<: " << a.type().name() << endl;
+			cerr << "event_arg: Unrecognized type in <<: " << a.type().name() << endl;
 	} catch (boost::bad_any_cast& bc) {
-		cout << "bad cast on <<: " << bc.what() << endl;
+		cerr << "bad cast on <<: " << bc.what() << endl;
 	}
 	return strm;
 }
@@ -141,7 +145,7 @@ struct dynamic_poset {
 	}
 
 	void add_element(shared_ptr<ordered> e) {
-		//        cout << "Adding element at " << e->order() << endl;
+		//        cerr << "Adding element at " << e->order() << endl;
 		if ( !poset[e->order()] ) {
 			poset[e->order()] = shared_ptr<pset>(new pset());
 			poset[e->order()]->insert(e);
@@ -153,7 +157,7 @@ struct dynamic_poset {
 	void remove_element(shared_ptr<ordered> e) {
 		unsigned int o = e->order();
 		iterator it = find(o);
-		//        cout << "Removing element at " << e->order() << " out of " << it->second->size() << endl;
+		//        cerr << "Removing element at " << e->order() << " out of " << it->second->size() << endl;
 		if ( it != end() ) it->second->erase(e);
 		if ( it->second->empty() ) poset.erase(o);
 	}
@@ -166,7 +170,7 @@ struct dynamic_poset {
 	}
 
 	void reorder_elements(unsigned int order) {
-		//        cout << "Reordering elements at " << order << endl;
+		//        cerr << "Reordering elements at " << order << endl;
 		iterator it = find(order);
 		if ( it == end() ) return;
 		shared_ptr<pset> ps = it->second;
@@ -183,14 +187,14 @@ struct dynamic_poset {
 			// Re-add the adaptor at its new stage.
 			if ( (*rm_it)->order() > order ) add_element(*rm_it);
 			else if ( (*rm_it)->order() < order ) {
-				cout << "invalid adaptor order ... removing" << endl;
+				cerr << "invalid adaptor order ... removing" << endl;
 			}
 			ps->erase(*rm_it);
 		}
-		//        cout << "Size is now " << ps->size() << "; empty: " << ps->empty() << endl;
+		//        cerr << "Size is now " << ps->size() << "; empty: " << ps->empty() << endl;
 		if ( ps->empty() ) {
 			poset.erase(order);
-			//          cout << "Moving from " << order << " to " << this->order() << endl;
+			//          cerr << "Moving from " << order << " to " << this->order() << endl;
 		}
 
 	}
@@ -237,7 +241,8 @@ struct dbt_file_source : public source
 		if ( !source_stream ) {
 			cerr << "failed to open file source " << path << endl;
 		} else {
-			cout << "reading from " << path
+			if( __verbose )
+			cerr << "reading from " << path
 					<< " with " << a.size() << " adaptors" << endl;
 		}
 		buffer = shared_ptr<string>(new string());
@@ -321,7 +326,7 @@ struct dbt_file_source : public source
 		unsigned int min_order = adaptors.order();
 		shared_ptr<dynamic_poset::class_range> range = adaptors.range(min_order);
 		if ( !range ) {
-			cout << "invalid min order at source with empty range" << endl;
+			cerr << "invalid min order at source with empty range" << endl;
 			return;
 		}
 
@@ -351,7 +356,7 @@ struct dbt_file_source : public source
 					if ( a ) a->finalize(r);
 				}
 			} else {
-				cout << "invalid adaptors poset class at position "
+				cerr << "invalid adaptors poset class at position "
 						<< it->first << endl;
 			}
 		}
@@ -425,7 +430,7 @@ struct stream_multiplexer
 					if ( s ) s->init_source();
 				}
 			} else {
-				cout << "invalid source poset class at position " << it->first << endl;
+				cerr << "invalid source poset class at position " << it->first << endl;
 			}
 		}
 	}
@@ -444,7 +449,7 @@ struct stream_multiplexer
 					if ( s ) found = found || s->has_inputs();
 				}
 			} else {
-				cout << "invalid source poset class at position " << it->first << endl;
+				cerr << "invalid source poset class at position " << it->first << endl;
 			}
 		}
 		return found;
@@ -459,7 +464,7 @@ struct stream_multiplexer
 
 						if ( inputs.order() < current_order ) {
 				if(inputs.order() <= 0){ return r; }
-				cout << "non-monotonic source ordering "
+				cerr << "non-monotonic source ordering "
 						<< inputs.order() << " vs " << current_order << endl;
 				break;
 			}
@@ -478,7 +483,7 @@ struct stream_multiplexer
 					remaining = (int) (step > 0? step : block*(rand() / (RAND_MAX + 1.0)));
 				}
 			} else {
-				cout << "invalid poset class at position " << it->first << endl;
+				cerr << "invalid poset class at position " << it->first << endl;
 			}
 		}
 
@@ -487,16 +492,17 @@ struct stream_multiplexer
 		r = current->next_inputs();
 
 		if ( r ) remaining -= r->size();
-		//        cout << "Preparing to reorder multiplexer elements for " << current_order << endl;
+		//        cerr << "Preparing to reorder multiplexer elements for " << current_order << endl;
 		inputs.reorder_elements(current_order);
-		//        cout << "Done reordering multiplexer elements for " << current_order << "; order is now " << inputs.order() << endl;
+		//        cerr << "Done reordering multiplexer elements for " << current_order << "; order is now " << inputs.order() << endl;
 
 		// remove the stream if its done.
 		if ( !current->has_inputs() ) {
 			remove_source(current);
 			current = shared_ptr<source>();
 			remaining = 0;
-			cout << "done with stream, " << inputs.size() << " remain" << endl;
+			if( __verbose )
+				cerr << "done with stream, " << inputs.size() << " remain" << endl;
 		} else if (current_order != current->order()) {
 			current = shared_ptr<source>();
 			remaining = 0;
@@ -518,7 +524,7 @@ struct stream_registry {
 
 	void register_source(string name, shared_ptr<source> src) {
 		if (data_sources.find(name) != data_sources.end()) {
-			cout << "Re-registering source \"" << name << "\"" << endl;
+			cerr << "Re-registering source \"" << name << "\"" << endl;
 		}
 		data_sources[name] = src;
 		if ( multiplexer ) { multiplexer->add_source(src); }
