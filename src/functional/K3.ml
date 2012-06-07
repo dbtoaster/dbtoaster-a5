@@ -898,7 +898,7 @@ let nice_string_of_expr ?(type_is_needed = false) e maps =
     | Leq(e1, e2)         -> par e1 e2 "<="
     | IfThenElse0(c, ie)  -> ob(); ps "if0( "; aux c; ps " )"; fnl(); aux ie; cb();
     | IfThenElse(c,ie,ee) -> ob(); ps "if( "; aux c; ps " )"; fnl(); aux ie; cb(); fnl(); ob();  ps "else"; fnl(); aux ee; cb();
-    | Iterate(e1, e2)     -> ppar "Iterate" e1 e2
+    | Iterate _           -> pop "Iterate"
     | Apply _             -> pop "Apply"
     | Map _               -> pop "Map"
     | Flatten _           -> pop "Flatten"

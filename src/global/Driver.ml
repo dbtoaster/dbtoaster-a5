@@ -300,12 +300,12 @@ Debug.exec "LOG-M3"     (fun () -> activate_stage StagePrintM3);;
 Debug.exec "LOG-M3DM"   (fun () -> activate_stage StagePrintM3DomainMaintenance);;
 Debug.exec "LOG-K3"     (fun () -> activate_stage StagePrintK3);;
 Debug.exec "LOG-PARSER" (fun () -> let _ = Parsing.set_trace true in ());;
-Debug.exec "DEBUG-DM"   (fun () -> Debug.activate "DEBUG-DM-IVC"; Debug.activate "K3-NO-OPTIMIZE";
+Debug.exec "DEBUG-DM"   (fun () -> Debug.activate "DEBUG-DM-IVC"; Debug.activate (*"K3-NO-OPTIMIZE"*)"K3-NO-OPTIMIZE-LIFT-UPDATES";
   Debug.activate "DEBUG-DM-WITH-M3";
   if not (Debug.active "DEBUG-DM-NO-LEFT") then
     Debug.activate "DEBUG-DM-LEFT"
-  (*else
-     Debug.activate "M3TOK3-GENERATE-INIT" *)
+  else
+    Debug.activate "M3TOK3-GENERATE-INIT"
 );;
 
 (* If we're compiling to a binary (i.e., the second-stage compiler is being
@@ -621,10 +621,16 @@ if (stage_is_active StageOptimizeK3) then (
          List.map (fun (event, stmts) ->
             let trigger_vars = Schema.event_vars event in (
                event, 
-               List.map (
-                  K3Optimizer.optimize ~optimizations:!optimizations
-                                       (List.map fst trigger_vars)
-               ) stmts
+               if not(Debug.active "DEBUG-DM") || trigger_vars = [] then
+                 List.map (
+                   K3Optimizer.optimize ~optimizations:!optimizations
+                   (List.map fst trigger_vars)  
+                 ) stmts
+               else
+                 List.map (
+                           K3Optimizer.dm_optimize ~optimizations:!optimizations
+                             (List.map fst trigger_vars)
+                          ) stmts
             )
          ) triggers,
          tlqs

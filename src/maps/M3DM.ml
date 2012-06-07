@@ -227,7 +227,12 @@ let rec maintain (context: Calculus.expr_t)
             let input_domain = get_map_input_domain (formula) in
             let output_domain = get_map_output_domain (formula) in
             let input_vars = get_relation_vars input_domain in
-            let context1 = CalcRing.mk_prod ([context; output_domain]) in
+            let context1 = 
+              if get_relation_vars output_domain = [] then 
+                context 
+              else 
+                CalcRing.mk_prod ([context; output_domain]) 
+            in
             let update_domain = 
               CalcRing.Val(AggSum(input_vars, context))
               (*TODO, unnecessary usage of AggSum *)
@@ -243,14 +248,17 @@ let rec maintain (context: Calculus.expr_t)
           | Rel(rname, rvars)    -> 
             ([], CalcRing.mk_prod ([context; formula]))
           | Cmp(op,subexp1,subexp2) -> 
-            let right_context = formula in
-                ([], CalcRing.mk_prod ([context; right_context]))
+            if Debug.active "DEBUG-DM-COMPARISON" then
+              let right_context = formula in
+              ([], CalcRing.mk_prod ([context; right_context]))
+            else
+              ([], context)
           | Lift(target, subexp)    -> 
             let (trlist, _) = maintain(context)(subexp) in
-          (*let (_, context1) = maintain(CalcRing.one)(subexp) in
+              (*let (_, context1) = maintain(CalcRing.one)(subexp) in
             let new_formula = CalcRing.Val(Lift(target, context1)) in
-              (trlist, CalcRing.mk_prod ([context; new_formula]))*)
-               (trlist, CalcRing.mk_prod ([context; formula]))
+                 (trlist, CalcRing.mk_prod ([context; new_formula]))*)
+            (trlist, CalcRing.mk_prod ([context; formula]))
         end
     | _ -> failwith ("Incorrect formula")
     end

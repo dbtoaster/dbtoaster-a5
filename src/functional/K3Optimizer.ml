@@ -1453,7 +1453,37 @@ let optimize ?(optimizations=[]) trigger_vars expr =
      else (lift_if0s
             (fixpoint (lift_ifs trigger_vars (common_subexpression_elim r1))))
 
-
+let dm_optimize ?(optimizations=[]) trigger_vars expr = 
+  let optim = optimize ~optimizations:optimizations
+    trigger_vars
+  in
+  let optimize_stmt s = 
+    match s with
+      | K3.Comment(s, K3.Block(bs)) -> K3.Comment(s, K3.Block((List.map optim bs)))
+      | K3.Block(bs) -> K3.Block((List.map optim bs))
+      | K3.Unit -> K3.Unit
+      | _ -> failwith ("Invalid inside expression in DM block"^(K3.nice_string_of_expr s []))
+  in
+  match expr with
+    | K3.Apply(K3.Lambda(lambda_arg, K3.Block(lbbs)), K3.Tuple(tuples)) ->
+      let new_lbbs =
+        if Debug.active "DEBUG-DM-K3-HIGH-OPTIMIZE" then 
+          List.map optimize_stmt lbbs
+        else
+          match lbbs with
+            | [update_domain_part; update_status_part; ivc_part; m3_part; gc_part; unit_statement] ->
+              [update_domain_part; update_status_part; ivc_part; optimize_stmt m3_part; gc_part; unit_statement]
+            | _ -> failwith ("Invalid K3 program of DM")
+      in
+      let new_tuples = 
+        if Debug.active "DEBUG-DM-K3-HIGH-OPTIMIZE" then
+          List.map optim tuples 
+        else 
+          tuples
+      in
+      K3.Apply(K3.Lambda(lambda_arg, K3.Block(new_lbbs)), K3.Tuple(new_tuples))
+    | _ -> expr
+      
 
 (**** Datastructure optimization ****)
 
