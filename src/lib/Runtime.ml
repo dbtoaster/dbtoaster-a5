@@ -147,8 +147,14 @@ let synch_main
                         List.map (fun (q_name,q_access_f) ->
                            (q_name, q_access_f db)
                         ) toplevel_query_accessors 
-                     in
-                        DBCheck.check_result dbc tlq_results
+                     in (
+                        try 
+                           DBCheck.check_result dbc tlq_results
+                        with Failure(msg) ->
+                           print_endline "========= DB State =========";
+                           print_endline ((DB.db_to_string db)^"\n\n");
+                           failwith msg
+                     )
                  | None -> ()
               end;                               
               if output then log_results result_chan;

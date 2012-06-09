@@ -4,6 +4,8 @@ open Arithmetic
 open Calculus
 open UnitTest
 ;;
+Debug.activate "NO-VISUAL-DIFF"
+;;
 log_test "Invalid Commute"
    string_of_bool
    (commutes (parse_calc "R(A,B) * A") (parse_calc "B"))
@@ -170,7 +172,7 @@ in
       "AggSum([], 1)";
    test "Dropping some unnecessary lifts 2" []
       "AggSum([], (A ^= AA)*(B ^= BB)*S(B))"
-      "AggSum([BB], S(BB))";
+      "AggSum([BB], S(BB))"; (* BB goes from being an ivar to being an ovar *)
    test "Lifts in non-normal form" []
       "AggSum([], S(B)*(B ^= BB))"
       "AggSum([], S(B)*(B ^= BB))"; (* This should get shifted left by 
@@ -181,7 +183,8 @@ in
    test "Duplicate lifts (not terminal)" []
       "(A ^= 0) * (A ^= AggSum([], B)) * 2"
       "(A ^= 0) * (A ^= AggSum([], B)) * 2";
-   test "Query18 funny business" [var "query18_mLINEITEMLINEITEM_ORDERKEY"; var "query18_mLINEITEMLINEITEM_QUANTITY"]
+   test "Query18 funny business" [var "query18_mLINEITEMLINEITEM_ORDERKEY"; 
+                                  var "query18_mLINEITEMLINEITEM_QUANTITY"]
       "(O_OK ^= dOK) * AggSum([O_OK],(
          (AggSum([O_OK],(LINEITEM(O_OK, L3_Q)))) +
             ( (O_OK ^= dOK) * AggSum([O_OK],(LINEITEM(O_OK, L3_Q)))
@@ -197,10 +200,10 @@ in
       "AggSum([],((CUSTOMER_MKTSEGMENT_1 ^= CUSTOMER_MKTSEGMENT) * 
                   (CUSTOMER_MKTSEGMENT_1 ^= 'BUILDING')))"
       "AggSum([],{'BUILDING' = CUSTOMER_MKTSEGMENT})";
-   test "Lift into a lifted aggsum of a lift" []
+   test "Lift into a lifted aggsum of a lift" [var "C"]
       "(A ^= B) * (C ^= (AggSum([A], R(D) * (A ^= D))))"
-      "(C ^= (AggSum([B], R(D) * (B ^= D))))";
-   test "TPCH11 nested query" [var "P_NATIONKEY"]
+      "(C ^= (AggSum([], R(D) * {D = B})))";
+   test "TPCH11 nested query" [var "P_NATIONKEY"; var "N_VALUE"]
       "(N_NATIONKEY ^= P_NATIONKEY) * 
        (N_VALUE ^= AggSum([N_NATIONKEY],(
          PARTSUPP(PS_PARTKEY, PS_SUPPKEY, PS_AVAILQTY, PS_SUPPLYCOST, 
@@ -211,17 +214,26 @@ in
          (N_NATIONKEY ^= S_NATIONKEY) * 
          PS_SUPPLYCOST * PS_AVAILQTY
       )))"
-      "(N_VALUE ^= AggSum([P_NATIONKEY],(
+      "(N_VALUE ^= AggSum([],(
          PARTSUPP(PS_PARTKEY, PS_SUPPKEY, PS_AVAILQTY, PS_SUPPLYCOST, 
                    PS_COMMENT) * 
          SUPPLIER(PS_SUPPKEY, S_NAME, S_ADDRESS, S_NATIONKEY, S_PHONE, 
                   S_ACCTBAL, S_COMMENT) * 
-         (P_NATIONKEY ^= S_NATIONKEY) * 
+         {S_NATIONKEY = P_NATIONKEY} * 
          PS_SUPPLYCOST * PS_AVAILQTY
       )))";
    test "Materialized terminal lift" [var "B"]
       "AggSum([A], (M1_L1_1(int)[][A,B] * (E ^= M1_L1_1(int)[][] * B)))"
-      "AggSum([A], M1_L1_1(int)[][A,B])"
+      "AggSum([A], M1_L1_1(int)[][A,B])";
+   test "Aggregation over a non-agg lift" [var "A"]
+      "AggSum([A], R(A,B) * (E ^= R(C,D) * B))"
+      "AggSum([A], R(A,B) * (E ^= R(C,D) * B))";
+   test "Lift in a sum, ivar on RHS" []
+      "(R(A) + (A ^= B)) * {A < 3}"
+      "(R(A) + (A ^= B)) * {A < 3}";
+   test "Lift in a sum, ovar on RHS" []
+      "(R(A) + (A ^= B)) * S(A)"
+      "(R(A) + (A ^= B)) * S(A)"
 ;;
 let test msg input output =
    log_test ("Nesting Rewrites ("^msg^")")
@@ -381,7 +393,7 @@ in
       ) * {QTY < 0.5 * nested}"
       "(nested ^= (AggSum([dPK], LI(dPK,QTY2) * QTY2))) * LI(dPK,QTY) *
          {QTY < 0.5 * nested}";
-   test "TPCH17 dLineitem" ["dPK"; "dQTY"] []
+   test "TPCH17 dLineitem" ["dPK"; "dQTY"] ["QTY"; "nested"]
       "P(PK) * (((PK ^= dPK) * (QTY ^= dQTY) * 
                   (nested ^= AggSum([PK], L(PK, QTY2) * QTY2)))
             + 
@@ -398,3 +410,34 @@ in
                (nested ^= AggSum([dPK], L(dPK, QTY2) * QTY2) + dQTY) +
                (nested ^= AggSum([dPK], L(dPK, QTY2) * QTY2)) * {-1}
             )))";
+   test "SumNestedInTarget Delta" ["dA"; "dB"] []
+      "AggSum([], 
+        (((R1_A ^= dA) *
+           (R1_B ^= dB) * AggSum([R1_A], R(R1_A, R2_B))) +
+          ((R(R1_A, R1_B) +
+             ((R1_A ^= dA) *
+               (R1_B ^= dB))) *
+            AggSum([R1_A], 
+              ((R1_A ^= dA) *
+                (R2_B ^= dB))))))"
+      "AggSum([dA], R(dA, R2_B)) + AggSum([dA], R(dA, R1_B)) + 1";
+(*   test "Employee37 dEmployee dLineitem" ["dLID"; "dRG"] ["COUNT_DID"]
+      "AggSum([COUNT_DID], 
+        (AggSum([__sql_inline_agg_1, D_LOCATION_ID], 
+           ((delta_14 ^=
+              AggSum([D_LOCATION_ID], 
+                ((L_REGIONAL_GROUP ^= 'CHICAGO') * (D_LOCATION_ID ^= dLID) *
+                  (L_REGIONAL_GROUP ^= dRG)))) *
+             ((__sql_inline_agg_1 ^=
+                (AggSum([D_LOCATION_ID], 
+                   ((L_REGIONAL_GROUP ^= 'CHICAGO') *
+                     LOCATION(D_LOCATION_ID, L_REGIONAL_GROUP))) +
+                  delta_14)) +
+               (-1 *
+                 (__sql_inline_agg_1 ^=
+                   AggSum([D_LOCATION_ID], 
+                     ((L_REGIONAL_GROUP ^= 'CHICAGO') *
+                       LOCATION(D_LOCATION_ID, L_REGIONAL_GROUP)))))))) *
+          DEPARTMENT(COUNT_DID, D_NAME, D_LOCATION_ID) * 
+          {__sql_inline_agg_1 > 0}))"
+      "0";*)

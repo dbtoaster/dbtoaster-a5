@@ -107,31 +107,50 @@ struct
     
    let check_result (db_session : db_session_t)
                     (tlq_results : (string * K3Value.t) list) : unit =
+      let i = ref 0 in
       List.iter (fun q -> 
-         let db_result = I.query !(db_session.client) q.stmt q.schema in
+         i := !i + 1;
+         let prefix = if List.length !(db_session.queries) > 1 
+                      then "QUERY_"^(string_of_int !i)^"_" else "" in
+         let (real_query,real_schema) = 
+            if Sql.is_agg_query q.stmt then
+               (q.stmt, q.schema)
+            else
+               let (targets, sources, condition, gb) = q.stmt in
+                  (( targets @ ["COUNT", 
+                        Sql.Aggregate(Sql.CountAgg, Sql.Const(Types.CInt(1)))],
+                     sources, condition,
+                     List.map (fun (tn,te) -> 
+                        (None, tn, Sql.expr_type te !(db_session.tables) 
+                                                    sources)) 
+                        targets
+                  ), (q.schema @ ["COUNT", Types.TInt]))
+         in
+         let db_result = I.query !(db_session.client) real_query real_schema in
          let db_hashtbl = to_hashtbl db_result in
          
-         let (targets, _, _, _) = q.stmt in            
-            List.iter (fun (target_name, _) ->
-               try 
-                  let k3_result = snd (
-                     List.find (fun (name, _) ->
-                        name = target_name
-                     ) tlq_results
-                  ) in
-                  
-	               let k3_hashtbl = K3Value.to_hashtbl k3_result in
-	              
-	               if (db_hashtbl <> k3_hashtbl) 
-                  then begin
-                     print_hashtbl "========= Expected =========" db_hashtbl;
-                     print_hashtbl "========= Result   =========" k3_hashtbl;
-                     if not (Debug.active "DBCHECK-CONTINUE-ON-MISMATCH") then
-                        failwith "Wrong results"
-                  end
-                  else print_string("|"); flush stdout
-               with Not_found -> () 
-            ) targets 
+         let target_name = 
+            let (targets, _, _, _) = real_query in
+            prefix^(fst (List.nth targets ((List.length targets) - 1)))
+         in
+            try 
+               let k3_result = snd (
+                  List.find (fun (name, _) ->
+                     name = target_name
+                  ) tlq_results
+               ) in
+               
+               let k3_hashtbl = K3Value.to_hashtbl k3_result in
+               if (db_hashtbl <> k3_hashtbl) 
+               then begin
+                  print_hashtbl "========= Expected =========" db_hashtbl;
+                  print_hashtbl "========= Result   =========" k3_hashtbl;
+                  if not (Debug.active "DBCHECK-CONTINUE-ON-MISMATCH") then
+                     failwith "Wrong results"
+               end
+               else print_string("|"); flush stdout
+            with Not_found -> 
+               failwith ("Bug in DBChecker: unable to find query "^target_name)
       ) !(db_session.queries)
    
 end

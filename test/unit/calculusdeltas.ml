@@ -155,3 +155,30 @@ test "TPCH11 dPartsupp" (InsertEvent(schema_rel "PARTSUPP" ["dPK"; "dSK"; "dAQ";
              {P_VALUE > __sql_inline_agg_1})) *
          P_VALUE)))"
 ;;
+
+test "Employee37 dEmployee dLineitem" 
+   (InsertEvent(schema_rel "LOCATION" ["dLID"; "dRG"]))
+   "AggSum([COUNT_DID], 
+     ((__sql_inline_agg_1 ^=
+        AggSum([D_LOCATION_ID], 
+          ((L_REGIONAL_GROUP ^= 'CHICAGO') *
+            LOCATION(D_LOCATION_ID, L_REGIONAL_GROUP)))) *
+       DEPARTMENT(COUNT_DID, D_NAME, D_LOCATION_ID) *
+       {__sql_inline_agg_1 > 0}))"
+   "AggSum([COUNT_DID], 
+     (AggSum([__sql_inline_agg_1, D_LOCATION_ID], 
+        (AggSum([D_LOCATION_ID], 
+             ((L_REGIONAL_GROUP ^= 'CHICAGO') * (D_LOCATION_ID ^= dLID) *
+               (L_REGIONAL_GROUP ^= dRG))) *
+          ((__sql_inline_agg_1 ^=
+             (AggSum([D_LOCATION_ID], 
+                ((L_REGIONAL_GROUP ^= 'CHICAGO') *
+                  LOCATION(D_LOCATION_ID, L_REGIONAL_GROUP))) +
+               delta_14)) +
+            (-1 *
+              (__sql_inline_agg_1 ^=
+                AggSum([D_LOCATION_ID], 
+                  ((L_REGIONAL_GROUP ^= 'CHICAGO') *
+                    LOCATION(D_LOCATION_ID, L_REGIONAL_GROUP)))))))) *
+       DEPARTMENT(COUNT_DID, D_NAME, D_LOCATION_ID) * 
+       {__sql_inline_agg_1 > 0}))";

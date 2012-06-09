@@ -72,7 +72,8 @@ module Postgres : Interface = struct
          | CDate _     -> Types.string_of_const const 
 	 ;;
 
-   let const_of_string (str:string) (const_type:Types.type_t) : Types.const_t =
+   let const_of_string ?(truncate = false) (str:string) 
+                       (const_type:Types.type_t) : Types.const_t =
       match const_type with
          | TBool -> 
             begin match str with
@@ -82,7 +83,19 @@ module Postgres : Interface = struct
             end
          | TInt  -> CInt(int_of_string (trim str))
          | TFloat -> CFloat(float_of_string (trim str))
-         | TString -> CString(str)
+         | TString -> 
+            let rec find_non_space s i incr_op = 
+               if String.get s i <> ' ' then i
+               else find_non_space s (incr_op i 1) incr_op
+            in
+            let lstart = 
+               find_non_space str 0 (+) in
+            let rstart =
+               find_non_space str ((String.length str)-1) (-) in
+            CString(
+               if lstart > rstart then "" else
+                  String.sub str lstart (rstart-lstart+1)
+            )
          | TDate   -> 
            if (Str.string_match
                 (Str.regexp "\\([0-9]+\\)-\\([0-9]+\\)-\\([0-9]+\\)") str 0)
@@ -199,7 +212,7 @@ module Postgres : Interface = struct
                let fields = Str.split (Str.regexp field_separator) line in 
                tuple_list @ [
                   List.map2 (fun fstr (_, ftype) ->
-                     const_of_string fstr ftype
+                     const_of_string ~truncate:true fstr ftype
                   ) fields schema
                 ]
             end

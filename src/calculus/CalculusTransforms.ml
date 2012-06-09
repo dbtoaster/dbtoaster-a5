@@ -328,6 +328,8 @@ let split_ctx (split_fn: value_t -> 'a option) (ctx:(var_t * C.expr_t) list):
       end
    ) ([],[]) ctx
 ;;
+exception CouldNotUnifyException of string
+;;
 (**/**)
 
 (**
@@ -356,7 +358,258 @@ let split_ctx (split_fn: value_t -> 'a option) (ctx:(var_t * C.expr_t) list):
 let unify_lifts (big_scope:var_t list) (big_schema:var_t list) 
                 (big_expr:C.expr_t): C.expr_t =
    Debug.print "LOG-CALCOPT-DETAIL" (fun () ->
-      "Unify Lifts: "^(C.string_of_expr big_expr) 
+      let (in_sch, out_sch) = C.schema_of_expr big_expr in
+      "Unify Lifts: "^
+      (ListExtras.ocaml_of_list string_of_var in_sch)^
+      (ListExtras.ocaml_of_list string_of_var out_sch)^": \n"^
+      (C.string_of_expr big_expr) 
+   );
+   let unify (lift_v:var_t) (expr_sub:C.expr_t) (scope:var_t list) 
+             (schema:var_t list) (expr:C.expr_t): C.expr_t =
+      Debug.print "LOG-UNIFY-LIFTS" (fun () ->
+         "Attempting to unify ("^(string_of_var lift_v)^" ^= "^
+         (CalculusPrinter.string_of_expr expr_sub)^") with scope/schema "^
+         (ListExtras.ocaml_of_list string_of_var scope)^
+         (ListExtras.ocaml_of_list string_of_var schema)^"\nin: "^
+         (CalculusPrinter.string_of_expr expr)
+      );
+      let var_sub msg =
+         match expr_sub with 
+         | CalcRing.Val(Value(ValueRing.Val(AVar(v)))) -> v
+         | _ -> raise (CouldNotUnifyException("Could not put '"^
+                        (C.string_of_expr expr_sub)^"' into a"^msg))
+      in
+      let val_sub ?(aggressive = false) msg =
+         match (combine_values ~aggressive:aggressive expr_sub) with 
+         | CalcRing.Val(Value(v)) -> v
+         | _ -> raise (CouldNotUnifyException("Could not put '"^
+                        (C.string_of_expr expr_sub)^"' into a"^msg))
+      in
+      let map_vars msg = 
+         List.map (fun x -> if x = lift_v then var_sub msg else x)
+      in
+      
+      (* If the lift variable is in the schema, then we can't unify it --
+         Otherwise, we'd shrink the schema.  In some cases, a unification of 
+         this sort is actually possible, but we don't handle them here.  
+          - If the schema is defined by an AggSum, nested_rewrites will pull
+            the Lift out of the AggSum (and update the schema accordingly)
+          - If the schema is based on the expression itself, we have to handle
+            things on a case-by-case basis, because whatever is going to be 
+            evaluating the expression has to be made aware of the schema 
+            changes.  For example, in Compiler, this is handled by 
+            extract_renamings. *)
+      if List.mem lift_v schema then 
+         raise (CouldNotUnifyException("Lift var is in the schema"));
+      
+      (* If the lift variable is already in-scope, then we can't unify it, 
+         because it's serving the role of an equality predicate.  We could try 
+         to turn it into an equality predicate here, but that's unnecessary.
+          - If the term that brought the lift variable into scope is itself a
+            lift, then we could only have gotten to this point if that lift was
+            not unifiable for other reasons.
+          - Otherwise, the next pass through advance_lifts and/or 
+            nesting_rewrites will move this lift up and left, and then we should
+            be able to unify it normally without trouble. *)
+      if List.mem lift_v scope then
+         raise (CouldNotUnifyException("Lift var is in the scope"));
+
+      (* We unify by replacing expressions with CalcRing.one.  This is only 
+         correct if the lifted expression is a singleton.  For example, we 
+         could implement COUNT(UNIQUE A) as 
+            AggSum([], (foo ^= R(A)) * {foo > 0})
+         The nested expression cannot be safely replaced.  However, if we get:
+            (A ^= ...) * AggSum([], (foo ^= R(A)) * {foo > 0})
+         then the nested aggregate is always over a single element. *)
+      if not (C.expr_is_singleton ~scope:scope expr_sub) then
+         raise (CouldNotUnifyException("Can only unify lifts of singletons"));
+      
+      
+      let rewritten = 
+      C.rewrite_leaves (fun _ x -> begin match x with
+         (* No Arithmetic over lone values means they can take non-float/int
+            values. *)
+         | Value(ValueRing.Val(AVar(v))) when v = lift_v -> expr_sub
+         | Value(v) when List.mem lift_v (Arithmetic.vars_of_value v) -> 
+            CalcRing.mk_val (Value(
+               Arithmetic.eval_partial 
+                  ~scope:[lift_v, val_sub " value expression"] v
+            ))
+         | Value(_) -> CalcRing.mk_val x
+         | AggSum(gb_vars, subexp) ->
+            (* subexp is rewritten.  We just need to update gb_vars properly.
+               This can only change (in this unify function) if the lhs variable
+               appears in the GB terms.  
+                  - If lift_v is bound in the expression, then subst may not be
+                    bound if lift_v is bound by a lift.  E.g.  
+                       (A ^= X) * AggSum([A], (A ^= X) * ...) -> 
+                          AggSum([], ...)
+                  - If the variable is not bound in the expression, but the 
+                    subst is (and is a variable), then the new subst had better 
+                    already be in the group-by variables.  
+            *)
+            let mapped_gb_vars = map_vars "n aggsum group-by var" gb_vars in
+            let new_gb_vars = 
+               ListAsSet.inter mapped_gb_vars (snd (C.schema_of_expr subexp))
+            in            
+               CalcRing.mk_val (AggSum(new_gb_vars, subexp))
+         | Rel(rn, rv) ->
+            let new_rv = map_vars " relation var" rv in
+               CalcRing.mk_val (Rel(rn, new_rv))
+
+         | External(en, eiv, eov, et, em) ->
+            (* The metadata is already rewritten *)
+            let new_eiv = map_vars "n external input var" eiv in
+            let new_eov = map_vars "n external output var" eov in
+               CalcRing.mk_val (External(en, new_eiv, new_eov, et, em))
+
+         | Cmp(op, lhs, rhs) ->
+            let new_lhs = Arithmetic.eval_partial 
+                              ~scope:[lift_v, val_sub " cmp expression"] lhs in
+            let new_rhs = Arithmetic.eval_partial 
+                              ~scope:[lift_v, val_sub " cmp expression"] rhs in
+               CalcRing.mk_val (Cmp(op, new_lhs, new_rhs))
+         | Lift(v, subexp) when (v = lift_v) && (subexp = expr_sub) ->
+            CalcRing.one
+         | Lift(v, subexp) when (v = lift_v) ->
+            (* If the subexpressions aren't equivalent, then we should turn this
+               into an equality test on the two.  lift_equalities will do 
+               something more intelligent later if possible.  Note that here, 
+               for the sake of code simplicity we take a slight hit: we cannot
+               do comparisons over expressions. *)
+            begin match combine_values ~aggressive:true subexp with
+               | CalcRing.Val(Value(subexp_v)) ->
+                  CalcRing.mk_val (Cmp(Eq, subexp_v,
+                     val_sub ~aggressive:true " lift comparison"
+                  ))
+               | _ -> raise (CouldNotUnifyException("Conflicting Lift"))
+            end
+            (* the subexp is already rewritten *)
+         | Lift(v, subexp) -> CalcRing.mk_val (Lift(v, subexp))
+            
+      end) expr
+      in 
+         Debug.print "LOG-UNIFY-LIFTS" (fun () ->
+            "Successfully unified ("^(string_of_var lift_v)^" ^= "^
+            (CalculusPrinter.string_of_expr expr_sub)^") in: "^
+            (CalculusPrinter.string_of_expr expr)^"\nto: "^
+            (CalculusPrinter.string_of_expr rewritten)
+         ); rewritten
+
+   in
+   let rec rcr (scope:var_t list) (schema:var_t list) (expr:C.expr_t):C.expr_t =
+      Debug.print "LOG-UNIFY-LIFTS" (fun () ->
+         "Attempting to unify lifts in: \n"^
+         (CalculusPrinter.string_of_expr expr)
+      );
+      begin match expr with 
+      | CalcRing.Val(Value(_))
+      | CalcRing.Val(Rel(_,_)) 
+      | CalcRing.Val(External(_)) 
+      | CalcRing.Val(Cmp(_,_,_)) -> expr
+      
+      | CalcRing.Val(AggSum(gb_vars, subexp)) ->
+         let new_subexp = rcr scope gb_vars subexp in
+         let (orig_ivars,_) = C.schema_of_expr subexp in
+         let (_,new_ovars) = C.schema_of_expr new_subexp in
+         (* Unifying lifts can do some wonky things to the schema of subexp.
+            Among other things, previously unbound variables can become bound,
+            and previously bound variables can become unbound.  A variable in
+            the schema of an expression will never be unified (although the lift 
+            can be propagated up and out of the aggsum via nesting_rewrites) *)
+         let new_gb_vars = 
+            ListAsSet.union
+               (ListAsSet.inter gb_vars new_ovars)
+               (ListAsSet.inter orig_ivars new_ovars)
+         in
+            Debug.print "LOG-UNIFY-LIFTS" (fun () ->
+               "Updating group-by variables from "^
+               (ListExtras.ocaml_of_list string_of_var gb_vars)^" to "^
+               (ListExtras.ocaml_of_list string_of_var new_gb_vars)^
+               " in AggSum of: "^
+               (CalculusPrinter.string_of_expr new_subexp)
+            );
+            CalcRing.mk_val (AggSum(new_gb_vars, new_subexp))
+      
+      | CalcRing.Val(Lift(lift_v, subexp)) ->
+         let subexp_schema = ListAsSet.diff schema [lift_v] in
+         let new_subexp = rcr scope subexp_schema subexp in (
+            try 
+               unify lift_v new_subexp scope schema CalcRing.one;
+            with CouldNotUnifyException(msg) ->
+               Debug.print "LOG-UNIFY-LIFTS" (fun () ->
+                  "Could not unify "^(string_of_var lift_v)^" because: "^msg^
+                  " in terminal lift"
+               );
+               CalcRing.mk_val (Lift(lift_v, new_subexp))
+         )
+
+      | CalcRing.Sum(sum_terms) ->
+         (* This is a bit of a hack for now.  The schema of every term in the
+            sum needs to be kept identical.  Factorize will pull out any lifts 
+            shared across terms in the sum, and poly decomposition will allow
+            unification within a sum.  *)
+         let (_,sum_schema) = C.schema_of_expr expr in
+         let full_schema = ListAsSet.union sum_schema schema in
+            CalcRing.mk_sum (List.map (rcr scope full_schema) sum_terms)
+      
+      | CalcRing.Neg(neg_term) ->
+         CalcRing.mk_neg ((rcr scope schema) neg_term)
+      
+      | CalcRing.Prod(CalcRing.Val(Lift(lift_v, subexp))::rest) ->
+         let subexp_schema = ListAsSet.diff schema [lift_v] in
+         let new_subexp = rcr scope subexp_schema subexp in (
+            try
+               rcr scope schema (unify lift_v new_subexp scope schema 
+                                       (CalcRing.mk_prod rest))
+            with CouldNotUnifyException(msg) -> 
+               Debug.print "LOG-UNIFY-LIFTS" (fun () ->
+                  "Could not unify "^(string_of_var lift_v)^" because: "^msg^
+                  " in: \n"^(CalculusPrinter.string_of_expr 
+                                    (CalcRing.mk_prod rest))
+               );
+               let (_,subexp_ovars) = C.schema_of_expr new_subexp in
+               let new_scope = 
+                  ListAsSet.multiunion [scope; [lift_v]; subexp_ovars]
+               in
+               let new_schema = 
+                  ListAsSet.diff schema new_scope
+               in
+                  CalcRing.mk_prod [
+                     CalcRing.mk_val (Lift(lift_v, new_subexp));
+                     rcr new_scope new_schema (CalcRing.mk_prod rest)
+                  ]
+         )
+
+      | CalcRing.Prod(head::rest) ->
+         let (rest_ivars, rest_ovars) = 
+            C.schema_of_expr (CalcRing.mk_prod rest) 
+         in
+         let head_schema = 
+            (ListAsSet.multiunion [schema; rest_ivars; rest_ovars]) 
+         in
+         let new_head = rcr scope head_schema head in
+         let (_, head_ovars) = C.schema_of_expr new_head in
+         let new_scope = ListAsSet.union scope head_ovars in
+         let new_schema = ListAsSet.diff schema head_ovars in
+            CalcRing.mk_prod [
+               new_head; 
+               rcr new_scope new_schema (CalcRing.mk_prod rest)
+            ]
+
+      | CalcRing.Prod([]) -> CalcRing.one
+   end in 
+      rcr big_scope big_schema big_expr
+
+(**/**)
+let unify_lifts_old (big_scope:var_t list) (big_schema:var_t list) 
+                (big_expr:C.expr_t): C.expr_t =
+   Debug.print "LOG-CALCOPT-DETAIL" (fun () ->
+      let (in_sch, out_sch) = C.schema_of_expr big_expr in
+      "Unify Lifts: "^
+      (ListExtras.ocaml_of_list string_of_var in_sch)^
+      (ListExtras.ocaml_of_list string_of_var out_sch)^": "^
+      (C.string_of_expr big_expr) 
    );
    let split_values (ctx:(var_t * C.expr_t) list): 
                     (var_t list * (var_t * value_t) list) = 
@@ -516,8 +769,7 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
                         " because an RHS term decided it was a bad idea"
                      );
                      ((rcr (v::rhs_scope) schema ctx (CalcRing.mk_prod pl)), 
-                        (CalcRing.mk_val (Lift(v,lhs_nested_term))),
-                        false)
+                        (CalcRing.mk_val (Lift(v,lhs_nested_term))), false)
                   )
                else (
                   Debug.print "LOG-UNIFY-LIFTS" (fun () -> 
@@ -525,8 +777,7 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
                      " because Lift is an expression or in the schema"
                   );
                   ((rcr (v::rhs_scope) schema ctx (CalcRing.mk_prod pl)),
-                   (CalcRing.mk_val (Lift(v,lhs_nested_term))),
-                   false)
+                   (CalcRing.mk_val (Lift(v,lhs_nested_term))), false)
                )
             in
                (  (if lift_already_occurs && succeeded_at_unifying
@@ -663,6 +914,7 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
    in
       snd (rcr big_scope big_schema [] big_expr)
 ;;
+(**/**)
 
 (**
   [advance_lifts scope expr]
@@ -776,9 +1028,36 @@ let rec nesting_rewrites (expr:C.expr_t) =
             else
                begin match subterm with
                   | CalcRing.Sum(sl) ->
-                     CalcRing.mk_sum 
-                        (List.map (fun x-> CalcRing.mk_val
-                                             (AggSum(gb_vars, x))) sl)
+                     (* Input variables might be bound some but not all of the 
+                        sum terms.  We need to update the aggsum accordingly *)
+                     let (sum_ivars, _) = C.schema_of_expr subterm in
+                     let rewritten = 
+                        CalcRing.mk_sum 
+                           (List.map (fun term -> 
+                              let (_,term_ovars) = C.schema_of_expr term in
+                              Debug.print "LOG-NESTINGREWRITES-DETAIL" (fun ()->
+                                 "Rewriting aggsum term with ovars:"^
+                                 (ListExtras.ocaml_of_list string_of_var 
+                                                            term_ovars)^":\n"^
+                                 (CalculusPrinter.string_of_expr term)
+                              );
+                              let term_gb_vars = 
+                                 ListAsSet.union gb_vars
+                                    (ListAsSet.inter sum_ivars term_ovars)
+                              in
+                                 CalcRing.mk_val (AggSum(term_gb_vars, term)))
+                           sl)
+                     in
+                     Debug.print "LOG-NESTINGREWRITES-DETAIL" (fun () ->
+                        "Rewrote : AggSum("^
+                        (ListExtras.ocaml_of_list string_of_var gb_vars)^", \n"^
+                        (CalculusPrinter.string_of_expr subterm)^
+                        "\n) with ivars: "^
+                        (ListExtras.ocaml_of_list string_of_var sum_ivars)^                        
+                        "\nto: "^
+                        (CalculusPrinter.string_of_expr rewritten)
+                     );
+                     rewritten
                   | CalcRing.Prod(pl) ->
                      let (unnested,nested) = 
                         List.fold_left (fun (unnested,nested) term->

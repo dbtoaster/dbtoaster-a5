@@ -474,10 +474,16 @@ if stage_is_active StagePrintSchema then (
 ;;
 if stage_is_active StagePrintCalc then (
    Debug.print "LOG-DRIVER" (fun () -> "Running Stage: PrintCalc");
+   let opt = 
+      if Debug.active "PRINT-RAW-CALC" then (fun x -> x)
+      else (fun expr -> 
+         let schema = Calculus.schema_of_expr expr in
+            CalculusTransforms.optimize_expr schema expr)
+   in
    output_endline (
       (ListExtras.string_of_list ~sep:"\n" 
          (fun (name, calc) -> name^": \n"^
-            (CalculusPrinter.string_of_expr calc))
+            (CalculusPrinter.string_of_expr (opt calc)))
          !calc_queries)
    )
 )
