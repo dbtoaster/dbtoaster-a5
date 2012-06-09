@@ -288,24 +288,7 @@ expression:
 | COUNTAGG LPAREN countAggParam RPAREN { Sql.Aggregate(Sql.CountAgg, 
                                                      Sql.Const(CInt(1))) }
 | ID LPAREN functionParameters RPAREN { Sql.ExternalFn($1,$3) }
-| DATE LPAREN STRING RPAREN     {
-            if (Str.string_match
-                (Str.regexp "\\([0-9]+\\)-\\([0-9]+\\)-\\([0-9]+\\)") $3 0)
-						then (
-                let y = (int_of_string (Str.matched_group 1 $3)) in
-                let m = (int_of_string (Str.matched_group 2 $3)) in
-                let d = (int_of_string (Str.matched_group 3 $3)) in
-                    if (m > 12) then bail 
-                        ("Invalid month ("^(string_of_int m)^") in date: "^$3);                                         
-                    if (d > 31) then bail
-                        ("Invalid day ("^(string_of_int d)^") in date: "^$3);
-
-                    (*Sql.Const(CInt((y * 10000) + (m * 100) + (d * 1)))*) 
-
-                    Sql.Const(CDate(y,m,d))
-            ) else
-                bail ("Improperly formatted date: "^$3)	             
-          }
+| DATE LPAREN STRING RPAREN     { Sql.Const(Types.parse_date $3) }
 
 functionParameters: 
 | expression COMMA functionParameters { $1::$3 }

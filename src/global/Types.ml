@@ -90,6 +90,27 @@ let inverse_of_cmp = function
  | Eq -> Neq | Neq -> Eq
  | Lt -> Gte | Lte -> Gt
  | Gt -> Lte | Gte -> Lt
+   
+(**
+   Parses a string and converts it into corresponding Date constant.
+   @param str   A string
+   @return    The Date value of [str]
+   @raise Failure If the string does not correspond to any date
+*)
+let parse_date str = 
+  if (Str.string_match
+      (Str.regexp "\\([0-9]+\\)-\\([0-9]+\\)-\\([0-9]+\\)") str 0)
+              then (
+      let y = (int_of_string (Str.matched_group 1 str)) in
+      let m = (int_of_string (Str.matched_group 2 str)) in
+      let d = (int_of_string (Str.matched_group 3 str)) in
+          if (m > 12) then failwith 
+              ("Invalid month ("^(string_of_int m)^") in date: "^str);                                         
+          if (d > 31) then failwith
+              ("Invalid day ("^(string_of_int d)^") in date: "^str);
+              CDate(y,m,d)
+  ) else
+      failwith ("Improperly formatted date: "^str)              
  
 (**** Conversion to Strings ****)
 (**
@@ -183,7 +204,7 @@ let sql_of_const (a: const_t): string =
       | CInt(i)      -> (string_of_int i)
       | CFloat(f)    -> (string_of_float f)
       | CString(s)   -> "'"^s^"'"
-      | CDate(y,m,d) -> "DATE("^(string_of_const a)^")"
+      | CDate(y,m,d) -> "DATE('"^(string_of_const a)^"')"
    end
 
 (**

@@ -48,7 +48,8 @@ let keywords =
          "COLLECTION", COLLECTION;
          "IN", IN;
          "OUT", OUT;
-
+         "SINGLETON", SINGLETON;
+      
          "CREATE", CREATE;
          "TABLE", TABLE;
          "STREAM", STREAM;

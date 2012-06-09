@@ -96,7 +96,7 @@ let string_of_map ?(is_query=false) (map:map_t): string = begin match map with
    | DSView(view) -> 
       "DECLARE "^
       (if is_query then "QUERY " else "")^
-      "MAP "^(CalculusPrinter.string_of_expr view.ds_name)^
+       "MAP "^(CalculusPrinter.string_of_expr ~show_type:true view.ds_name)^
       " := \n"^
       (CalculusPrinter.string_of_expr view.ds_definition)^";"
    | DSTable(rel) -> Schema.code_of_rel rel

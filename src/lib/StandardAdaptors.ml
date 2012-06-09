@@ -134,25 +134,7 @@ let build_tuple (reln,relv,_) param_val support_sch =
                     Failure(_) -> failwith ("Could not convert float: '"^x^"'"))
         | "date" -> 
           assert_type vn vt t (*TInt*) TDate;
-          (fun x -> 
-            if (Str.string_match 
-                  (Str.regexp "\\([0-9]+\\)-\\([0-9]+\\)-\\([0-9]+\\)") x 0)
-            then (
-               let y = (int_of_string (Str.matched_group 1 x)) in
-               let m = (int_of_string (Str.matched_group 2 x)) in
-               let d = (int_of_string (Str.matched_group 3 x)) in
-                  if (m > 12) then failwith (
-                        "Invalid month ("^(string_of_int m)^
-                        ") in date: "^x
-                     );
-                  if (d > 31) then failwith (
-                        "Invalid day ("^(string_of_int d)^
-                        ") in date: "^x
-                     );
-                  (*CInt((y * 10000) + (m * 100) + (d * 1))*)
-                  CDate(y,m,d)
-            ) else failwith ("Invalid date string: "^x)
-         )
+          (fun x -> Types.parse_date x)
         | "string" -> 
            assert_type vn vt t TString;
            (fun x -> CString(x))

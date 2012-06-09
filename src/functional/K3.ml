@@ -757,13 +757,7 @@ let nice_string_of_expr ?(type_is_needed = false) e maps =
   let fnl () = pp_force_newline str_formatter () in
   let rec ttostr t = (match t with
       | TUnit -> "unit"
-      | TBase( b_t ) -> begin match b_t with
-            | Types.TInt -> "int"
-            | Types.TFloat -> "float"
-            | Types.TString -> "string"
-            | Types.TDate -> "date"
-            | _ -> "unknown!"
-            end
+      | TBase( b_t ) -> Types.string_of_type b_t
       | TTuple(tlist) -> 
          "<"^(ListExtras.string_of_list ttostr tlist)^">"
       | Collection(subt) -> "Collection("^(ttostr subt)^")"
@@ -835,7 +829,7 @@ let nice_string_of_expr ?(type_is_needed = false) e maps =
 				| Types.CInt _ -> "int"
 				| Types.CBool _ -> "bool" 
         | Types.CDate _ -> "CDate"
-      in ob(); ps (Types.string_of_const c);
+      in ob(); ps (Types.sql_of_const c);
          if type_is_needed then ps (":"^(const_ts));
          cb()
     | Var (id,t) -> 

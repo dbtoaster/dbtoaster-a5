@@ -105,7 +105,7 @@ dbtType:
 | VARCHAR LPAREN INT RPAREN { TString }
 | VARCHAR                   { TString }
 | CHAR                      { TString }
-| DATE                      { TInt    }
+| DATE                      { TDate    }
 
 queryStatement:
 | DECLARE QUERY STRING AS calculusExpr { ($3, $5) }
@@ -158,7 +158,10 @@ ivcCalculusExpr:
 | LBRACE valueExpr comparison valueExpr RBRACE
                                   { CalcRing.mk_val (Cmp($3,$2,$4)) }
 | LPAREN variable LIFT ivcCalculusExpr RPAREN
-                                  { CalcRing.mk_val (Lift($2, $4)) }
+  { let t_var, _ = $2 in 
+   let t_type = Calculus.type_of_expr $4 in
+   let target = (t_var, t_type) in
+    CalcRing.mk_val (Lift(target, $4)) }
 
 comparison:
 | EQ  { Types.Eq  } | NEQ { Types.Neq } | LT  { Types.Lt  } 
@@ -190,6 +193,7 @@ constant:
 | INT       { CInt($1) }
 | FLOAT     { CFloat($1) }
 | STRING    { CString($1) }
+| DATE LPAREN STRING RPAREN     { Types.parse_date $3 }
 
 emptyVariableList:
 |                             { [] }

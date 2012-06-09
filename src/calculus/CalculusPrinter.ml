@@ -111,7 +111,7 @@ let rec format_value (v:value_t) =
    Dump a Calculus expression to the formatter
    @param expr   The Calculus expression to dump
 *)
-let rec format_expr (expr:expr_t) = 
+let rec format_expr ?(show_type = false) (expr:expr_t) = 
    !fmt.bopen 0;
    begin match expr with
       | CalcRing.Sum(sl)  -> 
@@ -168,13 +168,13 @@ let rec format_expr (expr:expr_t) =
          !fmt.cut ();
          !fmt.string "[";
          !fmt.bopen 0;
-         format_list (dump string_of_var) "," ivars;
+         format_list (dump (string_of_var ~verbose:show_type)) "," ivars;
          !fmt.bclose ();
          !fmt.string "]";
          !fmt.cut ();
          !fmt.string "[";
          !fmt.bopen 0;
-         format_list (dump string_of_var) "," ovars;
+         format_list (dump (string_of_var ~verbose:show_type)) "," ovars;
          !fmt.bclose ();
          !fmt.string "]";
          begin match extivc with
@@ -226,6 +226,6 @@ let string_of_value v =
    @param e    A Calculus expression
    @return     The pretty-printed string representation of [e]
 *)
-let string_of_expr e =
-   format_expr e;
+let string_of_expr ?(show_type = false) e =
+  format_expr ~show_type:show_type e;
    flush_str_formatter ()

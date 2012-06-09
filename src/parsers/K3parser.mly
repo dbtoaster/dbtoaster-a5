@@ -69,13 +69,14 @@
 
    let must_infer_from_slice: (bool ref) = ref true
 
-   let slice_infering statement var_bind_list = 
-      let map_name = match statement with 
+   let slice_infering statement var_bind_list =
+     let calc_result stmt = 
+      let map_name = match stmt with 
          | PC(n, _, _, _) -> n
          | OutPC(n, _, _) -> n
          | InPC(n, _, _)  -> n
          | SingletonPC(n, _) -> n
-         | _ -> raise (K3TypeError("First argument of Slice should be a Collection!"))
+         | _ -> raise (K3TypeError("Incorrect collection!"))
       in
          let (in_var_types, out_var_types) = get_map_schema map_name in
          if (!must_infer_from_slice) then
@@ -95,7 +96,25 @@
          end
          else
             ();
-         in_var_types@out_var_types
+       in_var_types@out_var_types
+     in
+     
+	 let rec rcr stmt = 
+	    match stmt with
+	      | Map(_, e) -> rcr e
+	      | Slice(e, _, _) -> rcr e
+	      | Block(el) ->
+	        let rec last_item l = 
+	            if List.length l = 1 then
+	                List.hd l
+	            else 
+	                last_item (List.tl l)
+	        in
+	        rcr (last_item el)
+	      | PC _ | OutPC _ | InPC _ | SingletonPC _ -> calc_result stmt
+	      | _ -> raise (K3TypeError("First argument of Slice should be a Collection!"))
+      in
+      rcr statement
 
 
    let collections:((string, expr_t) Hashtbl.t) = Hashtbl.create 10
@@ -124,7 +143,7 @@
 %token SUM MINUS PRODUCT
 %token COMMA LPAREN RPAREN LBRACK RBRACK PERIOD COLON DOLLAR
 %token ON SYSTEM READY QUERY
-%token IF IF0 ELSE ITERATE LAMBDA APPLY MAP FLATTEN AGGREGATE GROUPBYAGGREGATE MEMBER LOOKUP SLICE
+%token IF IF0 ELSE ITERATE LAMBDA APPLY MAP FLATTEN AGGREGATE GROUPBYAGGREGATE MEMBER LOOKUP SLICE SINGLETON
 %token CREATE TABLE STREAM FROM SOCKET FILE PIPE FIXEDWIDTH DELIMITED LINE VARSIZE OFFSET ADJUSTBY SETVALUE
 %token PCUPDATE PCVALUEUPDATE PCELEMENTREMOVE
 %token INT UNIT FLOAT COLLECTION STRINGTYPE CHAR VARCHAR DATE
@@ -235,7 +254,8 @@ mapVarItem:
 typeItem:
 | INT                                                       { Types.TInt }
 | FLOAT                                                     { Types.TFloat }
-| STRINGTYPE                                                    { Types.TString }
+| STRINGTYPE                                                { Types.TString }
+| DATE                                                      { Types.TDate }
 
 triggerList:
 | trigger triggerList                                       { $1::$2 }
@@ -306,10 +326,13 @@ statement:
 | pcUpdateStatement                                         { $1 }
 | pcValueUpdateStatement                                    { $1 }
 | pcElementRemoveStatement                                  { $1 }
+| singletonStatement                                        { $1 }
 
 constStatement:
 | CONST_FLOAT                                               { Const(Types.CFloat($1)) }
 | INTEGER                                                   { Const(Types.CInt($1)) }
+| CONST_STRING                                              { Const(CString($1)) }
+| DATE LPAREN CONST_STRING RPAREN                                 { Const(Types.parse_date $3) }
 
 varStatement:
 | ID COLON typeItem                                         { Var($1, TBase( $3 ) ) }
@@ -362,6 +385,8 @@ varList:
 varType:
 | INT                                                       { TBase(Types.TInt) }
 | FLOAT                                                     { TBase(Types.TFloat) }
+| DATE                                                      { TBase(Types.TDate) }
+| STRINGTYPE                                                { TBase(Types.TString) }
 | UNIT                                                      { TUnit }
 | LT varTypeList GT                                         { TTuple($2) }
 | COLLECTION LPAREN varType RPAREN                          { Collection($3) }
@@ -428,7 +453,11 @@ pcElementRemoveStatement:
 pcValueUpdateStatement:
 | PCVALUEUPDATE LPAREN statement COMMA LBRACK statementElementListOpt RBRACK
    COMMA LBRACK statementElementListOpt RBRACK COMMA statement RPAREN   
-                                                            { PCValueUpdate($3, $6, $10, $13) }
+    { PCValueUpdate($3, $6, $10, $13) }
+    
+singletonStatement:
+| SINGLETON LPAREN statement RPAREN                         { Singleton($3) }
+
 statementElementListOpt:
 | statementElementList                                      { $1 }
 |                                                           { [] }
@@ -487,4 +516,6 @@ dbtType:
 | VARCHAR LPAREN INTEGER RPAREN { TString }
 | VARCHAR                   { TString }
 | CHAR                      { TString }
-| DATE                      { TInt    }
+| DATE                      { TDate    }
+  
+  
