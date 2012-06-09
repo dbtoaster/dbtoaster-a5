@@ -17,7 +17,7 @@ CREATE STREAM LINEITEM (
         comment        VARCHAR(44)
     )
   FROM FILE '../../experiments/data/tpch/lineitem.csv'
-  LINE DELIMITED lineitem (deletions := 'false');
+  LINE DELIMITED lineitem;
 
 
 CREATE STREAM ORDERS (
@@ -32,7 +32,7 @@ CREATE STREAM ORDERS (
         comment        VARCHAR(79)
     )
   FROM FILE '../../experiments/data/tpch/orders.csv'
-  LINE DELIMITED orders (deletions := 'false');
+  LINE DELIMITED orders;
 
 CREATE STREAM PART (
         partkey      INT,
@@ -46,7 +46,7 @@ CREATE STREAM PART (
         comment      VARCHAR(23)
     )
   FROM FILE '../../experiments/data/tpch/part.csv'
-  LINE DELIMITED part (deletions := 'false');
+  LINE DELIMITED part;
 
 
 CREATE STREAM CUSTOMER (
@@ -60,7 +60,7 @@ CREATE STREAM CUSTOMER (
         comment      VARCHAR(117)
     )
   FROM FILE '../../experiments/data/tpch/customer.csv'
-  LINE DELIMITED customer (deletions := 'false');
+  LINE DELIMITED customer;
 
 CREATE STREAM SUPPLIER (
         suppkey      INT,
@@ -72,7 +72,7 @@ CREATE STREAM SUPPLIER (
         comment      VARCHAR(101)
     )
   FROM FILE '../../experiments/data/tpch/supplier.csv'
-  LINE DELIMITED supplier (deletions := 'false');
+  LINE DELIMITED supplier;
   
 CREATE STREAM NATION (
         nationkey    INT,
@@ -81,7 +81,7 @@ CREATE STREAM NATION (
         comment      VARCHAR(152)
     )
   FROM FILE '../../experiments/data/tpch/nation.csv'
-  LINE DELIMITED nation (deletions := 'false');
+  LINE DELIMITED nation;
 
 
  SELECT sn.regionkey, 
