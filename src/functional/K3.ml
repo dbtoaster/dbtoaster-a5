@@ -761,6 +761,7 @@ let nice_string_of_expr ?(type_is_needed = false) e maps =
             | Types.TInt -> "int"
             | Types.TFloat -> "float"
             | Types.TString -> "string"
+            | Types.TDate -> "date"
             | _ -> "unknown!"
             end
       | TTuple(tlist) -> 
