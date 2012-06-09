@@ -95,6 +95,7 @@ query: testdatahash
 	@$(FAST_QUERY_TEST) simple/r_sumnestedintargetwitheq
 	@$(FAST_QUERY_TEST) simple/r_sumstar
 	@$(FAST_QUERY_TEST) simple/rst
+	@$(FAST_QUERY_TEST) simple/invalid_schema_fn
 	@$(FAST_QUERY_TEST) employee/query01
 	@$(FAST_QUERY_TEST) employee/query01a
 	@$(FAST_QUERY_TEST) employee/query02
