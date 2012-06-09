@@ -1,5 +1,5 @@
 
-include ../makefile.config
+include ../makefile.local
 
 DBTOASTER_TOP=../bin/dbtoaster_unit
 UNIT_TEST=sh -c 'echo ==== $$1 ====; $(DBTOASTER_TOP) $$1' --

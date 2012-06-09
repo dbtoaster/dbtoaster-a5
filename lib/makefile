@@ -1,5 +1,5 @@
 
-include ../makefile.config
+include ../makefile.local
 
 all: dependencies
 

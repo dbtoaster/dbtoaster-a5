@@ -103,7 +103,7 @@ OPT_FLAGS +=\
 
 #################################################
 
-all: makefile.config versioncheck bin/dbtoaster_top bin/dbtoaster_debug \
+all: makefile.local versioncheck bin/dbtoaster_top bin/dbtoaster_debug \
 		 bin/dbtoaster runtimelibs
 
 versioncheck:
@@ -195,12 +195,13 @@ makefile.deps: makefile $(patsubst %,%.ml,$(BASE_FILES))
 	@$(OCAMLDEP) $(patsubst %, -I %,$(DIRS)) \
 			$(patsubst %,%.ml,$(BASE_FILES)) > $@
 
-makefile.config:
+makefile.local:
 	@echo Initializing local configuration file
-	@cp src/misc/makefile.config.default makefile.config
+	@cp config/makefile.local.default makefile.local
 
 include makefile.deps
 include makefile.parserdeps
+include makefile.local
 
 #################################################
 
