@@ -19,51 +19,6 @@ module K = K3
 *
 *****************************)
 
-(* TODO: Lifting * -- we should apply lifting once, before typechecking,   *)
-(* rather than lifting for * typechecking as needed. * * -- when is it     *)
-(* safe to lift? K.Collections of functions are generally not * safe for     *)
-(* function lifting, because functions define equivalence classes * and it *)
-(* is the class being "indexed"/named/referenced as part of the *          *)
-(* K.Collection record (i.e. functions are data). * * Map lifting: * --      *)
-(* map(f : Fn(b,Fn(c,d)), Lambda(g, h : C([b,c]))) * = Lambda(g,map(f,h))  *)
-(* : Fn(g,d) * here Lambda(g,h) can be lifted since maps only apply to     *)
-(* K.Collections, * and there is a single function yielding the K.Collection * *)
-(* * -- map(f : Fn(a,Fn(b,Fn(c,d))), g : C([b,c])) * = Lambda(a,map(f' :   *)
-(* Fn(b,Fn(c,d)), g : C([b,c]))) : Fn(a,d) * where f =                     *)
-(* Lambda(a,Lambda(b,Lambda(c,...))) * and f' = Lambda(b,Lambda(c,...)) *  *)
-(* here f can be partially applied to g, and lifted since f is common to * *)
-(* all K.Collection elements. Note that map uses suffix currying. * * --     *)
-(* map(f : Fn(a,Fn(b,Fn(c,d))), Lambda(g, h : C([b,c]))) * =               *)
-(* Lambda(g,Lambda(a,map(f' : Fn(b,Fn(c,d)),h))) : Fn(g,Fn(a,d)) * where f *)
-(* = Lambda(a,Lambda(b,Lambda(c,...))) * and f' = Lambda(b,Lambda(c,...))  *)
-(* * Note lifting occurs right-to-left, that is the K.Collection function is *)
-(* * lifted before any partially evaluated map function. * * Aggregation   *)
-(* lifting: * * -- aggregate(f : Fn(b,Fn(c,Fn(d,d))), i:d, Lambda(g, h :   *)
-(* C([b,c]))) * = Lambda(g,aggregate(f,i,h)) * * -- aggregate(f:           *)
-(* Fn(a,Fn(b,Fn(c,Fn(d,d)))), i:d, g : C([b,c])) * =                       *)
-(* Lambda(a,aggregate(f',i,g)) * where f =                                 *)
-(* Lambda(a,Lambda(b,Lambda(c,...))) * and f' = Lambda(b,Lambda(c,...)) *  *)
-(* * -- aggregate(f: Fn(a,Fn(b,Fn(c,Fn(d,d)))), i:d, Lambda(g, h :         *)
-(* C([b,c]))) * = Lambda(g,Lambda(a,aggregate(f' : Fn(b,Fn(c,Fn(d,d))),    *)
-(* i:d, h : C([b,c])))) * where f = Lambda(a,Lambda(b,Lambda(c,...))) *    *)
-(* and f' = Lambda(b,Lambda(c,...)) * * Flatten lifting: * * --            *)
-(* flatten(Lambda(a,C(C(b)))) = Lambda(a,flatten(C(C(b)))) * * * Unsafe: * *)
-(* -- implicit lifting from K.Collections, e.g. * FFn([w,x,y],               *)
-(* Lambda(z,C([a,b]))) : C([w,x,y,Fn(z,C([a,b,Float]))]) * =               *)
-(* Lambda(z,FFn([w,x,y,C([a,b])])) : Fn(z,C([w,x,y,C([a,b,Float])])) * *   *)
-(* -- lifting left-to-right, recursively, e.g.: *                          *)
-(* C([Fn(a,b),Fn(c,Fn(d,e)),Float]) = Fn(a, Fn(c, (Fn(d,                   *)
-(* C([b,e,Float]))))) * * C([Fn(a,b),Fn(Fn(c,C(d)),Fn(e,f)),Float]) = *    *)
-(* Fn(a, Fn(Fn(c,C(d)), Fn(e, C([b,f,Float])))) * * -- conditionals can be *)
-(* incorrectly lifted w.r.t types, e.g. * Map( f :                         *)
-(* Fn(a,Fn(b,Fn(c,Fn(d,e))) , C([c,d]) ) * : Fn(a, b, Map(f:               *)
-(* Fn(c,Fn(d,e)), ...)) * where f : Lambda(a, IfThenElse(F, *              *)
-(* Lambda(b,Lambda(c,..)), Lambda(b,Lambda(c,...)))) * TODO: * this is     *)
-(* because we're typing based on what a lifting simplification would * do, *)
-(* rather than actually applying this simplification, and simply typing *  *)
-(* each expression. We should *not* have the typechecker recreate the      *)
-(* effect * of optimizations. Conditions should not admit lambda lifting.  *)
-
 (* Helpers *)
 
 exception K3TypecheckError of K.expr_t list * string
@@ -108,7 +63,7 @@ let is_flat t = match t with | K.TBase(_) -> true | _ -> false
 let flat t = if is_flat t then t else type_error t "invalid flat expression"
 
 let promote t1 t2 =
-	let open Types in
+	(*let open Types in*)
 	match t1, t2 with
 	| (K.TBase(TFloat), K.TBase(TInt)) 
 	| (K.TBase(TInt), K.TBase(TFloat)) -> K.TBase(TFloat)
@@ -445,8 +400,7 @@ let rec typecheck_expr e : K.type_t =
 		(* for v1, v2                                                          *)
 				K.Fn(tc_fn_arg arg1_e be, K.Fn(tc_fn_arg arg2_e be, recur be))
 		
-		| K.ExternalLambda (fn_id, arg_e, fn_t) -> 
-				K.Fn(tc_fn_arg arg_e (K.Const(CInt(0))), fn_t)		
+		| K.ExternalLambda (fn_id, arg, fn_t) -> K.Fn(K.types_of_arg arg, fn_t)		
 		
 		(* f : fn ([x],y) arg : x f : fn([x;y],z) arg : tuple(x,y) *           *)
 		(* ----------------------- ----------------------------------- *       *)
@@ -591,16 +545,6 @@ let rec typecheck_expr e : K.type_t =
             end
        | K.Unit                               -> K.TUnit
 
-	(*| External     efn_id ->
-	begin match efn_id with
-	| Symbol(id) ->
-	begin try let (arg_t, ret_t) = Hashtbl.find ext_fn_symbols id
-	in rebuild_mvf ret_t arg_t
-	with Not_found -> failwith "invalid external function"
-	end
-	| _ -> failwith "externals not yet supported"
-	end
-	*)
 	with 
       | Failure(x)                -> expr_error e x
       | K3TypecheckError(stack,x) -> expr_error ~old_stack:stack e x

@@ -510,7 +510,7 @@ namespace dbtoaster {
         string data_file;
 
         order_book_streams(string file_name, string params,
-                           shared_ptr<stream_multiplexer> m)
+                           shared_ptr<source_multiplexer> m)
           : r(m), sid(0), data_file(file_name)
         {
           init(parse_params(params));

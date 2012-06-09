@@ -2,9 +2,13 @@
 int main(int argc, char* argv[]) {
 	boost::archive::xml_oarchive oa(cout, 0);
 
-	dbtoaster::Program p;
+	dbtoaster::Program p(argc, argv);
 	dbtoaster::Program::snapshot_t snap;
 
+	cout << "Initializing program" << endl;
+	p.init();
+
+	cout << "Running program" << endl;
 	if( argc > 1 && !strcmp(argv[1],"async") )
 	{
 		boost::unique_future<int> fp = p.run_async();

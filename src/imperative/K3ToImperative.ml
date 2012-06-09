@@ -58,7 +58,8 @@ struct
 
   type ir_tag_t = Decorated of node_tag_t | Undecorated of expr_t
   and node_tag_t =
-    (* No consts or vars, since these are always undecorated leaves *)
+    (* No consts, vars, or external lambdas since these are always
+     * undecorated leaves *)
    | Op of op_t
    | Tuple
    | Projection of int list
@@ -83,7 +84,8 @@ struct
    | Slice  of int list
 
    | PCUpdate
-   | PCValueUpdate 
+   | PCValueUpdate
+   | PCElementRemove  
  
 
   type 'a ir_t =
@@ -110,9 +112,12 @@ struct
 
    | Singleton -> "Singleton"
    | Combine -> "Combine"
+   
    | Lambda(v) -> "Lambda("^(K.string_of_arg v)^")"
+
    | AssocLambda(v1,v2) -> 
       "AssocLambda("^(K.string_of_arg v1)^", "^(K.string_of_arg v2)^")"
+  
    | Apply -> "Apply"
 
    | Block -> "Block"
@@ -132,6 +137,7 @@ struct
 
    | PCUpdate -> "Update"
    | PCValueUpdate -> "ValueUpdate"
+   | PCElementRemove -> "ElementRemove"
   
   let string_of_tag t = match t with
     | Undecorated e -> K.string_of_expr e
@@ -158,6 +164,12 @@ struct
     TypedSym of id_t option * 'ext_type decl_t
 
   (* K3/IR helpers *)
+  let is_external_lambda tag = match tag with
+    | Undecorated(K.ExternalLambda(_,_,_)) -> true
+    | Decorated(Lambda _) -> false
+    | Undecorated(K.Lambda(_,_)) -> false
+    | _ -> failwith "invalid lambda"
+
   let arg_of_lambda leaf_tag = match leaf_tag with
     | Decorated(Lambda(x)) -> x
     | Undecorated(K.Lambda(x,_)) -> x
@@ -316,6 +328,7 @@ struct
         in Node(metadata, Undecorated(e), cir))
         
   let combine_ir metadata sub_ir =
+    (*
     build_code sub_ir
       (fun lru cir -> match lru with
         | [(sym1, le); (_, re)] ->
@@ -326,6 +339,9 @@ struct
           let e = K3.Combine(le,re)
           in Node(metadata, Undecorated(e), cir)
         | _ -> failwith "invalid combine expressions")
+    *)
+    (* Assume combines produce a temporary *)
+    Node(metadata, Decorated(Combine), sub_ir)
 
   let op_ir ?(decorated=false) metadata o sub_ir =
     if decorated then Node(metadata, Decorated(Op(o)), sub_ir) else
@@ -431,6 +447,13 @@ struct
     | _ -> failwith "invalid map value to update"
     end
 
+  let element_remove_ir metadata m_e m_ty sub_ir =
+    let r id = Node(metadata, Decorated(PCElementRemove), sub_ir) in
+    begin match m_e with
+    | SingletonPC (id,_) | OutPC(id,_,_)  | InPC(id,_,_)  | PC(id,_,_,_) -> r id
+    | _ -> failwith "invalid map element to remove"
+    end
+
 end
 
 
@@ -510,6 +533,8 @@ struct
 
       | K.Lambda (arg,_) -> lambda_ir metadata arg [sfst()]
       | K.AssocLambda (arg1,arg2,_) -> assoc_lambda_ir metadata arg1 arg2 [sfst()]
+      
+      | K.ExternalLambda _ -> undecorated_ir metadata e
 
       | K.Apply _  -> apply_ir metadata [sfst();ssnd()]
 
@@ -560,14 +585,12 @@ struct
         update_value_ir metadata
           m_e (T.typecheck_expr m_e) ([sfst()]@snd()@thd()@[sfth()])
       
-      | K.PCElementRemove(_,_,_) ->
-         failwith "K3ToImperative: PCElementRemove unsupported"
+      | K.PCElementRemove(m_e,_,_) ->
+        element_remove_ir metadata
+          m_e (T.typecheck_expr m_e) ([sfst()]@snd()@thd())
          
       | K.Unit -> 
          failwith "K3ToImperative: Unit unsupported"
-         
-      | K.ExternalLambda(_,_,_) ->
-         failwith "K3ToImperative: ExternalLambda unsupported"
 
     in K.fold_expr fold_f (fun x _ -> x) None (dummy_init TInt) e
 end
@@ -693,7 +716,10 @@ struct
       | K.IfThenElse0(l,r) -> gc_binop imp_meta If0  l r
       | K.Project(e,idx)   -> Fn (imp_meta, Projection(idx), [gc_expr e])
       | K.Singleton(e)     -> Fn (imp_meta, Singleton, [gc_expr e])
+      
+      (* Combine now produces a temporary
       | K.Combine(l,r)     -> Fn (imp_meta, Combine, List.map gc_expr [l;r])
+      *)
       
       | K.Member(m,k)      -> Fn (imp_meta, Member, List.map gc_expr (m::k))
       | K.Lookup(m,k)      -> Fn (imp_meta, Lookup, List.map gc_expr (m::k))
@@ -717,6 +743,11 @@ struct
       (* Lambdas assume caller has performed arg binding *)
       | K.Lambda(arg, body) -> gc_expr body
       | K.AssocLambda(arg1, arg2, body) -> gc_expr body
+
+      (* Return a placeholder for the external lambda function call,
+       * which will actually be filled in when generating code for its
+       * application. *)
+      | K.ExternalLambda(id, arg_t, r_t) -> Var (imp_meta,(id,Host r_t))
 
       | _ -> failwith ("invalid imperative expression: "^(K.string_of_expr e))
     in
@@ -750,10 +781,16 @@ struct
          * in the case of single args, push down the arg symbol *)
         (* TODO: multi-arg pushdown/binding *)
         | Apply ->
-          let arg = arg_of_lambda (ctagi 0) in
-          let arg_meta, rem_bindings, arg_decl = arg_f arg (cmetai 1) in
-          [pushli 0; arg_meta], rem_bindings, [None; arg_decl]
+          let ltag = ctagi 0 in
+          if is_external_lambda ltag then
+            [pushli 0; cmetai 1], [], [None; decl_f false (cmetai 1)]
+          else
+            let arg = arg_of_lambda ltag in
+            let arg_meta, rem_bindings, arg_decl = arg_f arg (cmetai 1)
+            in [pushli 0; arg_meta], rem_bindings, [None; arg_decl]
         
+        | AK.Combine -> [pushi 0; cmetai 1], [], [None; decl_f false (cmetai 1)]
+
         (* Blocks push down the symbol to the last element *)    
         | AK.Block ->
           let r = (List.rev (List.tl (List.rev cmeta)))@[pushi last]
@@ -911,7 +948,9 @@ struct
         | AK.Projection(idx) -> Some(Fn(m, Projection(idx), [cexpri 0]))
 
         | AK.Singleton  -> Some(Fn(m, Singleton, [cexpri 0]))
-        | AK.Combine    -> Some(Fn(m, Combine, [cexpri 0; cexpri 1]))     
+        (* Combine now always produces a temporary
+        | AK.Combine    -> Some(Fn(m, Combine, [cexpri 0; cexpri 1]))
+        *)     
         | AK.Member     -> Some(Fn(m, Member, cvals))
         | AK.Lookup     -> Some(Fn(m, Lookup, cvals))
         | AK.Slice(idx) -> Some(Fn(m, Slice(idx), cvals))
@@ -938,6 +977,14 @@ struct
              Expr(None, BinOp(None, Assign, meta_var, cexpri 1))]),
           Block(None, []))]),
         true
+        
+      | AK.Combine ->
+        let combine_f e = Expr(None, Fn(None, Concat, [cdecli 0; e])) in
+        begin match cimpo 1, cexpro 1 with
+          | Some(i), None -> Some(i@[combine_f (cdecli 1)]), (cused 0)
+          | None, Some(e) -> Some([combine_f e]), true
+          | _, _ -> failwith "invalid combine argument"
+        end
          
       | Lambda _ | AssocLambda _ ->
         (* lambdas have no expression form, they must use their arg bindings
@@ -961,7 +1008,16 @@ struct
         in
         let used = match_ie 0 "invalid apply function"
           (fun _ -> cused 0) (fun _ -> true) in
-        let body = assign_if_expr 0 "invalid apply function"
+        let body =
+          let ltag = ctagi 0 in
+          if is_external_lambda ltag then
+            (match ltag with
+             | Undecorated(ExternalLambda(id,arg_t,r_t)) ->
+		           [Expr(None,
+		             BinOp(None, Assign, cdecli 0,
+		               Fn(None, External(id,arg_t,r_t), [cdecli 1])))]
+             | _ -> failwith "invalid external function application")
+          else assign_if_expr 0 "invalid apply function"
         in Some(decls@body), used
 
       | AK.Block -> 
@@ -1188,6 +1244,11 @@ struct
           Some((List.flatten pre)@
            [Expr(None, Fn(None, MapValueUpdate, cvals))]), false
 
+      | AK.PCElementRemove ->
+        let pre = List.map unwrap (List.filter ((<>) None) cimps) in
+          Some((List.flatten pre)@
+            [Expr(None, Fn(None, MapElementRemove, cvals))]), false
+
       | _ -> None, false
     
       in 
@@ -1207,6 +1268,7 @@ struct
             in imp_meta_used, ro, expr
         | _, _ -> failwith "invalid tag compilation"
       end
+
     and gc_meta (meta, (tag, cmeta))
           : (bool * (('a option, 'ext_type, 'ext_fn) imp_t list) option 
                   * (('a option, 'ext_type, 'ext_fn) expr_t) option) =

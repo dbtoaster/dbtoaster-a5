@@ -29,6 +29,10 @@ std::ostream& operator<<(std::ostream &strm, const boost::any &a) {
 	try{
 		if( a.type() == typeid(int) )
 			return strm << any_cast<long>(a);
+
+		else if( a.type() == typeid(long) )
+            return strm << any_cast<long>(a);
+
 		else if( a.type() == typeid(double) )
 			return strm << any_cast<double>(a);
 		else
@@ -389,22 +393,22 @@ struct dbt_file_source : public source
 	}
 };
 
-struct stream_multiplexer
+struct source_multiplexer
 {
 	dynamic_poset inputs;
 	shared_ptr<source> current;
 	unsigned int current_order;
 	int step, remaining, block;
 
-	stream_multiplexer(int seed, int st)
+	source_multiplexer(int seed, int st)
 	: current_order(0), step(st), remaining(0), block(100)
 	{
 		srandom(seed);
 	}
 
-	stream_multiplexer(int seed, int st, set<shared_ptr<source> >& s)
+	source_multiplexer(int seed, int st, set<shared_ptr<source> >& s)
 	{
-		stream_multiplexer(seed, st);
+		source_multiplexer(seed, st);
 		set<shared_ptr<source> >::iterator it = s.begin();
 		set<shared_ptr<source> >::iterator end = s.end();
 		for(; it != end; ++it) add_source(*it);
@@ -512,11 +516,11 @@ struct stream_multiplexer
 };
 
 struct stream_registry {
-	shared_ptr<stream_multiplexer> multiplexer;
+	shared_ptr<source_multiplexer> multiplexer;
 	map<string, shared_ptr<source> > data_sources;
 	map<string, list<shared_ptr<stream_adaptor> > > source_adaptors;
 
-	stream_registry(shared_ptr<stream_multiplexer> m) : multiplexer(m) {}
+	stream_registry(shared_ptr<source_multiplexer> m) : multiplexer(m) {}
 
 	void register_adaptor(string source_name, shared_ptr<stream_adaptor> a) {
 		source_adaptors[source_name].push_back(a);
@@ -542,7 +546,7 @@ struct stream_registry {
 		return s;
 			}
 
-	void register_multiplexer(shared_ptr<stream_multiplexer> m) {
+	void register_multiplexer(shared_ptr<source_multiplexer> m) {
 		multiplexer = m;
 		if ( data_sources.size() > 0 ) {
 			map<string, shared_ptr<source> >::iterator src_it = data_sources.begin();

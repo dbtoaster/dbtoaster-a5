@@ -97,17 +97,6 @@ type arg_t =
                                         referenced individually by the specified 
                                         identifiers *)
 
-(* External functions (Not implemented yet) *)
-(*
-type ext_fn_type_t = type_t list * type_t   (* arg, ret type *)
-
-type fn_id_t = string
-type ext_fn_id = Symbol of fn_id_t
-
-type symbol_table = (fn_id_t, ext_fn_type_t) Hashtbl.t
-let ext_fn_symbols : symbol_table = Hashtbl.create 100
-*)
-
 (** Expression AST *)
 type expr_t =
    
@@ -182,11 +171,10 @@ type expr_t =
          two parameters.
       *)
    | ExternalLambda of id_t       * arg_t    * type_t (**
-         Defines a single-argument function.  When the function is [Apply]ed, 
-         the first field external function is evaluated with the seconds field's 
-         variable(s) in scope, bound to the applied value, and the return value
-         of the function is returned from the [Apply]. The type of the return
-				 value is defined by the third field.
+         Defines an external function. When the function is [Apply]ed, 
+         the external function named by the first field is evaluated
+         with argument's taken from the [Apply] context.
+         The type of the return value is defined by the third field.
       *)
    | Apply         of expr_t      * expr_t (**
          Evaluate a [Lambda] function on a value, or curry the outermost 
@@ -310,8 +298,6 @@ type expr_t =
       *)
     
 
-   (*| External      of ext_fn_id*)
-
 
 (* Expression traversal helpers *)
 
@@ -336,7 +322,7 @@ let get_branches (e : expr_t) : expr_t list list =
     | Iterate          (fn_e, ce)           -> [[fn_e];[ce]]
     | Lambda           (arg_e,be)           -> [[be]]
     | AssocLambda      (arg1_e,arg2_e,be)   -> [[be]]
-		| ExternalLambda   (arg_e,fn_id,fn_t)   -> []
+		| ExternalLambda   (fn_id,arg_e,fn_t)   -> []
     | Apply            (fn_e,arg_e)         -> [[fn_e];[arg_e]]
     | Map              (fn_e,ce)            -> [[fn_e];[ce]]
     | Flatten          ce                   -> [[ce]]
@@ -353,7 +339,6 @@ let get_branches (e : expr_t) : expr_t list list =
     | PCValueUpdate    (me,ine,oute,ve)     -> [[me];ine;oute;[ve]]
     | PCElementRemove  (me,ine,oute)        -> [[me];ine;oute]
     | Unit                                  -> []
-    (*| External         efn_id               -> [] *)
     end
 
 (* Tree reconstruction, given a list of branches.
@@ -390,7 +375,7 @@ let rebuild_expr e (parts : expr_t list list) =
     | Iterate          (fn_e, ce)           -> Iterate(sfst(),ssnd())
     | Lambda           (arg_e,ce)           -> Lambda (arg_e,sfst())
     | AssocLambda      (arg1_e,arg2_e,be)   -> AssocLambda(arg1_e,arg2_e,sfst())
-    | ExternalLambda   (arg_e,fn_id,fn_t)   -> e
+    | ExternalLambda   (fn_id,arg_e,fn_t)   -> e
     | Apply            (fn_e,arg_e)         -> Apply(sfst(),ssnd())
     | Map              (fn_e,ce)            -> Map(sfst(),ssnd())
     | Flatten          ce                   -> Flatten(sfst())
@@ -408,7 +393,6 @@ let rebuild_expr e (parts : expr_t list list) =
     | PCValueUpdate    (me,ine,oute,ve)     -> PCValueUpdate(sfst(),snd(),thd(),sfth())
     | PCElementRemove  (me,ine,oute)        -> PCElementRemove(sfst(),snd(),thd())
     | Unit                                  -> e
-    (*| External         efn_id               -> sfst() *)
     end
 
 (* Apply a function to all its children *)
@@ -433,7 +417,7 @@ let descend_expr (f : expr_t -> expr_t) e =
     | Iterate          (fn_e, ce)           -> Iterate (f fn_e, f ce)
     | Lambda           (arg_e,ce)           -> Lambda (arg_e, f ce)
     | AssocLambda      (arg1_e,arg2_e,be)   -> AssocLambda (arg1_e, arg2_e, f be)
-    | ExternalLambda   (arg_e,fn_id,fn_t)   -> e
+    | ExternalLambda   (fn_id,arg_e,fn_t)   -> e
     | Apply            (fn_e,arg_e)         -> Apply (f fn_e, f arg_e)
     | Map              (fn_e,ce)            -> Map (f fn_e, f ce)
     | Flatten          ce                   -> Flatten (f ce)
@@ -450,7 +434,6 @@ let descend_expr (f : expr_t -> expr_t) e =
     | PCValueUpdate    (me,ine,oute,ve)     -> PCValueUpdate(f me, List.map f ine, List.map f oute, f ve)
     | PCElementRemove  (me,ine,oute)        -> PCElementRemove(f me, List.map f ine, List.map f oute)
     | Unit                                  -> e
-    (*| External         efn_id               -> e *)
     end
 
 
@@ -483,11 +466,12 @@ let rec fold_expr (f : 'b -> 'a list list -> expr_t -> 'a)
     begin match e with
     | Const            c                    -> app_f [[init]] e
     | Var              (id,t)               -> app_f [[init]] e
+    | ExternalLambda   (id,arg_e,t)         -> app_f [[init]] e
     | SingletonPC      (id,t)               -> app_f [[init]] e
     | OutPC            (id,outs,t)          -> app_f [[init]] e
     | InPC             (id,ins,t)           -> app_f [[init]] e
     | PC               (id,ins,outs,t)      -> app_f [[init]] e
-    (*| External         efn_id               -> app_f [[init]] e *)
+    | Unit                                  -> app_f [[init]] e
     | _ -> app_f (sub (get_branches e)) e
     end
 
@@ -496,6 +480,15 @@ let contains_expr e1 e2 =
   let contains_aux _ parts_contained e =
     (List.exists (fun x -> x) (List.flatten parts_contained)) || (e = e2)
   in fold_expr contains_aux (fun x _ -> x) None false e1
+
+(* Argument helpers *)
+let vars_of_arg a = match a with
+  | AVar(v,_) -> [v]
+  | ATuple(vt_l) -> List.map fst vt_l
+
+let types_of_arg a = match a with
+  | AVar(_,t) -> [t]
+  | ATuple(vt_l) -> List.map snd vt_l
 
 (* Stringification *)
 let rec string_of_type t =
@@ -550,7 +543,6 @@ let string_of_expr e =
         | Types.CString _ -> "CString"
 				| Types.CInt _ -> "CInt"
 				| Types.CBool _ -> "CBool" 
-        | Types.CDate _ -> "CDate"
       in ob(); ps ("Const("^const_ts^"("^(Types.string_of_const c)^"))"); cb()
     | Var (id,t) -> ob(); ps "Var("; pid id; ps ","; 
                                      ps (string_of_type t); ps ")"; cb()
@@ -575,9 +567,9 @@ let string_of_expr e =
         ps (string_of_arg arg1_e); ps ","; ps (string_of_arg arg2_e); 
         ps ","; recur []; ps ")"; cb()
     
-    | ExternalLambda      (fn_id,arg_e,fn_t)   ->
+    | ExternalLambda      (fn_id,fn_arg,fn_t)   ->
         ob(); ps "ExternalLambda(";
-        pid fn_id; ps ","; ps (string_of_arg arg_e); 
+        pid fn_id; ps ","; ps (string_of_arg fn_arg); 
         ps ","; ps (string_of_type fn_t); ps ")"; cb()
     
     | Slice(pc, sch, vars) ->
@@ -613,7 +605,6 @@ let string_of_expr e =
     | PCUpdate _          -> pop ~lb:[1] "PCUpdate"
     | PCValueUpdate   _   -> pop ~lb:[1;2] "PCValueUpdate"
     | PCElementRemove _   -> pop ~lb:[1;2] "PCElementRemove"
-    (*| External         efn_id               -> pop "External" *)
     in pp_set_margin str_formatter 80; flush_str_formatter (aux e)
 
 let string_of_exprs e_l = ListExtras.string_of_list string_of_expr e_l
@@ -645,7 +636,6 @@ let rec code_of_expr e =
           | Types.CString _ -> "CString" 
 					| Types.CInt _ -> "CInt"
           | Types.CBool _ -> "CBool" 
-          | Types.CDate _ -> "CDate"
         in "K3.Const(Types."^const_ts^"("^(Types.string_of_const c)^"))"
       | Var (id,t) -> "K3.Var(\""^id^"\","^(ttostr t)^")"
       | Tuple e_l -> "K3.Tuple("^(ListExtras.ocaml_of_list rcr e_l)^")"
@@ -676,8 +666,11 @@ let rec code_of_expr e =
       | AssocLambda(arg1,arg2,be) ->
             "K3.AssocLambda("^(argstr arg1)^","^(argstr arg2)^","^
                                (rcr be)^")"
-      | ExternalLambda(fn_id,arg,fn_t) ->
-            "K3.ExternalLambda(\""^fn_id^"\","^(argstr arg)^","^(ttostr fn_t)^")"
+
+      | ExternalLambda(fn_id,fn_arg,fn_t) ->
+            "K3.ExternalLambda(\""^fn_id^"\","^
+              (string_of_arg fn_arg)^","^(ttostr fn_t)^")"
+
       | Apply(fn_e,arg_e) -> 
             "K3.Apply("^(rcr fn_e)^","^(rcr arg_e)^")"
       | Map(fn_e,ce) -> 
@@ -757,7 +750,12 @@ let nice_string_of_expr ?(type_is_needed = false) e maps =
   let fnl () = pp_force_newline str_formatter () in
   let rec ttostr t = (match t with
       | TUnit -> "unit"
-      | TBase( b_t ) -> Types.string_of_type b_t
+      | TBase( b_t ) -> begin match b_t with
+            | Types.TInt -> "int"
+            | Types.TFloat -> "float"
+            | Types.TString -> "string"
+            | _ -> "unknown!"
+            end
       | TTuple(tlist) -> 
          "<"^(ListExtras.string_of_list ttostr tlist)^">"
       | Collection(subt) -> "Collection("^(ttostr subt)^")"
@@ -814,7 +812,6 @@ let nice_string_of_expr ?(type_is_needed = false) e maps =
     let paroperand e1 = if is_single_statement e1 then aux e1 else begin ps "("; aux e1; ps ")" end in
     let par e1 e2 op = ob(); ps "("; paroperand e1; pc(); psp (); ps (op); psp(); pc(); paroperand e2; ps ")"; cb() in
     let pop ?(lb = []) s = ob(); ps s; ps "("; recur lb; ps ")"; cb() in 
-    (*let ppar sname earg e1 = ob(); ps (sname^"("); aux earg; ps ")"; pc(); aux e1; cb() in*)
     let schema args = 
       "[" ^
       (String.concat ";"
@@ -829,7 +826,7 @@ let nice_string_of_expr ?(type_is_needed = false) e maps =
 				| Types.CInt _ -> "int"
 				| Types.CBool _ -> "bool" 
         | Types.CDate _ -> "CDate"
-      in ob(); ps (Types.sql_of_const c);
+      in ob(); ps (Types.string_of_const c);
          if type_is_needed then ps (":"^(const_ts));
          cb()
     | Var (id,t) -> 
@@ -857,9 +854,9 @@ let nice_string_of_expr ?(type_is_needed = false) e maps =
         ps ") ";  pc(); ps "{"; pc(); 
         aux be; pc(); ps "}"; cb()
     
-    | ExternalLambda      (fn_id,arg_e,fn_t)   ->
+    | ExternalLambda      (fn_id,fn_arg,fn_t)   ->
         ob(); ps "ExternalLambda(";
-        pid fn_id; ps ","; ps (string_of_arg arg_e); 
+        pid fn_id; ps ","; ps (string_of_arg fn_arg); 
         ps ","; ps (string_of_type fn_t); ps ")"; cb()
     
     | Slice(pce, sch, vars) ->
@@ -967,8 +964,9 @@ let rec nice_code_of_expr e =
       | AssocLambda(arg1,arg2,be) ->
             "AssocLambda("^(argstr arg1)^","^(argstr arg2)^")"^
                                (rcr be)
-      | ExternalLambda(fn_id,arg,fn_t) ->
-            "ExternalLambda(\""^fn_id^"\","^(argstr arg)^","^(ttostr fn_t)^")"
+      | ExternalLambda(fn_id,fn_arg,fn_t) ->
+            "ExternalLambda(\""^fn_id^"\","^
+              (string_of_arg fn_arg)^","^(ttostr fn_t)^")"
       | Apply(fn_e,arg_e) -> 
             "Apply("^(rcr fn_e)^","^(rcr arg_e)^")"
       | Map(fn_e,ce) -> 

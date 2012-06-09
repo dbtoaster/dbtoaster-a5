@@ -21,6 +21,8 @@ type 'ext_fn fn_id_t =
   | ConcatElement
   | MapUpdate
   | MapValueUpdate
+  | MapElementRemove
+  | External of id_t * K3.arg_t * K3.type_t
   | Ext of 'ext_fn
   
 (* Parameterized expression types for imperative expressions. The parameter
@@ -176,6 +178,9 @@ let string_of_fn ext_fn_f fn_id =
   | ConcatElement -> "ConcatElement"
   | MapUpdate -> "MapUpdate"
   | MapValueUpdate -> "MapValueUpdate"
+  | MapElementRemove -> "MapElementRemove"
+  | External(id, arg, r_t) ->
+     "External("^id^","^(of_list (K3.vars_of_arg arg))^")"
   | Ext fn -> "Ext("^(ext_fn_f fn)^")"
 
 let string_of_decl ext_type_f (id,ty) = id^","^(string_of_type ext_type_f ty)

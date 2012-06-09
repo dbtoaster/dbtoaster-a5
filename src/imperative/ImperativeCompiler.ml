@@ -242,7 +242,7 @@ struct
         in
         let serialize = serialization_source_code_of_entry id fields in
         csc (Lines([id^"("^direct_ctor^") { "^direct_assign^" }";
-                    id^"("^pair_ctor^") { "^pair_assign^" }"]))
+                    id^"("^pair_ctor^") { "^pair_assign^" }";]))
             serialize
       in cscl [(inl ("struct "^id^" {")); isc tab (csc (inl str_fields)
                (if str_fields = "" then inl "" else ctor)); inl("};")]
@@ -734,6 +734,11 @@ struct
       | Concat -> unit
       | MapUpdate -> unit
       | MapValueUpdate -> unit
+      | MapElementRemove -> unit
+      | External(_,arg_t,r_t) ->
+        if (List.map host_type arg_types) = (K.types_of_arg arg_t)
+        then Host(r_t)
+        else failwith "invalid external function in imp"
       | Ext _ -> failwith "external function appeared in untyped imp"
     in
     let infer_expr type_env c_opts untyped_e =
@@ -888,7 +893,7 @@ end (* Typing *)
       (* TODO *)
     | Singleton -> inl("singleton("^a^")")
     | Combine -> inl("combine("^a^")")
-  
+    
       (* Map operations should not exist after desugaring.
        * For now we dump out erroneous code to debug locatinos rather than
        * throwing an exception. *)  
@@ -964,7 +969,18 @@ end (* Typing *)
             failwith "unhandled sugared persistent map value update"
           | _ -> failwith "unsupported map value update"  
         end
+        
+    | MapElementRemove ->
+        let k = List.tl args in 
+        begin match argti 0 with
+          | Host(Collection _) -> inl((argi 0)^".erase("^(mk_tuple k)^")")
+          | Host(_) -> failwith "invalid erase on non-collection"
+          | Target(Type x) ->
+            failwith "unhandled sugared persistent map value update"
+          | _ -> failwith "unsupported map element remove"  
+        end
 
+    | External _ -> failwith "invalid sugared external function"
 
     | Ext(ext_fn) -> inl(
         begin match ext_fn with
@@ -1439,6 +1455,10 @@ end (* Typing *)
          Block(unit, update_and_relocate),
          Block(unit, insert_and_flush))]
 
+  (* Desugar map erase from a global collection *)
+  let desugar_map_element_remove env nargs c_t =
+    let c_var = List.hd nargs in
+      Expr(unit, Fn(unit, Ext(EraseCollection), [c_var]@(List.tl nargs)))
 
   (** Expression desugaring:
       Imp supports certain forms of syntactic sugar, allowing certain 
@@ -1584,6 +1604,37 @@ end (* Typing *)
         | _ -> result ci (Fn(ty, MapValueUpdate, nargs))
         end
 
+    | Fn(ty, MapElementRemove, args) ->
+        let ci,nargs = recur args in
+        if List.length nargs <> List.length args then
+            failwith "invalid map update desugaring"
+        else
+        let t = type_of_expr_t (List.hd nargs)
+        in begin match t with
+        | Target(_) as c_t when is_ext_collection env c_t ->
+          if opts.profile then
+            let id = ssc (source_code_of_expr (List.hd nargs)) in
+            let remove_f = id^"_remove"
+            in result ci (Fn(ty, Ext(Apply(remove_f)), nargs))
+          else
+            Some(ci@[desugar_map_element_remove env nargs c_t]), None
+          
+        | _ -> result ci (Fn(ty, MapElementRemove, nargs))
+        end
+
+    | Fn(ty, External(id,arg_t,r_t), args) ->
+        let ci,nargs = recur args in
+        if List.length nargs <> List.length args then
+            failwith "invalid external function application"
+        else begin match id with
+            | "/" ->
+              let arg1 = ssc (source_code_of_expr (List.hd nargs)) in
+              let arg2 = ssc (source_code_of_expr (List.nth nargs 1)) in
+              result ci (Fn(ty, Ext(Inline("("^arg1^") / ("^arg2^")")), []))
+
+            | _ -> result ci (Fn(ty, Ext(Apply(id)), nargs))
+        end
+      
     | Fn (meta,fn_id,args) ->
         let x,y = recur args in
         if List.length y = List.length args then result x (Fn(meta,fn_id,y))
@@ -1752,6 +1803,34 @@ end (* Typing *)
     let loop_t = type_of_imp_t subbed_body
     in iter_decls@[For(loop_t, ((iter_id, iter_t), false), loop_cond, subbed_body)]
 
+  let sub_entry_access_in_loop env (id,id_t) elem_ty body = 
+    let loop_elem_t, loop_elem_tl = match id_t with
+      | Host(TTuple(id_tl)) -> id_t, id_tl
+      | Target _ ->
+        begin match host_type_of_type env id_t with
+        | (Host(TTuple(id_tl))) as x -> x, id_tl
+        | _ -> failwith "invalid element for slice"
+        end
+      | _ -> failwith "invalid element for slice"
+    in
+    let subs =
+      (* tuple element -> member access, and var subs. Ordering
+       * is important here, larger expressions must occur before
+       * enclosed ones. *)
+      let src_var = Var(loop_elem_t,(id,loop_elem_t)) in
+      let dest_var = Var(elem_ty,(id,elem_ty)) in
+      let access_subs =
+        let last_field = List.length loop_elem_tl - 1 in
+        let fields_t = field_types_of_type (type_decl_of_env env elem_ty) in
+        snd (List.fold_left (fun (i,acc) (src_t, dest_t) ->
+            let attr = "__a"^(if i = last_field then "v" else string_of_int i) in
+            let src = Fn(Host src_t, TupleElement(i), [src_var]) in
+            let dest = dest_t, Fn(dest_t, Ext(MemberAccess(attr)), [dest_var])
+            in i+1,acc@[src, dest]) (0,[])
+          (List.combine loop_elem_tl fields_t))
+      in let var_subs = [src_var, (elem_ty, dest_var)]
+      in access_subs@var_subs
+    in fixpoint_sub_imp env subs body
 
   (* Imperative statement desugaring *)
   let rec desugar_imp_aux opts env imp =
@@ -1838,38 +1917,11 @@ end (* Typing *)
           end
         in
         let iter_meta = (iter_id, iter_end, iter_decls, source_ty) in
-        let new_body =
-          let loop_elem_t, loop_elem_tl = match id_t with
-            | Host(TTuple(id_tl)) -> id_t, id_tl
-            | Target _ ->
-              begin match host_type_of_type env id_t with
-              | (Host(TTuple(id_tl))) as x -> x, id_tl
-              | _ -> failwith "invalid element for slice"
-              end
-            | _ -> failwith "invalid element for slice"
-          in
-          let subs =
-            (* tuple element -> member access, and var subs. Ordering
-             * is important here, larger expressions must occur before
-             * enclosed ones. *)
-            let src_var = Var(loop_elem_t,(id,loop_elem_t)) in
-            let dest_var = Var(elem_ty,(id,elem_ty)) in
-            let access_subs =
-              let last_field = List.length loop_elem_tl - 1 in
-              let fields_t = field_types_of_type (type_decl_of_env env elem_ty) in
-              snd (List.fold_left (fun (i,acc) (src_t, dest_t) ->
-                  let attr = "__a"^(if i = last_field then "v" else string_of_int i) in
-                  let src = Fn(Host src_t, TupleElement(i), [src_var]) in
-                  let dest = dest_t, Fn(dest_t, Ext(MemberAccess(attr)), [dest_var])
-                  in i+1,acc@[src, dest]) (0,[])
-                (List.combine loop_elem_tl fields_t))
-            in let var_subs = [src_var, (elem_ty, dest_var)]
-            in access_subs@var_subs
-          in fixpoint_sub_imp env subs body 
-        in
-        pre@(sub_iters ((id,elem_ty),f) iter_meta (rcr new_body))
+        let new_body = sub_entry_access_in_loop env (id, id_t) elem_ty body
+        in pre@(sub_iters ((id,elem_ty),f) iter_meta (rcr new_body))
 
-    (* Handle loops over temporaries *)
+    (* Handle direct loops over data structures, which may be
+     * temporaries or globals *)
     | For (_, elem, source, body) ->
         let pre, new_source = match desugar_expr opts env source with
           | Some(i), Some(e) -> i, e 
@@ -1922,7 +1974,11 @@ end (* Typing *)
            * an iterator, or substitute it with the iterator *)
           | _, Host(Collection _) -> elem, body
 
-          (* Loop should be over a temporary collection. *)
+          (* Loops over global data structures *)
+          | (((id,id_t),_), (Target(_) as c_t)) when is_ext_collection env c_t ->
+            elem, (sub_entry_access_in_loop env (id,id_t) id_t body)
+
+          (* Loop should be over a temporary or global collection. *)
           | _, t ->
             print_endline ("invalid for loop collection type "^(string_of_type t)^
                            ": "^(string_of_ext_imp imp));
@@ -2075,6 +2131,22 @@ end (* Typing *)
        "}"]
     in Lines(indirect_sc@direct_sc)
 
+  let profile_map_element_remove c_id t_l =
+    let c_t, c_entry_t = (c_id^"_map"), (c_id^"_entry") in 
+    let (k_decl,k) = snd (List.fold_left
+        (fun (id,(dacc,vacc)) t ->
+          (id+1,(dacc@[(string_of_m3_type t)^" k"^(string_of_int id)],
+                 vacc@["k"^(string_of_int id)])))
+      (0,([],[])) t_l)
+    in
+    Lines(["void "^c_id^"_remove("^c_t^"& m, "^
+            (String.concat ", " k_decl)^")"^
+            " __attribute__((noinline));";
+           "void "^c_id^"_remove("^c_t^"& m, "^
+            (String.concat ", " k_decl)^")";
+           "{";
+           "  m.erase("^(mk_tuple k)^");";
+           "}"])
 
   let declare_profiling (schema: K3.map_t list) =
     cscl ~delim:"\n" (List.flatten (List.map (fun (id, in_tl, out_tl,_) ->
@@ -2273,7 +2345,35 @@ end (* Typing *)
 	    (fst trig_reg_info))
 	  in
       
-    
+    let load_table =
+      let table_types =
+        let convert_var_type (_,t) =
+          Typing.string_of_type (imp_type_of_calc_type t)
+        in
+        List.map
+          (fun (id,f,_) -> id, List.map convert_var_type f)
+          (Schema.table_rels sources)
+      in
+      let load_table_body (id, field_types) =
+        let entry_t = id^"_entry" in
+        let evt_fields types = snd (List.fold_left
+            (fun (i,acc) ty -> (i+1,
+              acc@["any_cast<"^ty^">(evt.data["^(string_of_int i)^"])"]))
+            (0,[]) types)
+        in
+        let direct_unwrap =
+          (String.concat "," (evt_fields field_types))^",0"
+        in 
+        [tab^"if (pb != NULL && pb->get_stream_name(evt.id) == \""^id^"\") {";
+         tab^tab^entry_t^" e("^direct_unwrap^");";
+         tab^tab^id^".insert(e);";
+         tab^"}"]
+      in
+       Lines (["void load_table(ProgramBase<tlq_t>* pb, stream_event& evt) {"]@
+               (List.flatten (List.map load_table_body table_types))@
+              ["}"])
+    in
+
     let flat_triggers = List.flatten 
         (List.map (fun (t_decls,t) -> 
              t_decls@(source_code_of_trigger dbschema t))
@@ -2329,6 +2429,7 @@ end (* Typing *)
       isc (tab^tab) register_triggers;
       isc (tab^tab) init_stats;
       Lines [tab^"}";];
+      isc tab load_table;
       isc tab (cscl flat_triggers);
       isc tab profiling;
       Lines ["private:"];
@@ -2337,7 +2438,7 @@ end (* Typing *)
     ])) 
     
 
-  let declare_sources_and_adaptors (sources:Schema.t) =
+  let declare_sources_and_adaptors (sources: Schema.source_info_t list) =
     let quote s = "\""^(String.escaped s)^"\"" in
     let valid_adaptors = ["csv"      , "csv_adaptor";
                           "orderbook", "order_books::order_book_adaptor";
@@ -2384,7 +2485,7 @@ end (* Typing *)
               if List.mem_assoc (fst a) adaptor_ctor_args
               then [List.assoc (fst a) adaptor_ctor_args] else []
             in  
-            let rel_id = ("get_id(\""^(String.escaped r)^"\")")
+            let rel_id = ("get_stream_id(\""^(String.escaped r)^"\")")
             in
             String.concat "," ([rel_id]@extra_args@
                                [string_of_int (List.length (snd a)); param_id])
@@ -2435,9 +2536,10 @@ end (* Typing *)
           let s_decl = Decl(unit, (s_id, s_ptr_t), Some(s_ctor)) in
             Var(s_ptr_t, (s_id, s_ptr_t)), [f_decl; ad_arr_decl; al_decl; s_decl]
           
-        | _ -> failwith "unsupported data source and framing types" 
+        | _ -> failwith "unsupported data source and framing types"
+
       in source_var, (List.flatten (List.map snd adaptor_meta))@source_decl)
-      (List.filter (fun (s,_) -> (s <> NoSource) ) !sources)
+      (List.filter (fun (s,_) -> (s <> NoSource) ) sources)
     in 
     let rsc = cscl ~delim:"\n" (List.map (fun sd ->
         cscl (List.map source_code_of_imp sd)) (List.map snd decls))
@@ -2589,27 +2691,41 @@ struct
     
     let maps_and_triggers = declare_maps_and_triggers opts tab imp_prog in
     
-    let source_vars, source_and_adaptor_decls = 
-                declare_sources_and_adaptors sources in
+    let table_sources, stream_sources =
+      Schema.partition_sources_by_type sources in
+
+    let table_source_vars, table_source_and_adaptor_decls = 
+      declare_sources_and_adaptors table_sources in
     
-	  let register_src = Lines (List.map (function
-	    | Var(_,(id,_)) -> "multiplexer.add_source("^id^");"
-	    | _ -> failwith "invalid source") source_vars)
-	  in
-	  
+    let stream_source_vars, stream_source_and_adaptor_decls = 
+      declare_sources_and_adaptors stream_sources in
+
+    let register_table_src = Lines (List.map (function
+      | Var(_,(id,_)) -> "table_multiplexer.add_source("^id^");"
+      | _ -> failwith "invalid source") table_source_vars)
+    in
+      
+	  let register_stream_src = Lines (List.map (function
+	    | Var(_,(id,_)) -> "stream_multiplexer.add_source("^id^");"
+	    | _ -> failwith "invalid source") stream_source_vars)
+ 	  in
+
     let main_fn = (isc tab (cscl ~delim:"\n"
-	      [Lines [
+	     ([Lines [
          "class Program : public ProgramBase<tlq_t>";
          "{";
          "public:";
          tab^"Program(int argc = 0, char* argv[] = 0) : ProgramBase<tlq_t>(argc,argv) {";
          tab^tab^"data.register_data(*this);";];
-	       isc (tab^tab) source_and_adaptor_decls;
-	       isc (tab^tab) register_src;
-	       Lines [
-          tab^"}";
-          "";
+         isc (tab^tab) table_source_and_adaptor_decls;
+         isc (tab^tab) register_table_src;
+	       isc (tab^tab) stream_source_and_adaptor_decls;
+	       isc (tab^tab) register_stream_src;
+	       isc tab (inl "}");
+         Lines [
           tab^"void init() {";
+          tab^tab^"run_multiplexer(table_multiplexer,";
+          tab^tab^"  boost::bind(&data_t::load_table, &data, this, ::boost::lambda::_1));";
           tab^tab^"data.on_"^(Schema.name_of_event Schema.SystemInitializedEvent)^"();";
           tab^"}";
           "";
@@ -2620,7 +2736,7 @@ struct
           "private:";
           tab^"data_t data;";
           "};";];
-        ] ))
+        ] )))
     in
     
       strings_of_source_code (

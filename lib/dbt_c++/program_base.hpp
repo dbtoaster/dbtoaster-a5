@@ -163,7 +163,19 @@ public:
 	typedef shared_ptr<stream_t> stream_ptr_t;
 
 
+    stream_id_t get_stream_id( string s_name )
+    {
+        typename map<string, shared_ptr<stream_t> >::iterator
+            it = streams_by_name.find( s_name );
+        return ( it != streams_by_name.end() ) ? it->second->id : -1;
+    }
 
+    string get_stream_name( stream_id_t s_id )
+    {
+        typename map<stream_id_t, shared_ptr<stream_t> >::iterator
+            it = streams_by_id.find( s_id );
+        return ( it != streams_by_id.end() ) ? it->second->name : "";
+    }
 
 	template<class T>
 	void add_map( string m_name, T& t )
@@ -237,12 +249,10 @@ public:
 	}
 
 
-
-
-
 	ProgramBase(int argc = 0, char* argv[] = 0) :
 		run_opts(argc,argv)
-		, multiplexer(12345, 10)
+		, stream_multiplexer(12345, 10)
+        , table_multiplexer(12345, 10)
 		, next_stream_id(0)
 		, tuple_count(0)
 		, log_count_every(run_opts.log_tuple_count_every)
@@ -258,20 +268,28 @@ public:
 		if ( run_opts.help() ) { exit(1); };
 	}
 
+    typedef boost::function<void (stream_event&)> process_fn_t;
+
+    void run_multiplexer(source_multiplexer& multiplexer, process_fn_t process_fn) {
+        while( multiplexer.has_inputs() ) {
+            shared_ptr<std::list<stream_event> > events = multiplexer.next_inputs();
+
+            if( !events ) { continue; }
+
+            std::list<stream_event>::iterator ev_it = events->begin();
+            for( ; ev_it != events->end(); ev_it++)
+            {
+                process_fn(*ev_it);
+            }
+        }
+    }
+
 	virtual int run() {
 		IProgram<TLQ_T>::start_running();
-		while( multiplexer.has_inputs() ) {
-			shared_ptr<std::list<stream_event> > events =
-					multiplexer.next_inputs();
 
-			if( !events )	continue;
+		run_multiplexer(stream_multiplexer,
+            boost::bind(&ProgramBase::process_event, this, ::boost::lambda::_1));
 
-			std::list<stream_event>::iterator ev_it = events->begin();
-			for( ; ev_it != events->end(); ev_it++)
-			{
-				process_event(*ev_it);
-			}
-		}
 		IProgram<TLQ_T>::stop_running();
 
 
@@ -280,12 +298,15 @@ public:
 #ifdef DBT_PROFILE
 		exec_stats->save_now();
 #endif // DBT_PROFILE
+
+		return 0;
 	}
 
 
 protected:
 	runtime_options run_opts;
-	stream_multiplexer multiplexer;
+	source_multiplexer stream_multiplexer;
+	source_multiplexer table_multiplexer;
 
 	map<string, map_ptr_t> maps_by_name;
 
@@ -296,13 +317,6 @@ protected:
 	unsigned int tuple_count;
 	unsigned int log_count_every;
 
-
-	stream_id_t get_id( string s_name )
-	{
-		typename map<string, shared_ptr<stream_t> >::iterator
-			it = streams_by_name.find( s_name );
-		return ( it != streams_by_name.end() ) ? it->second->id : -1;
-	}
 
 	void set_log_count_every(unsigned int _log_count_every){
 		log_count_every = _log_count_every;
@@ -348,7 +362,6 @@ protected:
 
 		IProgram<TLQ_T>::process_snapshot();
 	}
-
 
 	void trace(const path& trace_file, bool debug) {
 		if(strcmp(trace_file.c_str(), "-")){
