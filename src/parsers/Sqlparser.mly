@@ -77,7 +77,6 @@ let bind_select_vars q =
 %token CHAR
 %token VARCHAR
 %token TRUE FALSE
-%token DATE
 %token EQ NE LT LE GT GE
 %token SUM MINUS
 %token PRODUCT DIVIDE
@@ -300,8 +299,10 @@ expression:
                         ("Invalid month ("^(string_of_int m)^") in date: "^$3);                                         
                     if (d > 31) then bail
                         ("Invalid day ("^(string_of_int d)^") in date: "^$3);
-            (*Sql.Const(CInt((y * 10000) + (m * 100) + (d * 1)))*) 
-                        Sql.Const(CDate(y,m,d))
+
+                    (*Sql.Const(CInt((y * 10000) + (m * 100) + (d * 1)))*) 
+
+                    Sql.Const(CDate(y,m,d))
             ) else
                 bail ("Improperly formatted date: "^$3)	             
           }
