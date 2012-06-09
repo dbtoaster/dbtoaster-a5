@@ -1,0 +1,19 @@
+{
+  :path => "test/queries/simple/invalid_schema_fn.sql",
+  :datasets => {
+    "standard" => {
+      :toplevels => {
+        "COUNT" => {
+          :type => :onelevel,
+          :expected => {
+            [1] => 1,
+            [2] => 3,
+            [3] => 1,
+            [4] => 3,
+            [5] => 2
+          }
+        }
+      }
+    }
+  }
+}
