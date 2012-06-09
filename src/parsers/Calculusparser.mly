@@ -159,7 +159,8 @@ ivcCalculusExpr:
                                   { CalcRing.mk_val (Cmp($3,$2,$4)) }
 | LPAREN variable LIFT ivcCalculusExpr RPAREN
   { let t_var, _ = $2 in 
-   let t_type = Calculus.type_of_expr $4 in
+   let t_type = if Debug.active "PARSE-CALC-WITH-FLOAT-VARS" then TFloat
+                else Calculus.type_of_expr $4 in
    let target = (t_var, t_type) in
     CalcRing.mk_val (Lift(target, $4)) }
 

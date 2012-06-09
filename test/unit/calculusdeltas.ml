@@ -30,13 +30,11 @@ test "TPCH17 simple: +Lineitem" (InsertEvent(schema_rel "L" ["dPK"; "dQTY"]))
                   (nested ^= AggSum([PK], L(PK, QTY2) * QTY2)))
             + 
             ((L(PK, QTY) + (PK ^= dPK) * (QTY ^= dQTY)) * 
-            AggSum([nested, PK],
-						(delta_2 ^= (AggSum([PK],(
-               ((PK ^= dPK) * (QTY2 ^= dQTY) * QTY2))))) * 
-            (
-               (nested ^= AggSum([PK], L(PK, QTY2) * QTY2) + delta_2)
+               (PK ^= dPK) *             (
+               (nested ^= AggSum([PK], L(PK, QTY2) * QTY2) + 
+                          AggSum([], (QTY2 ^= dQTY) * QTY2))
                 - (nested ^= AggSum([PK], L(PK, QTY2) * QTY2))
-            )))))"
+            ))))"
 ;;
 
 test "TPCH11 dPartsupp" (InsertEvent(schema_rel "PARTSUPP" ["dPK"; "dSK"; "dAQ"; "dSC"]))
@@ -59,28 +57,26 @@ test "TPCH11 dPartsupp" (InsertEvent(schema_rel "PARTSUPP" ["dPK"; "dSK"; "dAQ";
            {P_VALUE > __sql_inline_agg_1})) *
        P_VALUE))"
    "AggSum([P_NATIONKEY, P_PARTKEY], 
-     ((AggSum([N_VALUE, P_NATIONKEY], 
-         ((delta_10 ^=
-            AggSum([P_NATIONKEY], 
-              ((PS_PARTKEY ^= dPK) * (PS_SUPPKEY ^= dSK) *
-                (PS_AVAILQTY ^= dAQ) * (PS_SUPPLYCOST ^= dSC) *
-                SUPPLIER(PS_SUPPKEY, S_NAME, S_ADDRESS, S_NATIONKEY, S_PHONE,
-                           S_ACCTBAL, S_COMMENT) *
-                (P_NATIONKEY ^= S_NATIONKEY) * PS_SUPPLYCOST * PS_AVAILQTY))) *
-           ((N_VALUE ^=
+     (( 
+         ( ((N_VALUE ^=
               (AggSum([P_NATIONKEY], 
                  (PARTSUPP(PS_PARTKEY, PS_SUPPKEY, PS_AVAILQTY, PS_SUPPLYCOST) *
                    SUPPLIER(PS_SUPPKEY, S_NAME, S_ADDRESS, S_NATIONKEY, S_PHONE,
                               S_ACCTBAL, S_COMMENT) *
                    (P_NATIONKEY ^= S_NATIONKEY) * PS_SUPPLYCOST * PS_AVAILQTY)) +
-                delta_10)) +
+                AggSum([P_NATIONKEY], 
+                  (PS_PARTKEY ^= dPK) * (PS_SUPPKEY ^= dSK) *
+                  (PS_AVAILQTY ^= dAQ) * (PS_SUPPLYCOST ^= dSC) *              
+                  (SUPPLIER(PS_SUPPKEY, S_NAME, S_ADDRESS, S_NATIONKEY, S_PHONE,
+                           S_ACCTBAL, S_COMMENT) *
+                (P_NATIONKEY ^= S_NATIONKEY) * PS_SUPPLYCOST * PS_AVAILQTY)))) +
              (-1 *
                (N_VALUE ^=
                  AggSum([P_NATIONKEY], 
                    (PARTSUPP(PS_PARTKEY, PS_SUPPKEY, PS_AVAILQTY, PS_SUPPLYCOST) *
                      SUPPLIER(PS_SUPPKEY, S_NAME, S_ADDRESS, S_NATIONKEY,
                                 S_PHONE, S_ACCTBAL, S_COMMENT) *
-                     (P_NATIONKEY ^= S_NATIONKEY) * PS_SUPPLYCOST * PS_AVAILQTY))))))) *
+                     (P_NATIONKEY ^= S_NATIONKEY) * PS_SUPPLYCOST * PS_AVAILQTY)))))) *
         (P_VALUE ^=
           AggSum([P_PARTKEY, P_NATIONKEY], 
             (PARTSUPP(PS_PARTKEY, PS_SUPPKEY, PS_AVAILQTY, PS_SUPPLYCOST) *
@@ -98,22 +94,19 @@ test "TPCH11 dPartsupp" (InsertEvent(schema_rel "PARTSUPP" ["dPK"; "dSK"; "dAQ";
                SUPPLIER(PS_SUPPKEY, S_NAME, S_ADDRESS, S_NATIONKEY, S_PHONE,
                           S_ACCTBAL, S_COMMENT) *
                (P_NATIONKEY ^= S_NATIONKEY) * PS_SUPPLYCOST * PS_AVAILQTY))) +
-          AggSum([N_VALUE, P_NATIONKEY], 
-            ((delta_9 ^=
-               AggSum([P_NATIONKEY], 
-                 ((PS_PARTKEY ^= dPK) * (PS_SUPPKEY ^= dSK) *
-                   (PS_AVAILQTY ^= dAQ) * (PS_SUPPLYCOST ^= dSC) *
-                   SUPPLIER(PS_SUPPKEY, S_NAME, S_ADDRESS, S_NATIONKEY, S_PHONE,
-                              S_ACCTBAL, S_COMMENT) *
-                   (P_NATIONKEY ^= S_NATIONKEY) * PS_SUPPLYCOST * PS_AVAILQTY))) *
-              ((N_VALUE ^=
+            ( ((N_VALUE ^=
                  (AggSum([P_NATIONKEY], 
                     (PARTSUPP(PS_PARTKEY, PS_SUPPKEY, PS_AVAILQTY, PS_SUPPLYCOST) *
                       SUPPLIER(PS_SUPPKEY, S_NAME, S_ADDRESS, S_NATIONKEY,
                                  S_PHONE, S_ACCTBAL, S_COMMENT) *
                       (P_NATIONKEY ^= S_NATIONKEY) * PS_SUPPLYCOST *
                       PS_AVAILQTY)) +
-                   delta_9)) +
+                   AggSum([P_NATIONKEY], 
+                   (PS_PARTKEY ^= dPK) * (PS_SUPPKEY ^= dSK) *
+                   (PS_AVAILQTY ^= dAQ) * (PS_SUPPLYCOST ^= dSC) *
+                 (SUPPLIER(PS_SUPPKEY, S_NAME, S_ADDRESS, S_NATIONKEY, S_PHONE,
+                              S_ACCTBAL, S_COMMENT) *
+                   (P_NATIONKEY ^= S_NATIONKEY) * PS_SUPPLYCOST * PS_AVAILQTY)))) +
                 (-1 *
                   (N_VALUE ^=
                     AggSum([P_NATIONKEY], 
@@ -122,24 +115,21 @@ test "TPCH11 dPartsupp" (InsertEvent(schema_rel "PARTSUPP" ["dPK"; "dSK"; "dAQ";
                         SUPPLIER(PS_SUPPKEY, S_NAME, S_ADDRESS, S_NATIONKEY,
                                    S_PHONE, S_ACCTBAL, S_COMMENT) *
                         (P_NATIONKEY ^= S_NATIONKEY) * PS_SUPPLYCOST *
-                        PS_AVAILQTY)))))))) *
-         AggSum([P_VALUE, P_PARTKEY, P_NATIONKEY], 
-           ((delta_8 ^=
-              AggSum([P_PARTKEY, P_NATIONKEY], 
-                ((PS_PARTKEY ^= dPK) * (PS_SUPPKEY ^= dSK) *
-                  (PS_AVAILQTY ^= dAQ) * (PS_SUPPLYCOST ^= dSC) *
-                  (P_PARTKEY ^= PS_PARTKEY) *
-                  SUPPLIER(PS_SUPPKEY, S_NAME, S_ADDRESS, S_NATIONKEY, S_PHONE,
-                             S_ACCTBAL, S_COMMENT) *
-                  (P_NATIONKEY ^= S_NATIONKEY) * PS_SUPPLYCOST * PS_AVAILQTY))) *
-             ((P_VALUE ^=
+                        PS_AVAILQTY))))))) *
+           ( ((P_VALUE ^=
                 (AggSum([P_PARTKEY, P_NATIONKEY], 
                    (PARTSUPP(PS_PARTKEY, PS_SUPPKEY, PS_AVAILQTY, PS_SUPPLYCOST) *
                      (P_PARTKEY ^= PS_PARTKEY) *
                      SUPPLIER(PS_SUPPKEY, S_NAME, S_ADDRESS, S_NATIONKEY,
                                 S_PHONE, S_ACCTBAL, S_COMMENT) *
                      (P_NATIONKEY ^= S_NATIONKEY) * PS_SUPPLYCOST * PS_AVAILQTY)) +
-                  delta_8)) +
+                  AggSum([P_PARTKEY, P_NATIONKEY], 
+                  (PS_PARTKEY ^= dPK) * (PS_SUPPKEY ^= dSK) *
+                  (PS_AVAILQTY ^= dAQ) * (PS_SUPPLYCOST ^= dSC) *
+                  (P_PARTKEY ^= PS_PARTKEY) *
+                (SUPPLIER(PS_SUPPKEY, S_NAME, S_ADDRESS, S_NATIONKEY, S_PHONE,
+                             S_ACCTBAL, S_COMMENT) *
+                  (P_NATIONKEY ^= S_NATIONKEY) * PS_SUPPLYCOST * PS_AVAILQTY)))) +
                (-1 *
                  (P_VALUE ^=
                    AggSum([P_PARTKEY, P_NATIONKEY], 
@@ -149,7 +139,7 @@ test "TPCH11 dPartsupp" (InsertEvent(schema_rel "PARTSUPP" ["dPK"; "dSK"; "dAQ";
                        SUPPLIER(PS_SUPPKEY, S_NAME, S_ADDRESS, S_NATIONKEY,
                                   S_PHONE, S_ACCTBAL, S_COMMENT) *
                        (P_NATIONKEY ^= S_NATIONKEY) * PS_SUPPLYCOST *
-                       PS_AVAILQTY))))))) *
+                       PS_AVAILQTY)))))) *
          AggSum([], 
            ((__sql_inline_agg_1 ^= (0.001 * N_VALUE)) *
              {P_VALUE > __sql_inline_agg_1})) *
@@ -166,19 +156,41 @@ test "Employee37 dEmployee dLineitem"
        DEPARTMENT(COUNT_DID, D_NAME, D_LOCATION_ID) *
        {__sql_inline_agg_1 > 0}))"
    "AggSum([COUNT_DID], 
-     (AggSum([__sql_inline_agg_1, D_LOCATION_ID], 
-        (AggSum([D_LOCATION_ID], 
-             ((L_REGIONAL_GROUP ^= 'CHICAGO') * (D_LOCATION_ID ^= dLID) *
-               (L_REGIONAL_GROUP ^= dRG))) *
+     (    (D_LOCATION_ID ^= dLID) *
           ((__sql_inline_agg_1 ^=
              (AggSum([D_LOCATION_ID], 
                 ((L_REGIONAL_GROUP ^= 'CHICAGO') *
-                  LOCATION(D_LOCATION_ID, L_REGIONAL_GROUP))) +
-               delta_14)) +
+                  LOCATION(D_LOCATION_ID, L_REGIONAL_GROUP))) + 
+             (AggSum([],
+               (L_REGIONAL_GROUP ^= 'CHICAGO') * (L_REGIONAL_GROUP ^= dRG))))) +
             (-1 *
               (__sql_inline_agg_1 ^=
                 AggSum([D_LOCATION_ID], 
                   ((L_REGIONAL_GROUP ^= 'CHICAGO') *
-                    LOCATION(D_LOCATION_ID, L_REGIONAL_GROUP)))))))) *
+                    LOCATION(D_LOCATION_ID, L_REGIONAL_GROUP)))))) *
        DEPARTMENT(COUNT_DID, D_NAME, D_LOCATION_ID) * 
-       {__sql_inline_agg_1 > 0}))";
+       {__sql_inline_agg_1 > 0}))"
+;;
+
+test "SumADivB dR"
+   (InsertEvent(schema_rel "R" ["dA"; "dB"]))
+   "(AggSum([], (R(R_A, R_B) * R_A)) *
+     AggSum([], 
+       ((__sql_inline_agg_2 ^= (AggSum([], (R(R_A, R_B) * R_B)) + 1)) *
+         {[/:float](__sql_inline_agg_2)})))"
+   "(AggSum([], ((R_A ^= dA) * (R_B ^= dB) * R_A)) *
+      (AggSum([], 
+       ((__sql_inline_agg_2 ^= (AggSum([], (R(R_A, R_B) * R_B)) + 1)) *
+         {[/:float](__sql_inline_agg_2)})))) +
+    ((AggSum([], (R(R_A, R_B) * R_A)) + 
+      AggSum([], ((R_A ^= dA) * (R_B ^= dB) * R_A))) *
+      (AggSum([], 
+            (
+               (__sql_inline_agg_2 ^= (
+                  AggSum([], (R(R_A, R_B) * R_B)) + 1 + 
+                     AggSum([], (R_A ^= dA) * (R_B ^= dB) * R_B)))
+               - (__sql_inline_agg_2 ^= (
+                  AggSum([], (R(R_A, R_B) * R_B)) + 1))
+            ) *
+         {[/:float](__sql_inline_agg_2)}
+      )))"

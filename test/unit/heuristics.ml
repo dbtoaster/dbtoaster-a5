@@ -4,9 +4,11 @@ open Calculus
 open UnitTest
 ;;
 
+Debug.activate "PARSE-CALC-WITH-FLOAT-VARS"
 (*Debug.active "HEURISTICS-IGNORE-FINAL-OPTIMIZATION"*)
 (*Debug.activate "HEURISTICS-IGNORE-IVC-OPTIMIZATION"*)
 (*Debug.activate "IVC-OPTIMIZE-EXPR"*)
+;;
 
 let test_db = mk_db [
    ("R", ["A"; "B"]);

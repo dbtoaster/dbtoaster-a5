@@ -4,7 +4,7 @@ open Arithmetic
 open Calculus
 open UnitTest
 ;;
-Debug.activate "NO-VISUAL-DIFF"
+Debug.activate "PARSE-CALC-WITH-FLOAT-VARS"
 ;;
 log_test "Invalid Commute"
    string_of_bool
@@ -177,6 +177,7 @@ in
       "AggSum([], S(B)*(B ^= BB))"
       "AggSum([], S(B)*(B ^= BB))"; (* This should get shifted left by 
                                        nesting_rewrites *)
+   Debug.activate "LOG-UNIFY-LIFTS";
    test "Duplicate lifts" []
       "(A ^= 0) * (A ^= AggSum([], B))"
       "(A ^= 0) * (A ^= AggSum([], B))";
@@ -421,23 +422,34 @@ in
               ((R1_A ^= dA) *
                 (R2_B ^= dB))))))"
       "AggSum([dA], R(dA, R2_B)) + AggSum([dA], R(dA, R1_B)) + 1";
-(*   test "Employee37 dEmployee dLineitem" ["dLID"; "dRG"] ["COUNT_DID"]
+   test "Employee37 dEmployee dLineitem" ["dLID"; "dRG"] ["COUNT_DID"]
       "AggSum([COUNT_DID], 
         (AggSum([__sql_inline_agg_1, D_LOCATION_ID], 
-           ((delta_14 ^=
-              AggSum([D_LOCATION_ID], 
-                ((L_REGIONAL_GROUP ^= 'CHICAGO') * (D_LOCATION_ID ^= dLID) *
-                  (L_REGIONAL_GROUP ^= dRG)))) *
+           (L_REGIONAL_GROUP ^= 'CHICAGO') * (D_LOCATION_ID ^= dLID) *
+                  (L_REGIONAL_GROUP ^= dRG) *
              ((__sql_inline_agg_1 ^=
                 (AggSum([D_LOCATION_ID], 
                    ((L_REGIONAL_GROUP ^= 'CHICAGO') *
                      LOCATION(D_LOCATION_ID, L_REGIONAL_GROUP))) +
-                  delta_14)) +
+                  AggSum([], 1))) +
                (-1 *
                  (__sql_inline_agg_1 ^=
                    AggSum([D_LOCATION_ID], 
                      ((L_REGIONAL_GROUP ^= 'CHICAGO') *
-                       LOCATION(D_LOCATION_ID, L_REGIONAL_GROUP)))))))) *
+                       LOCATION(D_LOCATION_ID, L_REGIONAL_GROUP)))))) *
           DEPARTMENT(COUNT_DID, D_NAME, D_LOCATION_ID) * 
-          {__sql_inline_agg_1 > 0}))"
-      "0";*)
+          {__sql_inline_agg_1 > 0})))"
+      "({dRG = 'CHICAGO'} *
+        AggSum([], 
+          (((__sql_inline_agg_1 ^=
+              (AggSum([dLID], 
+                 ((L_REGIONAL_GROUP ^= 'CHICAGO') *
+                   LOCATION(dLID, L_REGIONAL_GROUP))) +
+                1)) +
+             ((__sql_inline_agg_1 ^=
+                AggSum([dLID], 
+                  ((L_REGIONAL_GROUP ^= 'CHICAGO') *
+                    LOCATION(dLID, L_REGIONAL_GROUP)))) *
+               {-1})) *
+            {__sql_inline_agg_1 > 0} *
+            AggSum([dLID], DEPARTMENT(COUNT_DID, D_NAME, dLID)))))";

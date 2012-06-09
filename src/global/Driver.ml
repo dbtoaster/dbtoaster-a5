@@ -67,6 +67,7 @@ let optimizations_by_level =
          "WEAK-EXPR-EQUIV";
          "K3-NO-OPTIMIZE";
          "COMPILE-WITHOUT-OPT";
+         "DUMB-LIFT-DELTAS";
       ]; 
       (** -O2 **) [
          "COMPILE-WITHOUT-OPT";
@@ -672,6 +673,9 @@ if stage_is_active StageK3ToTargetLanguage then (
                | Some(s) -> error ~detail:(fun () -> K3.string_of_expr s) msg
                | None    -> error msg
             end)
+         | K3Typechecker.K3TypecheckError(stack,msg) ->
+            bug ~exc:true ~detail:(fun () -> 
+               K3Typechecker.string_of_k3_stack stack) msg
          | Failure(msg) ->
             error msg
                

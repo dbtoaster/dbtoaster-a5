@@ -410,9 +410,34 @@ let rec typecheck_expr e : K.type_t =
 				let fn_t = recur fn_e in
 				begin match fn_t with
 					| K.Fn(expected, ret) ->
+					      let rec validate_type req_type offered_type = (
+					        try 
+					          begin match (req_type,offered_type) with 
+					             | (K.TBase(rt),K.TBase(ot)) -> 
+                               rt = escalate_type rt ot
+                            | (K.TTuple(rt),K.TTuple(ot)) ->
+                               if List.length rt <> List.length ot then false
+                               else List.for_all2 validate_type rt ot
+                            | (K.Collection(rt),K.Collection(ot)) ->
+                               validate_type rt ot
+                            | (K.Fn(rt_arg,rt_ret),K.Fn(ot_arg,ot_ret))->
+                               if List.length rt_arg <> List.length ot_arg
+                               then false
+                               else (List.for_all2 validate_type rt_arg ot_arg)
+                                    && (validate_type rt_ret ot_ret)
+                            | (K.TUnit,K.TUnit) -> true
+                            | (_,_) -> false
+                          end
+					        with Failure(_) -> false
+					      ) in
 							let valid = match expected with
-								| [x] -> arg_t = x
-								| _ -> arg_t = K.TTuple(expected)
+								| [x] -> validate_type x arg_t
+								| _ -> 
+								  begin match arg_t with
+								    | K.TTuple(arg_tuple) -> 
+                               List.for_all2 validate_type expected arg_tuple
+                            | _ -> false
+                          end
 							in if valid then ret else failwith "invalid function application [1]"
 					| _ -> failwith "invalid function application [2]"
 				end
