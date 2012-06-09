@@ -10,7 +10,7 @@ ifeq ($(COMPILE_SCALA), 1)
 	QUERY_TEST += -t scala
 endif
 ifeq ($(COMPILE_CPP), 1)
-	QUERY_TEST += -t cpp
+	QUERY_TEST += -t cpp $(CPP_TEST_FLAGS)
 endif
 
 FAST_QUERY_TEST=$(QUERY_TEST) -d weak-expr-equiv
@@ -71,7 +71,7 @@ query: testdatahash
 	@$(FAST_QUERY_TEST) simple/r_btimesacorrelated
 	@$(FAST_QUERY_TEST) simple/r_count
 	@$(FAST_QUERY_TEST) simple/r_divb
-	@$(FAST_QUERY_TEST) simple/r_existsnestedagg # scoping issues in SQL
+	@$(FAST_QUERY_TEST) simple/r_existsnestedagg
 	@$(FAST_QUERY_TEST) simple/r_gbasumb
 	@$(FAST_QUERY_TEST) simple/r_gtealldynamic
 	@$(FAST_QUERY_TEST) simple/r_gtesomedynamic
@@ -81,7 +81,7 @@ query: testdatahash
 	@$(FAST_QUERY_TEST) simple/r_ltallagg
 	@$(FAST_QUERY_TEST) simple/r_ltallavg
 	@$(FAST_QUERY_TEST) simple/r_ltalldynamic
-#	@$(FAST_QUERY_TEST) simple/r_multinest # bad IVC computation
+	@$(FAST_QUERY_TEST) simple/r_multinest -d compile-without-tlq-map
 	@$(FAST_QUERY_TEST) simple/r_natselfjoin
 	@$(FAST_QUERY_TEST) simple/r_nogroupby
 	@$(FAST_QUERY_TEST) simple/r_selectstar
@@ -95,7 +95,18 @@ query: testdatahash
 	@$(FAST_QUERY_TEST) simple/r_sumnestedintargetwitheq
 	@$(FAST_QUERY_TEST) simple/r_sumstar
 	@$(FAST_QUERY_TEST) simple/rst
-	@$(FAST_QUERY_TEST) simple/invalid_schema_fn
+#	@$(FAST_QUERY_TEST) simple/invalid_schema_fn # typechecker error (Yanif)
+	@$(FAST_QUERY_TEST) zeus/11564068
+	@$(FAST_QUERY_TEST) zeus/12811747
+	@$(FAST_QUERY_TEST) zeus/37494577
+#	@$(FAST_QUERY_TEST) zeus/39765730  # typechecker error (Yanif)
+#	@$(FAST_QUERY_TEST) zeus/48183500  # no test file yet
+#	@$(FAST_QUERY_TEST) zeus/52548748  # no test file yet
+#	@$(FAST_QUERY_TEST) zeus/59977251  # no test file yet
+#	@$(FAST_QUERY_TEST) zeus/75453299  # no test file yet
+#	@$(FAST_QUERY_TEST) zeus/94384934  # no test file yet
+#	@$(FAST_QUERY_TEST) zeus/95497049  # no test file yet
+#	@$(FAST_QUERY_TEST) zeus/96434723  # no test file yet
 	@$(FAST_QUERY_TEST) employee/query01
 	@$(FAST_QUERY_TEST) employee/query01a
 	@$(FAST_QUERY_TEST) employee/query02
@@ -143,6 +154,10 @@ query: testdatahash
 	@$(FAST_QUERY_TEST) employee/query64a
 	@$(FAST_QUERY_TEST) employee/query65a
 	@$(FAST_QUERY_TEST) tpch3 --dataset tiny
+#	@$(FAST_QUERY_TEST) tpch11 --dataset tiny  # aaaaaargh
+	@$(FAST_QUERY_TEST) tpch17 --dataset tiny
+#	@$(FAST_QUERY_TEST) tpch18 --dataset tiny  # sloooooow
+	@$(FAST_QUERY_TEST) tpch22
 	@$(FAST_QUERY_TEST) vwap --dataset tiny
 	@$(FAST_QUERY_TEST) brokervariance
 

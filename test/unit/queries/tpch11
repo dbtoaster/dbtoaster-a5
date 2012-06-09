@@ -8,6 +8,16 @@
           :expected => results_file("test/results/tpch/query11.csv"),
         }
       }
-    }
+    },
+    
+    "tiny" => {
+      :subs => [ [/data\/tpch\//, "data/tpch_tiny/"] ],
+      :toplevels => {
+        "QUERY11" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query11_tiny.csv")
+        }
+      }
+    },
   }
 }

@@ -113,7 +113,10 @@ module Postgres : Interface = struct
          | TAny | TExternal(_) -> failwith "Unsupported type in Sql client"      
 
    let convert_row ?(sep = ", ") (data:Types.const_t list):string =
-      ListExtras.string_of_list ~sep:sep string_of_const data
+      ListExtras.string_of_list ~sep:sep (function 
+         | CDate(_,_,_) as x -> "'"^(string_of_const x)^"'"
+         | x        -> string_of_const x
+      ) data
    ;;
    
    let create ?(database = None) ?(username = None) ?(password = None) 

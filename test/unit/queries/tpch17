@@ -8,6 +8,15 @@
           :expected => 898778.73
         }
       }
+    },
+    "tiny" => {
+      :subs => [ [/data\/tpch\//, "data/tpch_tiny/"] ],
+      :toplevels => {
+        "QUERY17" => {
+          :type => :singleton,
+          :expected => 98015.33
+        }
+      }
     }
   }
 }

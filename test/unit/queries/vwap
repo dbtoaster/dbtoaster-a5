@@ -6,7 +6,6 @@
         "VWAP" => {
           :type => :singleton,
           :expected => 28916017900.0,
-          :valid_opts => ["depth-0", "depth-1"]  
         }
       } 
     }, 
@@ -16,7 +15,6 @@
         "VWAP" => {
           :type => :singleton,
           :expected => 491070000.0,
-          :valid_opts => ["depth-0", "depth-1"]  
         }
       } 
     }

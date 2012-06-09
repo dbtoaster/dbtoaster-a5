@@ -126,73 +126,49 @@ class GenericUnitTest
   end
 end
 
-# Not ported properly to Alpha 5 yet
-#
-#class CppUnitTest < GenericUnitTest
-#  def run
-#    unless $skip_compile then
-#      compile_cmd = 
-#        "OCAMLRUNPARAM='#{$ocamlrunparam}';" +
-#        (dbt_base_cmd + [
-#        "-l","cpp",
-#        "-o","#{$dbt_path}/bin/#{@qname}.cpp",
-#        "-c","#{$dbt_path}/bin/#{@qname}"
-#      ]).join(" ") + "  2>&1";
-#      starttime = Time.now
-#      system(compile_cmd) or raise "Compilation Error";
-#      print "(Compile: #{(Time.now - starttime).to_i}s) "
-#      $stdout.flush;
-#    end
-#    return if $compile_only;
-#    starttime = Time.now;
-#    IO.popen("#{$dbt_path}/bin/#{@qname} #{$executable_args.join(" ")}",
-#             "r") do |qin|
-#      output = qin.readlines;
-#      endtime = Time.now;
-#      output = output.map { |l| l.chomp }.join("");
-#      @runtime = (endtime - starttime).to_f;
-#      if(/<QUERY_1_1[^>]*>(.*)<\/QUERY_1_1>/ =~ output) then
-#        output = $1;
-#        case @qtype
-#          when :singleton then @result = output.to_f
-#          when :onelevel then
-#            tok = Tokenizer.new(output, /<\/?[^>]+>|[^<]+/);
-#            @result = Hash.new;
-#            loop do
-#              tok.tokens_up_to(/<item[^>]*>/);
-#              break unless /<item[^>]*>/ =~ tok.last;
-#              fields = Hash.new("");
-#              curr_field = nil;
-#              tok.tokens_up_to("</item>").each do |t|
-#                case t
-#                  when /<\/.*>/ then curr_field = nil;
-#                  when /<(.*)>/ then curr_field = $1;
-#                  else 
-#                    if curr_field then 
-#                      fields[curr_field] = fields[curr_field] + t 
-#                    end
-#                end
-#              end
-#              keys = fields.keys.clone;
-#              keys.delete("__av");
-#              @result[
-#                keys.
-#                  map { |k| k[3..-1].to_i }.
-#                  sort.
-#                  map { |k| fields["__a#{k}"].to_f }
-#              ] = fields["__av"].to_f unless fields["__av"].to_f == 0.0
-#            end
-#          else nil
-#        end
-#      else raise "Runtime Error"
-#      end;
-#    end
-#  end
-#  
-#  def to_s
-#    "C++ Code Generator"
-#  end
-#end
+class CppUnitTest < GenericUnitTest
+  def run
+    unless $skip_compile then
+      compile_cmd = 
+        "OCAMLRUNPARAM='#{$ocamlrunparam}';" +
+        (dbt_base_cmd + [
+        "-l","cpp",
+        "-o","bin/queries/#{@qname}.cpp",
+        "-c","bin/queries/#{@qname}"
+      ]).join(" ") + "  2>&1";
+      starttime = Time.now
+      system(compile_cmd) or raise "Compilation Error";
+      print "(Compile: #{(Time.now - starttime).to_i}s) "
+      $stdout.flush;
+    end
+    return if $compile_only;
+    starttime = Time.now;
+    IO.popen("bin/queries/#{@qname} #{$executable_args.join(" ")}",
+             "r") do |qin|
+      output = qin.readlines;
+      endtime = Time.now;
+      output = output.map { |l| l.chomp }.join("");
+      @runtime = (endtime - starttime).to_f;
+      
+      @toplevels.keys.each do |q| 
+        if /<_#{q}[^>]*>(.*)<\/_#{q}>/ =~ output then
+          q_results = $1
+          case @toplevels[q][:type]
+            when :singleton then @toplevels[q][:result] = q_results.to_f
+            when :onelevel then  @toplevels[q][:result] = CppDB.new(q_results)
+            else nil
+            
+          end
+        else raise "Runtime Error: No result for query #{q}"
+        end
+      end
+    end
+  end
+  
+  def to_s
+    "C++ Code Generator"
+  end
+end
 
 class ScalaUnitTest < GenericUnitTest
   def run

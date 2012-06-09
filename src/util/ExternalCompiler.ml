@@ -98,16 +98,20 @@ let cpp_compiler = {
          (if Debug.active "COMPILE-WITH-PROFILE" then ["-pg"] else []) @
          (if Debug.active "COMPILE-WITH-GDB" then ["-g"] else []) @
          (if Debug.active "COMPILE-WITHOUT-OPT" then [] else ["-O3"]) @
-			   (if Debug.active "COMPILE-WITHOUT-STATIC" then [] else ["-static"]) @
+         (if Debug.active "COMPILE-WITH-STATIC" then ["-static"] else []) @
 			[ "-I."; ] @
          (List.map (fun x->"-I"^x) (compile_flags "INCLUDE_HDR" "DBT_HDR")) @
          (List.map (fun x->"-L"^x) (compile_flags "INCLUDE_LIB" "DBT_LIB")) @
-         [ "-lboost_program_options";
-           "-lboost_serialization";
-           "-lboost_system";
-           "-lboost_filesystem";
-           "-lboost_chrono";
-           "-lboost_thread";
+         (  (if Debug.active "MT" then
+               List.map (fun x -> x^"-mt") else (fun x -> x))
+            [ "-lboost_program_options";
+              "-lboost_serialization";
+              "-lboost_system";
+              "-lboost_filesystem";
+              "-lboost_chrono";
+              "-lboost_thread";
+            ]
+         ) @ [
            "-lpthread";
            "-DFUSION_MAX_VECTOR_SIZE=50";           
          ] @ (!compiler_flags)
