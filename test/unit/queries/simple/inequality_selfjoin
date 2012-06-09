@@ -1,0 +1,29 @@
+{
+  :path => "test/queries/simple/inequality_selfjoin.sql",
+  :datasets => {
+    "standard" => {
+      :toplevels => {
+        "QUERY_1_COUNT" => {
+          :type => :onelevel,
+          :expected => {
+            [1] => 9 ,
+            [2] => 21,
+            [3] => 9 ,
+            [4] => 21,
+            [5] => 16,
+          }
+        },
+        "QUERY_2_COUNT" => {
+          :type => :onelevel,
+          :expected => {
+            [1] => 9 ,
+            [2] => 21,
+            [3] => 9 ,
+            [4] => 21,
+            [5] => 16,
+          }
+        }
+      }
+    }
+  }
+}

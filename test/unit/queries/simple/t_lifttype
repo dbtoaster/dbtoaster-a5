@@ -1,0 +1,13 @@
+{
+  :path => "test/queries/simple/t_lifttype.sql",
+  :datasets => {
+    "standard" => {
+      :toplevels => {
+        "COUNT" => {
+          :type => :onelevel,
+          :expected => {}
+        }
+      }
+    }
+  }
+}

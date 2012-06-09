@@ -94,6 +94,8 @@ query: testdatahash
 	@$(FAST_QUERY_TEST) simple/r_sumnestedintarget
 	@$(FAST_QUERY_TEST) simple/r_sumnestedintargetwitheq
 	@$(FAST_QUERY_TEST) simple/r_sumstar
+	@$(FAST_QUERY_TEST) simple/t_lifttype
+	@$(FAST_QUERY_TEST) simple/inequality_selfjoin
 	@$(FAST_QUERY_TEST) simple/rst
 #	@$(FAST_QUERY_TEST) simple/invalid_schema_fn # typechecker error (Yanif)
 	@$(FAST_QUERY_TEST) zeus/11564068

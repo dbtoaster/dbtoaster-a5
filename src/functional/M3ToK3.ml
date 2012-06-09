@@ -668,13 +668,18 @@ let rec calc_to_k3_expr meta ?(generate_init = false) theta_vars_el calc :
 									
 			| Lift(lift_v, lift_calc) 	      -> 
 				let (lift_outs_el,lift_ret_ve,lift_e),nm = rcr lift_calc in
-				let lift_ve =
-                  let lift_vt =
-                    escalate_type ~expr:(Some(calc))
-                      (type_of_kvar lift_ret_ve) (K.TBase(snd lift_v))
-                  in K.Var((fst lift_v), lift_vt)
-                in
-				let is_bound = List.mem lift_ve theta_vars_el in
+				let is_bound = List.mem (K.Var(fst lift_v, K.TBase(snd lift_v))) 
+				                        theta_vars_el in
+				(* If the variable is already bound, this lift should be treated as
+				   an equality predicate and we can leave its type in place.  If it
+				   isn't bound, we escalate the variable's type based on the lifted
+				   expression. *)
+        let lift_vt =
+				  if is_bound then (K.TBase(snd lift_v))
+				  else escalate_type ~expr:(Some(calc))
+            (type_of_kvar lift_ret_ve) (K.TBase(snd lift_v))
+        in
+				let lift_ve = K.Var((fst lift_v),lift_vt) in
 				let extra_ve, ret_ve, lift_body = 
 					if is_bound then 
 						[], K.Var("lift_v",K.TBase(T.TInt)),
