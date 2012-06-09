@@ -63,7 +63,6 @@ let is_flat t = match t with | K.TBase(_) -> true | _ -> false
 let flat t = if is_flat t then t else type_error t "invalid flat expression"
 
 let promote t1 t2 =
-	(*let open Types in*)
 	match t1, t2 with
 	| (K.TBase(TFloat), K.TBase(TInt)) 
 	| (K.TBase(TInt), K.TBase(TFloat)) -> K.TBase(TFloat)
@@ -414,20 +413,20 @@ let rec typecheck_expr e : K.type_t =
 					        try 
 					          begin match (req_type,offered_type) with 
 					             | (K.TBase(rt),K.TBase(ot)) -> 
-                               rt = escalate_type rt ot
-                            | (K.TTuple(rt),K.TTuple(ot)) ->
-                               if List.length rt <> List.length ot then false
-                               else List.for_all2 validate_type rt ot
-                            | (K.Collection(rt),K.Collection(ot)) ->
-                               validate_type rt ot
-                            | (K.Fn(rt_arg,rt_ret),K.Fn(ot_arg,ot_ret))->
-                               if List.length rt_arg <> List.length ot_arg
-                               then false
-                               else (List.for_all2 validate_type rt_arg ot_arg)
-                                    && (validate_type rt_ret ot_ret)
-                            | (K.TUnit,K.TUnit) -> true
-                            | (_,_) -> false
-                          end
+                         rt = escalate_type rt ot
+                       | (K.TTuple(rt),K.TTuple(ot)) ->
+                         if List.length rt <> List.length ot then false
+                         else List.for_all2 validate_type rt ot
+                       | (K.Collection(rt),K.Collection(ot)) ->
+                         validate_type rt ot
+                       | (K.Fn(rt_arg,rt_ret),K.Fn(ot_arg,ot_ret))->
+                         if List.length rt_arg <> List.length ot_arg
+                         then false
+                         else (List.for_all2 validate_type rt_arg ot_arg)
+                               && (validate_type rt_ret ot_ret)
+                       | (K.TUnit,K.TUnit) -> true
+                       | (_,_) -> false
+                    end
 					        with Failure(_) -> false
 					      ) in
 							let valid = match expected with
@@ -435,9 +434,9 @@ let rec typecheck_expr e : K.type_t =
 								| _ -> 
 								  begin match arg_t with
 								    | K.TTuple(arg_tuple) -> 
-                               List.for_all2 validate_type expected arg_tuple
-                            | _ -> false
-                          end
+                      List.for_all2 validate_type expected arg_tuple
+                    | _ -> false
+                  end
 							in if valid then ret else failwith "invalid function application [1]"
 					| _ -> failwith "invalid function application [2]"
 				end

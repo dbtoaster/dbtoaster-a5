@@ -29,17 +29,17 @@ namespace dbtoaster {
 
       shared_ptr<stream_event> saved_event;
 
-      csv_adaptor(stream_id_t i) : id(i), type(insert_tuple) {}
+      csv_adaptor(stream_id_t i) : id(i), type(insert_tuple), delimiter(",") {}
 
       csv_adaptor(stream_id_t i, string sch)
-        : id(i), schema(sch), type(insert_tuple)
+        : id(i), type(insert_tuple), schema(sch), delimiter(",")
       {
         validate_schema();
       }
 
       csv_adaptor(stream_id_t i, int num_params,
                   const pair<string,string> params[])
-        : id(i), type(insert_tuple)
+        : id(i), type(insert_tuple), delimiter(",")
       {
         parse_params(num_params,params);
         validate_schema();

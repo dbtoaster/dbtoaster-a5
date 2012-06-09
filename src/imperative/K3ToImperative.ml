@@ -996,26 +996,27 @@ struct
 
       | Apply ->
         Debug.print "IMP-DEBUG-APPLY" (fun _ -> string_of_k3ir ir);
-        let decls = match cimpo 1, cexpro 1 with
+        let ltag = ctagi 0 in
+        let decls, ext_args = match cimpo 1, cexpro 1 with
           | Some(i), None -> 
-            if args_to_bind = [] then i
-            else i@(bind_arg (List.hd args_to_bind) (cdecli 1))
+            if args_to_bind = [] then i, (cdecli 1)
+            else i@(bind_arg (List.hd args_to_bind) (cdecli 1)), (cdecli 1)
           | None, Some(e) ->
             if args_to_bind = [] then
-               [Expr(None, BinOp(None, Assign, cdecli 1, e))]
-            else bind_arg (List.hd args_to_bind) e
+              (if is_external_lambda ltag then []
+               else [Expr(None, BinOp(None, Assign, cdecli 1, e))]), e
+            else (bind_arg (List.hd args_to_bind) e), e
           | _, _ -> failwith "invalid apply argument"
         in
         let used = match_ie 0 "invalid apply function"
           (fun _ -> cused 0) (fun _ -> true) in
         let body =
-          let ltag = ctagi 0 in
           if is_external_lambda ltag then
             (match ltag with
              | Undecorated(ExternalLambda(id,arg_t,r_t)) ->
 		           [Expr(None,
 		             BinOp(None, Assign, cdecli 0,
-		               Fn(None, External(id,arg_t,r_t), [cdecli 1])))]
+		               Fn(None, External(id,arg_t,r_t), [ext_args])))]
              | _ -> failwith "invalid external function application")
           else assign_if_expr 0 "invalid apply function"
         in Some(decls@body), used

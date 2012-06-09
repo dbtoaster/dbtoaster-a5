@@ -1628,9 +1628,8 @@ end (* Typing *)
             failwith "invalid external function application"
         else begin match id with
             | "/" ->
-              let arg1 = ssc (source_code_of_expr (List.hd nargs)) in
-              let arg2 = ssc (source_code_of_expr (List.nth nargs 1)) in
-              result ci (Fn(ty, Ext(Inline("("^arg1^") / ("^arg2^")")), []))
+              let arg = ssc (source_code_of_expr (List.hd nargs))
+              in result ci (Fn(ty, Ext(Inline("static_cast<double>(1) / ("^arg^")")), []))
 
             | _ -> result ci (Fn(ty, Ext(Apply(id)), nargs))
         end
