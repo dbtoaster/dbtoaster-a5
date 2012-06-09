@@ -28,7 +28,7 @@ bool __verbose = false;
 std::ostream& operator<<(std::ostream &strm, const boost::any &a) {
 	try{
 		if( a.type() == typeid(int) )
-			return strm << any_cast<long>(a);
+			return strm << any_cast<int>(a);
 
 		else if( a.type() == typeid(long) )
             return strm << any_cast<long>(a);

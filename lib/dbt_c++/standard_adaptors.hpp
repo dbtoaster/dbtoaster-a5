@@ -73,15 +73,17 @@ namespace dbtoaster {
              it != end; ++it)
         {
           string ty = copy_range<std::string>(*it);
-          if ( ty == "event" ) r += "e";
+          if ( ty == "event" )      r += "e";
           else if ( ty == "order" ) r += "o";
-          else if ( ty == "int" ) r += "i";
+          else if ( ty == "int" )   r += "i";
+          else if ( ty == "long" )  r += "l";
           else if ( ty == "float" ) r += "f";
-          else if ( ty == "date" ) r += "d";
-          else if ( ty == "hash" ) r += "h";
+          else if ( ty == "date" )  r += "d";
+          else if ( ty == "hash" )  r += "h";
           else {
             cerr << "invalid csv schema type " << ty << endl;
             r = "";
+            break;
           }
         }
         return r;
@@ -95,6 +97,7 @@ namespace dbtoaster {
             case 'e':  // event type
             case 'o':  // order field type
             case 'i':
+            case 'l':
             case 'f':
             case 'd':
             case 'h': break;
@@ -125,12 +128,13 @@ namespace dbtoaster {
           string field = copy_range<std::string>(*field_it);
           istringstream iss(field);
           bool ins; unsigned int o;
-          int y,m,d; double f;
-          long i;
+          int y,m,d;
+          double f; int i; long l;
           vector<string> date_fields;
           switch (*schema_it) {
             case 'e': iss >> ins; insert = ins; break;
             case 'i': iss >> i; tuple.push_back(i); break;
+            case 'l': iss >> l; tuple.push_back(l); break;
             case 'f': iss >> f; tuple.push_back(f); break;
             case 'h': tuple.push_back(static_cast<int>(field_hash(field))); break;
             case 'd':
@@ -188,6 +192,9 @@ namespace dbtoaster {
             cerr << "adaptor could not process " << data << endl;
             cerr << "schema: " << schema << endl;
           }
+        } else if ( __verbose ) {
+           cerr << "Skipping event, no "
+                << (schema == ""? "schema" : "buffer") << " found." << endl;
         }
       }
 

@@ -543,6 +543,7 @@ let string_of_expr e =
         | Types.CString _ -> "CString"
 				| Types.CInt _ -> "CInt"
 				| Types.CBool _ -> "CBool" 
+        | Types.CDate _ -> "CDate" 
       in ob(); ps ("Const("^const_ts^"("^(Types.string_of_const c)^"))"); cb()
     | Var (id,t) -> ob(); ps "Var("; pid id; ps ","; 
                                      ps (string_of_type t); ps ")"; cb()
@@ -636,6 +637,7 @@ let rec code_of_expr e =
           | Types.CString _ -> "CString" 
 					| Types.CInt _ -> "CInt"
           | Types.CBool _ -> "CBool" 
+          | Types.CDate _ -> "CDate" 
         in "K3.Const(Types."^const_ts^"("^(Types.string_of_const c)^"))"
       | Var (id,t) -> "K3.Var(\""^id^"\","^(ttostr t)^")"
       | Tuple e_l -> "K3.Tuple("^(ListExtras.ocaml_of_list rcr e_l)^")"

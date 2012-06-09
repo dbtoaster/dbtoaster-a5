@@ -2467,13 +2467,23 @@ end (* Typing *)
     let mk_array l = "{ "^(String.concat ", " l)^" }" in
     let decls = List.map (fun ((sf:Schema.source_t), ra) ->
       let adaptor_meta = 
-      List.fold_left (fun acc ((a:Schema.adaptor_t),((r,_,_):Schema.rel_t)) ->
+      List.fold_left
+      (fun acc ((a:Schema.adaptor_t),((r,fields,_):Schema.rel_t)) ->
         if List.mem_assoc (fst a) valid_adaptors then
           let a_t_id = List.assoc (fst a) valid_adaptors in
           let a_spt = "shared_ptr<"^a_t_id^" >" in
           let a_id, a_t = gensym(), Target(Type(a_spt)) in
+          let a_params =
+            let ud_params = snd a in
+            if List.mem_assoc "schema" ud_params then ud_params
+            else
+              let a_schema =
+                List.map (fun (_,t) ->
+                  Typing.string_of_type (imp_type_of_calc_type t)) fields
+              in ud_params@[("schema", String.concat "," a_schema)]
+          in
           let params_arr = mk_array (List.map (fun (k,v) ->
-            "make_pair("^(quote k)^","^(quote v)^")") (snd a)) in
+            "make_pair("^(quote k)^","^(quote v)^")") a_params) in
           let param_id, param_t, param_arr_t =
             let t = Target(Type("pair<string,string>")) in
             a_id^"_params", t, array_of_type t in
@@ -2488,7 +2498,7 @@ end (* Typing *)
             let rel_id = ("get_stream_id(\""^(String.escaped r)^"\")")
             in
             String.concat "," ([rel_id]@extra_args@
-                               [string_of_int (List.length (snd a)); param_id])
+                               [string_of_int (List.length a_params); param_id])
           in
           let d = Decl(unit, (a_id, a_t), 
                     Some(Fn(a_t, Ext(Constructor(a_t)),
