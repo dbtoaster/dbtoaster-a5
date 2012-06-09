@@ -151,7 +151,7 @@ typeDefn:
 | VARCHAR LPAREN INT RPAREN { TString }
 | VARCHAR                   { TString }
 | CHAR                      { TString }
-| DATE                      { TInt    }
+| DATE                      { TDate    }
 
 fieldList:
 | ID typeDefn                    { [None, String.uppercase $1, $2] }
@@ -300,7 +300,8 @@ expression:
                         ("Invalid month ("^(string_of_int m)^") in date: "^$3);                                         
                     if (d > 31) then bail
                         ("Invalid day ("^(string_of_int d)^") in date: "^$3);
-                    Sql.Const(CInt((y * 10000) + (m * 100) + (d * 1))) 
+            (*Sql.Const(CInt((y * 10000) + (m * 100) + (d * 1)))*) 
+                        Sql.Const(CDate(y,m,d))
             ) else
                 bail ("Improperly formatted date: "^$3)	             
           }

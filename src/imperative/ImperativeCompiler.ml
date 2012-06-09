@@ -343,6 +343,7 @@ struct
     | Host(K.TBase(TFloat)) -> inl ("double")
     | Host(K.TBase(TInt)) -> inl ("long")
     | Host(K.TBase(TString)) -> inl ("string")
+    | Host(K.TBase(TDate))   -> inl ("long") (* TODO change with an appropriate type in c++ *)
     | Host(K.TBase(TBool)) -> inl ("bool")
     | Host(K.TBase(TAny)) -> inl ("??")
     | Host(K.TBase(TExternal(ext_type))) -> inl (ext_type)
@@ -1011,7 +1012,7 @@ end (* Typing *)
             else "\""^(String.escaped s)^"\""
          | CBool(true) -> "true"
          | CBool(false) -> "false"
-         
+         | CDate(y,m,d) -> wrap_neg_with_parens (string_of_int (y*10000+m*100+d)) (* TODO must be change with appropriate object in c++ *)
        end)
  
     | Var (_,(v,_)) -> inl(v)

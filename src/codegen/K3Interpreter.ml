@@ -101,6 +101,7 @@ struct
                  | CInt(i)      -> float_of_int i
                  | CBool(true)  -> 1.
                  | CBool(false) -> 0.
+                 | CDate _      -> bail ("invalid float: "^(string_of_const x))
 
     let const_of_value x = match x with
       | BaseValue(c) -> c

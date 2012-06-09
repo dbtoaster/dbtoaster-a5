@@ -19,6 +19,7 @@ type type_t =
    | TInt                  (** Integer *)
    | TFloat                (** Floating point number *)
    | TString               (** A string of bounded length n (0 is infinite) *)
+   | TDate                 (** Date *)
    | TAny                  (** An unspecified type *)
    | TExternal of string   (** An externally defined type *)
 
@@ -28,6 +29,7 @@ type const_t =
    | CInt    of int        (** Integer *)
    | CFloat  of float      (** Float *)
    | CString of string     (** String *)
+   | CDate   of int*int*int(** Date *)
 
 (** Basic (typed) variables *)
 type var_t = string * type_t
@@ -44,6 +46,7 @@ let type_of_const (a:const_t): type_t =
       | CInt(_)    -> TInt
       | CFloat(_)  -> TFloat
       | CString(s) -> TString
+      | CDate _    -> TDate
    end
 
 (** 
@@ -60,6 +63,7 @@ let int_of_const (a:const_t): int =
       | CInt(av)     -> av
       | CFloat(av)   -> int_of_float av
       | CString(av)  -> failwith ("Cannot produce integer of string '"^av^"'")
+      | CDate _ -> failwith ("Cannot produce integer of date")
    end
 
 (**
@@ -76,6 +80,7 @@ let float_of_const (a:const_t): float =
       | CInt(av)     -> float_of_int av
       | CFloat(av)   -> av
       | CString(av)  -> failwith ("Cannot produce float of string '"^av^"'")
+      | CDate _ -> failwith ("Cannot produce float of date")
    end	
 
 (**
@@ -112,6 +117,7 @@ let ocaml_of_type (ty: type_t): string =
       | TInt             -> "TInt"
       | TFloat           -> "TFloat"
       | TString          -> "TString"
+      | TDate            -> "TDate"
       | TExternal(etype) -> "TExternal(\""^etype^"\")"
    end
 
@@ -128,6 +134,7 @@ let string_of_type (ty: type_t): string =
       | TInt             -> "int"
       | TFloat           -> "float"
       | TString          -> "string"
+      | TDate            -> "date"
       | TExternal(etype) -> etype
    end
 
@@ -143,6 +150,7 @@ let string_of_const (a: const_t): string =
       | CInt(av)     -> string_of_int av
       | CFloat(av)   -> string_of_float av
       | CString(av)  -> av
+      | CDate(y,m,d) -> (string_of_int y)^"-"^(string_of_int m)^"-"^(string_of_int d)
    end
 
 (**
@@ -158,6 +166,8 @@ let ocaml_of_const (a: const_t): string =
       | CInt(i)      -> "CInt("^(string_of_int i)^")"
       | CFloat(f)    -> "CInt("^(string_of_float f)^")"
       | CString(s)   -> "CString(\""^s^"\")"
+      | CDate(y,m,d) -> "CDate("^(string_of_int y)^","^
+        (string_of_int m)^","^(string_of_int d)^")"
    end
 
 (**
@@ -173,6 +183,7 @@ let sql_of_const (a: const_t): string =
       | CInt(i)      -> (string_of_int i)
       | CFloat(f)    -> (string_of_float f)
       | CString(s)   -> "'"^s^"'"
+      | CDate(y,m,d) -> "DATE("^(string_of_const a)^")"
    end
 
 (**

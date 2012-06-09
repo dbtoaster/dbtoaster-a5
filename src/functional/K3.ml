@@ -550,6 +550,7 @@ let string_of_expr e =
         | Types.CString _ -> "CString"
 				| Types.CInt _ -> "CInt"
 				| Types.CBool _ -> "CBool" 
+        | Types.CDate _ -> "CDate"
       in ob(); ps ("Const("^const_ts^"("^(Types.string_of_const c)^"))"); cb()
     | Var (id,t) -> ob(); ps "Var("; pid id; ps ","; 
                                      ps (string_of_type t); ps ")"; cb()
@@ -644,6 +645,7 @@ let rec code_of_expr e =
           | Types.CString _ -> "CString" 
 					| Types.CInt _ -> "CInt"
           | Types.CBool _ -> "CBool" 
+          | Types.CDate _ -> "CDate"
         in "K3.Const(Types."^const_ts^"("^(Types.string_of_const c)^"))"
       | Var (id,t) -> "K3.Var(\""^id^"\","^(ttostr t)^")"
       | Tuple e_l -> "K3.Tuple("^(ListExtras.ocaml_of_list rcr e_l)^")"
@@ -817,7 +819,7 @@ let nice_string_of_expr ?(type_is_needed = false) e maps =
     let paroperand e1 = if is_single_statement e1 then aux e1 else begin ps "("; aux e1; ps ")" end in
     let par e1 e2 op = ob(); ps "("; paroperand e1; pc(); psp (); ps (op); psp(); pc(); paroperand e2; ps ")"; cb() in
     let pop ?(lb = []) s = ob(); ps s; ps "("; recur lb; ps ")"; cb() in 
-    let ppar sname earg e1 = ob(); ps (sname^"("); aux earg; ps ")"; pc(); aux e1; cb() in
+    (*let ppar sname earg e1 = ob(); ps (sname^"("); aux earg; ps ")"; pc(); aux e1; cb() in*)
     let schema args = 
       "[" ^
       (String.concat ";"
@@ -831,6 +833,7 @@ let nice_string_of_expr ?(type_is_needed = false) e maps =
         | Types.CString _ -> "string"
 				| Types.CInt _ -> "int"
 				| Types.CBool _ -> "bool" 
+        | Types.CDate _ -> "CDate"
       in ob(); ps (Types.string_of_const c);
          if type_is_needed then ps (":"^(const_ts));
          cb()

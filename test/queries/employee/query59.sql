@@ -13,7 +13,7 @@ CREATE STREAM EMPLOYEE(
     department_id   INT
     ) 
   FROM FILE '../../experiments/data/employee/employee.dat' LINE DELIMITED
-  csv (fields := ',', schema := 'int,string,string,string,int,int,date,float,float,int', eventtype := 'insert');
+  csv (fields := ',', eventtype := 'insert');
 
 SELECT e.last_name AS emp_name, m.last_name AS mgr_name
 FROM employee e, employee m 

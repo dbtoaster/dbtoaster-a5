@@ -133,7 +133,7 @@ let build_tuple (reln,relv,_) param_val support_sch =
                    (fun x -> try CFloat(float_of_string x) with
                     Failure(_) -> failwith ("Could not convert float: '"^x^"'"))
         | "date" -> 
-          assert_type vn vt t TInt;
+          assert_type vn vt t (*TInt*) TDate;
           (fun x -> 
             if (Str.string_match 
                   (Str.regexp "\\([0-9]+\\)-\\([0-9]+\\)-\\([0-9]+\\)") x 0)
@@ -149,7 +149,8 @@ let build_tuple (reln,relv,_) param_val support_sch =
                         "Invalid day ("^(string_of_int d)^
                         ") in date: "^x
                      );
-                  CInt((y * 10000) + (m * 100) + (d * 1))
+                  (*CInt((y * 10000) + (m * 100) + (d * 1))*)
+                  CDate(y,m,d)
             ) else failwith ("Invalid date string: "^x)
          )
         | "string" -> 

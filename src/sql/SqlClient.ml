@@ -52,6 +52,7 @@ module Postgres : Interface = struct
                | TInt    -> "bigint"
                | TFloat  -> "float"
                | TString -> "varchar(1000)"
+               | TDate   -> "date"
             )
          ) sch)^
       ")"   
@@ -67,7 +68,8 @@ module Postgres : Interface = struct
          | CBool(false) -> "0"
          | CInt(av) -> string_of_int av
          | CFloat(av) -> string_of_float av
-         | CString(av) -> "'"^av^"'"   
+         | CString(av) -> "'"^av^"'"  
+         | CDate _     -> Types.string_of_const const 
 	 ;;
 
    let const_of_string (str:string) (const_type:Types.type_t) : Types.const_t =
@@ -81,6 +83,20 @@ module Postgres : Interface = struct
          | TInt  -> CInt(int_of_string (trim str))
          | TFloat -> CFloat(float_of_string (trim str))
          | TString -> CString(str)
+         | TDate   -> 
+           if (Str.string_match
+                (Str.regexp "\\([0-9]+\\)-\\([0-9]+\\)-\\([0-9]+\\)") str 0)
+                        then (
+                let y = (int_of_string (Str.matched_group 1 str)) in
+                let m = (int_of_string (Str.matched_group 2 str)) in
+                let d = (int_of_string (Str.matched_group 3 str)) in
+                    if (m > 12) then failwith 
+                        ("Invalid month ("^(string_of_int m)^") in date: "^str);                                         
+                    if (d > 31) then failwith
+                        ("Invalid day ("^(string_of_int d)^") in date: "^str);
+                              CDate(y, m, d)
+            ) else
+                failwith ("Improperly formatted date: "^str)  
          | TAny | TExternal(_) -> failwith "Unsupported type in Sql client"      
 
    let convert_row ?(sep = ", ") (data:Types.const_t list):string =

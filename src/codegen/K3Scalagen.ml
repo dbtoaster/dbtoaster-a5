@@ -155,6 +155,7 @@ struct
     | TInt -> Int
     | TFloat -> Float
     | TString -> String
+    | TDate -> Int (* TODO change with an appropriate type in scala *)
     | TAny -> Any
     | TExternal(s) -> External(s)
 
@@ -248,6 +249,8 @@ struct
     | CInt(y) -> (string_of_int y, Int)
     | CFloat(y) -> (string_of_float y, Float)
     | CString(y) -> ("\"" ^ y ^ "\"", String)
+    | CDate(y,m,d) -> (string_of_int (y*10000+m*100+d), Int)
+   (* TODO must be change with appropriate object in scala *)
    
   let var ?(expr = None) (v:K3.id_t) (t:K3.type_t) : code_t = 
     ("var_" ^ v, map_type t)

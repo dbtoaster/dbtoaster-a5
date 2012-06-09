@@ -4,7 +4,7 @@ class OcamlDB < Hash
   def initialize(db_string, reverse_key = true)
     tok = Tokenizer.new(
       db_string,
-        /\[|\]|->|[a-zA-Z][a-zA-Z0-9_\s]*|[\-\+]?[0-9]+\.?[0-9]*e?[\-\+]?[0-9]*|<pat=[^>]*>|SingleMap|DoubleMap|TupleList|\(|\)|;/
+        /\[|\]|->|[0-9]+\-[0-9]+\-[0-9]+|[a-zA-Z][a-zA-Z0-9_\s]*|[\-\+]?[0-9]+\.?[0-9]*e?[\-\+]?[0-9]*|<pat=[^>]*>|SingleMap|DoubleMap|TupleList|\(|\)|;/
     )
     tok.next while (tok.peek == "SingleMap") || tok.peek == "DoubleMap" || tok.peek == "TupleList" || (tok.peek == "(");
     raise "Not A Database (Got '#{tok.peek}')" unless tok.peek == "[";
@@ -49,6 +49,7 @@ class OcamlDB < Hash
         end
       k = k.map { |k_elem| 
         case k_elem.chomp
+          when / *([0-9]+)\-([0-9]+)\-([0-9]+)/ then $1.to_i*10000+$2.to_i*100+$3.to_i;
           when / *([\-\+]?[0-9]+\.[0-9]*e?[\-\+]?[0-9]*)/ then $1.to_f;
           when / *([\-\+]?[0-9]+)/ then $1.to_i;
           when /([a-zA-Z][a-zA-Z0-9_ ]*)/ then $1;

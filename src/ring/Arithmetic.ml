@@ -178,6 +178,7 @@ let binary_op (b_op: bool   -> bool   -> bool)
 		| (CFloat(_), (CBool(_)|CInt(_)|(CFloat(_))), (TFloat|TAny))
       | ((CBool(_)|CInt(_)), CFloat(_), (TFloat|TAny)) -> CFloat(f_op (float_of_const a) (float_of_const b))
       | (CString(_), _, _) | (_, CString(_), _) -> failwith "Binary math op over a string"
+      | (CDate _, _, _) | (_, CDate _, _) -> failwith "Binary math op over a date"
 		| (_,   _,  _) -> 
 			failwith ("Binary math op with incompatible return type: "^
 		             (string_of_const a)^" "^(string_of_const b)^
@@ -209,6 +210,13 @@ let comparison_op (opname:string) (iop:int -> int -> bool)
                                              (type_of_const b)) with
       | TInt -> CBool(iop (int_of_const a) (int_of_const b))
       | TFloat -> CBool(fop (float_of_const a) (float_of_const b))
+      | TDate -> 
+        begin
+          match a, b with
+            | CDate(y1,m1,d1), CDate(y2,m2,d2) ->
+              CBool(iop (y1*10000+m1*100+d1) (y2*10000+m2*100+d2))
+            | _ -> failwith (opname^" over invalid types")
+        end
       | _ -> failwith (opname^" over invalid types")
    end
 
@@ -227,6 +235,8 @@ let cmp_eq a b =
       | (CBool(_), _)  | (_,CBool(_)) -> failwith "= of boolean and other"
       | (CString(av), CString(bv))    -> av = bv
       | (CString(_), _) | (_,CString(_))-> failwith "= of string and other"
+      | (CDate(y1,m1,d1), CDate(y2,m2,d2))-> y1=y2 && m1=m2 && d1=d2
+      | (CDate _, _) | (_, CDate _)     -> failwith "= of date and other"
       | (CFloat(_), _) | (_,CFloat(_))-> (float_of_const a) = (float_of_const b)
       | (CInt(av), CInt(bv))          -> av = bv
    end)
