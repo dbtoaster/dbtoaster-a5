@@ -108,7 +108,7 @@ dbtType:
 | DATE                      { TDate    }
 
 queryStatement:
-| DECLARE QUERY STRING AS calculusExpr { ($3, $5) }
+| DECLARE QUERY ID SETVALUE calculusExpr { ($3, $5) }
 
 emptyValueExprList:
 |                                { [] }

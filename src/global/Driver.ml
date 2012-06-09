@@ -197,6 +197,7 @@ type stage_t =
  | SQLMarker
    | StagePrintSQL
    | StageSQLToCalc
+   | StageParseCalc
  | CalcMarker
    | StagePrintCalc
    | StagePrintSchema
@@ -229,7 +230,7 @@ let output_stages =
       StagePrintM3; StagePrintM3DomainMaintenance; StagePrintK3; StagePrintImp;
       StageRunInterpreter; StageOutputSource; StageCompileSource;  ]
 let input_stages = 
-   [  StageParseSQL; StageParseM3; StageParseK3 ]
+   [  StageParseSQL; StageParseCalc; StageParseM3; StageParseK3 ]
 
 
 (* The following list (core_stages) MUST be kept in order of desired execution.  
@@ -264,6 +265,7 @@ let active_stages = ref (ListAsSet.inter
    ((match !input_language with
       | Auto -> bug "input language still auto"; []
       | SQL  -> StageParseSQL::(stages_from SQLMarker)
+      | Calc -> StageParseCalc::(stages_from CalcMarker)
       | M3   -> StageParseM3::(stages_from M3Marker)
       | K3   -> StageParseK3::(stages_from K3Marker)
       | _    -> error "Unsupported input language"; []
@@ -466,6 +468,26 @@ if stage_is_active StageSQLToCalc then (
          | Sql.SqlException(msg) ->
             error ~exc:true ("Sql Error: "^msg)
 
+)
+;;
+if stage_is_active StageParseCalc then (
+   Debug.print "LOG-DRIVER" (fun () -> "Running Stage: ParseCalculus");
+   try 
+      List.iter (fun f ->
+         let lexbuff = 
+            Lexing.from_channel (if f <> "-" then (open_in f) else stdin) 
+         in let (db_schema0, calc_queries0) =
+               (Calculusparser.statementList Calculuslexer.tokenize lexbuff)
+         in db_schema := !db_schema0;
+            calc_queries := calc_queries0@(!calc_queries)
+      ) !files
+   with 
+      | Parsing.Parse_error ->
+         error ("Calculus Parse Error.  (try using '-d log-parser' to track the "^
+                "error)")
+      | Sys_error(msg) ->
+         error msg
+   
 )
 ;;
 if stage_is_active StagePrintSchema then (
