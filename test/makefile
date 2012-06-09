@@ -48,15 +48,15 @@ unit:
 #	@$(UNIT_TEST) unit/sqlclient.ml
 
 bigquery:	testdatahash
-#	@$(QUERY_TEST) missedtrades
+	@$(QUERY_TEST) missedtrades
 	@$(QUERY_TEST) axfinder
 	@$(QUERY_TEST) pricespread
 	@$(QUERY_TEST) brokerspread
-#	@$(QUERY_TEST) vwap    #slow
+	@$(QUERY_TEST) vwap    #slow
 #	@$(QUERY_TEST) tpch11 -d K3-NO-OPTIMIZE #results incorrect
-#	@$(QUERY_TEST) tpch17
-#	@$(QUERY_TEST) tpch18
-#	@$(QUERY_TEST) tpch22 
+	@$(QUERY_TEST) tpch17
+	@$(QUERY_TEST) tpch18
+	@$(QUERY_TEST) tpch22 
 	@$(QUERY_TEST) ssb4
 	@$(QUERY_TEST) simple/r_ltallcorravg
 	
