@@ -9,6 +9,16 @@
           :valid_opts => ["depth-0", "depth-1"]  
         }
       } 
+    }, 
+    "tiny" => {
+      :subs => [ [/data\/vwap5k\//, "data/vwap100/"] ],
+      :toplevels => {
+        "VWAP" => {
+          :type => :singleton,
+          :expected => 491070000.0,
+          :valid_opts => ["depth-0", "depth-1"]  
+        }
+      } 
     }
   }
 }

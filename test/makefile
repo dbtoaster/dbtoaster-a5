@@ -52,7 +52,6 @@ bigquery:	testdatahash
 	@$(QUERY_TEST) axfinder
 	@$(QUERY_TEST) pricespread
 	@$(QUERY_TEST) brokerspread
-	@$(QUERY_TEST) vwap    #slow
 #	@$(QUERY_TEST) tpch11 -d K3-NO-OPTIMIZE #results incorrect
 	@$(QUERY_TEST) tpch17
 	@$(QUERY_TEST) tpch18
@@ -61,7 +60,6 @@ bigquery:	testdatahash
 	@$(QUERY_TEST) simple/r_ltallcorravg
 	
 query: testdatahash
-	@$(FAST_QUERY_TEST) brokervariance
 	@$(FAST_QUERY_TEST) simple/r_aggcomparison
 	@$(FAST_QUERY_TEST) simple/r_aggofnested
 	@$(FAST_QUERY_TEST) simple/r_aggofnestedagg
@@ -143,7 +141,9 @@ query: testdatahash
 	@$(FAST_QUERY_TEST) employee/query63a
 	@$(FAST_QUERY_TEST) employee/query64a
 	@$(FAST_QUERY_TEST) employee/query65a
-	@$(FAST_QUERY_TEST) tpch3
+	@$(FAST_QUERY_TEST) tpch3 --dataset tiny
+	@$(FAST_QUERY_TEST) vwap --dataset tiny
+	@$(FAST_QUERY_TEST) brokervariance
 
 err:
 	@$(ERROR_TEST) ambiguous_names
