@@ -1,0 +1,13 @@
+{
+  :path => "test/queries/simple/rs_inequality.sql",
+  :datasets => {
+    "standard" => {
+      :toplevels => {
+        "__SQL_SUM_AGGREGATE_1" => {
+          :type => :singleton,
+          :expected => 370
+        }
+      } 
+    }
+  }
+}

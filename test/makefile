@@ -116,10 +116,10 @@ query: testdatahash
 	@$(FAST_QUERY_TEST) simple/r_unique_counts_by_a -d expressive-tlqs
 	@$(FAST_QUERY_TEST) simple/rr_ormyself
 	@$(FAST_QUERY_TEST) simple/rs
-#	@$(FAST_QUERY_TEST) simple/rs_cmpnest										 # no test script
-#	@$(FAST_QUERY_TEST) simple/rs_eqineq										 # no test script
-#	@$(FAST_QUERY_TEST) simple/rs_ineqonnestedagg						 # no test script
-#	@$(FAST_QUERY_TEST) simple/rs_inequality								 # no test script
+	@$(FAST_QUERY_TEST) simple/rs_cmpnest
+	@$(FAST_QUERY_TEST) simple/rs_eqineq
+	@$(FAST_QUERY_TEST) simple/rs_ineqonnestedagg
+	@$(FAST_QUERY_TEST) simple/rs_inequality
 #	@$(FAST_QUERY_TEST) simple/rs_ineqwithnestedagg					 # no test script
 #	@$(FAST_QUERY_TEST) simple/rs_joinon										 # no test script
 #	@$(FAST_QUERY_TEST) simple/rs_joinwithnestedagg					 # no test script

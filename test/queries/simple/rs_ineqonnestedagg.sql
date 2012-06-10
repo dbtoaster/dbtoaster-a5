@@ -8,4 +8,4 @@ CREATE STREAM S(B int, C int)
   FROM FILE '../../experiments/data/tiny_s.dat' LINE DELIMITED
   csv (fields := ',', schema := 'int,int', eventtype := 'insert');
 
-SELECT A FROM R r, (SELECT B, COUNT(*) AS CNT FROM S GROUP BY B) s WHERE r.B = s.B AND r.A < CNT;
+SELECT A FROM R r, (SELECT s2.B, COUNT(*) AS CNT FROM S s2 GROUP BY s2.B) s WHERE r.B = s.B AND r.A < CNT;

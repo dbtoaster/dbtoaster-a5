@@ -1,0 +1,17 @@
+{
+  :path => "test/queries/simple/rs_eqineq.sql",
+  :datasets => {
+    "standard" => {
+      :toplevels => {
+        "COUNT" => {
+          :type => :onelevel,
+          :expected => {
+             [2, 1, 1, 5] => 1,
+             [1, 3, 3, 2] => 1,
+             [3, 4, 4, 5] => 2,
+           }
+        }
+      } 
+    }
+  }
+}
