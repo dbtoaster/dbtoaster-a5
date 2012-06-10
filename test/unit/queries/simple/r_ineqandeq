@@ -1,0 +1,13 @@
+{
+  :path => "test/queries/simple/r_ineqandeq.sql",
+  :datasets => {
+    "standard" => {
+      :toplevels => {
+        "__SQL_SUM_AGGREGATE_1" => {
+          :type => :singleton,
+          :expected => 5
+        }
+      } 
+    }
+  }
+}

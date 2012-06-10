@@ -101,6 +101,42 @@ query: testdatahash
 	@$(FAST_QUERY_TEST) simple/m3k3unable2escalate
 	@$(FAST_QUERY_TEST) simple/r_sumoutsideofagg -d expressive-tlqs
 	@$(FAST_QUERY_TEST) simple/rst
+	@$(FAST_QUERY_TEST) simple/r_count_of_one
+	@$(FAST_QUERY_TEST) simple/r_count_of_one_prime
+	@$(FAST_QUERY_TEST) simple/r_deepscoping
+	@$(FAST_QUERY_TEST) simple/r_impossibleineq
+	@$(FAST_QUERY_TEST) simple/r_ineqandeq
+	@$(FAST_QUERY_TEST) simple/r_lift_of_count -d expressive-tlqs
+	@$(FAST_QUERY_TEST) simple/r_nonjoineq
+	@$(FAST_QUERY_TEST) simple/r_possibleineq
+	@$(FAST_QUERY_TEST) simple/r_possibleineqwitheq
+	@$(FAST_QUERY_TEST) simple/r_sum_gb_all_out_of_aggregate -d expressive-tlqs
+	@$(FAST_QUERY_TEST) simple/r_sum_gb_out_of_aggregate -d expressive-tlqs
+	@$(FAST_QUERY_TEST) simple/r_sum_out_of_aggregate
+	@$(FAST_QUERY_TEST) simple/r_unique_counts_by_a -d expressive-tlqs
+	@$(FAST_QUERY_TEST) simple/rr_ormyself
+	@$(FAST_QUERY_TEST) simple/rs
+#	@$(FAST_QUERY_TEST) simple/rs_cmpnest										 # no test script
+#	@$(FAST_QUERY_TEST) simple/rs_eqineq										 # no test script
+#	@$(FAST_QUERY_TEST) simple/rs_ineqonnestedagg						 # no test script
+#	@$(FAST_QUERY_TEST) simple/rs_inequality								 # no test script
+#	@$(FAST_QUERY_TEST) simple/rs_ineqwithnestedagg					 # no test script
+#	@$(FAST_QUERY_TEST) simple/rs_joinon										 # no test script
+#	@$(FAST_QUERY_TEST) simple/rs_joinwithnestedagg					 # no test script
+#	@$(FAST_QUERY_TEST) simple/rs_natjoin										 # no test script
+#	@$(FAST_QUERY_TEST) simple/rs_natjoinineq								 # no test script
+#	@$(FAST_QUERY_TEST) simple/rs_natjoinooverlap						 # no test script
+#	@$(FAST_QUERY_TEST) simple/rs_natjoinpartstar						 # no test script
+#	@$(FAST_QUERY_TEST) simple/rs_selectconstcmp						 # no test script
+#	@$(FAST_QUERY_TEST) simple/rs_selectpartstar						 # no test script
+#	@$(FAST_QUERY_TEST) simple/rs_selectstar								 # no test script
+#	@$(FAST_QUERY_TEST) simple/rs_simple										 # no test script
+#	@$(FAST_QUERY_TEST) simple/rs_stramvtable								 # no test script
+#	@$(FAST_QUERY_TEST) simple/rs_stringjoin								 # no test script
+#	@$(FAST_QUERY_TEST) simple/rstar												 # no test script
+#	@$(FAST_QUERY_TEST) simple/rtt_or_with_stars						 # no test script
+#	@$(FAST_QUERY_TEST) simple/singleton_renaming_conflict	 # no test script
+#	@$(FAST_QUERY_TEST) simple/ss_math											 # no test script
 #	@$(FAST_QUERY_TEST) simple/invalid_schema_fn # typechecker error (Yanif)
 	@$(FAST_QUERY_TEST) zeus/11564068
 	@$(FAST_QUERY_TEST) zeus/12811747

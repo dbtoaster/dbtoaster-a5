@@ -1,0 +1,17 @@
+{
+  :path => "test/queries/simple/rs.sql",
+  :datasets => {
+    "standard" => {
+      :toplevels => {
+        "__SQL_SUM_AGGREGATE_2" => {
+          :type => :singleton,
+          :expected => 108
+        },
+        "__SQL_SUM_AGGREGATE_1" => {
+          :type => :singleton,
+          :expected => 156
+        }
+      } 
+    }
+  }
+}
