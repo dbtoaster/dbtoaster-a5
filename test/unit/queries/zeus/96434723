@@ -1,0 +1,15 @@
+{
+  :path => "test/queries/zeus/96434723.sql",
+  :datasets => {
+    "standard" => {
+      :toplevels => {
+        "COUNT" => {
+          :type => :onelevel,
+          :expected => {
+
+          }
+        }
+      } 
+    }
+  }
+}
