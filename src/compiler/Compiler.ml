@@ -307,7 +307,7 @@ let compile_tlqs (db_schema:Schema.t) (history:Heuristics.ds_history_t)
                  (calc_queries:tlq_list_t) : todo_list_t * tlq_list_t =
 	 	
    let todo_lists, toplevel_queries = List.split ( 			
-      if (Debug.active "COMPILE-WITHOUT-TLQ-MAP") then
+      if (Debug.active "EXPRESSIVE-TLQS") then
          List.map ( fun (qname, qexpr) ->
             let qschema = Calculus.schema_of_expr qexpr in
             let optimized_qexpr = CalculusTransforms.optimize_expr qschema 

@@ -25,6 +25,18 @@ let compiler_flags  = ref [];;
 *)
 let set_env k v         = compile_env := StringMap.add k v !compile_env;;
 
+(** 
+   Append to a specific environment variable 
+   @param k The environment variable set
+   @param v A value to append to the list
+*)
+let add_env k v         = 
+   if StringMap.mem k !compile_env
+   then compile_env := StringMap.add k (v::(StringMap.find k !compile_env))
+                                     !compile_env
+   else compile_env := StringMap.add k [v] !compile_env
+;;
+
 (**
    Set the inline compiler flags to the provided value
    @param f The new list of raw compiler flags

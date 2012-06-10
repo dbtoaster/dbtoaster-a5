@@ -79,7 +79,7 @@ let optimizations_by_level =
 let optimizations = 
    ListAsSet.union (ListAsSet.multiunion optimizations_by_level) [
       "IGNORE-DELETES"; "HEURISTICS-ALWAYS-UPDATE"; "HEURISTICS-ALWAYS-REPLACE";
-      "HASH-STRINGS"
+      "HASH-STRINGS"; "EXPRESSIVE-TLQS"
    ]
 let opt_level = ref 2;;
 
@@ -106,6 +106,12 @@ let specs:(Arg.key * Arg.spec * Arg.doc) list  = Arg.align [
    (  "--custom-prefix",
       (Arg.String(FreshVariable.set_prefix)),
       "pfx    Specify a prefix for generated symbols");
+   (  "-I", 
+      (Arg.String(ExternalCompiler.add_env "INCLUDE_HDR")),
+      "dir    Add a directory to the second-stage compiler's include path");
+   (  "-L", 
+      (Arg.String(ExternalCompiler.add_env "INCLUDE_LIB")),
+      "dir    Add a directory to the second-stage compiler's library path");
    (  "-O1",
       (Arg.Unit(fun () -> opt_level := 1)),
       "       Produce less efficient code faster");
@@ -303,12 +309,14 @@ Debug.exec "LOG-M3"     (fun () -> activate_stage StagePrintM3);;
 Debug.exec "LOG-M3DM"   (fun () -> activate_stage StagePrintM3DomainMaintenance);;
 Debug.exec "LOG-K3"     (fun () -> activate_stage StagePrintK3);;
 Debug.exec "LOG-PARSER" (fun () -> let _ = Parsing.set_trace true in ());;
-Debug.exec "DEBUG-DM"   (fun () -> Debug.activate "DEBUG-DM-IVC"; Debug.activate (*"K3-NO-OPTIMIZE"*)"K3-NO-OPTIMIZE-LIFT-UPDATES";
-  Debug.activate "DEBUG-DM-WITH-M3";
+Debug.exec "DEBUG-DM"   (fun () -> 
+      Debug.activate "DEBUG-DM-IVC"; 
+      Debug.activate (*"K3-NO-OPTIMIZE"*)"K3-NO-OPTIMIZE-LIFT-UPDATES";
+      Debug.activate "DEBUG-DM-WITH-M3";
   if not (Debug.active "DEBUG-DM-NO-LEFT") then
-    Debug.activate "DEBUG-DM-LEFT"
+      Debug.activate "DEBUG-DM-LEFT"
   else
-    Debug.activate "M3TOK3-GENERATE-INIT"
+      Debug.activate "M3TOK3-GENERATE-INIT"
 );;
 
 (* If we're compiling to a binary (i.e., the second-stage compiler is being

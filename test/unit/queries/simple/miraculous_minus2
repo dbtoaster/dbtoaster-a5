@@ -1,0 +1,16 @@
+{
+  :path => "test/queries/simple/miraculous_minus2.sql",
+  :datasets => {
+    "standard" => {
+      :toplevels => {
+        "COUNT" => {
+          :type => :onelevel,
+          :expected => {
+            [2] => 2,
+            [4] => 1
+          }
+        }
+      }
+    }
+  }
+}

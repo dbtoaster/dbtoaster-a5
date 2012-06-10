@@ -81,7 +81,7 @@ query: testdatahash
 	@$(FAST_QUERY_TEST) simple/r_ltallagg
 	@$(FAST_QUERY_TEST) simple/r_ltallavg
 	@$(FAST_QUERY_TEST) simple/r_ltalldynamic
-	@$(FAST_QUERY_TEST) simple/r_multinest -d compile-without-tlq-map
+	@$(FAST_QUERY_TEST) simple/r_multinest -d expressive-tlqs
 	@$(FAST_QUERY_TEST) simple/r_natselfjoin
 	@$(FAST_QUERY_TEST) simple/r_nogroupby
 	@$(FAST_QUERY_TEST) simple/r_selectstar
@@ -159,7 +159,7 @@ query: testdatahash
 	@$(FAST_QUERY_TEST) employee/query64a
 	@$(FAST_QUERY_TEST) employee/query65a
 	@$(FAST_QUERY_TEST) tpch3 --dataset tiny
-	@$(FAST_QUERY_TEST) tpch11 --dataset tiny -d COMPILE-WITHOUT-TLQ-MAP
+	@$(FAST_QUERY_TEST) tpch11 --dataset tiny -d expressive-tlqs
 	@$(FAST_QUERY_TEST) tpch17 --dataset tiny
 #	@$(FAST_QUERY_TEST) tpch18 --dataset tiny  # sloooooow
 	@$(FAST_QUERY_TEST) tpch22

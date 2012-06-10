@@ -1,0 +1,15 @@
+{
+  :path => "test/queries/simple/m3k3unable2escalate.sql",
+  :datasets => {
+    "standard" => {
+      :toplevels => {
+        "COUNT" => {
+          :type => :onelevel,
+          :expected => {
+            [1] => 1
+          }
+        }
+      }
+    }
+  }
+}
