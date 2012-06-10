@@ -1,0 +1,7 @@
+CREATE STREAM R(R_A int, R_B int)
+  FROM FILE '../../experiments/data/tiny_r.dat' LINE DELIMITED
+  CSV(fields := ',', schema := 'int,int', eventtype := 'insert');
+
+DECLARE QUERY q := (R(A, B) * {A > 2} * (C ^= 5.0));
+
+
