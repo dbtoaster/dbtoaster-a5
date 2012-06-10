@@ -96,6 +96,9 @@ query: testdatahash
 	@$(FAST_QUERY_TEST) simple/r_sumstar
 	@$(FAST_QUERY_TEST) simple/t_lifttype
 	@$(FAST_QUERY_TEST) simple/inequality_selfjoin
+	@$(FAST_QUERY_TEST) simple/miraculous_minus
+#	@$(FAST_QUERY_TEST) simple/miraculous_minus2 # typechecker error (Yanif)
+	@$(FAST_QUERY_TEST) simple/m3k3unable2escalate
 	@$(FAST_QUERY_TEST) simple/rst
 #	@$(FAST_QUERY_TEST) simple/invalid_schema_fn # typechecker error (Yanif)
 	@$(FAST_QUERY_TEST) zeus/11564068
@@ -156,7 +159,7 @@ query: testdatahash
 	@$(FAST_QUERY_TEST) employee/query64a
 	@$(FAST_QUERY_TEST) employee/query65a
 	@$(FAST_QUERY_TEST) tpch3 --dataset tiny
-#	@$(FAST_QUERY_TEST) tpch11 --dataset tiny  # aaaaaargh
+	@$(FAST_QUERY_TEST) tpch11 --dataset tiny -d COMPILE-WITHOUT-TLQ-MAP
 	@$(FAST_QUERY_TEST) tpch17 --dataset tiny
 #	@$(FAST_QUERY_TEST) tpch18 --dataset tiny  # sloooooow
 	@$(FAST_QUERY_TEST) tpch22

@@ -12,6 +12,24 @@ let test_expr =
    ]
 ;;
 
+let test msg op ret = 
+   log_test ("Variable comparisons ( "^msg^" )")
+      (function true -> "TRUE" | false -> "FALSE")
+      op
+      ret
+in
+   test "Equality with same type"
+      (("A",TInt) = ("A",TInt))  true;
+   (* test "Equality with different type"
+      (("A",TInt) = ("A",TFloat)) true; *)
+   test "Nonequality with same type"
+      (("A",TInt) <> ("A",TInt)) false;
+   (* test "Nonequality with different type"
+      (("A",TInt) <> ("A",TFloat)) false; *)
+   test "List.mem"
+      (List.mem ("A",TFloat) [var "A"; var "B"; var "C"]) true
+;;
+
 log_test "Stringification"
    (fun x -> x)
    (string_of_expr test_expr)

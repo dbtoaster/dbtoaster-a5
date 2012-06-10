@@ -34,6 +34,15 @@ type const_t =
 (** Basic (typed) variables *)
 type var_t = string * type_t
 
+(** Equality over variables *)
+let var_eq ((a,_):var_t) ((b,_):var_t) = (a = b)
+
+(** Inequality over variables *)
+let var_neq ((a,_):var_t) ((b,_):var_t) = (a <> b)
+
+(** Membership testing *)
+let mem_var ((a,_):var_t) = List.find (fun (b,_) -> a = b)
+
 (**** Basic Operations ****)
 (** 
    Compute the type of a given constant
@@ -269,6 +278,16 @@ let escalate_type ?(opname="<op>") (a:type_t) (b:type_t): type_t =
       | _ -> failwith ("Can not compute type of "^(string_of_type a)^" "^
                        opname^" "^(string_of_type b))
    end
+
+(**
+   Given two types, determine if the first may be escalated into the second
+   @param from_type  The source type
+   @param to_type    The destination type
+   @return true if [from_type] escalates safely to [to_type]
+*)
+let can_escalate_type (from_type:type_t) (to_type:type_t): bool =
+   try (escalate_type from_type to_type) = to_type
+   with Failure(_) -> false
 
 (**
    Given a list of types, return the "greatest" (as [escalate_type])

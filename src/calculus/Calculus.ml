@@ -576,3 +576,23 @@ let rec cmp_exprs ?(cmp_opts:CalcRing.cmp_opt_t list =
          | (_,_) -> None
       end
    ) e1 e2
+
+(** 
+   The full name of a variable includes its type.  That is, a variable with the
+   same string name but different types will be treated as different variables.
+   
+   This can be a bit confusing, so in order to ameliorate this confusion, we 
+   have this handy dandy method that will raise an error if the same variable
+   name appears twice in the expression. 
+*)
+let sanity_check_variable_names expr =
+   let vars = all_vars expr in
+   let var_names = ListExtras.reduce_assoc vars in
+      List.iter (fun (vn, vtypes) ->
+         if List.length vtypes > 1 then
+            bail_out expr (
+               "Variable name sanity check failed.  Variable "^vn^
+               " appears with types: "^
+               (ListExtras.ocaml_of_list string_of_type vtypes)
+            )
+      ) var_names
