@@ -3,4 +3,5 @@ CREATE STREAM R(R_A int, R_B int)
   CSV(fields := ',', schema := 'int,int', eventtype := 'insert');
 
 DECLARE QUERY q := AggSum([], (C ^= 0) * {C > 0});
+DECLARE QUERY q := AggSum([], (C ^= 0) * {C:int > 0});
 
