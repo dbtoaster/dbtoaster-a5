@@ -52,7 +52,7 @@ bigquery:	testdatahash
 	@$(QUERY_TEST) axfinder
 	@$(QUERY_TEST) pricespread
 	@$(QUERY_TEST) brokerspread
-#	@$(QUERY_TEST) tpch11 -d K3-NO-OPTIMIZE #results incorrect
+	@$(QUERY_TEST) tpch11 -d expressive-tlqs
 	@$(QUERY_TEST) tpch17
 	@$(QUERY_TEST) tpch18
 	@$(QUERY_TEST) tpch22 
@@ -99,19 +99,20 @@ query: testdatahash
 	@$(FAST_QUERY_TEST) simple/miraculous_minus
 #	@$(FAST_QUERY_TEST) simple/miraculous_minus2 # typechecker error (Yanif)
 	@$(FAST_QUERY_TEST) simple/m3k3unable2escalate
+	@$(FAST_QUERY_TEST) simple/r_sumoutsideofagg -d expressive-tlqs
 	@$(FAST_QUERY_TEST) simple/rst
 #	@$(FAST_QUERY_TEST) simple/invalid_schema_fn # typechecker error (Yanif)
 	@$(FAST_QUERY_TEST) zeus/11564068
 	@$(FAST_QUERY_TEST) zeus/12811747
 	@$(FAST_QUERY_TEST) zeus/37494577
 #	@$(FAST_QUERY_TEST) zeus/39765730  # typechecker error (Yanif)
-#	@$(FAST_QUERY_TEST) zeus/48183500  # no test file yet
-#	@$(FAST_QUERY_TEST) zeus/52548748  # no test file yet
-#	@$(FAST_QUERY_TEST) zeus/59977251  # no test file yet
-#	@$(FAST_QUERY_TEST) zeus/75453299  # no test file yet
-#	@$(FAST_QUERY_TEST) zeus/94384934  # no test file yet
-#	@$(FAST_QUERY_TEST) zeus/95497049  # no test file yet
-#	@$(FAST_QUERY_TEST) zeus/96434723  # no test file yet
+	@$(FAST_QUERY_TEST) zeus/48183500
+	@$(FAST_QUERY_TEST) zeus/52548748
+	@$(FAST_QUERY_TEST) zeus/59977251
+	@$(FAST_QUERY_TEST) zeus/75453299
+	@$(FAST_QUERY_TEST) zeus/94384934
+	@$(FAST_QUERY_TEST) zeus/95497049
+	@$(FAST_QUERY_TEST) zeus/96434723
 	@$(FAST_QUERY_TEST) employee/query01
 	@$(FAST_QUERY_TEST) employee/query01a
 	@$(FAST_QUERY_TEST) employee/query02

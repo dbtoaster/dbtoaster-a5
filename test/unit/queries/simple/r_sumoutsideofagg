@@ -1,0 +1,19 @@
+{
+  :path => "test/queries/simple/r_sumoutsideofagg.sql",
+  :datasets => {
+    "standard" => {
+      :toplevels => {
+        "__SQL_EXPRESSION_1" => {
+          :type => :onelevel,
+          :expected => {
+            [1] => 4,
+            [2] => 9,
+            [3] => 7,
+            [4] => 13,
+            [5] => 13,
+          }
+        }
+      }
+    }
+  }
+}

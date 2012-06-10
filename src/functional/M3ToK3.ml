@@ -1100,16 +1100,18 @@ let m3_to_k3 ?(generate_init = false) (m3_program : M3.prog_t) : (K.prog_t) =
 	(* The list of temporary maps required for performing sum operations is *)
 	(* appended to the K3 program schema. *)
 	in
-	let k3_prog_tlqs = 
-	  List.map (fun (name, query) ->
-	     let ((_,_,k3_query_compiled),_) =
-	        calc_to_k3_expr empty_meta ~generate_init:generate_init [] query
-	     in
-	        (name, k3_query_compiled)
-	  ) !m3_prog_tlqs
+	let (k3_prog_tlqs,tlq_sum_maps) = 
+	  List.split (
+        List.map (fun (name, query) ->
+           let ((_,_,k3_query_compiled),(_,tlq_sum_maps)) =
+              calc_to_k3_expr empty_meta ~generate_init:generate_init [] query
+           in
+              ((name, k3_query_compiled), tlq_sum_maps)
+        ) !m3_prog_tlqs
+      )
 	in
 	( k3_database, 
-	  (k3_prog_schema@sum_maps, patterns_map), 
+	  (k3_prog_schema@sum_maps@(List.flatten tlq_sum_maps), patterns_map), 
 	  k3_prog_trigs, 
 	  k3_prog_tlqs 
    )
