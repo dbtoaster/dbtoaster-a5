@@ -1,0 +1,6 @@
+CREATE STREAM R(R_A int, R_B int)
+  FROM FILE '../../experiments/data/tiny_r.dat' LINE DELIMITED
+  CSV(fields := ',', schema := 'int,int', eventtype := 'insert');
+
+DECLARE QUERY q := AggSum([], (C ^= 0) * {C > 0});
+
