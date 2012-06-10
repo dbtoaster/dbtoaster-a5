@@ -6,7 +6,6 @@
 -- 5 -> 256
 
 CREATE STREAM R(A float, B float) 
-  FROM FILE '../../experiments/data/tiny_r.dat' LINE DELIMITED
-  csv (fields := ',', schema := 'float,float', eventtype := 'insert');
+  FROM FILE '../../experiments/data/tiny_r.dat' LINE DELIMITED csv;
 
 SELECT A, SUM(B * (SELECT SUM(r2.A) FROM R r2)) FROM R r1 GROUP BY A

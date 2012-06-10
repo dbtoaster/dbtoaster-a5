@@ -73,13 +73,14 @@ namespace dbtoaster {
              it != end; ++it)
         {
           string ty = copy_range<std::string>(*it);
-          if ( ty == "event" )      r += "e";
-          else if ( ty == "order" ) r += "o";
-          else if ( ty == "int" )   r += "i";
-          else if ( ty == "long" )  r += "l";
-          else if ( ty == "float" ) r += "f";
-          else if ( ty == "date" )  r += "d";
-          else if ( ty == "hash" )  r += "h";
+          if ( ty == "event" )       r += "e";
+          else if ( ty == "order" )  r += "o";
+          else if ( ty == "int" )    r += "i";
+          else if ( ty == "long" )   r += "l";
+          else if ( ty == "float" )  r += "f";
+          else if ( ty == "double" ) r += "f";
+          else if ( ty == "date" )   r += "d";
+          else if ( ty == "hash" )   r += "h";
           else {
             cerr << "invalid csv schema type " << ty << endl;
             r = "";

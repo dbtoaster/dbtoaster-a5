@@ -185,7 +185,9 @@ let tc_fn_app_suffix (rt_f : K.type_t list -> K.type_t) fn_tll sch_tl : K.type_t
 						if v then (v, cnt, tl:: acc)
 						else if (cnt + r) = sch_len then
 							let suffix_tl = List.flatten (tl:: acc) in
-							(sch_tl = suffix_tl, cnt + r,[])
+              let new_v = List.for_all2
+                (fun t1 t2 -> valid_promote t1 t2 = t2) suffix_tl sch_tl
+              in (new_v, cnt + r,[])
 						else (v, cnt + r, tl:: acc))
 			(false,0,[]) rest_rev
 	in

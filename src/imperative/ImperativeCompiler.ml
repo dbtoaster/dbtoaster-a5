@@ -735,10 +735,22 @@ struct
       | MapUpdate -> unit
       | MapValueUpdate -> unit
       | MapElementRemove -> unit
-      | External(_,arg_t,r_t) ->
-        if (List.map host_type arg_types) = (K.types_of_arg arg_t)
-        then Host(r_t)
-        else failwith "invalid external function in imp"
+      | External(id,arg_t,r_t) ->
+        let valid =
+          match arg_t, arg_types with
+          | AVar _, [t] ->
+            (List.map host_type arg_types) = (K.types_of_arg arg_t)
+          
+          | ATuple f_t, [Host(TTuple(x))]
+              when List.length f_t = List.length x ->
+            x = (K.types_of_arg arg_t)
+            
+          | ATuple f_t, x when List.length f_t = List.length x ->
+            (List.map host_type arg_types) = (K.types_of_arg arg_t)
+          | _ -> false
+        in 
+        if valid then Host(r_t)
+        else failwith ("invalid "^id^" external function in imp")
       | Ext _ -> failwith "external function appeared in untyped imp"
     in
     let infer_expr type_env c_opts untyped_e =
@@ -890,13 +902,13 @@ end (* Typing *)
     | TupleElement(idx) -> inl("at_c<"^(string_of_int idx)^">("^a^")")
     | Projection(idx) -> inl("project<"^(string_of_int_list idx)^">("^a^")")
 
-      (* TODO *)
-    | Singleton -> inl("singleton("^a^")")
-    | Combine -> inl("combine("^a^")")
+    (* Singleton and combine operations should not exist after desugaring *)
+    | Singleton -> inl("!!!error!!!singleton("^a^")")
+    | Combine -> inl("!!!error!!!combine("^a^")")
     
-      (* Map operations should not exist after desugaring.
-       * For now we dump out erroneous code to debug locatinos rather than
-       * throwing an exception. *)  
+    (* Map operations should not exist after desugaring.
+     * For now we dump out erroneous code to debug locatinos rather than
+     * throwing an exception. *)  
     | Member -> inl("!!!error!!!"^
       (argi 0)^".find("^
         (mk_tuple (List.tl args))^") != "^(argi 0)^".end()")
@@ -1021,14 +1033,14 @@ end (* Typing *)
               wrap_neg_with_parens 
                  (if r.[(String.length r)-1] = '.' then r^"0" else r)
          | CInt x ->
-              wrap_neg_with_parens (string_of_int x)
+              "static_cast<long>("^(string_of_int x)^")"
          | CString s ->
             if Debug.active "HASH-STRINGS"
             then "static_cast<int>(string_hash(\""^(String.escaped s)^"\"))"
             else "\""^(String.escaped s)^"\""
          | CBool(true) -> "true"
          | CBool(false) -> "false"
-         | CDate(y,m,d) -> wrap_neg_with_parens (string_of_int (y*10000+m*100+d)) (* TODO must be change with appropriate object in c++ *)
+         | CDate(y,m,d) -> "static_cast<long>("^(string_of_int (y*10000+m*100+d))^")" (* TODO must be change with appropriate object in c++ *)
        end)
  
     | Var (_,(v,_)) -> inl(v)
@@ -1156,8 +1168,15 @@ end (* Typing *)
       (List.map (fun ((a,_),ty) -> ty^" "^a) (List.combine args trig_types))
     in  
     let trigger_fn =
+      let is_singleton_block i = match i with
+        | Block(_,[s]) -> true
+        | _ -> false
+      in
       [inl ("void on_"^trig_name^"("^trig_args^")")]@
-      [source_code_of_imp stmts]@[Lines ([""])]
+      (if is_singleton_block stmts then [inl " {"] else [])@
+      [source_code_of_imp stmts]@
+      (if is_singleton_block stmts then [inl "}"] else [])@
+      [Lines ([""])]
     in
     let unwrapper =
       if event = Schema.SystemInitializedEvent then []
@@ -1458,7 +1477,12 @@ end (* Typing *)
   (* Desugar map erase from a global collection *)
   let desugar_map_element_remove env nargs c_t =
     let c_var = List.hd nargs in
-      Expr(unit, Fn(unit, Ext(EraseCollection), [c_var]@(List.tl nargs)))
+    let entry_tuple =
+      let tt = Host(TTuple(
+        List.map (fun e -> host_type (type_of_expr_t e)) (List.tl nargs)))
+      in Tuple(tt, List.tl nargs) 
+    in
+      Expr(unit, Fn(unit, Ext(EraseCollection), [c_var; entry_tuple]))
 
   (** Expression desugaring:
       Imp supports certain forms of syntactic sugar, allowing certain 
@@ -1630,7 +1654,12 @@ end (* Typing *)
             | "/" ->
               let arg = ssc (source_code_of_expr (List.hd nargs))
               in result ci (Fn(ty, Ext(Inline("static_cast<double>(1) / ("^arg^")")), []))
-
+            | "max" | "min" ->
+              begin match nargs with
+                | [Tuple(ft_l, f)] ->
+                  result ci (Fn(ty, Ext(Apply(id)), f))
+                | _ -> result ci (Fn(ty, Ext(Apply(id)), nargs))
+              end
             | _ -> result ci (Fn(ty, Ext(Apply(id)), nargs))
         end
       

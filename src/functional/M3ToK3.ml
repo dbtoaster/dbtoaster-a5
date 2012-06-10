@@ -661,7 +661,11 @@ let rec calc_to_k3_expr meta ?(generate_init = false) theta_vars_el calc :
 						else
 								let gb_fn = project_fn (aggsum_outs_el@[ret_ve]) agg_vars_el in 
 								let gb_aggsum_e = 
-										K.Slice(aggsum_e, k3_expr_to_k3_idType aggsum_outs_el,[]) in
+                  (* 
+										K.Slice(aggsum_e, k3_expr_to_k3_idType aggsum_outs_el,[]) 
+                  *)
+                  aggsum_e
+                in
 								K.GroupByAggregate(agg_fn, init_val ret_ve, gb_fn, gb_aggsum_e)
 				in
 				((agg_vars_el, ret_ve, expr), nm)

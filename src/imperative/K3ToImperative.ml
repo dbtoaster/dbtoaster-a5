@@ -316,31 +316,11 @@ struct
         let e = K3.Project(List.hd ce, projections)
         in Node(metadata, Undecorated(e), cir))
 
+  (* Singletons and combines produce temporaries *)
   let singleton_ir metadata sub_ir =
-    build_code sub_ir
-      (fun eu cir -> match eu with
-        | [sym, elem] ->
-          let e = K3.Singleton(elem)
-          in tag_of_undecorated metadata e cir
-        | _ -> failwith "invalid singleton element expression")
-      (fun ce cir -> 
-        let e = K3.Singleton(List.hd ce)
-        in Node(metadata, Undecorated(e), cir))
+    Node(metadata, Decorated(Singleton), sub_ir)
         
   let combine_ir metadata sub_ir =
-    (*
-    build_code sub_ir
-      (fun lru cir -> match lru with
-        | [(sym1, le); (_, re)] ->
-          let e = K3.Combine(le,re) in tag_of_undecorated metadata e cir
-        | _ -> failwith "invalid combine expressions")
-      (fun ce cir -> match ce with
-        | [le; re] ->
-          let e = K3.Combine(le,re)
-          in Node(metadata, Undecorated(e), cir)
-        | _ -> failwith "invalid combine expressions")
-    *)
-    (* Assume combines produce a temporary *)
     Node(metadata, Decorated(Combine), sub_ir)
 
   let op_ir ?(decorated=false) metadata o sub_ir =
@@ -715,12 +695,6 @@ struct
       | K.Leq(l,r)         -> gc_binop imp_meta Leq  l r
       | K.IfThenElse0(l,r) -> gc_binop imp_meta If0  l r
       | K.Project(e,idx)   -> Fn (imp_meta, Projection(idx), [gc_expr e])
-      | K.Singleton(e)     -> Fn (imp_meta, Singleton, [gc_expr e])
-      
-      (* Combine now produces a temporary
-      | K.Combine(l,r)     -> Fn (imp_meta, Combine, List.map gc_expr [l;r])
-      *)
-      
       | K.Member(m,k)      -> Fn (imp_meta, Member, List.map gc_expr (m::k))
       | K.Lookup(m,k)      -> Fn (imp_meta, Lookup, List.map gc_expr (m::k))
       | K.Slice(m,sch,fe)  ->
@@ -755,7 +729,10 @@ struct
     (* Code generation for tagged nodes *)
     let rec gc_tag meta t cmeta =
       (* Helpers *)
-
+      let demote_collection_element_type c_t e_t = match c_t with
+        | Host(Collection(x)) -> Host(x)
+        | _ -> failwith "invalid k3 collection"
+      in
       let cmetai i = List.nth cmeta i in
       let ciri i = List.assoc (cmetai i) flat_ir in
       let ctagi i = fst (ciri i) in
@@ -789,6 +766,7 @@ struct
             let arg_meta, rem_bindings, arg_decl = arg_f arg (cmetai 1)
             in [pushli 0; arg_meta], rem_bindings, [None; arg_decl]
         
+        | AK.Singleton -> [cmetai 0], [], [decl_f false (cmetai 0)]
         | AK.Combine -> [pushi 0; cmetai 1], [], [None; decl_f false (cmetai 1)]
 
         (* Blocks push down the symbol to the last element *)    
@@ -947,10 +925,6 @@ struct
         | AK.Tuple           -> Some(Tuple(m, cvals))
         | AK.Projection(idx) -> Some(Fn(m, Projection(idx), [cexpri 0]))
 
-        | AK.Singleton  -> Some(Fn(m, Singleton, [cexpri 0]))
-        (* Combine now always produces a temporary
-        | AK.Combine    -> Some(Fn(m, Combine, [cexpri 0; cexpri 1]))
-        *)     
         | AK.Member     -> Some(Fn(m, Member, cvals))
         | AK.Lookup     -> Some(Fn(m, Lookup, cvals))
         | AK.Slice(idx) -> Some(Fn(m, Slice(idx), cvals))
@@ -977,7 +951,16 @@ struct
              Expr(None, BinOp(None, Assign, meta_var, cexpri 1))]),
           Block(None, []))]),
         true
-        
+
+      | AK.Singleton ->
+        let s_var = Var(None, (meta_sym, meta_ty)) in
+        let append_f e = Expr(None, Fn(None, ConcatElement, [s_var; e])) in
+        begin match cimpo 0, cexpro 0 with
+          | Some(i), None -> Some(i@[append_f (cdecli 0)]), true
+          | None, Some(e) -> Some([append_f e]), true
+          | _, _ -> failwith "invalid singleton argument"
+        end
+
       | AK.Combine ->
         let combine_f e = Expr(None, Fn(None, Concat, [cdecli 0; e])) in
         begin match cimpo 1, cexpro 1 with
@@ -1051,11 +1034,15 @@ struct
           meta_used
 
       | Iterate ->
+        let c_t = type_of_meta (cmetai 1) in
         let arg = List.hd args_to_bind in
         let elem, elem_ty, elem_f, decls = match arg with
-            | AVar(id,ty) -> id, (Host ty), true, []
+            | AVar(id,ty) -> 
+              let t = demote_collection_element_type c_t (Host ty)
+              in id, t, true, []
             | ATuple(it_l) ->
-              let t = Host(K.TTuple(List.map snd it_l)) in 
+              let arg_t = Host(K.TTuple(List.map snd it_l)) in
+              let t = demote_collection_element_type c_t arg_t in 
               let x = gensym() in x, t, false, bind_arg arg (Var(None,(x,t)))
         in
         let fn_body = match_ie 0 "invalid iterate function"
@@ -1066,14 +1053,17 @@ struct
             (fun e -> [For(None, ((elem, elem_ty), elem_f), e, loop_body)])), false
 
       | Map | AK.Ext ->
-        (* TODO: in-loop multi-var bindings from collections of tuples *)
+        let c_t = type_of_meta (cmetai 1) in
         let is_ext = match t with | AK.Ext -> true | _ -> false in
         let is_filter = valid_sym_of_meta meta <> None in
         let arg = List.hd args_to_bind in
         let elem, elem_ty, elem_f, elem_decls = match arg with
-            | AVar(id,ty) -> id, Host(ty), true, []
+            | AVar(id,ty) ->
+              let t = demote_collection_element_type c_t (Host ty)
+              in id, t, true, []
             | ATuple(it_l) ->
-              let t = Host(K.TTuple(List.map snd it_l)) in 
+              let arg_t = Host(K.TTuple(List.map snd it_l)) in
+              let t = demote_collection_element_type c_t arg_t in 
               let x = gensym() in 
                Debug.print "LOG-K3-TO-IMP" (fun () -> 
                   "Tuple Types for "^x^": "^
@@ -1140,14 +1130,21 @@ struct
           (if is_ext then (cused 0) else true)
 
       | Aggregate -> 
+        let c_t = type_of_meta (cmetai 2) in 
         let elem, elem_ty, elem_f, decls = match args_to_bind with
-          | [AVar(id,ty)] -> id, (Host ty), true, []
+          | [AVar(id,ty)] ->
+            let t = demote_collection_element_type c_t (Host ty)
+            in id, t, true, []
           | [ATuple(it_l) as arg1] ->
-            let t = Host(K.TTuple(List.map snd it_l)) in 
+            let arg_t = Host(K.TTuple(List.map snd it_l)) in
+            let t = demote_collection_element_type c_t arg_t in  
             let x = gensym() in x, t, false, bind_arg arg1 (Var (None,(x,t)))
-          | [AVar(id,ty); arg2] -> id, (Host ty), true, bind_arg arg2 (cdecli 1)
+          | [AVar(id,ty); arg2] ->
+            let t = demote_collection_element_type c_t (Host ty)
+            in id, t, true, bind_arg arg2 (cdecli 1)
           | [ATuple(it_l) as arg1; arg2] ->
-            let t = Host(K.TTuple(List.map snd it_l)) in
+            let arg_t = Host(K.TTuple(List.map snd it_l)) in
+            let t = demote_collection_element_type c_t arg_t in  
             let x = gensym() in
               x, t, false, (bind_arg arg1 (Var (None,(x,t))))@(bind_arg arg2 (cdecli 1))
           | _ -> failwith "invalid aggregate args"
@@ -1166,10 +1163,14 @@ struct
         Some(pre@[For(None, ((elem, elem_ty), elem_f), ce, loop_body)]@post), true
       
       | GroupByAggregate ->
+        let c_t = type_of_meta (cmetai 3) in 
         let get_elem arg = match arg with
-          | AVar(id, ty) -> id, (Host ty), true, []
+          | AVar(id, ty) ->
+            let t = demote_collection_element_type c_t (Host ty)
+            in id, t, true, []
           | ATuple(it_l) ->
-            let t = Host(K.TTuple(List.map snd it_l)) in 
+            let arg_t = Host(K.TTuple(List.map snd it_l)) in
+            let t = demote_collection_element_type c_t arg_t in  
             let x = gensym() in x, t, false, bind_arg arg (Var (None, (x,t)))
         in
         let eg_decls elem_arg g_arg =
