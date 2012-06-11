@@ -1,0 +1,15 @@
+{
+  :path => "test/queries/simple/rs_selectconstcmp.sql",
+  :datasets => {
+    "standard" => {
+      :toplevels => {
+        "COUNT" => {
+          :type => :onelevel,
+          :expected => {
+            [1] => 10
+          }
+        }
+      }
+    }
+  }
+}

@@ -97,7 +97,7 @@ query: testdatahash
 	@$(FAST_QUERY_TEST) simple/t_lifttype
 	@$(FAST_QUERY_TEST) simple/inequality_selfjoin
 	@$(FAST_QUERY_TEST) simple/miraculous_minus
-#	@$(FAST_QUERY_TEST) simple/miraculous_minus2 # typechecker error (Yanif)
+	@$(FAST_QUERY_TEST) simple/miraculous_minus2
 	@$(FAST_QUERY_TEST) simple/m3k3unable2escalate
 	@$(FAST_QUERY_TEST) simple/r_sumoutsideofagg -d expressive-tlqs
 	@$(FAST_QUERY_TEST) simple/rst
@@ -120,28 +120,26 @@ query: testdatahash
 	@$(FAST_QUERY_TEST) simple/rs_eqineq
 	@$(FAST_QUERY_TEST) simple/rs_ineqonnestedagg
 	@$(FAST_QUERY_TEST) simple/rs_inequality
-#	@$(FAST_QUERY_TEST) simple/rs_ineqwithnestedagg					 # no test script
-#	@$(FAST_QUERY_TEST) simple/rs_joinon										 # no test script
-#	@$(FAST_QUERY_TEST) simple/rs_joinwithnestedagg					 # no test script
-#	@$(FAST_QUERY_TEST) simple/rs_natjoin										 # no test script
-#	@$(FAST_QUERY_TEST) simple/rs_natjoinineq								 # no test script
-#	@$(FAST_QUERY_TEST) simple/rs_natjoinooverlap						 # no test script
-#	@$(FAST_QUERY_TEST) simple/rs_natjoinpartstar						 # no test script
-#	@$(FAST_QUERY_TEST) simple/rs_selectconstcmp						 # no test script
-#	@$(FAST_QUERY_TEST) simple/rs_selectpartstar						 # no test script
-#	@$(FAST_QUERY_TEST) simple/rs_selectstar								 # no test script
-#	@$(FAST_QUERY_TEST) simple/rs_simple										 # no test script
-#	@$(FAST_QUERY_TEST) simple/rs_stramvtable								 # no test script
-#	@$(FAST_QUERY_TEST) simple/rs_stringjoin								 # no test script
-#	@$(FAST_QUERY_TEST) simple/rstar												 # no test script
-#	@$(FAST_QUERY_TEST) simple/rtt_or_with_stars						 # no test script
-#	@$(FAST_QUERY_TEST) simple/singleton_renaming_conflict	 # no test script
-#	@$(FAST_QUERY_TEST) simple/ss_math											 # no test script
-#	@$(FAST_QUERY_TEST) simple/invalid_schema_fn # typechecker error (Yanif)
+	@$(FAST_QUERY_TEST) simple/rs_ineqwithnestedagg
+	@$(FAST_QUERY_TEST) simple/rs_joinon
+	@$(FAST_QUERY_TEST) simple/rs_joinwithnestedagg
+	@$(FAST_QUERY_TEST) simple/rs_natjoin
+	@$(FAST_QUERY_TEST) simple/rs_natjoinineq
+	@$(FAST_QUERY_TEST) simple/rs_natjoinpartstar
+	@$(FAST_QUERY_TEST) simple/rs_selectconstcmp
+	@$(FAST_QUERY_TEST) simple/rs_selectpartstar
+	@$(FAST_QUERY_TEST) simple/rs_selectstar
+	@$(FAST_QUERY_TEST) simple/rs_simple
+	@$(FAST_QUERY_TEST) simple/rs_stringjoin
+	@$(FAST_QUERY_TEST) simple/rstar
+	@$(FAST_QUERY_TEST) simple/rtt_or_with_stars
+	@$(FAST_QUERY_TEST) simple/singleton_renaming_conflict
+	@$(FAST_QUERY_TEST) simple/ss_math
+	@$(FAST_QUERY_TEST) simple/invalid_schema_fn
 	@$(FAST_QUERY_TEST) zeus/11564068
 	@$(FAST_QUERY_TEST) zeus/12811747
 	@$(FAST_QUERY_TEST) zeus/37494577
-#	@$(FAST_QUERY_TEST) zeus/39765730  # typechecker error (Yanif)
+	@$(FAST_QUERY_TEST) zeus/39765730
 	@$(FAST_QUERY_TEST) zeus/48183500
 	@$(FAST_QUERY_TEST) zeus/52548748
 	@$(FAST_QUERY_TEST) zeus/59977251
