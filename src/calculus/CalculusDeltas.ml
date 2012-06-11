@@ -20,27 +20,34 @@ let error expr msg = raise (CalculusException(expr, msg));;
 (* Extract lifts containing Value subexpressions *)
 let extract_lifts scope expr =
    (* Remove toplevel AggSum *)
-   let (gb, sumfree_expr) = match expr with
-      | CalcRing.Val(AggSum(gb, subexpr)) -> (gb, subexpr)
-      | _ -> (snd (schema_of_expr expr), expr)
-   in
-   (* Make Aggsum out of the given expr and gb_vars *)
-   let mk_aggsum gb_vars expr =    
-      let ovars = snd (schema_of_expr expr) in
-      if ListAsSet.subset ovars gb_vars then expr
-      else CalcRing.Val(AggSum(ListAsSet.inter gb_vars ovars, expr))
-   in
+   let schema = snd (C.schema_of_expr expr) in
+   Debug.print "LOG-DELTA-DETAIL" (fun () ->
+      "Extracting lifts from lift delta: "^
+      (ListExtras.ocaml_of_list string_of_var scope)^
+      (ListExtras.ocaml_of_list string_of_var schema)^"\n"^
+      (CalculusPrinter.string_of_expr expr)
+   );
+   (* We need to get all the extractable lifts up into the top-level product.
+      This is achieved by a combination of existing CalculusTransforms: 
+         NestingRewrites pulls lifts up and out of AggSums.
+         FactorizePolynomial pulls lifts up and out of Sums
+         AdvanceLifts assists, and moves lifts up as far left as possible.
+   *)
+   let opt_expr = 
+      CalculusTransforms.optimize_expr ~optimizations:[
+         CalculusTransforms.OptNestingRewrites; 
+         CalculusTransforms.OptAdvanceLifts; 
+         CalculusTransforms.OptFactorizePolynomial
+      ] (scope,schema) expr in
    (* Extract lifts containing Value subexpressions *)
-   let (lhs, rhs) = List.fold_left (fun (lhs, rhs) term ->
+   List.fold_left (fun (lhs, rhs) term ->
       match term with
          | CalcRing.Val(Lift(lift_v, CalcRing.Val(Value(_)))) -> 
             if (commutes ~scope:scope rhs term)
-               && (List.mem lift_v gb)
             then (CalcRing.mk_prod [lhs; term], rhs)
             else (lhs, CalcRing.mk_prod [rhs; term])
          | _ -> (lhs, CalcRing.mk_prod [rhs; term])
-   ) (CalcRing.one, CalcRing.one) (CalcRing.prod_list sumfree_expr) in
-      (lhs, mk_aggsum gb rhs) 
+   ) (CalcRing.one, CalcRing.one) (CalcRing.prod_list opt_expr)
       
 (**
    [delta_of_expr delta_event expr]

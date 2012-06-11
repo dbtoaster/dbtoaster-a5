@@ -25,15 +25,15 @@ test "TPCH17 simple: +Part" (InsertEvent(schema_rel "P" ["dPK"]))
 ;;
 
 test "TPCH17 simple: +Lineitem" (InsertEvent(schema_rel "L" ["dPK"; "dQTY"]))
-   "AggSum([], P(PK) * L(PK, QTY) * (nested ^= AggSum([PK], L(PK, QTY2) * QTY2)))"
+   "AggSum([], P(PK) * L(PK, QTY) * (nested ^= AggSum([PK], L(PK, QTY2) * QTY2)*0.5))"
    "AggSum([], P(PK) * (((PK ^= dPK) * (QTY ^= dQTY) * 
-                  (nested ^= AggSum([PK], L(PK, QTY2) * QTY2)))
+                  (nested ^= AggSum([PK], L(PK, QTY2) * QTY2)*0.5))
             + 
             ((L(PK, QTY) + (PK ^= dPK) * (QTY ^= dQTY)) * 
                (PK ^= dPK) *             (
-               (nested ^= AggSum([PK], L(PK, QTY2) * QTY2) + 
-                          AggSum([], (QTY2 ^= dQTY) * QTY2))
-                - (nested ^= AggSum([PK], L(PK, QTY2) * QTY2))
+               (nested ^= (AggSum([PK], L(PK, QTY2) * QTY2)*0.5) + 
+                          (AggSum([], (QTY2 ^= dQTY)* QTY2) * 0.5))
+                - (nested ^= AggSum([PK], L(PK, QTY2) * QTY2)*0.5)
             ))))"
 ;;
 
@@ -65,8 +65,10 @@ test "TPCH11 dPartsupp" (InsertEvent(schema_rel "PARTSUPP" ["dPK"; "dSK"; "dAQ";
                               S_ACCTBAL, S_COMMENT) *
                    (P_NATIONKEY ^= S_NATIONKEY) * PS_SUPPLYCOST * PS_AVAILQTY)) +
                 AggSum([P_NATIONKEY], 
-                  (PS_PARTKEY ^= dPK) * (PS_SUPPKEY ^= dSK) *
-                  (PS_AVAILQTY ^= dAQ) * (PS_SUPPLYCOST ^= dSC) *              
+                  (PS_PARTKEY ^= dPK) *  
+                  (PS_SUPPKEY ^= dSK) *
+                  (PS_AVAILQTY ^= dAQ) *
+                  (PS_SUPPLYCOST ^= dSC) *
                   (SUPPLIER(PS_SUPPKEY, S_NAME, S_ADDRESS, S_NATIONKEY, S_PHONE,
                            S_ACCTBAL, S_COMMENT) *
                 (P_NATIONKEY ^= S_NATIONKEY) * PS_SUPPLYCOST * PS_AVAILQTY)))) +
@@ -102,8 +104,10 @@ test "TPCH11 dPartsupp" (InsertEvent(schema_rel "PARTSUPP" ["dPK"; "dSK"; "dAQ";
                       (P_NATIONKEY ^= S_NATIONKEY) * PS_SUPPLYCOST *
                       PS_AVAILQTY)) +
                    AggSum([P_NATIONKEY], 
-                   (PS_PARTKEY ^= dPK) * (PS_SUPPKEY ^= dSK) *
-                   (PS_AVAILQTY ^= dAQ) * (PS_SUPPLYCOST ^= dSC) *
+                  (PS_PARTKEY ^= dPK) * 
+                  (PS_SUPPKEY ^= dSK) *
+                  (PS_AVAILQTY ^= dAQ) * 
+                  (PS_SUPPLYCOST ^= dSC) *
                  (SUPPLIER(PS_SUPPKEY, S_NAME, S_ADDRESS, S_NATIONKEY, S_PHONE,
                               S_ACCTBAL, S_COMMENT) *
                    (P_NATIONKEY ^= S_NATIONKEY) * PS_SUPPLYCOST * PS_AVAILQTY)))) +
@@ -124,8 +128,10 @@ test "TPCH11 dPartsupp" (InsertEvent(schema_rel "PARTSUPP" ["dPK"; "dSK"; "dAQ";
                                 S_PHONE, S_ACCTBAL, S_COMMENT) *
                      (P_NATIONKEY ^= S_NATIONKEY) * PS_SUPPLYCOST * PS_AVAILQTY)) +
                   AggSum([P_PARTKEY, P_NATIONKEY], 
-                  (PS_PARTKEY ^= dPK) * (PS_SUPPKEY ^= dSK) *
-                  (PS_AVAILQTY ^= dAQ) * (PS_SUPPLYCOST ^= dSC) *
+                   (PS_SUPPLYCOST ^= dSC) *
+                   (PS_AVAILQTY ^= dAQ) * 
+                   (PS_SUPPKEY ^= dSK) *
+                   (PS_PARTKEY ^= dPK) * 
                   (P_PARTKEY ^= PS_PARTKEY) *
                 (SUPPLIER(PS_SUPPKEY, S_NAME, S_ADDRESS, S_NATIONKEY, S_PHONE,
                              S_ACCTBAL, S_COMMENT) *
@@ -147,12 +153,13 @@ test "TPCH11 dPartsupp" (InsertEvent(schema_rel "PARTSUPP" ["dPK"; "dSK"; "dAQ";
 ;;
 
 test "Employee37 dEmployee dLineitem" 
-   (InsertEvent(schema_rel "LOCATION" ["dLID"; "dRG"]))
+   (InsertEvent("LOCATION", [var "dLID"; "dRG", Types.TString], 
+                  Schema.StreamRel))
    "AggSum([COUNT_DID], 
      ((__sql_inline_agg_1 ^=
         AggSum([D_LOCATION_ID], 
           ((L_REGIONAL_GROUP ^= 'CHICAGO') *
-            LOCATION(D_LOCATION_ID, L_REGIONAL_GROUP)))) *
+            LOCATION(D_LOCATION_ID, L_REGIONAL_GROUP:string)))) *
        DEPARTMENT(COUNT_DID, D_NAME, D_LOCATION_ID) *
        {__sql_inline_agg_1 > 0}))"
    "AggSum([COUNT_DID], 
@@ -160,14 +167,14 @@ test "Employee37 dEmployee dLineitem"
           ((__sql_inline_agg_1 ^=
              (AggSum([D_LOCATION_ID], 
                 ((L_REGIONAL_GROUP ^= 'CHICAGO') *
-                  LOCATION(D_LOCATION_ID, L_REGIONAL_GROUP))) + 
+                  LOCATION(D_LOCATION_ID, L_REGIONAL_GROUP:string))) + 
              (AggSum([],
-               (L_REGIONAL_GROUP ^= 'CHICAGO') * (L_REGIONAL_GROUP ^= dRG))))) +
+               (L_REGIONAL_GROUP ^= dRG:string) * (L_REGIONAL_GROUP ^= 'CHICAGO'))))) +
             (-1 *
               (__sql_inline_agg_1 ^=
                 AggSum([D_LOCATION_ID], 
                   ((L_REGIONAL_GROUP ^= 'CHICAGO') *
-                    LOCATION(D_LOCATION_ID, L_REGIONAL_GROUP)))))) *
+                    LOCATION(D_LOCATION_ID, L_REGIONAL_GROUP:string)))))) *
        DEPARTMENT(COUNT_DID, D_NAME, D_LOCATION_ID) * 
        {__sql_inline_agg_1 > 0}))"
 ;;
