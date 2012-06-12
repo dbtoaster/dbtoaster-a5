@@ -47,9 +47,9 @@ let string_of_event (event:Schema.event_t option) : string =
 let string_of_expr = CalculusPrinter.string_of_expr
 let string_of_vars = ListExtras.string_of_list string_of_var
 
-   let covered_by_scope scope expr = 
-      let expr_ivars = fst (Calculus.schema_of_expr expr) in
-         ListAsSet.diff expr_ivars scope = []
+let covered_by_scope scope expr = 
+   let expr_ivars = fst (Calculus.schema_of_expr expr) in
+      ListAsSet.diff expr_ivars scope = []
 
 
 (** Reorganize a given expression such that: 1) terms depending only on the
@@ -63,25 +63,15 @@ let prepare_expr (scope:var_t list) (expr:expr_t) :
    let expr_terms = CalcRing.prod_list expr in
    
    (* Extract constant terms *)
-   let (const_terms, rest_terms) = fst (
-      List.fold_left (fun ((const_terms, rest_terms), scope_const) term ->
+   let (const_terms, rest_terms) = 
+      List.fold_left (fun (const_terms, rest_terms) term ->
          match CalcRing.get_val term with
-            | Value(_) | Cmp(_, _, _) -> 
-               if covered_by_scope scope_const term
-               then ((const_terms @ [term], rest_terms), scope_const)
-               else ((const_terms, rest_terms @ [term]), scope_const) 
-            | Lift(v, subexpr) -> 
-               if rels_of_expr subexpr <> []
-               then ((const_terms, rest_terms @ [term]), scope_const)
-               else begin
-                   if covered_by_scope scope_const term
-                   then ((const_terms @ [term], rest_terms), 
-                         ListAsSet.union scope_const [v])
-                   else ((const_terms, rest_terms @ [term]), scope_const) 
-               end  
-            | _ -> ((const_terms, rest_terms @ [term]), scope_const)
-      ) (([], []), scope) expr_terms
-   )
+            | Value(_) | Cmp(_, _, _) ->
+               if covered_by_scope scope term
+               then (const_terms @ [term], rest_terms)
+               else (const_terms, rest_terms @ [term])
+            | _ -> (const_terms, rest_terms @ [term])
+      ) ([], []) expr_terms
    in
    (* Reorganize the rest *)
    let (rel_terms, lift_terms, value_terms) = 
@@ -95,6 +85,11 @@ let prepare_expr (scope:var_t list) (expr:expr_t) :
       ) ([], [], []) rest_terms
    in
       (const_terms, rel_terms, lift_terms, value_terms)    
+
+type materialize_opt_t = 
+   | MaterializeAsNewMap
+   | MaterializeUnknown
+
 
 (** Split an expression into three parts: 
     {ol
@@ -110,120 +105,169 @@ let prepare_expr (scope:var_t list) (expr:expr_t) :
 let partition_expr (scope:var_t list) (event:Schema.event_t option) 
                    (expr:expr_t) : (expr_t * expr_t * expr_t * expr_t) =
 
-   let (c_terms, r_terms, l_terms, v_terms) = prepare_expr scope expr in
-   
-   let const_expr = CalcRing.mk_prod c_terms in
-   let (_, const_expr_ovars) = schema_of_expr const_expr in
-   let scope_const = ListAsSet.union scope const_expr_ovars in
+   let (const_terms, rel_terms, lift_terms, value_terms) = 
+      prepare_expr scope expr 
+   in
    
    let ivc_opt_enabled = not (Debug.active "HEURISTICS-IGNORE-IVC-OPTIMIZATION") in
    let inputvar_allowed = Debug.active "HEURISTICS-IGNORE-INPUTVAR-RULE" in
-   let has_root_relation = (r_terms <> []) in    
-    
-   (* Relations + irrelevant lifts, relevant lifts, and the remainder *)
-   let (rel_terms, lift_terms, value_terms) = fst (
-      List.fold_left ( fun ((rels, lifts, vals), scope_rel) term ->
-                
-         match CalcRing.get_val term with
-            | Value(v) ->
-               if covered_by_scope scope_rel term
-               then ((rels @ [term], lifts, vals), scope_rel) 
-               else if inputvar_allowed
-               then begin
-                  (* Sanity check - term should be covered by the scope *)
-                  let scope = ListAsSet.union scope_const scope_rel in
-                  if not (covered_by_scope scope term) 
-                  then failwith "The expression is not covered by the scope" 
-                  else ((rels @ [term], lifts, vals), scope_rel);
-               end
-               else ((rels, lifts, vals @ [term]), scope_rel)
-            | AggSum (v, subexp) ->
-               failwith "AggSums are supposed to be removed."                                                                  
-            | Rel (reln, relv) ->                               
-               ((rels @ [term], lifts, vals), (ListAsSet.union scope_rel relv))
-            | External (_) -> 
-               failwith "Externals are not allowed at this stage." 
-            | Cmp (_, v1, v2) -> 
-               if covered_by_scope scope_rel term
-               then ((rels @ [term], lifts, vals), scope_rel)
-               else if inputvar_allowed 
-               then begin
-                  (* Sanity check - term should be covered by the scope *)
-                  let scope = ListAsSet.union scope_const scope_rel in
-                  if not (covered_by_scope scope term) 
-                  then failwith "The expression is not covered by the scope" 
-                  else ((rels @ [term], lifts, vals), scope_rel)
-               end
-               else ((rels, lifts, vals @ [term]), scope_rel)               
-            | Lift (v, subexpr) ->    
+   let has_root_relation = (rel_terms <> []) in
+   
+   let final_const_expr = CalcRing.mk_prod const_terms in
+      
+   (* Pull in covered lift terms *)
+   let (new_rl_terms, new_l_terms) = 
+   begin 
+      let rel_expr = CalcRing.mk_prod rel_terms in
+
+      (* Sanity check - rel_expr should be covered by the scope *)
+      if not (covered_by_scope scope rel_expr)
+      then failwith "rel_expr is not covered by the scope."
+      else     
+         
+      let rel_expr_ovars = snd (schema_of_expr rel_expr) in         
+                  
+      (* We have to decide on which lift terms should be  *)
+      (* pulled in rel_terms. Here are some examples,     *)
+      (* assuming inputvar_allowed = false                *)
+      (* e.g. R(A,B) * (A ^= 0) --> Yes                   *)
+      (*      R(A,B) * (D ^= 0) * (D ^= {A=C}) --> No     *)
+      (*      R(A,B) * (C ^= 1) * (A ^= C) --> Yes        *)
+      (*      R(A,B) * (C ^= D) * (A ^= C) --> No         *)
+      (* Essentially, we perform graph decomposition over *)
+      (* the lift and value terms. For each term group,   *)
+      (* we make the same decision: either all terms are  *)
+      (* going to be pulled in, or none of them. The      *)
+      (* invariant that we want to preserve is the set of *)
+      (* output variables of the relation term.           *)
+      
+                              
+      (* Preprocessing step to mark those lifts that are *)
+      (* going to be materialized separately for sure    *)
+      let lift_terms_annot = List.map (fun l_term ->
+         match CalcRing.get_val l_term with
+            | Lift(v, subexpr) -> 
+               (* If there is no root relations, materialize *)
+               (* subexp in order to avoid the need for IVC  *)
+               if ivc_opt_enabled && not has_root_relation
+               then (l_term, MaterializeAsNewMap)
+               else
+
                let subexpr_rels = rels_of_expr subexpr in
                if subexpr_rels <> [] then begin
 
-                  (* If there is no root relations, materialize *)
-                  (* subexp in order to avoid the need for IVC  *)
-                  if ivc_opt_enabled && not has_root_relation
-                  then ((rels, lifts @ [term], vals), scope_rel)
-                  else
-                    
                   (* The lift subexpression containing the event *)
-                  (* relation is always materialized separately  *)                      
+                  (* relation is always materialized separately  *)
                   let lift_contains_event_rel =
-                     match extract_event_reln event with 
+                     match extract_event_reln event with
                         | Some(reln) -> List.mem reln subexpr_rels
                         | None -> false
                   in
-                  if lift_contains_event_rel 
-                  then ((rels, lifts @ [term], vals), scope_rel)
-                  else
-                    
-                  (* The lift subexpression contains non-event relations *)   
-                  if covered_by_scope scope_rel subexpr 
-                  then ((rels @ [term], lifts, vals),
-                        ListAsSet.union scope_rel 
-                                        (snd (schema_of_expr term)))
-                  else
-                  
-                  (* The expression has input variables *)
-                  if inputvar_allowed
-                  then begin
-                     (* Sanity check - term should be covered by the scope *)
-                     let scope = ListAsSet.union scope_const scope_rel in
-                     if not (covered_by_scope scope term) 
-                     then failwith "The expression is not covered by the scope" 
-                     else ((rels @ [term], lifts, vals), 
-                           ListAsSet.union scope_rel 
-                                           (snd (schema_of_expr term)))
-                  end
-                  else ((rels, lifts @ [term], vals), scope_rel)                  
+                  if lift_contains_event_rel
+                  then (l_term, MaterializeAsNewMap)
+                  else (l_term, MaterializeUnknown)
                end
+               else (l_term, MaterializeUnknown)            
+            | _ -> failwith "Not a lift term"         
+      ) lift_terms in
+      
+      let value_terms_annot = List.map (fun v_term ->
+         match CalcRing.get_val v_term with
+            | Value(_) | Cmp(_, _, _) -> (v_term, MaterializeUnknown)
+            | _ -> failwith "Not a value term"
+      ) value_terms in
+      
+      (* Graph decomposition over the lift and value terms *)
+      let get_vars term_annot = 
+         let i,o = C.schema_of_expr (fst term_annot) in 
+         ListAsSet.diff (ListAsSet.union i o) scope
+      in     
+      let graph_components = 
+         HyperGraph.connected_unique_components get_vars 
+            (lift_terms_annot @ value_terms_annot)
+      in
+      let get_graph_component term_annot = 
+         List.find (fun terms_annot -> 
+            List.mem term_annot terms_annot
+         ) graph_components
+      in
+      
+      List.fold_left (
+         fun (r_terms, l_terms) (l_term, l_annot) ->
+            match CalcRing.get_val l_term with
+               | Lift(v, subexpr) -> 
+                  if l_annot = MaterializeAsNewMap 
+                  then (rel_terms, l_terms @ [l_term])
+                  else begin 
+                  try 
+                     let graph_cmpnt = get_graph_component (l_term, l_annot) in
+                     if (List.exists (fun (_, annot) -> 
+                            annot = MaterializeAsNewMap) graph_cmpnt) 
+                     then (rel_terms, l_terms @ [l_term])
+                     else begin
+                        let graph_cmpnt_expr =  
+                           CalcRing.mk_prod (List.map fst graph_cmpnt)
+                        in
+                        if covered_by_scope rel_expr_ovars graph_cmpnt_expr ||
+                           inputvar_allowed
+                        then (r_terms @ [l_term], l_terms)
+                        else (r_terms, l_terms @ [l_term])
+                     end   
+                  with Not_found -> failwith "The lift term cannot be found."
+                  end                 
+               | _ -> failwith "Not a lift term"
+      ) (rel_terms, []) lift_terms_annot                  
+   end
+   in
+   
+   let final_lift_expr = CalcRing.mk_prod new_l_terms in
+   
+   (* Pull in covered value terms *)
+   let (new_rlv_terms, new_v_terms) =
+   begin
+      let rel_expr = CalcRing.mk_prod new_rl_terms in
+   
+      (* Sanity check - rel_expr should be covered by the scope *)
+      if not (covered_by_scope scope rel_expr)
+      then failwith "rel_expr is not covered by the scope."
+      else                  
+
+      let rel_lift_expr = CalcRing.mk_prod (new_rl_terms @ new_l_terms) in
+      
+      (* Sanity check - rel_lift_expr should be covered by the scope *)
+      if not (covered_by_scope scope rel_lift_expr)
+      then failwith "rel_lift_expr is not covered by the scope."
+      else
+      
+      let rel_expr_ovars = snd (schema_of_expr rel_expr) in         
+      let rel_lift_expr_ovars = snd (schema_of_expr rel_lift_expr) in
+      
+      List.fold_left (fun (r_terms, v_terms) v_term ->
+         match CalcRing.get_val v_term with
+            | Value(_) | Cmp (_, _, _) ->
+               
+               (* Sanity check - the term should be covered by the scope *)
+               let scope_union = ListAsSet.union scope rel_lift_expr_ovars in
+               if not (covered_by_scope scope_union v_term)
+               then 
+                  (print_endline ("Scope: " ^ (string_of_vars scope_union) ^
+                                  "\nTerm: " ^ (string_of_expr v_term)); 
+                  failwith "The value term is not covered by the scope.")
                else
                
-                  (* The lift subexpression does not contain any relation *)
-                  if covered_by_scope scope_rel subexpr
-                  then ((rels @ [term], lifts, vals), 
-                           ListAsSet.union scope_rel 
-                                           (snd (schema_of_expr term)))
-                  else 
-                     
-                  (* The expression has input variables *)
-                  if inputvar_allowed 
-                  then begin
-                     (* Sanity check - term should be covered by the scope *)
-                     let scope = ListAsSet.union scope_const scope_rel in
-                     if not (covered_by_scope scope term) 
-                     then failwith "The expression is not covered by the scope" 
-                     else ((rels @ [term], lifts, vals), 
-                           ListAsSet.union scope_rel 
-                                           (snd (schema_of_expr term)))
-                  end                  
-                  else ((rels, lifts, vals @ [term]), scope_rel) 
-                                                                                
-      ) (([], [], []), []) (r_terms @ l_terms @ v_terms)
-   ) 
-   in 
-      (const_expr, CalcRing.mk_prod rel_terms, 
-       CalcRing.mk_prod lift_terms, CalcRing.mk_prod value_terms)
-                
+               if covered_by_scope rel_expr_ovars v_term ||
+                  inputvar_allowed
+               then (r_terms @ [v_term], v_terms) 
+               else (r_terms, v_terms @ [v_term])
+            | _ -> failwith "Not a value term."
+      ) (new_rl_terms, []) value_terms
+   end
+   in
+   let final_rel_expr = CalcRing.mk_prod new_rlv_terms in
+   let final_value_expr = CalcRing.mk_prod new_v_terms in
+      (final_const_expr, final_rel_expr, 
+       final_lift_expr,  final_value_expr)
+
 
 (******************************************************************************)
 (** For a given expression and a trigger event, decides whether it is more 
@@ -398,7 +442,7 @@ and materialize_expr (db_schema:Schema.t) (history:ds_history_t)
                      (scope:var_t list) (schema:var_t list) 
                      (expr:expr_t) : (ds_t list * expr_t) =
 
-   (* Divide the expression into three parts *)
+   (* Divide the expression into four parts *)
    let (const_expr, rel_expr, lift_expr, value_expr) = 
       partition_expr scope event expr 
    in        
@@ -437,50 +481,48 @@ and materialize_expr (db_schema:Schema.t) (history:ds_history_t)
       end
    end;
                      
-   (* Extracted lifts are always materialized separately *)   
-   let (todo_lifts, mat_lifts) = 
-      if lift_expr = CalcRing.one then ([], lift_expr) else      
-      let scope_rel = ListAsSet.union scope_const rel_expr_ovars in
-      fst ( 
-	      List.fold_left (fun ((todos, mats), (j, scope_acc)) lift ->
-	         match (CalcRing.get_val lift) with
-	            | Lift(v, subexp) ->
-	               let (todo, mat_expr) = 
-                     materialize ~scope:scope_acc db_schema history 
-	                              (prefix^"_L"^(string_of_int j)^"_") 
-	                              event subexp 
-	               in
-	               let mat_expr_ovars = snd(schema_of_expr mat_expr) in 
-	                  ((todos @ todo, 
-	                    CalcRing.mk_prod [mats; CalcRing.mk_val (Lift(v, mat_expr))]), 
-	                   (j + 1, (ListAsSet.union scope_acc mat_expr_ovars)))
-	            | _  ->
-	               Calculus.bail_out lift "Not a lift expression"
-	      ) (([], CalcRing.one), (1, scope_rel)) 
-	        (CalcRing.prod_list lift_expr)
-      ) 
-   in  
-      
    (* Extended the schema with the input variables of other expressions *) 
    let rel_expected_schema = ListAsSet.inter 
         rel_expr_ovars 
-        (ListAsSet.multiunion [  
-                                 schema;
-(*                                 const_expr_ovars;*)
+        (ListAsSet.multiunion [  schema;
                                  scope_const;
                                  lift_expr_ivars;
-                                 (* handling a special case of type (A ^= 0) * (A ^= R(dB)) *)
-                                 lift_expr_ovars;
-                                 value_expr_ivars;
-                                 value_expr_ovars ]) 
+                                 value_expr_ivars ]) 
    in
-   (* If necessary, add an aggregation to the relation term *)
+   (* If necessary, add an aggregation around the relation term *)
    let agg_rel_expr = 
       if ListAsSet.seteq rel_expr_ovars rel_expected_schema 
       then rel_expr
       else CalcRing.mk_val (AggSum(rel_expected_schema, rel_expr)) 
    in
-  
+
+   (* Extracted lifts are always materialized separately *)   
+   let (todo_lifts, mat_lift_expr) = 
+      if lift_expr = CalcRing.one then ([], lift_expr) else      
+      fst (
+          List.fold_left (fun ((todos, mats), (j, whole_expr)) lift ->
+             match (CalcRing.get_val lift) with
+                | Lift(v, subexpr) ->
+                  let (todo, mat_expr) =
+                     if rels_of_expr subexpr = []
+                     then ([], subexpr)
+                     else begin 
+                        let scope_lift = snd (schema_of_expr whole_expr) in
+                        materialize ~scope:scope_lift db_schema history 
+                                    (prefix^"_L"^(string_of_int j)^"_") 
+                                    event subexpr
+                     end 
+                  in
+                  let mat_lift_expr = CalcRing.mk_val (Lift(v, mat_expr)) in
+                     ((todos @ todo, CalcRing.mk_prod [mats; mat_lift_expr]), 
+                      (j + 1, CalcRing.mk_prod [whole_expr; mat_lift_expr]))
+                | _  ->
+                   Calculus.bail_out lift "Not a lift expression"
+          ) (([], CalcRing.one), (1, agg_rel_expr)) 
+            (CalcRing.prod_list lift_expr) 
+      ) 
+   in  
+      
    Debug.print "LOG-HEURISTICS-DETAIL" (fun () -> 
       "[Heuristics]  Relation AggSum expression: " ^ 
       (string_of_expr agg_rel_expr) ^
@@ -501,7 +543,7 @@ and materialize_expr (db_schema:Schema.t) (history:ds_history_t)
       then (todo_lifts, 
             CalcRing.mk_prod [ const_expr; 
                                agg_rel_expr; 
-                               mat_lifts; 
+                               mat_lift_expr; 
                                value_expr ])
       else        
          (* Try to found an already existing map *)
@@ -543,7 +585,7 @@ and materialize_expr (db_schema:Schema.t) (history:ds_history_t)
                   ([new_ds] @ todo_lifts, 
                    CalcRing.mk_prod [ const_expr; 
                                       new_ds.ds_name; 
-                                      mat_lifts; 
+                                      mat_lift_expr; 
                                       value_expr ])
                          
             | Some(mapping) ->
@@ -557,7 +599,7 @@ and materialize_expr (db_schema:Schema.t) (history:ds_history_t)
                (todo_lifts, 
                 CalcRing.mk_prod [ const_expr; 
                                    (rename_vars mapping found_ds.ds_name); 
-                                   mat_lifts; 
+                                   mat_lift_expr; 
                                    value_expr ])
          end
    in

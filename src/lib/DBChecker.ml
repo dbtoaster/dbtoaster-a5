@@ -128,7 +128,7 @@ struct
          in
          let db_result = I.query !(db_session.client) real_query real_schema in
          let db_hashtbl = to_hashtbl db_result in
-         
+(*         print_hashtbl "========= Expected =========" db_hashtbl;*)
          let target_name = 
             let (targets, _, _, _) = real_query in
             prefix^(fst (List.nth targets ((List.length targets) - 1)))
