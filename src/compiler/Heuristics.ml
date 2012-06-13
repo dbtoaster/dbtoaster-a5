@@ -177,10 +177,14 @@ let partition_expr (scope:var_t list) (event:Schema.event_t option)
             | _ -> failwith "Not a value term"
       ) value_terms in
       
-      (* Graph decomposition over the lift and value terms *)
+      (* Graph decomposition over the lift and value terms *)      
+      let scope_lift =
+         (* Scope is extended with rel_expr_ovars *) 
+         ListAsSet.union scope rel_expr_ovars
+      in
       let get_vars term_annot = 
          let i,o = C.schema_of_expr (fst term_annot) in 
-         ListAsSet.diff (ListAsSet.union i o) scope
+         ListAsSet.diff (ListAsSet.union i o) scope_lift
       in     
       let graph_components = 
          HyperGraph.connected_unique_components get_vars 
@@ -487,6 +491,9 @@ and materialize_expr (db_schema:Schema.t) (history:ds_history_t)
         (ListAsSet.multiunion [  schema;
                                  scope_const;
                                  lift_expr_ivars;
+                                 (* e.g. ON +S(dA)     *)
+                                 (* R(A) * (C ^= S(A)) *)
+                                 lift_expr_ovars;
                                  value_expr_ivars ]) 
    in
    (* If necessary, add an aggregation around the relation term *)

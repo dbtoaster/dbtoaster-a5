@@ -17,9 +17,11 @@ def results_file(path, delim = /,/)
     map do |l|
       k = l.split(delim).map { |i| 
         case i 
+            when /([0-9]+)\-([0-9]+)\-([0-9]+)/ then $1.to_i*10000+$2.to_i*100+$3.to_i;
             when /[\-\+]?[0-9]+\.[0-9]*e?[\-\+]?[0-9]*/ then i.to_f;
+            when /[a-zA-Z][a-zA-Z0-9_# ]*/ then i;
             when /[\-\+]?[0-9]+/ then i.to_i;
-            when /[a-zA-Z][a-zA-Z0-9_ ]*/ then i;
+            else i
         end 
       }
       [k, k.pop];

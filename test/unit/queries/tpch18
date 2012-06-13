@@ -11,7 +11,7 @@
     },
     
     "tiny" => {
-      :subs => [ [/test\/data\/tpch\//, "test/data/tpch_tiny/"] ],
+      :subs => [ [/data\/tpch\//, "data/tpch_tiny/"] ],
       :toplevels => {
         "QUERY18" => {
           :type => :onelevel,
