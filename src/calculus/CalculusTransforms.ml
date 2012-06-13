@@ -502,7 +502,9 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
    in
    let rec rcr (scope:var_t list) (schema:var_t list) (expr:C.expr_t):C.expr_t =
       Debug.print "LOG-UNIFY-LIFTS" (fun () ->
-         "Attempting to unify lifts in: \n"^
+         "Attempting to unify lifts in: "^
+         (ListExtras.ocaml_of_list string_of_var scope)^
+         (ListExtras.ocaml_of_list string_of_var schema)^"\n"^
          (CalculusPrinter.string_of_expr expr)
       );
       begin match expr with 

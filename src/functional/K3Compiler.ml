@@ -34,7 +34,7 @@ let rec compile_k3_expr e =
 
     | K.IfThenElse0(cond,v) -> compile_op ifthenelse0_op cond v
     
-    | K.Comment(c, cexp) -> rcr cexp
+    | K.Comment(c, cexp) -> comment ~expr:(debug e) c (rcr cexp)
 
     | K.IfThenElse(p,t,e) -> ifthenelse ~expr:(debug e) (rcr p) (rcr t) (rcr e)
 

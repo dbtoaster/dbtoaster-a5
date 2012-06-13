@@ -19,6 +19,7 @@ FILES=\
 	src/calculus/Calculus\
 	src/calculus/CalculusPrinter\
 	src/calculus/CalculusTransforms\
+	src/calculus/CalculusDomains\
 	src/calculus/CalculusDeltas\
 	src/calculus/CalculusDecomposition\
 	src/calculus/SqlToCalculus\
@@ -28,8 +29,8 @@ FILES=\
 	src/compiler/Heuristics\
 	src/compiler/Compiler\
 	src/maps/M3\
-	src/maps/Patterns\
 	src/maps/M3DM\
+	src/maps/Patterns\
 	src/functional/K3\
 	src/functional/K3Typechecker\
 	src/functional/M3ToK3\
@@ -141,6 +142,9 @@ states: $(patsubst %,%.states,$(PARSERS))
 test: bin/dbtoaster_top bin/dbtoaster
 	@make -C test all
 
+localtest: bin/dbtoaster_top
+	@make -C test local
+
 querytest: bin/dbtoaster
 	@make -C test query bigquery
 	
@@ -228,4 +232,4 @@ distclean: clean
 #################################################
 
 .PHONY: all clean distclean test states doc runtimelibs fast querytest queries\
-        versioncheck
+        versioncheck localtest

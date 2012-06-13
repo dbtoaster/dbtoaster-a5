@@ -320,6 +320,8 @@ struct
   let block ?(expr = None) (stmts:code_t list) : code_t =
     (make_list ~parens:("{","}") ~sep:"; " (List.map (fun (s,_) -> s) stmts),
       if (List.length stmts) < 1 then Unit else (snd (List.hd (List.rev stmts))))
+   
+  let comment ?(expr = None) (comment:string) (stmt:code_t) : code_t = stmt
 
   let wrap_function argt fnt f: string = 
     match fnt with

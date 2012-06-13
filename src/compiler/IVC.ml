@@ -118,6 +118,13 @@ let needs_runtime_ivc (table_rels:Schema.rel_t list) (expr:expr_t):
                       bool =
    let table_names = List.map Schema.name_of_rel table_rels in
    let (var_provenance,val_provenance) =  Provenance.provenance_of_expr expr in
+   Debug.print "LOG-IVC-TEST" (fun () ->
+      "Provenance for: \n"^(CalculusPrinter.string_of_expr expr)^"\n is: \n"^
+      "[value] -> "^(Provenance.string_of_provenance val_provenance)^
+      (ListExtras.string_of_list ~sep:"" (fun ((vn,_),p) ->
+         "\n"^vn^" -> "^(Provenance.string_of_provenance p)
+         ) var_provenance)
+   );
    let for_inline_or_table_influence = (function 
       | RelSource(rn) -> (List.mem rn table_names)
       | InlineSource -> true
@@ -146,13 +153,17 @@ let derive_initializer ?(scope = [])
    let optimized_expr = (CalculusTransforms.optimize_expr
                               (Calculus.schema_of_expr expr) expr)
    in
-   Debug.print "LOG-DERIVE-INITIALIZER" (fun () ->
+   Debug.print "LOG-IVC-DERIVATION" (fun () ->
       "[Initializer] Input is (scope: "^(ListExtras.ocaml_of_list fst scope)^
       "): "^(CalculusPrinter.string_of_expr optimized_expr)
    );
-   let init_expr =
-      Calculus.rewrite_leaves ~scope:scope (fun lf_scope lf ->
-         Debug.print "LOG-DERIVE-INITIALIZER" (fun () ->
+   let rec rcr curr_expr = 
+      Calculus.fold 
+         (fun _ -> CalcRing.mk_sum) 
+         (fun _ -> CalcRing.mk_prod) 
+         (fun _ -> CalcRing.mk_neg)
+         (fun _ lf ->
+         Debug.print "LOG-IVC-DERIVATION" (fun () ->
             "[Initializer] Deriving Initializer for : "^(string_of_leaf lf)
          );
          match lf with
@@ -160,7 +171,8 @@ let derive_initializer ?(scope = [])
             if List.mem rn table_names
             then CalcRing.mk_val (Rel(rn,rv))
             else CalcRing.zero
-         | AggSum(gb_vars, subexp) ->
+         | AggSum(gb_vars, original_subexp) ->
+            let subexp = rcr original_subexp in
             (* If the subexpression is zero, then the aggsum is zero *)
             if subexp = CalcRing.zero then CalcRing.zero else
            
@@ -183,9 +195,27 @@ let derive_initializer ?(scope = [])
                                                             subexp_ovars,
                                             subexp))
                else CalcRing.zero
+
+         | Lift(v, original_subexp) ->
+            let (_,original_ovars) = Calculus.schema_of_expr original_subexp in
+            let subexp = rcr original_subexp in
+            let (_,new_ovars) = Calculus.schema_of_expr subexp in
+            Debug.print "LOG-IVC-DERIVATION" (fun () ->
+               "IVC For Lift into "^(string_of_var v)^" went from: \n"^
+               (CalculusPrinter.string_of_expr original_subexp)^"\nto: \n"^
+               (CalculusPrinter.string_of_expr subexp)^"\n ovars:"^
+               (ListExtras.ocaml_of_list string_of_var original_ovars)^"->"^
+               (ListExtras.ocaml_of_list string_of_var new_ovars)
+            );
+               if ListAsSet.diff original_ovars new_ovars <> [] 
+                  then CalcRing.zero
+                  else CalcRing.mk_val (Lift(v, subexp))
+
          | _ -> CalcRing.mk_val lf
-      ) (CalculusTransforms.optimize_expr (Calculus.schema_of_expr expr) expr)
+      ) (CalculusTransforms.optimize_expr (Calculus.schema_of_expr curr_expr) 
+                                          curr_expr)
    in
+   let init_expr = rcr expr in
       (* It's possible that a zero will narrow the schema of an expression
          without zeroing out the entire expression thanks to a lift.  We need
          to detect this here, rather than above, since we don't have schema
@@ -194,15 +224,15 @@ let derive_initializer ?(scope = [])
       if ListAsSet.diff (snd (Calculus.schema_of_expr expr))
                         (snd (Calculus.schema_of_expr init_expr)) <> []
       then (
-         Debug.print "LOG-DERIVE-INITIALIZER" (fun () ->
+         Debug.print "LOG-IVC-DERIVATION" (fun () ->
             "[Initializer] Initializer is zero");
          CalcRing.zero
       ) else (
-         Debug.print "LOG-DERIVE-INITIALIZER" (fun () ->
+         Debug.print "LOG-IVC-DERIVATION" (fun () ->
             "[Initializer] Initializer is "^
                (CalculusPrinter.string_of_expr init_expr)
          );
-         if (Debug.active "IVC-OPTIMIZE-EXPR") then
+         if (Debug.active "IVC-IVC-DERIVATION") then
             CalculusTransforms.optimize_expr (Calculus.schema_of_expr init_expr)
                                              init_expr
                         else init_expr

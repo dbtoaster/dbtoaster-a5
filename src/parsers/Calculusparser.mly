@@ -158,10 +158,11 @@ ivcCalculusExpr:
 | LBRACE valueExpr comparison valueExpr RBRACE
                                   { CalcRing.mk_val (Cmp($3,$2,$4)) }
 | LPAREN variable LIFT ivcCalculusExpr RPAREN
-  { let t_var, _ = $2 in 
-   let t_type = if Debug.active "PARSE-CALC-WITH-FLOAT-VARS" then TFloat
-                else Calculus.type_of_expr $4 in
-   let target = (t_var, t_type) in
+  { let (var_n, var_t) = $2 in 
+   let (e_type) = 
+      if Debug.active "PARSE-CALC-WITH-FLOAT-VARS" then var_t
+      else Calculus.type_of_expr $4 in
+   let target = (var_n, e_type) in
     CalcRing.mk_val (Lift(target, $4)) }
 
 comparison:

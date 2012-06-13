@@ -88,7 +88,7 @@ query: testdatahash
 	@$(FAST_QUERY_TEST) simple/r_simplenest
 	@$(FAST_QUERY_TEST) simple/r_smallstar
 	@$(FAST_QUERY_TEST) simple/r_starofnested
-	@$(FAST_QUERY_TEST) simple/r_starofnestedagg
+	@$(FAST_QUERY_TEST) simple/r_starofnestedagg -d expressive-tlqs
 	@$(FAST_QUERY_TEST) simple/r_sumadivsumb
 	@$(FAST_QUERY_TEST) simple/r_sumdivgrp
 	@$(FAST_QUERY_TEST) simple/r_sumnestedintarget
@@ -201,6 +201,10 @@ query: testdatahash
 	@$(FAST_QUERY_TEST) vwap --dataset tiny
 	@$(FAST_QUERY_TEST) brokervariance
 
+local: 
+	@for i in $(LOCAL_UNIT_TESTS); do \
+		if $(UNIT_TEST) $$i; then echo; else exit -1; fi; done
+
 err:
 	@$(ERROR_TEST) ambiguous_names
 	@$(ERROR_TEST) ambiguous_sources bug
@@ -311,4 +315,4 @@ employee: testdatahash
 #	@$(QUERY_TEST) employee/query66   # unsupported IN and INTERSECTION operators
 	@$(QUERY_TEST) employee/query66a
 
-.PHONY: all unit development query bigquery employee err datahash testdatahash
+.PHONY: all unit query bigquery employee err datahash testdatahash local

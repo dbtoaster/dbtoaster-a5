@@ -64,11 +64,14 @@ type stmt_t = {
 (** Stringify a statement.  This string conforms to the grammar of 
     Calculusparser *)
 let string_of_statement (stmt:stmt_t): string = 
+   let expr_string = (CalculusPrinter.string_of_expr (stmt.update_expr)) in
    (string_of_expr (stmt.target_map))^
    (if stmt.update_type = UpdateStmt
       then " += "
       else " := ")^
-   (CalculusPrinter.string_of_expr (stmt.update_expr))
+   (if String.contains expr_string '\n' then "\n  " else "")^
+   expr_string
+   
 
 (******************* Compiled Datastructures *******************)
 (** A compiled datastructure *)

@@ -292,6 +292,16 @@ struct
         Eval(fun th db ->
           let rvs = apply_fn_list th db stmts in List.nth rvs idx)
  
+    let comment ?(expr = None) (comment:string) (stmt:code_t) =
+        if Debug.active "LOG-INTERPRETER-UPDATES"
+        then Eval(fun th db -> 
+           print_endline ("\n/****************************\n"^
+                          comment^
+                          "\n****************************/");
+           (get_eval expr stmt) th db
+         )
+        else stmt
+ 
     (* iter fn, collection -> iteration *)
     let iterate ?(expr = None) iter_fn collection = Eval(fun th db ->
         let function_value = (get_eval expr iter_fn) th db in

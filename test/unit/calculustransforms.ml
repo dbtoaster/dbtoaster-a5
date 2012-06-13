@@ -452,3 +452,21 @@ in
                {-1})) *
             {__sql_inline_agg_1 > 0} *
             AggSum([dLID], DEPARTMENT(COUNT_DID, D_NAME, dLID)))))";
+   test "Zeus Query 96434723 dS" ["COUNT_mSSB"; "COUNT_mSSC"] 
+                                 ["B1"; "C1"; "LB71Y"; "GKKEOF"; "QKKF7PYI"]
+      "(AggSum([B1, C1, LB71Y, GKKEOF], 
+          (COUNTS1(int)[][NPZL_7DKV_B,NPZL_7DKV_C] * (__sql_inline_not_1 ^= 0) *
+            (NPZL_7DKV_B ^= 0) *
+            (LB71Y ^= ((COUNTSS_B * COUNTSS_C) + NPZL_7DKV_B)) *
+            (B1 ^= NPZL_7DKV_B) * (__sql_inline_not_1 ^= {NPZL_7DKV_C = 2}) *
+            (GKKEOF ^= (NPZL_7DKV_C * {(NPZL_7DKV_B * NPZL_7DKV_B)})) *
+            (C1 ^= NPZL_7DKV_C))) *
+         (QKKF7PYI ^= COUNTSS_C))"
+      "((QKKF7PYI ^= COUNTSS_C) *
+        AggSum([B1, C1, LB71Y, GKKEOF], 
+          ((NPZL_7DKV_B ^= 0) * (B1 ^= NPZL_7DKV_B) *
+            (LB71Y ^= ((COUNTSS_B * COUNTSS_C) + NPZL_7DKV_B)) *
+            (__sql_inline_not_1 ^= 0) * COUNTS1(int)[][NPZL_7DKV_B, NPZL_7DKV_C] *
+            (C1 ^= NPZL_7DKV_C) *
+            (GKKEOF ^= (NPZL_7DKV_C * {(NPZL_7DKV_B * NPZL_7DKV_B)})) *
+            (__sql_inline_not_1 ^= {NPZL_7DKV_C = 2}))))"

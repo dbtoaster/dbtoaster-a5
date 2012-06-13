@@ -5,7 +5,7 @@ CREATE STREAM PARTSUPP (
         supplycost   DECIMAL,
         comment      VARCHAR(199)
     )
-  FROM FILE '../../experiments/data/tpch/partsupp.csv'
+  FROM FILE '../../experiments/data/tpch_tiny/partsupp.csv'
   LINE DELIMITED partsupp ();
 
 CREATE STREAM SUPPLIER (
@@ -17,7 +17,7 @@ CREATE STREAM SUPPLIER (
         acctbal      DECIMAL,
         comment      VARCHAR(199)
     )
-  FROM FILE '../../experiments/data/tpch/supplier.csv'
+  FROM FILE '../../experiments/data/tpch_tiny/supplier.csv'
   LINE DELIMITED supplier ();
 
 SELECT p.nationkey, p.partkey, SUM(p.value) AS QUERY11
@@ -27,13 +27,10 @@ FROM
     FROM  partsupp ps, supplier s
     WHERE ps.suppkey = s.suppkey
     GROUP BY ps.partkey, s.nationkey
-  ) p,
-  (
-    SELECT s.nationkey, sum(ps.supplycost * ps.availqty) AS value
+  ) p
+WHERE p.value > (
+    SELECT sum(ps.supplycost * ps.availqty) * 0.001
     FROM  partsupp ps, supplier s
-    WHERE ps.suppkey = s.suppkey
-    GROUP BY s.nationkey
-  ) n
-WHERE p.nationkey = n.nationkey
-  AND p.value > 0.001 * n.value
+    WHERE ps.suppkey = s.suppkey AND s.nationkey = p.nationkey
+  )
 GROUP BY p.nationkey, p.partkey;

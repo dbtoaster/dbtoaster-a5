@@ -1,11 +1,14 @@
 open Schema
 open Calculus
+open Types
 open UnitTest
-
+;;
+Debug.activate "PARSE-CALC-WITH-FLOAT-VARS"
+;;
 let test ?(opt_in=false) ?(opt_out=false) msg event input output = 
    let input_calc = parse_calc input in
    let map_schema = (event_vars event, snd (schema_of_expr input_calc)) in
-   log_test (msg^" : "^(string_of_event event))
+   log_test ("Delta of Expression ( "^msg^" : "^(string_of_event event)^" )")
       CalculusPrinter.string_of_expr
       (( if opt_out 
          then CalculusTransforms.optimize_expr map_schema
@@ -17,14 +20,15 @@ let test ?(opt_in=false) ?(opt_out=false) msg event input output =
          ))
       )
       (parse_calc output)
+
 ;;
 
-test "TPCH17 simple: +Part" (InsertEvent(schema_rel "P" ["dPK"]))
+test "TPCH17 simple" (InsertEvent(schema_rel "P" ["dPK"]))
    "AggSum([], P(PK) * L(PK, QTY) * (nested ^= AggSum([PK], L(PK, QTY2) * QTY2)))"
    "AggSum([], (PK ^= dPK) * L(PK, QTY) * (nested ^= AggSum([PK], L(PK, QTY2) * QTY2)))"
 ;;
 
-test "TPCH17 simple: +Lineitem" (InsertEvent(schema_rel "L" ["dPK"; "dQTY"]))
+test "TPCH17 simple" (InsertEvent(schema_rel "L" ["dPK"; "dQTY"]))
    "AggSum([], P(PK) * L(PK, QTY) * (nested ^= AggSum([PK], L(PK, QTY2) * QTY2)*0.5))"
    "AggSum([], P(PK) * (((PK ^= dPK) * (QTY ^= dQTY) * 
                   (nested ^= AggSum([PK], L(PK, QTY2) * QTY2)*0.5))
@@ -37,7 +41,7 @@ test "TPCH17 simple: +Lineitem" (InsertEvent(schema_rel "L" ["dPK"; "dQTY"]))
             ))))"
 ;;
 
-test "TPCH11 dPartsupp" (InsertEvent(schema_rel "PARTSUPP" ["dPK"; "dSK"; "dAQ"; "dSC"]))
+test "TPCH11" (InsertEvent(schema_rel "PARTSUPP" ["dPK"; "dSK"; "dAQ"; "dSC"]))
    "AggSum([P_NATIONKEY, P_PARTKEY], 
      ((N_VALUE ^=
         AggSum([P_NATIONKEY], 
@@ -152,13 +156,13 @@ test "TPCH11 dPartsupp" (InsertEvent(schema_rel "PARTSUPP" ["dPK"; "dSK"; "dAQ";
          P_VALUE)))"
 ;;
 
-test "Employee37 dEmployee dLineitem" 
+test "Employee37 dEmployee" 
    (InsertEvent("LOCATION", [var "dLID"; "dRG", Types.TString], 
                   Schema.StreamRel))
    "AggSum([COUNT_DID], 
      ((__sql_inline_agg_1 ^=
         AggSum([D_LOCATION_ID], 
-          ((L_REGIONAL_GROUP ^= 'CHICAGO') *
+          ((L_REGIONAL_GROUP:string ^= 'CHICAGO') *
             LOCATION(D_LOCATION_ID, L_REGIONAL_GROUP:string)))) *
        DEPARTMENT(COUNT_DID, D_NAME, D_LOCATION_ID) *
        {__sql_inline_agg_1 > 0}))"
@@ -166,20 +170,20 @@ test "Employee37 dEmployee dLineitem"
      (    (D_LOCATION_ID ^= dLID) *
           ((__sql_inline_agg_1 ^=
              (AggSum([D_LOCATION_ID], 
-                ((L_REGIONAL_GROUP ^= 'CHICAGO') *
+                ((L_REGIONAL_GROUP:string ^= 'CHICAGO') *
                   LOCATION(D_LOCATION_ID, L_REGIONAL_GROUP:string))) + 
              (AggSum([],
-               (L_REGIONAL_GROUP ^= dRG:string) * (L_REGIONAL_GROUP ^= 'CHICAGO'))))) +
+               (L_REGIONAL_GROUP:string ^= dRG:string) * (L_REGIONAL_GROUP:string ^= 'CHICAGO'))))) +
             (-1 *
               (__sql_inline_agg_1 ^=
                 AggSum([D_LOCATION_ID], 
-                  ((L_REGIONAL_GROUP ^= 'CHICAGO') *
+                  ((L_REGIONAL_GROUP:string ^= 'CHICAGO') *
                     LOCATION(D_LOCATION_ID, L_REGIONAL_GROUP:string)))))) *
        DEPARTMENT(COUNT_DID, D_NAME, D_LOCATION_ID) * 
        {__sql_inline_agg_1 > 0}))"
 ;;
 
-test "SumADivB dR"
+test "SumADivB"
    (InsertEvent(schema_rel "R" ["dA"; "dB"]))
    "(AggSum([], (R(R_A, R_B) * R_A)) *
      AggSum([], 
@@ -201,3 +205,4 @@ test "SumADivB dR"
             ) *
          {[/:float](__sql_inline_agg_2)}
       )))"
+;;

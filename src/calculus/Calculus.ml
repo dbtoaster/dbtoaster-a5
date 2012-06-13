@@ -71,6 +71,7 @@ type external_t = CalcRing.expr_t external_leaf_t
     expression is expected to produce. *)
 type schema_t = (var_t list * var_t list)
 
+
 (*** Stringifiers ***)
 (** 
    Generate the (Calculusparser-compatible) string representation of a base
@@ -282,6 +283,8 @@ let rec degree_of_expr (expr:expr_t): int =
          end)
          expr
 
+
+(*** Iteration operations ***)
 (**
    Recursively fold over the elements of a Calculus ring expression.  This is
    equivalent to the behavior of CalcRing.fold, except that the fold functions

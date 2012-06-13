@@ -24,7 +24,7 @@ let showdiff exp_str fnd_str =
             Unix.unlink fnd
          )
        | _ -> ()
-
+;;
 let log_test (title:string) (to_s:'a -> string) 
                   (result:'a) (expected:'a) : unit =
    if result = expected then print_endline (title^": Passed")
@@ -32,8 +32,11 @@ let log_test (title:string) (to_s:'a -> string)
       print_endline (title^": Failed");
       showdiff (to_s expected) (to_s result);
       exit 1
-   );;
-
+   )
+;;
+let log_boolean (title:string) (result:bool) (expected:bool) : unit =
+   log_test title (function true -> "TRUE" | false -> "FALSE") result expected
+;;
 let log_list_test (title:string) (to_s:'a -> string) 
                        (result:'a list) (expected:'a list) : unit =
    if result = expected then print_endline (title^": Passed")

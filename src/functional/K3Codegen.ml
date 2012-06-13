@@ -41,6 +41,9 @@ sig
 
     (* statements -> block *)    
     val block : ?expr:K3.expr_t option -> code_t list -> code_t
+    
+    (* comment string -> nested_expr  *)    
+    val comment : ?expr:K3.expr_t option -> string -> code_t -> code_t
 
     (* iter fn, collection -> iterate *)
     val iterate : ?expr:K3.expr_t option -> code_t -> code_t -> code_t

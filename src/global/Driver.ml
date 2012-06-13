@@ -79,7 +79,7 @@ let optimizations_by_level =
 let optimizations = 
    ListAsSet.union (ListAsSet.multiunion optimizations_by_level) [
       "IGNORE-DELETES"; "HEURISTICS-ALWAYS-UPDATE"; "HEURISTICS-ALWAYS-REPLACE";
-      "HASH-STRINGS"; "EXPRESSIVE-TLQS"
+      "HASH-STRINGS"; "EXPRESSIVE-TLQS"; "COMPILE-WITH-STATIC";
    ]
 let opt_level = ref 2;;
 

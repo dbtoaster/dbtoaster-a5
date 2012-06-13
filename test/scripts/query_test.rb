@@ -11,7 +11,7 @@ Dir.chdir $dbt_path
 
 raise "DBToaster is not compiled" unless (File.exists? $dbt)
 
-def results_file(path, delim = /,/)
+def results_file(path, delim = /,/, reverse = false)
   File.open(path).readlines.
     delete_if { |l| l.chomp == "" }.  
     map do |l|
@@ -25,7 +25,7 @@ def results_file(path, delim = /,/)
         end 
       }
       [k, k.pop];
-    end.to_h
+    end.map { |k,v| if reverse then [k.reverse,v] else [k,v] end }.to_h
 end
 
 class GenericUnitTest

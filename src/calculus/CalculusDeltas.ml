@@ -12,12 +12,13 @@ module C = Calculus
 
 let mk_delta_var = 
    FreshVariable.declare_class "calculus/CalculusDeltas"
-                               "delta"
+                               "delta_exists"
 
 let error expr msg = raise (CalculusException(expr, msg));;
 (**/**)
 
-(* Extract lifts containing Value subexpressions *)
+
+(** Extract lifts containing Value subexpressions *)
 let extract_lifts scope expr =
    (* Remove toplevel AggSum *)
    let schema = snd (C.schema_of_expr expr) in
@@ -122,34 +123,27 @@ let rec delta_of_expr (delta_event:Schema.event_t) (expr:C.expr_t): C.expr_t=
                      statements.  In this case, the optimizations (specifically 
                      unify_lifts) will unnest the lift statements, and 
                      substitute the (now) constant dB in for deltaVar. *)
-
-                  (* Optimize the delta expression *)
-(*                  let delta_term_opt = CalculusTransforms.optimize_expr *)
-(*                        (schema_of_expr delta_term) delta_term          *)
-(*                  in                                                    *)
-                  let delta_term_opt = delta_term in
-                  
                   (* Extract lifts containing Value subexpressions *)
                   let scope = Schema.event_vars delta_event in
                   let (delta_lhs, delta_rhs) =
                      if Debug.active "DUMB-LIFT-DELTAS" then
-                        (CalcRing.one, delta_term_opt)
+                        (CalcRing.one, delta_term)
                      else
-                        extract_lifts scope delta_term_opt
+                        extract_lifts scope delta_term
                   in
-               
-                 CalcRing.mk_prod [
-                    delta_lhs;
-                    CalcRing.mk_sum [
-                       CalcRing.mk_val (
-                          Lift(v, CalcRing.mk_sum [
-                             sub_t;
-                             delta_rhs
-                          ])
-                       );
-                       CalcRing.mk_neg (CalcRing.mk_val (Lift(v, sub_t)))
-                    ]
-                 ]
+                  
+                  CalcRing.mk_prod [
+                     delta_lhs;
+                     CalcRing.mk_sum [
+                        CalcRing.mk_val (
+                           Lift(v, CalcRing.mk_sum [
+                              sub_t;
+                              delta_rhs
+                           ])
+                        );
+                        CalcRing.mk_neg (CalcRing.mk_val (Lift(v, sub_t)))
+                     ]
+                  ]
                )
          (*****************************************) 
       ) expr

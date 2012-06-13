@@ -180,6 +180,14 @@ let identities (theta: ('a, 'a) table_fn_t): ('a list) =
    List.flatten (List.map f theta)
 
 (**
+   Determine if a functional mapping consists entirely of identities.
+   @param theta The functional mapping table
+   @return      True if [theta] is the identity function for its domain.
+*)
+let is_identity (theta: ('a, 'a) table_fn_t): bool =
+   List.length (identities theta) = List.length theta
+
+(**
    Determine if the provided functional mapping has a transitive closure (i.e., 
    if applying the mapping a second time could produce a different mapping).  
    @param theta The functional mapping table

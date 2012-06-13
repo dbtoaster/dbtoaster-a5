@@ -367,16 +367,21 @@ let rec calc_of_query ?(query_name = None)
                                     [source_calc; cond_calc; noagg_calc]
                               )))));
                         (* 1/COUNT *)
-                        CalcRing.mk_val (Value(
-                           ValueRing.mk_val (AFn("/", [
-                              (* Hack to ensure that we don't ever get NAN:
-                                 make sure that the count is always >= 1 *)
-                              ValueRing.mk_val(AFn("max", [
-                                 ValueRing.mk_val(AConst(CInt(1)));
-                                 ValueRing.mk_val(AVar(count_var))
-                              ], TInt))
-                           ], TFloat))
-                        ))
+                        CalcRing.mk_prod [
+                           CalcRing.mk_val (Value(
+                              ValueRing.mk_val (AFn("/", [
+                                 (* Hack to ensure that we don't ever get NAN:
+                                    make sure that the count is always >= 1 *)
+                                 ValueRing.mk_val(AFn("max", [
+                                    Arithmetic.mk_int 1;
+                                    Arithmetic.mk_var count_var
+                                 ], TInt))
+                              ], TFloat))
+                           ));
+                           CalcRing.mk_val (Cmp(Neq, 
+                              Arithmetic.mk_int 0, 
+                              Arithmetic.mk_var count_var))
+                        ]
                      ]
                   ))
             end
@@ -418,15 +423,23 @@ and calc_of_sources (tables:Sql.table_t list)
          then 
             (* For aggregate queries, calc_of_query gives us a list of 
                target name, target_expression pairs, each of which computes the
-               value of one of the aggregate targets.  These aggregates should
-               be lifted into variables and passed further into the expression*)
+               value of one of the aggregate targets.  
+               
+               Ideally, we would just lift the aggregate target into a variable
+               with the appropriate name and be done with it.  
+               
+               However, unlike other situations where we would use lifts, here
+               in order to obey SQL semantics, we need to perform a 
+               domain-restricted lift.  This is a lift that shares the domain of
+               the outer expression.  A utility function for generating such an
+               expression is defined in CalculusDomains.
+               *)
             CalcRing.mk_prod (List.map (fun (tgt_name,subq) ->
-               CalcRing.mk_val (Lift(
-                  var_of_sql_var ((Some(ref_name)),
-                                  tgt_name,
-                                  (C.type_of_expr subq)),
-                  subq
-               ))
+               CalculusDomains.mk_domain_restricted_lift
+                  (var_of_sql_var ((Some(ref_name)),
+                                   tgt_name,
+                                   (C.type_of_expr subq)))
+                  (subq)
             ) (rcr_q q ref_name))
          else
             (* For non-aggregate queries, calc_of_query instead produces a
