@@ -91,8 +91,9 @@ type materialize_opt_t =
    | MaterializeUnknown
 
 
-(** Split an expression into three parts: 
+(** Split an expression into four parts: 
     {ol
+      {li value terms that depends solely on the trigger variables }
       {li base relations, irrelevant lift expressions with respect to the 
           event relation that also contain no input variables, and subexpressions 
           with no input variables (comparisons, variables and constants) }  
@@ -201,13 +202,13 @@ let partition_expr (scope:var_t list) (event:Schema.event_t option)
             match CalcRing.get_val l_term with
                | Lift(v, subexpr) -> 
                   if l_annot = MaterializeAsNewMap 
-                  then (rel_terms, l_terms @ [l_term])
+                  then (r_terms, l_terms @ [l_term])
                   else begin 
                   try 
-                     let graph_cmpnt = get_graph_component (l_term, l_annot) in
+                     let graph_cmpnt = get_graph_component (l_term, l_annot) in                     
                      if (List.exists (fun (_, annot) -> 
                             annot = MaterializeAsNewMap) graph_cmpnt) 
-                     then (rel_terms, l_terms @ [l_term])
+                     then (r_terms, l_terms @ [l_term])
                      else begin
                         let graph_cmpnt_expr =  
                            CalcRing.mk_prod (List.map fst graph_cmpnt)
@@ -312,7 +313,8 @@ let partition_expr (scope:var_t list) (event:Schema.event_t option)
 let should_update (event:Schema.event_t) (expr:expr_t)  : bool =
    
    if (Debug.active "HEURISTICS-ALWAYS-UPDATE") then true
-   else if (Debug.active "HEURISTICS-ALWAYS-REPLACE") then false
+   (* "HEURISTICS-ALWAYS-REPLACE" makes sense only for TLQ. *)
+   (* else if (Debug.active "HEURISTICS-ALWAYS-REPLACE") then false *)
    else
       
    let expr_scope = Schema.event_vars event in
@@ -324,18 +326,25 @@ let should_update (event:Schema.event_t) (expr:expr_t)  : bool =
     
          (* Graph decomposition *)
          let (do_update_graphs, do_replace_graphs) =  
-            List.fold_left ( fun (do_update_graph, do_replace_graph) (subexpr_schema, subexpr) ->
+            List.fold_left ( fun (do_update_graph, do_replace_graph) 
+                                 (subexpr_schema, subexpr) ->
                             
                (* Subexpression optimization *)                    
-               let subexpr_opt = optimize_expr (expr_scope, subexpr_schema) subexpr in
-    
+               let subexpr_opt = 
+                  optimize_expr (expr_scope, subexpr_schema) subexpr 
+               in
                (* Split the expression into four parts *)
-               let (_, rel_exprs, lift_exprs, _) = partition_expr expr_scope (Some(event)) subexpr_opt in
-               let rel_exprs_ovars = snd (schema_of_expr rel_exprs) in
-               (* The next statement assumes that the optimization phase removed all equalities *)
-               let lift_exprs_ovars = snd (schema_of_expr lift_exprs) in
-               let local_update_graph = ((rel_exprs_ovars = []) || (lift_exprs_ovars = []) ||
-                                         ((ListAsSet.inter rel_exprs_ovars lift_exprs_ovars) <> [])) in
+               let (_, rel_expr, lift_expr, _) = 
+                  partition_expr expr_scope (Some(event)) subexpr_opt 
+               in
+               let rel_expr_ovars = snd (schema_of_expr rel_expr) in
+               let lift_expr_ovars = snd (schema_of_expr lift_expr) in
+               (* We assume that all equalities have been removed *)
+               (* by the calculus optimizer*)
+               let local_update_graph = 
+                  ((rel_expr_ovars = []) || (lift_expr_ovars = []) ||
+                   ((ListAsSet.inter rel_expr_ovars lift_expr_ovars) <> [])) 
+               in
                   (do_update_graph || local_update_graph, 
                    do_replace_graph || (not local_update_graph))
             

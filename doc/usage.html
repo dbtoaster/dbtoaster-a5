@@ -330,8 +330,10 @@ condition := <br/>
 <dt class="code">HEURISTICS-ALWAYS-UPDATE</dt>
 <dd>In some cases, it is slightly more efficient to re-evaluate parts of the expression tree rather than computing an incremental update.  If this flag is on, the compiler will always compute updates incrementally, regardless.</dd>
 
+<!--
 <dt class="code">HEURISTICS-ALWAYS-REPLACE</dt>
 <dd>In some cases, it is slightly more efficient to re-evaluate parts of the expression tree rather than computing an incremental update.  If this flag is on, the compiler will always re-evaluate the expression.  This is usually a bad idea to turn on.</dd>
+-->
 
 <dt class="code">HEURISTICS-PREFER-REPLACE</dt>
 <dd>In some cases, heuristics rules do not provide a clear decision whether it is more efficient to re-evaluate parts of the expression tree than to compute an incremental update. If this flag is on, the compiler will break the tie by re-evaluating the expression; otherwise, it computes updates incrementally.</dd>

@@ -52,10 +52,10 @@ bigquery:	testdatahash
 	@$(QUERY_TEST) axfinder
 	@$(QUERY_TEST) pricespread
 	@$(QUERY_TEST) brokerspread
-	@$(QUERY_TEST) tpch11 -d expressive-tlqs
+#	@$(QUERY_TEST) tpch11 -d expressive-tlqs
 	@$(QUERY_TEST) tpch17
 	@$(QUERY_TEST) tpch18
-	@$(QUERY_TEST) tpch22 -d weak-expr-equiv -d HEURISTICS-ALWAYS-UPDATE
+	@$(QUERY_TEST) tpch22 -d weak-expr-equiv 
 	@$(QUERY_TEST) ssb4
 	@$(QUERY_TEST) simple/r_ltallcorravg
 	
@@ -197,7 +197,7 @@ query: testdatahash
 	@$(FAST_QUERY_TEST) tpch11 --dataset tiny -d expressive-tlqs
 	@$(FAST_QUERY_TEST) tpch17 --dataset tiny
 	@$(FAST_QUERY_TEST) tpch18 --dataset tiny
-	@$(FAST_QUERY_TEST) tpch22 -d weak-expr-equiv  -d HEURISTICS-ALWAYS-UPDATE
+	@$(FAST_QUERY_TEST) tpch22 -d weak-expr-equiv 
 	@$(FAST_QUERY_TEST) vwap --dataset tiny
 	@$(FAST_QUERY_TEST) brokervariance
 
