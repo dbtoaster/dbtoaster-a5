@@ -781,6 +781,21 @@ let is_agg_query ((targets,_,_,_):select_t): bool =
    List.exists is_agg_expr (List.map snd targets)
 ;;
 
+let rec push_down_nots (cond:cond_t): cond_t =
+   let rcr = push_down_nots in
+   begin match cond with
+      | Not(Not(c)) -> rcr c
+      | Not(Comparison(e1, cmp, e2)) ->
+         Comparison(e1, inverse_of_cmp cmp, e2)
+      | Not(And(c1,c2)) -> rcr (Or((Not(c1)),(Not(c2))))
+      | Not(Or(c1,c2)) -> rcr (And((Not(c1)),(Not(c2))))
+      | Not(ConstB(c)) -> ConstB(not c)
+      | And(c1,c2) -> And(rcr c1, rcr c2)
+      | Or(c1,c2) -> Or(rcr c1, rcr c2)
+      | _ -> cond
+   end
+
+;;
 (**
    Expand all targets of type * and *.* and something.*.  Does not recur into
    nested select statements.

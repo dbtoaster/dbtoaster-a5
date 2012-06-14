@@ -81,7 +81,7 @@ query: testdatahash
 	@$(FAST_QUERY_TEST) simple/r_ltallagg
 	@$(FAST_QUERY_TEST) simple/r_ltallavg
 	@$(FAST_QUERY_TEST) simple/r_ltalldynamic
-	@$(FAST_QUERY_TEST) simple/r_multinest -d expressive-tlqs
+	@$(FAST_QUERY_TEST) simple/r_multinest -d expressive-tlqs # Correct without expressive-tlqs, but k3 optimization is slooooow
 	@$(FAST_QUERY_TEST) simple/r_natselfjoin
 	@$(FAST_QUERY_TEST) simple/r_nogroupby
 	@$(FAST_QUERY_TEST) simple/r_selectstar
@@ -197,7 +197,7 @@ query: testdatahash
 	@$(FAST_QUERY_TEST) tpch11 --dataset tiny -d expressive-tlqs
 	@$(FAST_QUERY_TEST) tpch17 --dataset tiny
 	@$(FAST_QUERY_TEST) tpch18 --dataset tiny
-	@$(FAST_QUERY_TEST) tpch22 -d weak-expr-equiv 
+	@$(FAST_QUERY_TEST) tpch22
 	@$(FAST_QUERY_TEST) vwap --dataset tiny
 	@$(FAST_QUERY_TEST) brokervariance
 

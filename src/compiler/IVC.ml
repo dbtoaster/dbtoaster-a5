@@ -142,9 +142,18 @@ let needs_runtime_ivc (table_rels:Schema.rel_t list) (expr:expr_t):
       (List.exists (fun (_,v) -> test_provenance for_stream_influence v)
                    var_provenance)
       
-
-
-
+let rec naive_needs_runtime_ivc (table_rels:Schema.rel_t list) (expr:expr_t): 
+                     bool = 
+   let table_names = List.map Schema.name_of_rel table_rels in
+   CalcRing.fold 
+      (List.fold_left (||) false) 
+      (List.fold_left (&&) true) 
+      (fun x -> x)
+      (function 
+         | Rel(rn,rv) -> List.mem rn table_names
+         | AggSum(gb_vars, subexp) -> naive_needs_runtime_ivc table_rels subexp
+         | _ -> true)
+      expr
 
 let derive_initializer ?(scope = [])
                        (table_rels:Schema.rel_t list)

@@ -27,7 +27,7 @@ in
       [];
    test "r_count_of_one -3"
       "(R(R_A, R_B) * (S_A ^= R_A))"
-      (join [rel_source "R"; inline_source])
+      (join [rel_source "R"; inline_source (inline_source (rel_source "R"))])
       [  "R_A", rel_source "R";
          "R_B", rel_source "R";
          "S_A", rel_source "R"];

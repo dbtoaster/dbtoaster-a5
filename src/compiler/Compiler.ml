@@ -16,7 +16,8 @@ open Plan
 
 (******************************************************************************)
 
-type todo_list_t = ds_t list
+type todo_t = ds_t * bool (* bool is true if we can skip TLQ computation *)
+type todo_list_t = todo_t list
 type tlq_list_t = (string * expr_t) list
 
 (******************************************************************************)
@@ -88,7 +89,7 @@ let extract_renamings ((scope,schema):schema_t) (expr:expr_t):
 (******************************************************************************)
 
 let compile_map (db_schema:Schema.t) (history:Heuristics.ds_history_t)
-                (todo:ds_t) : todo_list_t * compiled_ds_t =
+                ((todo,skip_ivc):todo_t) : todo_list_t * compiled_ds_t =
    (* Sanity check: Deltas of non-numeric types don't make sense and it doesn't
       make sense to compile a map that doesn't support deltas of some form. *)
    let (todo_name, todo_ivars, todo_ovars, todo_base_type, _) =
@@ -181,16 +182,22 @@ let compile_map (db_schema:Schema.t) (history:Heuristics.ds_history_t)
             (CalculusPrinter.string_of_expr materialized_delta)
          );
              
-         let todo_ivc = 
-            if (todo_ivars <> []) then None
+         let (ivc_todos,todo_ivc) = 
+            if skip_ivc then ([], None) else
+            if (todo_ivars <> []) then ([], None)
 (*          then failwith "TODO: Implement IVC for maps with ivars."*)
             else if (todo_ovars <> [])
-            then if IVC.needs_runtime_ivc (Schema.table_rels db_schema)
-                                          todo.ds_definition
-                 then (Calculus.bail_out todo.ds_definition
-                       "Unsupported query.  Cannot materialize IVC (yet).")
-                 else None
-            else None
+            then if IVC.naive_needs_runtime_ivc (Schema.table_rels db_schema)
+                                                todo.ds_definition
+                 then  let (ivc_todos, todo_ivc) =
+                          Heuristics.materialize db_schema 
+                                                 history 
+                                                 (map_prefix^"_IVC")
+                                                 (Some(delta_event))
+                                                 todo.ds_definition
+                       in (ivc_todos, Some(todo_ivc))
+                 else ([], None)
+            else ([], None)
          in
              
          Debug.print "LOG-COMPILE-DETAIL" (fun () ->
@@ -200,7 +207,11 @@ let compile_map (db_schema:Schema.t) (history:Heuristics.ds_history_t)
             end
          );
              
-         trigger_todos := new_todos @ !trigger_todos;
+         trigger_todos := 
+            (** The materializer (presently) produces maps guaranteed not to
+                need IVC *)
+            (List.map (fun x -> (x, true)) (ivc_todos @ new_todos)) 
+               @ !trigger_todos;
          triggers      := 
             (delta_event, {
                Plan.target_map = 
@@ -227,7 +238,8 @@ let compile_map (db_schema:Schema.t) (history:Heuristics.ds_history_t)
             "Materialized expr: \n"^
             (CalculusPrinter.string_of_expr materialized_expr)
          );
-         trigger_todos := new_todos @ !trigger_todos;
+         trigger_todos := (List.map (fun x -> (x, true)) new_todos)
+                               @ !trigger_todos;
          triggers      := 
             (delta_event, {
                Plan.target_map = todo.ds_name;
@@ -235,7 +247,7 @@ let compile_map (db_schema:Schema.t) (history:Heuristics.ds_history_t)
                Plan.update_expr = materialized_expr
             }) :: !triggers
       end
-            
+      
       (**************************************)
 
    ) events) stream_rels;
@@ -276,7 +288,7 @@ let compile_map (db_schema:Schema.t) (history:Heuristics.ds_history_t)
          ([], None)
    
    in
-      (((!trigger_todos) @ init_todos), {
+      (((!trigger_todos) @ (List.map (fun x -> (x, true)) init_todos)), {
          description = {
             ds_name = CalcRing.mk_val (External(
                   todo_name, todo_ivars, todo_ovars, todo_type, init_expr
@@ -319,7 +331,7 @@ let compile_tlqs (db_schema:Schema.t) (history:Heuristics.ds_history_t)
             let (todos, mat_expr) = Heuristics.materialize db_schema history
                                                            (qname^"_") None 
                                                            optimized_qexpr in
-               (todos, (qname, mat_expr))
+               (List.map (fun x -> (x, true)) todos, (qname, mat_expr))
          ) calc_queries
       else
          List.map (fun (qname, qexpr) ->
@@ -327,7 +339,7 @@ let compile_tlqs (db_schema:Schema.t) (history:Heuristics.ds_history_t)
             let qtype   = Calculus.type_of_expr qexpr in
             let ds_name = Plan.mk_ds_name qname qschema qtype in
                ( [ { Plan.ds_name = ds_name; 
-                     Plan.ds_definition = qexpr } ], 
+                     Plan.ds_definition = qexpr }, false ], 
                  (qname, ds_name) )
          ) calc_queries
     ) in 
@@ -348,7 +360,9 @@ let compile (db_schema:Schema.t) (calc_queries:tlq_list_t):
    while List.length !todos > 0 do (
       let next_ds = List.hd !todos in todos := List.tl !todos;
       Debug.print "LOG-COMPILE-DETAIL" (fun () ->
-         "Compiling: "^(string_of_ds next_ds)
+         "Compiling: "^
+         (if (snd next_ds) then "(skipping todos)" else "")^
+         (string_of_ds (fst next_ds))
       );
       let new_todos, compiled_ds = 
          compile_map db_schema history next_ds

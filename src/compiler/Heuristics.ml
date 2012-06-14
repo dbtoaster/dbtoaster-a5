@@ -577,7 +577,7 @@ and materialize_expr (db_schema:Schema.t) (history:ds_history_t)
                   if (IVC.needs_runtime_ivc (Schema.table_rels db_schema)
                                              agg_rel_expr)
                   then (Calculus.bail_out agg_rel_expr
-                        "Unsupported query.  Cannot materialize IVC (yet).")
+                     "Unsupported query.  Cannot materialize IVC inline (yet).")
                   else None
                in
                         

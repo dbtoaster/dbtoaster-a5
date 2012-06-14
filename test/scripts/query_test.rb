@@ -249,11 +249,13 @@ class InterpreterUnitTest < GenericUnitTest
        " -d SINGLE-LINE-MAP-OUTPUT"+
        " -r 2>&1";
     IO.popen(cmd, "r") do |qin|
-      @runtime = "unknown"
+      starttime = Time.now;
+      @runtime = "unknown";
       qin.each do |l|
         case l
           when /Processing time: ([0-9]+\.?[0-9]*)(e-?[0-9]+)?/ then 
             @runtime = "#{$1}#{$2}".to_f
+            print "(Compile: #{(Time.now - starttime - @runtime).to_i}s) "
           when /([a-zA-Z0-9_-]+): (.*)$/ then
             query = $1;
             results = $2;
@@ -278,8 +280,6 @@ end
 tests = [];
 $opts = []; 
 $debug_flags = [];
-#$debug_flags = ["DEBUG-DM"];
-#$debug_flags = ["DEBUG-DM", "DEBUG-DM-NO-LEFT"];
 $skip_compile = false;
 $precision = 1e-4;
 $strict = false;

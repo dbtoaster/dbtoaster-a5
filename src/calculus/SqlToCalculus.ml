@@ -470,7 +470,7 @@ and calc_of_condition (tables:Sql.table_t list) (cond:Sql.cond_t):
    let rcr_e e = calc_of_sql_expr tables e in
    let rcr_c c = calc_of_condition tables c in
    let rcr_q q = calc_of_query tables q in
-      begin match cond with
+      begin match Sql.push_down_nots cond with
          | Sql.Comparison(e1,cmp,e2) -> 
             let e1_calc = rcr_e e1 in
             let e2_calc = rcr_e e2 in
@@ -486,8 +486,15 @@ and calc_of_condition (tables:Sql.table_t list) (cond:Sql.cond_t):
                ))
          | Sql.And(c1,c2) -> CalcRing.mk_prod [rcr_c c1; rcr_c c2]
          | Sql.Or(c1,c2)  -> 
+            let rec extract_ors = (function
+               | Sql.Or(inner_c1, inner_c2) -> 
+                  (extract_ors inner_c1)@(extract_ors inner_c1)
+               | c -> [c]
+            ) in
             let (or_val,or_calc) = lift_if_necessary ~t:"or" (
-               CalcRing.mk_sum [rcr_c c1;rcr_c c2]
+               CalcRing.mk_sum (
+                  List.map rcr_c ((extract_ors c1) @ (extract_ors c2))
+               )
             ) in
                (* A little hackery is needed here to handle the case where
                   both c1 and c2 are true; To deal with this, we explicitly 
@@ -520,7 +527,8 @@ and calc_of_condition (tables:Sql.table_t list) (cond:Sql.cond_t):
                ))
             | _ -> (failwith "Nested subqueries must have exactly 1 argument")
             end
-         | Sql.Not(c) ->
+         | Sql.Not(c) -> (* This should never be reached... push_down nots 
+                            should push everything away *)
             let (not_val,not_calc) = lift_if_necessary ~t:"not" (rcr_c c) in
                (* Note that Calculus negation is NOT boolean negation.  We need
                   to swap 0 and not 0 with a comparison *)

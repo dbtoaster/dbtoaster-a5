@@ -513,7 +513,7 @@ let commutes ?(scope = []) (e1:expr_t) (e2:expr_t): bool =
 
 let rec cmp_exprs ?(cmp_opts:CalcRing.cmp_opt_t list = 
                         if Debug.active "WEAK-EXPR-EQUIV" 
-                           then CalcRing.default_cmp_opts else []) 
+                           then [] else CalcRing.default_cmp_opts) 
                    (e1:expr_t) (e2:expr_t):((var_t * var_t) list option) =
    let rcr a b = 
       cmp_exprs ~cmp_opts:cmp_opts a b
