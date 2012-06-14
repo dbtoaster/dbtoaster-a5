@@ -1,3 +1,7 @@
+(**
+  Validation of top-level K3 databases using a DBMS (PostgreSQL). 
+*)
+
 open Database
 open SqlClient
 open Values
@@ -87,9 +91,8 @@ struct
             let schema = get_schema db_session rel_name in
             I.delete !(db_session.client) rel_name schema [tuple]
          | _ -> ()
-(*            print_endline "Unsupported event type."*)
-   
-   
+
+      
    let to_hashtbl (tuples : Types.const_t list list) : hashtbl_t = 
       let hashtbl = Hashtbl.create 10 in      
       List.iter (fun tuple ->
@@ -104,7 +107,29 @@ struct
          print_endline ("["^(ListExtras.string_of_list Types.string_of_const keys) ^ "] -> "^
                         ListExtras.string_of_list Types.string_of_const values)
       ) hashtbl
-    
+   
+   let cmp_hashtbl (hashtbl_a : hashtbl_t) (hashtbl_b : hashtbl_t) : bool =
+      if Hashtbl.length hashtbl_a <> Hashtbl.length hashtbl_b 
+      then false else 
+      try
+	      Hashtbl.iter (fun key_a value_a -> 
+	         let value_b = Hashtbl.find hashtbl_b key_a in
+            if value_a <> value_b then 
+            begin
+               let v_a = List.hd value_a in
+               let v_b = List.hd value_b in
+               let error =
+                  Arithmetic.div2 Types.TFloat  
+                     (Arithmetic.sum v_a (Arithmetic.neg v_b))
+                     (Arithmetic.sum v_a v_b)  
+               in
+               if Arithmetic.cmp_gt error (Types.CFloat(1e-6)) = Types.CBool(true) 
+               then raise Not_found   
+            end
+	      ) hashtbl_a;
+	      true;
+      with Not_found -> false
+  
    let check_result (db_session : db_session_t)
                     (tlq_results : (string * K3Value.t) list) : unit =
       let i = ref 0 in
@@ -128,7 +153,6 @@ struct
          in
          let db_result = I.query !(db_session.client) real_query real_schema in
          let db_hashtbl = to_hashtbl db_result in
-(*         print_hashtbl "========= Expected =========" db_hashtbl;*)
          let target_name = 
             let (targets, _, _, _) = real_query in
             prefix^(fst (List.nth targets ((List.length targets) - 1)))
@@ -141,7 +165,7 @@ struct
                ) in
                
                let k3_hashtbl = K3Value.to_hashtbl k3_result in
-               if (db_hashtbl <> k3_hashtbl) 
+               if (not (cmp_hashtbl db_hashtbl k3_hashtbl)) 
                then begin
                   print_hashtbl "========= Expected =========" db_hashtbl;
                   print_hashtbl "========= Result   =========" k3_hashtbl;

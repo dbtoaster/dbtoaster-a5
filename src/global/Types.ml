@@ -25,11 +25,11 @@ type type_t =
 
 (** Basic Constants *)
 type const_t = 
-   | CBool   of bool       (** Boolean  *)
-   | CInt    of int        (** Integer *)
-   | CFloat  of float      (** Float *)
-   | CString of string     (** String *)
-   | CDate   of int*int*int(** Date *)
+   | CBool   of bool            (** Boolean  *)
+   | CInt    of int             (** Integer *)
+   | CFloat  of float           (** Float *)
+   | CString of string          (** String *)
+   | CDate   of int * int * int (** Date *)
 
 (** Basic (typed) variables *)
 type var_t = string * type_t
@@ -72,7 +72,7 @@ let int_of_const (a:const_t): int =
       | CInt(av)     -> av
       | CFloat(av)   -> int_of_float av
       | CString(av)  -> failwith ("Cannot produce integer of string '"^av^"'")
-      | CDate _ -> failwith ("Cannot produce integer of date")
+      | CDate _      -> failwith ("Cannot produce integer of date")
    end
 
 (**
@@ -89,7 +89,7 @@ let float_of_const (a:const_t): float =
       | CInt(av)     -> float_of_int av
       | CFloat(av)   -> av
       | CString(av)  -> failwith ("Cannot produce float of string '"^av^"'")
-      | CDate _ -> failwith ("Cannot produce float of date")
+      | CDate _      -> failwith ("Cannot produce float of date")
    end	
 
 (**
@@ -102,8 +102,8 @@ let inverse_of_cmp = function
    
 (**
    Parses a string and converts it into corresponding Date constant.
-   @param str   A string
-   @return    The Date value of [str]
+   @param str  A string
+   @return     The Date value of [str]
    @raise Failure If the string does not correspond to any date
 *)
 let parse_date str = 
@@ -180,7 +180,9 @@ let string_of_const (a: const_t): string =
       | CInt(av)     -> string_of_int av
       | CFloat(av)   -> string_of_float av
       | CString(av)  -> av
-      | CDate(y,m,d) -> (string_of_int y)^"-"^(string_of_int m)^"-"^(string_of_int d)
+      | CDate(y,m,d) -> (string_of_int y) ^ "-" ^
+                        (string_of_int m) ^ "-" ^
+                        (string_of_int d)
    end
 
 (**
@@ -197,7 +199,8 @@ let ocaml_of_const (a: const_t): string =
       | CFloat(f)    -> "CInt("^(string_of_float f)^")"
       | CString(s)   -> "CString(\""^s^"\")"
       | CDate(y,m,d) -> "CDate("^(string_of_int y)^","^
-        (string_of_int m)^","^(string_of_int d)^")"
+                                 (string_of_int m)^","^
+                                 (string_of_int d)^")"
    end
 
 (**

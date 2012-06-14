@@ -306,7 +306,7 @@ let string_of_const (const:Types.const_t):string =
      | CInt(av) -> string_of_int av
      | CFloat(av) -> string_of_float av
      | CString(av) -> "'"^av^"'"   
-     | CDate _     -> Types.string_of_const const
+     | CDate _     -> Types.sql_of_const const
 
 (**
    Produce the (Sqlparser-compatible) representation of the specified SQL 

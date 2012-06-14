@@ -31,7 +31,8 @@ module Postgres : Interface = struct
    
    let get ((chan,_):sql_channel_t):string = 
       let data = ref "" in (
-         try 
+         try                
+            let _ = Unix.select [(Unix.descr_of_in_channel chan)] [] [] (-1.0) in
             while true do 
                data := (!data) ^ (input_line chan) ^"\n"
             done
@@ -63,17 +64,19 @@ module Postgres : Interface = struct
       Str.replace_first (Str.regexp "[ ]+$") "" str;;           
 
    let string_of_const (const:Types.const_t):string =
-	    match const with
-         | CBool(true)  -> "1"
-         | CBool(false) -> "0"
-         | CInt(av) -> string_of_int av
-         | CFloat(av) -> string_of_float av
-         | CString(av) -> "'"^av^"'"  
-         | CDate _     -> Types.string_of_const const 
+      match const with
+         | CBool(true)    -> "1"
+         | CBool(false)   -> "0"
+         | CInt(av)       -> string_of_int av
+         | CFloat(av)     -> string_of_float av
+         | CString(av)    -> "'" ^ av ^ "'"  
+         | CDate(y, m, d) -> (string_of_int y) ^ "-" ^
+                             (string_of_int m) ^ "-" ^ 
+                             (string_of_int d)
 	 ;;
 
-   let const_of_string ?(truncate = false) (str:string) 
-                       (const_type:Types.type_t) : Types.const_t =
+   let const_of_string (_str:string) (const_type:Types.type_t) : Types.const_t =
+      let str = trim _str in
       match const_type with
          | TBool -> 
             begin match str with
@@ -107,7 +110,7 @@ module Postgres : Interface = struct
                         ("Invalid month ("^(string_of_int m)^") in date: "^str);                                         
                     if (d > 31) then failwith
                         ("Invalid day ("^(string_of_int d)^") in date: "^str);
-                              CDate(y, m, d)
+                    CDate(y, m, d)
             ) else
                 failwith ("Improperly formatted date: "^str)  
          | TAny | TExternal(_) -> failwith "Unsupported type in Sql client"      
@@ -128,7 +131,8 @@ module Postgres : Interface = struct
          ["-n"; "-q"; "-S"]
       in
       let (in_chan,out_chan) = 
-         Unix.open_process ("psql -t "^(ListExtras.string_of_list ~sep:" " 
+         Unix.open_process ("PGOPTIONS='--client-min-messages=warning' " ^
+                            "psql -tq "^(ListExtras.string_of_list ~sep:" " 
                                                                (fun x -> x)
                                                                full_flags))
       in 
@@ -203,7 +207,6 @@ module Postgres : Interface = struct
             "[SQL client] Querying: " ^ cmd
          );
          put channel cmd;
-         Unix.sleep 1;
          let lines = Str.split (Str.regexp "\n") (get channel) in
          Debug.print "LOG-SQLCLIENT" (fun () ->
             "[SQL client] Query result: \n\t" ^
@@ -215,7 +218,7 @@ module Postgres : Interface = struct
                let fields = Str.split (Str.regexp field_separator) line in 
                tuple_list @ [
                   List.map2 (fun fstr (_, ftype) ->
-                     const_of_string ~truncate:true fstr ftype
+                     const_of_string fstr ftype
                   ) fields schema
                 ]
             end
