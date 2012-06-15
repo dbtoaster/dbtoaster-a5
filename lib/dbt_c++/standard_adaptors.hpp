@@ -84,6 +84,7 @@ namespace dbtoaster {
           else if ( ty == "double" ) r += "f";
           else if ( ty == "date" )   r += "d";
           else if ( ty == "hash" )   r += "h";
+          else if ( ty == "string" ) r += "s";          
           else {
             cerr << "invalid csv schema type " << ty << endl;
             r = "";
@@ -103,7 +104,8 @@ namespace dbtoaster {
             case 'l':
             case 'f':
             case 'd':
-            case 'h': break;
+            case 'h':
+            case 's': break;
             default: valid = false; break;
           }
         }
@@ -147,7 +149,7 @@ namespace dbtoaster {
                 m = atoi(date_fields[1].c_str());
                 d = atoi(date_fields[2].c_str());
                 if ( 0 < m && m < 13 && 0 < d && d <= 31) {
-                  tuple.push_back(y*10000+m*100+d); valid = true;
+                  tuple.push_back(long(y*10000+m*100+d)); valid = true;
                 }
               }
               break;
@@ -160,6 +162,7 @@ namespace dbtoaster {
                   current_order = o;
                 }
                 break;
+            case 's': tuple.push_back(field);   break;
             default: valid = false; break;
           }
           valid = valid && !iss.fail();

@@ -11,7 +11,7 @@ namespace dbtoaster {
     struct fold_hash {
       typedef std::size_t result_type;
       template<class T>
-      std::size_t operator()(const T& arg, std::size_t current) {
+      std::size_t operator()(std::size_t current, const T& arg) {
         boost::hash_combine(current, arg);
         return(current);
       }
