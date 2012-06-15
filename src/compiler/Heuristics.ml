@@ -79,6 +79,9 @@ let prepare_expr (scope:var_t list) (expr:expr_t) :
           match CalcRing.get_val term with
              | Value(_) | Cmp(_, _, _) -> (rels, lifts, values @ [term])
              | Rel (_, _) | External (_) -> (rels @ [term], lifts, values)
+(***** BEGIN EXISTS HACK *****)
+             | Exists(_)
+(***** END EXISTS HACK *****) 
              | Lift (_, _) -> (rels, lifts @ [term], values)                              
              | AggSum (_, _) ->
                 failwith "[prepare_expr] Error: AggSums are supposed to be removed."
@@ -147,7 +150,10 @@ let partition_expr (scope:var_t list) (event:Schema.event_t option)
       (* going to be materialized separately for sure    *)
       let lift_terms_annot = List.map (fun l_term ->
          match CalcRing.get_val l_term with
-            | Lift(v, subexpr) -> 
+(***** BEGIN EXISTS HACK *****)
+            | Exists(subexpr)  
+(***** END EXISTS HACK *****)
+            | Lift(_, subexpr) -> 
                (* If there is no root relations, materialize *)
                (* subexp in order to avoid the need for IVC  *)
                if ivc_opt_enabled && not has_root_relation
@@ -200,7 +206,10 @@ let partition_expr (scope:var_t list) (event:Schema.event_t option)
       List.fold_left (
          fun (r_terms, l_terms) (l_term, l_annot) ->
             match CalcRing.get_val l_term with
-               | Lift(v, subexpr) -> 
+(***** BEGIN EXISTS HACK *****)
+               | Exists(subexpr)  
+(***** END EXISTS HACK *****)
+               | Lift(_, subexpr) -> 
                   if l_annot = MaterializeAsNewMap 
                   then (r_terms, l_terms @ [l_term])
                   else begin 
@@ -518,6 +527,22 @@ and materialize_expr (db_schema:Schema.t) (history:ds_history_t)
       fst (
           List.fold_left (fun ((todos, mats), (j, whole_expr)) lift ->
              match (CalcRing.get_val lift) with
+(***** BEGIN EXISTS HACK *****)
+                | Exists(subexpr) ->
+                  let (todo, mat_expr) =
+                     if rels_of_expr subexpr = []
+                     then ([], subexpr)
+                     else begin 
+                        let scope_lift = snd (schema_of_expr whole_expr) in
+                        materialize ~scope:scope_lift db_schema history 
+                                    (prefix^"_E"^(string_of_int j)^"_") 
+                                    event subexpr
+                     end 
+                  in
+                  let mat_lift_expr = CalcRing.mk_val (Exists(mat_expr)) in
+                     ((todos @ todo, CalcRing.mk_prod [mats; mat_lift_expr]), 
+                      (j + 1, CalcRing.mk_prod [whole_expr; mat_lift_expr])) 
+(***** END EXISTS HACK *****)
                 | Lift(v, subexpr) ->
                   let (todo, mat_expr) =
                      if rels_of_expr subexpr = []
