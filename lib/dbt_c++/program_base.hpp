@@ -12,10 +12,8 @@
 #include <map>
 #include <utility>
 #include <boost/archive/xml_oarchive.hpp>
-#include <boost/archive/text_oarchive.hpp>
-#include <boost/array.hpp>
-#include <boost/chrono.hpp>
-#include <boost/filesystem.hpp>
+
+
 #include <boost/fusion/tuple.hpp>
 #include <boost/fusion/include/fold.hpp>
 #include <boost/lambda/lambda.hpp>
@@ -33,8 +31,7 @@
 
 using namespace ::std;
 using namespace ::boost;
-using namespace ::boost::chrono;
-using namespace ::boost::filesystem;
+
 using namespace ::boost::serialization;
 using namespace ::boost::fusion;
 using namespace ::boost::lambda;

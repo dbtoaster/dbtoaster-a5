@@ -713,11 +713,17 @@ let rec calc_to_k3_expr meta ?(generate_init = false) theta_vars_el calc :
 					 print_endline("Sum output vars: "^K3.string_of_exprs outs_el);
 					error ("M3ToK3: The schema of a sum term should be the same as "^
 								 "the schema of the entire sum."));
+        let new_outs_el, new_e =
+            if (Debug.active "M3TOK3-SUM-WITH-COMBINE") && e_outs_el <> outs_el then
+              outs_el, K.Map( project_fn (e_outs_el@[e_ret_ve]) (outs_el@[e_ret_ve]), e)
+            else 
+              e_outs_el, e
+        in
 				let e_ret_t = type_of_kvar e_ret_ve in
 				let new_ret_t = arithmetic_return_types old_ret_t e_ret_t in
 				let e_txt = (CalculusPrinter.string_of_expr c)
 				in
-				((e_outs_el,e_ret_ve,e,e_txt),new_meta,new_ret_t)
+				((new_outs_el,e_ret_ve,new_e,e_txt),new_meta,new_ret_t)
 			in
 							
 			let nm,ret_t,sum_exprs = 
