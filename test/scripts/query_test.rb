@@ -28,6 +28,10 @@ def results_file(path, delim = /,/, reverse = false)
     end.map { |k,v| if reverse then [k.reverse,v] else [k,v] end }.to_h
 end
 
+def upcast_int_to_float(i)
+  if i.is_a? Integer then i.to_f else i end
+end
+
 class GenericUnitTest
   attr_reader :runtime, :opts;
 
@@ -40,7 +44,19 @@ class GenericUnitTest
     @qpath = qdat[:path];
     
     raise "Invalid dataset" unless qdat[:datasets].has_key? @dataset;
-    @toplevels = qdat[:datasets][@dataset][:toplevels]
+    @toplevels = qdat[:datasets][@dataset][:toplevels].to_a.map do |name,info|
+      info[:expected] =
+        case info[:type]
+          when :singleton then upcast_int_to_float(info[:expected])
+          when :onelevel  then info[:expected].to_a.map do |k,v|
+            [ k.map { |k_elem| upcast_int_to_float(k_elem) }, 
+              upcast_int_to_float(v) ]
+          end.to_h
+        end
+      [name, info]
+    end.to_h
+    @toplevels
+    
     if qdat[:datasets][@dataset].has_key? :subs then    
       qfile = Tempfile.new(["query_test",".sql"]);
       subs = qdat[:datasets][@dataset][:subs]
@@ -65,8 +81,6 @@ class GenericUnitTest
   end
   
   def diff(e, r)
-    r = r.to_f if ((e.is_a? Float) && (r.is_a? Integer));
-    e = e.to_f if ((r.is_a? Float) && (e.is_a? Integer));
     if (e == r)                            then "Same"
     elsif e == nil                         then "Different"
     elsif r == nil                         then "Different"

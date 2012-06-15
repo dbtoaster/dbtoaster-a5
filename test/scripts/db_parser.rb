@@ -4,9 +4,9 @@ class String
   def extract_dbt_value
     case self.chomp
       when /([a-zA-Z][a-zA-Z0-9_# ]*)/ then $1;
-      when / *([0-9]+)\-([0-9]+)\-([0-9]+)/ then $1.to_i*10000+$2.to_i*100+$3.to_i;
+      when / *([0-9]+)\-([0-9]+)\-([0-9]+)/ then ($1.to_i*10000+$2.to_i*100+$3.to_i).to_f;
       when / *([\-\+]?[0-9]+\.[0-9]*e?[\-\+]?[0-9]*)/ then $1.to_f;
-      when / *([\-\+]?[0-9]+)/ then $1.to_i;
+      when / *([\-\+]?[0-9]+)/ then $1.to_f;
       else $1
     end
   end
@@ -55,7 +55,7 @@ class OcamlDB < Hash
             v = contents.to_f;
             v unless v == 0.0;
           when /[\-\+]?[0-9]+/ then
-            v = contents.to_i;
+            v = contents.to_f;
             v unless v == 0;
           else raise "Unknown value type"
         end
