@@ -729,7 +729,7 @@ let rec calc_to_k3_expr meta ?(generate_init = false) theta_vars_el calc :
                error ("M3ToK3: The schema of a sum term should be the same as "^
                          "the schema of the entire sum."));
         let new_outs_el, new_e =
-            if (Debug.active "M3TOK3-SUM-WITH-COMBINE") && e_outs_el <> outs_el then
+            if not (Debug.active "M3TOK3-SUM-WITHOUT-COMBINE") && e_outs_el <> outs_el then
               outs_el, K.Map( project_fn (e_outs_el@[e_ret_ve]) (outs_el@[e_ret_ve]), e)
             else 
               e_outs_el, e
@@ -754,7 +754,7 @@ let rec calc_to_k3_expr meta ?(generate_init = false) theta_vars_el calc :
          let sum_exprs_tl = List.tl sum_exprs in
          
          let sum_result, nm2 = if outs_el <> [] then 
-        (if not (Debug.active "M3TOK3-SUM-WITH-COMBINE") then
+        (if (Debug.active "M3TOK3-SUM-WITHOUT-COMBINE") then
                (* For computing sums between collections we use temporary maps. *)
                (* The operation has 3 steps:*)
                (* 1. Reset the temporary collection. *)

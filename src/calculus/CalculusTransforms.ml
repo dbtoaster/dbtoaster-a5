@@ -265,6 +265,10 @@ let lift_equalities (global_scope:var_t list) (big_expr:C.expr_t): C.expr_t =
             ([], CalcRing.mk_val (AggSum(gb_vars, rcr_merge term)))
          | CalcRing.Val(Lift(v, term)) ->
             ([], CalcRing.mk_val (Lift(v, rcr_merge term)))
+(***** BEGIN EXISTS HACK *****)
+         | CalcRing.Val(Exists(term)) ->
+            ([], CalcRing.mk_val (Exists(rcr_merge term)))
+(***** END EXISTS HACK *****)
          | CalcRing.Val(Cmp(Eq, x, y)) when x = y ->
             (* X = X is a no-op *)
             ([], CalcRing.one)
@@ -278,7 +282,10 @@ let lift_equalities (global_scope:var_t list) (big_expr:C.expr_t): C.expr_t =
          | CalcRing.Val(Cmp(Eq, x, ValueRing.Val(AVar(y))))
                when (Types.can_escalate_type (type_of_value x) (snd y)) ->
             ([UnidirectionalLift(y, x)], CalcRing.one)
-         | _ -> 
+         | CalcRing.Val(Cmp _) 
+         | CalcRing.Val(External _)
+         | CalcRing.Val(Rel _)
+         | CalcRing.Val(Value _) -> 
             ([], expr)
       end
    in

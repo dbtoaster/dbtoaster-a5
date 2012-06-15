@@ -324,7 +324,7 @@ in
 							~env:["A", (T.CFloat(1.));
 										"C", (T.CFloat(3.));"D", (T.CFloat(2.));
 										"E", (T.CFloat(2.));]
-							" R[][A,B] + W[C,C][A,B] - W[D,D][E,B]" 
+							" AggSum([B], R[][A,B] + W[C,C][A,B] - W[D,D][E,B])" 
 							[  [2.], -2.;
 				         [1.], -1.;
 				         [3.], 6.;

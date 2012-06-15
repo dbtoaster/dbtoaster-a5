@@ -659,26 +659,31 @@ if (stage_is_active StageOptimizeK3) then (
       if not (Debug.active "K3-NO-BETA-OPT")
          then optimizations := K3Optimizer.Beta :: !optimizations;
       let (db,(maps,patterns),triggers,tlqs) = !k3_program in
-      k3_program := (
-         db,
-         (maps, patterns),
-         List.map (fun (event, stmts) ->
-            let trigger_vars = Schema.event_vars event in (
-               event, 
-               if not(Debug.active "DEBUG-DM") || trigger_vars = [] then
-                 List.map (
-                   K3Optimizer.optimize ~optimizations:!optimizations
-                   (List.map fst trigger_vars)  
-                 ) stmts
-               else
-                 List.map (
+      try 
+         k3_program := (
+            db,
+            (maps, patterns),
+            List.map (fun (event, stmts) ->
+               let trigger_vars = Schema.event_vars event in (
+                  event, 
+                  if not(Debug.active "DEBUG-DM") || trigger_vars = [] then
+                    List.map (
+                      K3Optimizer.optimize ~optimizations:!optimizations
+                      (List.map fst trigger_vars)  
+                    ) stmts
+                  else
+                    List.map (
                            K3Optimizer.dm_optimize ~optimizations:!optimizations
                              (List.map fst trigger_vars)
                           ) stmts
-            )
-         ) triggers,
-         tlqs
-      )
+               )
+            ) triggers,
+            tlqs
+         )
+      with 
+         | K3Typechecker.K3TypecheckError(stack, msg) -> 
+               bug ~exc:true ~detail:(fun () -> 
+                      K3Typechecker.string_of_k3_stack stack) msg
    )
 )
 ;;

@@ -205,6 +205,21 @@ let derive_initializer ?(scope = [])
                                             subexp))
                else CalcRing.zero
 
+         | Exists(original_subexp) ->
+            let (_,original_ovars) = Calculus.schema_of_expr original_subexp in
+            let subexp = rcr original_subexp in
+            let (_,new_ovars) = Calculus.schema_of_expr subexp in
+            Debug.print "LOG-IVC-DERIVATION" (fun () ->
+               "IVC For Exists went from: \n"^
+               (CalculusPrinter.string_of_expr original_subexp)^"\nto: \n"^
+               (CalculusPrinter.string_of_expr subexp)^"\n ovars:"^
+               (ListExtras.ocaml_of_list string_of_var original_ovars)^"->"^
+               (ListExtras.ocaml_of_list string_of_var new_ovars)
+            );
+               if ListAsSet.diff original_ovars new_ovars <> [] 
+                  then CalcRing.zero
+                  else CalcRing.mk_val (Exists(subexp))         
+         
          | Lift(v, original_subexp) ->
             let (_,original_ovars) = Calculus.schema_of_expr original_subexp in
             let subexp = rcr original_subexp in

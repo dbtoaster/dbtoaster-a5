@@ -81,7 +81,7 @@ query: testdatahash
 	@$(FAST_QUERY_TEST) simple/r_ltallagg
 	@$(FAST_QUERY_TEST) simple/r_ltallavg
 	@$(FAST_QUERY_TEST) simple/r_ltalldynamic
-	@$(FAST_QUERY_TEST) simple/r_multinest -d expressive-tlqs # Correct without expressive-tlqs, but k3 optimization is slooooow
+#	@$(FAST_QUERY_TEST) simple/r_multinest # Correct, but slow
 	@$(FAST_QUERY_TEST) simple/r_natselfjoin
 	@$(FAST_QUERY_TEST) simple/r_nogroupby
 	@$(FAST_QUERY_TEST) simple/r_selectstar

@@ -248,24 +248,25 @@ struct
                          (string_of_value v)^(get_expr expr))
         end)
     
+    let inline_collection ?(expr = None) c = 
+      match c with
+         | FloatList _ | TupleList _
+         | SingleMapList _ | ListCollection _ -> c
+         | SingleMap(m) -> TupleList(smc_to_tlc m)
+         | DoubleMap(m) -> ListCollection(dmc_to_c m)
+         | MapCollection(m) -> ListCollection(nmc_to_c m)
+         | _ -> bail ~expr:expr ("Can't inline collection")
+    
     let combine_impl ?(expr = None) c1 c2 =
-        begin match c1, c2 with
+        let inline = inline_collection ~expr:expr in
+        begin match (inline c1), (inline c2) with
         | FloatList(c1), FloatList(c2) -> FloatList(c1@c2)
         | TupleList(c1), TupleList(c2) -> TupleList(c1@c2)
         | SingleMapList(c1), SingleMapList(c2) -> SingleMapList(c1@c2)
         | ListCollection(c1), ListCollection(c2) -> ListCollection(c1@c2)
         
-        | SingleMap(m1), SingleMap(m2) ->
-            TupleList((smc_to_tlc m1)@(smc_to_tlc m2))
-        
-        | DoubleMap(m1), DoubleMap(m2) ->
-            ListCollection((dmc_to_c m1)@(dmc_to_c m2))
-
-        | MapCollection(m1), MapCollection(m2) ->
-            ListCollection((nmc_to_c m1)@(nmc_to_c m2))
-
         | _,_ -> bail ~expr:expr
-                      ("invalid collections to combine"^(get_expr expr))
+                      ("invalid collections to combine")
         end
 
     let combine ?(expr = None) c1 c2 = Eval(fun th db ->
