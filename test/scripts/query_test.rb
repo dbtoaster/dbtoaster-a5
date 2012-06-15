@@ -65,6 +65,8 @@ class GenericUnitTest
   end
   
   def diff(e, r)
+    r = r.to_f if ((e.is_a? Float) && (r.is_a? Integer));
+    e = e.to_f if ((r.is_a? Float) && (e.is_a? Integer));
     if (e == r)                            then "Same"
     elsif e == nil                         then "Different"
     elsif r == nil                         then "Different"
