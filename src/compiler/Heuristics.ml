@@ -533,7 +533,9 @@ and materialize_expr (db_schema:Schema.t) (history:ds_history_t)
                      if rels_of_expr subexpr = []
                      then ([], subexpr)
                      else begin 
-                        let scope_lift = snd (schema_of_expr whole_expr) in
+                        let scope_lift = 
+                           ListAsSet.union scope_const
+                                           (snd (schema_of_expr whole_expr)) in
                         materialize ~scope:scope_lift db_schema history 
                                     (prefix^"_E"^(string_of_int j)^"_") 
                                     event subexpr
@@ -548,7 +550,9 @@ and materialize_expr (db_schema:Schema.t) (history:ds_history_t)
                      if rels_of_expr subexpr = []
                      then ([], subexpr)
                      else begin 
-                        let scope_lift = snd (schema_of_expr whole_expr) in
+                        let scope_lift = 
+                           ListAsSet.union scope_const
+                                           (snd (schema_of_expr whole_expr)) in
                         materialize ~scope:scope_lift db_schema history 
                                     (prefix^"_L"^(string_of_int j)^"_") 
                                     event subexpr
