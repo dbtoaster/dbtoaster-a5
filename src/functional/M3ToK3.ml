@@ -701,8 +701,8 @@ let rec calc_to_k3_expr meta ?(generate_init = false) theta_vars_el calc :
          
          | Exists(exists_calc)          -> 
             let (exists_outs_el,exists_ret_ve,exists_e),nm = rcr exists_calc in
-            let ret_ve = K.Var("lift_v",K.TBase(T.TInt)) in
-            let exists_body = (exprs_to_tuple (exists_outs_el@[K.Eq(exists_ret_ve,zero_int_val)])) 
+            let ret_ve = K.Var("exists_v",K.TBase(T.TInt)) in
+            let exists_body = (exprs_to_tuple (exists_outs_el@[K.Neq(exists_ret_ve,zero_int_val)])) 
             in               
             let exists_lambda = lambda (exists_outs_el@[exists_ret_ve]) exists_body   in
             let expr = apply_lambda_to_expr exists_lambda exists_e   

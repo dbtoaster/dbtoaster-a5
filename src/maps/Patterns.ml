@@ -310,6 +310,10 @@ let rec extract_from_calc (theta_vars: Types.var_t list)
 	            extract_from_calc tvars agg_calc
 	      | Calculus.Lift( v, lift_calc ) -> 				
 	            extract_from_calc tvars lift_calc
+(***** BEGIN EXISTS HACK *****)
+	      | Calculus.Exists( lift_calc ) -> 				
+	            extract_from_calc tvars lift_calc
+(***** END EXISTS HACK *****)
 	      | Calculus.Rel( reln, relv ) -> 
 	            create_pattern_map_from_access reln tvars relv
 	      | Calculus.External( mapn, inv, outv, _, init_calc_opt ) -> 

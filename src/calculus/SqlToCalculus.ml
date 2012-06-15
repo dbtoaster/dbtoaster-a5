@@ -509,14 +509,16 @@ and calc_of_condition (tables:Sql.table_t list) (cond:Sql.cond_t):
                domain, we need to handle this case separately *)
             begin match rcr_q q with
             | [_,q_calc_unlifted] ->
-               CalculusDomains.mk_not_exists q_calc_unlifted
+               CalculusDomains.mk_not_exists 
+                  (CalcRing.mk_val (AggSum([], q_calc_unlifted)))
             | _ -> (failwith "Nested subqueries must have exactly 1 argument")
             end
 
          | Sql.Exists(q) ->
             begin match rcr_q q with
             | [_,q_calc_unlifted] ->
-               CalculusDomains.mk_exists q_calc_unlifted
+               CalculusDomains.mk_exists 
+                  (CalcRing.mk_val (AggSum([], q_calc_unlifted)))
 
             | _ -> (failwith "Nested subqueries must have exactly 1 argument")
             end

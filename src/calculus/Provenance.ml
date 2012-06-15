@@ -136,7 +136,13 @@ let rec provenance_of_expr ?(in_scope=[]) ?(inline_vars=[]) (expr:expr_t):
             ) else (
                ( (lv,val_prov)::var_prov, inline_source )
             )
-      
+
+(***** BEGIN EXISTS HACK *****)
+      | CalcRing.Val(Exists(subexp)) ->
+         let (var_prov, val_prov) = rcr scope subexp in
+            ( var_prov, inline_source )
+(***** END EXISTS HACK *****)
+
       | CalcRing.Val(External(e)) ->
             bug ~detail:(fun () -> Calculus.string_of_leaf (External(e)))
                 "Provenance for a materialized expression"; ([], no_source)

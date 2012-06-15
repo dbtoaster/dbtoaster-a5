@@ -72,9 +72,10 @@ in
         [ "-1"; "R(A,B)"; "S(B,C)"] [ ("B",TFloat) ] [];                
 ;;
 
-let test msg input output =
+let test msg 
+      ?(event = Some(Schema.InsertEvent(schema_rel "R" ["dA"; "dB"])))
+      input output =
    let history:Heuristics.ds_history_t = ref [] in 
-   let event = Some(Schema.InsertEvent(schema_rel "R" ["dA"; "dB"])) in
    let expr = parse_calc input in 
       log_test ("Materialization ("^msg^")")
          string_of_expr
@@ -179,4 +180,16 @@ in
    test "Aggregation with a lift containing an irrelevant relation and a common variable"
       "AggSum([A], R(A,B) * (C ^= S(A)) * {C > 0})"
       "M1(int)[][A]";
+   
+   Debug.activate "NO-VISUAL-DIFF";
+   Debug.activate "LOG-HEURISTICS-DETAIL";
+   test "RExistsNestedAgg Delta Chunk"
+      "(R(R1_A, R1_B) *
+        (foo ^= 
+          ( AggSum([], 
+              (((N1_B ^=
+                  (AggSum([], (R(R2_A, R2_B) * {R2_A = R1_B} * R2_B)) +
+                    ({dA = R1_B} * dB)))) *
+                {(3 * R1_A) < N1_B})))))"
+      "0"
 ;;

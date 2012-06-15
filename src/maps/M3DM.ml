@@ -169,6 +169,9 @@ let rec simplify_formula (event_input: Schema.event_t) (expr: Calculus.expr_t): 
 		            (e, true)
                 | Lift(target, subexp)    -> 
                     (e, true)
+(***** BEGIN EXISTS HACK *****)
+                | Exists(subexp) -> (e, true)
+(***** END EXISTS HACK *****)
                 (*                 (CalcRing.Val(Lift(target, fst (aux subexp))), true)*)
                 | Value(v) -> (e, true) 
                 end
@@ -253,6 +256,14 @@ let rec maintain (context: Calculus.expr_t)
               ([], CalcRing.mk_prod ([context; right_context]))
             else
               ([], context)
+(***** BEGIN EXISTS HACK *****)
+          | Exists(subexp) -> 
+            let (trlist, _) = maintain(context)(subexp) in
+              (*let (_, context1) = maintain(CalcRing.one)(subexp) in
+            let new_formula = CalcRing.Val(Lift(target, context1)) in
+                 (trlist, CalcRing.mk_prod ([context; new_formula]))*)
+            (trlist, CalcRing.mk_prod ([context; formula]))
+(***** END EXISTS HACK *****)
           | Lift(target, subexp)    -> 
             let (trlist, _) = maintain(context)(subexp) in
               (*let (_, context1) = maintain(CalcRing.one)(subexp) in
