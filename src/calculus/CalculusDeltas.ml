@@ -146,6 +146,33 @@ let rec delta_of_expr (delta_event:Schema.event_t) (expr:C.expr_t): C.expr_t=
                   ]
                )
          (*****************************************) 
+(***** BEGIN EXISTS HACK *****)
+            | Exists(sub_t) ->
+               let delta_term = rcr sub_t in
+               if delta_term = CalcRing.zero then CalcRing.zero else (
+                  (* We do the same thing here as for lifts *)
+                  let scope = Schema.event_vars delta_event in
+                  let (delta_lhs, delta_rhs) =
+                     if Debug.active "DUMB-LIFT-DELTAS" then
+                        (CalcRing.one, delta_term)
+                     else
+                        extract_lifts scope delta_term
+                  in
+                  CalcRing.mk_prod [
+                     delta_lhs;
+                     CalcRing.mk_sum [
+                        CalcRing.mk_val (
+                           Exists(CalcRing.mk_sum [
+                              sub_t;
+                              delta_rhs
+                           ])
+                        );
+                        CalcRing.mk_neg (CalcRing.mk_val (Exists(sub_t)))
+                     ]
+                  ]
+               )
+(***** END EXISTS HACK *****)
+         (*****************************************)
       ) expr
 
 ;;

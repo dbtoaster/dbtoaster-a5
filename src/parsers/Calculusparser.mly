@@ -35,7 +35,7 @@ type map_metadata =
 %token DECLARE QUERY MAP PARTIAL INITIALIZED
 %token FILE SOCKET FIXEDWIDTH LINE DELIMITED
 %token AGGSUM
-%token LIFT SETVALUE INCREMENT
+%token LIFT SETVALUE INCREMENT EXISTS
 
 // start
 %start statementList calculusExpr mapProgram mapTriggerStmt
@@ -164,6 +164,9 @@ ivcCalculusExpr:
       else Calculus.type_of_expr $4 in
    let target = (var_n, e_type) in
     CalcRing.mk_val (Lift(target, $4)) }
+//(***** BEGIN EXISTS HACK *****)
+| EXISTS LPAREN calculusExpr RPAREN { CalcRing.mk_val (Exists($3)) }
+//(***** END EXISTS HACK *****)
 
 comparison:
 | EQ  { Types.Eq  } | NEQ { Types.Neq } | LT  { Types.Lt  } 

@@ -1428,7 +1428,7 @@ let optimize ?(optimizations=[]) trigger_vars expr =
     let e2 = (simplify_collections (not(List.mem NoFilter optimizations)) e1) in
       Debug.print "LOG-K3-OPT-DETAIL" (fun () -> "SIMPLIFY IF CHAINS");
     let e3 = (simplify_if_chains [] e2) in
-    if not(Debug.active "K3-NO-OPTIMIZE-LIFT-UPDATES") then
+    if (Debug.active "K3-OPTIMIZE-LIFT-UPDATES") then
       begin
         Debug.print "LOG-K3-OPT-DETAIL" (fun () -> "LIFT UPDATES");
         let e4 = (lift_updates trigger_vars e3) in

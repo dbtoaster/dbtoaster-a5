@@ -88,6 +88,10 @@ let rec combine_values ?(aggressive=false) (expr:C.expr_t): C.expr_t =
             CalcRing.mk_val (AggSum(gb_vars, rcr subexp))
          | Lift(lift_v, subexp)    -> 
             CalcRing.mk_val (Lift(lift_v,    rcr subexp))
+(***** BEGIN EXISTS HACK *****)
+         | Exists(subexp)    -> 
+            CalcRing.mk_val (Exists(         rcr subexp))
+(***** END EXISTS HACK *****)
       ))
       expr
 ;;
@@ -281,58 +285,11 @@ let lift_equalities (global_scope:var_t list) (big_expr:C.expr_t): C.expr_t =
       merge global_scope (List.split [rcr global_scope big_expr])
 ;;
 
-(** 
-  [normalize_lifts schema expr]
-  
-   Transform the provided expression into a form where all lifts have been 
-   normalized -- that is, each lift is guaranteed to be introducing the 
-   variable into which we are lifting into scope.  For those lift operaitons 
-   where this is not the case, we transform the lift operation into an equality.
-   
-   Note that this operation is destructive, and may hinder the behavior of 
-   several other transformations defined in this file.  In general, it is simply
-   better to design code without making the assumption that lifts have been
-   normalized -- this function is present only for legacy purposes.
-   
-   @param schema  The expected output variables of the expression being unified.  
-                  These variables will never be unified away
-   @param expr    The expression to be normalized
-*)
-let normalize_lifts big_schema = C.rewrite_leaves (fun (scope, _) lf ->
-      match lf with
-         | Lift(v, term) -> 
-            let tmpv = mk_temp_var term in
-            if (List.mem v scope) && (not (List.mem v big_schema)) then
-               CalcRing.mk_prod [
-                  CalcRing.mk_val (Lift(tmpv, term));
-                  CalcRing.mk_val (Cmp(Eq, mk_var v, mk_var tmpv))
-               ]
-            else CalcRing.mk_val lf
-         | _ -> CalcRing.mk_val lf
-   )
-;;
-
 (**/**)
-(** Helper method internal to unify_lifts.  Used to partition the context into
-    viable variables for unification in a specific context and non-viable ones.
-    This lives outside unify_lifts so that the typesystem doesn't try to resolve
-    the types of split_fn
-*)
-let split_ctx (split_fn: value_t -> 'a option) (ctx:(var_t * C.expr_t) list): 
-              (var_t list * (var_t * 'a) list) =
-   List.fold_left (fun (unusable_ctx, usable_ctx) (v,e) ->
-      begin match e with
-         | CalcRing.Val(Value(e_val)) -> 
-            begin match split_fn e_val with
-               | Some(s) -> (unusable_ctx, (v,s)::usable_ctx)
-               | None -> (v::unusable_ctx, usable_ctx)
-            end
-         | _ -> (v::unusable_ctx, usable_ctx)
-      end
-   ) ([],[]) ctx
-;;
-exception CouldNotUnifyException of string
-;;
+(** Thrown when a potential unification would fail in order to back out of 
+    unification and undo any changes that have been made.  The one field is the 
+    reason for the failure. *)
+exception CouldNotUnifyException of string;;
 (**/**)
 
 (**
@@ -472,6 +429,11 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
             let new_rhs = Arithmetic.eval_partial 
                               ~scope:[lift_v, val_sub " cmp expression"] rhs in
                CalcRing.mk_val (Cmp(op, new_lhs, new_rhs))
+(***** BEGIN EXISTS HACK *****)
+         | Exists(subexp) -> CalcRing.mk_val (Exists(subexp))
+            (* Subexp is rewritten.  No changes need to be made here *)
+(***** END EXISTS HACK *****)
+
          | Lift(v, subexp) when (v = lift_v) && (subexp = expr_sub) ->
             CalcRing.one
          | Lift(v, subexp) when (v = lift_v) ->
@@ -512,6 +474,11 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
       | CalcRing.Val(Rel(_,_)) 
       | CalcRing.Val(External(_)) 
       | CalcRing.Val(Cmp(_,_,_)) -> expr
+      
+(***** BEGIN EXISTS HACK *****)
+      | CalcRing.Val(Exists(subexp)) -> 
+         CalcRing.mk_val (Exists(rcr scope schema subexp))
+(***** END EXISTS HACK *****)
       
       | CalcRing.Val(AggSum(gb_vars, subexp)) ->
          let new_subexp = rcr scope gb_vars subexp in
@@ -782,6 +749,22 @@ let rec nesting_rewrites (expr:C.expr_t) =
                      then subterm
                      else CalcRing.mk_val e
                end
+         
+(***** BEGIN EXISTS HACK *****)
+         | Exists(unprocessed_subexp) -> 
+            begin match (nesting_rewrites unprocessed_subexp) with 
+               | CalcRing.Val(Value(ValueRing.Val(AConst(CInt(0))))) ->
+                  CalcRing.zero
+               | CalcRing.Val(Value(ValueRing.Val(AConst(CInt(_))))) ->
+                  CalcRing.one
+               | CalcRing.Val(Value(ValueRing.Val(AConst(_)))) ->
+                  Calculus.bail_out (CalcRing.mk_val e) 
+                     "Exists with a non-integer value"
+               | subexp -> CalcRing.mk_val (Exists(subexp))
+            end               
+            
+(***** END EXISTS HACK *****)
+         
          | Lift(v, unprocessed_subterm) ->
             let nested = nesting_rewrites unprocessed_subterm in
             let (nested_ivars,nested_ovars) = C.schema_of_expr nested in

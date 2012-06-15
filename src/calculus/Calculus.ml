@@ -46,6 +46,12 @@ type ('term_t) calc_leaf_t =
    | Lift     of var_t * 'term_t             (** A Lift expression.  The nested
                                                  sub-term's value is lifted
                                                  into the indicated variable *)
+(***** BEGIN EXISTS HACK *****)
+   | Exists   of 'term_t                     (** An existence test.  The value 
+                                                 of this term is 1 if and only 
+                                                 if the nested expression's
+                                                 value is 1 *)
+(***** END EXISTS HACK *****)
 
 module rec
 CalcBase : sig
@@ -104,6 +110,10 @@ let rec string_of_leaf (leaf:CalcRing.leaf_t): string =
          " "^(string_of_value subexp2)^"}"
       | Lift(target, subexp)    -> 
          "("^(string_of_var target)^" ^= "^(string_of_expr subexp)^")"
+(***** BEGIN EXISTS HACK *****)
+      | Exists(subexp) -> 
+         "Exists("^(string_of_expr subexp)^")"
+(***** END EXISTS HACK *****)
    end
 (**
    Generate the (Calculusparser-compatible) string representation of an
@@ -140,7 +150,8 @@ let bail_out expr msg =
    @param expr  A Calculus expression
    @return      A pair of the set of input and output variables of [expr]
 *)
-let rec schema_of_expr (expr:expr_t):(var_t list * var_t list) =
+let rec schema_of_expr ?(lift_group_by_vars_are_inputs = false)
+                       (expr:expr_t):(var_t list * var_t list) =
    let rcr a = schema_of_expr a in
    CalcRing.fold 
       (fun sum_vars ->
@@ -189,7 +200,13 @@ let rec schema_of_expr (expr:expr_t):(var_t list * var_t list) =
             (ListAsSet.union (vars_of_value v1) (vars_of_value v2), [])
          | Lift(target, subexp) ->
             let ivars, ovars = rcr subexp in
-               (ivars, ListAsSet.union [target] ovars)
+               if lift_group_by_vars_are_inputs then
+                  (ListAsSet.union ivars ovars, [target])
+               else 
+                  (ivars, ListAsSet.union [target] ovars)
+(***** BEGIN EXISTS HACK *****)
+         | Exists(subexp) -> rcr subexp
+(***** END EXISTS HACK *****)
       end)
       expr 
 
@@ -213,6 +230,9 @@ let rec type_of_expr (expr:expr_t): type_t =
                                               rather truthiness: the # of
                                               truths encountered thus far *)
          | Lift(_,_)               -> TInt
+(***** BEGIN EXISTS HACK *****)
+         | Exists(_)               -> TInt
+(***** END EXISTS HACK *****)
       end)
       expr
 
@@ -236,6 +256,9 @@ let rec rels_of_expr (expr:expr_t): string list =
             | Rel(rn,_)           -> [rn]
             | Cmp(_,_,_)          -> []
             | Lift(_,subexp)      -> rcr subexp
+(***** BEGIN EXISTS HACK *****)
+            | Exists(subexp)      -> rcr subexp
+(***** END EXISTS HACK *****)
          end)
          expr
 
@@ -259,6 +282,9 @@ let rec externals_of_expr (expr:expr_t): string list =
             | Rel(_,_)           -> []
             | Cmp(_,_,_)          -> []
             | Lift(_,subexp)      -> rcr subexp
+(***** BEGIN EXISTS HACK *****)
+            | Exists(subexp)      -> rcr subexp
+(***** END EXISTS HACK *****)
          end)
          expr
 
@@ -281,6 +307,9 @@ let rec degree_of_expr (expr:expr_t): int =
             | Rel(rn,_)           -> 1
             | Cmp(_,_,_)          -> 0
             | Lift(_,subexp)      -> rcr subexp
+(***** BEGIN EXISTS HACK *****)
+            | Exists(subexp)      -> rcr subexp
+(***** END EXISTS HACK *****)
          end)
          expr
 
@@ -377,6 +406,10 @@ let rec rewrite ?(scope = []) ?(schema = [])
                                   sub_t)))
                   | External(en, eiv, eov, et, Some(em)) ->
                      (External(en, eiv, eov, et, Some(rcr eiv eov em)))
+(***** BEGIN EXISTS HACK *****)
+                  | Exists(subexp) -> 
+                     (Exists(rcr local_scope local_schema subexp))
+(***** END EXISTS HACK *****)
                   | _ -> lf
          end)
    ) e
@@ -436,6 +469,9 @@ let rec all_vars (expr:expr_t): var_t list =
          | Cmp(_,v1,v2) -> ListAsSet.uniq ((Arithmetic.vars_of_value v1) @
                                            (Arithmetic.vars_of_value v2))
          | Lift(var,subexp) -> ListAsSet.union [var] (all_vars subexp)
+(***** BEGIN EXISTS HACK *****)
+         | Exists(subexp) -> all_vars subexp
+(***** END EXISTS HACK *****)
       end)
       expr
 
@@ -497,13 +533,16 @@ let rename_vars (mapping:(var_t,var_t)Function.table_fn_t)
          | Cmp(op,v1,v2)              -> Cmp(op, remap_value v1, 
                                                  remap_value v2)
          | Lift(var,subexp)           -> Lift(remap_one var, subexp)
+(***** BEGIN EXISTS HACK *****)
+         | Exists(subexp)             -> Exists(subexp)
+(***** END EXISTS HACK *****)
       end))
       expr
    
 
 let commutes ?(scope = []) (e1:expr_t) (e2:expr_t): bool =
-   let (_,ovar1) = schema_of_expr e1 in
-   let (ivar2,_) = schema_of_expr e2 in
+   let (_,ovar1) = schema_of_expr ~lift_group_by_vars_are_inputs:true e1 in
+   let (ivar2,_) = schema_of_expr ~lift_group_by_vars_are_inputs:true e2 in
       (* Commutativity within a product is possible if and only if all input 
          variables on the right hand side do not enter scope on the left hand 
          side.  A variable enters scope in an expression if it is an output 
@@ -576,6 +615,10 @@ let rec cmp_exprs ?(cmp_opts:CalcRing.cmp_opt_t list =
                | None -> None
                | Some(new_mappings) -> Function.merge [v1,v2] new_mappings
             end
+         
+(***** BEGIN EXISTS HACK *****)
+         | ((Exists(sub1)),(Exists(sub2))) -> rcr sub1 sub2
+(***** END EXISTS HACK *****)
             
          | (_,_) -> None
       end

@@ -201,6 +201,14 @@ let rec format_expr ?(show_type = false) (expr:expr_t) =
          !fmt.break 1 !line_indent;
          format_expr subexp;
          !fmt.string ")";
+
+(***** BEGIN EXISTS HACK *****)
+      | CalcRing.Val(Exists(subexp)) ->
+         !fmt.string "EXISTS(";
+         !fmt.break 1 !line_indent;
+         format_expr subexp;
+         !fmt.string ")";
+(***** END EXISTS HACK *****)
       
    end;
    !fmt.bclose();;

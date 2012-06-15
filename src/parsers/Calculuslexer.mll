@@ -55,6 +55,9 @@ let keywords =
       "STRING",     TYPE(TString);
       "TRUE",       BOOL(true);
       "FALSE",      BOOL(false);
+(***** BEGIN EXISTS HACK *****)
+      "EXISTS",     EXISTS;
+(***** END EXISTS HACK *****)
     ]
 let _ = hashtbl_of_pair_list keyword_table keywords
 

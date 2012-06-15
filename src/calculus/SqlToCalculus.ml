@@ -504,38 +504,26 @@ and calc_of_condition (tables:Sql.table_t list) (cond:Sql.cond_t):
                      CalcRing.mk_val (Cmp(Gt, or_val, mk_int 0))]
                ))
          | Sql.Not(Sql.Exists(q)) ->
+            (* The exists operator is only bound for elements in the domain.  
+               Since we're explicitly looking for cases that are not in the 
+               domain, we need to handle this case separately *)
             begin match rcr_q q with
             | [_,q_calc_unlifted] ->
-            let (q_val,q_calc) = 
-               lift_if_necessary (CalcRing.mk_val (AggSum([],q_calc_unlifted)))
-            in
-               CalcRing.mk_val (AggSum([], 
-                  CalcRing.mk_prod [q_calc; 
-                     CalcRing.mk_val (Cmp(Eq, q_val, mk_int 0))]
-               ))
+               CalculusDomains.mk_not_exists q_calc_unlifted
             | _ -> (failwith "Nested subqueries must have exactly 1 argument")
             end
+
          | Sql.Exists(q) ->
             begin match rcr_q q with
             | [_,q_calc_unlifted] ->
-            let (q_val,q_calc) = 
-               lift_if_necessary (CalcRing.mk_val (AggSum([],q_calc_unlifted)))
-            in
-               CalcRing.mk_val (AggSum([], 
-                  CalcRing.mk_prod [q_calc; 
-                     CalcRing.mk_val (Cmp(Gt, q_val, mk_int 0))]
-               ))
+               CalculusDomains.mk_exists q_calc_unlifted
+
             | _ -> (failwith "Nested subqueries must have exactly 1 argument")
             end
          | Sql.Not(c) -> (* This should never be reached... push_down nots 
                             should push everything away *)
-            let (not_val,not_calc) = lift_if_necessary ~t:"not" (rcr_c c) in
-               (* Note that Calculus negation is NOT boolean negation.  We need
-                  to swap 0 and not 0 with a comparison *)
-               CalcRing.mk_val (AggSum([], 
-                  CalcRing.mk_prod [not_calc; 
-                     CalcRing.mk_val (Cmp(Eq, not_val, mk_int 0))]
-               ))
+            failwith "Non-pushed down NOT in Sql Condition"
+
          | Sql.ConstB(true)  -> CalcRing.one
          | Sql.ConstB(false) -> CalcRing.zero
       end

@@ -16,6 +16,9 @@ let rec maintain (formula: Calculus.expr_t) : Calculus.expr_t =
          | Rel _
          | Cmp _
          | Lift _ -> CalcRing.mk_val lf
+(***** BEGIN EXISTS HACK *****)
+         | Exists(subexp) -> subexp
+(***** END EXISTS HACK *****)
       )
       formula
 (*
@@ -56,6 +59,33 @@ let rec maintain (formula: Calculus.expr_t) : Calculus.expr_t =
 let mk_dom_var =
    FreshVariable.declare_class "calculus/SqlToCalculus" "domain"
 
+(***** BEGIN EXISTS HACK *****)
+(* Note, these functions need to be changed, not deleted when exists goes away*)
+
+let mk_exists (expr:expr_t): expr_t = 
+   let dom_expr = (maintain expr) in
+   Debug.print "LOG-MK-EXISTS" (fun () ->
+      "Making existence test with domain expression : \n"^(
+         (CalculusPrinter.string_of_expr dom_expr)
+      )
+   );
+   CalcRing.mk_val (Exists(dom_expr))
+;;
+
+let mk_not_exists (expr:expr_t): expr_t =
+   let dom_expr = (maintain expr) in
+   let dom_var = (mk_dom_var (), TInt) in
+   let (_,ovars) = Calculus.schema_of_expr expr in
+   CalcRing.mk_val (AggSum(ovars, 
+      (CalcRing.mk_prod [
+         CalcRing.mk_val (Lift(dom_var, dom_expr));
+         CalcRing.mk_val (Cmp(Eq, Arithmetic.mk_int 0, 
+                                  Arithmetic.mk_var dom_var))
+      ])
+   ))
+;;
+(***** END EXISTS HACK *****)
+
 (**
    Lifts in Calculus do not have finite support.  Even if the expression nested
    within the lift has finite support, the lift itself is supported as long as
@@ -87,43 +117,8 @@ let mk_domain_restricted_lift (lift_v:var_t) (lift_expr:expr_t): expr_t =
    ) else
 
    (* Otherwise we need to actually do some domain tracking. *)
-   let dom_expr = (maintain lift_expr) in
-
-   (* If the domain definition expression is identical to the original 
-      expression (which is possible), then we don't need to lift twice.
-      
-      Note: Calculus.cmp_exprs returns a Some(mappings), where mappings is
-      a set of variable renamings that can be applied to go from one expression 
-      to the other.  We want to test for equivalence, but the presence of 
-      mappings in the return means that the two expressions are not, in fact, 
-      equivalent. *)
-   Debug.print "LOG-MK-DR-LIFT" (fun () ->
-      "Domain definition expression is : \n"^(
-         (CalculusPrinter.string_of_expr dom_expr)
-      )^"\n"^(
-      match Calculus.cmp_exprs dom_expr lift_expr with
-         | None     -> "Lift needs an explicit domain maintenance expression"
-         | Some(m) when Function.is_identity m ->
-                       "Lift is its own domain maintenance expression"
-         | Some(m)  -> "Domain maintenance expression is mappable: "^(
-            Function.string_of_table_fn m string_of_var string_of_var
-         )
-      )
-   );
-   match Calculus.cmp_exprs dom_expr lift_expr with 
-      | Some(m) when Function.is_identity m ->
-         CalcRing.mk_prod [
-            lift; CalcRing.mk_val (Cmp(Neq, Arithmetic.mk_int 0, 
-                                            Arithmetic.mk_var lift_v))]
-      | _ ->
    (* If all else fails, we need to create a new variable for the lifted 
       expression, test, and then project it all away. *)
-   let dom_var = ((mk_dom_var ()^"_"^(fst lift_v)), TInt) in
-      CalcRing.mk_val (AggSum(lift_v::ovars, 
-         CalcRing.mk_prod [
-            CalcRing.mk_val (Lift(dom_var, dom_expr));
-            CalcRing.mk_val (Cmp(Neq, Arithmetic.mk_int 0,
-                                      Arithmetic.mk_var dom_var));
-            lift
-         ]
-      ))
+   CalcRing.mk_prod [ mk_exists lift_expr; lift ]
+
+
