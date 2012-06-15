@@ -189,12 +189,16 @@ let compile_map (db_schema:Schema.t) (history:Heuristics.ds_history_t)
             else if (todo_ovars <> [])
             then if IVC.naive_needs_runtime_ivc (Schema.table_rels db_schema)
                                                 todo.ds_definition
-                 then  let (ivc_todos, todo_ivc) =
-                          Heuristics.materialize db_schema 
-                                                 history 
-                                                 (map_prefix^"_IVC")
-                                                 (Some(delta_event))
-                                                 todo.ds_definition
+                 then
+                     let (schema_matched_ivc) = 
+                        Calculus.rename_vars delta_renamings todo.ds_definition 
+                     in
+                     let (ivc_todos, todo_ivc) =
+                        Heuristics.materialize db_schema 
+                                               history 
+                                               (map_prefix^"_IVC")
+                                               (Some(delta_event))
+                                               schema_matched_ivc
                        in (ivc_todos, Some(todo_ivc))
                  else ([], None)
             else ([], None)

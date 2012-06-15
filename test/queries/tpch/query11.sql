@@ -5,7 +5,7 @@ CREATE STREAM PARTSUPP (
         supplycost   DECIMAL,
         comment      VARCHAR(199)
     )
-  FROM FILE '../../experiments/data/tpch_tiny/partsupp.csv'
+  FROM FILE '../../experiments/data/tpch/partsupp.csv'
   LINE DELIMITED partsupp ();
 
 CREATE STREAM SUPPLIER (
@@ -17,7 +17,7 @@ CREATE STREAM SUPPLIER (
         acctbal      DECIMAL,
         comment      VARCHAR(199)
     )
-  FROM FILE '../../experiments/data/tpch_tiny/supplier.csv'
+  FROM FILE '../../experiments/data/tpch/supplier.csv'
   LINE DELIMITED supplier ();
 
 SELECT p.nationkey, p.partkey, SUM(p.value) AS QUERY11

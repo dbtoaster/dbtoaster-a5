@@ -253,7 +253,8 @@ let rec externals_of_expr (expr:expr_t): string list =
          (fun x -> x)
          (fun lf -> begin match lf with
             | Value(_)            -> []
-            | External(en,_,_,_,_) -> [en]
+            | External(en,_,_,_,Some(ivc)) -> en::(externals_of_expr ivc)
+            | External(en,_,_,_,None) -> [en]
             | AggSum(_, subexp)   -> rcr subexp
             | Rel(_,_)           -> []
             | Cmp(_,_,_)          -> []

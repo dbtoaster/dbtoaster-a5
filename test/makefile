@@ -88,7 +88,7 @@ query: testdatahash
 	@$(FAST_QUERY_TEST) simple/r_simplenest
 	@$(FAST_QUERY_TEST) simple/r_smallstar
 	@$(FAST_QUERY_TEST) simple/r_starofnested
-	@$(FAST_QUERY_TEST) simple/r_starofnestedagg -d expressive-tlqs
+	@$(FAST_QUERY_TEST) simple/r_starofnestedagg
 	@$(FAST_QUERY_TEST) simple/r_sumadivsumb
 	@$(FAST_QUERY_TEST) simple/r_sumdivgrp
 	@$(FAST_QUERY_TEST) simple/r_sumnestedintarget
@@ -99,21 +99,21 @@ query: testdatahash
 	@$(FAST_QUERY_TEST) simple/miraculous_minus
 	@$(FAST_QUERY_TEST) simple/miraculous_minus2
 	@$(FAST_QUERY_TEST) simple/m3k3unable2escalate
-	@$(FAST_QUERY_TEST) simple/r_sumoutsideofagg -d expressive-tlqs
+	@$(FAST_QUERY_TEST) simple/r_sumoutsideofagg
 	@$(FAST_QUERY_TEST) simple/rst
 	@$(FAST_QUERY_TEST) simple/r_count_of_one
 	@$(FAST_QUERY_TEST) simple/r_count_of_one_prime
 	@$(FAST_QUERY_TEST) simple/r_deepscoping
 	@$(FAST_QUERY_TEST) simple/r_impossibleineq
 	@$(FAST_QUERY_TEST) simple/r_ineqandeq
-	@$(FAST_QUERY_TEST) simple/r_lift_of_count -d expressive-tlqs
+	@$(FAST_QUERY_TEST) simple/r_lift_of_count
 	@$(FAST_QUERY_TEST) simple/r_nonjoineq
 	@$(FAST_QUERY_TEST) simple/r_possibleineq
 	@$(FAST_QUERY_TEST) simple/r_possibleineqwitheq
-	@$(FAST_QUERY_TEST) simple/r_sum_gb_all_out_of_aggregate -d expressive-tlqs
-	@$(FAST_QUERY_TEST) simple/r_sum_gb_out_of_aggregate -d expressive-tlqs
+	@$(FAST_QUERY_TEST) simple/r_sum_gb_all_out_of_aggregate
+	@$(FAST_QUERY_TEST) simple/r_sum_gb_out_of_aggregate
 	@$(FAST_QUERY_TEST) simple/r_sum_out_of_aggregate
-	@$(FAST_QUERY_TEST) simple/r_unique_counts_by_a -d expressive-tlqs
+	@$(FAST_QUERY_TEST) simple/r_unique_counts_by_a
 	@$(FAST_QUERY_TEST) simple/rr_ormyself
 	@$(FAST_QUERY_TEST) simple/rs
 	@$(FAST_QUERY_TEST) simple/rs_cmpnest
@@ -194,7 +194,7 @@ query: testdatahash
 	@$(FAST_QUERY_TEST) employee/query64a
 	@$(FAST_QUERY_TEST) employee/query65a
 	@$(FAST_QUERY_TEST) tpch3 --dataset tiny
-	@$(FAST_QUERY_TEST) tpch11 --dataset tiny -d expressive-tlqs
+	@$(FAST_QUERY_TEST) tpch11 --dataset tiny
 	@$(FAST_QUERY_TEST) tpch17 --dataset tiny
 	@$(FAST_QUERY_TEST) tpch18 --dataset tiny
 	@$(FAST_QUERY_TEST) tpch22

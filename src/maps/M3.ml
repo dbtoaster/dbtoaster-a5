@@ -324,11 +324,22 @@ let sort_prog (prog:prog_t):prog_t =
       in
       (* Create a graph to encode dependencies between maps *)
       let graph = List.map (fun stmt ->
-         let target_name = List.hd (externals_of_expr stmt.target_map) in
-         let update_names = externals_of_expr stmt.update_expr in
+         let (target_name,_,_,_,target_ivc) = expand_ds_name stmt.target_map in
+         let ivc_names = match target_ivc with
+            | None -> []
+            | Some(unwrapped_ivc) -> externals_of_expr unwrapped_ivc
+         in
+         let update_names = 
+            ListAsSet.union ivc_names (externals_of_expr stmt.update_expr) in
+         Debug.print "LOG-M3-SORT" (fun () -> 
+            "'"^target_name^"' depends on: "^
+            (ListExtras.ocaml_of_list (fun x -> x) update_names)
+         );
             if (stmt.update_type = Plan.UpdateStmt)
-            then (target_name, ListAsSet.union update_names replace_target_names)
-            else (target_name, ListAsSet.inter update_names replace_target_names)
+            then (target_name, ListAsSet.union update_names 
+                                               replace_target_names)
+            else (target_name, ListAsSet.inter update_names
+                                               replace_target_names)
       ) !(trigger.statements) in  
                         
       (* Topologically sort the graph and create a new order of statements *)

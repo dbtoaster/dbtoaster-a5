@@ -249,24 +249,20 @@ struct
         end)
     
     let combine_impl ?(expr = None) c1 c2 =
-        begin match c1, c2 with
+      let flatten = (function
+         | SingleMap(m) -> TupleList(smc_to_tlc m)
+         | DoubleMap(m) -> ListCollection(dmc_to_c m)
+         | MapCollection(m) -> ListCollection(nmc_to_c m)
+         | c -> c
+      ) in
+      begin match (flatten c1), (flatten c2) with
         | FloatList(c1), FloatList(c2) -> FloatList(c1@c2)
         | TupleList(c1), TupleList(c2) -> TupleList(c1@c2)
         | SingleMapList(c1), SingleMapList(c2) -> SingleMapList(c1@c2)
         | ListCollection(c1), ListCollection(c2) -> ListCollection(c1@c2)
-        
-        | SingleMap(m1), SingleMap(m2) ->
-            TupleList((smc_to_tlc m1)@(smc_to_tlc m2))
-        
-        | DoubleMap(m1), DoubleMap(m2) ->
-            ListCollection((dmc_to_c m1)@(dmc_to_c m2))
-
-        | MapCollection(m1), MapCollection(m2) ->
-            ListCollection((nmc_to_c m1)@(nmc_to_c m2))
-
         | _,_ -> bail ~expr:expr
                       ("invalid collections to combine"^(get_expr expr))
-        end
+      end
 
     let combine ?(expr = None) c1 c2 = Eval(fun th db ->
         combine_impl ~expr:expr ((get_eval expr c1) th db) 
@@ -297,8 +293,11 @@ struct
         then Eval(fun th db -> 
            print_endline ("\n/****************************\n"^
                           comment^
-                          "\n****************************/");
-           (get_eval expr stmt) th db
+                          "\n****************************/"
+                          );
+           let v = ((get_eval expr stmt) th db) in
+           print_endline ("Value: "^(K3Value.to_string v));
+           v
          )
         else stmt
  

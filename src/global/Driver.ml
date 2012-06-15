@@ -106,6 +106,12 @@ let specs:(Arg.key * Arg.spec * Arg.doc) list  = Arg.align [
    (  "--custom-prefix",
       (Arg.String(FreshVariable.set_prefix)),
       "pfx    Specify a prefix for generated symbols");
+   (  "--debug",
+      (Arg.Unit(fun () -> 
+               output_language := Interpreter;
+               Debug.activate "STEP-INTERPRETER";
+               Debug.activate "LOG-INTERPRETER-UPDATES")),
+      "       Run the interpreter in debugging mode");
    (  "-I", 
       (Arg.String(ExternalCompiler.add_env "INCLUDE_HDR")),
       "dir    Add a directory to the second-stage compiler's include path");

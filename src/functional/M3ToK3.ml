@@ -755,19 +755,18 @@ let rec calc_to_k3_expr meta ?(generate_init = false) theta_vars_el calc :
 							K.Iterate( lambda (outs_el@[ret_ve]) reset_update,	sum_coll) in
 					
 					let head_update = 
-							K.PCValueUpdate(sum_coll, [], outs_el, hd_ret_ve) in									
+							K.PCValueUpdate(sum_coll, [], outs_el, K.Comment(hd_txt,hd_ret_ve)) in
 					let head_stmt =
-					      K.Comment(hd_txt, 
-	                     K.Iterate(lambda (hd_outs_el@[hd_ret_ve])	head_update, hd_s)) in
+					      K.Iterate(lambda (hd_outs_el@[hd_ret_ve])	head_update, hd_s) in
 					
 					let sum_fn (s_outs_el,s_ret_ve,s,txt) =							
 							let sum_update =
 								K.PCValueUpdate(sum_coll, [], outs_el, 
-									K.IfThenElse(K.Member(sum_coll,outs_el), 
+                           K.Comment(txt, 
+									   K.IfThenElse(K.Member(sum_coll,outs_el), 
 															 K.Add(s_ret_ve,K.Lookup(sum_coll,outs_el)), 
-															 s_ret_ve) ) in
-	                  K.Comment(txt, 
-	                     K.Iterate(lambda (s_outs_el@[s_ret_ve])	sum_update,	s)) in
+															 s_ret_ve) )  ) in
+	                 K.Iterate(lambda (s_outs_el@[s_ret_ve])	sum_update,	s) in
 					let tail_stmts = List.map sum_fn sum_exprs_tl in
 					
 					(K.Block( reset_stmt::head_stmt::tail_stmts@[sum_coll] )),
