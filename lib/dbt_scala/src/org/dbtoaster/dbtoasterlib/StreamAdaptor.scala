@@ -16,6 +16,7 @@ package org.dbtoaster.dbtoasterlib {
 
     abstract trait ColumnType
     case object IntColumn extends ColumnType
+    case object BigIntColumn extends ColumnType
     case object FloatColumn extends ColumnType
     case object OrderColumn extends ColumnType
     case object DateColumn extends ColumnType
@@ -29,7 +30,6 @@ package org.dbtoaster.dbtoasterlib {
     case object EndOfStream extends DBTEvent
 
     def createAdaptor(adaptorType: String, relation: String, params: List[(String, String)]): StreamAdaptor = {
-      println("Create Adaptor: " + adaptorType + ", " + relation + ", " + params)
       adaptorType match {
         case "orderbook" => createOrderbookAdaptor(relation, params)
         case _ => throw new IllegalArgumentException("No adaptor for: " + adaptorType)
@@ -61,27 +61,27 @@ package org.dbtoaster.dbtoasterlib {
       def processTuple(row: String): List[StreamEvent]
     }
 
-    class lineitemAdaptor(relation: String, deletions: String = "false") extends CSVAdaptor(relation, fields = "\\|", eventtype = "insert",
+    class lineitemAdaptor(relation: String, deletions: String = "false") extends CSVAdaptor(relation, Nil, fields = "\\|", eventtype = "insert",
       schema = "int,int,int,int,float,float,float,float,hash,hash,date,date,date,hash,hash,hash") {}
-    class customerAdaptor(relation: String, deletions: String = "false") extends CSVAdaptor(relation, fields = "\\|", eventtype = "insert",
+    class customerAdaptor(relation: String, deletions: String = "false") extends CSVAdaptor(relation, Nil, fields = "\\|", eventtype = "insert",
       schema = "int,hash,hash,int,hash,float,hash,hash") {}
-    class ordersAdaptor(relation: String, deletions: String = "false") extends CSVAdaptor(relation, fields = "\\|", eventtype = "insert",
+    class ordersAdaptor(relation: String, deletions: String = "false") extends CSVAdaptor(relation, Nil, fields = "\\|", eventtype = "insert",
       schema = "int,int,hash,float,date,hash,hash,int,hash") {}
-    class partAdaptor(relation: String, deletions: String = "false") extends CSVAdaptor(relation, fields = "\\|", eventtype = "insert",
+    class partAdaptor(relation: String, deletions: String = "false") extends CSVAdaptor(relation, Nil, fields = "\\|", eventtype = "insert",
       schema = "int,hash,hash,hash,hash,int,hash,float,hash") {}
-    class partsuppAdaptor(relation: String, deletions: String = "false") extends CSVAdaptor(relation, fields = "\\|", eventtype = "insert",
+    class partsuppAdaptor(relation: String, deletions: String = "false") extends CSVAdaptor(relation, Nil, fields = "\\|", eventtype = "insert",
       schema = "int,int,int,float,hash") {}
-    class nationAdaptor(relation: String, deletions: String = "false") extends CSVAdaptor(relation, fields = "\\|", eventtype = "insert",
+    class nationAdaptor(relation: String, deletions: String = "false") extends CSVAdaptor(relation, Nil, fields = "\\|", eventtype = "insert",
       schema = "int,hash,int,hash") {}
-    class regionAdaptor(relation: String, deletions: String = "false") extends CSVAdaptor(relation, fields = "\\|", eventtype = "insert",
+    class regionAdaptor(relation: String, deletions: String = "false") extends CSVAdaptor(relation, Nil, fields = "\\|", eventtype = "insert",
       schema = "int,hash,hash") {}
-    class supplierAdaptor(relation: String, deletions: String = "false") extends CSVAdaptor(relation, fields = "\\|", eventtype = "insert",
+    class supplierAdaptor(relation: String, deletions: String = "false") extends CSVAdaptor(relation, Nil, fields = "\\|", eventtype = "insert",
       schema = "int,hash,hash,int,hash,float,hash") {}
 
-    class CSVAdaptor(relation: String, eventtype: String = "insert", deletions: String = "false", schema: String = "", fields: String = ";") extends StreamAdaptor {
+    class CSVAdaptor(relation: String, schemaTypes: List[ColumnType], eventtype: String = "insert", deletions: String = "false", schema: String = "", fields: String = ",") extends StreamAdaptor {
       val eventType = if (eventtype == "insert") InsertTuple else DeleteTuple
       val hasDeletions = (deletions == "true")
-
+      
       def parseColType(col: String): ColumnType = {
         col match {
           case "int" => IntColumn
@@ -92,7 +92,11 @@ package org.dbtoaster.dbtoasterlib {
         }
       }
 
-      val colTypes: List[ColumnType] = schema.split(",").iterator.toList.map(x => parseColType(x))
+      val colTypes: List[ColumnType] = 
+        if(schemaTypes.isEmpty) 
+	  schema.split(",").iterator.toList.map(x => parseColType(x)) 
+	else
+	  schemaTypes
 
       def processTuple(row: String): List[StreamEvent] = {
         val cols = row.split(fields).toList
@@ -105,6 +109,7 @@ package org.dbtoaster.dbtoasterlib {
           x =>
             x match {
               case (v, IntColumn) => v.toInt
+	      case (v, BigIntColumn) => BigInt(v)
               case (v, FloatColumn) => v.toDouble
               case (v, OrderColumn) => v.toInt
               case (v, DateColumn) => v.replace("-", "").toInt

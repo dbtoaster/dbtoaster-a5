@@ -143,7 +143,7 @@
 %token SUM MINUS PRODUCT
 %token COMMA LPAREN RPAREN LBRACK RBRACK PERIOD COLON DOLLAR
 %token ON SYSTEM READY QUERY
-%token IF IF0 ELSE ITERATE LAMBDA APPLY MAP FLATTEN AGGREGATE GROUPBYAGGREGATE MEMBER LOOKUP SLICE SINGLETON
+%token IF IF0 ELSE ITERATE LAMBDA APPLY MAP FLATTEN AGGREGATE GROUPBYAGGREGATE MEMBER LOOKUP SLICE FILTER SINGLETON
 %token CREATE TABLE STREAM FROM SOCKET FILE PIPE FIXEDWIDTH DELIMITED LINE VARSIZE OFFSET ADJUSTBY SETVALUE
 %token PCUPDATE PCVALUEUPDATE PCELEMENTREMOVE
 %token INT UNIT FLOAT COLLECTION STRINGTYPE CHAR VARCHAR DATE
@@ -322,6 +322,7 @@ statement:
 | memberStatement                                           { $1 }
 | lookupStatement                                           { $1 }
 | sliceStatement                                            { $1 }
+| filterStatement                                           { $1 }
 | collectionStatement                                       { $1 }
 | pcUpdateStatement                                         { $1 }
 | pcValueUpdateStatement                                    { $1 }
@@ -389,7 +390,7 @@ varType:
 | STRINGTYPE                                                { TBase(Types.TString) }
 | UNIT                                                      { TUnit }
 | LT varTypeList GT                                         { TTuple($2) }
-| COLLECTION LPAREN varType RPAREN                          { Collection($3) }
+| COLLECTION LPAREN varType RPAREN                          { Collection(Unknown, $3) }
 | LPAREN varTypeList RPAREN ARROW varType                   { Fn($2, $5) }
 
 varTypeList:
@@ -430,6 +431,9 @@ sliceStatement:
          varBindList RBRACK RPAREN                          { let var_list = slice_infering $3 $6 
                                                                in
                                                                   Slice($3, types_to_vartypes var_list, $6) }
+
+filterStatement:
+| FILTER LPAREN statement COMMA statement RPAREN            { Map($3, $5) }
 
 varBindList:
 | varBindItem EOSTMT varBindList                            { $1::$3 }

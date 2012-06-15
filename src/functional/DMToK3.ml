@@ -105,7 +105,7 @@ let collection_ivc_gc_var stmt_info =
         if free_lhs_outs_el = [] then
             K.TTuple([domain_type;domain_type])
         else
-            K.Collection(K.TTuple( (k3_expr_to_k3_type (free_lhs_outs_el))@[domain_type; domain_type] )) 
+            K.Collection(K.Unknown, K.TTuple( (k3_expr_to_k3_type (free_lhs_outs_el))@[domain_type; domain_type] )) 
     in
         K.Var("cig_"^mapn, collection_ivc_gc_t)
 

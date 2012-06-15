@@ -13,6 +13,7 @@ package org.dbtoaster.dbtoasterlib {
       def map[K2, V2](f: Tuple2[K, V] => Tuple2[K2, V2]): K3IntermediateCollection[K2, V2]
       def foreach(f: Tuple2[K, V] => Unit): Unit
       def slice[KP](keyPart: KP, idx: List[Int]): K3IntermediateCollection[K, V]
+      def filter(f: Tuple2[K, V] => Boolean): K3IntermediateCollection[K, V]
       def groupByAggregate[K2, V2](init: V2, group: Tuple2[K, V] => K2, fn: Tuple2[K, V] => V2 => V2): K3IntermediateCollection[K2, V2]
       def fold[Y](init: Y, fn: Tuple2[K, V] => Y => Y): Y
       def flatten[K2, V2](): K3IntermediateCollection[K2, V2]
@@ -112,6 +113,10 @@ package org.dbtoaster.dbtoasterlib {
           case None => throw new IllegalArgumentException
         }
       }
+      
+      def filter(f: Tuple2[K, V] => Boolean): K3IntermediateCollection[K, V] = {
+        K3IntermediateCollection(elems.filter(f).toList)
+      }
 
       def groupByAggregate[K2, V2](init: V2, group: Tuple2[K, V] => K2, fn: Tuple2[K, V] => V2 => V2): K3IntermediateCollection[K2, V2] = {
         val groupedCollection = elems.foldLeft(Map[K2, V2]()) {
@@ -196,6 +201,10 @@ package org.dbtoaster.dbtoasterlib {
       def slice[K2](keyPart: K2, idx: List[Int]): K3IntermediateCollection[K, V] = {
         val kp = keyPart.asInstanceOf[Product].productIterator.toList
         K3IntermediateCollection(elems.filter { case (k, v) => println(k + "," + kp); (kp zip idx).forall { case (kp, i) => kp == k.asInstanceOf[Product].productElement(i) } })
+      }
+      
+      def filter(f: Tuple2[K, V] => Boolean): K3IntermediateCollection[K, V] = {
+        K3IntermediateCollection(elems.filter(f))
       }
 
       def groupByAggregate[K2, V2](init: V2, group: Tuple2[K, V] => K2, fn: Tuple2[K, V] => V2 => V2): K3IntermediateCollection[K2, V2] = {

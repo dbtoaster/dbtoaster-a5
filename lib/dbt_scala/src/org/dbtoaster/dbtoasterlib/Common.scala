@@ -19,5 +19,8 @@ package org.dbtoaster.dbtoasterlib {
 	*/
   object StdFunctions {
 	def div(x: Double): Double = 1.0 / x
+	
+	def max(v: Tuple2[Double, Double]): Double = if(v._1 > v._2) v._1 else v._2
+	def min(v: Tuple2[Double, Double]): Double = if(v._1 < v._2) v._1 else v._2
   }
 }

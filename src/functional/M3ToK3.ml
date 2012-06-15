@@ -331,7 +331,7 @@ let map_access_to_expr mapn ins outs map_ret_t theta_vars_el init_expr_opt =
 		let map_ret_k = K.TBase(map_ret_t) in
 		(* K3 type of the out tier of the map *)
 		let map_out_t = if outs_tl = [] then map_ret_k
-							  else K.Collection(K.TTuple(outs_tl@[map_ret_k])) in
+							  else K.Collection(K.Unknown,K.TTuple(outs_tl@[map_ret_k])) in
 		
 		let map_ret_ve = K.Var("map_ret",map_ret_k) in
 		let map_out_ve = K.Var("slice",map_out_t) in
@@ -882,7 +882,7 @@ let m3_stmt_to_k3_stmt (meta: meta_t) ?(generate_init = false) trig_args (m3_stm
 	let map_k3_type = K.TBase(map_type) in
 	let out_tier_t  = 
 		if lhs_outs = [] then map_k3_type 
-		else K.Collection(K.TTuple( (varIdType_to_k3_type lhs_outs)@[map_k3_type] )) in
+		else K.Collection(K.Unknown,K.TTuple( (varIdType_to_k3_type lhs_outs)@[map_k3_type] )) in
 			  
 	let (lhs_ins_el,lhs_outs_el) = pair_map varIdType_to_k3_expr (lhs_ins, lhs_outs) in
 	let trig_args_el = varIdType_to_k3_expr trig_args in
@@ -1001,7 +1001,7 @@ let m3_stmt_to_k3_stmt (meta: meta_t) ?(generate_init = false) trig_args (m3_stm
               if free_lhs_outs_el = [] then
                   K.TTuple([domain_type;domain_type])
               else
-                  K.Collection(K.TTuple( (k3_expr_to_k3_type (rhs_outs_el))@[domain_type; domain_type] )) 
+                  K.Collection(K.Unknown, K.TTuple( (k3_expr_to_k3_type (rhs_outs_el))@[domain_type; domain_type] )) 
             in
             K.Var("cig_"^mapn^"_output", collection_ivc_gc_t)
           in

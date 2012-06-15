@@ -39,6 +39,7 @@ let keywords =
          "MEMBER", MEMBER;
          "LOOKUP", LOOKUP;
          "SLICE", SLICE;
+	 "FILTER", FILTER;
          "PCUPDATE", PCUPDATE;
          "PCVALUEUPDATE", PCVALUEUPDATE;
          "PCELEMENTREMOVE", PCELEMENTREMOVE;

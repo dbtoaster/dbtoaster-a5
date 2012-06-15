@@ -117,7 +117,7 @@ struct
     match t with 
     | Float -> "Double"
     | Bool -> "Boolean"
-    | Int -> "Int"
+    | Int -> if Debug.active "BIG-INT" then "BigInt" else "Int"
     | String -> "String"
     | Any -> "Any"
     | External(s) -> s
@@ -164,13 +164,19 @@ struct
     | K3.TUnit -> Unit
     | K3.TBase(bt) -> map_base_type bt
     | K3.TTuple(tlist) -> Tuple(List.map map_type tlist)
-    | K3.Collection(ctype) -> 
+    | K3.Collection(c_t, ctype) -> 
+        let m_t = 
+	  match c_t with
+	  | K3.Intermediate -> Intermediate
+	  | K3.Unknown -> Unknown
+	  | K3.Persistent -> Persistent
+	in
         begin match (map_type ctype) with 
-        | Tuple([]) -> Collection(Intermediate, [], Unit)
+        | Tuple([]) -> Collection(m_t, [], Unit)
         | Tuple(klist) -> 
-          Collection(Unknown, (List.rev (List.tl (List.rev klist))), 
+          Collection(m_t, (List.rev (List.tl (List.rev klist))), 
             (List.hd (List.rev klist)))
-        | vtype -> Collection(Unknown, [], vtype)
+        | vtype -> Collection(m_t, [], vtype)
         end
     | K3.Fn(argtlist,rett) -> Fn(ArgNTuple([]), map_type (List.hd argtlist), 
       map_type (K3.Fn(List.tl argtlist, rett)))
@@ -183,6 +189,7 @@ struct
   type source_impl_t = source_code_t
   let identity a = a
   let mk_bool_to_float a = "(if(" ^ a ^ ") 1.0 else 0.0)"
+  let mk_bool_to_int a = "(if(" ^ a ^ ") 1 else 0)"
   let num_op ?(conva = identity) ?(convb = identity) opcode = (fun a b -> "(" ^ 
     conva(a) ^ ") " ^ opcode ^ " (" ^ convb(b) ^ ")")
 
@@ -190,7 +197,7 @@ struct
     (fun a b -> 
       match (a, b) with
       | (Float, Float) -> ((num_op op_f), Float, None)
-      | (Bool, Bool)   -> ((num_op op_b), Bool, None)
+      | (Bool, Bool)   -> ((num_op op_b), Int, None)
       | (Bool, Float) -> ((num_op op_f), Float, None)
       | (Float, Bool) -> ((num_op op_f), Float, None)
       | (Float, Int) -> ((num_op op_f), Float, None)
@@ -219,12 +226,14 @@ struct
       *)
       | (Bool, Float) -> ((num_op op ~conva:mk_bool_to_float), Bool, None)
       | (Float, Bool) -> ((num_op op ~convb:mk_bool_to_float), Bool, None)
+      | (Bool, Int) -> ((num_op op ~conva:mk_bool_to_int), Bool, None)
+      | (Int, Bool) -> ((num_op op ~convb:mk_bool_to_int), Bool, None)
       | (_, _) -> 
           ((num_op op), Unit, 
           Some((string_of_type a) ^ " [" ^ op ^ "] " ^ (string_of_type b)))
     )
 
-  let add_op         : op_t = (f_op "+" "||")
+  let add_op         : op_t = (f_op "+" "+")
   let mult_op        : op_t = (f_op "*" "&&")
   let eq_op          : op_t = (c_op "==")
   let neq_op         : op_t = (c_op "!=")
@@ -393,7 +402,13 @@ struct
     ("", ExtFn(clean_name name 0 (Buffer.create 0), argst, map_type ret))
    
   let apply ?(expr = None) ((fn,fnt):code_t) ((arg,argt):code_t) : code_t =
-    ("(" ^ (wrap_function argt fnt fn) ^ ").apply(" ^ arg ^ ")", fn_ret_type fnt)
+    (begin match fnt with
+    | Fn(argsn, argst, rett) ->
+      "{ val " ^ (string_of_argn argsn) ^ " = " ^ arg ^ ";" ^ fn ^ "}"
+    | ExtFn(n, _, _) -> "(" ^ n ^ "(" ^ arg ^ "))"
+    | _ -> debugfail None "Expected a function"
+    end
+    , fn_ret_type fnt)
 
   let map ?(expr = None) ((fn,fnt):code_t) (exprt:K3.type_t) ((c, ct):code_t) : code_t =
     let (keyt,valt) = 
@@ -485,6 +500,14 @@ struct
       Collection(Intermediate, kt, vt))
     | _ -> debugfail expr "Slice on a non-collection"
 
+  let filter ?(expr = None) ((fn,fnt):code_t) ((c, ct):code_t) : code_t =
+    match ct with
+    | Collection(_, kt, vt) ->
+      (c ^ ".filter({ " ^
+        (wrap_function_key_val (Tuple(kt) :: [vt]) (fn_ret_type fnt) fnt fn) ^ 
+        " })", ct)
+    | _ -> debugfail expr ("Filter of a non-collection: " ^ c ^ " has type " ^ 
+      (string_of_type ct))
 
   (* Database retrieval methods *)  
   let get_value ?(expr = None) (t:K3.type_t) (map:K3.coll_id_t): code_t =
@@ -567,13 +590,24 @@ struct
       | Schema.FixedSize(i) -> "FixedSize(" ^ (string_of_int i) ^ ")"
       | Schema.Delimited(str) -> "Delimited(\"" ^ str ^ "\")"
     in
-    let adaptors_strings = (List.map (fun ((atype, akeys), (rel, _ , _)) -> 
+    let adaptors_strings = (List.map (fun ((atype, akeys), (rel, schema, _)) -> 
+      let args = if (List.length akeys) == 0 then "" else (make_list ~parens:(", ","") 
+        (List.map (fun (k, v) -> k ^ " = \"" ^ v ^ "\"") akeys)) in
       match atype with
-      | "csv" -> "new CSVAdaptor(\"" ^ rel ^ "\", " ^ (make_list ~parens:("","") 
-        (List.map (fun (k, v) -> k ^ " = \"" ^ v ^ "\"") akeys)) ^ ")"
+      | "csv" -> 
+        let string_of_schema_type t = 
+	  match t with
+	  | TBool -> "BoolColumn"
+	  | TInt -> if Debug.active "BIG-INT" then "BigIntColumn" else "IntColumn"
+	  | TFloat -> "FloatColumn"
+	  | TString -> "StringColumn"
+	  | TDate -> "DateColumn"
+	  | _ -> debugfail None "Unsupported type in adaptor"
+	in
+        let schema_str = make_list (List.map (fun (_, t) -> string_of_schema_type t) schema) in
+        "new CSVAdaptor(\"" ^ rel ^ "\", List" ^ schema_str ^ args ^ ")"
       | "orders" | "part" | "partsupp" | "customer" | "supplier" | "nation" | "region" | "lineitem" -> 
-        "new " ^ atype ^ "Adaptor(\"" ^ rel ^ "\", " ^ (make_list ~parens:("","") 
-        (List.map (fun (k, v) -> k ^ " = \"" ^ v ^ "\"") akeys)) ^ ")"
+        "new " ^ atype ^ "Adaptor(\"" ^ rel ^ "\"" ^ args ^ ")"
       | _ ->
           "createAdaptor(\"" ^ atype ^ "\", \"" ^ rel ^ "\", List" ^
             (make_list (List.map (fun (k,v) -> "(\"" ^ k ^ "\", \"" ^ v ^ "\")") akeys)) ^

@@ -208,8 +208,7 @@ class ScalaUnitTest < GenericUnitTest
     end
     return if $compile_only;
     starttime = Time.now;
-    IO.popen("scala -classpath \"bin/queries/#{@qname}.jar;lib/dbt_scala/dbtlib.jar\" org.dbtoaster.RunQuery",
-             "r") do |qin|
+    IO.popen("scala -classpath \"bin/queries/#{@qname}.jar:lib/dbt_scala/dbtlib.jar\" org.dbtoaster.RunQuery", "r") do |qin|
       output = qin.readlines;
       endtime = Time.now;
       output = output.map { |l| l.chomp.strip }.join("");
@@ -219,33 +218,7 @@ class ScalaUnitTest < GenericUnitTest
         output = $2;
         case @toplevels[query][:type]
           when :singleton then @toplevels[query][:result] = output.strip.to_f;
-          when :onelevel then
-            tok = Tokenizer.new(output, /<\/?[^>]+>|[^<]+/);
-            @toplevels[query][:result] = Hash.new;
-            loop do
-              tok.tokens_up_to(/<item[^>]*>/);
-              break unless /<item[^>]*>/ =~ tok.last;
-              fields = Hash.new("");
-              curr_field = nil;
-              tok.tokens_up_to("</item>").each do |t|
-                case t
-                  when /<\/.*>/ then curr_field = nil;
-                  when /<(.*)>/ then curr_field = $1;
-                  else 
-                    if curr_field then 
-                      fields[curr_field] = fields[curr_field] + t 
-                    end
-                end
-              end
-              keys = fields.keys.clone;
-              keys.delete("__av");
-              @toplevels[query][:result][
-                keys.
-                  map { |k| k[3..-1].to_i }.
-                  sort.
-                  map { |k| fields["__a#{k}"].to_i }
-              ] = fields["__av"].to_f unless fields["__av"].to_f == 0.0
-            end
+          when :onelevel then @toplevels[query][:result] = CppDB.new(output);
           else nil
         end
       else raise "Runtime Error"
@@ -332,8 +305,8 @@ GetoptLong.new(
       case arg
         when 'cpp'         then tests.push CppUnitTest
         when 'interpreter' then tests.push InterpreterUnitTest
-		when 'scala'       then tests.push ScalaUnitTest
-        when 'all'         then tests = [CppUnitTest, InterpreterUnitTest]
+        when 'scala'       then tests.push ScalaUnitTest
+        when 'all'         then tests = [CppUnitTest, InterpreterUnitTest, ScalaUnitTest]
       end
     when '-d' then $debug_flags.push(arg)
     when '--depth' then $depth = arg
@@ -352,7 +325,7 @@ GetoptLong.new(
 end
 
 tests.uniq!
-tests = [InterpreterUnitTest] if tests.empty?;
+tests = [ScalaUnitTest, InterpreterUnitTest] if tests.empty?;
 
 queries = ARGV
 

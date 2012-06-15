@@ -89,6 +89,9 @@ sig
     (* map, partial key, pattern -> slice *)
     (* TODO: see notes on datatype conversions/secondary indexes *)
     val slice  : ?expr:K3.expr_t option -> code_t -> code_t list -> int list -> code_t
+    
+    (* filter fn, collection -> filter *)
+    val filter : ?expr:K3.expr_t option -> code_t -> code_t -> code_t
 
     (* Persistent collections *)
     

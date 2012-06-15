@@ -249,20 +249,24 @@ struct
         end)
     
     let combine_impl ?(expr = None) c1 c2 =
-      let flatten = (function
-         | SingleMap(m) -> TupleList(smc_to_tlc m)
-         | DoubleMap(m) -> ListCollection(dmc_to_c m)
-         | MapCollection(m) -> ListCollection(nmc_to_c m)
-         | c -> c
-      ) in
-      begin match (flatten c1), (flatten c2) with
+        begin match c1, c2 with
         | FloatList(c1), FloatList(c2) -> FloatList(c1@c2)
         | TupleList(c1), TupleList(c2) -> TupleList(c1@c2)
         | SingleMapList(c1), SingleMapList(c2) -> SingleMapList(c1@c2)
         | ListCollection(c1), ListCollection(c2) -> ListCollection(c1@c2)
+        
+        | SingleMap(m1), SingleMap(m2) ->
+            TupleList((smc_to_tlc m1)@(smc_to_tlc m2))
+        
+        | DoubleMap(m1), DoubleMap(m2) ->
+            ListCollection((dmc_to_c m1)@(dmc_to_c m2))
+
+        | MapCollection(m1), MapCollection(m2) ->
+            ListCollection((nmc_to_c m1)@(nmc_to_c m2))
+
         | _,_ -> bail ~expr:expr
                       ("invalid collections to combine"^(get_expr expr))
-      end
+        end
 
     let combine ?(expr = None) c1 c2 = Eval(fun th db ->
         combine_impl ~expr:expr ((get_eval expr c1) th db) 
@@ -293,11 +297,8 @@ struct
         then Eval(fun th db -> 
            print_endline ("\n/****************************\n"^
                           comment^
-                          "\n****************************/"
-                          );
-           let v = ((get_eval expr stmt) th db) in
-           print_endline ("Value: "^(K3Value.to_string v));
-           v
+                          "\n****************************/");
+           (get_eval expr stmt) th db
          )
         else stmt
  
@@ -465,7 +466,7 @@ struct
             | TTuple tl ->
                 if is_flat map_rt then TupleList(v)
                 else ListCollection(v)
-            | Collection t -> ListCollection(v)
+            | Collection(_, t) -> ListCollection(v)
             | Fn (args_t,body_t) ->
                 (* TODO: ListCollection(v) ? *)
                 bail ~expr:expr "first class functions not supported yet"
@@ -665,7 +666,27 @@ struct
         let nmc_f m pk = ListCollection(nmc_to_c (MC.slice pattern pk m))
         in tcollection_op expr "slice" lc_f smc_f dmc_f nmc_f tcollection pkey_l
 
-
+    (* filter fn, collection -> filter *)
+    let filter ?(expr = None) filter_fn collection =
+        Eval(fun th db ->
+	let f: (Values.K3Value.t -> bool) = 
+	match (get_eval expr filter_fn) th db with
+        | Fun f -> 
+	  (fun x ->
+	    (let v = (f x) in begin match v with 
+	    | BaseValue(CFloat(x)) -> x <> 0.0 
+            | BaseValue(CInt(x))   -> x <> 0
+	    | _ -> bail ~expr:expr ("invalid filter function")
+	    end))
+	| _ -> bail ~expr:expr ("expected filter function")
+	in
+        begin match (get_eval expr collection) th db with
+            | TupleList l -> TupleList(List.filter (fun t -> f t) l)
+            | SingleMap m -> TupleList(smc_to_tlc (MC.filter f m)) 
+            | MapCollection m -> ListCollection(nmc_to_c (MC.filter f m))
+            | v -> bail ~expr:expr ("invalid tuple collection in filter : "^(string_of_value v))
+	end)
+        
     (* Database retrieval methods *)
     let get_value ?(expr = None) (_) id = Eval(fun th db ->
         match DB.get_value id db with | Some(x) -> x | None -> 

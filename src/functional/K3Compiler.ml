@@ -77,7 +77,8 @@ let rec compile_k3_expr e =
         let v_l, k_l = List.split idk_l in
         let idx_l = List.map (index (List.map fst sch)) v_l in
         slice ~expr:(debug e) (rcr m_e) (List.map rcr k_l) idx_l
-
+	
+    | K.Filter(fn_e, c_e)      -> filter ~expr:(debug e) (rcr fn_e) (rcr c_e) 
     | K.SingletonPC(id,t)      -> get_value ~expr:(debug e) t id
     | K.OutPC(id,outs,t)       -> get_out_map ~expr:(debug e) outs t id
     | K.InPC(id,ins,t)         -> get_in_map ~expr:(debug e) ins t id
@@ -123,7 +124,7 @@ let rec compile_k3_expr e =
 
 let compile_triggers_noopt (trigs:K3.trigger_t list) : code_t list =
    List.map (fun (event, cs) ->
-      let stmts = List.map compile_k3_expr cs in
+      let stmts = List.map (fun x -> compile_k3_expr (K3.annotate_collections x)) cs in
          trigger event stmts
    ) trigs
 

@@ -867,7 +867,7 @@ let rec simplify_collections filter expr =
             | AVar(_,t) -> t
             | ATuple(vt_l) -> TTuple(List.map snd vt_l)
         in
-        let v,v_t = gen_var_sym(), Collection(mapf_arg_t)
+        let v,v_t = gen_var_sym(), Collection(Unknown, mapf_arg_t)
         in Flatten(Map(Lambda(AVar(v,v_t), Map(map_f, Var(v,v_t))), c))
 
     | Map(map_f, (Map(_,_) as rmap)) ->
@@ -1611,7 +1611,7 @@ let create_datastructure arg partial_key e =
 
 let datastructure_statement (schema, patterns) (pm, rel, args) stmt =
   let is_tuple_collection e = match K3Typechecker.typecheck_expr e with
-    | Collection(TTuple _) -> true
+    | Collection(Unknown,TTuple _) -> true
     | _ -> false
   in
   let is_primitive_collection e = match e with

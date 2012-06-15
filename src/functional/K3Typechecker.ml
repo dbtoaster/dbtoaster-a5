@@ -62,7 +62,7 @@ let type_as_schema t = match t with K.TTuple(t_l) -> t_l | _ -> [t]
 let is_flat t = match t with | K.TBase(_) -> true | _ -> false
 let flat t = if is_flat t then t else type_error t "invalid flat expression"
 
-let promote t1 t2 =
+let rec promote t1 t2 =
 	match t1, t2 with
 	| (K.TBase(TFloat), K.TBase(TInt)) 
 	| (K.TBase(TInt), K.TBase(TFloat)) -> K.TBase(TFloat)
@@ -70,6 +70,7 @@ let promote t1 t2 =
 	| (K.TBase(TBool), K.TBase(TInt)) -> K.TBase(TInt)
 	| (K.TBase(TFloat), K.TBase(TBool)) 
 	| (K.TBase(TBool), K.TBase(TFloat)) -> K.TBase(TFloat)
+	| (K.Collection(x, t1), K.Collection(K.Unknown, t2)) -> K.Collection(x, promote t1 t2)
 	| (x, y) -> if x = y then x
 			else type_error (K.TTuple[x; y]) "could not promote types"
 
@@ -203,7 +204,7 @@ let tc_fn_app_suffix (rt_f : K.type_t list -> K.type_t) fn_tll sch_tl : K.type_t
 (* type f : x+ -> coll_fn y, where fn_tl = [x+;y]                          *)
 let tc_fn_app_each (rt_f : K.type_t list -> K.type_t) fn_tll t : K.type_t =
 	match t with
-	| K.Collection(c_t) ->
+	| K.Collection(_,c_t) ->
 			tc_fn_app_suffix rt_f fn_tll (type_as_schema c_t)
 	| _ ->
 	(* tc_fn_app_suffix rt_f fn_tll [t] *)
@@ -269,7 +270,7 @@ let tc_agg fn_t i_t c_t (tc_gb_f : K.type_t -> K.type_t list -> K.type_t) =
 let tc_pcop f m_t k_t =
 	let m_f ret_tl rest_tll =
 		match ret_tl with
-		| [K.Collection(K.TTuple(kv_tl))] ->
+		| [K.Collection(_,K.TTuple(kv_tl))] ->
 				let (mv_t, t_l) = back kv_tl in
 				begin try ignore(List.map2 valid_promote t_l k_t);
 					rebuild_mvf (f mv_t kv_tl) rest_tll
@@ -311,7 +312,7 @@ let rec typecheck_expr e : K.type_t =
 		
 		(* e : t t <> Unit * ----------------------------- * singleton(e) :    *)
 		(* K.Collection t                                                        *)
-		| K.Singleton (ce) -> K.Collection(
+		| K.Singleton (ce) -> K.Collection(K.Unknown,
 					match recur ce with K.TUnit -> failwith "invalid singleton" | x -> x)
 		
 		(* e1 : K.Collection t1 e2 : K.Collection t2 t1 <> Unit, t1 = t2 *         *)
@@ -320,7 +321,7 @@ let rec typecheck_expr e : K.type_t =
 		| K.Combine (ce1, ce2) ->
 				let ce1_t, ce2_t = (recur ce1, recur ce2) in
 				begin match ce1_t, ce2_t with
-					| (K.Collection(c1_t), K.Collection(c2_t)) ->
+					| (K.Collection(_,c1_t), K.Collection(_,c2_t)) ->
 							if (c1_t <> K.TUnit) && (c1_t = c2_t) then ce1_t
 							else failwith "invalid collections for combine"
 					| _ -> failwith "invalid combine of non-collections"
@@ -419,7 +420,7 @@ let rec typecheck_expr e : K.type_t =
                        | (K.TTuple(rt),K.TTuple(ot)) ->
                          if List.length rt <> List.length ot then false
                          else List.for_all2 validate_type rt ot
-                       | (K.Collection(rt),K.Collection(ot)) ->
+                       | (K.Collection(_, rt),K.Collection(_, ot)) ->
                          validate_type rt ot
                        | (K.Fn(rt_arg,rt_ret),K.Fn(ot_arg,ot_ret))->
                          if List.length rt_arg <> List.length ot_arg
@@ -449,7 +450,7 @@ let rec typecheck_expr e : K.type_t =
 				let (fn_t, c_t) = (recur fn_e, recur ce) in
 				let fn_tll = linearize_mvf fn_t in
 				let coll_fn = tc_compose_collection
-						None (fun g fl -> K.Collection(List.hd fl))
+						None (fun g fl -> K.Collection(K.Unknown,List.hd fl))
 				in
 				if List.length fn_tll < 2 then failwith "invalid map function"
 				else
@@ -473,8 +474,8 @@ let rec typecheck_expr e : K.type_t =
 					let gb_ret_t = tc_fn_app_each tc_multiple_rv g_tll c_ret_t in
 					begin match (c_ret_t, agg_tl, gb_ret_t) with
 						| (_, _, K.TUnit) -> failwith "invalid group by value"
-						| (K.Collection _, [agg_t], K.TTuple(t_l)) -> K.Collection(K.TTuple(t_l@[agg_t]))
-						| (K.Collection _, [agg_t], x) -> K.Collection(K.TTuple([x; agg_t]))
+						| (K.Collection _, [agg_t], K.TTuple(t_l)) -> K.Collection(K.Unknown,K.TTuple(t_l@[agg_t]))
+						| (K.Collection _, [agg_t], x) -> K.Collection(K.Unknown,K.TTuple([x; agg_t]))
 						| (K.Collection _, _, _) -> failwith "invalid aggregate type"
 						| _ -> failwith "invalid gb aggregate K.Collection"
 					end
@@ -486,8 +487,8 @@ let rec typecheck_expr e : K.type_t =
 					| K.Fn (_, _) -> lift_fn f t | _ -> f [t] []
 				in
 				let l1 tl rest_tll = match tl with
-					| [K.Collection(K.Collection(x))] ->
-							rebuild_mvf (K.Collection(x)) rest_tll
+					| [K.Collection(_,K.Collection(_,x))] ->
+							rebuild_mvf (K.Collection(K.Unknown,x)) rest_tll
 					| _ -> failwith "invalid flatten"
 				in tc_aux l1 c_t
 		
@@ -499,12 +500,12 @@ let rec typecheck_expr e : K.type_t =
 		| K.SingletonPC (id, t) ->
 				if t = K.TUnit then failwith "invalid singleton PC" else t
 		
-		| K.OutPC (id, outs, t) -> K.Collection(K.TTuple((tc_schema outs)@[t]))
-		| K.InPC (id, ins, t) -> K.Collection(K.TTuple((tc_schema ins)@[t]))
+		| K.OutPC (id, outs, t) -> K.Collection(K.Unknown,K.TTuple((tc_schema outs)@[t]))
+		| K.InPC (id, ins, t) -> K.Collection(K.Unknown,K.TTuple((tc_schema ins)@[t]))
 		| K.PC (id, ins, outs, t) ->
 				let ins_t = tc_schema ins in
 				let outs_t = tc_schema outs
-				in K.Collection(K.TTuple(ins_t@[K.Collection(K.TTuple(outs_t@[t]))]))
+				in K.Collection(K.Unknown,K.TTuple(ins_t@[K.Collection(K.Unknown,K.TTuple(outs_t@[t]))]))
 		
 		| K.Member (me, ke) -> tc_pcop (fun _ _ -> K.TBase(TFloat)) (recur me) (List.map recur ke)
 		| K.Lookup (me, ke) -> tc_pcop (fun mv_t _ -> mv_t) (recur me) (List.map recur ke)
@@ -515,10 +516,17 @@ let rec typecheck_expr e : K.type_t =
 									(let t = List.assoc v sch in (promote t (recur e)) = t)) pat_ve in
 				if valid_pattern
 				then let ke = List.map (fun (v, t) -> K.Var(v, t)) sch
-					in tc_pcop (fun mv_t kv_tl -> K.Collection(K.TTuple(kv_tl)))
+					in tc_pcop (fun mv_t kv_tl -> K.Collection(K.Unknown,K.TTuple(kv_tl)))
 						(recur me) (List.map recur ke)
 				else failwith "inconsistent schema,pattern for map slice"
-		
+				
+		| K.Filter (fn_e, ce) ->
+				let (fn_t, c_t) = (recur fn_e, recur ce) in
+				begin match fn_t with
+					| K.Fn(args, K.TBase(TBool)) when ((List.length args) == 2) -> c_t
+					| _ -> failwith "invalid filter function"
+				end
+				  
 		| K.PCUpdate (me, ke, te) ->
 				begin match me, ke with
 					| (K.OutPC _,[]) | (K.InPC _,[]) ->
@@ -528,7 +536,7 @@ let rec typecheck_expr e : K.type_t =
 					| (K.PC(id, ins, outs, t(*,ie*)), _) ->
 							let (m_t, t_t) = (recur me, recur te) in
 							let valid_tier = match m_t with
-								| K.Collection(K.TTuple(kv_tl)) -> (fst (back kv_tl)) = t_t
+								| K.Collection(K.Unknown,K.TTuple(kv_tl)) -> (fst (back kv_tl)) = t_t
 								| _ -> failwith "internal error, expected K.Collection type for map"
 							in
 							if valid_tier then

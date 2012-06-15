@@ -82,6 +82,7 @@ struct
    | Member
    | Lookup
    | Slice  of int list
+   | Filter
 
    | PCUpdate
    | PCValueUpdate
@@ -135,6 +136,7 @@ struct
    | Slice(idx) -> 
      "Slice("^(String.concat "," (List.map string_of_int idx))^")"
 
+   | Filter -> "Filter"
    | PCUpdate -> "Update"
    | PCValueUpdate -> "ValueUpdate"
    | PCElementRemove -> "ElementRemove"
@@ -555,6 +557,9 @@ struct
           (ListExtras.ocaml_of_list string_of_int idx_l)^"\n"
         );
            slice_ir metadata idx_l ([sfst()]@snd())
+	   
+      | K.Filter _ ->
+        failwith "TODO: implement filter in K3ToImperative"
 
       | K.SingletonPC _ | K.OutPC _ | K.InPC _ | K.PC _ -> undecorated_ir metadata e
 
@@ -730,7 +735,7 @@ struct
     let rec gc_tag meta t cmeta =
       (* Helpers *)
       let demote_collection_element_type c_t e_t = match c_t with
-        | Host(Collection(x)) -> Host(x)
+        | Host(Collection(_, x)) -> Host(x)
         | _ -> failwith "invalid k3 collection"
       in
       let cmetai i = List.nth cmeta i in
@@ -1214,7 +1219,7 @@ struct
         let outer_pre,outer_src = match_ie 0 "invalid flatten nested collection"
           (fun i -> i,cdecli 0) (fun e -> [],e) in
         let inner_elem, inner_ty = match meta_ty with
-          | Host(Collection(x)) -> gensym(), Host x
+          | Host(Collection(_, x)) -> gensym(), Host x
           | _ -> failwith "invalid flatten collection" 
         in
         (* HACK: explicitly use a declared value to ensure correct substitution

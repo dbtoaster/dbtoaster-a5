@@ -350,7 +350,7 @@ struct
     | Host(K.TTuple(tl)) -> 
         if List.length tl = 1 then inl (of_host_list tl)
         else inl (mk_tuple_ty (List.map string_of_type (types_of_host_list tl)))
-    | Host(K.Collection et) ->
+    | Host(K.Collection(_,et)) ->
         begin match et with
         | K.TTuple(fields) ->
             let rest, v =
@@ -490,7 +490,7 @@ struct
     begin match t with
       | Host _ -> t
       | _ when is_ext_collection env t ->
-        Host(Collection(host_type
+        Host(Collection(Unknown, host_type
           (host_type_of_type env (entry_type_of_collection env t)))) 
       | _ ->
         let entry_fields = field_types_of_type (type_decl_of_env env t)
@@ -680,7 +680,7 @@ struct
 
       | Projection idx ->
         Host (TTuple (List.map host_type (List.map (List.nth arg_types) idx)))
-      | Singleton -> Host (Collection (host_type (List.hd arg_types))) 
+      | Singleton -> Host (Collection(Unknown, (host_type (List.hd arg_types))))
       | Combine ->
         let l,r = List.hd arg_types, List.nth arg_types 1 in
         if l = r then l else failwith "incompatible combine arguments"
@@ -699,7 +699,7 @@ struct
         let error() = 
           failwith ("invalid collection type for member "^(string_of_type t))
         in begin match t with
-        | Host (Collection (TTuple(_))) -> Host(TBase(TInt))
+        | Host (Collection(_, (TTuple(_)))) -> Host(TBase(TInt))
         | Target(_) when is_ext_collection env t -> Host(TBase(TInt))
         | _ -> error()
         end
@@ -708,7 +708,7 @@ struct
         let t = List.hd arg_types in 
         let error () = failwith ("invalid collection type "^(string_of_type t))
         in begin match t with
-        | Host (Collection (TTuple l)) -> let _,t = back l in Host t
+        | Host (Collection(_, (TTuple l))) -> let _,t = back l in Host t
         | Target(_) when is_ext_collection env t ->
           let t_fields = match ext_collection_of_type env t with
             | Some(c_t) -> field_types_of_collection env c_t
@@ -722,7 +722,7 @@ struct
         let error () =
           failwith ("invalid collection type for slicing "^(string_of_type t)) 
         in begin match t with
-        | Host (Collection (TTuple l)) ->
+        | Host (Collection(_, (TTuple l))) ->
             if (List.length l) <= (List.fold_left max 0 idx) then
               failwith "invalid slice indices"
             else t
@@ -843,7 +843,7 @@ struct
         let l_t = type_of_imp_t (cimpi 1) in
         let new_l, el_t =
           let el_t = match s_t with
-            | Host(Collection(x)) -> Host(x)
+            | Host(Collection(_, x)) -> Host(x)
             | Target(_) when is_ext_collection !type_env s_t ->
               entry_type_of_collection !type_env s_t
             | _ -> failwith "invalid collection in loop"
@@ -924,7 +924,7 @@ end (* Typing *)
        * than maps *)
     | ConcatElement ->
         begin match argti 0 with
-          | Host (Collection(TTuple(_))) ->
+          | Host (Collection(_, TTuple(_))) ->
             let k,v = match List.nth arg_exprs 1 with
               | Tuple (_,fields) ->
                 back (List.map (fun e -> ssc (source_code_of_expr e)) fields)
@@ -1254,7 +1254,7 @@ end (* Typing *)
       (* Update slice iterators *)
       let slice_id, slice_t = gensym(), type_of_expr_t v in
       let slice_elem_t = match slice_t with
-        | Host(Collection(x)) -> Host x
+        | Host(Collection(_, x)) -> Host x
         | Target(_) as x when is_ext_collection env x ->
           entry_type_of_collection env x
         | _ -> failwith ("invalid update collection in map update "^(string_of_type slice_t))
@@ -1522,7 +1522,7 @@ end (* Typing *)
       let c_var, c_t = List.hd nargs, type_of_expr_t (List.hd nargs) in
       let c_it_t = Target(Iterator(c_t)) in
       let c_elem_t, access_f = match c_t with
-        | Host(Collection(x)) -> Host x, Ext(PairSecond)
+        | Host(Collection(_, x)) -> Host x, Ext(PairSecond)
         | Target(Type(x)) -> Target(Type(x^"_entry")), Ext(MemberAccess("__av"))
         | _ -> failwith "invalid lookup on non-collection"
       in
@@ -1774,7 +1774,7 @@ end (* Typing *)
     if nsubs = [] then nimp
     else
       let next_subs = List.map (fun (ty,(id,nty)) -> match ty, nty with
-        | Host(Collection (TTuple(l))), Target(_) when is_ext_collection env nty ->
+        | Host(Collection(_, (TTuple(l)))), Target(_) when is_ext_collection env nty ->
           let fields_t = field_types_of_collection env (type_decl_of_env env nty)
           in (struct_member_sub (Var(ty,(id,ty))) l fields_t)@
              [Var(ty, (id, ty)), (nty, Var(nty, (id, nty)))]
@@ -1975,7 +1975,7 @@ end (* Typing *)
 
           (* Rewrite loops over STL maps to use the std::pair format of map
            * entries rather than a single tuple or struct of keys and value. *)
-          | ((id,(Host(TTuple id_tl) as id_t)), false), Host(Collection (TTuple _)) ->
+          | ((id,(Host(TTuple id_tl) as id_t)), false), Host(Collection(_, (TTuple _))) ->
             let key_t,value_t = back id_tl in 
             let flat_key, nk_t, nv_t = (List.length key_t = 1),
               Host (tuple_type_of_list key_t), Host value_t in
