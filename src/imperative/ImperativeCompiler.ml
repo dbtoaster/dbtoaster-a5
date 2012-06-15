@@ -1187,7 +1187,7 @@ end (* Typing *)
 	          acc@["any_cast<"^ty^">("^evt_arg^"["^(string_of_int i)^"])"]))
 	        (0,[]) trig_types)
 	      in	       
-	      [Lines ["void unwrap_"^trig_name^"(const event_args& e) {";
+	      [Lines ["void unwrap_"^trig_name^"(const event_args_t& e) {";
 	              tab^"on_"^trig_name^"("^(String.concat "," evt_fields)^");";
 	              "}"; ""];]
                
@@ -2295,9 +2295,12 @@ end (* Typing *)
          
   let ending = Lines ["}";]
 
-  (* Stream identifier generation *)
-  let declare_streams (dbschema:Schema.rel_t list) = 
-    List.map (fun (rel,_,_) -> ("\""^(String.escaped rel)^"\"")) dbschema
+  (* Relation identifier generation *)
+  let declare_relations (dbschema:Schema.rel_t list) = Lines        
+    (List.map (fun (rel,_,rel_type) -> 
+                ("pb.add_relation(\""^(String.escaped rel)^"\""^
+                    (if rel_type = TableRel then ", true" else "")^");")) 
+              dbschema)
  
   (* Generates source code for map declarations, based on the
    * type_of_map_schema function above *)
@@ -2359,53 +2362,54 @@ end (* Typing *)
     let d_l, i_l = compile_decls (ListAsSet.diff map_schema tlq_schema) in
     let r_l = compile_registration map_schema in
     
-    let dbschema = Schema.rels sources in
+    let dbschema = Schema.rels sources in    
+    let register_relations = declare_relations dbschema in
     
-    let streams = declare_streams dbschema in
-	  let register_streams = Lines (
-	    List.map (fun rel -> ("pb.add_stream("^rel^");") ) streams)
-	  in
-	  let register_triggers = Lines 
-	    (List.map (fun (rel, evt_type, unwrap_fn_id,_) ->
-	        let args = String.concat ", " [rel; evt_type; ("boost::bind(&"^unwrap_fn_id^", this, ::boost::lambda::_1)")] in
-	        if evt_type = "insert_tuple" || evt_type = "delete_tuple" then 
-	            ("pb.add_trigger("^args^");") else ("")) 
-	    (fst trig_reg_info))
-	  in
-      
-    let load_table =
+    let table_rels = Schema.table_rels sources in
+    let register_table_triggers = Lines (List.map
+      (fun (id,_,_) -> "pb.add_trigger(\""^id^"\", insert_tuple,"^
+        " boost::bind(&data_t::unwrap_insert_"^id^", this, ::boost::lambda::_1));")
+      table_rels)
+    in  
+	  let declare_table_triggers =
       let table_types =
         let convert_var_type (_,t) =
           Typing.string_of_type (imp_type_of_calc_type t)
         in
-        List.map
-          (fun (id,f,_) -> id, List.map convert_var_type f)
-          (Schema.table_rels sources)
+        List.map (fun (id,f,_) -> id, List.map convert_var_type f) table_rels
       in
-      let load_table_body (id, field_types) =
+      let table_trigger (id, field_types) =
         let entry_t = id^"_entry" in
+        let table_t = id^"_map" in
         let evt_fields types = snd (List.fold_left
             (fun (i,acc) ty -> (i+1,
-              acc@["any_cast<"^ty^">(evt.data["^(string_of_int i)^"])"]))
+              acc@["any_cast<"^ty^">(ea["^(string_of_int i)^"])"]))
             (0,[]) types)
         in
         let direct_unwrap =
-          (String.concat "," (evt_fields field_types))^",0"
+          (String.concat "," (evt_fields field_types))^",1"
         in 
-        [tab^"if (pb != NULL && pb->get_stream_name(evt.id) == \""^id^"\") {";
-         tab^tab^entry_t^" e("^direct_unwrap^");";
-         tab^tab^id^".insert(e);";
-         tab^"}"]
+        ["void unwrap_insert_"^id^"(const event_args_t& ea) {";
+         tab^entry_t^" e("^direct_unwrap^");";
+         tab^"pair<"^table_t^"::iterator,bool> ret = "^id^".insert(e);";
+         tab^"if( !ret.second )       "^id^".modify( ret.first, increment_table_entry<"^entry_t^">() );";
+         "}"; "";]
       in
-       Lines (["void load_table(ProgramBase<tlq_t>* pb, stream_event& evt) {"]@
-               (List.flatten (List.map load_table_body table_types))@
-              ["}"])
+      Lines (List.flatten (List.map table_trigger table_types))
     in
 
-    let flat_triggers = List.flatten 
+    let register_stream_triggers = Lines 
+        (List.map (fun (rel, evt_type, unwrap_fn_id,_) ->
+            let args = String.concat ", " [rel; evt_type; ("boost::bind(&"^unwrap_fn_id^", this, ::boost::lambda::_1)")] in
+            if evt_type = "insert_tuple" || evt_type = "delete_tuple" then 
+                ("pb.add_trigger("^args^");") else ("")) 
+        (fst trig_reg_info))
+    in
+    
+    let declare_stream_triggers = cscl (List.flatten 
         (List.map (fun (t_decls,t) -> 
              t_decls@(source_code_of_trigger dbschema t))
-         triggers)
+         triggers))
     in
     let profiling = if opts.profile then (declare_profiling map_schema) 
                     else Lines([]) 
@@ -2453,12 +2457,13 @@ end (* Typing *)
         "";
         tab^"void register_data(ProgramBase<tlq_t>& pb) {";];
       isc (tab^tab) (Lines r_l);
-      isc (tab^tab) register_streams;
-      isc (tab^tab) register_triggers;
+      isc (tab^tab) register_relations;
+      isc (tab^tab) register_table_triggers;
+      isc (tab^tab) register_stream_triggers;
       isc (tab^tab) init_stats;
       Lines [tab^"}";];
-      isc tab load_table;
-      isc tab (cscl flat_triggers);
+      isc tab declare_table_triggers;
+      isc tab declare_stream_triggers;
       isc tab profiling;
       Lines ["private:"];
       isc tab (cscl d_l); 
@@ -2466,7 +2471,7 @@ end (* Typing *)
     ])) 
     
 
-  let declare_sources_and_adaptors (sources: Schema.source_info_t list) =
+  let declare_sources_and_adaptors (sources: Schema.source_info_t list ref) =
     let quote s = "\""^(String.escaped s)^"\"" in
     let valid_adaptors = ["csv"      , "csv_adaptor";
                           "orderbook", "order_books::order_book_adaptor";
@@ -2493,7 +2498,7 @@ end (* Typing *)
         | _ -> t
     in
     let mk_array l = "{ "^(String.concat ", " l)^" }" in
-    let decls = List.map (fun ((sf:Schema.source_t), ra) ->
+    let decls_for = List.map (fun ((sf:Schema.source_t), ra) ->
       let adaptor_meta = 
       List.fold_left
       (fun acc ((a:Schema.adaptor_t),((r,fields,_):Schema.rel_t)) ->
@@ -2523,7 +2528,7 @@ end (* Typing *)
               if List.mem_assoc (fst a) adaptor_ctor_args
               then [List.assoc (fst a) adaptor_ctor_args] else []
             in  
-            let rel_id = ("get_stream_id(\""^(String.escaped r)^"\")")
+            let rel_id = ("get_relation_id(\""^(String.escaped r)^"\")")
             in
             String.concat "," ([rel_id]@extra_args@
                                [string_of_int (List.length a_params); param_id])
@@ -2577,11 +2582,22 @@ end (* Typing *)
         | _ -> failwith "unsupported data source and framing types"
 
       in source_var, (List.flatten (List.map snd adaptor_meta))@source_decl)
-      (List.filter (fun (s,_) -> (s <> NoSource) ) sources)
     in 
-    let rsc = cscl ~delim:"\n" (List.map (fun sd ->
-        cscl (List.map source_code_of_imp sd)) (List.map snd decls))
-    in (List.map fst decls), rsc     
+    
+    let decls_code_for is_table_src srcs =
+      let decls = decls_for (List.filter (fun (s,_) -> (s <> NoSource) ) srcs) in
+      let register_src = function
+          | Var(_,(id,_)) -> Lines ["add_source("^id^( if is_table_src then ", true" else "")^");"]
+          | _ -> failwith "invalid source"
+      in
+      cscl ~delim:"\n" (List.map (fun (sv,sd) ->
+        cscl ((List.map source_code_of_imp sd)@[register_src sv])) decls)
+    in
+    
+    let table_sources, stream_sources = Schema.partition_sources_by_type sources in
+    cdsc "\n"
+        (decls_code_for true  table_sources)
+        (decls_code_for false stream_sources)
             
 end (* Target *)
 
@@ -2728,26 +2744,8 @@ struct
     let (map_schema,patterns,(triggers,trig_reg_info)), sources, (tlq_schema,tlqs) = imp_prog in
     
     let maps_and_triggers = declare_maps_and_triggers opts tab imp_prog in
+    let sources_and_adaptors = declare_sources_and_adaptors sources in
     
-    let table_sources, stream_sources =
-      Schema.partition_sources_by_type sources in
-
-    let table_source_vars, table_source_and_adaptor_decls = 
-      declare_sources_and_adaptors table_sources in
-    
-    let stream_source_vars, stream_source_and_adaptor_decls = 
-      declare_sources_and_adaptors stream_sources in
-
-    let register_table_src = Lines (List.map (function
-      | Var(_,(id,_)) -> "table_multiplexer.add_source("^id^");"
-      | _ -> failwith "invalid source") table_source_vars)
-    in
-      
-	  let register_stream_src = Lines (List.map (function
-	    | Var(_,(id,_)) -> "stream_multiplexer.add_source("^id^");"
-	    | _ -> failwith "invalid source") stream_source_vars)
- 	  in
-
     let main_fn = (isc tab (cscl ~delim:"\n"
 	     ([Lines [
          "class Program : public ProgramBase<tlq_t>";
@@ -2755,15 +2753,11 @@ struct
          "public:";
          tab^"Program(int argc = 0, char* argv[] = 0) : ProgramBase<tlq_t>(argc,argv) {";
          tab^tab^"data.register_data(*this);";];
-         isc (tab^tab) table_source_and_adaptor_decls;
-         isc (tab^tab) register_table_src;
-	       isc (tab^tab) stream_source_and_adaptor_decls;
-	       isc (tab^tab) register_stream_src;
-	       isc tab (inl "}");
+         isc (tab^tab) sources_and_adaptors;
+         isc tab (inl "}");
          Lines [
           tab^"void init() {";
-          tab^tab^"run_multiplexer(table_multiplexer,";
-          tab^tab^"  boost::bind(&data_t::load_table, &data, this, ::boost::lambda::_1));";
+          tab^tab^"process_tables();";
           tab^tab^"data.on_"^(Schema.name_of_event Schema.SystemInitializedEvent)^"();";
           tab^"}";
           "";

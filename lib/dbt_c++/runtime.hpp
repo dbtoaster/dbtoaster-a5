@@ -15,8 +15,6 @@
 #include <boost/program_options.hpp>
 #include <boost/shared_ptr.hpp>
 
-#include "streams.hpp"
-
 namespace dbtoaster {
   namespace runtime {
 
@@ -25,7 +23,6 @@ namespace dbtoaster {
     using namespace boost;
     using namespace boost::filesystem;
     using namespace boost::program_options;
-    using namespace dbtoaster::streams;
     
     boost::hash<std::string> string_hash;
 
@@ -45,16 +42,26 @@ namespace dbtoaster {
       unordered_set<string> traced_maps;
       unsigned int log_tuple_count_every;
 
-      runtime_options() { traced = false; trace_step = trace_counter = 0; 
-                          log_tuple_count_every = 0; }
+      // Verbose
+      static bool _verbose;
 
-      runtime_options(int argc, char* argv[]) { 
-        traced = false; trace_step = trace_counter = log_tuple_count_every = 0;
-        init(argc, argv); }
+      // Execution mode
+      bool async;
+
+      runtime_options(int argc = 0, char* argv[] = 0) :
+    	  traced(false)
+      	  , trace_step(0)
+      	  , log_tuple_count_every(0)
+      	  , async(false)
+      {
+        init(argc, argv);
+      }
 
       void init_options(options_description& desc) {
         desc.add_options()
           ("help", "list available options")
+          ("v", "verbose")
+          ("async", "asynchronous execution mode")
           ("log-dir", value<string>(), "logging directory")
           ("log-triggers,l",
             value<vector<string> >(&logged_streams_v), "log stream triggers")
@@ -110,7 +117,7 @@ namespace dbtoaster {
         	  trace_step = 1000;
           if ( trace_opts != "" )
           {
-        	  if( __verbose )
+        	  if( runtime_options::verbose() )
         		  cerr << "tracing: " << trace_opts << endl;
         	  parse_tracing(trace_opts);
           }
@@ -127,12 +134,16 @@ namespace dbtoaster {
       }
 
       void init(int argc, char* argv[]) {
+    	if (argc <= 0 )	return;
+
         opt_desc = shared_ptr<options_description>(
             new options_description("dbtoaster query options"));
 
         init_options(*opt_desc);
         init_positional_options(pos_options);
         process_options(argc, argv, *opt_desc, pos_options, opt_map);
+        _verbose = opt_map.count("v");
+        async = opt_map.count("async");
         setup_tracing(*opt_desc);
         logged_streams = set<string>(logged_streams_v.begin(), logged_streams_v.end());
         logged_streams_v.clear();
@@ -141,6 +152,12 @@ namespace dbtoaster {
       bool help() {
         if ( opt_map.count("help") ) cerr << *opt_desc << endl;
         return opt_map.count("help");
+      }
+
+      static
+      bool verbose()
+      {
+    	  return _verbose;
       }
 
       // Result output.
@@ -172,8 +189,8 @@ namespace dbtoaster {
                  && opt_map["unified"].as<string>() == "stream";
       }
 
-      path get_log_file(string stream_name, stream_event_type t) {
-        return get_log_file(stream_name, stream_event_name[t], true);
+      path get_log_file(string stream_name, event_type t) {
+        return get_log_file(stream_name, event_name[t], true);
       }
 
       path get_log_file(string stream_name) {
@@ -250,6 +267,8 @@ namespace dbtoaster {
         return p.make_preferred();
       }
     };
+
+    bool runtime_options::_verbose = false;
 
     struct orderbook_options : public runtime_options {
       vector<string> orderbook_params;

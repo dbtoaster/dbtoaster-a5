@@ -1,0 +1,150 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>DBToaster C++</title>
+
+<style type="text/css">
+h1 {
+  text-align: center;
+}
+h2 {
+  text-align: center;
+}
+h3 {
+  text-align: center;
+}
+.wrapper {
+  margin: 0 auto;
+  width: 600px;
+}
+.code {
+  font-family: Courier, Monospace;
+  font-weight: bold;
+}
+.codeblock {
+  font-family: Courier, Monospace;
+  margin: 10px 20px;
+  padding: 10px;
+  background-color: #cccccc;
+}
+.todo {
+  margin: 10px 20px;
+  color: red;
+  font-weight: bold;
+  text-align: center;
+}
+</style>
+</head><body>
+
+<div class="wrapper">
+<h1>DBToaster C++ User Reference</h1>
+
+<h2>Generating and Compiling C++ Code</h2>
+<p>
+In order to generate C++ code the <tt>-l cpp</tt> option needs to be specified. DBToaster will produce a C++ 
+header file containing a set of datastructures required for executing the sql program. 
+</p>
+
+<p>
+If DBToaster operates in the standalone binary mode (the <tt>-c [binary name]</tt> flag is present) then
+the generated header file is compiled against <tt>lib/dbt_c++/main.cpp</tt>, which provides code for executing
+the sql program and printing the results. In order for the compilation process to succeed, the Boost library
+must be present and the following environment variables must be defined: 
+<ul>
+<li><b>DBT_HDR</b> which must contain the path to Boost's <tt>include</tt> folder;</li>
+<li><b>DBT_LIB</b> which must contain the path to Boost's <tt>lib</tt> folder.</li>
+</ul>
+</p>
+<p>
+The following boost libraries must be present: <tt>boost_program_options</tt>, <tt>boost_serialization</tt>, 
+<tt>boost_system</tt>, <tt>boost_filesystem</tt>, <tt>boost_chrono</tt> and <tt>boost_thread</tt>. 
+</p>
+<p>
+If the generated binary is run with the <tt>-async</tt> flag, it will also print intermediary results 
+concurrently with executing the sql program.
+</p>
+
+<h2>C++ Datastructures</h2>
+
+<p>
+The DBToaster C++ codegenerator produces a header file containing 3 main type definitions in the <tt>dbtoaster</tt> namespace:
+<tt>tlq_t</tt>, <tt>data_t</tt> and <tt>Program</tt>.Additionally <tt>snapshot_t</tt> is pre-defined as a garbage collected
+pointer to <tt>tlq_t</tt>.
+</p>
+
+<p>
+The <tt>tlq_t</tt> contains all the relevant datastructures for computing the results of the sql program, also called
+the top level queries. It provides a set of functions named <tt>computeTLQ_NAME</tt> that return the top level query
+result labeled <tt>TLQ_NAME</tt>. For example if generating code for the query: <tt>SELECT A, SUM(B) as RESULT1, AVG(C) as RESULT2 
+FROM R GROUP BY A;</tt> the <tt>tlq_t</tt> produced has two functions named <tt>computeRESULT1</tt> and <tt>computeRESULT2</tt>
+that return the corresponding query results.
+</p>
+
+<p>
+The <tt>data_t</tt> contains all the relevant datastructures for incrementally maintaining the results of the sql program. 
+It provides for each stream based relation <tt>STREAM_X</tt>, present in the sql program, a pair of trigger functions named 
+<tt>on_insert_STREAM_X()</tt> and <tt>on_delete_STREAM_X()</tt>  that incrementally maintain the query results in the event of 
+an insertion/deletion of a tuple in <tt>STREAM_X</tt>. For static table based relations it contains only the insertion trigger, 
+which gets called when processing the static tables in the initialization phase of the program.
+</p>
+
+<p>
+Finally, <tt>Program</tt> is a class that implements the <tt>IProgram</tt> interface and provides the basic functionalities
+for reading static table tuples and stream events from their sources, initializing the relevant datastructures, running the sql 
+program and retrieving its results. This is done through a set of 4 functions: <tt>init()</tt>, <tt>run()</tt>, <tt>is_finished()</tt> 
+and <tt>get_snapshot()</tt>, as presented bellow:
+<div class="codeblock">
+/**<br/>
+* This should get overridden by a function that does<br/>
+* initialization work, such as processing the static<br/>
+* table tuples.<br/>
+*/<br/>
+virtual void init();<br/>
+<br/>
+/**<br/>
+* Executes the program by launching the virtual method<br/>
+* 'process_streams()'.<br/>
+* <br/>
+* @param async If 'true' the execution is performed in<br/>
+*               a separate thread.<br/>
+*/<br/>
+void run( bool async = false );<br/>
+<br/>
+/**<br/>
+* This function provides a way for testing whether the<br/>
+* program has finished or not when run in asynchronous<br/>
+* mode.<br/>
+* <br/>
+* @return 'true' if the program has finished.<br/>
+*/<br/>
+bool is_finished();<br/>
+<br/>
+/**<br/>
+* Obtains a snapshot of the results of the program. If<br/>
+* the program is currently running in asynchronous<br/> 
+* mode it guarantees that the snapshot is consistent.<br/>
+* <br/>
+* @return A snapshot of the 'tlq_t' data-structure<br/>
+*         representing the results of the program.<br/>
+*/<br/>
+snapshot_t get_snapshot();<br/>
+</div>
+
+<tt>lib/dbt_c++/main.cpp</tt> is an example of how these functions can be used to execute the sql program.
+</p>
+
+<h2>Advanced features</h2>
+
+<p>
+In order to perform additional processing on each stream event one can override the virtual function 
+<tt>void IProgram::process_stream_event(event_t& ev)</tt> while making sure that the base function
+<tt>Program::process_stream_event()</tt> still gets called.
+</p>
+
+<p>
+If one wants to manually read stream events they can do that by overriding the virtual function
+<tt>void IProgram::process_streams()</tt> and call <tt>Program::process_stream_event()</tt> for
+each event read.
+</p>
+
+</body></html>

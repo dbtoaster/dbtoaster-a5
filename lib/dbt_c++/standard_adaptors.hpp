@@ -11,33 +11,36 @@
 #include <boost/functional/hash.hpp>
 #include <boost/shared_ptr.hpp>
 
+#include "runtime.hpp"
 #include "streams.hpp"
 
 namespace dbtoaster {
   namespace adaptors {
 
     using namespace std;
+    using namespace dbtoaster;
+    using namespace dbtoaster::runtime;
     using namespace dbtoaster::streams;
 
     struct csv_adaptor : public stream_adaptor
     {
-      stream_id_t id;
-      stream_event_type type;
+      relation_id_t id;
+      event_type type;
       string schema;
       string delimiter;
       boost::hash<std::string> field_hash;
 
-      shared_ptr<stream_event> saved_event;
+      shared_ptr<event_t> saved_event;
 
-      csv_adaptor(stream_id_t i) : id(i), type(insert_tuple), delimiter(",") {}
+      csv_adaptor(relation_id_t _id) : id(_id), type(insert_tuple), delimiter(",") {}
 
-      csv_adaptor(stream_id_t i, string sch)
-        : id(i), type(insert_tuple), schema(sch), delimiter(",")
+      csv_adaptor(relation_id_t _id, string sch)
+        : id(_id), type(insert_tuple), schema(sch), delimiter(",")
       {
         validate_schema();
       }
 
-      csv_adaptor(stream_id_t i, int num_params,
+      csv_adaptor(relation_id_t i, int num_params,
                   const pair<string,string> params[])
         : id(i), type(insert_tuple), delimiter(",")
       {
@@ -49,7 +52,7 @@ namespace dbtoaster {
         for (int i = 0; i< num_params; ++i) {
           string k = params[i].first;
           string v = params[i].second;
-          if( __verbose )
+          if( runtime_options::verbose() )
         	  cerr << "csv params: " << k << ": " << v << endl;
 
           if ( k == "fields" ) {
@@ -75,7 +78,7 @@ namespace dbtoaster {
           string ty = copy_range<std::string>(*it);
           if ( ty == "event" )       r += "e";
           else if ( ty == "order" )  r += "o";
-          else if ( ty == "int" )    r += "i";
+          else if ( ty == "int" )    r += "l";
           else if ( ty == "long" )   r += "l";
           else if ( ty == "float" )  r += "f";
           else if ( ty == "double" ) r += "f";
@@ -97,7 +100,6 @@ namespace dbtoaster {
           switch(*it) {
             case 'e':  // event type
             case 'o':  // order field type
-            case 'i':
             case 'l':
             case 'f':
             case 'd':
@@ -109,10 +111,10 @@ namespace dbtoaster {
       }
 
       // Interpret the schema.
-      tuple<bool, bool, event_args> interpret_event(const string& schema,
+      tuple<bool, bool, event_args_t> interpret_event(const string& schema,
                                                     const string& data)
       {
-        event_args tuple;
+        event_args_t tuple;
         string::const_iterator schema_it = schema.begin();
         bool valid = true;
 
@@ -130,11 +132,10 @@ namespace dbtoaster {
           istringstream iss(field);
           bool ins; unsigned int o;
           int y,m,d;
-          double f; int i; long l;
+          double f; long l;
           vector<string> date_fields;
           switch (*schema_it) {
             case 'e': iss >> ins; insert = ins; break;
-            case 'i': iss >> i; tuple.push_back(i); break;
             case 'l': iss >> l; tuple.push_back(l); break;
             case 'f': iss >> f; tuple.push_back(f); break;
             case 'h': tuple.push_back(static_cast<int>(field_hash(field))); break;
@@ -166,26 +167,26 @@ namespace dbtoaster {
         return make_tuple(valid, insert, tuple);
       }
 
-      void process(const string& data, shared_ptr<list<stream_event> > dest)
+      void process(const string& data, shared_ptr<list<event_t> > dest)
       {
         // Flush any buffered tuple.
         if ( saved_event ) {
             dest->push_back(*saved_event);
-            saved_event = shared_ptr<stream_event>();
+            saved_event = shared_ptr<event_t>();
         }
 
         if ( dest && schema != "" ) {
           // Interpret the schema.
           unsigned int order_before = current_order;
-          tuple<bool, bool, event_args> evt = interpret_event(schema, data);
+          tuple<bool, bool, event_args_t> evt = interpret_event(schema, data);
           bool valid = get<0>(evt);
           bool insert = get<1>(evt);
 
           if ( valid )  {
-            stream_event e(insert? insert_tuple : delete_tuple, id, get<2>(evt));
+            event_t e(insert? insert_tuple : delete_tuple, id, get<2>(evt));
             // Buffer on change of order.
             if ( current_order > order_before ) {
-              saved_event = shared_ptr<stream_event>(new stream_event(e));
+              saved_event = shared_ptr<event_t>(new event_t(e));
             } else {
               dest->push_back(e);
             }
@@ -193,28 +194,28 @@ namespace dbtoaster {
             cerr << "adaptor could not process " << data << endl;
             cerr << "schema: " << schema << endl;
           }
-        } else if ( __verbose ) {
+        } else if ( runtime_options::verbose() ) {
            cerr << "Skipping event, no "
                 << (schema == ""? "schema" : "buffer") << " found." << endl;
         }
       }
 
-      void finalize(shared_ptr<list<stream_event> > dest) {}
+      void finalize(shared_ptr<list<event_t> > dest) {}
     };
 
     // Replay adaptors are CSV adaptors prepended with an integer denoting the
     // event type. The adaptor internally adjusts the schema, allowing it to
     // be used with the same parameters as a standard CSV adaptor.
     struct replay_adaptor : public csv_adaptor {
-      replay_adaptor(stream_id_t i) : csv_adaptor(i) {}
+      replay_adaptor(relation_id_t i) : csv_adaptor(i) {}
 
-      replay_adaptor(stream_id_t i, string sch) : csv_adaptor(i) {
+      replay_adaptor(relation_id_t i, string sch) : csv_adaptor(i) {
         type = insert_tuple;
         schema = "e,"+sch;
         validate_schema();
       }
 
-      replay_adaptor(stream_id_t i, int num_params,
+      replay_adaptor(relation_id_t i, int num_params,
                      const pair<string,string> params[])
         : csv_adaptor(i,num_params,params)
       {}
@@ -272,7 +273,7 @@ namespace dbtoaster {
             return *this;
           }
 
-          void operator()(event_args& e) {
+          void operator()(event_args_t& e) {
             if (e.size() > 0) e[0] = t; else e.push_back(t);
             if (e.size() > 1) e[1] = id; else e.push_back(id);
             if (e.size() > 2) e[2] = broker_id; else e.push_back(broker_id);
@@ -284,7 +285,7 @@ namespace dbtoaster {
       typedef map<int, order_book_tuple> order_book;
 
       struct order_book_adaptor : public stream_adaptor {
-        stream_id_t id;
+    	relation_id_t id;
         int num_brokers;
         order_book_type type;
         shared_ptr<order_book> bids;
@@ -293,7 +294,7 @@ namespace dbtoaster {
         bool insert_only;
 
 
-        order_book_adaptor(stream_id_t sid, int nb, order_book_type t)
+        order_book_adaptor(relation_id_t sid, int nb, order_book_type t)
           : id(sid), num_brokers(nb), type(t)
         {
           bids = shared_ptr<order_book>(new order_book());
@@ -302,7 +303,7 @@ namespace dbtoaster {
           insert_only = false;
         }
 
-        order_book_adaptor(stream_id_t sid, int num_params,
+        order_book_adaptor(relation_id_t sid, int num_params,
                            pair<string, string> params[])
         {
           id = sid;
@@ -314,7 +315,7 @@ namespace dbtoaster {
           for (int i = 0; i < num_params; ++i) {
             string k = params[i].first;
             string v = params[i].second;
-            if( __verbose )
+            if( runtime_options::verbose() )
             	cerr << "order book adaptor params: "
             		<< params[i].first << ", " << params[i].second << endl;
 
@@ -379,11 +380,11 @@ namespace dbtoaster {
         }
 
         void process_message(const order_book_message& msg,
-                             shared_ptr<list<stream_event> > dest)
+                             shared_ptr<list<event_t> > dest)
         {
             bool valid = true;
             order_book_tuple r(msg);
-            stream_event_type t = insert_tuple;
+            event_type t = insert_tuple;
 
             if ( msg.action == "B" ) {
               if (type == tbids || type == both) {
@@ -426,9 +427,9 @@ namespace dbtoaster {
                 }
               }
               if ( x_valid && !insert_only ) {
-                event_args fields(5);
+                event_args_t fields(5);
                 x(fields);
-                stream_event y(delete_tuple, id, fields);
+                event_t y(delete_tuple, id, fields);
                 dest->push_back(y);
               }
               t = insert_tuple;
@@ -484,16 +485,16 @@ namespace dbtoaster {
 
 
             if ( valid ) {
-              event_args fields(5);
+              event_args_t fields(5);
               r(fields);
               if ( !(t == delete_tuple && insert_only) ) {
-                stream_event e(t, id, fields);
+                event_t e(t, id, fields);
                 dest->push_back(e);
               }
             }
         }
 
-        void process(const string& data, shared_ptr<list<stream_event> > dest)
+        void process(const string& data, shared_ptr<list<event_t> > dest)
         {
             // Grab a message from the data.
             order_book_message r;
@@ -505,7 +506,7 @@ namespace dbtoaster {
             }
         }
 
-        void finalize(shared_ptr<list<stream_event> > dest) {}
+        void finalize(shared_ptr<list<event_t> > dest) {}
       };
 
       // Command line initialization of orderbook datasets.
@@ -603,13 +604,13 @@ namespace dbtoaster {
         int num_fields;
         bool deletions;
 
-        tpch_adaptor(stream_id_t i, string tpch_rel) : csv_adaptor(i),
+        tpch_adaptor(relation_id_t i, string tpch_rel) : csv_adaptor(i),
                                                      deletions(false){
           schema = parse_schema(get_schema(tpch_rel));
           if ( delimiter == "" ) delimiter = "|";
         }
 
-        tpch_adaptor(stream_id_t i, string tpch_rel, int num_params,
+        tpch_adaptor(relation_id_t i, string tpch_rel, int num_params,
                      const pair<string, string> params[])
           : csv_adaptor(i,num_params,params), deletions(false)
         {
@@ -617,7 +618,7 @@ namespace dbtoaster {
           for (int i = 0; i< num_params; ++i) {
             string k = params[i].first;
             string v = params[i].second;
-            if( __verbose )
+            if( runtime_options::verbose() )
             	cerr << "tpch adaptor params: " << k << ": " << v << endl;
             if ( k == "deletions" ) {
               deletions = (v == "true");
@@ -666,18 +667,18 @@ namespace dbtoaster {
       {
         unsigned int gap_counter;
         bool reverse;
-        shared_ptr<list<stream_event> > buffer;
+        shared_ptr<list<event_t> > buffer;
 
-        non_inflationary_tpch_adaptor(stream_id_t i, string tpch_rel,
+        non_inflationary_tpch_adaptor(relation_id_t i, string tpch_rel,
                                       unsigned int gap, bool rev)
           : tpch_adaptor(i,tpch_rel)
         {
           gap_counter = gap > 0? gap : 100;
           reverse = rev;
-          buffer = shared_ptr<list<stream_event> >(new list<stream_event>());
+          buffer = shared_ptr<list<event_t> >(new list<event_t>());
         }
 
-        non_inflationary_tpch_adaptor(stream_id_t i, string tpch_rel,
+        non_inflationary_tpch_adaptor(relation_id_t i, string tpch_rel,
                                       int num_params,
                                       const pair<string, string> params[])
           : tpch_adaptor(i, tpch_rel, num_params, params)
@@ -696,24 +697,24 @@ namespace dbtoaster {
               reverse = (v == "true");
             }
           }
-          buffer = shared_ptr<list<stream_event> >(new list<stream_event>());
+          buffer = shared_ptr<list<event_t> >(new list<event_t>());
         }
 
-        void process(const string& data, shared_ptr<list<stream_event> > dest)
+        void process(const string& data, shared_ptr<list<event_t> > dest)
         {
           if ( dest && schema != "" ) {
             // Interpret the schema.
-            tuple<bool, bool, event_args> evt = interpret_event(schema, data);
+            tuple<bool, bool, event_args_t> evt = interpret_event(schema, data);
             bool valid = get<0>(evt);
             bool insert = get<1>(evt);
 
             if ( valid )  {
-              stream_event e(insert? insert_tuple : delete_tuple, id, get<2>(evt));
+              event_t e(insert? insert_tuple : delete_tuple, id, get<2>(evt));
               dest->push_back(e);
 
               if ( !buffer ) return;
               if ( insert ) {
-                stream_event de(delete_tuple, id, get<2>(evt));
+                event_t de(delete_tuple, id, get<2>(evt));
                 if ( reverse ) buffer->push_back(de);
                 else buffer->push_front(de);
               }
@@ -728,7 +729,7 @@ namespace dbtoaster {
           }
         }
 
-        void finalize(shared_ptr<list<stream_event> > data) {
+        void finalize(shared_ptr<list<event_t> > data) {
           if ( data && buffer && !buffer->empty() ) {
             copy(buffer->begin(), buffer->end(), back_inserter(*data));
           }

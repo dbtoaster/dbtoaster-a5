@@ -13,6 +13,8 @@
 #include <boost/lambda/lambda.hpp>
 #include <boost/lambda/bind.hpp>
 
+#include "runtime.hpp"
+
 using namespace ::std;
 using namespace ::boost;
 using namespace boost::filesystem;
@@ -20,8 +22,6 @@ using namespace boost::iostreams;
 using namespace boost::lambda;
 
 namespace dbtoaster {
-
-bool __verbose = false;
 
 // These need to be placed here as C++ doesn't search for overloaded
 // << operators in all the available namespaces
@@ -55,21 +55,9 @@ std::ostream& operator<<(std::ostream &strm, const vector<boost::any> &args) {
 
 namespace streams {
 
-typedef int stream_id_t;
-enum stream_event_type { insert_tuple = 0, delete_tuple, system_ready_event };
-string stream_event_name[] = {string("insert"), string("delete"), string("system_ready")};
+using namespace ::dbtoaster::runtime;
 
-typedef vector<boost::any> event_args;
 
-struct stream_event
-{
-	stream_event_type type;
-	stream_id_t id;
-	event_args data;
-	stream_event(stream_event_type t, stream_id_t i, event_args& d)
-	: type(t), id(i), data(d)
-	{}
-};
 
 struct ordered {
 	virtual unsigned int order() = 0;
@@ -87,9 +75,9 @@ struct stream_adaptor : public ordered
 
 	// processes the data, adding all stream events generated to the list.
 	virtual void process(const string& data,
-			shared_ptr<list<stream_event> > dest) = 0;
+			shared_ptr<list<event_t> > dest) = 0;
 
-	virtual void finalize(shared_ptr<list<stream_event> > dest) = 0;
+	virtual void finalize(shared_ptr<list<event_t> > dest) = 0;
 };
 
 // Framing
@@ -230,7 +218,7 @@ struct source : public ordered
 
 	virtual void init_source() = 0;
 	virtual bool has_inputs() = 0;
-	virtual shared_ptr<list<stream_event> > next_inputs() = 0;
+	virtual shared_ptr<list<event_t> > next_inputs() = 0;
 };
 
 struct dbt_file_source : public source
@@ -245,7 +233,7 @@ struct dbt_file_source : public source
 		if ( !source_stream ) {
 			cerr << "failed to open file source " << path << endl;
 		} else {
-			if( __verbose )
+			if( runtime_options::verbose() )
 			cerr << "reading from " << path
 					<< " with " << a.size() << " adaptors" << endl;
 		}
@@ -326,7 +314,7 @@ struct dbt_file_source : public source
 
 	// Process adaptors in the first stage, accumulating and returning
 	// stream events
-	void process_adaptors(string& data, shared_ptr<list<stream_event> >& r) {
+	void process_adaptors(string& data, shared_ptr<list<event_t> >& r) {
 		unsigned int min_order = adaptors.order();
 		shared_ptr<dynamic_poset::class_range> range = adaptors.range(min_order);
 		if ( !range ) {
@@ -345,7 +333,7 @@ struct dbt_file_source : public source
 	}
 
 	// Finalize all adaptors, accumulating stream events.
-	void finalize_adaptors(shared_ptr<list<stream_event> >& r) {
+	void finalize_adaptors(shared_ptr<list<event_t> >& r) {
 		dynamic_poset::iterator it = adaptors.begin();
 		dynamic_poset::iterator end = adaptors.end();
 
@@ -368,8 +356,8 @@ struct dbt_file_source : public source
 		adaptors.clear();
 	}
 
-	shared_ptr<list<stream_event> > next_inputs() {
-		shared_ptr<list<stream_event> > r;
+	shared_ptr<list<event_t> > next_inputs() {
+		shared_ptr<list<event_t> > r;
 
 		if ( adaptors.empty() ) return r;
 
@@ -379,12 +367,12 @@ struct dbt_file_source : public source
 			shared_ptr<string> data = next_frame();
 
 			if ( data ) {
-				r = shared_ptr<list<stream_event> >(new list<stream_event>());
+				r = shared_ptr<list<event_t> >(new list<event_t>());
 				process_adaptors(*data, r);
 			}
 		} else if ( source_stream->is_open() ) {
 			source_stream->close();
-			r = shared_ptr<list<stream_event> >(new list<stream_event>());
+			r = shared_ptr<list<event_t> >(new list<event_t>());
 
 			finalize_adaptors(r);
 		}
@@ -459,9 +447,9 @@ struct source_multiplexer
 		return found;
 	}
 
-	shared_ptr<list<stream_event> > next_inputs()
+	shared_ptr<list<event_t> > next_inputs()
     {
-		shared_ptr<list<stream_event> > r;
+		shared_ptr<list<event_t> > r;
 		// pick a random stream until we find one that's not done,
 		// and process its frame.
 		while ( !current || remaining <= 0 ) {
@@ -505,7 +493,7 @@ struct source_multiplexer
 			remove_source(current);
 			current = shared_ptr<source>();
 			remaining = 0;
-			if( __verbose )
+			if( runtime_options::verbose() )
 				cerr << "done with stream, " << inputs.size() << " remain" << endl;
 		} else if (current_order != current->order()) {
 			current = shared_ptr<source>();
