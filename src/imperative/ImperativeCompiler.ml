@@ -810,6 +810,8 @@ struct
         let t = match op with
           | Assign -> unit
           | If0 -> ctypei 1
+          (* TODO: change to boolean type *)
+          | Eq | Neq | Lt | Leq -> Host(TBase(TInt)) 
           | _ -> promote_types_op op (ctypei 0) (ctypei 1)    
         in None, Some(BinOp(t, op, cexpri 0, cexpri 1))
 
