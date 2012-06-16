@@ -1,25 +1,25 @@
-CREATE TABLE PARTSUPP (
-        partkey      int,
-        suppkey      int,
-        availqty     int,
-        supplycost   double,
-        comment      double  -- text
+CREATE STREAM PARTSUPP (
+        partkey      INT,
+        suppkey      INT,
+        availqty     INT,
+        supplycost   DECIMAL,
+        comment      VARCHAR(199)
     )
-  FROM FILE '../../experiments/data/tpch/partsupp.tbl'
-  LINE DELIMITED partsupp;
+  FROM FILE '../../experiments/data/tpch/partsupp.csv'
+  LINE DELIMITED CSV (fields := '|', schema := 'int,int,int,float,string', eventtype := 'insert');
 
-CREATE TABLE SUPPLIER (
-        suppkey      int,
-        name         double, -- text
-        address      double, -- text
-        nationkey    int,
-        phone        double, -- text
-        acctbal      double,
-        comment      double  -- text
+CREATE STREAM SUPPLIER (
+        suppkey      INT,
+        name         CHAR(25),
+        address      VARCHAR(40),
+        nationkey    INT,
+        phone        CHAR(15),
+        acctbal      DECIMAL,
+        comment      VARCHAR(199)
     )
-  FROM FILE '../../experiments/data/tpch/supplier.tbl'
-  LINE DELIMITED supplier;
+  FROM FILE '../../experiments/data/tpch/supplier.csv'
+  LINE DELIMITED CSV (fields := '|', schema := 'int,string,string,int,string,float,string', eventtype := 'insert');
 
-select sum(ps.supplycost * ps.availqty)
-from  partsupp ps, supplier s
-where ps.suppkey = s.suppkey
+SELECT SUM(ps.supplycost * ps.availqty) AS query11b
+FROM  partsupp ps, supplier s
+WHERE ps.suppkey = s.suppkey

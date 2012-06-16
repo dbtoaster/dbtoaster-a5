@@ -41,7 +41,7 @@ CREATE STREAM LINEITEM (
         comment        VARCHAR(44)
     )
   FROM FILE '../../experiments/data/tpch/lineitem.csv'
-  LINE DELIMITED lineitem ();
+  LINE DELIMITED CSV (fields := '|', schema := 'int,int,int,int,float,float,float,float,string,string,date,date,date,string,string,string', eventtype := 'insert');
 
 CREATE STREAM ORDERS (
         orderkey       INT,
@@ -55,7 +55,7 @@ CREATE STREAM ORDERS (
         comment        VARCHAR(79)
     )
   FROM FILE '../../experiments/data/tpch/orders.csv'
-  LINE DELIMITED orders ();
+  LINE DELIMITED CSV (fields := '|', schema := 'int,int,string,float,date,string,string,int,string', eventtype := 'insert');
 
 CREATE STREAM CUSTOMER (
         custkey      INT,
@@ -68,7 +68,7 @@ CREATE STREAM CUSTOMER (
         comment      VARCHAR(117)
     )
   FROM FILE '../../experiments/data/tpch/customer.csv'
-  LINE DELIMITED customer ();
+  LINE DELIMITED CSV (fields := '|', schema := 'int,string,string,int,string,float,string,string', eventtype := 'insert');
 
 SELECT ORDERS.orderkey, 
        ORDERS.orderdate,

@@ -244,7 +244,7 @@ namespace dbtoaster {
       // Struct to represent messages coming off a socket/historical file
       struct order_book_message {
           double t;
-          int id;
+          long id;
           string action;
           double volume;
           double price;
@@ -254,8 +254,8 @@ namespace dbtoaster {
       // order id.
       struct order_book_tuple {
           double t;
-          int id;
-          int broker_id;
+          long id;
+          long broker_id;
           double volume;
           double price;
           order_book_tuple() {}
@@ -331,6 +331,9 @@ namespace dbtoaster {
               deterministic = (v == "yes");
             } else if ( k == "insert-only" ) {
               insert_only = true;
+            } else if ( k == "schema" ) {
+              // simply ignore this parameter since it is hard-coded
+              // it should be always "double,long,long,double,double"
             } else {
               cerr << "Invalid order book param " << k << ", " << v << endl;
             }
@@ -358,7 +361,7 @@ namespace dbtoaster {
 
               switch (i) {
               case 0: r.t = atof(start); break;
-              case 1: r.id = atoi(start); break;
+              case 1: r.id = atol(start); break;
               case 2:
                   action = *start;
                   if ( !(action == 'B' || action == 'S' ||
@@ -392,7 +395,7 @@ namespace dbtoaster {
             if ( msg.action == "B" ) {
               if (type == tbids || type == both) {
                 r.broker_id = 
-                  (deterministic ? msg.id : ((int) rand())) % num_brokers;
+                  (deterministic ? msg.id : ((long) rand())) % num_brokers;
                 (*bids)[msg.id] = r;
                 t = insert_tuple;
               } else valid = false;
@@ -400,7 +403,7 @@ namespace dbtoaster {
             else if ( msg.action == "S" ) {
               if (type == tasks || type == both) {
                 r.broker_id = 
-                  (deterministic ? msg.id : ((int) rand())) % num_brokers;
+                  (deterministic ? msg.id : ((long) rand())) % num_brokers;
                 (*asks)[msg.id] = r;
                 t = insert_tuple;
               } else valid = false;
@@ -592,151 +595,6 @@ namespace dbtoaster {
 
         int get_bids_stream_id() { return get_stream_id("bids"); }
         int get_asks_stream_id() { return get_stream_id("asks"); }
-      };
-    }
-
-    //////////////////////////////
-    //
-    // TPCH files
-
-    namespace tpch
-    {
-      using namespace dbtoaster::adaptors;
-
-      struct tpch_adaptor : public csv_adaptor {
-        int num_fields;
-        bool deletions;
-
-        tpch_adaptor(relation_id_t i, string tpch_rel) : csv_adaptor(i),
-                                                     deletions(false){
-          schema = parse_schema(get_schema(tpch_rel));
-          if ( delimiter == "" ) delimiter = "|";
-        }
-
-        tpch_adaptor(relation_id_t i, string tpch_rel, int num_params,
-                     const pair<string, string> params[])
-          : csv_adaptor(i,num_params,params), deletions(false)
-        {
-          // Parse TPCH adaptor-specific parameters.
-          for (int i = 0; i< num_params; ++i) {
-            string k = params[i].first;
-            string v = params[i].second;
-            if( runtime_options::verbose() )
-            	cerr << "tpch adaptor params: " << k << ": " << v << endl;
-            if ( k == "deletions" ) {
-              deletions = (v == "true");
-            }
-          }
-
-          schema = parse_schema(get_schema(tpch_rel));
-          if ( delimiter == "" ) delimiter = "|";
-        }
-
-        string get_schema(string tpch_rel) {
-          string r = deletions? "order,event," : "";
-          if ( tpch_rel == "lineitem" ) {
-            r += "int,int,int,int,int,float,float,float,hash,hash,date,date,date,hash,hash,hash";
-            num_fields = 16;
-          } else if ( tpch_rel == "orders" ) {
-            r += "int,int,hash,float,date,hash,hash,int,hash";
-            num_fields = 9;
-          } else if ( tpch_rel == "customer" ) {
-            r += "int,hash,hash,int,hash,float,hash,hash";
-            num_fields = 8;
-          } else if ( tpch_rel == "supplier") {
-            r += "int,hash,hash,int,hash,float,hash";
-            num_fields = 7;
-          } else if ( tpch_rel == "part") {
-            r += "int,hash,hash,hash,hash,int,hash,float,hash";
-            num_fields = 9;
-          } else if ( tpch_rel == "partsupp") {
-            r += "int,int,int,float,hash";
-            num_fields = 5;
-          } else if ( tpch_rel == "nation") {
-            r += "int,hash,int,hash";
-            num_fields = 4;
-          } else if ( tpch_rel == "region") {
-            r += "int,hash,hash";
-            num_fields = 3;
-          } else {
-            cerr << "Invalid TPCH relation " << tpch_rel << endl;
-          }
-          return r;
-        }
-      };
-
-      // TODO: needs testing.
-      struct non_inflationary_tpch_adaptor : public tpch_adaptor
-      {
-        unsigned int gap_counter;
-        bool reverse;
-        shared_ptr<list<event_t> > buffer;
-
-        non_inflationary_tpch_adaptor(relation_id_t i, string tpch_rel,
-                                      unsigned int gap, bool rev)
-          : tpch_adaptor(i,tpch_rel)
-        {
-          gap_counter = gap > 0? gap : 100;
-          reverse = rev;
-          buffer = shared_ptr<list<event_t> >(new list<event_t>());
-        }
-
-        non_inflationary_tpch_adaptor(relation_id_t i, string tpch_rel,
-                                      int num_params,
-                                      const pair<string, string> params[])
-          : tpch_adaptor(i, tpch_rel, num_params, params)
-        {
-          // Parse adaptor-specific parameters.
-          for (int i = 0; i< num_params; ++i) {
-            string k = params[i].first;
-            string v = params[i].second;
-            if ( k == "gap" ) {
-              istringstream iss(v); iss >> gap_counter;
-              if ( iss.fail() ) {
-                cerr << "invalid gap parameter " << v << endl;
-                gap_counter = 100;
-              }
-            } else if ( k == "reverse" ) {
-              reverse = (v == "true");
-            }
-          }
-          buffer = shared_ptr<list<event_t> >(new list<event_t>());
-        }
-
-        void process(const string& data, shared_ptr<list<event_t> > dest)
-        {
-          if ( dest && schema != "" ) {
-            // Interpret the schema.
-            tuple<bool, bool, event_args_t> evt = interpret_event(schema, data);
-            bool valid = get<0>(evt);
-            bool insert = get<1>(evt);
-
-            if ( valid )  {
-              event_t e(insert? insert_tuple : delete_tuple, id, get<2>(evt));
-              dest->push_back(e);
-
-              if ( !buffer ) return;
-              if ( insert ) {
-                event_t de(delete_tuple, id, get<2>(evt));
-                if ( reverse ) buffer->push_back(de);
-                else buffer->push_front(de);
-              }
-
-              if ( (--gap_counter) == 0 && !buffer->empty() ) {
-                dest->push_back(buffer->front());
-                buffer->pop_front();
-              }
-            } else {
-              cerr << "adaptor could not process " << data << endl;
-            }
-          }
-        }
-
-        void finalize(shared_ptr<list<event_t> > data) {
-          if ( data && buffer && !buffer->empty() ) {
-            copy(buffer->begin(), buffer->end(), back_inserter(*data));
-          }
-        }
       };
     }
   }

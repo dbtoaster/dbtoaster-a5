@@ -430,6 +430,7 @@ let orderbook_generator rel_sch params =
     | _ -> failwith ("invalid orderbook type: "^book_type)
 
 (* TPC-H *)
+(* 
 let li_schema =
    "int,int,int,int,float,float,float,float,string,string,date,date,date,string,string,string"
 
@@ -454,6 +455,11 @@ let generators =
    [("csv", standard_generator);
     ("orderbook", orderbook_generator)]@
    tpch_generators
+*)
+
+let generators =
+   [("csv", standard_generator);
+    ("orderbook", orderbook_generator)]
 
 (* TODO: unit tests for generators *)
 
