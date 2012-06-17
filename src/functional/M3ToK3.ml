@@ -655,21 +655,21 @@ let rec calc_to_k3_expr meta ?(generate_init = false) theta_vars_el calc :
                            
             let agg_fn = aggregate_fn aggsum_outs_el ret_ve in
             let expr = 
-                  if aggsum_outs_el = [] then aggsum_e
-                  else if agg_vars_el = [] then
-                        K.Aggregate(agg_fn, init_val ret_ve, aggsum_e)
-                  else
-                        let gb_fn = project_fn (aggsum_outs_el@[ret_ve]) agg_vars_el in 
-                        let gb_aggsum_e = 
-                  (* 
-                              K.Slice(aggsum_e, k3_expr_to_k3_idType aggsum_outs_el,[]) 
-                  *)
-                  aggsum_e
+              if aggsum_outs_el = [] then aggsum_e
+              else if agg_vars_el = [] then
+                K.Aggregate(agg_fn, init_val ret_ve, aggsum_e)
+              else
+                let gb_fn = project_fn (aggsum_outs_el@[ret_ve]) agg_vars_el in 
+                let gb_aggsum_e = 
+                (* 
+                      K.Slice(aggsum_e, k3_expr_to_k3_idType aggsum_outs_el,[]) 
+                *)
+                   aggsum_e
                 in
-                        K.GroupByAggregate(agg_fn, init_val ret_ve, gb_fn, gb_aggsum_e)
+                K.GroupByAggregate(agg_fn, init_val ret_ve, gb_fn, gb_aggsum_e)
             in
             ((agg_vars_el, ret_ve, expr), nm)
-                           
+            
          | Lift(lift_v, lift_calc)          -> 
             let (lift_outs_el,lift_ret_ve,lift_e),nm = rcr lift_calc in
             let is_bound = List.mem (K.Var(fst lift_v, K.TBase(snd lift_v))) 
@@ -730,6 +730,8 @@ let rec calc_to_k3_expr meta ?(generate_init = false) theta_vars_el calc :
                          "the schema of the entire sum."));
         let new_outs_el, new_e =
             if not (Debug.active "M3TOK3-SUM-WITHOUT-COMBINE") && e_outs_el <> outs_el then
+              (* If using combine, the sum terms must have the exact same schema (same vars *)
+              (* in the same order) *)
               outs_el, K.Map( project_fn (e_outs_el@[e_ret_ve]) (outs_el@[e_ret_ve]), e)
             else 
               e_outs_el, e
@@ -754,7 +756,7 @@ let rec calc_to_k3_expr meta ?(generate_init = false) theta_vars_el calc :
          let sum_exprs_tl = List.tl sum_exprs in
          
          let sum_result, nm2 = if outs_el <> [] then 
-        (if (Debug.active "M3TOK3-SUM-WITHOUT-COMBINE") then
+         (if (Debug.active "M3TOK3-SUM-WITHOUT-COMBINE") then
                (* For computing sums between collections we use temporary maps. *)
                (* The operation has 3 steps:*)
                (* 1. Reset the temporary collection. *)
@@ -786,11 +788,19 @@ let rec calc_to_k3_expr meta ?(generate_init = false) theta_vars_el calc :
                
                (K.Block( reset_stmt::head_stmt::tail_stmts@[sum_coll] )),
                (meta_append_sum_map nm sum_map)
-        else
-          let sum_fn sum_e (s_outs_el,s_ret_ve,s,_) = K.Combine(sum_e,s) in
-          (List.fold_left sum_fn hd_s sum_exprs_tl), 
-          nm
-        )
+         else
+            let sum_result_combine = 
+               let sum_fn sum_e (s_outs_el,s_ret_ve,s,_) = K.Combine(sum_e,s) in
+               List.fold_left sum_fn hd_s sum_exprs_tl
+            in
+            (* Since now K3.Combine does a simple append, we need to put a group by *)
+            (* aggregate around it in order to "combine" tuples with the same key. *)
+            let agg_fn = aggregate_fn outs_el ret_ve in
+            let gb_fn = project_fn (outs_el@[ret_ve]) outs_el 
+            in
+            K.GroupByAggregate(agg_fn, init_val ret_ve, gb_fn, sum_result_combine),
+            nm
+         )
          else
             let sum_fn sum_e (s_outs_el,s_ret_ve,s,_)   = K.Add(sum_e,s) in
             (List.fold_left sum_fn hd_s sum_exprs_tl), 
