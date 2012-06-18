@@ -11,7 +11,7 @@ package org.dbtoaster.dbtoasterlib {
     * used by queries.
 	*/
   object ImplicitConversions {
-	implicit def boolToInt(i: Boolean) = if(i) 1 else 0
+	implicit def boolToLong(i: Boolean): Long = if(i) 1.toLong else 0.toLong
   }
   
   /** In this object, the standard external functions that can be called by

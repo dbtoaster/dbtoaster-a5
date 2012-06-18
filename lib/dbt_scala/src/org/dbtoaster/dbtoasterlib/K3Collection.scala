@@ -1,5 +1,7 @@
 import org.dbtoaster.dbtoasterlib.dbtoasterExceptions._
 import xml._
+import java.util.Date
+import java.text.SimpleDateFormat
 
 package org.dbtoaster.dbtoasterlib {
 
@@ -18,6 +20,26 @@ package org.dbtoaster.dbtoasterlib {
       def fold[Y](init: Y, fn: Tuple2[K, V] => Y => Y): Y
       def flatten[K2, V2](): K3IntermediateCollection[K2, V2]
       def toPersistentCollection(): K3PersistentCollection[K, V]
+
+      val ft = new SimpleDateFormat("yyyyMMdd")
+      def valToStr(v: Any): String = {
+        v match {
+          case d: Date => ft.format(d)
+          case x => x.toString
+        }      
+      }
+
+      def toXML(): List[Elem] = {
+        toList().foldLeft(List[Elem]()) {
+          case (l, (k, v)) =>
+            (try {
+              val keyXML: List[xml.Elem] = (k.asInstanceOf[Product].productIterator.foldLeft((0, List[xml.Elem]())) { case ((i, l), k) => (i + 1, <xml>{ valToStr(k) }</xml>.copy(label = ("__a" + i)) :: l) })._2
+              <item> { keyXML } <__av>{ valToStr(v) }</__av></item>
+            } catch {
+              case e: java.lang.ClassCastException => <item><__a0>{ valToStr(k) }</__a0><__av>{ valToStr(v) }</__av></item>
+            }) :: l
+        }
+      }
     }
 
     trait Index[K, V] {
@@ -145,18 +167,6 @@ package org.dbtoaster.dbtoasterlib {
         elems.foldLeft("") {
           case (str, (k, v)) =>
             str + k + " -> " + v + sys.props("line.separator")
-        }
-      }
-
-      def toXML(): List[Elem] = {
-        elems.foldLeft(List[Elem]()) {
-          case (l, (k, v)) =>
-            (try {
-              val keyXML: List[xml.Elem] = (k.asInstanceOf[Product].productIterator.foldLeft((0, List[xml.Elem]())) { case ((i, l), k) => (i + 1, <xml>{ k }</xml>.copy(label = ("__a" + i)) :: l) })._2
-              <item> { keyXML } <__av>{ v }</__av></item>
-            } catch {
-              case e: java.lang.ClassCastException => <item><__a0>{ k }</__a0><__av>{ v }</__av></item>
-            }) :: l
         }
       }
 

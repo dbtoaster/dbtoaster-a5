@@ -31,6 +31,7 @@ struct
   | Bool
   | Int
   | String
+  | Date
   | Any
   | External of string
   | Unit
@@ -117,8 +118,9 @@ struct
     match t with 
     | Float -> "Double"
     | Bool -> "Boolean"
-    | Int -> if Debug.active "BIG-INT" then "BigInt" else "Int"
+    | Int -> if Debug.active "BIG-INT" then "BigInt" else "Long"
     | String -> "String"
+    | Date -> "Date"
     | Any -> "Any"
     | External(s) -> s
     | Unit -> "Unit"
@@ -155,7 +157,7 @@ struct
     | TInt -> Int
     | TFloat -> Float
     | TString -> String
-    | TDate -> Int (* TODO change with an appropriate type in scala *)
+    | TDate -> Date
     | TAny -> Any
     | TExternal(s) -> External(s)
 
@@ -189,7 +191,8 @@ struct
   type source_impl_t = source_code_t
   let identity a = a
   let mk_bool_to_float a = "(if(" ^ a ^ ") 1.0 else 0.0)"
-  let mk_bool_to_int a = "(if(" ^ a ^ ") 1 else 0)"
+  let mk_bool_to_int a = "(if(" ^ a ^ ") 1.toLong else 0.toLong)"
+  let mk_date_to_time a = a ^ ".getTime()"
   let num_op ?(conva = identity) ?(convb = identity) opcode = (fun a b -> "(" ^ 
     conva(a) ^ ") " ^ opcode ^ " (" ^ convb(b) ^ ")")
 
@@ -228,13 +231,14 @@ struct
       | (Float, Bool) -> ((num_op op ~convb:mk_bool_to_float), Bool, None)
       | (Bool, Int) -> ((num_op op ~conva:mk_bool_to_int), Bool, None)
       | (Int, Bool) -> ((num_op op ~convb:mk_bool_to_int), Bool, None)
+      | (Date, Date) -> ((num_op op ~conva:mk_date_to_time ~convb:mk_date_to_time), Bool, None) 
       | (_, _) -> 
           ((num_op op), Unit, 
           Some((string_of_type a) ^ " [" ^ op ^ "] " ^ (string_of_type b)))
     )
 
   let add_op         : op_t = (f_op "+" "+")
-  let mult_op        : op_t = (f_op "*" "&&")
+  let mult_op        : op_t = (f_op "*" "*")
   let eq_op          : op_t = (c_op "==")
   let neq_op         : op_t = (c_op "!=")
   let lt_op          : op_t = (c_op "<")
@@ -255,10 +259,10 @@ struct
   let const ?(expr = None) (c:const_t) : code_t = 
     match c with 
     | CBool(y) -> (string_of_bool y, Bool)
-    | CInt(y) -> (string_of_int y, Int)
+    | CInt(y) -> ((string_of_int y) ^ ".toLong", Int)
     | CFloat(y) -> (string_of_float y, Float)
     | CString(y) -> ("\"" ^ y ^ "\"", String)
-    | CDate(y,m,d) -> (string_of_int (y*10000+m*100+d), Int)
+    | CDate(y,m,d) -> ("new GregorianCalendar(" ^ (string_of_int y) ^ "," ^ (string_of_int m) ^ " - 1," ^ (string_of_int d) ^ ").getTime()", Date)
    (* TODO must be change with appropriate object in scala *)
    
   let var ?(expr = None) (v:K3.id_t) (t:K3.type_t) : code_t = 
@@ -291,13 +295,13 @@ struct
 
   let singleton ?(expr = None) ((d,dt):code_t) (t:K3.type_t) : code_t =
     let kt, vt, v = 
-      match dt with
+      match (map_type t) with
       | Tuple(t) -> 
         let vars = (list_vars "v._" (List.length t)) in
         let kv, vv = list_split vars ((List.length vars) - 1) in
         let kt, vt = list_split t ((List.length t) - 1) in
         (kt, vt, make_tuple([make_tuple kv; List.hd vv]))
-      | _ -> [], [dt], "v"
+      | t -> [], [t], "v"
     in
     let tpe = Collection(Intermediate, kt, List.hd vt) in
     ("{ val v = " ^ d ^ ";" ^ (string_of_type tpe) ^ "(List(" ^ v ^ ")) }", tpe)
@@ -364,6 +368,7 @@ struct
           ArgNTuple(ArgNTuple(k) :: v)
         | _ -> debugfail None "Excpected tuple of argument names"
       ) in
+      (*"/* " ^ (string_of_type argst) ^ " => " ^ (string_of_type rett) ^ " */ " ^*)
       "(x:Tuple2[" ^ (string_of_type (Tuple(ktt))) ^ ", " ^ (string_of_type vtt) ^ 
       "]) => { x match { case " ^ (string_of_argn argsnkv) ^ 
       " => {" ^ f_body ^ "} } }" 
@@ -376,13 +381,13 @@ struct
         (wrap_function_key_val kt vt fnt fn) ^ " }", Unit)
     | _ -> debugfail expr "Iteration of a non-collection"
 
-  let map_args_type args rt =       
+  let map_args_type args =       
     match args with
-    | K3.AVar(v, vt) -> (ArgN("var_" ^ v), rt)
-    | K3.ATuple(tlist) -> (ArgNTuple(List.map (fun (v, _) -> ArgN("var_" ^ v)) tlist), rt)
+    | K3.AVar(v, vt) -> (ArgN("var_" ^ v), map_type vt)
+    | K3.ATuple(tlist) -> (ArgNTuple(List.map (fun (v, _) -> ArgN("var_" ^ v)) tlist), Tuple(List.map (fun (_, t) -> map_type t) tlist))
   
   let lambda ?(expr = None) (args:K3.arg_t) ((b,bt):code_t) : code_t =
-    let argsn, argst = map_args_type args bt in
+    let argsn, argst = map_args_type args in
     (b, Fn(argsn, argst, bt))
 
   let assoc_lambda ?(expr = None) (arg1:K3.arg_t) (arg2:K3.arg_t) (b:code_t) : code_t =
@@ -398,13 +403,14 @@ struct
         | '/' -> Buffer.add_string buffer "div"; clean_name name (i + 1) buffer
         | c -> Buffer.add_char buffer c; clean_name name (i + 1) buffer
       ) in
-    let _, argst = map_args_type args (map_type ret) in
+    let _, argst = map_args_type args in
     ("", ExtFn(clean_name name 0 (Buffer.create 0), argst, map_type ret))
    
   let apply ?(expr = None) ((fn,fnt):code_t) ((arg,argt):code_t) : code_t =
     (begin match fnt with
     | Fn(argsn, argst, rett) ->
-      "{ val " ^ (string_of_argn argsn) ^ " = " ^ arg ^ ";" ^ fn ^ "}"
+      "{ val " ^ (string_of_argn argsn) ^ (*":" ^ (string_of_type argt) ^*) " = " ^ arg ^ ";" ^ 
+      fn ^ "}"
     | ExtFn(n, _, _) -> "(" ^ n ^ "(" ^ arg ^ "))"
     | _ -> debugfail None "Expected a function"
     end
@@ -592,13 +598,16 @@ struct
     in
     let adaptors_strings = (List.map (fun ((atype, akeys), (rel, schema, _)) -> 
       let args = if (List.length akeys) == 0 then "" else (make_list ~parens:(", ","") 
-        (List.map (fun (k, v) -> k ^ " = \"" ^ v ^ "\"") akeys)) in
+        (List.map (fun (k, v) -> 
+	  match (k, v) with
+	  | "fields", "|" -> "fields = \"\\|\""
+	  | k, v -> k ^ " = \"" ^ v ^ "\"") akeys)) in
       match atype with
       | "csv" -> 
         let string_of_schema_type t = 
 	  match t with
 	  | TBool -> "BoolColumn"
-	  | TInt -> if Debug.active "BIG-INT" then "BigIntColumn" else "IntColumn"
+	  | TInt -> "IntColumn"
 	  | TFloat -> "FloatColumn"
 	  | TString -> "StringColumn"
 	  | TDate -> "DateColumn"
@@ -719,6 +728,8 @@ struct
         "org.dbtoaster.dbtoasterlib.ImplicitConversions._";
         "org.dbtoaster.dbtoasterlib.StdFunctions._";
         "scala.collection.mutable.Map";
+	"java.util.Date";
+	"java.util.GregorianCalendar";
         "xml._";
       ])
     )

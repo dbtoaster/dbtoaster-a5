@@ -2,6 +2,7 @@ import java.io.InputStream
 import org.dbtoaster.dbtoasterlib.dbtoasterExceptions._
 import scala.util.Random
 import scala.collection.mutable.Map
+import java.text.SimpleDateFormat
 
 package org.dbtoaster.dbtoasterlib {
   object StreamAdaptor {
@@ -20,10 +21,10 @@ package org.dbtoaster.dbtoasterlib {
     case object FloatColumn extends ColumnType
     case object OrderColumn extends ColumnType
     case object DateColumn extends ColumnType
-    case object HashColumn extends ColumnType
+    case object StringColumn extends ColumnType
 
     abstract trait DBTEvent
-    case class StreamEvent(eventType: EventType, order: Int, relation: String, vals: List[Any])
+    case class StreamEvent(eventType: EventType, order: Long, relation: String, vals: List[Any])
       extends Ordered[StreamEvent] with DBTEvent {
       def compare(other: StreamEvent) = other.order.compareTo(this.order)
     }
@@ -88,7 +89,8 @@ package org.dbtoaster.dbtoasterlib {
           case "float" => FloatColumn
           case "order" => OrderColumn
           case "date" => DateColumn
-          case "hash" => HashColumn
+          case "hash" => StringColumn
+          case "string" => StringColumn
         }
       }
 
@@ -108,12 +110,12 @@ package org.dbtoaster.dbtoasterlib {
         val vals: List[Any] = (valCols zip colTypes).map {
           x =>
             x match {
-              case (v, IntColumn) => v.toInt
+              case (v, IntColumn) => v.toLong
 	      case (v, BigIntColumn) => BigInt(v)
               case (v, FloatColumn) => v.toDouble
-              case (v, OrderColumn) => v.toInt
-              case (v, DateColumn) => v.replace("-", "").toInt
-              case (v, HashColumn) => v //v.hashCode().toInt
+              case (v, OrderColumn) => v.toLong
+              case (v, DateColumn) => new SimpleDateFormat("yyyy-MM-dd").parse(v)
+              case (v, StringColumn) => v
               case _ => ""
             }
         }
@@ -121,18 +123,18 @@ package org.dbtoaster.dbtoasterlib {
       }
     }
 
-    class OrderbookAdaptor(relation: String, orderbookType: OrderbookType, brokers: Int, deterministic: Boolean, insertOnly: Boolean) extends StreamAdaptor {
-      val asks: Map[Int, OrderbookRow] = Map()
-      val bids: Map[Int, OrderbookRow] = Map()
+    class OrderbookAdaptor(relation: String, orderbookType: OrderbookType, brokers: Long, deterministic: Boolean, insertOnly: Boolean) extends StreamAdaptor {
+      val asks: Map[Long, OrderbookRow] = Map()
+      val bids: Map[Long, OrderbookRow] = Map()
 
-      case class OrderbookRow(t: Int, id: Int, brokerId: Int, volume: Double, price: Double) {
+      case class OrderbookRow(t: Long, id: Long, brokerId: Long, volume: Double, price: Double) {
         def toList: List[Any] = List[Any](t.toDouble, id, brokerId, volume, price)
       }
 
       def processTuple(row: String): List[StreamEvent] = {
         val rows = row.split(",")
-        val t = rows(0).toInt
-        val id = rows(1).toInt
+        val t = rows(0).toLong
+        val id = rows(1).toLong
         val volume = rows(3).toDouble
         val price = rows(4).toDouble
 

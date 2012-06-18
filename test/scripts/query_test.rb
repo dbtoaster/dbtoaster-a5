@@ -191,7 +191,8 @@ end
 class ScalaUnitTest < GenericUnitTest
   def run
     unless $skip_compile then
-    Dir.mkdir "bin/queries" unless File::exists? "bin/queries";
+    dir = File.dirname("bin/queries/#{@qname}")
+    FileUtils.mkdir_p dir unless File::exists? dir;
 	  File.delete("bin/queries/#{@qname}.jar") if 
 	       File::exists?("bin/queries/#{@qname}.jar");
       compile_cmd = 
@@ -213,16 +214,18 @@ class ScalaUnitTest < GenericUnitTest
       endtime = Time.now;
       output = output.map { |l| l.chomp.strip }.join("");
       @runtime = (endtime - starttime).to_f;
-      if(/<([^>]*)>(.*)<\/[^>]*>/ =~ output) then
-		query = $1;
-        output = $2;
-        case @toplevels[query][:type]
-          when :singleton then @toplevels[query][:result] = output.strip.to_f;
-          when :onelevel then @toplevels[query][:result] = CppDB.new(output);
-          else nil
-        end
-      else raise "Runtime Error"
-      end;
+      
+      @toplevels.keys.each do |q| 
+        if /<#{q}[^>]*>(.*)<\/#{q}>/ =~ output then
+          result = $1;
+          case @toplevels[q][:type]
+            when :singleton then @toplevels[q][:result] = result.strip.to_f;
+            when :onelevel then @toplevels[q][:result] = CppDB.new(output);
+            else nil
+          end
+        else raise "Runtime Error"
+        end;
+      end
     end
   end
 
