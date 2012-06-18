@@ -23,6 +23,8 @@ using namespace boost::lambda;
 
 namespace dbtoaster {
 
+typedef long date;
+
 // These need to be placed here as C++ doesn't search for overloaded
 // << operators in all the available namespaces
 std::ostream& operator<<(std::ostream &strm, const boost::any &a) {

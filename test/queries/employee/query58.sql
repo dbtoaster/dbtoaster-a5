@@ -13,7 +13,7 @@ CREATE STREAM EMPLOYEE(
     department_id   INT
     ) 
   FROM FILE '../../experiments/data/employee/employee.dat' LINE DELIMITED
-  csv (fields := ',', schema := 'int,string,string,string,int,int,date,float,float,int', eventtype := 'insert');
+  CSV (fields := ',');
 
 CREATE STREAM SALARY_GRADE(
     grade_id     INT, 
@@ -21,7 +21,7 @@ CREATE STREAM SALARY_GRADE(
     upper_bound  FLOAT
     ) 
   FROM FILE '../../experiments/data/employee/salary_grade.dat' LINE DELIMITED
-  csv (fields := ',', schema := 'int,float,float', eventtype := 'insert');
+  CSV (fields := ',');
 
 SELECT grade_id, count(*) 
 FROM employee e, salary_grade s 

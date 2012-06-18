@@ -5,7 +5,7 @@ CREATE STREAM LOCATION(
     regional_group   VARCHAR(20)
     ) 
   FROM FILE '../../experiments/data/employee/location.dat' LINE DELIMITED
-  csv (fields := ',', schema := 'int,string', eventtype := 'insert');
+  CSV (fields := ',');
 
 SELECT * 
 FROM location;

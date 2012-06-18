@@ -351,7 +351,7 @@ struct
     | Host(K.TBase(TFloat)) -> inl ("double")
     | Host(K.TBase(TInt)) -> inl ("long")
     | Host(K.TBase(TString)) -> inl ("string")
-    | Host(K.TBase(TDate))   -> inl ("long") (* TODO change with an appropriate type in c++ *)
+    | Host(K.TBase(TDate))   -> inl ("date") (* at the moment: typedef long date *)
     | Host(K.TBase(TBool)) -> inl ("bool")
     | Host(K.TBase(TAny)) -> inl ("??")
     | Host(K.TBase(TExternal(ext_type))) -> inl (ext_type)
@@ -2488,24 +2488,8 @@ end (* Typing *)
   let declare_sources_and_adaptors (sources: Schema.source_info_t list ref) =
     let quote s = "\""^(String.escaped s)^"\"" in
     let valid_adaptors = ["csv"      , "csv_adaptor";
-                          "orderbook", "order_books::order_book_adaptor";
-                          "lineitem" , "tpch::tpch_adaptor";
-                          "orders"   , "tpch::tpch_adaptor";
-                          "customer" , "tpch::tpch_adaptor";
-                          "part"     , "tpch::tpch_adaptor";
-                          "supplier" , "tpch::tpch_adaptor";
-                          "partsupp" , "tpch::tpch_adaptor";
-                          "nation"   , "tpch::tpch_adaptor";
-                          "region"   , "tpch::tpch_adaptor"]
+                          "orderbook", "order_books::order_book_adaptor"]
     in
-    let adaptor_ctor_args = ["lineitem", quote "lineitem";
-                             "orders"  , quote "orders";
-                             "customer", quote "customer";
-                             "part"    , quote "part";
-                             "supplier", quote "supplier";
-                             "partsupp", quote "partsupp";
-                             "nation"  , quote "nation";
-                             "region"  , quote "region"] in
     let array_of_id id = id^"[]" in
     let array_of_type t = match t with
         | Target(Type(x)) -> Target(Type(x^"[]"))
@@ -2538,13 +2522,9 @@ end (* Typing *)
             Some(Fn(param_arr_t, Ext(Inline(params_arr)), [])))
           in
           let d_ctor_args =
-            let extra_args =
-              if List.mem_assoc (fst a) adaptor_ctor_args
-              then [List.assoc (fst a) adaptor_ctor_args] else []
-            in  
             let rel_id = ("get_relation_id(\""^(String.escaped r)^"\")")
             in
-            String.concat "," ([rel_id]@extra_args@
+            String.concat "," ([rel_id]@
                                [string_of_int (List.length a_params); param_id])
           in
           let d = Decl(unit, (a_id, a_t), 

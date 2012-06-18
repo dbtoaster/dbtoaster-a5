@@ -6,7 +6,7 @@ CREATE STREAM PARTSUPP (
         comment      VARCHAR(199)
     )
   FROM FILE '../../experiments/data/tpch/partsupp.csv'
-  LINE DELIMITED CSV (fields := '|', schema := 'int,int,int,float,string', eventtype := 'insert');
+  LINE DELIMITED CSV (fields := '|');
 
 CREATE STREAM SUPPLIER (
         suppkey      INT,
@@ -18,7 +18,7 @@ CREATE STREAM SUPPLIER (
         comment      VARCHAR(199)
     )
   FROM FILE '../../experiments/data/tpch/supplier.csv'
-  LINE DELIMITED CSV (fields := '|', schema := 'int,string,string,int,string,float,string', eventtype := 'insert');
+  LINE DELIMITED CSV (fields := '|');
 
 SELECT SUM(ps.supplycost * ps.availqty) AS query11b
 FROM  partsupp ps, supplier s

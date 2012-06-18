@@ -141,7 +141,7 @@ namespace dbtoaster {
             case 'l': iss >> l; tuple.push_back(l); break;
             case 'f': iss >> f; tuple.push_back(f); break;
             case 'h': tuple.push_back(static_cast<int>(field_hash(field))); break;
-            case 'd':
+            case 'd': 
               split(date_fields, field, is_any_of("-"));
               valid = false;
               if ( date_fields.size() == 3 ) {
@@ -149,9 +149,9 @@ namespace dbtoaster {
                 m = atoi(date_fields[1].c_str());
                 d = atoi(date_fields[2].c_str());
                 if ( 0 < m && m < 13 && 0 < d && d <= 31) {
-                  tuple.push_back(long(y*10000+m*100+d)); valid = true;
+                  tuple.push_back(date(y*10000+m*100+d)); valid = true;
                 }
-              }
+              } 
               break;
             case 'o':
                 iss >> o;

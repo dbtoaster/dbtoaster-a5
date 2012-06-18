@@ -133,7 +133,7 @@ let build_tuple (reln,relv,_) param_val support_sch =
                    (fun x -> try CFloat(float_of_string x) with
                     Failure(_) -> failwith ("Could not convert float: '"^x^"'"))
         | "date" -> 
-          assert_type vn vt t (*TInt*) TDate;
+          assert_type vn vt t TDate;
           (fun x -> Types.parse_date x)
         | "string" -> 
            assert_type vn vt t TString;
@@ -428,34 +428,6 @@ let orderbook_generator rel_sch params =
       end)
     
     | _ -> failwith ("invalid orderbook type: "^book_type)
-
-(* TPC-H *)
-(* 
-let li_schema =
-   "int,int,int,int,float,float,float,float,string,string,date,date,date,string,string,string"
-
-let lineitem_params = csv_params "|" li_schema
-let order_params    = csv_params "|" "int,int,string,float,date,string,string,int,string"
-let part_params     = csv_params "|" "int,string,string,string,string,int,string,float,string"
-let partsupp_params = csv_params "|" "int,int,int,float,string"
-let customer_params = csv_params "|" "int,string,string,int,string,float,string,string"
-let supplier_params = csv_params "|" "int,string,string,int,string,float,string"
-let nation_params   = csv_params "|" "int,string,int,string"
-let region_params   = csv_params "|" "int,string,string"
-
-(* TODO: handle "deletions" parameter for TPCH
- * Requires a staged multiplexer. *)
-let tpch_generators = List.map (fun (n,(_,p)) -> (n, csv_generator_wrapper p))
-  ([("lineitem", lineitem_params); ("orders", order_params);
-    ("part", part_params);         ("partsupp", partsupp_params);
-    ("customer", customer_params); ("supplier", supplier_params);
-    ("nation", nation_params);     ("region", region_params)])
-
-let generators =
-   [("csv", standard_generator);
-    ("orderbook", orderbook_generator)]@
-   tpch_generators
-*)
 
 let generators =
    [("csv", standard_generator);

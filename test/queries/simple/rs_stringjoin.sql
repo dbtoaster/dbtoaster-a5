@@ -20,11 +20,11 @@
 
 CREATE STREAM R(A string, B string) 
   FROM FILE '../../experiments/data/tiny_r.dat' LINE DELIMITED
-  csv (fields := ',', schema := 'string,string', eventtype := 'insert');
+  CSV (fields := ',');
 
 CREATE STREAM S(B string, C int) 
   FROM FILE '../../experiments/data/tiny_s.dat' LINE DELIMITED
-  csv (fields := ',', schema := 'string,int', eventtype := 'insert');
+  CSV (fields := ',');
 
 SELECT r.A, SUM(s.C)
 FROM R r, S s

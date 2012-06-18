@@ -17,7 +17,7 @@ CREATE STREAM LINEITEM (
         comment        VARCHAR(44)
     )
   FROM FILE '../../experiments/data/tpch/lineitem.csv'
-  LINE DELIMITED CSV (fields := '|', schema := 'int,int,int,int,float,float,float,float,string,string,date,date,date,string,string,string', eventtype := 'insert');
+  LINE DELIMITED CSV (fields := '|');
 
 
 CREATE STREAM ORDERS (
@@ -32,7 +32,7 @@ CREATE STREAM ORDERS (
         comment        VARCHAR(79)
     )
   FROM FILE '../../experiments/data/tpch/orders.csv'
-  LINE DELIMITED CSV (fields := '|', schema := 'int,int,string,float,date,string,string,int,string', eventtype := 'insert');
+  LINE DELIMITED CSV (fields := '|');
 
 CREATE STREAM PART (
         partkey      INT,
@@ -46,7 +46,7 @@ CREATE STREAM PART (
         comment      VARCHAR(23)
     )
   FROM FILE '../../experiments/data/tpch/part.csv'
-  LINE DELIMITED CSV (fields := '|', schema := 'int,string,string,string,string,int,string,float,string', eventtype := 'insert');
+  LINE DELIMITED CSV (fields := '|');
 
 
 CREATE STREAM CUSTOMER (
@@ -60,7 +60,7 @@ CREATE STREAM CUSTOMER (
         comment      VARCHAR(117)
     )
   FROM FILE '../../experiments/data/tpch/customer.csv'
-  LINE DELIMITED CSV (fields := '|', schema := 'int,string,string,int,string,float,string,string', eventtype := 'insert');
+  LINE DELIMITED CSV (fields := '|');
 
 CREATE STREAM SUPPLIER (
         suppkey      INT,
@@ -72,7 +72,7 @@ CREATE STREAM SUPPLIER (
         comment      VARCHAR(101)
     )
   FROM FILE '../../experiments/data/tpch/supplier.csv'
-  LINE DELIMITED CSV (fields := '|', schema := 'int,string,string,int,string,float,string', eventtype := 'insert');
+  LINE DELIMITED CSV (fields := '|');
   
 CREATE STREAM NATION (
         nationkey    INT,
@@ -81,7 +81,7 @@ CREATE STREAM NATION (
         comment      VARCHAR(152)
     )
   FROM FILE '../../experiments/data/tpch/nation.csv'
-  LINE DELIMITED CSV (fields := '|', schema := 'int,string,int,string', eventtype := 'insert');
+  LINE DELIMITED CSV (fields := '|');
 
 
  SELECT sn.regionkey, 

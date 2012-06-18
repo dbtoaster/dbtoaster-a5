@@ -10,6 +10,6 @@ $(LIBJAR): $(FILES)
 	@$(SCALAC) -d "$(LIBJAR)" $(FILES)
 
 clean: 
-	rm "$(LIBJAR)"
+	rm -f "$(LIBJAR)"
 
 .PHONY: all clean

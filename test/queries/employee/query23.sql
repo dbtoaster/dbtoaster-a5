@@ -13,7 +13,7 @@ CREATE STREAM EMPLOYEE(
     department_id   INT
     ) 
   FROM FILE '../../experiments/data/employee/employee.dat' LINE DELIMITED
-  csv (fields := ',', schema := 'int,string,string,string,int,int,date,float,float,int', eventtype := 'insert');
+  CSV (fields := ',');
 
 SELECT department_id, count(*), max(salary), min(salary), avg(salary) 
 FROM employee 
