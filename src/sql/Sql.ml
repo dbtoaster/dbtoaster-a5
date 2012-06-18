@@ -190,13 +190,23 @@ let merge_files (lhs:file_t) (rhs:file_t): file_t =
 let empty_file:file_t = ([],[])
 
 (**
-   Add a statement to a SQL file
+   Add a statement at the end of a SQL file
    @param stmt A SQL statement
    @param file A SQL file
    @return     A SQL file containing [stmt] and everything in [file]
 *)
 let add_to_file (stmt:t) (file:file_t): file_t =
    merge_files file (mk_file stmt)
+
+(**
+   Add a statement at the beginning a SQL file
+   @param stmt A SQL statement
+   @param file A SQL file
+   @return     A SQL file containing [stmt] and everything in [file]
+*)
+let add_to_file_first (stmt:t) (file:file_t): file_t =
+   merge_files (mk_file stmt) file 
+
 
 (**
    Create a conjunction between two terms.  If either term is a boolean

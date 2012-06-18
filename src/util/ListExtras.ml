@@ -299,14 +299,14 @@ exception CycleFound
 		@return           A list of topologically sorted elements 
 *)
 let toposort_from_node graph visited start_node =
-    let rec explore path visited node =
+    let rec explore path node visited =
         if List.mem node path then raise CycleFound else
         if List.mem node visited then visited else                    
             let new_path = node::path in
             let child_nodes = try List.assoc node graph with Not_found -> [] in
-            let visited = List.fold_left (explore new_path) visited child_nodes in
+            let visited = List.fold_right (explore new_path) child_nodes visited in
             node :: visited
-    in explore [] visited start_node
+    in explore [] start_node visited
 
 (** 
     Perform topological sort on a given graph which may contain multiple root elements.
@@ -314,15 +314,15 @@ let toposort_from_node graph visited start_node =
         Example: 
         
         {[ toposort [ (0, [2; 3]); (1, [2]) ] = 
-                    [ 1; 0; 3; 2]
+                    [ 0; 3; 1; 2]
 				]}
 				{[ toposort [ (1, [2]); (5, [6; 7]); (3, [2]); (6, [3; 7]); (8, [7]); (4, [3; 1]) ] =
-                    [ 4; 8; 5; 6; 7; 3; 1; 2]
+                    [ 5; 6; 8; 7; 4; 3; 1; 2]
         ]}
         
         @param graph      A graph representing a partial order between elements
         @return           A list of topologically sorted elements 
 *)
 let toposort graph =
-   List.fold_left (fun visited (node, _) -> toposort_from_node graph visited node) [] graph
+   List.fold_right (fun (node, _) visited -> toposort_from_node graph visited node) graph [] 
 															

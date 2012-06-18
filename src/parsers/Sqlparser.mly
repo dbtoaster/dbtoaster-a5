@@ -110,7 +110,7 @@ dbtoasterSqlList:
 | dbtoasterSqlStmt EOF           { Sql.mk_file $1 }
 | dbtoasterSqlStmt EOSTMT EOF    { Sql.mk_file $1 }
 | dbtoasterSqlStmt EOSTMT dbtoasterSqlList
-                                 { Sql.add_to_file $1 $3 }
+                                 { Sql.add_to_file_first $1 $3 }
 
 dbtoasterSqlStmt:
 | createTableStmt        { Sql.Create_Table($1) }

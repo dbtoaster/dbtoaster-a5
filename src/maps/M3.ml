@@ -213,7 +213,7 @@ let add_rel (prog:prog_t) ?(source = Schema.NoSource)
                typically just a reference to an external).
 *)   
 let add_query (prog:prog_t) (name:string) (expr:expr_t): unit =
-   prog.queries := (name, expr) :: !(prog.queries)
+   prog.queries := !(prog.queries) @ [(name, expr)]
 ;;
 
 (**
@@ -224,7 +224,7 @@ let add_query (prog:prog_t) (name:string) (expr:expr_t): unit =
    @param view The view definition to add to [prog]
 *)
 let add_view (prog:prog_t) (view:Plan.ds_t): unit =
-   prog.maps := (DSView(view)) :: !(prog.maps)
+   prog.maps := !(prog.maps) @ [DSView(view)]
 ;;
 
 (**
@@ -341,7 +341,7 @@ let sort_prog (prog:prog_t):prog_t =
             else (target_name, ListAsSet.inter update_names
                                                replace_target_names)
       ) !(trigger.statements) in  
-                        
+      
       (* Topologically sort the graph and create a new order of statements *)
       let new_stmt_order = 
          List.fold_left (fun stmt_order name ->
