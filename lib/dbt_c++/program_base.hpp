@@ -12,10 +12,13 @@
 #include <map>
 #include <utility>
 #include <boost/archive/xml_oarchive.hpp>
+#include <boost/serialization/map.hpp>
 
+#include <boost/preprocessor/repetition/enum_params.hpp>
 
 #include <boost/fusion/tuple.hpp>
 #include <boost/fusion/include/fold.hpp>
+#include <boost/fusion/include/for_each.hpp>
 #include <boost/lambda/lambda.hpp>
 #include <boost/lambda/bind.hpp>
 #include <boost/multi_index_container.hpp>
@@ -436,5 +439,31 @@ struct increment_table_entry{
 };
 
 }
+
+
+namespace boost {namespace serialization {
+
+template<class Archive>
+struct serialize_tuple
+{
+	Archive& ar;
+
+	serialize_tuple(Archive& _ar) : ar(_ar){}
+
+    template<typename T>
+    void operator()(T& t) const
+    {
+    	ar & BOOST_SERIALIZATION_NVP(t);
+    }
+};
+
+template <class Archive, BOOST_PP_ENUM_PARAMS (FUSION_MAX_VECTOR_SIZE, typename T)>
+inline void serialize (Archive& ar, boost::fusion::tuple <BOOST_PP_ENUM_PARAMS (FUSION_MAX_VECTOR_SIZE, T) >& p, const unsigned int/* file_version */)
+{
+    boost::fusion::for_each( p, serialize_tuple<Archive>(ar) );
+}
+
+}} //namespace serialization, namespace boost
+
 
 #endif /* DBTOASTER_DBT_PROGRAM_BASE_H */

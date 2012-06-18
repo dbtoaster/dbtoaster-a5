@@ -219,30 +219,38 @@ struct
         let pair_id = "p" in
         let last = List.length fields - 1 in
         let tuple_member i p = if last <> 1 then "at_c<"^i^">("^p^")" else p in
-        let field_types, direct_ctor, direct_assign, pair_assign =
-          let a,b,c,d = snd (List.fold_left
-            (fun (i, (ty_acc, c1_acc, a1_acc, c2_acc)) (m,ty) ->
+        let field_types, field_names, direct_ctor, direct_assign, pair_assign =
+          let a,b,c,d,e = snd (List.fold_left
+            (fun (i, (ty_acc, m_acc, c1_acc, a1_acc, c2_acc)) (m,ty) ->
               let ty_s = string_of_type ty in
               let i_s = string_of_int i in
               let cf = "c"^i_s in (i+1,
                 (ty_acc@[ty_s],
+                 m_acc@[m],
                  c1_acc@[ty_s^" "^cf],
                  a1_acc@[m^" = "^cf],
                  c2_acc@[m^" = "^(if i <> last
                           then tuple_member i_s (pair_id^".first")
                           else pair_id^".second")])))
-            (0,([],[],[],[])) fields)
-          in a, String.concat "," b,
-              ((String.concat "; " c)^";"), ((String.concat "; " d)^";")
+            (0,([],[],[],[],[])) fields)
+          in a, b, String.concat "," c,
+              ((String.concat "; " d)^";"), ((String.concat "; " e)^";")
         in
-        let pair_ctor =
-          if field_types = [] then "" else
-          let k_t,v_t = back field_types
-          in "std::pair<"^(String.concat "," [mk_tuple_ty k_t; v_t])^"> "^pair_id  
+        let pair_ctor, pair_conversion =
+          if field_types = [] then "","" else
+          let k_t,v_t = back field_types in
+          let k_m,v_m = back field_names 
+          in 
+          ("std::pair<"^(mk_tuple_ty k_t)^", "^v_t^"> "^pair_id),
+          ("operator const std::pair<const "^(mk_tuple_ty k_t)^", "^v_t^">() const "^
+              "{ return std::make_pair("^(mk_tuple k_m)^", "^v_m^"); }")
+          
         in
         let serialize = serialization_source_code_of_entry id fields in
-        csc (Lines([id^"("^direct_ctor^") { "^direct_assign^" }";
-                    id^"("^pair_ctor^") { "^pair_assign^" }";]))
+        
+        csc (Lines [id^"("^direct_ctor^") { "^direct_assign^" }";
+                    id^"("^pair_ctor^") { "^pair_assign^" }";
+                    pair_conversion;])
             serialize
       in cscl [(inl ("struct "^id^" {")); isc tab (csc (inl str_fields)
                (if str_fields = "" then inl "" else ctor)); inl("};")]
@@ -956,12 +964,16 @@ end (* Typing *)
         end
 
     | Concat ->
+        (* TODO: Perform stronger type validation of arguments to concat. *)
         begin match argti 0, argti 1 with
-          | Host (Collection _), Host (Collection _) ->
+          | Host (Collection _), Host (Collection _) 
+          | Host (Collection _), (Target (MultiIndexDef _) | Target (Type _))  
+          | (Target (MultiIndexDef _) | Target (Type _)), Host (Collection _) ->
             inl((argi 0)^".insert("^(argi 1)^".begin(), "^(argi 1)^".end())")
 
-          | _ -> failwith ("invalid concatenation to return type "^
-                            (string_of_type return_type))
+          | _ -> failwith ("invalid concatenation between: "^
+                  (argi 0)^" : "^(string_of_type (argti 0))^"  -  "^
+                  (argi 1)^" : "^(string_of_type (argti 1)))
         end
 
     | MapUpdate ->
@@ -2644,7 +2656,13 @@ struct
     let rec type_of_expr s = match s with
       | Imperative.Block (_, i_l) ->
         List.fold_left (fun t_l bs -> t_l@(type_of_expr bs)) [] i_l
-      | Imperative.Decl (_,(expr_var,ty), _) -> [ty]
+      | Imperative.Decl (_,(d_var,ty), _) ->
+         if d_var = expr_var then
+            (*print_endline ("Typed_imp: "^(string_of_typed_imp (Target.Typing.string_of_type) (fun _ -> " hmm ") s));
+            print_endline ("Found type for "^expr_var^": "^(Target.Typing.string_of_type ty));*)
+            [ty]
+         else
+            []
       | _ -> []
     in
     let expr_type = match (type_of_expr typed_imp) with
@@ -2732,12 +2750,16 @@ struct
       let tlq_code,(tlq_var,_tlq_type) =
         (compile_k3_expr opts [] schema patterns tlq_k3expr)
       in
+      let tlq_sc = match tlq_code with
+         | Imperative.Block (_, i_l) -> cscl (List.map source_code_of_imp i_l)
+         | _ ->  source_code_of_imp tlq_code
+      in 
       let tlq_type = Target.Typing.string_of_type _tlq_type
       in      
       (tlq_name,tlq_type),
       cscl [
         Lines [tlq_type^" compute"^tlq_name^"(){"];
-        isc tab (source_code_of_imp tlq_code);
+        isc tab tlq_sc;
         Lines [tab^"return "^tlq_var^";";"}";];
       ])
     tlqs

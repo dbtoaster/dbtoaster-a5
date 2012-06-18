@@ -1062,7 +1062,7 @@ let rec get_expr_map_schema (e: expr_t) : map_t list =
     | OutPC            (id,outs,t)          -> [to_map_t (id,[],outs,t)]
     | InPC             (id,ins,t)           -> [to_map_t (id,ins,[],t)]
     | PC               (id,ins,outs,t)      -> [to_map_t (id,ins,outs,t)]
-    | _ -> List.flatten 
+    | _ -> ListAsSet.multiunion 
             (List.map get_expr_map_schema 
                 (List.flatten (get_branches e)))
     end
