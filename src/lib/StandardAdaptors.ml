@@ -228,15 +228,16 @@ let parametrized_event param_val =
 
 let event_constructors : 
       (string * ((string -> const_t list -> 
-                     (adaptor_event_t * const_t list) list) * 
-                 Types.type_t list)) list =
-   [  ("eventtype", (constant_event,[])); 
-      ("triggers", (parametrized_event,[TInt]));
+                    (adaptor_event_t * const_t list) list) * 
+                 (string -> Types.type_t list))) list =
+   [  ("eventtype", (constant_event, (function _ -> []))); 
+      ("triggers",  (parametrized_event, (function _ -> [TInt])));
       ("deletions", ((function "true" -> parametrized_event "0:insert,1:delete"
-                              | _     -> constant_event "insert"),[TInt]))
+                              | _     -> constant_event "insert"),
+                     (function "true" -> [TInt]
+                              | _     -> [])))
    ]
-
-
+  
 (* Standard generator, applying above transformations *)
 let standard_generator rel_sch params =
 
@@ -263,13 +264,15 @@ let standard_generator rel_sch params =
       with Not_found ->
          ("eventtype", "insert")
    in      
-   let (event_const_fn_template, support_sch) = 
+
+   let (event_const_fn_template, support_sch_fn) = 
       List.assoc event_const_fn_name event_constructors
    in
-   let const_fn = const_fn_template support_sch in
    let event_const_fn = event_const_fn_template event_const_fn_args in
+   let support_sch = support_sch_fn event_const_fn_args in
+   let const_fn = const_fn_template support_sch in
    (fun tuple ->
-      (*print_endline tuple;*)
+(*      print_endline tuple;*)
       try
         ( 
           let pre_fields = List.fold_left
