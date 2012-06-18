@@ -861,7 +861,7 @@ let rec simplify_if_chains predicates expr =
         else IfThenElse(pe, rcr [pe,true] te, rcr [pe,false] ee)
     | _ -> descend_expr (simplify_if_chains []) expr 
 
-(* TODO: pairwith2, deep flattens *)
+(* TODO: pairwith2, deep flattens, group-by-aggregate of singleton *)
 let rec simplify_collections filter expr =
   let recur = simplify_collections filter in
   let simplify expr =
@@ -883,7 +883,19 @@ let rec simplify_collections filter expr =
           let rmap_f, rmap_c = get_map_parts rmap in
           let new_map_f = compose map_f rmap_f
           in Map(new_map_f, rmap_c)
-
+    
+    | Aggregate((AssocLambda _ as agg_f),init, Singleton(s_expr)) ->
+        let aggf_arg1, aggf_arg2, aggf_body = get_assoc_fun_parts agg_f in
+          Apply(
+            (Lambda(aggf_arg1, 
+               Apply(
+                  (Lambda(aggf_arg2, aggf_body)), 
+                  init
+               )
+            )),
+            s_expr
+         )
+    
     | Aggregate((AssocLambda _ as agg_f),init, (Map _ as rmap)) ->
         (* v,w,fb *)
         let aggf_arg1, aggf_arg2, aggf_body = get_assoc_fun_parts agg_f in
@@ -929,6 +941,9 @@ let rec simplify_collections filter expr =
         let new_agg_f = compose_assoc agg_f rmap_f in
         let new_gb_f = compose gb_f rmap_f
         in GroupByAggregate(new_agg_f,i,new_gb_f,rmap_c) 
+
+    | Iterate(iter_f, Singleton(s_value)) ->
+        Apply(iter_f, s_value)
 
     | Iterate(iter_f, (Map _ as rmap)) ->
         let rmap_f, rmap_c = get_map_parts rmap in
@@ -1001,8 +1016,16 @@ let common_subexpression_elim expr =
            failwith ("invalid cse: "^msg))
       in
       let cse_var = Var(cse_id, cse_ty) in
+      let cse_expr = 
         Apply(Lambda(AVar(cse_id, cse_ty),
-              sub_cse acc_expr cse_var (unique cl)), arg))
+              sub_cse acc_expr cse_var (unique cl)), arg)
+      in
+         Debug.print "LOG-K3-OPT-CSE" (fun () ->
+            (K3.nice_string_of_expr cse_expr [])^
+            "\n------------------------------------------------------"
+         ); 
+         cse_expr
+      )
     expr (List.rev (filter_contained eqv))
   in
   

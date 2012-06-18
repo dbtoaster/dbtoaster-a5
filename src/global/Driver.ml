@@ -480,7 +480,7 @@ if stage_is_active StageSQLToCalc then (
                calc_queries := (rename_query tgt_name, tgt_calc)::!calc_queries
             ) (List.rev (SqlToCalculus.calc_of_query tables q))
             (* Reverse the order to use :: to build up the query list *)
-         ) queries;
+         ) (List.rev queries);
       with 
          | Sql.SqlException(msg) ->
             error ~exc:true ("Sql Error: "^msg)
