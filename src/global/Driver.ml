@@ -68,6 +68,7 @@ let optimizations_by_level =
          "K3-NO-OPTIMIZE";
          "COMPILE-WITHOUT-OPT";
          "DUMB-LIFT-DELTAS";
+         "CALC-DONT-CREATE-ZEROES";
       ]; 
       (** -O2 **) [
          "COMPILE-WITHOUT-OPT";

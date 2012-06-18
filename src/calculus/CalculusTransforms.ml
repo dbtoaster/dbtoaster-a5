@@ -76,14 +76,24 @@ let rec combine_values ?(aggressive=false) (expr:C.expr_t): C.expr_t =
       (merge CalcRing.mk_sum  ValueRing.mk_sum)
       (merge CalcRing.mk_prod ValueRing.mk_prod)
       (fun x -> CalcRing.mk_prod [CalcRing.mk_val (Value(mk_int (-1))); x])
-      (fun x -> (match x with
-         (* Zero is contageous.  The following case wreaks havoc on the 
-            schema of the expression being optimized, and is being pulled out
-            for now (see ticket #161)
-         | Cmp((Neq|Lt|Gt ),x,y) when x = y  -> CalcRing.zero
+      (fun lf -> (match lf with
+         | Cmp((Neq|Lt|Gt ),x,y) when x = y  -> 
+         (* Zero is contageous.  This particular case following case wreaks 
+            havoc on the schema of the expression being optimized.  Fortunately 
+            though, the presence of Exists makes this point moot.  Since lifts
+            can't extend the schema, and since Exists(0) = 0, the zero should
+            either only affect subexpressions where the variables in question 
+            are already in-scope, or should be able to propagate further up and
+            kill anything that would have otherwise been able to bind the 
+            variable.
+            
+            Even so, there's a flag to disable this.
          *)
+            if Debug.active "CALC-DONT-CREATE-ZEROES" 
+            then CalcRing.mk_val lf else CalcRing.zero
+         
          | Cmp((Eq|Gte|Lte),x,y) when x = y -> CalcRing.one
-         | Value(_) | Rel(_,_) | External(_) | Cmp(_,_,_) -> CalcRing.mk_val x
+         | Value(_) | Rel(_,_) | External(_) | Cmp(_,_,_) -> CalcRing.mk_val lf
          | AggSum(gb_vars, subexp) -> 
             CalcRing.mk_val (AggSum(gb_vars, rcr subexp))
          | Lift(lift_v, subexp)    -> 
