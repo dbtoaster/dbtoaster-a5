@@ -93,7 +93,27 @@ let rec combine_values ?(aggressive=false) (expr:C.expr_t): C.expr_t =
             then CalcRing.mk_val lf else CalcRing.zero
          
          | Cmp((Eq|Gte|Lte),x,y) when x = y -> CalcRing.one
-         | Value(_) | Rel(_,_) | External(_) | Cmp(_,_,_) -> CalcRing.mk_val lf
+         | Cmp(op,x,y) ->
+            (* Pre-Evaluate comparisons wherever and as much as possible *)
+            begin match ((Arithmetic.eval_partial x),
+                         (Arithmetic.eval_partial y)) with
+               | (ValueRing.Val(AConst(x_const)),
+                  ValueRing.Val(AConst(y_const))) ->
+                     begin match (Arithmetic.cmp op x_const y_const) with
+                        | CBool(true) -> CalcRing.one
+                        | CBool(false) -> 
+                           if Debug.active "CALC-DONT-CREATE-ZEROES" 
+                           then CalcRing.mk_val 
+                                 (Cmp(op, ValueRing.mk_val (AConst(x_const)),
+                                          ValueRing.mk_val (AConst(y_const))))
+                           else CalcRing.zero
+                        | _ -> C.bail_out (CalcRing.mk_val lf)
+                                 "Unexpected return value of comparison op"
+                     end
+               | (x_val, y_val) -> CalcRing.mk_val (Cmp(op, x_val, y_val))
+            end
+         
+         | Value(_) | Rel(_,_) | External(_) -> CalcRing.mk_val lf
          | AggSum(gb_vars, subexp) -> 
             CalcRing.mk_val (AggSum(gb_vars, rcr subexp))
          | Lift(lift_v, subexp)    -> 

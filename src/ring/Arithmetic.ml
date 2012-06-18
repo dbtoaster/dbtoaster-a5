@@ -242,6 +242,16 @@ let cmp_eq a b =
    end)
 (** Perform a type-escalating not-equals comparison *)
 let cmp_neq a b = CBool((cmp_eq a b) = CBool(false))
+(** Find the type-escalating comparison operation for a Types.cmp_t *)
+let cmp op =
+   begin match op with 
+      | Lt  -> cmp_lt
+      | Lte -> cmp_lte
+      | Gt  -> cmp_gt
+      | Gte -> cmp_gte
+      | Eq  -> cmp_eq
+      | Neq -> cmp_neq
+   end
 
 (**** Functions ****)
 (**
