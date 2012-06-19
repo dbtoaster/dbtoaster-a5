@@ -257,22 +257,49 @@ struct
          | MapCollection(m) -> ListCollection(nmc_to_c m)
          | _ -> bail ~expr:expr ("Can't inline collection")
     
-    let combine_impl ?(expr = None) c1 c2 =
-        let inline = inline_collection ~expr:expr in
-        begin match (inline c1), (inline c2) with
-        | TupleList(c1), TupleList(c2) -> TupleList(c1@c2)
-        | SingleMapList(c1), SingleMapList(c2) -> SingleMapList(c1@c2)
-        | ListCollection(c1), ListCollection(c2) -> ListCollection(c1@c2)
-        
-        | _,_ -> bail ~expr:expr
-                      ("invalid collections to combine")
-        end
+    let merge_lists ?(expr=None) ?(op = (bin_op Arithmetic.sum)) 
+                    tuples_to_merge =
+      let tuples_by_field =
+         List.map (function 
+           | Tuple(fields) -> 
+             let rev_fields = List.rev fields in
+                (List.rev (List.tl (rev_fields)), (List.hd rev_fields))
+           | v -> bail ~expr:expr 
+                      ("Merging lists of non-tuples ("^
+                       (K3Value.string_of_value v)^")")
+         ) tuples_to_merge
+      in
+      List.map (fun (key, values) ->
+         Tuple(key @ [
+            List.fold_left op (List.hd values) (List.tl values)
+         ])
+      ) (ListExtras.reduce_assoc tuples_by_field)
+    
+    let rec combine_impl ?(expr = None) c_lists =
+      let (inlined_lists:K3Value.t list) = 
+         List.map (inline_collection ~expr:expr) c_lists 
+      in
+      (* Assume that the list types are identical *)
+      let (op,cons) =
+         begin match List.hd inlined_lists with
+            | TupleList _ -> ((bin_op Arithmetic.sum), (fun x -> TupleList(x)))
+            | ListCollection _ -> ((fun x y -> combine_impl ~expr:expr [x; y]),
+                                   (fun x -> ListCollection x))
+            | _ -> bail ~expr:expr ("invalid collections to combine")
+         end
+      in
+      cons (
+         merge_lists ~expr:expr ~op:op (List.flatten
+            (List.map (function TupleList(l) | ListCollection(l) -> l
+                       | _ -> bail ~expr:expr ("ERROR: Invalid combine"))
+                      inlined_lists)
+         )
+      )
 
     let combine ?(expr = None) c_list = Eval(fun th db ->
         if c_list = [] then bail ~expr:expr ("Empty combine operation") else
-        List.fold_left (fun old_col new_col_eval -> 
-            combine_impl ~expr:expr old_col ((get_eval expr new_col_eval) th db)
-        ) ((get_eval expr (List.hd c_list)) th db) (List.tl c_list)
+        combine_impl ~expr:expr (List.map (fun x -> ((get_eval expr x) th db))
+                                          c_list)
       )
 
     (* Arithmetic, comparision operators *)
@@ -580,9 +607,34 @@ struct
             bail ~expr:expr ("cannot flatten a SingleMap"^(get_expr expr))
 
         | ListCollection l -> 
-            if (List.length l) > 0 then
-              List.fold_left (combine_impl ~expr:expr) (List.hd l) (List.tl l)
-            else ListCollection []
+            if List.length l < 1 then ListCollection [] else 
+            let inlined_l = 
+               List.map (inline_collection ~expr:expr) l
+            in
+            begin match List.hd inlined_l with
+               | FloatList _ -> 
+                  FloatList(List.flatten(List.map (function
+                     FloatList l -> l
+                     | _ -> bail ~expr:expr ("flatten of mixed collection (1)")
+                  ) inlined_l))
+               | TupleList _ -> 
+                  TupleList(List.flatten(List.map (function
+                     TupleList l -> l
+                     | _ -> bail ~expr:expr ("flatten of mixed collection (2)")
+                  ) inlined_l))
+               | ListCollection _ -> 
+                  ListCollection(List.flatten(List.map (function
+                     ListCollection l -> l
+                     | _ -> bail ~expr:expr ("flatten of mixed collection (3)")
+                  ) inlined_l))
+               | SingleMapList _ ->
+                  SingleMapList(List.flatten(List.map (function
+                     SingleMapList l -> l
+                     | _ -> bail ~expr:expr ("flatten of mixed collection (4)")
+                  ) inlined_l))
+               | _ -> 
+                  bail ~expr:expr ("invalid collection to flatten")
+            end
         
         (* Note: for now we don't flatten tuples with collection fields,
          * such as SingleMapList, DoubleMap or MapCollections.
