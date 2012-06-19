@@ -129,6 +129,9 @@ let specs:(Arg.key * Arg.spec * Arg.doc) list  = Arg.align [
    (  "-O3",
       (Arg.Unit(fun () -> opt_level := 3)),
       "       Produce the most efficient code possible");
+   (  "-D", 
+      (Arg.String(ExternalCompiler.add_flag ~switch:"-D")),
+      "macro Define a macro when invoking the second-stage compiler");
    (  "-F",
       (Arg.String(fun opt -> 
          if not (List.mem opt optimizations) then
@@ -188,8 +191,9 @@ let suffix_regexp = Str.regexp ".*\\.\\([^.]*\\)$" in
          input_language := SQL
    );
    if !output_language = Auto then (
+      let default_language = if (!binary_file) = "" then Interpreter else CPP in
       output_language := 
-         if !output_file = "-" then Interpreter else
+         if !output_file = "-" then default_language else
          if Str.string_match suffix_regexp !output_file 0
          then let suffix = (Str.matched_group 1 !output_file) in
             begin match suffix with
@@ -200,11 +204,17 @@ let suffix_regexp = Str.regexp ".*\\.\\([^.]*\\)$" in
              | "scala" -> Scala
              | _       -> K3
             end
-         else if (!binary_file) = "" 
-         then Interpreter
-         else CPP
+         else default_language
    )            
 ;;
+
+Debug.print "LOG-DRIVER" (fun () ->
+   let language_map = List.map (fun (_,(key,name,_)) ->
+      (key, name)
+   ) languages in
+      "Input Language: "^(List.assoc !input_language language_map)^"\n"^
+      "Output Language: "^(List.assoc !output_language language_map)
+)
 
 type stage_t = 
    | StageParseSQL

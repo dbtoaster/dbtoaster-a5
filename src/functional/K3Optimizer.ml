@@ -1468,6 +1468,10 @@ let optimize ?(optimizations=[]) trigger_vars expr =
       e3
   in
   let rec fixpoint e =
+    Debug.print "LOG-K3-OPT-STEPS" (fun () ->
+      (K3.nice_string_of_expr e [])^
+      "\n----------------------------------------------"
+    );
     let new_e = apply_opts e in
     if e = new_e then e else fixpoint new_e    
   in 

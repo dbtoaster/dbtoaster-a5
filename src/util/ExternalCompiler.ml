@@ -44,6 +44,15 @@ let add_env k v         =
 let set_flags f         = compiler_flags := f;;
 
 (**
+   Append a set of flags to the raw flags to pass to the compiler
+   @param switch optional A switch to prepend to the flag
+   @param f      the flag to append
+*)
+let add_flag ?(switch="") f =
+   compiler_flags := !compiler_flags @ 
+      (if switch = "" then [f] else [switch; f])
+
+(**
    The signature for an external compiler implementation
 *)
 type t = {
