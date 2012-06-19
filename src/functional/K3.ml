@@ -128,9 +128,8 @@ type expr_t =
          Constructor for singleton collections (collections with only one 
          element)
       *)
-   | Combine       of expr_t      * expr_t   (**
-         Combine two or more collections together {b NOT FULLY SUPPORTED BY 
-         RUNTIMES}
+   | Combine       of expr_t  list   (**
+         Combine two or more collections together
       *)
 
    (* Arithmetic and comparison operators, conditionals *) 
@@ -316,7 +315,7 @@ let get_branches (e : expr_t) : expr_t list list =
     | Tuple            e_l                  -> List.map (fun e -> [e]) e_l
     | Project          (ce, idx)            -> [[ce]]
     | Singleton        ce                   -> [[ce]]
-    | Combine          (ce1,ce2)            -> [[ce1];[ce2]]
+    | Combine          e_l                  -> List.map (fun e -> [e]) e_l
     | Add              (ce1,ce2)            -> [[ce1];[ce2]]
     | Mult             (ce1,ce2)            -> [[ce1];[ce2]]
     | Eq               (ce1,ce2)            -> [[ce1];[ce2]]
@@ -370,7 +369,7 @@ let rebuild_expr e (parts : expr_t list list) =
     | Tuple            e_l                  -> Tuple(List.flatten parts)
     | Project          (ce, idx)            -> Project(sfst(), idx)
     | Singleton        ce                   -> Singleton (sfst())
-    | Combine          (ce1,ce2)            -> Combine(sfst(),ssnd())
+    | Combine          e_l                  -> Combine(List.flatten parts)
     | Add              (ce1,ce2)            -> Add(sfst(),ssnd())
     | Mult             (ce1,ce2)            -> Mult(sfst(),ssnd())
     | Eq               (ce1,ce2)            -> Eq(sfst(),ssnd())
@@ -413,7 +412,7 @@ let descend_expr (f : expr_t -> expr_t) e =
     | Tuple            e_l                  -> Tuple (List.map f e_l)
     | Project          (ce, idx)            -> Project (f ce, idx)
     | Singleton        ce                   -> Singleton (f ce)
-    | Combine          (ce1,ce2)            -> Combine (f ce1, f ce2)
+    | Combine          e_l                  -> Combine (List.map f e_l)
     | Add              (ce1,ce2)            -> Add (f ce1, f ce2)
     | Mult             (ce1,ce2)            -> Mult (f ce1, f ce2)
     | Eq               (ce1,ce2)            -> Eq (f ce1, f ce2)
@@ -653,13 +652,15 @@ let rec code_of_expr e =
           | Types.CDate _ -> "CDate" 
         in "K3.Const(Types."^const_ts^"("^(Types.string_of_const c)^"))"
       | Var (id,t) -> "K3.Var(\""^id^"\","^(ttostr t)^")"
-      | Tuple e_l -> "K3.Tuple("^(ListExtras.ocaml_of_list rcr e_l)^")"
+      | Tuple e_l -> "K3.Tuple("^
+               (ListExtras.string_of_list ~sep:";" rcr e_l)^")"
       
       | Project (ce, idx) -> "K3.Project("^(rcr ce)^","^
-                           (ListExtras.ocaml_of_list string_of_int idx)^")"
+               (ListExtras.ocaml_of_list string_of_int idx)^")"
       
       | Singleton ce      -> "K3.Singleton("^(rcr ce)^")"
-      | Combine (ce1,ce2) -> "K3.Combine("^(rcr ce1)^","^(rcr ce2)^")"
+      | Combine e_l       -> "K3.Combine("^
+               (ListExtras.string_of_list ~sep:";" rcr e_l)^")"
       | Add  (ce1,ce2)    -> "K3.Add("^(rcr ce1)^","^(rcr ce2)^")"
       | Mult (ce1,ce2)    -> "K3.Mult("^(rcr ce1)^","^(rcr ce2)^")"
       | Eq   (ce1,ce2)    -> "K3.Eq("^(rcr ce1)^","^(rcr ce2)^")"
@@ -960,7 +961,8 @@ let rec nice_code_of_expr e =
                            (ListExtras.ocaml_of_list string_of_int idx)^")"
       
       | Singleton ce      -> "Singleton("^(rcr ce)^")"
-      | Combine (ce1,ce2) -> "Combine("^(rcr ce1)^","^(rcr ce2)^")"
+      | Combine e_l       -> "Combine("^
+                           (ListExtras.string_of_list rcr e_l)^")"
       | Add  (ce1,ce2)    -> "("^(rcr ce1)^"+"^(rcr ce2)^")"
       | Mult (ce1,ce2)    -> "("^(rcr ce1)^"*"^(rcr ce2)^")"
       | Eq   (ce1,ce2)    -> "("^(rcr ce1)^"=="^(rcr ce2)^")"
@@ -1030,13 +1032,11 @@ let rec nice_code_of_expr e =
 (* Native collection constructors *)
 let collection_of_list (l : expr_t list) =
     if l = [] then failwith "invalid list for construction" else
-    List.fold_left (fun acc v -> Combine(acc,Singleton(v)))
-        (Singleton(List.hd l)) (List.tl l)
+    Combine(List.map (fun v -> Singleton(v)) l)
 
 let collection_of_float_list (l : float list) =
     if l = [] then failwith "invalid list for construction" else
-    List.fold_left (fun acc v -> Combine(acc,Singleton(Const(Types.CFloat(v)))))
-        (Singleton(Const(Types.CFloat(List.hd l)))) (List.tl l)
+    collection_of_list (List.map (fun v -> Const(Types.CFloat(v))) l)
 
 
 (* Incremental section *)
@@ -1216,10 +1216,12 @@ let annotate_collections e =
     | Singleton ce      -> 
       let ace, act = _annotate_collections ce var_map in
       (Singleton(ace), Collection(Intermediate, act))
-    | Combine (ce1,ce2) ->
-      let ce1_e, ce1_t = _annotate_collections ce1 var_map in
-      let ce2_e, _ = _annotate_collections ce2 var_map in
-      (Combine(ce1_e, ce2_e), ce1_t)
+    | Combine e_l ->
+      let ce1_e, ce1_t = _annotate_collections (List.hd e_l) var_map in
+      let cerest_e = List.map (fun x -> fst (_annotate_collections x var_map))
+                              (List.tl e_l)
+      in
+         (Combine(ce1_e :: cerest_e), ce1_t)
     | Add  (ce1,ce2)    -> 
       let ce1_e, ce1_t = _annotate_collections ce1 var_map in
       let ce2_e, ce2_t = _annotate_collections ce2 var_map in

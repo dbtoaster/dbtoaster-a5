@@ -24,7 +24,7 @@ let rec compile_k3_expr e =
     | K.Tuple(field_l) -> tuple ~expr:(debug e) (List.map rcr field_l)
     | K.Project(e,fields) -> project ~expr:(debug e) (rcr e) fields
     | K.Singleton(e) -> singleton ~expr:(debug e) (rcr e) (typecheck_expr e)
-    | K.Combine(l,r) -> combine ~expr:(debug e) (rcr l) (rcr r) 
+    | K.Combine(l) -> combine ~expr:(debug e) (List.map rcr l) 
     | K.Add(l,r)  -> compile_op add_op l r
     | K.Mult(l,r) -> compile_op mult_op l r
     | K.Eq(l,r)   -> compile_op eq_op l r

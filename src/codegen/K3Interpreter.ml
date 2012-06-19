@@ -260,7 +260,6 @@ struct
     let combine_impl ?(expr = None) c1 c2 =
         let inline = inline_collection ~expr:expr in
         begin match (inline c1), (inline c2) with
-        | FloatList(c1), FloatList(c2) -> FloatList(c1@c2)
         | TupleList(c1), TupleList(c2) -> TupleList(c1@c2)
         | SingleMapList(c1), SingleMapList(c2) -> SingleMapList(c1@c2)
         | ListCollection(c1), ListCollection(c2) -> ListCollection(c1@c2)
@@ -269,9 +268,12 @@ struct
                       ("invalid collections to combine")
         end
 
-    let combine ?(expr = None) c1 c2 = Eval(fun th db ->
-        combine_impl ~expr:expr ((get_eval expr c1) th db) 
-                                ((get_eval expr c2) th db))
+    let combine ?(expr = None) c_list = Eval(fun th db ->
+        if c_list = [] then bail ~expr:expr ("Empty combine operation") else
+        List.fold_left (fun old_col new_col_eval -> 
+            combine_impl ~expr:expr old_col ((get_eval expr new_col_eval) th db)
+        ) ((get_eval expr (List.hd c_list)) th db) (List.tl c_list)
+      )
 
     (* Arithmetic, comparision operators *)
     (* op type, lhs, rhs -> op *)

@@ -318,14 +318,17 @@ let rec typecheck_expr e : K.type_t =
 		(* e1 : K.Collection t1 e2 : K.Collection t2 t1 <> Unit, t1 = t2 *         *)
 		(* ----------------------------------------------------------------- * *)
 		(* combine(e1,e2) : K.Collection t1                                      *)
-		| K.Combine (ce1, ce2) ->
-				let ce1_t, ce2_t = (recur ce1, recur ce2) in
-				begin match ce1_t, ce2_t with
-					| (K.Collection(_,c1_t), K.Collection(_,c2_t)) ->
-							if (c1_t <> K.TUnit) && (c1_t = c2_t) then ce1_t
-							else failwith "invalid collections for combine"
-					| _ -> failwith "invalid combine of non-collections"
-				end
+		| K.Combine e_l ->
+		      if e_l = [] then failwith "Invalid (empty) combine operation" else
+		      let ce_tl = List.map recur e_l in
+		      List.fold_left (fun ce1_t ce2_t ->
+               begin match ce1_t, ce2_t with
+                  | (K.Collection(_,c1_t), K.Collection(_,c2_t)) ->
+                        if (c1_t <> K.TUnit) && (c1_t = c2_t) then ce1_t
+                        else failwith "invalid collections for combine"
+                  | _ -> failwith "invalid combine of non-collections"
+               end
+            ) (List.hd ce_tl) (List.tl ce_tl)
 		
 		(* e1 : t1 e2 : t2 * t1 <> Unit, t2 <> Unit, flat(t1), flat(t2) *      *)
 		(* -------------------------------------------- * op(e1,e2) :          *)

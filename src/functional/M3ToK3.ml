@@ -790,8 +790,7 @@ let rec calc_to_k3_expr meta ?(generate_init = false) theta_vars_el calc :
                (meta_append_sum_map nm sum_map)
          else
             let sum_result_combine = 
-               let sum_fn sum_e (s_outs_el,s_ret_ve,s,_) = K.Combine(sum_e,s) in
-               List.fold_left sum_fn hd_s sum_exprs_tl
+               K.Combine(List.map (fun (s_outs_el,s_ret_ve,s,_) -> s) sum_exprs)
             in
             (* Since now K3.Combine does a simple append, we need to put a group by *)
             (* aggregate around it in order to "combine" tuples with the same key. *)

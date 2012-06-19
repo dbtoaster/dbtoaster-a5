@@ -29,7 +29,7 @@ sig
 
     (* Native collections *)
     val singleton : ?expr:K3.expr_t option -> code_t -> K3.type_t -> code_t
-    val combine   : ?expr:K3.expr_t option -> code_t -> code_t -> code_t
+    val combine   : ?expr:K3.expr_t option -> code_t list -> code_t
 
     (* Arithmetic, comparision operators *)
     (* op type, lhs, rhs -> op *)

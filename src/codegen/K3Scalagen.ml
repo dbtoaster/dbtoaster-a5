@@ -306,15 +306,20 @@ struct
     let tpe = Collection(Intermediate, kt, List.hd vt) in
     ("{ val v = " ^ d ^ ";" ^ (string_of_type tpe) ^ "(List(" ^ v ^ ")) }", tpe)
    
-  let combine ?(expr = None) (a_code:code_t) (b_code:code_t): code_t =
-    match (a_code, b_code) with 
-    | ((a, Collection(_, ak, at)), (b, Collection(_, bk, bt))) ->
-        if ak <> bk or at <> bt then 
-          debugfail expr "Cannot combine collections of different types"
-        else 
-          let tpe = Collection(Intermediate, ak, at) in
-          ((string_of_type tpe) ^ "(" ^ a ^ ".toList ::: " ^ b ^ ".toList)", tpe)
-    | _ -> debugfail expr "Type mismatch for collection combine"
+  let combine ?(expr = None) (terms:code_t list): code_t =
+    if (List.length terms) < 1 
+    then debugfail expr "Empty combines are invalid" 
+    else List.fold_left (fun a_code b_code ->
+       match (a_code, b_code) with 
+       | ((a, Collection(_, ak, at)), (b, Collection(_, bk, bt))) ->
+           if ak <> bk or at <> bt then 
+             debugfail expr "Cannot combine collections of different types"
+           else 
+             let tpe = Collection(Intermediate, ak, at) in
+             ((string_of_type tpe) ^ "(" ^ a ^ ".toList ::: " ^ b ^ ".toList)", tpe)
+   
+       | _ -> debugfail expr "Type mismatch for collection combine"
+    ) (List.hd terms) (List.tl terms)
 
   let op ?(expr = None) ((mk_op):op_t) ((a,at):code_t) ((b,bt):code_t) : code_t =
     let (op_f,rt,err) = (mk_op at bt) in
