@@ -49,10 +49,10 @@ namespace dbtoaster {
       bool async;
 
       runtime_options(int argc = 0, char* argv[] = 0) :
-    	  traced(false)
-      	  , trace_step(0)
-      	  , log_tuple_count_every(0)
-      	  , async(false)
+          traced(false)
+          , trace_step(0)
+          , log_tuple_count_every(0)
+          , async(false)
       {
         init(argc, argv);
       }
@@ -114,12 +114,12 @@ namespace dbtoaster {
         try {
           trace_counter = 0;
           if ( trace_step <= 0 )
-        	  trace_step = 1000;
+              trace_step = 1000;
           if ( trace_opts != "" )
           {
-        	  if( runtime_options::verbose() )
-        		  cerr << "tracing: " << trace_opts << endl;
-        	  parse_tracing(trace_opts);
+              if( runtime_options::verbose() )
+                  cerr << "tracing: " << trace_opts << endl;
+              parse_tracing(trace_opts);
           }
           else traced = false;
         } catch (unknown_option& uo) {
@@ -134,7 +134,7 @@ namespace dbtoaster {
       }
 
       void init(int argc, char* argv[]) {
-    	if (argc <= 0 )	return;
+        if (argc <= 0 ) return;
 
         opt_desc = shared_ptr<options_description>(
             new options_description("dbtoaster query options"));
@@ -157,7 +157,7 @@ namespace dbtoaster {
       static
       bool verbose()
       {
-    	  return _verbose;
+          return _verbose;
       }
 
       // Result output.
@@ -198,12 +198,12 @@ namespace dbtoaster {
       }
 
       path get_log_file(string stream_name, string ftype, bool prefix) {
-		path r;
-		if ( opt_map.count("log-dir") ) r = opt_map["log-dir"].as<string>();
-		else r = current_path();
-		r /= (prefix? ftype : "") + stream_name + (prefix? "" : ftype) + ".dbtdat";
-		return r.make_preferred();
-	  }
+        path r;
+        if ( opt_map.count("log-dir") ) r = opt_map["log-dir"].as<string>();
+        else r = current_path();
+        r /= (prefix? ftype : "") + stream_name + (prefix? "" : ftype) + ".dbtdat";
+        return r.make_preferred();
+      }
 
       // Statistics
       // Number of samples to collect per statitics period.

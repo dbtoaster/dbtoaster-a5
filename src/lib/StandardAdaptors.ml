@@ -352,7 +352,7 @@ let orderbook_generator rel_sch params =
     * otherwise action, order_id, broker_id-price-volume triple *)
    let ff l i = float_of_string (List.nth l i) in
    let fi l i = int_of_string (List.nth l i) in
-	 let fs l i = List.nth l i in
+   let fs l i = List.nth l i in
    let get_order_fields tup =
       let t = Str.split (Str.regexp ",") tup in
       let ts,i,a,v,p =
@@ -379,7 +379,7 @@ let orderbook_generator rel_sch params =
 
    let insert tuple = (AInsert, tuple) in
    let delete tuple = (ADelete, tuple) in
-	   
+
    (* Common actions across book types *)
    let adaptor_common action order_id tuple =
       let existing_tuple = if Hashtbl.mem book_orders order_id

@@ -64,8 +64,8 @@ in
       (BaseValue(CFloat(0.5)));
    test "An external function invocation - multiple arguments"
       (Apply((ExternalLambda("/",
-										 (ATuple(["aparam0", TBase(TFloat);"aparam1", TBase(TFloat)])),
-                     TBase(TFloat))),
+                (ATuple(["aparam0", TBase(TFloat);"aparam1", TBase(TFloat)])),
+                TBase(TFloat))),
              (K3.Tuple([Const(CFloat(2.));Const(CFloat(5.))])) ))
       (BaseValue(CFloat(0.4)));
    test "Arithmetic"

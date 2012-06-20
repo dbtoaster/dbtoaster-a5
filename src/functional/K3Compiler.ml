@@ -46,7 +46,7 @@ let rec compile_k3_expr e =
     | K.AssocLambda(arg1_e,arg2_e,b_e) ->
         assoc_lambda ~expr:(debug e) arg1_e arg2_e (rcr b_e)
     
-		| K.ExternalLambda(fn_id,fn_arg,fn_t) ->
+    | K.ExternalLambda(fn_id,fn_arg,fn_t) ->
         external_lambda ~expr:(debug e) fn_id fn_arg fn_t
     
     | K.Apply(fn_e, arg_e) -> apply ~expr:(debug e) (rcr fn_e) (rcr arg_e)
@@ -77,7 +77,7 @@ let rec compile_k3_expr e =
         let v_l, k_l = List.split idk_l in
         let idx_l = List.map (index (List.map fst sch)) v_l in
         slice ~expr:(debug e) (rcr m_e) (List.map rcr k_l) idx_l
-	
+
     | K.Filter(fn_e, c_e)      -> filter ~expr:(debug e) (rcr fn_e) (rcr c_e) 
     | K.SingletonPC(id,t)      -> get_value ~expr:(debug e) t id
     | K.OutPC(id,outs,t)       -> get_out_map ~expr:(debug e) outs t id
@@ -175,4 +175,4 @@ let compile_query_to_program ?(disable_opt = false)
    let m3ptrigs,patterns = M3Compiler.prepare_triggers m3prog in
    let p = collection_prog (schema,m3ptrigs) patterns in
    if disable_opt then p else optimize_prog ~optimizations:optimizations p
-	*)
+*)

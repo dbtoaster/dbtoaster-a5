@@ -575,10 +575,10 @@ let rec cmp_exprs ?(cmp_opts:CalcRing.cmp_opt_t list =
          
          | ((Rel(rn1,rv1)), (Rel(rn2,rv2))) ->
             if (rn1 <> rn2) then None else
-						  if ((List.length rv1) = (List.length rv2)) then
-                Some(List.combine rv1 rv2)
-							else None
-							            
+            if ((List.length rv1) = (List.length rv2)) 
+            then Some(List.combine rv1 rv2)
+            else None
+
          | ((External(en1,eiv1,eov1,et1,em1)), 
             (External(en2,eiv2,eov2,et2,em2))) ->
             if ((en1 <> en2) || (et1 <> et2))
@@ -594,10 +594,12 @@ let rec cmp_exprs ?(cmp_opts:CalcRing.cmp_opt_t list =
                   | None -> None
                   | Some(s) -> 
                      if ((List.length eiv1) = (List.length eiv2)) &&
-										    ((List.length eov1) = (List.length eov2)) then
-	                     Function.multimerge 
-	                        [s; (List.combine eiv1 eiv2); (List.combine eov1 eov2)]
-										else None
+                        ((List.length eov1) = (List.length eov2)) 
+                     then Function.multimerge 
+                             [ s; 
+                               (List.combine eiv1 eiv2); 
+                               (List.combine eov1 eov2) ]
+                     else None
                end
             else None
 

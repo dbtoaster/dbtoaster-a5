@@ -286,7 +286,7 @@ let compile_map (db_schema:Schema.t) (history:Heuristics.ds_history_t)
          (* If the todo has input variables, it needs a default initializer *)
          let (init_todos,init_expr) =
             Heuristics.materialize db_schema history (todo_name^"_init") 
-						                       None optimized_defn
+                                   None optimized_defn
          in (init_todos, Some(init_expr))
       else
          ([], None)
@@ -325,8 +325,8 @@ let compile_table ((reln, relv, relut):Schema.rel_t): compiled_ds_t =
 (******************************************************************************)
 let compile_tlqs (db_schema:Schema.t) (history:Heuristics.ds_history_t) 
                  (calc_queries:tlq_list_t) : todo_list_t * tlq_list_t =
-	 	
-   let todo_lists, toplevel_queries = List.split ( 			
+
+   let todo_lists, toplevel_queries = List.split (
       if (Debug.active "EXPRESSIVE-TLQS") then
          List.map ( fun (qname, qexpr) ->
             let qschema = Calculus.schema_of_expr qexpr in
@@ -360,19 +360,19 @@ let compile_tlqs (db_schema:Schema.t) (history:Heuristics.ds_history_t)
          ) calc_queries
     ) in 
       (List.flatten todo_lists, toplevel_queries)
-			
+
 (******************************************************************************)
 
 let compile (db_schema:Schema.t) (calc_queries:tlq_list_t): 
             (plan_t * tlq_list_t) =
-	 
-	 (* First process the toplevel queries *)					
+
+   (* First process the toplevel queries *)
    let history:Heuristics.ds_history_t   = ref [] in
    let plan   :plan_t ref                = ref [] in
-	 let todo_list, tlq_list = compile_tlqs db_schema history calc_queries in	
-	 let todos  :todo_list_t ref           = ref todo_list in
-	 let toplevel_queries : tlq_list_t ref = ref tlq_list in
-				
+   let todo_list, tlq_list = compile_tlqs db_schema history calc_queries in
+   let todos  :todo_list_t ref           = ref todo_list in
+   let toplevel_queries : tlq_list_t ref = ref tlq_list in
+
    while List.length !todos > 0 do (
       let next_ds = List.hd !todos in todos := List.tl !todos;
       Debug.print "LOG-COMPILE-DETAIL" (fun () ->

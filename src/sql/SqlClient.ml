@@ -73,7 +73,7 @@ module Postgres : Interface = struct
          | CDate(y, m, d) -> (string_of_int y) ^ "-" ^
                              (string_of_int m) ^ "-" ^ 
                              (string_of_int d)
-	 ;;
+   ;;
 
    let const_of_string (_str:string) (const_type:Types.type_t) : Types.const_t =
       let str = trim _str in
@@ -163,7 +163,7 @@ module Postgres : Interface = struct
          );
          put channel cmd
    ;;
-	
+
    let insert (channel:sql_channel_t) (tname:string) (tschema:Types.var_t list)
               (data:Types.const_t list list): unit =
       let cmd = 
@@ -187,10 +187,10 @@ module Postgres : Interface = struct
          let cmd =
             "DELETE FROM " ^ tname ^
             " WHERE _id = (SELECT max(_id) FROM " ^ tname ^ " WHERE " ^
-				(String.concat " AND " (
+            (String.concat " AND " (
                List.map2 (fun (vn,_) c -> 
                   vn ^ "=" ^ (string_of_const c)) tschema tuple
-            )) ^ ")"									
+            )) ^ ")"
          in
             Debug.print "LOG-SQLCLIENT" (fun () ->
                "[SQL client] Delete from: " ^ cmd

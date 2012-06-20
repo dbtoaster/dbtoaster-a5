@@ -61,11 +61,9 @@
       tl_queries := (qname, qexp)::(!tl_queries)
    
    let concat_stmt (schema, m,t) (map_list,pat_list,trig_list) =
-				let new_map = if m = [] then map_list else m @ map_list
-					in
-						let new_trig = if t = [] then trig_list else t @ trig_list
-							in
-								(schema, (new_map, !patterns), new_trig, !tl_queries) 
+      let new_map = if m = [] then map_list else m @ map_list in
+      let new_trig = if t = [] then trig_list else t @ trig_list in
+          (schema, (new_map, !patterns), new_trig, !tl_queries) 
 
    let must_infer_from_slice: (bool ref) = ref true
 
@@ -99,21 +97,21 @@
        in_var_types@out_var_types
      in
      
-	 let rec rcr stmt = 
-	    match stmt with
-	      | Map(_, e) -> rcr e
-	      | Slice(e, _, _) -> rcr e
-	      | Block(el) ->
-	        let rec last_item l = 
-	            if List.length l = 1 then
-	                List.hd l
-	            else 
-	                last_item (List.tl l)
-	        in
-	        rcr (last_item el)
-	      | PC _ | OutPC _ | InPC _ | SingletonPC _ -> calc_result stmt
-	      | _ -> raise (K3TypeError("First argument of Slice should be a Collection!"))
-      in
+   let rec rcr stmt = 
+      match stmt with
+         | Map(_, e) -> rcr e         
+         | Slice(e, _, _) -> rcr e
+         | Block(el) ->
+            let rec last_item l = 
+               if List.length l = 1 
+               then List.hd l
+               else last_item (List.tl l)
+            in
+               rcr (last_item el)
+          | PC _ | OutPC _ | InPC _ | SingletonPC _ -> calc_result stmt
+          | _ -> raise (
+             K3TypeError("First argument of Slice should be a Collection!"))
+   in
       rcr statement
 
 
@@ -125,7 +123,7 @@
    let get_collection c_id = 
       Hashtbl.find collections c_id
 
-	let types_to_vartypes types = 
+   let types_to_vartypes types = 
       List.map 
          (
             fun (n, t) -> let nt = TBase(t)
@@ -178,7 +176,7 @@
 
 dbtoasterK3Program:
 | relStatementList mapDeclarationList queryDeclarationList patternDeclarationList triggerList         
-	{ let _ = $3 in
+   { let _ = $3 in
      concat_stmt ($1, $2, $5) empty_output_k3 }
 mapDeclarationList:
 | mapDeclaration mapDeclarationList                         { $1::$2 }
@@ -186,25 +184,25 @@ mapDeclarationList:
 
 mapDeclaration:
 | ID LPAREN typeItem RPAREN LBRACK mapVarList RBRACK LBRACK mapVarList RBRACK EOSTMT   
-	{ let col = PC($1, types_to_vartypes $6, types_to_vartypes $9, TBase($3))
-	   in
-	      add_collection $1 col;
-	         create_map $1 $6 $9 $3}
+   { let col = PC($1, types_to_vartypes $6, types_to_vartypes $9, TBase($3))
+     in
+        add_collection $1 col;
+        create_map $1 $6 $9 $3}
 | ID LPAREN typeItem RPAREN LBRACK RBRACK LBRACK mapVarList RBRACK EOSTMT            
-	{ let col = OutPC($1, types_to_vartypes $8, TBase($3))
-	   in
-	      add_collection $1 col;
-	         create_map $1 [] $8 $3}
+   { let col = OutPC($1, types_to_vartypes $8, TBase($3))
+     in 
+        add_collection $1 col;
+        create_map $1 [] $8 $3}
 | ID LPAREN typeItem RPAREN LBRACK mapVarList RBRACK LBRACK RBRACK EOSTMT            
-	{ let col = InPC($1, types_to_vartypes $6, TBase($3))
-	   in
-	      add_collection $1 col;
-	         create_map $1 $6 [] $3}
+   { let col = InPC($1, types_to_vartypes $6, TBase($3))
+     in
+        add_collection $1 col;
+        create_map $1 $6 [] $3}
 | ID LPAREN typeItem RPAREN LBRACK RBRACK LBRACK RBRACK EOSTMT                     
-	{ let col = SingletonPC($1,TBase($3))
-	   in
-	      add_collection $1 col;
-	         create_map $1 [] [] $3}
+   { let col = SingletonPC($1,TBase($3))
+     in
+        add_collection $1 col;
+        create_map $1 [] [] $3}
 
 queryDeclarationList:
 | queryDeclaration EOSTMT queryDeclarationList              { let _ = $1 in () }

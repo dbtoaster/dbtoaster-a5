@@ -26,23 +26,23 @@ module C = Calculus
 let decompose_poly (expr:C.expr_t):(var_t list * C.expr_t) list = 
 (* TODO: ensure that different expessions under AggSum have disjunct schemas *)
 
-  let rec erase_aggsums e = 
-		C.CalcRing.fold C.CalcRing.mk_sum C.CalcRing.mk_prod C.CalcRing.mk_neg
-		  (fun lf -> begin match lf with
-        | AggSum(s, subexp) -> erase_aggsums subexp
-        | _ -> C.CalcRing.mk_val lf
-      end) e
-	in 
-	  (* Top-level sum-terms can have different schemas *)
-    List.fold_left (fun result term ->
-			let schema = snd (C.schema_of_expr term) in
-			let term_decomposed = List.map (fun x -> (schema, x))
-        (C.CalcRing.sum_list 
-			    (C.CalcRing.polynomial_expr (erase_aggsums term)))
-			in
-    	    (result @ term_decomposed)
-		) [] (C.CalcRing.sum_list (C.CalcRing.polynomial_expr expr))
-		
+   let rec erase_aggsums e = 
+      C.CalcRing.fold C.CalcRing.mk_sum C.CalcRing.mk_prod C.CalcRing.mk_neg
+         (fun lf -> begin match lf with
+            | AggSum(s, subexp) -> erase_aggsums subexp
+            | _ -> C.CalcRing.mk_val lf
+         end) e
+   in 
+   (* Top-level sum-terms can have different schemas *)
+   List.fold_left (fun result term ->
+      let schema = snd (C.schema_of_expr term) in
+      let term_decomposed = List.map (fun x -> (schema, x))
+         (C.CalcRing.sum_list 
+             (C.CalcRing.polynomial_expr (erase_aggsums term)))
+      in
+         (result @ term_decomposed)
+   ) [] (C.CalcRing.sum_list (C.CalcRing.polynomial_expr expr))
+
 (******************************************************************************)
 (**
    [decompose_graph scope (schema,expr)]

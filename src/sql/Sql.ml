@@ -697,7 +697,7 @@ let rec bind_select_vars ?(parent_sources = [])
       List.map (fun (s,v,t) -> 
         ((Some(fst (source_for_var (s,v,t) tables sources))),
          v,
-         var_type (s,v,t) tables sources)	
+         var_type (s,v,t) tables sources)
       ) gb
    )
 

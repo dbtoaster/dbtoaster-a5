@@ -192,8 +192,8 @@ struct
     | MapCollection  of t K3ValuationMap.t
 
     let zero = BaseValue(CFloat(0.0))
-	 let zero_of_type zt = BaseValue(Types.zero_of_type zt)
-	 let compare = Pervasives.compare
+    let zero_of_type zt = BaseValue(Types.zero_of_type zt)
+    let compare = Pervasives.compare
 
     let rec key_to_string k = ListExtras.ocaml_of_list string_of_value k
     and string_of_vmap ?(sep = ";\n") sm   = K3ValuationMap.to_string ~sep:sep key_to_string string_of_value sm

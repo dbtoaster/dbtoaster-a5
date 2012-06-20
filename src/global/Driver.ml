@@ -85,7 +85,7 @@ let optimizations_by_level =
    ]
 let optimizations = 
    ListAsSet.union (ListAsSet.multiunion optimizations_by_level) [
-      "IGNORE-DELETES"; "HEURISTICS-ALWAYS-UPDATE"; "HEURISTICS-ALWAYS-REPLACE";
+      "IGNORE-DELETES"; "HEURISTICS-ALWAYS-UPDATE";
       "HASH-STRINGS"; "EXPRESSIVE-TLQS"; "COMPILE-WITH-STATIC";
    ]
 let opt_level = ref 2;;
@@ -546,7 +546,7 @@ if stage_is_active StagePrintCalc then (
          !calc_queries)
    )
 )
-;; 				
+;;
 if stage_is_active StageCompileCalc then (
    Debug.print "LOG-DRIVER" (fun () -> "Running Stage: CompileCalc");
 
@@ -628,7 +628,7 @@ if stage_is_active StageM3ToK3 then (
    Debug.print "LOG-DRIVER" (fun () -> "Running Stage: M3ToK3");
    if not (Debug.active "DEBUG-DM") then Debug.activate "M3TOK3-GENERATE-INIT";
    try
-		let gen_init = (Debug.active "M3TOK3-GENERATE-INIT") in
+      let gen_init = (Debug.active "M3TOK3-GENERATE-INIT") in
       k3_program := M3ToK3.m3_to_k3 ~generate_init:gen_init !m3_program; 
       let (_,(_, pats), _, _) = !k3_program in
          Debug.print "LOG-PATTERNS" 
@@ -641,8 +641,8 @@ if stage_is_active StageM3ToK3 then (
       | M3ToK3.M3ToK3Failure(_, _, msg) ->
          bug ~exc:true ~detail:(fun () -> M3.string_of_m3 !m3_program) msg
       | K3Typechecker.K3TypecheckError(stack,msg) ->
-			bug ~exc:true ~detail:(fun () -> 
-			                      K3Typechecker.string_of_k3_stack stack) msg
+         bug ~exc:true ~detail:(fun () -> 
+                                K3Typechecker.string_of_k3_stack stack) msg
 )
 ;;
 
@@ -750,10 +750,9 @@ if stage_is_active StageK3ToTargetLanguage then (
                
       )   
       | Ocaml       -> bug "Ocaml codegen not implemented yet"
-      | Scala       -> (
-		source_code := [K3ScalaCompiler.compile_query_to_string !k3_program]
-	  )
-	  
+      | Scala       -> 
+         source_code := [K3ScalaCompiler.compile_query_to_string !k3_program]
+         
          (* All imperative languages now produce IMP *)
       | IMP
       | CPP         -> 

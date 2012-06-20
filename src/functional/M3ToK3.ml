@@ -279,10 +279,10 @@ let map_to_expr mapn ins outs map_type =
    let (ins_k,outs_k) = pair_map varIdType_to_k3_idType (ins,outs) in
    let map_type_k = K.TBase(map_type) in
    begin match ins, outs with
-	| ([],[]) -> K.SingletonPC(mapn,             map_type_k)
-	| ([], x) ->       K.OutPC(mapn,      outs_k,map_type_k)
-	| ( x,[]) ->        K.InPC(mapn,ins_k,       map_type_k)
-	| ( x, y) ->          K.PC(mapn,ins_k,outs_k,map_type_k)
+       | ([],[]) -> K.SingletonPC(mapn,             map_type_k)
+       | ([], x) ->       K.OutPC(mapn,      outs_k,map_type_k)
+       | ( x,[]) ->        K.InPC(mapn,ins_k,       map_type_k)
+       | ( x, y) ->          K.PC(mapn,ins_k,outs_k,map_type_k)
    end
 
 

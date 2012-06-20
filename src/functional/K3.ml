@@ -81,8 +81,8 @@ type type_t =
     | Fn         of type_t list * type_t          (** Function type *)
 
 let base_type_of t = begin match t with
-	| TBase(bt) -> bt
-	| _ -> failwith "Invalid argument: not a K3 base type!"
+    | TBase(bt) -> bt
+    | _ -> failwith "Invalid argument: not a K3 base type!"
 end
 
 (** Schemas are carried along with persistent map references, and temporary 
@@ -329,7 +329,7 @@ let get_branches (e : expr_t) : expr_t list list =
     | Iterate          (fn_e, ce)           -> [[fn_e];[ce]]
     | Lambda           (arg_e,be)           -> [[be]]
     | AssocLambda      (arg1_e,arg2_e,be)   -> [[be]]
-		| ExternalLambda   (fn_id,arg_e,fn_t)   -> []
+    | ExternalLambda   (fn_id,arg_e,fn_t)   -> []
     | Apply            (fn_e,arg_e)         -> [[fn_e];[arg_e]]
     | Map              (fn_e,ce)            -> [[fn_e];[ce]]
     | Flatten          ce                   -> [[ce]]
@@ -504,7 +504,7 @@ let types_of_arg a = match a with
 let rec string_of_type t =
     match t with
       TUnit -> "TUnit" 
-		| TBase(b_t) -> Types.string_of_type b_t
+    | TBase(b_t) -> Types.string_of_type b_t
     | TTuple(t_l) -> "TTuple("^(String.concat " ; " (List.map string_of_type t_l))^")"
     | Collection(k,c_t) ->
       "Collection("^(string_of_type c_t)^")"
@@ -552,8 +552,8 @@ let string_of_expr e =
       let const_ts = match c with
         | Types.CFloat _ -> "CFloat"
         | Types.CString _ -> "CString"
-				| Types.CInt _ -> "CInt"
-				| Types.CBool _ -> "CBool" 
+        | Types.CInt _ -> "CInt"
+        | Types.CBool _ -> "CBool" 
         | Types.CDate _ -> "CDate" 
       in ob(); ps ("Const("^const_ts^"("^(Types.string_of_const c)^"))"); cb()
     | Var (id,t) -> ob(); ps "Var("; pid id; ps ","; 
@@ -647,7 +647,7 @@ let rec code_of_expr e =
         let const_ts = match c with
           | Types.CFloat _ -> "CFloat"
           | Types.CString _ -> "CString" 
-					| Types.CInt _ -> "CInt"
+          | Types.CInt _ -> "CInt"
           | Types.CBool _ -> "CBool" 
           | Types.CDate _ -> "CDate" 
         in "K3.Const(Types."^const_ts^"("^(Types.string_of_const c)^"))"
@@ -841,8 +841,8 @@ let nice_string_of_expr ?(type_is_needed = false) e maps =
       let const_ts = match c with
         | Types.CFloat _ -> "float"
         | Types.CString _ -> "string"
-				| Types.CInt _ -> "int"
-				| Types.CBool _ -> "bool" 
+        | Types.CInt _ -> "int"
+        | Types.CBool _ -> "bool" 
         | Types.CDate _ -> "CDate"
       in ob(); ps (Types.string_of_const c);
          if type_is_needed then ps (":"^(const_ts));
@@ -1150,7 +1150,7 @@ let annotate_collections e =
       match args, ts with
       | AVar(id, at), rt -> AVar(id, transfer_annotation at rt)
       | ATuple(l), TTuple(ts) -> 
-	ATuple(List.map2 (fun (id, at) rt -> (id, transfer_annotation at rt)) l ts)
+          ATuple(List.map2 (fun (id, at) rt -> (id, transfer_annotation at rt)) l ts)
       | _, t -> failwith ("Expected Tuple, found: " ^ (string_of_type t))
     in
     let type_of_schema t = List.map (fun (i, t) -> t) t in
@@ -1163,12 +1163,12 @@ let annotate_collections e =
       match t with
       | TTuple(ts) -> (
         let rec _key_val l k = 
-	  match l with 
-	  | [x] -> (k, x)
-	  | x :: xs -> _key_val xs (x :: k)
-	  | [] -> ([], TUnit)
-	in 
-	_key_val ts [])
+        match l with 
+          | [x] -> (k, x)
+          | x :: xs -> _key_val xs (x :: k)
+          | [] -> ([], TUnit)
+        in 
+          _key_val ts [])
       | _ -> ([], t)
     in
     let rec unzip l = 
@@ -1295,13 +1295,13 @@ let annotate_collections e =
     | Flatten(ce) -> 
       let c_e, c_t = _annotate_collections ce var_map in
       (match c_t with
-      | Collection(_, elems) -> (
-        let k, v = key_val elems in 
-	match v with
-	| Collection(_, TTuple(t)) -> (Flatten(c_e), Collection(Intermediate, TTuple(t @ k)))
-	| Collection(_, t) -> (Flatten(c_e), Collection(Intermediate, TTuple(t :: k)))
-	| _ -> failwith "Expected nested collection")
-      | _ -> failwith "Expected collection"
+        | Collection(_, elems) -> (
+          let k, v = key_val elems in 
+          match v with
+            | Collection(_, TTuple(t)) -> (Flatten(c_e), Collection(Intermediate, TTuple(t @ k)))
+            | Collection(_, t) -> (Flatten(c_e), Collection(Intermediate, TTuple(t :: k)))
+            | _ -> failwith "Expected nested collection")
+        | _ -> failwith "Expected collection"
       )
     | Aggregate(fn_e,ie,ce) -> 
       let c_e, c_t = _annotate_collections ce var_map in
@@ -1315,8 +1315,8 @@ let annotate_collections e =
       let f_e, f_t = _annotate_collections ~argt:((type_of_collection c_t) :: [i_t]) fn_e var_map in
       let c_tpe = 
         match fnret g_t with
-	| TTuple(ts) -> TTuple(ts @ [i_t])
-	| t -> TTuple(t :: [i_t])
+          | TTuple(ts) -> TTuple(ts @ [i_t])
+          | t -> TTuple(t :: [i_t])
       in
       (GroupByAggregate(f_e, i_e, g_e, c_e), Collection(Intermediate, c_tpe))
     | SingletonPC(id,t) -> (e, t)

@@ -84,30 +84,30 @@ struct
     | Inline of string
 
 
-	type trigger_setup_t =
-	    (string * string * string * (string * string) list) list *
-	    (string * int list) list
+  type trigger_setup_t =
+    (string * string * string * (string * string) list) list *
+    (string * int list) list
 
   type compiler_trig_t = (ext_type type_t, ext_type, ext_fn) Program.trigger_t
-	
+
   type imp_prog_t =
-	    (  K3.map_t list *              (*   Schema *)
-	       Patterns.pattern_map *       (*   Schema patterns *)
-	       (  (  source_code_t list *   (*       ?? *)
-	             compiler_trig_t        (*       Trigger code *)
-	          ) list *                  (*     List of all triggers =^ *)
-	          trigger_setup_t           (*     Trigger setup code *)
-	       )                            (*   Imperative Program Triggers *)
-	    ) *                             (* Imperative Program =^ *)
-	    Schema.t *                      (* Database Schema *)
-	    (* Toplevel Queries *)
-      ( K3.map_t list * 
-        ((string * string) * source_code_t) list )
-	      
+    (  K3.map_t list *              (* Schema *)
+       Patterns.pattern_map *       (* Schema patterns *)
+       (  (  source_code_t list *   (* ?? *)
+             compiler_trig_t        (* Trigger code *)
+          ) list *                  (* List of all triggers =^ *)
+          trigger_setup_t           (* Trigger setup code *)
+       )                            (* Imperative Program Triggers *)
+    ) *                             (* Imperative Program =^ *)
+    Schema.t *                      (* Database Schema *)
+    (* Toplevel Queries *)
+    ( K3.map_t list * 
+      ((string * string) * source_code_t) list )
+
   let empty_prog ():imp_prog_t = 
-	    (([], Patterns.empty_pattern_map (), ([], ([], []))), 
-	     Schema.empty_db (), ([],[]))
-	    
+    (([], Patterns.empty_pattern_map (), ([], ([], []))), 
+     Schema.empty_db (), ([],[]))
+
 
   (* AST stringification *)
   let rec string_of_ext_type t =
@@ -1195,16 +1195,15 @@ end (* Typing *)
     let unwrapper =
       if event = Schema.SystemInitializedEvent then []
       else
-	      let evt_arg = "e" in
-	      let evt_fields = snd (List.fold_left
-	        (fun (i,acc) ty -> (i+1,
-	          acc@["any_cast<"^ty^">("^evt_arg^"["^(string_of_int i)^"])"]))
-	        (0,[]) trig_types)
-	      in	       
-	      [Lines ["void unwrap_"^trig_name^"(const event_args_t& e) {";
-	              tab^"on_"^trig_name^"("^(String.concat "," evt_fields)^");";
-	              "}"; ""];]
-               
+        let evt_arg = "e" in
+        let evt_fields = snd (List.fold_left
+          (fun (i,acc) ty -> (i+1,
+            acc@["any_cast<"^ty^">("^evt_arg^"["^(string_of_int i)^"])"]))
+          (0,[]) trig_types)
+        in
+          [Lines ["void unwrap_"^trig_name^"(const event_args_t& e) {";
+                  tab^"on_"^trig_name^"("^(String.concat "," evt_fields)^");";
+                  "}"; ""];]             
   in trigger_fn@unwrapper
 
 
@@ -2385,7 +2384,7 @@ end (* Typing *)
         " boost::bind(&data_t::unwrap_insert_"^id^", this, ::boost::lambda::_1));")
       table_rels)
     in  
-	  let declare_table_triggers =
+      let declare_table_triggers =
       let table_types =
         let convert_var_type (_,t) =
           Typing.string_of_type (imp_type_of_calc_type t)
@@ -2413,37 +2412,40 @@ end (* Typing *)
     in
 
     let register_stream_triggers = Lines 
-        (List.map (fun (rel, evt_type, unwrap_fn_id,_) ->
-            let args = String.concat ", " [rel; evt_type; ("boost::bind(&"^unwrap_fn_id^", this, ::boost::lambda::_1)")] in
-            if evt_type = "insert_tuple" || evt_type = "delete_tuple" then 
-                ("pb.add_trigger("^args^");") else ("")) 
+      (List.map (fun (rel, evt_type, unwrap_fn_id,_) ->
+        let args = String.concat ", " [
+            rel; 
+            evt_type; 
+            ("boost::bind(&"^unwrap_fn_id^", this, ::boost::lambda::_1)")
+        ] in
+          if evt_type = "insert_tuple" || evt_type = "delete_tuple" 
+          then ("pb.add_trigger("^args^");") else ("")) 
         (fst trig_reg_info))
     in
     
     let declare_stream_triggers = cscl (List.flatten 
-        (List.map (fun (t_decls,t) -> 
-             t_decls@(source_code_of_trigger dbschema t))
-         triggers))
+      (List.map (fun (t_decls,t) -> 
+           t_decls@(source_code_of_trigger dbschema t))
+       triggers))
     in
     let profiling = if opts.profile then (declare_profiling map_schema) 
                     else Lines([]) 
     in
     let init_stats =
-	    let stmt_ids = List.flatten (List.map (fun (_,_,_,sids) ->
-	        List.map (fun (i,n) ->
-	          "pb.exec_stats->register_probe("^i^", \""^(String.escaped n)^"\");")
-	        sids)
-	      (fst trig_reg_info))
-	    in
-	    let ivc_ids =
-	      List.fold_left (fun acc (n,cl) ->
-	        acc@(List.map (fun i ->
-	          "pb.ivc_stats->register_probe("^(string_of_int i)^", \""^
-	          (String.escaped n)^"\");") cl))
-	      [] (snd trig_reg_info)
-	    in
-	    Lines (["#ifdef DBT_PROFILE"]@stmt_ids@ivc_ids@["#endif // DBT_PROFILE"])
-	  in
+      let stmt_ids = List.flatten (List.map (fun (_,_,_,sids) ->
+         List.map (fun (i,n) ->
+           "pb.exec_stats->register_probe("^i^", \""^(String.escaped n)^"\");"
+         ) sids) (fst trig_reg_info))
+      in
+      let ivc_ids =
+        List.fold_left (fun acc (n,cl) ->
+          acc@(List.map (fun i ->
+            "pb.ivc_stats->register_probe("^(string_of_int i)^", \""^
+            (String.escaped n)^"\");") cl)
+        ) [] (snd trig_reg_info)
+      in
+        Lines (["#ifdef DBT_PROFILE"]@stmt_ids@ivc_ids@["#endif // DBT_PROFILE"])
+    in
       
       
     isc indent (cscl ~delim:"\n" ([
@@ -2454,7 +2456,7 @@ end (* Typing *)
         tab^"{}";
         "";
         tab^"template<class Archive>";
-	      tab^"void serialize(Archive& ar, const unsigned int version) {";];
+        tab^"void serialize(Archive& ar, const unsigned int version) {";];
       isc (tab^tab) (Lines tlq_s_l);  
       Lines [
         tab^"}";];
@@ -2465,9 +2467,9 @@ end (* Typing *)
         "};";
         "";
         "struct data_t : tlq_t{";
-		    tab^"data_t()"^
-	        (if i_l <> [] then " : "^(ssc (cscl ~delim:"," i_l)) else "");
-	      tab^"{}";
+        tab^"data_t()"^
+        (if i_l <> [] then " : "^(ssc (cscl ~delim:"," i_l)) else "");
+        tab^"{}";
         "";
         tab^"void register_data(ProgramBase<tlq_t>& pb) {";];
       isc (tab^tab) (Lines r_l);
@@ -2659,15 +2661,15 @@ struct
                       (stmt:K3.expr_t) =
     let type_env = type_env_of_declarations arg_types schema patterns in
     let untyped_imp =
-	    let i = imp_of_ir (var_type_env type_env) (ir_of_expr stmt)
-	    in match i with 
-	        | [x] -> x 
-	        | _ -> Imperative.Block (None, i)
-	  in
+      let i = imp_of_ir (var_type_env type_env) (ir_of_expr stmt)
+      in match i with 
+         | [x] -> x 
+         | _ -> Imperative.Block (None, i)
+    in
           
-	  Debug.print "UNTYPED-IMP" (fun () -> string_of_imp_noext untyped_imp);  
-	  let typed_imp = infer_types type_env untyped_imp in
-    if opts.desugar then desugar_imp opts type_env typed_imp else typed_imp
+      Debug.print "UNTYPED-IMP" (fun () -> string_of_imp_noext untyped_imp);  
+      let typed_imp = infer_types type_env untyped_imp in
+      if opts.desugar then desugar_imp opts type_env typed_imp else typed_imp
     
   (* Compiles a K3 trigger, setting up a type environment based on the
    * given datastructure schemas and access patterns *)
@@ -2751,7 +2753,7 @@ struct
     let sources_and_adaptors = declare_sources_and_adaptors sources in
     
     let main_fn = (isc tab (cscl ~delim:"\n"
-	     ([Lines [
+        ([Lines [
          "class Program : public ProgramBase<tlq_t>";
          "{";
          "public:";

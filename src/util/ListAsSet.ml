@@ -133,11 +133,9 @@ let rec distribute (l: 'a list list) =
    @return   The permutation of all n elements in l
 *)
 let rec permute (l: 'a list) : 'a list list =
-	if l = [] then [[]]
-	else
-		let rec insert elem sublist = match sublist with
-			| [] -> [[elem]]
-			| hd::tl -> (elem::sublist) :: List.map (fun x -> hd::x) (insert elem tl)
-		in
-		List.flatten (List.map (insert (List.hd l)) (permute (List.tl l)));
-			
+   if l = [] then [[]] else
+   let rec insert elem sublist = match sublist with
+      | [] -> [[elem]]
+      | hd::tl -> (elem::sublist) :: List.map (fun x -> hd::x) (insert elem tl)
+   in
+      List.flatten (List.map (insert (List.hd l)) (permute (List.tl l)));

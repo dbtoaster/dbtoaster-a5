@@ -74,12 +74,11 @@ let log_collection_test (title:string) (result:Values.K3Value.t)
          | Values.K3Value.SingleMap(m) ->
             Values.K3ValuationMap.to_list m
          | Values.K3Value.DoubleMap(dm) ->
-					  List.flatten
-							(List.map (fun (k1,m) -> 
-										List.map
-												(fun (k2,v) -> (k1@k2,v) ) 
-												(Values.K3ValuationMap.to_list m) )
-		        	(Values.K3ValuationMap.to_list dm) )
+            List.flatten
+                ( List.map (fun (k1,m) -> 
+                     List.map (fun (k2,v) -> (k1@k2,v) ) 
+                     (Values.K3ValuationMap.to_list m) 
+                  ) (Values.K3ValuationMap.to_list dm) )
          | Values.K3Value.TupleList(tlist) -> 
             List.map (fun tuple ->
                match tuple with

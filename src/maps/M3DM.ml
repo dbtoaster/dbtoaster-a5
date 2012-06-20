@@ -165,10 +165,8 @@ let rec simplify_formula (event_input: Schema.event_t) (expr: Calculus.expr_t): 
                               else
                                  (e, true)
 *)
-                | Cmp(op,subexp1,subexp2) -> 
-		            (e, true)
-                | Lift(target, subexp)    -> 
-                    (e, true)
+                | Cmp(op,subexp1,subexp2) -> (e, true)
+                | Lift(target, subexp)    -> (e, true)
 (***** BEGIN EXISTS HACK *****)
                 | Exists(subexp) -> (e, true)
 (***** END EXISTS HACK *****)
@@ -327,8 +325,8 @@ let make_DM_triggers (m3_triggers: trigger_t list): trigger_t list =
             let rel = get_relation_of_event (trigger.event) in
             match rel with
             | Some(relation) ->
-            	let dm_trigger = maintain_all (relation) (!(trigger.statements)) (trigger.event) in
-            	dm_triggers := !dm_triggers@[dm_trigger]
+                let dm_trigger = maintain_all (relation) (!(trigger.statements)) (trigger.event) in
+                    dm_triggers := !dm_triggers@[dm_trigger]
             | None -> ()
         ) m3_triggers;
     !dm_triggers
@@ -368,9 +366,9 @@ let make_DM_maps (m3_db: Schema.t) (m3_maps: map_t list): map_t list =
                     add_map (get_singleton_tuple rel)
             ) (Schema.rels m3_db);
       let unit_map = 
-		  let dummy_m3_map = ("dummy_map", [], [], Types.TInt) in
-		  let (ename,eins,eouts,etype) = dummy_m3_map in
-		      CalcRing.Val(External(ename, eins, eouts, etype, None))
+        let dummy_m3_map = ("dummy_map", [], [], Types.TInt) in
+        let (ename,eins,eouts,etype) = dummy_m3_map in
+          CalcRing.Val(External(ename, eins, eouts, etype, None))
       in
           add_map (unit_map);
 

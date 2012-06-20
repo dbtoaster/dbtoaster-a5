@@ -445,35 +445,36 @@ struct
             in (get_eval expr body) new_th db
         in let fn1 vl1 = Fun(fun vl2 -> aux vl1 vl2)
         in Fun fn1)
-				
-		(* arg, external function id, external function return type -> external fn *)
+
+    (* arg, external function id, external function return type -> external fn *)
     let external_lambda ?(expr = None) fn_id arg fn_t = Eval(fun th db ->
         let fn v = 
-					let fn_args = begin match v with
-		        | BaseValue(c) -> [c]
-		        | Tuple t -> List.map const_of_value t
-		        | _ -> bail ~expr:expr
-		                    ("Arguments of external functions can be only values"^
-		                     " or tuple of values")
-		        end in
-						try 
-							let external_fn = 
-								StringMap.find fn_id (!Arithmetic.arithmetic_functions) in
-							(*
-							print_endline ("External Function call "^fn_id^
-												" with arguments: "^(ListExtras.string_of_list string_of_const fn_args));
-							*)
-							let ret_c = external_fn fn_args (base_type_of fn_t) in
-							let ret_t = K3.TBase(Types.type_of_const ret_c) in
-							if( fn_t <> ret_t) then
-									 bail ~expr:expr
-									      ("Unexpected return value type for external "^
-									       "function: "^fn_id^" : "^
-									       (K3.string_of_type fn_t)^" <> "^
-									       (K3.string_of_type ret_t));
-							BaseValue(ret_c)
-			      with Not_found -> bail ~expr:expr
-			                             ("No external function named: "^fn_id)
+            let fn_args = begin match v with
+                | BaseValue(c) -> [c]
+                | Tuple t -> List.map const_of_value t
+                | _ -> bail ~expr:expr
+                          ("Arguments of external functions can be only values"^
+                           " or tuple of values")
+            end in
+            try
+               let external_fn = 
+                   StringMap.find fn_id (!Arithmetic.arithmetic_functions) in
+                (*
+                   print_endline ("External Function call "^fn_id^
+                                  " with arguments: "^
+                                  (ListExtras.string_of_list string_of_const fn_args));
+                *)
+                let ret_c = external_fn fn_args (base_type_of fn_t) in
+                let ret_t = K3.TBase(Types.type_of_const ret_c) in
+                if( fn_t <> ret_t) then
+                    bail ~expr:expr
+                        ("Unexpected return value type for external "^
+                         "function: "^fn_id^" : "^
+                         (K3.string_of_type fn_t)^" <> "^
+                         (K3.string_of_type ret_t));
+                         BaseValue(ret_c)
+            with Not_found -> bail ~expr:expr
+                                  ("No external function named: "^fn_id)
         in Fun fn)
 
     (* fn, arg -> evaluated fn *)
@@ -724,23 +725,24 @@ struct
     (* filter fn, collection -> filter *)
     let filter ?(expr = None) filter_fn collection =
         Eval(fun th db ->
-	let f: (Values.K3Value.t -> bool) = 
-	match (get_eval expr filter_fn) th db with
-        | Fun f -> 
-	  (fun x ->
-	    (let v = (f x) in begin match v with 
-	    | BaseValue(CFloat(x)) -> x <> 0.0 
-            | BaseValue(CInt(x))   -> x <> 0
-	    | _ -> bail ~expr:expr ("invalid filter function")
-	    end))
-	| _ -> bail ~expr:expr ("expected filter function")
-	in
+    let f: (Values.K3Value.t -> bool) = 
+        match (get_eval expr filter_fn) th db with
+            | Fun f -> (fun x ->
+                (let v = (f x) in begin match v with 
+                    | BaseValue(CFloat(x)) -> x <> 0.0 
+                    | BaseValue(CInt(x))   -> x <> 0
+                    | _ -> bail ~expr:expr ("invalid filter function")
+                end))
+            | _ -> bail ~expr:expr ("expected filter function")
+    in
         begin match (get_eval expr collection) th db with
             | TupleList l -> TupleList(List.filter (fun t -> f t) l)
             | SingleMap m -> TupleList(smc_to_tlc (MC.filter f m)) 
             | MapCollection m -> ListCollection(nmc_to_c (MC.filter f m))
-            | v -> bail ~expr:expr ("invalid tuple collection in filter : "^(string_of_value v))
-	end)
+            | v -> bail ~expr:expr 
+                       ("invalid tuple collection in filter : "^
+                        (string_of_value v))
+        end)
         
     (* Database retrieval methods *)
     let get_value ?(expr = None) (_) id = Eval(fun th db ->

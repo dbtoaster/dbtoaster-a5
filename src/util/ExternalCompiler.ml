@@ -113,14 +113,14 @@ let cpp_compiler = {
      let cpp_cc = "g++" in
      let cpp_args = (
          cpp_cc ::
-			[ "./lib/dbt_c++/main.cpp"; 
-        "-include";in_file_name; 
-        "-o"; out_file_name; ] @
+         [ "./lib/dbt_c++/main.cpp"; 
+           "-include";in_file_name; 
+           "-o"; out_file_name; ] @
          (if Debug.active "COMPILE-WITH-PROFILE" then ["-pg"] else []) @
          (if Debug.active "COMPILE-WITH-GDB" then ["-g"] else []) @
          (if Debug.active "COMPILE-WITHOUT-OPT" then [] else ["-O3"]) @
          (if Debug.active "COMPILE-WITH-STATIC" then ["-static"] else []) @
-			[ "-I."; ] @
+         [ "-I."; ] @
          (List.map (fun x->"-I"^x) (compile_flags "INCLUDE_HDR" "DBT_HDR")) @
          (List.map (fun x->"-L"^x) (compile_flags "INCLUDE_LIB" "DBT_LIB")) @
          (  (if Debug.active "MT" then

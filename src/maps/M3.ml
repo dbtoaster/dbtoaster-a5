@@ -169,15 +169,15 @@ let get_triggers (prog:prog_t) : trigger_t list =
    Obtain the statement of the given name for the specified event from an M3 program.
    @param prog    An M3 program
    @param event   An event
-	 @param name    A statement name
+   @param name    A statement name
    @return        The trigger for [event] in [prog].
 *)
 let get_statement (prog:prog_t) (event:Schema.event_t) 
                   (name:string): stmt_t =
-	let trigger = get_trigger prog event in
-	List.find (fun stmt ->
-		List.hd (externals_of_expr stmt.target_map) = name
-	) !(trigger.statements)
+   let trigger = get_trigger prog event in
+   List.find (fun stmt ->
+      List.hd (externals_of_expr stmt.target_map) = name
+   ) !(trigger.statements)
 
 (**
    [add_rel prog ~source:(...) ~adaptor:(...) rel]
@@ -367,12 +367,12 @@ let sort_prog (prog:prog_t):prog_t =
 *)
 let plan_to_m3 (db:Schema.t) (plan:Plan.plan_t):prog_t =
    let prog = init db in
-		 List.iter (fun (ds:Plan.compiled_ds_t) -> 
-        add_view prog ds.description;
-        List.iter (fun (event, stmt) ->
-           add_stmt prog event stmt
-        ) (ds.ds_triggers)
-		) plan;		 
-   sort_prog prog	
+   List.iter (fun (ds:Plan.compiled_ds_t) -> 
+      add_view prog ds.description;
+      List.iter (fun (event, stmt) ->
+         add_stmt prog event stmt
+      ) (ds.ds_triggers)
+   ) plan;
+   sort_prog prog
 ;;
 

@@ -53,7 +53,7 @@ namespace dbtoaster {
           string k = params[i].first;
           string v = params[i].second;
           if( runtime_options::verbose() )
-        	  cerr << "csv params: " << k << ": " << v << endl;
+            cerr << "csv params: " << k << ": " << v << endl;
 
           if ( k == "fields" ) {
             delimiter = v;
@@ -288,7 +288,7 @@ namespace dbtoaster {
       typedef map<int, order_book_tuple> order_book;
 
       struct order_book_adaptor : public stream_adaptor {
-    	relation_id_t id;
+        relation_id_t id;
         int num_brokers;
         order_book_type type;
         shared_ptr<order_book> bids;
@@ -319,8 +319,8 @@ namespace dbtoaster {
             string k = params[i].first;
             string v = params[i].second;
             if( runtime_options::verbose() )
-            	cerr << "order book adaptor params: "
-            		<< params[i].first << ", " << params[i].second << endl;
+               cerr << "order book adaptor params: "
+                    << params[i].first << ", " << params[i].second << endl;
 
             if ( k == "book" ) {
               type = (v == "bids"? tbids : tasks);

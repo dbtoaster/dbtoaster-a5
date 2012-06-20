@@ -557,7 +557,7 @@ struct
           (ListExtras.ocaml_of_list string_of_int idx_l)^"\n"
         );
            slice_ir metadata idx_l ([sfst()]@snd())
-	   
+
       | K.Filter _ ->
         failwith "TODO: implement filter in K3ToImperative"
 
@@ -1002,9 +1002,9 @@ struct
           if is_external_lambda ltag then
             (match ltag with
              | Undecorated(ExternalLambda(id,arg_t,r_t)) ->
-		           [Expr(None,
-		             BinOp(None, Assign, cdecli 0,
-		               Fn(None, External(id,arg_t,r_t), [ext_args])))]
+                [Expr(None,
+                    BinOp(None, Assign, cdecli 0,
+                       Fn(None, External(id,arg_t,r_t), [ext_args])))]
              | _ -> failwith "invalid external function application")
           else assign_if_expr 0 "invalid apply function"
         in Some(decls@body), used

@@ -90,7 +90,7 @@ let float_of_const (a:const_t): float =
       | CFloat(av)   -> av
       | CString(av)  -> failwith ("Cannot produce float of string '"^av^"'")
       | CDate _      -> failwith ("Cannot produce float of date")
-   end	
+   end
 
 (**
    Identify the inverse of a comparison operation (Eq -> Neq, etc...)
@@ -239,8 +239,8 @@ let string_of_var ?(verbose = Debug.active "PRINT-VERBOSE")
    @return      The string representation of [vars]
 *)
 let string_of_vars ?(verbose = Debug.active "PRINT-VERBOSE")
-						 (vars : var_t list): string = 
-	ListExtras.string_of_list (string_of_var ~verbose:verbose) vars
+                    (vars : var_t list): string = 
+   ListExtras.string_of_list (string_of_var ~verbose:verbose) vars
 
 (**** Zero Constants ****)
 (**
@@ -250,13 +250,13 @@ let string_of_vars ?(verbose = Debug.active "PRINT-VERBOSE")
    @raise Failure If there is no zero constant corrsponding to [zt]
 *)  
 let zero_of_type zt : const_t = 
-	begin match zt with
-		| TBool -> CBool(false)
-		| TInt  -> CInt(0)
-		| TFloat -> CFloat(0.)
-		| _ -> failwith ("Cannot produce zero of type '"^(string_of_type zt)^"'")
-	end
-	
+   begin match zt with
+      | TBool -> CBool(false)
+      | TInt  -> CInt(0)
+      | TFloat -> CFloat(0.)
+      | _ -> failwith ("Cannot produce zero of type '"^(string_of_type zt)^"'")
+   end
+
 (**** Escalation ****)
 (**
    Given two types, return the "greater" of the two.  

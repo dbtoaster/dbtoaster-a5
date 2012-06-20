@@ -15,10 +15,10 @@
  */
 bool async_mode(int argc, char* argv[])
 {
-	for(int i = 1; i < argc; i++)
-		if( !strcmp(argv[1],"-async") )
-			return true;
-	return false;
+    for(int i = 1; i < argc; i++)
+        if( !strcmp(argv[1],"-async") )
+            return true;
+    return false;
 }
 
 /**
@@ -34,25 +34,25 @@ bool async_mode(int argc, char* argv[])
  * @return
  */
 int main(int argc, char* argv[]) {
-	bool async = async_mode(argc,argv);
-	boost::archive::xml_oarchive oa(cout, 0);
+    bool async = async_mode(argc,argv);
+    boost::archive::xml_oarchive oa(cout, 0);
 
-	dbtoaster::Program p;
-	dbtoaster::Program::snapshot_t snap;
+    dbtoaster::Program p;
+    dbtoaster::Program::snapshot_t snap;
 
-	cout << "Initializing program" << endl;
-	p.init();
+    cout << "Initializing program" << endl;
+    p.init();
 
-	cout << "Running program" << endl;
-	p.run( async );
-	while( !p.is_finished() )
-	{
-		snap = p.get_snapshot();
-		oa<<BOOST_SERIALIZATION_NVP_OF_PTR(snap);
-	}
+    cout << "Running program" << endl;
+    p.run( async );
+    while( !p.is_finished() )
+    {
+        snap = p.get_snapshot();
+        oa<<BOOST_SERIALIZATION_NVP_OF_PTR(snap);
+    }
 
-	snap = p.get_snapshot();
-	oa<<BOOST_SERIALIZATION_NVP_OF_PTR(snap);
+    snap = p.get_snapshot();
+    oa<<BOOST_SERIALIZATION_NVP_OF_PTR(snap);
 
-	return 0;
+    return 0;
 }

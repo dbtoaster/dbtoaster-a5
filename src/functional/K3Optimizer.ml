@@ -612,10 +612,10 @@ let selective_expr expr =
          * is not, then transformation of this Map will perform optimization *)
         | Map _ -> List.hd (List.hd part_selvars) 
         | IfThenElse0 _ ->
-	        let (subsel,subvars) = rv in
-	        let sel = (ListAsSet.inter subvars vars) <> []
-	        in if subsel || sel then (true, []) else (false, subvars)  
-	      | _ -> rv
+            let (subsel,subvars) = rv in
+            let sel = (ListAsSet.inter subvars vars) <> []
+            in if subsel || sel then (true, []) else (false, subvars)  
+        | _ -> rv
     in fst (fold_expr aux (fun x _ -> x) None (false,[]) expr)
 
 (* TODO: better nested map detection *)
@@ -689,75 +689,80 @@ let rec conservative_beta_reduction substitutions expr =
       | _ -> Const(CFloat(0.0)) 
   in
   begin match expr with
-  
+      
       (* Adding 0 to a number leaves it unchanged *)
-	  | Add(Const(CInt(0)), x)     | Add(x, Const(CInt(0)))
-	  | Add(Const(CFloat(0.0)), x) | Add(x, Const(CFloat(0.0))) -> recid x
+      | Add(Const(CInt(0)), x)     | Add(x, Const(CInt(0)))
+      | Add(Const(CFloat(0.0)), x) | Add(x, Const(CFloat(0.0))) -> recid x
 
       (* Adding two numbers can be inlined *)
-	  | Add(Const(x), Const(y)) -> Const(Arithmetic.sum x y)
+      | Add(Const(x), Const(y)) -> Const(Arithmetic.sum x y)
 
-      (* Multiplying by 0 makes the number 0 *)	
-     | Mult(Const(CInt(0)), x)     | Mult(x, Const(CInt(0)))
-     | Mult(Const(CFloat(0.0)), x) | Mult(x, Const(CFloat(0.0))) ->  zero_of_expr expr
+      (* Multiplying by 0 makes the number 0 *)
+      | Mult(Const(CInt(0)), x)     | Mult(x, Const(CInt(0)))
+      | Mult(Const(CFloat(0.0)), x) | Mult(x, Const(CFloat(0.0))) ->  zero_of_expr expr
 
       (* Multiplying by 1 leaves the number unchanged *)
-	  | Mult(Const(CInt(1)), x)     | Mult(x, Const(CInt(1)))
-	  | Mult(Const(CFloat(1.0)), x) | Mult(x, Const(CFloat(1.0))) -> recid x
-	  
-	   (* Multiplying two numbers can be inlined *)
-	  | Mult(Const(x), Const(y)) -> Const(Arithmetic.prod x y)
-	
-	   (* External function application to constants *)
-     | Apply(ExternalLambda(fn_name, AVar(_,_), TBase(fn_type)), Const(x)) 
-          when Arithmetic.function_is_defined fn_name ->
-       Const(Arithmetic.eval (
-         Arithmetic.ValueRing.mk_val (
-             Arithmetic.AFn(fn_name, [Arithmetic.mk_const x], fn_type))))
-	
-	   (* External function application to constant tuples *)
-     | Apply(ExternalLambda(fn_name, ATuple(vt_l), TBase(fn_type)), Tuple(fields)) 
-          when ((List.length vt_l) = (List.length fields)) &&
-               (Arithmetic.function_is_defined fn_name) &&
-               (List.for_all (function Const(_)->true | _->false) fields) ->
-       Const (Arithmetic.eval (
-         Arithmetic.ValueRing.mk_val (
-             Arithmetic.AFn(fn_name, 
-               List.map (function Const(x) -> Arithmetic.mk_const x
-                  (* We should have filtered this case out in the case stmt. *)
-                    | _ -> failwith "BUG: I thought I had only constants"
-               ) fields,
-               fn_type
-            )
-         )
-      ))
+      | Mult(Const(CInt(1)), x)     | Mult(x, Const(CInt(1)))
+      | Mult(Const(CFloat(1.0)), x) | Mult(x, Const(CFloat(1.0))) -> recid x
 
-	  | Apply(Lambda(AVar(v,t), body) as lambda_e, arg) ->
-	    let free_vars = get_free_vars [] body in
-	    let remaining, _, new_e =
-	      beta_reduce free_vars ([], substitutions, lambda_e) ((v,t), arg) in
-	    if remaining <> [] then recid expr else snd (get_fun_parts new_e)
-	
-	  | Apply(Lambda(ATuple(vt_l), body) as lambda_e, Tuple(fields)) ->
-	    let free_vars = get_free_vars [] body in
-	    let reml, _, new_e = List.fold_left (beta_reduce free_vars)
-	        ([], substitutions, lambda_e) (List.combine vt_l fields) in
-	    let rem_vt_l, rem_fields = List.split reml in
-	    if rem_fields = fields then recid expr
-	    else 
-			begin match rem_fields with
-				| [] -> snd (get_fun_parts new_e)
-				| [rem_field] ->
-					let (rem_v,rem_t) = List.hd rem_vt_l in
-					Apply(Lambda(AVar(rem_v,rem_t), snd (get_fun_parts new_e)), rem_field)
-				| _ -> Apply(Lambda(ATuple(rem_vt_l), snd (get_fun_parts new_e)), Tuple(rem_fields))
-	 		end
-	  (* TODO: handle Apply(AssocLambda(...)) *)
-	
-	  | Var(v,t) -> if List.mem_assoc (v,t) substitutions
-	                then List.assoc (v,t) substitutions else expr
-	  | _ -> recid expr
-	  end	
+      (* Multiplying two numbers can be inlined *)
+      | Mult(Const(x), Const(y)) -> Const(Arithmetic.prod x y)
+
+      (* External function application to constants *)
+      | Apply(ExternalLambda(fn_name, AVar(_,_), TBase(fn_type)), 
+              Const(x)) 
+        when Arithmetic.function_is_defined fn_name ->
+          Const(Arithmetic.eval (
+            Arithmetic.ValueRing.mk_val (
+              Arithmetic.AFn(fn_name, [Arithmetic.mk_const x], fn_type))))
+
+      (* External function application to constant tuples *)
+      | Apply(ExternalLambda(fn_name, ATuple(vt_l), TBase(fn_type)),
+              Tuple(fields)) 
+        when ((List.length vt_l) = (List.length fields)) &&
+              (Arithmetic.function_is_defined fn_name) &&
+              (List.for_all (function Const(_)->true | _->false) fields) ->
+          Const (Arithmetic.eval (
+            Arithmetic.ValueRing.mk_val (
+              Arithmetic.AFn(fn_name, 
+                List.map (function 
+                  Const(x) -> Arithmetic.mk_const x
+                  (* We should have filtered this case out in the case stmt. *)
+                  | _ -> failwith "BUG: I thought I had only constants"
+                ) fields,
+                fn_type
+              )
+            )
+          ))
+
+      | Apply(Lambda(AVar(v,t), body) as lambda_e, arg) ->
+        let free_vars = get_free_vars [] body in
+        let remaining, _, new_e =
+          beta_reduce free_vars ([], substitutions, lambda_e) ((v,t), arg) in
+        if remaining <> [] then recid expr else snd (get_fun_parts new_e)
+
+      | Apply(Lambda(ATuple(vt_l), body) as lambda_e, Tuple(fields)) ->
+        let free_vars = get_free_vars [] body in
+        let reml, _, new_e = List.fold_left (beta_reduce free_vars)
+          ([], substitutions, lambda_e) (List.combine vt_l fields) in
+        let rem_vt_l, rem_fields = List.split reml in
+        if rem_fields = fields then recid expr
+        else 
+          begin match rem_fields with
+            | [] -> snd (get_fun_parts new_e)
+            | [rem_field] ->
+              let (rem_v,rem_t) = List.hd rem_vt_l in
+                Apply(Lambda(AVar(rem_v,rem_t), 
+                      snd (get_fun_parts new_e)), rem_field)
+            | _ -> Apply(Lambda(ATuple(rem_vt_l), 
+                         snd (get_fun_parts new_e)), Tuple(rem_fields))
+          end
+      (* TODO: handle Apply(AssocLambda(...)) *)
+
+      | Var(v,t) -> if List.mem_assoc (v,t) substitutions
+                    then List.assoc (v,t) substitutions else expr
+      | _ -> recid expr
+    end
   
 (* Performs dependency tests at lambda-if boundaries *)
 (* Avoids spinning on reordering at if-chains
@@ -782,10 +787,10 @@ let rec lift_ifs bindings expr =
             | h::t ->
                 begin match h with
                 | IfThenElse(pe,te,ee) ->  
-	                let pe,te,ee = get_if_parts h in
-	                let tev = recex t (acc_branch@[te]) in
-	                let eev = recex t (acc_branch@[ee])
-	                in IfThenElse(pe,tev,eev)
+                    let pe,te,ee = get_if_parts h in
+                    let tev = recex t (acc_branch@[te]) in
+                    let eev = recex t (acc_branch@[ee])
+                    in IfThenElse(pe,tev,eev)
                 | _ -> recex t (acc_branch@[h])
                 end
             end
@@ -1105,11 +1110,11 @@ let common_subexpression_elim expr =
   in
 
   let fold_f pre acc expr : expr_t list list * expr_t =
-	 let parts = List.map (fun x -> List.map snd x) acc in
+    let parts = List.map (fun x -> List.map snd x) acc in
     let sub_parts = List.map (fun x -> List.map fst x) acc in
     let rebuilt_expr = rebuild_expr expr parts in
-	
-	 let lambda_common body f = 
+
+    let lambda_common body f = 
       let r_expr =
         let body = List.hd (List.hd parts) in
         let cses = List.filter

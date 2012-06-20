@@ -55,8 +55,8 @@ sig
    val zero: expr_t
    val one:  expr_t
     
-	 (** Default comparison options. See cmp_opt_t *)
-	 val default_cmp_opts : cmp_opt_t list
+   (** Default comparison options. See cmp_opt_t *)
+   val default_cmp_opts : cmp_opt_t list
 
    (** constructing a (nested) expression using base values,
       sums, and products of expressions *)
@@ -203,10 +203,10 @@ sig
       A positive result (Some(x)) is guaranteed to be an equivalent expr, while
       a negative result (None) only indicates that we were not able to establish
       equivalence.  Among other things, form normalization and double-negation  
-			are not handled properly (yet).
+      are not handled properly (yet).
    *)
    val cmp_exprs: ?cmp_opts:cmp_opt_t list -> 
-		              ('a list -> 'a option) ->
+                  ('a list -> 'a option) ->
                   ('a list -> 'a option) ->
                   (leaf_t -> leaf_t  -> 'a option) ->
                   expr_t -> expr_t -> 'a option
@@ -386,33 +386,33 @@ struct
    let simplify (e: expr_t) =
       apply_to_leaves (fun x -> mk_val x) e
     
-	 let rec cmp_exprs ?(cmp_opts:cmp_opt_t list = default_cmp_opts)
-	                   (sum_f: 'a list -> 'a option)
+   let rec cmp_exprs ?(cmp_opts:cmp_opt_t list = default_cmp_opts)
+                     (sum_f: 'a list -> 'a option)
                      (prod_f: 'a list -> 'a option)
                      (leaf_f: leaf_t -> leaf_t -> 'a option)
                      (a: expr_t) (b: expr_t): 'a option = 
-			let sum_order_indep  = List.mem OptSumOrderIndependent  cmp_opts in
-			let prod_order_indep = List.mem OptProdOrderIndependent cmp_opts in
+      let sum_order_indep  = List.mem OptSumOrderIndependent  cmp_opts in
+      let prod_order_indep = List.mem OptProdOrderIndependent cmp_opts in
       let rcr a b = cmp_exprs ~cmp_opts:cmp_opts sum_f prod_f leaf_f a b in
       let rcr_all order_indep merge_fn al bl = 
          if List.length al <> List.length bl then None
          else begin try 
-					  if (order_indep) then
-						    merge_fn (fst(
-	                (* For each term of the first expression find the equivalent yet *)
-	                (* unmatched term from the second expression, if such exists *)
-						      List.fold_left (fun (mappings, bl_matched) a ->
-	                   let bl_unmatched = ListAsSet.diff bl bl_matched in
-	                   let (found_b, mapping_if_found) =
-	                      find_expr rcr a bl_unmatched
-									   in
-	                      match (mapping_if_found) with
-                           | Some(new_mapping) -> (new_mapping :: mappings,
-	                                                 found_b :: bl_matched);
-                           | None -> raise Not_found
-                  ) ([],[]) al)) 								
-            else
-							 merge_fn (List.map2 (fun a b -> begin match rcr a b with
+            if (order_indep) 
+            then merge_fn (fst(
+               (* For each term of the first expression find the equivalent *)
+               (* yet unmatched term from the second expression, if exists *)
+               List.fold_left (fun (mappings, bl_matched) a ->
+                  let bl_unmatched = ListAsSet.diff bl bl_matched in
+                  let (found_b, mapping_if_found) =
+                     find_expr rcr a bl_unmatched
+                  in
+                     match (mapping_if_found) with
+                        | Some(new_mapping) -> (new_mapping :: mappings,
+                                                found_b :: bl_matched);
+                        | None -> raise Not_found
+               ) ([],[]) al)) 
+            else merge_fn (List.map2 (fun a b -> 
+               begin match rcr a b with
                   | None -> raise Not_found
                   | Some(s) -> s
                end) al bl)
@@ -426,14 +426,14 @@ struct
       | (Prod ae, Prod be) -> rcr_all prod_order_indep prod_f ae be 
       | _ -> None
    and
-	    find_expr (cmp_f: expr_t -> expr_t -> 'a option)
-			          (a: expr_t) (bl: expr_t list) : (expr_t * 'a option) =
-	       List.fold_left (fun (e, mapping) b ->
-	          if (mapping = None) then (b, cmp_f a b)
-	          else (e, mapping);
-	       ) (zero, None) bl 
+      find_expr (cmp_f: expr_t -> expr_t -> 'a option)
+                (a: expr_t) (bl: expr_t list) : (expr_t * 'a option) =
+         List.fold_left (fun (e, mapping) b ->
+            if (mapping = None) 
+            then (b, cmp_f a b)
+            else (e, mapping);
+         ) (zero, None) bl 
 
-	   
    let multiply_out (lhs:expr_t list) (sum:expr_t) (rhs:expr_t list):
                     expr_t list =
       List.map (fun x -> mk_prod (lhs@[x]@rhs)) (sum_list sum)

@@ -281,48 +281,49 @@ let rec k_tuples k (src: 'a list) : 'a list list =
    else List.flatten (List.map (fun t -> List.map (fun x -> x::t) src)
                                (k_tuples (k-1) src))
 
-																																																																																										
+
 exception CycleFound
 
 (** 
-    Perform topological sort on a given graph starting from a given node.
+   Perform topological sort on a given graph starting from a given node.
     
-		Example: 
-		
-		{[ toposort_from_node [ (1, [2;3]); (2, [4;5]); (4, [6]) ] [] 1 = 
-                          [ 1; 3; 2; 5; 4; 6]
-		]}
-		
-		@param graph      A graph representing a partial order between elements
-		@param visited    A list of already visited nodes (useful in multiple invocations, see [toposort])
-		@param start_node The root node of the graph
-		@return           A list of topologically sorted elements 
+   Example: 
+        
+   {[ toposort_from_node [ (1, [2;3]); (2, [4;5]); (4, [6]) ] [] 1 = 
+                         [ 1; 3; 2; 5; 4; 6]
+    ]}
+        
+   @param graph      A graph representing a partial order between elements
+   @param visited    A list of already visited nodes (useful in multiple invocations, see [toposort])
+   @param start_node The root node of the graph
+   @return           A list of topologically sorted elements 
 *)
 let toposort_from_node graph visited start_node =
-    let rec explore path node visited =
-        if List.mem node path then raise CycleFound else
-        if List.mem node visited then visited else                    
-            let new_path = node::path in
-            let child_nodes = try List.assoc node graph with Not_found -> [] in
-            let visited = List.fold_right (explore new_path) child_nodes visited in
+   let rec explore path node visited =
+      if List.mem node path then raise CycleFound 
+      else if List.mem node visited then visited 
+      else                    
+         let new_path = node::path in
+         let child_nodes = try List.assoc node graph with Not_found -> [] in
+         let visited = List.fold_right (explore new_path) child_nodes visited in
             node :: visited
-    in explore [] start_node visited
+   in 
+      explore [] start_node visited
 
 (** 
-    Perform topological sort on a given graph which may contain multiple root elements.
-    
-        Example: 
+   Perform topological sort on a given graph which may contain multiple root elements.
+   Example: 
         
-        {[ toposort [ (0, [2; 3]); (1, [2]) ] = 
-                    [ 0; 3; 1; 2]
-				]}
-				{[ toposort [ (1, [2]); (5, [6; 7]); (3, [2]); (6, [3; 7]); (8, [7]); (4, [3; 1]) ] =
-                    [ 5; 6; 8; 7; 4; 3; 1; 2]
-        ]}
+   {[ toposort [ (0, [2; 3]); (1, [2]) ] = 
+               [ 0; 3; 1; 2]
+    ]}
+   {[ toposort [ (1, [2]); (5, [6; 7]); (3, [2]); (6, [3; 7]); (8, [7]); (4, [3; 1]) ] =
+               [ 5; 6; 8; 7; 4; 3; 1; 2]
+    ]}
         
-        @param graph      A graph representing a partial order between elements
-        @return           A list of topologically sorted elements 
+   @param graph      A graph representing a partial order between elements
+   @return           A list of topologically sorted elements 
 *)
 let toposort graph =
    List.fold_right (fun (node, _) visited -> toposort_from_node graph visited node) graph [] 
-															
+                                                            

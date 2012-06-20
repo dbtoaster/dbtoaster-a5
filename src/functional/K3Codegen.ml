@@ -56,10 +56,10 @@ sig
     val assoc_lambda : ?expr:K3.expr_t option ->
         K3.arg_t -> K3.arg_t -> code_t -> code_t
 
-		(* arg, function id, arg, return type -> external fn *)
+    (* arg, function id, arg, return type -> external fn *)
     val external_lambda : ?expr:K3.expr_t option ->
         K3.id_t -> K3.arg_t -> K3.type_t -> code_t
-				
+
     (* fn, arg -> evaluated fn *)
     val apply : ?expr:K3.expr_t option -> code_t -> code_t -> code_t
     

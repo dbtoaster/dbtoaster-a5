@@ -164,25 +164,25 @@ let rec type_of_value (a_value: value_t): type_t =
 let binary_op (b_op: bool   -> bool   -> bool)
               (i_op: int    -> int    -> int)
               (f_op: float  -> float  -> float)
-				  (op_type: type_t)
+              (op_type: type_t)
               (a: const_t) (b: const_t): const_t =
    begin match (a,b,op_type) with
       | (CBool(av),  CBool(bv), (TBool|TAny)) -> CBool(b_op av bv)
-		| (CBool(_),   CBool(_),  TInt)
+      | (CBool(_),   CBool(_),  TInt)
       | (CBool(_),   CInt(_),   (TInt|TAny))
       | (CInt(_),    CBool(_),  (TInt|TAny)) 
       | (CInt(_),    CInt(_),   (TInt|TAny))  -> CInt(i_op (int_of_const a) (int_of_const b))
       
-		| (CBool(_),   CBool(_),  TFloat)
+      | (CBool(_),   CBool(_),  TFloat)
       | (CInt(_),    CInt(_),   TFloat)      
-		| (CFloat(_), (CBool(_)|CInt(_)|(CFloat(_))), (TFloat|TAny))
+      | (CFloat(_), (CBool(_)|CInt(_)|(CFloat(_))), (TFloat|TAny))
       | ((CBool(_)|CInt(_)), CFloat(_), (TFloat|TAny)) -> CFloat(f_op (float_of_const a) (float_of_const b))
       | (CString(_), _, _) | (_, CString(_), _) -> failwith "Binary math op over a string"
       | (CDate _, _, _) | (_, CDate _, _) -> failwith "Binary math op over a date"
-		| (_,   _,  _) -> 
-			failwith ("Binary math op with incompatible return type: "^
-		             (string_of_const a)^" "^(string_of_const b)^
-						 " -> "^(string_of_type op_type))
+      | (_,   _,  _) -> 
+         failwith ("Binary math op with incompatible return type: "^
+                   (string_of_const a)^" "^(string_of_const b)^
+                   " -> "^(string_of_type op_type))
    end
 
 (** Perform type-escalating addition over two constants *)
@@ -283,7 +283,7 @@ let declare_arithmetic_function (name:string)
 ;;
 declare_arithmetic_function "/" 
    (fun arglist ftype -> 
-		match arglist with
+      match arglist with
          | [v] -> div1 ftype v
          | [v1;v2] -> div2 ftype v1 v2
          | _ ->
@@ -421,7 +421,8 @@ let rec eval_partial ?(scope=[]) (v:value_t): value_t =
 *)
 let rec cmp_values ?(cmp_opts:ValueRing.cmp_opt_t list = ValueRing.default_cmp_opts) 
                     (val1:value_t) (val2:value_t):((var_t * var_t) list option) =
-   let rcr = cmp_values ~cmp_opts:cmp_opts in											
+   let rcr = cmp_values ~cmp_opts:cmp_opts in
+   
    ValueRing.cmp_exprs ~cmp_opts:cmp_opts Function.multimerge Function.multimerge 
                       (fun lf1 lf2 ->
       match (lf1,lf2) with 

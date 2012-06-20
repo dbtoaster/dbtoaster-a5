@@ -612,31 +612,31 @@ and calc_of_sql_expr ?(materialize_query = None)
       | Sql.SQLArith(e1, Sql.Prod, e2) ->
          CalcRing.mk_prod [rcr_e e1; rcr_e e2]
       | Sql.SQLArith(e1, Sql.Div, e2) ->
-			let ce1 = rcr_e e1 in
-         let ce2 = rcr_e e2 in			
-			let (e2_val, e2_calc) = lift_if_necessary ce2 in
-			
-			(* The ordering of ce1/e1_calc and e2_calc needs to pay attention to
-			   which variables are bound where.  Specifically, if e2 is an 
-			   aggregate expression and e1 is not (i.e., the entire thing is an
-			   aggregate expression, but there are computations going on outside
-			   of the aggregate), then it's possible that e2 will bind group by
-			   variables that are used in e1.  In this case, we need to flip the
-			   order of the lift operations.  
-			   
-			   The equivalent operations are performed for the other arithmetic
-			   operators in [normalize_agg_target_expr] above, since the correct
-			   rewrite behavior for some of those can not be determined locally.
-			*)
-			let needs_order_flip = 
-			   (not (Sql.is_agg_expr e1)) && (Sql.is_agg_expr e2)
+         let ce1 = rcr_e e1 in
+         let ce2 = rcr_e e2 in
+         let (e2_val, e2_calc) = lift_if_necessary ce2 in
+
+         (* The ordering of ce1/e1_calc and e2_calc needs to pay attention to
+            which variables are bound where.  Specifically, if e2 is an 
+            aggregate expression and e1 is not (i.e., the entire thing is an
+            aggregate expression, but there are computations going on outside
+            of the aggregate), then it's possible that e2 will bind group by
+            variables that are used in e1.  In this case, we need to flip the
+            order of the lift operations.  
+
+            The equivalent operations are performed for the other arithmetic
+            operators in [normalize_agg_target_expr] above, since the correct
+            rewrite behavior for some of those can not be determined locally.
+         *)
+         let needs_order_flip = 
+            (not (Sql.is_agg_expr e1)) && (Sql.is_agg_expr e2)
          in 
          
          let nested_schema = 
             (ListAsSet.union (snd (Calculus.schema_of_expr ce1))
                              (snd (Calculus.schema_of_expr ce2)))
-         in	
-			CalcRing.mk_val (AggSum(nested_schema, 
+         in
+            CalcRing.mk_val (AggSum(nested_schema, 
             CalcRing.mk_prod [
                ( if needs_order_flip 
                  then CalcRing.mk_prod [e2_calc; ce1]
@@ -646,7 +646,7 @@ and calc_of_sql_expr ?(materialize_query = None)
                   AFn("/", [e2_val], TFloat)
                )))]
          ))
-			
+
       | Sql.Negation(e) -> CalcRing.mk_neg (rcr_e e)
       | Sql.NestedQ(q)  -> 
          let (q_targets,q_sources,q_cond,q_gb_vars) = q in
