@@ -982,9 +982,9 @@ end (* Typing *)
                 begin match lhs_argt with
 	              | Host (Collection(_, TTuple(_))) ->
 	                 "ret.first->second += combine_it->"^rhs_tuple_value
-	              | Target (MultiIndexDef (_,_,Target(EntryStructDef(entry_t_id,_)),_,_)) ->
+	              | Target (MultiIndexDef (_,_,entry_t,_,_)) ->
                     let new_value = "ret.first->__av + combine_it->"^rhs_tuple_value in
-	                 lhs_arg^".modify( ret.first, boost::lambda::bind(&"^entry_t_id^"::__av, boost::lambda::_1) = "^new_value^" )"
+	                 lhs_arg^".modify( ret.first, boost::lambda::bind(&"^(type_id_of_type entry_t)^"::__av, boost::lambda::_1) = "^new_value^" )"
 	              | _ -> failwith ("invalid concatenation of: "^lhs_arg^" : "^lhs_argt_sc)
 			       end
              in
