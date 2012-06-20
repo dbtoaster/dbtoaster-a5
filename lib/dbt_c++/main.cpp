@@ -40,17 +40,18 @@ int main(int argc, char* argv[]) {
     dbtoaster::Program p;
     dbtoaster::Program::snapshot_t snap;
 
-    cout << "Initializing program" << endl;
+    cout << "Initializing program:" << endl;
     p.init();
 
-    cout << "Running program" << endl;
+    cout << "Running program:" << endl;
     p.run( async );
     while( !p.is_finished() )
     {
-        snap = p.get_snapshot();
-        oa<<BOOST_SERIALIZATION_NVP_OF_PTR(snap);
+	snap = p.get_snapshot();
+	oa<<BOOST_SERIALIZATION_NVP_OF_PTR(snap);
     }
 
+    cout << "Printing final result:" << endl;
     snap = p.get_snapshot();
     oa<<BOOST_SERIALIZATION_NVP_OF_PTR(snap);
 

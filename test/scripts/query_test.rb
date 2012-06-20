@@ -155,7 +155,7 @@ class CppUnitTest < GenericUnitTest
         "OCAMLRUNPARAM='#{$ocamlrunparam}';" +
         (dbt_base_cmd + [
         "-l","cpp",
-        "-o","bin/queries/#{@qname}.cpp",
+        "-o","bin/queries/#{@qname}.hpp",
         "-c","bin/queries/#{@qname}"
       ]).join(" ") + "  2>&1";
       starttime = Time.now
@@ -173,7 +173,7 @@ class CppUnitTest < GenericUnitTest
       @runtime = (endtime - starttime).to_f;
       
       @toplevels.keys.each do |q| 
-        if /<_#{q}[^>]*>(.*)<\/_#{q}>/ =~ output then
+        if /<#{q}[^>]*>(.*)<\/#{q}>/ =~ output then
           q_results = $1
           case @toplevels[q][:type]
             when :singleton then @toplevels[q][:result] = q_results.to_f

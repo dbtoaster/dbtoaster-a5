@@ -430,14 +430,6 @@ public:
 
 };
 
-template<class entry_type>
-struct increment_table_entry{
-    void operator ()( entry_type& e )
-    {
-        e.__av++;
-    }
-};
-
 }
 
 

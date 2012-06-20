@@ -15,7 +15,7 @@ h3 {
 }
 .wrapper {
   margin: 0 auto;
-  width: 600px;
+  width: 800px;
 }
 .code {
   font-family: Courier, Monospace;
@@ -26,6 +26,7 @@ h3 {
   margin: 10px 20px;
   padding: 10px;
   background-color: #cccccc;
+  white-space:pre-wrap;
 }
 .todo {
   margin: 10px 20px;
@@ -39,32 +40,109 @@ h3 {
 <div class="wrapper">
 <h1>DBToaster C++ User Reference</h1>
 
-<h2>Generating and Compiling C++ Code</h2>
+
+<h2>Quickstart Guide</h2>
+
+
 <p>
-In order to generate C++ code the <tt>-l cpp</tt> option needs to be specified. DBToaster will produce a C++ 
-header file containing a set of datastructures required for executing the sql program. 
+DBToaster will generate C++ code for incrementally maintaining the results of a given set of queries 
+if CPP is specified as the output language (<tt>-l cpp</tt> command line option). In this case DBToaster 
+will produce a C++ header file containing a set of datastructures (<tt>tlq_t</tt>, <tt>data_t</tt> and
+<tt>Program</tt>) required for executing the sql program. 
+</p>
+<p>
+Let's consider the following sql query:
+<div class="codeblock">$&gt; cat test/queries/simple/rs_example.sql
+CREATE TABLE R(A int, B int) 
+  FROM FILE '../../experiments/data/tiny_r.dat' LINE DELIMITED
+  CSV (fields := ',');
+
+CREATE STREAM S(B int, C int) 
+  FROM FILE '../../experiments/data/tiny_s.dat' LINE DELIMITED
+  CSV (fields := ',');
+
+SELECT SUM(r.A*s.C) as RESULT FROM R r, S s WHERE r.B = s.B;
+</div>
+
+The corresponding C++ header file can be obtained by running:
+
+<div class="codeblock">$&gt; bin/dbtoaster test/queries/simple/rs_example.sql -l cpp -o rs_example.hpp</div>
 </p>
 
 <p>
-If DBToaster operates in the standalone binary mode (the <tt>-c [binary name]</tt> flag is present) then
-the generated header file is compiled against <tt>lib/dbt_c++/main.cpp</tt>, which provides code for executing
-the sql program and printing the results. In order for the compilation process to succeed, the Boost library
-must be present and the following environment variables must be defined: 
+Alternatively, DBToaster can build a standalone binary (if the <tt>-c [binary name]</tt> flag is present) by compiling 
+the generated header file against <tt>lib/dbt_c++/main.cpp</tt>, which provides code for executing the 
+sql program and printing the results: 
+
+<div class="codeblock">$&gt; bin/dbtoaster test/queries/simple/rs_example.sql -l cpp -c rs_example</div>
+</p>
+
+<p>
+<b>Requirements:</b> The Boost header files and the following library binaries: <tt>boost_program_options</tt>, 
+<tt>boost_serialization</tt>, <tt>boost_system</tt>, <tt>boost_filesystem</tt>, <tt>boost_chrono</tt> and 
+<tt>boost_thread</tt> have to be present on the system since the generated code makes use of them.
+If these can't be found in the paths searched by default by <tt>g++</tt> then their location has to be explicitly
+provided to DBToaster as the following environment variables:
 <ul>
-<li><b>DBT_HDR</b> which must contain the path to Boost's <tt>include</tt> folder;</li>
-<li><b>DBT_LIB</b> which must contain the path to Boost's <tt>lib</tt> folder.</li>
+<li><b>DBT_HDR</b> which should contain the path to Boost's <tt>include</tt> folder;</li>
+<li><b>DBT_LIB</b> which should contain the path to Boost's <tt>lib</tt> folder.</li>
 </ul>
 </p>
+
 <p>
-The following boost libraries must be present: <tt>boost_program_options</tt>, <tt>boost_serialization</tt>, 
-<tt>boost_system</tt>, <tt>boost_filesystem</tt>, <tt>boost_chrono</tt> and <tt>boost_thread</tt>. 
-</p>
-<p>
-If the generated binary is run with the <tt>-async</tt> flag, it will also print intermediary results 
-concurrently with executing the sql program.
+Running the compiled binary will result in the following output:
+<div class="codeblock">$&gt; ./rs_example
+&lt;?xml version="1.0" encoding="UTF-8" standalone="yes" ?&gt;
+&lt;!DOCTYPE boost_serialization&gt;
+&lt;boost_serialization signature="serialization::archive" version="9"&gt;
+Initializing program:
+Running program:
+Printing final result:
+&lt;snap class_id="0" tracking_level="0" version="0"&gt;
+        &lt;RESULT&gt;156&lt;/RESULT&gt;
+&lt;/snap&gt;
+&lt;/boost_serialization&gt;
+</div>
+
+If the generated binary is run with the <tt>-async</tt> flag, it will also print intermediary results as frequently
+as possible while the sql program is running in a separate thread.
+
+<div class="codeblock">$&gt; ./rs_example -async
+&lt;?xml version="1.0" encoding="UTF-8" standalone="yes" ?&gt;
+&lt;!DOCTYPE boost_serialization&gt;
+&lt;boost_serialization signature="serialization::archive" version="9"&gt;
+Initializing program:
+Running program:
+&lt;snap class_id="0" tracking_level="0" version="0"&gt;
+        &lt;RESULT&gt;0&lt;/RESULT&gt;
+&lt;/snap&gt;
+&lt;snap&gt;
+        &lt;RESULT&gt;0&lt;/RESULT&gt;
+&lt;/snap&gt;
+&lt;snap&gt;
+        &lt;RESULT&gt;0&lt;/RESULT&gt;
+&lt;/snap&gt;
+&lt;snap&gt;
+        &lt;RESULT&gt;0&lt;/RESULT&gt;
+&lt;/snap&gt;
+&lt;snap&gt;
+        &lt;RESULT&gt;9&lt;/RESULT&gt;
+&lt;/snap&gt;
+&lt;snap&gt;
+        &lt;RESULT&gt;74&lt;/RESULT&gt;
+&lt;/snap&gt;
+&lt;snap&gt;
+        &lt;RESULT&gt;141&lt;/RESULT&gt;
+&lt;/snap&gt;
+Printing final result:
+&lt;snap&gt;
+        &lt;RESULT&gt;156&lt;/RESULT&gt;
+&lt;/snap&gt;
+&lt;/boost_serialization&gt;
+</div>
 </p>
 
-<h2>C++ Datastructures</h2>
+<h2>C++ Generated Code Reference</h2>
 
 <p>
 The DBToaster C++ codegenerator produces a header file containing 3 main type definitions in the <tt>dbtoaster</tt> namespace:
@@ -73,20 +151,140 @@ pointer to <tt>tlq_t</tt>.
 </p>
 
 <p>
-The <tt>tlq_t</tt> contains all the relevant datastructures for computing the results of the sql program, also called
-the top level queries. It provides a set of functions named <tt>computeTLQ_NAME</tt> that return the top level query
-result labeled <tt>TLQ_NAME</tt>. For example if generating code for the query: <tt>SELECT A, SUM(B) as RESULT1, AVG(C) as RESULT2 
-FROM R GROUP BY A;</tt> the <tt>tlq_t</tt> produced has two functions named <tt>computeRESULT1</tt> and <tt>computeRESULT2</tt>
-that return the corresponding query results.
+We will use as an example the C++ code generated for the <tt>rs_example.sql</tt> sql program introduced above. In the interest
+of clarity some implementation details are omitted.
+<div class="codeblock">$&gt; bin/dbtoaster test/queries/simple/rs_example.sql -l cpp
+#include &lt;lib/dbt_c++/program_base.hpp&gt;
+
+namespace dbtoaster {
+
+    /* Definitions of auxiliary maps for storing materialized views. */
+    ...
+    ...
+    ...
+
+    /* Type definition providing a way to access the results of the sql */
+    /* program */
+    struct tlq_t{
+        tlq_t()
+        {}
+    
+        /* Serialization Code */
+        template&lt;class Archive&gt;
+        void serialize(Archive&amp; ar, const unsigned int version) {
+            ...
+        }
+
+        /* Functions returning / computing the results of top level */
+        /* queries */
+        long get_RESULT(){
+            ...
+        }
+
+    protected:
+
+        /* Data structures used for storing/computing top level queries */
+        ...
+    };
+    
+    /* Type definition providing a way to incrementally maintain the */
+    /* results of the sql program */
+    struct data_t : tlq_t{
+        data_t()
+        {}
+    
+        /* Registering relations and trigger functions */
+        void register_data(ProgramBase&lt;tlq_t&gt;&amp; pb) {
+            ...
+        }
+
+        /* Trigger functions for table relations */
+        void on_insert_R(long R_A, long R_B) {
+            ...
+        }
+        
+        /* Trigger functions for stream relations */
+        void on_insert_S(long S_B, long S_C) {
+            ...
+        }
+        
+        void on_delete_S(long S_B, long S_C) {
+            ...
+        }
+        
+        void on_system_ready_event() {
+            ...
+        }
+
+    private:
+
+        /* Data structures used for storing materialized views */
+        ...
+    };
+
+    /* Type definition providing a way to execute the sql program */
+    class Program : public ProgramBase&lt;tlq_t&gt;
+    {
+    public:
+        Program(int argc = 0, char* argv[] = 0) : 
+                ProgramBase&lt;tlq_t&gt;(argc,argv) 
+        {
+            data.register_data(*this);
+
+            /* Specifying data sources */
+            ...
+        }
+
+        /* Imports data for static tables and performs view */
+        /* initialization based on it. */
+        void init() {
+            process_tables();
+            data.on_system_ready_event();
+        }
+    
+        /* Saves a snapshot of the data required to obtain the results */
+        /* of top level queries. */
+        snapshot_t take_snapshot(){
+            return snapshot_t( new tlq_t((tlq_t&amp;)data) );
+        }
+    
+    private:
+        data_t data;
+    };
+
+}
+}</div>
 </p>
+
+<h3><tt>struct tlq_t</tt></h3>
+
+<p>
+The <tt>tlq_t</tt> contains all the relevant datastructures for computing the results of the sql program, also called
+the top level queries. It provides a set of functions named <tt>get_TLQ_NAME</tt> that return the top level query
+result labeled <tt>TLQ_NAME</tt>. For our example the <tt>tlq_t</tt> produced has a function named <tt>get_RESULT</tt> 
+that returns the query result corresponding to <tt>SELECT SUM(r.A*s.C) as RESULT ...</tt> in <tt>rs_example.sql</tt>.
+
+- add info about multiple queries with group by's
+
+</p>
+
+<h3><tt>struct data_t</tt></h3>
 
 <p>
 The <tt>data_t</tt> contains all the relevant datastructures for incrementally maintaining the results of the sql program. 
 It provides for each stream based relation <tt>STREAM_X</tt>, present in the sql program, a pair of trigger functions named 
 <tt>on_insert_STREAM_X()</tt> and <tt>on_delete_STREAM_X()</tt>  that incrementally maintain the query results in the event of 
-an insertion/deletion of a tuple in <tt>STREAM_X</tt>. For static table based relations it contains only the insertion trigger, 
-which gets called when processing the static tables in the initialization phase of the program.
+an insertion/deletion of a tuple in <tt>STREAM_X</tt>. If generating code for the query presented above the <tt>data_t</tt> 
+produced has the trigger functions <tt>void on_insert_S(long S_B, long S_C) / void on_delete_S(long S_B, long S_C)</tt>.
 </p>
+<p>
+For static table based relations only the insertion trigger is required and will get called when processing the static tables 
+in the initialization phase of the program.
+</p>
+
+
+
+<h3><tt>class Program</tt></h3>
 
 <p>
 Finally, <tt>Program</tt> is a class that implements the <tt>IProgram</tt> interface and provides the basic functionalities

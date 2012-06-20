@@ -494,7 +494,7 @@ struct
       | K.Project (_, p) -> project_ir metadata p [sfst()]
             
       | K.Singleton _ -> singleton_ir metadata [sfst()]
-      | K.Combine _   -> combine_ir metadata [sfst();ssnd()]
+      | K.Combine _   -> combine_ir metadata (List.flatten parts)
       | K.Add _       -> op_ir metadata Add [sfst(); ssnd()]
       | K.Mult _      -> op_ir metadata Mult [sfst(); ssnd()]
       | K.Eq _        -> op_ir metadata Eq [sfst(); ssnd()]
@@ -732,13 +732,13 @@ struct
     in
 
     (* Code generation for tagged nodes *)
-    let rec gc_tag meta t cmeta =
+    let rec gc_tag meta (t : node_tag_t) cmeta_l =
       (* Helpers *)
       let demote_collection_element_type c_t e_t = match c_t with
         | Host(Collection(_, x)) -> Host(x)
         | _ -> failwith "invalid k3 collection"
       in
-      let cmetai i = List.nth cmeta i in
+      let cmetai i = List.nth cmeta_l i in
       let ciri i = List.assoc (cmetai i) flat_ir in
       let ctagi i = fst (ciri i) in
       
@@ -749,20 +749,20 @@ struct
        * -- force indicates whether to force declaration of the symbol, given
        *    that the tag cg will bind to the symbol
        *)  
-      let child_meta, args_to_bind, possible_decls =
-        let last = (List.length cmeta) - 1 in
+      let child_meta_l, args_to_bind, possible_decls =
+        let last = (List.length cmeta_l) - 1 in
         let pushi i = push_meta meta (cmetai i) in
         let pushli i = push_lambda_meta meta (cmetai i) in
         let decl_f = decl_of_meta in 
         let arg_f = meta_of_arg in
         let assoc_arg_f = meta_of_assoc_arg in
         match t with
-        | Lambda _ | AssocLambda _ -> [pushi 0], [], [None]
+        | AK.Lambda _ | AK.AssocLambda _ -> [pushi 0], [], [None]
         
         (* Apply always pushes down the return symbol to the function, and
          * in the case of single args, push down the arg symbol *)
         (* TODO: multi-arg pushdown/binding *)
-        | Apply ->
+        | AK.Apply ->
           let ltag = ctagi 0 in
           if is_external_lambda ltag then
             [pushli 0; cmetai 1], [], [None; decl_f false (cmetai 1)]
@@ -772,11 +772,14 @@ struct
             in [pushli 0; arg_meta], rem_bindings, [None; arg_decl]
         
         | AK.Singleton -> [cmetai 0], [], [decl_f false (cmetai 0)]
-        | AK.Combine -> [pushi 0; cmetai 1], [], [None; decl_f false (cmetai 1)]
+        | AK.Combine -> 
+            (pushi 0) :: (List.tl cmeta_l), 
+            [], 
+            None :: (List.map (decl_f false) (List.tl cmeta_l))
 
         (* Blocks push down the symbol to the last element *)    
         | AK.Block ->
-          let r = (List.rev (List.tl (List.rev cmeta)))@[pushi last]
+          let r = (List.rev (List.tl (List.rev cmeta_l)))@[pushi last]
           in r, [], List.map (fun x -> None) r
         
         (* Conditionals push down the symbol to both branches *)
@@ -786,11 +789,11 @@ struct
         (* Iterate needs a child symbol, but this should not be used since
          * the return type is unit. Maps yield the new collection as the symbol
          * thus does not pass it on to any children. *)
-        | Iterate | Map ->
+        | AK.Iterate | AK.Map ->
           let fn_meta = match valid_sym_of_meta meta with
             | None -> push_lambda_meta (cmetai 0) (cmetai 0)
             | Some _ -> push_meta_valid meta (cmetai 0)
-          in (fn_meta::(List.tl cmeta)),
+          in (fn_meta::(List.tl cmeta_l)),
              [arg_of_lambda (ctagi 0)], [None; decl_f false (cmetai 1)]
 
         (* Ext passes on its symbol to children to perform direct concatenation
@@ -804,7 +807,7 @@ struct
           cmeta, [arg], [None; None; decl_f false (cmetai 2)]
         *)
 
-        | Aggregate ->
+        | AK.Aggregate ->
             let arg1, arg2 = arg_of_assoc_lambda (ctagi 0) in
             let coll_meta = cmetai 2 in
             let assoc_arg_meta, rem_bindings, arg_decls =
@@ -830,7 +833,7 @@ struct
          *   ++ push single agg fn state var to init return sym (and map lookup
          *      sym in cg body), otherwise use new sym. skip binding if pushed.
          *) 
-        | GroupByAggregate ->
+        | AK.GroupByAggregate ->
             let arg1, arg2 = arg_of_assoc_lambda (ctagi 0) in
             let arg3 = arg_of_lambda (ctagi 2) in
             let arg2_binding, init_meta = match arg2 with
@@ -850,13 +853,16 @@ struct
               ([x; init_meta; y; z],
                 ([arg1]@arg2_binding@[arg3]), [dx; decl_f true init_meta; dy; dz])
   
-        | _ -> cmeta, [], List.map (fun m -> decl_f false m) cmeta
+        | _ -> cmeta_l, [], List.map (decl_f false) cmeta_l
       in
 
       (* Recursive call to generate child imperative or expression code *)
-      let cuie = List.map2 (fun cmeta meta_to_use ->
-        let (ctag, ccm) = List.assoc cmeta flat_ir in
-        gc_meta (meta_to_use, (ctag, ccm))) cmeta child_meta
+      let cuie = List.map2 
+         (fun cmeta meta_to_use ->
+            let (ctag, ccm) = List.assoc cmeta flat_ir in
+            gc_meta (meta_to_use, (ctag, ccm)) ) 
+         cmeta_l 
+         child_meta_l
       in
 
       let unique l = List.fold_left
@@ -877,6 +883,7 @@ struct
       let imp_of_list l =
         if List.length l = 1 then List.hd l else Block(None, l) in
       let unwrap x = match x with Some(y) -> y | _ -> failwith "invalid value" in
+      let unwrap_l l = List.map unwrap (List.filter (fun x -> x <> None) l) in
       let list_i l = function 0 -> List.hd l | i -> List.nth l i in
 
       let match_ie_pair ie error_str f_i f_e = match ie with
@@ -886,16 +893,18 @@ struct
       in
       
       let cimps, cexprs = List.split cie in
-      let cvals = List.map2 (fun meta iep ->
-        match_ie_pair iep "invalid child value"
-          (fun i -> Var (None, (sym_of_meta meta, type_of_meta meta)))
-          (fun e -> e))
-          child_meta cie
+      let cvals = List.map2 
+         (fun meta iep ->
+            match_ie_pair iep "invalid child value"
+               (fun i -> Var (None, (sym_of_meta meta, type_of_meta meta)))
+               (fun e -> e))
+         child_meta_l 
+         cie
       in
       
       let cimpo, cexpro = list_i cimps, list_i cexprs in
       let cdecli i =
-        let m = list_i child_meta i in
+        let m = list_i child_meta_l i in
         Var (None, (sym_of_meta m, type_of_meta m)) in
       let cexpri = list_i cvals in
       let cused i = let (x,_,_) = list_i cuie i in x in
@@ -967,14 +976,11 @@ struct
         end
 
       | AK.Combine ->
-        let combine_f e = Expr(None, Fn(None, Concat, [cdecli 0; e])) in
-        begin match cimpo 1, cexpro 1 with
-          | Some(i), None -> Some(i@[combine_f (cdecli 1)]), (cused 0)
-          | None, Some(e) -> Some([combine_f e]), true
-          | _, _ -> failwith "invalid combine argument"
-        end
+        let unwrapped_cimps  = List.flatten (unwrap_l cimps) in
+        let combine_e = Expr(None, Fn(None, Concat, cvals)) in
+        Some( unwrapped_cimps@[combine_e] ), true
          
-      | Lambda _ | AssocLambda _ ->
+      | AK.Lambda _ | AK.AssocLambda _ ->
         (* lambdas have no expression form, they must use their arg bindings
            and assign result value to their indicated symbol *)
         begin match cimpo 0, cexpro 0 with
@@ -982,7 +988,7 @@ struct
           | _, _ -> failwith "invalid tagged function body"
         end
 
-      | Apply ->
+      | AK.Apply ->
         Debug.print "IMP-DEBUG-APPLY" (fun _ -> string_of_k3ir ir);
         let ltag = ctagi 0 in
         let decls, ext_args = match cimpo 1, cexpro 1 with
@@ -1019,7 +1025,7 @@ struct
           | _,_ -> failwith "invalid block element"
         in
         let li, meta_used = match last with
-          | Some(i), None -> i, (cused ((List.length cmeta)-1))
+          | Some(i), None -> i, (cused ((List.length cmeta_l)-1))
           | None, Some(e) ->
             [Expr(None, BinOp(None, Assign,
                                 Var(None, (meta_sym, meta_ty)), e))],
@@ -1038,7 +1044,7 @@ struct
             (fun e -> [IfThenElse(None, e, branch 1, branch 2)])),
           meta_used
 
-      | Iterate ->
+      | AK.Iterate ->
         let c_t = type_of_meta (cmetai 1) in
         let arg = List.hd args_to_bind in
         let elem, elem_ty, elem_f, decls = match arg with
@@ -1057,7 +1063,7 @@ struct
             (fun i -> i@[For(None, ((elem, elem_ty), elem_f), cdecli 1, loop_body)])
             (fun e -> [For(None, ((elem, elem_ty), elem_f), e, loop_body)])), false
 
-      | Map | AK.Ext ->
+      | AK.Map | AK.Ext ->
         let c_t = type_of_meta (cmetai 1) in
         let is_ext = match t with | AK.Ext -> true | _ -> false in
         let is_filter = valid_sym_of_meta meta <> None in
@@ -1134,7 +1140,7 @@ struct
              (fun i -> i@[mk_loop (cdecli 1)]) (fun e -> [mk_loop e])),
           (if is_ext then (cused 0) else true)
 
-      | Aggregate -> 
+      | AK.Aggregate -> 
         let c_t = type_of_meta (cmetai 2) in 
         let elem, elem_ty, elem_f, decls = match args_to_bind with
           | [AVar(id,ty)] ->
@@ -1167,7 +1173,7 @@ struct
         in
         Some(pre@[For(None, ((elem, elem_ty), elem_f), ce, loop_body)]@post), true
       
-      | GroupByAggregate ->
+      | AK.GroupByAggregate ->
         let c_t = type_of_meta (cmetai 3) in 
         let get_elem arg = match arg with
           | AVar(id, ty) ->
@@ -1214,7 +1220,7 @@ struct
             (fun i -> i, (cdecli 3)) (fun e -> [], e) 
         in Some(pre@[For(None, ((elem, elem_ty), elem_f), ce, loop_body)]), true
       
-      | Flatten -> 
+      | AK.Flatten -> 
         let outer_elem, outer_ty = gensym(), meta_ty in
         let outer_pre,outer_src = match_ie 0 "invalid flatten nested collection"
           (fun i -> i,cdecli 0) (fun e -> [],e) in

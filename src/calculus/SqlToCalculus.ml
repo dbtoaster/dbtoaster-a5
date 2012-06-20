@@ -701,4 +701,4 @@ let extract_sql_schema (db:Schema.t) (tables:Sql.table_t list) =
    List.iter (fun (reln, relsch, reltype, (relsource, reladaptor)) ->
       Schema.add_rel db ~source:relsource ~adaptor:reladaptor 
                         (reln, List.map var_of_sql_var relsch, reltype)
-   ) tables
+   ) (List.rev tables)
