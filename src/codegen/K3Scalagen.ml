@@ -389,13 +389,24 @@ struct
        in
        
        let common_type = List.fold_left (fun a (_, b) -> unify_types a b) (snd (List.hd terms)) terms in
+       let k, v = 
+          match common_type with 
+          | Collection(_, k, v) -> (k, v) 
+          | _ -> debugfail expr "Combine can only combin collections" 
+       in
        
+       ("({ val result = Map[" ^ (string_of_type (Tuple k)) ^ "," ^ (string_of_type v) ^ "]();" ^ (make_list ~sep:";" ~parens:("", ";") (List.map (fun (n, (Collection(_, ko, vo))) -> 
+	  let key_len = List.length ko in
+	  let v_var =  "v" ^ (string_of_int (key_len + 1)) in
+	  let body = "val t = " ^ (make_tuple (list_vars "v" (key_len))) ^ "; result += ((t, (result.get(t) match { case Some(v) => v + " ^ v_var ^ "; case _ => " ^ v_var ^ " })))" in
+          "(" ^ n ^ ").foreach { " ^ (wrap_function_key_val ko vo (Fn(ArgNTuple(List.map (fun x -> ArgN(x)) (list_vars "v" (key_len + 1))), Tuple(k @ [v]), Unit)) body) ^ " }"        
+       ) terms)) ^ " " ^ (string_of_type common_type) ^ "(result.toList) })", common_type) (*
        List.fold_left (fun (a, act) (b, bct) ->
        match (act, bct) with 
        | Collection(_, ak, at), Collection(_, bk, bt) ->
           ((string_of_type common_type) ^ "(" ^ (cast_up a act common_type) ^ ".toList ::: " ^ (cast_up b bct common_type) ^ ".toList)", common_type)
        | _ -> debugfail expr "Type mismatch for collection combine"
-    ) (List.hd terms) (List.tl terms)
+    ) (List.hd terms) (List.tl terms) *)
 
   let op ?(expr = None) ((mk_op):op_t) ((a,at):code_t) ((b,bt):code_t) : code_t =
     let (op_f,rt,err) = (mk_op at bt) in
