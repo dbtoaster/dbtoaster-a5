@@ -69,6 +69,12 @@ struct
       else 
         (prefix ^ (string_of_int n)) :: (_list_vars prefix (n - 1)) in
     List.rev (_list_vars prefix n)
+    
+  let rec list_zip l1 l2 = 
+    match l1, l2 with
+    | x1 :: xs1, x2 :: xs2 -> (x1, x2) :: (list_zip xs1 xs2)
+    | [], [] -> []
+    | _ -> raise (K3SException("list_zip expected lists of equal length"))
 
   let make_list ?(empty="") ?(parens=("(", ")")) ?(sep=",") l = 
     let rec make_list_ l = 
@@ -79,7 +85,7 @@ struct
     in
     (fst parens) ^ (make_list_ l) ^ (snd parens)
 
-  let rec make_tuple t : string = 
+  let rec make_tuple ?(tpe = "") t : string = 
     let nb_elems = (List.length t) in 
     let elems = 
       if nb_elems > max_tuple_elems then
@@ -91,13 +97,18 @@ struct
     match t with 
     | []      -> "Unit"
     | x :: [] -> "(" ^ x ^ ")"
-    | _       -> "Tuple" ^ (string_of_int (List.length elems)) ^ 
+    | _       -> (if tpe = "" then "Tuple" ^ (string_of_int (List.length elems)) else tpe) ^ 
                  (make_list elems)
+		 
+  let rec flatten_tuple t = 
+    match t with
+    | Tuple(ts) -> List.fold_left (fun x t -> x @ (flatten_tuple t)) [] ts
+    | _ -> [t]
 
-  let rec string_of_argn a : string = 
+  let rec string_of_argn ?(prefix = "") a : string = 
     match a with
-    | ArgN(n) -> n
-    | ArgNTuple(ns) -> make_tuple (List.map string_of_argn ns)
+    | ArgN(n) -> if n = "()" then n else prefix ^ n
+    | ArgNTuple(ns) -> make_tuple (List.map (fun x -> string_of_argn ~prefix:prefix x) ns)
 
   let rec string_of_tuple_type t : string =
     let nb_elems = (List.length t) in 
@@ -151,7 +162,7 @@ struct
                          | Some(s) -> K3.code_of_expr s));
     raise (K3SException("K3Scalagen Internal Error ["^msg^"]"))
 	
-	let rec map_base_type bt = 
+  let rec map_base_type bt = 
     match bt with
 		| TBool -> Bool
     | TInt -> Int
@@ -187,6 +198,63 @@ struct
   | Fn(_, _, fnrett) -> fnrett
   | ExtFn(_, _, fnrett) -> fnrett
   | _ -> debugfail None ("Function excpected found: " ^ (string_of_type fnt))
+    let rec flatten_args args =
+    match args with
+    | ArgN(n) -> [n]
+    | ArgNTuple(ags) -> List.fold_left (fun x a -> x @ (flatten_args a)) [] ags 
+
+  let rec cast_up n ot t =
+    match t, ot with
+    | Collection(_, k, v), Collection(_, ko, vo) when k != ko || v != vo -> 
+      let key_length = List.length k in
+      let rett = (Tuple((Tuple(k)) :: [v])) in
+      let body = (string_of_type rett) ^ "(" ^ 
+        (make_list (list_vars "v" key_length)) ^ ", v" ^ 
+        (string_of_int (key_length + 1)) ^ ")" in
+        n ^ ".map { " ^ (wrap_function_key_val ko vo (Fn(ArgNTuple(List.map (fun x -> ArgN(x)) (list_vars "v" (key_length + 1))), Tuple(k @ [v]), rett)) body) ^ " }"
+    | _ -> n 
+    
+  and implicit_conversions argsn t1s t2s: string =  
+   (make_list ~parens:("", ";") ~sep:";" (List.map2 (fun v (t1, t2) -> "val " ^ v ^ ":" ^ (string_of_type t2) ^ " = " ^ (cast_up ("_" ^ v) t1 t2)) (flatten_args argsn) (list_zip (flatten_tuple t1s) (flatten_tuple t2s))))
+    
+  and wrap_function argt fnt f: string = 
+    match fnt with
+    | Fn(argsn, argst, rett) ->
+      "(x:" ^ (string_of_type argt) ^ ") => { x match { case " ^ 
+      (string_of_argn argsn) ^ " => {" ^ f ^ "} } }" 
+    | ExtFn(n, _, _) -> n ^ " _"
+    | _ -> debugfail None "Expected a function"
+
+  and wrap_function_key_val (kt:type_t list) (vt:type_t) fnt f: string =     
+    let ktt, vtt, f_body = 
+    match fnt with
+    | Fn(argsn1, argst1, Fn(argsn2, argst2, rett)) ->
+      ([List.hd kt], List.hd (List.tl kt), wrap_function (fn_ret_type vt) (Fn(argsn2, argst2, rett)) f)
+    | _ -> (kt, vt, f) in
+    match fnt with
+    | Fn(argsn, argst, rett) ->
+      let argsnkv = match ktt with 
+      | [] -> ArgNTuple(ArgN("()") :: [argsn])
+      | Tuple(t) :: ts -> (
+	match argsn with 
+	| ArgNTuple(ns) -> 
+	  let k, v  = list_split ns ((List.length ns - 1)) in
+	  ArgNTuple(ArgNTuple(k) :: v)
+	| _ -> debugfail None "Excpected tuple of argument names"
+      )
+      | _  -> ( 
+	match argsn with 
+	| ArgNTuple(ns) -> 
+	  let k, v  = list_split ns ((List.length ns - 1)) in
+	  ArgNTuple(ArgNTuple(k) :: v)
+	| _ -> debugfail None "Excpected tuple of argument names"
+      ) in
+      "(x:Tuple2[" ^ (string_of_type (Tuple(ktt))) ^ ", " ^ (string_of_type vtt) ^ 
+      "]) => { x match { case " ^ (string_of_argn ~prefix:"_" argsnkv) ^ 
+      " => {" ^ (implicit_conversions argsn (Tuple([Tuple(ktt); vtt])) argst) ^ f_body ^ "} } }" 
+    | ExtFn(n, _, _) -> n ^ " _"
+    | _ -> debugfail None "Expected a function"
+
 
   type source_impl_t = source_code_t
   let identity a = a
@@ -263,16 +331,15 @@ struct
     | CFloat(y) -> (string_of_float y, Float)
     | CString(y) -> ("\"" ^ y ^ "\"", String)
     | CDate(y,m,d) -> ("new GregorianCalendar(" ^ (string_of_int y) ^ "," ^ (string_of_int m) ^ " - 1," ^ (string_of_int d) ^ ").getTime()", Date)
-   (* TODO must be change with appropriate object in scala *)
    
   let var ?(expr = None) (v:K3.id_t) (t:K3.type_t) : code_t = 
     ("var_" ^ v, map_type t)
 
   let tuple ?(expr = None) (c:code_t list) : code_t =
     if (List.length c) = 0 then debugfail expr "Empty List"
-    else let t = (List.map (fun (_,t)->t) c) in
-          (make_tuple
-            (List.map (fun (s,_) -> "(" ^ s ^ ")") c), Tuple(t))
+    else let t = Tuple(List.map (fun (_,t)->t) c) in
+          (make_tuple ~tpe:(string_of_type t)
+            (List.map (fun (s,_) -> "(" ^ s ^ ")") c), t)
 
   let project ?(expr = None) ((tuple,tuplet):code_t) (f:int list) : code_t =
     let tuple_members = 
@@ -300,7 +367,7 @@ struct
         let vars = (list_vars "v._" (List.length t)) in
         let kv, vv = list_split vars ((List.length vars) - 1) in
         let kt, vt = list_split t ((List.length t) - 1) in
-        (kt, vt, make_tuple([make_tuple kv; List.hd vv]))
+        (kt, vt, make_tuple([make_tuple ~tpe:(string_of_type (Tuple(kt))) kv; List.hd vv]))
       | t -> [], [t], "v"
     in
     let tpe = Collection(Intermediate, kt, List.hd vt) in
@@ -309,15 +376,24 @@ struct
   let combine ?(expr = None) (terms:code_t list): code_t =
     if (List.length terms) < 1 
     then debugfail expr "Empty combines are invalid" 
-    else List.fold_left (fun a_code b_code ->
-       match (a_code, b_code) with 
-       | ((a, Collection(_, ak, at)), (b, Collection(_, bk, bt))) ->
-           if ak <> bk or at <> bt then 
-             debugfail expr "Cannot combine collections of different types"
-           else 
-             let tpe = Collection(Intermediate, ak, at) in
-             ((string_of_type tpe) ^ "(" ^ a ^ ".toList ::: " ^ b ^ ".toList)", tpe)
-   
+    else 
+       (** finds the common supertype of two types **)
+       let rec unify_types a b = 
+          match a, b with
+	  | a, b when a = b -> a
+	  | Int, Float | Float, Int -> Float
+	  | Bool, Int  | Int, Bool  -> Int
+	  | Collection(_, ak, at), Collection(_, bk, bt) -> 
+	     Collection(Intermediate, (List.map2 unify_types ak bk), unify_types at bt) 
+	  | _, _ -> debugfail expr ("Cannot combine collections of different types: " ^ (string_of_type a) ^ " and " ^ (string_of_type b))
+       in
+       
+       let common_type = List.fold_left (fun a (_, b) -> unify_types a b) (snd (List.hd terms)) terms in
+       
+       List.fold_left (fun (a, act) (b, bct) ->
+       match (act, bct) with 
+       | Collection(_, ak, at), Collection(_, bk, bt) ->
+          ((string_of_type common_type) ^ "(" ^ (cast_up a act common_type) ^ ".toList ::: " ^ (cast_up b bct common_type) ^ ".toList)", common_type)
        | _ -> debugfail expr "Type mismatch for collection combine"
     ) (List.hd terms) (List.tl terms)
 
@@ -340,46 +416,7 @@ struct
       if (List.length stmts) < 1 then Unit else (snd (List.hd (List.rev stmts))))
    
   let comment ?(expr = None) (comment:string) (stmt:code_t) : code_t = stmt
-
-  let wrap_function argt fnt f: string = 
-    match fnt with
-    | Fn(argsn, argst, rett) ->
-      "(x:" ^ (string_of_type argt) ^ ") => { x match { case " ^ 
-      (string_of_argn argsn) ^ " => {" ^ f ^ "} } }" 
-    | ExtFn(n, _, _) -> n ^ " _"
-    | _ -> debugfail None "Expected a function"
-
-  let wrap_function_key_val (kt:type_t list) (vt:type_t) fnt f: string = 
-    let ktt, vtt, f_body = 
-    match fnt with
-    | Fn(argsn1, argst1, Fn(argsn2, argst2, rett)) ->
-      ([List.hd kt], List.hd (List.tl kt), wrap_function (fn_ret_type vt) (Fn(argsn2, argst2, rett)) f)
-    | _ -> (kt, vt, f) in
-    match fnt with
-    | Fn(argsn, argst, rett) ->
-      let argsnkv = match ktt with 
-      | [] -> ArgNTuple(ArgN("()") :: [argsn])
-      | Tuple(t) :: ts -> (
-        match argsn with 
-        | ArgNTuple(ns) -> 
-          let k, v  = list_split ns ((List.length ns - 1)) in
-          ArgNTuple(ArgNTuple(k) :: v)
-        | _ -> debugfail None "Excpected tuple of argument names"
-      )
-      | _  -> ( 
-        match argsn with 
-        | ArgNTuple(ns) -> 
-          let k, v  = list_split ns ((List.length ns - 1)) in
-          ArgNTuple(ArgNTuple(k) :: v)
-        | _ -> debugfail None "Excpected tuple of argument names"
-      ) in
-      (*"/* " ^ (string_of_type argst) ^ " => " ^ (string_of_type rett) ^ " */ " ^*)
-      "(x:Tuple2[" ^ (string_of_type (Tuple(ktt))) ^ ", " ^ (string_of_type vtt) ^ 
-      "]) => { x match { case " ^ (string_of_argn argsnkv) ^ 
-      " => {" ^ f_body ^ "} } }" 
-    | ExtFn(n, _, _) -> n ^ " _"
-    | _ -> debugfail None "Expected a function"
-
+  
   let iterate ?(expr = None) ((fn,fnt):code_t) ((c, ct):code_t) : code_t =
     match ct with
     | Collection(_, kt, vt) -> ("(" ^ c ^ ").foreach { " ^ 
@@ -414,9 +451,14 @@ struct
   let apply ?(expr = None) ((fn,fnt):code_t) ((arg,argt):code_t) : code_t =
     (begin match fnt with
     | Fn(argsn, argst, rett) ->
-      "{ val " ^ (string_of_argn argsn) ^ (*":" ^ (string_of_type argt) ^*) " = " ^ arg ^ ";" ^ 
-      fn ^ "}"
-    | ExtFn(n, _, _) -> "(" ^ n ^ "(" ^ arg ^ "))"
+      "{ val " ^ (string_of_argn ~prefix:"_" argsn) ^ (*":" ^ (string_of_type argt) ^*) " = " ^ arg ^ ";" ^ 
+      (implicit_conversions argsn argt argst) ^ fn ^ "}"
+    | ExtFn(n, a, _) -> 
+      let n_a = List.length (flatten_tuple a) in
+      if n_a = 1 then
+        "(" ^ n ^ "(" ^ arg ^ "))" 
+      else
+        "({ val arg = " ^ arg ^ "; " ^ n ^ (make_list (list_vars "arg._" n_a)) ^ "})"
     | _ -> debugfail None "Expected a function"
     end
     , fn_ret_type fnt)
@@ -752,8 +794,12 @@ struct
                 | Schema.DeleteEvent(rel, vars, tpe) -> ("DeleteTuple", "Delete", rel, vars)
                 | Schema.SystemInitializedEvent -> ("SystemInitialized", "SystemInitialized", "", []) in
               "case StreamEvent(" ^ event_type ^ ", o, \"" ^ rel ^ "\", " ^ 
-              (make_list ~parens:("List(", ")") (List.map (fun (n, t) -> 
-              "(var_" ^ n ^ ": " ^ (string_of_type (map_base_type t)) ^ ")") vars)) ^ ") => on" ^ 
+              (if (List.length vars) = 0 then 
+	        "Nil" 
+	      else
+	        (make_list ~parens:("", "::Nil") ~sep:"::" (List.map (fun (n, t) -> 
+              "(var_" ^ n ^ ": " ^ (string_of_type (map_base_type t)) ^ ")") vars))) ^ 
+	      ") => on" ^ 
               trigger_type ^ rel ^ (make_list (List.map (fun (n, t) -> "var_" ^ n) vars))
           | t -> debugfail None ("Trigger expected but found " ^ (string_of_type t))
         )) triggers)) 

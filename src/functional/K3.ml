@@ -1206,7 +1206,7 @@ let annotate_collections e =
     | Var (id,t) -> 
       if VarMap.mem id var_map then
         let tp = VarMap.find id var_map in
-        (Var(id, tp), tp)
+        (Var(id, tp), transfer_annotation t tp)
       else
         (Var(id, t), t)
     | Tuple e_l -> 
