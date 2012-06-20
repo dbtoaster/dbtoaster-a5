@@ -19,6 +19,10 @@ open Schema
 open Plan
 open M3
 
+(**
+   Compute the corrective trigger for a specific external and a specific base 
+   event.
+*)
 let corrective_trigger (ext_name:string) (base_event:event_t) 
                        (base_stmts:stmt_t list): trigger_t =
    let reserved_names =
@@ -45,6 +49,9 @@ let corrective_trigger (ext_name:string) (base_event:event_t)
       ) base_stmts))
    }
 
+(**
+   Compute all the corrective triggers for a specific base trigger 
+*)
 let corrective_triggers_for_event ({ event = base_event;
                                      statements = base_stmts }: trigger_t):
                                   trigger_t list =
@@ -57,6 +64,10 @@ let corrective_triggers_for_event ({ event = base_event;
          corrective_trigger ext_name base_event !base_stmts
       ) externals_in_event
 
+(**
+   Extend a specified M3 program with corrective update triggers.  This will 
+   allow it to be run in a distributed setting.
+*)
 let distributed_m3_of_m3 (prog:prog_t): prog_t =
    {
       queries = prog.queries;
