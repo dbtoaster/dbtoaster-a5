@@ -1,25 +1,30 @@
+(**
+   Command and control functionality; The main() function of the dbtoaster 
+   binary
+*)
 let (inform, warn, error, bug) = Debug.Logger.functions_for_module ""
 
 ;;
 
 (************ Language Names ************)
 type language_t =
-   | Auto | SQL | Calc | MPlan | M3 | M3DM | K3 | IMP | CPP | Scala | Ocaml
-   | Interpreter
+   | Auto | SQL | Calc | MPlan | DistM3 | M3 | M3DM | K3 | IMP | CPP | Scala 
+   | Ocaml | Interpreter
 
 let languages =
-   [  "AUTO" , (Auto       , "automatic"                    , false); 
-      "SQL",   (SQL        , "DBToaster SQL"                , true);
-      "CALC" , (Calc       , "DBToaster Relational Calculus", true);
-      "PLAN" , (MPlan      , "Materialization Plan"         , false);
-      "M3"   , (M3         , "M3 Program"                   , true);
-      "M3DM" , (M3DM       , "M3 Domain Maintenance Program", false);
-      "K3"   , (K3         , "K3 Program"                   , true);
-      "IMP"  , (IMP        , "Abstract Imperative Program"  , false);
-      "SCALA", (Scala      , "Scala Code"                   , true);
-      "OCAML", (Ocaml      , "Ocaml Code"                   , false);
-      "RUN",   (Interpreter, "Ocaml Interpreter"            , false);
-      "CPP"  , (CPP        , "C++ Code"                     , true);
+   [  "AUTO"   , (Auto       , "automatic"                    , false); 
+      "SQL"    , (SQL        , "DBToaster SQL"                , true);
+      "CALC"   , (Calc       , "DBToaster Relational Calculus", true);
+      "PLAN"   , (MPlan      , "Materialization Plan"         , false);
+      "M3"     , (M3         , "M3 Program"                   , true);
+      "DISTM3" , (DistM3     , "Distributable M3 Program"     , true);
+      "M3DM"   , (M3DM       , "M3 Domain Maintenance Program", false);
+      "K3"     , (K3         , "K3 Program"                   , true);
+      "IMP"    , (IMP        , "Abstract Imperative Program"  , false);
+      "SCALA"  , (Scala      , "Scala Code"                   , true);
+      "OCAML"  , (Ocaml      , "Ocaml Code"                   , false);
+      "RUN"    , (Interpreter, "Ocaml Interpreter"            , false);
+      "CPP"    , (CPP        , "C++ Code"                     , true);
    ]
 
 let input_language  = ref Auto
@@ -232,6 +237,7 @@ type stage_t =
    | StageParseM3
  | M3Marker
    | StageM3DomainMaintenance
+   | StageM3ToDistM3
    | StagePrintM3
    | StagePrintM3DomainMaintenance
    | StageM3ToK3
@@ -252,10 +258,11 @@ type stage_t =
 let output_stages = 
    [  StagePrintSQL; StagePrintSchema; StagePrintCalc; StagePrintPlan;
       StagePrintM3; StagePrintM3DomainMaintenance; StagePrintK3; StagePrintImp;
-      StageRunInterpreter; StageOutputSource; StageCompileSource;  ]
+      StageOutputSource;  ]
 let input_stages = 
-   [  StageParseSQL; StageParseCalc; StageParseM3; StageParseK3 ]
-
+   [  StageParseSQL; StageParseCalc; StageParseM3; StageParseK3  ]
+let optional_stages =
+   [  StageM3ToDistM3; StageRunInterpreter; StageCompileSource  ]
 
 (* The following list (core_stages) MUST be kept in order of desired execution.  
 
@@ -268,7 +275,8 @@ let core_stages =
    [  SQLMarker;   (* -> *) StageSQLToCalc; 
       CalcMarker;  (* -> *) StageCompileCalc; 
       PlanMarker;  (* -> *) StagePlanToM3;
-      M3Marker;    (* -> *) StageM3DomainMaintenance; StageM3ToK3; StageM3DMToK3;
+      M3Marker;    (* -> *) StageM3DomainMaintenance; StageM3ToK3; 
+                            StageM3DMToK3;
       K3Marker;    (* -> *) StageOptimizeK3; StageK3ToTargetLanguage;
       FunctionalTargetMarker; StageImpToTargetLanguage; 
       ImperativeTargetMarker; 
@@ -293,20 +301,21 @@ let active_stages = ref (ListAsSet.inter
       | M3   -> StageParseM3::(stages_from M3Marker)
       | K3   -> StageParseK3::(stages_from K3Marker)
       | _    -> error "Unsupported input language"; []
-    )@output_stages)
+    )@output_stages@optional_stages)
    ((match !output_language with
-      | Auto  -> bug "output language still auto"; []
-      | SQL   -> StagePrintSQL::(stages_to SQLMarker)
-      | Calc  -> StagePrintCalc::(stages_to CalcMarker)
-      | MPlan -> StagePrintPlan::(stages_to PlanMarker)
-      | M3    -> StagePrintM3::(stages_to M3Marker)
-      | M3DM  -> StagePrintM3DomainMaintenance::
+      | Auto   -> bug "output language still auto"; []
+      | SQL    -> StagePrintSQL::(stages_to SQLMarker)
+      | Calc   -> StagePrintCalc::(stages_to CalcMarker)
+      | MPlan  -> StagePrintPlan::(stages_to PlanMarker)
+      | M3     -> StagePrintM3::(stages_to M3Marker)
+      | DistM3 -> StagePrintM3::StageM3ToDistM3::(stages_to M3Marker)
+      | M3DM   -> StagePrintM3DomainMaintenance::
                      (stages_to StageM3DomainMaintenance)
-      | K3    -> StagePrintK3::StageOptimizeK3::(stages_to K3Marker)
-      | IMP   -> StagePrintImp::(stages_to FunctionalTargetMarker)
-      | Scala -> functional_stages ExternalCompiler.scala_compiler
-      | Ocaml -> functional_stages ExternalCompiler.ocaml_compiler
-      | CPP   -> imperative_stages ExternalCompiler.cpp_compiler
+      | K3     -> StagePrintK3::StageOptimizeK3::(stages_to K3Marker)
+      | IMP    -> StagePrintImp::(stages_to FunctionalTargetMarker)
+      | Scala  -> functional_stages ExternalCompiler.scala_compiler
+      | Ocaml  -> functional_stages ExternalCompiler.ocaml_compiler
+      | CPP    -> imperative_stages ExternalCompiler.cpp_compiler
          (* CPP is defined as a functional stage because the IMP implementation
             desperately needs to be redone before we can actually use it as an 
             reasonable intermediate representation.  For now, we avoid the
@@ -586,6 +595,12 @@ if stage_is_active StageParseM3 then (
    in 
       m3_program := 
             Calculusparser.mapProgram Calculuslexer.tokenize lexbuff   
+)
+;;
+if stage_is_active StageM3ToDistM3 then (
+   Debug.print "LOG-DRIVER" (fun () -> "Running Stage: M3ToDistM3");
+   
+   m3_program := DistributedM3.distributed_m3_of_m3 !m3_program
 )
 ;;
 if stage_is_active StagePrintM3 then (

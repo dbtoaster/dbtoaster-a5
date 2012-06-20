@@ -227,6 +227,8 @@ let run_adaptors output_dir sources =
          begin match event_name with
          | Schema.InsertEvent(rel) -> aux ("Insert"^(Schema.name_of_rel rel))
          | Schema.DeleteEvent(rel) -> aux ("Delete"^(Schema.name_of_rel rel))
+         | Schema.CorrectiveUpdate _ -> 
+               failwith "Ocaml Runtime does not support distributed execution"
          | Schema.SystemInitializedEvent -> ()
          end  
            

@@ -68,3 +68,14 @@ let declared_classes () =
    StringMap.fold (fun k v accum -> 
       accum^v.prefix^" (in "^v.source_file^")\n"
    ) !classes ""
+;;
+let rec mk_safe_name ?(idx=None) (unsafe_names:string list) (base:string) =
+   let (curr_name,next_idx) = 
+      match idx with
+         | None -> (base, 1)
+         | Some(idx) -> (base^"_"^(string_of_int idx), idx+1)
+   in
+      if List.mem curr_name unsafe_names then
+         mk_safe_name ~idx:(Some(next_idx)) unsafe_names base
+      else
+         curr_name

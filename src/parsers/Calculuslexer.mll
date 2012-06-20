@@ -47,6 +47,9 @@ let keywords =
       "AGGSUM",     AGGSUM;
       "SYSTEM",     SYSTEM;
       "READY",      READY;
+      "CORRECT",    CORRECT;
+      "WITH",       WITH;
+      "FOR",        FOR;
       "INT",        TYPE(TInt);
       "INTEGER",    TYPE(TInt);
       "FLOAT",      TYPE(TFloat);

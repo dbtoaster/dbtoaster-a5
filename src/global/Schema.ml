@@ -25,6 +25,12 @@ type rel_t =
 type event_t =
  | InsertEvent of rel_t    (** An insertion into the specified relation *)
  | DeleteEvent of rel_t    (** A deletion from the specified relation *)
+ | CorrectiveUpdate of string * string * event_t
+                           (** (For distributed execution) A correction to a
+                               an external has arrived -- The fields of the
+                               event are: ExternalName * ExternalDeltaName *
+                               (event being corrected);  (see the DistributedM3 
+                               module for details on this event) *)
  | SystemInitializedEvent  (** Invoked when the system has been initialized, 
                                once all static tables have been loaded. *)
 
@@ -155,10 +161,11 @@ let partition_sources_by_type (db:t): (source_info_t list * source_info_t list)=
    @param event An event
    @return      A list of all parameters taken by [event]
 *)
-let event_vars (event:event_t): var_t list =
+let rec event_vars (event:event_t): var_t list =
    begin match event with
       | InsertEvent(_,relv,_) -> relv
       | DeleteEvent(_,relv,_) -> relv
+      | CorrectiveUpdate(_,_,updated_evt) -> event_vars updated_evt
       | SystemInitializedEvent -> []
    end
 
@@ -169,11 +176,13 @@ let event_vars (event:event_t): var_t list =
    @return    true if [a] and [b] refer to the same event, even if they differ
               on the details of this event.
 *)
-let events_equal (a:event_t) (b:event_t): bool =
+let rec events_equal (a:event_t) (b:event_t): bool =
    begin match (a,b) with
       | (SystemInitializedEvent, SystemInitializedEvent) -> true
       | (InsertEvent(an,_,_), InsertEvent(bn,_,_)) -> an = bn
       | (DeleteEvent(an,_,_), DeleteEvent(bn,_,_)) -> an = bn
+      | (CorrectiveUpdate(aen,_,aue), CorrectiveUpdate(ben,_,bue)) -> 
+             (aen = ben) && (events_equal aue bue)
       | _ -> false
    end
 
@@ -197,10 +206,12 @@ let name_of_rel ((reln,_,_):rel_t): string = reln
 (**
    Obtain a whitespace-free identifier useable to describe an event.
 *)
-let name_of_event (event:event_t):string =
+let rec name_of_event (event:event_t):string =
    begin match event with
       | InsertEvent(reln,_,_) -> "insert_"^reln
       | DeleteEvent(reln,_,_) -> "delete_"^reln
+      | CorrectiveUpdate(en,_,updated_evt) ->
+                           "correct_"^en^"_for_"^(name_of_event updated_evt)
       | SystemInitializedEvent -> "system_ready_event"
    end
 
@@ -212,6 +223,7 @@ let class_name_of_event (event:event_t):string =
    begin match event with
       | InsertEvent(_,_,_) -> "insert_tuple"
       | DeleteEvent(_,_,_) -> "delete_tuple"
+      | CorrectiveUpdate(en,_,updated_evt) -> "corrective_update"
       | SystemInitializedEvent -> "system_ready_event"
    end
 
@@ -223,6 +235,7 @@ let rel_name_of_event (event:event_t):string =
    begin match event with
       | InsertEvent(reln,_,_) 
       | DeleteEvent(reln,_,_) -> reln
+      | CorrectiveUpdate(en,_,_) -> en
       | SystemInitializedEvent -> "NULL_RELATION"
    end
 
@@ -230,10 +243,12 @@ let rel_name_of_event (event:event_t):string =
    Obtain the human-readable representation of an event.  The output of this 
    function is compatible with Calculusparser.
 *)
-let string_of_event (event:event_t) =
+let rec string_of_event (event:event_t) =
    begin match event with 
       | InsertEvent(rel)       -> "ON + "^(string_of_rel rel)
       | DeleteEvent(rel)       -> "ON - "^(string_of_rel rel)
+      | CorrectiveUpdate(en,den,u_evt) -> "CORRECT "^en^" WITH "^den^
+                                          " FOR "^(string_of_event u_evt)
       | SystemInitializedEvent -> "ON SYSTEM READY"
    end
 

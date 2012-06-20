@@ -58,17 +58,57 @@ let extract_lifts scope expr =
    @param expr          A Calculus expression without Externals
    @return              The delta of [expr] with respect to [delta_event]
 *)
-let rec delta_of_expr (delta_event:Schema.event_t) (expr:C.expr_t): C.expr_t=
-   let (apply_sign, (delta_reln,delta_relv,_)) =
+let rec delta_of_expr (delta_event:Schema.event_t) (expr:C.expr_t): C.expr_t =
+   let template_delta_of_rel apply_sign (delta_reln,delta_relv,_) reln relv =
+      if delta_reln = reln then 
+         if (List.length relv) <> (List.length delta_relv)
+         then
+            error expr (
+               "Relation '"^reln^"' has an inconsistent number of vars"
+            )
+         else
+         let definition_terms = 
+            CalcRing.mk_prod (
+               List.map (fun (dv, v) ->
+                  CalcRing.mk_val (Lift(dv, 
+                     CalcRing.mk_val (Value(mk_var v))))
+               ) (List.combine relv delta_relv)
+            )
+         in apply_sign definition_terms
+      else CalcRing.zero
+   in
+   let empty_delta_of_rel (_:string) (_:var_t list) = CalcRing.zero in
+   let error_delta_of_ext (_:external_t) = 
+      error expr "Can not take delta of an external"
+   in
+   let (delta_of_rel, delta_of_ext) =
       begin match delta_event with
-         | Schema.InsertEvent(rel) -> ((fun x -> x),    rel)
-         | Schema.DeleteEvent(rel) -> (CalcRing.mk_neg, rel)
+         | Schema.InsertEvent(delta_rel) -> 
+            (
+               (template_delta_of_rel (fun x -> x) delta_rel), 
+               (error_delta_of_ext)
+            )
+         | Schema.DeleteEvent(delta_rel) -> 
+            (
+               (template_delta_of_rel CalcRing.mk_neg delta_rel), 
+               (error_delta_of_ext)
+            )
+         | Schema.CorrectiveUpdate(orig_ext_name, delta_ext_name, _) ->
+            (
+               (empty_delta_of_rel), 
+               (fun (ext_name, ext_ivars, ext_ovars, ext_type, ext_ivc) ->
+                  if ext_name = orig_ext_name
+                  then CalcRing.mk_val (External(delta_ext_name, ext_ivars, 
+                                               ext_ovars, ext_type, ext_ivc))
+                  else CalcRing.zero
+               )
+            )
          | _ -> error expr "Error: Can not take delta of a non relation event"
       end
    in
    let rcr = delta_of_expr delta_event in
    Debug.print "LOG-DELTA-DETAIL" (fun () ->
-      "d"^delta_reln^" of "^(C.string_of_expr expr) 
+      (Schema.name_of_event delta_event)^" of "^(C.string_of_expr expr) 
    );
    CalcRing.delta
       (fun lf ->
@@ -82,25 +122,9 @@ let rec delta_of_expr (delta_event:Schema.event_t) (expr:C.expr_t): C.expr_t=
                   then CalcRing.zero
                   else CalcRing.mk_val (AggSum(gb_vars, rcr sub_t))
          (*****************************************)
-            | Rel(reln,relv) ->
-               if delta_reln = reln then 
-                  if (List.length relv) <> (List.length delta_relv)
-                  then
-                     error expr (
-                        "Relation '"^reln^"' has an inconsistent number of vars"
-                     )
-                  else
-                  let definition_terms = 
-                     CalcRing.mk_prod (
-                        List.map (fun (dv, v) ->
-                           CalcRing.mk_val (Lift(dv, 
-                              CalcRing.mk_val (Value(mk_var v))))
-                        ) (List.combine relv delta_relv)
-                     )
-                  in apply_sign definition_terms
-               else CalcRing.zero
+            | Rel(reln,relv) -> delta_of_rel reln relv
          (*****************************************)
-            | External(_) -> error expr "Can not take delta of an external"
+            | External(e) -> delta_of_ext e
          (*****************************************)
             | Cmp(_,_,_) -> CalcRing.zero
          (*****************************************)

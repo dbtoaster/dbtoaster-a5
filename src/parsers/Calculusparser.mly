@@ -36,6 +36,7 @@ type map_metadata =
 %token FILE SOCKET FIXEDWIDTH LINE DELIMITED
 %token AGGSUM
 %token LIFT SETVALUE INCREMENT EXISTS
+%token CORRECT WITH FOR
 
 // start
 %start statementList calculusExpr mapProgram mapTriggerStmt
@@ -278,12 +279,13 @@ mapQuery:
 | DECLARE QUERY ID SETVALUE ivcCalculusExpr { ($3, $5) }
 
 mapTrigger:
-| ON mapEvent LBRACE mapTriggerStmtList RBRACE { ($2, $4) }
+| mapEvent LBRACE mapTriggerStmtList RBRACE { ($1, $3) }
 
 mapEvent:
-| PLUS  schemaRelationDefn { Schema.InsertEvent($2) }
-| MINUS schemaRelationDefn { Schema.DeleteEvent($2) }
-| SYSTEM READY             { Schema.SystemInitializedEvent }
+| ON PLUS  schemaRelationDefn     { Schema.InsertEvent($3) }
+| ON MINUS schemaRelationDefn     { Schema.DeleteEvent($3) }
+| ON SYSTEM READY                 { Schema.SystemInitializedEvent }
+| CORRECT ID WITH ID FOR mapEvent { Schema.CorrectiveUpdate($2, $4, $6) }
 
 schemaRelationDefn:
 | relationDefn {

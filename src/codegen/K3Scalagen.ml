@@ -161,6 +161,9 @@ struct
         (match expr with | None -> "{Not Available}"
                          | Some(s) -> K3.code_of_expr s));
     raise (K3SException("K3Scalagen Internal Error ["^msg^"]"))
+  
+  let unsupported msg = 
+    raise (K3SException("K3Scalagen Unsupported Feature ["^msg^"]"))
 	
   let rec map_base_type bt = 
     match bt with
@@ -640,6 +643,7 @@ struct
       | Schema.InsertEvent(rel, vars, tpe) -> ("Insert" ^ rel, vars) 
       | Schema.DeleteEvent(rel, vars, tpe) -> ("Delete" ^ rel, vars)
       | Schema.SystemInitializedEvent -> ("SystemInitialized", []) 
+      | Schema.CorrectiveUpdate _ -> unsupported "Distributed Execution"
     in
     let var_def = (make_list (List.map (fun (n, t) -> "var_" ^ n ^ ": " ^ (string_of_type (map_base_type t))) vars)) in
     let fn_def = "def on" ^ prefix ^ var_def in
@@ -803,7 +807,9 @@ struct
                 match eventt with 
                 | Schema.InsertEvent(rel, vars, tpe) -> ("InsertTuple", "Insert", rel, vars)
                 | Schema.DeleteEvent(rel, vars, tpe) -> ("DeleteTuple", "Delete", rel, vars)
-                | Schema.SystemInitializedEvent -> ("SystemInitialized", "SystemInitialized", "", []) in
+                | Schema.SystemInitializedEvent -> ("SystemInitialized", "SystemInitialized", "", []) 
+                | Schema.CorrectiveUpdate _ -> unsupported "Distributed Execution"  
+              in
               "case StreamEvent(" ^ event_type ^ ", o, \"" ^ rel ^ "\", " ^ 
               (if (List.length vars) = 0 then 
 	        "Nil" 
