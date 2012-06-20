@@ -108,27 +108,28 @@ struct
                         ListExtras.string_of_list Types.string_of_const values)
       ) hashtbl
    
-   let cmp_hashtbl (hashtbl_a : hashtbl_t) (hashtbl_b : hashtbl_t) : bool =
-      if Hashtbl.length hashtbl_a <> Hashtbl.length hashtbl_b 
-      then false else 
-      try
-	      Hashtbl.iter (fun key_a value_a -> 
-	         let value_b = Hashtbl.find hashtbl_b key_a in
-            if value_a <> value_b then 
-            begin
-               let v_a = List.hd value_a in
-               let v_b = List.hd value_b in
-               let error =
-                  Arithmetic.div2 Types.TFloat  
-                     (Arithmetic.sum v_a (Arithmetic.neg v_b))
-                     (Arithmetic.sum v_a v_b)  
-               in
-               if Arithmetic.cmp_gt error (Types.CFloat(1e-6)) = Types.CBool(true) 
-               then raise Not_found   
-            end
-	      ) hashtbl_a;
-	      true;
-      with Not_found -> false
+   let cmp_hashtbl ?(default = (fun _ -> Types.CFloat(0.))) 
+                   (hashtbl_a : hashtbl_t) (hashtbl_b : hashtbl_t) : bool =
+      let keys tbl = Hashtbl.fold (fun k _ l -> k::l) tbl [] in
+      let all_keys = ListAsSet.union (keys hashtbl_a) (keys hashtbl_b) in
+      List.for_all (fun key ->
+         let value_a = try List.hd (Hashtbl.find hashtbl_a key) 
+                       with Not_found -> default key in
+         let value_b = try List.hd (Hashtbl.find hashtbl_b key)
+                       with Not_found -> default key in
+         let error =
+            Arithmetic.div2 Types.TFloat  
+               (Arithmetic.sum value_a (Arithmetic.neg value_b))
+               (Arithmetic.sum value_a value_b)  
+         in
+            Debug.print "LOG-DBCHECK-TEST" (fun () -> 
+               (ListExtras.ocaml_of_list Types.string_of_const key)^
+               " -> "^(Types.string_of_const value_a)^" // "^
+               (Types.string_of_const value_b)^" ; error: "^
+               (Types.string_of_const error)
+            );
+            Arithmetic.cmp_gt error (Types.CFloat(1e-6)) <> Types.CBool(true) 
+      ) all_keys
   
    let check_result (db_session : db_session_t)
                     (tlq_results : (string * K3Value.t) list) : unit =

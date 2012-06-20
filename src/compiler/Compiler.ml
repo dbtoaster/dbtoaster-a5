@@ -335,7 +335,19 @@ let compile_tlqs (db_schema:Schema.t) (history:Heuristics.ds_history_t)
             let (todos, mat_expr) = Heuristics.materialize db_schema history
                                                            (qname^"_") None 
                                                            optimized_qexpr in
-               (List.map (fun x -> (x, true)) todos, (qname, mat_expr))
+            let schema_ordered_expr =
+               let (_,mat_ovars) = (Calculus.schema_of_expr mat_expr) in
+               if mat_ovars = snd qschema then mat_expr
+               else 
+                  CalcRing.mk_val (AggSum(snd qschema, 
+                     match mat_expr with   
+                        | CalcRing.Val(AggSum(_,as_expr)) -> as_expr
+                        | _ -> mat_expr
+                  ))
+            in
+               (  List.map (fun x -> (x, true)) todos, 
+                  (qname, schema_ordered_expr)
+               )
          ) calc_queries
       else
          List.map (fun (qname, qexpr) ->

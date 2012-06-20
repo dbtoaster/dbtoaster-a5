@@ -82,9 +82,14 @@ class GenericUnitTest
   
   def diff(e, r)
     if (e == r)                            then "Same"
+    elsif e == nil && r.abs < $precision   then "Close"
+    elsif r == nil && e.abs < $precision   then "Close"
     elsif e == nil                         then "Different"
     elsif r == nil                         then "Different"
-    elsif ((e-r) / (e+r)).abs < $precision then "Close"
+    elsif ((e+r).abs > 1) && (((e-r)/(e+r)).abs < $precision)
+                                           then "Close"
+    elsif ((e+r).abs <= 1) && ((e-r) < $precision )
+                                           then "Close"
     else                                        "Different"
     end
   end
@@ -105,8 +110,7 @@ class GenericUnitTest
           raise "Got nil result" if result.nil?;
           raise "Metadata has nil expected results" if expected.nil?;
           not ((expected.keys + result.keys).uniq.find do |k|
-            (not ((expected.has_key? k) && (result.has_key? k))) ||
-            (diff(expected[k], result[k]) == "Different")
+            diff(expected[k], result[k]) == "Different"
           end)
         else raise "Unknown query result type '#{query[:type]}'"
       end

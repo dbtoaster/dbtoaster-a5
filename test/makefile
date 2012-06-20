@@ -52,12 +52,12 @@ bigquery:	testdatahash
 	@$(QUERY_TEST) axfinder
 	@$(QUERY_TEST) pricespread
 	@$(QUERY_TEST) brokerspread
-#	@$(QUERY_TEST) tpch11 -d expressive-tlqs
+	@$(QUERY_TEST) tpch11
 	@$(QUERY_TEST) tpch17
 	@$(QUERY_TEST) tpch18
-	@$(QUERY_TEST) tpch22 -d weak-expr-equiv 
+	@$(QUERY_TEST) tpch22
 	@$(QUERY_TEST) ssb4
-	@$(QUERY_TEST) simple/r_ltallcorravg
+	@$(QUERY_TEST) simple/r_multinest # Correct, but slow
 	
 query: testdatahash
 	@$(FAST_QUERY_TEST) simple/r_aggcomparison
@@ -81,7 +81,6 @@ query: testdatahash
 	@$(FAST_QUERY_TEST) simple/r_ltallagg
 	@$(FAST_QUERY_TEST) simple/r_ltallavg
 	@$(FAST_QUERY_TEST) simple/r_ltalldynamic
-#	@$(FAST_QUERY_TEST) simple/r_multinest # Correct, but slow
 	@$(FAST_QUERY_TEST) simple/r_natselfjoin
 	@$(FAST_QUERY_TEST) simple/r_nogroupby
 	@$(FAST_QUERY_TEST) simple/r_selectstar
@@ -95,6 +94,7 @@ query: testdatahash
 	@$(FAST_QUERY_TEST) simple/r_sumnestedintargetwitheq
 	@$(FAST_QUERY_TEST) simple/r_sumstar
 	@$(FAST_QUERY_TEST) simple/t_lifttype
+	@$(FAST_QUERY_TEST) simple/r_ltallcorravg
 	@$(FAST_QUERY_TEST) simple/inequality_selfjoin
 	@$(FAST_QUERY_TEST) simple/miraculous_minus
 	@$(FAST_QUERY_TEST) simple/miraculous_minus2
@@ -194,12 +194,20 @@ query: testdatahash
 	@$(FAST_QUERY_TEST) employee/query64a
 	@$(FAST_QUERY_TEST) employee/query65a
 	@$(FAST_QUERY_TEST) tpch3 --dataset tiny
+	@$(FAST_QUERY_TEST) tpch3
 	@$(FAST_QUERY_TEST) tpch11 --dataset tiny
+	@$(FAST_QUERY_TEST) tpch17 
 	@$(FAST_QUERY_TEST) tpch17 --dataset tiny
+	@$(FAST_QUERY_TEST) tpch18
 	@$(FAST_QUERY_TEST) tpch18 --dataset tiny
 	@$(FAST_QUERY_TEST) tpch22
+	@$(FAST_QUERY_TEST) ssb4
 	@$(FAST_QUERY_TEST) vwap --dataset tiny
 	@$(FAST_QUERY_TEST) brokervariance
+	@$(FAST_QUERY_TEST) missedtrades
+	@$(FAST_QUERY_TEST) axfinder
+	@$(FAST_QUERY_TEST) pricespread
+	@$(FAST_QUERY_TEST) brokerspread
 
 local: 
 	@for i in $(LOCAL_UNIT_TESTS); do \
