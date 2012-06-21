@@ -782,9 +782,12 @@ struct
         
         | AK.Singleton -> [cmetai 0], [], [decl_f false (cmetai 0)]
         | AK.Combine -> 
+            (*
             (pushi 0) :: (List.tl cmeta_l), 
             [], 
             None :: (List.map (decl_f false) (List.tl cmeta_l))
+            *)
+            cmeta_l, [], (List.map (decl_f false) cmeta_l)
 
         (* Blocks push down the symbol to the last element *)    
         | AK.Block ->
@@ -993,8 +996,9 @@ struct
         end
 
       | AK.Combine ->
+        let c_var = Var(None, (meta_sym, meta_ty)) in
         let unwrapped_cimps  = List.flatten (unwrap_l cimps) in
-        let combine_e = Expr(None, Fn(None, Concat, cvals)) in
+        let combine_e = Expr(None, Fn(None, Concat, c_var::cvals)) in
         Some( unwrapped_cimps@[combine_e] ), true
          
       | AK.Lambda _ | AK.AssocLambda _ ->
