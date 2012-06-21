@@ -96,9 +96,15 @@ let rec delta_of_expr (delta_event:Schema.event_t) (expr:C.expr_t): C.expr_t =
                (fun (ext_name, ext_ivars, ext_ovars, ext_type, ext_ivc) ->
                   if ext_name = delta_ext_name
                   then Calculus.value_singleton
-                     ~multiplicity:(CalcRing.mk_val (Value(mk_var delta_value)))
-                     (List.combine (ext_ivars@ext_ovars)
-                                   (List.map mk_var (delta_ivars@delta_ovars)))
+                     ~multiplicity:(
+                        CalcRing.mk_prod (
+                           (CalcRing.mk_val (Value(mk_var delta_value))) :: 
+                           (List.map (fun (iv,div) ->
+                              CalcRing.mk_val (Cmp(Eq, mk_var iv, mk_var div))
+                           ) (List.combine ext_ivars delta_ivars))
+                        )
+                     )
+                     (List.combine ext_ovars (List.map mk_var delta_ovars))
                   else CalcRing.zero
                )
             )
