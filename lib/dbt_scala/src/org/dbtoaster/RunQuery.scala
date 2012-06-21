@@ -31,7 +31,7 @@ package org.dbtoaster {
         println("" + runtime)
       }
       else {
-        println("Run time: " + runtime + " ms")
+        println("Run time: " + runtime + " s")
         Query.printResults()
       }
 
