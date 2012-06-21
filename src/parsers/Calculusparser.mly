@@ -288,10 +288,11 @@ mapEvent:
 | ON SYSTEM READY                 { Schema.SystemInitializedEvent }
 | CORRECT ID LBRACKET emptyVariableList RBRACKET 
   LBRACKET emptyVariableList RBRACKET
-  SETVALUE variable FOR mapEvent {
+  INCREMENT variable FOR mapEvent {
          Schema.CorrectiveUpdate($2, $4, $7, $10, $12)
   }
-| CORRECT ID LBRACKET emptyVariableList RBRACKET SETVALUE variable FOR mapEvent{
+| CORRECT ID LBRACKET emptyVariableList RBRACKET INCREMENT variable 
+  FOR mapEvent {
          Schema.CorrectiveUpdate($2, [], $4, $7, $9)
   }
 
