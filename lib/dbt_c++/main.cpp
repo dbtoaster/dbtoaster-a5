@@ -47,8 +47,8 @@ int main(int argc, char* argv[]) {
     p.run( async );
     while( !p.is_finished() )
     {
-	snap = p.get_snapshot();
-	oa<<BOOST_SERIALIZATION_NVP_OF_PTR(snap);
+    	snap = p.get_snapshot();
+    	oa<<BOOST_SERIALIZATION_NVP_OF_PTR(snap);
     }
 
     cout << "Printing final result:" << endl;

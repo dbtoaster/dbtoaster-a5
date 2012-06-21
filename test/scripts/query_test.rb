@@ -156,7 +156,8 @@ class CppUnitTest < GenericUnitTest
         (dbt_base_cmd + [
         "-l","cpp",
         "-o","bin/queries/#{@qname}.hpp",
-        "-c","bin/queries/#{@qname}"
+        "-c","bin/queries/#{@qname}",
+	    "-d","compile-with-static"
       ]).join(" ") + "  2>&1";
       starttime = Time.now
       system(compile_cmd) or raise "Compilation Error";

@@ -241,7 +241,7 @@ struct
           let k_t,v_t = back field_types in
           let k_m,v_m = back field_names 
           in 
-          ("std::pair<"^(mk_tuple_ty k_t)^", "^v_t^"> "^pair_id),
+          ("std::pair<const "^(mk_tuple_ty k_t)^", "^v_t^">& "^pair_id),
           ("operator const std::pair<const "^(mk_tuple_ty k_t)^", "^v_t^">() const "^
               "{ return std::make_pair("^(mk_tuple k_m)^", "^v_m^"); }")
           
