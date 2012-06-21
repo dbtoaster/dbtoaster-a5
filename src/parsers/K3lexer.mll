@@ -50,6 +50,7 @@ let keywords =
          "IN", IN;
          "OUT", OUT;
          "SINGLETON", SINGLETON;
+         "COMBINE", COMBINE;
       
          "CREATE", CREATE;
          "TABLE", TABLE;

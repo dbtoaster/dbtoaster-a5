@@ -61,7 +61,6 @@ bigquery:	testdatahash
 	@$(QUERY_TEST) tpch18
 	@$(QUERY_TEST) tpch22
 	@$(QUERY_TEST) ssb4
-	@$(QUERY_TEST) simple/r_multinest # Correct, but slow
 	
 query: testdatahash query_simple query_zeus query_employee query_tpch query_financial
 
@@ -120,6 +119,7 @@ query_simple:
 	@$(FAST_QUERY_TEST) simple/r_sum_gb_out_of_aggregate
 	@$(FAST_QUERY_TEST) simple/r_sum_out_of_aggregate
 	@$(FAST_QUERY_TEST) simple/r_unique_counts_by_a
+	@$(FAST_QUERY_TEST) simple/r_multinest
 	@$(FAST_QUERY_TEST) simple/rr_ormyself
 	@$(FAST_QUERY_TEST) simple/rs
 	@$(FAST_QUERY_TEST) simple/rs_cmpnest

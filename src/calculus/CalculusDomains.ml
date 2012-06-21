@@ -18,7 +18,7 @@ let rec maintain (formula: Calculus.expr_t) : Calculus.expr_t =
          | Cmp _
          | Lift _ -> CalcRing.mk_val lf
 (***** BEGIN EXISTS HACK *****)
-         | Exists(subexp) -> subexp
+         | Exists(subexp) -> CalcRing.mk_val (Exists(subexp))
 (***** END EXISTS HACK *****)
       )
       formula

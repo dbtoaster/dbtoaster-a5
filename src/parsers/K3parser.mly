@@ -138,7 +138,7 @@
 %token COMMA LPAREN RPAREN LBRACK RBRACK PERIOD COLON DOLLAR
 %token ON SYSTEM READY QUERY
 %token IF IF0 ELSE ITERATE LAMBDA APPLY MAP FLATTEN AGGREGATE GROUPBYAGGREGATE
-%token MEMBER LOOKUP SLICE FILTER SINGLETON
+%token MEMBER LOOKUP SLICE FILTER SINGLETON COMBINE
 %token CREATE TABLE STREAM FROM SOCKET FILE PIPE FIXEDWIDTH DELIMITED LINE
 %token VARSIZE OFFSET ADJUSTBY SETVALUE
 %token PCUPDATE PCVALUEUPDATE PCELEMENTREMOVE
@@ -321,6 +321,7 @@ statement:
 | pcValueUpdateStatement                                    { $1 }
 | pcElementRemoveStatement                                  { $1 }
 | singletonStatement                                        { $1 }
+| combineStatement                                          { $1 }
 
 constStatement:
 | CONST_FLOAT
@@ -474,6 +475,9 @@ pcValueUpdateStatement:
     
 singletonStatement:
 | SINGLETON LPAREN statement RPAREN                         { Singleton($3) }
+
+combineStatement:
+| COMBINE LBRACE statementElementList RBRACE                { Combine($3) }
 
 statementElementListOpt:
 | statementElementList                                      { $1 }

@@ -856,7 +856,9 @@ let nice_string_of_expr ?(type_is_needed = false) e maps =
                        pc(); psp (); ps (op); psp(); 
                        pc(); paroperand e2; ps ")"; cb() 
     in
-    let pop ?(lb = []) s = ob(); ps s; ps "("; recur lb; ps ")"; cb() in 
+    let pop ?(parens = ("(",")")) ?(delim=",") ?(lb = []) s = 
+         ob(); ps s; ps (fst parens); recur ~delim:delim lb; 
+         ps (snd parens); cb() in 
     let schema args = 
       "[" ^
       (String.concat ";"
@@ -934,7 +936,7 @@ let nice_string_of_expr ?(type_is_needed = false) e maps =
     
     | Tuple _             -> ob(); ps "<"; recur ~delim:";" []; ps ">"; cb()
     | Singleton _         -> pop "Singleton"
-    | Combine _           -> pop "Combine"
+    | Combine _           -> pop ~parens:("{","}") ~delim:";" "Combine"
     | Add(e1, e2)         -> par e1 e2 "+"
     | Mult(e1, e2)        -> par e1 e2 "*"
     | Eq(e1, e2)          -> par e1 e2 "=="
@@ -997,8 +999,8 @@ let rec nice_code_of_expr e =
                            (ListExtras.ocaml_of_list string_of_int idx)^")"
       
       | Singleton ce      -> "Singleton("^(rcr ce)^")"
-      | Combine e_l       -> "Combine("^
-                           (ListExtras.string_of_list rcr e_l)^")"
+      | Combine e_l       -> "Combine { "^
+                           (ListExtras.string_of_list ~sep:";" rcr e_l)^"}"
       | Add  (ce1,ce2)    -> "("^(rcr ce1)^"+"^(rcr ce2)^")"
       | Mult (ce1,ce2)    -> "("^(rcr ce1)^"*"^(rcr ce2)^")"
       | Eq   (ce1,ce2)    -> "("^(rcr ce1)^"=="^(rcr ce2)^")"
