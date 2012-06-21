@@ -4,7 +4,11 @@ include ../makefile.local
 DBTOASTER_TOP=../bin/dbtoaster_unit
 UNIT_TEST=sh -c 'echo ==== $$1 ====; $(DBTOASTER_TOP) $$1' --
 
-QUERY_TEST := scripts/query_test.rb -t interpreter $(QUERY_TEST_FLAGS)
+QUERY_TEST := scripts/query_test.rb $(QUERY_TEST_FLAGS)
+
+ifneq ($(COMPILE_INTERPRETER), 0)
+	QUERY_TEST += -t interpreter 
+endif
 
 ifeq ($(COMPILE_SCALA), 1)
 	QUERY_TEST += -t scala $(SCALA_TEST_FLAGS)

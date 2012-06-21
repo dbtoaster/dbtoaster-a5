@@ -141,7 +141,7 @@ fast: bin/dbtoaster_debug bin/dbtoaster_top
 states: $(patsubst %,%.states,$(PARSERS))
 
 test: bin/dbtoaster_top bin/dbtoaster
-	@make -C test all
+	@make -C test $(TEST_TARGET)
 
 localtest: bin/dbtoaster_top
 	@make -C test local
