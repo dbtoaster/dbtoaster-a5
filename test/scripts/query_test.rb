@@ -288,6 +288,7 @@ $compiler_args = [];
 $executable_args = [];
 $dump_query = false;
 $log_detail = false;
+$always_return_success = true;
 
 GetoptLong.new(
   [ '-f',                GetoptLong::REQUIRED_ARGUMENT],
@@ -302,7 +303,8 @@ GetoptLong.new(
   [ '--dataset',         GetoptLong::REQUIRED_ARGUMENT],
   [ '--trace',           GetoptLong::OPTIONAL_ARGUMENT],
   [ '--dump-query',      GetoptLong::NO_ARGUMENT],
-  [ '--memprofiling',    GetoptLong::NO_ARGUMENT]
+  [ '--memprofiling',    GetoptLong::NO_ARGUMENT],
+  [ '--ignore-errors',   GetoptLong::NO_ARGUMENT]
 ).each do |opt, arg|
   case opt
     when '-f' then $opts.push(arg)
@@ -328,6 +330,7 @@ GetoptLong.new(
     when '--dump-query' then $dump_query = true;
     when '--memprofiling' then 
       $compiler_args += ["-l", "cpp:prof", "-g", "^-ltcmalloc"]
+    when '--ignore-errors' then $strict = false; $always_return_success = true;
   end
 end
 
@@ -389,4 +392,4 @@ queries.each do |tquery|
   end
 end
   
-exit $ret;
+exit $ret unless $always_return_success;
