@@ -23,28 +23,50 @@ open M3
    Compute the corrective trigger for a specific external and a specific base 
    event.
 *)
-let corrective_trigger (ext_name:string) (base_event:event_t) 
+let corrective_trigger ((en,eiv,eov,et,_):Calculus.external_t) 
+                       (base_event:event_t) 
                        (base_stmts:stmt_t list): trigger_t =
-   let reserved_names =
+   let reserved_names = ref (List.map fst (
       List.flatten (List.map (fun { target_map = tgt; update_expr = update } -> 
-         (Calculus.externals_of_expr tgt) @ (Calculus.externals_of_expr update)
-      ) base_stmts)
+         (Calculus.all_vars tgt) @ (Calculus.all_vars update)
+      ) base_stmts))
+   ) in
+   let mk_delta_name ((vn,vt):var_t) =
+      let new_vn = FreshVariable.mk_safe_name !reserved_names ("delta_"^vn) in
+         reserved_names := new_vn :: !reserved_names;
+         (new_vn, vt)
    in
-   let delta_ext_name = 
-      FreshVariable.mk_safe_name reserved_names ("delta_"^ext_name)
-   in
-   let update_event = CorrectiveUpdate(ext_name, delta_ext_name, base_event) in
+   let div = List.map mk_delta_name eiv in
+   let dov = List.map mk_delta_name eov in
+   let dval   = mk_delta_name (en,et) in
+   let update_event = CorrectiveUpdate(en, div, dov, dval, base_event) in
+   let all_delta_vars = Schema.event_vars update_event in
    {
       event = update_event;
       statements = ref (List.flatten (List.map (fun { target_map = tgt; 
                                     update_type = upd_type;
                                     update_expr = expr } ->
+         Debug.print "LOG-CORRECTIVE-TRIGGER" (fun () ->
+            "[DistributedM3] "^(Schema.string_of_event update_event)^"\n"^
+            "vars: "^(ListExtras.ocaml_of_list string_of_var all_delta_vars)
+         );
          let delta_expr = (CalculusDeltas.delta_of_expr update_event expr) in
          if delta_expr = Calculus.CalcRing.zero then []
          else 
-            [{ target_map = tgt; 
+         let expr_schema =
+            (  all_delta_vars,
+               ListAsSet.diff (snd (Calculus.schema_of_expr expr)) 
+                              all_delta_vars
+            ) in
+         let opt_delta_expr = 
+            CalculusTransforms.optimize_expr expr_schema delta_expr
+         in
+         let (renamings, extracted_delta_expr) = 
+            Compiler.extract_renamings expr_schema opt_delta_expr
+         in
+            [{ target_map = Calculus.rename_vars renamings tgt; 
                update_type = upd_type;
-               update_expr = delta_expr
+               update_expr = extracted_delta_expr
             }]
       ) base_stmts))
    }
@@ -52,13 +74,16 @@ let corrective_trigger (ext_name:string) (base_event:event_t)
 (**
    Compute all the corrective triggers for a specific base trigger 
 *)
-let corrective_triggers_for_event ({ event = base_event;
-                                     statements = base_stmts }: trigger_t):
-                                  trigger_t list =
+let corrective_triggers_for_event
+       (maps_by_name:(string * Calculus.external_t) list)
+       ({ event = base_event; statements = base_stmts }: trigger_t): 
+            trigger_t list =
    let externals_in_event = 
-      List.flatten (List.map (fun { update_expr = update } -> 
-         (Calculus.externals_of_expr update)
-      ) !base_stmts)
+      List.map (fun x -> List.assoc x maps_by_name) (
+         List.flatten (List.map (fun { update_expr = update } -> 
+            (Calculus.externals_of_expr update)
+         ) !base_stmts)
+      )
    in
       List.map (fun ext_name ->
          corrective_trigger ext_name base_event !base_stmts
@@ -69,6 +94,15 @@ let corrective_triggers_for_event ({ event = base_event;
    allow it to be run in a distributed setting.
 *)
 let distributed_m3_of_m3 (prog:prog_t): prog_t =
+   let maps_by_name = List.flatten (List.map (fun m ->
+      match m with 
+       | DSTable _ -> []
+       | DSView({ds_name = ds}) -> 
+         let external_info = expand_ds_name ds in
+         let (en, _, _, _, _) = external_info in
+            [en, external_info]
+      ) !(prog.maps))
+   in
    {
       queries = prog.queries;
       
@@ -78,7 +112,7 @@ let distributed_m3_of_m3 (prog:prog_t): prog_t =
       
       triggers = ref (
          (!(prog.triggers)) @
-         (List.flatten (List.map corrective_triggers_for_event 
+         (List.flatten (List.map (corrective_triggers_for_event maps_by_name)
                                  !(prog.triggers)))
       )
    }

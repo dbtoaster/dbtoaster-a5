@@ -539,7 +539,15 @@ let rename_vars (mapping:(var_t,var_t)Function.table_fn_t)
       end))
       expr
    
-
+(**
+   Determine whether two expressions safely commute (in a product).
+   
+   @param scope  (optional) The scope in which the expression is evaluated 
+                 (having a subset of the scope may produce false negatives)
+   @param e1     The left hand side expression
+   @param e2     The right hand side expression
+   @return       true if and only if e1 * e2 = e2 * e1
+*)
 let commutes ?(scope = []) (e1:expr_t) (e2:expr_t): bool =
    let (_,ovar1) = schema_of_expr ~lift_group_by_vars_are_inputs:true e1 in
    let (ivar2,_) = schema_of_expr ~lift_group_by_vars_are_inputs:true e2 in
@@ -550,7 +558,50 @@ let commutes ?(scope = []) (e1:expr_t) (e2:expr_t): bool =
          a parameter).  *)
    (ListAsSet.inter (ListAsSet.diff ovar1 scope) ivar2) = []
 
+(**
+   Generate a singleton term from a list of column/expression pairs
+   @param multiplicity   (optional) The multiplicity of the singleton term
+   @param cols_and_vals  The columns+expressions to compute the column values
+   @return               An expression to generate the specified singleton
+*)
+let singleton ?(multiplicity = CalcRing.one) 
+              (cols_and_vals:(var_t * expr_t) list) =
+   CalcRing.mk_prod (
+      multiplicity :: (
+         List.map (fun (col, v) -> 
+            CalcRing.mk_val (Lift(col, v))
+         ) cols_and_vals
+      )
+   )
 
+(**
+   Generate a singleton term from a list of column/value pairs
+   @param multiplicity   (optional) The multiplicity of the singleton term
+   @param cols_and_vals  The columns+values of the columns
+   @return               An expression to generate the specified singleton
+*)
+let value_singleton ?(multiplicity = CalcRing.one)
+                    (cols_and_vals:(var_t * value_t) list) =
+   singleton ~multiplicity:multiplicity 
+             (List.map (fun (c,v) -> (c,(CalcRing.mk_val (Value(v))))) 
+                       cols_and_vals)
+
+(**
+   Determine whether two expressions compute the same thing.  If so, generate
+   a schema mapping between the two expressions.
+   
+   Note that cmp_exprs is only best-effort, and may return false negatives.
+   If it returns a mapping, the mapping is guaranteed to be correct.  However, 
+   it might not return a mapping, even though one exists.
+      
+   @param cmp_opts  (optional) See [CalcRing.cmp_opt_t]
+   @param e1        The first expression
+   @param e2        The second expression
+   @return          If [e1] and [e2] compute the same thing, return a Some-
+                    wrapped mapping from the schema/variables of [e1] to the 
+                    schema/variables of [e2], suitable for application with the 
+                    [Function] module.  Otherwise return None.  
+*)
 let rec cmp_exprs ?(cmp_opts:CalcRing.cmp_opt_t list = 
                         if Debug.active "WEAK-EXPR-EQUIV" 
                            then [] else CalcRing.default_cmp_opts) 

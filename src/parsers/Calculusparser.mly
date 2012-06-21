@@ -286,7 +286,14 @@ mapEvent:
 | ON PLUS  schemaRelationDefn     { Schema.InsertEvent($3) }
 | ON MINUS schemaRelationDefn     { Schema.DeleteEvent($3) }
 | ON SYSTEM READY                 { Schema.SystemInitializedEvent }
-| CORRECT ID WITH ID FOR mapEvent { Schema.CorrectiveUpdate($2, $4, $6) }
+| CORRECT ID LBRACKET emptyVariableList RBRACKET 
+  LBRACKET emptyVariableList RBRACKET
+  SETVALUE variable FOR mapEvent {
+         Schema.CorrectiveUpdate($2, $4, $7, $10, $12)
+  }
+| CORRECT ID LBRACKET emptyVariableList RBRACKET SETVALUE variable FOR mapEvent{
+         Schema.CorrectiveUpdate($2, [], $4, $7, $9)
+  }
 
 schemaRelationDefn:
 | relationDefn {

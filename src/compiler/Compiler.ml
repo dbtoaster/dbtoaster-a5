@@ -28,10 +28,17 @@ let extract_renamings ((scope,schema):schema_t) (expr:expr_t):
       List.fold_left (fun (mappings, expr_terms) term ->
          begin match term with
          | CalcRing.Val(Lift(v1, 
-            CalcRing.Val(Value(ValueRing.Val(AVar(v2))))))->
-            if (List.mem v2 scope) && (List.mem v1 schema) then
-               ((v1, v2)::mappings, expr_terms)
-            else (mappings, expr_terms @ [term])
+            CalcRing.Val(Value(ValueRing.Val(AVar(v2))))))
+               when (List.mem v2 scope) && (List.mem v1 schema) ->
+                  ((v1, v2)::mappings, expr_terms)
+
+         | CalcRing.Val(Lift(v1, 
+            CalcRing.Val(Value(ValueRing.Val(AVar(v2))))))
+               when (List.mem v2 scope) && (List.mem v1 scope) ->
+                  (mappings, expr_terms @ [
+                     CalcRing.mk_val (Cmp(Eq, mk_var v1, mk_var v2))
+                  ])
+
          | _ ->  (mappings, expr_terms @ [term])
          end
       ) ([], []) (CalcRing.prod_list expr)

@@ -25,12 +25,17 @@ type rel_t =
 type event_t =
  | InsertEvent of rel_t    (** An insertion into the specified relation *)
  | DeleteEvent of rel_t    (** A deletion from the specified relation *)
- | CorrectiveUpdate of string * string * event_t
-                           (** (For distributed execution) A correction to a
-                               an external has arrived -- The fields of the
-                               event are: ExternalName * ExternalDeltaName *
-                               (event being corrected);  (see the DistributedM3 
-                               module for details on this event) *)
+ | CorrectiveUpdate of string * var_t list * var_t list * var_t * event_t
+                           (** 
+                        (For distributed execution) A correction to a
+                        an external -- The fields of the event are: 
+                           * External Name
+                           * Input Vars (trigger parameter)
+                           * Output Vars (trigger parameter)
+                           * Value Var (trigger parameter)
+                           * Event being corrected (also specifies parameters)
+                        (see the [DistributedM3] module for details on this 
+                        event) *)
  | SystemInitializedEvent  (** Invoked when the system has been initialized, 
                                once all static tables have been loaded. *)
 
@@ -165,7 +170,8 @@ let rec event_vars (event:event_t): var_t list =
    begin match event with
       | InsertEvent(_,relv,_) -> relv
       | DeleteEvent(_,relv,_) -> relv
-      | CorrectiveUpdate(_,_,updated_evt) -> event_vars updated_evt
+      | CorrectiveUpdate(_,ivars,ovars,vvar,updated_evt) -> 
+                     ivars @ ovars @ [vvar] @ (event_vars updated_evt)
       | SystemInitializedEvent -> []
    end
 
@@ -181,7 +187,7 @@ let rec events_equal (a:event_t) (b:event_t): bool =
       | (SystemInitializedEvent, SystemInitializedEvent) -> true
       | (InsertEvent(an,_,_), InsertEvent(bn,_,_)) -> an = bn
       | (DeleteEvent(an,_,_), DeleteEvent(bn,_,_)) -> an = bn
-      | (CorrectiveUpdate(aen,_,aue), CorrectiveUpdate(ben,_,bue)) -> 
+      | (CorrectiveUpdate(aen,_,_,_,aue), CorrectiveUpdate(ben,_,_,_,bue)) -> 
              (aen = ben) && (events_equal aue bue)
       | _ -> false
    end
@@ -210,7 +216,7 @@ let rec name_of_event (event:event_t):string =
    begin match event with
       | InsertEvent(reln,_,_) -> "insert_"^reln
       | DeleteEvent(reln,_,_) -> "delete_"^reln
-      | CorrectiveUpdate(en,_,updated_evt) ->
+      | CorrectiveUpdate(en,_,_,_,updated_evt) ->
                            "correct_"^en^"_for_"^(name_of_event updated_evt)
       | SystemInitializedEvent -> "system_ready_event"
    end
@@ -223,7 +229,7 @@ let class_name_of_event (event:event_t):string =
    begin match event with
       | InsertEvent(_,_,_) -> "insert_tuple"
       | DeleteEvent(_,_,_) -> "delete_tuple"
-      | CorrectiveUpdate(en,_,updated_evt) -> "corrective_update"
+      | CorrectiveUpdate(en,_,_,_,updated_evt) -> "corrective_update"
       | SystemInitializedEvent -> "system_ready_event"
    end
 
@@ -235,7 +241,7 @@ let rel_name_of_event (event:event_t):string =
    begin match event with
       | InsertEvent(reln,_,_) 
       | DeleteEvent(reln,_,_) -> reln
-      | CorrectiveUpdate(en,_,_) -> en
+      | CorrectiveUpdate(en,_,_,_,_) -> en
       | SystemInitializedEvent -> "NULL_RELATION"
    end
 
@@ -247,8 +253,13 @@ let rec string_of_event (event:event_t) =
    begin match event with 
       | InsertEvent(rel)       -> "ON + "^(string_of_rel rel)
       | DeleteEvent(rel)       -> "ON - "^(string_of_rel rel)
-      | CorrectiveUpdate(en,den,u_evt) -> "CORRECT "^en^" WITH "^den^
-                                          " FOR "^(string_of_event u_evt)
+      | CorrectiveUpdate(en,eiv,eov,eval,u_evt) -> 
+         "CORRECT "^en^"["^
+         (ListExtras.string_of_list ~sep:"," (string_of_var ~verbose:true) eiv)^
+         "]["^
+         (ListExtras.string_of_list ~sep:"," (string_of_var ~verbose:true) eov)^
+         "] += "^
+         (string_of_var ~verbose:true eval)^" FOR "^(string_of_event u_evt)
       | SystemInitializedEvent -> "ON SYSTEM READY"
    end
 

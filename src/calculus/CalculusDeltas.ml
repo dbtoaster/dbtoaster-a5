@@ -68,12 +68,8 @@ let rec delta_of_expr (delta_event:Schema.event_t) (expr:C.expr_t): C.expr_t =
             )
          else
          let definition_terms = 
-            CalcRing.mk_prod (
-               List.map (fun (dv, v) ->
-                  CalcRing.mk_val (Lift(dv, 
-                     CalcRing.mk_val (Value(mk_var v))))
-               ) (List.combine relv delta_relv)
-            )
+            Calculus.value_singleton 
+               (List.combine relv (List.map mk_var delta_relv))
          in apply_sign definition_terms
       else CalcRing.zero
    in
@@ -93,13 +89,16 @@ let rec delta_of_expr (delta_event:Schema.event_t) (expr:C.expr_t): C.expr_t =
                (template_delta_of_rel CalcRing.mk_neg delta_rel), 
                (error_delta_of_ext)
             )
-         | Schema.CorrectiveUpdate(orig_ext_name, delta_ext_name, _) ->
+         | Schema.CorrectiveUpdate(delta_ext_name, delta_ivars, delta_ovars,  
+                                   delta_value, _) ->
             (
                (empty_delta_of_rel), 
                (fun (ext_name, ext_ivars, ext_ovars, ext_type, ext_ivc) ->
-                  if ext_name = orig_ext_name
-                  then CalcRing.mk_val (External(delta_ext_name, ext_ivars, 
-                                               ext_ovars, ext_type, ext_ivc))
+                  if ext_name = delta_ext_name
+                  then Calculus.value_singleton
+                     ~multiplicity:(CalcRing.mk_val (Value(mk_var delta_value)))
+                     (List.combine (ext_ivars@ext_ovars)
+                                   (List.map mk_var (delta_ivars@delta_ovars)))
                   else CalcRing.zero
                )
             )
