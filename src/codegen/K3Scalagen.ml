@@ -208,7 +208,7 @@ struct
 
   let rec cast_up n ot t =
     match t, ot with
-    | Collection(_, k, v), Collection(_, ko, vo) when k != ko || v != vo -> 
+    | Collection(_, k, v), Collection(_, ko, vo) when k <> ko || v <> vo -> 
       let key_length = List.length k in
       let rett = (Tuple((Tuple(k)) :: [v])) in
       let body = (string_of_type rett) ^ "(" ^ 
@@ -380,7 +380,7 @@ struct
     if (List.length terms) < 1 
     then debugfail expr "Empty combines are invalid" 
     else 
-       (** finds the common supertype of two types **)
+       (** Finds the common supertype of two types **)
        let rec unify_types a b = 
           match a, b with
 	  | a, b when a = b -> a
@@ -398,18 +398,13 @@ struct
           | _ -> debugfail expr "Combine can only combin collections" 
        in
        
-       ("({ val result = Map[" ^ (string_of_type (Tuple k)) ^ "," ^ (string_of_type v) ^ "]();" ^ (make_list ~sep:";" ~parens:("", ";") (List.map (fun (n, (Collection(_, ko, vo))) -> 
+       ("({ val result = Map[" ^ (string_of_type (Tuple k)) ^ "," ^ (string_of_type v) ^ "]();" ^ (make_list ~sep:";" ~parens:("", ";") (List.map (fun (n, t) ->
+          let ko, vo = match t with | Collection(_, ko, vo) -> ko, vo | _ -> debugfail None "Expected collection" in
 	  let key_len = List.length ko in
 	  let v_var =  "v" ^ (string_of_int (key_len + 1)) in
 	  let body = "val t = " ^ (make_tuple (list_vars "v" (key_len))) ^ "; result += ((t, (result.get(t) match { case Some(v) => v + " ^ v_var ^ "; case _ => " ^ v_var ^ " })))" in
           "(" ^ n ^ ").foreach { " ^ (wrap_function_key_val ko vo (Fn(ArgNTuple(List.map (fun x -> ArgN(x)) (list_vars "v" (key_len + 1))), Tuple(k @ [v]), Unit)) body) ^ " }"        
-       ) terms)) ^ " " ^ (string_of_type common_type) ^ "(result.toList) })", common_type) (*
-       List.fold_left (fun (a, act) (b, bct) ->
-       match (act, bct) with 
-       | Collection(_, ak, at), Collection(_, bk, bt) ->
-          ((string_of_type common_type) ^ "(" ^ (cast_up a act common_type) ^ ".toList ::: " ^ (cast_up b bct common_type) ^ ".toList)", common_type)
-       | _ -> debugfail expr "Type mismatch for collection combine"
-    ) (List.hd terms) (List.tl terms) *)
+       ) terms)) ^ " " ^ (string_of_type common_type) ^ "(result.toList) })", common_type) 
 
   let op ?(expr = None) ((mk_op):op_t) ((a,at):code_t) ((b,bt):code_t) : code_t =
     let (op_f,rt,err) = (mk_op at bt) in
@@ -465,7 +460,8 @@ struct
   let apply ?(expr = None) ((fn,fnt):code_t) ((arg,argt):code_t) : code_t =
     (begin match fnt with
     | Fn(argsn, argst, rett) ->
-      "{ val " ^ (string_of_argn ~prefix:"_" argsn) ^ (*":" ^ (string_of_type argt) ^*) " = " ^ arg ^ ";" ^ 
+      let str_type = match argt with | Tuple(_) -> "" | _ -> ":" ^ (string_of_type argt) in
+      "{ val " ^ (string_of_argn ~prefix:"_" argsn) ^ str_type ^ " = " ^ arg ^ ";" ^ 
       (implicit_conversions argsn argt argst) ^ fn ^ "}"
     | ExtFn(n, a, _) -> 
       let n_a = List.length (flatten_tuple a) in
@@ -677,8 +673,6 @@ struct
 	in
         let schema_str = make_list (List.map (fun (_, t) -> string_of_schema_type t) schema) in
         "new CSVAdaptor(\"" ^ rel ^ "\", List" ^ schema_str ^ args ^ ")"
-      | "orders" | "part" | "partsupp" | "customer" | "supplier" | "nation" | "region" | "lineitem" -> 
-        "new " ^ atype ^ "Adaptor(\"" ^ rel ^ "\"" ^ args ^ ")"
       | _ ->
           "createAdaptor(\"" ^ atype ^ "\", \"" ^ rel ^ "\", List" ^
             (make_list (List.map (fun (k,v) -> "(\"" ^ k ^ "\", \"" ^ v ^ "\")") akeys)) ^
@@ -698,7 +692,6 @@ struct
       let fn_event_to_tuple = 
         "x => x match {" ^ 
         (make_list ~sep:";" ~parens:("",";") (List.map (fun (adaptor, (rel, vars, _)) -> 
-          (*let k, v = (list_split (List.map (fun (n, t) -> "var_" ^ n) vars) ((List.length vars) - 1)) in*)
           "case StreamEvent(InsertTuple, o, \"" ^ rel ^ "\", List" ^ 
           let k = (make_list (List.map (fun (n, _) -> "var_" ^ n) vars)) in
           let knt = (make_list (List.map (fun (n, t) -> "var_" ^ n ^ ":" ^ string_of_type (map_base_type t)) vars)) in
@@ -855,7 +848,7 @@ struct
       Unit)
 
 
-  (** This function formats a piece of scala code *)
+  (** This function formats a piece of scala code **)
   let format_code (str:string) = 
     let strlen = String.length str in
     let rec _format_code (pos:int) (ind:int) (newline:bool) buffer: string = 

@@ -62,23 +62,6 @@ package org.dbtoaster.dbtoasterlib {
       def processTuple(row: String): List[StreamEvent]
     }
 
-    class lineitemAdaptor(relation: String, deletions: String = "false") extends CSVAdaptor(relation, Nil, fields = "\\|", eventtype = "insert",
-      schema = "int,int,int,int,float,float,float,float,hash,hash,date,date,date,hash,hash,hash") {}
-    class customerAdaptor(relation: String, deletions: String = "false") extends CSVAdaptor(relation, Nil, fields = "\\|", eventtype = "insert",
-      schema = "int,hash,hash,int,hash,float,hash,hash") {}
-    class ordersAdaptor(relation: String, deletions: String = "false") extends CSVAdaptor(relation, Nil, fields = "\\|", eventtype = "insert",
-      schema = "int,int,hash,float,date,hash,hash,int,hash") {}
-    class partAdaptor(relation: String, deletions: String = "false") extends CSVAdaptor(relation, Nil, fields = "\\|", eventtype = "insert",
-      schema = "int,hash,hash,hash,hash,int,hash,float,hash") {}
-    class partsuppAdaptor(relation: String, deletions: String = "false") extends CSVAdaptor(relation, Nil, fields = "\\|", eventtype = "insert",
-      schema = "int,int,int,float,hash") {}
-    class nationAdaptor(relation: String, deletions: String = "false") extends CSVAdaptor(relation, Nil, fields = "\\|", eventtype = "insert",
-      schema = "int,hash,int,hash") {}
-    class regionAdaptor(relation: String, deletions: String = "false") extends CSVAdaptor(relation, Nil, fields = "\\|", eventtype = "insert",
-      schema = "int,hash,hash") {}
-    class supplierAdaptor(relation: String, deletions: String = "false") extends CSVAdaptor(relation, Nil, fields = "\\|", eventtype = "insert",
-      schema = "int,hash,hash,int,hash,float,hash") {}
-
     class CSVAdaptor(relation: String, schemaTypes: List[ColumnType], eventtype: String = "insert", deletions: String = "false", schema: String = "", fields: String = ",") extends StreamAdaptor {
       val eventType = if (eventtype == "insert") InsertTuple else DeleteTuple
       val hasDeletions = (deletions == "true")
