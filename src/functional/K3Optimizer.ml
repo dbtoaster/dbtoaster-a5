@@ -406,6 +406,10 @@ let gen_ds_sym =
 let gen_alpha_sym = 
    FreshVariable.declare_class "functional/K3Optimizer" "alpha"
 
+let (_, _, _, bug) = Debug.Logger.functions_for_module "K3OPTIMIZER"
+
+let k3_bug expr = (bug ~detail:(fun () -> K3.nice_string_of_expr expr []))
+
 let mk_var (id,ty) = Var(id,ty)
 let mk_block l = match l with [x] -> x | _ -> Block(l)
 
@@ -522,10 +526,9 @@ let substitute (arg_to_sub, sub_expr) expr =
     in fold_expr sub_aux remove_var vars_to_sub (Const (CFloat(0.0))) expr
 
 
-(* Lambda and assoc lambda composition *)
-
-(* returns a new version of g's arguments and body if they collide with any
- * nested variables used in f's body *)
+(** Lambda and assoc lambda composition 
+   returns a new version of g's arguments and body if they collide with any
+    nested variables used in f's body *)
 let replace_nesting_collisions f_argvars f_body g_args g_body =
     let collisions =
       (* f_body can use vars that are not g's results due to nested functions.
@@ -557,7 +560,7 @@ let replace_nesting_collisions f_argvars f_body g_args g_body =
         substitute (AVar(v,t), Var(nv,t)) e) g_body renamings
       in new_args,new_body 
 
-(* Compose f and g, i.e. f(g(x)) -> f \circ g *)
+(** Compose f and g, i.e. f(g(x)) -> f \circ g *)
 let compose f g =
     let f_args, f_body = get_fun_parts f in
     let g_args, g_body = get_fun_parts g in
@@ -586,8 +589,8 @@ let compose_assoc assoc_f g =
         in substitute (f_arg1, g_body) non_coll_f_body
     in AssocLambda(g_args, new_args, new_f_body)
 
-(* collection_expr:
- * -- returns if expr is a collection type *)
+(** collection_expr:
+     -- returns if expr is a collection type *)
 let collection_expr expr = 
     begin match K3Typechecker.typecheck_expr expr with
         | Collection _ | Fn(_,Collection _) -> true
@@ -601,9 +604,9 @@ let contains_collection_expr expr =
     | _ -> List.exists (fun x -> x) (List.flatten parts)
   in fold_expr bu_f (fun x _ -> x) None false expr
 
-(* selective_expr:
- * -- returns if expr is an aggregate, or a map with a selective lambda (i.e. a
- *    lambda contains a predicate dependent on the function argument)
+(** selective_expr:
+    -- returns if expr is an aggregate, or a map with a selective lambda (i.e. a
+       lambda contains a predicate dependent on the function argument)
  *)
 let selective_expr expr =
     let vars = match expr with Map(f,_) -> get_fun_vars f | _ -> [] in
@@ -660,10 +663,122 @@ let rec inline_collection_functions substitutions expr =
   | _ -> descend_expr (recur substitutions) expr
   end
 
+(** 
+   Other optimizations might simplify the type of an expression.  There is no
+   semantic difference, but this wreaks havoc on the typesystem when the 
+   expression is one that is passed to a lambda.  This method fixes the types of
+   all lambdas to match the type of the expression that they are evaluated on.
+*)
+let fix_lambda_types expr =
+   let fix_body is_coll arg subexp body =
+      let subexp_ty = K3Typechecker.typecheck_expr subexp in
+      begin match (is_coll, arg, subexp_ty) with 
+         | (false, AVar(vn,vt), arg_ty)
+         | (true, AVar(vn,vt), Collection(_, arg_ty)) -> 
+            if vt = subexp_ty then (arg,body) else
+               (  AVar(vn,arg_ty), 
+                  substitute (arg, Var(vn,arg_ty)) body
+               )
 
-(* Perform beta reduction for applications of base type arguments, and for
- * complex arguments that are used at most once.
- * For now, we'll also add some simple constant folding in here *)
+         | (false, ATuple(fields),TTuple(subexp_fields)) 
+         | (true, ATuple(fields),Collection(_,TTuple(subexp_fields)))
+                  when List.length fields = List.length subexp_fields ->
+               if snd (List.split fields) = subexp_fields
+               then (ATuple(fields), body)
+               else
+                  let subs = 
+                     List.map (fun ((vn,vt),(se_t)) -> (AVar(vn,vt), 
+                                                        Var(vn,se_t)))
+                              (List.filter (fun ((vn,vt),(se_t)) -> vt <> se_t)
+                                           (List.combine fields subexp_fields))
+                  in (
+                     ATuple(List.map (fun ((vn,vt),(se_t)) -> (vn,se_t))
+                                     (List.combine fields subexp_fields)), 
+                     List.fold_right substitute subs body
+                  )
+         
+         | (_, AVar(_,vt),_) -> 
+               k3_bug expr (* (Apply(Lambda(arg, body), subexp)) *) (
+                  "Invalid function application: "^
+                  (string_of_type vt)^" applied on "^
+                  (string_of_type subexp_ty)^(
+                        if is_coll then " as part of a collection operation" 
+                                   else ""
+                     )
+               ); (AVar("",TUnit),Unit)
+
+         | (_, ATuple(fields),_) -> 
+               k3_bug expr (* (Apply(Lambda(arg,body),subexp)) *)
+                 ("Invalid function application: <"^
+                     (ListExtras.string_of_list ~sep:"," fst fields)^">:<"^
+                     (ListExtras.string_of_list ~sep:"," 
+                                                (fun (_,t) -> string_of_type t)
+                                                fields)^"> applied on "^
+                     (string_of_type subexp_ty)^(
+                        if is_coll then " as part of a collection operation" 
+                                   else ""
+                     )
+                 ); (AVar("",TUnit),Unit)
+      end
+   in
+   let fix_lambda is_coll lam subexp = 
+      let new_lam = 
+         begin match lam with
+            | Lambda(arg, body) -> 
+               let arg, body = fix_body is_coll arg subexp body in
+                  Lambda(arg,body)
+            | ExternalLambda(id,arg,ty) -> lam
+            | _ -> k3_bug lam "Invalid lambda expression"; Unit
+         end
+      in
+      Debug.print "LOG-FIX-LAMBDA-TYPES" (fun () ->
+         "[Fix Lambda Types] Replacing \n"^
+         (nice_string_of_expr (Apply(lam,    subexp)) [])^"\nwith\n"^
+         (nice_string_of_expr (Apply(new_lam,subexp)) [])^"\n"
+      );
+      new_lam
+   in
+   let fix_assoc lam subexp_a subexp_b =
+      let new_lam =
+         begin match lam with
+            | AssocLambda(arg_a, arg_b, body) -> 
+               let new_arg_a, new_body_a =
+                  fix_body true arg_a subexp_a body in
+               let new_arg_b, new_body_b =
+                  fix_body false arg_b subexp_b new_body_a in
+                     AssocLambda(new_arg_a, new_arg_b, new_body_b)
+            | _ -> k3_bug lam "Invalid external lambda expression"; Unit
+         end
+      in
+      Debug.print "LOG-FIX-LAMBDA-TYPES" (fun () ->
+         "[Fix Lambda Types] Replacing \n"^
+         (nice_string_of_expr (Apply(Apply(lam,    subexp_a),subexp_b))
+                              [])^"\nwith\n"^
+         (nice_string_of_expr (Apply(Apply(new_lam,subexp_a),subexp_b))
+                              [])^"\n"
+      );
+      new_lam
+   in
+   post_map_expr (function
+      | Iterate(lam, subexp) -> Iterate(fix_lambda true  lam subexp, subexp)
+      | Map(lam, subexp)     -> Map    (fix_lambda true  lam subexp, subexp)
+      | Apply(lam, subexp)   -> Apply  (fix_lambda false lam subexp, subexp)
+
+      | Aggregate(agg_lam, init, subexp) ->
+                  Aggregate(fix_assoc agg_lam subexp init, init, subexp)
+      | GroupByAggregate(agg_lam, init, gb_lam, subexp) ->
+                  GroupByAggregate(fix_assoc agg_lam subexp init, init, 
+                                   fix_lambda true gb_lam subexp, subexp)
+
+      | e -> e
+   ) expr
+      
+
+
+
+(** Perform beta reduction for applications of base type arguments, and for
+    complex arguments that are used at most once.
+    For now, we'll also add some simple constant folding in here *)
 let rec conservative_beta_reduction substitutions expr =
   let recur = conservative_beta_reduction in
   (* recursive identity fn, i.e. recur with same set of substitutions *)
@@ -774,18 +889,22 @@ let rec conservative_beta_reduction substitutions expr =
                     then List.assoc (v,t) substitutions else expr
       | _ -> recid expr
     end
-  
-(* Performs dependency tests at lambda-if boundaries *)
-(* Avoids spinning on reordering at if-chains
- * -- if-reordering-spinning can be an arbitrarily deep problem, thus
- *    no pattern can match it (i.e. if we prevent an n-level reorder spin,
- *    we can still spin on a n+1-level if-chain)
- * -- the correct way to detect this is based on dependency sets of
- *    if-stmts, and only lift nested ifs when they have a strictly simpler
- *    dependency set.
- * -- a dependency set is the intersection of the bound variables, and
- *    variables used in the if's predicate. Thus we need to pass along
- *    bound variables, i.e. trigger vars and variables bound by lambdas.
+    
+
+
+
+
+(** Performs dependency tests at lambda-if boundaries 
+    Avoids spinning on reordering at if-chains
+    -- if-reordering-spinning can be an arbitrarily deep problem, thus
+       no pattern can match it (i.e. if we prevent an n-level reorder spin,
+       we can still spin on a n+1-level if-chain)
+    -- the correct way to detect this is based on dependency sets of
+       if-stmts, and only lift nested ifs when they have a strictly simpler
+       dependency set.
+    -- a dependency set is the intersection of the bound variables, and
+       variables used in the if's predicate. Thus we need to pass along
+       bound variables, i.e. trigger vars and variables bound by lambdas.
  *)
 let rec lift_ifs bindings expr =
    Debug.print "LOG-K3-OPT-LIFTIF" (fun () -> K3.string_of_expr expr);
@@ -867,8 +986,8 @@ let rec lift_ifs bindings expr =
       if old_expr = new_expr then new_expr else lift_ifs bindings new_expr
     in fixpoint expr (simplify expr)
 
-(* predicates: list of upstream predicates and whether this expr is a
- * descendant of the "then" branch for each upstream predicate *)
+(** predicates: list of upstream predicates and whether this expr is a
+    descendant of the "then" branch for each upstream predicate *)
 let rec simplify_if_chains predicates expr =
     let rcr new_branch = simplify_if_chains (predicates@new_branch) in
     match expr with
@@ -978,24 +1097,24 @@ let rec simplify_collections filter expr =
 
 
 
-(* Common subexpression elimination, based on alpha equivalence of expressions. 
- * This method folds over a K3 expression, building up candidates to test for
- * equivalence in a bottom-up fashion. Currently, only collection operations
- * are considered as candidates (that is maps,aggregates,group-bys,flattens).
- * This CSE is conservative, candidates are materialized at:
- * i) lambdas, as a simple way to ensure variables do not escape their
- *    definition. This could be refined by allowing candidates to propagate up
- *    provided they do not use the variable bound by the lambda.
- * ii) if-then-elses, where only candidates common to both then- and 
- *     else-branches are carried up. Candidates that appear in any combination 
- *     of the predicate and one of the branches are materialized then and there.
- * 
- * Specifically, the fold method accumulates a set of equivalence classes,
- * represented as a nested list of expressions (each inner list represents
- * alpha equivalent expressions). This allows for easy substitution once we
- * decide to materialize candidates. Each equivalence class is kept as a list
- * rather than a set, to keep track of its usage count. Candidates that are
- * used at most once are not materialized.  
+(** Common subexpression elimination, based on alpha equivalence of expressions. 
+    This method folds over a K3 expression, building up candidates to test for
+    equivalence in a bottom-up fashion. Currently, only collection operations
+    are considered as candidates (that is maps,aggregates,group-bys,flattens).
+    This CSE is conservative, candidates are materialized at:
+    i) lambdas, as a simple way to ensure variables do not escape their
+       definition. This could be refined by allowing candidates to propagate up
+       provided they do not use the variable bound by the lambda.
+    ii) if-then-elses, where only candidates common to both then- and 
+        else-branches are carried up. Candidates that appear in any combination 
+        of the predicate and one of the branches are materialized then and there.
+    
+    Specifically, the fold method accumulates a set of equivalence classes,
+    represented as a nested list of expressions (each inner list represents
+    alpha equivalent expressions). This allows for easy substitution once we
+    decide to materialize candidates. Each equivalence class is kept as a list
+    rather than a set, to keep track of its usage count. Candidates that are
+    used at most once are not materialized.  
  *)
 
 let common_subexpression_elim expr =
@@ -1480,14 +1599,19 @@ let optimize ?(optimizations=[]) trigger_vars expr =
     let e2 = (simplify_collections (not(List.mem NoFilter optimizations)) e1) in
       Debug.print "LOG-K3-OPT-DETAIL" (fun () -> "SIMPLIFY IF CHAINS");
     let e3 = (simplify_if_chains [] e2) in
-    if (Debug.active "K3-OPTIMIZE-LIFT-UPDATES") then
-      begin
-        Debug.print "LOG-K3-OPT-DETAIL" (fun () -> "LIFT UPDATES");
-        let e4 = (lift_updates trigger_vars e3) in
-          e4
-      end
-    else
-      e3
+    let e5 =
+       if (Debug.active "K3-OPTIMIZE-LIFT-UPDATES") then
+         begin
+           Debug.print "LOG-K3-OPT-DETAIL" (fun () -> "LIFT UPDATES");
+           let e4 = (lift_updates trigger_vars e3) in
+             e4
+         end
+       else
+         e3
+    in
+      Debug.print "LOG-K3-OPT-DETAIL" (fun () -> "FIX LAMBDA TYPES");
+    if Debug.active "K3-NO-FIX-LAMBDAS" then e5
+                                        else fix_lambda_types e5
   in
   let rec fixpoint e =
     Debug.print "LOG-K3-OPT-STEPS" (fun () ->

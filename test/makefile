@@ -218,7 +218,7 @@ query_financial:
 	@$(FAST_QUERY_TEST) ssb4
 	@$(FAST_QUERY_TEST) vwap --dataset tiny
 	@$(FAST_QUERY_TEST) brokervariance
-	@$(FAST_QUERY_TEST) missedtrades
+	@$(FAST_QUERY_TEST) missedtrades --dataset tiny
 	@$(FAST_QUERY_TEST) axfinder
 	@$(FAST_QUERY_TEST) pricespread
 	@$(FAST_QUERY_TEST) brokerspread

@@ -4,18 +4,18 @@
     "standard" => {
       :toplevels => {
         "MST" => {
-          :type => :onelevel,      
-          :expected => results_file("test/results/finance/missedtrades_100.csv"),
+          :type => :onelevel,
+          :expected => results_file("test/results/finance/missedtrades.csv"),        
         }
       } 
     },
     
-    "big" => {
-      :subs => [ [/vwap100/, "vwap5k"] ],
+    "tiny" => {
+      :subs => [ [/vwap5k/, "vwap100"] ],
       :toplevels => {
         "MST" => {
-          :type => :onelevel,          
-          :expected => results_file("test/results/finance/missedtrades.csv"),        
+          :type => :onelevel,
+          :expected => results_file("test/results/finance/missedtrades_100.csv"),
         }
       }    
     }

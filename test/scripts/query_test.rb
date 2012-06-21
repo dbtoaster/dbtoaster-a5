@@ -288,7 +288,7 @@ $compiler_args = [];
 $executable_args = [];
 $dump_query = false;
 $log_detail = false;
-$always_return_success = true;
+$always_return_success = false;
 
 GetoptLong.new(
   [ '-f',                GetoptLong::REQUIRED_ARGUMENT],
