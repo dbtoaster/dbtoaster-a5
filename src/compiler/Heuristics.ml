@@ -2,12 +2,14 @@
    A module for deciding on how to materialize a given (delta) query. It is used
      by the Compiler module to produce a Plan.plan_t datastructure.
         
-     Driven by a set of heuristics rules, this module provides two main functions: 
+     Driven by a set of heuristics rules, this module provides 
+     two main functions: 
      {ul
-       {- {b should_update} decides whether it is more efficient to incrementally 
-            maintain the given query, or to reevaluate it upon each trigger call }  
-       {- {b materialize} transforms the input (delta) expression by replacing all
-            relations with data structures (maps) }
+       {- {b should_update} decides whether it is more efficient to
+          incrementally maintain the given query, or to reevaluate it upon 
+          each trigger call }  
+       {- {b materialize} transforms the input (delta) expression by replacing
+          all relations with data structures (maps) }
      }
   *)
 
@@ -23,14 +25,16 @@ type term_list = expr_t list
 
 (******************************************************************************)
 
-(** A helper function for obtaining the variable list from the optional event parameter. 
-    It calls Schema.event_vars if the event is passed. *)
+(** A helper function for obtaining the variable list from 
+    the optional event parameter. It calls Schema.event_vars 
+    if the event is passed. *)
 let extract_event_vars (event:Schema.event_t option) : (var_t list) =
    match event with 
       | Some(ev) ->  Schema.event_vars ev
       | None -> []
 
-(** A helper function for extracting the relations from the optional event parameter. *)
+(** A helper function for extracting the relations from 
+    the optional event parameter. *)
 let extract_event_reln (event:Schema.event_t option) : (string option) =
    match event with
       | Some(Schema.InsertEvent((reln,_,_))) 
@@ -82,9 +86,10 @@ let prepare_expr (scope:var_t list) (expr:expr_t) :
 (***** BEGIN EXISTS HACK *****)
              | Exists(_)
 (***** END EXISTS HACK *****) 
-             | Lift (_, _) -> (rels, lifts @ [term], values)                              
+             | Lift (_, _) -> (rels, lifts @ [term], values)
              | AggSum (_, _) ->
-                failwith "[prepare_expr] Error: AggSums are supposed to be removed."
+                failwith ("[prepare_expr] Error: " ^ 
+                          "AggSums are supposed to be removed.")
       ) ([], [], []) rest_terms
    in
       (const_terms, rel_terms, lift_terms, value_terms)    
@@ -98,8 +103,9 @@ type materialize_opt_t =
     {ol
       {li value terms that depends solely on the trigger variables }
       {li base relations, irrelevant lift expressions with respect to the 
-          event relation that also contain no input variables, and subexpressions 
-          with no input variables (comparisons, variables and constants) }  
+          event relation that also contain no input variables, and 
+          subexpressions with no input variables (comparisons, variables 
+          and constants) }  
       {li lift expressions containing the event relation or input variables }
       {li subexpressions with input variables and the above lift variables } 
     } 
@@ -113,8 +119,12 @@ let partition_expr (scope:var_t list) (event:Schema.event_t option)
       prepare_expr scope expr 
    in
    
-   let ivc_opt_enabled = not (Debug.active "HEURISTICS-IGNORE-IVC-OPTIMIZATION") in
-   let inputvar_allowed = Debug.active "HEURISTICS-IGNORE-INPUTVAR-RULE" in
+   let ivc_opt_enabled = 
+      not (Debug.active "HEURISTICS-IGNORE-IVC-OPTIMIZATION") 
+   in
+   let inputvar_allowed = 
+      Debug.active "HEURISTICS-IGNORE-INPUTVAR-RULE"
+   in
    let has_root_relation = (rel_terms <> []) in
    
    let final_const_expr = CalcRing.mk_prod const_terms in
@@ -214,7 +224,9 @@ let partition_expr (scope:var_t list) (event:Schema.event_t option)
                   then (r_terms, l_terms @ [l_term])
                   else begin 
                   try 
-                     let graph_cmpnt = get_graph_component (l_term, l_annot) in                     
+                     let graph_cmpnt = 
+                        get_graph_component (l_term, l_annot) 
+                     in
                      if (List.exists (fun (_, annot) -> 
                             annot = MaterializeAsNewMap) graph_cmpnt) 
                      then (r_terms, l_terms @ [l_term])
@@ -298,8 +310,9 @@ let partition_expr (scope:var_t list) (event:Schema.event_t option)
     three categories:  
     {ol
        {li base relations, irrelevant lift expressions with respect to the 
-           event relation that also contain no input variables, and subexpressions 
-           with no input variables (comparisons, variables and constants) }  
+           event relation that also contain no input variables, and 
+           subexpressions with no input variables (comparisons, variables 
+           and constants) }  
        {li lift expressions containing the event relation or input variables }
        {li subexpressions with input variables and the above lift variables } 
     }
@@ -370,19 +383,21 @@ let should_update (event:Schema.event_t) (expr:expr_t)  : bool =
     
 (******************************************************************************)
 
-(** Perform partial materialization of a given expression according to the following rules:
+(** Perform partial materialization of a given expression according to 
+    the following rules:
     {ol
-       {li {b Polynomial expansion}: Before materializing, an expression is expanded into 
-           a flat ("polynomial") form with unions at the top. The materialization procedure 
-           is performed over each individual term. }
-       {li {b Graph decomposition}: If some parts of the expression are disconnected in 
-           the join graph, it is always better to materialise them piecewise.}
-       {li {b Decorrelation of nested subexpressions}: Lift expressions with non-zero 
-           delta are always materialized separetely. } 
-       {li {b No input variables}: No map includes input variables in order to prevent 
-           creation of large expensive-to-maintain domains. } 
-       {li {b Factorization} is performed after the partial materialization in order to 
-           maximise reuse of common subexpressions. }
+       {li {b Polynomial expansion}: Before materializing, an expression is
+        expanded into a flat ("polynomial") form with unions at the top. The
+        materialization procedure is performed over each individual term. }
+       {li {b Graph decomposition}: If some parts of the expression are 
+       disconnected in the join graph, it is always better to materialise them 
+       piecewise.}
+       {li {b Decorrelation of nested subexpressions}: Lift expressions with 
+       non-zero delta are always materialized separetely. } 
+       {li {b No input variables}: No map includes input variables in order to
+        prevent creation of large expensive-to-maintain domains. } 
+       {li {b Factorization} is performed after the partial materialization 
+       in order to maximise reuse of common subexpressions. }
     }
     @param scope     The scope in which [expr] is materialized
     @param db_schema Schema of the database
@@ -390,8 +405,9 @@ let should_update (event:Schema.event_t) (expr:expr_t)  : bool =
     @param prefix    A prefix string used to name newly created maps
     @param event     A trigger event
     @param expr      A calculus expression
-    @return          A list of data structures that needs to be materialized afterwards 
-                     (a todo list) together with the materialized form of the expression. 
+    @return          A list of data structures that needs to be 
+                     materialized afterwards (a todo list) together with 
+                     the materialized form of the expression. 
 *)                                  
 let rec materialize ?(scope:var_t list = []) (db_schema:Schema.t) 
                     (history:ds_history_t) (prefix:string) 
@@ -404,7 +420,7 @@ let rec materialize ?(scope:var_t list = []) (db_schema:Schema.t)
       "\n\t Expr: "^(string_of_expr expr)^
       "\n\t Scope: ["^(string_of_vars scope)^"]"
    );
-                                                                                            
+
    let expr_scope = ListAsSet.union scope (extract_event_vars event) in
    let (todos, mat_expr) = fst (
       (* Polynomial decomposition *)
@@ -413,23 +429,29 @@ let rec materialize ?(scope:var_t list = []) (db_schema:Schema.t)
          let term_opt = optimize_expr (expr_scope, term_schema) term in
 
             Debug.print "LOG-HEURISTICS-DETAIL" (fun () ->
-               "[Heuristics] PolyDecomposition Before Optimization: "^(string_of_expr term)^
-               "\n[Heuristics] PolyDecomposition + Optimization: "^(string_of_expr term_opt)^
-               "\n\t Scope: ["^(string_of_vars expr_scope)^"]"^
-               "\n\t Schema: ["^(string_of_vars term_schema)^"]"
+               "[Heuristics] PolyDecomposition Before Optimization: " ^ 
+               (string_of_expr term) ^
+               "\n[Heuristics] PolyDecomposition + Optimization: " ^ 
+               (string_of_expr term_opt) ^
+               "\n\t Scope: [" ^ (string_of_vars expr_scope) ^ "]" ^
+               "\n\t Schema: [" ^ (string_of_vars term_schema) ^ "]"
             ); 
 
             (* Graph decomposition *)
             let ((new_term_todos, new_term_mats), k) =  
-            List.fold_left ( fun ((todos, mat_expr), j) (subexpr_schema, subexpr) ->
+            List.fold_left ( fun ((todos, mat_expr), j) 
+                                 (subexpr_schema, subexpr) ->
                         
                (* Subexpression optimization *)                    
-               let subexpr_opt = optimize_expr (expr_scope, subexpr_schema) subexpr in
+               let subexpr_opt = 
+                  optimize_expr (expr_scope, subexpr_schema) subexpr 
+               in
                         
                let subexpr_name = (prefix^(string_of_int j)) in
                                 
                Debug.print "LOG-HEURISTICS-DETAIL" (fun () -> 
-                  "[Heuristics] Graph decomposition: " ^ (string_of_expr subexpr) ^
+                  "[Heuristics] Graph decomposition: " ^ 
+                  (string_of_expr subexpr) ^
                   "\n\t Scope: [" ^ (string_of_vars expr_scope)^"]" ^
                   "\n\t Schema: [" ^ (string_of_vars subexpr_schema) ^ "]" ^
                   "\n\t MapName: " ^ subexpr_name
@@ -440,14 +462,19 @@ let rec materialize ?(scope:var_t list = []) (db_schema:Schema.t)
                                    expr_scope subexpr_schema subexpr_opt 
                in
                   Debug.print "LOG-HEURISTICS-DETAIL" (fun () -> 
-                     "[Heuristics] Materialized form: "^(string_of_expr mat_subexpr)
+                     "[Heuristics] Materialized form: " ^
+                     (string_of_expr mat_subexpr)
                   );
-                  ((todos @ todos_subexpr, CalcRing.mk_prod [mat_expr; mat_subexpr]), j + 1)  
+                  ( ( todos @ todos_subexpr, 
+                      CalcRing.mk_prod [mat_expr; mat_subexpr] ), 
+                    j + 1)  
     
             ) (([], CalcRing.one), i)
               (snd (decompose_graph expr_scope (term_schema, term_opt)))
          in
-            ((term_todos @ new_term_todos, CalcRing.mk_sum [term_mats; new_term_mats]), k)
+            ( ( term_todos @ new_term_todos, 
+                CalcRing.mk_sum [term_mats; new_term_mats] ), 
+              k)
                     
       ) (([], CalcRing.zero), 1) (decompose_poly expr)
    )
@@ -483,7 +510,7 @@ and materialize_expr (db_schema:Schema.t) (history:ds_history_t)
    else
    
    let scope_const = ListAsSet.union scope const_expr_ovars in
-                                                                                                                        
+
    if (Debug.active "HEURISTICS-IGNORE-INPUTVAR-RULE")
    then begin
       (* Sanity check - rel_exprs input variables should be in the scope *)

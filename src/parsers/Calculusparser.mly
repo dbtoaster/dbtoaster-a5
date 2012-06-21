@@ -258,7 +258,8 @@ mapProgramStatement:
 | mapQuery     EOSTMT { ([], [], [], [$1]) }
 
 mapView:
-| DECLARE mapViewMetadata MAP externalDefnWithoutMeta SETVALUE ivcCalculusExpr { 
+| DECLARE mapViewMetadata MAP externalDefnWithoutMeta 
+  SETVALUE ivcCalculusExpr { 
       let (name, ivars, ovars, dtype, _) = $4 in
       (  {
             Plan.ds_name = Plan.mk_ds_name name (ivars,ovars) dtype;

@@ -32,7 +32,9 @@ module Postgres : Interface = struct
    let get ((chan,_):sql_channel_t):string = 
       let data = ref "" in (
          try                
-            let _ = Unix.select [(Unix.descr_of_in_channel chan)] [] [] (-1.0) in
+            let _ = Unix.select [(Unix.descr_of_in_channel chan)] 
+                                [] [] (-1.0) 
+            in
             while true do 
                data := (!data) ^ (input_line chan) ^"\n"
             done
@@ -75,14 +77,16 @@ module Postgres : Interface = struct
                              (string_of_int d)
    ;;
 
-   let const_of_string (_str:string) (const_type:Types.type_t) : Types.const_t =
+   let const_of_string (_str:string) (const_type:Types.type_t) : 
+                       Types.const_t =
       let str = trim _str in
       match const_type with
          | TBool -> 
             begin match str with
                | "t" -> CBool(true)
                | "f" -> CBool(false)
-               | _ -> failwith "Unsupported boolean representation in Sql client"
+               | _ -> failwith 
+                  "Unsupported boolean representation in Sql client"
             end
          | TInt  -> CInt(int_of_string (trim str))
          | TFloat -> CFloat(float_of_string (trim str))
@@ -100,20 +104,21 @@ module Postgres : Interface = struct
                   String.sub str lstart (rstart-lstart+1)
             )
          | TDate   -> 
-           if (Str.string_match
-                (Str.regexp "\\([0-9]+\\)-\\([0-9]+\\)-\\([0-9]+\\)") str 0)
-                        then (
-                let y = (int_of_string (Str.matched_group 1 str)) in
-                let m = (int_of_string (Str.matched_group 2 str)) in
-                let d = (int_of_string (Str.matched_group 3 str)) in
-                    if (m > 12) then failwith 
-                        ("Invalid month ("^(string_of_int m)^") in date: "^str);                                         
-                    if (d > 31) then failwith
-                        ("Invalid day ("^(string_of_int d)^") in date: "^str);
-                    CDate(y, m, d)
+            if (Str.string_match
+                  (Str.regexp "\\([0-9]+\\)-\\([0-9]+\\)-\\([0-9]+\\)") 
+                   str 0)
+            then (
+               let y = (int_of_string (Str.matched_group 1 str)) in
+               let m = (int_of_string (Str.matched_group 2 str)) in
+               let d = (int_of_string (Str.matched_group 3 str)) in
+               if (m > 12) then failwith 
+                  ("Invalid month ("^(string_of_int m)^") in date: "^str);
+               if (d > 31) then failwith
+                  ("Invalid day ("^(string_of_int d)^") in date: "^str);
+               CDate(y, m, d)
             ) else
-                failwith ("Improperly formatted date: "^str)  
-         | TAny | TExternal(_) -> failwith "Unsupported type in Sql client"      
+               failwith ("Improperly formatted date: "^str)  
+         | TAny | TExternal(_) -> failwith "Unsupported type in Sql client"
 
    let convert_row ?(sep = ", ") (data:Types.const_t list):string =
       ListExtras.string_of_list ~sep:sep (function 
@@ -141,8 +146,8 @@ module Postgres : Interface = struct
    
    let destroy x = let _ = Unix.close_process x in ()
    
-   let create_table (channel: sql_channel_t) ?(temporary = false) (tname:string) 
-                    (tschema:Types.var_t list): unit =
+   let create_table (channel: sql_channel_t) ?(temporary = false) 
+                    (tname:string) (tschema:Types.var_t list): unit =
       let cmd = "CREATE " ^
          (if temporary then "TEMPORARY " else "")^
          "TABLE "^tname^

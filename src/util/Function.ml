@@ -1,6 +1,6 @@
 (**
-   Utilities for performing list-based translation.  The basic type [table_fn_t] 
-   describes a functional mapping as a list of 2-tuples, with the first elements 
+   Utilities for performing list-based translation.  The basic type [table_fn_t]
+   describes a functional mapping as a list of 2-tuples, with the first elements
    representing the domain, and the second representing the range.  
 *)
 

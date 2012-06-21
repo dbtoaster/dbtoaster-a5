@@ -186,12 +186,12 @@ in
    test "Query18 funny business" [var "query18_mLINEITEMLINEITEM_ORDERKEY"; 
                                   var "query18_mLINEITEMLINEITEM_QUANTITY"]
       "(O_OK ^= dOK) * AggSum([O_OK],(
-         (AggSum([O_OK],(LINEITEM(O_OK, L3_Q)))) +
-            ( (O_OK ^= dOK) * AggSum([O_OK],(LINEITEM(O_OK, L3_Q)))
+          (AggSum([O_OK],(LINEITEM(O_OK, L3_Q)))) +
+          ( (O_OK ^= dOK) * AggSum([O_OK],(LINEITEM(O_OK, L3_Q)))
        )))"
       "AggSum([dOK],(
-         (AggSum([dOK],(LINEITEM(dOK, L3_Q)))) +
-         (AggSum([dOK],(LINEITEM(dOK, L3_Q))))
+          (AggSum([dOK],(LINEITEM(dOK, L3_Q)))) +
+          (AggSum([dOK],(LINEITEM(dOK, L3_Q))))
        ))";
    test "Double lifts into an equality" [var "B"; var "C"]
       "AggSum([],(A ^= B) * (A ^= C))"
@@ -206,21 +206,21 @@ in
    test "TPCH11 nested query" [var "P_NATIONKEY"; var "N_VALUE"]
       "(N_NATIONKEY ^= P_NATIONKEY) * 
        (N_VALUE ^= AggSum([N_NATIONKEY],(
-         PARTSUPP(PS_PARTKEY, PS_SUPPKEY, PS_AVAILQTY, PS_SUPPLYCOST, 
-                   PS_COMMENT) * 
-         (S_SUPPKEY ^= PS_SUPPKEY) * 
-         SUPPLIER(S_SUPPKEY, S_NAME, S_ADDRESS, S_NATIONKEY, S_PHONE, S_ACCTBAL, 
-                  S_COMMENT) * 
-         (N_NATIONKEY ^= S_NATIONKEY) * 
-         PS_SUPPLYCOST * PS_AVAILQTY
+           PARTSUPP(PS_PARTKEY, PS_SUPPKEY, PS_AVAILQTY, PS_SUPPLYCOST, 
+                    PS_COMMENT) * 
+           (S_SUPPKEY ^= PS_SUPPKEY) * 
+           SUPPLIER(S_SUPPKEY, S_NAME, S_ADDRESS, S_NATIONKEY, S_PHONE,
+                    S_ACCTBAL, S_COMMENT) * 
+           (N_NATIONKEY ^= S_NATIONKEY) * 
+           PS_SUPPLYCOST * PS_AVAILQTY
       )))"
       "(N_VALUE ^= AggSum([],(
-         PARTSUPP(PS_PARTKEY, PS_SUPPKEY, PS_AVAILQTY, PS_SUPPLYCOST, 
-                   PS_COMMENT) * 
-         SUPPLIER(PS_SUPPKEY, S_NAME, S_ADDRESS, S_NATIONKEY, S_PHONE, 
-                  S_ACCTBAL, S_COMMENT) * 
-         {S_NATIONKEY = P_NATIONKEY} * 
-         PS_SUPPLYCOST * PS_AVAILQTY
+           PARTSUPP(PS_PARTKEY, PS_SUPPKEY, PS_AVAILQTY, PS_SUPPLYCOST, 
+                    PS_COMMENT) * 
+           SUPPLIER(PS_SUPPKEY, S_NAME, S_ADDRESS, S_NATIONKEY, S_PHONE, 
+                    S_ACCTBAL, S_COMMENT) * 
+           {S_NATIONKEY = P_NATIONKEY} * 
+           PS_SUPPLYCOST * PS_AVAILQTY
       )))";
    test "Materialized terminal lift" [var "B"]
       "AggSum([A], (M1_L1_1(int)[][A,B] * (E ^= M1_L1_1(int)[][] * B)))"
@@ -269,7 +269,8 @@ in
 let test msg scope input output =
    log_test ("Factorize One Polynomial ("^msg^")")
       string_of_expr
-      (CalculusTransforms.factorize_one_polynomial scope (List.map parse_calc input))
+      (CalculusTransforms.factorize_one_polynomial 
+          scope (List.map parse_calc input))
       (parse_calc output)
 in
 (*   Debug.activate "LOG-FACTORIZE";*)
@@ -324,32 +325,31 @@ let test ?(opts = CalculusTransforms.default_optimizations)
 in
    test "TPCH17 simple raw" [] []
       "AggSum([], (
-         P(PPK) * LI(LPK, LQTY) * 
-         AggSum([], ({PPK = LPK})) *
-         AggSum([], (
-            (nested ^= (0.5 * AggSum([], LI(LPK2, LQTY2) * 
-               AggSum([], {LPK2 = PPK}) * LQTY2))) *
-            {LQTY < nested}
-         ))
-      ))"
+          P(PPK) * LI(LPK, LQTY) * 
+          AggSum([], ({PPK = LPK})) *
+          AggSum([], (
+             (nested ^= (0.5 * AggSum([], LI(LPK2, LQTY2) * 
+                 AggSum([], {LPK2 = PPK}) * LQTY2))) *
+             {LQTY < nested}
+          ))
+       ))"
       "AggSum([], (
-         P(PPK) * LI(PPK, LQTY) * 
-         AggSum([PPK], (
-            (nested ^= AggSum([PPK], LI(PPK, LQTY2) * LQTY2) * 
-               0.5) *
-            {LQTY < nested}
-         ))
-      ))";
+          P(PPK) * LI(PPK, LQTY) * 
+          AggSum([PPK], (
+             (nested ^= AggSum([PPK], LI(PPK, LQTY2) * LQTY2) * 0.5) *
+             {LQTY < nested}
+          ))
+       ))";
    test "TPCH17 full raw" [] []
       "AggSum([],(
-         (  LINEITEM(L_PARTKEY, L_QUANTITY, L_EXTENDEDPRICE) * 
+          ( LINEITEM(L_PARTKEY, L_QUANTITY, L_EXTENDEDPRICE) * 
             PART(P_PARTKEY) * 
             AggSum([],({P_PARTKEY = L_PARTKEY})) * 
             AggSum([],(
                (  (__sql_agg_tmp_1 ^= (0.005 * AggSum([],(
-                     (LINEITEM(L2_PARTKEY, L2_QUANTITY, L2_EXTENDEDPRICE) * 
-                     AggSum([],({L2_PARTKEY = P_PARTKEY})) * 
-                     L2_QUANTITY
+                      (LINEITEM(L2_PARTKEY, L2_QUANTITY, L2_EXTENDEDPRICE) * 
+                      AggSum([],({L2_PARTKEY = P_PARTKEY})) * 
+                      L2_QUANTITY
                   ))))) * 
                   {L_QUANTITY < __sql_agg_tmp_1}
                )
@@ -358,12 +358,12 @@ in
          )
       ))"
       "AggSum([],(
-         (  LINEITEM(L_PARTKEY, L_QUANTITY, L_EXTENDEDPRICE) * 
+          ( LINEITEM(L_PARTKEY, L_QUANTITY, L_EXTENDEDPRICE) * 
             PART(L_PARTKEY) * 
             AggSum([L_PARTKEY],(
                (  (__sql_agg_tmp_1 ^= (AggSum([L_PARTKEY],(
-                     (LINEITEM(L_PARTKEY, L2_QUANTITY, L2_EXTENDEDPRICE) * 
-                     L2_QUANTITY
+                      (LINEITEM(L_PARTKEY, L2_QUANTITY, L2_EXTENDEDPRICE) * 
+                      L2_QUANTITY
                   )))) * 0.005 ) * 
                   {L_QUANTITY < __sql_agg_tmp_1}
                )
@@ -373,100 +373,102 @@ in
       ))";
    test "TPCH17 dPart Tricky Term" ["dPK"] []
       "(PK ^= dPK) * LI(PK, QTY) * (alpha ^= 0) * (
-         (nested ^= (AggSum([PK], LI(PK, QTY2) * QTY2) + alpha))
-         - (nested ^= (AggSum([PK], LI(PK, QTY2) * QTY2)))
+          (nested ^= (AggSum([PK], LI(PK, QTY2) * QTY2) + alpha)) -
+          (nested ^= (AggSum([PK], LI(PK, QTY2) * QTY2)))
        ) * {QTY < 0.5 * nested}"
       "0";
    test "TPCH17 dPart Full" ["dPK"] [] 
       "( ((PK ^= dPK) * LI(PK, QTY) *
-            (nested ^= (AggSum([PK], LI(PK,QTY2) * QTY2))))
+          (nested ^= (AggSum([PK], LI(PK,QTY2) * QTY2))))
          +
          (P(PK) * LI(PK, QTY) * (alpha ^= 0) * (
-            (nested ^= (AggSum([PK], LI(PK, QTY2) * QTY2) + alpha))
-            - (nested ^= (AggSum([PK], LI(PK, QTY2) * QTY2)))
+             (nested ^= (AggSum([PK], LI(PK, QTY2) * QTY2) + alpha)) -
+             (nested ^= (AggSum([PK], LI(PK, QTY2) * QTY2)))
          ))
          +
          ((PK ^= dPK) * LI(PK, QTY) * (alpha ^= 0) * (
-            (nested ^= (AggSum([PK], LI(PK, QTY2) * QTY2) + alpha))
-            - (nested ^= (AggSum([PK], LI(PK, QTY2) * QTY2)))
+             (nested ^= (AggSum([PK], LI(PK, QTY2) * QTY2) + alpha)) -
+             (nested ^= (AggSum([PK], LI(PK, QTY2) * QTY2)))
          ))
-      ) * {QTY < 0.5 * nested}"
+       ) * {QTY < 0.5 * nested}"
       "(nested ^= (AggSum([dPK], LI(dPK,QTY2) * QTY2))) * LI(dPK,QTY) *
-         {QTY < 0.5 * nested}";
+       {QTY < 0.5 * nested}";
    test "TPCH17 dLineitem" ["dPK"; "dQTY"] ["QTY"; "nested"]
-      "P(PK) * (((PK ^= dPK) * (QTY ^= dQTY) * 
-                  (nested ^= AggSum([PK], L(PK, QTY2) * QTY2)))
-            + 
-            ((L(PK, QTY) + (PK ^= dPK) * (QTY ^= dQTY)) * (PK ^= dPK) *
-            (
-               (nested ^= AggSum([PK], L(PK, QTY2) * QTY2) + (AggSum([],((QTY2 ^= dQTY) * QTY2))))
-                - (nested ^= AggSum([PK], L(PK, QTY2) * QTY2))
-            )))"
+      "P(PK) * 
+       (((PK ^= dPK) * (QTY ^= dQTY) * 
+         (nested ^= AggSum([PK], L(PK, QTY2) * QTY2)))
+        + 
+        ((L(PK, QTY) + (PK ^= dPK) * (QTY ^= dQTY)) * (PK ^= dPK) *
+         (
+             (nested ^= AggSum([PK], L(PK, QTY2) * QTY2) + 
+                        (AggSum([],((QTY2 ^= dQTY) * QTY2)))) -
+             (nested ^= AggSum([PK], L(PK, QTY2) * QTY2))
+         )))"
       "P(dPK) * (
-         ((QTY ^= dQTY) * (nested ^= AggSum([dPK], L(dPK, QTY2) * QTY2)))
-            + 
-            ((L(dPK, QTY) + (QTY ^= dQTY)) * 
-            (
+          ((QTY ^= dQTY) * (nested ^= AggSum([dPK], L(dPK, QTY2) * QTY2)))
+          + 
+          ((L(dPK, QTY) + (QTY ^= dQTY)) * 
+           (
                (nested ^= AggSum([dPK], L(dPK, QTY2) * QTY2) + dQTY) +
                (nested ^= AggSum([dPK], L(dPK, QTY2) * QTY2)) * {-1}
-            )))";
+       )))";
    test "SumNestedInTarget Delta" ["dA"; "dB"] []
       "AggSum([], 
-        (((R1_A ^= dA) *
-           (R1_B ^= dB) * AggSum([R1_A], R(R1_A, R2_B))) +
-          ((R(R1_A, R1_B) +
-             ((R1_A ^= dA) *
-               (R1_B ^= dB))) *
+          (((R1_A ^= dA) *
+            (R1_B ^= dB) * AggSum([R1_A], R(R1_A, R2_B))) +
+           ((R(R1_A, R1_B) +
+             ((R1_A ^= dA) * (R1_B ^= dB))) *
             AggSum([R1_A], 
-              ((R1_A ^= dA) *
-                (R2_B ^= dB))))))"
+               ((R1_A ^= dA) * (R2_B ^= dB))))))"
       "AggSum([dA], R(dA, R2_B)) + AggSum([dA], R(dA, R1_B)) + 1";
    test "Employee37 dEmployee dLineitem" ["dLID"; "dRG"] ["COUNT_DID"]
       "AggSum([COUNT_DID], 
-        (AggSum([__sql_inline_agg_1, D_LOCATION_ID], 
-           (L_REGIONAL_GROUP ^= 'CHICAGO') * (D_LOCATION_ID ^= dLID) *
-                  (L_REGIONAL_GROUP ^= dRG) *
-             ((__sql_inline_agg_1 ^=
-                (AggSum([D_LOCATION_ID], 
-                   ((L_REGIONAL_GROUP ^= 'CHICAGO') *
-                     LOCATION(D_LOCATION_ID, L_REGIONAL_GROUP))) +
-                  AggSum([], 1))) +
+          (AggSum([__sql_inline_agg_1, D_LOCATION_ID], 
+              (L_REGIONAL_GROUP ^= 'CHICAGO') * (D_LOCATION_ID ^= dLID) *
+              (L_REGIONAL_GROUP ^= dRG) *
+              ((__sql_inline_agg_1 ^=
+                   (AggSum([D_LOCATION_ID], 
+                       ((L_REGIONAL_GROUP ^= 'CHICAGO') *
+                        LOCATION(D_LOCATION_ID, L_REGIONAL_GROUP))) +
+                    AggSum([], 1))) +
                (-1 *
-                 (__sql_inline_agg_1 ^=
-                   AggSum([D_LOCATION_ID], 
-                     ((L_REGIONAL_GROUP ^= 'CHICAGO') *
-                       LOCATION(D_LOCATION_ID, L_REGIONAL_GROUP)))))) *
-          DEPARTMENT(COUNT_DID, D_NAME, D_LOCATION_ID) * 
-          {__sql_inline_agg_1 > 0})))"
+                (__sql_inline_agg_1 ^=
+                    AggSum([D_LOCATION_ID], 
+                       ((L_REGIONAL_GROUP ^= 'CHICAGO') *
+                        LOCATION(D_LOCATION_ID, L_REGIONAL_GROUP)))))) *
+              DEPARTMENT(COUNT_DID, D_NAME, D_LOCATION_ID) * 
+              {__sql_inline_agg_1 > 0})))"
       "({dRG = 'CHICAGO'} *
         AggSum([], 
-          (((__sql_inline_agg_1 ^=
-              (AggSum([dLID], 
-                 ((L_REGIONAL_GROUP ^= 'CHICAGO') *
-                   LOCATION(dLID, L_REGIONAL_GROUP))) +
-                1)) +
+           (((__sql_inline_agg_1 ^=
+                 (AggSum([dLID], 
+                     ((L_REGIONAL_GROUP ^= 'CHICAGO') *
+                      LOCATION(dLID, L_REGIONAL_GROUP))) +
+                  1)) +
              ((__sql_inline_agg_1 ^=
-                AggSum([dLID], 
-                  ((L_REGIONAL_GROUP ^= 'CHICAGO') *
-                    LOCATION(dLID, L_REGIONAL_GROUP)))) *
-               {-1})) *
+                  AggSum([dLID], 
+                     ((L_REGIONAL_GROUP ^= 'CHICAGO') *
+                      LOCATION(dLID, L_REGIONAL_GROUP)))) *
+                     {-1})) *
             {__sql_inline_agg_1 > 0} *
             AggSum([dLID], DEPARTMENT(COUNT_DID, D_NAME, dLID)))))";
    test "Zeus Query 96434723 dS" ["COUNT_mSSB"; "COUNT_mSSC"] 
                                  ["B1"; "C1"; "LB71Y"; "GKKEOF"; "QKKF7PYI"]
       "(AggSum([B1, C1, LB71Y, GKKEOF], 
-          (COUNTS1(int)[][NPZL_7DKV_B,NPZL_7DKV_C] * (__sql_inline_not_1 ^= 0) *
+           (COUNTS1(int)[][NPZL_7DKV_B,NPZL_7DKV_C] * 
+            (__sql_inline_not_1 ^= 0) *
             (NPZL_7DKV_B ^= 0) *
             (LB71Y ^= ((COUNTSS_B * COUNTSS_C) + NPZL_7DKV_B)) *
             (B1 ^= NPZL_7DKV_B) * (__sql_inline_not_1 ^= {NPZL_7DKV_C = 2}) *
             (GKKEOF ^= (NPZL_7DKV_C * {(NPZL_7DKV_B * NPZL_7DKV_B)})) *
             (C1 ^= NPZL_7DKV_C))) *
-         (QKKF7PYI ^= COUNTSS_C))"
+        (QKKF7PYI ^= COUNTSS_C))"
       "((QKKF7PYI ^= COUNTSS_C) *
         AggSum([B1, C1, LB71Y, GKKEOF], 
-          ((NPZL_7DKV_B ^= 0) * (B1 ^= NPZL_7DKV_B) *
+           ((NPZL_7DKV_B ^= 0) * (B1 ^= NPZL_7DKV_B) *
             (LB71Y ^= ((COUNTSS_B * COUNTSS_C) + NPZL_7DKV_B)) *
-            (__sql_inline_not_1 ^= 0) * COUNTS1(int)[][NPZL_7DKV_B, NPZL_7DKV_C] *
+            (__sql_inline_not_1 ^= 0) * 
+            COUNTS1(int)[][NPZL_7DKV_B, NPZL_7DKV_C] *
             (C1 ^= NPZL_7DKV_C) *
             (GKKEOF ^= (NPZL_7DKV_C * {(NPZL_7DKV_B * NPZL_7DKV_B)})) *
             (__sql_inline_not_1 ^= {NPZL_7DKV_C = 2}))))"

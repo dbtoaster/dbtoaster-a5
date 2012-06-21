@@ -19,7 +19,7 @@ let tmp_var (vn:string) (vt:type_t): var_t =
 (**/**)
 
 (** 
-   This utility function performs conversion from arbitrary calculus expressions 
+   This utility function performs conversion from arbitrary calculus expressions
    to values (e.g., so that the expression values can be compared).  It does 
    this by lifting the expression into a newly created variable (if necessary).
    
@@ -121,7 +121,7 @@ let cast_query_to_aggregate (tables:Sql.table_t list)
      (this isn't so much a rewrite as a sanity check, as the SQL expression is
      invalid otherwise).
    - Products of aggregates and non-aggregates have the non-aggregate on the
-     right-hand side so that (group-by) variables appearing in the non-aggregate 
+     right-hand side so that (group-by) variables appearing in the non-aggregate
      terms will be bound by the aggregate
    - A sum/subtraction operation with at least one non-aggregate child must 
      have a parent that is a product with an aggregate (so that the sum will 
@@ -230,7 +230,7 @@ let rec calc_of_query ?(query_name = None)
       List.partition (fun (_,expr) -> Sql.is_agg_expr expr) targets in
    let check_gb_var_list tgt_name tgt_expr = 
       match tgt_expr with
-         (* If the target expression is just a variable, then the variable might 
+         (* If the target expression is just a variable, then the variable might
             be present directly in the group-by variables list.  In this case, 
             we return true. *)
          | Sql.Var(v_source,v_name,_) when

@@ -30,7 +30,9 @@ let field_tokens param_val =
 
 (* param_val: comma-separated field offsets, i.e. "0,4,8,12" *)
 let offset_tokens param_val =
-   let offsets = List.map int_of_string (Str.split (Str.regexp ",") param_val) in
+   let offsets = List.map int_of_string (Str.split (Str.regexp ",") 
+                                                   param_val) 
+   in
    if List.length offsets = 0 then
       failwith "Offset tokenizer: no offsets specified!"
    else 
@@ -74,7 +76,8 @@ let substring param_val =
        | [fid;off;len] ->
          begin
             if List.mem_assoc fid !spec then
-               failwith ("Duplicate substring found for field "^(string_of_int fid));
+               failwith ("Duplicate substring found for field " ^
+                         (string_of_int fid));
             spec := (fid,(off,len))::(!spec); 
             pos := !pos + (String.length triple)
          end
@@ -162,10 +165,11 @@ let build_tuple (reln,relv,_) param_val support_sch =
          let common =
             if nf = num_fns then List.map2 (fun bf f -> bf f) build_fns fields
             else if nf = 0 then
-              raise AbortEventConstruction (* no fields => no event *)
+               raise AbortEventConstruction (* no fields => no event *)
             else if nf < num_fns then
-              List.map2 (fun bf f -> bf f) (sub [] build_fns 0 nf) fields
-            else List.map2 (fun bf f -> bf f) build_fns (sub [] fields 0 num_fns)
+               List.map2 (fun bf f -> bf f) (sub [] build_fns 0 nf) fields
+            else 
+               List.map2 (fun bf f -> bf f) build_fns (sub [] fields 0 num_fns)
          in
          let extension = if nf > num_fns then
             List.map extend_fn (sub [] fields num_fns (nf - num_fns)) else []
@@ -401,7 +405,8 @@ let orderbook_generator rel_sch params =
           then (Hashtbl.remove book_orders order_id;
                 if insert_only then [] else [delete old_tuple])
           else (Hashtbl.replace book_orders order_id new_tuple;
-                (if insert_only then [] else [delete old_tuple])@[insert new_tuple]))
+                (if insert_only then [] else [delete old_tuple]) @
+                [insert new_tuple]))
 
        | (Some(old_tuple), "F") | (Some(old_tuple), "D") ->
           Hashtbl.remove book_orders order_id;

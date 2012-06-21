@@ -74,7 +74,8 @@ let rec string_of_value_leaf (leaf:value_leaf_t): string =
       | AConst(c) -> sql_of_const c
       | AVar(v)   -> string_of_var v
       | AFn(fname,fargs,ftype) ->
-         "["^fname^" : "^(string_of_type ftype)^"]("^(ListExtras.string_of_list string_of_value fargs)^")"
+         "[" ^ fname ^ " : " ^ (string_of_type ftype) ^ 
+         "](" ^ (ListExtras.string_of_list string_of_value fargs) ^ ")"
    end
 
 (**
@@ -171,14 +172,18 @@ let binary_op (b_op: bool   -> bool   -> bool)
       | (CBool(_),   CBool(_),  TInt)
       | (CBool(_),   CInt(_),   (TInt|TAny))
       | (CInt(_),    CBool(_),  (TInt|TAny)) 
-      | (CInt(_),    CInt(_),   (TInt|TAny))  -> CInt(i_op (int_of_const a) (int_of_const b))
+      | (CInt(_),    CInt(_),   (TInt|TAny))  -> 
+         CInt(i_op (int_of_const a) (int_of_const b))
       
       | (CBool(_),   CBool(_),  TFloat)
       | (CInt(_),    CInt(_),   TFloat)      
       | (CFloat(_), (CBool(_)|CInt(_)|(CFloat(_))), (TFloat|TAny))
-      | ((CBool(_)|CInt(_)), CFloat(_), (TFloat|TAny)) -> CFloat(f_op (float_of_const a) (float_of_const b))
-      | (CString(_), _, _) | (_, CString(_), _) -> failwith "Binary math op over a string"
-      | (CDate _, _, _) | (_, CDate _, _) -> failwith "Binary math op over a date"
+      | ((CBool(_)|CInt(_)), CFloat(_), (TFloat|TAny)) -> 
+         CFloat(f_op (float_of_const a) (float_of_const b))
+      | (CString(_), _, _) | (_, CString(_), _) -> 
+         failwith "Binary math op over a string"
+      | (CDate _, _, _) | (_, CDate _, _) -> 
+         failwith "Binary math op over a date"
       | (_,   _,  _) -> 
          failwith ("Binary math op with incompatible return type: "^
                    (string_of_const a)^" "^(string_of_const b)^
@@ -323,8 +328,18 @@ let rec sign_of_value (a_value:value_t): value_t =
     match a_leaf with
       | AConst(c) ->
         begin match c with
-          | CInt(number) -> if number > 0 then one_expr else if number < 0 then ValueRing.Neg(one_expr) else zero_expr
-          | CFloat(number) -> if number > 0. then one_expr else if number < 0. then ValueRing.Neg(one_expr) else zero_expr
+          | CInt(number) -> 
+             if number > 0 
+             then one_expr 
+             else if number < 0 
+                  then ValueRing.Neg(one_expr) 
+                  else zero_expr
+          | CFloat(number) -> 
+             if number > 0. 
+             then one_expr 
+             else if number < 0. 
+                  then ValueRing.Neg(one_expr) 
+                  else zero_expr
           | _ -> one_expr
         end
       | AVar(v) -> a_value
@@ -356,7 +371,8 @@ let rec eval ?(scope=StringMap.empty) (v:value_t): const_t =
          | AConst(c) -> c
          | AVar(v,_) -> 
             if StringMap.mem v scope then StringMap.find v scope
-            else failwith ("Variable "^v^" not found while evaluating arithmetic")
+            else failwith 
+                    ("Variable "^v^" not found while evaluating arithmetic")
          | AFn(fn,fargs,ftype) ->
             if StringMap.mem fn !arithmetic_functions then
                let fn_def = StringMap.find fn !arithmetic_functions
@@ -419,30 +435,34 @@ let rec eval_partial ?(scope=[]) (v:value_t): value_t =
                  [val2].  If such a mapping exists, it is returned wrapped in
                  a [Some]
 *)
-let rec cmp_values ?(cmp_opts:ValueRing.cmp_opt_t list = ValueRing.default_cmp_opts) 
-                    (val1:value_t) (val2:value_t):((var_t * var_t) list option) =
+let rec cmp_values ?(cmp_opts:ValueRing.cmp_opt_t list =
+                     ValueRing.default_cmp_opts) 
+                   (val1:value_t) (val2:value_t):
+                   ((var_t * var_t) list option) =
    let rcr = cmp_values ~cmp_opts:cmp_opts in
    
-   ValueRing.cmp_exprs ~cmp_opts:cmp_opts Function.multimerge Function.multimerge 
-                      (fun lf1 lf2 ->
-      match (lf1,lf2) with 
-      | ((AConst(c1)),(AConst(c2))) ->
-         if c1 <> c2 then None else Some([])
+   ValueRing.cmp_exprs ~cmp_opts:cmp_opts 
+      Function.multimerge 
+      Function.multimerge 
+      (fun lf1 lf2 ->
+         match (lf1,lf2) with 
+            | ((AConst(c1)),(AConst(c2))) ->
+               if c1 <> c2 then None else Some([])
          
-      | ((AVar(v1)),(AVar(v2))) ->
-         Some([v1,v2])
+            | ((AVar(v1)),(AVar(v2))) ->
+               Some([v1,v2])
          
-      | ((AFn(fn1,subt1,ft1)),(AFn(fn2,subt2,ft2))) ->
-         if (fn1 <> fn2) || (ft1 <> ft2) then None
-         else begin try 
-            Function.multimerge (List.map2 (fun a b -> 
-            begin match rcr a b with 
-               | None -> raise Not_found
-               | Some(s) -> s
-            end) subt1 subt2)
-         with Not_found -> None
-         end
+            | ((AFn(fn1,subt1,ft1)),(AFn(fn2,subt2,ft2))) ->
+               if (fn1 <> fn2) || (ft1 <> ft2) then None
+               else begin try 
+                  Function.multimerge (List.map2 (fun a b -> 
+                  begin match rcr a b with 
+                     | None -> raise Not_found
+                     | Some(s) -> s
+                  end) subt1 subt2)
+               with Not_found -> None
+               end
       
-      | (_,_) -> None
-   ) val1 val2
+            | (_,_) -> None
+      ) val1 val2
    

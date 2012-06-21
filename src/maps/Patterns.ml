@@ -69,10 +69,10 @@ have the pattern [[0]].
    should probably be phased out as soon as possible.
 *)
 type pattern =
-  In of (string list * int list)  (** Binding pattern of the input variables in 
-                                      a map access *)
-| Out of (string list * int list) (** Binding pattern of the output variables in 
-                                      a map access *)
+  In of (string list * int list)  (** Binding pattern of the input variables
+                                      in a map access *)
+| Out of (string list * int list) (** Binding pattern of the output variables 
+                                      in a map access *)
 
 (**
    A pattern map: the full set of patterns used in a K3 or M3 program.  Every
@@ -269,9 +269,11 @@ let patterns_to_string pm =
    Creates a pattern map containing a single out pattern corresponding
    to a map access.
    @param mapn       Name of the map being accessed pattern map.
-   @param theta_vars List of variables that are in scope at the time of the access
+   @param theta_vars List of variables that are in scope at the time of 
+                     the access
    @param key_vars   List of variables used as key for the map access.
-   @return           A pattern map with a single pattern corresponding to the access.
+   @return           A pattern map with a single pattern corresponding to 
+                     the access.
 *)
 let create_pattern_map_from_access mapn theta_vars key_vars =
    let bound_vars = ListAsSet.inter key_vars theta_vars in 

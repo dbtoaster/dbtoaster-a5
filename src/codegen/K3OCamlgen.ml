@@ -145,7 +145,8 @@ struct
    let arg_tuple a_list =
       (Util.string_of_list "," (List.map fst a_list))
    
-   let key_tuple ?(init_id = 0) ?(tuplizer = arg_tuple) ?(prefix="key") t_list = 
+   let key_tuple ?(init_id = 0) ?(tuplizer = arg_tuple) 
+                 ?(prefix="key") t_list = 
       tuplizer (snd (List.fold_left (fun (i,accum) _ -> 
           (i+1,accum@[prefix^"_"^(string_of_int i),()])) 
         (init_id,[]) t_list))
@@ -633,7 +634,9 @@ struct
             ]);
             map]),Bool)
       |  Collection(DBEntry,kt,vt) ->
-         ((apply_many "MC.mem" [(mapkey_of_codekey key);((*unwrap_map*) map)]),Bool)
+         ((apply_many "MC.mem" 
+                      [ (mapkey_of_codekey key);
+                        ((*unwrap_map*) map) ]), Bool)
       | _ -> debugfail expr "Existence check on a non-collection"
    
    (* map, key -> map value *)
@@ -657,7 +660,9 @@ struct
             (IP.Leaf("value"))
          ])),vt)
       | Collection(DBEntry,kt,vt) ->
-         ((apply_many "MC.find" [(mapkey_of_codekey key);((*unwrap_map*) map)]),vt)
+         ((apply_many "MC.find" 
+                      [ (mapkey_of_codekey key);
+                        ((*unwrap_map*) map) ]), vt)
       | _ -> debugfail expr "Lookup on a non-collection"
       
    (* map, partial key, pattern -> slice *)
@@ -904,8 +909,9 @@ struct
                [IP.Leaf("match event with ")]@
                (List.map (fun (_,trigger) ->
                   match trigger with Trigger(pm, rel, vars) ->
-                     IP.Leaf("| Some("^(match pm with | M3.Insert -> "M3.Insert" 
-                                                  | M3.Delete -> "M3.Delete")^
+                     IP.Leaf("| Some("^(match pm with 
+                                           | M3.Insert -> "M3.Insert"
+                                           | M3.Delete -> "M3.Delete")^
                              ", \""^rel^"\", "^
                              (unwrap_key_matcher vars)^
                              ") -> on_"^

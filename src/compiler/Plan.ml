@@ -22,11 +22,11 @@ type ds_t = {
                                and can always be simply (assuming its schema
                                matches) dropped into an existing expression in
                                order to access this datastructure.  
-                               {b mk_ds_name} and {b expand_ds_name} are utility 
-                               methods for interacting with ds_names *)
+                               {b mk_ds_name} and {b expand_ds_name} are 
+                               utility methods for interacting with ds_names *)
    
    ds_definition : expr_t  (** The definition of the datastructure.  This is the
-                               query that the map will be maintaining the result 
+                               query that the map will be maintaining the result
                                of *)
 }
 

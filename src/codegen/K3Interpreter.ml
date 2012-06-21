@@ -446,7 +446,8 @@ struct
         in let fn1 vl1 = Fun(fun vl2 -> aux vl1 vl2)
         in Fun fn1)
 
-    (* arg, external function id, external function return type -> external fn *)
+    (* arg, external function id, external function return type ->
+       external fn *)
     let external_lambda ?(expr = None) fn_id arg fn_t = Eval(fun th db ->
         let fn v = 
             let fn_args = begin match v with
@@ -462,7 +463,8 @@ struct
                 (*
                    print_endline ("External Function call "^fn_id^
                                   " with arguments: "^
-                                  (ListExtras.string_of_list string_of_const fn_args));
+                                  (ListExtras.string_of_list string_of_const
+                                                             fn_args));
                 *)
                 let ret_c = external_fn fn_args (base_type_of fn_t) in
                 let ret_t = K3.TBase(Types.type_of_const ret_c) in
@@ -574,9 +576,10 @@ struct
                   bail ~expr:expr ("invalid group by grouping fn: "^
                      (string_of_value g)^(get_expr expr)))
             ((get_eval ~comment:"Init Value of " expr init_agg) th db)
-            (match ((get_eval ~comment:"Collection of " expr collection) th db) with  
+            (match ((get_eval ~comment:"Collection of " 
+                              expr collection) th db) with  
                (* There's probably a more efficient way to do this, but for now
-                  we implement GB-aggs by casting non-TupleList collections down 
+                  we implement GB-aggs by casting non-TupleList collections down
                   to TupleLists *)
                | TupleList      l -> l
                | ListCollection l -> l
@@ -654,7 +657,8 @@ struct
             in TupleList(r)
         *)
 
-        | _ -> bail ~expr:expr ("invalid collection to flatten"^(get_expr expr)))
+        | _ -> bail ~expr:expr ("invalid collection to flatten" ^ 
+                                (get_expr expr)))
         
         
 
@@ -669,7 +673,9 @@ struct
             | SingleMap m -> smc_f m k
             | DoubleMap m -> dmc_f m k
             | MapCollection m -> nmc_f m k
-            | v -> bail ~expr:expr ("invalid tuple collection in "^ex_s^" : "^(string_of_value v))
+            | v -> bail ~expr:expr 
+                        ("invalid tuple collection in " ^ 
+                         ex_s ^ " : " ^ (string_of_value v))
             end
         with Not_found ->
             print_string
@@ -693,7 +699,8 @@ struct
 
     (* map, key -> map value *)
     let lookup ?(expr = None) tcollection key_l =
-        (* returns the (unnamed) value from the first tuple with a matching key *)
+        (* returns the (unnamed) value from the first tuple with 
+           a matching key *)
         let lc_f l k =
             let r = List.find (fun t ->
                 match_key_prefix k (tuple_of_value t)) l in

@@ -166,7 +166,8 @@ let get_triggers (prog:prog_t) : trigger_t list =
 (** 
    [get_statement prog event target_map]
 
-   Obtain the statement of the given name for the specified event from an M3 program.
+   Obtain the statement of the given name for the specified event 
+   from an M3 program.
    @param prog    An M3 program
    @param event   An event
    @param name    A statement name

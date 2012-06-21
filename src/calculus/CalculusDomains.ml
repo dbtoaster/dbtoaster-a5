@@ -5,7 +5,8 @@ open Calculus
 (** Compute the domain maintenance expression of the provided calculus 
     expression. *)
 let rec maintain (formula: Calculus.expr_t) : Calculus.expr_t =
-   Calculus.fold (fun _ -> CalcRing.mk_sum) (fun _ -> CalcRing.mk_prod)
+   Calculus.fold (fun _ -> CalcRing.mk_sum) 
+                 (fun _ -> CalcRing.mk_prod)
                  (fun _ -> CalcRing.mk_neg)
       (fun _ lf -> match lf with
          | Value(_) -> CalcRing.one
@@ -22,37 +23,47 @@ let rec maintain (formula: Calculus.expr_t) : Calculus.expr_t =
       )
       formula
 (*
-    begin match formula with
-    | CalcRing.Sum(q1::qo) -> 
-        let (context1) = maintain(context)(q1) in
-            let (context2) = maintain(context)(if List.length qo = 1 then List.hd qo else CalcRing.mk_sum qo) in 
-                (CalcRing.mk_sum([context1; context2]))
-    | CalcRing.Prod(q1::qo) -> 
-        let (context1) = maintain(context)(q1) in
-            let (context2) = maintain(context1)(if List.length qo = 1 then List.hd qo else CalcRing.mk_prod qo) in 
-                (context2)
-    | CalcRing.Neg(q1) ->
-        maintain(context)(q1)
-    | CalcRing.Val(leaf) ->
-        begin match leaf with
-          | Value(v) -> (context)
-          | External(ename,eins,eouts,etype,emeta) ->
-            failwith "Domain Maintenance on a materialized expression"
-          | AggSum(gb_vars, subexp) -> 
-            let (context1) = maintain (CalcRing.one) (subexp) in
-                let right_context = CalcRing.Val(AggSum(gb_vars, context1)) in
-                    (CalcRing.mk_prod ([context; right_context]))
-          | Rel(rname, rvars)    -> 
-            (CalcRing.mk_prod ([context; formula]))
-          | Cmp(op,subexp1,subexp2) -> 
-              let right_context = formula in
-              (CalcRing.mk_prod ([context; formula]))
-            else
-              (context)
-          | Lift(target, subexp)    -> 
-            (CalcRing.mk_prod ([context; formula]))
-        end
-    | _ -> failwith ("Incorrect formula")
+   begin match formula with
+       | CalcRing.Sum(q1::qo) -> 
+          let (context1) = maintain(context) (q1) in
+          let (context2) = maintain(context) 
+                           (if List.length qo = 1 
+                            then List.hd qo 
+                            else CalcRing.mk_sum qo) 
+          in 
+             (CalcRing.mk_sum([context1; context2]))
+      | CalcRing.Prod(q1::qo) -> 
+          let (context1) = maintain(context) (q1) in
+          let (context2) = maintain(context1)
+                          (if List.length qo = 1 
+                           then List.hd qo 
+                           else CalcRing.mk_prod qo) 
+          in 
+             (context2)
+      | CalcRing.Neg(q1) ->
+          maintain(context)(q1)
+      | CalcRing.Val(leaf) ->
+         begin match leaf with
+            | Value(v) -> (context)
+            | External(ename,eins,eouts,etype,emeta) ->
+               failwith "Domain Maintenance on a materialized expression"
+            | AggSum(gb_vars, subexp) -> 
+               let (context1) = maintain (CalcRing.one) (subexp) in
+               let right_context = 
+                  CalcRing.Val(AggSum(gb_vars, context1)) 
+               in
+                  (CalcRing.mk_prod ([context; right_context]))
+            | Rel(rname, rvars) -> 
+               (CalcRing.mk_prod ([context; formula]))
+            | Cmp(op,subexp1,subexp2) -> 
+               let right_context = formula in
+                  (CalcRing.mk_prod ([context; formula]))
+               else
+                  (context)
+            | Lift(target, subexp)    -> 
+               (CalcRing.mk_prod ([context; formula]))
+         end
+      | _ -> failwith ("Incorrect formula")
     end
 *)
 
@@ -65,7 +76,7 @@ let mk_dom_var =
 let mk_exists (expr:expr_t): expr_t = 
    let dom_expr = (maintain expr) in
    Debug.print "LOG-MK-EXISTS" (fun () ->
-      "Making existence test with domain expression : \n"^(
+      "Making existence test with domain expression : \n" ^ (
          (CalculusPrinter.string_of_expr dom_expr)
       )
    );

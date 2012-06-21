@@ -1,6 +1,6 @@
 (**
-   Internal representation of a SQL parse tree.  The first representation in the 
-   compiler pipeline.  Not all features of SQL are supported.  In particular, 
+   Internal representation of a SQL parse tree.  The first representation in 
+   the compiler pipeline.  Not all features of SQL are supported. In particular,
    only SUM aggregates are available, and there is no HAVING clause.
 
 {[
@@ -56,9 +56,9 @@ let error msg = raise (SqlException(msg))
 (**/**)
 
 (**
-   A SQL variable.  The first field is the (optional) relation or pseudorelation 
-   that the variable is associated with.  Distinct from [Types.var_t], because 
-   of this optional relation association.
+   A SQL variable.  The first field is the (optional) relation or 
+   pseudorelation that the variable is associated with.  Distinct from 
+   [Types.var_t], because of this optional relation association.
 *)
 type sql_var_t = string option * string * type_t
 
@@ -101,7 +101,7 @@ type expr_t =
                                                 function. *)
  | Aggregate  of agg_t * expr_t             (** An aggregate operator.  This
                                                 only makes sense if this
-                                                expression appears in the target 
+                                                expression appears in the target
                                                 (or having) clause(s). *)
 
 (**

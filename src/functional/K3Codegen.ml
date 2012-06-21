@@ -37,7 +37,8 @@ sig
 
     (* Control flow *)
     (* predicate, then clause, else clause -> condition *) 
-    val ifthenelse : ?expr:K3.expr_t option -> code_t -> code_t -> code_t -> code_t
+    val ifthenelse : ?expr:K3.expr_t option -> code_t -> code_t -> 
+                     code_t -> code_t
 
     (* statements -> block *)    
     val block : ?expr:K3.expr_t option -> code_t list -> code_t
@@ -69,10 +70,12 @@ sig
         code_t -> K3.type_t -> code_t -> code_t
     
     (* agg fn, initial agg, collection -> agg *)
-    val aggregate : ?expr:K3.expr_t option -> code_t -> code_t -> code_t -> code_t
+    val aggregate : ?expr:K3.expr_t option -> code_t -> code_t -> code_t -> 
+                    code_t
     
     (* agg fn, initial agg, grouping fn, collection -> agg *)
-    val group_by_aggregate: ?expr:K3.expr_t option -> code_t -> code_t -> code_t -> code_t -> code_t
+    val group_by_aggregate: ?expr:K3.expr_t option -> code_t -> code_t -> 
+                            code_t -> code_t -> code_t
     
     (* nested collection -> flatten *)
     val flatten : ?expr:K3.expr_t option -> code_t -> code_t
@@ -88,7 +91,8 @@ sig
     
     (* map, partial key, pattern -> slice *)
     (* TODO: see notes on datatype conversions/secondary indexes *)
-    val slice  : ?expr:K3.expr_t option -> code_t -> code_t list -> int list -> code_t
+    val slice  : ?expr:K3.expr_t option -> code_t -> code_t list -> 
+                 int list -> code_t
     
     (* filter fn, collection -> filter *)
     val filter : ?expr:K3.expr_t option -> code_t -> code_t -> code_t
@@ -217,6 +221,6 @@ sig
 
     type value_t
 
-    val eval : DBChecker.DBAccess.db_session_t option -> code_t -> string list -> 
-               const_t list -> db_t -> value_t
+    val eval : DBChecker.DBAccess.db_session_t option -> code_t -> 
+               string list -> const_t list -> db_t -> value_t
 end

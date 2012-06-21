@@ -168,7 +168,8 @@ let lift_equalities (global_scope:var_t list) (big_expr:C.expr_t): C.expr_t =
                         "Scope of error is : " ^
                         (ListExtras.ocaml_of_list string_of_var local_scope)
                       );
-                      C.bail_out big_expr "Error: lifted equality past scope of both vars")
+                      C.bail_out big_expr 
+                         "Error: lifted equality past scope of both vars")
          | UnidirectionalLift(x, y) -> 
             if not (List.for_all (fun y_var -> List.mem y_var local_scope)
                                  (Arithmetic.vars_of_value y))
@@ -240,7 +241,7 @@ let lift_equalities (global_scope:var_t list) (big_expr:C.expr_t): C.expr_t =
                      in
                      if y_enters_scope then
                         (* If y enters scope here, then it's not possible to
-                           lift this expression (for now, this is true even if x 
+                           lift this expression (for now, this is true even if x
                            doesn't enter scope here) *)
                         (  commuting_eqs, 
                            CalcRing.mk_prod 
@@ -348,7 +349,7 @@ exception CouldNotUnifyException of string;;
    @param scope   Any variables defined outside of the expression being 
                   evaluated.  This includes trigger variables, input variables 
                   from the map on the lhs of the statement being evaluated.
-   @param schema  The expected output variables of the expression being unified.  
+   @param schema  The expected output variables of the expression being unified.
                   These variables will never be unified away
    @param expr    The calculus expression being processed
 *)
@@ -524,7 +525,7 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
          (* Unifying lifts can do some wonky things to the schema of subexp.
             Among other things, previously unbound variables can become bound,
             and previously bound variables can become unbound.  A variable in
-            the schema of an expression will never be unified (although the lift 
+            the schema of an expression will never be unified (although the lift
             can be propagated up and out of the aggsum via nesting_rewrites) *)
          let new_gb_vars = 
             ListAsSet.union
@@ -747,7 +748,7 @@ let rec nesting_rewrites (expr:C.expr_t) =
                         (ListExtras.ocaml_of_list string_of_var gb_vars)^", \n"^
                         (CalculusPrinter.string_of_expr subterm)^
                         "\n) with ivars: "^
-                        (ListExtras.ocaml_of_list string_of_var sum_ivars)^                        
+                        (ListExtras.ocaml_of_list string_of_var sum_ivars)^
                         "\nto: "^
                         (CalculusPrinter.string_of_expr rewritten)
                      );
@@ -756,7 +757,8 @@ let rec nesting_rewrites (expr:C.expr_t) =
                      let (unnested,nested) = 
                         List.fold_left (fun (unnested,nested) term->
                            if (C.commutes nested term) && 
-                              (ListAsSet.subset (snd (C.schema_of_expr term)) gb_vars)
+                              (ListAsSet.subset (snd (C.schema_of_expr term))
+                                                gb_vars)
                            then (CalcRing.mk_prod [unnested; term], nested)
                            else (unnested, CalcRing.mk_prod [nested; term])
                         ) (CalcRing.one, CalcRing.one) pl in

@@ -130,7 +130,8 @@ in
    test "Aggregation with a lift containing an irrelevant relation"
       "AggSum([A], R(A,B) * (C ^= S(A)))"
       "M1(int)[][A]";       
-   test "Aggregation with a lift containing an irrelevant relation and a comparison"
+   test ("Aggregation with a lift containing an irrelevant relation " ^ 
+         "and a comparison")
       "AggSum([A], R(A,B) * (C ^= S(A)) * {C > 0})"
       "M1(int)[][A]";
    test "Aggregation with a lift containing a relevant relation"
@@ -138,11 +139,14 @@ in
       "AggSum([A], (M1_L1_1(int)[][A,B] * (E ^= M1_L1_1(int)[][C, D] * B)))";
    test "Aggregation with a lift containing a relevant relation and a condition"
       "AggSum([A], R(A,B) * (E ^= R(C,D) * B) * {E > 0})"
-      "AggSum([A], (M1_L1_1(int)[][A,B] * (E ^= M1_L1_1(int)[][C,D] * B) * {E > 0}))";  
+      "AggSum([A], (M1_L1_1(int)[][A,B] * 
+                   (E ^= M1_L1_1(int)[][C,D] * B) * {E > 0}))";  
    test "Aggregation with a lift containing a relevant relation and a variable"
       "AggSum([A], R(A,B) * (E ^= R(C,D) * B) * E)"
-      "AggSum([A], (M1_L1_1(int)[][A,B] * (E ^= M1_L1_1(int)[][C,D] * B) * E))";    
-   test "Aggregation with a lift containing a relevant relation and a common variable"
+      "AggSum([A], (M1_L1_1(int)[][A,B] * 
+                    (E ^= M1_L1_1(int)[][C,D] * B) * E))";    
+   test ("Aggregation with a lift containing a relevant relation " ^ 
+         "and a common variable")
       "AggSum([A], R(A,B) * (E ^= R(C,D) * {A = C}) * {E > 0})"
       (if (Debug.active "HEURISTICS-IGNORE-FINAL-OPTIMIZATION") 
        then "AggSum([A], M1(int)[][A] * (E ^= M1_L1_1(int)[][A,D]) * {E > 0})"
@@ -150,7 +154,8 @@ in
     
    test "Extending schema due to a lift"
       "AggSum([A], R(A,B) * S(C,D) * (E ^= R(F,G) * C))"
-      "(M1(int)[][A] * AggSum([], M2(int)[][C] * (E ^= M2_L1_1(int)[][F,G] * C)))";
+      "(M1(int)[][A] * AggSum([], M2(int)[][C] * 
+        (E ^= M2_L1_1(int)[][F,G] * C)))";
 
    test "Mapping example"
       "R(A) * S(C) * (E ^= R(B) * S(D)) * 5"      
@@ -165,11 +170,13 @@ in
        then "M1(int)[][](1) * M2(int)[][A]"
        else "M1(int)[][](AggSum([],((C ^= 0)))) * M2(int)[][A]");
                     
-   test "Aggregation with a lift containing an irrelevant relation and a common variable"
+   test ("Aggregation with a lift containing an irrelevant relation " ^ 
+         "and a common variable")
       "AggSum([A], R(A,B) * (C ^= S(B)))"
       "M1(int)[][A]";
     
-   test "Aggregation with a lift containing an irrelevant relation and comparison"
+   test ("Aggregation with a lift containing an irrelevant relation " ^ 
+         "and comparison")
       "AggSum([A], R(A,B) * (C ^= S(D)) * {C > 0})"
       (if (not (Debug.active "HEURISTICS-IGNORE-IVC-OPTIMIZATION")) 
        then "AggSum([], (C ^= M1_L1_1(int)[][D]) * {C > 0}) * M2(int)[][A]"
@@ -177,16 +184,17 @@ in
        then "M1(int)[][] * M2(int)[][A]"
        else "M1(int)[][](AggSum([],(((C ^= 0) * {C > 0})))) * M2(int)[][A]");
     
-   test "Aggregation with a lift containing an irrelevant relation and a common variable"
+   test ("Aggregation with a lift containing an irrelevant relation " ^ 
+         "and a common variable")
       "AggSum([A], R(A,B) * (C ^= S(A)) * {C > 0})"
       "M1(int)[][A]";
    
    test "RExistsNestedAgg Delta Chunk"
       "R(A, B) *
-         (foo ^= ( AggSum([], (X ^= R(A,B) + {dA = A} * dB) *
-                                  {(3 * A) < X})))"
+       (foo ^= ( AggSum([], (X ^= R(A,B) + {dA = A} * dB) *
+                            {(3 * A) < X})))"
       "M1_L1_1_L1_1(int)[][A,B] * 
-         (foo ^= ( AggSum([], (X ^= (M1_L1_1_L1_1(int)[][A,B] + 
-                              {dA = A} * dB)) * 
-                                  {(3 * A) < X})))"
+       (foo ^= ( AggSum([], (X ^= (M1_L1_1_L1_1(int)[][A,B] + 
+                            {dA = A} * dB)) * 
+                            {(3 * A) < X})))"
 ;;

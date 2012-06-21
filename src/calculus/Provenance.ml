@@ -1,7 +1,7 @@
 (**
    A simple (and currently unused) set of tools for obtaining provenance 
-   information about a given calculus expression and/or the domains of variables 
-   in this expression.
+   information about a given calculus expression and/or the domains of 
+   variables in this expression.
 *)
 
 open Types
@@ -64,7 +64,7 @@ let rec provenance_of_expr ?(in_scope=[]) ?(inline_vars=[]) (expr:expr_t):
    let var_provenance vars =
          try 
             (* We use information flow to derive the provenance of variables in 
-               a value or a comparison.  These variables don't introduce any new 
+               a value or a comparison.  These variables don't introduce any new
                variables into scope, but the value of the expression itself 
                derives its value from these variables. The value doesn't 
                introduce any new variables into scope, but the value itself 

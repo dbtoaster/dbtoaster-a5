@@ -119,11 +119,11 @@ struct
     let to_string = Types.string_of_const
 end
 
-(* K3 values, includes base types, unit, tuples and several types of collections,
- * including named simple lists, such as FloatList and TupleList, whose contents
- * are always flat elements, 1- and 2-level persistent collections
- * (SingleMap, DoubleMap), as well as arbitrarily nested collections, namely
- * ListCollection and an indexed MapCollection.
+(* K3 values, includes base types, unit, tuples and several types of 
+ * collections, including named simple lists, such as FloatList and TupleList, 
+ * whose contents are always flat elements, 1- and 2-level persistent 
+ * collections (SingleMap, DoubleMap), as well as arbitrarily nested 
+ * collections, namely ListCollection and an indexed MapCollection.
  *
  * Note explictly defined type, which is a subtype of both Value above, and
  * Database.SliceableInOutMap. This is necessary since values include variants
@@ -196,9 +196,12 @@ struct
     let compare = Pervasives.compare
 
     let rec key_to_string k = ListExtras.ocaml_of_list string_of_value k
-    and string_of_vmap ?(sep = ";\n") sm   = K3ValuationMap.to_string ~sep:sep key_to_string string_of_value sm
-    and string_of_smap ?(sep = ";\n") sm   = string_of_vmap ~sep:sep sm 
-    and string_of_map  ?(sep = ";\n") m    = K3ValuationMap.to_string ~sep:sep key_to_string string_of_smap m 
+    and string_of_vmap ?(sep = ";\n") sm = 
+       K3ValuationMap.to_string ~sep:sep key_to_string string_of_value sm
+    and string_of_smap ?(sep = ";\n") sm = 
+       string_of_vmap ~sep:sep sm 
+    and string_of_map  ?(sep = ";\n") m  =
+       K3ValuationMap.to_string ~sep:sep key_to_string string_of_smap m 
 
     and string_of_value ?(sep = ";\n") v =
       begin match v with
@@ -275,7 +278,8 @@ struct
                 tbl      
              | _ -> failwith "TupleList contains elements other than tuples"
           ) (Hashtbl.create 10) kvl
-      | _ -> failwith "Unsupported (yet) conversion of a K3Value into a hash table"   
+      | _ -> failwith 
+         "Unsupported (yet) conversion of a K3Value into a hash table"   
 
 end
 and K3ValuationMap : SliceableMap.S with type key_elt = K3Value.t

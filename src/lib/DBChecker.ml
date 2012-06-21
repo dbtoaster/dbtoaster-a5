@@ -46,7 +46,7 @@ struct
       db_session.tables := table :: !(db_session.tables);
       let (name, schema, _, _) = table in
       let schema_sql = convert_schema schema in
-         I.create_table !(db_session.client) ~temporary:true name schema_sql       
+         I.create_table !(db_session.client) ~temporary:true name schema_sql
    
     
    let add_query (db_session : db_session_t) (query : Sql.select_t) : unit =
@@ -104,8 +104,11 @@ struct
    let print_hashtbl (title : string) (hashtbl : hashtbl_t) : unit =
       print_endline("\n"^title);
       Hashtbl.iter (fun keys values -> 
-         print_endline ("["^(ListExtras.string_of_list Types.string_of_const keys) ^ "] -> "^
-                        ListExtras.string_of_list Types.string_of_const values)
+         print_endline 
+            ("[" ^ 
+             (ListExtras.string_of_list Types.string_of_const keys) ^
+             "] -> " ^
+             (ListExtras.string_of_list Types.string_of_const values))
       ) hashtbl
    
    let cmp_hashtbl ?(default = (fun _ -> Types.CFloat(0.))) 

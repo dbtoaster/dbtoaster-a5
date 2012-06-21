@@ -64,8 +64,9 @@ let extract_renamings ((scope,schema):schema_t) (expr:expr_t):
    let rec fix_schemas expr =
       (* We can't just leave the result of the standard rename_vars approach 
          here, because we're actually mucking with the schema of the 
-         subexpressions.  In particular it's possible for us to remove Lifts (if 
-         we get X ^= X), and the schema of AggSums may need to be updated. *)
+         subexpressions. In particular it's possible for us to remove Lifts 
+         (if we get X ^= X), and the schema of AggSums may need to be updated.
+       *)
       CalcRing.fold CalcRing.mk_sum CalcRing.mk_prod CalcRing.mk_neg
          (fun leaf -> (begin match leaf with
             | AggSum(gb_vars, subexp) ->
@@ -141,7 +142,7 @@ let compile_map (db_schema:Schema.t) (history:Heuristics.ds_history_t)
       (***** THE FUN STUFF HAPPENS HERE *****)
       
       let map_prefix = todo_name^evt_prefix^reln in
-      let prefixed_relv = List.map (fun (n,t) -> (map_prefix^n, t)) relv in         
+      let prefixed_relv = List.map (fun (n,t) -> (map_prefix^n, t)) relv in
       let delta_event = mk_evt (reln, prefixed_relv, Schema.StreamRel) in
             
       if (Heuristics.should_update delta_event optimized_defn) 
@@ -383,13 +384,13 @@ let compile (db_schema:Schema.t) (calc_queries:tlq_list_t):
       let new_todos, compiled_ds = 
          compile_map db_schema history next_ds
       in
-      (* The order in which we concatenate new_todos decides whether compilation 
-      is performed 'depth-first' or 'breadth-first' with respect to the map 
-      heirarchy.  Only depth-first is correct without a topological sort 
-      postprocessing step. 
+      (* The order in which we concatenate new_todos decides whether 
+      compilation is performed 'depth-first' or 'breadth-first' with respect 
+      to the map heirarchy. Only depth-first is correct without a topological
+      sort postprocessing step. 
       
-      OAK: I'm not 100% convinced that this is the case.  It might be safer just 
-      to do a topo sort postprocessing step regardless.
+      OAK: I'm not 100% convinced that this is the case.  It might be safer 
+      just to do a topo sort postprocessing step regardless.
       *)
       todos     := new_todos @ !todos;
       plan      := (!plan) @ [compiled_ds]

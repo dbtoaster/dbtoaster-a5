@@ -264,7 +264,7 @@ let input_stages =
 let optional_stages =
    [  StageM3ToDistM3; StageRunInterpreter; StageCompileSource  ]
 
-(* The following list (core_stages) MUST be kept in order of desired execution.  
+(* The following list (core_stages) MUST be kept in order of desired execution.
 
    The list of active stages is created with the user's choice of input and 
    output formats determining which stages are unnecessary: This includes all 
@@ -333,7 +333,8 @@ Debug.exec "LOG-CALC"   (fun () -> activate_stage StagePrintCalc);;
 Debug.exec "LOG-SCHEMA" (fun () -> activate_stage StagePrintSchema);;
 Debug.exec "LOG-PLAN"   (fun () -> activate_stage StagePrintPlan);;
 Debug.exec "LOG-M3"     (fun () -> activate_stage StagePrintM3);;
-Debug.exec "LOG-M3DM"   (fun () -> activate_stage StagePrintM3DomainMaintenance);;
+Debug.exec "LOG-M3DM"   (fun () -> activate_stage 
+                                   StagePrintM3DomainMaintenance);;
 Debug.exec "LOG-K3"     (fun () -> activate_stage StagePrintK3);;
 Debug.exec "LOG-PARSER" (fun () -> let _ = Parsing.set_trace true in ());;
 Debug.exec "DEBUG-DM"   (fun () -> 
@@ -441,7 +442,8 @@ if stage_is_active StageParseSQL then (
       List.iter (fun f ->
          let lexbuff = 
             Lexing.from_channel (if f <> "-" then (open_in f) else stdin) in
-         let sql_parsed_file = Sqlparser.dbtoasterSqlList Sqllexer.tokenize lexbuff 
+         let sql_parsed_file = Sqlparser.dbtoasterSqlList Sqllexer.tokenize 
+                                                          lexbuff 
          in
          sql_program := Sql.merge_files !sql_program sql_parsed_file
       ) !files
@@ -519,8 +521,8 @@ if stage_is_active StageParseCalc then (
       ) !files
    with 
       | Parsing.Parse_error ->
-         error ("Calculus Parse Error.  (try using '-d log-parser' to track the "^
-                "error)")
+         error ("Calculus Parse Error.  (try using '-d log-parser' " ^ 
+                "to track the error)")
       | Sys_error(msg) ->
          error msg
    

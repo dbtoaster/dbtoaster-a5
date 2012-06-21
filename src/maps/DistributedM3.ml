@@ -9,7 +9,7 @@
    discover.  
    
    Corrective update triggers are this mechanism.  Each corrective update is 
-   associated with an existing trigger, as well as an external that is read from 
+   associated with an existing trigger, as well as an external that is read from
    by that trigger.  If we discover an error, we run the corrective update to 
    fix the mistake (and propagate any further corrections as-needed).
 *)

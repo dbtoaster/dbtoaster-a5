@@ -141,7 +141,8 @@
  *
  *    -- why do pipelining transforms after pushing down aggregates? does the
  *       order of these two optimizations matter? DONE: see answer below.
- *      ++ eliminating chains is a no-brainer, since the code is strictly simpler
+ *      ++ eliminating chains is a no-brainer, since the code is strictly 
+ *         simpler
  *      ++ pipelining should also result in strictly simpler code
  *         (i.e. fewer maps), since we eliminate map-chains w/ composition
  *      ++ this is not the case with pushing aggs, since it duplicates the agg
@@ -178,7 +179,8 @@
  *              transform only affects the function part of the nested map,
  *              which just as above, only makes a function more complex (g->g').
  *              Any subsequent transformations of the RHS map operation x would
- *              continue to simplify c1, at the expense of the inner function g',
+ *              continue to simplify c1, at the expense of the inner 
+ *              function g',
  *              and we would never reverse the effects of this aggregate
  *              pushdown operation since we do not decompose functions.
  *      ++ this answers the above question. We simultaneously match for:
@@ -314,10 +316,12 @@
  *        => map(f=lambda v.map(g=lambda w.gb,c1),
  *            map(h'=lambda z.app(lambda x.map(i=lambda y.ib, c2), jb), c0))
  *        => map(f=lambda v.map(g=lambda w.gb,c1),
- *            map(h'=lambda z.map(i=lambda y.sub[x->jb](ib), sub[x->jb](c2)), c0))
+ *            map(h'=lambda z.map(i=lambda y.sub[x->jb](ib), sub[x->jb](c2)),
+ *                          c0))
  *        => map(f'=lambda z.app(lambda v.map(g=lambda w.gb,c1),
  *            map(i=lambda y.sub[x->jb](ib), sub[x->jb](c2))), c0)
- *        => map(f'=lambda z.map(g'=lambda w.sub[v->mc2](gb),sub[v->mc2](c1)),c0)
+ *        => map(f'=lambda z.map(g'=lambda w.sub[v->mc2](gb),sub[v->mc2](c1)),
+ *                         c0)
  *           where mc1 = map(i=lambda y.sub[x->jb](ib), sub[x->jb](c2))
  *
  *       ++ above, if there is no flatten prior to map(h,...) in the original
@@ -353,7 +357,8 @@
  *
  *     -- agg(f=aclambda v,w.fb,i,map(g=lambda x.map(h=lambda y.hb,c2),c1))
  *        => agg(f=aclambda v,w.fb,i,
- *             map(g=lambda x.(agg(f=aclambda v,w.fb,0,map(h=lambda y.hb,c2))),c1))
+ *             map(g=lambda x.(agg(f=aclambda v,w.fb,0,map(h=lambda y.hb,c2))), 
+ *                          c1))
  *        => agg(f=aclambda v,w.fb,i,
  *             map(g=lambda x.(agg(f'=aclambda y,w.sub[v->hb](fb),0,c2)),c1))
  *        => agg(f''=aclambda x,w.sub[v->mc2](fb),i,c1)
@@ -488,10 +493,14 @@ let substitute (arg_to_sub, sub_expr) expr =
                      (fun e -> Apply( Lambda( lambda_arg, e ), apply_expr ))
                      (push_down_ifs lambda_expr)
                | _ -> 
-                  print_endline ("Substitute expression: "^(string_of_expr sub_expr));
-                  print_endline ("Arg to substitute : "^(string_of_arg arg_to_sub));
-                  print_endline ("Tuple expression: "^(string_of_expr tup_expr));
-                  failwith ("invalid tuple binding: "^(string_of_expr sub_expr))
+                  print_endline ("Substitute expression: " ^
+                                 (string_of_expr sub_expr));
+                  print_endline ("Arg to substitute : " ^
+                                 (string_of_arg arg_to_sub));
+                  print_endline ("Tuple expression: " ^
+                                 (string_of_expr tup_expr));
+                  failwith ("invalid tuple binding: " ^
+                            (string_of_expr sub_expr))
             in List.map2 (fun (v,_) e -> (v,e)) vt_l (push_down_ifs sub_expr)
     in
     (* Remove vars from substitutions when descending through lambdas
@@ -626,8 +635,8 @@ let nested_map map_f = match map_f with
 let rec inline_collection_functions substitutions expr =
   Debug.print "INLINE-COLLECTION-FUNCTIONS" (fun () ->
     "---- Current substitutions ----\n"^
-    (ListExtras.string_of_list (fun ((v,t),subst) -> v^"<="^(code_of_expr subst)) 
-                    substitutions)^
+    (ListExtras.string_of_list (fun ((v,t),subst) -> 
+        v ^ "<=" ^ (code_of_expr subst)) substitutions) ^
     "\n---- Current expression ----\n"^
     (code_of_expr expr)^"\n"
   );
@@ -679,8 +688,9 @@ let rec conservative_beta_reduction substitutions expr =
     if not(contains_collection_expr arg) then reduce()
     else
       let occurrences = List.filter ((=) v) free_vars in
-       (* first case preserves the variable even if it is not used, since the
-        * argument may have side-effects, such as persistent collection updates. *)
+       (* first case preserves the variable even if it is not used, since 
+        * the argument may have side-effects, such as persistent collection 
+        * updates. *)
        if List.length occurrences = 1 then reduce() else preserve()
   in
   let zero_of_expr expr =
@@ -699,7 +709,8 @@ let rec conservative_beta_reduction substitutions expr =
 
       (* Multiplying by 0 makes the number 0 *)
       | Mult(Const(CInt(0)), x)     | Mult(x, Const(CInt(0)))
-      | Mult(Const(CFloat(0.0)), x) | Mult(x, Const(CFloat(0.0))) ->  zero_of_expr expr
+      | Mult(Const(CFloat(0.0)), x) | Mult(x, Const(CFloat(0.0))) ->  
+         zero_of_expr expr
 
       (* Multiplying by 1 leaves the number unchanged *)
       | Mult(Const(CInt(1)), x)     | Mult(x, Const(CInt(1)))
@@ -811,7 +822,8 @@ let rec lift_ifs bindings expr =
         let d2 = get_dependencies pe2 in
         (ListAsSet.subset d1 d2) && not(ListAsSet.subset d2 d1)
     in
-    (* if expression is dependent on arg, returns new bindings, otherwise nothing *)
+    (* if expression is dependent on arg, returns new bindings, 
+     * otherwise nothing *)
     let arg_uses arg_l e =
         let vars = get_free_vars [] e in
         let bindings = List.flatten (List.map get_arg_vars arg_l) in
@@ -974,9 +986,9 @@ let rec simplify_collections filter expr =
  * i) lambdas, as a simple way to ensure variables do not escape their
  *    definition. This could be refined by allowing candidates to propagate up
  *    provided they do not use the variable bound by the lambda.
- * ii) if-then-elses, where only candidates common to both then- and else-branches
- *     are carried up. Candidates that appear in any combination of the predicate
- *     and one of the branches are materialized then and there.
+ * ii) if-then-elses, where only candidates common to both then- and 
+ *     else-branches are carried up. Candidates that appear in any combination 
+ *     of the predicate and one of the branches are materialized then and there.
  * 
  * Specifically, the fold method accumulates a set of equivalence classes,
  * represented as a nested list of expressions (each inner list represents
@@ -1048,7 +1060,8 @@ let common_subexpression_elim expr =
       let nv = List.map (sub_of_id subs) (get_arg_vars arg) in
       match arg,nv with
         | AVar(_,ty),[x] -> AVar(x,ty)
-        | ATuple(vt_l), nvl -> ATuple(List.map2 (fun (_,ty) id -> id,ty) vt_l nvl)
+        | ATuple(vt_l), nvl -> ATuple(List.map2 (fun (_,ty) id -> 
+                                                 id,ty) vt_l nvl)
         | _,_ -> failwith "invalid arg to rebuild"
     in
     let modify_subs subs expr = match expr with
@@ -1164,7 +1177,8 @@ let common_subexpression_elim expr =
             (inter_eqv t_cand_exprs e_cand_exprs) in
           let rest = diff_eqv (union_eqvl [] branch_candidates) common in
 
-          (* Make CSEs for subexprs that are used more than once, but not passed up. *)
+          (* Make CSEs for subexprs that are used more than once, but not
+           * passed up. *)
           let cses_here = List.filter (fun cl -> List.length cl > 1) rest in
           let p_cses, branch_cses =
             List.partition (fun cl -> List.exists (fun cl2 ->
@@ -1206,7 +1220,8 @@ let common_subexpression_elim expr =
           lambda_common (List.hd (List.hd parts)) (fun x -> Lambda(arg, x))
 
         | AssocLambda (arg1, arg2, _) ->
-          lambda_common (List.hd (List.hd parts)) (fun x -> AssocLambda(arg1, arg2, x))
+          lambda_common (List.hd (List.hd parts)) 
+                        (fun x -> AssocLambda(arg1, arg2, x))
 
         (* there will be no CSEs inside lambdas, leaving only the argument cses
          * to carry up. *)
@@ -1242,9 +1257,9 @@ let common_subexpression_elim expr =
             (List.flatten (List.flatten sub_parts)) 
           in (union_eqv_parts ([[[[candidate]]]]@sub_parts)), candidate
 
-        (* TODO/HACK: don't treat nested map lookups as CSEs for efficiency for now,
-         * since nested map CSEs result in copying. This can be fixed by using
-         * pointers in map entries for nested maps. *)
+        (* TODO/HACK: don't treat nested map lookups as CSEs for efficiency 
+         * for now, since nested map CSEs result in copying. This can be fixed
+         * by using pointers in map entries for nested maps. *)
         | Member(PC _, _) | Lookup(PC _, _) ->
           (union_eqv_parts sub_parts), rebuilt_expr
 
@@ -1330,7 +1345,8 @@ let lift_updates bindings expr =
     let add_bindings l arg_l =
       let current_max = List.fold_left max 0 (List.map snd l) in
       l@(List.fold_left (fun acc arg -> acc@
-          (List.map (fun id -> (id,current_max+1)) (get_arg_vars arg))) [] arg_l)
+          (List.map (fun id -> (id,current_max+1)) 
+                    (get_arg_vars arg))) [] arg_l)
     in
     let new_binding_depths = match expr with
       | Lambda(arg,_) -> add_bindings binding_depths [arg]
@@ -1384,7 +1400,8 @@ let lift_updates bindings expr =
                     (List.map (dependent_depth binding_depths) l_updates)
                 in List.map fst 
                      (List.filter (fun (u,rnk) -> rnk < threshold_l_rank)
-                       (List.map (dependent_depth binding_depths) common_updates))
+                       (List.map (dependent_depth binding_depths)
+                                 common_updates))
               in
               if lift_updates = [] then ne else 
               let new_then = IfThenElse(p, t2, mk_block (l_updates@[t3])) in
@@ -1498,10 +1515,12 @@ let dm_optimize ?(optimizations=[]) trigger_vars expr =
   in
   let optimize_stmt s = 
     match s with
-      | K3.Comment(s, K3.Block(bs)) -> K3.Comment(s, K3.Block((List.map optim bs)))
+      | K3.Comment(s, K3.Block(bs)) -> 
+         K3.Comment(s, K3.Block((List.map optim bs)))
       | K3.Block(bs) -> K3.Block((List.map optim bs))
       | K3.Unit -> K3.Unit
-      | _ -> failwith ("Invalid inside expression in DM block"^(K3.nice_string_of_expr s []))
+      | _ -> failwith ("Invalid inside expression in DM block" ^ 
+                       (K3.nice_string_of_expr s []))
   in
   match expr with
     | K3.Apply(K3.Lambda(lambda_arg, K3.Block(lbbs)), K3.Tuple(tuples)) ->
@@ -1510,8 +1529,10 @@ let dm_optimize ?(optimizations=[]) trigger_vars expr =
           List.map optimize_stmt lbbs
         else
           match lbbs with
-            | [update_domain_part; update_status_part; ivc_part; m3_part; gc_part; unit_statement] ->
-              [update_domain_part; update_status_part; ivc_part; optimize_stmt m3_part; gc_part; unit_statement]
+            | [update_domain_part; update_status_part; 
+               ivc_part; m3_part; gc_part; unit_statement] ->
+              [update_domain_part; update_status_part; 
+               ivc_part; optimize_stmt m3_part; gc_part; unit_statement]
             | _ -> failwith ("Invalid K3 program of DM")
       in
       let new_tuples = 
@@ -1624,7 +1645,8 @@ let index e l =
 let create_datastructure arg partial_key e =
   let schema = get_arg_vars_w_types arg in
   if List.length schema = 1 then
-    (print_endline ("singleton schema "^(String.concat "," (List.map fst schema)));
+    (print_endline ("singleton schema " ^ 
+                    (String.concat "," (List.map fst schema)));
      failwith ("invalid tuple collection "^(string_of_expr e)))
   else
     let k_sch, _ = back schema in
@@ -1702,11 +1724,16 @@ let datastructure_statement (schema, patterns) (pm, rel, args) stmt =
                  slice keys. We thus need to add a pattern for this new
                  partial key *)
               let c_name = get_collection_name rc in
-              let merged_probe_key, slice_expr = slice_collection rc probe_key in
-              let key_pat = List.split (List.map
-                (fun (v,_) -> v, index v (List.map fst ds_sch)) merged_probe_key)
+              let merged_probe_key, slice_expr = 
+                 slice_collection rc probe_key
               in
-              let existing_patterns = Patterns.get_out_patterns !r_pats c_name in
+              let key_pat = List.split (List.map
+                 (fun (v,_) -> v, index v (List.map fst ds_sch))
+                 merged_probe_key)
+              in
+              let existing_patterns = 
+                 Patterns.get_out_patterns !r_pats c_name 
+              in
               let has_pattern = List.mem (snd key_pat) existing_patterns in 
               if not(probe_key = [] || has_pattern) then 
                 r_pats := Patterns.add_pattern !r_pats
@@ -1715,7 +1742,8 @@ let datastructure_statement (schema, patterns) (pm, rel, args) stmt =
               Map(Lambda(narg, rest_b), slice_expr)
             end
           else
-            (* TODO: lift datastructure constructor if it is independent of narg. *)
+            (* TODO: lift datastructure constructor if it is independent 
+             * of narg. *)
             let ds, ds_decl, ds_cons = create_datastructure narg bp_pairs rc in
             let rebuilt_expr =
               (* Perform a lookup instead of a slice if all keys are probed. *)
@@ -1753,17 +1781,22 @@ let datastructure_statement (schema, patterns) (pm, rel, args) stmt =
     | AssocLambda(arg1, arg2, _) -> ListAsSet.multiunion [env; f arg1; f arg2]
     | _ -> env
   in
-  let filter_opts l = List.map (function Some(x) -> x
-                                | None -> failwith "invalid ds decl and pattern")
-       (List.filter ((<>) None) l)
+  let filter_opts l = List.map 
+     (function 
+         Some(x) -> x
+       | None -> failwith "invalid ds decl and pattern")
+     (List.filter ((<>) None) l)
   in
-  let decl_opts, new_stmt = fold_expr bu_f td_f args ([],Const(CFloat 1.0)) stmt in
+  let decl_opts, new_stmt = fold_expr bu_f td_f args 
+                                      ([],Const(CFloat 1.0)) stmt 
+  in
   let decls, patterns = 
     let d, p_l = List.split (filter_opts decl_opts) in
     let p = match p_l with
       | [] -> Patterns.empty_pattern_map()
       | [pm] -> pm
-      | _ -> List.fold_left Patterns.merge_pattern_maps (List.hd p_l) (List.tl p_l)
+      | _ -> List.fold_left Patterns.merge_pattern_maps (List.hd p_l) 
+                                                        (List.tl p_l)
     in d, p
   in (!r_sch, !r_pats), ((decls, patterns), [new_stmt])
 

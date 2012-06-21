@@ -1,10 +1,10 @@
 (**
-   Functionality for managing debugging statements and 'hidden' functionality in  
-   DBToaster.  Accessed through dbtoaster's -d flag.
+   Functionality for managing debugging statements and 'hidden' functionality
+   in DBToaster.  Accessed through dbtoaster's -d flag.
    
    The debug module keeps track of a list of globally 'active' debug modes.  
-   Each mode is identified in the string, and referenced within the code via the 
-   Debug.exec, Debug.print, and Debug.active functions.  
+   Each mode is identified in the string, and referenced within the code via 
+   the Debug.exec, Debug.print, and Debug.active functions.  
    
    Debug modes can be explicitly managed in the code using Debug.activate or 
    Debug.deactivate.  Users can activate debug modes in the dbtoaster binary by
@@ -54,8 +54,8 @@ let exec (mode:debug_mode_t) (f:(unit->'a)): unit =
       then let _ = f () in () else ();;
 
 (**
-   Print a string when the indicated debug mode is active.  The string should be 
-   encapsulated in a generator function of type ( unit -> string )
+   Print a string when the indicated debug mode is active.  The string should 
+   be encapsulated in a generator function of type ( unit -> string )
    @param mode The triggering mode
    @param f    The string-generating function
 *)
@@ -71,8 +71,8 @@ let active (mode:debug_mode_t) = StringSet.mem mode !DebugInternal.debug_modes;;
 
 (**
    Determine the operating system on which we are running
-   @return A string describing the operating system (the output of unmame or ??? 
-           if uname does not exist
+   @return A string describing the operating system (the output of unmame or 
+           ??? if uname does not exist
 *)
 let os () =
    let fdes = (Unix.open_process_in "uname") in
@@ -102,7 +102,7 @@ module Logger = struct
    
       Log a message of a specified class, for a specified module 
       
-      @param m            The module to associate with this warning, or an empty 
+      @param m            The module to associate with this warning, or an empty
                           string for an unassociated message
       @param level        The log level to post the message at
       @param continuation (optional) A function that will be invoked after the

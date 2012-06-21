@@ -60,8 +60,10 @@ type ('a, 'ext_type, 'ext_fn) imp_t =
                          ('a, 'ext_type, 'ext_fn) imp_t *
                          ('a, 'ext_type, 'ext_fn) imp_t
 
-type ('ext_type, 'ext_fn) typed_expr_t = ('ext_type type_t, 'ext_type, 'ext_fn) expr_t
-type ('ext_type, 'ext_fn) typed_imp_t = ('ext_type type_t, 'ext_type, 'ext_fn) imp_t
+type ('ext_type, 'ext_fn) typed_expr_t = 
+   ('ext_type type_t, 'ext_type, 'ext_fn) expr_t
+type ('ext_type, 'ext_fn) typed_imp_t = 
+   ('ext_type type_t, 'ext_type, 'ext_fn) imp_t
 
 (* Typing helpers *)
 
@@ -100,7 +102,8 @@ type ('a, 'ext_type, 'ext_fn) all_trace =
 let rec fold_expr ?(trace:(('a, 'ext_type, 'ext_fn) all_trace option) = None)
                   (f:   'b -> 'c list -> ('a, 'ext_type, 'ext_fn) expr_t -> 'c)
                   (pre: 'b ->            ('a, 'ext_type, 'ext_fn) expr_t -> 'b)
-                  (acc: 'b) (init: 'c) (e : ('a, 'ext_type, 'ext_fn) expr_t) : 'c
+                  (acc: 'b) (init: 'c) (e : ('a, 'ext_type, 'ext_fn) expr_t) :
+                  'c
 =
   try
      let nacc = pre acc e in

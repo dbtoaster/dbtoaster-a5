@@ -33,7 +33,8 @@
  * In summary:
  * -- databases are functors of names and maps
  * -- names are strings or integers
- * -- InOutMaps implement M3 maps, and are functors of values (i.e. map contents)
+ * -- InOutMaps implement M3 maps, and are functors of values 
+ *    (i.e. map contents)
  * -- K3 maps implement all the functionality of M3 maps, and additionally a
  *    deeply nested map type and accessors.
  * -- K3 databases implement all the functionality of M3 databases, and
@@ -99,7 +100,8 @@ sig
 
    val make_smap : (key_t * value_t) list -> pattern_t list -> single_map_t
    val make_map  : pattern_t list -> map_t  
-   val make_map_from_smaps : (key_t * single_map_t) list -> pattern_t list -> map_t
+   val make_map_from_smaps : (key_t * single_map_t) list -> pattern_t list -> 
+                             map_t
 
    val smap_to_list : single_map_t -> (key_t * value_t) list
    val map_to_list : map_t -> (key_t * single_map_t) list
@@ -210,7 +212,8 @@ sig
    val nested_map_of_value : value_t -> nested_map_t
    val value_of_nested_map : nested_map_t -> value_t
    
-   val make_nested_map : (key_t * value_t) list -> pattern_t list -> nested_map_t
+   val make_nested_map : (key_t * value_t) list -> pattern_t list -> 
+                         nested_map_t
    val nested_map_has_entry : key_t -> nested_map_t -> bool
    val get_nested_map_entry : key_t -> nested_map_t -> value_t
    val add_nested_map_entry : key_t -> value_t -> nested_map_t -> nested_map_t
@@ -294,8 +297,10 @@ struct
    let value_to_string    = S.string_of_value
    let key_to_string k    = ListExtras.ocaml_of_list value_to_string k
 
-   let smap_to_string ?(sep = ";\n") (m: single_map_t) = S.string_of_smap ~sep:sep m
-   let map_to_string ?(sep = ";\n") (m: map_t) = S.string_of_map ~sep:sep m
+   let smap_to_string ?(sep = ";\n") (m: single_map_t) = 
+      S.string_of_smap ~sep:sep m
+   let map_to_string ?(sep = ";\n") (m: map_t) = 
+      S.string_of_map ~sep:sep m
 
    (* Debugging and testing helpers *)
    let showsmap (s: single_map_t) = S.smap_to_list s
@@ -372,7 +377,8 @@ sig
    val update_out_map : map_name_t -> single_map_t -> db_t -> unit
 
    (* Single value updates *)
-   val update_map_value : map_name_t -> key_t -> key_t -> value_t -> db_t -> unit
+   val update_map_value : map_name_t -> key_t -> key_t -> value_t -> db_t -> 
+                          unit
    val update_in_map_value : map_name_t -> key_t -> value_t -> db_t -> unit
    val update_out_map_value : map_name_t -> key_t -> value_t -> db_t -> unit
    val update_value: map_name_t -> value_t -> db_t -> unit
@@ -489,7 +495,8 @@ struct
 
     let update_db_smap_entry mapn img new_value (db,_) =
        let m = S.smap_of_value (DBM.find [mapn] db) in
-       ignore(DBM.add [mapn] (S.value_of_smap (S.add_smap_entry img new_value m)) db)
+       ignore(DBM.add [mapn] 
+                      (S.value_of_smap (S.add_smap_entry img new_value m)) db)
 
     (* Generic nested update *)
     let update_db_value_chain mapn imgs patterns new_value (db,_) =
@@ -557,13 +564,16 @@ struct
            (S.remove_smap_entry x (S.smap_of_value v))
         | ([h;t],[h2;t2]) ->
             let m = S.map_of_value v in
-            let new_nested = aux [t] [t2] (S.value_of_smap (S.get_map_entry h m)) in 
-                let new_map = 
-                        if (S.smap_is_empty (S.smap_of_value new_nested)) then
-                            S.remove_map_entry h m
-                        else
-                            S.add_map_entry h (S.smap_of_value new_nested) m in
-                S.value_of_map (new_map)
+            let new_nested = 
+               aux [t] [t2] (S.value_of_smap (S.get_map_entry h m)) 
+            in 
+            let new_map = 
+               if (S.smap_is_empty (S.smap_of_value new_nested)) then
+                  S.remove_map_entry h m
+               else
+                  S.add_map_entry h (S.smap_of_value new_nested) m 
+            in
+               S.value_of_map (new_map)
         | (h::t,h2::t2) ->
             let nm = S.nested_map_of_value v in
             let new_nested = aux t t2 (S.get_nested_map_entry h nm) in 

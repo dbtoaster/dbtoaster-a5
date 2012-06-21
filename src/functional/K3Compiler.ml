@@ -51,7 +51,8 @@ let rec compile_k3_expr e =
     
     | K.Apply(fn_e, arg_e) -> apply ~expr:(debug e) (rcr fn_e) (rcr arg_e)
     
-    | K.Map(fn_e, c_e) -> map ~expr:(debug e) (rcr fn_e) (tc_fn_rt fn_e) (rcr c_e) 
+    | K.Map(fn_e, c_e) -> map ~expr:(debug e) (rcr fn_e) 
+                              (tc_fn_rt fn_e) (rcr c_e) 
     | K.Flatten(c_e) -> flatten ~expr:(debug e) (rcr c_e) 
     | K.Aggregate(fn_e, init_e, c_e) ->
         begin match List.map rcr [fn_e;init_e;c_e] with
@@ -65,8 +66,10 @@ let rec compile_k3_expr e =
         | _ -> failwith "invalid group-by aggregate compilation"
         end
 
-    | K.Member(m_e, ke_l) -> exists ~expr:(debug e) (rcr m_e) (List.map rcr ke_l)  
-    | K.Lookup(m_e, ke_l) -> lookup ~expr:(debug e) (rcr m_e) (List.map rcr ke_l)
+    | K.Member(m_e, ke_l) -> exists ~expr:(debug e) (rcr m_e) 
+                                    (List.map rcr ke_l)  
+    | K.Lookup(m_e, ke_l) -> lookup ~expr:(debug e) (rcr m_e) 
+                                    (List.map rcr ke_l)
     | K.Slice(m_e, sch, idk_l) ->
         let index l e =
           let (pos,found) = List.fold_left (fun (c,f) x ->
@@ -96,7 +99,8 @@ let rec compile_k3_expr e =
 
     | K.PCValueUpdate(m_e, ine_l, oute_l, u_e) ->
         begin match (m_e, ine_l, oute_l) with
-        | (K.SingletonPC(id,_),[],[]) -> update_value ~expr:(debug e) id (rcr u_e)
+        | (K.SingletonPC(id,_),[],[]) -> update_value ~expr:(debug e) 
+                                                      id (rcr u_e)
         
         | (K.OutPC(id,_,_), [], e_l) -> update_out_map_value ~expr:(debug e) id
             (List.map rcr e_l) (rcr u_e) 
@@ -111,7 +115,8 @@ let rec compile_k3_expr e =
         end
     | K.PCElementRemove(m_e, ine_l, oute_l) ->
         begin match (m_e, ine_l, oute_l) with    
-        | (K.OutPC(id,_,_), [], e_l) -> remove_out_map_element ~expr:(debug e) id
+        | (K.OutPC(id,_,_), [], e_l) -> remove_out_map_element ~expr:(debug e) 
+                                                               id
             (List.map rcr e_l)
         | (K.InPC(id,_,_), e_l, []) -> remove_in_map_element ~expr:(debug e) id
             (List.map rcr e_l)
@@ -124,7 +129,9 @@ let rec compile_k3_expr e =
 
 let compile_triggers_noopt (trigs:K3.trigger_t list) : code_t list =
    List.map (fun (event, cs) ->
-      let stmts = List.map (fun x -> compile_k3_expr (K3.annotate_collections x)) cs in
+      let stmts = List.map (fun x -> 
+         compile_k3_expr (K3.annotate_collections x)) cs 
+      in
          trigger event stmts
    ) trigs
 

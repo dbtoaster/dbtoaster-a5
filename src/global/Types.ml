@@ -76,7 +76,7 @@ let int_of_const (a:const_t): int =
    end
 
 (**
-   Cast a constant to a float.  Integers are promoted, booleans are converted to 
+   Cast a constant to a float. Integers are promoted, booleans are converted to
    1./0..  Strings produce an error.
    @param a   A constant
    @return    The floating point value of [a]
@@ -107,18 +107,19 @@ let inverse_of_cmp = function
    @raise Failure If the string does not correspond to any date
 *)
 let parse_date str = 
-  if (Str.string_match
-      (Str.regexp "\\([0-9]+\\)-\\([0-9]+\\)-\\([0-9]+\\)") str 0)
-              then (
+   if (Str.string_match
+          (Str.regexp "\\([0-9]+\\)-\\([0-9]+\\)-\\([0-9]+\\)") 
+                      str 0)
+   then (
       let y = (int_of_string (Str.matched_group 1 str)) in
       let m = (int_of_string (Str.matched_group 2 str)) in
       let d = (int_of_string (Str.matched_group 3 str)) in
-          if (m > 12) then failwith 
-              ("Invalid month ("^(string_of_int m)^") in date: "^str);                                         
-          if (d > 31) then failwith
-              ("Invalid day ("^(string_of_int d)^") in date: "^str);
-              CDate(y,m,d)
-  ) else
+      if (m > 12) then failwith 
+         ("Invalid month ("^(string_of_int m)^") in date: "^str);
+      if (d > 31) then failwith
+         ("Invalid day ("^(string_of_int d)^") in date: "^str);
+      CDate(y,m,d)
+   ) else
       failwith ("Improperly formatted date: "^str)              
  
 (**** Conversion to Strings ****)

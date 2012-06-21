@@ -58,8 +58,8 @@ type source_t =
 
 (**
    An Adaptor, or mechanism for parsing tuple frames into data.  Adaptors 
-   consist of a string name, and a list of string key/value pairs parameterizing 
-   the adaptor.
+   consist of a string name, and a list of string key/value pairs 
+   parameterizing the adaptor.
 *)
 type adaptor_t = string * (string * string) list
 
@@ -85,8 +85,8 @@ let empty_db ():t = ref []
    Add a relation to the indicated database schema.  Optionally include the 
    source and adaptor that will read into the relation.
    @param db      The database schema to modify
-   @param source  (optional) The source from which the relation's tuples will be 
-                  read.
+   @param source  (optional) The source from which the relation's tuples will 
+                  be read.
    @param adaptor (optional) The adaptor that will parse the relation's tuples
    @param rel     The relation to add to the schema
 *)
@@ -136,11 +136,11 @@ let rel (db:t) (reln:string): rel_t =
    List.find (fun (cmpn,_,_) -> reln = cmpn) (rels db)
 
 (**
-   Partition the sources in a database schema by type of relation they generate.  
-   All the sources that generate stream relations will be grouped together and
-   all the sources that generate table relations will be grouped together.  
-   Sources that generate both will be included in both groups, but each 
-   [source_info_t] will contain only the appropriate relations.
+   Partition the sources in a database schema by type of relation they 
+   generate. All the sources that generate stream relations will be grouped 
+   together and all the sources that generate table relations will be grouped
+   together. Sources that generate both will be included in both groups, but
+   each [source_info_t] will contain only the appropriate relations.
    
    @param db   The database schema
    @return     A pair (table_sources, stream_sources) of [source_info_t]s 
@@ -287,8 +287,8 @@ let code_of_source (source:source_t):string = begin match source with
    end
 
 (**
-   Obtain a string representation of an adaptor construct constructor compatible 
-   with Calculusparser.
+   Obtain a string representation of an adaptor construct constructor 
+   compatible with Calculusparser.
    @param adaptor  An adaptor construct
    @return         The calculusparser-compatible string representation of
                    the constructor for [adaptor] (to be used in a relation

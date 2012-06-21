@@ -107,24 +107,26 @@ struct
       | None -> failwith "invalid access on finished source"
       | Some(fr, inc) ->
          begin try match fr with
-             | FixedSize(len) ->
-                let buf = String.create len in
-                really_input inc buf 0 len; (Some(fr,inc), buf)
-             | Delimited(s) ->
-                (* TODO: handle \n\r *)
-                if s = "\n" then (Some(fr, inc), input_line inc) else
-                let delim_len = String.length s in
-                let tok = String.create delim_len in
-                let buf = ref (String.create 1024) in
-                let pos = ref 0 in
-                   while (really_input inc tok 0 delim_len; tok <> s) do
-                      if ( (!pos) + delim_len >= (String.length (!buf)) ) then
-                         buf := (!buf)^(String.create 1024);
-                      for i = 0 to delim_len do (!buf).[(!pos)+i] <- tok.[i] done;
-                      pos := (!pos) + delim_len;
-                   done;
-                   (Some(fr,inc), !buf)
-          with End_of_file -> (close_in inc; (None, ""))
+            | FixedSize(len) ->
+               let buf = String.create len in
+               really_input inc buf 0 len; (Some(fr,inc), buf)
+            | Delimited(s) ->
+               (* TODO: handle \n\r *)
+               if s = "\n" then (Some(fr, inc), input_line inc) else
+               let delim_len = String.length s in
+               let tok = String.create delim_len in
+               let buf = ref (String.create 1024) in
+               let pos = ref 0 in
+                  while (really_input inc tok 0 delim_len; tok <> s) do
+                     if ( (!pos) + delim_len >= (String.length (!buf)) ) then
+                        buf := (!buf)^(String.create 1024);
+                     for i = 0 to delim_len do 
+                        (!buf).[(!pos)+i] <- tok.[i] 
+                     done;
+                     pos := (!pos) + delim_len;
+                  done;
+                  (Some(fr,inc), !buf)
+         with End_of_file -> (close_in inc; (None, ""))
          end 
 
    let has_next fs = let (ns,_,buf,_) = fs in not((ns = None) && (!buf = []))

@@ -247,7 +247,8 @@ struct
       (function Leaf(meta, Undecorated(f)) -> [meta, f, []], [f, []]
        | Leaf(meta, Decorated _) -> [], [k3_var_of_meta meta, []] 
        | Node(meta, Undecorated(f), cir) -> [meta, f, cir], [f, cir]
-       | Node(meta, Decorated _, cir) as n -> [], [k3_var_of_meta meta, [n]]) cl)
+       | Node(meta, Decorated _, cir) as n -> 
+          [], [k3_var_of_meta meta, [n]]) cl)
     in
     let el, cll = List.split (List.flatten ecl) in
     List.flatten ull, el, List.flatten cll 
@@ -456,7 +457,9 @@ struct
   let is_filter_map expr = match expr with
     | K.Map(K.Lambda(_,map_e),_) ->
       let v_e = get_value_expr map_e in
-      List.for_all (fun e -> match e with | IfThenElse0 _ -> true | _ -> false) v_e
+      List.for_all (fun e -> match e with
+                               | IfThenElse0 _ -> true 
+                               | _ -> false) v_e
     | _ -> false
 
   (* IR (i.e., annotated K3 construction) from a K3 expression.
@@ -514,7 +517,9 @@ struct
       | K.IfThenElse _ -> ifthenelse_ir metadata [sfst(); ssnd(); sthd()]
 
       | K.Lambda (arg,_) -> lambda_ir metadata arg [sfst()]
-      | K.AssocLambda (arg1,arg2,_) -> assoc_lambda_ir metadata arg1 arg2 [sfst()]
+      | K.AssocLambda (arg1,arg2,_) -> assoc_lambda_ir metadata 
+                                                       arg1 arg2 
+                                                       [sfst()]
       
       | K.ExternalLambda _ -> undecorated_ir metadata e
 
@@ -524,7 +529,9 @@ struct
       | K.Map _ ->
         let map_meta =
           if not(is_filter_map e) then metadata
-          else mk_meta ~valid:(Some(gensym())) (sym_of_meta metadata) (type_of_meta metadata)
+          else mk_meta ~valid:(Some(gensym())) 
+                       (sym_of_meta metadata) 
+                       (type_of_meta metadata)
         in map_ir map_meta [sfst();ssnd()]
 
       | K.Aggregate _ -> aggregate_ir metadata [sfst(); ssnd(); sthd()]
@@ -561,7 +568,8 @@ struct
       | K.Filter _ ->
         failwith "TODO: implement filter in K3ToImperative"
 
-      | K.SingletonPC _ | K.OutPC _ | K.InPC _ | K.PC _ -> undecorated_ir metadata e
+      | K.SingletonPC _ | K.OutPC _ | K.InPC _ | K.PC _ -> 
+        undecorated_ir metadata e
 
       | K.PCUpdate (m_e,_,_) -> 
         update_ir metadata m_e (T.typecheck_expr m_e) ([sfst()]@snd()@[sthd()])
@@ -678,7 +686,8 @@ struct
 
     Debug.print "IMP-IR" (fun () ->
       String.concat "\n" (List.map (fun (meta,(tag,c)) -> 
-        (sym_of_meta meta)^": "^(String.concat "," (List.map sym_of_meta c))^"\n"^
+        (sym_of_meta meta)^": "^
+        (String.concat "," (List.map sym_of_meta c))^"\n"^
         (sym_of_meta meta)^": "^(string_of_tag tag)) flat_ir));
     
     let gc_op op = match op with
@@ -784,7 +793,8 @@ struct
         
         (* Conditionals push down the symbol to both branches *)
         | AK.IfThenElse ->
-          [cmetai 0; pushi 1; pushi 2], [], [decl_f false (cmetai 0); None; None]
+          [cmetai 0; pushi 1; pushi 2], [], 
+          [decl_f false (cmetai 0); None; None]
 
         (* Iterate needs a child symbol, but this should not be used since
          * the return type is unit. Maps yield the new collection as the symbol
@@ -800,7 +810,9 @@ struct
          * of the collection resulting from each ext lambda invocation to the
          * return value *)
         | AK.Ext ->
-          [pushi 0; (cmetai 1)], [arg_of_lambda (ctagi 0)], [None; decl_f false (cmetai 1)]
+          [pushi 0; (cmetai 1)], 
+          [arg_of_lambda (ctagi 0)], 
+          [None; decl_f false (cmetai 1)]
          
         (* 
         | FilterMap arg ->
@@ -844,14 +856,16 @@ struct
             let y =
               let gb_t = match type_of_meta (cmetai 2) with
                 | Host(K.Fn(_,rt)) -> Host rt
-                | Host(K.TBase(TInt)) -> Host(K.TBase(TInt)) (* let this through for untyped compilation *)
+                | Host(K.TBase(TInt)) -> Host(K.TBase(TInt)) 
+                    (* let this through for untyped compilation *)
                 | _ -> failwith "invalid group by function type"
               in mk_meta (sym_of_meta (cmetai 2)) gb_t
             in
             let z = cmetai 3 in
             let dx, dy, dz = decl_f false x, decl_f true y, decl_f false z in  
               ([x; init_meta; y; z],
-                ([arg1]@arg2_binding@[arg3]), [dx; decl_f true init_meta; dy; dz])
+                ([arg1]@arg2_binding@[arg3]), 
+                 [dx; decl_f true init_meta; dy; dz])
   
         | _ -> cmeta_l, [], List.map (decl_f false) cmeta_l
       in
@@ -882,7 +896,10 @@ struct
       (* Imp construction helpers *) 
       let imp_of_list l =
         if List.length l = 1 then List.hd l else Block(None, l) in
-      let unwrap x = match x with Some(y) -> y | _ -> failwith "invalid value" in
+      let unwrap x = match x with 
+          Some(y) -> y 
+        | _ -> failwith "invalid value" 
+      in
       let unwrap_l l = List.map unwrap (List.filter (fun x -> x <> None) l) in
       let list_i l = function 0 -> List.hd l | i -> List.nth l i in
 
@@ -1060,8 +1077,10 @@ struct
           (fun i -> i) (fun e -> failwith "invalid iterate function") in
         let loop_body = imp_of_list (decls@fn_body) in
           Some(match_ie 1 "invalid iterate collection"
-            (fun i -> i@[For(None, ((elem, elem_ty), elem_f), cdecli 1, loop_body)])
-            (fun e -> [For(None, ((elem, elem_ty), elem_f), e, loop_body)])), false
+            (fun i -> i@[For(None, ((elem, elem_ty), elem_f), 
+                             cdecli 1, loop_body)])
+            (fun e -> [For(None, ((elem, elem_ty), elem_f), 
+                           e, loop_body)])), false
 
       | AK.Map | AK.Ext ->
         let c_t = type_of_meta (cmetai 1) in
@@ -1084,9 +1103,9 @@ struct
                );
                x, t, false, bind_arg arg (Var (None,(x,t)))
         in
-        (* Loops must define any declarations used by the map/ext lambda, such as
-         * nested map temporary collection declarations, inside the loop body.
-         * This is not achieved by a child declaration, which
+        (* Loops must define any declarations used by the map/ext lambda, such
+         * as nested map temporary collection declarations, inside the loop 
+         * body. This is not achieved by a child declaration, which
          * is always defined prior to the expression's code. Thus we handle
          * map lambda declarations as a special case here *)
         let body_decls =
@@ -1157,7 +1176,8 @@ struct
             let arg_t = Host(K.TTuple(List.map snd it_l)) in
             let t = demote_collection_element_type c_t arg_t in  
             let x = gensym() in
-              x, t, false, (bind_arg arg1 (Var (None,(x,t))))@(bind_arg arg2 (cdecli 1))
+              x, t, false, (bind_arg arg1 (Var (None,(x,t)))) @
+                           (bind_arg arg2 (cdecli 1))
           | _ -> failwith "invalid aggregate args"
         in     
         let fn_body = assign_if_expr 0 "invalid aggregate function" in
@@ -1171,7 +1191,8 @@ struct
         let post = [Expr(None,
           BinOp(None, Assign, Var(None,(meta_sym, meta_ty)), cdecli 0))]
         in
-        Some(pre@[For(None, ((elem, elem_ty), elem_f), ce, loop_body)]@post), true
+        Some(pre@[For(None, ((elem, elem_ty), elem_f), 
+                      ce, loop_body)]@post), true
       
       | AK.GroupByAggregate ->
         let c_t = type_of_meta (cmetai 3) in 
@@ -1187,7 +1208,9 @@ struct
         let eg_decls elem_arg g_arg =
           let e, e_ty, e_f, edecls = get_elem g_arg in
           let eadecls =
-            if elem_arg <> g_arg then bind_arg elem_arg (Var (None, (e,e_ty))) else []
+            if elem_arg <> g_arg 
+            then bind_arg elem_arg (Var (None, (e,e_ty))) 
+            else []
           in e, e_ty, e_f, edecls, eadecls
         in
         let (elem, elem_ty, elem_f, edecls, eadecls), sdecls =
@@ -1205,7 +1228,8 @@ struct
             [IfThenElse(None,
                Fn(None, Member, [Var (None, (meta_sym, meta_ty)); cdecli 2]),
                Expr(None, BinOp(None, Assign, cdecli 1,
-                 Fn(None, Lookup, [Var (None, (meta_sym, meta_ty)); cdecli 2]))),
+                 Fn(None, Lookup, [Var (None, (meta_sym, meta_ty)); 
+                                   cdecli 2]))),
                imp_of_list (state_init))] 
         in
         (* Bind agg fn decls, invoke agg fn, and assign to result map *)
@@ -1214,7 +1238,9 @@ struct
         let fn_body = eadecls@sdecls@(match_ie 0 "invalid gb agg function"
           (fun i -> i@[mk_body (cdecli 0)]) (fun e -> [mk_body e]))
         in
-        let loop_body = imp_of_list (gb_body@[Block(None, pre_fn_body@fn_body)]) in
+        let loop_body = imp_of_list (gb_body@[Block(None, 
+                                                    pre_fn_body@fn_body)]) 
+        in
         let pre, ce =
           match_ie 3 "invalid gb agg collection"
             (fun i -> i, (cdecli 3)) (fun e -> [], e) 
@@ -1239,10 +1265,12 @@ struct
           Decl(None, (inner_var_id, inner_var_ty),
             Some(Var (None, (inner_elem, inner_ty)))) in
         let inner_body = Expr(None,
-          Fn(None, ConcatElement, [Var (None, (meta_sym, meta_ty)); inner_var])) in 
+          Fn(None, ConcatElement, 
+             [Var (None, (meta_sym, meta_ty)); inner_var])) in 
         let inner = 
           For(None, ((inner_elem, inner_ty), false),
-            Var(None, (outer_elem, outer_ty)), Block(None, [inner_decl; inner_body]))
+            Var(None, (outer_elem, outer_ty)), 
+            Block(None, [inner_decl; inner_body]))
         in Some(outer_pre@
              [For(None, ((outer_elem, outer_ty), false), outer_src, inner)]),
            true
@@ -1269,7 +1297,8 @@ struct
         | None, Some(e) -> 
           let pre = List.map unwrap (List.filter ((<>) None) cimps) in
           let b = child_decls@(List.flatten pre)@
-            [Expr(None, BinOp(None, Assign, Var (None, (meta_sym, meta_ty)), e))]
+            [Expr(None, BinOp(None, Assign, 
+                              Var (None, (meta_sym, meta_ty)), e))]
           in
           if List.length b = 1 then (false, None, Some(e))
           else (true, Some(inline_decls_of_imp_list env b), None)
@@ -1277,7 +1306,8 @@ struct
         | Some(i), None -> 
             let ro = Some(
               if child_decls = [] then i
-              else [(Block(None, inline_decls_of_imp_list env (child_decls@i)))]) 
+              else [(Block(None, inline_decls_of_imp_list env
+                           (child_decls@i)))]) 
             in imp_meta_used, ro, expr
         | _, _ -> failwith "invalid tag compilation"
       end
@@ -1299,13 +1329,15 @@ struct
               begin match io,eo with
                 | Some(i), None -> if used then [decl]@i else i
                 | None, Some(e) ->
-                  [decl; Expr(None, BinOp(None, Assign,
-                                Var (None, (sym_of_meta m, type_of_meta m)), e))]
+                  [decl; Expr(None, BinOp(
+                     None, Assign, 
+                     Var (None, (sym_of_meta m, type_of_meta m)), e))]
                 | _,_ -> failwith "invalid child code"
               end) cmeta)
             in
             let r = [Expr(None, BinOp(None, Assign,
-                     Var (None, (sym_of_meta meta, type_of_meta meta)), gc_expr e))]
+                     Var (None, (sym_of_meta meta, type_of_meta meta)), 
+                     gc_expr e))]
             in true, Some(inline_decls_of_imp_list env (cimp@r)), None
         end 
     in

@@ -102,9 +102,9 @@ let flatten_list_pair (l:('a list * 'b list) list): ('a list * 'b list) =
    @param a  A list of 2-tuples [(c,a)]
    @param b  A list of 2-tuples [(c,b)]
    @return   A list of tuples [(c,(a option,b option))] where c comes from the 
-             union of the first tuple elements of [a] and [b], and the remaining 
-             fields are populated by the result of {[List.assoc a c]} and 
-             {[List.assoc b c]}.
+             union of the first tuple elements of [a] and [b], and the 
+             remaining fields are populated by the result of {[List.assoc a c]}
+             and {[List.assoc b c]}.
 *)
 let outer_join_assoc (a:(('c * 'a) list)) (b:(('c * 'b) list)):
                      ('c * ('a option * 'b option)) list =
@@ -180,7 +180,7 @@ let sublist (start:int) (cnt:int) (l:'a list):'a list =
    
    @param a  The pivot element
    @param l  The input list
-   @return   The 2-tuple consisting of all elements that occur (positionally) in 
+   @return   The 2-tuple consisting of all elements that occur (positionally) in
              [l] before the first occurrence of [a], and all the elements that 
              occur after.
 *)
@@ -193,7 +193,7 @@ let split_at_pivot (a:'a) (l:'a list): 'a list * 'a list =
    
    @param a  The split position
    @param l  The input list
-   @return   The 3-tuple consisting of all elements that occur (positionally) in 
+   @return   The 3-tuple consisting of all elements that occur (positionally) in
              [l] before the split position, the element at the split position, 
              and all the elements that occur after.
 *)
@@ -204,7 +204,7 @@ let split_at_position (pos:int) (l:'a list): 'a list * 'a list * 'a list =
    Partition a list, splitting at the last position.
    
    @param l  The input list
-   @return   The 3-tuple consisting of all elements that occur (positionally) in 
+   @return   The 3-tuple consisting of all elements that occur (positionally) in
              [l] before the split position, the element at the split position, 
              and all the elements that occur after.
 *)
@@ -294,7 +294,8 @@ exception CycleFound
     ]}
         
    @param graph      A graph representing a partial order between elements
-   @param visited    A list of already visited nodes (useful in multiple invocations, see [toposort])
+   @param visited    A list of already visited nodes (useful in multiple
+                     invocations, see [toposort])
    @param start_node The root node of the graph
    @return           A list of topologically sorted elements 
 *)
@@ -311,13 +312,15 @@ let toposort_from_node graph visited start_node =
       explore [] start_node visited
 
 (** 
-   Perform topological sort on a given graph which may contain multiple root elements.
+   Perform topological sort on a given graph which may contain 
+   multiple root elements.
    Example: 
         
    {[ toposort [ (0, [2; 3]); (1, [2]) ] = 
                [ 0; 3; 1; 2]
     ]}
-   {[ toposort [ (1, [2]); (5, [6; 7]); (3, [2]); (6, [3; 7]); (8, [7]); (4, [3; 1]) ] =
+   {[ toposort [ (1, [2]); (5, [6; 7]); (3, [2]); (6, [3; 7]); (8, [7]); 
+                 (4, [3; 1]) ] =
                [ 5; 6; 8; 7; 4; 3; 1; 2]
     ]}
         
@@ -325,5 +328,6 @@ let toposort_from_node graph visited start_node =
    @return           A list of topologically sorted elements 
 *)
 let toposort graph =
-   List.fold_right (fun (node, _) visited -> toposort_from_node graph visited node) graph [] 
+   List.fold_right (fun (node, _) visited -> 
+      toposort_from_node graph visited node) graph [] 
                                                             

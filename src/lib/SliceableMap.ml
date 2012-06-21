@@ -52,14 +52,16 @@ sig
    val from_list : (key * 'a) list -> pattern list -> 'a t
    val to_list : 'a t -> (key * 'a) list
    
-   val to_string : ?sep:string -> (key -> string) -> ('a -> string) -> 'a t -> string
+   val to_string : ?sep:string -> (key -> string) -> ('a -> string) -> 
+                   'a t -> string
    
    (* Secondary index methods *)
    val slice : pattern -> partial_key -> 'a t -> 'a t
    val slice_keys : pattern -> partial_key -> 'a t -> key list
    val partition_slice : pattern -> partial_key -> 'a t -> 'a t * 'a t
 
-   val fold_index : (partial_key -> (key * 'a) list -> 'b -> 'b) -> pattern -> 'a t -> 'b -> 'b
+   val fold_index : (partial_key -> (key * 'a) list -> 'b -> 'b) -> 
+                    pattern -> 'a t -> 'b -> 'b
    
    val add_secondary_index : 'a t -> pattern -> 'a t
    val extend_secondary_indexes: 'a t -> 'a t -> 'a t
@@ -262,7 +264,8 @@ struct
       let aux k v nm =
          let (nprim, nsecond) = nm in
          Hashtbl.add nprim k v;
-         (* For debugging, ensure key already exists in the secondary index union *)
+         (* For debugging, ensure key already exists in *)
+         (* the secondary index union *)
          (*
          (let valid = IndexMap.fold
             (fun pat si acc -> acc && (mem_secondary si k)) nsecond true
@@ -318,7 +321,10 @@ struct
       in fold aux (map_rk f1 (extend_secondary_indexes m1 m2)) m2
 
    let merge f1 f2 f12 m1 m2 =
-      merge_rk (fun k v -> f1 v) (fun k v -> f2 v) (fun k v1 v2 -> f12 v1 v2) m1 m2
+      merge_rk (fun k v -> f1 v) 
+               (fun k v -> f2 v) 
+               (fun k v1 v2 -> f12 v1 v2) 
+               m1 m2
 
    (* filter that applies f to both keys and values.
     * assumes add has replace semantics
@@ -366,13 +372,15 @@ struct
          else ((*print_endline "Pattern not found.";*) SecondaryIndex.empty)
       in if SecondaryIndex.mem pkey index
          then SecondaryIndex.find pkey index
-         else ((*print_endline ("Not found: "^(secondary_to_string index));*) [])
+         else (
+            (*print_endline ("Not found: "^(secondary_to_string index));*) []
+         )
 
    (* Note semantics of slicing with empty partial keys.
-    * -- the empty list [], may be a valid primary key for maps with no out vars
-    *    thus slicing with [] as a partial key acts as a lookup.
-    * -- the empty list [] is used as a partial key for maps with only bigsum vars
-    *    as out vars, thus slicing with [] acts as a full scan.
+    * -- the empty list [], may be a valid primary key for maps with no out
+    *    vars thus slicing with [] as a partial key acts as a lookup.
+    * -- the empty list [] is used as a partial key for maps with only bigsum 
+    *    vars as out vars, thus slicing with [] acts as a full scan.
     *)
    let slice pat pkey m =
       let aux acc k = add k (find k m) acc in

@@ -46,9 +46,9 @@ type coll_id_t = string
 
 
 type collection_type_t = 
-    | Unknown             (** The type of the collection is currently not known **)
-    | Persistent          (** The collection is persistent **)
-    | Intermediate        (** The collection is intermediate **)
+    | Unknown         (** The type of the collection is currently not known **)
+    | Persistent      (** The collection is persistent **)
+    | Intermediate    (** The collection is intermediate **)
 
 (**K3 Typing primitives.  This needs to be more extensive than the primitive
    types defined in the Types module.  We include those via TBase.
@@ -74,11 +74,12 @@ type collection_type_t =
    [PCValueUpdate].
  *)
 type type_t =
-    | TUnit                                       (** Unit type; No data content *)
-    | TBase      of Types.type_t                  (** Primitive type, see Types *)
-    | TTuple     of type_t list                   (** Tuples of nested objects *)
-    | Collection of collection_type_t * type_t    (** Collections (typically bags) *)
-    | Fn         of type_t list * type_t          (** Function type *)
+    | TUnit                               (** Unit type; No data content   *)
+    | TBase      of Types.type_t          (** Primitive type, see Types    *)
+    | TTuple     of type_t list           (** Tuples of nested objects     *)
+    | Collection of collection_type_t * 
+                    type_t                (** Collections (typically bags) *)
+    | Fn         of type_t list * type_t  (** Function type                *)
 
 let base_type_of t = begin match t with
     | TBase(bt) -> bt
@@ -98,9 +99,9 @@ type arg_t =
    | ATuple of (id_t * type_t) list (** The function accepts a single variable
                                         which must be of tuple type, with a 
                                         width and type corresponding to the 
-                                        provided types.  Within the scope of the 
-                                        function, the fields of the tuple can be 
-                                        referenced individually by the specified 
+                                        provided types.  Within the scope of the
+                                        function, the fields of the tuple can be
+                                        referenced individually by the specified
                                         identifiers *)
 
 (** Expression AST *)
@@ -184,7 +185,7 @@ type expr_t =
    | Apply         of expr_t      * expr_t (**
          Evaluate a [Lambda] function on a value, or curry the outermost 
          parameter of an [AssocLambda] function.  The first field must be a 
-         function who's leftmost argument type is the type of the second field.  
+         function who's leftmost argument type is the type of the second field. 
          The function will be evaluated with the second field as its argument, 
          and the return value of the function will be returned by the [Apply].
       *)
@@ -226,7 +227,7 @@ type expr_t =
       *)
    | Lookup      of expr_t      * expr_t list  (**
          Find the value corresponding to the key formed by evaluating the 
-         expressions in the second field in the tuple collection provided in the 
+         expressions in the second field in the tuple collection provided in the
          first field.  This operation will cause an error if the value is not
          already present in the collection.
       *)
@@ -274,11 +275,11 @@ type expr_t =
 
    (* map, key (optional, used for double-tiered), tier *)
    | PCUpdate      of expr_t      * expr_t list * expr_t (**
-         Bulk replace the contents of an OutPC, InPC or the OutPC component of a 
-         PC.  If the collection provided in the first field is an OutPC or InPC, 
+         Bulk replace the contents of an OutPC, InPC or the OutPC component of a
+         PC.  If the collection provided in the first field is an OutPC or InPC,
          then the key provided in the second field must be empty and the entire 
          collection will be replaced by the collection provided in the third 
-         field.  If the collection provided in the first field is a PC, then the 
+         field.  If the collection provided in the first field is a PC, then the
          key in the second field is evaluated used to determine which InPC 
          element to set/replace.
       *)
@@ -388,7 +389,8 @@ let rebuild_expr e (parts : expr_t list list) =
     | Map              (fn_e,ce)            -> Map(sfst(),ssnd())
     | Flatten          ce                   -> Flatten(sfst())
     | Aggregate        (fn_e,i_e,ce)        -> Aggregate(sfst(),ssnd(),sthd())
-    | GroupByAggregate (fn_e,i_e,ge,ce)     -> GroupByAggregate(sfst(),ssnd(),sthd(),sfth())
+    | GroupByAggregate (fn_e,i_e,ge,ce)     -> 
+       GroupByAggregate(sfst(),ssnd(),sthd(),sfth())
     | SingletonPC      (id,t)               -> e
     | OutPC            (id,outs,t)          -> e
     | InPC             (id,ins,t)           -> e
@@ -399,8 +401,10 @@ let rebuild_expr e (parts : expr_t list list) =
         Slice(sfst(),sch,List.map2 (fun (id,_) e -> id,e) pat_ve (snd()))
     | Filter           (fn_e,ce)            -> Filter(sfst(),ssnd())
     | PCUpdate         (me,ke,te)           -> PCUpdate(sfst(), snd(), sthd())
-    | PCValueUpdate    (me,ine,oute,ve)     -> PCValueUpdate(sfst(),snd(),thd(),sfth())
-    | PCElementRemove  (me,ine,oute)        -> PCElementRemove(sfst(),snd(),thd())
+    | PCValueUpdate    (me,ine,oute,ve)     -> 
+       PCValueUpdate(sfst(),snd(),thd(),sfth())
+    | PCElementRemove  (me,ine,oute)        -> 
+       PCElementRemove(sfst(),snd(),thd())
     | Unit                                  -> e
     end
 
@@ -425,24 +429,34 @@ let descend_expr (f : expr_t -> expr_t) e =
     | Block            e_l                  -> Block (List.map f e_l)
     | Iterate          (fn_e, ce)           -> Iterate (f fn_e, f ce)
     | Lambda           (arg_e,ce)           -> Lambda (arg_e, f ce)
-    | AssocLambda      (arg1_e,arg2_e,be)   -> AssocLambda (arg1_e, arg2_e, f be)
+    | AssocLambda      (arg1_e,arg2_e,be)   -> AssocLambda (arg1_e, arg2_e, 
+                                                            f be)
     | ExternalLambda   (fn_id,arg_e,fn_t)   -> e
     | Apply            (fn_e,arg_e)         -> Apply (f fn_e, f arg_e)
     | Map              (fn_e,ce)            -> Map (f fn_e, f ce)
     | Flatten          ce                   -> Flatten (f ce)
-    | Aggregate        (fn_e,i_e,ce)        -> Aggregate (f fn_e, f i_e, f ce)    
-    | GroupByAggregate (fn_e,i_e,ge,ce)     -> GroupByAggregate (f fn_e, f i_e, f ge, f ce)
+    | Aggregate        (fn_e,i_e,ce)        -> Aggregate (f fn_e, f i_e, f ce)
+    | GroupByAggregate (fn_e,i_e,ge,ce)     -> GroupByAggregate (f fn_e, f i_e,
+                                                                 f ge, f ce)
     | SingletonPC      (id,t)               -> e
     | OutPC            (id,outs,t)          -> e
     | InPC             (id,ins,t)           -> e
     | PC               (id,ins,outs,t)      -> e
     | Member           (me,ke)              -> Member(f me, List.map f ke)  
     | Lookup           (me,ke)              -> Lookup(f me, List.map f ke)
-    | Slice            (me,sch,pat_ve)      -> Slice(f me, sch, List.map (fun (id,e) -> id, f e) pat_ve)
+    | Slice            (me,sch,pat_ve)      -> Slice(f me, sch, 
+                                                     List.map (fun (id,e) ->
+                                                         id, f e) pat_ve)
     | Filter           (fn_e,ce)            -> Filter(f fn_e, f ce)
-    | PCUpdate         (me,ke,te)           -> PCUpdate(f me, List.map f ke, f te)
-    | PCValueUpdate    (me,ine,oute,ve)     -> PCValueUpdate(f me, List.map f ine, List.map f oute, f ve)
-    | PCElementRemove  (me,ine,oute)        -> PCElementRemove(f me, List.map f ine, List.map f oute)
+    | PCUpdate         (me,ke,te)           -> PCUpdate(f me, List.map f ke, 
+                                                        f te)
+    | PCValueUpdate    (me,ine,oute,ve)     -> PCValueUpdate(f me, 
+                                                             List.map f ine, 
+                                                             List.map f oute, 
+                                                             f ve)
+    | PCElementRemove  (me,ine,oute)        -> PCElementRemove(f me, 
+                                                               List.map f ine,
+                                                               List.map f oute)
     | Unit                                  -> e
     end
 
@@ -505,7 +519,8 @@ let rec string_of_type t =
     match t with
       TUnit -> "TUnit" 
     | TBase(b_t) -> Types.string_of_type b_t
-    | TTuple(t_l) -> "TTuple("^(String.concat " ; " (List.map string_of_type t_l))^")"
+    | TTuple(t_l) -> "TTuple(" ^ 
+                     (String.concat " ; " (List.map string_of_type t_l)) ^ ")"
     | Collection(k,c_t) ->
       "Collection("^(string_of_type c_t)^")"
     | Fn(a,b) -> "Fn("^(String.concat "," (List.map string_of_type a))^
@@ -722,11 +737,13 @@ let rec code_of_expr e =
             "K3.PCUpdate("^(rcr me)^","^(ListExtras.ocaml_of_list rcr ke)^","^
                             (rcr te)^")"
       | PCValueUpdate(me,ine,oute,ve) -> 
-            "K3.PCValueUpdate("^(rcr me)^","^(ListExtras.ocaml_of_list rcr ine)^
-                                 ","^(ListExtras.ocaml_of_list rcr oute)^","^
-                                 (rcr ve)^")"
+            "K3.PCValueUpdate("^(rcr me)^","^
+                              (ListExtras.ocaml_of_list rcr ine)^
+                              ","^(ListExtras.ocaml_of_list rcr oute)^","^
+                              (rcr ve)^")"
       | PCElementRemove(me,ine,oute) -> 
-            "K3.PCElementRemove("^(rcr me)^","^(ListExtras.ocaml_of_list rcr ine)^
+            "K3.PCElementRemove("^(rcr me)^","^
+                                (ListExtras.ocaml_of_list rcr ine)^
                                 ","^(ListExtras.ocaml_of_list rcr oute)^")"
       | Unit -> "K3.Unit"
 
@@ -760,8 +777,12 @@ let get_pc_schema pce maps =
 
 
 let nice_string_of_expr ?(type_is_needed = false) e maps =
-  let ob () = pp_open_hovbox str_formatter 2(*; pp_print_string str_formatter "{"*) in
-  let cb () = (*pp_print_string str_formatter "}";*)pp_close_box str_formatter () in
+  let ob () = 
+     pp_open_hovbox str_formatter 2 (*; pp_print_string str_formatter "{"*)
+  in
+  let cb () = 
+     (*pp_print_string str_formatter "}";*)pp_close_box str_formatter () 
+  in
   let pc () = pp_print_cut str_formatter () in
   let ps s = pp_print_string str_formatter s in
   let psp () = pp_print_space str_formatter () in
@@ -827,8 +848,14 @@ let nice_string_of_expr ?(type_is_needed = false) e maps =
     in
     let pid id = ps (id) in
     let ppc pcid = ps ("$"^pcid) in
-    let paroperand e1 = if is_single_statement e1 then aux e1 else begin ps "("; aux e1; ps ")" end in
-    let par e1 e2 op = ob(); ps "("; paroperand e1; pc(); psp (); ps (op); psp(); pc(); paroperand e2; ps ")"; cb() in
+    let paroperand e1 = if is_single_statement e1 
+                        then aux e1 
+                        else begin ps "("; aux e1; ps ")" end 
+    in
+    let par e1 e2 op = ob(); ps "("; paroperand e1; 
+                       pc(); psp (); ps (op); psp(); 
+                       pc(); paroperand e2; ps ")"; cb() 
+    in
     let pop ?(lb = []) s = ob(); ps s; ps "("; recur lb; ps ")"; cb() in 
     let schema args = 
       "[" ^
@@ -889,14 +916,18 @@ let nice_string_of_expr ?(type_is_needed = false) e maps =
         let convert_each_var_to_new_var = 
            try 
               let orig_sch = get_pc_schema pce maps in
-              (fun each_var -> List.nth orig_sch (ListExtras.index_of each_var (List.map fst sch)))
+              (fun each_var -> List.nth orig_sch (
+                 ListExtras.index_of each_var (List.map fst sch)))
            with _ ->
              (fun each_var -> each_var)
         in
-           let new_vars = List.map (fun (x, v) -> (convert_each_var_to_new_var x, v)) vars
-               in
-                  (List.iter (fun (x,v) -> pid x; ps " => ("; aux v; ps ");") new_vars); 
-                  ps "])"; cb()
+           let new_vars = List.map (fun (x, v) -> 
+              (convert_each_var_to_new_var x, v)) vars
+           in
+              (List.iter (fun (x,v) -> 
+                  pid x; ps " => ("; aux v; ps ");"
+               ) new_vars); 
+              ps "])"; cb()
     | Filter _               -> pop "Filter"
     | Comment(c, cexpr) ->
         ob(); ps "/**"; ps c; ps "**/"; fnl(); aux cexpr; cb()
@@ -910,8 +941,11 @@ let nice_string_of_expr ?(type_is_needed = false) e maps =
     | Neq(e1, e2)         -> par e1 e2 "!="
     | Lt(e1, e2)          -> par e1 e2 "<"
     | Leq(e1, e2)         -> par e1 e2 "<="
-    | IfThenElse0(c, ie)  -> ob(); ps "if0( "; aux c; ps " )"; fnl(); aux ie; cb();
-    | IfThenElse(c,ie,ee) -> ob(); ps "if( "; aux c; ps " )"; fnl(); aux ie; cb(); fnl(); ob();  ps "else"; fnl(); aux ee; cb();
+    | IfThenElse0(c, ie)  -> ob(); ps "if0( "; aux c; ps " )"; 
+                             fnl(); aux ie; cb();
+    | IfThenElse(c,ie,ee) -> ob(); ps "if( "; aux c; ps " )"; 
+                             fnl(); aux ie; cb(); fnl(); 
+                             ob(); ps "else"; fnl(); aux ee; cb();
     | Iterate _           -> pop "Iterate"
     | Apply _             -> pop "Apply"
     | Map _               -> pop "Map"
@@ -919,7 +953,9 @@ let nice_string_of_expr ?(type_is_needed = false) e maps =
     | Aggregate _         -> pop "Aggregate"
     | GroupByAggregate _  -> pop "GroupByAggregate"
     | Block(expr_list)    -> ob(); ps "{"; ob();
-                             List.iter (fun (expr) -> fnl(); aux expr; ps ";") expr_list;
+                             List.iter (fun (expr) -> 
+                                fnl(); aux expr; ps ";"
+                             ) expr_list;
                              cb(); cb(); fnl(); ps "}"
     | Unit                -> ob(); ps "()"; cb()
 
@@ -1082,7 +1118,9 @@ let code_of_prog ((_,(maps,_),triggers,_):prog_t): string = (
    ) triggers)^"\n"
 )
 
-let nice_code_of_prog ((db_schema,(maps,patts),triggers,tl_queries):prog_t): string = (
+let nice_code_of_prog ((db_schema, (maps,patts),
+                        triggers, tl_queries):prog_t) : 
+                      string = (
    let string_of_var_type (n, t) = n ^ " : " ^ (Types.string_of_type t) in
    "--------------------- SCHEMA ----------------------\n"^
    Schema.code_of_schema db_schema ^ "\n" ^
@@ -1111,21 +1149,24 @@ let nice_code_of_prog ((db_schema,(maps,patts),triggers,tl_queries):prog_t): str
    )^
    "--------------------- TRIGGERS ----------------------\n"^
    (ListExtras.string_of_list ~sep:"\n\n" (fun (event, stmts) ->
-      (Schema.string_of_event event)^"\n{\n"^
-      (ListExtras.string_of_list ~sep:"\n" (fun e -> (nice_string_of_expr e maps)^";\n") stmts)^
+      (Schema.string_of_event event) ^ "\n{\n" ^
+      (ListExtras.string_of_list ~sep:"\n" 
+         (fun e -> (nice_string_of_expr e maps) ^ ";\n") stmts) ^
       "\n}"
-   ) triggers)^"\n"
+   ) triggers) ^ "\n"
 )
 
 (**
-This function takes a K3 expression where the type of collections is unknown, determines the
-type of those collections and returns the K3 expression with those types.
+This function takes a K3 expression where the type of collections is unknown,
+determines the type of those collections and returns the K3 expression with 
+those types.
 
 To determine the type of a collection, two mechanisms are used:
-- The types of variables are stored in a hasmap, mapping variable names to types
-- If the type of arguments of a lambda function contains collections, the type of those
-  collections is determined by checking which type of values are given when the function
-  gets called
+- The types of variables are stored in a hasmap, mapping variable names 
+  to types
+- If the type of arguments of a lambda function contains collections, 
+  the type of those collections is determined by checking which type of 
+  values are given when the function gets called
 *)
 module VarMap = Map.Make (String);;
 let annotate_collections e =
@@ -1142,15 +1183,19 @@ let annotate_collections e =
     in
     let rec transfer_annotation t1 t2 = 
       match t1, t2 with 
-      | Collection(t1ct, t1t), Collection(t2ct, t2t) -> Collection(t2ct, transfer_annotation t1t t2t)
-      | TTuple(t1l), TTuple(t2l) -> TTuple(List.map2 (fun x1 x2 -> transfer_annotation x1 x2) t1l t2l)
+      | Collection(t1ct, t1t), Collection(t2ct, t2t) -> 
+         Collection(t2ct, transfer_annotation t1t t2t)
+      | TTuple(t1l), TTuple(t2l) -> 
+         TTuple(List.map2 (fun x1 x2 -> transfer_annotation x1 x2) t1l t2l)
       | t1, t2 -> t1
     in
     let replace_arg_types args ts = 
       match args, ts with
       | AVar(id, at), rt -> AVar(id, transfer_annotation at rt)
       | ATuple(l), TTuple(ts) -> 
-          ATuple(List.map2 (fun (id, at) rt -> (id, transfer_annotation at rt)) l ts)
+          ATuple(List.map2 (fun (id, at) rt -> 
+                    (id, transfer_annotation at rt)
+                ) l ts)
       | _, t -> failwith ("Expected Tuple, found: " ^ (string_of_type t))
     in
     let type_of_schema t = List.map (fun (i, t) -> t) t in
@@ -1189,10 +1234,12 @@ let annotate_collections e =
       | (TBase(Types.TInt), TBase(Types.TInt)) -> Types.TInt
       | (TBase(Types.TFloat), TBase(Types.TInt)) -> Types.TFloat
       | (TBase(Types.TInt), TBase(Types.TFloat)) -> Types.TFloat
-      (* NOTE: calculations with two bools result in an int (e.g. true + true) *)
+      (* NOTE: calculations with two bools result in 
+         an int (e.g. true + true) *)
       | (TBase(Types.TBool), TBase(Types.TBool)) -> Types.TInt
       | (TBase(Types.TDate), TBase(Types.TDate)) -> Types.TDate
-      | _ -> failwith ("Failed to match " ^ (string_of_type t1) ^ " and " ^ (string_of_type t2))
+      | _ -> failwith ("Failed to match " ^ (string_of_type t1) ^ 
+                       " and " ^ (string_of_type t2))
     )
     in
     match e with
@@ -1211,11 +1258,11 @@ let annotate_collections e =
         (Var(id, t), t)
     | Tuple e_l -> 
       let els, tps = annotate_list e_l in 
-      (Tuple(els), TTuple(tps))
+         (Tuple(els), TTuple(tps))
     | Project (ce, idx) -> failwith "not implemented" (* TODO: implement! *)
     | Singleton ce      -> 
       let ace, act = _annotate_collections ce var_map in
-      (Singleton(ace), Collection(Intermediate, act))
+         (Singleton(ace), Collection(Intermediate, act))
     | Combine e_l ->
       let ce1_e, ce1_t = _annotate_collections (List.hd e_l) var_map in
       let cerest_e = List.map (fun x -> fst (_annotate_collections x var_map))
@@ -1225,55 +1272,56 @@ let annotate_collections e =
     | Add  (ce1,ce2)    -> 
       let ce1_e, ce1_t = _annotate_collections ce1 var_map in
       let ce2_e, ce2_t = _annotate_collections ce2 var_map in
-      (Add(ce1_e, ce2_e), type_of_op ce1_t ce2_t)
+         (Add(ce1_e, ce2_e), type_of_op ce1_t ce2_t)
     | Mult (ce1,ce2)    -> 
       let ce1_e, ce1_t = _annotate_collections ce1 var_map in
       let ce2_e, ce2_t = _annotate_collections ce2 var_map in
-      (Mult(ce1_e, ce2_e), type_of_op ce1_t ce2_t)
+         (Mult(ce1_e, ce2_e), type_of_op ce1_t ce2_t)
     | Eq   (ce1,ce2)    -> 
       let ce1_e, _ = _annotate_collections ce1 var_map in
       let ce2_e, _ = _annotate_collections ce2 var_map in
-      (Eq(ce1_e, ce2_e), TBase(Types.TBool))
+         (Eq(ce1_e, ce2_e), TBase(Types.TBool))
     | Neq  (ce1,ce2)    ->
       let ce1_e, _ = _annotate_collections ce1 var_map in
       let ce2_e, _ = _annotate_collections ce2 var_map in
-      (Neq(ce1_e, ce2_e), TBase(Types.TBool))
+         (Neq(ce1_e, ce2_e), TBase(Types.TBool))
     | Lt   (ce1,ce2)    ->       
       let ce1_e, _ = _annotate_collections ce1 var_map in
       let ce2_e, _ = _annotate_collections ce2 var_map in
-      (Lt(ce1_e, ce2_e), TBase(Types.TBool))
+         (Lt(ce1_e, ce2_e), TBase(Types.TBool))
     | Leq  (ce1,ce2)    ->       
       let ce1_e, _ = _annotate_collections ce1 var_map in
       let ce2_e, _ = _annotate_collections ce2 var_map in
-      (Leq(ce1_e, ce2_e), TBase(Types.TBool))
+         (Leq(ce1_e, ce2_e), TBase(Types.TBool))
     | IfThenElse0 (ce1,ce2)  -> 
       let ce1e, _ = _annotate_collections ce1 var_map in
       let ce2e, ce2t = _annotate_collections ce2 var_map in
-      (IfThenElse0(ce1e, ce2e), ce2t)
+         (IfThenElse0(ce1e, ce2e), ce2t)
     | Comment(c, cexpr) ->
       let ce, ct = _annotate_collections cexpr var_map in
-      (Comment(c, ce), ct)
+         (Comment(c, ce), ct)
     | IfThenElse  (pe,te,ee) -> 
       let pe_e, _    = _annotate_collections pe var_map in
       let te_e, te_t = _annotate_collections te var_map in
       let ee_e, _    = _annotate_collections ee var_map in
-      (IfThenElse(pe_e, te_e, ee_e), te_t)
+         (IfThenElse(pe_e, te_e, ee_e), te_t)
     | Block   e_l        -> 
       let le, lt = annotate_list e_l in
-      (Block(le), List.hd (List.rev lt))
+         (Block(le), List.hd (List.rev lt))
     | Iterate (fn_e, c) ->
       let ce, ct = _annotate_collections c var_map in
       let fe, ft = 
         match ct with
-        | Collection(_, argt) -> _annotate_collections ~argt:[argt] fn_e var_map
+        | Collection(_, argt) -> _annotate_collections 
+                                        ~argt:[argt] fn_e var_map
         | _ -> failwith "Expected collection"
       in
-      (Iterate(fe, ce), TUnit)
+         (Iterate(fe, ce), TUnit)
     | Lambda  (arg_e,ce) -> 
       let arg1t = List.hd argt in
       let newargs = replace_arg_types arg_e arg1t in
       let c_e, c_t = _annotate_collections ce (add_args newargs var_map) in
-      (Lambda(newargs, c_e), Fn(argt, c_t))
+         (Lambda(newargs, c_e), Fn(argt, c_t))
     | AssocLambda(arg1,arg2,be) ->
       let arg1t = List.hd argt in
       let arg2t = List.nth argt 1 in
@@ -1281,38 +1329,52 @@ let annotate_collections e =
       let newargs2 = replace_arg_types arg2 arg2t in
       let newvar_map = add_args newargs1 (add_args newargs2 var_map) in
       let c_e, c_t = _annotate_collections be newvar_map in
-      (AssocLambda(newargs1, newargs2, c_e), Fn(argt, c_t))
+         (AssocLambda(newargs1, newargs2, c_e), Fn(argt, c_t))
     | ExternalLambda(fn_id,arg,fn_t) ->
-      (e, Fn(argt, fn_t))
+       (e, Fn(argt, fn_t))
     | Apply(fn_e,arg_e) -> 
       let ae, at = _annotate_collections arg_e var_map in
       let fe, ft = _annotate_collections ~argt:[at] fn_e var_map in
-      (Apply(fe, ae), fnret ft)
+         (Apply(fe, ae), fnret ft)
     | Map(fn_e,ce) -> 
       let c_e, c_t = _annotate_collections ce var_map in
-      let f_e, f_t = _annotate_collections ~argt:[type_of_collection c_t] fn_e var_map in
-      (Map(f_e, c_e), Collection(Intermediate, fnret f_t))
+      let f_e, f_t = _annotate_collections 
+                            ~argt:[type_of_collection c_t] 
+                            fn_e var_map 
+      in
+         (Map(f_e, c_e), Collection(Intermediate, fnret f_t))
     | Flatten(ce) -> 
       let c_e, c_t = _annotate_collections ce var_map in
       (match c_t with
         | Collection(_, elems) -> (
           let k, v = key_val elems in 
           match v with
-            | Collection(_, TTuple(t)) -> (Flatten(c_e), Collection(Intermediate, TTuple(t @ k)))
-            | Collection(_, t) -> (Flatten(c_e), Collection(Intermediate, TTuple(t :: k)))
+            | Collection(_, TTuple(t)) -> 
+               (Flatten(c_e), Collection(Intermediate, TTuple(t @ k)))
+            | Collection(_, t) -> 
+               (Flatten(c_e), Collection(Intermediate, TTuple(t :: k)))
             | _ -> failwith "Expected nested collection")
         | _ -> failwith "Expected collection"
       )
     | Aggregate(fn_e,ie,ce) -> 
       let c_e, c_t = _annotate_collections ce var_map in
       let i_e, i_t = _annotate_collections ie var_map in
-      let f_e, f_t = _annotate_collections ~argt:((type_of_collection c_t) :: [i_t]) fn_e var_map in
-      (Aggregate(f_e, i_e, c_e), i_t)
+      let f_e, f_t = _annotate_collections 
+                        ~argt:((type_of_collection c_t) :: [i_t]) 
+                        fn_e var_map 
+      in
+         (Aggregate(f_e, i_e, c_e), i_t)
     | GroupByAggregate(fn_e,ie,ge,ce) -> 
       let c_e, c_t = _annotate_collections ce var_map in
-      let g_e, g_t = _annotate_collections ~argt:[type_of_collection c_t] ge var_map in
+      let g_e, g_t = _annotate_collections 
+                        ~argt:[type_of_collection c_t] 
+                        ge var_map 
+      in
       let i_e, i_t = _annotate_collections ie var_map in
-      let f_e, f_t = _annotate_collections ~argt:((type_of_collection c_t) :: [i_t]) fn_e var_map in
+      let f_e, f_t = _annotate_collections 
+                        ~argt:((type_of_collection c_t) :: [i_t]) 
+                        fn_e var_map 
+      in
       let c_tpe = 
         match fnret g_t with
           | TTuple(ts) -> TTuple(ts @ [i_t])
@@ -1320,42 +1382,53 @@ let annotate_collections e =
       in
       (GroupByAggregate(f_e, i_e, g_e, c_e), Collection(Intermediate, c_tpe))
     | SingletonPC(id,t) -> (e, t)
-    | InPC(id,ins,t) -> (e, Collection(Persistent, TTuple((type_of_schema ins) @ [t])))
-    | OutPC(id,outs,t) -> (e, Collection(Persistent, TTuple((type_of_schema outs) @ [t])))
+    | InPC(id,ins,t) -> (e, Collection(Persistent, 
+                                       TTuple((type_of_schema ins) @ [t])))
+    | OutPC(id,outs,t) -> (e, Collection(Persistent, 
+                                         TTuple((type_of_schema outs) @ [t])))
     | PC(id,ins,outs,t) -> 
       (e, Collection(Persistent, TTuple((type_of_schema ins) @ 
         [Collection(Persistent, TTuple((type_of_schema outs) @ [t]))])))
     | Member(me,ke) -> 
-      (Member(fst (_annotate_collections me var_map), fst (annotate_list ke)), TBase(Types.TBool))
+      (Member(fst (_annotate_collections me var_map), 
+              fst (annotate_list ke)), TBase(Types.TBool))
     | Lookup(me,ke) -> 
       let ce, ct = _annotate_collections me var_map in
-      (Lookup(ce, fst (annotate_list ke)), snd (key_val (type_of_collection ct)))
+         (Lookup(ce, fst (annotate_list ke)), 
+          snd (key_val (type_of_collection ct)))
     | Slice(me,sch,pat_ve) -> 
       let m_e, m_t = _annotate_collections me var_map in
       let pats = 
-        List.map (fun (id, exp) -> (id, fst (_annotate_collections exp var_map))) pat_ve in
-      (Slice(m_e, sch, pats), Collection(Intermediate, type_of_collection m_t))
+        List.map (fun (id, exp) -> 
+           (id, fst (_annotate_collections exp var_map))) pat_ve 
+      in
+         (Slice(m_e, sch, pats), 
+          Collection(Intermediate, type_of_collection m_t))
     | Filter(fn_e,ce) -> 
       let c_e, c_t = _annotate_collections ce var_map in
-      let f_e, f_t = _annotate_collections ~argt:[type_of_collection c_t] fn_e var_map in
-      (Filter(f_e, c_e), Collection(Intermediate, type_of_collection c_t))
+      let f_e, f_t = _annotate_collections 
+                            ~argt:[type_of_collection c_t] 
+                            fn_e var_map 
+      in
+         (Filter(f_e, c_e), Collection(Intermediate, type_of_collection c_t))
     | PCUpdate(me,ke,te) -> 
       let m_e, _ = _annotate_collections me var_map in
       let k_e, _ = annotate_list ke in
       let t_e, _ = _annotate_collections te var_map in
-      (PCUpdate(m_e, k_e, t_e), TUnit)
+         (PCUpdate(m_e, k_e, t_e), TUnit)
     | PCValueUpdate(me,ine,oute,ve) -> 
       let m_e, _ = _annotate_collections me var_map in
       let ine_e, _ = annotate_list ine in
       let oute_e, _ = annotate_list oute in
       let ve_e, _ = _annotate_collections ve var_map in
-      (PCValueUpdate(m_e, ine_e, oute_e, ve_e), TUnit)
+         (PCValueUpdate(m_e, ine_e, oute_e, ve_e), TUnit)
     | PCElementRemove(me,ine,oute) -> 
       let m_e, _ = _annotate_collections me var_map in
       let ine_e, _ = annotate_list ine in
       let oute_e, _ = annotate_list oute in
-      (PCElementRemove(m_e, ine_e, oute_e), TUnit)
+         (PCElementRemove(m_e, ine_e, oute_e), TUnit)
     | Unit -> (e, TUnit)
   in
-  if Debug.active "NO-COLLECTION-ANNOTATION" then
-  e else fst (_annotate_collections e VarMap.empty)
+  if Debug.active "NO-COLLECTION-ANNOTATION" 
+  then e 
+  else fst (_annotate_collections e VarMap.empty)
