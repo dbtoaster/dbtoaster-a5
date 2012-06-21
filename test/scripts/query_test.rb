@@ -157,7 +157,6 @@ class CppUnitTest < GenericUnitTest
         "-l","cpp",
         "-o","bin/queries/#{@qname}.hpp",
         "-c","bin/queries/#{@qname}",
-	    "-d","compile-with-static"
       ]).join(" ") + "  2>&1";
       starttime = Time.now
       system(compile_cmd) or raise "Compilation Error";
@@ -363,6 +362,7 @@ queries.each do |tquery|
     STDOUT.flush;
     t.query = tquery
     puts t.query if $dump_query;
+    puts t.dbt_base_cmd.join(" ") if $dump_query;
     begin
       t.run
       unless $compile_only then

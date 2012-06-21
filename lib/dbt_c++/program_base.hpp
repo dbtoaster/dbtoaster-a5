@@ -51,6 +51,10 @@ using namespace ::dbtoaster::util;
 using namespace ::dbtoaster::statistics;
 #endif
 
+#ifdef DBT_TRACE_ALL
+#define DBT_TRACE
+#endif
+
 #define BOOST_SERIALIZATION_NVP_OF_PTR( name )  \
     boost::serialization::make_nvp(BOOST_PP_STRINGIZE(name), *name)
 
@@ -408,8 +412,11 @@ private:
 
         typename map<string, map_ptr_t>::iterator it = maps_by_name.begin();
         for (; it != maps_by_name.end(); it++)
-            if ((!debug && it->second->isOutput)
-                    || (debug && it->second->isTraced)) {
+            #ifndef DBT_TRACE_ALL
+              if ((!debug && it->second->isOutput)
+                      || (debug && it->second->isTraced)) 
+            #endif
+            {
                 if (!oa.get())
                     oa = std::auto_ptr<boost::archive::xml_oarchive>(
                             new boost::archive::xml_oarchive(ofs, 0));

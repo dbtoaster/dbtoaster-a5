@@ -792,13 +792,7 @@ let rec calc_to_k3_expr meta ?(generate_init = false) theta_vars_el calc :
             let sum_result_combine = 
                K.Combine(List.map (fun (s_outs_el,s_ret_ve,s,_) -> s) sum_exprs)
             in
-            (* Since now K3.Combine does a simple append, we need to put a group by *)
-            (* aggregate around it in order to "combine" tuples with the same key. *)
-            let agg_fn = aggregate_fn outs_el ret_ve in
-            let gb_fn = project_fn (outs_el@[ret_ve]) outs_el 
-            in
-            K.GroupByAggregate(agg_fn, init_val ret_ve, gb_fn, sum_result_combine),
-            nm
+               (sum_result_combine, nm)
          )
          else
             let sum_fn sum_e (s_outs_el,s_ret_ve,s,_)   = K.Add(sum_e,s) in
