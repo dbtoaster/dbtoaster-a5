@@ -237,16 +237,45 @@ source_declaration := <br/>
 
 <p>The contents of data sources are first partitioned into records, either based on a fixed-width record size, or using a delimiter character.  Records are parsed into tuples using the specified adaptor.  DBToaster's runtimes currently support the following adaptors:</p>
 
-<p>If multiple stream relations read from the same file (but with different adaptors), the file will be read only once, and events for each relation will be performed in the order in which they appear in the file</p>
+<ul>
+<li> CSV - A simple string-delimited adaptor. Fields are separated using the delimiter passed in the <b>fields</b> parameter.  The <b>schema</b> is a comma-separated list that dictates how each field is parsed in: <i>int</i>, <i>float</i>, and <i>string</i> produce elements of the corresponding type.  <i>date</i> parses in strings of the form [yyyy]-[mm]-[dd] and produces the integer [yyyymmdd]. Providing these paramaters is optional.
+
+<div class="codeblock">
+    CREATE STREAM R(A int, B int) FROM FILE 'r.dat' <br/>
+    LINE DELIMITED CSV (fields := '|', schema := 'int,int');
+</div>
+
+<li> Order book - An adaptor that allows reading in stock trade historical data. It assumes that all the input records obey the following predefined schema: 
+<i>&lt;timestamp : float, message_id : int, action_id : int, volume : float, price : float&gt;</i>.
+<div class="todo"> Add more about the order book adaptor </div> 
+</ul>
+
+<div class="codeblock">
+  CREATE STREAM bids(T float, ID int, BROKER_ID int, VOLUME float, PRICE float) <br/>
+  FROM FILE 'history.csv' <br/>
+  LINE DELIMITED orderbook (book := 'bids', brokers := '10', deterministic := 'yes');
+</div>
+
+<p>If multiple stream relations read from the same file (but with different adaptors), the file will be read only once, and events for each relation will be performed in the order in which they appear in the file.</p>
 
 <table border>
-<tr><th>Adaptor</th><th>Valid Parameters</th><th>Description</th></tr>
 
-<tr><td>CSV</td>
-<td>fields,<br/>schema
-</td><td>
-A simple string-delimited adaptor.  Fields are separated using the delimiter passed in the <b>fields</b> parameter.  The <b>schema</b> is a comma-separated list that dictates how each field is parsed in: <i>int</i>, <i>float</i>, and <i>string</i> produce elements of the corresponding type.  <i>date</i> parses in strings of the form [yyyy]-[mm]-[dd] and produces the integer [yyyymmdd]. The special type <i>event</i> can be used to interleave insertion and deletion events.  A 1 in this field creates an insertion, a 0 creates a deletion.  In either case, the field will not be present in the generated tuple.
+<tr><th>Adaptor</th><th>Parameter</th><th>Optional</th><th>Description</th></tr>
+
+<tr>
+<td rowspan="2">CSV</td>
+<td><div class="code">fields</div></td>
+<td>yes</td>
+<td>A string delimiter used to extract fields from a record. 
+    If not specified, the default value is ','.</td>
 </td></tr>
+
+<tr> 
+<td><div class="code">schema</div></td>
+<td>yes</td>
+<td>The expected schema of the generated tuples. When it is not specified, 
+    DBToaster will infer the schema from the data source definitions.</td>
+</tr>
 </table>
 
 <h3 class="code">SELECT</h3>
@@ -308,12 +337,38 @@ condition := <br/>
 
 <hr/>
 <h2>Optional Optimization Features</h2>
+<dt class="code">-O1</dt>
+<ul>
+<li> Test for expression equivalence naively. This may result in duplicate maps being created on some queries, but can substantially reduce compile times.
+<li> Do not perform functional optimization.
+<li> Disable any unnecessary optimizations in the second-stage compiler (e.g., GCC is invoked with no optimization flags).
+<li> Use the standard delta rewrite rule to compute deltas of lift expressions.
+<li> <div class="todo">MISSING DEF: CALC-DONT-CREATE-ZEROES</div>
+</ul>
+
+<dt class="code">-O2 (default)</dt>
+<ul>
+<li> Test for expression equivalence by taking into account the sum and product commutativity. This may reduce the number of created maps, but can prolong compile times.
+<li> Perform functional optimization.
+<li> Compute deltas of lift expressions using an optimized delta rewrite rule.
+<li> Disable any unnecessary optimizations in the second-stage compiler (e.g., GCC is invoked with no optimization flags).
+</ul>
+
+<dt class="code">-O3</dt>
+<ul>
+<li> Same as -O2
+<li>Attempt to unify entire lifted expressions, and not just lifted variables/values.  This usually produces tighter calculus expressions, but can slow down compilation.
+<li><div class="todo">MISSING DEF: K3-OPTIMIZE-LIFT-UPDATES</div>
+</ul>
 
 <hr/>
 <h2>Debugging Flags</h2>
 
 <h3>Optimization</h3>
 <dl>
+
+<dt class="code">DUMB-LIFT-DELTAS</dt>
+<dd>Use the standard delta rewrite rule to compute deltas of lift expressions. By default, the compiler will use an optimized delta rule that can significantly speedup the overall execution time.</dd>
 
 <dt class="code">UNIFY-EXPRESSIONS</dt>
 <dd>Attempt to unify entire lifted expressions, and not just lifted variables/values.  This usually produces tighter calculus expressions, but can slow down compilation.</dd>
