@@ -758,14 +758,15 @@ if stage_is_active StageK3ToTargetLanguage then (
          (* All imperative languages now produce IMP *)
       | IMP
       | CPP         -> 
-         try 
+         begin try 
             imperative_program := 
                ImperativeCompiler.Compiler.imp_of_k3 !imperative_opts 
                                                      !k3_program 
          with 
-         | K3Typechecker.K3TypecheckError(stack,msg) ->
-            bug ~exc:true ~detail:(fun () -> 
-               K3Typechecker.string_of_k3_stack stack) msg
+            | K3Typechecker.K3TypecheckError(stack,msg) ->
+               bug ~exc:true ~detail:(fun () -> 
+                  K3Typechecker.string_of_k3_stack stack) msg
+         end
 
       | _ -> bug "Unexpected K3 target language"
 )
