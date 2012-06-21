@@ -59,7 +59,9 @@ bigquery:	testdatahash
 	@$(QUERY_TEST) ssb4
 	@$(QUERY_TEST) simple/r_multinest # Correct, but slow
 	
-query: testdatahash
+query: testdatahash query_simple query_zeus query_employee query_tpch query_financial
+
+query_simple:
 	@$(FAST_QUERY_TEST) simple/r_aggcomparison
 	@$(FAST_QUERY_TEST) simple/r_aggofnested
 	@$(FAST_QUERY_TEST) simple/r_aggofnestedagg
@@ -136,6 +138,8 @@ query: testdatahash
 	@$(FAST_QUERY_TEST) simple/singleton_renaming_conflict
 	@$(FAST_QUERY_TEST) simple/ss_math
 	@$(FAST_QUERY_TEST) simple/invalid_schema_fn
+
+query_zeus:
 	@$(FAST_QUERY_TEST) zeus/11564068
 	@$(FAST_QUERY_TEST) zeus/12811747
 	@$(FAST_QUERY_TEST) zeus/37494577
@@ -147,6 +151,8 @@ query: testdatahash
 	@$(FAST_QUERY_TEST) zeus/94384934
 	@$(FAST_QUERY_TEST) zeus/95497049
 	@$(FAST_QUERY_TEST) zeus/96434723
+
+query_employee:
 	@$(FAST_QUERY_TEST) employee/query01
 	@$(FAST_QUERY_TEST) employee/query01a
 	@$(FAST_QUERY_TEST) employee/query02
@@ -193,6 +199,8 @@ query: testdatahash
 	@$(FAST_QUERY_TEST) employee/query63a
 	@$(FAST_QUERY_TEST) employee/query64a
 	@$(FAST_QUERY_TEST) employee/query65a
+
+query_tpch:
 	@$(FAST_QUERY_TEST) tpch3 --dataset tiny
 	@$(FAST_QUERY_TEST) tpch3
 	@$(FAST_QUERY_TEST) tpch11 --dataset tiny
@@ -201,6 +209,8 @@ query: testdatahash
 	@$(FAST_QUERY_TEST) tpch18
 	@$(FAST_QUERY_TEST) tpch18 --dataset tiny
 	@$(FAST_QUERY_TEST) tpch22
+
+query_financial:
 	@$(FAST_QUERY_TEST) ssb4
 	@$(FAST_QUERY_TEST) vwap --dataset tiny
 	@$(FAST_QUERY_TEST) brokervariance

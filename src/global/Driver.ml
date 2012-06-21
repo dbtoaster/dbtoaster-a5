@@ -46,13 +46,27 @@ let output_filehandle = ref None;;
 let binary_file = ref "";;
 let compiler = ref ExternalCompiler.null_compiler;;
 
+(* Creates the directories of path 'p', where the last element is a file *)
+let rec mk_path p =
+   if String.contains p '/' then (
+      let dir_sep_idx = String.rindex p '/' in
+      let dir = String.sub p 0 dir_sep_idx in
+      if not (Sys.file_exists dir) then (
+         mk_path dir;
+         Unix.mkdir dir 0o750 )
+      else if not (Sys.is_directory dir) then
+            raise (Arg.Bad(dir^" already exists and is not a directory."))
+   )
+      
 let output s = 
    let fh = 
       match !output_filehandle with 
       | None -> 
          let fh = 
             if !output_file = "-" then stdout
-            else open_out !output_file
+            else (
+               mk_path !output_file;
+               open_out !output_file )
          in
             output_filehandle := Some(fh); fh
       | Some(fh) -> fh
@@ -826,6 +840,7 @@ if stage_is_active StageOutputSource then (
 if stage_is_active StageCompileSource then (
    Debug.print "LOG-DRIVER" (fun () -> "Running Stage: CompileSource");
    flush_output ();
+   mk_path !binary_file;
    (!compiler).ExternalCompiler.compile !output_file !binary_file
 )
 ;;
