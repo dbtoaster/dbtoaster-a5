@@ -70,7 +70,11 @@ let rec promote t1 t2 =
 	| (K.TBase(TBool), K.TBase(TInt)) -> K.TBase(TInt)
 	| (K.TBase(TFloat), K.TBase(TBool)) 
 	| (K.TBase(TBool), K.TBase(TFloat)) -> K.TBase(TFloat)
-	| (K.Collection(x, t1), K.Collection(K.Unknown, t2)) -> K.Collection(x, promote t1 t2)
+	| (K.Collection(x, t1), K.Collection(K.Unknown, t2)) -> 
+	                          K.Collection(x, promote t1 t2)
+	| (K.TTuple(fields1), K.TTuple(fields2)) 
+	     when (List.length fields1) = (List.length fields2) -> 
+	                          K.TTuple(List.map2 promote fields1 fields2)
 	| (x, y) -> if x = y then x
 			else type_error (K.TTuple[x; y]) "could not promote types"
 
