@@ -573,19 +573,21 @@ struct
            unique (List.filter (fun x -> x <> []) (snd r))
       in
       let mk_pat t_id pfx p =
-	      let id_of_idxl l = String.concat "" (List.map string_of_int l) in
-	      let mk_idx_field (i,ty) = (attri i), Host(k3vartype_of_m3vartype ty) in 
-	     
-	      let pat_sfx = id_of_idxl (List.map fst p) in
-	      let pat_id = id^pfx^"_pat"^pat_sfx in
-	      let idx_fields = List.map mk_idx_field p in
-	      let idx_t_id, idx_t =
-	        (id^pfx^"_index"^pat_sfx), 
-	        Target(Type(t_id^"::index<"^pat_id^">::type",None))
-	      in
-	      Target(StructDef(pat_id, [])), 
-	      Target(TypeDef(idx_t_id, idx_t )),
-	      (pat_id, idx_fields)
+          let id_of_idxl l = String.concat "" (List.map string_of_int l) in
+          let mk_idx_field (i,ty) = 
+              (attri i), Host(k3vartype_of_m3vartype ty) 
+          in
+     
+          let pat_sfx = id_of_idxl (List.map fst p) in
+          let pat_id = id^pfx^"_pat"^pat_sfx in
+          let idx_fields = List.map mk_idx_field p in
+          let idx_t_id, idx_t =
+              (id^pfx^"_index"^pat_sfx), 
+              Target(Type(t_id^"::index<"^pat_id^">::type",None))
+          in
+          Target(StructDef(pat_id, [])), 
+          Target(TypeDef(idx_t_id, idx_t )),
+          (pat_id, idx_fields)
       in
       
       (* Single tier maps only have entry_t defined *)
@@ -991,33 +993,33 @@ end (* Typing *)
         let lhs_argt = type_decl_of (argti 0) in
         let lhs_argt_sc = string_of_type (argti 0) in
         Lines (List.fold_left 
-	        (fun acc (rhs_arg, rhs_argt) ->
+            (fun acc (rhs_arg, rhs_argt) ->
              let rhs_argt_sc = string_of_type rhs_argt in
              let rhs_tuple_value = 
-		          begin match type_decl_of rhs_argt with
-		           | Host (Collection(_, TTuple(_))) -> "second"
-                 | Target (MultiIndexDef _) -> "__av"	                    
-                 | _ -> 
-                    failwith ("invalid concatenation of: " ^
-                              rhs_arg ^ " : " ^ rhs_argt_sc)
-		          end
-	          in
+                 begin match type_decl_of rhs_argt with
+                   | Host (Collection(_, TTuple(_))) -> "second"
+                   | Target (MultiIndexDef _) -> "__av"
+                   | _ -> 
+                       failwith ("invalid concatenation of: " ^
+                                 rhs_arg ^ " : " ^ rhs_argt_sc)
+                 end
+             in
              let modify_lhs = 
                 begin match lhs_argt with
-	              | Host (Collection(_, TTuple(_))) ->
-	                 "ret.first->second += combine_it->"^rhs_tuple_value
-	              | Target (MultiIndexDef (_,_,entry_t,_,_)) ->
+                  | Host (Collection(_, TTuple(_))) ->
+                     "ret.first->second += combine_it->"^rhs_tuple_value
+                  | Target (MultiIndexDef (_,_,entry_t,_,_)) ->
                     let new_value = 
                        "ret.first->__av + combine_it->" ^
                        rhs_tuple_value 
                     in
-	                   lhs_arg ^ ".modify( ret.first, boost::lambda::bind(&" ^
-	                   (type_id_of_type entry_t) ^
-	                   "::__av, boost::lambda::_1) = " ^ new_value ^ " )"
-	              | _ -> 
-	                failwith ("invalid concatenation of: " ^
-	                          lhs_arg ^ " : " ^ lhs_argt_sc)
-			       end
+                       lhs_arg ^ ".modify( ret.first, boost::lambda::bind(&" ^
+                       (type_id_of_type entry_t) ^
+                       "::__av, boost::lambda::_1) = " ^ new_value ^ " )"
+                  | _ -> 
+                     failwith ("invalid concatenation of: " ^
+                               lhs_arg ^ " : " ^ lhs_argt_sc)
+                end
              in
              acc @
              ["for( " ^ rhs_argt_sc ^ 
@@ -1027,7 +1029,7 @@ end (* Typing *)
               "::iterator,bool> ret = " ^ lhs_arg ^ ".insert(*combine_it);";
               tab ^ "if( !ret.second ) " ^ modify_lhs ^ ";";
               "}";]             
-	        )
+            )
            [] (List.tl (List.combine args arg_types)))
          
     | MapUpdate ->
@@ -2529,7 +2531,7 @@ end (* Typing *)
           ["/* Trigger functions for table relations */"]@ 
           (List.flatten (List.map table_trigger table_rels)))
     in
-	   
+
     let register_stream_triggers = Lines 
       (List.map (fun (rel, evt_type, unwrap_fn_id,_) ->
         let args = String.concat ", " [

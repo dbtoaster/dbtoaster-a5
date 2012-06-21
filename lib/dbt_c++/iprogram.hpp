@@ -27,14 +27,17 @@ typedef int relation_id_t;
 
 enum event_type { insert_tuple = 0, delete_tuple, system_ready_event };
 std::string event_name[] = {
-        std::string("insert"), std::string("delete"), std::string("system_ready")};
+    std::string("insert"), 
+    std::string("delete"), 
+    std::string("system_ready")
+};
 
 typedef std::vector<boost::any> event_args_t;
 
 /**
  * Data-structure used for representing a event consisting of: event type,
- * relation identifier corresponding to the stream/table it relates to and finally,
- * the tuple associated with event.
+ * relation identifier corresponding to the stream/table it relates to and
+ * finally, the tuple associated with event.
  */
 struct event_t
 {
@@ -50,12 +53,12 @@ struct event_t
 
 
 /**
- * IProgram is the base class for executing sql programs. It provides functionality
- * for running the program in synchronous or asynchronous mode and recording intermediate
- * or final snapshots of the results.
+ * IProgram is the base class for executing sql programs. It provides
+ * functionality for running the program in synchronous or asynchronous mode
+ * and recording intermediate or final snapshots of the results.
  *
- * The 'TLQ_T' class parameter represents the data-structure used for storing the results
- * of the program.
+ * The 'TLQ_T' class parameter represents the data-structure used for 
+ * storing the results of the program.
  */
 template<class TLQ_T>
 class IProgram {
@@ -84,7 +87,8 @@ public:
     void run( bool async = false ) {
         if( async )
         {
-            boost::packaged_task<void> pt(boost::bind(&IProgram::run, this, false));
+            boost::packaged_task<void> pt(boost::bind(&IProgram::run, 
+                                                      this, false));
             boost::thread task( boost::move(pt) );
         }
         else
@@ -97,8 +101,8 @@ public:
     }
 
     /**
-     * This function provides a way for testing whether the program has finished
-     * or not when run in asynchronous mode.
+     * This function provides a way for testing whether the program has 
+     * finished or not when run in asynchronous mode.
      * @return 'true' if the program has finished execution.
      */
     bool is_finished()
@@ -107,10 +111,11 @@ public:
     }
 
     /**
-     * Obtains a snapshot of the results of the program. If the program is currently
-     * running in asynchronous mode, it will make sure that the snapshot is consistent.
-     * @return A snapshot of the 'TLQ_T' data-structure representing the results of
-     * the program.
+     * Obtains a snapshot of the results of the program. If the program is
+     * currently running in asynchronous mode, it will make sure that the
+     * snapshot is consistent.
+     * @return A snapshot of the 'TLQ_T' data-structure representing 
+     *         the results of the program.
      */
     snapshot_t get_snapshot()
     {
@@ -145,8 +150,8 @@ protected:
     }
 
     /**
-     * Virtual function that should implement the functionality of taking snapshots
-     * of the results of the program.
+     * Virtual function that should implement the functionality of taking
+     * snapshots of the results of the program.
      * @return The collected snapshot.
      */
     virtual snapshot_t take_snapshot() = 0;
@@ -179,8 +184,8 @@ protected:
 
     /**
      * Function for processing requests for program results snapshot.
-     * Gets executed only between the processing of events and not during, in
-     * order to get consistent results.
+     * Gets executed only between the processing of events and not during,
+     * in order to get consistent results.
      */
     void process_snapshot()
     {
@@ -221,8 +226,10 @@ protected:
     }
 
     /**
-     * Function for waiting for a previously recorded snapshot request to complete.
-     * @return The snapshot taken as a response of a previously recorded request.
+     * Function for waiting for a previously recorded snapshot request to
+     * complete.
+     * @return The snapshot taken as a response of a previously recorded 
+     *         request.
      */
     snapshot_t wait_for_snapshot()
     {

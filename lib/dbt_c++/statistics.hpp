@@ -138,7 +138,8 @@ namespace dbtoaster {
     protected:
       typedef map<probe_id, string> names_map;
       typedef map<probe_id, metadata> meta_map;
-      typedef dbtoaster::statistics::statistics_map<probe_id, measure> stats_map;
+      typedef dbtoaster::statistics::statistics_map<probe_id, measure>
+              stats_map;
 
       typedef typename boost::function<measure (metadata)> measure_f;
 
@@ -169,7 +170,9 @@ namespace dbtoaster {
         if ( probe_ids ) (*probe_ids)[id] = name;
       }
 
-      void begin_probe(probe_id id, metadata mt) { if ( meta ) (*meta)[id] = mt; }
+      void begin_probe(probe_id id, metadata mt) { 
+        if ( meta ) (*meta)[id] = mt; 
+      }
 
       void end_probe(probe_id id) {
         if ( meta && stats ) stats->append(id, probe_f((*meta)[id]));
@@ -226,13 +229,15 @@ namespace dbtoaster {
 
     public:
       multi_trigger_stats(idpmap id_periods,
-                          boost::function<measure (metadata)> f, string fn_prefix)
+                          boost::function<measure (metadata)> f, 
+                          string fn_prefix)
       {
         typename idpmap::iterator it = id_periods.begin();
         typename idpmap::iterator end = id_periods.end();
         for (; it != end; ++it) {
           trigger_stats[it->first] = shared_ptr<stats>(
-            new stats(it->first, it->second.second, f, it->second.first, fn_prefix));
+            new stats(it->first, it->second.second, f, 
+                      it->second.first, fn_prefix));
         };
       }
 
@@ -288,7 +293,8 @@ namespace dbtoaster {
         map<string, pair<uint64_t, uint32_t> > id_periods, string fn_prefix)
         : mtstats(id_periods,
             boost::phoenix::bind(
-              &multi_trigger_exec_stats::probe, this, boost::phoenix::arg_names::arg1),
+              &multi_trigger_exec_stats::probe, this,
+              boost::phoenix::arg_names::arg1),
             fn_prefix)
       {}
 

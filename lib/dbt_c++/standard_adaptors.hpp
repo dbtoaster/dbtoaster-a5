@@ -32,7 +32,8 @@ namespace dbtoaster {
 
       shared_ptr<event_t> saved_event;
 
-      csv_adaptor(relation_id_t _id) : id(_id), type(insert_tuple), delimiter(",") {}
+      csv_adaptor(relation_id_t _id) : id(_id), type(insert_tuple),
+                  delimiter(",") {}
 
       csv_adaptor(relation_id_t _id, string sch)
         : id(_id), type(insert_tuple), schema(sch), delimiter(",")
@@ -140,7 +141,8 @@ namespace dbtoaster {
             case 'e': iss >> ins; insert = ins; break;
             case 'l': iss >> l; tuple.push_back(l); break;
             case 'f': iss >> f; tuple.push_back(f); break;
-            case 'h': tuple.push_back(static_cast<int>(field_hash(field))); break;
+            case 'h': tuple.push_back(static_cast<int>(field_hash(field)));
+                      break;
             case 'd': 
               split(date_fields, field, is_any_of("-"));
               valid = false;
@@ -536,7 +538,8 @@ namespace dbtoaster {
           shared_ptr<stream_params> current;
 
           vector<string> tmp; split(tmp, params, is_any_of(","));
-          for (vector<string>::iterator it = tmp.begin(); it != tmp.end(); ++it) {
+          for (vector<string>::iterator it = tmp.begin(); 
+               it != tmp.end(); ++it) {
             string p = *it;
             vector<string> p_parts; split(p_parts, p, is_any_of(":"));
             if ( p_parts.size() == 2 ) {
@@ -549,7 +552,8 @@ namespace dbtoaster {
               } else if ( current ){
                 current->second.push_back(make_pair(p_parts[0], p_parts[1]));
               } else {
-                cerr << "must declare order book before parameter " << p << endl;
+                cerr << "must declare order book before parameter " 
+                     << p << endl;
               }
             } else {
               cerr << "invalid order book adaptor parameter " << p << endl;
@@ -568,7 +572,9 @@ namespace dbtoaster {
                 new order_book_adaptor(sid, p.second.size(), &(p.second[0])));
               if ( a ) {
                 r.register_adaptor(p.first, a);
-                shared_ptr<source> s = r.initialize_file_source(p.first, data_file, fdesc);
+                shared_ptr<source> s = r.initialize_file_source(p.first,
+                                                                data_file,
+                                                                fdesc);
                 if ( s ) {
                   stream_identifiers[p.first] = sid;
                   ++sid;
@@ -584,7 +590,9 @@ namespace dbtoaster {
           }
         }
 
-        map<string, int>& get_stream_identifiers() { return stream_identifiers; }
+        map<string, int>& get_stream_identifiers() { 
+          return stream_identifiers;
+        }
 
         int get_stream_id(string name) {
           int r = -1;

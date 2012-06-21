@@ -39,7 +39,7 @@ let keywords =
          "MEMBER", MEMBER;
          "LOOKUP", LOOKUP;
          "SLICE", SLICE;
-	 "FILTER", FILTER;
+         "FILTER", FILTER;
          "PCUPDATE", PCUPDATE;
          "PCVALUEUPDATE", PCVALUEUPDATE;
          "PCELEMENTREMOVE", PCELEMENTREMOVE;
@@ -95,7 +95,7 @@ let digit       = ['0'-'9']
 let decint      = digit+
 let int         = ('-')?decint
 let decimal     = digit+ '.' digit+
-let number     	= ('-'|'+')?digit+ '.' digit*
+let number      = ('-'|'+')?digit+ '.' digit*
 let float       = (int|decimal)'E'('+'|'-')?digit+
 let identifier  = (char|('_'+(digit|char)))(char|digit|'_')*
 let whitespace  = [' ' '\t']   
@@ -119,17 +119,18 @@ rule tokenize = parse
 | cmp_op
 | arith_op      { let op_str = lexeme lexbuf in
                       try Hashtbl.find ops_table op_str
-                      with Not_found -> raise (Failure ("unknown operator "^(op_str)))
+                      with Not_found -> 
+                          raise (Failure ("unknown operator "^(op_str)))
                 }
 | identifier    { 
                   let keyword_str = lexeme lexbuf in
                   let keyword_str_uc = String.uppercase keyword_str in
                       try Hashtbl.find keyword_table keyword_str_uc
-                      with Not_found -> 	ID(keyword_str)
+                      with Not_found -> ID(keyword_str)
                 }
 | strconst      { let s = lexeme lexbuf in 
                       CONST_STRING(String.sub s 1 ((String.length s)-2)) 
-								}
+                }
 | ','           { COMMA }
 | '('           { LPAREN }
 | ')'           { RPAREN }
@@ -138,7 +139,7 @@ rule tokenize = parse
 | '{'           { LBRACE }
 | '}'           { RBRACE }
 | ';'           { EOSTMT }
-| ':'			{ COLON }
+| ':'           { COLON }
 | '$'           { DOLLAR }
 | singlecm      { tokenize lexbuf}
 | multicmst     { comment 1 lexbuf }

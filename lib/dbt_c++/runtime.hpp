@@ -83,7 +83,8 @@ namespace dbtoaster {
           ("trace-dir", value<string>(), "trace output dir")
           ("trace,t", value<string>(&trace_opts), "trace query execution")
           ("trace-step,s", value(&trace_step), "trace step size")
-          ("log-count", value<unsigned int>(&log_tuple_count_every), "log tuple count every [arg] updates");
+          ("log-count", value<unsigned int>(&log_tuple_count_every), 
+           "log tuple count every [arg] updates");
       }
 
       void init_positional_options(positional_options_description& p) {
@@ -100,7 +101,8 @@ namespace dbtoaster {
               options(o).positional(p).run(), m);
             notify(m);
           } catch (unknown_option& o) {
-              cerr << "unknown option: \"" << o.get_option_name() << "\"" << endl;
+              cerr << "unknown option: \"" 
+                   << o.get_option_name() << "\"" << endl;
               cerr << *opt_desc << endl;
               exit(1);
           } catch (error& e) {
@@ -123,7 +125,8 @@ namespace dbtoaster {
           }
           else traced = false;
         } catch (unknown_option& uo) {
-            cerr << "unknown option: \"" << uo.get_option_name() << "\"" << endl;
+            cerr << "unknown option: \"" 
+                 << uo.get_option_name() << "\"" << endl;
             cerr << o << endl;
             exit(1);
         } catch (error& e) {
@@ -145,7 +148,8 @@ namespace dbtoaster {
         _verbose = opt_map.count("v");
         async = opt_map.count("async");
         setup_tracing(*opt_desc);
-        logged_streams = set<string>(logged_streams_v.begin(), logged_streams_v.end());
+        logged_streams = set<string>(logged_streams_v.begin(),
+                                     logged_streams_v.end());
         logged_streams_v.clear();
       }
       
@@ -201,7 +205,8 @@ namespace dbtoaster {
         path r;
         if ( opt_map.count("log-dir") ) r = opt_map["log-dir"].as<string>();
         else r = current_path();
-        r /= (prefix? ftype : "") + stream_name + (prefix? "" : ftype) + ".dbtdat";
+        r /= (prefix? ftype : "") + stream_name + 
+             (prefix? "" : ftype) + ".dbtdat";
         return r.make_preferred();
       }
 
@@ -285,7 +290,8 @@ namespace dbtoaster {
               "order book adaptor parameters");
 
         // No positional parameters.
-        runtime_options::process_options(argc, argv, *opt_desc, pos_options, opt_map);
+        runtime_options::process_options(argc, argv, *opt_desc, 
+                                         pos_options, opt_map);
         runtime_options::setup_tracing(*opt_desc);
       }
 

@@ -119,7 +119,8 @@ rule tokenize = parse
 | cmp_op
 | arith_op      { let op_str = lexeme lexbuf in
                       try Hashtbl.find ops_table op_str
-                      with Not_found -> raise (Failure ("unknown operator "^(op_str)))
+                      with Not_found -> 
+                          raise (Failure ("unknown operator "^(op_str)))
                 }
 | identifier    { 
                   let keyword_str = lexeme lexbuf in

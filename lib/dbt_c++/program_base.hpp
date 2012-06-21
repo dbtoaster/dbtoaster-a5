@@ -61,8 +61,8 @@ using namespace ::dbtoaster::statistics;
 namespace dbtoaster {
 
 /**
- * Class that provides common functionality for running a program as specified by
- * the sql input file.
+ * Class that provides common functionality for running a program as 
+ * specified by the sql input file.
  *
  * It implements the process_streams() and process_stream_event() virtual
  * functions of IProgram. Only take_snapshot() remains to be implemented in a
@@ -70,15 +70,17 @@ namespace dbtoaster {
  *
  * Configuration is performed through the following functions:
  *  - add_map : used for specifying the maps used by the program;
- *  - add_stream : used for specifying the streams that might generate events during the
- *  execution of the program;
- *  - add_trigger : used for specifying the trigger functions that need to be executed
- *  for handling different events;
- *  - add_table_source : used for specifying sources of events for static table relations;
- *  - add_stream_source : used for specifying sources of events for stream relations.
+ *  - add_stream : used for specifying the streams that might generate events
+ *                 during the execution of the program;
+ *  - add_trigger : used for specifying the trigger functions that need to be 
+ *                  executed for handling different events;
+ *  - add_table_source : used for specifying sources of events for static table
+ *                       relations;
+ *  - add_stream_source : used for specifying sources of events for stream
+ *                        relations.
  *
- *  The 'TLQ_T' class parameter represents the data-structure used for storing the results
- * of the program.
+ *  The 'TLQ_T' class parameter represents the data-structure used for 
+ *  storing the results of the program.
  */
 template<class TLQ_T>
 class ProgramBase: public IProgram<TLQ_T> {
@@ -115,7 +117,8 @@ public:
         bool log_event_type;
 
         logger_t(const path& fp, bool ln = false, bool le = false) :
-                log_stream(new file_stream_t(fp.c_str())), log_relation_name(ln), log_event_type(
+                log_stream(new file_stream_t(fp.c_str())),
+                log_relation_name(ln), log_event_type(
                         le) {
             if (!log_stream) {
                 cerr << "failed to open file path " << fp << endl;
@@ -163,7 +166,8 @@ public:
         shared_ptr<trigger_t> trigger[2];
 
         relation_t(string r_name, bool r_is_table, relation_id_t r_id,
-                trigger_fn_t ins_trigger_fn = 0, trigger_fn_t del_trigger_fn = 0,
+                trigger_fn_t ins_trigger_fn = 0, 
+                trigger_fn_t del_trigger_fn = 0,
                 shared_ptr<logger_t> ins_logger = shared_ptr<logger_t>(),
                 shared_ptr<logger_t> del_logger = shared_ptr<logger_t>()) :
                 name(r_name), is_table(r_is_table), id(r_id) {
@@ -209,7 +213,8 @@ public:
         return;
     }
 
-    void add_relation(string r_name, bool is_table = false, relation_id_t s_id = -1) {
+    void add_relation(string r_name, bool is_table = false, 
+                      relation_id_t s_id = -1) {
         if (relations_by_name.find(r_name) != relations_by_name.end()) {
             cerr << "Found existing relation " << r_name << endl;
             return;
@@ -222,13 +227,15 @@ public:
             return;
         }
 
-        relation_ptr_t r = shared_ptr < relation_t > (new relation_t(r_name, is_table, id));
+        relation_ptr_t r = shared_ptr < relation_t > (
+                new relation_t(r_name, is_table, id));
         relations_by_name[r_name] = r;
         relations_by_id[id] = r;
     }
 
     void add_trigger(string r_name, event_type ev_type, trigger_fn_t fn) {
-        typename map<string, relation_ptr_t>::iterator it = relations_by_name.find(r_name);
+        typename map<string, relation_ptr_t>::iterator it =
+                 relations_by_name.find(r_name);
         if (it == relations_by_name.end()) {
             cerr << "Relation not found: " << r_name << endl;
             return;
@@ -268,7 +275,8 @@ public:
                 > (new trigger_t(r->name, ev_type, fn, log));
     }
 
-    void add_source(shared_ptr<streams::source> source, bool is_table_source = false) {
+    void add_source(shared_ptr<streams::source> source, 
+                    bool is_table_source = false) {
         if( is_table_source )   table_multiplexer.add_source(source);
         else                    stream_multiplexer.add_source(source);
     }
@@ -284,9 +292,12 @@ public:
         , window_size( run_opts.get_stats_window_size() )
         , stats_period( run_opts.get_stats_period() )
         , stats_file( run_opts.get_stats_file() )
-        , exec_stats(new trigger_exec_stats("exec", window_size, stats_period, stats_file))
-        , ivc_stats(new trigger_exec_stats("ivc", window_size, stats_period, stats_file))
-        , delta_stats(new delta_size_stats("delta_sz", window_size, stats_period, stats_file))
+        , exec_stats(new trigger_exec_stats("exec", window_size, 
+                                            stats_period, stats_file))
+        , ivc_stats(new trigger_exec_stats("ivc", window_size, 
+                                           stats_period, stats_file))
+        , delta_stats(new delta_size_stats("delta_sz", window_size,
+                                           stats_period, stats_file))
 #endif // DBT_PROFILE
     {
         if (run_opts.help()) {
@@ -297,7 +308,8 @@ public:
     void process_streams() {
 
         while( stream_multiplexer.has_inputs() ) {
-            shared_ptr<std::list<event_t> > events = stream_multiplexer.next_inputs();
+            shared_ptr<std::list<event_t> > events = 
+                    stream_multiplexer.next_inputs();
 
             if( !events )   continue;
 
@@ -317,7 +329,8 @@ public:
 
     void process_tables() {
         while( table_multiplexer.has_inputs() ) {
-            shared_ptr<std::list<event_t> > events = table_multiplexer.next_inputs();
+            shared_ptr<std::list<event_t> > events = 
+                    table_multiplexer.next_inputs();
 
             if( !events )   continue;
 
@@ -456,8 +469,12 @@ struct serialize_tuple
     }
 };
 
-template <class Archive, BOOST_PP_ENUM_PARAMS (FUSION_MAX_VECTOR_SIZE, typename T)>
-inline void serialize (Archive& ar, boost::fusion::tuple <BOOST_PP_ENUM_PARAMS (FUSION_MAX_VECTOR_SIZE, T) >& p, const unsigned int/* file_version */)
+template <class Archive, BOOST_PP_ENUM_PARAMS (FUSION_MAX_VECTOR_SIZE, 
+                                               typename T)>
+inline void serialize (Archive& ar, 
+        boost::fusion::tuple <BOOST_PP_ENUM_PARAMS (FUSION_MAX_VECTOR_SIZE, 
+                                                    T) >& p, 
+        const unsigned int/* file_version */)
 {
     boost::fusion::for_each( p, serialize_tuple<Archive>(ar) );
 }

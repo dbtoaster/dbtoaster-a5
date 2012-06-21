@@ -38,7 +38,8 @@ std::ostream& operator<<(std::ostream &strm, const boost::any &a) {
         else if( a.type() == typeid(double) )
             return strm << any_cast<double>(a);
         else
-            cerr << "event_arg: Unrecognized type in <<: " << a.type().name() << endl;
+            cerr << "event_arg: Unrecognized type in <<: " 
+                 << a.type().name() << endl;
     } catch (boost::bad_any_cast& bc) {
         cerr << "bad cast on <<: " << bc.what() << endl;
     }
@@ -134,7 +135,8 @@ struct dynamic_poset {
         shared_ptr<class_range> r;
         iterator it = find(order);
         if ( it == end() || !(it->second) ) return r;
-        r = shared_ptr<class_range>(new class_range(it->second->begin(), it->second->end()));
+        r = shared_ptr<class_range>(new class_range(it->second->begin(), 
+                                                    it->second->end()));
         return r;
     }
 
@@ -151,7 +153,8 @@ struct dynamic_poset {
     void remove_element(shared_ptr<ordered> e) {
         unsigned int o = e->order();
         iterator it = find(o);
-        //        cerr << "Removing element at " << e->order() << " out of " << it->second->size() << endl;
+        //        cerr << "Removing element at " << e->order() 
+        //             << " out of " << it->second->size() << endl;
         if ( it != end() ) it->second->erase(e);
         if ( it->second->empty() ) poset.erase(o);
     }
@@ -185,10 +188,12 @@ struct dynamic_poset {
             }
             ps->erase(*rm_it);
         }
-        //        cerr << "Size is now " << ps->size() << "; empty: " << ps->empty() << endl;
+        //        cerr << "Size is now " << ps->size() 
+        //             << "; empty: " << ps->empty() << endl;
         if ( ps->empty() ) {
             poset.erase(order);
-            //          cerr << "Moving from " << order << " to " << this->order() << endl;
+            //          cerr << "Moving from " << order 
+            //               << " to " << this->order() << endl;
         }
 
     }
@@ -259,7 +264,8 @@ struct dbt_file_source : public source
     shared_ptr<string> frame_from_buffer() {
         shared_ptr<string> r;
         if (frame_info.type == fixed_size) {
-            r = shared_ptr<string>(new string(buffer->substr(0,frame_info.size)));
+            r = shared_ptr<string>(
+                    new string(buffer->substr(0,frame_info.size)));
             buffer = shared_ptr<string>(
                     new string(buffer->substr(frame_info.size, string::npos)));
         } else if ( frame_info.type == delimited ) {
@@ -267,7 +273,8 @@ struct dbt_file_source : public source
             r = shared_ptr<string>(new string(buffer->substr(0, delim_pos)));
             buffer = shared_ptr<string>(
                     new string(buffer->substr(
-                            delim_pos+frame_info.delimiter.size(), string::npos)));
+                            delim_pos+frame_info.delimiter.size(),
+                            string::npos)));
         }
         return r;
     }
@@ -292,14 +299,17 @@ struct dbt_file_source : public source
             }
 
             if( !source_stream->good() &&
-                    buffer->find(frame_info.delimiter) != (buffer->size()-frame_info.delimiter.size()) )
+                    buffer->find(frame_info.delimiter) != 
+                    (buffer->size()-frame_info.delimiter.size()) )
                 (*buffer) += frame_info.delimiter;
 
 
             size_t dd_index = 0;
             string ddelimiter = frame_info.delimiter+frame_info.delimiter;
-            while ( (dd_index = buffer->find(ddelimiter,dd_index)) != string::npos )
-                buffer->replace( dd_index, ddelimiter.size(), frame_info.delimiter );
+            while ( (dd_index = buffer->find(ddelimiter,dd_index)) !=
+                    string::npos )
+                buffer->replace( dd_index, ddelimiter.size(), 
+                                 frame_info.delimiter );
 
         }
         else if ( frame_info.type == variable_size ) {
@@ -318,7 +328,8 @@ struct dbt_file_source : public source
     // stream events
     void process_adaptors(string& data, shared_ptr<list<event_t> >& r) {
         unsigned int min_order = adaptors.order();
-        shared_ptr<dynamic_poset::class_range> range = adaptors.range(min_order);
+        shared_ptr<dynamic_poset::class_range> range = 
+                adaptors.range(min_order);
         if ( !range ) {
             cerr << "invalid min order at source with empty range" << endl;
             return;
@@ -419,12 +430,14 @@ struct source_multiplexer
         for (; it != end; ++it) {
             shared_ptr<dynamic_poset::class_range> r = inputs.range(it->first);
             if ( r ) {
-                for (dynamic_poset::pset::iterator it = r->first; it != r->second; ++it) {
+                for (dynamic_poset::pset::iterator it = r->first; 
+                     it != r->second; ++it) {
                     shared_ptr<source> s = dynamic_pointer_cast<source>(*it);
                     if ( s ) s->init_source();
                 }
             } else {
-                cerr << "invalid source poset class at position " << it->first << endl;
+                cerr << "invalid source poset class at position " 
+                     << it->first << endl;
             }
         }
     }
@@ -443,7 +456,8 @@ struct source_multiplexer
                     if ( s ) found = found || s->has_inputs();
                 }
             } else {
-                cerr << "invalid source poset class at position " << it->first << endl;
+                cerr << "invalid source poset class at position " 
+                     << it->first << endl;
             }
         }
         return found;
@@ -456,17 +470,18 @@ struct source_multiplexer
         // and process its frame.
         while ( !current || remaining <= 0 ) {
 
-                        if ( inputs.order() < current_order ) {
+            if ( inputs.order() < current_order ) {
                 if(inputs.order() <= 0){ return r; }
                 cerr << "non-monotonic source ordering "
-                        << inputs.order() << " vs " << current_order << endl;
+                     << inputs.order() << " vs " << current_order << endl;
                 break;
             }
 
             current_order = inputs.order();
             dynamic_poset::iterator it = inputs.find(current_order);
             if ( it->second && (it->second->size() > 0) ) {
-                size_t id = (size_t) (it->second->size() * (rand() / (RAND_MAX + 1.0)));
+                size_t id = (size_t) (it->second->size() * 
+                                      (rand() / (RAND_MAX + 1.0)));
                 dynamic_poset::pset::iterator c_it = it->second->begin();
                 advance(c_it, id);
                 shared_ptr<source> c = dynamic_pointer_cast<source>(*c_it);
@@ -474,7 +489,9 @@ struct source_multiplexer
                     it->second->erase(c_it);
                 } else {
                     current = c;
-                    remaining = (int) (step > 0? step : block*(rand() / (RAND_MAX + 1.0)));
+                    remaining = (int) (step > 0 ? 
+                                       step : 
+                                       block*(rand() / (RAND_MAX + 1.0)));
                 }
             } else {
                 cerr << "invalid poset class at position " << it->first << endl;
@@ -486,9 +503,12 @@ struct source_multiplexer
         r = current->next_inputs();
 
         if ( r ) remaining -= r->size();
-        //        cerr << "Preparing to reorder multiplexer elements for " << current_order << endl;
+        //        cerr << "Preparing to reorder multiplexer elements for " 
+        //             << current_order << endl;
         inputs.reorder_elements(current_order);
-        //        cerr << "Done reordering multiplexer elements for " << current_order << "; order is now " << inputs.order() << endl;
+        //        cerr << "Done reordering multiplexer elements for " 
+        //             << current_order << "; order is now " 
+        //             << inputs.order() << endl;
 
         // remove the stream if its done.
         if ( !current->has_inputs() ) {
@@ -496,7 +516,8 @@ struct source_multiplexer
             current = shared_ptr<source>();
             remaining = 0;
             if( runtime_options::verbose() )
-                cerr << "done with stream, " << inputs.size() << " remain" << endl;
+                cerr << "done with stream, " << inputs.size() 
+                     << " remain" << endl;
         } else if (current_order != current->order()) {
             current = shared_ptr<source>();
             remaining = 0;
@@ -539,7 +560,8 @@ struct stream_registry {
     void register_multiplexer(shared_ptr<source_multiplexer> m) {
         multiplexer = m;
         if ( data_sources.size() > 0 ) {
-            map<string, shared_ptr<source> >::iterator src_it = data_sources.begin();
+            map<string, shared_ptr<source> >::iterator src_it =
+                    data_sources.begin();
             for (; src_it != data_sources.end(); ++src_it) {
                 multiplexer->add_source(src_it->second);
             }
