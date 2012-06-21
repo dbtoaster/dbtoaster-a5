@@ -50,6 +50,8 @@ namespace dbtoaster {
       }
 
       void parse_params(int num_params, const pair<string, string> params[]) {
+        string param_schema = "";
+        string param_schema_prefix = "";
         for (int i = 0; i< num_params; ++i) {
           string k = params[i].first;
           string v = params[i].second;
@@ -59,13 +61,16 @@ namespace dbtoaster {
           if ( k == "fields" ) {
             delimiter = v;
           } else if ( k == "schema" ) {
-            schema = parse_schema(v);
+            param_schema = v;
           } else if ( k == "eventtype" ) {
-             type = v == "insert"? insert_tuple : delete_tuple;
+            type = ( v == "insert" ? insert_tuple : delete_tuple);
+          } else if ( k == "deletions" ) {
+            param_schema_prefix = ( v == "true" ? "order,event," : "" );
           }
           // TODO: handle parameterized events, via 'triggers' key as seen
           // in OCaml adaptors.
         }
+        schema = parse_schema(param_schema_prefix + param_schema);
       }
 
       virtual string parse_schema(string s)
@@ -115,7 +120,7 @@ namespace dbtoaster {
 
       // Interpret the schema.
       tuple<bool, bool, event_args_t> interpret_event(const string& schema,
-                                                    const string& data)
+                                                      const string& data)
       {
         event_args_t tuple;
         string::const_iterator schema_it = schema.begin();
