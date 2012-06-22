@@ -2,14 +2,15 @@ h1 {
   text-align: center;
 }
 h2 {
-  text-align: center;
+  text-align: left;
 }
 h3 {
-  text-align: center;
+  text-align: left;
 }
 .wrapper {
   margin: 0 auto;
-  width: 600px;
+  min-width: 600px;
+  max-width: 900px;
 }
 .code {
   font-family: Courier, Monospace;
@@ -20,10 +21,17 @@ h3 {
   margin: 10px 20px;
   padding: 10px;
   background-color: #cccccc;
+  white-space:pre-wrap;
 }
 .todo {
   margin: 10px 20px;
   color: red;
   font-weight: bold;
   text-align: center;
+}
+
+dt.api{
+  font-family: Courier, Monospace;
+  font-weight: bold;
+  font-size: small;
 }

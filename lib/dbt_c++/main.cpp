@@ -1,3 +1,32 @@
+
+namespace dbtoaster{
+    class CustomProgram : public Program
+    {
+    public:
+        void process_stream_event(event_t& ev) {
+            cout << "on_" << dbtoaster::event_name[ev.type] << "_";
+            cout << get_relation_name(ev.id) << "(" << ev.data << ")" << endl;
+
+            Program::process_stream_event(ev);
+        }
+    };
+
+    class CustomProgram_2 : public Program
+    {
+    public:
+        void process_streams() {
+            for( long i = 1; i <= 10; i++ ) {
+                event_args_t ev_args;
+                ev_args.push_back(i);
+                ev_args.push_back(i+10);
+                event_t ev( insert_tuple, get_relation_id("S"), ev_args);
+
+                process_stream_event(ev);
+            }
+        }
+    };
+}
+
 /**
  * In order to compile this file one would have to include a header containing
  * the definition of "dbtoaster::Program" and "dbtoaster::Program::snapshot_t"
@@ -15,7 +44,7 @@
  */
 bool async_mode(int argc, char* argv[])
 {
-    for(int i = 1; i < argc; i++)
+	for(int i = 1; i < argc; i++)
         if( !strcmp(argv[1],"-async") )
             return true;
     return false;
@@ -38,6 +67,8 @@ int main(int argc, char* argv[]) {
     boost::archive::xml_oarchive oa(cout, 0);
 
     dbtoaster::Program p;
+    //dbtoaster::CustomProgram_1 p;
+    //dbtoaster::CustomProgram_2 p;
     dbtoaster::Program::snapshot_t snap;
 
     cout << "Initializing program:" << endl;

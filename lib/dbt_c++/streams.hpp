@@ -37,7 +37,10 @@ std::ostream& operator<<(std::ostream &strm, const boost::any &a) {
 
         else if( a.type() == typeid(double) )
             return strm << any_cast<double>(a);
-        else
+
+        else if( a.type() == typeid(std::string) )
+			return strm << any_cast<std::string>(a);
+		else
             cerr << "event_arg: Unrecognized type in <<: " 
                  << a.type().name() << endl;
     } catch (boost::bad_any_cast& bc) {

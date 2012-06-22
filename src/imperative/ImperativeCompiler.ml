@@ -474,6 +474,12 @@ struct
     | Target(MultiIndexDef(t_id,_,entry_t,_,_)) -> entry_t
     | _ -> error()
 
+  let fields_of_entry_type entry_ty =
+     begin match type_decl_of entry_ty with
+      | Target(EntryStructDef(_, fields)) -> fields
+      | _ -> failwith "Unsupported entry type!"
+     end
+            
   let field_types_of_collection t = match t with
     | Target(MultiIndexDef(t_id,_,entry_t,_,_)) ->
         if is_type_defined entry_t then
@@ -516,12 +522,11 @@ struct
    * -- multi_index_container types for in and out tiers.
    * -- pattern tag types and index typedefs.
    *)
-  let type_of_map_schema patterns ((id, in_tl, out_tl, mapt):K3.map_t) =
+  let type_of_map_schema patterns ((id, in_vl, out_vl, mapt):K3.map_t) =
     let k3vartype_of_m3vartype t = TBase(t) in
-    let attri i = "__a"^(string_of_int i) in
-    let fields_of_var_types tl = snd (List.fold_left (fun (i,acc) ty ->
-          (i+1, acc@[attri i, Host (k3vartype_of_m3vartype ty)]))
-        (0,[]) tl)
+    let fields_of_var_types vl = snd (List.fold_left (fun (i,acc) (v,ty) ->
+          (i+1, acc@[v, Host (k3vartype_of_m3vartype ty)]))
+        (0,[]) vl)
     in
     let aux () =
       let mk_mindex t_id in_tier entry_t_decl idx_meta =
@@ -553,8 +558,8 @@ struct
       let t_id           = id^"_map" in
       let entry_t_id     = id^"_entry" in
       
-      let  in_fields = fields_of_var_types (List.map snd in_tl) in
-      let out_fields = fields_of_var_types (List.map snd out_tl) in
+      let  in_fields = fields_of_var_types  in_vl in
+      let out_fields = fields_of_var_types out_vl in
       let val_field  = "__av", Host(TBase(mapt)) in
         
       (* In/out pattern index and type lists *)
@@ -564,18 +569,15 @@ struct
           else (List.assoc id patterns) in
         let it_of_idx l idxl = List.combine idxl (List.map (List.nth l) idxl) in
         let r = List.fold_left (fun (in_acc, out_acc) p -> match p with
-            | Patterns.In(v,i) -> in_acc@[it_of_idx (List.map snd in_tl) i],
-                                  out_acc
-            | Patterns.Out(v,i) -> in_acc, 
-                                   out_acc@[it_of_idx (List.map snd out_tl) i])
+            | Patterns.In(v,i) -> in_acc@[it_of_idx in_vl i], out_acc
+            | Patterns.Out(v,i) -> in_acc, out_acc@[it_of_idx out_vl i])
           ([], []) id_pats
         in unique (List.filter (fun x -> x <> []) (fst r)),
            unique (List.filter (fun x -> x <> []) (snd r))
       in
       let mk_pat t_id pfx p =
           let id_of_idxl l = String.concat "" (List.map string_of_int l) in
-          let mk_idx_field (i,ty) = 
-              (attri i), Host(k3vartype_of_m3vartype ty) 
+          let mk_idx_field (i,(v,ty)) = v, Host(k3vartype_of_m3vartype ty) 
           in
      
           let pat_sfx = id_of_idxl (List.map fst p) in
@@ -623,7 +625,7 @@ struct
       in 
       id, mindex_t, (out_mindex_decls@mindex_decls)
     in 
-    if (in_tl@out_tl) = [] then (id, Host(TBase(mapt)), []) else aux()
+    if (in_vl@out_vl) = [] then (id, Host(TBase(mapt)), []) else aux()
 
 
   (* Returns a var env containing global variables *)
@@ -1859,8 +1861,7 @@ end (* Typing *)
       if num_fields <> List.length tt_l then
         failwith "invalid composite element substitution"
       else 
-        snd (List.fold_left (fun (i,acc) (src_t, dest_t) ->
-          let attr = "__a"^(if i = num_fields then "v" else string_of_int i) in
+        snd (List.fold_left (fun (i,acc) (src_t, (attr,dest_t)) ->
           let src = Fn(Host src_t, TupleElement(i), [src_expr]) in
           let dest = dest_t, Fn(dest_t, Ext(MemberAccess(attr)), [src_expr])
           in i+1,acc@[src, dest])
@@ -1874,13 +1875,15 @@ end (* Typing *)
       let next_subs = List.map (fun (ty,(id,nty)) -> match ty, nty with
         | Host(Collection(_, (TTuple(l)))), Target(_) 
             when is_ext_collection nty ->
-               let fields_t = field_types_of_collection (type_decl_of nty) in
-                  (struct_member_sub (Var(ty,(id,ty))) l fields_t)@
-                  [Var(ty, (id, ty)), (nty, Var(nty, (id, nty)))]
+               let entry_ty = entry_type_of_collection (type_decl_of nty) in
+               let fields_l = fields_of_entry_type entry_ty 
+               in
+               (struct_member_sub (Var(ty,(id,ty))) l fields_l)@
+               [Var(ty, (id, ty)), (nty, Var(nty, (id, nty)))]
         
         | Host(TTuple l), Target(_) ->
-          let fields_t = field_types_of_type (type_decl_of nty)
-          in (struct_member_sub (Var(ty,(id,ty))) l fields_t)@
+          let fields_l = fields_of_entry_type nty 
+          in (struct_member_sub (Var(ty,(id,ty))) l fields_l)@
              [Var(ty, (id, ty)), (nty, Var(nty, (id, nty)))]
         
         | _, _ -> []) nsubs
@@ -1948,17 +1951,13 @@ end (* Typing *)
       let src_var = Var(loop_elem_t,(id,loop_elem_t)) in
       let dest_var = Var(elem_ty,(id,elem_ty)) in
       let access_subs =
-        let last_field = List.length loop_elem_tl - 1 in
-        let fields_t = field_types_of_type (type_decl_of elem_ty) in
-        snd (List.fold_left (fun (i,acc) (src_t, dest_t) ->
-            let attr = "__a"^(if i = last_field 
-                              then "v" 
-                              else string_of_int i) 
-            in
+        let fields_l = fields_of_entry_type elem_ty
+        in
+        snd (List.fold_left (fun (i,acc) (src_t, (attr,dest_t)) ->
             let src = Fn(Host src_t, TupleElement(i), [src_var]) in
             let dest = dest_t, Fn(dest_t, Ext(MemberAccess(attr)), [dest_var])
             in i+1,acc@[src, dest]) (0,[])
-          (List.combine loop_elem_tl fields_t))
+          (List.combine loop_elem_tl fields_l))
       in let var_subs = [src_var, (elem_ty, dest_var)]
       in access_subs@var_subs
     in fixpoint_sub_imp subs body
