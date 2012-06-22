@@ -11,7 +11,7 @@
     },
     
     "tiny" => {
-      :subs => [ [/data\/tpch\/normal\//, "data/tpch/tiny/"] ],
+      :subs => [ [/data\/tpch\/standard\//, "data/tpch/tiny/"] ],
       :toplevels => {
         "QUERY11" => {
           :type => :onelevel,
@@ -19,5 +19,27 @@
         }
       }
     },
+    
+    "standard_del" => {
+      :subs => [ [/data\/tpch\/standard\//, "data/tpch/standard_del/"],
+                 [/deletions := 'false'/, "deletions := 'true'" ]  ],
+      :toplevels => {
+        "QUERY11" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query11_del.csv", /,/)
+        }
+      }
+    },
+    
+    "tiny_del" => {
+      :subs => [ [/data\/tpch\/standard\//, "data/tpch/tiny_del/"],
+                 [/deletions := 'false'/, "deletions := 'true'" ]  ],
+      :toplevels => {
+        "QUERY11" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query11_tiny_del.csv", /,/)
+        }
+      }
+    }
   }
 }

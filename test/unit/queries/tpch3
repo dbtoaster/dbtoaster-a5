@@ -11,7 +11,7 @@
     },
     
     "tiny" => {
-      :subs => [ [/data\/tpch\/normal\//, "data/tpch/tiny/"] ],
+      :subs => [ [/data\/tpch\/standard\//, "data/tpch/tiny/"] ],
       :toplevels => {
         "QUERY3" => {
           :type => :onelevel,
@@ -21,13 +21,47 @@
     },
 
     "big" => {
-      :subs => [ [/data\/tpch\/normal\//, "data/tpch/big/"] ],
+      :subs => [ [/data\/tpch\/standard\//, "data/tpch/big/"] ],
       :toplevels => {
         "QUERY3" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query3_100M.csv")
+          :expected => results_file("test/results/tpch/query3_big.csv")
+        }
+      }
+    },
+    
+    "standard_del" => {
+      :subs => [ [/data\/tpch\/standard\//, "data/tpch/standard_del/"],
+                 [/deletions := 'false'/, "deletions := 'true'" ] ],
+      :toplevels => {
+        "QUERY3" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query3_del.csv")
+        }
+      }
+    },
+    
+    "tiny_del" => {
+      :subs => [ [/data\/tpch\/standard\//, "data/tpch/tiny_del/"],
+                 [/deletions := 'false'/, "deletions := 'true'" ] ],
+      :toplevels => {
+        "QUERY3" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query3_tiny_del.csv")
+        }
+      }
+    },
+
+    "big_del" => {
+      :subs => [ [/data\/tpch\/standard\//, "data/tpch/big/"],
+                 [/deletions := 'false'/, "deletions := 'true'" ] ],
+      :toplevels => {
+        "QUERY3" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query3_big_del.csv")
         }
       }
     }
+    
   }
 }

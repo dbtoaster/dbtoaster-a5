@@ -11,7 +11,7 @@
     },
     
     "tiny" => {
-      :subs => [ [/data\/finance\/normal\/vwap5k.csv/, "data/finance/tiny/vwap100.csv"] ],
+      :subs => [ [/data\/finance\/standard\/vwap5k.csv/, "data/finance/tiny/vwap100.csv"] ],
       :toplevels => {
         "AXFINDER" => {
           :type => :onelevel,          

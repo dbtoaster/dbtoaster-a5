@@ -16,7 +16,7 @@ CREATE STREAM LINEITEM (
         shipmode       CHAR(10),
         comment        VARCHAR(44)
     )
-  FROM FILE '../../experiments/data/tpch/normal/lineitem.csv'
+  FROM FILE '../../experiments/data/tpch/standard/lineitem.csv'
   LINE DELIMITED CSV (fields := '|');
 
 
@@ -31,7 +31,7 @@ CREATE STREAM ORDERS (
         shippriority   INT,
         comment        VARCHAR(79)
     )
-  FROM FILE '../../experiments/data/tpch/normal/orders.csv'
+  FROM FILE '../../experiments/data/tpch/standard/orders.csv'
   LINE DELIMITED CSV (fields := '|');
 
 CREATE STREAM PART (
@@ -45,7 +45,7 @@ CREATE STREAM PART (
         retailprice  DECIMAL,
         comment      VARCHAR(23)
     )
-  FROM FILE '../../experiments/data/tpch/normal/part.csv'
+  FROM FILE '../../experiments/data/tpch/standard/part.csv'
   LINE DELIMITED CSV (fields := '|');
 
 
@@ -59,7 +59,7 @@ CREATE STREAM CUSTOMER (
         mktsegment   CHAR(10),
         comment      VARCHAR(117)
     )
-  FROM FILE '../../experiments/data/tpch/normal/customer.csv'
+  FROM FILE '../../experiments/data/tpch/standard/customer.csv'
   LINE DELIMITED CSV (fields := '|');
 
 CREATE STREAM SUPPLIER (
@@ -71,7 +71,7 @@ CREATE STREAM SUPPLIER (
         acctbal      DECIMAL,
         comment      VARCHAR(101)
     )
-  FROM FILE '../../experiments/data/tpch/normal/supplier.csv'
+  FROM FILE '../../experiments/data/tpch/standard/supplier.csv'
   LINE DELIMITED CSV (fields := '|');
   
 CREATE STREAM NATION (
@@ -80,7 +80,7 @@ CREATE STREAM NATION (
         regionkey    INT,
         comment      VARCHAR(152)
     )
-  FROM FILE '../../experiments/data/tpch/normal/nation.csv'
+  FROM FILE '../../experiments/data/tpch/standard/nation.csv'
   LINE DELIMITED CSV (fields := '|');
 
 

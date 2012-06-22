@@ -23,8 +23,8 @@ CREATE STREAM LINEITEM (
         shipmode       CHAR(10),
         comment        VARCHAR(44)
     )
-  FROM FILE '../../experiments/data/tpch/normal/lineitem.csv'
-  LINE DELIMITED CSV (fields := '|');
+  FROM FILE '../../experiments/data/tpch/standard/lineitem.csv'
+  LINE DELIMITED CSV (fields := '|', deletions := 'false');
 
 CREATE STREAM PART (
         partkey      INT,
@@ -37,8 +37,8 @@ CREATE STREAM PART (
         retailprice  DECIMAL,
         comment      VARCHAR(23)
     )
-  FROM FILE '../../experiments/data/tpch/normal/part.csv'
-  LINE DELIMITED CSV (fields := '|');
+  FROM FILE '../../experiments/data/tpch/standard/part.csv'
+  LINE DELIMITED CSV (fields := '|', deletions := 'false');
 
 SELECT sum(l.extendedprice) AS query17
 FROM   lineitem l, part p

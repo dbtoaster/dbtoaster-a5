@@ -10,11 +10,31 @@
       }
     },
     "tiny" => {
-      :subs => [ [/data\/tpch\/normal\//, "data/tpch/tiny/"] ],
+      :subs => [ [/data\/tpch\/standard\//, "data/tpch/tiny/"] ],
       :toplevels => {
         "QUERY17" => {
           :type => :singleton,
           :expected => 98015.33
+        }
+      }
+    },
+    "standard_del" => {
+      :subs => [ [/data\/tpch\/standard\//, "data/tpch/standard_del/"],
+                 [/deletions := 'false'/, "deletions := 'true'" ] ],
+      :toplevels => {
+        "QUERY17" => {
+          :type => :singleton,
+          :expected => 6087.66
+        }
+      }
+    },
+    "tiny_del" => {
+      :subs => [ [/data\/tpch\/standard\//, "data/tpch/tiny_del/"],
+                 [/deletions := 'false'/, "deletions := 'true'" ] ],
+      :toplevels => {
+        "QUERY17" => {
+          :type => :singleton,
+          :expected => 0.0
         }
       }
     }
