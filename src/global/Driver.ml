@@ -219,7 +219,9 @@ let suffix_regexp = Str.regexp ".*\\.\\([^.]*\\)$" in
              | "sql"   -> SQL
              | "m3"    -> M3
              | "k3"    -> K3
-             | "cpp"   -> CPP
+             | "cpp"
+             | "hpp"
+             | "h"     -> CPP
              | "scala" -> Scala
              | _       -> K3
             end

@@ -1,0 +1,29 @@
+h1 {
+  text-align: center;
+}
+h2 {
+  text-align: center;
+}
+h3 {
+  text-align: center;
+}
+.wrapper {
+  margin: 0 auto;
+  width: 600px;
+}
+.code {
+  font-family: Courier, Monospace;
+  font-weight: bold;
+}
+.codeblock {
+  font-family: Courier, Monospace;
+  margin: 10px 20px;
+  padding: 10px;
+  background-color: #cccccc;
+}
+.todo {
+  margin: 10px 20px;
+  color: red;
+  font-weight: bold;
+  text-align: center;
+}

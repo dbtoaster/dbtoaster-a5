@@ -1,0 +1,328 @@
+<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
+<html xmlns="http://www.w3.org/1999/xhtml">
+<head>
+<title>DBToaster C++</title>
+
+<link rel="stylesheet" type="text/css" href="style.css" />
+
+</head><body>
+
+<div class="wrapper">
+<h1>DBToaster C++ User Reference</h1>
+
+
+<h2><a name="quickstart">Quickstart Guide</a></h2>
+
+
+<p>
+DBToaster will generate C++ code for incrementally maintaining the results of a given set of queries 
+if CPP is specified as the output language (<tt>-l cpp</tt> command line option). In this case DBToaster 
+will produce a C++ header file containing a set of datastructures (<tt>tlq_t</tt>, <tt>data_t</tt> and
+<tt>Program</tt>) required for executing the sql program. 
+</p>
+<p>
+Let's consider the following sql query:
+<div class="codeblock">$&gt; cat test/queries/simple/rs_example.sql<br/>
+CREATE TABLE R(A int, B int) <br/>
+  FROM FILE '../../experiments/data/tiny_r.dat' LINE DELIMITED<br/>
+  CSV (fields := ',');<br/>
+<br/>
+CREATE STREAM S(B int, C int) <br/>
+  FROM FILE '../../experiments/data/tiny_s.dat' LINE DELIMITED<br/>
+  CSV (fields := ',');<br/>
+<br/>
+SELECT SUM(r.A*s.C) as RESULT FROM R r, S s <br/>
+WHERE r.B = s.B;<br/>
+</div>
+
+The corresponding C++ header file can be obtained by running:
+
+<div class="codeblock">$&gt; bin/dbtoaster test/queries/simple/rs_example.sql -l cpp -o rs_example.hpp</div>
+</p>
+
+<p>
+Alternatively, DBToaster can build a standalone binary (if the <tt>-c [binary name]</tt> flag is present) by compiling 
+the generated header file against <tt>lib/dbt_c++/main.cpp</tt>, which provides code for executing the 
+sql program and printing the results: 
+
+<div class="codeblock">$&gt; bin/dbtoaster test/queries/simple/rs_example.sql -l cpp -c rs_example</div>
+</p>
+
+<p>
+<b>Requirements:</b> The Boost header files and the following library binaries: <tt>boost_program_options</tt>, 
+<tt>boost_serialization</tt>, <tt>boost_system</tt>, <tt>boost_filesystem</tt>, <tt>boost_chrono</tt> and 
+<tt>boost_thread</tt> have to be present on the system since the generated code makes use of them.
+If these can't be found in the paths searched by default by <tt>g++</tt> then their location has to be explicitly
+provided to DBToaster as the following environment variables:
+<ul>
+<li><b>DBT_HDR</b> which should contain the path to Boost's <tt>include</tt> folder;</li>
+<li><b>DBT_LIB</b> which should contain the path to Boost's <tt>lib</tt> folder.</li>
+</ul>
+</p>
+
+<p>
+Running the compiled binary will result in the following output:
+<div class="codeblock">$&gt; ./rs_example
+&lt;?xml version="1.0" encoding="UTF-8" standalone="yes" ?&gt;<br/>
+&lt;!DOCTYPE boost_serialization&gt;<br/>
+&lt;boost_serialization signature="serialization::archive" version="9"&gt;<br/>
+Initializing program:<br/>
+Running program:<br/>
+Printing final result:<br/>
+&lt;snap class_id="0" tracking_level="0" version="0"&gt;<br/>
+        &lt;RESULT&gt;156&lt;/RESULT&gt;<br/>
+&lt;/snap&gt;<br/>
+&lt;/boost_serialization&gt;<br/>
+</div>
+
+If the generated binary is run with the <tt>-async</tt> flag, it will also print intermediary results as frequently
+as possible while the sql program is running in a separate thread.
+
+<div class="codeblock">$&gt; ./rs_example -async
+&lt;?xml version="1.0" encoding="UTF-8" standalone="yes" ?&gt;<br/>
+&lt;!DOCTYPE boost_serialization&gt;<br/>
+&lt;boost_serialization signature="serialization::archive" version="9"&gt;<br/>
+Initializing program:<br/>
+Running program:<br/>
+&lt;snap class_id="0" tracking_level="0" version="0"&gt;<br/>
+        &lt;RESULT&gt;0&lt;/RESULT&gt;<br/>
+&lt;/snap&gt;<br/>
+&lt;snap&gt;<br/>
+        &lt;RESULT&gt;0&lt;/RESULT&gt;<br/>
+&lt;/snap&gt;<br/>
+&lt;snap&gt;<br/>
+        &lt;RESULT&gt;0&lt;/RESULT&gt;<br/>
+&lt;/snap&gt;<br/>
+&lt;snap&gt;<br/>
+        &lt;RESULT&gt;0&lt;/RESULT&gt;<br/>
+&lt;/snap&gt;<br/>
+&lt;snap&gt;<br/>
+        &lt;RESULT&gt;9&lt;/RESULT&gt;<br/>
+&lt;/snap&gt;<br/>
+&lt;snap&gt;<br/>
+        &lt;RESULT&gt;74&lt;/RESULT&gt;<br/>
+&lt;/snap&gt;<br/>
+&lt;snap&gt;<br/>
+        &lt;RESULT&gt;141&lt;/RESULT&gt;<br/>
+&lt;/snap&gt;<br/>
+Printing final result:<br/>
+&lt;snap&gt;<br/>
+        &lt;RESULT&gt;156&lt;/RESULT&gt;<br/>
+&lt;/snap&gt;<br/>
+&lt;/boost_serialization&gt;<br/>
+</div>
+</p>
+
+<h2><a name="generatedcode">Generated Code Reference</a></h2>
+
+<p>
+The DBToaster C++ codegenerator produces a header file containing 3 main type definitions in the <tt>dbtoaster</tt> namespace:
+<tt>tlq_t</tt>, <tt>data_t</tt> and <tt>Program</tt>.Additionally <tt>snapshot_t</tt> is pre-defined as a garbage collected
+pointer to <tt>tlq_t</tt>.
+</p>
+
+<p>
+We will use as an example the C++ code generated for the <tt>rs_example.sql</tt> sql program introduced above. In the interest
+of clarity some implementation details are omitted.
+<div class="codeblock">$&gt; bin/dbtoaster test/queries/simple/rs_example.sql -l cpp<br/>
+#include &lt;lib/dbt_c++/program_base.hpp&gt;<br/>
+<br/>
+namespace dbtoaster {<br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;/* Definitions of auxiliary maps for storing <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;materialized views. */<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;...<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;...<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;...<br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;/* Type definition providing a way to access the <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;results of the sql program */<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;struct tlq_t{<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;tlq_t()<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{}<br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/* Serialization Code */<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;template&lt;class Archive&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;void serialize(Archive&amp; ar,<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; const unsigned int version) {<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;...<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/* Functions returning/computing the results<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp; of top level queries */<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;long get_RESULT(){<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;...<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;protected:<br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/* Data structures used for storing/computing <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;top level queries */<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;...<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;};<br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;/* Type definition providing a way to <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;incrementally maintain the results of the sql <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;program */<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;struct data_t : tlq_t{<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;data_t()<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{}<br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/* Registering relations and trigger <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;functions */<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;void register_data(ProgramBase&lt;tlq_t&nbsp;&amp; pb) {<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;...<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/* Trigger functions for table relations */<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;void on_insert_R(long R_A, long R_B) {<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;...<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/* Trigger functions for stream relations */<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;void on_insert_S(long S_B, long S_C) {<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;...<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;void on_delete_S(long S_B, long S_C) {<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;...<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;void on_system_ready_event() {<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;...<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;private:<br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/* Data structures used for storing <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;materialized views */<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;...<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;};<br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;/* Type definition providing a way to execute the <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;sql program */<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;class Program : public ProgramBase&lt;tlq_t&gt;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;{<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;public:<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;Program(int argc = 0, char* argv[] = 0) : <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;ProgramBase&lt;tlq_t&gt;(argc,argv) <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;{<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;data.register_data(*this);<br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/* Specifying data sources */<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;...<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/* Imports data for static tables and performs <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;view initialization based on it. */<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;void init() {<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;process_tables();<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;data.on_system_ready_event();<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;/* Saves a snapshot of the data required to <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;obtain the results of top level queries. */<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;snapshot_t take_snapshot(){<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;return snapshot_t( <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;new tlq_t((tlq_t&amp;)data) <br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;);<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;}<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;private:<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;data_t data;<br/>
+&nbsp;&nbsp;&nbsp;&nbsp;};<br/>
+<br/>
+}<br/>
+}</div>
+</p>
+
+<h3><tt>struct tlq_t</tt></h3>
+
+<p>
+The <tt>tlq_t</tt> contains all the relevant datastructures for computing the results of the sql program, also called
+the top level queries. It provides a set of functions named <tt>get_TLQ_NAME</tt> that return the top level query
+result labeled <tt>TLQ_NAME</tt>. For our example the <tt>tlq_t</tt> produced has a function named <tt>get_RESULT</tt> 
+that returns the query result corresponding to <tt>SELECT SUM(r.A*s.C) as RESULT ...</tt> in <tt>rs_example.sql</tt>.
+
+- add info about multiple queries with group by's
+
+</p>
+
+<h3><tt>struct data_t</tt></h3>
+
+<p>
+The <tt>data_t</tt> contains all the relevant datastructures for incrementally maintaining the results of the sql program. 
+It provides for each stream based relation <tt>STREAM_X</tt>, present in the sql program, a pair of trigger functions named 
+<tt>on_insert_STREAM_X()</tt> and <tt>on_delete_STREAM_X()</tt>  that incrementally maintain the query results in the event of 
+an insertion/deletion of a tuple in <tt>STREAM_X</tt>. If generating code for the query presented above the <tt>data_t</tt> 
+produced has the trigger functions <tt>void on_insert_S(long S_B, long S_C) / void on_delete_S(long S_B, long S_C)</tt>.
+</p>
+<p>
+For static table based relations only the insertion trigger is required and will get called when processing the static tables 
+in the initialization phase of the program.
+</p>
+
+
+
+<h3><tt>class Program</tt></h3>
+
+<p>
+Finally, <tt>Program</tt> is a class that implements the <tt>IProgram</tt> interface and provides the basic functionalities
+for reading static table tuples and stream events from their sources, initializing the relevant datastructures, running the sql 
+program and retrieving its results. This is done through a set of 4 functions: <tt>init()</tt>, <tt>run()</tt>, <tt>is_finished()</tt> 
+and <tt>get_snapshot()</tt>, as presented bellow:
+<div class="codeblock">
+/**<br/>
+* This should get overridden by a function that does<br/>
+* initialization work, such as processing the static<br/>
+* table tuples.<br/>
+*/<br/>
+virtual void init();<br/>
+<br/>
+/**<br/>
+* Executes the program by launching the virtual method<br/>
+* 'process_streams()'.<br/>
+* <br/>
+* @param async If 'true' the execution is performed in<br/>
+*               a separate thread.<br/>
+*/<br/>
+void run( bool async = false );<br/>
+<br/>
+/**<br/>
+* This function provides a way for testing whether the<br/>
+* program has finished or not when run in asynchronous<br/>
+* mode.<br/>
+* <br/>
+* @return 'true' if the program has finished.<br/>
+*/<br/>
+bool is_finished();<br/>
+<br/>
+/**<br/>
+* Obtains a snapshot of the results of the program. If<br/>
+* the program is currently running in asynchronous<br/> 
+* mode it guarantees that the snapshot is consistent.<br/>
+* <br/>
+* @return A snapshot of the 'tlq_t' data-structure<br/>
+*         representing the results of the program.<br/>
+*/<br/>
+snapshot_t get_snapshot();<br/>
+</div>
+
+<tt>lib/dbt_c++/main.cpp</tt> is an example of how these functions can be used to execute the sql program.
+</p>
+
+<h2><a name="advanced">Advanced features</a></h2>
+
+<p>
+In order to perform additional processing on each stream event one can override the virtual function 
+<tt>void IProgram::process_stream_event(event_t& ev)</tt> while making sure that the base function
+<tt>Program::process_stream_event()</tt> still gets called.
+</p>
+
+<p>
+If one wants to manually read stream events they can do that by overriding the virtual function
+<tt>void IProgram::process_streams()</tt> and call <tt>Program::process_stream_event()</tt> for
+each event read.
+</p>
+
+</body></html>
