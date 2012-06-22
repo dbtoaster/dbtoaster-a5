@@ -458,7 +458,7 @@ if stage_is_active StageParseSQL then (
       List.iter (fun f ->
          let lexbuff = 
             Lexing.from_channel (if f <> "-" then (open_in f) else stdin) in
-         let sql_parsed_file = Sqlparser.dbtoasterSqlList Sqllexer.tokenize 
+         let sql_parsed_file = Sqlparser.dbtoasterSqlFile Sqllexer.tokenize 
                                                           lexbuff 
          in
          sql_program := Sql.merge_files !sql_program sql_parsed_file

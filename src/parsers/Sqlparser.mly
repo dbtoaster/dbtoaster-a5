@@ -1,5 +1,6 @@
 %{
 open Types
+;;
 
 let bail msg = raise (Sql.SQLParseError(msg))
 
@@ -92,6 +93,7 @@ let bind_select_vars q =
 %token EOSTMT
 %token EOF
 %token SUMAGG COUNTAGG AVGAGG
+%token INCLUDE
 
 %left AND OR NOT
 %left EQ NE LT LE GT GE
@@ -100,21 +102,28 @@ let bind_select_vars q =
 %nonassoc UMINUS
 
 // start   
-%start dbtoasterSqlList expression
-%type < Sql.file_t > dbtoasterSqlList
+%start dbtoasterSqlFile dbtoasterSqlStmtList expression
+%type < Sql.file_t > dbtoasterSqlFile
+%type < Sql.t list > dbtoasterSqlStmtList
 %type < Sql.expr_t > expression
     
 %%
 
-dbtoasterSqlList:
-| dbtoasterSqlStmt EOF           { Sql.mk_file $1 }
-| dbtoasterSqlStmt EOSTMT EOF    { Sql.mk_file $1 }
-| dbtoasterSqlStmt EOSTMT dbtoasterSqlList
-                                 { Sql.add_to_file_first $1 $3 }
+dbtoasterSqlFile:
+dbtoasterSqlStmtList   { 
+   List.fold_right Sql.add_to_file_first $1 Sql.empty_file 
+}
+
+dbtoasterSqlStmtList:
+| dbtoasterSqlStmt EOF           { $1 }
+| dbtoasterSqlStmt EOSTMT EOF    { $1 }
+| dbtoasterSqlStmt EOSTMT dbtoasterSqlStmtList
+                                 { $1 @ $3 }
 
 dbtoasterSqlStmt:
-| createTableStmt        { Sql.Create_Table($1) }
-| selectStmt             { Sql.Select(bind_select_vars $1) }
+| INCLUDE STRING         { (!Sql.parse_file) $2 }
+| createTableStmt        { [Sql.Create_Table($1)] }
+| selectStmt             { [Sql.Select(bind_select_vars $1)] }
 
 //
 // Create table statements

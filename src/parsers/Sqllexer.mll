@@ -84,7 +84,8 @@ let keywords =
         "AVG", AVGAGG;
         "IN", IN;
         "ALL", ALL;
-        "SOME", SOME
+        "SOME", SOME;
+        "INCLUDE", INCLUDE;
     ]
 let _ = hashtbl_of_pair_list keyword_table keywords
 
@@ -165,3 +166,12 @@ and comment depth = parse
 | multicmend    { tokenize lexbuf }
 | eof           { raise (Failure ("hit end of file in a comment")) }
 | _             { comment depth lexbuf }
+
+{
+   (* Initialize the Sqlparser's parsing capabilities, so that we can have
+      include directives *)
+   Sql.parse_file := (fun fname -> 
+      let lexbuff = Lexing.from_channel (open_in fname) in
+         Sqlparser.dbtoasterSqlStmtList tokenize lexbuff   
+   )
+}
