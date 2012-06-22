@@ -73,26 +73,20 @@ class CppDB < Hash
     loop do 
       tok.tokens_up_to(/<item[^>]*>/);
       break unless /<item[^>]*>/ =~ tok.last;
-      fields = Hash.new("");
-      curr_field = nil;
+      fields = Array.new;
+      curr_field = -1;
+      active = false;
       tok.tokens_up_to("</item>").each do |t|
         case t
-          when /<\/.*>/ then curr_field = nil;
-          when /<(.*)>/ then curr_field = $1;
-          else 
-            if curr_field then 
-              fields[curr_field] = fields[curr_field] + t 
-            end
+          when /<\/.*>/ then active = false;
+          when /<(.*)>/ then curr_field = curr_field+1; fields[curr_field] = ""; active = true;
+          else
+            fields[curr_field] = fields[curr_field] + t if active;
         end
       end
-      keys = fields.keys.clone;
-      keys.delete("__av");
       self[
-        keys.
-          map { |k| k[3..-1].to_i }.
-          sort.
-          map { |k| fields["__a#{k}"].extract_dbt_value }
-      ] = fields["__av"].to_f unless fields["__av"].extract_dbt_value == 0.0
+        fields[0..-2].map { |k| k.extract_dbt_value }
+      ] = fields[-1].to_f unless fields[-1].to_f == 0.0
     end
   end
 end
