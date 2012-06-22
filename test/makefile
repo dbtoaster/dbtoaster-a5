@@ -21,7 +21,7 @@ FAST_QUERY_TEST=$(QUERY_TEST) -d weak-expr-equiv
 ERROR_TEST=scripts/error_test.sh
 DATA_FILES=$(shell echo \
 	../../../experiments/data/employee/*.dat\
-	../../../experiments/data/tpch_tiny/*.csv\
+	../../../experiments/data/tpch/tiny/*.csv\
 	| sort)
 
 all: unit query err
@@ -32,7 +32,7 @@ datahash:
 testdatahash:
 #	@if [ $(shell basename $(shell which md5)) = md5 ] ; then \
 #	  if [ $(shell cat ../../../experiments/data/employee/*.dat \
-#	                   ../../../experiments/data/tpch_tiny/*.csv \
+#	                   ../../../experiments/data/tpch/tiny/*.csv \
 #	                    | md5) != 4aafddbcd29e2e52a053651761605ea4 ] ; then \
 #	echo "Your test data is out of date, update your experiments directory";\
 #	exit -1; fi;\
@@ -52,10 +52,13 @@ unit:
 #	@$(UNIT_TEST) unit/sqlclient.ml
 
 bigquery:	testdatahash
+	@$(QUERY_TEST) vwap 
 	@$(QUERY_TEST) missedtrades
 	@$(QUERY_TEST) axfinder
 	@$(QUERY_TEST) pricespread
 	@$(QUERY_TEST) brokerspread
+	@$(QUERY_TEST) brokervariance
+	@$(QUERY_TEST) tpch3
 	@$(QUERY_TEST) tpch11
 	@$(QUERY_TEST) tpch17
 	@$(QUERY_TEST) tpch18
@@ -208,20 +211,28 @@ query_tpch:
 	@$(FAST_QUERY_TEST) tpch3 --dataset tiny
 	@$(FAST_QUERY_TEST) tpch3
 	@$(FAST_QUERY_TEST) tpch11 --dataset tiny
-	@$(FAST_QUERY_TEST) tpch17 
+#	@$(FAST_QUERY_TEST) tpch11 
 	@$(FAST_QUERY_TEST) tpch17 --dataset tiny
-	@$(FAST_QUERY_TEST) tpch18
+	@$(FAST_QUERY_TEST) tpch17 
 	@$(FAST_QUERY_TEST) tpch18 --dataset tiny
+	@$(FAST_QUERY_TEST) tpch18
+	@$(FAST_QUERY_TEST) tpch22 --dataset tiny
 	@$(FAST_QUERY_TEST) tpch22
+	@$(FAST_QUERY_TEST) ssb4 --dataset tiny
+#	@$(FAST_QUERY_TEST) ssb4
 
 query_financial:
-	@$(FAST_QUERY_TEST) ssb4
 	@$(FAST_QUERY_TEST) vwap --dataset tiny
+#	@$(FAST_QUERY_TEST) vwap
 	@$(FAST_QUERY_TEST) brokervariance
-	@$(FAST_QUERY_TEST) missedtrades --dataset tiny
-	@$(FAST_QUERY_TEST) axfinder
-	@$(FAST_QUERY_TEST) pricespread
+	@$(FAST_QUERY_TEST) brokerspread --dataset tiny
 	@$(FAST_QUERY_TEST) brokerspread
+	@$(FAST_QUERY_TEST) missedtrades --dataset tiny
+#	@$(FAST_QUERY_TEST) missedtrades
+	@$(FAST_QUERY_TEST) axfinder --dataset tiny
+	@$(FAST_QUERY_TEST) axfinder
+	@$(FAST_QUERY_TEST) pricespread --dataset tiny
+	@$(FAST_QUERY_TEST) pricespread
 
 local: 
 	@for i in $(LOCAL_UNIT_TESTS); do \

@@ -11,7 +11,7 @@
     },
     
 #    "tiny" => {
-#      :subs => [ [/vwap5k/, "vwap100"] ],
+#      :subs => [ [/data\/finance\/normal\/vwap5k.csv/, "data/finance/tiny/vwap100.csv"] ],
 #      :toplevels => {
 #        "BSV" => {
 #          :type => :onelevel,          

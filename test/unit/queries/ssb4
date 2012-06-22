@@ -11,7 +11,7 @@
     },
     
     "tiny" => {
-      :subs => [ [/test\/data\/tpch\//, "test/data/tpch_tiny/"] ],
+      :subs => [ [/data\/tpch\/normal\//, "data/tpch/tiny/"] ],
       :toplevels => {
         "SSB4" => {
           :type => :onelevel,
