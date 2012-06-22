@@ -1,5 +1,5 @@
 CREATE STREAM R(A int, B int)
-FROM FILE '../../experiments/data/tiny_r.dat' LINE DELIMITED
+FROM FILE '../../experiments/data/simple/tiny/r.dat' LINE DELIMITED
 CSV (fields := ',');
 
 SELECT r3.A

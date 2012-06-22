@@ -5,7 +5,7 @@ CREATE STREAM PARTSUPP (
         supplycost   DECIMAL,
         comment      VARCHAR(199)
     )
-  FROM FILE '../../experiments/data/tpch/partsupp.csv'
+  FROM FILE '../../experiments/data/tpch/normal/partsupp.csv'
   LINE DELIMITED CSV (fields := '|');
 
 CREATE STREAM SUPPLIER (
@@ -17,7 +17,7 @@ CREATE STREAM SUPPLIER (
         acctbal      DECIMAL,
         comment      VARCHAR(199)
     )
-  FROM FILE '../../experiments/data/tpch/supplier.csv'
+  FROM FILE '../../experiments/data/tpch/normal/supplier.csv'
   LINE DELIMITED CSV (fields := '|');
 
 SELECT SUM(ps.supplycost * ps.availqty) AS query11b

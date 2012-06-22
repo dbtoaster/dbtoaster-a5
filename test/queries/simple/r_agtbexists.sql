@@ -1,5 +1,5 @@
 CREATE STREAM R(A int, B int) 
-  FROM FILE '../../experiments/data/tiny_r.dat' LINE DELIMITED csv;
+  FROM FILE '../../experiments/data/simple/tiny/r.dat' LINE DELIMITED csv;
 
 SELECT r1.A, SUM(1)
 FROM R r1

@@ -16,7 +16,7 @@ CREATE STREAM LINEITEM (
         shipmode       CHAR(10),
         comment        VARCHAR(44)
     )
-  FROM FILE '../../experiments/data/tpch/lineitem.csv'
+  FROM FILE '../../experiments/data/tpch/normal/lineitem.csv'
   LINE DELIMITED CSV (fields := '|');
 
 CREATE STREAM ORDERS (
@@ -30,7 +30,7 @@ CREATE STREAM ORDERS (
         shippriority   INT,
         comment        VARCHAR(79)
     )
-  FROM FILE '../../experiments/data/tpch/orders.csv'
+  FROM FILE '../../experiments/data/tpch/normal/orders.csv'
   LINE DELIMITED CSV (fields := '|');
 
 CREATE STREAM CUSTOMER (
@@ -43,7 +43,7 @@ CREATE STREAM CUSTOMER (
         mktsegment   CHAR(10),
         comment      VARCHAR(117)
     )
-  FROM FILE '../../experiments/data/tpch/customer.csv'
+  FROM FILE '../../experiments/data/tpch/normal/customer.csv'
   LINE DELIMITED CSV (fields := '|');
 
 SELECT c.name, c.custkey, o.orderkey, o.orderdate, o.totalprice, 

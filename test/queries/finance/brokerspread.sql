@@ -12,7 +12,7 @@
 --          0 |   78933620700
 
 CREATE STREAM bids(t FLOAT, id INT, broker_id INT, volume FLOAT, price FLOAT)
-  FROM FILE '../../experiments/data/vwap5k.csv'
+  FROM FILE '../../experiments/data/finance/normal/vwap5k.csv'
   LINE DELIMITED orderbook (book := 'bids', brokers := '10', 
                             deterministic := 'yes');
 
