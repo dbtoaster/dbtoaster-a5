@@ -273,10 +273,6 @@ selectStmt:
 variable:
 | ID              { (None, String.uppercase $1, TAny) }
 | ID PERIOD ID    { ((Some(String.uppercase $1)),String.uppercase $3, TAny) }
-//These wildcard targets will get expanded out in selectStmt
-| PRODUCT                { (None, "*", TAny) }
-| PRODUCT PERIOD PRODUCT { (None, "*", TAny) }
-| ID PERIOD PRODUCT      { (Some(String.uppercase $1), "*", TAny) }
 
 op:
 | SUM     { Sql.Sum }
@@ -286,10 +282,14 @@ op:
 
 expression:
 | LPAREN expression RPAREN { $2 }
-| INT      { Sql.Const(CInt($1)) }
-| FLOAT    { Sql.Const(CFloat($1)) }
-| STRING   { Sql.Const(CString($1)) }
-| variable { Sql.Var($1) }
+| INT          { Sql.Const(CInt($1)) }
+| FLOAT        { Sql.Const(CFloat($1)) }
+| STRING       { Sql.Const(CString($1)) }
+| ID           { Sql.Var(None, String.uppercase $1, TAny) }
+| ID PERIOD ID { Sql.Var(Some(String.uppercase $1), String.uppercase $3, TAny) }
+| PRODUCT      { Sql.Var(None, "*", TAny) }
+| PRODUCT PERIOD PRODUCT { Sql.Var(None, "*", TAny) }
+| ID PERIOD PRODUCT      { Sql.Var(Some(String.uppercase $1), "*", TAny) }
 | expression op expression      { Sql.SQLArith($1, $2, $3) }
 | MINUS expression %prec UMINUS { Sql.Negation($2) }
 | LPAREN selectStmt RPAREN      { Sql.NestedQ($2) }
@@ -297,12 +297,13 @@ expression:
 | AVGAGG LPAREN expression RPAREN { Sql.Aggregate(Sql.AvgAgg, $3) }
 | COUNTAGG LPAREN countAggParam RPAREN { Sql.Aggregate(Sql.CountAgg, 
                                                      Sql.Const(CInt(1))) }
+| ID LPAREN  RPAREN                   { Sql.ExternalFn($1,[]) }
 | ID LPAREN functionParameters RPAREN { Sql.ExternalFn($1,$3) }
 | DATE LPAREN STRING RPAREN     { Sql.Const(Constants.parse_date $3) }
 
 functionParameters: 
 | expression COMMA functionParameters { $1::$3 }
-|                                     { [] }
+| expression                          { [$1] }
 
 countAggParam:
 | PRODUCT    { () }

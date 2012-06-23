@@ -226,7 +226,7 @@ let rec calc_of_query ?(query_name = None)
       (Sql.string_of_select (targets,sources,cond,gb_vars))
    );
    let source_calc = calc_of_sources tables sources in
-   let cond_calc = calc_of_condition tables cond in
+   let cond_calc = calc_of_condition tables sources cond in
    let (agg_tgts, noagg_tgts) = 
       List.partition (fun (_,expr) -> Sql.is_agg_expr expr) targets in
    let check_gb_var_list tgt_name tgt_expr = 
@@ -287,7 +287,7 @@ let rec calc_of_query ?(query_name = None)
                up into a variable of the appropriate name (this also covers
                simple renaming) *)
             let tgt_var = (tgt_name, (Sql.expr_type tgt_expr tables sources)) in
-            let calc_expr = calc_of_sql_expr tables tgt_expr in
+            let calc_expr = calc_of_sql_expr tables sources tgt_expr in
                CalcRing.mk_val (Lift(tgt_var,
                   match ((Calculus.type_of_expr calc_expr), (snd tgt_var)) with
                   | (a, b) when a = b -> calc_expr
@@ -386,7 +386,7 @@ let rec calc_of_query ?(query_name = None)
                      ]
                   ))
             end
-         )) tables tgt_expr
+         )) tables sources tgt_expr
       )
    ) agg_tgts
 
@@ -462,14 +462,18 @@ and calc_of_sources (tables:Sql.table_t list)
    
    Translate the [WHERE] clause of a SQL query to its corresponding Calculus
    form.
-   @param tables The schema of the database on which the query is being run
-   @param cond   The [WHERE] clause of a SQL query
-   @return       A Calculus expression implementing [cond].
+   @param tables  The schema of the database on which the query is being run
+   @param sources All members of the [FROM] clause of the SQL query in the 
+                  context of which [cond] is being evaluated.
+   @param cond    The [WHERE] clause of a SQL query
+   @return        A Calculus expression implementing [cond].
 *)
-and calc_of_condition (tables:Sql.table_t list) (cond:Sql.cond_t):
+and calc_of_condition (tables:Sql.table_t list) 
+                      (sources:Sql.labeled_source_t list)
+                      (cond:Sql.cond_t):
                       C.expr_t =
-   let rcr_e e = calc_of_sql_expr tables e in
-   let rcr_c c = calc_of_condition tables c in
+   let rcr_e e = calc_of_sql_expr tables sources e in
+   let rcr_c c = calc_of_condition tables sources c in
    let rcr_q q = calc_of_query tables q in
       begin match Sql.push_down_nots cond with
          | Sql.Comparison(e1,cmp,e2) -> 
@@ -558,6 +562,8 @@ and calc_of_condition (tables:Sql.table_t list) (cond:Sql.cond_t):
                             an aggregate function is encountered
    @param tables            The schema of the database on which the query is 
                             being run
+   @param sources           The sources of the query in the context of which 
+                            [expr] is being evaluated.
    @param expr              A SQL expression
    @return                  The Calculus form of [expr]
    @raise Failure If the SQL expression is invalid (e.g., it contains a nested
@@ -566,14 +572,15 @@ and calc_of_condition (tables:Sql.table_t list) (cond:Sql.cond_t):
 *)
 and calc_of_sql_expr ?(materialize_query = None)
                      (tables:Sql.table_t list) 
+                     (sources:Sql.labeled_source_t list)
                      (expr:Sql.expr_t): C.expr_t =
    let rcr_e ?(is_agg=false) e =
-      if is_agg then calc_of_sql_expr tables e
+      if is_agg then calc_of_sql_expr tables sources e
       else calc_of_sql_expr ~materialize_query:materialize_query
-                            tables e
+                            tables sources e
    in
    let rcr_q q = calc_of_query tables q in
-   let rcr_c c = calc_of_condition tables c in
+   let rcr_c c = calc_of_condition tables sources c in
    
    (* In order to support expressions like A + Sum(B) where A is a group-by 
       variable, we need to extend the schema of the non-aggregate term to 
@@ -686,7 +693,8 @@ and calc_of_sql_expr ?(materialize_query = None)
          in
             CalcRing.mk_prod ((List.map snd (agg_args@non_agg_args))@[
                CalcRing.mk_val (Value(
-                  ValueRing.mk_val (AFn(fn, lifted_args, TAny))
+                  ValueRing.mk_val (AFn(fn, lifted_args, 
+                     Sql.expr_type expr tables sources))
                ))
             ])
    end

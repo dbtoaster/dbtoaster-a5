@@ -26,7 +26,7 @@ let function_is_defined (name:string) =
 let declare_function (name:string)  
                                 (fn:const_t list -> type_t -> const_t): unit =
    standard_functions := 
-      StringMap.add name fn !standard_functions
+      StringMap.add (String.uppercase name) fn !standard_functions
 ;;
 
 exception InvalidInvocation of string
@@ -35,10 +35,10 @@ exception InvalidInvocation of string
    Invoke an arithmetic function
 *)
 let invoke (fn:string) (arglist:const_t list) (ftype:type_t) =
-   if not (function_is_defined fn) then
+   if not (function_is_defined (String.uppercase fn)) then
       raise (InvalidInvocation("Undefined function: "^fn))
    else
-      (StringMap.find fn !standard_functions) arglist ftype
+      (StringMap.find (String.uppercase fn) !standard_functions) arglist ftype
 
 (**
    Floating point division.  

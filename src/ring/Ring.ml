@@ -71,7 +71,7 @@ sig
    val mk_neg:  expr_t -> expr_t
 
    (** accessing the contents of an expression *)
-   exception NotAValException
+   exception NotAValException of expr_t
    val get_val: expr_t -> leaf_t
 
    (** returns a list l of expressions such that (mk_sum l) resp. (mk_prod l)
@@ -286,11 +286,11 @@ struct
 
    let mk_neg e = match e with Neg(e1) -> e1 | _ -> Neg(e)
 
-   exception NotAValException
+   exception NotAValException of expr_t
    let get_val e =
       match e with
          Val(x) -> x
-       | _ -> raise NotAValException
+       | _ -> raise (NotAValException(e))
 
    let rec fold ( sum_f: 'b list -> 'b)
                 (prod_f: 'b list -> 'b)

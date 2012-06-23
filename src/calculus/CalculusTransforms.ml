@@ -29,7 +29,7 @@ let mk_temp_var term =
  *)
 let rec combine_values ?(aggressive=false) (expr:C.expr_t): C.expr_t =
    Debug.print "LOG-CALCOPT-DETAIL" (fun () ->
-      "Combine Values: "^(C.string_of_expr expr) 
+      "Combine Values: "^(CalculusPrinter.string_of_expr expr) 
    );
    let rcr = combine_values in
    let merge calc_op val_op e =
@@ -66,9 +66,14 @@ let rec combine_values ?(aggressive=false) (expr:C.expr_t): C.expr_t =
             HyperGraph.connected_components Arithmetic.vars_of_value
                                             variable_values
          in
+         let final_term_components = 
+            if List.length partitioned_variable_values = 1
+            then [number_values @ (List.hd partitioned_variable_values)]
+            else number_values :: partitioned_variable_values
+         in
             calc_op (List.map (fun val_list -> CalcRing.mk_val (
                Value(Arithmetic.eval_partial (val_op val_list))
-            )) (number_values :: partitioned_variable_values))
+            )) (final_term_components))
       in      
       if calc_list = [] then val_term 
       else calc_op (calc_list @ [val_term])
@@ -154,7 +159,7 @@ type lift_candidate_t =
 *)
 let lift_equalities (global_scope:var_t list) (big_expr:C.expr_t): C.expr_t =
    Debug.print "LOG-CALCOPT-DETAIL" (fun () ->
-      "Lift Equalities: "^(C.string_of_expr big_expr) 
+      "Lift Equalities: "^(CalculusPrinter.string_of_expr big_expr) 
    );
    let candidate_term (local_scope:var_t list) (candidate:lift_candidate_t) = 
       CalcRing.mk_val (match candidate with
@@ -194,7 +199,7 @@ let lift_equalities (global_scope:var_t list) (big_expr:C.expr_t): C.expr_t =
    let rec rcr (scope:var_t list) (expr:C.expr_t):
                ((lift_candidate_t) list * C.expr_t) = 
       Debug.print "LOG-LIFT-EQUALITIES" (fun () ->
-         "Lift Equalities: "^(C.string_of_expr expr)^"\n\t\tWith Scope: "^
+         "Lift Equalities: "^(CalculusPrinter.string_of_expr expr)^"\n\t\tWith Scope: "^
          (ListExtras.ocaml_of_list string_of_var scope)
       );
       let rcr_merge x = merge scope (List.split [rcr scope x]) in
@@ -240,23 +245,35 @@ let lift_equalities (global_scope:var_t list) (big_expr:C.expr_t): C.expr_t =
                                         y_vars) 
                            && (y_vars <> [])
                      in
-                     if y_enters_scope then
+                     if y_enters_scope then (
                         (* If y enters scope here, then it's not possible to
                            lift this expression (for now, this is true even if x
                            doesn't enter scope here) *)
+                        Debug.print "LOG-LIFT-EQUALITIES" (fun () ->
+                           "Aborting search for unidirectional lift "^
+                           (string_of_var x)^" ^= "^
+                              (CalculusPrinter.string_of_value y)^
+                           " due to scope"
+                        );
                         (  commuting_eqs, 
                            CalcRing.mk_prod 
                               [updated_lhs; 
                                candidate_term rhs_scope candidate])
-                     else if List.mem x entering_scope then
+                     ) else if List.mem x entering_scope then (
                         (* x enters scope here, but y does not.  We can
                            lift this equality *)
+                        Debug.print "LOG-LIFT-EQUALITIES" (fun () ->
+                           "Found lift location for unidirectional lift "^
+                           (string_of_var x)^" ^= "^
+                              (CalculusPrinter.string_of_value y)^" in:\n"^
+                              (CalculusPrinter.string_of_expr updated_lhs)
+                        );
                         (  commuting_eqs, 
                            CalcRing.mk_prod [
                               CalcRing.mk_val (
                                  Lift(x, CalcRing.mk_val (Value(y))));
                               updated_lhs])
-                     else
+                     ) else
                         (* Neither x nor y enter scope here.  We commute the
                            equality further. *)
                         (  commuting_eqs @ [candidate], updated_lhs  )
@@ -264,12 +281,23 @@ let lift_equalities (global_scope:var_t list) (big_expr:C.expr_t): C.expr_t =
                      begin match (List.mem x entering_scope, 
                             List.mem y entering_scope) with
                      | (true, true) -> (* x and y enter scope: abort *)
+                        Debug.print "LOG-LIFT-EQUALITIES" (fun () ->
+                           "Aborting search for bidirectional lift "^
+                           (string_of_var x)^" ^=^ "^(string_of_var y)^
+                           " due to simultaneous scope entrance"
+                        );
                         (  commuting_eqs, 
                            CalcRing.mk_prod 
                               [updated_lhs; 
                                candidate_term rhs_scope candidate])
                      | (false, true) -> (* y enters scope, x does not: 
                                            lift into y *)
+                        Debug.print "LOG-LIFT-EQUALITIES" (fun () ->
+                           "Found lift location for bidirectional lift "^
+                           (string_of_var y)^" ^= "^(string_of_var x)^
+                              " in:\n"^
+                              (CalculusPrinter.string_of_expr updated_lhs)
+                        );
                         (  commuting_eqs, 
                            CalcRing.mk_prod [
                               CalcRing.mk_val (
@@ -277,6 +305,12 @@ let lift_equalities (global_scope:var_t list) (big_expr:C.expr_t): C.expr_t =
                               updated_lhs])
                      | (true, false) -> (* x enters scope, y does not: 
                                            lift into x *)
+                        Debug.print "LOG-LIFT-EQUALITIES" (fun () ->
+                           "Found lift location for bidirectional lift "^
+                           (string_of_var x)^" ^= "^(string_of_var y)^
+                              " in:\n"^
+                              (CalculusPrinter.string_of_expr updated_lhs)
+                        );
                         (  commuting_eqs, 
                            CalcRing.mk_prod [
                               CalcRing.mk_val (
@@ -294,7 +328,14 @@ let lift_equalities (global_scope:var_t list) (big_expr:C.expr_t): C.expr_t =
             let (eqs, term) = rcr scope nt in
                (eqs, CalcRing.mk_neg nt)
          | CalcRing.Val(AggSum(gb_vars, term)) ->
-            ([], CalcRing.mk_val (AggSum(gb_vars, rcr_merge term)))
+            (** It's possible that we'll take advantage of a variable in-scope
+                to unify some of the gb-vars away.  If this happens, we need
+                to update the gb_vars *)
+            let new_term = rcr_merge term in
+            let new_gb_vars = ListAsSet.inter gb_vars
+                                              (snd (C.schema_of_expr new_term))
+            in
+               ([], CalcRing.mk_val (AggSum(new_gb_vars, new_term)))
          | CalcRing.Val(Lift(v, term)) ->
             ([], CalcRing.mk_val (Lift(v, rcr_merge term)))
 (***** BEGIN EXISTS HACK *****)
@@ -307,12 +348,24 @@ let lift_equalities (global_scope:var_t list) (big_expr:C.expr_t): C.expr_t =
          | CalcRing.Val(Cmp(Eq, ValueRing.Val(AVar(x)), 
                                 ValueRing.Val(AVar(y))))
                when (snd x) = (snd y) ->
+            Debug.print "LOG-LIFT-EQUALITIES" (fun () -> 
+               "Bidirectional lift candidate "^(string_of_var x)^" ^=^ "^
+               (string_of_var y)
+            );
             ([BidirectionalLift(x, y)], CalcRing.one)
          | CalcRing.Val(Cmp(Eq, ValueRing.Val(AVar(x)), y)) 
                when (Types.can_escalate_type (type_of_value y) (snd x)) ->
+            Debug.print "LOG-LIFT-EQUALITIES" (fun () -> 
+               "Unidirectional lift candidate "^(string_of_var x)^" ^= "^
+               (CalculusPrinter.string_of_value y)
+            );
             ([UnidirectionalLift(x, y)], CalcRing.one)
          | CalcRing.Val(Cmp(Eq, x, ValueRing.Val(AVar(y))))
                when (Types.can_escalate_type (type_of_value x) (snd y)) ->
+            Debug.print "LOG-LIFT-EQUALITIES" (fun () -> 
+               "Unidirectional lift candidate "^(string_of_var y)^" ^= "^
+               (CalculusPrinter.string_of_value x)
+            );
             ([UnidirectionalLift(y, x)], CalcRing.one)
          | CalcRing.Val(Cmp _) 
          | CalcRing.Val(External _)
@@ -361,7 +414,7 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
       "Unify Lifts: "^
       (ListExtras.ocaml_of_list string_of_var in_sch)^
       (ListExtras.ocaml_of_list string_of_var out_sch)^": \n"^
-      (C.string_of_expr big_expr) 
+      (CalculusPrinter.string_of_expr big_expr) 
    );
    let unify (lift_v:var_t) (expr_sub:C.expr_t) (scope:var_t list) 
              (schema:var_t list) (expr:C.expr_t): C.expr_t =
@@ -376,13 +429,13 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
          match expr_sub with 
          | CalcRing.Val(Value(ValueRing.Val(AVar(v)))) -> v
          | _ -> raise (CouldNotUnifyException("Could not put '"^
-                        (C.string_of_expr expr_sub)^"' into a"^msg))
+                        (CalculusPrinter.string_of_expr expr_sub)^"' into a"^msg))
       in
       let val_sub ?(aggressive = false) msg =
          match (combine_values ~aggressive:aggressive expr_sub) with 
          | CalcRing.Val(Value(v)) -> v
          | _ -> raise (CouldNotUnifyException("Could not put '"^
-                        (C.string_of_expr expr_sub)^"' into a"^msg))
+                        (CalculusPrinter.string_of_expr expr_sub)^"' into a"^msg))
       in
       let map_vars msg = 
          List.map (fun x -> if x = lift_v then var_sub msg else x)
@@ -626,11 +679,11 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
 *)
 let advance_lifts scope expr =
    Debug.print "LOG-CALCOPT-DETAIL" (fun () -> 
-      "Advance Lifts: "^(C.string_of_expr expr));
+      "Advance Lifts: "^(CalculusPrinter.string_of_expr expr));
    Calculus.rewrite ~scope:scope (fun _ x -> CalcRing.mk_sum x)
    (fun (scope, _) pl ->
       Debug.print "LOG-ADVANCE-LIFTS" (fun () -> 
-         "Advance Lifts: processing "^(C.string_of_expr (CalcRing.mk_prod pl)));
+         "Advance Lifts: processing "^(CalculusPrinter.string_of_expr (CalcRing.mk_prod pl)));
       CalcRing.mk_prod (
          List.fold_left (fun curr_ret curr_term ->
             begin match curr_term with
@@ -712,7 +765,7 @@ let advance_lifts scope expr =
 *)
 let rec nesting_rewrites (expr:C.expr_t) = 
    Debug.print "LOG-CALCOPT-DETAIL" (fun () ->
-      "Nesting Rewrites: "^(C.string_of_expr expr) 
+      "Nesting Rewrites: "^(CalculusPrinter.string_of_expr expr) 
    );
    CalcRing.fold (CalcRing.mk_sum) (CalcRing.mk_prod) 
       (CalcRing.mk_neg)
@@ -871,7 +924,7 @@ let rec nesting_rewrites (expr:C.expr_t) =
 let rec factorize_one_polynomial (scope:var_t list) (term_list:C.expr_t list) =
    Debug.print "LOG-FACTORIZE" (fun () ->
       "Factorizing Expression: ("^
-      (ListExtras.string_of_list ~sep:" + " C.string_of_expr term_list)^
+      (ListExtras.string_of_list ~sep:" + " CalculusPrinter.string_of_expr term_list)^
       ")["^(ListExtras.string_of_list fst scope)^"]"
    );
    if List.length term_list < 2 then CalcRing.mk_sum term_list
@@ -933,10 +986,10 @@ let rec factorize_one_polynomial (scope:var_t list) (term_list:C.expr_t list) =
             let (lhs_of_selected,rhs_of_selected) =
                ListExtras.split_at_pivot selected (CalcRing.prod_list term) in
             Debug.print "LOG-FACTORIZE" (fun () ->
-               "Split "^(C.string_of_expr term)^" into "^
-               (C.string_of_expr (CalcRing.mk_prod lhs_of_selected))^
+               "Split "^(CalculusPrinter.string_of_expr term)^" into "^
+               (CalculusPrinter.string_of_expr (CalcRing.mk_prod lhs_of_selected))^
                " * [...] * "^
-               (C.string_of_expr (CalcRing.mk_prod rhs_of_selected))         
+               (CalculusPrinter.string_of_expr (CalcRing.mk_prod rhs_of_selected))         
             );
             if validate_fn lhs_of_selected rhs_of_selected 
             then (   factorized@
@@ -951,7 +1004,7 @@ let rec factorize_one_polynomial (scope:var_t list) (term_list:C.expr_t list) =
       if (snd (List.hd rhs_sorted)) > (snd (List.hd lhs_sorted)) then
          let selected = (fst (List.hd rhs_sorted)) in
             Debug.print "LOG-FACTORIZE" (fun () ->
-               "Factorizing "^(C.string_of_expr selected)^" from the RHS"
+               "Factorizing "^(CalculusPrinter.string_of_expr selected)^" from the RHS"
             );
             (  (factorize_and_split selected (fun _ rhs ->
                   C.commutes ~scope:scope selected (CalcRing.mk_prod rhs))), 
@@ -960,7 +1013,7 @@ let rec factorize_one_polynomial (scope:var_t list) (term_list:C.expr_t list) =
       else
          let selected = (fst (List.hd lhs_sorted)) in
             Debug.print "LOG-FACTORIZE" (fun () ->
-               "Factorizing "^(C.string_of_expr selected)^" from the LHS"
+               "Factorizing "^(CalculusPrinter.string_of_expr selected)^" from the LHS"
             );
             (  (factorize_and_split selected (fun lhs _ ->
                   C.commutes ~scope:scope (CalcRing.mk_prod lhs) selected)), 
@@ -969,9 +1022,9 @@ let rec factorize_one_polynomial (scope:var_t list) (term_list:C.expr_t list) =
    in
       Debug.print "LOG-FACTORIZE" (fun () ->
          "Factorized: "^
-            (ListExtras.string_of_list C.string_of_expr factorized)^"\n"^
+            (ListExtras.string_of_list CalculusPrinter.string_of_expr factorized)^"\n"^
          "Unfactorized: "^
-            (ListExtras.string_of_list C.string_of_expr unfactorized)
+            (ListExtras.string_of_list CalculusPrinter.string_of_expr unfactorized)
       );
       (* Finally, recur. We might be able to pull additional terms out of the
          individual expressions.  Note that we're no longer able to pull out

@@ -557,12 +557,18 @@ if stage_is_active StagePrintCalc then (
          let schema = Calculus.schema_of_expr expr in
             CalculusTransforms.optimize_expr schema expr)
    in
-   output_endline (
-      (ListExtras.string_of_list ~sep:"\n" 
-         (fun (name, calc) -> name^": \n"^
-            (CalculusPrinter.string_of_expr (opt calc)))
-         !calc_queries)
-   )
+   try
+      output_endline (
+         (ListExtras.string_of_list ~sep:"\n" 
+            (fun (name, calc) -> name^": \n"^
+               (CalculusPrinter.string_of_expr (opt calc)))
+            !calc_queries)
+      )
+   with 
+   | Calculus.CalculusException(expr, msg) ->
+      bug ~exc:true
+          ~detail:(fun () -> CalculusPrinter.string_of_expr expr) 
+          msg
 )
 ;;
 if stage_is_active StageCompileCalc then (
@@ -578,6 +584,10 @@ if stage_is_active StageCompileCalc then (
       bug ~exc:true
           ~detail:(fun () -> CalculusPrinter.string_of_expr expr) 
           msg
+   | Calculus.CalcRing.NotAValException(expr) ->
+      bug ~exc:true
+          ~detail:(fun () -> CalculusPrinter.string_of_expr expr)
+          "Not A Value"
    | Failure(msg) ->
       bug ~exc:true
           ~detail:(fun () -> ListExtras.string_of_list ~sep:"\n" 
