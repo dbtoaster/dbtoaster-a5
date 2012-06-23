@@ -1,4 +1,5 @@
 open Types
+open Constants
 open Patterns
 
 module type CG =

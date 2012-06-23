@@ -1,5 +1,6 @@
 open Schema
 open Types
+open Constants
 open Values
 
 type stream_event_t = event_t * const_t list

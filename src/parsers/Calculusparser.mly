@@ -1,7 +1,8 @@
 %{
 open Types
-open Arithmetic
+open Constants
 open Calculus
+open Arithmetic
 open Plan
 
 let incorporate_stmt ?(old = (Schema.empty_db (), [])) (rel, query) =
@@ -126,8 +127,8 @@ valueExpr:
 | valueExpr MINUS valueExpr   { ValueRing.mk_sum  [$1; ValueRing.mk_neg $3] }
 | MINUS valueExpr             { match $2 with
                                 | ValueRing.Val(AConst(c)) ->
-                                    ValueRing.mk_val 
-                                       (AConst(Arithmetic.prod c (CInt(-1)))) 
+                                 ValueRing.mk_val 
+                                    (AConst(Constants.Math.prod c (CInt(-1)))) 
                                 | _ -> ValueRing.mk_neg $2 }
 | valueLeaf                   { $1 }
 
@@ -199,7 +200,7 @@ constant:
 | INT       { CInt($1) }
 | FLOAT     { CFloat($1) }
 | STRING    { CString($1) }
-| DATE LPAREN STRING RPAREN     { Types.parse_date $3 }
+| DATE LPAREN STRING RPAREN     { Constants.parse_date $3 }
 
 emptyVariableList:
 |                             { [] }

@@ -1,29 +1,30 @@
-(* Imperative expression construction.
- *
- * This module builds imperative expressions (i.e. Imperative.imp_t) from K3
- * expressions.
- * We use an internal intermediate representation based on annotated K3
- * expressions to flatten and linearize the K3 tree structure into procedural
- * code.
- *
- * Submodules include:
- *   AnnotatedK3: a tree structure for annotating K3 expressions.
- *
- *   DirectIRBuilder: an implementation of annotated K3 expressions (IR), where
- *     annotations are unique symbols associated with K3 expressions that
- *     cannot be inlined (i.e. implemented as a right-hand value) in C++.
- *     This includes any expression resulting in a collection. 
- *
- *   Imp: the main construction module which turns an IR tree into imperative
- *     expressions. This first linearizes the IR tree, with the result yielded
- *     at the end of the resulting sequence of IR nodes. Imperative expression
- *     construction works backwards from results, pushing result symbols upwards
- *     to eliminate temporary symbols and unnecessary assignments,
- *     particularly for lambdas and their arguments and return values.
- *
+(** Imperative expression construction.
+ 
+  This module builds imperative expressions (i.e. Imperative.imp_t) from K3
+  expressions.
+  We use an internal intermediate representation based on annotated K3
+  expressions to flatten and linearize the K3 tree structure into procedural
+  code.
+ 
+  Submodules include:
+    AnnotatedK3: a tree structure for annotating K3 expressions.
+ 
+    DirectIRBuilder: an implementation of annotated K3 expressions (IR), where
+      annotations are unique symbols associated with K3 expressions that
+      cannot be inlined (i.e. implemented as a right-hand value) in C++.
+      This includes any expression resulting in a collection. 
+ 
+    Imp: the main construction module which turns an IR tree into imperative
+      expressions. This first linearizes the IR tree, with the result yielded
+      at the end of the resulting sequence of IR nodes. Imperative expression
+      construction works backwards from results, pushing result symbols upwards
+      to eliminate temporary symbols and unnecessary assignments,
+      particularly for lambdas and their arguments and return values.
+ 
  *)
 
 open Types
+open Constants
 open Schema
 open K3
 open Format
@@ -981,7 +982,8 @@ struct
           Block(None,
             [Expr(None, BinOp(None, Assign, valid_var, Const(None, 
                (* Type escalate the 1 by using Arithmetic *)
-               (Arithmetic.sum (CInt(1)) (Types.zero_of_type valid_type)))));
+               (Constants.Math.sum (CInt(1)) 
+                     (Constants.zero_of_type valid_type)))));
              Expr(None, BinOp(None, Assign, meta_var, cexpri 1))]),
           Block(None, []))]),
         true
@@ -1143,7 +1145,7 @@ struct
                          Host(TBase(valid_type))))
             in [IfThenElse(None,
                   BinOp(None, Neq, valid_var, Const(None, 
-                                    Types.zero_of_type valid_type)),
+                                    Constants.zero_of_type valid_type)),
                   append_imp, Block(None,[]))]
           else if (is_ext && not(cused 0)) || not(is_ext) then [append_imp]
           else []

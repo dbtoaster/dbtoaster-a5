@@ -5,6 +5,7 @@ open Arithmetic
 open Calculus
 
 module T = Types
+module Const = Constants
 module V = Arithmetic.ValueRing
 module C = Calculus.CalcRing
 module K = K3
@@ -67,13 +68,13 @@ let m3_map_to_k3_map (m3_map: M3.map_t) : K.map_t = match m3_map with
 (**********************************************************************)
 (**********************************************************************)
 (**/**)
-let      zero_int_val = K.Const(T.CInt(0))
-let       one_int_val = K.Const(T.CInt(1))
-let minus_one_int_val = K.Const(T.CInt(-1))
+let      zero_int_val = K.Const(Const.CInt(0))
+let       one_int_val = K.Const(Const.CInt(1))
+let minus_one_int_val = K.Const(Const.CInt(-1))
 
-let      zero_flt_val = K.Const(T.CFloat(0.0))
-let       one_flt_val = K.Const(T.CFloat(1.0))
-let minus_one_flt_val = K.Const(T.CFloat(-1.0))
+let      zero_flt_val = K.Const(Const.CFloat(0.0))
+let       one_flt_val = K.Const(Const.CFloat(1.0))
+let minus_one_flt_val = K.Const(Const.CFloat(-1.0))
 
 
 let compatible_types t1 t2 = begin match t1, t2 with
@@ -439,7 +440,7 @@ let rec value_to_k3_expr (value_calc : V.expr_t) : K.type_t * K.expr_t =
       ret_t, (op_fn e1 e2)
    in   
    begin match value_calc with
-      | V.Val( AConst(i) )  -> K.TBase(T.type_of_const i), K.Const(i)
+      | V.Val( AConst(i) )  -> K.TBase(Const.type_of_const i), K.Const(i)
       | V.Val( AVar(v,t) )  -> K.TBase(t),                 K.Var(v,K.TBase(t))
       | V.Val( AFn(fn,fargs,ftype) ) -> 
             let ret_t = K.TBase(ftype) in
@@ -849,7 +850,7 @@ let rec calc_to_k3_expr meta ?(generate_init = false) theta_vars_el calc :
          (prod_result, nm)
             
       | C.Neg( neg_arg ) ->
-         rcr (C.Prod( [(C.Val(Value(V.Val(AConst(T.CInt(-1))))));neg_arg] ))
+         rcr (C.Prod( [(C.Val(Value(V.Val(AConst(Const.CInt(-1))))));neg_arg] ))
    end 
    in
    

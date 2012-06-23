@@ -3,6 +3,7 @@
 *)
 
 open Types
+open Constants
 open Ring
 open Arithmetic
 open Calculus
@@ -99,7 +100,7 @@ let rec combine_values ?(aggressive=false) (expr:C.expr_t): C.expr_t =
                          (Arithmetic.eval_partial y)) with
                | (ValueRing.Val(AConst(x_const)),
                   ValueRing.Val(AConst(y_const))) ->
-                     begin match (Arithmetic.cmp op x_const y_const) with
+                     begin match (Constants.Math.cmp op x_const y_const) with
                         | CBool(true) -> CalcRing.one
                         | CBool(false) -> 
                            if Debug.active "CALC-DONT-CREATE-ZEROES" 

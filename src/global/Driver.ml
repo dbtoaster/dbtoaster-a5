@@ -436,7 +436,7 @@ let k3_program:(K3.prog_t ref) = ref (Schema.empty_db (), ([],[]),[],[]);;
    database *)
 let interpreter_program:
    (K3.map_t list * Patterns.pattern_map * K3Interpreter.K3CG.code_t) ref = 
-      ref ([], [], K3Interpreter.K3CG.const(Types.CInt(0)));;
+      ref ([], [], K3Interpreter.K3CG.const(Constants.CInt(0)));;
 
 (**If we're compiling to an imperative language, we have one final stage before
    producing source code: The imperative stage is a flattening of the K3

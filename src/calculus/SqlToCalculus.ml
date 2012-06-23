@@ -5,6 +5,7 @@
 
 open Ring
 open Types
+open Constants
 open Arithmetic
 open Calculus
 

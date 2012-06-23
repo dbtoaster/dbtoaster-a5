@@ -1,4 +1,5 @@
 open Types
+open Constants
 
 module type Interface = sig
    type sql_channel_t
@@ -14,11 +15,11 @@ module type Interface = sig
    val create_table: sql_channel_t -> ?temporary:bool ->
                      string -> Types.var_t list -> unit
    val insert: sql_channel_t -> string -> Types.var_t list -> 
-               Types.const_t list list -> unit
+               Constants.const_t list list -> unit
    val delete: sql_channel_t -> string -> Types.var_t list -> 
-               Types.const_t list list -> unit
+               Constants.const_t list list -> unit
    val query: ?field_separator:string -> sql_channel_t -> Sql.select_t -> 
-              Types.var_t list -> Types.const_t list list
+              Types.var_t list -> Constants.const_t list list
 end 
 
 module Postgres : Interface = struct
@@ -65,7 +66,7 @@ module Postgres : Interface = struct
       let str = Str.replace_first (Str.regexp "^[ ]+") "" str in
       Str.replace_first (Str.regexp "[ ]+$") "" str;;           
 
-   let string_of_const (const:Types.const_t):string =
+   let string_of_const (const:Constants.const_t):string =
       match const with
          | CBool(true)    -> "1"
          | CBool(false)   -> "0"
@@ -78,7 +79,7 @@ module Postgres : Interface = struct
    ;;
 
    let const_of_string (_str:string) (const_type:Types.type_t) : 
-                       Types.const_t =
+                       Constants.const_t =
       let str = trim _str in
       match const_type with
          | TBool -> 
@@ -120,7 +121,7 @@ module Postgres : Interface = struct
                failwith ("Improperly formatted date: "^str)  
          | TAny | TExternal(_) -> failwith "Unsupported type in Sql client"
 
-   let convert_row ?(sep = ", ") (data:Types.const_t list):string =
+   let convert_row ?(sep = ", ") (data:Constants.const_t list):string =
       ListExtras.string_of_list ~sep:sep (function 
          | CDate(_,_,_) as x -> "'"^(string_of_const x)^"'"
          | x        -> string_of_const x
@@ -170,7 +171,7 @@ module Postgres : Interface = struct
    ;;
 
    let insert (channel:sql_channel_t) (tname:string) (tschema:Types.var_t list)
-              (data:Types.const_t list list): unit =
+              (data:Constants.const_t list list): unit =
       let cmd = 
          "INSERT INTO " ^ tname ^ "("^
          (ListExtras.string_of_list ~sep:", " fst tschema) ^
@@ -187,7 +188,7 @@ module Postgres : Interface = struct
    ;;
 
    let delete (channel:sql_channel_t) (tname:string) (tschema:Types.var_t list)
-              (data:Types.const_t list list): unit =
+              (data:Constants.const_t list list): unit =
       List.iter (fun tuple ->
          let cmd =
             "DELETE FROM " ^ tname ^
@@ -206,7 +207,7 @@ module Postgres : Interface = struct
 
    let query ?(field_separator:string = "|") (channel:sql_channel_t) 
              (query:Sql.select_t) (schema:Types.var_t list) : 
-             Types.const_t list list =
+             Constants.const_t list list =
       let cmd = (Sql.string_of_select query)^"\n" in
          Debug.print "LOG-SQLCLIENT" (fun () ->
             "[SQL client] Querying: " ^ cmd

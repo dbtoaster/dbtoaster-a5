@@ -1,6 +1,7 @@
 %{    
    open Calculus
    open Types
+   open Constants
    open K3
    exception K3ParseError of string
    exception K3TypeError of string
@@ -252,10 +253,10 @@ mapVarItem:
 | ID COLON typeItem                                        { ($1, $3) }
 
 typeItem:
-| INT                                                       { Types.TInt }
-| FLOAT                                                     { Types.TFloat }
-| STRINGTYPE                                                { Types.TString }
-| DATE                                                      { Types.TDate }
+| INT                                                      { Types.TInt }
+| FLOAT                                                    { Types.TFloat }
+| STRINGTYPE                                               { Types.TString }
+| DATE                                                     { Types.TDate }
 
 triggerList:
 | trigger triggerList                                       { $1::$2 }
@@ -325,13 +326,13 @@ statement:
 
 constStatement:
 | CONST_FLOAT
-   { Const(Types.CFloat($1)) }
+   { Const(Constants.CFloat($1)) }
 | INTEGER
-   { Const(Types.CInt($1)) }
+   { Const(Constants.CInt($1)) }
 | CONST_STRING
    { Const(CString($1)) }
 | DATE LPAREN CONST_STRING RPAREN
-   { Const(Types.parse_date $3) }
+   { Const(Constants.parse_date $3) }
 
 varStatement:
 | ID COLON typeItem

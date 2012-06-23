@@ -393,6 +393,7 @@
  *)
 
 open Types
+open Constants
 open K3
 
 type optimization_t = CSE | Beta | NoFilter
@@ -820,7 +821,7 @@ let rec conservative_beta_reduction substitutions expr =
       | Add(Const(CFloat(0.0)), x) | Add(x, Const(CFloat(0.0))) -> recid x
 
       (* Adding two numbers can be inlined *)
-      | Add(Const(x), Const(y)) -> Const(Arithmetic.sum x y)
+      | Add(Const(x), Const(y)) -> Const(Constants.Math.sum x y)
 
       (* Multiplying by 0 makes the number 0 *)
       | Mult(Const(CInt(0)), x)     | Mult(x, Const(CInt(0)))
@@ -832,34 +833,27 @@ let rec conservative_beta_reduction substitutions expr =
       | Mult(Const(CFloat(1.0)), x) | Mult(x, Const(CFloat(1.0))) -> recid x
 
       (* Multiplying two numbers can be inlined *)
-      | Mult(Const(x), Const(y)) -> Const(Arithmetic.prod x y)
+      | Mult(Const(x), Const(y)) -> Const(Constants.Math.prod x y)
 
       (* External function application to constants *)
       | Apply(ExternalLambda(fn_name, AVar(_,_), TBase(fn_type)), 
               Const(x)) 
-        when Arithmetic.function_is_defined fn_name ->
-          Const(Arithmetic.eval (
-            Arithmetic.ValueRing.mk_val (
-              Arithmetic.AFn(fn_name, [Arithmetic.mk_const x], fn_type))))
+        when StandardFunctions.function_is_defined fn_name ->
+          Const(StandardFunctions.invoke fn_name [x] fn_type)
 
       (* External function application to constant tuples *)
       | Apply(ExternalLambda(fn_name, ATuple(vt_l), TBase(fn_type)),
               Tuple(fields)) 
         when ((List.length vt_l) = (List.length fields)) &&
-              (Arithmetic.function_is_defined fn_name) &&
+              (StandardFunctions.function_is_defined fn_name) &&
               (List.for_all (function Const(_)->true | _->false) fields) ->
-          Const (Arithmetic.eval (
-            Arithmetic.ValueRing.mk_val (
-              Arithmetic.AFn(fn_name, 
+          Const(StandardFunctions.invoke fn_name (
                 List.map (function 
-                  Const(x) -> Arithmetic.mk_const x
+                  Const(x) -> x
                   (* We should have filtered this case out in the case stmt. *)
                   | _ -> failwith "BUG: I thought I had only constants"
-                ) fields,
-                fn_type
-              )
-            )
-          ))
+                ) fields
+            ) fn_type)
 
       | Apply(Lambda(AVar(v,t), body) as lambda_e, arg) ->
         let free_vars = get_free_vars [] body in

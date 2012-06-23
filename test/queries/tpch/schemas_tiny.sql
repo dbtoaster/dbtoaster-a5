@@ -16,7 +16,7 @@ CREATE STREAM LINEITEM (
         shipmode       CHAR(10),
         comment        VARCHAR(44)
     )
-  FROM FILE '../../experiments/data/tpch_tiny/lineitem.csv'
+  FROM FILE '../../experiments/data/tpch/tiny/lineitem.csv'
   LINE DELIMITED CSV (fields := '|');
 
 
@@ -31,7 +31,7 @@ CREATE STREAM ORDERS (
         shippriority   INT,
         comment        VARCHAR(79)
     )
-  FROM FILE '../../experiments/data/tpch_tiny/orders.csv'
+  FROM FILE '../../experiments/data/tpch/tiny/orders.csv'
   LINE DELIMITED CSV (fields := '|');
 
 CREATE STREAM PART (
@@ -45,9 +45,8 @@ CREATE STREAM PART (
         retailprice  DECIMAL,
         comment      VARCHAR(23)
     )
-  FROM FILE '../../experiments/data/tpch_tiny/part.csv'
+  FROM FILE '../../experiments/data/tpch/tiny/part.csv'
   LINE DELIMITED CSV (fields := '|');
-
 
 CREATE STREAM CUSTOMER (
         custkey      INT,
@@ -59,7 +58,7 @@ CREATE STREAM CUSTOMER (
         mktsegment   CHAR(10),
         comment      VARCHAR(117)
     )
-  FROM FILE '../../experiments/data/tpch_tiny/customer.csv'
+  FROM FILE '../../experiments/data/tpch/tiny/customer.csv'
   LINE DELIMITED CSV (fields := '|');
 
 CREATE STREAM SUPPLIER (
@@ -71,15 +70,33 @@ CREATE STREAM SUPPLIER (
         acctbal      DECIMAL,
         comment      VARCHAR(101)
     )
-  FROM FILE '../../experiments/data/tpch_tiny/supplier.csv'
+  FROM FILE '../../experiments/data/tpch/tiny/supplier.csv'
   LINE DELIMITED CSV (fields := '|');
-  
-CREATE STREAM NATION (
+
+CREATE STREAM PARTSUPP (
+        partkey      INT,
+        suppkey      INT,
+        availqty     INT,
+        supplycost   DECIMAL,
+        comment      VARCHAR(199)
+    )
+  FROM FILE '../../experiments/data/tpch/tiny/partsupp.csv'
+  LINE DELIMITED CSV (fields := '|');
+
+CREATE TABLE NATION (
         nationkey    INT,
         name         CHAR(25),
         regionkey    INT,
         comment      VARCHAR(152)
     )
-  FROM FILE '../../experiments/data/tpch_tiny/nation.csv'
+  FROM FILE '../../experiments/data/tpch/tiny/nation.csv'
+  LINE DELIMITED CSV (fields := '|');
+
+CREATE TABLE REGION (
+        regionkey    INT,
+        name         CHAR(25),
+        comment      VARCHAR(152)
+    )
+  FROM FILE '../../experiments/data/tpch/tiny/region.csv'
   LINE DELIMITED CSV (fields := '|');
 

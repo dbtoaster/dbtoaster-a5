@@ -108,7 +108,7 @@ type arg_t =
 type expr_t =
    
    (* Terminals *)
-     Const         of Types.const_t          (** 
+     Const         of Constants.const_t          (** 
          Constants of primitive types.
       *)
    | Var           of id_t        * type_t   (**
@@ -565,12 +565,13 @@ let string_of_expr e =
     match e with
     | Const c -> 
       let const_ts = match c with
-        | Types.CFloat _ -> "CFloat"
-        | Types.CString _ -> "CString"
-        | Types.CInt _ -> "CInt"
-        | Types.CBool _ -> "CBool" 
-        | Types.CDate _ -> "CDate" 
-      in ob(); ps ("Const("^const_ts^"("^(Types.string_of_const c)^"))"); cb()
+        | Constants.CFloat _ -> "CFloat"
+        | Constants.CString _ -> "CString"
+        | Constants.CInt _ -> "CInt"
+        | Constants.CBool _ -> "CBool" 
+        | Constants.CDate _ -> "CDate" 
+      in ob(); ps ("Const("^const_ts^"("^(Constants.string_of_const c)^"))"); 
+         cb()
     | Var (id,t) -> ob(); ps "Var("; pid id; ps ","; 
                                      ps (string_of_type t); ps ")"; cb()
 
@@ -660,12 +661,12 @@ let rec code_of_expr e =
    match e with
       | Const c -> 
         let const_ts = match c with
-          | Types.CFloat _ -> "CFloat"
-          | Types.CString _ -> "CString" 
-          | Types.CInt _ -> "CInt"
-          | Types.CBool _ -> "CBool" 
-          | Types.CDate _ -> "CDate" 
-        in "K3.Const(Types."^const_ts^"("^(Types.string_of_const c)^"))"
+          | Constants.CFloat _ -> "CFloat"
+          | Constants.CString _ -> "CString" 
+          | Constants.CInt _ -> "CInt"
+          | Constants.CBool _ -> "CBool" 
+          | Constants.CDate _ -> "CDate" 
+        in "K3.Const(Types."^const_ts^"("^(Constants.string_of_const c)^"))"
       | Var (id,t) -> "K3.Var(\""^id^"\","^(ttostr t)^")"
       | Tuple e_l -> "K3.Tuple("^
                (ListExtras.string_of_list ~sep:";" rcr e_l)^")"
@@ -868,12 +869,12 @@ let nice_string_of_expr ?(type_is_needed = false) e maps =
     match e with
     | Const c -> 
       let const_ts = match c with
-        | Types.CFloat _ -> "float"
-        | Types.CString _ -> "string"
-        | Types.CInt _ -> "int"
-        | Types.CBool _ -> "bool" 
-        | Types.CDate _ -> "CDate"
-      in ob(); ps (Types.string_of_const c);
+        | Constants.CFloat _ -> "float"
+        | Constants.CString _ -> "string"
+        | Constants.CInt _ -> "int"
+        | Constants.CBool _ -> "bool" 
+        | Constants.CDate _ -> "CDate"
+      in ob(); ps (Constants.string_of_const c);
          if type_is_needed then ps (":"^(const_ts));
          cb()
     | Var (id,t) -> 
@@ -991,7 +992,7 @@ let rec nice_code_of_expr e =
             "<"^(vltostr vlist)^">"
    in
    match e with
-      | Const c -> Types.string_of_const c
+      | Const c -> Constants.string_of_const c
       | Var (id,t) -> id
       | Tuple e_l -> "<"^(ListExtras.string_of_list rcr e_l)^">"
       
@@ -1074,7 +1075,7 @@ let collection_of_list (l : expr_t list) =
 
 let collection_of_float_list (l : float list) =
     if l = [] then failwith "invalid list for construction" else
-    collection_of_list (List.map (fun v -> Const(Types.CFloat(v))) l)
+    collection_of_list (List.map (fun v -> Const(Constants.CFloat(v))) l)
 
 
 (* Incremental section *)
@@ -1247,11 +1248,11 @@ let annotate_collections e =
     match e with
     | Const c -> (e, TBase(
       match c with
-      | Types.CFloat _  -> Types.TFloat
-      | Types.CString _ -> Types.TString
-      | Types.CInt _    -> Types.TInt
-      | Types.CBool _   -> Types.TBool
-      | Types.CDate _   -> Types.TDate)) 
+      | Constants.CFloat _  -> Types.TFloat
+      | Constants.CString _ -> Types.TString
+      | Constants.CInt _    -> Types.TInt
+      | Constants.CBool _   -> Types.TBool
+      | Constants.CDate _   -> Types.TDate)) 
     | Var (id,t) -> 
       if VarMap.mem id var_map then
         let tp = VarMap.find id var_map in

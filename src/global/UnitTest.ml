@@ -6,6 +6,7 @@
 *)
 
 open Types
+open Constants
 open Ring
 open Arithmetic
 

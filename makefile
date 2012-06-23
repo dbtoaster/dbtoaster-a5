@@ -11,7 +11,9 @@ FILES=\
 	src/util/SourceCode\
 	src/util/FreshVariable\
 	src/global/Types\
+	src/global/Constants\
 	src/global/Schema\
+	src/global/StandardFunctions\
 	src/sql/Sql\
 	src/sql/SqlClient\
 	src/ring/Ring\

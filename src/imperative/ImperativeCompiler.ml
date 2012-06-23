@@ -1,4 +1,5 @@
 open Types
+open Constants
 open Schema
 open K3
 
@@ -798,7 +799,7 @@ struct
          let base_type = 
             begin match c with 
                | CString(_) when Debug.active "HASH-STRINGS" -> TInt
-               | _ -> Types.type_of_const c
+               | _ -> Constants.type_of_const c
             end
          in (None, Some(Const(Host(TBase(base_type)),c)))
 

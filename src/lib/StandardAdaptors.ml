@@ -15,6 +15,7 @@
  *)
 
 open Types
+open Constants
 open Schema
 open Values
 open Sources
@@ -137,7 +138,7 @@ let build_tuple (reln,relv,_) param_val support_sch =
                     Failure(_) -> failwith ("Could not convert float: '"^x^"'"))
         | "date" -> 
           assert_type vn vt t TDate;
-          (fun x -> Types.parse_date x)
+          (fun x -> Constants.parse_date x)
         | "string" -> 
            assert_type vn vt t TString;
            (fun x -> CString(x))
@@ -218,7 +219,7 @@ let parametrized_event param_val =
     ) (Str.split (Str.regexp ",") param_val)
   in
   let hash_constant cnst = 
-     CFloat(float(Hashtbl.hash (Types.string_of_const cnst) ) )
+     CFloat(float(Hashtbl.hash (Constants.string_of_const cnst) ) )
   in
     (fun fields -> 
       if (List.length fields) <= 0 then raise AbortEventConstruction
@@ -393,7 +394,7 @@ let orderbook_generator rel_sch params =
        
        | (Some(old_tuple), "E") ->
          let subtract x y = 
-            Arithmetic.sum x (Arithmetic.neg y) in 
+            Constants.Math.sum x (Constants.Math.neg y) in 
          let new_tuple =
             let nvp =
                [subtract (getv old_tuple) (getv tuple);

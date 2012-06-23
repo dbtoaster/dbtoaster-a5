@@ -13,6 +13,7 @@ open K3
 open Database
 open Format
 open Types
+open Constants
 open Patterns
 
 exception K3SException of string

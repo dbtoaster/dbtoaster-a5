@@ -1,4 +1,5 @@
 open Types
+open Constants
 open K3
 open Values
 open Values.K3Value
@@ -40,8 +41,8 @@ struct
 
     type eval_t      = env_t -> db_t -> value_t
     type code_t      =
-          Eval of eval_t
-        | Trigger of Schema.event_t * (Types.const_t list -> db_t -> unit)
+          Eval of K3.expr_t option * eval_t
+        | Trigger of Schema.event_t * (Constants.const_t list -> db_t -> unit)
         | Main of (unit -> unit) 
 
     type op_t        = value_t -> value_t -> value_t
@@ -55,8 +56,8 @@ struct
         | None -> ""
         | Some(e) -> " at code: "^(string_of_expr e)
 
-    let get_eval ?(comment = "") expr e = match e with
-        | Eval(e) when Debug.active "TRACE-INTERPRETER" -> 
+    let get_eval ?(comment = "") e = match e with
+        | Eval(expr, e) when Debug.active "TRACE-INTERPRETER" -> 
             (fun (env:env_t) (db:db_t) -> 
                let ret = (e env db) in
                print_endline "\n------------------------------";
@@ -70,7 +71,7 @@ struct
                if Debug.active "STEP-INTERPRETER" then ignore (read_line ());
                ret
             )
-        | Eval(e) -> e
+        | Eval(_, e) -> e
         | _ -> bail "unable to eval expr"
 
     let get_trigger e = match e with
@@ -138,7 +139,7 @@ struct
         | (Fun f, h::t) -> apply_list (f h) t
         | (_,_) -> bail "invalid schema application"
     
-    let apply_fn_list th db l = List.map (fun f -> (get_eval None f) th db) l
+    let apply_fn_list th db l = List.map (fun f -> (get_eval f) th db) l
 
     (* Persistent collection converters to temporary values *)
     let smc_to_tlc m = MC.fold (fun k v acc ->
@@ -186,12 +187,12 @@ struct
          | (BaseValue(cx), BaseValue(cy)) -> BaseValue(op cx cy)
          | (_,_) -> bail "invalid arithmetic operation"
     
-    let add_op  = bin_op Arithmetic.sum
-    let mult_op = bin_op Arithmetic.prod
-    let lt_op   = (int_op Arithmetic.cmp_lt)
-    let leq_op  = (int_op Arithmetic.cmp_lte)
-    let eq_op   = (int_op Arithmetic.cmp_eq)
-    let neq_op  = (int_op Arithmetic.cmp_neq)
+    let add_op  = bin_op Constants.Math.sum
+    let mult_op = bin_op Constants.Math.prod
+    let lt_op   = (int_op Constants.Math.cmp_lt)
+    let leq_op  = (int_op Constants.Math.cmp_lte)
+    let eq_op   = (int_op Constants.Math.cmp_eq)
+    let neq_op  = (int_op Constants.Math.cmp_neq)
     
     let ifthenelse0_op cond v = 
         let aux v = match v with
@@ -205,18 +206,18 @@ struct
 
 
     (* Terminals *)
-    let const ?(expr = None) k = Eval(fun th db -> value_of_const_t k)
-    let var ?(expr = None) v _ = Eval(fun th db -> 
+    let const ?(expr = None) k = Eval(expr, fun th db -> value_of_const_t k)
+    let var ?(expr = None) v _ = Eval(expr, fun th db -> 
         if (Env.bound v (fst th)) then Env.value v (fst th)
         else if is_env_value v th then get_env_value v th 
         else bail ~expr:expr ("Var("^v^"): theta="^(Env.to_string (fst th))))
 
     (* Tuples *)
-    let tuple ?(expr = None) field_l = Eval(fun th db ->
+    let tuple ?(expr = None) field_l = Eval(expr, fun th db ->
         Tuple(apply_fn_list th db field_l))
 
-    let project ?(expr = None) tuple idx = Eval(fun th db ->
-        match (get_eval expr tuple) th db with
+    let project ?(expr = None) tuple idx = Eval(expr, fun th db ->
+        match (get_eval tuple) th db with
         | Tuple(t_v) -> Tuple(tuple_fields t_v idx)
         | _ -> bail ~expr:expr ("invalid tuple for projection"^(get_expr expr)))
 
@@ -236,8 +237,8 @@ struct
                 bail ~expr:expr "first class functions not supported yet"
             | TUnit -> 
                 bail ~expr:expr "cannot create singleton of unit expression"
-        in Eval(fun th db ->
-        begin match (get_eval expr el) th db with
+        in Eval(expr, fun th db ->
+        begin match (get_eval el) th db with
         | Tuple _ | BaseValue _ 
         | FloatList _ | TupleList _
         | ListCollection _ | MapCollection _ as v -> rv_f v
@@ -257,7 +258,7 @@ struct
          | MapCollection(m) -> ListCollection(nmc_to_c m)
          | _ -> bail ~expr:expr ("Can't inline collection")
     
-    let merge_lists ?(expr=None) ?(op = (bin_op Arithmetic.sum)) 
+    let merge_lists ?(expr=None) ?(op = (bin_op Constants.Math.sum)) 
                     tuples_to_merge =
       let tuples_by_field =
          List.map (function 
@@ -282,7 +283,8 @@ struct
       (* Assume that the list types are identical *)
       let (op,cons) =
          begin match List.hd inlined_lists with
-            | TupleList _ -> ((bin_op Arithmetic.sum), (fun x -> TupleList(x)))
+            | TupleList _ -> ((bin_op Constants.Math.sum), 
+                              (fun x -> TupleList(x)))
             | ListCollection _ -> ((fun x y -> combine_impl ~expr:expr [x; y]),
                                    (fun x -> ListCollection x))
             | _ -> bail ~expr:expr ("invalid collections to combine")
@@ -296,46 +298,46 @@ struct
          )
       )
 
-    let combine ?(expr = None) c_list = Eval(fun th db ->
+    let combine ?(expr = None) c_list = Eval(expr, fun th db ->
         if c_list = [] then bail ~expr:expr ("Empty combine operation") else
-        combine_impl ~expr:expr (List.map (fun x -> ((get_eval expr x) th db))
+        combine_impl ~expr:expr (List.map (fun x -> ((get_eval x) th db))
                                           c_list)
       )
 
     (* Arithmetic, comparision operators *)
     (* op type, lhs, rhs -> op *)
-    let op ?(expr = None) op_fn l r = Eval(fun th db ->
-        op_fn ((get_eval expr l) th db) ((get_eval expr r) th db))
+    let op ?(expr = None) op_fn l r = Eval(expr, fun th db ->
+        op_fn ((get_eval l) th db) ((get_eval r) th db))
 
     (* Control flow *)
     (* predicate, then clause, else clause -> condition *) 
-    let ifthenelse ?(expr = None) pred t e = Eval(fun th db ->
-        let valid = match ((get_eval expr pred) th db) with
+    let ifthenelse ?(expr = None) pred t e = Eval(expr, fun th db ->
+        let valid = match ((get_eval pred) th db) with
             | BaseValue(CFloat(x)) -> x <> 0.0 
             | BaseValue(CInt(x))   -> x <> 0
             | _ -> bail ~expr:expr ("invalid predicate value"^(get_expr expr))
-        in if valid then (get_eval expr t) th db else (get_eval expr e) th db)
+        in if valid then (get_eval t) th db else (get_eval e) th db)
 
     (* statements -> block *)    
     let block ?(expr = None) stmts =
         let idx = List.length stmts - 1 in
-        Eval(fun th db ->
+        Eval(expr, fun th db ->
           let rvs = apply_fn_list th db stmts in List.nth rvs idx)
  
     let comment ?(expr = None) (comment:string) (stmt:code_t) =
         if Debug.active "LOG-INTERPRETER-UPDATES"
-        then Eval(fun th db -> 
+        then Eval(expr, fun th db -> 
            print_endline ("\n/****************************\n"^
                           comment^
                           "\n****************************/");
-           (get_eval expr stmt) th db
+           (get_eval stmt) th db
          )
         else stmt
  
     (* iter fn, collection -> iteration *)
-    let iterate ?(expr = None) iter_fn collection = Eval(fun th db ->
-        let function_value = (get_eval expr iter_fn) th db in
-        let collection_value = (get_eval expr collection) th db in
+    let iterate ?(expr = None) iter_fn collection = Eval(expr, fun th db ->
+        let function_value = (get_eval iter_fn) th db in
+        let collection_value = (get_eval collection) th db in
         Debug.print "LOG-INTERPRETER-ITERATE" (fun () ->
           "Iterating over "^(K3Value.to_string collection_value)
         );
@@ -379,7 +381,7 @@ struct
         | AVar(var,vt) -> 
           let const_val = 
              begin match (vt,f) with
-               | (TBase(base_vt),_) when (Types.type_of_const f) = base_vt -> f
+               | (TBase(base_vt),_) when (Constants.type_of_const f)=base_vt -> f
                | ((TBase(TFloat)), CBool(true)) -> CFloat(1.)
                | ((TBase(TFloat)), CBool(false)) -> CFloat(0.)
                | ((TBase(TFloat)), CInt(i)) -> CFloat(float_of_int i)
@@ -424,9 +426,9 @@ struct
         end
 
     (* arg, schema application, body -> fn *)
-    let lambda ?(expr = None) arg body = Eval(fun th db ->
+    let lambda ?(expr = None) arg body = Eval(expr, fun th db ->
         let fn v = (
-          let ret = (get_eval expr body) (bind_arg expr arg th v) db in
+          let ret = (get_eval body) (bind_arg expr arg th v) db in
           Debug.print "TRACE-INTERPRETER" (fun () ->
             "Evaluating: "^
             (match expr with | Some(s) -> K3.string_of_expr s 
@@ -439,16 +441,16 @@ struct
     
     (* arg1, type, arg2, type, body -> assoc fn *)
     (* M3 assoc functions should never need to use slices *)
-    let assoc_lambda ?(expr = None) arg1 arg2 body = Eval(fun th db ->
+    let assoc_lambda ?(expr = None) arg1 arg2 body = Eval(expr, fun th db ->
         let aux vl1 vl2 =
             let new_th = bind_arg expr arg2 (bind_arg expr arg1 th vl1) vl2 
-            in (get_eval expr body) new_th db
+            in (get_eval body) new_th db
         in let fn1 vl1 = Fun(fun vl2 -> aux vl1 vl2)
         in Fun fn1)
 
     (* arg, external function id, external function return type ->
        external fn *)
-    let external_lambda ?(expr = None) fn_id arg fn_t = Eval(fun th db ->
+    let external_lambda ?(expr = None) fn_id arg fn_t = Eval(expr, fun th db ->
         let fn v = 
             let fn_args = begin match v with
                 | BaseValue(c) -> [c]
@@ -458,16 +460,15 @@ struct
                            " or tuple of values")
             end in
             try
-               let external_fn = 
-                   StringMap.find fn_id (!Arithmetic.arithmetic_functions) in
                 (*
                    print_endline ("External Function call "^fn_id^
                                   " with arguments: "^
                                   (ListExtras.string_of_list string_of_const
                                                              fn_args));
                 *)
-                let ret_c = external_fn fn_args (base_type_of fn_t) in
-                let ret_t = K3.TBase(Types.type_of_const ret_c) in
+                let ret_c = StandardFunctions.invoke fn_id fn_args 
+                                                     (base_type_of fn_t) in
+                let ret_t = K3.TBase(Constants.type_of_const ret_c) in
                 if( fn_t <> ret_t) then
                     bail ~expr:expr
                         ("Unexpected return value type for external "^
@@ -475,13 +476,13 @@ struct
                          (K3.string_of_type fn_t)^" <> "^
                          (K3.string_of_type ret_t));
                          BaseValue(ret_c)
-            with Not_found -> bail ~expr:expr
-                                  ("No external function named: "^fn_id)
+            with StandardFunctions.InvalidInvocation(msg) -> 
+                        bail ~expr:expr msg
         in Fun fn)
 
     (* fn, arg -> evaluated fn *)
-    let apply ?(expr = None) fn arg = Eval(fun th db ->
-        begin match (get_eval expr fn) th db, (get_eval expr arg) th db with
+    let apply ?(expr = None) fn arg = Eval(expr, fun th db ->
+        begin match (get_eval fn) th db, (get_eval arg) th db with
         | Fun f, x -> f x
         | _ -> bail ~expr:expr ("invalid function for fn app"^(get_expr expr))
         end)
@@ -505,10 +506,10 @@ struct
                 bail ~expr:expr "first class functions not supported yet"
             | TUnit -> bail ~expr:expr "map function cannot return unit type"
         in
-        Eval(fun th db ->
+        Eval(expr, fun th db ->
         let aux fn  = List.map (fun v -> fn v) in
-        match (get_eval expr map_fn) th db, 
-              (get_eval expr collection) th db with
+        match (get_eval map_fn) th db, 
+              (get_eval collection) th db with
         | Fun f, FloatList l -> rv_f (aux f l)
         | Fun f, TupleList l -> rv_f (aux f l)
         | Fun f, SingleMap m -> rv_f (aux f (smc_to_tlc m))
@@ -522,13 +523,13 @@ struct
     
     (* agg fn, initial agg, collection -> agg *)
     (* Note: accumulator is the last arg to agg_fn *)
-    let aggregate ?(expr = None) agg_fn init_agg collection = Eval(fun th db ->
+    let aggregate ?(expr = None) agg_fn init_agg collection = Eval(expr, fun th db ->
         let aux fn v_f l = List.fold_left
             (fun acc v -> apply_list fn ((v_f v)::[acc])) 
-            ((get_eval expr init_agg) th db) l
+            ((get_eval init_agg) th db) l
         in
-        match (get_eval expr agg_fn) th db, 
-              (get_eval expr collection) th db with
+        match (get_eval agg_fn) th db, 
+              (get_eval collection) th db with
         | Fun _ as f, FloatList l -> aux f (fun x -> x) l
         | Fun _ as f, TupleList l -> aux f (fun x -> x) l
         | Fun _ as f, ListCollection l -> aux f (fun x -> x) l
@@ -565,19 +566,18 @@ struct
                (List.fold_left (apply_gb
                    init_v (apply_list (Fun f)) g) (MC.empty_map()) l))
         in
-        Eval(fun th db ->
+        Eval(expr, fun th db ->
           process_agg 
-            (match ((get_eval ~comment:"Agg Fn of " expr agg_fn) th db) with
+            (match ((get_eval agg_fn) th db) with
                | Fun f -> f| f -> 
                   bail ~expr:expr ("invalid group by agg fn: "^
                      (string_of_value f)^(get_expr expr)))
-            (match ((get_eval ~comment:"Group Fn of " expr gb_fn) th db) with
+            (match ((get_eval gb_fn) th db) with
                | Fun g -> g | g -> 
                   bail ~expr:expr ("invalid group by grouping fn: "^
                      (string_of_value g)^(get_expr expr)))
-            ((get_eval ~comment:"Init Value of " expr init_agg) th db)
-            (match ((get_eval ~comment:"Collection of " 
-                              expr collection) th db) with  
+            ((get_eval init_agg) th db)
+            (match ((get_eval collection) th db) with  
                (* There's probably a more efficient way to do this, but for now
                   we implement GB-aggs by casting non-TupleList collections down
                   to TupleLists *)
@@ -599,8 +599,8 @@ struct
           MC.fold (fun k2 v acc -> acc@[Tuple(k@k2@[v])]) acc m
         in
         *)
-        Eval(fun th db ->
-        match ((get_eval expr nested_collection) th db) with
+        Eval(expr, fun th db ->
+        match ((get_eval nested_collection) th db) with
         | FloatList _ ->
             bail ~expr:expr ("cannot flatten a FloatList"^(get_expr expr))
         
@@ -666,9 +666,9 @@ struct
     (* TODO: write documentation on datatypes + implementation requirements
      * for these methods *)
     let tcollection_op expr ex_s lc_f smc_f dmc_f nmc_f tcollection key_l =
-        Eval(fun th db ->
+        Eval(expr, fun th db ->
         let k = apply_fn_list th db key_l in
-        try begin match (get_eval expr tcollection) th db with
+        try begin match (get_eval tcollection) th db with
             | TupleList l -> lc_f l k
             | SingleMap m -> smc_f m k
             | DoubleMap m -> dmc_f m k
@@ -681,7 +681,7 @@ struct
             print_string
                ("Collection operation failed: "^
                 (ListExtras.ocaml_of_list string_of_value k)^" in "^
-                (string_of_value ((get_eval expr tcollection) th db)));
+                (string_of_value ((get_eval tcollection) th db)));
             bail ~expr:expr "Collection Operation Failed"
         )
 
@@ -731,9 +731,9 @@ struct
 
     (* filter fn, collection -> filter *)
     let filter ?(expr = None) filter_fn collection =
-        Eval(fun th db ->
+        Eval(expr, fun th db ->
     let f: (Values.K3Value.t -> bool) = 
-        match (get_eval expr filter_fn) th db with
+        match (get_eval filter_fn) th db with
             | Fun f -> (fun x ->
                 (let v = (f x) in begin match v with 
                     | BaseValue(CFloat(x)) -> x <> 0.0 
@@ -742,7 +742,7 @@ struct
                 end))
             | _ -> bail ~expr:expr ("expected filter function")
     in
-        begin match (get_eval expr collection) th db with
+        begin match (get_eval collection) th db with
             | TupleList l -> TupleList(List.filter (fun t -> f t) l)
             | SingleMap m -> TupleList(smc_to_tlc (MC.filter f m)) 
             | MapCollection m -> ListCollection(nmc_to_c (MC.filter f m))
@@ -752,21 +752,21 @@ struct
         end)
         
     (* Database retrieval methods *)
-    let get_value ?(expr = None) (_) id = Eval(fun th db ->
+    let get_value ?(expr = None) (_) id = Eval(expr, fun th db ->
         match DB.get_value id db with | Some(x) -> x | None -> 
                BaseValue(CFloat(0.0)))
 
     let get_in_map ?(expr = None) (_) (_) id =
-        Eval(fun th db -> SingleMap(DB.get_in_map id db))
+        Eval(expr, fun th db -> SingleMap(DB.get_in_map id db))
     
     let get_out_map ?(expr = None) (_) (_) id =
-        Eval(fun th db -> SingleMap(DB.get_out_map id db))
+        Eval(expr, fun th db -> SingleMap(DB.get_out_map id db))
     
     let get_map ?(expr = None) (_) (_) id =
-        Eval(fun th db -> DoubleMap(DB.get_map id db))
+        Eval(expr, fun th db -> DoubleMap(DB.get_map id db))
 
     (* Database udpate methods *)
-    let get_update_value th db v = (get_eval None v) th db
+    let get_update_value th db v = (get_eval v) th db
     let get_update_key th db kl = apply_fn_list th db kl
 
     let get_update_map c pats = match c with
@@ -775,7 +775,7 @@ struct
         | _ -> bail "invalid single_map_t" 
 
     (* persistent collection id, value -> update *)
-    let update_value ?(expr = None) id value = Eval(fun th db ->
+    let update_value ?(expr = None) id value = Eval(expr, fun th db ->
       let v = (get_update_value th db value) in
         Debug.print "LOG-INTERPRETER-UPDATES" (fun () -> 
            "\nUPDATE '"^id^"'[-][-] := "^(K3Value.to_string v)
@@ -783,7 +783,7 @@ struct
         DB.update_value id v db; Unit)
     
     (* persistent collection id, in key, value -> update *)
-    let update_in_map_value ?(expr = None) id in_kl value = Eval(fun th db ->
+    let update_in_map_value ?(expr = None) id in_kl value = Eval(expr, fun th db ->
       let key = (get_update_key th db in_kl) in
       let v = (get_update_value th db value) in
         Debug.print "LOG-INTERPRETER-UPDATES" (fun () -> 
@@ -794,7 +794,7 @@ struct
         DB.update_in_map_value id key v db; Unit)
     
     (* persistent collection id, out key, value -> update *)
-    let update_out_map_value ?(expr = None) id out_kl value = Eval(fun th db ->
+    let update_out_map_value ?(expr = None) id out_kl value = Eval(expr, fun th db ->
       let key = (get_update_key th db out_kl) in
       let v = (get_update_value th db value) in
         Debug.print "LOG-INTERPRETER-UPDATES" (fun () -> 
@@ -806,7 +806,7 @@ struct
     
     (* persistent collection id, in key, out key, value -> update *)
     let update_map_value ?(expr = None) id in_kl out_kl value = 
-      Eval(fun th db ->
+      Eval(expr, fun th db ->
       let in_key = (get_update_key th db in_kl) in
       let out_key = (get_update_key th db out_kl) in
       let v = (get_update_value th db value) in
@@ -820,28 +820,28 @@ struct
         DB.update_map_value id in_key out_key v db; Unit)
 
     (* persistent collection id, update collection -> update *)
-    let update_in_map ?(expr = None) id collection = Eval(fun th db ->
+    let update_in_map ?(expr = None) id collection = Eval(expr, fun th db ->
         let in_pats = DB.get_in_patterns id db
         in DB.update_in_map id
-             (get_update_map ((get_eval expr collection) th db) in_pats) db;
+             (get_update_map ((get_eval collection) th db) in_pats) db;
         Unit)
     
-    let update_out_map ?(expr = None) id collection = Eval(fun th db ->
+    let update_out_map ?(expr = None) id collection = Eval(expr, fun th db ->
         let out_pats = DB.get_out_patterns id db
         in DB.update_out_map id
-             (get_update_map ((get_eval expr collection) th db) out_pats) db;
+             (get_update_map ((get_eval collection) th db) out_pats) db;
         Unit)
 
     (* persistent collection id, key, update collection -> update *)
-    let update_map ?(expr = None) id in_kl collection = Eval(fun th db ->
+    let update_map ?(expr = None) id in_kl collection = Eval(expr, fun th db ->
         let out_pats = DB.get_out_patterns id db in
         DB.update_map id (get_update_key th db in_kl)
-           (get_update_map ((get_eval expr collection) th db) out_pats) db;
+           (get_update_map ((get_eval collection) th db) out_pats) db;
         Unit)
 
     (* Database remove methods *)    
     (* persistent collection id, in key -> remove *)
-    let remove_in_map_element ?(expr = None) id in_kl = Eval(fun th db ->
+    let remove_in_map_element ?(expr = None) id in_kl = Eval(expr, fun th db ->
       let key = (get_update_key th db in_kl) in
         Debug.print "LOG-INTERPRETER-UPDATES" (fun () -> 
            "\nREMOVE '"^id^"'["^
@@ -851,7 +851,7 @@ struct
         DB.remove_in_map_element id key db; Unit)
     
     (* persistent collection id, out key -> remove *)
-    let remove_out_map_element ?(expr = None) id out_kl = Eval(fun th db ->
+    let remove_out_map_element ?(expr = None) id out_kl = Eval(expr, fun th db ->
       let key = (get_update_key th db out_kl) in
         Debug.print "LOG-INTERPRETER-UPDATES" (fun () -> 
            "\nREMOVE '"^id^"'[-]["^
@@ -863,7 +863,7 @@ struct
 
     (* persistent collection id, in key, out key -> remove *)
     let remove_map_element ?(expr = None) id in_kl out_kl = 
-      Eval(fun th db ->
+      Eval(expr, fun th db ->
       let in_key = (get_update_key th db in_kl) in
       let out_key = (get_update_key th db out_kl) in
         Debug.print "LOG-INTERPRETER-UPDATES" (fun () -> 
@@ -878,7 +878,7 @@ struct
         
     (* unit operation which has no effect *)
     let unit_operation =
-      Eval(fun th db -> Unit) 
+      Eval(Some(K3.Unit), fun th db -> Unit) 
     
     (* Top level code generation *)
     let trigger event stmt_block =
@@ -903,7 +903,7 @@ struct
           List.iter (fun cstmt -> 
             Debug.print "LOG-INTERPRETER-TRIGGERS" (fun () -> 
                "Processing trigger "^(Schema.string_of_event event));
-            match (get_eval None cstmt) theta db with
+            match (get_eval cstmt) theta db with
             | Unit -> ()
             | _ as d -> bail  
                ("trigger "^(Schema.string_of_event event)^
@@ -958,7 +958,7 @@ struct
                   print_endline ((DB.db_to_string db)^"\n\n");
                   print_string ((Schema.string_of_event event)^
                                 " <- ["^(String.concat "; " 
-                                   (List.map Types.string_of_const tuple)
+                                   (List.map Constants.string_of_const tuple)
                                 )^"]");
                   ignore (read_line ());
             );
@@ -978,7 +978,7 @@ struct
         in
         let tlq_access = List.map (fun (q_name, q_expr, q_eval) ->
           (* print_endline ("EXPRESSION:"^(K3.nice_code_of_expr q_expr));*)
-          let q_access_f = get_eval (Some(q_expr)) q_eval in
+          let q_access_f = get_eval q_eval in
             (q_name, (fun db -> q_access_f ((Env.make [] []),[]) db))
         ) toplevel_queries
         in
@@ -1006,7 +1006,7 @@ struct
       bail "Interpreter can't output a string"
  
     let rec eval dbc c vars vals db = match c with
-      | Eval(f) -> f (Env.make vars (List.map value_of_const_t vals), []) db
+      | Eval(_, f) -> f (Env.make vars (List.map value_of_const_t vals), []) db
       | Trigger(evt,trig_fn) -> trig_fn vals db; Unit
       | Main(f) -> db_checker := dbc; f(); Unit
 end

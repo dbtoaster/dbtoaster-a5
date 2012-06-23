@@ -1,18 +1,8 @@
 (** Values.
-  A module implementing categories of basic values used in compiled programs.
-  Currently these categories are:
-   - ConstTValue: M3.const_t
-   - FloatValue: float
-   - K3Value: floats, ints, tuples, list + map collections
- 
-  Description of module usage:
-   - variables are bound to values.
-   - maps are keyed by values.
-   - databases store values.
-   - interpreted code yields values.
  *)
 
 open Types
+open Constants
 
 module type Value =
 sig
@@ -99,26 +89,6 @@ struct
 
 end
 
-(* TODO: replace usage of ConstTValue with FloatValue to remove boxing from
- * generated code *)
-module FloatValue : Value with type t = float =
-struct
-    type t = float
-    let zero = 0.0
-    let zero_of_type zt =  0.0
-    let compare = Pervasives.compare
-    let to_string = string_of_float
-end
-
-module ConstTValue : Value with type t = const_t =
-struct
-    type t = const_t
-    let zero = CFloat(0.0)
-    let zero_of_type = Types.zero_of_type
-    let compare = Pervasives.compare
-    let to_string = Types.string_of_const
-end
-
 (* K3 values, includes base types, unit, tuples and several types of 
  * collections, including named simple lists, such as FloatList and TupleList, 
  * whose contents are always flat elements, 1- and 2-level persistent 
@@ -134,7 +104,7 @@ sig
     and map_t = single_map_t K3ValuationMap.t
     and t = 
     | Unit
-    | BaseValue      of Types.const_t
+    | BaseValue      of Constants.const_t
     | Tuple          of t list
     | Fun            of (t -> t) 
 
@@ -172,7 +142,8 @@ sig
     val string_of_smap : ?sep:string -> single_map_t -> string
     val string_of_map : ?sep:string -> map_t -> string
     val to_string : t -> string
-    val to_hashtbl : t -> (Types.const_t list, Types.const_t list) Hashtbl.t
+    val to_hashtbl : t -> 
+         (Constants.const_t list, Constants.const_t list) Hashtbl.t
 end =
 struct
     module Map = K3ValuationMap
@@ -180,7 +151,7 @@ struct
     and map_t = single_map_t K3ValuationMap.t
     and t = 
     | Unit
-    | BaseValue      of Types.const_t
+    | BaseValue      of Constants.const_t
     | Tuple          of t list
     | Fun            of (t -> t) 
     | SingleMap      of single_map_t
@@ -192,7 +163,7 @@ struct
     | MapCollection  of t K3ValuationMap.t
 
     let zero = BaseValue(CFloat(0.0))
-    let zero_of_type zt = BaseValue(Types.zero_of_type zt)
+    let zero_of_type zt = BaseValue(Constants.zero_of_type zt)
     let compare = Pervasives.compare
 
     let rec key_to_string k = ListExtras.ocaml_of_list string_of_value k
@@ -226,7 +197,7 @@ struct
                   (string_of_value ~sep:sep (FloatList keys))^"->"^
                   (string_of_value ~sep:sep (if values <> []
                                              then List.hd values
-                                             else BaseValue(Types.CInt(1))))
+                                             else BaseValue(CInt(1))))
                | _ -> failwith "TupleList contains elements other than tuples"
          ) kvl)) ^ "])"
 
@@ -249,7 +220,7 @@ struct
       | _ -> failwith "Invalid argument: not a K3 base value!"  
    
     let is_const_zero c = 
-       (c = Types.zero_of_type (type_of_const c))
+       (c = Constants.zero_of_type (type_of_const c))
    
     let to_hashtbl v = match v with
        | Unit -> Hashtbl.create 10

@@ -1,4 +1,5 @@
 open Types
+open Constants
 open Schema
 open K3
 open Format

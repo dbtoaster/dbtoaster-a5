@@ -1,5 +1,6 @@
 %{
 open Types
+open Constants
 ;;
 
 let bail msg = raise (Sql.SQLParseError(msg))
@@ -297,7 +298,7 @@ expression:
 | COUNTAGG LPAREN countAggParam RPAREN { Sql.Aggregate(Sql.CountAgg, 
                                                      Sql.Const(CInt(1))) }
 | ID LPAREN functionParameters RPAREN { Sql.ExternalFn($1,$3) }
-| DATE LPAREN STRING RPAREN     { Sql.Const(Types.parse_date $3) }
+| DATE LPAREN STRING RPAREN     { Sql.Const(Constants.parse_date $3) }
 
 functionParameters: 
 | expression COMMA functionParameters { $1::$3 }

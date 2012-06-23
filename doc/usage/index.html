@@ -47,8 +47,8 @@ DBToaster operates in three modes: (1) Interpreter mode, which compiles and proc
 To use DBToaster in interpreter mode, invoke it with the <tt>-r</tt> flag and one or more SQL query files.  The output of all queries in the file will be printed once all data has been processed.  If any of the queries do not terminate (e.g., one or more data sources are sockets), then pressing control-c will terminate the process and print the most recent query results.
 
 <div class="codeblock">
-$&gt; dbtoaster -r test/queries/simple/rst.sql<br/>
-Processing time: 0.0309669971466<br/>
+$&gt; dbtoaster -r test/queries/simple/rst.sql
+Processing time: 0.0309669971466
 AtimesD: 1.87533670489e+13
 </div>
 </p>
@@ -58,12 +58,12 @@ AtimesD: 1.87533670489e+13
 To use DBToaster to create a standalone binary, invoke it with the <tt>-c [binary name]</tt> flag.  The binary can be invoked directly.  Like the interpreter, it will print the results of all queries once all data has been processed.  </p>
 
 <div class="codeblock">
-$&gt; dbtoaster test/queries/simple/rst.sql -c rst<br/>
-$&gt; ./rst<br/>
-&lt;?xml version="1.0" encoding="UTF-8" standalone="yes" ?&gt;<br/>
-&lt;!DOCTYPE boost_serialization&gt;<br/>
-&lt;boost_serialization signature="serialization::archive" version="9"&gt;<br/>
-&lt;ATIMESD&gt;18753367048934&lt;/ATIMESD&gt;<br/>
+$&gt; dbtoaster test/queries/simple/rst.sql -c rst
+$&gt; ./rst
+&lt;?xml version="1.0" encoding="UTF-8" standalone="yes" ?&gt;
+&lt;!DOCTYPE boost_serialization&gt;
+&lt;boost_serialization signature="serialization::archive" version="9"&gt;
+&lt;ATIMESD&gt;18753367048934&lt;/ATIMESD&gt;
 &lt;/boost_serialization&gt;
 </div>
 
@@ -75,12 +75,12 @@ To produce a scala binary, invoke dbtoaster with <tt>-l scala</tt>, and the <tt>
 </p>
 
 <div class="codeblock">
-$&gt; dbtoaster test/queries/simple/rst.sql -l scala -c rst<br/>
-$&gt; java -cp [path_to_dbt_lib]:[path_to_scala_lib] -jar rst.jar<br/>
-&lt;?xml version="1.0" encoding="UTF-8" standalone="yes" ?&gt;<br/>
-&lt;!DOCTYPE boost_serialization&gt;<br/>
-&lt;boost_serialization signature="serialization::archive" version="9"&gt;<br/>
-&lt;ATIMESD&gt;18753367048934&lt;/ATIMESD&gt;<br/>
+$&gt; dbtoaster test/queries/simple/rst.sql -l scala -c rst
+$&gt; java -cp [path_to_dbt_lib]:[path_to_scala_lib] -jar rst.jar
+&lt;?xml version="1.0" encoding="UTF-8" standalone="yes" ?&gt;
+&lt;!DOCTYPE boost_serialization&gt;
+&lt;boost_serialization signature="serialization::archive" version="9"&gt;
+&lt;ATIMESD&gt;18753367048934&lt;/ATIMESD&gt;
 &lt;/boost_serialization&gt;
 </div>
 
@@ -136,7 +136,7 @@ $&gt; dbtoaster [options] &lt;input file 1&gt; [&lt;input file 2&gt; [...]]
   <tr>
     <td>DBT Relational Calculus</td>
     <td class="code">calc</td>
-    <td>output-only</td>
+    <td>input/output</td>
     <td>DBToaster's internal query representation.  This is a direct translation of the input queries.</td>
   </tr>
 
@@ -150,35 +150,35 @@ $&gt; dbtoaster [options] &lt;input file 1&gt; [&lt;input file 2&gt; [...]]
   <tr>
     <td>M3</td>
     <td class="code">m3</td>
-    <td>input-or-output</td>
+    <td>input/output</td>
     <td>A map-mantenance messages program.  This is the set of triggers (written in DBT Relational Calculus) that will incrementally maintain the input queries and all supporting datastructures.</td>
   </tr>
 
   <tr>
     <td>K3</td>
     <td class="code">k3</td>
-    <td>input-or-output</td>
+    <td>input/output</td>
     <td>The execution plan generated for an M3 program.  This is a simple functional language that admits a set of useful functional optimizations.</td>
   </tr>
 
   <tr>
     <td>OCaml</td>
     <td class="code">ocaml</td>
-    <td>output-or-compiled</td>
+    <td>output/compiled</td>
     <td>An OCaml implementation of the K3 execution plan.</td>
   </tr>
 
   <tr>
     <td>C++</td>
     <td class="code">cpp</td>
-    <td>output-or-compiled</td>
+    <td>output/compiled</td>
     <td>A C++ implementation of the K3 execution plan.</td>
   </tr>
 
   <tr>
     <td>Scala</td>
     <td class="code">scala</td>
-    <td>output-or-compiled</td>
+    <td>output/compiled</td>
     <td>A Scala implementation of the K3 execution plan.</td>
   </tr>
 
@@ -189,30 +189,30 @@ $&gt; dbtoaster [options] &lt;input file 1&gt; [&lt;input file 2&gt; [...]]
 
 To run the query <tt>rst.sql</tt> in the interpreter:
 <div class="codeblock">
-$&gt; dbtoaster -r rst.sql<br/>
-Processing time: 0.0424609184265<br/>
+$&gt; dbtoaster -r rst.sql
+Processing time: 0.0424609184265
 ATIMESD: 18753367048934
 </div>
 
 To compile the query <tt>rst.sql</tt> using the C++ code generator and produce a binary named <tt>rst</tt>:
 <div class="codeblock">
-$&gt; dbtoaster rst.sql -c rst<br/>
-$&gt; ./rst<br/>
-&lt;?xml version="1.0" encoding="UTF-8" standalone="yes" ?&gt;<br/>
-&lt;!DOCTYPE boost_serialization&gt;<br/>
-&lt;boost_serialization signature="serialization::archive" version="9"&gt;<br/>
-&lt;ATIMESD&gt;18753367048934&lt;/ATIMESD&gt;<br/>
+$&gt; dbtoaster rst.sql -c rst
+$&gt; ./rst
+&lt;?xml version="1.0" encoding="UTF-8" standalone="yes" ?&gt;
+&lt;!DOCTYPE boost_serialization&gt;
+&lt;boost_serialization signature="serialization::archive" version="9"&gt;
+&lt;ATIMESD&gt;18753367048934&lt;/ATIMESD&gt;
 &lt;/boost_serialization&gt;
 </div>
 
 To compile the query <tt>rst.sql</tt> using the C++ code generator, put the source in the file "rst.cpp" and produce a binary named <tt>rst</tt>:
 <div class="codeblock">
-$&gt; dbtoaster rst.sql -o rst.cpp -c rst<br/>
+$&gt; dbtoaster rst.sql -o rst.cpp -c rst
 </div>
 
 To compile the query <tt>rst.sql</tt> using the Scala code generator and produce a binary named <tt>rst</tt>:
 <div class="codeblock">
-$&gt; dbtoaster rst.sql -l scala -c rst<br/>
+$&gt; dbtoaster rst.sql -l scala -c rst
 </div>
 
 <hr/>
@@ -221,23 +221,23 @@ $&gt; dbtoaster rst.sql -l scala -c rst<br/>
 <h3 class="code">CREATE</h3>
 <center>Declare a relation for use in the query.</center>
 <div class="codeblock">
-create_statement := <br/>
-&nbsp;&nbsp;CREATE { TABLE | STREAM } &lt;name&gt; ( &lt;schema&gt; ) [&lt;source_declaration&gt;]<br/>
-<br/>
-schema := [&lt;var_1&gt; &lt;type_1&gt; [, &lt;var_2&gt; &lt;type_2&gt; [, ...]]]<br/>
-<br/>
-source_declaration := source_stream source_adaptor<br/>
-<br/>
-source_stream := <br/>
-&nbsp;&nbsp;FROM FILE '&lt;path&gt;' {<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;FIXEDWIDTH &lt;bytes_per_row&gt;<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;LINE DELIMITED<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;'&lt;delim_string&gt;' DELIMITED<br/>
-&nbsp;&nbsp;} <br/>
-<br/>
-source_adaptor := <br/>
-&nbsp;&nbsp;&lt;adaptor_name&gt; (<br/>
-&nbsp;&nbsp;&nbsp;&nbsp;[&lt;param_1&gt; := '&lt;value&gt;' [, &lt;param_2&gt; := '&lt;value&gt;' [, ...]]]<br/>
+create_statement := 
+&nbsp;&nbsp;CREATE { TABLE | STREAM } &lt;name&gt; ( &lt;schema&gt; ) [&lt;source_declaration&gt;]
+
+schema := [&lt;var_1&gt; &lt;type_1&gt; [, &lt;var_2&gt; &lt;type_2&gt; [, ...]]]
+
+source_declaration := source_stream source_adaptor
+
+source_stream := 
+&nbsp;&nbsp;FROM FILE '&lt;path&gt;' {
+&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;&nbsp;FIXEDWIDTH &lt;bytes_per_row&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;LINE DELIMITED
+&nbsp;&nbsp;&nbsp;&nbsp;|&nbsp;'&lt;delim_string&gt;' DELIMITED
+&nbsp;&nbsp;} 
+
+source_adaptor := 
+&nbsp;&nbsp;&lt;adaptor_name&gt; (
+&nbsp;&nbsp;&nbsp;&nbsp;[&lt;param_1&gt; := '&lt;value&gt;' [, &lt;param_2&gt; := '&lt;value&gt;' [, ...]]]
 &nbsp;&nbsp;)
 </div>
 
@@ -262,8 +262,8 @@ source_adaptor := <br/>
 </p>
 
 <div class="codeblock">
-CREATE STREAM R(a int, b date)<br/>
-FROM FILE 'data/r.csv' LINE DELIMITED <br/>
+CREATE STREAM R(a int, b date)
+FROM FILE 'data/r.csv' LINE DELIMITED 
 CSV (fields := '|')
 </div>
 
@@ -271,37 +271,37 @@ CSV (fields := '|')
 <center>Declare a query to monitor</center>
 
 <div class="codeblock">
-select_statement := <br/>
-&nbsp;&nbsp;SELECT &lt;target_1&gt; [, &lt;target_2&gt; [, ...]] <br/>
-&nbsp;&nbsp;FROM &lt;source_1&gt; [, &lt;source_2&gt; [, ...]]<br/>
-&nbsp;&nbsp;WHERE &lt;condition&gt;<br/>
-&nbsp;&nbsp;[GROUP BY &lt;group_vars&gt;]<br/>
-<br/>
-target := &lt;expression&gt; [[AS] &lt;target_name&gt;] | * | *.* | &lt;source_name&gt;.*<br/>
-<br/>
-source := <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;&lt;relation_name&gt; [[AS] &lt;source_name&gt;]<br/>
-&nbsp;&nbsp;|&nbsp;(&lt;select_statement&gt;) [AS] &lt;source_name&gt;<br/>
-&nbsp;&nbsp;|&nbsp;&lt;source&gt; [NATURAL] JOIN &lt;source&gt; [ON &lt;condition&gt;]<br/>
-<br/>
-expression := <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;(&lt;expression&gt;) |&nbsp;&lt;int&gt; | &lt;float&gt; | '&lt;string&gt;' | &lt;var&gt; | &lt;source&gt;.&lt;var&gt;<br/>
-&nbsp;&nbsp;|&nbsp;&lt;expression&gt; { + | - | * | / } &lt;expression&gt;<br/>
-&nbsp;&nbsp;|&nbsp;-&lt;expression&gt;<br/>
-&nbsp;&nbsp;|&nbsp;(SELECT &lt;expression&gt; FROM ...)<br/>
-&nbsp;&nbsp;|&nbsp;SUM(&lt;expression&gt;) | COUNT(* | &lt;expression&gt;) | AVG(&lt;expression&gt;)<br/>
-&nbsp;&nbsp;|&nbsp;&lt;inline_function&gt;([&lt;expression_1&gt; [, &lt;expression_2&gt; [, ...]]])<br/>
-&nbsp;&nbsp;|&nbsp;DATE('yyyy-mm-dd')<br/>
-<br/>
-condition := <br/>
-&nbsp;&nbsp;&nbsp;&nbsp;(&lt;condition&gt;) | true | false | not (&lt;condition&gt;)<br/>
-&nbsp;&nbsp;|&nbsp;&lt;expression&gt; { < | <= | > | >= | = | <> } &lt;expression&gt;<br/>
-&nbsp;&nbsp;|&nbsp;&lt;expression&gt; { < | <= | > | >= | = | <> } { SOME | ALL } &lt;select_statement&gt;<br/>
-&nbsp;&nbsp;|&nbsp;&lt;condition&gt; AND &lt;condition&gt; | &lt;condition&gt; OR &lt;condition&gt;<br/>
-&nbsp;&nbsp;|&nbsp;EXISTS &lt;select_statement&gt;<br/>
-&nbsp;&nbsp;|&nbsp;&lt;expression&gt; BETWEEN &lt;expression&gt; AND &lt;expression&gt;<br/>
-&nbsp;&nbsp;|&nbsp;&lt;expression&gt; IN &lt;select_statement&gt;<br/>
-<br/>
+select_statement := 
+&nbsp;&nbsp;SELECT &lt;target_1&gt; [, &lt;target_2&gt; [, ...]] 
+&nbsp;&nbsp;FROM &lt;source_1&gt; [, &lt;source_2&gt; [, ...]]
+&nbsp;&nbsp;WHERE &lt;condition&gt;
+&nbsp;&nbsp;[GROUP BY &lt;group_vars&gt;]
+
+target := &lt;expression&gt; [[AS] &lt;target_name&gt;] | * | *.* | &lt;source_name&gt;.*
+
+source := 
+&nbsp;&nbsp;&nbsp;&nbsp;&lt;relation_name&gt; [[AS] &lt;source_name&gt;]
+&nbsp;&nbsp;|&nbsp;(&lt;select_statement&gt;) [AS] &lt;source_name&gt;
+&nbsp;&nbsp;|&nbsp;&lt;source&gt; [NATURAL] JOIN &lt;source&gt; [ON &lt;condition&gt;]
+
+expression := 
+&nbsp;&nbsp;&nbsp;&nbsp;(&lt;expression&gt;) |&nbsp;&lt;int&gt; | &lt;float&gt; | '&lt;string&gt;' | &lt;var&gt; | &lt;source&gt;.&lt;var&gt;
+&nbsp;&nbsp;|&nbsp;&lt;expression&gt; { + | - | * | / } &lt;expression&gt;
+&nbsp;&nbsp;|&nbsp;-&lt;expression&gt;
+&nbsp;&nbsp;|&nbsp;(SELECT &lt;expression&gt; FROM ...)
+&nbsp;&nbsp;|&nbsp;SUM(&lt;expression&gt;) | COUNT(* | &lt;expression&gt;) | AVG(&lt;expression&gt;)
+&nbsp;&nbsp;|&nbsp;&lt;inline_function&gt;([&lt;expression_1&gt; [, &lt;expression_2&gt; [, ...]]])
+&nbsp;&nbsp;|&nbsp;DATE('yyyy-mm-dd')
+
+condition := 
+&nbsp;&nbsp;&nbsp;&nbsp;(&lt;condition&gt;) | true | false | not (&lt;condition&gt;)
+&nbsp;&nbsp;|&nbsp;&lt;expression&gt; { < | <= | > | >= | = | <> } &lt;expression&gt;
+&nbsp;&nbsp;|&nbsp;&lt;expression&gt; { < | <= | > | >= | = | <> } { SOME | ALL } &lt;select_statement&gt;
+&nbsp;&nbsp;|&nbsp;&lt;condition&gt; AND &lt;condition&gt; | &lt;condition&gt; OR &lt;condition&gt;
+&nbsp;&nbsp;|&nbsp;EXISTS &lt;select_statement&gt;
+&nbsp;&nbsp;|&nbsp;&lt;expression&gt; BETWEEN &lt;expression&gt; AND &lt;expression&gt;
+&nbsp;&nbsp;|&nbsp;&lt;expression&gt; IN &lt;select_statement&gt;
+
 </div>
 
 <p>DBToaster SQL's SELECT operation differs slightly from the SQL-92 standard.
@@ -344,7 +344,7 @@ The optional deletions parameter can be used to generate a single stream of both
 Fields are parsed based on the type of the corresponding column in the relation.  Ints, floats, and strings are parsed as-is.  Dates are expected to be formatted in the SQL-standard <tt>[yyyy]-[mm]-[dd]</tt> format.<br/>
 
 <div class="codeblock">
-    CREATE STREAM R(A int, B int) FROM FILE 'r.dat' <br/>
+    CREATE STREAM R(A int, B int) FROM FILE 'r.dat' 
     LINE DELIMITED CSV (fields := '|');
 </div>
 </li>
@@ -360,8 +360,8 @@ Fields are parsed based on the type of the corresponding column in the relation.
 Records will be instantiated into a relation with schema &lt;T float, ID int, BROKER_ID int, VOLUME float, PRICE float&gt;.  All fields except BROKER_ID are taken directly from the input stream.  BROKER_IDs are assigned in a range from 0 to the integer value of the brokers parameter.  The value of BROKER_ID is assigned randomly, using rand() by default, or deterministically from the value of ID if the deterministic parameter is set to 'yes'.  
 
 <div class="codeblock">
-  CREATE STREAM bids(T float, ID int, BROKER_ID int, VOLUME float, PRICE float) <br/>
-  FROM FILE 'history.csv' <br/>
+  CREATE STREAM bids(T float, ID int, BROKER_ID int, VOLUME float, PRICE float) 
+  FROM FILE 'history.csv' 
   LINE DELIMITED orderbook (book := 'bids', brokers := '10', deterministic := 'yes');
 </div>
 </ul>

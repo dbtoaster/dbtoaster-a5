@@ -15,6 +15,7 @@
 *)
 
 open Types
+open Constants
 
 (**
    A generic exception pertaining to SQL.
@@ -309,14 +310,14 @@ let name_of_expr (expr:expr_t): string =
    @param a   A constant
    @return    The SQL-compatible string-representation of [a]
 *)
-let string_of_const (const:Types.const_t):string =
+let string_of_const (const:Constants.const_t):string =
    match const with
      | CBool(true)  -> "1"
      | CBool(false) -> "0"
      | CInt(av) -> string_of_int av
      | CFloat(av) -> string_of_float av
      | CString(av) -> "'"^av^"'"   
-     | CDate _     -> Types.sql_of_const const
+     | CDate _     -> Constants.sql_of_const const
 
 (**
    Produce the (Sqlparser-compatible) representation of the specified SQL 
@@ -469,6 +470,7 @@ let rec expr_type ?(strict = true) (expr:expr_t) (tables:table_t list)
          begin match (String.lowercase fn) with
             | "min" -> Types.escalate_type_list arg_types
             | "max" -> Types.escalate_type_list arg_types
+            | "date_part" -> TInt
             | _ -> error ("Undefined external function :"^fn)
          end
     

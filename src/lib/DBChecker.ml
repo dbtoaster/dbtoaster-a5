@@ -22,7 +22,7 @@ struct
       queries : query_t list ref;
    }
    
-   type hashtbl_t = (Types.const_t list, Types.const_t list) Hashtbl.t
+   type hashtbl_t = (Constants.const_t list, Constants.const_t list) Hashtbl.t
    
      
    let get_table (db_session : db_session_t) 
@@ -82,7 +82,7 @@ struct
     
    let handle_tuple (db_session : db_session_t)
                     (event:Schema.event_t) 
-                    (tuple:Types.const_t list) : unit =
+                    (tuple:Constants.const_t list) : unit =
       match event with
          | Schema.InsertEvent(rel_name, _, _) ->
             let schema = get_schema db_session rel_name in
@@ -93,7 +93,7 @@ struct
          | _ -> ()
 
       
-   let to_hashtbl (tuples : Types.const_t list list) : hashtbl_t = 
+   let to_hashtbl (tuples : Constants.const_t list list) : hashtbl_t = 
       let hashtbl = Hashtbl.create 10 in      
       List.iter (fun tuple ->
          let (key, value) = ListExtras.split_at_last tuple in
@@ -106,12 +106,12 @@ struct
       Hashtbl.iter (fun keys values -> 
          print_endline 
             ("[" ^ 
-             (ListExtras.string_of_list Types.string_of_const keys) ^
+             (ListExtras.string_of_list Constants.string_of_const keys) ^
              "] -> " ^
-             (ListExtras.string_of_list Types.string_of_const values))
+             (ListExtras.string_of_list Constants.string_of_const values))
       ) hashtbl
    
-   let cmp_hashtbl ?(default = (fun _ -> Types.CFloat(0.))) 
+   let cmp_hashtbl ?(default = (fun _ -> Constants.CFloat(0.))) 
                    (hashtbl_a : hashtbl_t) (hashtbl_b : hashtbl_t) : bool =
       let keys tbl = Hashtbl.fold (fun k _ l -> k::l) tbl [] in
       let all_keys = ListAsSet.union (keys hashtbl_a) (keys hashtbl_b) in
@@ -121,17 +121,18 @@ struct
          let value_b = try List.hd (Hashtbl.find hashtbl_b key)
                        with Not_found -> default key in
          let error =
-            Arithmetic.div2 Types.TFloat  
-               (Arithmetic.sum value_a (Arithmetic.neg value_b))
-               (Arithmetic.sum value_a value_b)  
+            Constants.Math.div2 Types.TFloat  
+               (Constants.Math.sum value_a (Constants.Math.neg value_b))
+               (Constants.Math.sum value_a value_b)  
          in
             Debug.print "LOG-DBCHECK-TEST" (fun () -> 
-               (ListExtras.ocaml_of_list Types.string_of_const key)^
-               " -> "^(Types.string_of_const value_a)^" // "^
-               (Types.string_of_const value_b)^" ; error: "^
-               (Types.string_of_const error)
+               (ListExtras.ocaml_of_list Constants.string_of_const key)^
+               " -> "^(Constants.string_of_const value_a)^" // "^
+               (Constants.string_of_const value_b)^" ; error: "^
+               (Constants.string_of_const error)
             );
-            Arithmetic.cmp_gt error (Types.CFloat(1e-6)) <> Types.CBool(true) 
+            Constants.Math.cmp_gt error (Constants.CFloat(1e-6)) <> 
+                                            Constants.CBool(true) 
       ) all_keys
   
    let check_result (db_session : db_session_t)
@@ -147,7 +148,8 @@ struct
             else
                let (targets, sources, condition, gb) = q.stmt in
                   (( targets @ ["COUNT", 
-                        Sql.Aggregate(Sql.CountAgg, Sql.Const(Types.CInt(1)))],
+                        Sql.Aggregate(Sql.CountAgg, 
+                                      Sql.Const(Constants.CInt(1)))],
                      sources, condition,
                      List.map (fun (tn,te) -> 
                         (None, tn, Sql.expr_type te !(db_session.tables) 

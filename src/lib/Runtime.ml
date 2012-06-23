@@ -1,4 +1,5 @@
 open Types
+open Constants
 open Arithmetic
 open Values
 open Database
@@ -8,7 +9,7 @@ open StandardAdaptors
 let string_of_stream_event evt = 
  begin match evt with None -> "" | Some(evt, tuple) ->
      ( (Schema.string_of_event evt)^
-       (ListExtras.ocaml_of_list Types.string_of_const tuple) )
+       (ListExtras.ocaml_of_list Constants.string_of_const tuple) )
  end
 ;;
 
@@ -35,7 +36,7 @@ let synch_init (table_sources:FileSource.t list) (db:DB.db_t): unit =
       let update_map map_name fields change =
          Debug.print "LOG-INTERPRETER-UPDATES" (fun () ->
             "INIT "^map_name^" <- "^(ListExtras.ocaml_of_list 
-                                       Types.string_of_const
+                                       Constants.string_of_const
                                        fields));
          let map = (DB.get_out_map map_name db) in
          let key = (List.map (fun x -> K3Value.BaseValue(x)) fields) in
@@ -221,7 +222,7 @@ let run_adaptors output_dir sources =
                           match c with 
                             | CString(s) -> "\""^s^"\""
                             | CFloat(f) -> sql_string_of_float f
-                            | _ -> Types.string_of_const c) t))
+                            | _ -> Constants.string_of_const c) t))
            in output_string rel_chan (s^"\n")
          in
          begin match event_name with

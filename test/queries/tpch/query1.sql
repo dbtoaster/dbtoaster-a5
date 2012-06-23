@@ -1,7 +1,7 @@
 -- Unsupported features for this query
---   INTERVAL
---   ORDER BY
---   LIMIT
+--   INTERVAL (inlined)
+--   ORDER BY (ignored)
+--   LIMIT    (ignored)
 
 INCLUDE 'test/queries/tpch/schemas.sql';
 
