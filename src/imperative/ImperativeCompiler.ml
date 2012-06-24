@@ -478,7 +478,7 @@ struct
   let fields_of_entry_type entry_ty =
      begin match type_decl_of entry_ty with
       | Target(EntryStructDef(_, fields)) -> fields
-      | _ -> failwith "Unsupported entry type!"
+      | _ -> failwith ("Unsupported entry type: "^(string_of_ext_type entry_ty))
      end
             
   let field_types_of_collection t = match t with
@@ -1868,7 +1868,6 @@ end (* Typing *)
           in i+1,acc@[src, dest])
         (0,[]) (List.combine tt_l smt_l))
 
-
   let rec fixpoint_sub_imp subs imp =
     let nsubs, nimp = sub_imp_expr subs imp in
     if nsubs = [] then nimp
@@ -1882,6 +1881,25 @@ end (* Typing *)
                (struct_member_sub (Var(ty,(id,ty))) l fields_l)@
                [Var(ty, (id, ty)), (nty, Var(nty, (id, nty)))]
         
+        | Host(TTuple l), Target(Pair(nk_t,nv_t)) ->
+            let key_t,value_t = back l in 
+            let flat_key = (List.length key_t = 1) in
+            let ne_var = Var(nty, (id,nty)) in
+            let nkey = Fn(nk_t, Ext(PairFirst), [ne_var]) in
+            let nvalue = Fn(nv_t, Ext(PairSecond), [ne_var]) in
+            (* replace tuple accessors of the old element, with accessors
+             * based on the new element definitions *)
+            let last_field = List.length l - 1 in
+            (snd (List.fold_left (fun (i,acc) t ->
+              let src = Fn(Host t, TupleElement(i),[Var(ty, (id, ty))]) in
+              let dest =
+                if i = last_field then nvalue 
+                else if flat_key then nkey
+                else Fn(Host t, TupleElement(i), [nkey])
+            in 
+            i+1,acc@[src, (Host t, dest)]) (0,[]) l))@
+            [Var(ty, (id, ty)), (nty, Var(nty, (id, nty)))]
+         
         | Host(TTuple l), Target(_) ->
           let fields_l = fields_of_entry_type nty 
           in (struct_member_sub (Var(ty,(id,ty))) l fields_l)@
