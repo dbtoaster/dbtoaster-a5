@@ -75,50 +75,68 @@ log_test "Renaming an external"
    (parse_calc "FOO(int)[][B]")
 ;;
 
-let test_schema (name:string) expr ivar ovar =
+let test (name:string) expr ivar ovar =
    log_test ("Schemas ("^name^")")
       (fun (iv,ov) -> (ListExtras.ocaml_of_list fst iv)^
                       (ListExtras.ocaml_of_list fst ov))
       (schema_of_expr (parse_calc expr))
       ((List.map var ivar), (List.map var ovar))
-;;
-
-test_schema "TPCH18 simplified funny business"
-   "( ( AggSum([],(
-      ( (delta_143 ^= 
-          (
-            {-1} * 
-            query18_mLINEITEMLINEITEM_QUANTITY
-          )
-        ) * 
-        ( (__sql_agg_tmp_1 ^= 
-            ( AggSum([O_ORDERKEY],(
-                ( LINEITEM(O_ORDERKEY, L3_QUANTITY) * 
-                  L3_QUANTITY
-                )
-              )) + 
-              delta_143
-            )
-          ) + 
-          ( (__sql_agg_tmp_1 ^= 
-              AggSum([O_ORDERKEY],(
-                ( LINEITEM(O_ORDERKEY, L3_QUANTITY) * 
-                  L3_QUANTITY
-                )
-              ))
-            ) * 
-            {-1}
-          )
-        ) * 
-        {100 < __sql_agg_tmp_1}
-      )
-    )) * 
-    AggSum([O_ORDERKEY],(
-      LINEITEM(O_ORDERKEY, L2_QUANTITY)
-    ))
-  ) 
-)"
-   ["O_ORDERKEY"; "query18_mLINEITEMLINEITEM_QUANTITY"] []
+in 
+   test "TPCH18 simplified funny business"
+      "( ( AggSum([],(
+         ( (delta_143 ^= 
+             (
+               {-1} * 
+               query18_mLINEITEMLINEITEM_QUANTITY
+             )
+           ) * 
+           ( (__sql_agg_tmp_1 ^= 
+               ( AggSum([O_ORDERKEY],(
+                   ( LINEITEM(O_ORDERKEY, L3_QUANTITY) * 
+                     L3_QUANTITY
+                   )
+                 )) + 
+                 delta_143
+               )
+             ) + 
+             ( (__sql_agg_tmp_1 ^= 
+                 AggSum([O_ORDERKEY],(
+                   ( LINEITEM(O_ORDERKEY, L3_QUANTITY) * 
+                     L3_QUANTITY
+                   )
+                 ))
+               ) * 
+               {-1}
+             )
+           ) * 
+           {100 < __sql_agg_tmp_1}
+         )
+       )) * 
+       AggSum([O_ORDERKEY],(
+         LINEITEM(O_ORDERKEY, L2_QUANTITY)
+       ))
+      ))"
+      ["O_ORDERKEY"; "query18_mLINEITEMLINEITEM_QUANTITY"] [];
+   test "TCPH 16" "AggSum([], 
+        (AggSum([SUPPLIER_CNT_pPARTPART_SIZE, SUPPLIER_CNT_pPARTPART_TYPE,
+                   SUPPLIER_CNT_pPARTPART_BRAND], 
+           EXISTS(
+             ( SUPPLIER_CNT_pPART1_E1_1(int)[]
+               [PS_SUPPKEY, SUPPLIER_CNT_pPARTPART_BRAND,
+                  SUPPLIER_CNT_pPARTPART_TYPE, SUPPLIER_CNT_pPARTPART_SIZE] *
+               ({SUPPLIER_CNT_pPARTPART_SIZE = 49} +
+                 {SUPPLIER_CNT_pPARTPART_SIZE = 14} +
+                 {SUPPLIER_CNT_pPARTPART_SIZE = 23} +
+                 {SUPPLIER_CNT_pPARTPART_SIZE = 45} +
+                 {SUPPLIER_CNT_pPARTPART_SIZE = 19} +
+                 {SUPPLIER_CNT_pPARTPART_SIZE = 3} +
+                 {SUPPLIER_CNT_pPARTPART_SIZE = 36} +
+                 {SUPPLIER_CNT_pPARTPART_SIZE = 9}) * 
+               {0 =
+              [regexp_match:int]('^MEDIUM POLISHED.*$', SUPPLIER_CNT_pPARTPART_TYPE)} *
+               {SUPPLIER_CNT_pPARTPART_BRAND != 'Brand#45'} 
+              ))) *
+    -1))" [] [];
 ;;
 
 

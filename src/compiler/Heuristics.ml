@@ -479,6 +479,10 @@ let rec materialize ?(scope:var_t list = []) (db_schema:Schema.t)
       ) (([], CalcRing.zero), 1) (decompose_poly expr)
    )
    in begin
+      Debug.print "LOG-HEURISTICS-DETAIL" (fun () ->
+         "[Heuristics] Final Materialized Form: \n"^
+         (CalculusPrinter.string_of_expr mat_expr)^"\n\n"
+      );
       if (Debug.active "HEURISTICS-IGNORE-FINAL-OPTIMIZATION") 
       then (todos, mat_expr)
       else let schema = snd (schema_of_expr mat_expr) in

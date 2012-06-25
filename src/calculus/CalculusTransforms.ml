@@ -777,7 +777,12 @@ let rec nesting_rewrites (expr:C.expr_t) =
    );
    CalcRing.fold (CalcRing.mk_sum) (CalcRing.mk_prod) 
       (CalcRing.mk_neg)
-      (fun e -> begin match e with
+      (fun e -> 
+      Debug.print "LOG-NESTING-REWRITES" (fun () ->
+         "Nesting Rewrites on Leaf: "^
+         (CalculusPrinter.string_of_expr (CalcRing.mk_val e))
+      );
+      begin match e with
          | AggSum(gb_vars, x) when x = CalcRing.zero -> CalcRing.zero
          | AggSum(gb_vars, unprocessed_subterm) ->
             let subterm = nesting_rewrites unprocessed_subterm in
@@ -848,7 +853,7 @@ let rec nesting_rewrites (expr:C.expr_t) =
                      if ListAsSet.subset (snd (C.schema_of_expr subterm))
                                          gb_vars 
                      then subterm
-                     else CalcRing.mk_val e
+                     else CalcRing.mk_val (AggSum(gb_vars, subterm))
                end
          
 (***** BEGIN EXISTS HACK *****)

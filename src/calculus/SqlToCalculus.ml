@@ -567,10 +567,10 @@ and calc_of_condition (tables:Sql.table_t list)
             end
          
          | Sql.Not(Sql.Like(expr, like_str)) -> 
-            calc_of_like (fun x -> Cmp(Eq,Arithmetic.mk_int 0, x)) expr like_str
+            calc_of_like (fun x -> Cmp(Eq,Arithmetic.mk_int 0,x)) expr like_str
 
          | Sql.Like(expr, like_str) ->
-            calc_of_like (fun x -> Value(x)) expr like_str
+            calc_of_like (fun x -> Cmp(Neq,Arithmetic.mk_int 0,x)) expr like_str
          
          | Sql.Not(Sql.InList(expr, l)) ->
             let (expr_val, expr_calc) = 
