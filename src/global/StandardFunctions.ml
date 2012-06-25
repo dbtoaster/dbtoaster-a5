@@ -65,7 +65,7 @@ let fp_div (arglist:const_t list) (ftype:type_t) =
    begin match arglist with
       | [v]     -> Constants.Math.div1 ftype v
       | [v1;v2] -> Constants.Math.div2 ftype v1 v2
-      | _ -> invalid_args ftype "fp_div" arglist
+      | _ -> invalid_args "fp_div" arglist ftype 
    end
 ;; declare_function "/" fp_div ;;
 
@@ -78,7 +78,7 @@ let min_of_list (arglist:const_t list) (ftype:type_t) =
       match ftype with TInt -> (CInt(max_int), TInt)
                      | TAny 
                      | TFloat -> (CFloat(max_float), TFloat)
-                     | _ -> invalid_args "min" arglist ftype
+                     | _ -> (invalid_args "min" arglist ftype, TAny)
    in List.fold_left min start (List.map (Constants.type_cast cast_type) 
                                          arglist)
 ;; declare_function "min" min_of_list ;;
@@ -92,7 +92,7 @@ let max_of_list (arglist:const_t list) (ftype:type_t) =
       match ftype with TInt -> (CInt(min_int), TInt)
                      | TAny 
                      | TFloat -> (CFloat(min_float), TFloat)
-                     | _ -> invalid_args "max" arglist ftype
+                     | _ -> (invalid_args "max" arglist ftype, TAny)
    in List.fold_left max start (List.map (Constants.type_cast cast_type) 
                                          arglist)
 ;; declare_function "max" max_of_list ;;
