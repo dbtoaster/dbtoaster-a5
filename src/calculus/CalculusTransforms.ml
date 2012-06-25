@@ -122,12 +122,16 @@ let rec combine_values ?(aggressive=false) (expr:C.expr_t): C.expr_t =
          
          | Value(_) | Rel(_,_) | External(_) -> CalcRing.mk_val lf
          | AggSum(gb_vars, subexp) -> 
-            CalcRing.mk_val (AggSum(gb_vars, rcr subexp))
+            let new_subexp = rcr subexp in
+            if new_subexp = CalcRing.zero then CalcRing.zero else
+               CalcRing.mk_val (AggSum(gb_vars, new_subexp))
          | Lift(lift_v, subexp)    -> 
             CalcRing.mk_val (Lift(lift_v,    rcr subexp))
 (***** BEGIN EXISTS HACK *****)
          | Exists(subexp)    -> 
-            CalcRing.mk_val (Exists(         rcr subexp))
+            let new_subexp = rcr subexp in
+            if new_subexp = CalcRing.zero then CalcRing.zero else
+               CalcRing.mk_val (Exists(new_subexp))
 (***** END EXISTS HACK *****)
       ))
       expr

@@ -2,7 +2,7 @@
 --   CREATE VIEW (replaced with nested query)
 --   ORDER BY (ignored)
 
-INCLUDE 'test/queries/tpch/schemas.sql';
+INCLUDE 'test/queries/tpch/schemas_tiny.sql';
 
 
 SELECT s.suppkey, s.name, s.address, s.phone, R1.total_revenue 

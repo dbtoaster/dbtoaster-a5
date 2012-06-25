@@ -5,9 +5,13 @@ open Calculus
 (** Compute the domain maintenance expression of the provided calculus 
     expression. *)
 let rec maintain (formula: Calculus.expr_t) : Calculus.expr_t =
-   Calculus.fold (fun _ -> CalcRing.mk_sum) 
+   Calculus.fold (fun _ sl -> CalcRing.mk_sum (
+                  if sl = [] then sl else 
+                     match (List.filter (fun x -> x <> CalcRing.one) []) with
+                        [] -> [CalcRing.one] | something_else -> something_else
+                 ))
                  (fun _ -> CalcRing.mk_prod)
-                 (fun _ -> CalcRing.mk_neg)
+                 (fun _ x -> x)
       (fun _ lf -> match lf with
          | Value(_) -> CalcRing.one
          | External _ -> 
