@@ -479,6 +479,8 @@ let rec expr_type ?(strict = true) (expr:expr_t) (tables:table_t list)
       | ExternalFn(fn,fargs) ->
          begin try 
             let arg_types = List.map rcr fargs in
+            if (not strict) && (List.exists (fun x -> x = TAny) arg_types) 
+            then TAny else
                StandardFunctions.infer_type fn arg_types
          with 
             | Not_found -> tree_err ("Undeclared Function '"^fn^"'")

@@ -1,5 +1,6 @@
 -- Unsupported features for this query
--- everything is supported
+-- ORDER BY (ignored)
+-- LIMIT    (ignored)
 
 INCLUDE 'test/queries/tpch/schemas.sql';
 

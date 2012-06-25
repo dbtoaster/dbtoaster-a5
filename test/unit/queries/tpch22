@@ -1,5 +1,5 @@
 {
-  :path => "test/queries/tpch/query22.sql",
+  :path => "test/queries/tpch/query22a.sql",
   :datasets => {
     "standard" => {
       :toplevels => {

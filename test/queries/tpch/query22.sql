@@ -1,34 +1,24 @@
-CREATE STREAM ORDERS (
-        orderkey       INT,
-        custkey        INT,
-        orderstatus    CHAR(1),
-        totalprice     DECIMAL,
-        orderdate      DATE,
-        orderpriority  CHAR(15),
-        clerk          CHAR(15),
-        shippriority   INT,
-        comment        VARCHAR(79)
-    )
-  FROM FILE '../../experiments/data/tpch/standard/orders.csv'
-  LINE DELIMITED CSV (fields := '|', deletions := 'false');
+-- Unsupported features for this query
+-- ORDER BY (ignored)
 
+INCLUDE 'test/queries/tpch/schemas.sql';
 
-CREATE STREAM CUSTOMER (
-        custkey      INT,
-        name         VARCHAR(25),
-        address      VARCHAR(40),
-        nationkey    INT,
-        phone        CHAR(15),
-        acctbal      DECIMAL,
-        mktsegment   CHAR(10),
-        comment      VARCHAR(117)
-    )
-  FROM FILE '../../experiments/data/tpch/standard/customer.csv'
-  LINE DELIMITED CSV (fields := '|', deletions := 'false');
-
-SELECT c1.nationkey, sum(c1.acctbal) AS query22
-FROM customer c1
-WHERE c1.acctbal <
-    (SELECT sum(c2.acctbal) FROM customer c2 WHERE c2.acctbal > 0)
-AND 0 = (SELECT sum(1) FROM orders o WHERE o.custkey = c1.custkey)
-GROUP BY c1.nationkey
+SELECT  cntrycode,
+        COUNT(*) AS numcust,
+        SUM(custsale.acctbal) AS totalacctbal
+FROM (
+  SELECT SUBSTRING(c.phone, 0, 2) AS cntrycode,
+         c.acctbal
+  FROM   customer c
+  WHERE  (SUBSTRING(c.phone, 0, 2) IN LIST 
+              ('13', '31', '23', '29', '30', '18', '17'))
+    AND  c.acctbal > (
+            SELECT AVG(c2.acctbal)
+            FROM   customer c2
+            WHERE  c2.acctbal > 0.00
+            AND    (SUBSTRING(c2.phone, 0, 2) IN LIST 
+                        ('13', '31', '23', '29', '30', '18', '17')))
+    AND  (NOT EXISTS (SELECT * FROM orders o WHERE o.custkey = c.custkey))
+  ) as custsale
+GROUP BY cntrycode
+          
