@@ -127,6 +127,7 @@ and cond_t   =
  | Exists     of select_t                (** An existential subquery *)
  | ConstB     of bool                    (** A boolean constant *)
  | Like       of expr_t * string         (** Partial string match *)
+ | InList     of expr_t * const_t list   (** Finite list membership test *)
 
 (**
    A member of a from clause.  This can either be a relation, or a nested 
@@ -356,6 +357,9 @@ and string_of_cond (cond:cond_t): string =
       | Not(c)        -> "NOT"^(string_of_cond c)
       | Exists(s)     -> "EXISTS ("^(string_of_select s)^")"
       | Like(e, s)    -> "("^(string_of_expr e)^") LIKE '"^s^"'"
+      | InList(e, l)  -> "("^(string_of_expr e)^") IN VALUES ("^
+                         (ListExtras.string_of_list ~sep:"," string_of_const l)^
+                        ")"
       | ConstB(true)  -> "TRUE"
       | ConstB(false) -> "FALSE"
 
@@ -735,6 +739,7 @@ and bind_cond_vars (cond:cond_t) (tables:table_t list)
       | Exists(q) -> Exists(rcr_q q)
       | ConstB(_) -> cond
       | Like(e,s) -> Like(rcr_e e, s)
+      | InList(e,l) -> InList(rcr_e e, l)
    
 (**
    Ensure that all variables in a SQL expression have been associated with

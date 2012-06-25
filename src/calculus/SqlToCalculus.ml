@@ -550,6 +550,26 @@ and calc_of_condition (tables:Sql.table_t list)
          | Sql.Like(expr, like_str) ->
             calc_of_like (fun x -> Value(x)) expr like_str
          
+         | Sql.Not(Sql.InList(expr, l)) ->
+            let (expr_val, expr_calc) = 
+               lift_if_necessary ~t:"in" (rcr_e expr)
+            in
+               CalcRing.mk_prod (expr_calc::(List.map (fun x -> 
+                  CalcRing.mk_val (Cmp(Neq, Arithmetic.mk_const x, expr_val)))
+                     (ListAsSet.uniq l)))
+
+         | Sql.InList(expr, l) ->
+            let (expr_val, expr_calc) = 
+               lift_if_necessary ~t:"in" (rcr_e expr)
+            in
+            (** Unlike the general OR, we can ensure that the condition is
+                an exclusive OR by making the list of comparisons unique *)
+               CalcRing.mk_prod [expr_calc; 
+                  CalcRing.mk_sum (List.map (fun x -> 
+                     CalcRing.mk_val (Cmp(Eq, Arithmetic.mk_const x, expr_val)))
+                        (ListAsSet.uniq l))
+               ]
+         
          | Sql.Not(c) -> (* This should never be reached... push_down nots 
                             should push everything away *)
             failwith "Non-pushed down NOT in Sql Condition"

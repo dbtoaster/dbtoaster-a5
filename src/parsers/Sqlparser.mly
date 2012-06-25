@@ -88,7 +88,7 @@ let bind_select_vars q =
 %token JOIN INNER OUTER LEFT RIGHT ON NATURAL EXISTS IN SOME ALL UNION
 %token CREATE TABLE FROM USING DELIMITER SELECT WHERE GROUP BY HAVING ORDER
 %token SOCKET FILE FIXEDWIDTH VARSIZE OFFSET ADJUSTBY SETVALUE LINE DELIMITED
-%token EXTRACT
+%token EXTRACT LIST
 %token POSTGRES RELATION PIPE
 %token ASC DESC
 %token SOURCE ARGS INSTANCE TUPLE ADAPTOR BINDINGS STREAM
@@ -283,9 +283,7 @@ op:
 
 expression:
 | LPAREN expression RPAREN { $2 }
-| INT          { Sql.Const(CInt($1)) }
-| FLOAT        { Sql.Const(CFloat($1)) }
-| STRING       { Sql.Const(CString($1)) }
+| constant                 { Sql.Const($1) }
 | ID           { Sql.Var(None, String.uppercase $1, TAny) }
 | ID PERIOD ID { Sql.Var(Some(String.uppercase $1), String.uppercase $3, TAny) }
 | PRODUCT      { Sql.Var(None, "*", TAny) }
@@ -300,7 +298,6 @@ expression:
                                                      Sql.Const(CInt(1))) }
 | ID LPAREN  RPAREN                   { Sql.ExternalFn($1,[]) }
 | ID LPAREN functionParameters RPAREN { Sql.ExternalFn($1,$3) }
-| DATE LPAREN STRING RPAREN     { Sql.Const(Constants.parse_date $3) }
 | EXTRACT LPAREN ID FROM variable RPAREN {
       let field = String.uppercase $3 in
       match field with
@@ -342,8 +339,17 @@ condition:
 | expression LIKE STRING          { Sql.Like($1, $3) }
 | expression BETWEEN expression AND expression 
    { Sql.And(Sql.Comparison($1, Gte, $3), Sql.Comparison($1, Lte, $5)) }
+| expression IN LIST LPAREN constantList RPAREN {
+      Sql.InList($1, $5)
+   }
+| expression NOT IN LIST LPAREN constantList RPAREN {
+      Sql.Not(Sql.InList($1, $6))
+   }
 | expression IN LPAREN selectStmt RPAREN { 
       scan_for_existence "IN" $4 Eq $1 
+   }
+| expression NOT IN LPAREN selectStmt RPAREN { 
+      Sql.Not(scan_for_existence "IN" $5 Eq $1)
    }
 | expression cmpOp SOME LPAREN selectStmt RPAREN { 
       scan_for_existence "SOME" $5 $2 $1 
@@ -351,3 +357,14 @@ condition:
 | expression cmpOp ALL LPAREN selectStmt RPAREN { 
       Sql.Not(scan_for_existence "ALL" $5 (inverse_of_cmp $2) $1)
    }
+
+constantList:
+| constant COMMA constantList   { $1 :: $3 }
+| constant                      { [$1] }
+|                               { [] }
+
+constant:
+| INT                           { CInt($1) }
+| FLOAT                         { CFloat($1) }
+| STRING                        { CString($1) }
+| DATE LPAREN STRING RPAREN     { Constants.parse_date $3 }
