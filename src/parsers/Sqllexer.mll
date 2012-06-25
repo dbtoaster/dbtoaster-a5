@@ -82,13 +82,16 @@ let keywords =
         "SUM", SUMAGG;
         "COUNT", COUNTAGG;
         "AVG", AVGAGG;
+        "MIN", MINAGG;
+        "MAX", MAXAGG;
         "IN", IN;
         "ALL", ALL;
         "SOME", SOME;
         "INCLUDE", INCLUDE;
         "EXTRACT", EXTRACT;
         "LIKE", LIKE;
-        "LIST", LIST;
+        "LIST", LIST; 
+        "DISTINCT", DISTINCT;       
     ]
 let _ = hashtbl_of_pair_list keyword_table keywords
 

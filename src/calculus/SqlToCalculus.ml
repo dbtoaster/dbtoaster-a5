@@ -349,11 +349,28 @@ let rec calc_of_query ?(query_name = None)
                         CalcRing.mk_prod 
                            [source_calc; cond_calc; agg_calc; noagg_calc]
                      ))
-               | Sql.CountAgg -> 
+               | Sql.CountAgg(None) -> (* COUNT( * ) *)
                   CalcRing.mk_val 
                      (AggSum(new_gb_vars,
-                        CalcRing.mk_prod 
-                           [source_calc; cond_calc; noagg_calc]
+                        CalcRing.mk_prod [source_calc; cond_calc; noagg_calc]
+                     ))
+               | Sql.CountAgg(Some([])) -> (* COUNT(DISTINCT) *)
+                  CalcRing.mk_val 
+                     (AggSum(new_gb_vars,
+                        CalculusDomains.mk_exists
+                           (CalcRing.mk_prod 
+                              [source_calc; cond_calc; noagg_calc])
+                     ))
+               | Sql.CountAgg(Some(fields)) -> (* COUNT(DISTINCT ... ) *)
+                  CalcRing.mk_val 
+                     (AggSum(new_gb_vars,
+                        CalculusDomains.mk_exists
+                           (CalcRing.mk_val 
+                              (AggSum(ListAsSet.union new_gb_vars 
+                                                      (List.map var_of_sql_var
+                                                                fields), 
+                                 CalcRing.mk_prod 
+                                    [source_calc; cond_calc; noagg_calc])))
                      ))
                | Sql.AvgAgg -> 
                   let count_var = tmp_var "average_count" TInt in
@@ -638,7 +655,7 @@ and calc_of_sql_expr ?(materialize_query = None)
       begin match materialize_query with
          | None -> failwith "Unexpected aggregation operator (1)"
          | Some(m) -> 
-            let count_agg = m Sql.CountAgg CalcRing.one in
+            let count_agg = m (Sql.CountAgg(None)) CalcRing.one in
             let (_,count_sch) = Calculus.schema_of_expr count_agg in
             CalcRing.mk_prod [
                CalcRing.mk_val (AggSum(count_sch,

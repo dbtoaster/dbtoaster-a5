@@ -84,7 +84,7 @@ type arith_t = Sum | Prod | Sub | Div
 (**
    Sql aggregate types
 *)
-type agg_t = SumAgg | CountAgg | AvgAgg
+type agg_t = SumAgg | CountAgg of sql_var_t list option | AvgAgg
 
 (**
    A Sql expression (which appears in either the target clause, or as part of a 
@@ -268,7 +268,7 @@ let string_of_arith_op (op:arith_t): string =
 *)
 let string_of_agg (agg:agg_t): string =
    match agg with SumAgg   -> "SUM"
-                | CountAgg -> "COUNT"
+                | CountAgg(fields) -> "COUNT"
                 | AvgAgg   -> "AVG"
 
 (**
@@ -336,6 +336,11 @@ let rec string_of_expr (expr:expr_t): string =
                               "("^(string_of_expr b)^")"
       | Negation(a) -> "-("^(string_of_expr a)^")"
       | NestedQ(q) -> "("^(string_of_select q)^")"
+      | Aggregate(CountAgg(None), _) -> "COUNT(*)"
+      | Aggregate(CountAgg(Some(fields)), _) -> 
+         "COUNT( DISTINCT "^
+         (String.concat "" (List.map (fun x -> (string_of_var x)^" ") fields))^
+         ")"
       | Aggregate(agg,a) -> (string_of_agg agg)^"("^
                             (string_of_expr a)^")"
       | ExternalFn(fn,fargs) -> fn^"("^(ListExtras.string_of_list ~sep:", "
@@ -466,7 +471,7 @@ let rec expr_type ?(strict = true) (expr:expr_t) (tables:table_t list)
             (* Sum takes its type from the nested expression *)
             | SumAgg -> return_if_numeric (rcr subexp) "Aggregate of "
             (* Count ignores the nested expression *)
-            | CountAgg -> TInt
+            | CountAgg _ -> TInt
             (* Average must have numeric inputs but always returns float *)
             | AvgAgg -> 
                let _ = return_if_numeric (rcr subexp) "Aggregate of " in TFloat
@@ -774,17 +779,19 @@ and bind_expr_vars (expr:expr_t) (tables:table_t list)
       (ListExtras.ocaml_of_list fst sources)^"\n\t"^
       (string_of_expr expr)
    );
+   let bind_var (s,v,t) = 
+      (Some(fst (source_for_var (s,v,t) tables sources))),
+      v,
+      var_type (s,v,t) tables sources
+   in
    match expr with 
       | Const(_) -> expr
-      | Var(s,v,t) -> 
-            Var(
-               (Some(fst (source_for_var (s,v,t) tables sources))),
-               v,
-               var_type (s,v,t) tables sources
-            )
+      | Var(v) -> Var(bind_var v)
       | SQLArith(a,op,b) -> SQLArith(rcr_e a,op,rcr_e b)
       | Negation(a) -> Negation(rcr_e a)
       | NestedQ(q) -> NestedQ(rcr_q q)
+      | Aggregate(CountAgg(Some(fields)),a) -> 
+         Aggregate(CountAgg(Some(List.map bind_var fields)), rcr_e a)
       | Aggregate(agg,a) -> Aggregate(agg, rcr_e a)
       | ExternalFn(fn,fargs) -> ExternalFn(fn, List.map rcr_e fargs)
 

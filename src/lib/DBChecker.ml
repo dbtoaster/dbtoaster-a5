@@ -148,7 +148,7 @@ struct
             else
                let (targets, sources, condition, gb) = q.stmt in
                   (( targets @ ["COUNT", 
-                        Sql.Aggregate(Sql.CountAgg, 
+                        Sql.Aggregate(Sql.CountAgg(None), 
                                       Sql.Const(Constants.CInt(1)))],
                      sources, condition,
                      List.map (fun (tn,te) -> 

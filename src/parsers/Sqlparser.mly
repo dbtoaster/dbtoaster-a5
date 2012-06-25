@@ -88,13 +88,13 @@ let bind_select_vars q =
 %token JOIN INNER OUTER LEFT RIGHT ON NATURAL EXISTS IN SOME ALL UNION
 %token CREATE TABLE FROM USING DELIMITER SELECT WHERE GROUP BY HAVING ORDER
 %token SOCKET FILE FIXEDWIDTH VARSIZE OFFSET ADJUSTBY SETVALUE LINE DELIMITED
-%token EXTRACT LIST
+%token EXTRACT LIST DISTINCT
 %token POSTGRES RELATION PIPE
 %token ASC DESC
 %token SOURCE ARGS INSTANCE TUPLE ADAPTOR BINDINGS STREAM
 %token EOSTMT
 %token EOF
-%token SUMAGG COUNTAGG AVGAGG
+%token SUMAGG COUNTAGG AVGAGG MAXAGG MINAGG
 %token INCLUDE
 
 %left AND OR NOT
@@ -275,6 +275,11 @@ variable:
 | ID              { (None, String.uppercase $1, TAny) }
 | ID PERIOD ID    { ((Some(String.uppercase $1)),String.uppercase $3, TAny) }
 
+variableList:
+| variable COMMA variableList  { $1 :: $3 }
+| variable                     { [$1] }
+|                              { [] }
+
 op:
 | SUM     { Sql.Sum }
 | PRODUCT { Sql.Prod }
@@ -294,8 +299,10 @@ expression:
 | LPAREN selectStmt RPAREN      { Sql.NestedQ($2) }
 | SUMAGG LPAREN expression RPAREN { Sql.Aggregate(Sql.SumAgg, $3) }
 | AVGAGG LPAREN expression RPAREN { Sql.Aggregate(Sql.AvgAgg, $3) }
-| COUNTAGG LPAREN countAggParam RPAREN { Sql.Aggregate(Sql.CountAgg, 
+| COUNTAGG LPAREN countAggParam RPAREN { Sql.Aggregate(Sql.CountAgg($3), 
                                                      Sql.Const(CInt(1))) }
+| MAXAGG LPAREN expression RPAREN { bail "MAX is not (yet) supported" }
+| MINAGG LPAREN expression RPAREN { bail "MIN is not (yet) supported" }
 | ID LPAREN  RPAREN                   { Sql.ExternalFn($1,[]) }
 | ID LPAREN functionParameters RPAREN { Sql.ExternalFn($1,$3) }
 | EXTRACT LPAREN ID FROM variable RPAREN {
@@ -312,9 +319,10 @@ functionParameters:
 | expression                          { [$1] }
 
 countAggParam:
-| PRODUCT    { () }
-| expression { () }
-|            { () }
+| PRODUCT               { None }
+| expression            { None }
+|                       { None }
+| DISTINCT variableList { Some($2) }
 
 cmpOp:
 | EQ { Eq }
