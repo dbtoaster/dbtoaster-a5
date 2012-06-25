@@ -477,12 +477,13 @@ let rec expr_type ?(strict = true) (expr:expr_t) (tables:table_t list)
                let _ = return_if_numeric (rcr subexp) "Aggregate of " in TFloat
          end
       | ExternalFn(fn,fargs) ->
-         let arg_types = List.map rcr fargs in
-         begin match (String.lowercase fn) with
-            | "min" -> Types.escalate_type_list arg_types
-            | "max" -> Types.escalate_type_list arg_types
-            | "date_part" -> TInt
-            | _ -> error ("Undefined external function :"^fn)
+         begin try 
+            let arg_types = List.map rcr fargs in
+               StandardFunctions.infer_type fn arg_types
+         with 
+            | Not_found -> tree_err ("Undeclared Function '"^fn^"'")
+            | StandardFunctions.InvalidFunctionArguments _ ->
+                           tree_err "Invalid function arguments"
          end
     
 (**
