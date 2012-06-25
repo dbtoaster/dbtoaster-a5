@@ -148,7 +148,8 @@ let rec normalize_agg_target_expr ?(vars_bound = false) gb_vars expr =
      | Sql.Var(v)   -> 
          if not (List.mem v gb_vars) then (
             Sql.error ("Non Group-by Variable "^(Sql.string_of_var v)^
-                       " used outside of an aggregate expression")
+                       " used outside of an aggregate expression (gb vars:"^
+                       (ListExtras.ocaml_of_list Sql.string_of_var gb_vars)^")")
          ) else expr
          
      | Sql.SQLArith(lhs, op, rhs) ->
@@ -252,7 +253,8 @@ let rec calc_of_query ?(query_name = None)
       This gets used below, within the generation of the aggregate targets, 
       since each aggregate target might need to include this expression multiple
       times. (e.g., if a single target composes multiple aggregates) *)
-   let noagg_calc = CalcRing.mk_prod (List.map (fun (base_tgt_name, tgt_expr) ->
+   let (noagg_vars, noagg_terms) = List.split (List.map 
+      (fun (base_tgt_name, tgt_expr) ->
       if not (check_gb_var_list base_tgt_name tgt_expr) then
          Sql.error ("Non-aggregate term '"^base_tgt_name^"' ("^
                     (Sql.string_of_expr tgt_expr)^
@@ -270,9 +272,9 @@ let rec calc_of_query ?(query_name = None)
          (Sql.string_of_expr tgt_expr)
       );
       match tgt_expr with
-         | Sql.Var((_,vn,_) as v) when ((query_name = None) && (vn = tgt_name))
-                                       || ((fst (var_of_sql_var v)) = tgt_name) 
-            ->
+         | Sql.Var((vs,vn,vt) as v) 
+            when ((query_name = None) && (vn = tgt_name))
+              || ((fst (var_of_sql_var v)) = tgt_name)   ->
                Debug.print "LOG-SQL-TO-CALC" (fun () -> 
                   "Just a variable where '"^(fst (var_of_sql_var v))^"' = '"^
                   tgt_name^"'"
@@ -280,7 +282,7 @@ let rec calc_of_query ?(query_name = None)
                (* If we're being asked to group by a variable (with no renaming)
                   then we don't actually need to include the variable in any way
                   shape and/or form *)
-               CalcRing.one
+               (var_of_sql_var (vs, vn, vt), CalcRing.one)
          | _ -> 
             (* If we're being asked to group by something more complex than
                just a simple variable, then we need to lift the expression
@@ -288,7 +290,7 @@ let rec calc_of_query ?(query_name = None)
                simple renaming) *)
             let tgt_var = (tgt_name, (Sql.expr_type tgt_expr tables sources)) in
             let calc_expr = calc_of_sql_expr tables sources tgt_expr in
-               CalcRing.mk_val (Lift(tgt_var,
+               (tgt_var, CalcRing.mk_val (Lift(tgt_var,
                   match ((Calculus.type_of_expr calc_expr), (snd tgt_var)) with
                   | (a, b) when a = b -> calc_expr
                   | _ -> 
@@ -300,8 +302,20 @@ let rec calc_of_query ?(query_name = None)
                                 ") from its expected type ("^
                                 (Types.string_of_type (snd tgt_var))^
                                 ")"));
-               )
+               ))
    ) noagg_tgts) in
+   let noagg_calc = CalcRing.mk_prod noagg_terms in
+   (* There might be group-by targets that are not represented in the target
+      list.  Add these to the var list artificial targets for these *)
+   let new_gb_vars = noagg_vars @ (List.flatten (List.map (fun (vs,vn,vt) ->
+         if not (List.exists (fun (tgt_name, tgt_expr) -> 
+            if (vs = None) && (tgt_name = vn) then true
+            else if tgt_expr = Sql.Var(vs,vn,vt) then true
+            else false
+         ) noagg_tgts)
+         then [var_of_sql_var (vs,vn,vt)] else []
+      ) gb_vars))
+   in
    List.map (fun (tgt_name, unnormalized_tgt_expr) ->
       let tgt_expr = 
          normalize_agg_target_expr gb_vars unnormalized_tgt_expr
@@ -328,15 +342,6 @@ let rec calc_of_query ?(query_name = None)
                Note that all of this must match the construction of noagg_calc 
                above.
             *)
-            let new_gb_vars = 
-               List.map (fun (vs,vn,vt) ->
-                           if query_name = None
-                           then if vs = None 
-                                then (vn,vt)
-                                else var_of_sql_var (vs,vn,vt)
-                           else var_of_sql_var (query_name,vn,vt)
-                        ) gb_vars
-            in
             begin match agg_type with
                | Sql.SumAgg -> 
                   CalcRing.mk_val 

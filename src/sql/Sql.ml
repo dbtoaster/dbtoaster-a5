@@ -691,8 +691,11 @@ let rec bind_select_vars ?(parent_sources = [])
       (ListExtras.ocaml_of_list fst sources)^"\n\t"^
       (string_of_select (targets,inner_sources,conds,gb))
    );
+   let mapped_targets = 
+      List.map (fun (tn,te) -> (tn,rcr_e te)) targets
+   in
    (
-      List.map (fun (tn,te) -> (tn,rcr_e te)) targets,
+      mapped_targets,
       List.map (fun (sn,s) -> 
          if List.length (List.filter (fun x -> x = sn)
                            (List.map fst sources)) > 1 then (
@@ -703,9 +706,18 @@ let rec bind_select_vars ?(parent_sources = [])
       ) inner_sources,
       rcr_c conds,
       List.map (fun (s,v,t) -> 
-        ((Some(fst (source_for_var (s,v,t) tables sources))),
-         v,
-         var_type (s,v,t) tables sources)
+         if (s = None) && (List.mem_assoc v mapped_targets)
+         then 
+            begin match (List.assoc v mapped_targets) with
+               | Var(ts,tv,tt) when tv = v -> (ts, v, tt)
+               | _ -> (None, v, expr_type ~strict:true 
+                                  (List.assoc v mapped_targets) 
+                                  tables sources)
+            end
+         else 
+           ((Some(fst (source_for_var (s,v,t) tables sources))),
+            v,
+            var_type (s,v,t) tables sources)
       ) gb
    )
 
