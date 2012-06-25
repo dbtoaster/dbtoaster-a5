@@ -115,3 +115,15 @@ let date_part (arglist:const_t list) (ftype:type_t) =
       | _ -> invalid_args "date_part" arglist ftype
 ;; declare_function "date_part" date_part ;;
 
+(**
+   Regular expression matching
+   - [regexp_match] regex_str; str returns true if regex_str matches str
+*)
+let regexp_match (arglist:const_t list) (ftype:type_t) =
+   match arglist with
+      | [CString(regexp); CString(str)] ->
+         Debug.print "LOG-REGEXP" (fun () -> "/"^regexp^"/ =~ '"^str^"'");
+         if Str.string_match (Str.regexp regexp) str 0
+         then CInt(1) else CInt(0)
+      | _ -> invalid_args "regexp_match" arglist ftype
+;; declare_function "regexp_match" regexp_match ;;

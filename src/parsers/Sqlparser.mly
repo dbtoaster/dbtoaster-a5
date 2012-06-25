@@ -339,6 +339,7 @@ condition:
 | TRUE                            { Sql.ConstB(true) }
 | FALSE                           { Sql.ConstB(false) }
 | EXISTS LPAREN selectStmt RPAREN { Sql.Exists($3) }
+| expression LIKE STRING          { Sql.Like($1, $3) }
 | expression BETWEEN expression AND expression 
    { Sql.And(Sql.Comparison($1, Gte, $3), Sql.Comparison($1, Lte, $5)) }
 | expression IN LPAREN selectStmt RPAREN { 

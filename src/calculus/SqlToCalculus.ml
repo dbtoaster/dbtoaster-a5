@@ -474,6 +474,22 @@ and calc_of_condition (tables:Sql.table_t list)
                       C.expr_t =
    let rcr_e e = calc_of_sql_expr tables sources e in
    let rcr_c c = calc_of_condition tables sources c in
+   let calc_of_like wrapper expr like = 
+      let like_regexp = "^"^(Str.global_replace (Str.regexp "%") ".*"
+                                                (Str.quote like) )^"$"
+      in
+      let (expr_val, expr_calc) = lift_if_necessary ~t:"like" (rcr_e expr) in
+      if not ((Arithmetic.type_of_value expr_val) = TString) then
+         failwith "Non-string value compared using the LIKE predicate"
+      else
+         CalcRing.mk_prod [
+            expr_calc;
+            CalcRing.mk_val (wrapper (Arithmetic.ValueRing.mk_val
+               (AFn("regexp_match", [Arithmetic.mk_string like_regexp;
+                                     expr_val], TInt))
+            ))
+         ]
+   in
    let rcr_q q = calc_of_query tables q in
       begin match Sql.push_down_nots cond with
          | Sql.Comparison(e1,cmp,e2) -> 
@@ -481,8 +497,8 @@ and calc_of_condition (tables:Sql.table_t list)
             let e2_calc = rcr_e e2 in
             let field_ty = Types.escalate_type (C.type_of_expr e1_calc)
                                                (C.type_of_expr e2_calc) in
-            let (e1_val, e1_calc) = lift_if_necessary ~vt:field_ty (rcr_e e1) in
-            let (e2_val, e2_calc) = lift_if_necessary ~vt:field_ty (rcr_e e2) in
+            let (e1_val, e1_calc) = lift_if_necessary ~vt:field_ty e1_calc in
+            let (e2_val, e2_calc) = lift_if_necessary ~vt:field_ty e2_calc in
                CalcRing.mk_val (AggSum([], 
                   CalcRing.mk_prod [
                      e1_calc; e2_calc;
@@ -527,6 +543,13 @@ and calc_of_condition (tables:Sql.table_t list)
 
             | _ -> (failwith "Nested subqueries must have exactly 1 argument")
             end
+         
+         | Sql.Not(Sql.Like(expr, like_str)) -> 
+            calc_of_like (fun x -> Cmp(Eq,Arithmetic.mk_int 0, x)) expr like_str
+
+         | Sql.Like(expr, like_str) ->
+            calc_of_like (fun x -> Value(x)) expr like_str
+         
          | Sql.Not(c) -> (* This should never be reached... push_down nots 
                             should push everything away *)
             failwith "Non-pushed down NOT in Sql Condition"
