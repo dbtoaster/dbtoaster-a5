@@ -110,10 +110,13 @@ let cpp_compiler = {
           else [] ) @
         ( try (Str.split (Str.regexp ":") (Unix.getenv env_name)) 
           with Not_found -> [] ) in
+     let (main_fname, main_stream) = 
+         Filename.open_temp_file ~mode:[Open_wronly; Open_trunc]
+                                 "dbtoaster_main_"  ".cpp" in
      let cpp_cc = "g++" in
      let cpp_args = (
          cpp_cc ::
-         [ "./lib/dbt_c++/main.cpp"; 
+         [ main_fname; 
            "-include";in_file_name; 
            "-o"; out_file_name; ] @
          (if Debug.active "COMPILE-WITH-PROFILE" then ["-pg"] else []) @
@@ -133,12 +136,14 @@ let cpp_compiler = {
               "-lboost_thread";
             ]
          ) @ [
-           "-lpthread";
-           "-DFUSION_MAX_VECTOR_SIZE=50";           
+           "-lpthread";       
          ] @ (!compiler_flags)
       ) in
          Debug.print "LOG-GCC" (fun () -> (
             ListExtras.string_of_list ~sep:" " (fun x->x) cpp_args));
+         at_exit (fun () -> Unix.unlink main_fname);
+         output_string main_stream MainCpp.code;
+         flush main_stream;
          Unix.execvp cpp_cc (Array.of_list cpp_args)
    )
 };;

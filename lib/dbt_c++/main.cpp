@@ -1,6 +1,6 @@
 
 namespace dbtoaster{
-    class CustomProgram : public Program
+    class CustomProgram_1 : public Program
     {
     public:
         void process_stream_event(event_t& ev) {
@@ -36,16 +36,16 @@ namespace dbtoaster{
  */
 
 /**
- * Determines whether "-async" was specified as a command line argument.
+ * Determines whether "--async" was specified as a command line argument.
  *
  * @param argc
  * @param argv
- * @return true if "-async" is one of the command line arguments
+ * @return true if "--async" is one of the command line arguments
  */
 bool async_mode(int argc, char* argv[])
 {
 	for(int i = 1; i < argc; i++)
-        if( !strcmp(argv[1],"-async") )
+        if( !strcmp(argv[i],"--async") )
             return true;
     return false;
 }
@@ -66,7 +66,7 @@ int main(int argc, char* argv[]) {
     bool async = async_mode(argc,argv);
     boost::archive::xml_oarchive oa(cout, 0);
 
-    dbtoaster::Program p;
+    dbtoaster::Program p(argc,argv);
     //dbtoaster::CustomProgram_1 p;
     //dbtoaster::CustomProgram_2 p;
     dbtoaster::Program::snapshot_t snap;

@@ -12,6 +12,24 @@
 
 <h1>DBToaster C++ User Reference</h1>
 
+<ul>
+    <li><a href="#quickstart">1. Quickstart Guide</a></li>
+    <li><a href="#apiguide">2. C++ API Guide</a>
+        <ul>
+            <li><a href="#execprogram">2.1. Executing the Program</a></li>
+            <li><a href="#retrieveresults">2.2. Retrieving the Results</a></li>
+            <li><a href="#basicexample">2.3. Basic Example</a></li>
+            <li><a href="#customexecution">2.4. Custom Execution</a></li>
+        </ul>
+    </li>
+    <li><a href="#codereference">3. Generated Code Reference</a>
+        <ul>
+            <li><a href="#tlq_t">3.1. <tt>struct tlq_t</tt></a></li>
+            <li><a href="#data_t">3.2. <tt>struct data_t</tt></a></li>
+            <li><a href="#program">3.3. <tt>class Program</tt></a></li>
+        </ul>
+    </li>
+</ul>
 
 <h2><a name="quickstart">1. Quickstart Guide</a></h2>
 
@@ -77,10 +95,10 @@ Printing final result:
 &lt;/boost_serialization&gt;
 </div>
 
-If the generated binary is run with the <tt>-async</tt> flag, it will also print intermediary results as frequently
+If the generated binary is run with the <tt>--async</tt> flag, it will also print intermediary results as frequently
 as possible while the sql program is running in a separate thread.
 
-<div class="codeblock">$&gt; ./rs_example1 -async
+<div class="codeblock">$&gt; ./rs_example1 --async
 &lt;?xml version="1.0" encoding="UTF-8" standalone="yes" ?&gt;
 &lt;!DOCTYPE boost_serialization&gt;
 &lt;boost_serialization signature="serialization::archive" version="9"&gt;
@@ -181,7 +199,7 @@ for stream <tt>ev.id</tt> with the arguments contained in <tt>ev.data</tt>.
 </p>
 
 
-<h3><a name="retrieveresults">2.2. Retrieving the results</a></h3>
+<h3><a name="retrieveresults">2.2. Retrieving the Results</a></h3>
 
 <p>
 The <b><tt>snapshot_t IProgram::get_snapshot()</tt></b> function returns a snapshot of the results of the program. 
@@ -305,7 +323,7 @@ print its results:
 <div class="codeblock">#include "rs_example1.hpp"
 
 int main(int argc, char* argv[]) {
-    bool async = argc > 1 &amp;&amp; !strcmp(argv[1],"-async");
+    bool async = argc > 1 &amp;&amp; !strcmp(argv[1],"--async");
     
     dbtoaster::Program p;
     dbtoaster::Program::snapshot_t snap;
@@ -532,68 +550,7 @@ the final query result.
         /* Functions returning / computing the results of top level queries */
         map&lt;long,long&gt; get_COUNT(){
             map&lt;long,long&gt; __v_41;
-            {
-                long __accv_1;
-                long __v_7;
-                map&lt;boost::fusion::tuple&lt;long,long&gt;,long&gt; __v_40;
-                {
-                    map&lt;long,long&gt; __v_38;
-                    COUNT_1_E1_1_map::iterator ___y1_it = COUNT_1_E1_1.begin();
-                    COUNT_1_E1_1_map::iterator ___y1_end = COUNT_1_E1_1.end();
-                    for (; (___y1_it!=___y1_end); ++___y1_it)
-                    {
-                        long R2_A = (*___y1_it).R2_A;
-                        long map_ret = (*___y1_it).__av;
-                        __v_38.insert(__v_38.end(), make_pair(R2_A,(map_ret!=static_cast&lt;long&gt;(0))));
-                    }
-                    map&lt;long,long&gt;::iterator ___y2_it = __v_38.begin();
-                    map&lt;long,long&gt;::iterator ___y2_end = __v_38.end();
-                    for (; (___y2_it!=___y2_end); ++___y2_it)
-                    {
-                        long R2_A = (*___y2_it).first;
-                        long __prod_ret_1_1 = (*___y2_it).second;
-                        {
-                            map&lt;long,long&gt; __v_28;
-                            {
-                                boost::fusion::tuple&lt;long,long&gt; __v_27;
-                                {
-                                    long map_ret;
-                                    if (COUNT_1_E1_1.find(R2_A)!=COUNT_1_E1_1.end()) 
-                                        map_ret = (*COUNT_1_E1_1.find(R2_A)).__av;
-                                    else 
-                                        map_ret = static_cast<long>(0);
-                                    __v_27 = boost::fusion::make_tuple(map_ret,static_cast&lt;long&gt;(1));
-                                }
-                                __v_28.insert(__v_28.end(), make_pair(at_c&lt;0&gt;(__v_27),at_c&lt;1&gt;(__v_27)));
-                            }
-                            map&lt;long,long&gt;::iterator ___y3_it = __v_28.begin();
-                            map&lt;long,long&gt;::iterator ___y3_end = __v_28.end();
-                            for (; (___y3_it!=___y3_end); ++___y3_it)
-                            {
-                                long R2_C = (*___y3_it).first;
-                                long __prod_ret_2_2 = (*___y3_it).second;
-                                __v_40.insert(__v_40.end(), make_pair(boost::fusion::make_tuple(R2_A,R2_C),(__prod_ret_1_1*__prod_ret_2_2)));
-                            }
-                        }
-                    }
-                }
-                map&lt;boost::fusion::tuple&lt;long,long&gt;,long&gt;::iterator ___y4_it = __v_40.begin();
-                map&lt;boost::fusion::tuple&lt;long,long&gt;,long&gt;::iterator ___y4_end = __v_40.end();
-                for (; (___y4_it!=___y4_end); ++___y4_it)
-                {
-                    long R2_A = at_c&lt;0&gt;((*___y4_it).first);
-                    long R2_C = at_c&lt;1&gt;((*___y4_it).first);
-                    long prod = (*___y4_it).second;
-                    __v_7 = R2_C;
-                    {
-                        if (__v_41.find(__v_7)!=__v_41.end()) 
-                            __accv_1 = (*__v_41.find(__v_7)).second;
-                        else 
-                            __accv_1 = static_cast&lt;long&gt;(0);
-                        __v_41[__v_7] = (__accv_1+prod);
-                    }
-                }
-            }
+            /* Result computation based on COUNT_1_E1_1 */
             return __v_41;
         }
 

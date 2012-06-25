@@ -8,6 +8,8 @@
 #ifndef DBTOASTER_PROGRAM_BASE_H
 #define DBTOASTER_PROGRAM_BASE_H
 
+#define FUSION_MAX_VECTOR_SIZE 50
+
 #include <fstream>
 #include <map>
 #include <utility>

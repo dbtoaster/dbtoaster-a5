@@ -7,6 +7,7 @@ FILES=\
 	src/util/Function\
 	src/util/HyperGraph\
 	src/util/Fixpoint\
+	src/util/MainCpp\
 	src/util/ExternalCompiler\
 	src/util/SourceCode\
 	src/util/FreshVariable\
@@ -44,7 +45,7 @@ FILES=\
 	src/imperative/Imperative\
 	src/imperative/K3ToImperative\
 	src/imperative/ImperativeCompiler\
-	src/lib/Sources\
+        src/lib/Sources\
 	src/lib/StandardAdaptors\
 	src/lib/SliceableMap\
 	src/lib/Values\
@@ -160,6 +161,13 @@ doc: $(C_FILES) $(patsubst %,%.ml,$(TOPLEVEL_FILES))
 	 make -C doc
 
 #################################################
+
+
+src/util/MainCpp.ml : lib/dbt_c++/main.cpp
+	@echo "Generating $@ from $< :"
+	@echo "let code = \"" > $@
+	@cat $< | sed s/\"/\\\\\"/g >> $@
+	@echo "\";;" >> $@
 
 $(C_FILES) : %.cmo : %.ml
 	@if [ -f $(*).mli ] ; then \
