@@ -236,9 +236,8 @@ in
       "(R(A) + (A ^= B)) * S(A)";
    test ~scope:[var "A"; var "B"]  
         "Empty schema, Lift order" [] 
-   "(BETA ^= {B = 'FRANCE' }) * 
-    (ALPHA ^= (A + 1)) *-1 * ALPHA * BETA "
-  "  (-1 * ((A + 1)) * ({B = 'FRANCE'}))"
+   "(BETA ^= {B = 'FRANCE' }) * (ALPHA ^= (A + 1)) * -1 * ALPHA * BETA"
+   "(-1 * ((A + 1)) * ({B = 'FRANCE'}))"
 
 ;;
 let test msg input output =

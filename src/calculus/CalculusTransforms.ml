@@ -516,12 +516,19 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
             let new_eov = map_vars "n external output var" eov in
                CalcRing.mk_val (External(en, new_eiv, new_eov, et, em))
 
-         | Cmp(op, lhs, rhs) ->
+         | Cmp(op, lhs, rhs) when 
+            (List.mem lift_v (Arithmetic.vars_of_value lhs)) ||
+            (List.mem lift_v (Arithmetic.vars_of_value rhs)) ->
             let new_lhs = Arithmetic.eval_partial 
                               ~scope:[lift_v, val_sub " cmp expression"] lhs in
             let new_rhs = Arithmetic.eval_partial 
                               ~scope:[lift_v, val_sub " cmp expression"] rhs in
                CalcRing.mk_val (Cmp(op, new_lhs, new_rhs))
+
+         | Cmp(op, lhs, rhs) ->
+            CalcRing.mk_val (Cmp(op, lhs, rhs))
+
+
 (***** BEGIN EXISTS HACK *****)
          | Exists(subexp) -> CalcRing.mk_val (Exists(subexp))
             (* Subexp is rewritten.  No changes need to be made here *)
