@@ -1,9 +1,10 @@
 -- Unsupported features for this query
 --   CREATE VIEW (replaced with nested query)
+--   Predicate R1.total_revenue = MAX(R2.total_revenue) replaced by 
+--      (NOT EXISTS (SELECT 1 ... WHERE R2.total_revenue > R1.total_revenue))
 --   ORDER BY (ignored)
 
 INCLUDE 'test/queries/tpch/schemas_tiny.sql';
-
 
 SELECT s.suppkey, s.name, s.address, s.phone, R1.total_revenue 
 FROM supplier s, 
@@ -18,6 +19,6 @@ WHERE
                      FROM (SELECT l.suppkey, SUM(l.extendedprice * (1 - l.discount)) AS total_revenue
                             FROM lineitem l
                             WHERE l.shipdate >= DATE('1996-01-01')
-                            AND l.shipdate < DATE('1996-04-03')
+                            AND l.shipdate < DATE('1996-04-01')
                             GROUP BY l.suppkey) AS R2
                      WHERE R2.total_revenue > R1.total_revenue) );
