@@ -233,7 +233,13 @@ in
       "(R(A) + (A ^= B)) * {A < 3}";
    test "Lift in a sum, ovar on RHS" []
       "(R(A) + (A ^= B)) * S(A)"
-      "(R(A) + (A ^= B)) * S(A)"
+      "(R(A) + (A ^= B)) * S(A)";
+   test ~scope:[var "A"; var "B"]  
+        "Empty schema, Lift order" [] 
+   "(BETA ^= {B = 'FRANCE' }) * 
+    (ALPHA ^= (A + 1)) *-1 * ALPHA * BETA "
+  "  (-1 * ((A + 1)) * ({B = 'FRANCE'}))"
+
 ;;
 let test msg input output =
    log_test ("Nesting Rewrites ("^msg^")")
@@ -472,3 +478,5 @@ in
             (C1 ^= NPZL_7DKV_C) *
             (GKKEOF ^= (NPZL_7DKV_C * {(NPZL_7DKV_B * NPZL_7DKV_B)})) *
             (__sql_inline_not_1 ^= {NPZL_7DKV_C = 2}))))"
+            
+            
