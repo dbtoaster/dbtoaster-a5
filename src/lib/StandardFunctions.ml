@@ -149,9 +149,9 @@ let date_part (arglist:const_t list) (ftype:type_t) =
    match arglist with
       | [CString(part);  CDate(y,m,d)] -> 
          begin match String.uppercase part with
-            | "year"  -> CInt(y)
-            | "month" -> CInt(m)
-            | "day"   -> CInt(d)
+            | "YEAR"  -> CInt(y)
+            | "MONTH" -> CInt(m)
+            | "DAY"   -> CInt(d)
             | _       -> invalid_args "date_part" arglist ftype
          end
       | _ -> invalid_args "date_part" arglist ftype

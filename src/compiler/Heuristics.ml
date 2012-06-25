@@ -65,7 +65,7 @@ let covered_by_scope scope expr =
 let prepare_expr (scope:var_t list) (expr:expr_t) : 
                  (term_list * term_list * term_list * term_list) =
    let expr_terms = CalcRing.prod_list expr in
-   
+
    (* Extract constant terms *)
    let (const_terms, rest_terms) = 
       List.fold_left (fun (const_terms, rest_terms) term ->
@@ -77,6 +77,7 @@ let prepare_expr (scope:var_t list) (expr:expr_t) :
             | _ -> (const_terms, rest_terms @ [term])
       ) ([], []) expr_terms
    in
+
    (* Reorganize the rest *)
    let (rel_terms, lift_terms, value_terms) = 
        List.fold_left (fun (rels, lifts, values) term ->
@@ -115,9 +116,22 @@ type materialize_opt_t =
 let partition_expr (scope:var_t list) (event:Schema.event_t option) 
                    (expr:expr_t) : (expr_t * expr_t * expr_t * expr_t) =
 
+   Debug.print "LOG-HEURISTICS-PARTITIONING" (fun () -> 
+      "[Heuristics]  Partitioning - Entering partition_expr: " ^ 
+      "\n\t Expr: " ^ (string_of_expr expr)
+   ); 
+
    let (const_terms, rel_terms, lift_terms, value_terms) = 
       prepare_expr scope expr 
    in
+   
+   Debug.print "LOG-HEURISTICS-PARTITIONING" (fun () -> 
+      "[Heuristics]  Partitioning - after preparation: " ^ 
+      "\n\t Const: "    ^ (string_of_expr (CalcRing.mk_prod const_terms)) ^
+      "\n\t Relation: " ^ (string_of_expr (CalcRing.mk_prod rel_terms  )) ^
+      "\n\t Lift: "     ^ (string_of_expr (CalcRing.mk_prod lift_terms )) ^
+      "\n\t Value:  "   ^ (string_of_expr (CalcRing.mk_prod value_terms)) 
+   ); 
    
    let ivc_opt_enabled = 
       not (Debug.active "HEURISTICS-IGNORE-IVC-OPTIMIZATION") 
@@ -291,6 +305,13 @@ let partition_expr (scope:var_t list) (event:Schema.event_t option)
    in
    let final_rel_expr = CalcRing.mk_prod new_rlv_terms in
    let final_value_expr = CalcRing.mk_prod new_v_terms in
+      Debug.print "LOG-HEURISTICS-PARTITIONING" (fun () -> 
+         "[Heuristics]  Partitioning - done: " ^ 
+         "\n\t Const: "    ^ (string_of_expr final_const_expr) ^
+         "\n\t Relation: " ^ (string_of_expr final_rel_expr  ) ^
+         "\n\t Lift: "     ^ (string_of_expr final_lift_expr ) ^
+         "\n\t Value:  "   ^ (string_of_expr final_value_expr) 
+      ); 
       (final_const_expr, final_rel_expr, 
        final_lift_expr,  final_value_expr)
 
@@ -332,7 +353,9 @@ let partition_expr (scope:var_t list) (event:Schema.event_t option)
     subexpressions, or it does not contain relation subexpressions. In both 
     cases, this method suggests the incremental maintenance.
 *)
-let should_update (event:Schema.event_t) (expr:expr_t)  : bool =
+let rec should_update (event:Schema.event_t) (expr:expr_t)  : bool =
+   
+   let rcr = should_update event in
    
    if (Debug.active "HEURISTICS-ALWAYS-UPDATE") then true
    (* "HEURISTICS-ALWAYS-REPLACE" makes sense only for TLQ. *)
@@ -346,6 +369,14 @@ let should_update (event:Schema.event_t) (expr:expr_t)  : bool =
         
          let term_opt = optimize_expr (expr_scope, term_schema) term in
     
+         if not (CalcRing.try_cast_to_monomial term_opt) 
+         then begin
+            let local_do_update = rcr term_opt in 
+            (do_update || local_do_update,
+             do_replace || not (local_do_update)) 
+         end
+         else
+
          (* Graph decomposition *)
          let (do_update_graphs, do_replace_graphs) =  
             List.fold_left ( fun (do_update_graph, do_replace_graph) 
@@ -355,6 +386,15 @@ let should_update (event:Schema.event_t) (expr:expr_t)  : bool =
                let subexpr_opt = 
                   optimize_expr (expr_scope, subexpr_schema) subexpr 
                in
+
+               if not (CalcRing.try_cast_to_monomial subexpr_opt) 
+		         then begin
+                  let local_do_update = rcr subexpr_opt in 
+                  (do_update || local_do_update,
+                   do_replace || not (local_do_update)) 
+               end
+               else
+               
                (* Split the expression into four parts *)
                let (_, rel_expr, lift_expr, _) = 
                   partition_expr expr_scope (Some(event)) subexpr_opt 
@@ -381,6 +421,12 @@ let should_update (event:Schema.event_t) (expr:expr_t)  : bool =
       then (not (Debug.active "HEURISTICS-PREFER-REPLACE"))
       else do_update  
     
+let mk_aggsum (e: expr_t) (schema: var_t list) =
+   let expr_ovars = snd (schema_of_expr e) in
+   let expr_schema = ListAsSet.inter expr_ovars schema in
+   if (ListAsSet.seteq expr_ovars expr_schema) then e
+   else CalcRing.mk_val (AggSum(expr_schema, e))
+   
 (******************************************************************************)
 
 (** Perform partial materialization of a given expression according to 
@@ -427,6 +473,25 @@ let rec materialize ?(scope:var_t list = []) (db_schema:Schema.t)
       List.fold_left ( fun ((term_todos, term_mats), i) (term_schema, term) ->
 
          let term_opt = optimize_expr (expr_scope, term_schema) term in
+         
+         if not (CalcRing.try_cast_to_monomial term_opt) 
+         then begin
+            Debug.print "LOG-HEURISTICS-DETAIL" (fun () -> 
+               "[Heuristics] Not a monomial in PD: " ^
+               (string_of_expr term_opt)
+            );
+            let term_name = (prefix^(string_of_int i)) in
+            
+            let (new_term_todos, new_term_mats) = 
+               materialize ~scope:scope db_schema history
+                           term_name event 
+                           (mk_aggsum term_opt term_schema)
+            in
+               ((term_todos @ new_term_todos,
+                 CalcRing.mk_sum [term_mats; new_term_mats]),
+                i + 1)
+         end
+         else begin
 
             Debug.print "LOG-HEURISTICS-DETAIL" (fun () ->
                "[Heuristics] PolyDecomposition Before Optimization: " ^ 
@@ -439,43 +504,61 @@ let rec materialize ?(scope:var_t list = []) (db_schema:Schema.t)
 
             (* Graph decomposition *)
             let ((new_term_todos, new_term_mats), k) =  
-            List.fold_left ( fun ((todos, mat_expr), j) 
-                                 (subexpr_schema, subexpr) ->
-                        
-               (* Subexpression optimization *)                    
-               let subexpr_opt = 
-                  optimize_expr (expr_scope, subexpr_schema) subexpr 
-               in
-                        
-               let subexpr_name = (prefix^(string_of_int j)) in
+               List.fold_left ( fun ((todos, mat_expr), j) 
+                                    (subexpr_schema, subexpr) ->
+
+                  let subexpr_name = (prefix^(string_of_int j)) in
+                                                
+                  (* Subexpression optimization *)                    
+                  let subexpr_opt = 
+                     optimize_expr (expr_scope, subexpr_schema) subexpr 
+                  in
+
+                  if not (CalcRing.try_cast_to_monomial subexpr_opt) 
+                  then begin
+                     Debug.print "LOG-HEURISTICS-DETAIL" (fun () -> 
+                        "[Heuristics] Not a monomial in GD: " ^
+                        (string_of_expr subexpr_opt)
+                     );
+                     let (todos_subexpr, mat_subexpr) = 
+                        materialize ~scope:scope db_schema history 
+                                    subexpr_name event 
+                                    (mk_aggsum subexpr_opt subexpr_schema)
+                     in
+                        ((todos @ todos_subexpr,
+                          CalcRing.mk_prod [mat_expr; mat_subexpr]),
+                         j + 1)
+                  end
+                  else begin 
                                 
-               Debug.print "LOG-HEURISTICS-DETAIL" (fun () -> 
-                  "[Heuristics] Graph decomposition: " ^ 
-                  (string_of_expr subexpr) ^
-                  "\n\t Scope: [" ^ (string_of_vars expr_scope)^"]" ^
-                  "\n\t Schema: [" ^ (string_of_vars subexpr_schema) ^ "]" ^
-                  "\n\t MapName: " ^ subexpr_name
-               );
+                     Debug.print "LOG-HEURISTICS-DETAIL" (fun () -> 
+                        "[Heuristics] Graph decomposition: " ^
+                        "\n\t Expr: " ^ (string_of_expr subexpr) ^
+                        "\n\t Expr opt: " ^ (string_of_expr subexpr_opt) ^
+                        "\n\t Scope: [" ^ (string_of_vars expr_scope)^"]" ^
+                        "\n\t Schema: [" ^ (string_of_vars subexpr_schema)^"]"^
+                        "\n\t MapName: " ^ subexpr_name
+                     );
         
-               let (todos_subexpr, mat_subexpr) = 
-                  materialize_expr db_schema history subexpr_name event 
-                                   expr_scope subexpr_schema subexpr_opt 
-               in
-                  Debug.print "LOG-HEURISTICS-DETAIL" (fun () -> 
-                     "[Heuristics] Materialized form: " ^
-                     (string_of_expr mat_subexpr)
-                  );
-                  ( ( todos @ todos_subexpr, 
-                      CalcRing.mk_prod [mat_expr; mat_subexpr] ), 
-                    j + 1)  
-    
-            ) (([], CalcRing.one), i)
-              (snd (decompose_graph expr_scope (term_schema, term_opt)))
-         in
-            ( ( term_todos @ new_term_todos, 
-                CalcRing.mk_sum [term_mats; new_term_mats] ), 
-              k)
-                    
+                     let (todos_subexpr, mat_subexpr) = 
+                        materialize_expr db_schema history subexpr_name event 
+                                         expr_scope subexpr_schema subexpr_opt 
+                     in
+                     Debug.print "LOG-HEURISTICS-DETAIL" (fun () -> 
+                        "[Heuristics] Materialized form: " ^
+                        (string_of_expr mat_subexpr)
+                     );
+                     ( ( todos @ todos_subexpr, 
+                         CalcRing.mk_prod [mat_expr; mat_subexpr] ), 
+                       j + 1)  
+                  end
+               ) (([], CalcRing.one), i)
+                  (snd (decompose_graph expr_scope (term_schema, term_opt)))
+            in
+               ( ( term_todos @ new_term_todos, 
+                   CalcRing.mk_sum [term_mats; new_term_mats] ), 
+                 k)
+         end           
       ) (([], CalcRing.zero), 1) (decompose_poly expr)
    )
    in begin
@@ -485,8 +568,9 @@ let rec materialize ?(scope:var_t list = []) (db_schema:Schema.t)
       );
       if (Debug.active "HEURISTICS-IGNORE-FINAL-OPTIMIZATION") 
       then (todos, mat_expr)
-      else let schema = snd (schema_of_expr mat_expr) in
-           (todos, optimize_expr (expr_scope, schema) mat_expr)
+      else 
+         let schema = snd (schema_of_expr mat_expr) in
+            (todos, optimize_expr (expr_scope, schema) mat_expr)
    end
     
 (* Materialization of an expression of the form mk_prod [ ...] *)   
@@ -494,6 +578,13 @@ and materialize_expr (db_schema:Schema.t) (history:ds_history_t)
                      (prefix:string) (event:Schema.event_t option)
                      (scope:var_t list) (schema:var_t list) 
                      (expr:expr_t) : (ds_t list * expr_t) =
+
+   Debug.print "LOG-HEURISTICS-DETAIL" (fun () ->
+      "[Heuristics] Entering materialize_expr" ^
+      "\n\t Map: "^prefix^
+      "\n\t Expr: "^(string_of_expr expr)^
+      "\n\t Scope: ["^(string_of_vars scope)^"]"
+   );
 
    (* Divide the expression into four parts *)
    let (const_expr, rel_expr, lift_expr, value_expr) = 

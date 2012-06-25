@@ -174,6 +174,9 @@ sig
    val cast_to_monomial: expr_t -> (leaf_t list)
    exception CannotCastToMonomialException of expr_t
 
+   (** check if an expression is a monomial *)
+   val try_cast_to_monomial: expr_t -> bool
+
    (** simplifies expressions by unnesting sums of sums and products
       of products, and simplifies using ones and zeros.
       The only real difference to the function polynomial is that
@@ -382,6 +385,10 @@ struct
          ( 1, m)::[] -> m
        | (-1, m)::[] -> failwith "Ring.cast_to_monomial TODO"
        | _ -> raise (CannotCastToMonomialException e)
+
+   let try_cast_to_monomial (e: expr_t): bool =
+      try let _ = cast_to_monomial e in true
+      with CannotCastToMonomialException _ -> false
 
    let simplify (e: expr_t) =
       apply_to_leaves (fun x -> mk_val x) e
