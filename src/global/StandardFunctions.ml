@@ -29,7 +29,23 @@ let declare_function (name:string)
       StringMap.add (String.uppercase name) fn !standard_functions
 ;;
 
-exception InvalidInvocation of string
+(** An invalid function invocation -- This is typically non-fatal, as long as it
+    happens before the interpreter stage, as it means that insufficient 
+    information exists to pre-evaluate the specified function *)
+exception InvalidInvocation of string;;
+
+(** A runtime function invocation error.  This is always fatal. *)
+exception FatalInvocationError of string;;
+
+(**/**)
+let invalid_args (fn:string) (arglist:const_t list) (ftype:type_t): const_t =
+   raise (FatalInvocationError(
+      "Invalid arguments of "^fn^(begin match ftype with
+         | TAny -> "" 
+         | _ -> ":"^(string_of_type ftype)
+      end)^"("^(ListExtras.string_of_list ~sep:"," string_of_const arglist)^")"
+   ))
+(**/**)
 
 (**
    Invoke an arithmetic function
@@ -49,8 +65,7 @@ let fp_div (arglist:const_t list) (ftype:type_t) =
    begin match arglist with
       | [v]     -> Constants.Math.div1 ftype v
       | [v1;v2] -> Constants.Math.div2 ftype v1 v2
-      | _ ->
-         failwith "Invalid arguments to division function"
+      | _ -> invalid_args ftype "fp_div" arglist
    end
 ;; declare_function "/" fp_div ;;
 
@@ -63,7 +78,7 @@ let min_of_list (arglist:const_t list) (ftype:type_t) =
       match ftype with TInt -> (CInt(max_int), TInt)
                      | TAny 
                      | TFloat -> (CFloat(max_float), TFloat)
-                     | _ -> failwith ("min of "^(string_of_type ftype))
+                     | _ -> invalid_args "min" arglist ftype
    in List.fold_left min start (List.map (Constants.type_cast cast_type) 
                                          arglist)
 ;; declare_function "min" min_of_list ;;
@@ -77,7 +92,7 @@ let max_of_list (arglist:const_t list) (ftype:type_t) =
       match ftype with TInt -> (CInt(min_int), TInt)
                      | TAny 
                      | TFloat -> (CFloat(min_float), TFloat)
-                     | _ -> failwith ("max of "^(string_of_type ftype))
+                     | _ -> invalid_args "max" arglist ftype
    in List.fold_left max start (List.map (Constants.type_cast cast_type) 
                                          arglist)
 ;; declare_function "max" max_of_list ;;
@@ -90,10 +105,13 @@ let max_of_list (arglist:const_t list) (ftype:type_t) =
 *)
 let date_part (arglist:const_t list) (ftype:type_t) =
    match arglist with
-      | [CString("year");  CDate(y,_,_)] -> CInt(y)
-      | [CString("month"); CDate(_,m,_)] -> CInt(m)
-      | [CString("day");   CDate(_,_,d)] -> CInt(d)
-      | _ -> failwith ("Invalid arguments to date_part("^
-                       (ListExtras.string_of_list string_of_const arglist)^")")
+      | [CString(part);  CDate(y,m,d)] -> 
+         begin match String.uppercase part with
+            | "year"  -> CInt(y)
+            | "month" -> CInt(m)
+            | "day"   -> CInt(d)
+            | _       -> invalid_args "date_part" arglist ftype
+         end
+      | _ -> invalid_args "date_part" arglist ftype
 ;; declare_function "date_part" date_part ;;
 
