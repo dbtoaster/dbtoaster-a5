@@ -86,6 +86,7 @@ let keywords =
         "ALL", ALL;
         "SOME", SOME;
         "INCLUDE", INCLUDE;
+        "EXTRACT", EXTRACT;
     ]
 let _ = hashtbl_of_pair_list keyword_table keywords
 

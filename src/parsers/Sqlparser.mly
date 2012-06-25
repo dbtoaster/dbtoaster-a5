@@ -88,6 +88,7 @@ let bind_select_vars q =
 %token JOIN INNER OUTER LEFT RIGHT ON NATURAL EXISTS IN SOME ALL UNION
 %token CREATE TABLE FROM USING DELIMITER SELECT WHERE GROUP BY HAVING ORDER
 %token SOCKET FILE FIXEDWIDTH VARSIZE OFFSET ADJUSTBY SETVALUE LINE DELIMITED
+%token EXTRACT
 %token POSTGRES RELATION PIPE
 %token ASC DESC
 %token SOURCE ARGS INSTANCE TUPLE ADAPTOR BINDINGS STREAM
@@ -300,6 +301,14 @@ expression:
 | ID LPAREN  RPAREN                   { Sql.ExternalFn($1,[]) }
 | ID LPAREN functionParameters RPAREN { Sql.ExternalFn($1,$3) }
 | DATE LPAREN STRING RPAREN     { Sql.Const(Constants.parse_date $3) }
+| EXTRACT LPAREN ID FROM variable RPAREN {
+      let field = String.uppercase $3 in
+      match field with
+         | "YEAR" | "MONTH" | "DAY" -> 
+            Sql.ExternalFn("date_part", [Sql.Const(CString(field)); 
+                                         Sql.Var($5)])
+         | _ -> bail ("Invalid field '"^field^"' referenced in EXTRACT")
+   }
 
 functionParameters: 
 | expression COMMA functionParameters { $1::$3 }
