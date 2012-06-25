@@ -32,7 +32,7 @@ let rec combine_values ?(aggressive=false) (expr:C.expr_t): C.expr_t =
       "Combine Values: "^(CalculusPrinter.string_of_expr expr) 
    );
    let rcr = combine_values in
-   let merge calc_op val_op e =
+   let merge merge_consts calc_op val_op e =
       let (val_list, calc_list) = List.fold_right (fun term (v, c) ->
          match term with
             | CalcRing.Val(Value(new_v)) -> (new_v :: v, c)
@@ -67,8 +67,9 @@ let rec combine_values ?(aggressive=false) (expr:C.expr_t): C.expr_t =
                                             variable_values
          in
          let final_term_components = 
-            if List.length partitioned_variable_values = 1
-            then [number_values @ (List.hd partitioned_variable_values)]
+            if (List.length partitioned_variable_values > 0) && merge_consts
+            then (number_values @ (List.hd partitioned_variable_values)) ::
+                     (List.tl partitioned_variable_values)
             else number_values :: partitioned_variable_values
          in
             calc_op (List.map (fun val_list -> CalcRing.mk_val (
@@ -79,8 +80,8 @@ let rec combine_values ?(aggressive=false) (expr:C.expr_t): C.expr_t =
       else calc_op (calc_list @ [val_term])
    in
    CalcRing.fold
-      (merge CalcRing.mk_sum  ValueRing.mk_sum)
-      (merge CalcRing.mk_prod ValueRing.mk_prod)
+      (merge true  CalcRing.mk_sum  ValueRing.mk_sum)
+      (merge false CalcRing.mk_prod ValueRing.mk_prod)
       (fun x -> CalcRing.mk_prod [CalcRing.mk_val (Value(mk_int (-1))); x])
       (fun lf -> (match lf with
          | Cmp((Neq|Lt|Gt ),x,y) when x = y  -> 
