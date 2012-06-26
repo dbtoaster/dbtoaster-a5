@@ -236,11 +236,16 @@ clean:
 	make -C lib clean
 	rm -f lib/.deps
 
-distclean: clean
+superclean: clean
+	rm -f $(shell find src -name "*.cmi") $(shell find src -name "*.cmo")
+	rm -f $(shell find src -name "*.cmxi") $(shell find src -name "*.cmx")
+	      
+
+distclean: superclean
 	make -C doc clean
 	make -C test/queries clean
 
 #################################################
 
 .PHONY: all clean distclean test states doc runtimelibs fast querytest queries\
-        versioncheck localtest
+        versioncheck localtest superclean

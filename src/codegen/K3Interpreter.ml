@@ -256,7 +256,8 @@ struct
          | SingleMap(m) -> TupleList(smc_to_tlc m)
          | DoubleMap(m) -> ListCollection(dmc_to_c m)
          | MapCollection(m) -> ListCollection(nmc_to_c m)
-         | _ -> bail ~expr:expr ("Can't inline collection")
+         | _ -> bail ~expr:expr ("Can't inline collection: "^
+                                 (K3Value.string_of_value c))
     
     let merge_lists ?(expr=None) ?(op = (bin_op Constants.Math.sum)) 
                     tuples_to_merge =
@@ -277,12 +278,39 @@ struct
       ) (ListExtras.reduce_assoc tuples_by_field)
     
     let rec combine_impl ?(expr = None) c_lists =
+      Debug.print "LOG-COMBINE" (fun () ->
+         "Combining: \n"^(ListExtras.string_of_list ~sep:"\n" 
+                              K3Value.string_of_value c_lists)^"\n\n"
+      );
       let (inlined_lists:K3Value.t list) = 
          List.map (inline_collection ~expr:expr) c_lists 
       in
+      (* ListCollection[] has an indeterminate type.  Disregard it when figuring
+         out the type of the list computations.  Otherwise, use the first 
+         list element to figure out the return type and do a safety check on the 
+         rest. *)
+      let (list_representative) = 
+      match List.fold_left (fun curr_rep candidate ->
+         match (curr_rep, candidate) with
+            | (None, ListCollection []) -> None
+            | (None, ListCollection _)  -> Some(ListCollection [])
+            | (None, TupleList _)       -> Some(TupleList [])
+            | ((Some(TupleList _)), (ListCollection [] | TupleList _))
+                                        -> curr_rep
+            | ((Some(ListCollection _)), ListCollection _)
+                                        -> curr_rep
+            | (None, _) -> bail ~expr:expr ("combine of non-collection: "^
+                                          (K3Value.string_of_value candidate))
+            | (Some r, _) -> bail ~expr:expr ("combine of mismatched types: \n"^
+                               "Expected: "^(K3Value.string_of_value r)^"\n"^
+                               "Got: "^(K3Value.string_of_value candidate))
+      ) None inlined_lists with
+         | None -> ListCollection []
+         | Some(s) -> s
+      in
       (* Assume that the list types are identical *)
       let (op,cons) =
-         begin match List.hd inlined_lists with
+         begin match list_representative with
             | TupleList _ -> ((bin_op Constants.Math.sum), 
                               (fun x -> TupleList(x)))
             | ListCollection _ -> ((fun x y -> combine_impl ~expr:expr [x; y]),
@@ -431,7 +459,7 @@ struct
           let ret = (get_eval body) (bind_arg expr arg th v) db in
           Debug.print "TRACE-INTERPRETER" (fun () ->
             "Evaluating: "^
-            (match expr with | Some(s) -> K3.string_of_expr s 
+            (match expr with | Some(s) -> K3.nice_string_of_expr s []
                              | None -> "[expression unavailable]")^
             " of "^(K3Value.string_of_value v)^" ==> "^
             (K3Value.string_of_value ret) 

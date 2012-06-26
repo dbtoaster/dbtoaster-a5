@@ -3,7 +3,7 @@
 --   LIMIT    (ignored)
 --   MIN      (replaced with equivalent query)
 
-INCLUDE 'test/queries/tpch/schemas.sql';
+INCLUDE 'test/queries/tpch/schemas_big.sql';
 
 SELECT s.acctbal, s.name, n.name, p.partkey, p.mfgr, s.address, s.phone, 
        s.comment
