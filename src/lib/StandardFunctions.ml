@@ -156,7 +156,7 @@ let date_part (arglist:const_t list) (ftype:type_t) =
          end
       | _ -> invalid_args "date_part" arglist ftype
 ;; declare_std_function "date_part" date_part 
-               (function [TDate] -> TInt | _-> inference_error ());;
+               (function [TString; TDate] -> TInt | _-> inference_error ());;
 
 (**
    Regular expression matching
