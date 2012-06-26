@@ -1,11 +1,11 @@
 {
-  :path => "test/queries/tpch/query3.sql",
+  :path => "test/queries/tpch/query2.sql",
   :datasets => {
     "standard" => {
       :toplevels => {
-        "QUERY3" => {
+        "COUNT" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query3.csv"),
+          :expected => { }
         }
       }
     },
@@ -13,19 +13,19 @@
     "tiny" => {
       :subs => [ [/schemas\.sql/, "schemas_tiny.sql"] ],
       :toplevels => {
-        "QUERY3" => {
+        "COUNT" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query3_tiny.csv")
+          :expected => { }
         }
       }
     },
-
+    
     "big" => {
       :subs => [ [/schemas\.sql/, "schemas_big.sql"] ],
       :toplevels => {
-        "QUERY3" => {
+        "COUNT" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query3_big.csv")
+          :expected => results_file("test/results/tpch/query2_big.csv")
         }
       }
     },
@@ -33,9 +33,9 @@
     "standard_del" => {
       :subs => [ [/schemas\.sql/, "schemas_del.sql"] ],
       :toplevels => {
-        "QUERY3" => {
+        "COUNT" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query3_del.csv")
+          :expected => { }
         }
       }
     },
@@ -43,22 +43,24 @@
     "tiny_del" => {
       :subs => [ [/schemas\.sql/, "schemas_tiny_del.sql"] ],
       :toplevels => {
-        "QUERY3" => {
+        "COUNT" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query3_tiny_del.csv")
+          :expected => { }
         }
       }
     },
-
+    
     "big_del" => {
       :subs => [ [/schemas\.sql/, "schemas_big_del.sql"] ],
       :toplevels => {
-        "QUERY3" => {
+        "COUNT" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query3_big_del.csv")
+          :expected => results_file("test/results/tpch/query2_big_del.csv")
         }
       }
     }
     
   }
 }
+
+

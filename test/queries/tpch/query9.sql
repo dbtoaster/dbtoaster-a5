@@ -17,6 +17,6 @@ FROM (
     AND  p.partkey = l.partkey
     AND  o.orderkey = l.orderkey 
     AND  s.nationkey = n.nationkey 
---    AND  p.name like '%[COLOR]%'
+    AND  (p.name LIKE '%[COLOR]%')
   ) AS profit 
 GROUP BY nation, o_year;

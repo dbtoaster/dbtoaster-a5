@@ -8,8 +8,8 @@ SELECT  total.o_year,
         (SUM(local.volume) / SUM(total.volume)) AS mkt_share
 FROM
   (
-    SELECT DATE_PART('year', o.orderdate) AS o_year,
-           l.extendedprice * (1-l.discount) AS volume
+    SELECT o.orderdate AS o_year,
+           DATE_PART('year', o.orderdate) AS o_year,
     FROM   part p, supplier s, lineitem l, orders o, customer c, nation n1,
            nation n2, region r
     WHERE  p.partkey = l.partkey
@@ -25,7 +25,8 @@ FROM
       AND  n2.name = 'BRAZIL'
   ) local,
   (
-    SELECT DATE_PART('year', o.orderdate) AS o_year,
+    SELECT o.orderdate AS o_year,
+--           DATE_PART('year', o.orderdate) AS o_year,
            l.extendedprice * (1-l.discount) AS volume
     FROM   part p, supplier s, lineitem l, orders o, customer c, nation n1,
            nation n2, region r

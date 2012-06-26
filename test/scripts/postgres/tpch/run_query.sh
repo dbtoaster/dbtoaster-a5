@@ -12,8 +12,7 @@ DATASET="TPCH_standard"
 OUTPUT_FILE=$QUERY
 
 case $2 in
-   standard)     echo "STD"
-                 DATASET="TPCH_standard"
+   standard)     DATASET="TPCH_standard"
                  OUTPUT_FILE=${QUERY}.csv
                  ;;
    standard_del) DATASET="TPCH_standard_del"

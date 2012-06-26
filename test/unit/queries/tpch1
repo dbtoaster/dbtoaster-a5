@@ -5,85 +5,272 @@
       :toplevels => {
         "SUM_QTY" => {
           :type => :onelevel,
-          :expected => {
-            ["N", "F"] =>  1041,
-            ["A", "F"] => 37474,
-            ["R", "F"] => 36511,
-            ["N", "O"] => 53826,
-          }
+          :expected => results_file("test/results/tpch/query1_sumqty.csv")
         },
         
         "SUM_BASE_PRICE" => {
           :type => :onelevel,
-          :expected => {
-            ["N", "F"] =>        1041301.07,
-            ["A", "F"] =>       37569624.64,
-            ["R", "F"] =>       36570841.24,
-            ["N", "O"] =>  54006481.0399999,
-          }
+          :expected => results_file("test/results/tpch/query1_sumbaseprice.csv")
         },
         
         "SUM_DISC_PRICE" => {
           :type => :onelevel,
-          :expected => {
-            ["N", "F"] =>       999060.898,
-            ["A", "F"] =>     35676192.097,
-            ["R", "F"] =>    34738472.8758,
-            ["N", "O"] => 51302903.5496999,
-          }
+          :expected => results_file("test/results/tpch/query1_sumdiscprice.csv")
         },
         
         "SUM_CHARGE" => {
           :type => :onelevel,
-          :expected => {
-            ["N", "F"] =>    1036450.80228,
-            ["A", "F"] =>  37101416.222424,
-            ["R", "F"] => 36169060.1121929,
-            ["N", "O"] => 53346924.3385249,
-          }
+          :expected => results_file("test/results/tpch/query1_sumcharge.csv")
         },
         
         "AVG_QTY" => {
           :type => :onelevel,
-          :expected => {
-            ["N", "F"] => 27.3947368421052632,
-            ["A", "F"] => 25.3545331529093369,
-            ["R", "F"] => 25.0590253946465340,
-            ["N", "O"] => 25.7910876856732151,
-          }
+          :expected => results_file("test/results/tpch/query1_avgqty.csv")
         },
         
         "AVG_PRICE" => {
           :type => :onelevel,
-          :expected => {
-            ["N", "F"] => 27402.6597368421,
-            ["A", "F"] => 25419.2318267929,
-            ["R", "F"] => 25100.0969389156,
-            ["N", "O"] =>  25877.566382367,
-          }
+          :expected => results_file("test/results/tpch/query1_avgprice.csv")
         },
         
         "AVG_DISC" => {
           :type => :onelevel,
-          :expected => {
-            ["N", "F"] => 0.0428947368421053,
-            ["A", "F"] => 0.0508660351826795,
-            ["R", "F"] => 0.0500274536719287,
-            ["N", "O"] => 0.0501245807379013,
-          }
+          :expected => results_file("test/results/tpch/query1_avgdisc.csv")
         },
         
         "COUNT_ORDER" => {
           :type => :onelevel,
-          :expected => {
-            ["N", "F"] =>   38,
-            ["A", "F"] => 1478,
-            ["R", "F"] => 1457,
-            ["N", "O"] => 2087,
-          }
+          :expected => results_file("test/results/tpch/query1_countorder.csv")
+        }
+      }
+    },
+    
+    "tiny" => {
+      :subs => [ [/schemas\.sql/, "schemas_tiny.sql"] ],
+      :toplevels => {
+        "SUM_QTY" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query1_sumqty_tiny.csv")
+        },
+        
+        "SUM_BASE_PRICE" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query1_sumbaseprice_tiny.csv")
+        },
+        
+        "SUM_DISC_PRICE" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query1_sumdiscprice_tiny.csv")
+        },
+        
+        "SUM_CHARGE" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query1_sumcharge_tiny.csv")
+        },
+        
+        "AVG_QTY" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query1_avgqty_tiny.csv")
+        },
+        
+        "AVG_PRICE" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query1_avgprice_tiny.csv")
+        },
+        
+        "AVG_DISC" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query1_avgdisc_tiny.csv")
+        },
+        
+        "COUNT_ORDER" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query1_countorder_tiny.csv")
+        }
+      }
+    },
+    
+    "big" => {
+      :subs => [ [/schemas\.sql/, "schemas_big.sql"] ],
+      :toplevels => {
+        "SUM_QTY" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query1_sumqty_big.csv")
+        },
+        
+        "SUM_BASE_PRICE" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query1_sumbaseprice_big.csv")
+        },
+        
+        "SUM_DISC_PRICE" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query1_sumdiscprice_big.csv")
+        },
+        
+        "SUM_CHARGE" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query1_sumcharge_big.csv")
+        },
+        
+        "AVG_QTY" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query1_avgqty_big.csv")
+        },
+        
+        "AVG_PRICE" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query1_avgprice_big.csv")
+        },
+        
+        "AVG_DISC" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query1_avgdisc_big.csv")
+        },
+        
+        "COUNT_ORDER" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query1_countorder_big.csv")
+        }
+      }
+    },
+    
+    "standard_del" => {
+      :subs => [ [/schemas\.sql/, "schemas_del.sql"] ],
+      :toplevels => {
+        "SUM_QTY" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query1_sumqty_del.csv")
+        },
+        
+        "SUM_BASE_PRICE" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query1_sumbaseprice_del.csv")
+        },
+        
+        "SUM_DISC_PRICE" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query1_sumdiscprice_del.csv")
+        },
+        
+        "SUM_CHARGE" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query1_sumcharge_del.csv")
+        },
+        
+        "AVG_QTY" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query1_avgqty_del.csv")
+        },
+        
+        "AVG_PRICE" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query1_avgprice_del.csv")
+        },
+        
+        "AVG_DISC" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query1_avgdisc_del.csv")
+        },
+        
+        "COUNT_ORDER" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query1_countorder_del.csv")
+        }
+      }
+    },
+    
+    "tiny_del" => {
+      :subs => [ [/schemas\.sql/, "schemas_tiny_del.sql"] ],
+      :toplevels => {
+        "SUM_QTY" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query1_sumqty_tiny_del.csv")
+        },
+        
+        "SUM_BASE_PRICE" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query1_sumbaseprice_tiny_del.csv")
+        },
+        
+        "SUM_DISC_PRICE" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query1_sumdiscprice_tiny_del.csv")
+        },
+        
+        "SUM_CHARGE" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query1_sumcharge_tiny_del.csv")
+        },
+        
+        "AVG_QTY" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query1_avgqty_tiny_del.csv")
+        },
+        
+        "AVG_PRICE" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query1_avgprice_tiny_del.csv")
+        },
+        
+        "AVG_DISC" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query1_avgdisc_tiny_del.csv")
+        },
+        
+        "COUNT_ORDER" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query1_countorder_tiny_del.csv")
+        }
+      }
+    },
+    
+    "big_del" => {
+      :subs => [ [/schemas\.sql/, "schemas_big_del.sql"] ],
+      :toplevels => {
+        "SUM_QTY" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query1_sumqty_big_del.csv")
+        },
+        
+        "SUM_BASE_PRICE" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query1_sumbaseprice_big_del.csv")
+        },
+        
+        "SUM_DISC_PRICE" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query1_sumdiscprice_big_del.csv")
+        },
+        
+        "SUM_CHARGE" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query1_sumcharge_big_del.csv")
+        },
+        
+        "AVG_QTY" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query1_avgqty_big_del.csv")
+        },
+        
+        "AVG_PRICE" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query1_avgprice_big_del.csv")
+        },
+        
+        "AVG_DISC" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query1_avgdisc_big_del.csv")
+        },
+        
+        "COUNT_ORDER" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query1_countorder_big_del.csv")
         }
       }
     }
+    
+    
   }
 }
 
