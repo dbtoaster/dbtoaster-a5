@@ -56,7 +56,7 @@ dbtoaster.cmxa: makefile $(OPT_FILES)
 			  "($(patsubst ../../src/lib/%.cmx,%,$@) unbuilt)"
 
 clean: 
-	rm -f dbtoaster.cma dbtoaster.cmxa
+	rm -f dbtoaster.cma dbtoaster.cmxa dbtoaster.a
 
 .PHONY: all clean
 	echo $(OCAMLCC)
