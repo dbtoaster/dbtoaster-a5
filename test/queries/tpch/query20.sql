@@ -1,7 +1,7 @@
 -- Unsupported features for this query
 --   ORDER BY (ignored)
 
-INCLUDE 'test/queries/tpch/schemas_tiny.sql';
+INCLUDE 'test/queries/tpch/schemas.sql';
 
 SELECT s.name, s.address 
 FROM supplier s, nation n

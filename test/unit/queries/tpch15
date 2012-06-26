@@ -1,0 +1,78 @@
+{
+  :path => "test/queries/tpch/query15.sql",
+  :datasets => {
+    "standard" => {
+      :toplevels => {
+        "COUNT" => {
+          :type => :onelevel,
+          :expected => {
+            [10,'Supplier#000000010','Saygah3gYWMp72i PY','34-852-489-8585',797313.383800000000] => 1
+          }
+        }
+      }
+    },
+    
+    "tiny" => {
+      :subs => [ [/schemas\.sql/, "schemas_tiny.sql"] ],
+      :toplevels => {
+        "COUNT" => {
+          :type => :onelevel,
+          :expected => {
+            [10,'Supplier#000000010','Saygah3gYWMp72i PY','34-852-489-8585',221085.065800000000] => 1            
+          }
+        }
+      }
+    },
+    
+    "big" => {
+      :subs => [ [/schemas\.sql/, "schemas_big.sql"] ],
+      :toplevels => {
+        "COUNT" => {
+          :type => :onelevel,
+          :expected => {
+            [677,'Supplier#000000677','8mhrffG7D2WJBSQbOGstQ','23-290-639-3315',1614410.292800000000] => 1
+          }
+        }
+      }
+    },
+    
+    "standard_del" => {
+      :subs => [ [/schemas\.sql/, "schemas_del.sql"] ],
+      :toplevels => {
+        "COUNT" => {
+          :type => :onelevel,
+          :expected => {
+            [10,'Supplier#000000010','Saygah3gYWMp72i PY','34-852-489-8585',246172.909000000000] => 1
+          }
+        }
+      }
+    },
+    
+    "tiny_del" => {
+      :subs => [ [/schemas\.sql/, "schemas_tiny_del.sql"] ],
+      :toplevels => {
+        "COUNT" => {
+          :type => :onelevel,
+          :expected => { 
+            [3,'Supplier#000000003','q1,G3Pj6OjIuUYfUoH18BFTKP5aU9bEV3','11-383-516-1199',27260.457600000000] => 1
+          }
+        }
+      }
+    },
+    
+    "big_del" => {
+      :subs => [ [/schemas\.sql/, "schemas_big_del.sql"] ],
+      :toplevels => {
+        "COUNT" => {
+          :type => :onelevel,
+          :expected => {
+            [590,'Supplier#000000590','KhRtsL4Foycp2hUwg bEHkDusXAf','19-277-247-1833',476313.342800000000] => 1
+          }
+        }
+      }
+    }
+    
+  }
+}
+
+

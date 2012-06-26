@@ -45,7 +45,7 @@
       :toplevels => {
         "QUERY3" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query3_tiny_del.csv")
+          :expected => { }
         }
       }
     },

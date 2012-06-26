@@ -3,7 +3,7 @@
 --   INTERVAL (inlined into constant)
 --   ORDER BY (ignored)
 
-INCLUDE 'test/queries/tpch/schemas.sql';
+INCLUDE 'test/queries/tpch/schemas_tiny.sql';
 
 SELECT  p.brand,
         p.type,

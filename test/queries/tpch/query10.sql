@@ -2,10 +2,10 @@
 --   INTERVAL (inlined into constant)
 --   ORDER BY (ignored)
 
-INCLUDE 'test/queries/tpch/schemas.sql';
+INCLUDE 'test/queries/tpch/schemas_tiny.sql';
 
 SELECT  c.custkey, c.name, 
-        sum(l.extendedprice * (1 - l.discount)) AS revenue, 
+        SUM(l.extendedprice * (1 - l.discount)) AS revenue, 
         c.acctbal,
         n.name,
         c.address,

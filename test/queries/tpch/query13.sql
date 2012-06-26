@@ -5,7 +5,7 @@
 
 INCLUDE 'test/queries/tpch/schemas.sql';
 
-SELECT c_count, COUNT(*) AS QUERY13
+SELECT c_count, COUNT(*) AS custdist
 FROM (  
    SELECT c.custkey AS c_custkey, COUNT(o.orderkey) AS c_count
    FROM customer c, orders o

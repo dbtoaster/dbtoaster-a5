@@ -1,11 +1,19 @@
 ﻿SET search_path = '@@DATASET@@';
--- SET search_path = 'TPCH_standard';
 
-
-SELECT c1.c_nationkey, sum(c1.c_acctbal) AS query22
-FROM customer c1
-WHERE c1.c_acctbal <
-    (SELECT sum(c2.c_acctbal) FROM customer c2 WHERE c2.c_acctbal > 0)
-AND 0 = (SELECT count(*) FROM orders o WHERE o.o_custkey = c1.c_custkey)
-GROUP BY c1.c_nationkey
-
+SELECT  cntrycode,
+        COUNT(*) AS numcust,
+        SUM(custsale.c_acctbal) AS totalacctbal
+FROM (
+  SELECT SUBSTRING(c.c_phone from 1 for 2) AS cntrycode, c.c_acctbal
+  FROM   customer c
+  WHERE  (SUBSTRING(c.c_phone from 1 for 2) IN
+              ('13', '31', '23', '29', '30', '18', '17'))
+    AND  c.c_acctbal > (
+            SELECT AVG(c2.c_acctbal)
+            FROM   customer c2
+            WHERE  c2.c_acctbal > 0.00
+            AND    (SUBSTRING(c2.c_phone from 1 for 2) IN 
+                        ('13', '31', '23', '29', '30', '18', '17')))
+    AND  (NOT EXISTS (SELECT * FROM orders o WHERE o.o_custkey = c.c_custkey))
+  ) as custsale
+GROUP BY cntrycode

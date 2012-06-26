@@ -5,42 +5,82 @@
       :toplevels => {
         "SUM_QTY" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query1_sumqty.csv")
+          :expected => {
+            ["N", "O"] => 53826.0000000000,
+            ["R", "F"] => 36511.0000000000,
+            ["A", "F"] => 37474.0000000000,
+            ["N", "F"] => 1041.0000000000
+          }
         },
         
         "SUM_BASE_PRICE" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query1_sumbaseprice.csv")
+          :expected => {
+            ["N", "O"] => 54006481.04,
+            ["R", "F"] => 36570841.24,
+            ["A", "F"] => 37569624.64,
+            ["N", "F"] => 1041301.07
+          }
         },
         
         "SUM_DISC_PRICE" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query1_sumdiscprice.csv")
+          :expected => {
+            ["N", "O"] => 51302903.549700000000,
+            ["R", "F"] => 34738472.875800000000,
+            ["A", "F"] => 35676192.097000000000,
+            ["N", "F"] => 999060.898000000000
+          }
         },
-        
+
         "SUM_CHARGE" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query1_sumcharge.csv")
+          :expected => {
+            ["N", "O"] => 53346924.3385250000000000000000,
+            ["R", "F"] => 36169060.1121930000000000000000,
+            ["A", "F"] => 37101416.2224240000000000000000,
+            ["N", "F"] => 1036450.8022800000000000000000
+          }
         },
-        
+                
         "AVG_QTY" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query1_avgqty.csv")
+          :expected => {
+            ["N", "O"] => 25.7910876856732151,
+            ["R", "F"] => 25.0590253946465340,
+            ["A", "F"] => 25.3545331529093369,
+            ["N", "F"] => 27.3947368421052632
+          }
         },
         
         "AVG_PRICE" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query1_avgprice.csv")
+          :expected => {
+            ["N", "O"] => 25877.566382367034,
+            ["R", "F"] => 25100.096938915580,
+            ["A", "F"] => 25419.231826792963,
+            ["N", "F"] => 27402.659736842105
+          }
         },
         
         "AVG_DISC" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query1_avgdisc.csv")
+          :expected => {
+            ["N", "O"] => 0.05012458073790129372,
+            ["R", "F"] => 0.05002745367192862045,
+            ["A", "F"] => 0.05086603518267929635,
+            ["N", "F"] => 0.04289473684210526316
+          }
         },
         
         "COUNT_ORDER" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query1_countorder.csv")
+          :expected => {
+            ["N", "O"] => 2087,
+            ["R", "F"] => 1457,
+            ["A", "F"] => 1478,
+            ["N", "F"] => 38
+          }
         }
       }
     },
@@ -50,42 +90,82 @@
       :toplevels => {
         "SUM_QTY" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query1_sumqty_tiny.csv")
+          :expected => {
+            ["N", "O"] => 5894.0000000000,
+            ["R", "F"] => 3269.0000000000,
+            ["A", "F"] => 3608.0000000000,
+            ["N", "F"] => 98.0000000000
+          }
         },
         
         "SUM_BASE_PRICE" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query1_sumbaseprice_tiny.csv")
+          :expected => {
+            ["N", "O"] => 5900151.76,
+            ["R", "F"] => 3260914.61,
+            ["A", "F"] => 3617399.80,
+            ["N", "F"] => 96050.28
+          }
         },
         
         "SUM_DISC_PRICE" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query1_sumdiscprice_tiny.csv")
+          :expected => {
+            ["N", "O"] => 5605401.944000000000,
+            ["R", "F"] => 3079298.879300000000,
+            ["A", "F"] => 3415815.615400000000,
+            ["N", "F"] => 93793.948400000000
+          }
         },
         
         "SUM_CHARGE" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query1_sumcharge_tiny.csv")
+          :expected => {
+            ["N", "O"] => 5840447.6174520000000000000000,
+            ["R", "F"] => 3200628.9333320000000000000000,
+            ["A", "F"] => 3550622.3880980000000000000000,
+            ["N", "F"] => 94868.9501000000000000000000
+          }
         },
-        
+    
         "AVG_QTY" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query1_avgqty_tiny.csv")
+          :expected => {
+            ["N", "O"] => 26.3125000000000000,
+            ["R", "F"] => 24.3955223880597015,
+            ["A", "F"] => 25.5886524822695035,
+            ["N", "F"] => 32.6666666666666667
+          }
         },
         
         "AVG_PRICE" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query1_avgprice_tiny.csv")
+          :expected => {
+            ["N", "O"] => 26339.963214285714,
+            ["R", "F"] => 24335.183656716418,
+            ["A", "F"] => 25655.317730496454,
+            ["N", "F"] => 32016.760000000000
+          }
         },
         
         "AVG_DISC" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query1_avgdisc_tiny.csv")
+          :expected => {
+            ["N", "O"] => 0.05035714285714285714,
+            ["R", "F"] => 0.05156716417910447761,
+            ["A", "F"] => 0.05354609929078014184,
+            ["N", "F"] => 0.02333333333333333333
+          }
         },
         
         "COUNT_ORDER" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query1_countorder_tiny.csv")
+          :expected => {
+            ["N", "O"] => 224,
+            ["R", "F"] => 134,
+            ["A", "F"] => 141,
+            ["N", "F"] => 3
+          }
         }
       }
     },
@@ -95,42 +175,82 @@
       :toplevels => {
         "SUM_QTY" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query1_sumqty_big.csv")
+          :expected => {
+            ["N", "O"] => 5151515.0000000000,
+            ["R", "F"] => 3785523.0000000000,
+            ["A", "F"] => 3774200.0000000000,
+            ["N", "F"] => 95257.0000000000
+          }
         },
         
         "SUM_BASE_PRICE" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query1_sumbaseprice_big.csv")
+          :expected => {
+            ["N", "O"] => 7261654758.89,
+            ["R", "F"] => 5337950526.47,
+            ["A", "F"] => 5320753880.69,
+            ["N", "F"] => 133737795.84
+          }
         },
         
         "SUM_DISC_PRICE" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query1_sumdiscprice_big.csv")
+          :expected => {
+            ["N", "O"] => 6898158833.526700000000,
+            ["R", "F"] => 5071818532.942000000000,
+            ["A", "F"] => 5054096266.682800000000,
+            ["N", "F"] => 127132372.651200000000
+          }
         },
         
         "SUM_CHARGE" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query1_sumcharge_big.csv")
+          :expected => {
+            ["N", "O"] => 7173916594.5085790000000000000000,
+            ["R", "F"] => 5274405503.0493670000000000000000,
+            ["A", "F"] => 5256751331.4492340000000000000000,
+            ["N", "F"] => 132286291.2294450000000000000000
+          }
         },
         
         "AVG_QTY" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query1_avgqty_big.csv")
+          :expected => {
+            ["N", "O"] => 25.5626597196377621,
+            ["R", "F"] => 25.5259438574251017,
+            ["A", "F"] => 25.5375871168549970,
+            ["N", "F"] => 25.3006640106241700
+          }
         },
         
         "AVG_PRICE" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query1_avgprice_big.csv")
+          :expected => {
+            ["N", "O"] => 36033.518218037464,
+            ["R", "F"] => 35994.029214030924,
+            ["A", "F"] => 36002.123829014142,
+            ["N", "F"] => 35521.326916334661
+          }
         },
         
         "AVG_DISC" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query1_avgdisc_big.csv")
+          :expected => {
+            ["N", "O"] => 0.05013244014390274160,
+            ["R", "F"] => 0.04998927856184381764,
+            ["A", "F"] => 0.05014459706340077136,
+            ["N", "F"] => 0.04939442231075697211
+          }
         },
         
         "COUNT_ORDER" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query1_countorder_big.csv")
+          :expected => {
+            ["N", "O"] => 201525,
+            ["R", "F"] => 148301,
+            ["A", "F"] => 147790,
+            ["N", "F"] => 3765
+          }
         }
       }
     },
@@ -140,42 +260,82 @@
       :toplevels => {
         "SUM_QTY" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query1_sumqty_del.csv")
+          :expected => {
+            ["N", "O"] => 10347.0000000000,
+            ["R", "F"] => 7733.0000000000,
+            ["A", "F"] => 7888.0000000000,
+            ["N", "F"] => 166.0000000000
+          }
         },
         
         "SUM_BASE_PRICE" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query1_sumbaseprice_del.csv")
+          :expected => {
+            ["N", "O"] => 10388543.61,
+            ["R", "F"] => 7721874.78,
+            ["A", "F"] => 7942466.61,
+            ["N", "F"] => 168525.24
+          }
         },
         
         "SUM_DISC_PRICE" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query1_sumdiscprice_del.csv")
+          :expected => {
+            ["N", "O"] => 9872801.402300000000,
+            ["R", "F"] => 7333989.784600000000,
+            ["A", "F"] => 7530758.609400000000,
+            ["N", "F"] => 162915.981100000000
+          }
         },
         
         "SUM_CHARGE" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query1_sumcharge_del.csv")
+          :expected => {
+            ["N", "O"] => 10256866.0452350000000000000000,
+            ["R", "F"] => 7618391.3581270000000000000000,
+            ["A", "F"] => 7841570.8572340000000000000000,
+            ["N", "F"] => 168178.2523820000000000000000
+          }
         },
-        
+
         "AVG_QTY" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query1_avgqty_del.csv")
+          :expected => {
+            ["N", "O"] => 25.8675000000000000,
+            ["R", "F"] => 26.4828767123287671,
+            ["A", "F"] => 26.3812709030100334,
+            ["N", "F"] => 27.6666666666666667
+          }
         },
         
         "AVG_PRICE" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query1_avgprice_del.csv")
+          :expected => {
+            ["N", "O"] => 25971.359025000000,
+            ["R", "F"] => 26444.776643835616,
+            ["A", "F"] => 26563.433478260870,
+            ["N", "F"] => 28087.540000000000
+          }
         },
-        
+
         "AVG_DISC" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query1_avgdisc_del.csv")
+          :expected => {
+            ["N", "O"] => 0.05055000000000000000,
+            ["R", "F"] => 0.05318493150684931507,
+            ["A", "F"] => 0.05321070234113712375,
+            ["N", "F"] => 0.03333333333333333333
+          }
         },
         
         "COUNT_ORDER" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query1_countorder_del.csv")
+          :expected => {
+            ["N", "O"] => 400,
+            ["R", "F"] => 292,
+            ["A", "F"] => 299,
+            ["N", "F"] => 6
+          }
         }
       }
     },
@@ -185,42 +345,58 @@
       :toplevels => {
         "SUM_QTY" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query1_sumqty_tiny_del.csv")
+          :expected => {
+            ["N","O"] => 145.0000000000
+          }
         },
         
         "SUM_BASE_PRICE" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query1_sumbaseprice_tiny_del.csv")
+          :expected => {
+            ["N", "O"] => 137313.99
+          }
         },
         
         "SUM_DISC_PRICE" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query1_sumdiscprice_tiny_del.csv")
+          :expected => {
+            ["N", "O"] => 126140.575200000000
+          }
         },
         
         "SUM_CHARGE" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query1_sumcharge_tiny_del.csv")
+          :expected => {
+            ["N", "O"] => 131251.8787680000000000000000 
+          }
         },
         
         "AVG_QTY" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query1_avgqty_tiny_del.csv")
+          :expected => {
+            ["N", "O"] => 24.1666666666666667
+          }
         },
         
         "AVG_PRICE" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query1_avgprice_tiny_del.csv")
+          :expected => {
+            ["N", "O"] => 22885.665000000000 
+          }
         },
         
         "AVG_DISC" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query1_avgdisc_tiny_del.csv")
+          :expected => {
+            ["N", "O"] => 0.08166666666666666667
+          }
         },
         
         "COUNT_ORDER" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query1_countorder_tiny_del.csv")
+          :expected => {
+            ["N", "O"] => 6
+          }
         }
       }
     },
@@ -230,42 +406,82 @@
       :toplevels => {
         "SUM_QTY" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query1_sumqty_big_del.csv")
+          :expected => {
+            ["N", "O"] => 1037177.0000000000,
+            ["R", "F"] => 758807.0000000000,
+            ["A", "F"] => 755146.0000000000,
+            ["N", "F"] => 18801.0000000000
+          }
         },
         
         "SUM_BASE_PRICE" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query1_sumbaseprice_big_del.csv")
+          :expected => {
+            ["N", "O"] => 1459042371.58,
+            ["R", "F"] => 1070027727.04,
+            ["A", "F"] => 1063575467.63,
+            ["N", "F"] => 26577720.50
+          }
         },
         
         "SUM_DISC_PRICE" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query1_sumdiscprice_big_del.csv")
+          :expected => {
+            ["N", "O"] => 1386174566.736500000000,
+            ["R", "F"] => 1016447623.099300000000,
+            ["A", "F"] => 1010377746.778500000000,
+            ["N", "F"] => 25232262.570500000000
+          }
         },
-        
+
         "SUM_CHARGE" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query1_sumcharge_big_del.csv")
+          :expected => {
+            ["N", "O"] => 1441610734.8465330000000000000000,
+            ["R", "F"] => 1057294278.8552190000000000000000,
+            ["A", "F"] => 1050723972.3901900000000000000000,
+            ["N", "F"] => 26259419.4447890000000000000000
+          }
         },
-        
+    
         "AVG_QTY" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query1_avgqty_big_del.csv")
+          :expected => {
+            ["N", "O"] => 25.6644396605052830,
+            ["R", "F"] => 25.4761457109283196,
+            ["A", "F"] => 25.4506420410501837,
+            ["N", "F"] => 24.6086387434554974
+          }
         },
         
         "AVG_PRICE" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query1_avgprice_big_del.csv")
+          :expected => {
+            ["N", "O"] => 36103.292791428501,
+            ["R", "F"] => 35925.053786805439,
+            ["A", "F"] => 35845.622581982407,
+            ["N", "F"] => 34787.592277486911
+          }
         },
-        
+                
         "AVG_DISC" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query1_avgdisc_big_del.csv")
+          :expected => {
+            ["N", "O"] => 0.05009378170390715859,
+            ["R", "F"] => 0.05005371831458787981,
+            ["A", "F"] => 0.05015671868154089852,
+            ["N", "F"] => 0.05112565445026178010
+          }
         },
-        
+
         "COUNT_ORDER" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query1_countorder_big_del.csv")
+          :expected => {
+            ["N", "O"] => 40413,
+            ["R", "F"] => 29785,
+            ["A", "F"] => 29671,
+            ["N", "F"] => 764
+          }
         }
       }
     }

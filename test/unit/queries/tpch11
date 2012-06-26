@@ -11,7 +11,7 @@
     },
     
     "tiny" => {
-      :subs => [ [/data\/tpch\/standard\//, "data/tpch/tiny/"] ],
+      :subs => [ [/schemas\.sql/, "schemas_tiny.sql"] ],
       :toplevels => {
         "QUERY11" => {
           :type => :onelevel,
@@ -21,8 +21,7 @@
     },
     
     "standard_del" => {
-      :subs => [ [/data\/tpch\/standard\//, "data/tpch/standard_del/"],
-                 [/deletions := 'false'/, "deletions := 'true'" ]  ],
+      :subs => [ [/schemas\.sql/, "schemas_del.sql"] ],
       :toplevels => {
         "QUERY11" => {
           :type => :onelevel,
@@ -32,8 +31,7 @@
     },
     
     "tiny_del" => {
-      :subs => [ [/data\/tpch\/standard\//, "data/tpch/tiny_del/"],
-                 [/deletions := 'false'/, "deletions := 'true'" ]  ],
+      :subs => [ [/schemas\.sql/, "schemas_tiny_del.sql"] ],
       :toplevels => {
         "QUERY11" => {
           :type => :onelevel,

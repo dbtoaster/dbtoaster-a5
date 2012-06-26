@@ -1,24 +1,4 @@
-CREATE STREAM PARTSUPP (
-        partkey      INT,
-        suppkey      INT,
-        availqty     INT,
-        supplycost   DECIMAL,
-        comment      VARCHAR(199)
-    )
-  FROM FILE '../../experiments/data/tpch_tiny/partsupp.csv'
-  LINE DELIMITED CSV (fields := '|');
-
-CREATE STREAM SUPPLIER (
-        suppkey      INT,
-        name         CHAR(25),
-        address      VARCHAR(40),
-        nationkey    INT,
-        phone        CHAR(15),
-        acctbal      DECIMAL,
-        comment      VARCHAR(199)
-    )
-  FROM FILE '../../experiments/data/tpch_tiny/supplier.csv'
-  LINE DELIMITED CSV (fields := '|');
+INCLUDE 'test/queries/tpch/schemas.sql';
 
 SELECT p.nationkey, p.partkey, SUM(p.value) AS QUERY11
 FROM

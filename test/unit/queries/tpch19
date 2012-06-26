@@ -1,0 +1,66 @@
+{
+  :path => "test/queries/tpch/query19.sql",
+  :datasets => {
+    "standard" => {
+      :toplevels => {
+        "REVENUE" => {
+          :type => :singleton,
+          :expected => 0.0
+        }
+      }
+    },
+    
+    "tiny" => {
+      :subs => [ [/schemas\.sql/, "schemas_tiny.sql"] ],
+      :toplevels => {
+        "REVENUE" => {
+          :type => :singleton,
+          :expected => 0.0
+        }
+      }
+    },
+    
+    "big" => {
+      :subs => [ [/schemas\.sql/, "schemas_big.sql"] ],
+      :toplevels => {
+        "REVENUE" => {
+          :type => :singleton,
+          :expected => 168597.286000000000
+        }
+      }
+    },
+    
+    "standard_del" => {
+      :subs => [ [/schemas\.sql/, "schemas_del.sql"] ],
+      :toplevels => {
+        "REVENUE" => {
+          :type => :singleton,
+          :expected => 0.0
+        }
+      }
+    },
+    
+    "tiny_del" => {
+      :subs => [ [/schemas\.sql/, "schemas_tiny_del.sql"] ],
+      :toplevels => {
+        "REVENUE" => {
+          :type => :singleton,
+          :expected => 0.0
+        }
+      }
+    },
+    
+    "big_del" => {
+      :subs => [ [/schemas\.sql/, "schemas_big_del.sql"] ],
+      :toplevels => {
+        "REVENUE" => {
+          :type => :singleton,
+          :expected => 64097.608200000000
+        }
+      }
+    }
+    
+  }
+}
+
+

@@ -5,7 +5,7 @@
       :toplevels => {
         "REVENUE" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query5.csv")
+          :expected => { }
         }
       }
     },
@@ -15,7 +15,7 @@
       :toplevels => {
         "REVENUE" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query5_tiny.csv")
+          :expected => { }
         }
       }
     },
@@ -25,7 +25,13 @@
       :toplevels => {
         "REVENUE" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query5_big.csv")
+          :expected => {
+            ['CHINA'] => 7822103.0000,          
+            ['VIETNAM'] => 4497840.5466,
+            ['INDONESIA'] => 5580475.4027,
+            ['JAPAN'] => 6000077.2184,
+            ['INDIA'] => 6376121.5085                        
+          }
         }
       }
     },
@@ -35,7 +41,7 @@
       :toplevels => {
         "REVENUE" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query5_del.csv")
+          :expected => { }
         }
       }
     },
@@ -45,7 +51,7 @@
       :toplevels => {
         "REVENUE" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query5_tiny_del.csv")
+          :expected => { }
         }
       }
     },
@@ -55,7 +61,13 @@
       :toplevels => {
         "REVENUE" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query5_big_del.csv")
+          :expected => {             
+            ['VIETNAM'] => 589837.9943,          
+            ['INDONESIA'] => 1003436.3644,
+            ['CHINA'] => 1292336.1804,
+            ['INDIA'] => 1080788.7358,
+            ['JAPAN'] => 1599617.3668                        
+          }
         }
       }
     }

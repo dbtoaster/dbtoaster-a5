@@ -1,0 +1,66 @@
+{
+  :path => "test/queries/tpch/query16.sql",
+  :datasets => {
+    "standard" => {
+      :toplevels => {
+        "SUPPLIER_CNT" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query16.csv")
+        }
+      }
+    },
+    
+    "tiny" => {
+      :subs => [ [/schemas\.sql/, "schemas_tiny.sql"] ],
+      :toplevels => {
+        "SUPPLIER_CNT" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query16_tiny.csv")
+        }
+      }
+    },
+    
+    "big" => {
+      :subs => [ [/schemas\.sql/, "schemas_big.sql"] ],
+      :toplevels => {
+        "SUPPLIER_CNT" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query16_big.csv")
+        }
+      }
+    },
+    
+    "standard_del" => {
+      :subs => [ [/schemas\.sql/, "schemas_del.sql"] ],
+      :toplevels => {
+        "SUPPLIER_CNT" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query16_del.csv")
+        }
+      }
+    },
+    
+    "tiny_del" => {
+      :subs => [ [/schemas\.sql/, "schemas_tiny_del.sql"] ],
+      :toplevels => {
+        "SUPPLIER_CNT" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query16_tiny_del.csv")
+        }
+      }
+    },
+    
+    "big_del" => {
+      :subs => [ [/schemas\.sql/, "schemas_big_del.sql"] ],
+      :toplevels => {
+        "SUPPLIER_CNT" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query16_big_del.csv")
+        }
+      }
+    }
+    
+  }
+}
+
+

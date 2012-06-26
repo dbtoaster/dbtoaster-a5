@@ -5,40 +5,7 @@
 (1 row)
  */
 
-CREATE STREAM LINEITEM (
-        orderkey       INT,
-        partkey        INT,
-        suppkey        INT,
-        linenumber     INT,
-        quantity       DECIMAL,
-        extendedprice  DECIMAL,
-        discount       DECIMAL,
-        tax            DECIMAL,
-        returnflag     CHAR(1),
-        linestatus     CHAR(1),
-        shipdate       DATE,
-        commitdate     DATE,
-        receiptdate    DATE,
-        shipinstruct   CHAR(25),
-        shipmode       CHAR(10),
-        comment        VARCHAR(44)
-    )
-  FROM FILE '../../experiments/data/tpch/standard/lineitem.csv'
-  LINE DELIMITED CSV (fields := '|', deletions := 'false');
-
-CREATE STREAM PART (
-        partkey      INT,
-        name         VARCHAR(55),
-        mfgr         CHAR(25),
-        brand        CHAR(10),
-        type         VARCHAR(25),
-        size         INT,
-        container    CHAR(10),
-        retailprice  DECIMAL,
-        comment      VARCHAR(23)
-    )
-  FROM FILE '../../experiments/data/tpch/standard/part.csv'
-  LINE DELIMITED CSV (fields := '|', deletions := 'false');
+INCLUDE 'test/queries/tpch/schemas.sql';
 
 SELECT sum(l.extendedprice) AS query17
 FROM   lineitem l, part p

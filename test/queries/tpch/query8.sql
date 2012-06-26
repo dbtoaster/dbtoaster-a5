@@ -2,14 +2,14 @@
 --   CASE     (using equivalent query)
 --   ORDER BY (ignored)
 
-INCLUDE 'test/queries/tpch/schemas_tiny.sql';
+INCLUDE 'test/queries/tpch/schemas.sql';
 
 SELECT  total.o_year,
         (SUM(local.volume) / SUM(total.volume)) AS mkt_share
 FROM
   (
-    SELECT o.orderdate AS o_year,
-           DATE_PART('year', o.orderdate) AS o_year,
+    SELECT DATE_PART('year', o.orderdate) AS o_year, 
+           l.extendedprice * (1-l.discount) AS volume    
     FROM   part p, supplier s, lineitem l, orders o, customer c, nation n1,
            nation n2, region r
     WHERE  p.partkey = l.partkey
@@ -25,8 +25,7 @@ FROM
       AND  n2.name = 'BRAZIL'
   ) local,
   (
-    SELECT o.orderdate AS o_year,
---           DATE_PART('year', o.orderdate) AS o_year,
+    SELECT DATE_PART('year', o.orderdate) AS o_year,
            l.extendedprice * (1-l.discount) AS volume
     FROM   part p, supplier s, lineitem l, orders o, customer c, nation n1,
            nation n2, region r
