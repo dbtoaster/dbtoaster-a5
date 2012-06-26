@@ -1753,11 +1753,12 @@ end (* Typing *)
                         (Fn(ty, 
                             Ext(Inline("static_cast<double>(1) / (" ^
                             arg ^ ")")), []))
-            | "max" | "min" ->
+            | "listmax" | "listmin" ->
+              let c_fn_id = String.sub id 4 3 in
               begin match nargs with
                 | [Tuple(ft_l, f)] ->
-                  result ci (Fn(ty, Ext(Apply(id)), f))
-                | _ -> result ci (Fn(ty, Ext(Apply(id)), nargs))
+                  result ci (Fn(ty, Ext(Apply(c_fn_id)), f))
+                | _ -> result ci (Fn(ty, Ext(Apply(c_fn_id)), nargs))
               end
             | _ -> result ci (Fn(ty, Ext(Apply(id)), nargs))
         end

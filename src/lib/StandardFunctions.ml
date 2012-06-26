@@ -120,10 +120,10 @@ let min_of_list (arglist:const_t list) (ftype:type_t) =
       match ftype with TInt -> (CInt(max_int), TInt)
                      | TAny 
                      | TFloat -> (CFloat(max_float), TFloat)
-                     | _ -> (invalid_args "min" arglist ftype, TAny)
+                     | _ -> (invalid_args "listmin" arglist ftype, TAny)
    in List.fold_left min start (List.map (Constants.type_cast cast_type) 
                                          arglist)
-;; declare_std_function "min" min_of_list (fun x -> escalate (TInt::x)) ;;
+;; declare_std_function "listmin" min_of_list (fun x -> escalate (TInt::x))
 
 (**
    Bounded fan-in list maximum.
@@ -134,10 +134,10 @@ let max_of_list (arglist:const_t list) (ftype:type_t) =
       match ftype with TInt -> (CInt(min_int), TInt)
                      | TAny 
                      | TFloat -> (CFloat(min_float), TFloat)
-                     | _ -> (invalid_args "max" arglist ftype, TAny)
+                     | _ -> (invalid_args "listmax" arglist ftype, TAny)
    in List.fold_left max start (List.map (Constants.type_cast cast_type) 
                                          arglist)
-;; declare_std_function "max" max_of_list (fun x -> escalate (TInt::x)) ;;
+;; declare_std_function "listmax" max_of_list (fun x -> escalate (TInt::x)) ;;
 
 (**
    Date part extraction
@@ -183,3 +183,38 @@ let substring (arglist:const_t list) (ftype:type_t) =
       | _ -> invalid_args "substring" arglist ftype
 ;; declare_std_function "substring" substring
          (function [TString; TInt; TInt] -> TString | _-> inference_error ()) ;;
+
+(** 
+   Type casting -- cast to a particular type
+*)
+let cast (arglist:const_t list) (ftype:type_t) = 
+   let arg = match arglist with 
+      [a] -> a | _ -> invalid_args "cast" arglist ftype 
+   in
+   begin try 
+      begin match ftype with
+         | TInt -> CInt(Constants.int_of_const arg)
+         | TFloat -> CFloat(Constants.float_of_const arg)
+         | TDate -> 
+            begin match arg with
+               | CDate _ -> arg
+               | CString(s) -> parse_date s
+               | _ -> invalid_args "cast" arglist ftype
+            end
+         | TString -> CString(Constants.string_of_const arg)
+         | _ -> invalid_args "cast" arglist ftype
+      end
+   with Failure _ -> invalid_args "cast" arglist ftype
+   end
+;; List.iter (fun (t, valid_in) ->
+      declare_std_function ("cast_"^(Types.string_of_type t))
+                           cast
+                           (function [a] when List.mem a valid_in -> t
+                                   | _ -> inference_error ())
+   ) [
+      TInt,     [TFloat; TInt]; 
+      TFloat,   [TFloat; TInt]; 
+      TDate,    [TDate; TString]; 
+      TString,  [TInt; TFloat; TDate; TString; TBool];
+     ]
+;;

@@ -395,7 +395,7 @@ let rec calc_of_query ?(query_name = None)
                               ValueRing.mk_val (AFn("/", [
                                  (* Hack to ensure that we don't ever get NAN:
                                     make sure that the count is always >= 1 *)
-                                 ValueRing.mk_val(AFn("max", [
+                                 ValueRing.mk_val(AFn("listmax", [
                                     Arithmetic.mk_int 1;
                                     Arithmetic.mk_var count_var
                                  ], TInt))
