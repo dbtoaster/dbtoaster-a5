@@ -1,42 +1,11 @@
 -- Unsupported features for this query
 --   CASE     (using equivalent query)
 --   INTERVAL (inlined into constant)
+-- Changes made to make the query more "incrementality friendly"
+--   floating point keys are bad -> added cast_int
+--   avoiding division by zero -> added listmax
 
---INCLUDE 'test/queries/tpch/schemas.sql';
-CREATE STREAM LINEITEM (
-        orderkey       INT,
-        partkey        INT,
-        suppkey        INT,
-        linenumber     INT,
-        quantity       DECIMAL,
-        extendedprice  DECIMAL,
-        discount       DECIMAL,
-        tax            DECIMAL,
-        returnflag     CHAR(1),
-        linestatus     CHAR(1),
-        shipdate       DATE,
-        commitdate     DATE,
-        receiptdate    DATE,
-        shipinstruct   CHAR(25),
-        shipmode       CHAR(10),
-        comment        VARCHAR(44)
-    )
-  FROM FILE '../../experiments/data/tpch/tiny/lineitem.csv'
-  LINE DELIMITED CSV (fields := '|');
-  
-CREATE STREAM PART (
-        partkey      INT,
-        name         VARCHAR(55),
-        mfgr         CHAR(25),
-        brand        CHAR(10),
-        type         VARCHAR(25),
-        size         INT,
-        container    CHAR(10),
-        retailprice  DECIMAL,
-        comment      VARCHAR(23)
-    )
-  FROM FILE '../../experiments/data/tpch/tiny/part.csv'
-  LINE DELIMITED CSV (fields := '|');
+INCLUDE 'test/queries/tpch/schemas.sql';
 
 SELECT cast_int(100.00 * (local.revenue / listmax(total.revenue, 1))) 
                 AS promo_revenue 
