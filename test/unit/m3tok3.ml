@@ -111,10 +111,13 @@ let calc_string_to_code env generate_init calc_s =
 	 *)
 	 Interpreter.compile_k3_expr code
 in
-let stmt_string_to_code env generate_init stmt_s =
+let stmt_string_to_code ?(debug=false) env generate_init stmt_s =
 	 let stmt = U.parse_stmt stmt_s in
 	 let env_vars = List.map (fun (vn,vl) -> (vn,C.type_of_const vl)) env in
 	 let code,_ = MK.m3_stmt_to_k3_stmt MK.empty_meta ~generate_init:generate_init env_vars stmt in
+	 if debug then (
+	   print_endline (K3.nice_string_of_expr code [])
+	 );
 	 let target_coll = MK.target_of_statement code in
 	 (*
 	 print_endline "\n--------------\n--------------";
@@ -135,12 +138,24 @@ let test_code env msg code rval =
       rval
 in
 let test_code_coll env msg code rval =
-	 let (vars, vals) = List.split env in
-   let db = Database.NamedK3Database.make_empty_db maps patterns in
-	 let _ = (K3Interpreter.K3CG.eval None init_code [] [] db) in
-	 U.log_collection_test ("M3ToK3("^msg^")")
-      (K3Interpreter.K3CG.eval None code vars vals db)
-      rval
+   try 
+      let (vars, vals) = List.split env in
+      let db = Database.NamedK3Database.make_empty_db maps patterns in
+       let _ = (K3Interpreter.K3CG.eval None init_code [] [] db) in
+       U.log_collection_test ("M3ToK3("^msg^")")
+         (K3Interpreter.K3CG.eval None code vars vals db)
+         rval
+   with 
+      | K3Interpreter.InterpreterException(expr, msg) ->
+         print_endline "Bug in program: ";
+         print_endline (K3Interpreter.K3CG.debug_string code);
+         print_endline ("Error: "^msg^"; in: ");
+         begin match expr with 
+            | Some(s) -> 
+               print_endline (K3.nice_string_of_expr s [])
+            | None -> print_endline "[???]"
+         end;
+         exit(-1)
 in
 
 let test_expr ?(env = []) ?(generate_init = false) msg calc_s rval =
@@ -156,12 +171,14 @@ let test_expr_coll2 ?(env = []) ?(generate_init = false) msg calc_s rval =
    test_code_coll env msg code rval
 in
 
-let test_stmt ?(env = []) ?(generate_init = false) msg stmt_s rval =
-	 let code = stmt_string_to_code env generate_init stmt_s in	
+let test_stmt ?(env = []) ?(generate_init = false) ?(debug=false) 
+              msg stmt_s rval =
+	 let code = stmt_string_to_code ~debug:debug env generate_init stmt_s in	
    test_code env msg code rval
 in
-let test_stmt_coll ?(env = []) ?(generate_init = false) msg stmt_s rval =
-   let code = stmt_string_to_code env generate_init stmt_s in	
+let test_stmt_coll ?(env = []) ?(generate_init = false) ?(debug=false) 
+                   msg stmt_s rval =
+   let code = stmt_string_to_code ~debug:debug env generate_init stmt_s in	
    test_code_coll env msg code (U.mk_float_collection rval)
 in
 		(*
@@ -233,7 +250,7 @@ in
 							~env:["A", (C.CFloat(3.));"B", (C.CFloat(3.));
 										"C", (C.CFloat(1.));"D", (C.CFloat(3.))]
 							"W[A,B][C,D]" (VK.BaseValue(C.CFloat(3.)));
-		
+
 		test_expr_coll " External - OutPC - Collection " 
 							"R[][A,B]" 
 							[  [1.; 3.], 3.;
@@ -353,6 +370,7 @@ in
 		test_stmt " Replace - SingletonPC - Singleton"
 							" QS[][] := {12.} " 
 							(VK.BaseValue(C.CFloat(12.)));
+
 		test_stmt_coll " Replace - OutPC - Singleton"
 							~env:["A", (C.CFloat(1.));
 										"B", (C.CFloat(1.));"C", (C.CFloat(2.));]
@@ -382,18 +400,16 @@ in
 		test_stmt_coll " Replace - OutPC - Collection"
 							~env:["A", (C.CFloat(2.));]
 							" QR[][B,C] := W[A,A][B,C] * 3. " 
-							[  [1.; 1.], 1.;
-				         [1.; 2.], 2.;
-				         [1.; 3.], 3.;
-				         [2.; 1.], 6.;
-				         [2.; 2.], 12.;
-				      ];
+							[  
+                        [2.; 1.], 6.;
+                        [2.; 2.], 12.;
+                     ];
 		test_stmt_coll " Replace - PC - Collection"
 							~env:["A", (C.CFloat(1.));]
 							" QW[X,Y][B,C] := W[A,A][B,C] * 3. " 
 							[  [1.; 1.; 1.; 1.], 3.; [1.; 1.; 1.; 2.], 6.;
-				         [2.; 2.; 2.; 1.], 2.; [2.; 2.; 2.; 2.], 4.; [2.; 2.; 1.; 1.], 3.; [2.; 2.; 1.; 2.], 6.;
-								 [3.; 3.; 1.; 3.], 3.; [3.; 3.; 1.; 1.], 3.; [3.; 3.; 1.; 2.], 6.;  
+				            [2.; 2.; 1.; 1.], 3.; [2.; 2.; 1.; 2.], 6.;
+								[3.; 3.; 1.; 1.], 3.; [3.; 3.; 1.; 2.], 6.;  
 				      ];		
 		
 		test_stmt " Update - SingletonPC - Singleton"

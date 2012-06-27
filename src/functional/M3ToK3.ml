@@ -504,8 +504,6 @@ let meta_has_init_keys meta init_keys =
 let meta_append_init_keys meta init_keys =
       (fst meta)@[init_keys],(snd meta)
       
-(**/**)   
-
 let dummy_k3_map =
     K.SingletonPC("dummy_map", K.TBase(T.TInt))
 
@@ -514,6 +512,7 @@ let get_unit_statement () =
         K.Unit
     else
         K.PCValueUpdate(dummy_k3_map, [], [], zero_int_val)
+(**/**)   
        
 (**********************************************************************)
 
@@ -946,7 +945,7 @@ let m3_stmt_to_k3_stmt (meta: meta_t) ?(generate_init = false) trig_args (m3_stm
             else 
                None
          in 
-            if (init_expr_opt != None && not(Debug.active "DEBUG-DM-LEFT")) then 
+            if (init_expr_opt != None) then 
             K.IfThenElse( K.Member(existing_out_tier, lhs_outs_el),
                           K.Lookup(existing_out_tier, lhs_outs_el),
                           (extract_opt init_expr_opt) ), meta
@@ -965,13 +964,6 @@ let m3_stmt_to_k3_stmt (meta: meta_t) ?(generate_init = false) trig_args (m3_stm
         let (rhs_outs_el, rhs_ret_ve, incr_expr), nm = 
           calc_to_k3_expr nm0 ~generate_init:(true) trig_w_ins_el incr_calc
         in
-        if (Debug.active "DEBUG-DM-LEFT-OPTIMAL" && update_type <> Plan.ReplaceStmt) then
-          let trig_w_ins_w_outs_el = ListAsSet.union trig_w_ins_el lhs_outs_el in
-          let (n_rhs_outs_el, n_rhs_ret_ve, n_incr_expr), n_nm =
-            calc_to_k3_expr nm0 ~generate_init:(true) trig_w_ins_w_outs_el incr_calc
-          in
-          (rhs_outs_el, n_rhs_ret_ve, n_incr_expr), n_nm
-        else
           (rhs_outs_el, rhs_ret_ve, incr_expr), nm
     in
    
@@ -988,64 +980,55 @@ let m3_stmt_to_k3_stmt (meta: meta_t) ?(generate_init = false) trig_args (m3_stm
    (* Iterate over all the tuples in "incr_expr" collection and update the *)
    (* lhs_collection accordingly. *)
    let coll_update_expr =   
-      let single_update_expr = K.PCValueUpdate( lhs_collection, lhs_ins_el, lhs_outs_el, 
-                                               K.Add(existing_v,rhs_ret_ve) )
+      let single_update_expr = K.PCValueUpdate( lhs_collection, lhs_ins_el, 
+                                                lhs_outs_el, 
+                                                K.Add(existing_v,rhs_ret_ve) )
       in
-      if ( (not (Debug.active "DEBUG-DM-LEFT") ) || update_type = Plan.ReplaceStmt || lhs_outs_el = [] ) then
+      if ( lhs_outs_el = [] ) then
         let inner_loop_body = lambda (rhs_outs_el@[rhs_ret_ve]) single_update_expr in
         if rhs_outs_el = [] then      K.Apply(  inner_loop_body,incr_expr)  
         else                          K.Iterate(inner_loop_body,incr_expr)
-      (* Next lines are for testing some features in DM *)
-      else
-        if (Debug.active "DEBUG-DM-LEFT-OPTIMAL") then
-          let status_ret = K.Var("status_ret",K.TBase(T.TInt)) in
-          let multi_ret = K.Var("multi_ret",K.TBase(T.TInt)) in
-          let single_update_statement = 
-            K.IfThenElse(
-              K.Neq(multi_ret, zero_int_val),
-              single_update_expr,
-              get_unit_statement ()
-            )
-           in
-          (*        let inner_loop_body = lambda (rhs_outs_el@[rhs_ret_ve]) single_update_statement in*)
-          let inner_loop_body = lambda ([rhs_ret_ve]) single_update_statement in
-          let update_expr = 
-            (*if rhs_outs_el = [] then*)
-            K.Apply(  inner_loop_body,incr_expr)   
-              (*          else                          K.Iterate(inner_loop_body,incr_expr)*)
-          in
-          let cig = 
-            let domain_type = K.TBase(Types.TInt) in
-            let collection_ivc_gc_t  = 
-              if free_lhs_outs_el = [] then
-                  K.TTuple([domain_type;domain_type])
-              else
-                  K.Collection(K.Unknown, K.TTuple( (k3_expr_to_k3_type (rhs_outs_el))@[domain_type; domain_type] )) 
-            in
-            K.Var("cig_"^mapn^"_output", collection_ivc_gc_t)
-          in
-          let update_body = lambda (rhs_outs_el@[status_ret;multi_ret]) update_expr
-          in
-          if rhs_outs_el = [] then  K.Apply(  update_body, cig)
-          else                      K.Iterate(update_body, cig)  
+      else if ( update_type = Plan.ReplaceStmt ) then
+        let inner_loop_body = lambda (rhs_outs_el@[rhs_ret_ve]) single_update_expr in
+        let update_body =
+           if rhs_outs_el = [] then      K.Apply(  inner_loop_body,incr_expr)  
+           else                          K.Iterate(inner_loop_body,incr_expr)
+        in
+        if free_lhs_outs_el = [] then 
+          update_body
         else
-          let single_update_statement = 
-            K.IfThenElse(
-              K.Member(existing_out_tier, lhs_outs_el),
-              single_update_expr,
-              get_unit_statement ()
-            )
-          in
-          let inner_loop_body = lambda (rhs_outs_el@[rhs_ret_ve]) single_update_statement in
-          if rhs_outs_el = [] then      K.Apply(  inner_loop_body,incr_expr)  
-          else                          K.Iterate(inner_loop_body,incr_expr)
+        let old_slice = 
+          if ListAsSet.seteq lhs_outs_el free_lhs_outs_el
+            then existing_out_tier
+            else let slice_mapping = 
+                   List.map (function (vn,vt) -> (vn, K.Var(vn, vt))) 
+                            (k3_expr_to_k3_idType free_lhs_outs_el)
+                 in
+                   K.Slice(existing_out_tier, 
+                           varIdType_to_k3_idType lhs_outs, 
+                           slice_mapping)
+        in
+           K.Block [
+             K.Iterate(
+               lambda (lhs_outs_el@[rhs_ret_ve]) (
+                 K.PCElementRemove(lhs_collection, lhs_ins_el, lhs_outs_el);
+               ),
+               old_slice
+             );
+             update_body
+           ]
+      else
+       let inner_loop_body = lambda (rhs_outs_el@[rhs_ret_ve]) 
+                                    single_update_expr in
+       if rhs_outs_el = [] then      K.Apply(  inner_loop_body,incr_expr)  
+       else                          K.Iterate(inner_loop_body,incr_expr)
     in
    
    (* In order to implement a statement we iterate over all the values *)
    (* of the input variables of the lhs collection, and for each of them *)
    (* we update the corresponding output tier. *)
    let statement_expr =
-      if ( (not (Debug.active "DEBUG-DM-LEFT") ) || update_type = Plan.ReplaceStmt) then
+      if ( update_type = Plan.ReplaceStmt) then
         let outer_loop_body = lambda (lhs_ins_el@[existing_out_tier]) coll_update_expr in
         if lhs_ins_el = [] then     K.Apply(  outer_loop_body,lhs_collection)
         else                        K.Iterate(outer_loop_body,lhs_collection)
@@ -1057,7 +1040,7 @@ let m3_stmt_to_k3_stmt (meta: meta_t) ?(generate_init = false) trig_args (m3_stm
             K.IfThenElse(
                 K.Member(lhs_collection, lhs_ins_el),
                 coll_update_expr,
-                get_unit_statement ()
+                K.Unit
             )
         in
         let outer_loop_body = lambda (lhs_ins_el@[existing_out_tier]) coll_update_statement in

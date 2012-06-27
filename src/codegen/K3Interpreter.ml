@@ -1031,7 +1031,11 @@ struct
       bail "Interpreter can't output a string"
 
    let debug_string (code:code_t): string =
-      bail "Interpreter can't output a string"
+      match code with
+         | Eval(Some(expr), _) -> K3.nice_string_of_expr expr []
+         | Eval(None, _) -> "[evaluated block]"
+         | Trigger _ -> "[trigger]"
+         | Main _ -> "[main]"
  
     let rec eval dbc c vars vals db = match c with
       | Eval(_, f) -> f (Env.make vars (List.map value_of_const_t vals), []) db
