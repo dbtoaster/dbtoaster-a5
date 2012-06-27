@@ -300,6 +300,37 @@ let init (db:Schema.t): prog_t =
       db = db
    }
 ;;
+ 
+(**[finalize prog]
+   Remove empty triggers and corresponding StreamRels from the program.
+*)
+let finalize (prog: prog_t): prog_t =
+   let non_empty_triggers = 
+      List.filter (fun trigger -> !(trigger.statements) <> []) 
+                  (get_triggers prog)
+   in 
+   let used_relations = ListAsSet.multiunion (
+      List.map (function
+         | DSView(view) -> rels_of_expr view.ds_definition
+         | _ -> []            
+      ) !(prog.maps)
+   )
+   in   
+   let non_empty_db = List.flatten (
+      List.map (fun (s, relations) -> 
+         let non_empty_relations = 
+            List.filter(fun (_, (reln, _, _)) -> 
+               List.mem reln used_relations 
+            ) relations
+         in
+         if (non_empty_relations <> []) then 
+            [ (s, non_empty_relations) ]
+         else []   
+      ) !(prog.db))    
+   in
+   prog.triggers := non_empty_triggers;
+   prog.db       := non_empty_db;
+   prog   
 
 (**[empty_prog ()]
    
@@ -310,6 +341,14 @@ let empty_prog (): prog_t =
       db = Schema.empty_db () }
 ;;
 
+(**[sort_prog prog]
+  
+   Reorder statements such that all update statements precede replace 
+   statements and update statements are first used on the left hand side 
+   and then incremented. Dependencies between statements are encoded 
+   in the form of a graph. Topological sort is used to create a new 
+   order of statements.    
+ *)
 let sort_prog (prog:prog_t):prog_t =
    List.iter (fun (trigger:trigger_t) ->
       (* The fact that all update statements must precede *)
@@ -374,6 +413,6 @@ let plan_to_m3 (db:Schema.t) (plan:Plan.plan_t):prog_t =
          add_stmt prog event stmt
       ) (ds.ds_triggers)
    ) plan;
-   sort_prog prog
+   finalize (sort_prog prog)
 ;;
 

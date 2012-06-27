@@ -696,3 +696,13 @@ let sanity_check_variable_names expr =
                (ListExtras.ocaml_of_list string_of_type vtypes)
             )
       ) var_names
+
+(**
+   Add AggSum around a given expression if necessary. 
+*)            
+let mk_aggsum (e: expr_t) (schema: var_t list) =
+   let expr_ovars = snd (schema_of_expr e) in
+   let expr_schema = ListAsSet.inter expr_ovars schema in
+   if (ListAsSet.seteq expr_ovars expr_schema) then e
+   else CalcRing.mk_val (AggSum(expr_schema, e))
+      

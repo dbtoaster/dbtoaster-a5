@@ -128,12 +128,16 @@ in
       "AggSum([A], R(A,B) * (C ^= (A + B)) * {C > 0})"
       "M1(int)[][A]";       
    test "Aggregation with a lift containing an irrelevant relation"
-      "AggSum([A], R(A,B) * (C ^= S(A)))"
-      "M1(int)[][A]";       
+      "AggSum([A], R(A,B) * (C ^= S(A)) * {C + 1})"
+      "M1(int)[][A] * AggSum([A], (C ^= M1_L1_1(int)[][A]) * {1 + C})";       
    test ("Aggregation with a lift containing an irrelevant relation " ^ 
          "and a comparison")
       "AggSum([A], R(A,B) * (C ^= S(A)) * {C > 0})"
-      "M1(int)[][A]";
+      "M1(int)[][A] * AggSum([A], (C ^= M1_L1_1(int)[][A]) * {C > 0})";     
+   test ("Aggregation with a lift containing an irrelevant relation " ^ 
+         "and a common variable")
+      "AggSum([A], R(A,B) * (C ^= (S(B) * {B = 0})) * C)"
+      "M1(int)[][A]";     
    test "Aggregation with a lift containing a relevant relation"
       "AggSum([A], R(A,B) * (E ^= R(C,D) * B))"
       "AggSum([A], (M1_L1_1(int)[][A,B] * (E ^= M1_L1_1(int)[][C, D] * B)))";
@@ -169,12 +173,7 @@ in
        else if (Debug.active "IVC-OPTIMIZE-EXPR") 
        then "M1(int)[][](1) * M2(int)[][A]"
        else "M1(int)[][](AggSum([],((C ^= 0)))) * M2(int)[][A]");
-                    
-   test ("Aggregation with a lift containing an irrelevant relation " ^ 
-         "and a common variable")
-      "AggSum([A], R(A,B) * (C ^= S(B)))"
-      "M1(int)[][A]";
-    
+                       
    test ("Aggregation with a lift containing an irrelevant relation " ^ 
          "and comparison")
       "AggSum([A], R(A,B) * (C ^= S(D)) * {C > 0})"
@@ -183,12 +182,7 @@ in
        else if (Debug.active "IVC-OPTIMIZE-EXPR") 
        then "M1(int)[][] * M2(int)[][A]"
        else "M1(int)[][](AggSum([],(((C ^= 0) * {C > 0})))) * M2(int)[][A]");
-    
-   test ("Aggregation with a lift containing an irrelevant relation " ^ 
-         "and a common variable")
-      "AggSum([A], R(A,B) * (C ^= S(A)) * {C > 0})"
-      "M1(int)[][A]";
-   
+       
    test "RExistsNestedAgg Delta Chunk"
       "R(A, B) *
        (foo ^= ( AggSum([], (X ^= R(A,B) + {dA = A} * dB) *

@@ -170,14 +170,14 @@ let partition_expr (scope:var_t list) (event:Schema.event_t option)
       (* output variables of the relation term.           *)
       
                               
-      (* Preprocessing step to mark those lifts that are *)
-      (* going to be materialized separately for sure    *)
+      (* Preprocessing step to mark those lifts that are  *)
+      (* going to be materialized separately for sure.    *)
+      (* Essentially, all lifts are singletons and are    *)
+      (* always materialize separately. *)
       let lift_terms_annot = List.map (fun l_term ->
          match CalcRing.get_val l_term with
 (***** BEGIN EXISTS HACK *****)
-            | Exists(subexpr)  
-(***** END EXISTS HACK *****)
-            | Lift(_, subexpr) -> 
+            | Exists(subexpr) -> 
                (* If there is no root relations, materialize *)
                (* subexp in order to avoid the need for IVC  *)
                if ivc_opt_enabled && not has_root_relation
@@ -186,7 +186,7 @@ let partition_expr (scope:var_t list) (event:Schema.event_t option)
 
                let subexpr_rels = rels_of_expr subexpr in
                if subexpr_rels <> [] then begin
-
+                  
                   (* The lift subexpression containing the event *)
                   (* relation is always materialized separately  *)
                   let lift_contains_event_rel =
@@ -198,7 +198,31 @@ let partition_expr (scope:var_t list) (event:Schema.event_t option)
                   then (l_term, MaterializeAsNewMap)
                   else (l_term, MaterializeUnknown)
                end
-               else (l_term, MaterializeUnknown)            
+               else (l_term, MaterializeUnknown)
+(***** END EXISTS HACK *****)
+            | Lift(_, subexpr) -> 
+               (* If there is no root relations, materialize *)
+               (* subexp in order to avoid the need for IVC  *)
+               if ivc_opt_enabled && not has_root_relation
+               then (l_term, MaterializeAsNewMap)
+               else
+                  
+               let subexpr_rels = rels_of_expr subexpr in
+               if subexpr_rels <> [] 
+               then (l_term, MaterializeAsNewMap)
+(*               then begin                                          *)
+(*                  (* The lift subexpression containing the event *)*)
+(*                  (* relation is always materialized separately  *)*)
+(*                  let lift_contains_event_rel =                    *)
+(*                     match extract_event_reln event with           *)
+(*                        | Some(reln) -> List.mem reln subexpr_rels *)
+(*                        | None -> false                            *)
+(*                  in                                               *)
+(*                  if lift_contains_event_rel                       *)
+(*                  then (l_term, MaterializeAsNewMap)               *)
+(*                  else (l_term, MaterializeUnknown)                *)
+(*               end                                                 *)
+               else (l_term, MaterializeUnknown)
             | _ -> failwith "Not a lift term"         
       ) lift_terms in
       
@@ -390,25 +414,54 @@ let rec should_update (event:Schema.event_t) (expr:expr_t)  : bool =
                if not (CalcRing.try_cast_to_monomial subexpr_opt) 
 		         then begin
                   let local_do_update = rcr subexpr_opt in 
-                  (do_update || local_do_update,
-                   do_replace || not (local_do_update)) 
+                  (do_update_graph || local_do_update,
+                   do_replace_graph || not (local_do_update)) 
                end
                else
                
-               (* Split the expression into four parts *)
-               let (_, rel_expr, lift_expr, _) = 
-                  partition_expr expr_scope (Some(event)) subexpr_opt 
-               in
-               let rel_expr_ovars = snd (schema_of_expr rel_expr) in
-               let lift_expr_ovars = snd (schema_of_expr lift_expr) in
-               (* We assume that all equalities have been removed *)
-               (* by the calculus optimizer*)
-               let local_update_graph = 
-                  ((rel_expr_ovars = []) || (lift_expr_ovars = []) ||
-                   ((ListAsSet.inter rel_expr_ovars lift_expr_ovars) <> [])) 
-               in
-                  (do_update_graph || local_update_graph, 
+               let local_update_graph = fst (
+                  List.fold_left (fun (update, scope_acc) term ->
+                   match CalcRing.get_val term with
+(***** BEGIN EXISTS HACK *****)
+                     | Exists(subexpr)
+(***** END EXISTS HACK *****)
+                     | Lift(_, subexpr) ->
+                        let term_ovars = snd (schema_of_expr term) in
+                        let subexpr_rels = rels_of_expr subexpr in
+                        let contains_event_rel =
+                           match extract_event_reln (Some(event)) with
+                              | Some(reln) -> List.mem reln subexpr_rels
+                              | None -> false
+                        in
+                           if contains_event_rel
+                           then (update && ListAsSet.inter scope_acc
+                                                           term_ovars <> [],
+                                 ListAsSet.union scope_acc term_ovars)
+                           else (update,
+                                 ListAsSet.union scope_acc term_ovars)
+                     | _ ->
+                        let term_ovars = snd (schema_of_expr term) in
+                        (update,
+                         ListAsSet.union scope_acc term_ovars)
+                  ) (true, expr_scope) (CalcRing.prod_list subexpr_opt)
+               ) in
+                  (do_update_graph || local_update_graph,
                    do_replace_graph || (not local_update_graph))
+               
+(*               (* Split the expression into four parts *)                   *)
+(*               let (_, rel_expr, lift_expr, _) =                            *)
+(*                  partition_expr expr_scope (Some(event)) subexpr_opt       *)
+(*               in                                                           *)
+(*               let rel_expr_ovars = snd (schema_of_expr rel_expr) in        *)
+(*               let lift_expr_ovars = snd (schema_of_expr lift_expr) in      *)
+(*               (* We assume that all equalities have been removed *)        *)
+(*               (* by the calculus optimizer*)                               *)
+(*               let local_update_graph =                                     *)
+(*                  ((rel_expr_ovars = []) || (lift_expr_ovars = []) ||       *)
+(*                   ((ListAsSet.inter rel_expr_ovars lift_expr_ovars) <> []))*)
+(*               in                                                           *)
+(*                  (do_update_graph || local_update_graph,                   *)
+(*                   do_replace_graph || (not local_update_graph))            *)
             
             ) (false, false)
               (snd (decompose_graph expr_scope (term_schema, term_opt)))
@@ -420,13 +473,7 @@ let rec should_update (event:Schema.event_t) (expr:expr_t)  : bool =
       if (do_update && do_replace) || (not do_update && not do_replace) 
       then (not (Debug.active "HEURISTICS-PREFER-REPLACE"))
       else do_update  
-    
-let mk_aggsum (e: expr_t) (schema: var_t list) =
-   let expr_ovars = snd (schema_of_expr e) in
-   let expr_schema = ListAsSet.inter expr_ovars schema in
-   if (ListAsSet.seteq expr_ovars expr_schema) then e
-   else CalcRing.mk_val (AggSum(expr_schema, e))
-   
+     
 (******************************************************************************)
 
 (** Perform partial materialization of a given expression according to 
@@ -626,21 +673,19 @@ and materialize_expr (db_schema:Schema.t) (history:ds_history_t)
    end;
                      
    (* Extended the schema with the input variables of other expressions *) 
-   let rel_expected_schema = ListAsSet.inter 
-        rel_expr_ovars 
-        (ListAsSet.multiunion [  schema;
-                                 scope_const;
-                                 lift_expr_ivars;
-                                 (* e.g. ON +S(dA)     *)
-                                 (* R(A) * (C ^= S(A)) *)
-                                 lift_expr_ovars;
-                                 value_expr_ivars ]) 
+   let extended_schema = 
+      ListAsSet.multiunion [ schema;
+                             scope_const;
+                             lift_expr_ivars;
+                             (* e.g. ON +S(dA)             *)
+                             (*         R(A) * (C ^= S(A)) *)
+                             lift_expr_ovars;
+                             value_expr_ivars ]
    in
-   (* If necessary, add an aggregation around the relation term *)
-   let agg_rel_expr = 
-      if ListAsSet.seteq rel_expr_ovars rel_expected_schema 
-      then rel_expr
-      else CalcRing.mk_val (AggSum(rel_expected_schema, rel_expr)) 
+
+   let agg_rel_expr = mk_aggsum rel_expr extended_schema in
+   let (agg_rel_expr_ivars, agg_rel_expr_ovars) = 
+      schema_of_expr agg_rel_expr 
    in
 
    (* Extracted lifts are always materialized separately *)   
@@ -698,13 +743,12 @@ and materialize_expr (db_schema:Schema.t) (history:ds_history_t)
       "\n\t Lift InpVars: [" ^ (string_of_vars lift_expr_ivars) ^ "]" ^
       "\n\t Lift OutVars: [" ^ (string_of_vars lift_expr_ovars) ^ "]" ^
       "\n\t Value InpVars: [" ^ (string_of_vars value_expr_ivars) ^ "]" ^
-      "\n\t Relation InVars: [" ^ (string_of_vars rel_expr_ivars) ^ "]" ^
-      "\n\t Relation OutVars: [" ^ (string_of_vars rel_expr_ovars) ^ "]" ^
-      "\n\t Original schema: [" ^ (string_of_vars schema) ^ "]" ^ 
-      "\n\t Relation expected schema: [" ^
-      (string_of_vars rel_expected_schema)^"]"
+      "\n\t Relation InVars: [" ^ (string_of_vars agg_rel_expr_ivars) ^ "]" ^
+      "\n\t Relation OutVars: [" ^ (string_of_vars agg_rel_expr_ovars) ^ "]" ^
+      "\n\t Original schema: [" ^ (string_of_vars schema) ^ "]" 
    ); 
-         
+      
+   (* The actual materialization of agg_rel_expr *)   
    let (todos, complete_mat_expr) = 
       if (rels_of_expr rel_expr) = [] 
       then (todo_lifts, 
@@ -741,8 +785,8 @@ and materialize_expr (db_schema:Schema.t) (history:ds_history_t)
                let new_ds = {
                   ds_name = CalcRing.mk_val (
                      External(prefix,
-                              rel_expr_ivars,
-                              rel_expected_schema,
+                              agg_rel_expr_ivars,
+                              agg_rel_expr_ovars,
                               type_of_expr agg_rel_expr,
                               ivc_expr)
                   );
@@ -771,12 +815,7 @@ and materialize_expr (db_schema:Schema.t) (history:ds_history_t)
          end
    in
    (* If necessary, add aggregation to the whole materialized expression *)
-   let (_, mat_expr_ovars) = schema_of_expr complete_mat_expr in
-   let agg_mat_expr = 
-      if ListAsSet.seteq mat_expr_ovars schema 
-      then complete_mat_expr
-      else CalcRing.mk_val (AggSum(schema, complete_mat_expr)) 
-   in
+   let agg_mat_expr = mk_aggsum complete_mat_expr schema in
       (todos, agg_mat_expr)
 
         

@@ -34,7 +34,7 @@ package org.dbtoaster.dbtoasterlib {
           case (l, (k, v)) =>
             (try {
               val keyXML: List[xml.Elem] = (k.asInstanceOf[Product].productIterator.foldLeft((0, List[xml.Elem]())) { case ((i, l), k) => (i + 1, <xml>{ valToStr(k) }</xml>.copy(label = ("__a" + i)) :: l) })._2
-              <item> { keyXML } <__av>{ valToStr(v) }</__av></item>
+              <item> { keyXML.reverse } <__av>{ valToStr(v) }</__av></item>
             } catch {
               case e: java.lang.ClassCastException => <item><__a0>{ valToStr(k) }</__a0><__av>{ valToStr(v) }</__av></item>
             }) :: l
