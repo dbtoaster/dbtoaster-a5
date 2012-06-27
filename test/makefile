@@ -49,6 +49,7 @@ unit:
 	@$(UNIT_TEST) unit/compiler.ml
 	@$(UNIT_TEST) unit/k3interpreter.ml
 	@$(UNIT_TEST) unit/m3tok3.ml
+	@$(UNIT_TEST) unit/k3optimizer.ml
 #	@$(UNIT_TEST) unit/sqlclient.ml
 
 bigquery:	testdatahash

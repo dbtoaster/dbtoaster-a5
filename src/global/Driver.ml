@@ -91,16 +91,20 @@ let optimizations_by_level =
       ]; 
       (** -O2 **) [
          "COMPILE-WITHOUT-OPT";
+         "UNIFY-EXPRESSIONS";
       ];
       (** -O3 **) [
          "UNIFY-EXPRESSIONS";
-         "K3-OPTIMIZE-LIFT-UPDATES";
       ];
    ]
 let optimizations = 
    ListAsSet.union (ListAsSet.multiunion optimizations_by_level) [
       "IGNORE-DELETES"; "HEURISTICS-ALWAYS-UPDATE";
       "HASH-STRINGS"; "EXPRESSIVE-TLQS"; "COMPILE-WITH-STATIC";
+      
+      (* This is generally more efficient, but doesn't respect side-effect-
+         producing statements, and is unsafe *)
+      "K3-OPTIMIZE-LIFT-UPDATES";
    ]
 let opt_level = ref 2;;
 
