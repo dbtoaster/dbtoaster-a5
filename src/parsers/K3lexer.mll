@@ -72,6 +72,7 @@ let keywords =
          "INTEGER", TYPE(Types.TInt);
          "DOUBLE", TYPE(Types.TFloat);
          "DECIMAL", TYPE(Types.TFloat);
+         "EXTERNALLAMBDA", EXTERNALLAMBDA;
    ]
 let _ = hashtbl_of_pair_list keyword_table keywords
 

@@ -308,6 +308,7 @@ mapTriggerStmtList:
 
 mapTriggerStmt:
 | externalDefn mapTriggerType ivcCalculusExpr { 
+      Calculus.sanity_check_variable_names $3;
       {  target_map  = CalcRing.mk_val (External($1));
          update_type = $2;
          update_expr = $3

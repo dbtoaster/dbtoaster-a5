@@ -1760,7 +1760,12 @@ end (* Typing *)
                   result ci (Fn(ty, Ext(Apply(c_fn_id)), f))
                 | _ -> result ci (Fn(ty, Ext(Apply(c_fn_id)), nargs))
               end
-            | _ -> result ci (Fn(ty, Ext(Apply(id)), nargs))
+            | _ -> 
+              begin match nargs with
+                | [Tuple(ft_l, f)] ->
+                  result ci (Fn(ty, Ext(Apply(id)), f))
+                | _ -> result ci (Fn(ty, Ext(Apply(id)), nargs))
+              end
         end
       
     | Fn (meta,fn_id,args) ->

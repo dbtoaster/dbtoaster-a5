@@ -790,12 +790,7 @@ let nice_string_of_expr ?(type_is_needed = false) e maps =
   let fnl () = pp_force_newline str_formatter () in
   let rec ttostr t = (match t with
       | TUnit -> "unit"
-      | TBase( b_t ) -> begin match b_t with
-            | Types.TInt -> "int"
-            | Types.TFloat -> "float"
-            | Types.TString -> "string"
-            | _ -> "unknown!"
-            end
+      | TBase( b_t ) -> Types.string_of_type b_t
       | TTuple(tlist) -> 
          "<"^(ListExtras.string_of_list ttostr tlist)^">"
       | Collection(_,subt) -> "Collection("^(ttostr subt)^")"

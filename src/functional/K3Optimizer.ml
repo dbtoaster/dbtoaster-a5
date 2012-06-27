@@ -600,6 +600,7 @@ let collection_expr expr =
 
 let contains_collection_expr expr =
   let bu_f _ parts e = match e with
+    | ExternalLambda _ 
     | Const _ | Var _ -> false
     | SingletonPC _ | InPC _ | OutPC _ | PC _ -> true
     | _ -> List.exists (fun x -> x) (List.flatten parts)
@@ -997,6 +998,10 @@ let rec simplify_collections filter expr =
   let simplify expr =
     let ne = descend_expr recur expr in
     begin match ne with
+    
+    | Apply(Lambda(args,Singleton(lambda_e)), arg_e) -> 
+         Singleton(Apply(Lambda(args, lambda_e), arg_e)) 
+    
     | Map(map_f, Singleton(e)) -> Singleton(Apply(map_f, e))
     | Flatten(Singleton(c)) -> c
     | Map(map_f, Flatten c) ->

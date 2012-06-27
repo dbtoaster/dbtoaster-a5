@@ -142,7 +142,7 @@
 %token MEMBER LOOKUP SLICE FILTER SINGLETON COMBINE
 %token CREATE TABLE STREAM FROM SOCKET FILE PIPE FIXEDWIDTH DELIMITED LINE
 %token VARSIZE OFFSET ADJUSTBY SETVALUE
-%token PCUPDATE PCVALUEUPDATE PCELEMENTREMOVE
+%token PCUPDATE PCVALUEUPDATE PCELEMENTREMOVE EXTERNALLAMBDA
 %token INT UNIT FLOAT COLLECTION STRINGTYPE CHAR VARCHAR DATE
 %token IN OUT
 %token EOSTMT
@@ -323,6 +323,7 @@ statement:
 | pcElementRemoveStatement                                  { $1 }
 | singletonStatement                                        { $1 }
 | combineStatement                                          { $1 }
+| externalLambdaStatement                                   { $1 }
 
 constStatement:
 | CONST_FLOAT
@@ -479,6 +480,9 @@ singletonStatement:
 
 combineStatement:
 | COMBINE LBRACE statementElementList RBRACE                { Combine($3) }
+
+externalLambdaStatement:
+| EXTERNALLAMBDA LPAREN ID COMMA lambdaArgument COMMA typeItem RPAREN { ExternalLambda($3, $5, TBase($7)) }
 
 statementElementListOpt:
 | statementElementList                                      { $1 }

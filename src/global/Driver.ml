@@ -620,9 +620,14 @@ if stage_is_active StageParseM3 then (
    let lexbuff = Lexing.from_channel 
       (if f <> "-" then (open_in f) else stdin)
    in 
-      m3_program := 
-            Calculusparser.mapProgram Calculuslexer.tokenize lexbuff   
-)
+      try 
+         m3_program := 
+               Calculusparser.mapProgram Calculuslexer.tokenize lexbuff   
+      with
+         | Calculus.CalculusException(expr, msg) ->
+            error ~exc:true
+                  ~detail:(fun () -> CalculusPrinter.string_of_expr expr) 
+                  msg)
 ;;
 if stage_is_active StageM3ToDistM3 then (
    Debug.print "LOG-DRIVER" (fun () -> "Running Stage: M3ToDistM3");

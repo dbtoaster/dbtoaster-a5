@@ -140,7 +140,6 @@ exception CalculusException of expr_t * string
 ;;
 (**/**)
 let bail_out expr msg = 
-   print_endline msg;                   
    raise (CalculusException(expr, msg))
 ;;
 (**/**)
