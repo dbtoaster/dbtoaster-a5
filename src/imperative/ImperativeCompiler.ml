@@ -2958,7 +2958,7 @@ struct
           tab^tab^"return snapshot_t( new tlq_t((tlq_t&)data) );";
           tab^"}";
           "";
-          "private:";
+          "protected:";
           tab^"data_t data;";
           "};";];
         ] )))

@@ -512,12 +512,11 @@ if stage_is_active StageSQLToCalc then (
          ) else (fun q -> q)
       in
       try 
-         List.iter (fun q -> 
-            List.iter (fun (tgt_name, tgt_calc) ->
-               calc_queries := (rename_query tgt_name, tgt_calc)::!calc_queries
-            ) (List.rev (SqlToCalculus.calc_of_query tables q))
-            (* Reverse the order to use :: to build up the query list *)
-         ) (List.rev queries);
+         calc_queries := List.flatten (List.map 
+            (fun q -> List.map 
+               (fun (tgt_name, tgt_calc) -> (rename_query tgt_name, tgt_calc)) 
+               (SqlToCalculus.calc_of_query tables q))
+            queries);         
       with 
          | Sql.SqlException(msg) ->
             error ~exc:true ("Sql Error: "^msg)

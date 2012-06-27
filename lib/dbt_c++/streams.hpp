@@ -239,20 +239,21 @@ struct dbt_file_source : public source
     dbt_file_source(const string& path, frame_descriptor& f, adaptor_list& a)
     : source(f,a)
     {
-        source_stream = shared_ptr<file_stream>(new file_stream(path));
-        if ( !source_stream ) {
-            cerr << "failed to open file source " << path << endl;
-        } else {
-            if( runtime_options::verbose() )
-            cerr << "reading from " << path
-                    << " with " << a.size() << " adaptors" << endl;
-        }
+    	if ( boost::filesystem::exists( path ) )
+    	{
+    		source_stream = shared_ptr<file_stream>(new file_stream(path));
+    		if( runtime_options::verbose() )
+    		    cerr << "reading from " << path
+    		         << " with " << a.size() << " adaptors" << endl;
+    	}
+    	else
+            cerr << "File not found: " << path << endl;
         buffer = shared_ptr<string>(new string());
     }
 
     void init_source() {}
 
-    bool has_inputs() { return has_frame() || source_stream->good(); }
+    bool has_inputs() { return has_frame() || (source_stream && source_stream->good()); }
 
     bool has_frame() {
         bool r = false;
