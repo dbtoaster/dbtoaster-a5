@@ -10,8 +10,10 @@
    type k3_statement_t = K3.statement_t
    type k3_trigger_t = K3.trigger_t
    type k3_program_t = K3.prog_t
+   (*
    type k3_map_t = K3.map_t
    type map_schema_t = (Types.var_t list * Types.var_t list)
+   *)
 
     
    let parse_error s =
@@ -31,41 +33,35 @@
                         (name, schema, reltype);
          old_rels
 
-   let empty_output_k3 = ([], [], [])
+   let collections:((string, expr_t) Hashtbl.t) = Hashtbl.create 10
 
-   let maps:((string, k3_map_t) Hashtbl.t) = Hashtbl.create 10
+   let add_collection name expr =
+      Hashtbl.replace collections name expr
 
-   let add_map name (new_map: k3_map_t) =
-      Hashtbl.replace maps (String.uppercase name) new_map
-
-   let get_map name : k3_map_t= 
-      try Hashtbl.find maps (String.uppercase name)
-         with _ -> raise (K3TypeError("Map '"^name^"' is not defined!"))
-
-   let get_map_schema name : map_schema_t = 
-      let (_, input_var_types, output_var_types, _) = get_map name in
-         input_var_types, output_var_types
+   let get_collection c_id = 
+      try Hashtbl.find collections c_id
+      with _ -> raise (K3TypeError("Collection '"^c_id^"' is not defined!"))
+      
+   let get_collection_schema name =  begin match get_collection name with
+      | SingletonPC(id,t) ->  [],[]
+      | OutPC(id,outs,t) ->   [],outs
+      | InPC(id,ins,t) ->     ins,[]
+      | PC(id,ins,outs,t) ->  ins,outs
+      | _ -> failwith "K3 expression must be PC!"
+   end
+   
+   let create_map coll = List.hd (get_expr_map_schema coll)
 
    let patterns:(Patterns.pattern_map ref) = ref []
 
    let add_pattern name (new_pattern: Patterns.pattern) = 
       patterns := Patterns.add_pattern !patterns (name, new_pattern)
 
-   let create_map name input_var_types output_var_types map_type =
-      let new_map = (name, input_var_types, output_var_types, map_type) in
-         add_map name new_map; 
-         new_map
-
    let tl_queries: (toplevel_query_t list ref) = ref []
 
    let add_tl qname qexp = 
       tl_queries := (qname, qexp)::(!tl_queries)
    
-   let concat_stmt (schema, m,t) (map_list,pat_list,trig_list) =
-      let new_map = if m = [] then map_list else m @ map_list in
-      let new_trig = if t = [] then trig_list else t @ trig_list in
-          (schema, (new_map, !patterns), new_trig, !tl_queries) 
-
    let must_infer_from_slice: (bool ref) = ref true
 
    let slice_infering statement var_bind_list =
@@ -77,7 +73,7 @@
             | SingletonPC(n, _) -> n
             | _ -> raise (K3TypeError("Incorrect collection!"))
          in
-         let (in_var_types, out_var_types) = get_map_schema map_name in
+         let (in_var_types, out_var_types) = get_collection_schema map_name in
          if (!must_infer_from_slice) then
          begin
             let get_vars l = List.map fst l in
@@ -110,24 +106,9 @@
              K3TypeError("First argument of Slice should be a Collection!"))
       in
       rcr statement
-
-
-   let collections:((string, expr_t) Hashtbl.t) = Hashtbl.create 10
-
-   let add_collection name expr =
-      Hashtbl.replace collections name expr
-
-   let get_collection c_id = 
-      Hashtbl.find collections c_id
-
-   let types_to_vartypes types = 
-      List.map 
-         (
-            fun (n, t) -> let nt = TBase(t)
-            in 
-               (n, nt)
-         )
-      types
+      
+   let varType_to_varK3Type = List.map (fun (v,t) -> (v,TBase(t)))   
+   let varK3Type_to_varType = List.map (fun (v,t) -> (v,base_type_of t))
 %}
 
 %token <Types.type_t> TYPE
@@ -177,33 +158,33 @@ dbtoasterK3Program:
 | relStatementList mapDeclarationList queryDeclarationList
   patternDeclarationList triggerList         
    { let _ = $3 in
-     concat_stmt ($1, $2, $5) empty_output_k3 }
+     ($1, ($2, !patterns), $5, !tl_queries) }
 mapDeclarationList:
 | mapDeclaration mapDeclarationList                         { $1::$2 }
 | mapDeclaration                                            { [$1] }
 
 mapDeclaration:
-| ID LPAREN typeItem RPAREN LBRACK mapVarList RBRACK 
-     LBRACK mapVarList RBRACK EOSTMT   
-   { let col = PC($1, types_to_vartypes $6, types_to_vartypes $9, TBase($3))
+| ID LPAREN typeItem RPAREN LBRACK varList RBRACK LBRACK varList RBRACK EOSTMT   
+   { let col = PC($1, varType_to_varK3Type $6, 
+                      varType_to_varK3Type $9, TBase($3))
      in
         add_collection $1 col;
-        create_map $1 $6 $9 $3}
-| ID LPAREN typeItem RPAREN LBRACK RBRACK LBRACK mapVarList RBRACK EOSTMT     
-   { let col = OutPC($1, types_to_vartypes $8, TBase($3))
+        create_map col}
+| ID LPAREN typeItem RPAREN LBRACK RBRACK LBRACK varList RBRACK EOSTMT     
+   { let col = OutPC($1, varType_to_varK3Type $8, TBase($3))
      in 
         add_collection $1 col;
-        create_map $1 [] $8 $3}
-| ID LPAREN typeItem RPAREN LBRACK mapVarList RBRACK LBRACK RBRACK EOSTMT
-   { let col = InPC($1, types_to_vartypes $6, TBase($3))
+        create_map col}
+| ID LPAREN typeItem RPAREN LBRACK varList RBRACK LBRACK RBRACK EOSTMT
+   { let col = InPC($1, varType_to_varK3Type $6, TBase($3))
      in
         add_collection $1 col;
-        create_map $1 $6 [] $3}
+        create_map col}
 | ID LPAREN typeItem RPAREN LBRACK RBRACK LBRACK RBRACK EOSTMT          
    { let col = SingletonPC($1,TBase($3))
      in
         add_collection $1 col;
-        create_map $1 [] [] $3}
+        create_map col}
 
 queryDeclarationList:
 | queryDeclaration EOSTMT queryDeclarationList              { let _ = $1 in () }
@@ -243,14 +224,15 @@ patternElementList:
 |  { [], [] }
 
 patternElementItem:
-| INTEGER COLON ID                                          { $3, $1 }
+| INTEGER COLON ID                                       { $3, $1 }
 
-mapVarList:
-| mapVarItem COMMA mapVarList                               { $1::$3 }
-| mapVarItem                                                { [$1] }
+varList:
+| varItem COMMA varList                               	{ $1::$3 }
+| varItem                                                { [$1] }
 
-mapVarItem:
-| ID COLON typeItem                                        { ($1, $3) }
+varItem:
+| ID COLON typeItem                                      { ($1, $3) }
+| ID                                                     { ($1, Types.TInt) }
 
 typeItem:
 | INT                                                      { Types.TInt }
@@ -258,13 +240,38 @@ typeItem:
 | STRINGTYPE                                               { Types.TString }
 | DATE                                                     { Types.TDate }
 
+
+k3Type:
+| INT                                                      { TBase(Types.TInt) }
+| FLOAT                                                    { TBase(Types.TFloat) }
+| DATE                                                     { TBase(Types.TDate) }
+| STRINGTYPE                                               { TBase(Types.TString) }
+| UNIT                                                     { TUnit }
+| LT k3TypeList GT                                         { TTuple($2) }
+| COLLECTION LPAREN k3Type RPAREN                          { Collection(Unknown, $3) }
+| LPAREN k3TypeList RPAREN ARROW k3Type                    { Fn($2, $5) }
+
+k3TypeList:
+| k3Type EOSTMT k3TypeList                                 { $1::$3 }
+| k3Type                                                   { [$1] }
+
+k3Var:
+| ID COLON k3Type                                          { ($1, $3) }
+
+k3VarList:
+| k3Var EOSTMT k3VarList                                   { $1::$3 }
+| k3Var                                                    { [$1] }
+
+
+
+
 triggerList:
 | trigger triggerList                                       { $1::$2 }
 | trigger                                                   { [$1] }
 
 trigger:
-| ON triggerType ID LPAREN argumentList RPAREN LBRACE statementList RBRACE 
-   { let args = List.map (fun x -> (x, Types.TInt)) $5 in
+| ON triggerType ID LPAREN varList RPAREN LBRACE statementList RBRACE 
+   { let args = $5 in
      let r = ($3, args,Schema.StreamRel) in
      let ev = 
         if $2 
@@ -272,8 +279,8 @@ trigger:
         else Schema.DeleteEvent(r)
      in
         (ev, $8) }
-| ON triggerType ID LBRACK argumentList RBRACK LBRACE statementList RBRACE 
-   { let args = List.map (fun x -> (x, Types.TInt)) $5 in
+| ON triggerType ID LBRACK varList RBRACK LBRACE statementList RBRACE 
+   { let args = $5 in
      let r = ($3, args,Schema.StreamRel) in
      let ev = 
         if $2 
@@ -287,10 +294,6 @@ trigger:
 triggerType:
 | SUM                                                       { true }
 | MINUS                                                     { false }
-
-argumentList:
-| ID COMMA argumentList                                     { $1::$3 }
-| ID                                                        { [$1] }
 
 statementList:
 | statement EOSTMT statementList                            { $1::$3 }
@@ -336,12 +339,8 @@ constStatement:
    { Const(Constants.parse_date $3) }
 
 varStatement:
-| ID COLON typeItem
-   { Var($1, TBase( $3 ) ) }
-| ID COLON varType
-   { Var($1, $3 ) }
-| ID
-   { Var($1, TBase(Types.TFloat)) }
+| ID COLON k3Type   { Var($1, $3 ) }
+| ID			        { Var($1, TBase(Types.TInt)) }
 
 tupleStatement:
 | LT statementElementList GT                                { Tuple($2) }
@@ -374,43 +373,16 @@ iterateStatement:
 | ITERATE LPAREN statement COMMA statement RPAREN           { Iterate($3, $5) }
 
 lambdaStatement:
-| LAMBDA LPAREN lambdaArgument RPAREN statement             { Lambda($3, $5) }
+| LAMBDA LPAREN lambdaArgument RPAREN LBRACE statement RBRACE { Lambda($3, $6) }
 
 lambdaArgument:
-| varItem
-   { AVar(fst $1, snd $1) }
-| LT varList GT                                             { ATuple($2) }
+| k3Var                                                     { AVar(fst $1, snd $1) }
+| LT k3VarList GT                                           { ATuple($2) }
 | LPAREN lambdaArgument RPAREN                              { $2 }
 
-varItem:
-| ID COLON varType                                          { ($1, $3) }
-
-varList:
-| varItem EOSTMT varList                                    { $1::$3 }
-| varItem                                                   { [$1] }
-
-varType:
-| INT
-   { TBase(Types.TInt) }
-| FLOAT
-   { TBase(Types.TFloat) }
-| DATE
-   { TBase(Types.TDate) }
-| STRINGTYPE
-   { TBase(Types.TString) }
-| UNIT                                                      { TUnit }
-| LT varTypeList GT                                         { TTuple($2) }
-| COLLECTION LPAREN varType RPAREN
-   { Collection(Unknown, $3) }
-| LPAREN varTypeList RPAREN ARROW varType                   { Fn($2, $5) }
-
-varTypeList:
-| varType EOSTMT varTypeList                                { $1::$3 }
-| varType                                                   { [$1] }
-
 assLmbdStatement:
-| LAMBDA LPAREN lambdaArgument COMMA lambdaArgument RPAREN statement
-   { AssocLambda($3, $5, $7) }
+| LAMBDA LPAREN lambdaArgument COMMA lambdaArgument RPAREN LBRACE statement RBRACE
+   { AssocLambda($3, $5, $8) }
 
 applyStatement:
 | APPLY LPAREN statement COMMA statement RPAREN             { Apply($3, $5) }
@@ -442,7 +414,7 @@ sliceStatement:
 | SLICE LPAREN statement COMMA LBRACK 
         varBindList RBRACK RPAREN
    { let var_list = slice_infering $3 $6 in
-     Slice($3, types_to_vartypes var_list, $6) }
+     Slice($3, var_list, $6) }
 
 filterStatement:
 | FILTER LPAREN statement COMMA statement RPAREN            { Map($3, $5) }
