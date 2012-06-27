@@ -1760,11 +1760,23 @@ end (* Typing *)
                   result ci (Fn(ty, Ext(Apply(c_fn_id)), f))
                 | _ -> result ci (Fn(ty, Ext(Apply(c_fn_id)), nargs))
               end
+            | "date_part" ->
+               begin match nargs with 
+               | [Tuple(ft_l, [Const(_, CString(part)); d_arg])] ->
+                  let lower_part = String.lowercase part in
+                  if (lower_part <> "year") && (lower_part <> "month") && 
+                     (lower_part <> "day")
+                  then failwith ("invalid call to date_part on : "^part)
+                  else
+                     result ci (Fn(ty, Ext(Apply(lower_part^"_part")), [d_arg]))
+               | _ -> failwith ("Invalid call to date_part")
+               end
             | _ -> 
               begin match nargs with
                 | [Tuple(ft_l, f)] ->
-                  result ci (Fn(ty, Ext(Apply(id)), f))
-                | _ -> result ci (Fn(ty, Ext(Apply(id)), nargs))
+                  result ci (Fn(ty, Ext(Apply(String.lowercase id)), f))
+                | _ -> result ci (Fn(ty, Ext(Apply(String.lowercase id)), 
+                                     nargs))
               end
         end
       

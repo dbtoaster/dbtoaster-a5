@@ -41,7 +41,7 @@ let int_of_const (a:const_t): int =
       | CBool(false) -> 0
       | CInt(av)     -> av
       | CFloat(av)   -> int_of_float av
-      | CString(av)  -> failwith ("Cannot produce integer of string '"^av^"'")
+      | CString(av)  -> int_of_string av
       | CDate _      -> failwith ("Cannot produce integer of date")
    end
 
@@ -58,7 +58,7 @@ let float_of_const (a:const_t): float =
       | CBool(false) -> 0.
       | CInt(av)     -> float_of_int av
       | CFloat(av)   -> av
-      | CString(av)  -> failwith ("Cannot produce float of string '"^av^"'")
+      | CString(av)  -> float_of_string av
       | CDate _      -> failwith ("Cannot produce float of date")
    end
 

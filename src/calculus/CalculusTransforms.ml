@@ -120,7 +120,8 @@ let rec combine_values ?(aggressive=false) (expr:C.expr_t): C.expr_t =
                | (x_val, y_val) -> CalcRing.mk_val (Cmp(op, x_val, y_val))
             end
          
-         | Value(_) | Rel(_,_) | External(_) -> CalcRing.mk_val lf
+         | Value(v) -> CalcRing.mk_val (Value(Arithmetic.eval_partial v))
+         | Rel(_,_) | External(_) -> CalcRing.mk_val lf
          | AggSum(gb_vars, subexp) -> 
             let new_subexp = rcr subexp in
             if new_subexp = CalcRing.zero then CalcRing.zero else

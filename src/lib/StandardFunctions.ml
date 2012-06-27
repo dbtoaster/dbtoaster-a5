@@ -68,7 +68,7 @@ let invalid_args (fn:string) (arglist:const_t list) (ftype:type_t): const_t =
       "Invalid arguments of "^fn^(begin match ftype with
          | TAny -> "" 
          | _ -> ":"^(string_of_type ftype)
-      end)^"("^(ListExtras.string_of_list ~sep:"," string_of_const arglist)^")"
+      end)^"("^(ListExtras.string_of_list ~sep:"," sql_of_const arglist)^")"
    ))
 (**/**)
 
@@ -204,7 +204,9 @@ let cast (arglist:const_t list) (ftype:type_t) =
          | TString -> CString(Constants.string_of_const arg)
          | _ -> invalid_args "cast" arglist ftype
       end
-   with Failure _ -> invalid_args "cast" arglist ftype
+   with Failure msg -> 
+      raise (InvalidFunctionArguments("Error while casting to "^
+                  (string_of_type ftype)^": "^msg))
    end
 ;; List.iter (fun (t, valid_in) ->
       declare_std_function ("cast_"^(Types.string_of_type t))
@@ -212,8 +214,8 @@ let cast (arglist:const_t list) (ftype:type_t) =
                            (function [a] when List.mem a valid_in -> t
                                    | _ -> inference_error ())
    ) [
-      TInt,     [TFloat; TInt]; 
-      TFloat,   [TFloat; TInt]; 
+      TInt,     [TFloat; TInt; TString]; 
+      TFloat,   [TFloat; TInt; TString]; 
       TDate,    [TDate; TString]; 
       TString,  [TInt; TFloat; TDate; TString; TBool];
      ]

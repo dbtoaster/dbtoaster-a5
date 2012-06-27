@@ -568,6 +568,8 @@ if stage_is_active StagePrintCalc then (
       bug ~exc:true
           ~detail:(fun () -> CalculusPrinter.string_of_expr expr) 
           msg
+   | StandardFunctions.InvalidFunctionArguments(msg) ->
+      error msg
 )
 ;;
 if stage_is_active StageCompileCalc then (
@@ -593,7 +595,8 @@ if stage_is_active StageCompileCalc then (
                                 (fun (_,x) -> CalculusPrinter.string_of_expr x)
                                 !calc_queries)
           msg
-          
+   | StandardFunctions.InvalidFunctionArguments(msg) ->
+      error msg
 )
 ;;
 if stage_is_active StagePrintPlan then (

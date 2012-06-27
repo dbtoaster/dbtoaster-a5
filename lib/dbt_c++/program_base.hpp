@@ -33,6 +33,7 @@
 #include "util.hpp"
 #include "streams.hpp"
 #include "standard_adaptors.hpp"
+#include "standard_functions.hpp"
 
 using namespace ::std;
 using namespace ::boost;
