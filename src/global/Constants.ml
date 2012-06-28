@@ -232,7 +232,8 @@ module Math = struct
    
    (**/**)
    let comparison_op (opname:string) (iop:int -> int -> bool) 
-                     (fop:float -> float -> bool) (a:const_t) (b:const_t):const_t =
+                     (fop:float -> float -> bool) (a:const_t)
+                     (b:const_t):const_t =
       let op_type = (escalate_type ~opname:opname (type_of_const a) 
                                                   (type_of_const b)) in
       begin match op_type with
@@ -266,7 +267,8 @@ module Math = struct
          | (CString(_), _) | (_,CString(_))-> failwith "= of string and other"
          | (CDate(y1,m1,d1), CDate(y2,m2,d2))-> y1=y2 && m1=m2 && d1=d2
          | (CDate _, _) | (_, CDate _)     -> failwith "= of date and other"
-         | (CFloat(_), _) | (_,CFloat(_))-> (float_of_const a) = (float_of_const b)
+         | (CFloat(_), _) | (_,CFloat(_))-> 
+            (float_of_const a) = (float_of_const b)
          | (CInt(av), CInt(bv))          -> av = bv
       end)
    (** Perform a type-escalating not-equals comparison *)

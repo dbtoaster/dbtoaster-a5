@@ -1111,7 +1111,8 @@ let rec simplify_collections filter expr =
 
 
 
-(** Common subexpression elimination, based on alpha equivalence of expressions. 
+(** Common subexpression elimination, based on alpha equivalence of 
+    expressions. 
     This method folds over a K3 expression, building up candidates to test for
     equivalence in a bottom-up fashion. Currently, only collection operations
     are considered as candidates (that is maps,aggregates,group-bys,flattens).
@@ -1121,7 +1122,8 @@ let rec simplify_collections filter expr =
        provided they do not use the variable bound by the lambda.
     ii) if-then-elses, where only candidates common to both then- and 
         else-branches are carried up. Candidates that appear in any combination 
-        of the predicate and one of the branches are materialized then and there.
+        of the predicate and one of the branches are materialized then and 
+        there.
     
     Specifically, the fold method accumulates a set of equivalence classes,
     represented as a nested list of expressions (each inner list represents
@@ -1407,17 +1409,20 @@ let common_subexpression_elim expr =
         | _ -> (union_eqv_parts sub_parts), rebuilt_expr
     in
     Debug.print "LOG-K3-OPT-CSE-FOLD" (fun () ->
-            "LOG-K3-OPT-CSE: Fold_expr: "^(K3.nice_string_of_expr expr [])^"\n"^
-            "LOG-K3-OPT-CSE: Rebuilt_expr: "^(K3.nice_string_of_expr rebuilt_expr [])^"\n"^
-            "LOG-K3-OPT-CSE: Ret_expr: "^(K3.nice_string_of_expr r_expr [])^"\n"^
-            "LOG-K3-OPT-CSE: new_candidates: "^
-               (ListExtras.string_of_list
-                  (fun x -> 
-                     (ListExtras.string_of_list 
-                        (fun y -> (K3.nice_string_of_expr y [])) x)^"\n" )
-                  new_candidates)^
-            "\n\n-----------------------------------------------------"
-         );
+       "LOG-K3-OPT-CSE: Fold_expr: "^
+       (K3.nice_string_of_expr expr [])^"\n"^
+       "LOG-K3-OPT-CSE: Rebuilt_expr: "^
+       (K3.nice_string_of_expr rebuilt_expr [])^"\n"^
+       "LOG-K3-OPT-CSE: Ret_expr: "^
+       (K3.nice_string_of_expr r_expr [])^"\n"^
+       "LOG-K3-OPT-CSE: new_candidates: "^
+       (ListExtras.string_of_list
+           (fun x -> 
+               (ListExtras.string_of_list 
+                   (fun y -> (K3.nice_string_of_expr y [])) x)^"\n" )
+                   new_candidates)^
+       "\n\n-----------------------------------------------------"
+    );
     new_candidates, r_expr
   in
   let global_cses, r_expr =

@@ -39,8 +39,8 @@ std::ostream& operator<<(std::ostream &strm, const boost::any &a) {
             return strm << any_cast<double>(a);
 
         else if( a.type() == typeid(std::string) )
-			return strm << any_cast<std::string>(a);
-		else
+            return strm << any_cast<std::string>(a);
+        else
             cerr << "event_arg: Unrecognized type in <<: " 
                  << a.type().name() << endl;
     } catch (boost::bad_any_cast& bc) {
@@ -239,21 +239,23 @@ struct dbt_file_source : public source
     dbt_file_source(const string& path, frame_descriptor& f, adaptor_list& a)
     : source(f,a)
     {
-    	if ( boost::filesystem::exists( path ) )
-    	{
-    		source_stream = shared_ptr<file_stream>(new file_stream(path));
-    		if( runtime_options::verbose() )
-    		    cerr << "reading from " << path
-    		         << " with " << a.size() << " adaptors" << endl;
-    	}
-    	else
+        if ( boost::filesystem::exists( path ) )
+        {
+            source_stream = shared_ptr<file_stream>(new file_stream(path));
+            if( runtime_options::verbose() )
+                cerr << "reading from " << path
+                     << " with " << a.size() << " adaptors" << endl;
+        }
+        else
             cerr << "File not found: " << path << endl;
         buffer = shared_ptr<string>(new string());
     }
 
     void init_source() {}
 
-    bool has_inputs() { return has_frame() || (source_stream && source_stream->good()); }
+    bool has_inputs() { 
+        return has_frame() || (source_stream && source_stream->good()); 
+    }
 
     bool has_frame() {
         bool r = false;

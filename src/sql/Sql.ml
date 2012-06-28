@@ -888,7 +888,7 @@ let reset_table_defs () =
    This is to support include directives in SQL.  Specifically, in order to
    allow the parser to recur into itself, we need definitions from both 
    Sqlparser and Sqllexer.  However, these definitions are not available in the 
-   parser itself.  To break the dependency cycle, we use a reference here.   The 
+   parser itself.  To break the dependency cycle, we use a reference here. The 
    reference is instantiated at the end of Sqllexer. *)
 let parse_file:((string -> t list) ref) = ref (fun _ -> []) 
 (**/**)

@@ -205,7 +205,9 @@ let lift_equalities (global_scope:var_t list) (big_expr:C.expr_t): C.expr_t =
    let rec rcr (scope:var_t list) (expr:C.expr_t):
                ((lift_candidate_t) list * C.expr_t) = 
       Debug.print "LOG-LIFT-EQUALITIES" (fun () ->
-         "Lift Equalities: "^(CalculusPrinter.string_of_expr expr)^"\n\t\tWith Scope: "^
+         "Lift Equalities: "^
+         (CalculusPrinter.string_of_expr expr)^
+         "\n\t\tWith Scope: "^
          (ListExtras.ocaml_of_list string_of_var scope)
       );
       let rcr_merge x = merge scope (List.split [rcr scope x]) in
@@ -409,7 +411,8 @@ exception CouldNotUnifyException of string;;
    @param scope   Any variables defined outside of the expression being 
                   evaluated.  This includes trigger variables, input variables 
                   from the map on the lhs of the statement being evaluated.
-   @param schema  The expected output variables of the expression being unified.
+   @param schema  The expected output variables of the expression 
+                  being unified.
                   These variables will never be unified away
    @param expr    The calculus expression being processed
 *)
@@ -435,13 +438,13 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
          match expr_sub with 
          | CalcRing.Val(Value(ValueRing.Val(AVar(v)))) -> v
          | _ -> raise (CouldNotUnifyException("Could not put '"^
-                        (CalculusPrinter.string_of_expr expr_sub)^"' into a"^msg))
+                   (CalculusPrinter.string_of_expr expr_sub)^"' into a"^msg))
       in
       let val_sub ?(aggressive = false) msg =
          match (combine_values ~aggressive:aggressive expr_sub) with 
          | CalcRing.Val(Value(v)) -> v
          | _ -> raise (CouldNotUnifyException("Could not put '"^
-                        (CalculusPrinter.string_of_expr expr_sub)^"' into a"^msg))
+                   (CalculusPrinter.string_of_expr expr_sub)^"' into a"^msg))
       in
       let map_vars msg = 
          List.map (fun x -> if x = lift_v then var_sub msg else x)
@@ -696,7 +699,8 @@ let advance_lifts scope expr =
    Calculus.rewrite ~scope:scope (fun _ x -> CalcRing.mk_sum x)
    (fun (scope, _) pl ->
       Debug.print "LOG-ADVANCE-LIFTS" (fun () -> 
-         "Advance Lifts: processing "^(CalculusPrinter.string_of_expr (CalcRing.mk_prod pl)));
+         "Advance Lifts: processing " ^
+         (CalculusPrinter.string_of_expr (CalcRing.mk_prod pl)));
       CalcRing.mk_prod (
          List.fold_left (fun curr_ret curr_term ->
             begin match curr_term with
@@ -942,7 +946,8 @@ let rec nesting_rewrites (expr:C.expr_t) =
 let rec factorize_one_polynomial (scope:var_t list) (term_list:C.expr_t list) =
    Debug.print "LOG-FACTORIZE" (fun () ->
       "Factorizing Expression: ("^
-      (ListExtras.string_of_list ~sep:" + " CalculusPrinter.string_of_expr term_list)^
+      (ListExtras.string_of_list ~sep:" + " 
+          CalculusPrinter.string_of_expr term_list)^
       ")["^(ListExtras.string_of_list fst scope)^"]"
    );
    if List.length term_list < 2 then CalcRing.mk_sum term_list
@@ -1005,9 +1010,11 @@ let rec factorize_one_polynomial (scope:var_t list) (term_list:C.expr_t list) =
                ListExtras.split_at_pivot selected (CalcRing.prod_list term) in
             Debug.print "LOG-FACTORIZE" (fun () ->
                "Split "^(CalculusPrinter.string_of_expr term)^" into "^
-               (CalculusPrinter.string_of_expr (CalcRing.mk_prod lhs_of_selected))^
+               (CalculusPrinter.string_of_expr 
+                  (CalcRing.mk_prod lhs_of_selected))^
                " * [...] * "^
-               (CalculusPrinter.string_of_expr (CalcRing.mk_prod rhs_of_selected))         
+               (CalculusPrinter.string_of_expr 
+                  (CalcRing.mk_prod rhs_of_selected))         
             );
             if validate_fn lhs_of_selected rhs_of_selected 
             then (   factorized@
@@ -1022,7 +1029,9 @@ let rec factorize_one_polynomial (scope:var_t list) (term_list:C.expr_t list) =
       if (snd (List.hd rhs_sorted)) > (snd (List.hd lhs_sorted)) then
          let selected = (fst (List.hd rhs_sorted)) in
             Debug.print "LOG-FACTORIZE" (fun () ->
-               "Factorizing "^(CalculusPrinter.string_of_expr selected)^" from the RHS"
+               "Factorizing "^
+               (CalculusPrinter.string_of_expr selected)^
+               " from the RHS"
             );
             (  (factorize_and_split selected (fun _ rhs ->
                   C.commutes ~scope:scope selected (CalcRing.mk_prod rhs))), 
@@ -1031,7 +1040,9 @@ let rec factorize_one_polynomial (scope:var_t list) (term_list:C.expr_t list) =
       else
          let selected = (fst (List.hd lhs_sorted)) in
             Debug.print "LOG-FACTORIZE" (fun () ->
-               "Factorizing "^(CalculusPrinter.string_of_expr selected)^" from the LHS"
+               "Factorizing "^
+               (CalculusPrinter.string_of_expr selected)^
+               " from the LHS"
             );
             (  (factorize_and_split selected (fun lhs _ ->
                   C.commutes ~scope:scope (CalcRing.mk_prod lhs) selected)), 
@@ -1040,9 +1051,11 @@ let rec factorize_one_polynomial (scope:var_t list) (term_list:C.expr_t list) =
    in
       Debug.print "LOG-FACTORIZE" (fun () ->
          "Factorized: "^
-            (ListExtras.string_of_list CalculusPrinter.string_of_expr factorized)^"\n"^
+            (ListExtras.string_of_list 
+                CalculusPrinter.string_of_expr factorized)^"\n"^
          "Unfactorized: "^
-            (ListExtras.string_of_list CalculusPrinter.string_of_expr unfactorized)
+            (ListExtras.string_of_list 
+                CalculusPrinter.string_of_expr unfactorized)
       );
       (* Finally, recur. We might be able to pull additional terms out of the
          individual expressions.  Note that we're no longer able to pull out

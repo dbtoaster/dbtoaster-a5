@@ -412,7 +412,7 @@ let rec should_update (event:Schema.event_t) (expr:expr_t)  : bool =
                in
 
                if not (CalcRing.try_cast_to_monomial subexpr_opt) 
-		         then begin
+               then begin
                   let local_do_update = rcr subexpr_opt in 
                   (do_update_graph || local_do_update,
                    do_replace_graph || not (local_do_update)) 

@@ -11,7 +11,7 @@
     },
     
     "tiny" => {
-      :subs => [ [/data\/finance\/standard\/vwap5k.csv/, "data/finance/tiny/vwap100.csv"] ],
+      :subs => [ [/data\/finance\/standard\/vwap.csv/, "data/finance/tiny/vwap.csv"] ],
       :toplevels => {
         "PSP" => {
           :type => :singleton,

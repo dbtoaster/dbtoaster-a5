@@ -133,7 +133,8 @@ in
                  {SUPPLIER_CNT_pPARTPART_SIZE = 36} +
                  {SUPPLIER_CNT_pPARTPART_SIZE = 9}) * 
                {0 =
-              [regexp_match:int]('^MEDIUM POLISHED.*$', SUPPLIER_CNT_pPARTPART_TYPE)} *
+              [regexp_match:int]
+                 ('^MEDIUM POLISHED.*$', SUPPLIER_CNT_pPARTPART_TYPE)} *
                {SUPPLIER_CNT_pPARTPART_BRAND != 'Brand#45'} 
               ))) *
     -1))" [] [];

@@ -164,7 +164,8 @@ mapDeclarationList:
 | mapDeclaration                                            { [$1] }
 
 mapDeclaration:
-| ID LPAREN typeItem RPAREN LBRACK varList RBRACK LBRACK varList RBRACK EOSTMT   
+| ID LPAREN typeItem RPAREN LBRACK varList RBRACK 
+  LBRACK varList RBRACK EOSTMT   
    { let col = PC($1, varType_to_varK3Type $6, 
                       varType_to_varK3Type $9, TBase($3))
      in
@@ -227,7 +228,7 @@ patternElementItem:
 | INTEGER COLON ID                                       { $3, $1 }
 
 varList:
-| varItem COMMA varList                               	{ $1::$3 }
+| varItem COMMA varList                                  { $1::$3 }
 | varItem                                                { [$1] }
 
 varItem:
@@ -242,13 +243,18 @@ typeItem:
 
 
 k3Type:
-| INT                                                      { TBase(Types.TInt) }
-| FLOAT                                                    { TBase(Types.TFloat) }
-| DATE                                                     { TBase(Types.TDate) }
-| STRINGTYPE                                               { TBase(Types.TString) }
+| INT
+   { TBase(Types.TInt) }
+| FLOAT
+   { TBase(Types.TFloat) }
+| DATE
+   { TBase(Types.TDate) }
+| STRINGTYPE
+   { TBase(Types.TString) }
 | UNIT                                                     { TUnit }
 | LT k3TypeList GT                                         { TTuple($2) }
-| COLLECTION LPAREN k3Type RPAREN                          { Collection(Unknown, $3) }
+| COLLECTION LPAREN k3Type RPAREN
+   { Collection(Unknown, $3) }
 | LPAREN k3TypeList RPAREN ARROW k3Type                    { Fn($2, $5) }
 
 k3TypeList:
@@ -340,7 +346,7 @@ constStatement:
 
 varStatement:
 | ID COLON k3Type   { Var($1, $3 ) }
-| ID			        { Var($1, TBase(Types.TInt)) }
+| ID                { Var($1, TBase(Types.TInt)) }
 
 tupleStatement:
 | LT statementElementList GT                                { Tuple($2) }
@@ -376,12 +382,14 @@ lambdaStatement:
 | LAMBDA LPAREN lambdaArgument RPAREN LBRACE statement RBRACE { Lambda($3, $6) }
 
 lambdaArgument:
-| k3Var                                                     { AVar(fst $1, snd $1) }
+| k3Var                                                     
+   { AVar(fst $1, snd $1) }
 | LT k3VarList GT                                           { ATuple($2) }
 | LPAREN lambdaArgument RPAREN                              { $2 }
 
 assLmbdStatement:
-| LAMBDA LPAREN lambdaArgument COMMA lambdaArgument RPAREN LBRACE statement RBRACE
+| LAMBDA LPAREN lambdaArgument COMMA lambdaArgument RPAREN 
+  LBRACE statement RBRACE
    { AssocLambda($3, $5, $8) }
 
 applyStatement:
@@ -454,7 +462,8 @@ combineStatement:
 | COMBINE LBRACE statementElementList RBRACE                { Combine($3) }
 
 externalLambdaStatement:
-| EXTERNALLAMBDA LPAREN ID COMMA lambdaArgument COMMA typeItem RPAREN { ExternalLambda($3, $5, TBase($7)) }
+| EXTERNALLAMBDA LPAREN ID COMMA lambdaArgument COMMA typeItem RPAREN
+    { ExternalLambda($3, $5, TBase($7)) }
 
 statementElementListOpt:
 | statementElementList                                      { $1 }

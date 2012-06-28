@@ -285,10 +285,10 @@ struct
       let (inlined_lists:K3Value.t list) = 
          List.map (inline_collection ~expr:expr) c_lists 
       in
-      (* ListCollection[] has an indeterminate type.  Disregard it when figuring
-         out the type of the list computations.  Otherwise, use the first 
-         list element to figure out the return type and do a safety check on the 
-         rest. *)
+      (* ListCollection[] has an indeterminate type.  Disregard it when 
+         figuring out the type of the list computations.  Otherwise, use the
+         first list element to figure out the return type and do a safety 
+         check on the rest. *)
       let (list_representative) = 
       match List.fold_left (fun curr_rep candidate ->
          match (curr_rep, candidate) with
@@ -409,7 +409,8 @@ struct
         | AVar(var,vt) -> 
           let const_val = 
              begin match (vt,f) with
-               | (TBase(base_vt),_) when (Constants.type_of_const f)=base_vt -> f
+               | (TBase(base_vt),_) 
+                  when (Constants.type_of_const f) = base_vt -> f
                | ((TBase(TFloat)), CBool(true)) -> CFloat(1.)
                | ((TBase(TFloat)), CBool(false)) -> CFloat(0.)
                | ((TBase(TFloat)), CInt(i)) -> CFloat(float_of_int i)
@@ -551,24 +552,25 @@ struct
     
     (* agg fn, initial agg, collection -> agg *)
     (* Note: accumulator is the last arg to agg_fn *)
-    let aggregate ?(expr = None) agg_fn init_agg collection = Eval(expr, fun th db ->
-        let aux fn v_f l = List.fold_left
-            (fun acc v -> apply_list fn ((v_f v)::[acc])) 
-            ((get_eval init_agg) th db) l
-        in
-        match (get_eval agg_fn) th db, 
-              (get_eval collection) th db with
-        | Fun _ as f, FloatList l -> aux f (fun x -> x) l
-        | Fun _ as f, TupleList l -> aux f (fun x -> x) l
-        | Fun _ as f, ListCollection l -> aux f (fun x -> x) l
-        | Fun _ as f, SingleMapList l ->
-            aux f (fun (k,m) -> Tuple (k@[SingleMap m])) l
-        | Fun _ as f, SingleMap m -> aux f (fun x -> x) (smc_to_tlc m)
-        | Fun _ as f, DoubleMap m -> aux f (fun x -> x) (dmc_to_c m)
-        | Fun _ as f, MapCollection m -> aux f (fun x -> x) (nmc_to_c m)
-        | Fun _, v -> bail ~expr:expr ("invalid agg collection: "^
-                                  (string_of_value v))        
-        | _ -> bail ~expr:expr ("invalid agg function"))
+    let aggregate ?(expr = None) agg_fn init_agg collection = 
+       Eval(expr, fun th db ->
+          let aux fn v_f l = List.fold_left
+              (fun acc v -> apply_list fn ((v_f v)::[acc])) 
+              ((get_eval init_agg) th db) l
+          in
+          match (get_eval agg_fn) th db, 
+                (get_eval collection) th db with
+          | Fun _ as f, FloatList l -> aux f (fun x -> x) l
+          | Fun _ as f, TupleList l -> aux f (fun x -> x) l
+          | Fun _ as f, ListCollection l -> aux f (fun x -> x) l
+          | Fun _ as f, SingleMapList l ->
+              aux f (fun (k,m) -> Tuple (k@[SingleMap m])) l
+          | Fun _ as f, SingleMap m -> aux f (fun x -> x) (smc_to_tlc m)
+          | Fun _ as f, DoubleMap m -> aux f (fun x -> x) (dmc_to_c m)
+          | Fun _ as f, MapCollection m -> aux f (fun x -> x) (nmc_to_c m)
+          | Fun _, v -> bail ~expr:expr ("invalid agg collection: "^
+                                         (string_of_value v))        
+          | _ -> bail ~expr:expr ("invalid agg function"))
 
     (* agg fn, initial agg, grouping fn, collection -> agg *)
     (* Perform group-by aggregation by using a temporary SliceableMap,
@@ -811,26 +813,28 @@ struct
         DB.update_value id v db; Unit)
     
     (* persistent collection id, in key, value -> update *)
-    let update_in_map_value ?(expr = None) id in_kl value = Eval(expr, fun th db ->
-      let key = (get_update_key th db in_kl) in
-      let v = (get_update_value th db value) in
-        Debug.print "LOG-INTERPRETER-UPDATES" (fun () -> 
-           "\nUPDATE '"^id^"'["^
-            (String.concat "; " (List.map K3Value.to_string key))^
-            "][-] := "^(K3Value.to_string v)
-        );
-        DB.update_in_map_value id key v db; Unit)
+    let update_in_map_value ?(expr = None) id in_kl value = 
+       Eval(expr, fun th db ->
+          let key = (get_update_key th db in_kl) in
+          let v = (get_update_value th db value) in
+          Debug.print "LOG-INTERPRETER-UPDATES" (fun () -> 
+             "\nUPDATE '"^id^"'["^
+             (String.concat "; " (List.map K3Value.to_string key))^
+             "][-] := "^(K3Value.to_string v)
+          );
+          DB.update_in_map_value id key v db; Unit)
     
     (* persistent collection id, out key, value -> update *)
-    let update_out_map_value ?(expr = None) id out_kl value = Eval(expr, fun th db ->
-      let key = (get_update_key th db out_kl) in
-      let v = (get_update_value th db value) in
-        Debug.print "LOG-INTERPRETER-UPDATES" (fun () -> 
-           "\nUPDATE '"^id^"'[-]["^
-           (String.concat "; " (List.map K3Value.to_string key))^
-           "] := "^(K3Value.to_string v)
-        );
-        DB.update_out_map_value id key v db; Unit)
+    let update_out_map_value ?(expr = None) id out_kl value = 
+       Eval(expr, fun th db ->
+          let key = (get_update_key th db out_kl) in
+          let v = (get_update_value th db value) in
+          Debug.print "LOG-INTERPRETER-UPDATES" (fun () -> 
+             "\nUPDATE '"^id^"'[-]["^
+             (String.concat "; " (List.map K3Value.to_string key))^
+             "] := "^(K3Value.to_string v)
+          );
+          DB.update_out_map_value id key v db; Unit)
     
     (* persistent collection id, in key, out key, value -> update *)
     let update_map_value ?(expr = None) id in_kl out_kl value = 
@@ -848,45 +852,50 @@ struct
         DB.update_map_value id in_key out_key v db; Unit)
 
     (* persistent collection id, update collection -> update *)
-    let update_in_map ?(expr = None) id collection = Eval(expr, fun th db ->
-        let in_pats = DB.get_in_patterns id db
-        in DB.update_in_map id
+    let update_in_map ?(expr = None) id collection = 
+       Eval(expr, fun th db ->
+          let in_pats = DB.get_in_patterns id db in 
+          DB.update_in_map id
              (get_update_map ((get_eval collection) th db) in_pats) db;
-        Unit)
+          Unit)
     
-    let update_out_map ?(expr = None) id collection = Eval(expr, fun th db ->
-        let out_pats = DB.get_out_patterns id db
-        in DB.update_out_map id
+    let update_out_map ?(expr = None) id collection = 
+       Eval(expr, fun th db ->
+          let out_pats = DB.get_out_patterns id db in 
+          DB.update_out_map id
              (get_update_map ((get_eval collection) th db) out_pats) db;
-        Unit)
+          Unit)
 
     (* persistent collection id, key, update collection -> update *)
-    let update_map ?(expr = None) id in_kl collection = Eval(expr, fun th db ->
-        let out_pats = DB.get_out_patterns id db in
-        DB.update_map id (get_update_key th db in_kl)
-           (get_update_map ((get_eval collection) th db) out_pats) db;
-        Unit)
+    let update_map ?(expr = None) id in_kl collection = 
+       Eval(expr, fun th db ->
+          let out_pats = DB.get_out_patterns id db in
+          DB.update_map id (get_update_key th db in_kl)
+             (get_update_map ((get_eval collection) th db) out_pats) db;
+          Unit)
 
     (* Database remove methods *)    
     (* persistent collection id, in key -> remove *)
-    let remove_in_map_element ?(expr = None) id in_kl = Eval(expr, fun th db ->
-      let key = (get_update_key th db in_kl) in
-        Debug.print "LOG-INTERPRETER-UPDATES" (fun () -> 
-           "\nREMOVE '"^id^"'["^
-            (String.concat "; " (List.map K3Value.to_string key))^
-            "][-]"
-        );
-        DB.remove_in_map_element id key db; Unit)
+    let remove_in_map_element ?(expr = None) id in_kl = 
+       Eval(expr, fun th db ->
+          let key = (get_update_key th db in_kl) in
+          Debug.print "LOG-INTERPRETER-UPDATES" (fun () -> 
+             "\nREMOVE '"^id^"'["^
+              (String.concat "; " (List.map K3Value.to_string key))^
+              "][-]"
+          );
+          DB.remove_in_map_element id key db; Unit)
     
     (* persistent collection id, out key -> remove *)
-    let remove_out_map_element ?(expr = None) id out_kl = Eval(expr, fun th db ->
-      let key = (get_update_key th db out_kl) in
-        Debug.print "LOG-INTERPRETER-UPDATES" (fun () -> 
-           "\nREMOVE '"^id^"'[-]["^
-           (String.concat "; " (List.map K3Value.to_string key))^
-           "]"
-        ); 
-        DB.remove_out_map_element id key db; Unit)
+    let remove_out_map_element ?(expr = None) id out_kl = 
+       Eval(expr, fun th db ->
+          let key = (get_update_key th db out_kl) in
+           Debug.print "LOG-INTERPRETER-UPDATES" (fun () -> 
+              "\nREMOVE '"^id^"'[-]["^
+              (String.concat "; " (List.map K3Value.to_string key))^
+              "]"
+           ); 
+           DB.remove_out_map_element id key db; Unit)
   
 
     (* persistent collection id, in key, out key -> remove *)

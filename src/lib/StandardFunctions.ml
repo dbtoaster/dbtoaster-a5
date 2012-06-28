@@ -174,7 +174,8 @@ let regexp_match (arglist:const_t list) (ftype:type_t) =
 
 (**
    Substring
-   - [substring] [str; start; len] returns the substring of str from start to start+len
+   - [substring] [str; start; len] returns the substring of str from 
+     start to start+len
 *)
 let substring (arglist:const_t list) (ftype:type_t) =
    match arglist with
