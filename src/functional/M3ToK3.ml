@@ -994,7 +994,8 @@ let m3_stmt_to_k3_stmt (meta: meta_t) ?(generate_init = false) trig_args (m3_stm
            if rhs_outs_el = [] then      K.Apply(  inner_loop_body,incr_expr)  
            else                          K.Iterate(inner_loop_body,incr_expr)
         in
-        if free_lhs_outs_el = [] then 
+        if free_lhs_outs_el = [] ||
+           Debug.active "UNSAFE-REPLACE" then 
           update_body
         else
         let old_slice = 
