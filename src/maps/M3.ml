@@ -306,18 +306,23 @@ let init (db:Schema.t): prog_t =
 *)
 let finalize (prog: prog_t): prog_t =
    let non_empty_triggers = 
-      List.filter (fun trigger -> !(trigger.statements) <> []) 
-                  (get_triggers prog)
+      List.filter (fun trigger -> 
+         match trigger.event with 
+         | Schema.InsertEvent(_, _, _) 
+         | Schema.DeleteEvent(_, _, _) ->
+            !(trigger.statements) <> []
+         | _ -> true
+      ) (get_triggers prog)
    in 
-   let used_relations = ListAsSet.multiunion (
-      List.map (function
-         | DSView(view) -> rels_of_expr view.ds_definition
-         | _ -> []            
-      ) !(prog.maps)
-   )
-   in   
-   let non_empty_db = List.flatten (
-      List.map (fun (s, relations) -> 
+   let non_empty_db = 
+      let used_relations = ListAsSet.multiunion (
+         List.map (function
+            | DSView(view) -> rels_of_expr view.ds_definition
+            | _ -> []            
+         ) !(prog.maps)
+      )
+      in   
+      List.flatten (List.map (fun (s, relations) -> 
          let non_empty_relations = 
             List.filter(fun (_, (reln, _, _)) -> 
                List.mem reln used_relations 

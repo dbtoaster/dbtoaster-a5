@@ -19,7 +19,17 @@
         }
       }
     },
-    
+
+    "big" => {
+      :subs => [ [/schemas\.sql/, "schemas_big.sql"] ],
+      :toplevels => {
+        "SSB4" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/ssb4_big.csv")
+        }
+      }
+    },
+        
     "standard_del" => {
       :subs => [ [/schemas\.sql/, "schemas_del.sql"] ],
       :toplevels => {
@@ -38,7 +48,17 @@
           :expected => { }
         }
       }
-    }
+    },
     
+    "big_del" => {
+      :subs => [ [/schemas\.sql/, "schemas_big_del.sql"] ],
+      :toplevels => {
+        "SSB4" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/ssb4_big_del.csv")
+        }
+      }
+    }
+     
   }
 }

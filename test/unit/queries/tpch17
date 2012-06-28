@@ -9,6 +9,7 @@
         }
       }
     },
+    
     "tiny" => {
       :subs => [ [/schemas\.sql/, "schemas_tiny.sql"] ],
       :toplevels => {
@@ -18,6 +19,17 @@
         }
       }
     },
+    
+    "big" => {
+      :subs => [ [/schemas\.sql/, "schemas_big.sql"] ],
+      :toplevels => {
+        "QUERY17" => {
+          :type => :singleton,
+          :expected => 129502082.22000033
+        }
+      }
+    },
+    
     "standard_del" => {
       :subs => [ [/schemas\.sql/, "schemas_del.sql"] ],
       :toplevels => {
@@ -27,12 +39,23 @@
         }
       }
     },
+    
     "tiny_del" => {
       :subs => [ [/schemas\.sql/, "schemas_tiny_del.sql"] ],
       :toplevels => {
         "QUERY17" => {
           :type => :singleton,
           :expected => 0.0
+        }
+      }
+    },
+    
+    "big_del" => {
+      :subs => [ [/schemas\.sql/, "schemas_big_del.sql"] ],
+      :toplevels => {
+        "QUERY17" => {
+          :type => :singleton,
+          :expected => 848632.43
         }
       }
     }
