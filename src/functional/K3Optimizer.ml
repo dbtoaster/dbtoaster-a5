@@ -1131,11 +1131,10 @@ let rec simplify_collections filter expr =
     used at most once are not materialized.  
  *)
 
-let common_subexpression_elim expr =
-  let unique l = List.fold_left (fun acc e ->
+let unique l = List.fold_left (fun acc e ->
     if List.mem e acc then acc else acc@[e]) [] l
-  in
-  let filter_contained eqvl =
+
+let filter_contained eqvl =
     List.fold_left (fun acc cl ->
       (* Remove any equiv. classes in the accumulator contained by cl *)
       let nacc = List.filter (fun cl2 -> List.for_all
@@ -1147,19 +1146,23 @@ let common_subexpression_elim expr =
         (fun x -> List.exists (fun y -> contains_expr x y) cl)) nacc
       in if prune then nacc else nacc@[cl])
       [] eqvl
-  in
-  let rec substitute_expr substitutions expr =
+  
+let rec substitute_expr substitutions expr =
     if List.mem_assoc expr substitutions then List.assoc expr substitutions
     else descend_expr (substitute_expr substitutions) expr
-  in
-  let sub_cse expr cse_var cl =
+
+let sub_cse expr cse_var cl =
     List.fold_left (fun acc cse -> substitute_expr [cse, cse_var] acc) expr cl
-  in
-  let mk_cse expr_id expr eqv = List.fold_left (fun acc_expr cl ->
+  
+let mk_cse expr_id expr eqv = 
+   List.fold_left (fun acc_expr cl ->
       let cse_id = gen_cse_sym () in
       let arg = List.hd cl in
       let cse_ty =
-        try K3Typechecker.typecheck_expr arg
+        try 
+            let _ty = K3Typechecker.typecheck_expr arg in
+            if _ty = TUnit then (failwith "CSE cannot be of type TUnit!");
+            _ty
         with Failure msg ->
           (print_endline ("invalid cse: "^msg);
            print_endline ("cse["^expr_id^"]: "^(string_of_expr arg));
@@ -1171,14 +1174,15 @@ let common_subexpression_elim expr =
               sub_cse acc_expr cse_var (unique cl)), arg)
       in
          Debug.print "LOG-K3-OPT-CSE" (fun () ->
+            "cse["^expr_id^"]["^cse_id^"]: \n"^
             (K3.nice_string_of_expr cse_expr [])^
             "\n------------------------------------------------------"
          ); 
          cse_expr
       )
     expr (List.rev (filter_contained eqv))
-  in
-  
+   
+let common_subexpression_elim expr =  
   (* Alpha renaming based equivalence, and equivalence class helpers *)
   let alpha_rename expr =
     let add_subs subs src dest =
@@ -1385,7 +1389,7 @@ let common_subexpression_elim expr =
         (* Carry up the block, which contains inlined collection updates, to
          * preserve evaluation order w.r.t map operations, as well as the
          * map operations themselves. *) 
-        | Block _ ->
+        | Block _ when TUnit <> (K3Typechecker.typecheck_expr rebuilt_expr) ->
           let candidate = mk_cse "block" rebuilt_expr
             (List.flatten (List.flatten sub_parts)) 
           in (union_eqv_parts ([[[[candidate]]]]@sub_parts)), candidate
@@ -1402,6 +1406,18 @@ let common_subexpression_elim expr =
         (* Everything else carries up CSE candidates. *)
         | _ -> (union_eqv_parts sub_parts), rebuilt_expr
     in
+    Debug.print "LOG-K3-OPT-CSE-FOLD" (fun () ->
+            "LOG-K3-OPT-CSE: Fold_expr: "^(K3.nice_string_of_expr expr [])^"\n"^
+            "LOG-K3-OPT-CSE: Rebuilt_expr: "^(K3.nice_string_of_expr rebuilt_expr [])^"\n"^
+            "LOG-K3-OPT-CSE: Ret_expr: "^(K3.nice_string_of_expr r_expr [])^"\n"^
+            "LOG-K3-OPT-CSE: new_candidates: "^
+               (ListExtras.string_of_list
+                  (fun x -> 
+                     (ListExtras.string_of_list 
+                        (fun y -> (K3.nice_string_of_expr y [])) x)^"\n" )
+                  new_candidates)^
+            "\n\n-----------------------------------------------------"
+         );
     new_candidates, r_expr
   in
   let global_cses, r_expr =
