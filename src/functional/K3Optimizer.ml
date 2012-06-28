@@ -999,11 +999,26 @@ let rec simplify_collections filter expr =
     let ne = descend_expr recur expr in
     begin match ne with
     
+    | IfThenElse(head, Singleton(then_clause), Singleton(else_clause)) ->
+         Singleton(IfThenElse(head, then_clause, else_clause))
+    
     | Apply(Lambda(args,Singleton(lambda_e)), arg_e) -> 
-         Singleton(Apply(Lambda(args, lambda_e), arg_e)) 
+         Singleton(Apply(Lambda(args, lambda_e), arg_e))
+   
+    | Block([]) -> Unit
+      
+    | Block(b_terms) ->
+      let rev_b_terms = List.rev b_terms in
+      begin match (List.hd rev_b_terms) with
+         | Singleton(s_term) -> 
+            Singleton(Block((List.tl rev_b_terms)@[s_term]))
+         | _ -> Block(b_terms)
+      end
     
     | Map(map_f, Singleton(e)) -> Singleton(Apply(map_f, e))
     | Flatten(Singleton(c)) -> c
+    | Flatten(Map(Lambda(map_arg, Singleton(map_body)), map_tgt)) ->
+         Map(Lambda(map_arg, map_body), map_tgt)
     | Map(map_f, Flatten c) ->
         let mapf_arg_t = match fst (get_fun_parts map_f) with
             | AVar(_,t) -> t

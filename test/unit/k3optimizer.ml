@@ -25,30 +25,33 @@ let test msg expr expected =
 in
    test "Date Extraction" "
       Apply(
-          Lambda(<D:int; M:int; __prod_ret_1_3:int>) {
-            <D:int;M:int;
-              Apply(
-                ExternalLambda(date_part,<date_part_arg_1:string;date_part_arg_2:date>,int),
-                <\"YEAR\";ORDERS_ORDERDATE:date>);(__prod_ret_1_3:int * 1)>},
-          <
-            Apply(
-              ExternalLambda(date_part,<date_part_arg_1:string;date_part_arg_2:date>,int),
-              <\"DAY\";ORDERS_ORDERDATE:date>);
-            Apply(
-              ExternalLambda(date_part,<date_part_arg_1:string;date_part_arg_2:date>,int),
-              <\"MONTH\";ORDERS_ORDERDATE:date>);
-              
-            1>)
-   "
-   "{ <
-            Apply(
-              ExternalLambda(date_part,<date_part_arg_1:string;date_part_arg_2:date>,int),
-              <\"DAY\";ORDERS_ORDERDATE:date>);
-            Apply(
-              ExternalLambda(date_part,<date_part_arg_1:string;date_part_arg_2:date>,int),
-              <\"MONTH\";ORDERS_ORDERDATE:date>);
-            Apply(
-                ExternalLambda(date_part,<date_part_arg_1:string;date_part_arg_2:date>,int),
-              <\"YEAR\";ORDERS_ORDERDATE:date>);
-              
-              1>}";
+        Lambda(<D:int; M:int; __prod_ret_1_3:int>) {
+          <  D:int;
+             M:int;
+             Apply(ExternalLambda(
+                date_part,<date_part_arg_1:string;date_part_arg_2:date>,int
+             ),<\"YEAR\";ORDERS_ORDERDATE:date>);
+             (__prod_ret_1_3:int * 1)
+          >
+        },
+        <
+          Apply(ExternalLambda(
+             date_part,<date_part_arg_1:string;date_part_arg_2:date>,int
+          ),<\"DAY\";ORDERS_ORDERDATE:date>);
+          Apply(ExternalLambda(
+             date_part,<date_part_arg_1:string;date_part_arg_2:date>,int
+          ),<\"MONTH\";ORDERS_ORDERDATE:date>);
+          1
+        >
+      )"
+   "< Apply(ExternalLambda(
+          date_part,<date_part_arg_1:string;date_part_arg_2:date>,int
+      ),<\"DAY\";ORDERS_ORDERDATE:date>);
+      Apply(ExternalLambda(
+          date_part,<date_part_arg_1:string;date_part_arg_2:date>,int
+      ),<\"MONTH\";ORDERS_ORDERDATE:date>);
+      Apply(ExternalLambda(
+          date_part,<date_part_arg_1:string;date_part_arg_2:date>,int
+      ),<\"YEAR\";ORDERS_ORDERDATE:date>);
+      1
+    >";

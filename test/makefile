@@ -216,7 +216,7 @@ query_tpch:
 	@$(FAST_QUERY_TEST) tpch17 --dataset tiny
 	@$(FAST_QUERY_TEST) tpch17 
 	@$(FAST_QUERY_TEST) tpch18 --dataset tiny
-	@$(FAST_QUERY_TEST) tpch18
+#	@$(FAST_QUERY_TEST) tpch18 #sloooow
 	@$(FAST_QUERY_TEST) tpch22a --dataset tiny
 	@$(FAST_QUERY_TEST) tpch22a
 	@$(FAST_QUERY_TEST) ssb4 --dataset tiny

@@ -87,11 +87,8 @@ let optimizations_by_level =
          "K3-NO-OPTIMIZE";
          "COMPILE-WITHOUT-OPT";
          "DUMB-LIFT-DELTAS";
-         "CALC-DONT-CREATE-ZEROES";
       ]; 
       (** -O2 **) [
-         "COMPILE-WITHOUT-OPT";
-         "UNIFY-EXPRESSIONS";
       ];
       (** -O3 **) [
          "UNIFY-EXPRESSIONS";
@@ -101,6 +98,7 @@ let optimizations =
    ListAsSet.union (ListAsSet.multiunion optimizations_by_level) [
       "IGNORE-DELETES"; "HEURISTICS-ALWAYS-UPDATE";
       "HASH-STRINGS"; "EXPRESSIVE-TLQS"; "COMPILE-WITH-STATIC";
+      "CALC-DONT-CREATE-ZEROES";
       
       (* This is generally more efficient, but doesn't respect side-effect-
          producing statements, and is unsafe *)
