@@ -50,7 +50,8 @@ struct
    (** The code generator produces a tuple of code and its type *)
    type code_t = source_code_t * type_t
    type op_t = (type_t -> type_t -> 
-      (source_code_t -> source_code_t -> source_code_t) * type_t * string option)
+      (source_code_t -> source_code_t -> source_code_t) * 
+      type_t * string option)
    type db_t = unit
 
    (** The line seperator is used to format the generated code *)
@@ -109,7 +110,9 @@ struct
     match t with 
     | []      -> "Unit"
     | x :: [] -> "(" ^ x ^ ")"
-    | _       -> (if tpe = "" then "Tuple" ^ (string_of_int (List.length elems)) else tpe) ^ 
+    | _       -> (if tpe = "" then "Tuple" ^ 
+                                   (string_of_int (List.length elems))
+                              else tpe) ^ 
                  (make_list elems)
    
    (** Takes a tuple t and flattens it recursively *)
@@ -151,7 +154,8 @@ struct
       | External(s) -> s
       | Unit -> "Unit"
       | Fn(_, arg, ret) -> (string_of_type arg) ^ " => " ^ (string_of_type ret)
-      | ExtFn(_, arg, ret) -> (string_of_type arg) ^ " => " ^ (string_of_type ret)
+      | ExtFn(_, arg, ret) -> (string_of_type arg) ^ " => " ^ 
+                              (string_of_type ret)
       | Tuple(elems) -> (string_of_tuple_type (List.map string_of_type elems))
       | Collection(tpe, keys_t, val_t) -> 
          let type_string = match tpe with 
@@ -224,11 +228,20 @@ struct
       let body = (string_of_type rett) ^ "(" ^ 
         (make_list (list_vars "v" key_length)) ^ ", v" ^ 
         (string_of_int (key_length + 1)) ^ ")" in
-        n ^ ".map { " ^ (wrap_function_key_val ko vo (Fn(ArgNTuple(List.map (fun x -> ArgN(x)) (list_vars "v" (key_length + 1))), Tuple(k @ [v]), rett)) body) ^ " }"
+        n ^ ".map { " ^ 
+        (wrap_function_key_val ko vo 
+            (Fn(ArgNTuple(List.map (fun x -> ArgN(x)) 
+                          (list_vars "v" (key_length + 1))), 
+                Tuple(k @ [v]), rett)) body) ^ " }"
     | _ -> n 
     
   and implicit_conversions argsn t1s t2s: string =  
-   (make_list ~parens:("", ";") ~sep:";" (List.map2 (fun v (t1, t2) -> "val " ^ v ^ ":" ^ (string_of_type t2) ^ " = " ^ (cast_up ("_" ^ v) t1 t2)) (flatten_args argsn) (list_zip (flatten_tuple t1s) (flatten_tuple t2s))))
+   (make_list ~parens:("", ";") ~sep:";" 
+       (List.map2 (fun v (t1, t2) -> 
+           "val " ^ v ^ ":" ^ (string_of_type t2) ^ " = " ^ 
+           (cast_up ("_" ^ v) t1 t2)
+        ) (flatten_args argsn) 
+          (list_zip (flatten_tuple t1s) (flatten_tuple t2s))))
     
   and wrap_function argt fnt f: string = 
     match fnt with
@@ -239,34 +252,37 @@ struct
     | _ -> debugfail None "Expected a function"
 
   and wrap_function_key_val (kt:type_t list) (vt:type_t) fnt f: string =     
-    let ktt, vtt, f_body = 
-    match fnt with
+    let ktt, vtt, f_body = match fnt with
     | Fn(argsn1, argst1, Fn(argsn2, argst2, rett)) ->
-      ([List.hd kt], List.hd (List.tl kt), wrap_function (fn_ret_type vt) (Fn(argsn2, argst2, rett)) f)
+       ([List.hd kt], List.hd (List.tl kt), 
+        wrap_function (fn_ret_type vt) (Fn(argsn2, argst2, rett)) f)
     | _ -> (kt, vt, f) in
-    match fnt with
-    | Fn(argsn, argst, rett) ->
-      let argsnkv = match ktt with 
-      | [] -> ArgNTuple(ArgN("()") :: [argsn])
-      | Tuple(t) :: ts -> (
-   match argsn with 
-   | ArgNTuple(ns) -> 
-     let k, v  = list_split ns ((List.length ns - 1)) in
-     ArgNTuple(ArgNTuple(k) :: v)
-   | _ -> debugfail None "Excpected tuple of argument names"
-      )
-      | _  -> ( 
-   match argsn with 
-   | ArgNTuple(ns) -> 
-     let k, v  = list_split ns ((List.length ns - 1)) in
-     ArgNTuple(ArgNTuple(k) :: v)
-   | _ -> debugfail None "Excpected tuple of argument names"
-      ) in
-      "(x:Tuple2[" ^ (string_of_type (Tuple(ktt))) ^ ", " ^ (string_of_type vtt) ^ 
-      "]) => { x match { case " ^ (string_of_argn ~prefix:"_" argsnkv) ^ 
-      " => {" ^ (implicit_conversions argsn (Tuple([Tuple(ktt); vtt])) argst) ^ f_body ^ "} } }" 
-    | ExtFn(n, _, _) -> n ^ " _"
-    | _ -> debugfail None "Expected a function"
+       match fnt with
+         | Fn(argsn, argst, rett) ->
+            let argsnkv = match ktt with 
+            | [] -> ArgNTuple(ArgN("()") :: [argsn])
+            | Tuple(t) :: ts -> (
+               match argsn with 
+               | ArgNTuple(ns) -> 
+                 let k, v  = list_split ns ((List.length ns - 1)) in
+                 ArgNTuple(ArgNTuple(k) :: v)
+               | _ -> debugfail None "Excpected tuple of argument names"
+              )
+            | _  -> ( 
+                match argsn with 
+                | ArgNTuple(ns) -> 
+                   let k, v  = list_split ns ((List.length ns - 1)) in
+                   ArgNTuple(ArgNTuple(k) :: v)
+                | _ -> 
+                   debugfail None "Excpected tuple of argument names"
+            ) in
+            "(x:Tuple2[" ^ (string_of_type (Tuple(ktt))) ^ ", " ^
+             (string_of_type vtt) ^ "]) => { x match { case " ^ 
+             (string_of_argn ~prefix:"_" argsnkv) ^ " => {" ^ 
+             (implicit_conversions argsn (Tuple([Tuple(ktt); vtt])) argst) ^
+             f_body ^ "} } }" 
+        | ExtFn(n, _, _) -> n ^ " _"
+        | _ -> debugfail None "Expected a function"
 
 
   type source_impl_t = source_code_t
@@ -295,10 +311,12 @@ struct
             (string_of_type b)))
     )
 
-  let fixed_op (t1:type_t) (t2:type_t) (rett:type_t) (op:string->string->string) =
+  let fixed_op (t1:type_t) (t2:type_t) (rett:type_t) 
+               (op:string->string->string) =
     (fun a b -> if (a = t1) && (b = t2) 
       then (op, rett, None)  
-      else (op, Unit, Some((string_of_type a) ^ " [cmp] " ^ (string_of_type b))))
+      else (op, Unit, Some((string_of_type a) ^ " [cmp] " ^ 
+            (string_of_type b))))
 
   let c_op op = (fun a b -> 
       match (a, b) with
@@ -312,7 +330,8 @@ struct
       | (Float, Bool) -> ((num_op op ~convb:mk_bool_to_float), Bool, None)
       | (Bool, Int) -> ((num_op op ~conva:mk_bool_to_int), Bool, None)
       | (Int, Bool) -> ((num_op op ~convb:mk_bool_to_int), Bool, None)
-      | (Date, Date) -> ((num_op op ~conva:mk_date_to_time ~convb:mk_date_to_time), Bool, None) 
+      | (Date, Date) -> ((num_op op ~conva:mk_date_to_time
+                         ~convb:mk_date_to_time), Bool, None) 
       | (_, _) -> 
           ((num_op op), Unit, 
           Some((string_of_type a) ^ " [" ^ op ^ "] " ^ (string_of_type b)))
@@ -382,11 +401,13 @@ struct
         let vars = (list_vars "v._" (List.length t)) in
         let kv, vv = list_split vars ((List.length vars) - 1) in
         let kt, vt = list_split t ((List.length t) - 1) in
-        (kt, vt, make_tuple([make_tuple ~tpe:(string_of_type (Tuple(kt))) kv; List.hd vv]))
+        (kt, vt, make_tuple( [make_tuple ~tpe:(string_of_type (Tuple(kt))) kv;
+                              List.hd vv]))
       | t -> [], [t], "v"
     in
     let tpe = Collection(Intermediate, kt, List.hd vt) in
-    ("{ val v = " ^ d ^ ";" ^ (string_of_type tpe) ^ "(List(" ^ v ^ ")) }", tpe)
+    ("{ val v = " ^ d ^ ";" ^ (string_of_type tpe) ^ 
+     "(List(" ^ v ^ ")) }", tpe)
    
   let combine ?(expr = None) (terms:code_t list): code_t =
     if (List.length terms) < 1 
@@ -399,33 +420,55 @@ struct
      | Int, Float | Float, Int -> Float
      | Bool, Int  | Int, Bool  -> Int
      | Collection(_, ak, at), Collection(_, bk, bt) -> 
-        Collection(Intermediate, (List.map2 unify_types ak bk), unify_types at bt) 
-     | _, _ -> debugfail expr ("Cannot combine collections of different types: " ^ (string_of_type a) ^ " and " ^ (string_of_type b))
+        Collection(Intermediate, (List.map2 unify_types ak bk), 
+                   unify_types at bt) 
+     | _, _ -> 
+        debugfail expr ("Cannot combine collections of different types: " ^
+                        (string_of_type a) ^ " and " ^ (string_of_type b))
        in
        
-       let common_type = List.fold_left (fun a (_, b) -> unify_types a b) (snd (List.hd terms)) terms in
+       let common_type = List.fold_left (fun a (_, b) -> unify_types a b) 
+                                        (snd (List.hd terms)) terms 
+       in
        let k, v = 
           match common_type with 
           | Collection(_, k, v) -> (k, v) 
           | _ -> debugfail expr "Combine can only combin collections" 
        in
        
-       ("({ val result = Map[" ^ (string_of_type (Tuple k)) ^ "," ^ (string_of_type v) ^ "]();" ^ (make_list ~sep:";" ~parens:("", ";") (List.map (fun (n, t) ->
-          let ko, vo = match t with | Collection(_, ko, vo) -> ko, vo | _ -> debugfail None "Expected collection" in
-     let key_len = List.length ko in
-     let v_var =  "v" ^ (string_of_int (key_len + 1)) in
-     let body = "val t = " ^ (make_tuple (list_vars "v" (key_len))) ^ "; result += ((t, (result.get(t) match { case Some(v) => v + " ^ v_var ^ "; case _ => " ^ v_var ^ " })))" in
-          "(" ^ n ^ ").foreach { " ^ (wrap_function_key_val ko vo (Fn(ArgNTuple(List.map (fun x -> ArgN(x)) (list_vars "v" (key_len + 1))), Tuple(k @ [v]), Unit)) body) ^ " }"        
-       ) terms)) ^ " " ^ (string_of_type common_type) ^ "(result.toList) })", common_type) 
+       ("({ val result = Map[" ^ (string_of_type (Tuple k)) ^ "," ^
+        (string_of_type v) ^ "]();" ^ 
+        (make_list ~sep:";" ~parens:("", ";") (List.map (fun (n, t) ->
+            let ko, vo = match t with 
+               | Collection(_, ko, vo) -> ko, vo 
+               | _ -> debugfail None "Expected collection" 
+            in
+            let key_len = List.length ko in
+            let v_var =  "v" ^ (string_of_int (key_len + 1)) in
+            let body = 
+               "val t = " ^ (make_tuple (list_vars "v" (key_len))) ^ 
+               "; result += ((t, (result.get(t) match { case Some(v) => v + " ^
+               v_var ^ "; case _ => " ^ v_var ^ " })))" 
+            in
+               "(" ^ n ^ ").foreach { " ^ 
+               (wrap_function_key_val ko vo (
+                Fn(ArgNTuple(
+                      List.map (fun x -> ArgN(x)) 
+                        (list_vars "v" (key_len + 1))),
+                   Tuple(k @ [v]), Unit)) body) ^ " }"        
+       ) terms)) ^ " " ^ (string_of_type common_type) ^ 
+       "(result.toList) })", common_type) 
 
-  let op ?(expr = None) ((mk_op):op_t) ((a,at):code_t) ((b,bt):code_t) : code_t =
+  let op ?(expr = None) ((mk_op):op_t) ((a,at):code_t) 
+         ((b,bt):code_t) : code_t =
     let (op_f,rt,err) = (mk_op at bt) in
       (match err with None -> () 
         | Some(err_msg) -> 
           debugfail expr ("Type mismatch in arithmetic: " ^ err_msg));
       ((op_f a b), rt)
 
-  let ifthenelse ?(expr = None) ((i,it):code_t) ((t,tt):code_t) ((e,et):code_t) : code_t =
+  let ifthenelse ?(expr = None) ((i,it):code_t) ((t,tt):code_t)
+                 ((e,et):code_t) : code_t =
     if it <> Bool then debugfail expr "Type mismatch: non-bool condition" 
     else
       if tt <> et 
@@ -434,7 +477,7 @@ struct
 
   let block ?(expr = None) (stmts:code_t list) : code_t =
     (make_list ~parens:("{","}") ~sep:"; " (List.map (fun (s,_) -> s) stmts),
-      if (List.length stmts) < 1 then Unit else (snd (List.hd (List.rev stmts))))
+     if (List.length stmts) < 1 then Unit else (snd (List.hd (List.rev stmts))))
    
   let comment ?(expr = None) (comment:string) (stmt:code_t) : code_t = stmt
   
@@ -447,16 +490,20 @@ struct
   let map_args_type args =       
     match args with
     | K3.AVar(v, vt) -> (ArgN("var_" ^ v), map_type vt)
-    | K3.ATuple(tlist) -> (ArgNTuple(List.map (fun (v, _) -> ArgN("var_" ^ v)) tlist), Tuple(List.map (fun (_, t) -> map_type t) tlist))
+    | K3.ATuple(tlist) -> 
+        (ArgNTuple(List.map (fun (v, _) -> ArgN("var_" ^ v)) tlist),
+         Tuple(List.map (fun (_, t) -> map_type t) tlist))
   
   let lambda ?(expr = None) (args:K3.arg_t) ((b,bt):code_t) : code_t =
     let argsn, argst = map_args_type args in
     (b, Fn(argsn, argst, bt))
 
-  let assoc_lambda ?(expr = None) (arg1:K3.arg_t) (arg2:K3.arg_t) (b:code_t) : code_t =
+  let assoc_lambda ?(expr = None) (arg1:K3.arg_t) (arg2:K3.arg_t) 
+                   (b:code_t) : code_t =
     lambda arg1 (lambda arg2 b)
    
-  let external_lambda ?(expr = None) (name:K3.id_t) (args:K3.arg_t) (ret:K3.type_t) : code_t =
+  let external_lambda ?(expr = None) (name:K3.id_t) (args:K3.arg_t)
+                      (ret:K3.type_t) : code_t =
     let strlen = String.length name in
     let rec clean_name name i buffer: string =
       if (strlen = i) then 
@@ -472,20 +519,26 @@ struct
   let apply ?(expr = None) ((fn,fnt):code_t) ((arg,argt):code_t) : code_t =
     (begin match fnt with
     | Fn(argsn, argst, rett) ->
-      let str_type = match argt with | Tuple(_) -> "" | _ -> ":" ^ (string_of_type argt) in
-      "{ val " ^ (string_of_argn ~prefix:"_" argsn) ^ str_type ^ " = " ^ arg ^ ";" ^ 
-      (implicit_conversions argsn argt argst) ^ fn ^ "}"
+      let str_type = match argt with 
+         | Tuple(_) -> "" 
+         | _ -> ":" ^ (string_of_type argt) 
+      in
+         "{ val " ^ (string_of_argn ~prefix:"_" argsn) ^ 
+         str_type ^ " = " ^ arg ^ ";" ^ 
+         (implicit_conversions argsn argt argst) ^ fn ^ "}"
     | ExtFn(n, a, _) -> 
       let n_a = List.length (flatten_tuple a) in
       if n_a = 1 then
         "(" ^ n ^ "(" ^ arg ^ "))" 
       else
-        "({ val arg = " ^ arg ^ "; " ^ n ^ (make_list (list_vars "arg._" n_a)) ^ "})"
+        "({ val arg = " ^ arg ^ "; " ^ n ^ 
+        (make_list (list_vars "arg._" n_a)) ^ "})"
     | _ -> debugfail None "Expected a function"
     end
     , fn_ret_type fnt)
 
-  let map ?(expr = None) ((fn,fnt):code_t) (exprt:K3.type_t) ((c, ct):code_t) : code_t =
+  let map ?(expr = None) ((fn,fnt):code_t) (exprt:K3.type_t) 
+          ((c, ct):code_t) : code_t =
     let (keyt,valt) = 
        match (fn_ret_type fnt) with
        |  Tuple(retlist) ->
@@ -507,20 +560,25 @@ struct
         (make_list (list_vars "v._" key_length)) ^ ", v._" ^ 
         (string_of_int (key_length + 1)) ^ ")"
     in
-    (c ^ ".map((y:Tuple2[" ^ (string_of_tuple_type (List.map string_of_type kt)) ^ 
-      "," ^ (string_of_type vt) ^ "]) => { val v = ({ " ^ wrapped_fn ^ " })(y); " ^ 
-      convert_to_key_value ^ " })", Collection(Intermediate, keyt,valt))
+    (c ^ ".map((y:Tuple2[" ^ 
+    (string_of_tuple_type (List.map string_of_type kt)) ^ "," ^ 
+    (string_of_type vt) ^ "]) => { val v = ({ " ^ wrapped_fn ^ " })(y); " ^
+     convert_to_key_value ^ " })", Collection(Intermediate, keyt,valt))
 
-  let aggregate ?(expr = None) ((fn,fnt):code_t) ((init,initt):code_t) ((c, ct):code_t) : code_t =
+  let aggregate ?(expr = None) ((fn,fnt):code_t) ((init,initt):code_t) 
+                ((c, ct):code_t) : code_t =
     match ct with
     | Collection(_, kt, vt) ->
       (c ^ ".fold(" ^ init ^ ", { " ^ 
         (wrap_function_key_val (Tuple(kt) :: [vt]) (fn_ret_type fnt) fnt fn) ^ 
         " })", (fn_ret_type (fn_ret_type fnt)))
-    | _ -> debugfail expr ("Aggregate on a non-collection: " ^ c ^ " has type " ^ 
+    | _ -> debugfail expr ("Aggregate on a non-collection: " ^ c ^ 
+                           " has type " ^ 
       (string_of_type ct))
 
-  let group_by_aggregate ?(expr = None) ((agg,aggt):code_t) ((init,initt):code_t) ((group,groupt):code_t) ((c, ct):code_t) : code_t =
+  let group_by_aggregate ?(expr = None) ((agg,aggt):code_t) 
+                         ((init,initt):code_t) ((group,groupt):code_t) 
+                         ((c, ct):code_t) : code_t =
     let key_type = 
        match (fn_ret_type groupt) with 
        | Tuple(tlist) -> tlist
@@ -530,8 +588,10 @@ struct
     | Collection(_, kt, vt) ->
       (c ^ ".groupByAggregate(" ^ init ^ ", { " ^ 
         (wrap_function_key_val kt vt groupt group) ^ " }, { " ^ 
-        (wrap_function_key_val (Tuple(kt) :: [vt]) (fn_ret_type aggt) aggt agg) ^ 
-        " })", Collection(Intermediate, key_type,(fn_ret_type (fn_ret_type aggt))))
+        (wrap_function_key_val (Tuple(kt) :: [vt]) 
+                               (fn_ret_type aggt) aggt agg) ^ 
+        " })", Collection(Intermediate, key_type,
+                          (fn_ret_type (fn_ret_type aggt))))
     | _ -> debugfail expr ("groupByAggregate on a non-collection: " ^ c ^ 
       " has type " ^ (string_of_type ct))
 
@@ -545,14 +605,16 @@ struct
   let exists ?(expr = None) ((c,ct):code_t) (key:code_t list) : code_t =
     match ct with 
     |  Collection(_, kt,vt) when kt <> [] ->
-       ("(" ^ c ^ ").contains(" ^ (make_tuple (List.map (fun (s,_) -> s) key)) ^ 
+       ("(" ^ c ^ ").contains(" ^ 
+       (make_tuple (List.map (fun (s,_) -> s) key)) ^ 
         ")",Bool)
     | _ -> debugfail expr "Existence check on a non-collection"
 
   let lookup ?(expr = None) ((c,ct):code_t) (key:code_t list) : code_t =
     match ct with 
     | Collection(_, kt, vt) when kt <> [] ->
-      ("(" ^ c ^ ").lookup(" ^ (make_tuple (List.map (fun (s,_) -> s) key)) ^ ")", vt)
+      ("(" ^ c ^ ").lookup(" ^ 
+       (make_tuple (List.map (fun (s,_) -> s) key)) ^ ")", vt)
     | _ -> debugfail expr ("Lookup on a non-collection: " ^ c ^ " has type " ^ 
       (string_of_type ct))
       
@@ -590,11 +652,13 @@ struct
 
   let get_in_map  ?(expr = None) (schema:K3.schema) (t:K3.type_t)   
                  (map:K3.coll_id_t): code_t =
-    (map, Collection(Persistent, (List.map (fun (_,x) -> map_type x) schema),  map_type t))
+    (map, Collection(Persistent, 
+                     (List.map (fun (_,x) -> map_type x) schema),  map_type t))
 
   let get_out_map ?(expr = None) (schema:K3.schema) (t:K3.type_t)
                  (map:K3.coll_id_t): code_t =
-    (map, Collection(Persistent, (List.map (fun (_,x) -> map_type x) schema),  map_type t))
+    (map, Collection(Persistent, 
+                     (List.map (fun (_,x) -> map_type x) schema),  map_type t))
 
   let get_map ?(expr = None) ((ins,outs):(K3.schema*K3.schema))  
              (t:K3.type_t) (map:K3.coll_id_t): code_t =
@@ -607,11 +671,13 @@ struct
 
   let update_in_map_value ?(expr = None) (map:K3.coll_id_t) 
                          (key:code_t list) ((v,vt):code_t): code_t =
-    (map ^ ".updateValue(" ^ (make_tuple (List.map fst key)) ^ ", " ^ v ^ ")",Unit)
+    (map ^ ".updateValue(" ^ (make_tuple (List.map fst key)) ^ 
+     ", " ^ v ^ ")",Unit)
 
   let update_out_map_value ?(expr = None) (map:K3.coll_id_t) 
                           (key:code_t list) ((v,vt):code_t): code_t =
-    (map ^ ".updateValue(" ^ (make_tuple (List.map fst key)) ^ ", " ^ v ^ ")",Unit)
+    (map ^ ".updateValue(" ^ (make_tuple (List.map fst key)) ^ 
+    ", " ^ v ^ ")",Unit)
 
   let update_map_value ?(expr = None) (map:K3.coll_id_t) (inkey:code_t list)
                       (outkey:code_t list) ((v,vt):code_t): code_t =
@@ -629,18 +695,23 @@ struct
     let conversion = match vt with
     | Collection(_, _, _) -> ".toPersistentCollection()"
     | _ -> "" in
-    (map ^ ".updateValue(" ^ (make_tuple (List.map fst inkey)) ^ ", " ^ v ^ conversion ^ ")",Unit)
+    (map ^ ".updateValue(" ^ (make_tuple (List.map fst inkey)) ^ 
+     ", " ^ v ^ conversion ^ ")",Unit)
    
-  let remove_in_map_element ?(expr = None) (map:K3.coll_id_t) (inkey:code_t list) : code_t =
+  let remove_in_map_element ?(expr = None) (map:K3.coll_id_t) 
+                            (inkey:code_t list) : code_t =
       (map ^ ".remove(" ^ (make_tuple (List.map fst inkey)) ^ ")", Unit)
   
   (* persistent collection id, out key -> remove *)
-  let remove_out_map_element ?(expr = None) (map:K3.coll_id_t) (outkey:code_t list) : code_t =
+  let remove_out_map_element ?(expr = None) (map:K3.coll_id_t) 
+                             (outkey:code_t list) : code_t =
       (map ^ ".remove(" ^ (make_tuple (List.map fst outkey)) ^ ")", Unit)
   
   (* persistent collection id, in key, out key -> remove *)
-  let remove_map_element ?(expr = None) (map:K3.coll_id_t) (inkey:code_t list) (outkey:code_t list) : code_t =
-      (map ^ ".remove(" ^ (make_tuple (List.map fst inkey)) ^ ", " ^ (make_tuple (List.map fst outkey)) ^ ")", Unit)
+  let remove_map_element ?(expr = None) (map:K3.coll_id_t) 
+                         (inkey:code_t list) (outkey:code_t list) : code_t =
+      (map ^ ".remove(" ^ (make_tuple (List.map fst inkey)) ^ 
+       ", " ^ (make_tuple (List.map fst outkey)) ^ ")", Unit)
       
   (* unit operation which has no effect *)
   let unit_operation : code_t = ("()", Unit) 
@@ -649,18 +720,24 @@ struct
     let prefix, vars =
       match eventt with
       (* TODO: Implement corrective updates *)
-      | Schema.CorrectiveUpdate(_, _, _, _, _) -> debugfail None "Corrective updates not implemented yet"
+      | Schema.CorrectiveUpdate(_, _, _, _, _) -> 
+         debugfail None "Corrective updates not implemented yet"
       | Schema.InsertEvent(rel, vars, tpe) -> ("Insert" ^ rel, vars) 
       | Schema.DeleteEvent(rel, vars, tpe) -> ("Delete" ^ rel, vars)
       | Schema.SystemInitializedEvent -> ("SystemInitialized", []) 
     in
-    let var_def = (make_list (List.map (fun (n, t) -> "var_" ^ n ^ ": " ^ (string_of_type (map_base_type t))) vars)) in
+    let var_def = (make_list (List.map (fun (n, t) -> 
+        "var_" ^ n ^ ": " ^ (string_of_type (map_base_type t))
+    ) vars)) in
     let fn_def = "def on" ^ prefix ^ var_def in
-    let stmts = (make_list ~parens:("{","}") ~sep:"; " (List.map (fun (s,_) -> s) code)) in
-    (fn_def ^ " = " ^ stmts, Trigger(eventt))
+    let stmts = (make_list ~parens:("{","}") ~sep:"; " 
+                           (List.map (fun (s,_) -> s) code)) 
+    in
+       (fn_def ^ " = " ^ stmts, Trigger(eventt))
    
-  let source (source:Schema.source_t) (adaptors:(Schema.adaptor_t * Schema.rel_t) list):
-            (source_impl_t * code_t option * code_t option) =
+  let source (source:Schema.source_t) 
+             (adaptors:(Schema.adaptor_t * Schema.rel_t) list):
+             (source_impl_t * code_t option * code_t option) =
     let sc = source_count := !source_count + 1; string_of_int !source_count in 
     let string_of_framing_type framing = 
       match framing with
@@ -668,28 +745,31 @@ struct
       | Schema.Delimited(str) -> "Delimited(\"" ^ str ^ "\")"
     in
     let adaptors_strings = (List.map (fun ((atype, akeys), (rel, schema, _)) -> 
-      let args = if (List.length akeys) == 0 then "" else (make_list ~parens:(", ","") 
-        (List.map (fun (k, v) -> 
-     match (k, v) with
-     | "fields", "|" -> "fields = \"\\|\""
-     | k, v -> k ^ " = \"" ^ v ^ "\"") akeys)) in
-      match atype with
-      | "csv" -> 
-        let string_of_schema_type t = 
-     match t with
-     | TBool -> "BoolColumn"
-     | TInt -> "IntColumn"
-     | TFloat -> "FloatColumn"
-     | TString -> "StringColumn"
-     | TDate -> "DateColumn"
-     | _ -> debugfail None "Unsupported type in adaptor"
-   in
-        let schema_str = make_list (List.map (fun (_, t) -> string_of_schema_type t) schema) in
-        "new CSVAdaptor(\"" ^ rel ^ "\", List" ^ schema_str ^ args ^ ")"
-      | _ ->
-          "createAdaptor(\"" ^ atype ^ "\", \"" ^ rel ^ "\", List" ^
-            (make_list (List.map (fun (k,v) -> "(\"" ^ k ^ "\", \"" ^ v ^ "\")") akeys)) ^
-          ")"
+      let args = if (List.length akeys) == 0 then "" 
+                 else (make_list ~parens:(", ","") 
+                                 (List.map (fun (k, v) -> 
+                                  match (k, v) with
+                                  | "fields", "|" -> "fields = \"\\|\""
+                                  | k, v -> k ^ " = \"" ^ v ^ "\"") akeys)) 
+      in match atype with
+         | "csv" -> 
+            let string_of_schema_type t = 
+               match t with
+               | TBool -> "BoolColumn"
+               | TInt -> "IntColumn"
+               | TFloat -> "FloatColumn"
+               | TString -> "StringColumn"
+               | TDate -> "DateColumn"
+               | _ -> debugfail None "Unsupported type in adaptor"
+            in
+            let schema_str = make_list (List.map (fun (_, t) ->
+                string_of_schema_type t) schema) 
+            in
+              "new CSVAdaptor(\"" ^ rel ^ "\", List" ^ schema_str ^ args ^ ")"
+         | _ ->
+            "createAdaptor(\"" ^ atype ^ "\", \"" ^ rel ^ "\", List" ^
+            (make_list (List.map (fun (k,v) -> 
+                        "(\"" ^ k ^ "\", \"" ^ v ^ "\")") akeys)) ^ ")"
     ) adaptors)
     in
     let source_init = 
@@ -697,29 +777,35 @@ struct
         | Schema.FileSource(s, f) -> 
           "createInputStreamSource(new FileInputStream(\"" ^ s ^ "\"), List" ^ 
           (make_list adaptors_strings) ^ ", " ^ (string_of_framing_type f) ^ ")"
-        | Schema.SocketSource(_, _, _) -> debugfail None "Sockets not implemented"
+        | Schema.SocketSource(_, _, _) -> 
+            debugfail None "Sockets not implemented"
         | Schema.PipeSource(_, _) -> debugfail None "Pipes not implemented"
         | Schema.NoSource -> debugfail None "Empty source not implemented"
     in
     let init_code = 
       let fn_event_to_tuple = 
         "x => x match {" ^ 
-        (make_list ~sep:";" ~parens:("",";") (List.map (fun (adaptor, (rel, vars, _)) -> 
-          "case StreamEvent(InsertTuple, o, \"" ^ rel ^ "\", List" ^ 
-          let k = (make_list (List.map (fun (n, _) -> "var_" ^ n) vars)) in
-          let knt = (make_list (List.map (fun (n, t) -> "var_" ^ n ^ ":" ^ string_of_type (map_base_type t)) vars)) in
-          knt ^ ") => " ^ 
-          "if(" ^ rel ^ ".contains(" ^ k ^ ")) { val count = " ^ rel ^ ".lookup(" ^ k ^ ") + 1; " ^ 
-          rel ^ ".updateValue(" ^ k ^ ", count) } else { " ^
-          rel ^ ".updateValue(" ^ k ^ ", 1) }" ^
-          "case event => throw ShouldNotHappenError(\"Event could not be dispatched: \" + event)"
-        ) adaptors)) ^
-        "}"
+        (make_list ~sep:";" ~parens:("",";") 
+         (List.map (fun (adaptor, (rel, vars, _)) -> 
+             "case StreamEvent(InsertTuple, o, \"" ^ rel ^ "\", List" ^ 
+              let k = (make_list (List.map (fun (n, _) -> "var_" ^ n) vars)) in
+              let knt = (make_list (List.map (fun (n, t) -> 
+                 "var_" ^ n ^ ":" ^ string_of_type (map_base_type t)
+              ) vars)) in
+                  knt ^ ") => " ^ 
+                  "if(" ^ rel ^ ".contains(" ^ k ^ ")) { val count = " ^ rel ^
+                  ".lookup(" ^ k ^ ") + 1; " ^ 
+                  rel ^ ".updateValue(" ^ k ^ ", count) } else { " ^
+                  rel ^ ".updateValue(" ^ k ^ ", 1) }" ^
+                  "case event => throw ShouldNotHappenError" ^
+                  "(\"Event could not be dispatched: \" + event)"
+         ) adaptors)) ^ "}"
       in
       ".forEachEvent({" ^ fn_event_to_tuple ^ "})"
     in
     let source_n = "s" ^ sc in 
-    ("val " ^ source_n ^ " = " ^ source_init, Some(init_code, Unit), Some(source_n, Unit))
+    ("val " ^ source_n ^ " = " ^ source_init, Some(init_code, Unit),
+     Some(source_n, Unit))
       
   let main (schemas:K3.map_t list) (patterns:pattern_map) 
     (tables:(source_impl_t * code_t option * code_t option) list)
@@ -734,11 +820,16 @@ struct
       "val pp = new PrettyPrinter(80, 2);" ^
       (make_list ~sep:";" ~parens:("",";") (List.map (fun (x, _, (c, ct)) -> 
         match ct with
-        | Collection(_, _, _) -> "println(pp.format(<" ^ x ^ ">{ get" ^ x ^ "().toXML() }</" ^ x ^ ">))"
-        | _ -> "println(pp.format(<" ^ x ^ ">{ get" ^ x ^ "() }</" ^ x ^ ">))") tlqs)) ^ 
+        | Collection(_, _, _) -> "println(pp.format(<" ^ x ^ ">{ get" ^ x ^
+          "().toXML() }</" ^ x ^ ">))"
+        | _ -> "println(pp.format(<" ^ x ^ ">{ get" ^ x ^ "() }</" ^ x ^ 
+               ">))") tlqs)) ^ 
       " }" in
     let str_schema =
-      let make_type_list t: string = string_of_tuple_type (List.map (fun (n, t) -> string_of_type (map_base_type t)) t) in
+      let make_type_list t: string = 
+         string_of_tuple_type (List.map (fun (n, t) -> 
+            string_of_type (map_base_type t)) t) 
+      in
       let sndIdx rel tpe valt =
         try
           (* find patterns for a certain map *)
@@ -754,7 +845,8 @@ struct
                 let vars = (list_vars "x" (List.length tpe)) in 
                 let sids = (List.map string_of_int ids) in
                 (make_list ~sep:"_" ~parens:("\"","\"") sids) ^ 
-                " -> SecondaryIndex[" ^ (make_type_list (list_project tpe ids)) ^ 
+                " -> SecondaryIndex[" ^ 
+                (make_type_list (list_project tpe ids)) ^ 
                 "," ^ (make_type_list tpe) ^ ", " ^ valt ^ "](x => x match " ^
                  "{ case " ^ (make_tuple vars) ^ " => " ^ 
                  (make_tuple (list_project vars ids)) ^ " })"
@@ -776,18 +868,25 @@ struct
         match (ivars, ovars) with
         | ([], []) -> "var " ^ id ^ " = SimpleVal[" ^ str_val_t ^ "](0)"
         | ([], os) -> "var " ^ id ^ " = new K3PersistentCollection[" ^ 
-          (make_type_list os) ^ ", " ^ str_val_t ^ "](Map(), " ^ (sndIdx id os str_val_t) ^ 
+          (make_type_list os) ^ ", " ^ str_val_t ^ "](Map(), " ^ 
+          (sndIdx id os str_val_t) ^ 
           ") /* out */"
         | (is, []) -> "var " ^ id ^ " = new K3PersistentCollection[" ^ 
-          (make_type_list is) ^ ", " ^ str_val_t ^ "](Map(), " ^ (sndIdx id is str_val_t) ^ ") /* in */"
+          (make_type_list is) ^ ", " ^ str_val_t ^ "](Map(), " ^ 
+          (sndIdx id is str_val_t) ^ ") /* in */"
         | (is, os) -> "var " ^ id ^ " = new K3FullPersistentCollection[" ^ 
-          (make_type_list is) ^ "," ^ (make_type_list os) ^ ", " ^ str_val_t ^ "](Map(), " ^ 
+          (make_type_list is) ^ "," ^ (make_type_list os) ^ ", " ^ 
+          str_val_t ^ "](Map(), " ^ 
           (sndIdx id is str_val_t) ^ ") /* full */"
       ) schemas))
     in
-    let run = "def run(onEventProcessedHandler: Unit => Unit = (_ => ())): Unit = { fillTables(); dispatcher(StreamEvent(SystemInitialized, 0, \"\", List()), onEventProcessedHandler) }"
+    let run = 
+        "def run(onEventProcessedHandler: Unit => " ^ 
+        "Unit = (_ => ())): Unit = { fillTables(); dispatcher(StreamEvent(" ^ 
+        "SystemInitialized, 0, \"\", List()), onEventProcessedHandler) }"
     in
-    let imports = (make_list ~sep:";" ~parens:("",";") (List.map (fun x -> "import " ^ x)
+    let imports = (make_list ~sep:";" ~parens:("",";") 
+                   (List.map (fun x -> "import " ^ x)
       [ 
         "java.io.FileInputStream";
         "org.dbtoaster.dbtoasterlib.StreamAdaptor._";
@@ -804,7 +903,8 @@ struct
     )
     in
     let dispatcher = 
-      "def dispatcher(event: DBTEvent, onEventProcessedHandler: Unit => Unit): Unit = {" ^ 
+      "def dispatcher(event: DBTEvent, " ^
+      "onEventProcessedHandler: Unit => Unit): Unit = {" ^ 
       "event match { " ^
       (make_list ~parens:("",";") ~sep:";" 
         (List.map (fun x -> 
@@ -813,30 +913,42 @@ struct
               let event_type, trigger_type, rel, vars = 
                 match eventt with 
                (* TODO: Implement corrective updates *)
-                  | Schema.CorrectiveUpdate(_, _, _, _, _) -> debugfail None "Corrective updates not implemented yet"
-                | Schema.InsertEvent(rel, vars, tpe) -> ("InsertTuple", "Insert", rel, vars)
-                | Schema.DeleteEvent(rel, vars, tpe) -> ("DeleteTuple", "Delete", rel, vars)
-                | Schema.SystemInitializedEvent -> ("SystemInitialized", "SystemInitialized", "", []) in
+                | Schema.CorrectiveUpdate(_, _, _, _, _) -> 
+                    debugfail None "Corrective updates not implemented yet"
+                | Schema.InsertEvent(rel, vars, tpe) -> 
+                    ("InsertTuple", "Insert", rel, vars)
+                | Schema.DeleteEvent(rel, vars, tpe) -> 
+                    ("DeleteTuple", "Delete", rel, vars)
+                | Schema.SystemInitializedEvent -> 
+                    ("SystemInitialized", "SystemInitialized", "", []) in
               "case StreamEvent(" ^ event_type ^ ", o, \"" ^ rel ^ "\", " ^ 
               (if (List.length vars) = 0 then 
-           "Nil" 
-         else
-           (make_list ~parens:("", "::Nil") ~sep:"::" (List.map (fun (n, t) -> 
-              "(var_" ^ n ^ ": " ^ (string_of_type (map_base_type t)) ^ ")") vars))) ^ 
-         ") => on" ^ 
-              trigger_type ^ rel ^ (make_list (List.map (fun (n, t) -> "var_" ^ n) vars))
-          | t -> debugfail None ("Trigger expected but found " ^ (string_of_type t))
+                "Nil" 
+             else
+               (make_list ~parens:("", "::Nil") ~sep:"::" 
+                (List.map (fun (n, t) -> "(var_" ^ n ^ ": " ^ 
+                                         (string_of_type (map_base_type t)) ^ 
+                                         ")") vars)
+               )) ^ ") => on" ^ 
+               trigger_type ^ rel ^ 
+               (make_list (List.map (fun (n, t) -> "var_" ^ n) vars))
+          | t -> 
+            debugfail None ("Trigger expected but found " ^ (string_of_type t))
         )) triggers)) 
       ^ "case EndOfStream => ();"
-      ^ "case _ => throw ShouldNotHappenError(\"Event could not be dispatched: \" + event)"
+      ^ "case _ => throw ShouldNotHappenError("
+      ^ "\"Event could not be dispatched: \" + event)"
       ^ "} "
       ^ "onEventProcessedHandler();"
-      ^ "if(sources.hasInput()) dispatcher(sources.nextInput(), onEventProcessedHandler)"
+      ^ "if(sources.hasInput()) dispatcher(sources.nextInput(),"
+      ^ " onEventProcessedHandler)"
       ^ "}" 
     in
     let str_sources = 
-      (make_list ~parens:("",";") ~sep:";" (List.map (fun (s, _, _) -> s) streams)) ^
-      (make_list ~parens:("",";") ~sep:";" (List.map (fun (s, _, _) -> s) tables))
+      (make_list ~parens:("",";") ~sep:";" 
+                (List.map (fun (s, _, _) -> s) streams)) ^
+      (make_list ~parens:("",";") ~sep:";" 
+                 (List.map (fun (s, _, _) -> s) tables))
     in
     let str_streams = 
       "val sources = new SourceMultiplexer(List" ^ 
@@ -846,15 +958,17 @@ struct
         | _ -> debugfail None "Missing source name"
       ) streams)) ^ ");"
     in
-    let triggers = (make_list ~parens:("",";") ~sep:";" (List.map (fun (b, bt) -> b) triggers)) in
-   let filltables = 
-      "def fillTables(): Unit = {" ^
-      (make_list ~parens:("",";") ~sep:";" (List.map (fun (s, init, _) -> 
-         match init with 
-         | Some(i, _) -> s ^ i
-         | None -> ""
-      ) tables)) ^
-      "}"
+    let triggers = (make_list ~parens:("",";") ~sep:";" 
+                              (List.map (fun (b, bt) -> b) triggers)) 
+    in
+    let filltables = 
+       "def fillTables(): Unit = {" ^
+       (make_list ~parens:("",";") ~sep:";" (List.map (fun (s, init, _) -> 
+          match init with 
+          | Some(i, _) -> s ^ i
+          | None -> ""
+       ) tables)) ^
+       "}"
    in 
    imports ^
    " package org.dbtoaster { object Query { " ^
