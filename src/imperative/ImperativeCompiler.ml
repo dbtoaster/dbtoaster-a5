@@ -1251,14 +1251,13 @@ end (* Typing *)
     in  
     let trigger_fn =
       let trigger_body = source_code_of_imp stmts in
-      let is_singleton_body = match trigger_body with
-        | Lines [l] -> true
-        | _ -> false
-      in
-      [inl ("void on_"^trig_name^"("^trig_args^") "^
-            (if is_singleton_body then "{" else ""))]@
+      [inl ("void on_"^trig_name^"("^trig_args^") {");
+       inl ("BEGIN_TRIGGER(exec_stats,\""^trig_name^"\")");
+       inl ("BEGIN_TRIGGER(ivc_stats,\""^trig_name^"\")");]@
       [trigger_body]@
-      [inl (if is_singleton_body then "}" else "")]
+      [inl ("END_TRIGGER(exec_stats,\""^trig_name^"\")");
+       inl ("END_TRIGGER(ivc_stats,\""^trig_name^"\")");
+       inl ("}")]
     in
     let unwrapper =
       if event = Schema.SystemInitializedEvent then []
@@ -2193,9 +2192,6 @@ end (* Typing *)
       (0,([],[])) t_l)
     in
     Lines(["void "^c_id^"_value_update("^c_t^"& m, "^
-            (String.concat ", " k_decl)^", double v)"^
-            " __attribute__((noinline));";
-           "void "^c_id^"_value_update("^c_t^"& m, "^
             (String.concat ", " k_decl)^", double v)";
            "{";
            "  "^c_t^"::iterator it = m.find("^(mk_tuple k)^");";
@@ -2221,9 +2217,6 @@ end (* Typing *)
     let in_k_decl, in_k = get_decl_and_val 0 in_tl in
     let out_k_decl, out_k = get_decl_and_val (List.length in_tl) out_tl in
     Lines(["void "^c_id^"_value_update("^c_t^"& m, "^
-             (String.concat ", " (in_k_decl@out_k_decl))^", double v)"^
-             " __attribute__((noinline));";
-           "void "^c_id^"_value_update("^c_t^"& m, "^
              (String.concat ", " (in_k_decl@out_k_decl))^", double v)";
            "{";
            "  "^c_t^"::iterator it = m.find("^(mk_tuple in_k)^");";
@@ -2268,15 +2261,10 @@ end (* Typing *)
          "  }"]
       in
       if in_tl = [] || out_tl = [] then
-        ["void "^c_id^"_update("^c_t^"& m, "^c_update_t^"& u)"^
-           " __attribute__((noinline));";
-         "void "^c_id^"_update("^c_t^"& m, "^c_update_t^"& u)";
+        ["void "^c_id^"_update("^c_t^"& m, "^c_update_t^"& u)";
          "{";"  m.clear();"]@update_loop@["}"]
       else
         ["void "^c_id^"_update("^c_t^"& m, "^
-           (String.concat ", " in_k_decl)^", "^c_update_t^"& u)"^
-           " __attribute__((noinline));";
-         "void "^c_id^"_update("^c_t^"& m, "^
            (String.concat ", " in_k_decl)^", "^c_update_t^"& u)";
          "{";
          "  "^c_t^"::iterator it = m.find("^(mk_tuple in_k)^");";
@@ -2289,15 +2277,10 @@ end (* Typing *)
     let direct_sc =
       let c_direct_t = if in_tl = [] || out_tl = [] then c_t else c_out_t in
       if in_tl = [] || out_tl = [] then
-      ["void "^c_id^"_update_direct("^c_t^"& m, "^c_direct_t^"& u)"^
-         " __attribute__((noinline));";
-       "void "^c_id^"_update_direct("^c_t^"& m, "^c_direct_t^"& u)";
+      ["void "^c_id^"_update_direct("^c_t^"& m, "^c_direct_t^"& u)";
        "{"; "  m = u;"; "}"]
       else
       ["void "^c_id^"_update_direct("^c_t^"& m, "^
-         (String.concat ", " in_k_decl)^", "^c_direct_t^"& u)"^
-         " __attribute__((noinline));";
-       "void "^c_id^"_update_direct("^c_t^"& m, "^
          (String.concat ", " in_k_decl)^", "^c_direct_t^"& u)";
        "{";
        "  "^c_t^"::iterator it = m.find("^(mk_tuple in_k)^");";
@@ -2315,9 +2298,6 @@ end (* Typing *)
       (0,([],[])) t_l)
     in
     Lines(["void "^c_id^"_remove("^c_t^"& m, "^
-            (String.concat ", " k_decl)^")"^
-            " __attribute__((noinline));";
-           "void "^c_id^"_remove("^c_t^"& m, "^
             (String.concat ", " k_decl)^")";
            "{";
            "  m.erase("^(mk_tuple k)^");";
@@ -2392,10 +2372,8 @@ end (* Typing *)
       let bimp = match prof_imp with | Block _ -> prof_imp
                                      | _ -> Block(unit, [prof_imp])
       in nivco,
-         [Lines (["void "^stmt_name^"("^(String.concat ", " iarg_decls)^")"^
-                  " __attribute__((noinline));";
-                  "void "^stmt_name^"("^(String.concat ", " iarg_decls)^")"])]@
-                 [source_code_of_imp bimp]@[Lines ([""])]
+         [Lines (["void "^stmt_name^"("^(String.concat ", " iarg_decls)^"){"])]@
+                 [source_code_of_imp bimp]@[Lines (["}"])]
     in nivc_offsets, new_decl,
        [prof_begin; 
         Expr(unit, Fn(unit, Ext(Apply(stmt_name)), iargs)); 
@@ -2593,18 +2571,20 @@ end (* Typing *)
     let init_stats =
       let stmt_ids = List.flatten (List.map (fun (_,_,_,sids) ->
          List.map (fun (i,n) ->
-           "pb.exec_stats->register_probe("^i^", \""^(String.escaped n)^"\");"
+           "exec_stats->register_probe("^i^", \""^(String.escaped n)^"\");"
          ) sids) (fst trig_reg_info))
       in
       let ivc_ids =
         List.fold_left (fun acc (n,cl) ->
           acc@(List.map (fun i ->
-            "pb.ivc_stats->register_probe("^(string_of_int i)^", \""^
+            "ivc_stats->register_probe("^(string_of_int i)^", \""^
             (String.escaped n)^"\");") cl)
         ) [] (snd trig_reg_info)
       in
-        Lines (["#ifdef DBT_PROFILE"] @ stmt_ids @
-                ivc_ids @ ["#endif // DBT_PROFILE"])
+        Lines (["#ifdef DBT_PROFILE";
+                "exec_stats = pb.exec_stats;";
+                "ivc_stats = pb.ivc_stats;";
+               ] @ stmt_ids @ ivc_ids @ ["#endif // DBT_PROFILE"])
     in
       
       
@@ -2642,6 +2622,11 @@ end (* Typing *)
       tab^"data_t()"^
       (if i_l <> [] then " : "^(ssc (cscl ~delim:"," i_l)) else "");
       tab^"{}";
+      "";
+      "#ifdef DBT_PROFILE";
+      "boost::shared_ptr<dbtoaster::statistics::trigger_exec_stats> exec_stats;";
+      "boost::shared_ptr<dbtoaster::statistics::trigger_exec_stats> ivc_stats;";
+      "#endif";
       "";
       tab^"/* Registering relations and trigger functions */";
       tab^"void register_data(ProgramBase<tlq_t>& pb) {";];

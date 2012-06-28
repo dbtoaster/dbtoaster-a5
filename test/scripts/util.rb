@@ -210,6 +210,16 @@ class Array
       child + child.map { |c| [self[0]] + c };
     end
   end
+
+  def grep(pattern, &block)
+    ret = [];
+    if block.nil? 
+    then each { |l| ret.push(l) if pattern =~ l; }
+    else each { |l| match = pattern.match(l);
+                    ret.push(block.call(match)) if match; }
+    end
+    ret
+  end
 end
 
 class Hash

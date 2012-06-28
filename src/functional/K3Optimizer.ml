@@ -815,7 +815,15 @@ let rec conservative_beta_reduction substitutions expr =
       | TBase(TInt) | TBase(TBool) -> Const(CInt(0))
       | _ -> Const(CFloat(0.0)) 
   in
+  let bool_op op a b = 
+    Const(CInt(Constants.int_of_const (op a b)))
+  in
   begin match expr with
+      
+      | Eq(Const(c1), Const(c2))  -> bool_op Constants.Math.cmp_eq  c1 c2
+      | Neq(Const(c1), Const(c2)) -> bool_op Constants.Math.cmp_neq c1 c2
+      | Lt(Const(c1), Const(c2))  -> bool_op Constants.Math.cmp_lt  c1 c2
+      | Leq(Const(c1), Const(c2)) -> bool_op Constants.Math.cmp_lte c1 c2
       
       (* Adding 0 to a number leaves it unchanged *)
       | Add(Const(CInt(0)), x)     | Add(x, Const(CInt(0)))
@@ -1045,6 +1053,31 @@ let rec simplify_collections filter expr =
             )),
             s_expr
          )
+    
+    | GroupByAggregate((AssocLambda(aggf_arg1,aggf_arg2,aggf_body)),init,
+                       (Lambda(gb_args,gb_body)),
+                       (Singleton(s_expr))) ->
+       let wrapped_gb_fields = 
+          begin match ((K3Typechecker.typecheck_expr gb_body),(gb_body)) with
+            | (TTuple _, Tuple(gb_fields)) -> Some(gb_fields)
+            | (TTuple _, _) -> None
+            | (_, gb_field) -> Some([gb_field])
+          end
+       in
+       begin match wrapped_gb_fields with
+         | None -> ne
+         | Some(gb_fields) -> 
+             Singleton(Apply(
+               (Lambda(gb_args,
+                  Tuple(gb_fields @ [
+                     Apply(Lambda(aggf_arg1,(
+                        Apply(Lambda(aggf_arg2,aggf_body), init)
+                     )), s_expr)
+                  ])
+               )),
+               s_expr
+            ))
+       end
     
     | Aggregate((AssocLambda _ as agg_f),init, (Map _ as rmap)) ->
         (* v,w,fb *)
@@ -1656,17 +1689,27 @@ let optimize ?(optimizations=[]) trigger_vars expr =
     let new_e = apply_opts e in
     if e = new_e then e else fixpoint new_e    
   in 
-  Debug.print "LOG-K3-OPT" (fun () -> "INLINE COLLECTION FNS");
+  Debug.print "LOG-K3-OPT" (fun () -> "===== INLINE COLLECTION FNS =====");
   let r = fixpoint (inline_collection_functions [] expr) 
   in
-  Debug.print "LOG-K3-OPT" (fun () -> "BETA OTIMIZATIONS");
+  Debug.print "LOG-K3-OPT" (fun () -> K3.nice_string_of_expr r []);
+  Debug.print "LOG-K3-OPT" (fun () -> "===== BETA OTIMIZATIONS =====");
   let r1 = if List.mem Beta optimizations
-             then conservative_beta_reduction [] r else r 
+             then Fixpoint.compute 
+                     (Fixpoint.compose [
+                        apply_opts;
+                        (conservative_beta_reduction [])
+                     ]) r
+             else r 
   in
-  Debug.print "LOG-K3-OPT" (fun () -> "CSE OPTIMIZATIONS");
-     if not(List.mem CSE optimizations)  then r1
+  Debug.print "LOG-K3-OPT" (fun () -> K3.nice_string_of_expr r1 []);
+  Debug.print "LOG-K3-OPT" (fun () -> "===== CSE OPTIMIZATIONS =====");
+  let r2 = if not(List.mem CSE optimizations)  then r1
      else (lift_if0s
             (fixpoint (lift_ifs trigger_vars (common_subexpression_elim r1))))
+  in
+  Debug.print "LOG-K3-OPT" (fun () -> K3.nice_string_of_expr r2 []);
+  (fixpoint r2)
 
 let dm_optimize ?(optimizations=[]) trigger_vars expr = 
   let optim = optimize ~optimizations:optimizations

@@ -181,15 +181,22 @@ let parse_stmt (m3_stmt:string) =
    )
 ;;      
 
+let k3_map (decl:string):K3.map_t =
+   try
+      K3parser.mapDeclaration K3lexer.tokenize (Lexing.from_string (decl^";"))
+   with Parsing.Parse_error -> (
+      print_endline ("Error parsing :'"^decl^";'");
+      let _ = Parsing.set_trace true in
+      K3parser.mapDeclaration K3lexer.tokenize (Lexing.from_string (decl^";"))
+   )
+
 let parse_k3 (expr:string):K3.expr_t =
    try  
-      K3parser.statement K3lexer.tokenize 
-                         (Lexing.from_string expr)
+      K3parser.statement K3lexer.tokenize (Lexing.from_string expr)
    with Parsing.Parse_error -> (
       print_endline ("Error parsing :'"^expr^"'");
       let _ = Parsing.set_trace true in
-      K3parser.statement K3lexer.tokenize 
-                         (Lexing.from_string expr)
+      K3parser.statement K3lexer.tokenize (Lexing.from_string expr)
    )
 ;;   
 

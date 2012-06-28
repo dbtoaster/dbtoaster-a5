@@ -136,7 +136,7 @@
 %left PRODUCT
 
 // start   
-%start dbtoasterK3Program statement
+%start dbtoasterK3Program statement mapDeclaration
 /* 
   List of
     List of Query Expressions       : target terms
@@ -151,6 +151,7 @@
 
 %type < K3.prog_t > dbtoasterK3Program
 %type < K3.expr_t > statement
+%type < K3.map_t > mapDeclaration
     
 %%
 

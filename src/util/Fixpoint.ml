@@ -56,6 +56,18 @@ let rec compute f x =
 ;;
 
 (**
+   Compose two functions
+   @param f_list  The list of functions to compose
+   @return        an [f x] equivalent to [((List.nth f_list 1) 
+                  ((List.nth f_list 2) (... x)))]
+*)
+let rec compose = (function 
+ | [] -> (fun x -> x)
+ | [x] -> x
+ | hd::rest -> (fun x -> (hd ((compose rest) x)))
+)
+
+(**
    Recursively apply a given transform until it produces a duplicate value.  Not
    quite the fixpoint, but it works if the transform produces multiple 
    equivalent representations of the fixpoint value.

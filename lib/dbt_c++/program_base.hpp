@@ -51,7 +51,21 @@ using namespace ::dbtoaster::util;
 
 #ifdef DBT_PROFILE
 #include "statistics.hpp"
+
+#define   BEGIN_PROBE(_class,_key) (_class)->begin_probe  (_key);
+#define     END_PROBE(_class,_key) (_class)->end_probe    (_key);
+#define BEGIN_TRIGGER(_class,_key) (_class)->begin_trigger(_key);
+#define   END_TRIGGER(_class,_key) (_class)->begin_trigger(_key);
+
 using namespace ::dbtoaster::statistics;
+
+#else
+
+#define   BEGIN_PROBE(_class,_key) 
+#define     END_PROBE(_class,_key) 
+#define BEGIN_TRIGGER(_class,_key) 
+#define   END_TRIGGER(_class,_key) 
+
 #endif
 
 #ifdef DBT_TRACE_ALL
