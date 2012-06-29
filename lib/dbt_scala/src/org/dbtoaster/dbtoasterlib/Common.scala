@@ -1,10 +1,14 @@
+/** 
+ * This file contains some helper functions and exceptions 
+ */
+
 package org.dbtoaster.dbtoasterlib {
   /** This object defines dbtoaster-related exceptions
 	*/
   object dbtoasterExceptions {
-    final case class K3ToScalaCompilerError(msg: String) extends Error(msg)
-    final case class ShouldNotHappenError(msg: String) extends Error(msg)
-    final case class NotImplementedException(msg: String) extends RuntimeException(msg)
+    final case class DBTScalaCodegenError(msg: String) extends Error(msg)
+    final case class DBTFatalError(msg: String) extends Error(msg)
+    final case class DBTNotImplementedException(msg: String) extends RuntimeException(msg)
   }
   
   /** This object defines some additional implicit conversions that are being

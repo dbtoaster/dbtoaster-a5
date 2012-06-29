@@ -213,7 +213,7 @@ class ScalaUnitTest < GenericUnitTest
     end
     return if $compile_only;
     starttime = Time.now;
-    IO.popen("scala -classpath \"bin/queries/#{@qname}.jar:lib/dbt_scala/dbtlib.jar\" org.dbtoaster.RunQuery", "r") do |qin|
+    IO.popen("scala -J-Xmx2048M -classpath \"bin/queries/#{@qname}.jar:lib/dbt_scala/dbtlib.jar\" org.dbtoaster.RunQuery", "r") do |qin|
       output = qin.readlines;
       endtime = Time.now;
       output = output.map { |l| l.chomp.strip }.join("");

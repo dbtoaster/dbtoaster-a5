@@ -5,30 +5,133 @@ import java.text.SimpleDateFormat
 
 package org.dbtoaster.dbtoasterlib {
 
+  /**
+   * This object contains the implementation of the persistent and intermediat
+   * collections used by DBToaster
+   */
   object K3Collection {
+    // mutable maps are used for better performance
     import scala.collection.mutable.Map
 
+    /**
+     * The trait that defines the operations that can be done on a persistent
+     * collection and contains some common methods.
+     *
+     * @param <K> Key type (a tuple in most cases)
+     * @param <V> Value type
+     */
     trait K3Collection[K, V] {
+
+      /**
+       * Checks whether an element with a given key exists in the collection
+       *
+       * @param key The key that should be checked
+       * @return True if the element is in the collection, false otherwise
+       */
       def contains(key: K): Boolean
+
+      /**
+       * Looks up an element in the collection given a key
+       *
+       * Note: If there is no element with the given key in the
+       * collection, an error is thrown
+       *
+       * @param key The key of that should be looked up
+       * @return The value of the element
+       */
       def lookup(key: K): V
+
+      /**
+       * Turns the collection into a list of key-value tuples
+       *
+       * @return The list of elements
+       */
       def toList(): List[Tuple2[K, V]]
+
+      /**
+       * Calls the function f on every element of the collection
+       * and stores the result in a new intermediate collection
+       *
+       * @param f The function that is used for the mapping
+       * @return A collection containing the mapped elements
+       */
       def map[K2, V2](f: Tuple2[K, V] => Tuple2[K2, V2]): K3IntermediateCollection[K2, V2]
+
+      /**
+       * Calls a function f for every element of the collection
+       *
+       * @param f The function
+       */
       def foreach(f: Tuple2[K, V] => Unit): Unit
+
+      /**
+       * Gets all the elements with a certain partial key.
+       * E.g. returns all the elements with the key <1,*,3>
+       * where * stands for an arbitrary value
+       *
+       * @param keyPart The partial key
+       * @param idx The indices of the elements that can be found in the
+       * partial key
+       * @return The matching elements
+       */
       def slice[KP](keyPart: KP, idx: List[Int]): K3IntermediateCollection[K, V]
+
+      /**
+       * Filters a collections by a function f
+       *
+       * @param f The filter function
+       * @return A collection with the elements for which the function f
+       * returned true
+       */
       def filter(f: Tuple2[K, V] => Boolean): K3IntermediateCollection[K, V]
+
       def groupByAggregate[K2, V2](init: V2, group: Tuple2[K, V] => K2, fn: Tuple2[K, V] => V2 => V2): K3IntermediateCollection[K2, V2]
+
+      /**
+       * Folds all the elements of a collection into one value
+       *
+       * @param init The initial value
+       * @param fn A function taking the current value and an element and
+       * returns the new value
+       * @return The value after calling the function for each element
+       */
       def fold[Y](init: Y, fn: Tuple2[K, V] => Y => Y): Y
+
+      /**
+       * Flattens a nested collection
+       *
+       * @return The flattened collection
+       */
       def flatten[K2, V2](): K3IntermediateCollection[K2, V2]
+
+      /**
+       * Turns a collection into a persistent collection
+       *
+       * @return The persistent collection
+       */
       def toPersistentCollection(): K3PersistentCollection[K, V]
 
       val ft = new SimpleDateFormat("yyyyMMdd")
+
+      /**
+       * Turns a value into a string
+       *
+       * @param v The value to be turned into a string
+       * @return A string representing the value
+       */
       def valToStr(v: Any): String = {
         v match {
           case d: Date => ft.format(d)
           case x => x.toString
-        }      
+        }
       }
 
+      /**
+       * Generates an XML representation of the collection (similar to
+       * the C++ backend) which is mostly used for debugging purposes
+       *
+       * @return The XML representing the collection
+       */
       def toXML(): List[Elem] = {
         toList().foldLeft(List[Elem]()) {
           case (l, (k, v)) =>
@@ -42,17 +145,54 @@ package org.dbtoaster.dbtoasterlib {
       }
     }
 
+    /**
+     * Trait for an index on a collection
+     *
+     * @param <K> Key type of the collection
+     * @param <V> Value type of the collection
+     */
     trait Index[K, V] {
+      /**
+       * Updates the index
+       * @param keyVal The element to be updated
+       */
       def update(keyVal: Tuple2[K, V]): Unit
+      /**
+       * Removes an element from the index
+       *
+       * @param key The element to be removed
+       */
       def remove(key: K): Unit
+      /**
+       * Returns all the elements that match a
+       * certain partial key
+       *
+       * @param keyPart The partial key
+       * @return The matching elements
+       */
       def slice[PK](keyPart: PK): Map[K, V]
     }
 
+    /**
+     * A persistent value
+     *
+     * @param <T> The type of the value
+     */
     case class SimpleVal[T](defval: T) {
       var v: T = defval
 
+      /**
+       * Returns the current value
+       *
+       * @return The value
+       */
       def get(): T = v
 
+      /**
+       * Updates the value
+       *
+       * @param nv The new value
+       */
       def update(nv: T): Unit = {
         v = nv
       }
@@ -60,9 +200,14 @@ package org.dbtoaster.dbtoasterlib {
       override def toString(): String = v.toString
     }
 
-    // KC = type of the complete key
-    // K = type of the partial key
-    // V = type of the values
+    /**
+     * Implements a secondary index on a collection. The function project
+     * defines how a key is mapped to a partial key.
+     *
+     * @param <PK> Partial key type
+     * @param <K> Key type
+     * @param <V> Value type
+     */
     case class SecondaryIndex[PK, K, V](project: K => PK) extends Index[K, V] {
       val index = Map[PK, Map[K, V]]()
 
@@ -80,7 +225,7 @@ package org.dbtoaster.dbtoasterlib {
 
         index.get(keyPart) match {
           case Some(m) => m -= key
-          case None => throw new ShouldNotHappenError("deletion of a non-existant key")
+          case None => throw new DBTFatalError("deletion of a non-existant key")
         }
       }
 
@@ -92,6 +237,12 @@ package org.dbtoaster.dbtoasterlib {
       }
     }
 
+    /**
+     * Implements a persistent collection with secondary indices sndIdx
+     *
+     * @param <K> The key type
+     * @param <V> The value type
+     */
     class K3PersistentCollection[K, V](elems: Map[K, V], sndIdx: Option[Map[String, Index[K, V]]]) extends K3Collection[K, V] {
       def map[K2, V2](f: Tuple2[K, V] => Tuple2[K2, V2]): K3IntermediateCollection[K2, V2] = {
         K3IntermediateCollection[K2, V2](elems.toList.map(f))
@@ -101,10 +252,16 @@ package org.dbtoaster.dbtoasterlib {
         elems.contains(key)
 
       def lookup(key: K): V = elems.get(key) match {
-        case None => throw new ShouldNotHappenError("lookup of a non-existant key")
+        case None => throw new DBTFatalError("lookup of a non-existant key")
         case Some(v) => v
       }
 
+      /**
+       * Updates an element in the collection
+       *
+       * @param key Key of the element
+       * @param value Value of the element
+       */
       def updateValue(key: K, value: V): Unit = {
         value match {
           case _ => {
@@ -118,6 +275,11 @@ package org.dbtoaster.dbtoasterlib {
         }
       }
 
+      /**
+       * Removes an element from the collection
+       *
+       * @param key Key of the element to be removed
+       */
       def remove(key: K): Unit = {
         elems -= key
         sndIdx match {
@@ -135,7 +297,7 @@ package org.dbtoaster.dbtoasterlib {
           case None => throw new IllegalArgumentException
         }
       }
-      
+
       def filter(f: Tuple2[K, V] => Boolean): K3IntermediateCollection[K, V] = {
         K3IntermediateCollection(elems.filter(f).toList)
       }
@@ -149,7 +311,7 @@ package org.dbtoaster.dbtoasterlib {
               case None => fn(keyval)(init)
             }
             grps += ((key, value))
-          case _ => throw new ShouldNotHappenError("Group By Aggregate failed")
+          case _ => throw new DBTFatalError("Group By Aggregate failed")
         }
         K3IntermediateCollection(groupedCollection.toList)
       }
@@ -159,7 +321,7 @@ package org.dbtoaster.dbtoasterlib {
       }
 
       def flatten[K2, V2](): K3IntermediateCollection[K2, V2] =
-        throw new K3ToScalaCompilerError("Flatten of a non-nested collection")
+        throw new DBTFatalError("flatten of non-nested collection")
 
       def toList(): List[Tuple2[K, V]] = elems.toList
 
@@ -173,7 +335,21 @@ package org.dbtoaster.dbtoasterlib {
       def toPersistentCollection(): K3PersistentCollection[K, V] = this
     }
 
+    /**
+     * Implements a persistent collection with in and out keys
+     *
+     * @param <K1> In key type
+     * @param <K2> Out key type
+     * @param <V> Value type
+     */
     class K3FullPersistentCollection[K1, K2, V](felems: Map[K1, K3PersistentCollection[K2, V]], fsndIdx: Option[Map[String, Index[K1, K3PersistentCollection[K2, V]]]]) extends K3PersistentCollection[K1, K3PersistentCollection[K2, V]](felems, fsndIdx) {
+      /**
+       * Updates an element of the collection
+       *
+       * @param inKey In key of the element
+       * @param outKey Out key of the element
+       * @param value Value of the element
+       */
       def updateValue(inKey: K1, outKey: K2, value: V): Unit = {
         felems.get(inKey) match {
           case Some(outerMap) => outerMap.updateValue(outKey, value)
@@ -181,15 +357,28 @@ package org.dbtoaster.dbtoasterlib {
         }
       }
 
+      /**
+       * Removes an element from the collection
+       *
+       * @param inKey In key of the element
+       * @param outKey Out key of the element
+       */
       def remove(inKey: K1, outKey: K2): Unit = {
         felems.get(inKey) match {
           case Some(outerMap) => outerMap.remove(outKey)
-          case None => throw new ShouldNotHappenError("deletion of a non-existant element")
+          case None => throw new DBTFatalError("deletion of a non-existant element")
         }
       }
     }
 
-    // Note that intermediate collections can have different values with the same key
+    /**
+     * Implementation of an intermediate collection
+     *
+     * Note: Intermediate collections can have multiple values for the same key
+     *
+     * @param <K> The key type
+     * @param <V> The value type
+     */
     case class K3IntermediateCollection[K, V](elems: List[Tuple2[K, V]]) extends K3Collection[K, V] {
       def map[K2, V2](f: Tuple2[K, V] => Tuple2[K2, V2]): K3IntermediateCollection[K2, V2] =
         K3IntermediateCollection(elems.map(f))
@@ -200,7 +389,7 @@ package org.dbtoaster.dbtoasterlib {
 
       def lookup(key: K): V = {
         (elems.find { case (k, v) => k == key }) match {
-          case None => throw new ShouldNotHappenError("lookup of a non-existant key")
+          case None => throw new DBTFatalError("lookup of a non-existant key")
           case Some((k, v)) => v
         }
       }
@@ -212,7 +401,7 @@ package org.dbtoaster.dbtoasterlib {
         val kp = keyPart.asInstanceOf[Product].productIterator.toList
         K3IntermediateCollection(elems.filter { case (k, v) => println(k + "," + kp); (kp zip idx).forall { case (kp, i) => kp == k.asInstanceOf[Product].productElement(i) } })
       }
-      
+
       def filter(f: Tuple2[K, V] => Boolean): K3IntermediateCollection[K, V] = {
         K3IntermediateCollection(elems.filter(f))
       }
@@ -226,7 +415,7 @@ package org.dbtoaster.dbtoasterlib {
               case None => fn(keyval)(init)
             }
             grps += ((key, value))
-          case _ => throw new ShouldNotHappenError("Group By Aggregate failed")
+          case _ => throw new DBTFatalError("Group By Aggregate failed")
         }
         K3IntermediateCollection(groupedCollection.toList)
       }

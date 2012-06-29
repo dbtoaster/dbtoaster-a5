@@ -5,31 +5,86 @@ import scala.collection.mutable.Map
 import java.text.SimpleDateFormat
 
 package org.dbtoaster.dbtoasterlib {
-  object StreamAdaptor {
+  /**
+ * This object contains the differen stream adaptors supported
+ * by DBToaster
+ *
+ */
+object StreamAdaptor {
+    /**
+     * The type of an orderbook stream adaptor
+     */
     abstract trait OrderbookType
+    
+    /**
+     * The adaptor looks for asks
+     *
+     */
     case object Asks extends OrderbookType
+    
+    /**
+     * The adaptor looks for bids
+     */
     case object Bids extends OrderbookType
 
+    /**
+     * Describes the type of an event
+     */
     abstract trait EventType
+    
+    /**
+     * Insertion of a tuple
+     */
     case object InsertTuple extends EventType
+    
+    /**
+     * Deletion of a tuple
+     */
     case object DeleteTuple extends EventType
+    
+    /**
+     * This type of event is fired only once when 
+     * the system has been initialized
+     */
     case object SystemInitialized extends EventType
 
+    /**
+     * Describes the type of a column
+     */
     abstract trait ColumnType
     case object IntColumn extends ColumnType
-    case object BigIntColumn extends ColumnType
     case object FloatColumn extends ColumnType
     case object OrderColumn extends ColumnType
     case object DateColumn extends ColumnType
     case object StringColumn extends ColumnType
 
+    /**
+     * An DBToaster event
+     */
     abstract trait DBTEvent
+    
+    /**
+     * A stream event representing some data that has been updated
+     */
     case class StreamEvent(eventType: EventType, order: Long, relation: String, vals: List[Any])
       extends Ordered[StreamEvent] with DBTEvent {
       def compare(other: StreamEvent) = other.order.compareTo(this.order)
     }
+    
+    /**
+     * This event is generated when there is no more tuples on
+     * this stream
+     */
     case object EndOfStream extends DBTEvent
 
+    /**
+     * Creates an adaptor from the parameters passed
+     * 
+     * @param adaptorType The type of the adaptor
+     * @param relation The relation that the adaptor belongs to
+     * @param params The paramaters for the adaptor
+     * @return The created adaptor
+     */
     def createAdaptor(adaptorType: String, relation: String, params: List[(String, String)]): StreamAdaptor = {
       adaptorType match {
         case "orderbook" => createOrderbookAdaptor(relation, params)
@@ -37,7 +92,15 @@ package org.dbtoaster.dbtoasterlib {
       }
     }
 
+    /**
+     * Creates an orderbook stream adaptor
+     * 
+     * @param relation The relation that the adaptor belongs to
+     * @param params The parameters for this adapter
+     * @return The created orderbook adaptor
+     */
     def createOrderbookAdaptor(relation: String, params: List[(String, String)]): OrderbookAdaptor = {
+      // Standard values for the parameters
       var orderbookType: OrderbookType = Asks
       var brokers: Int = 10
       var deterministic: Boolean = false
@@ -58,10 +121,23 @@ package org.dbtoaster.dbtoasterlib {
       parseParams(params)
     }
 
+    /**
+     * Abstract definition of a stream adaptor
+     *
+     */
     abstract class StreamAdaptor {
-      def processTuple(row: String): List[StreamEvent]
+      /**
+       * Processes some row and generates events
+     * @param row The row
+     * @return The list of events generated based on the row
+     */
+    def processTuple(row: String): List[StreamEvent]
     }
 
+    /**
+     * This adaptor parses CSV data
+     *
+     */
     class CSVAdaptor(relation: String, schemaTypes: List[ColumnType], eventtype: String = "insert", deletions: String = "false", schema: String = "", fields: String = ",") extends StreamAdaptor {
       val eventType = if (eventtype == "insert") InsertTuple else DeleteTuple
       val hasDeletions = (deletions == "true")
@@ -94,7 +170,6 @@ package org.dbtoaster.dbtoasterlib {
           x =>
             x match {
               case (v, IntColumn) => v.toLong
-	      case (v, BigIntColumn) => BigInt(v)
               case (v, FloatColumn) => v.toDouble
               case (v, OrderColumn) => v.toLong
               case (v, DateColumn) => new SimpleDateFormat("yyyy-MM-dd").parse(v)
@@ -106,6 +181,10 @@ package org.dbtoaster.dbtoasterlib {
       }
     }
 
+    /**
+     * This adaptor parses orderbook data
+     *
+     */
     class OrderbookAdaptor(relation: String, orderbookType: OrderbookType, brokers: Long, deterministic: Boolean, insertOnly: Boolean) extends StreamAdaptor {
       val asks: Map[Long, OrderbookRow] = Map()
       val bids: Map[Long, OrderbookRow] = Map()
