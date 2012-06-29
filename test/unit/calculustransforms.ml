@@ -4,7 +4,9 @@ open Arithmetic
 open Calculus
 open UnitTest
 ;;
-Debug.activate "PARSE-CALC-WITH-FLOAT-VARS"
+Debug.activate "PARSE-CALC-WITH-FLOAT-VARS";
+Debug.activate "AGGRESSIVE-FACTORIZE";
+Debug.activate "AGGRESSIVE-UNIFICATION";
 ;;
 log_test "Invalid Commute"
    string_of_bool
@@ -136,7 +138,7 @@ in
       "(A ^= {2*B}) * E[A][]";
    test "Empty schema, Value into all" []
       "(A ^= {2*B}) * A * {2*A} * R(A)"
-      "(A ^= {2*B}) * A * {2*A} * R(A)";
+      "(A ^= {2*B}) * {2*B} * {2*2*B} * R(A)";
    test "Empty schema, Variable into variable" []
       "(A ^= B) * A"
       "B";
@@ -154,13 +156,13 @@ in
       "B * {2*B} * R(B)";
    test "Variable into all made invalid by schema" [var "A"]
       "(A ^= B) * A * {2*A} * R(A)"
-      "(A ^= B) * A * {2*A} * R(A)";
+      "(A ^= B) * B * {2*B} * R(B)";
    test "Cascading pair with nesting" []
       "(A ^= B) * AggSum([], (C ^= {A*2})*C)"
       "AggSum([], {2*B})";
    test "Cascading pair made partly invalid by nested schema" []
       "(A ^= B) * AggSum([C], (C ^= {A*2})*C)"
-      "AggSum([C], (C ^= {2*B})*C)";
+      "AggSum([C], (C ^= {2*B})*{2*B})";
    test "Full expression and value into comparison" []
       "(A ^= {2*B}) * (C ^= AggSum([], R(D))) * {A < C}"
       "(C ^= AggSum([], R(D))) * {2*B < C}";
@@ -295,7 +297,7 @@ in
 ;;
 let test msg scope input output =
    log_test ("Factorize Sums ("^msg^")")
-      string_of_expr
+      CalculusPrinter.string_of_expr
       (CalculusTransforms.factorize_polynomial scope (parse_calc input))
       (parse_calc output)
 in
@@ -314,7 +316,7 @@ in
       "(R(A) * ((A * (2 + D)) + C)) + (S(A) * A)";
    test "Multiple Decreasing With Negs" []
       "(R(A) * A * 2)+(R(A) * C)-((R(A) * A * D)+(S(A) * A))"
-      "(R(A) * ((A * 2) + C))-(((R(A) * D)+S(A)) * A)"
+      "(R(A) * (A * (2+({-1}*D)))+C)+({-1} * S(A) * A)";
 ;;
 let test ?(opts = CalculusTransforms.default_optimizations)
          ?(skip_opts = [])
@@ -398,6 +400,7 @@ in
        ) * {QTY < 0.5 * nested}"
       "(nested ^= (AggSum([dPK], LI(dPK,QTY2) * QTY2))) * LI(dPK,QTY) *
        {QTY < 0.5 * nested}";
+   Debug.activate "NO-VISUAL-DIFF";
    test "TPCH17 dLineitem" ["dPK"; "dQTY"] ["QTY"; "nested"]
       "P(PK) * 
        (((PK ^= dPK) * (QTY ^= dQTY) * 
@@ -410,13 +413,14 @@ in
              (nested ^= AggSum([PK], L(PK, QTY2) * QTY2))
          )))"
       "P(dPK) * (
-          ((QTY ^= dQTY) * (nested ^= AggSum([dPK], L(dPK, QTY2) * QTY2)))
-          + 
-          ((L(dPK, QTY) + (QTY ^= dQTY)) * 
-           (
-               (nested ^= AggSum([dPK], L(dPK, QTY2) * QTY2) + dQTY) +
-               (nested ^= AggSum([dPK], L(dPK, QTY2) * QTY2)) * {-1}
-       )))";
+          (L(dPK, QTY) * (
+            (nested ^= AggSum([dPK], L(dPK, QTY2) * QTY2) + dQTY) +
+            (nested ^= AggSum([dPK], L(dPK, QTY2) * QTY2)) * {-1}
+          )) +
+          ((QTY ^= dQTY) * 
+            (nested ^= AggSum([dPK], L(dPK, QTY2) * QTY2) + dQTY)
+          )
+       )";
    test "SumNestedInTarget Delta" ["dA"; "dB"] []
       "AggSum([], 
           (((R1_A ^= dA) *
@@ -468,14 +472,37 @@ in
             (GKKEOF ^= (NPZL_7DKV_C * {(NPZL_7DKV_B * NPZL_7DKV_B)})) *
             (C1 ^= NPZL_7DKV_C))) *
         (QKKF7PYI ^= COUNTSS_C))"
-      "((QKKF7PYI ^= COUNTSS_C) *
-        AggSum([B1, C1, LB71Y, GKKEOF], 
-           ((NPZL_7DKV_B ^= 0) * (B1 ^= NPZL_7DKV_B) *
-            (LB71Y ^= ((COUNTSS_B * COUNTSS_C) + NPZL_7DKV_B)) *
-            (__sql_inline_not_1 ^= 0) * 
-            COUNTS1(int)[][NPZL_7DKV_B, NPZL_7DKV_C] *
-            (C1 ^= NPZL_7DKV_C) *
-            (GKKEOF ^= (NPZL_7DKV_C * {(NPZL_7DKV_B * NPZL_7DKV_B)})) *
-            (__sql_inline_not_1 ^= {NPZL_7DKV_C = 2}))))"
-            
-            
+      "(LB71Y ^= (COUNTSS_B * COUNTSS_C)) * (B1 ^= 0) * (GKKEOF ^= 0) *
+        (QKKF7PYI ^= COUNTSS_C) *
+        AggSum([C1], 
+           (__sql_inline_not_1 ^= 0) * (NPZL_7DKV_B ^= 0) *
+           COUNTS1(int)[][NPZL_7DKV_B, NPZL_7DKV_C] *
+           (__sql_inline_not_1 ^= {NPZL_7DKV_C = 2}) *
+           (C1 ^= NPZL_7DKV_C)
+         )";
+   test "Factorizing deltas of products of lifts" ["dA"; "dB"] 
+                                                  ["A"; "B"; "ALPHA"; "BETA"]
+      "( (  (A ^= dA) * (B ^= dB) *
+            (  (ALPHA ^= (R(A, B) + 1)) + 
+               (-1 * (ALPHA ^= R(A, B)))
+            ) *
+            (BETA ^= R(A, B))
+         ) +
+         (  (  (ALPHA ^= R(A, B)) +
+               (  (A ^= dA) * (B ^= dB) *
+                  (  (ALPHA ^= (R(A, B) + 1)) + 
+                     (-1 * (ALPHA ^= R(A, B)))
+                  )
+               )
+            ) *
+            (A ^= dA) * (B ^= dB) *
+            (  (BETA ^= (R(A, B) + 1)) + 
+               (-1 * (BETA ^= R(A, B)))
+            )
+         )
+      )"
+      "(A ^= dA) * (B ^= dB) * (
+         ((BETA ^= R(dA, dB)) * (ALPHA ^= R(dA,dB)) * {-1}) 
+            + 
+         ((BETA ^= R(dA, dB) + 1) * (ALPHA ^= R(dA,dB) + 1))
+       )";

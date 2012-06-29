@@ -8,6 +8,6 @@ The DBToaster compiler generates self-contained query engines that can be easily
 
 At the heart of the DBToaster compiler is an extreme form of incremental view maintenance that we call the viewlet transform.  Applying the viewlet transform to a query produces a hierarchy of higher order delta views and update rules which dramatically reduce the cost of maintaining materialized views.  In addition to the viewlet transform, DBToaster employs a broad range of programming language and compiler techniques to generate extremely efficient code.
 
-For more information on DBToaster, see our upcoming paper "DBToaster: Higher-order Delta Processing for Dynamic, Frequently Fresh Views" in VLDB 2012, and the information on dbtoaster.org.
+For more information on DBToaster, see our upcoming paper "DBToaster: Higher-order Delta Processing for Dynamic, Frequently Fresh Views" in VLDB 2012.  Further information is also available at http://www.dbtoaster.org.
 
 DBToaster was developed by a team of researchers from EPFL and Johns Hopkins University.

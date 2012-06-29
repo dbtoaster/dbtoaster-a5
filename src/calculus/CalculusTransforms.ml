@@ -117,7 +117,12 @@ let rec combine_values ?(aggressive=false) (expr:C.expr_t): C.expr_t =
                         | _ -> C.bail_out (CalcRing.mk_val lf)
                                  "Unexpected return value of comparison op"
                      end
-               | (x_val, y_val) -> CalcRing.mk_val (Cmp(op, x_val, y_val))
+               | (x_val, y_val) -> 
+                  let ret = CalcRing.mk_val (Cmp(op, x_val, y_val)) in
+                     Debug.print "LOG-COMBINE-VALUES" (fun () ->
+                        "Combining "^(C.string_of_leaf lf)^" into "^
+                        (C.string_of_expr ret)
+                     ); ret
             end
          
          | Value(v) -> CalcRing.mk_val (Value(Arithmetic.eval_partial v))
@@ -425,7 +430,7 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
       (ListExtras.ocaml_of_list string_of_var out_sch)^": \n"^
       (CalculusPrinter.string_of_expr big_expr) 
    );
-   let unify (lift_v:var_t) (expr_sub:C.expr_t) (scope:var_t list) 
+   let unify (force:bool) (lift_v:var_t) (expr_sub:C.expr_t) (scope:var_t list) 
              (schema:var_t list) (expr:C.expr_t): C.expr_t =
       Debug.print "LOG-UNIFY-LIFTS" (fun () ->
          "Attempting to unify ("^(string_of_var lift_v)^" ^= "^
@@ -434,15 +439,17 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
          (ListExtras.ocaml_of_list string_of_var schema)^"\nin: "^
          (CalculusPrinter.string_of_expr expr)
       );
-      let var_sub msg =
+      let var_sub msg=
          match expr_sub with 
          | CalcRing.Val(Value(ValueRing.Val(AVar(v)))) -> v
+         | _ when force -> lift_v
          | _ -> raise (CouldNotUnifyException("Could not put '"^
                    (CalculusPrinter.string_of_expr expr_sub)^"' into a"^msg))
       in
       let val_sub ?(aggressive = false) msg =
          match (combine_values ~aggressive:aggressive expr_sub) with 
          | CalcRing.Val(Value(v)) -> v
+         | _ when force -> Arithmetic.mk_var lift_v
          | _ -> raise (CouldNotUnifyException("Could not put '"^
                    (CalculusPrinter.string_of_expr expr_sub)^"' into a"^msg))
       in
@@ -460,7 +467,7 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
             evaluating the expression has to be made aware of the schema 
             changes.  For example, in Compiler, this is handled by 
             extract_renamings. *)
-      if List.mem lift_v schema then 
+      if (not force) && List.mem lift_v schema then 
          raise (CouldNotUnifyException("Lift var is in the schema"));
       
       (* If the lift variable is already in-scope, then we can't unify it, 
@@ -472,7 +479,7 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
           - Otherwise, the next pass through advance_lifts and/or 
             nesting_rewrites will move this lift up and left, and then we should
             be able to unify it normally without trouble. *)
-      if List.mem lift_v scope then
+      if (not force) && List.mem lift_v scope then
          raise (CouldNotUnifyException("Lift var is in the scope"));
 
       (* We unify by replacing expressions with CalcRing.one.  This is only 
@@ -482,9 +489,10 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
          The nested expression cannot be safely replaced.  However, if we get:
             (A ^= ...) * AggSum([], (foo ^= R(A)) * {foo > 0})
          then the nested aggregate is always over a single element. *)
-      if not (C.expr_is_singleton ~scope:scope expr_sub) then
+      if not (C.expr_is_singleton ~scope:scope expr_sub) then (
+         if force then expr else
          raise (CouldNotUnifyException("Can only unify lifts of singletons"));
-      
+      ) else
       
       let rewritten = 
       C.rewrite_leaves (fun _ x -> begin match x with
@@ -528,9 +536,11 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
             (List.mem lift_v (Arithmetic.vars_of_value lhs)) ||
             (List.mem lift_v (Arithmetic.vars_of_value rhs)) ->
             let new_lhs = Arithmetic.eval_partial 
-                              ~scope:[lift_v, val_sub " cmp expression"] lhs in
+                     ~scope:[lift_v, val_sub " cmp expression"] 
+                            lhs in
             let new_rhs = Arithmetic.eval_partial 
-                              ~scope:[lift_v, val_sub " cmp expression"] rhs in
+                     ~scope:[lift_v, val_sub " cmp expression"] 
+                            rhs in
                CalcRing.mk_val (Cmp(op, new_lhs, new_rhs))
 
          | Cmp(op, lhs, rhs) ->
@@ -551,6 +561,7 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
                for the sake of code simplicity we take a slight hit: we cannot
                do comparisons over expressions. *)
             begin match combine_values ~aggressive:true subexp with
+               | _ when force -> CalcRing.mk_val (Lift(v, subexp))
                | CalcRing.Val(Value(subexp_v)) ->
                   CalcRing.mk_val (Cmp(Eq, subexp_v,
                      val_sub ~aggressive:true " lift comparison"
@@ -615,7 +626,7 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
          let subexp_schema = ListAsSet.diff schema [lift_v] in
          let new_subexp = rcr scope subexp_schema subexp in (
             try 
-               unify lift_v new_subexp scope schema CalcRing.one;
+               unify false lift_v new_subexp scope schema CalcRing.one;
             with CouldNotUnifyException(msg) ->
                Debug.print "LOG-UNIFY-LIFTS" (fun () ->
                   "Could not unify "^(string_of_var lift_v)^" because: "^msg^
@@ -640,14 +651,20 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
          let subexp_schema = ListAsSet.diff schema [lift_v] in
          let new_subexp = rcr scope subexp_schema subexp in (
             try
-               rcr scope schema (unify lift_v new_subexp scope schema 
+               rcr scope schema (unify false lift_v new_subexp scope schema 
                                        (CalcRing.mk_prod rest))
-            with CouldNotUnifyException(msg) -> 
+            with CouldNotUnifyException(msg) -> (
                Debug.print "LOG-UNIFY-LIFTS" (fun () ->
                   "Could not unify "^(string_of_var lift_v)^" because: "^msg^
                   " in: \n"^(CalculusPrinter.string_of_expr 
                                     (CalcRing.mk_prod rest))
                );
+               let simplified_rest = (
+                  if Debug.active "AGGRESSIVE-UNIFICATION" then
+                     unify true lift_v new_subexp scope schema 
+                           (CalcRing.mk_prod rest)
+                  else CalcRing.mk_prod rest
+               ) in
                let (_,subexp_ovars) = C.schema_of_expr new_subexp in
                let new_scope = 
                   ListAsSet.multiunion [scope; [lift_v]; subexp_ovars]
@@ -657,8 +674,9 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
                in
                   CalcRing.mk_prod [
                      CalcRing.mk_val (Lift(lift_v, new_subexp));
-                     rcr new_scope new_schema (CalcRing.mk_prod rest)
+                     rcr new_scope new_schema simplified_rest
                   ]
+            )
          )
 
       | CalcRing.Prod(head::rest) ->
@@ -916,6 +934,69 @@ let rec nesting_rewrites (expr:C.expr_t) =
       expr
 ;;
 
+type selected_candidate_t = 
+  | FactorizeLHS of C.expr_t
+  | FactorizeRHS of C.expr_t
+  | DoNotFactorize
+
+(**
+   [default_factorize_heuristic candidates scope term_list]
+   
+   where candidates is a 2-tuple of candidates that can be commuted to the lhs 
+   of the terms they are extracted from, and the candidates that can be 
+   commuted to the rhs.
+   
+   The default heuristic for factorization.  
+      - Prefer non-value candidates
+      - Prefer candidates that occur in the maximal number of terms
+      - Prefer lhs candidates
+      
+*)
+let default_factorize_heuristic (lhs_candidates,rhs_candidates)
+                                scope term_list: (selected_candidate_t) =
+   Debug.print "LOG-FACTORIZE" (fun () ->
+      "Candidates for factorization: \n"^
+      ListExtras.string_of_list ~sep:"\n" string_of_expr 
+                               (lhs_candidates @ rhs_candidates)
+   );
+   let increment_count term list = 
+      if List.mem_assoc term list then
+         (term, (List.assoc term list) + 1)::(List.remove_assoc term list)
+      else list
+   in
+   let (lhs_counts,rhs_counts) =
+      List.fold_left (fun old_counts product_term -> 
+         List.fold_left (fun (lhs_counts,rhs_counts) term ->
+               (  increment_count term lhs_counts, 
+                  increment_count term rhs_counts)
+         ) old_counts (CalcRing.prod_list product_term)
+      ) (   List.map (fun x->(x,0)) lhs_candidates, 
+            List.map (fun x->(x,0)) rhs_candidates
+         ) term_list
+   in
+   let lhs_sorted = List.sort (fun x y -> compare (snd y) (snd x)) lhs_counts in
+   let rhs_sorted = List.sort (fun x y -> compare (snd y) (snd x)) rhs_counts in
+   if ((List.length lhs_sorted < 1) || (snd (List.hd lhs_sorted) = 1)) &&
+      ((List.length rhs_sorted < 1) || (snd (List.hd rhs_sorted) = 1))
+   then
+      (* If both candidate lists are empty, or all non-empty lists have each 
+         candidate appearing exactly in one term, then we can't factorize 
+         anything.  We're done here. *)
+      DoNotFactorize
+   else
+      (* We should never get a candidate that doesn't appear at least once.  
+         This is most definitely a bug if it happens. *)
+   if ((List.length lhs_sorted >= 1) && (snd (List.hd lhs_sorted) < 1)) ||
+      ((List.length rhs_sorted >= 1) && (snd (List.hd rhs_sorted) < 1))
+   then failwith "BUG: Factorize got a vanishing candidate"
+   else
+      if (snd (List.hd rhs_sorted)) > (snd (List.hd lhs_sorted)) then
+         FactorizeRHS(fst (List.hd rhs_sorted))
+      else 
+         FactorizeLHS(fst (List.hd lhs_sorted))
+
+                                 
+
 (**
   [factorize_one_polynomial scope term_list]
   
@@ -938,12 +1019,14 @@ let rec nesting_rewrites (expr:C.expr_t) =
     - We recur twice, once on the set of terms that were factorized, and once
       on the set of terms that weren't.
 
+   @param heuristic (optional) An optional factorization heuristic function
    @param scope   Any variables defined outside of the expression being 
                   evaluated.  This includes trigger variables, input variables 
                   from the map on the lhs of the statement being evaluated.
    @param term_list A list of terms to be treated as if they were part of a Sum
 *)
-let rec factorize_one_polynomial (scope:var_t list) (term_list:C.expr_t list) =
+let rec factorize_one_polynomial ?(heuristic = default_factorize_heuristic)
+                                 (scope:var_t list) (term_list:C.expr_t list) =
    Debug.print "LOG-FACTORIZE" (fun () ->
       "Factorizing Expression: ("^
       (ListExtras.string_of_list ~sep:" + " 
@@ -971,38 +1054,7 @@ let rec factorize_one_polynomial (scope:var_t list) (term_list:C.expr_t list) =
    then
       (* If there are no candidates, we're done here *)
       CalcRing.mk_sum term_list
-   else
-   let incr_mem term list = 
-      if List.mem_assoc term list then
-         (term, (List.assoc term list) + 1)::(List.remove_assoc term list)
-      else list
-   in
-   let (lhs_counts,rhs_counts) =
-      List.fold_left (fun old_counts product_term -> 
-         List.fold_left (fun (lhs_counts,rhs_counts) term ->
-               (  incr_mem term lhs_counts, 
-                  incr_mem term rhs_counts)
-         ) old_counts (CalcRing.prod_list product_term)
-      ) (   List.map (fun x->(x,0)) lhs_candidates, 
-            List.map (fun x->(x,0)) rhs_candidates
-         ) term_list
-   in
-   let lhs_sorted = List.sort (fun x y -> compare (snd y) (snd x)) lhs_counts in
-   let rhs_sorted = List.sort (fun x y -> compare (snd y) (snd x)) rhs_counts in
-   if ((List.length lhs_sorted < 1) || (snd (List.hd lhs_sorted) = 1)) &&
-      ((List.length rhs_sorted < 1) || (snd (List.hd rhs_sorted) = 1))
-   then
-      (* If both candidate lists are empty, or all non-empty lists have each 
-         candidate appearing exactly in one term, then we can't factorize 
-         anything.  We're done here. *)
-      CalcRing.mk_sum term_list
-   else
-   (* We should never get a candidate that doesn't appear at least once.  This
-      is most definitely a bug if it happens. *)
-   if ((List.length lhs_sorted >= 1) && (snd (List.hd lhs_sorted) < 1)) ||
-      ((List.length rhs_sorted >= 1) && (snd (List.hd rhs_sorted) < 1))
-   then failwith "BUG: Factorize got a vanishing candidate"
-   else
+   else 
    let factorize_and_split selected validate_fn =
       List.fold_left (fun (factorized,unfactorized) term ->
          try 
@@ -1025,30 +1077,7 @@ let rec factorize_one_polynomial (scope:var_t list) (term_list:C.expr_t list) =
             (factorized, unfactorized@[term])
       ) ([],[]) term_list
    in
-   let ((factorized, unfactorized), merge_fn) = 
-      if (snd (List.hd rhs_sorted)) > (snd (List.hd lhs_sorted)) then
-         let selected = (fst (List.hd rhs_sorted)) in
-            Debug.print "LOG-FACTORIZE" (fun () ->
-               "Factorizing "^
-               (CalculusPrinter.string_of_expr selected)^
-               " from the RHS"
-            );
-            (  (factorize_and_split selected (fun _ rhs ->
-                  C.commutes ~scope:scope selected (CalcRing.mk_prod rhs))), 
-               (fun factorized -> CalcRing.mk_prod [factorized; selected])
-            )
-      else
-         let selected = (fst (List.hd lhs_sorted)) in
-            Debug.print "LOG-FACTORIZE" (fun () ->
-               "Factorizing "^
-               (CalculusPrinter.string_of_expr selected)^
-               " from the LHS"
-            );
-            (  (factorize_and_split selected (fun lhs _ ->
-                  C.commutes ~scope:scope (CalcRing.mk_prod lhs) selected)), 
-               (fun factorized -> CalcRing.mk_prod [selected; factorized])
-            )
-   in
+   let rcr ((factorized, unfactorized), merge_fn) =
       Debug.print "LOG-FACTORIZE" (fun () ->
          "Factorized: "^
             (ListExtras.string_of_list 
@@ -1060,10 +1089,38 @@ let rec factorize_one_polynomial (scope:var_t list) (term_list:C.expr_t list) =
       (* Finally, recur. We might be able to pull additional terms out of the
          individual expressions.  Note that we're no longer able to pull out
          terms across the factorized/unfactorized boundary *)
-      CalcRing.mk_sum [
-         (merge_fn (factorize_one_polynomial scope factorized));
-         (factorize_one_polynomial scope unfactorized)
-      ]
+      let ret =
+         CalcRing.mk_sum [
+            (merge_fn (factorize_one_polynomial scope factorized));
+            (factorize_one_polynomial scope unfactorized)
+         ]
+      in Debug.print "LOG-FACTORIZE" (fun () ->
+         "Final expression: \n"^(CalculusPrinter.string_of_expr ret)
+      ); ret
+   in
+      match heuristic (lhs_candidates, rhs_candidates) scope term_list with
+         | DoNotFactorize -> CalcRing.mk_sum term_list
+         | FactorizeRHS(selected) ->
+            Debug.print "LOG-FACTORIZE" (fun () ->
+               "Factorizing "^
+               (CalculusPrinter.string_of_expr selected)^
+               " from the RHS"
+            );
+            rcr ((factorize_and_split selected (fun _ rhs ->
+                  C.commutes ~scope:scope selected (CalcRing.mk_prod rhs))), 
+                 (fun factorized -> CalcRing.mk_prod [factorized; selected])
+                )
+         | FactorizeLHS(selected) ->
+            Debug.print "LOG-FACTORIZE" (fun () ->
+               "Factorizing "^
+               (CalculusPrinter.string_of_expr selected)^
+               " from the LHS"
+            );
+            rcr ((factorize_and_split selected (fun lhs _ ->
+                  C.commutes ~scope:scope (CalcRing.mk_prod lhs) selected)), 
+                 (fun factorized -> CalcRing.mk_prod [selected; factorized])
+                )
+
 
 (**
    [factorize_polynomial scope expr]
@@ -1082,7 +1139,9 @@ let factorize_polynomial (scope:var_t list) (expr:C.expr_t): C.expr_t =
       (fun _ -> CalcRing.mk_prod)
       (fun _ -> CalcRing.mk_neg)
       (fun _ -> CalcRing.mk_val)
-      expr
+      (if Debug.active "AGGRESSIVE-FACTORIZE" 
+         then combine_values (CalcRing.polynomial_expr expr)
+         else expr)
 ;;
  
 

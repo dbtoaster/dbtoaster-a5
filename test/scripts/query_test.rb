@@ -122,7 +122,7 @@ class GenericUnitTest
       (if $depth.nil? then [] else ["--depth", $depth ] end) + 
       @compiler_flags + $compiler_args +
       ($debug_flags.map { |f| ["-d", f]}.flatten(1)) +
-      ($opts.map { |f| ["-f", f]}.flatten(1))
+      ($opts)
   end
   
   def results(query = @toplevels.keys[0])
@@ -345,7 +345,7 @@ queries.each do |tquery|
     opt_terms = 
       (if $debug_flags.empty? then [] 
                               else [["debug flags",$debug_flags]] end)+
-      (if $opts.empty? then [] else [["optimizations",$opts]] end)+
+      (if $opts.empty? then [] else [["options",$opts]] end)+
       (if $depth.nil? then [] else [["depth", ["#{$depth}"]]] end)+
       (if $compile_only then [["compilation", ["only"]]] else [] end)+
       (if $dataset.nil? then [] else [["dataset", [$dataset]]] end)+
