@@ -1,38 +1,6 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
-<head>
-<title>DBToaster C++</title>
 
-<link rel="stylesheet" type="text/css" href="style.css" />
-
-</head><body>
-
-<div class="wrapper">
-<p><a href="index.html">&lt;&lt; Index</a></p>
-
-<h1>DBToaster C++ User Reference</h1>
-
-<ul>
-    <li><a href="#quickstart">1. Quickstart Guide</a></li>
-    <li><a href="#apiguide">2. C++ API Guide</a>
-        <ul>
-            <li><a href="#execprogram">2.1. Executing the Program</a></li>
-            <li><a href="#retrieveresults">2.2. Retrieving the Results</a></li>
-            <li><a href="#basicexample">2.3. Basic Example</a></li>
-            <li><a href="#customexecution">2.4. Custom Execution</a></li>
-        </ul>
-    </li>
-    <li><a href="#codereference">3. Generated Code Reference</a>
-        <ul>
-            <li><a href="#tlq_t">3.1. <tt>struct tlq_t</tt></a></li>
-            <li><a href="#data_t">3.2. <tt>struct data_t</tt></a></li>
-            <li><a href="#program">3.3. <tt>class Program</tt></a></li>
-        </ul>
-    </li>
-</ul>
-
-<h2><a name="quickstart">1. Quickstart Guide</a></h2>
-
+<a name="quickstart"/>
+<?= chapter("Quickstart Guide") ?>
 
 <p>
 DBToaster generates C++ code for incrementally maintaining the results of a given set of queries 
@@ -136,8 +104,8 @@ Printing final result:
 
 
 
-
-<h2><a name="apiguide">2. C++ API Guide</a></h2>
+<a name="apiguide"/>
+<?= chapter("C++ API Guide") ?>
 
 <p>
 The DBToaster C++ codegenerator produces a header file containing 3 main type definitions in the <tt>dbtoaster</tt> namespace:
@@ -163,7 +131,8 @@ Default implementations for some of these functions are inherited from the <tt>P
 are generated depending on the previously defined <tt>tlq_t</tt> and <tt>data_t</tt> types.
 </p>
 
-<h3><a name="execprogram">2.1. Executing the Program</a></h3>
+<a name="execprogram"/>
+<?= section("Executing the Program") ?>
 
 <p>
 The execution of a program can be controlled through the functions: <tt>IProgram::init()</tt>, 
@@ -199,7 +168,8 @@ for stream <tt>ev.id</tt> with the arguments contained in <tt>ev.data</tt>.
 </p>
 
 
-<h3><a name="retrieveresults">2.2. Retrieving the Results</a></h3>
+<a name="retrieveresults"/>
+<?= section("Retrieving the Results") ?>
 
 <p>
 The <b><tt>snapshot_t IProgram::get_snapshot()</tt></b> function returns a snapshot of the results of the program. 
@@ -213,7 +183,8 @@ Currently, the mechanism for taking snapshots is trivial, in that a snapshot con
 is linear in the size of the results set.
 </p>
 
-<h3><a name="basicexample">2.3. Basic Example</a></h3>
+<a name="basicexample"/>
+<?= section("Basic Example") ?>
 
 <p>
 We will use as an example the C++ code generated for the <tt>rs_example1.sql</tt> sql program introduced above. In the interest
@@ -348,7 +319,8 @@ int main(int argc, char* argv[]) {
 </div>
 </p>
 
-<h3><a name="customexecution">2.4. Custom Execution</a></h3>
+<a name="customexecution"/>
+<?= section("Custom Execution") ?>
 
 <p>
 <b>Custom event processing</b> can be performed on each stream event if the virtual function 
@@ -399,9 +371,11 @@ Stream events can be manually read from <b>custom sources</b> and fed into the s
 
 
 
-<h2><a name="codereference">3. C++ Generated Code Reference</a></h2>
+<a name="codereference"/>
+<?= chapter("C++ Generated Code Reference") ?>
 
-<h3><a name="tlq_t">3.1. <tt>struct tlq_t</tt></a></h3>
+<a name="tlq_t"/>
+<?= section("<tt>struct tlq_t</tt>") ?>
 
 <p>
 The <tt>tlq_t</tt> contains all the relevant datastructures for computing the results of the sql program, also called
@@ -410,7 +384,7 @@ result labeled <tt><i>TLQ_NAME</i></tt>. For our example the <tt>tlq_t</tt> prod
 that returns the query result corresponding to <tt>SELECT SUM(r.A*s.C) as RESULT ...</tt> in <tt>rs_example1.sql</tt>.
 </p>
 
-<h4>3.1.1. Queries computing collections</h4>
+<?=subsection("Queries computing collections")?>
 <p>
 In the example above the result consisted of a single value. 
 If however our query has a <tt>GROUP BY</tt> clause its result is a collection and
@@ -482,7 +456,7 @@ If the given query has no aggregates the <tt>COUNT(*)</tt> aggregate will be com
 consequently the resulting collections will be guaranteed not to have any duplicate keys.
 </p>
 
-<h4>3.1.2. Partial Materialization</h4>
+<?=subsection("Partial Materialization")?>
 <p>
 Some of the work involved in maintaining the results of a query can be saved by performing partial materialization
 and only computing the final results when invoking <tt>tlq_t</tt>'s <tt>get_<i>TLQ_NAME</i></tt> functions. This
@@ -567,9 +541,8 @@ the final query result.
 
 </p>
 
-
-
-<h3><a name="data_t">3.2. <tt>struct data_t</tt></a></h3>
+<a name="data_t"/>
+<?= section("<tt>struct data_t</tt>")?>
 
 <p>
 The <tt>data_t</tt> contains all the relevant datastructures and trigger functions for incrementally maintaining the results
@@ -588,7 +561,8 @@ in the initialization phase of the program.
 
 
 
-<h3><a name="program">3.3. <tt>class Program</tt></a></h3>
+<a name="program"/>
+<?= section("<tt>class Program</tt>") ?>
 
 <p>
 Finally, <tt>Program</tt> is a class that implements the <tt>IProgram</tt> interface and provides the basic functionalities

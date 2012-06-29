@@ -1,19 +1,8 @@
-<!DOCTYPE html PUBLIC "-//W3C//DTD XHTML 1.0 Strict//EN" "http://www.w3.org/TR/xhtml1/DTD/xhtml1-strict.dtd">
-<html xmlns="http://www.w3.org/1999/xhtml">
-<head>
-<title>DBToaster C++</title>
 
-<link rel="stylesheet" type="text/css" href="style.css" />
+<a name="quickstart"/>
+<?=chapter("Quickstart Guide")?>
 
-</head><body>
-
-<div class="wrapper">
-<h1>DBToaster Scala User Reference</h1>
-
-
-<h2><a name="quickstart">Quickstart Guide</a></h2>
-
-<h3>Prerequisites</h3>
+<?=section("Prerequisites")?>
 <ul>
 	<li>DBToaster Beta1</li>
 	<li>Scala 2.9.2</li>
@@ -21,7 +10,7 @@
 </ul>
 <i>Note:</i> The following steps have been tested on Fedora 14 (64-bit) and Ubuntu 12.04 (32-bit), the commands may be slightly different for other operating systems
 
-<h3>Compiling and running your first query</h3>
+<?=chapter("Compiling and running your first query")?>
 We start with a simple query that looks like this:
 <div class="codeblock">
 CREATE TABLE R(A int, B int) 
@@ -54,7 +43,8 @@ Run time: 0.042 ms
 &lt;RESULT&gt;156 &lt;/RESULT&gt;
 </div>
 
-<h2><a name="generatedcode">Generated Code Reference</a></h2>
+<a name="generatedcode"/>
+<?=chapter("Generated Code Reference")?>
 The following example shows how a query can be ran from your own Scala code. Suppose we have a the following source code in <tt>main_example.scala</tt>:
 <div class="codeblock">
 import org.dbtoaster.Query
@@ -78,4 +68,3 @@ The resulting program can now be launched with:
 <div class="codeblock">
 $&gt; scala -classpath "main_example.jar:rs_example.jar:lib/dbt_scala/dbtlib.jar" org.example.MainExample
 </div>
-</body></html>
