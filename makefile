@@ -141,7 +141,19 @@ bin/dbtoaster_top: $(C_FILES) lib/.deps src/global/UnitTest.ml
 
 fast: bin/dbtoaster_debug bin/dbtoaster_top
 
+dist: bin/dbtoaster
+	make -C dist
+
+#################################################
+
 states: $(patsubst %,%.states,$(PARSERS))
+
+doc: $(C_FILES) $(patsubst %,%.ml,$(TOPLEVEL_FILES))
+	@FILES="$(patsubst %,../%.ml,$(FILES) $(TOPLEVEL_FILES))"\
+	 DIRS="$(patsubst %,../%,$(DIRS))"\
+	 make -C doc
+
+#################################################
 
 test: bin/dbtoaster_top bin/dbtoaster
 	@make -C test $(TEST_TARGET)
@@ -154,11 +166,6 @@ querytest: bin/dbtoaster
 	
 queries: bin/dbtoaster
 	make -C test/queries
-
-doc: $(C_FILES) $(patsubst %,%.ml,$(TOPLEVEL_FILES))
-	@FILES="$(patsubst %,../%.ml,$(FILES) $(TOPLEVEL_FILES))"\
-	 DIRS="$(patsubst %,../%,$(DIRS))"\
-	 make -C doc
 
 #################################################
 
@@ -234,6 +241,7 @@ clean:
 	rm -f doc/*.aux doc/*.synctex.gz doc/*.log
 	rm -f makefile.deps
 	make -C lib clean
+	make -C dist clean
 	rm -f lib/.deps
 
 superclean: clean
@@ -248,4 +256,4 @@ distclean: superclean
 #################################################
 
 .PHONY: all clean distclean test states doc runtimelibs fast querytest queries\
-        versioncheck localtest superclean
+        versioncheck localtest superclean dist
