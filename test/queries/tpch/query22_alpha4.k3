@@ -1,11 +1,11 @@
---------------------- SCHEMA ----------------------
+fiel--------------------- SCHEMA ----------------------
 CREATE STREAM CUSTOMER(custkey int, name string, address string, nationkey int, phone string, acctbal float, mktsegment string, comment string)
   FROM FILE '../../experiments/data/tpch/big/customer.csv' LINE DELIMITED
-  CSV(fields := '|');
+  CSV(delimiter := '|');
 
 CREATE STREAM ORDERS(orderkey int, custkey int, orderstatus string, totalprice float, orderdate date, orderpriority string, clerk string, shippriority int, comment string)
   FROM FILE '../../experiments/data/tpch/big/orders.csv' LINE DELIMITED
-  CSV(fields := '|');
+  CSV(delimiter := '|');
 --------------------- MAPS ----------------------
 QUERY_1_1(float)[][C1_NATIONKEY : int];
 

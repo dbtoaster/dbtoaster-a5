@@ -13,7 +13,7 @@ CREATE STREAM EMPLOYEE(
     department_id   INT
     ) 
   FROM FILE '../../experiments/data/employee/employee.dat' LINE DELIMITED
-  CSV (fields := ',');
+  CSV ();
 
 SELECT e.last_name AS emp_name, e.salary AS emp_salary, 
        m.last_name AS mgr_name, m.salary AS mgr_salary 

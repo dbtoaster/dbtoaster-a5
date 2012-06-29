@@ -6,7 +6,7 @@ CREATE STREAM DEPARTMENT(
     location_id     INT
     ) 
   FROM FILE '../../experiments/data/employee/department.dat' LINE DELIMITED
-  CSV (fields := ',');
+  CSV ();
 
 SELECT department_id, name, location_id 
 FROM department;

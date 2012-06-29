@@ -47,7 +47,7 @@ let offset_tokens param_val =
  
 (* Tokenizers: param key, tokenize fn list *)
 let tokenizers : (string * (string -> string -> string list)) list =
-   [("fields", field_tokens); ("offsets", offset_tokens)]
+   [("delimiter", field_tokens); ("offsets", offset_tokens)]
 
 (* param_val: field indexes to project down to, i.e. "0,2,3" *)
 let preproject param_val =
@@ -294,7 +294,7 @@ let standard_generator rel_sch params =
 (* Generic CSV, w/ user-defined field delimiter *)
 let csv_params ?(event = "none") delim schema =
    let schema_val = if schema = "" then "float" else schema in
-   ("csv", [("fields", delim); ("schema", schema_val)] @ 
+   ("csv", [("delimiter", delim); ("schema", schema_val)] @ 
       (match event with ""     -> ["eventtype", "insert"]
                       | "none" -> []
                       | _      -> ["eventtype", event]

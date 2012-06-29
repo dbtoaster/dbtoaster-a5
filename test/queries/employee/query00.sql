@@ -6,7 +6,7 @@ CREATE STREAM SALARY_GRADE(
     upper_bound  FLOAT
     ) 
   FROM FILE '../../experiments/data/employee/salary_grade.dat' LINE DELIMITED
-  CSV (fields := ',');
+  CSV ();
 
 SELECT * 
 FROM salary_grade

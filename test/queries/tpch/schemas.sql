@@ -17,7 +17,7 @@ CREATE STREAM LINEITEM (
         comment        VARCHAR(44)
     )
   FROM FILE '../../experiments/data/tpch/standard/lineitem.csv'
-  LINE DELIMITED CSV (fields := '|');
+  LINE DELIMITED CSV (delimiter := '|');
 
 
 CREATE STREAM ORDERS (
@@ -32,7 +32,7 @@ CREATE STREAM ORDERS (
         comment        VARCHAR(79)
     )
   FROM FILE '../../experiments/data/tpch/standard/orders.csv'
-  LINE DELIMITED CSV (fields := '|');
+  LINE DELIMITED CSV (delimiter := '|');
 
 CREATE STREAM PART (
         partkey      INT,
@@ -46,7 +46,7 @@ CREATE STREAM PART (
         comment      VARCHAR(23)
     )
   FROM FILE '../../experiments/data/tpch/standard/part.csv'
-  LINE DELIMITED CSV (fields := '|');
+  LINE DELIMITED CSV (delimiter := '|');
 
 
 CREATE STREAM CUSTOMER (
@@ -60,7 +60,7 @@ CREATE STREAM CUSTOMER (
         comment      VARCHAR(117)
     )
   FROM FILE '../../experiments/data/tpch/standard/customer.csv'
-  LINE DELIMITED CSV (fields := '|');
+  LINE DELIMITED CSV (delimiter := '|');
 
 CREATE STREAM SUPPLIER (
         suppkey      INT,
@@ -72,7 +72,7 @@ CREATE STREAM SUPPLIER (
         comment      VARCHAR(101)
     )
   FROM FILE '../../experiments/data/tpch/standard/supplier.csv'
-  LINE DELIMITED CSV (fields := '|');
+  LINE DELIMITED CSV (delimiter := '|');
 
 CREATE STREAM PARTSUPP (
         partkey      INT,
@@ -82,7 +82,7 @@ CREATE STREAM PARTSUPP (
         comment      VARCHAR(199)
     )
   FROM FILE '../../experiments/data/tpch/standard/partsupp.csv'
-  LINE DELIMITED CSV (fields := '|');
+  LINE DELIMITED CSV (delimiter := '|');
 
 CREATE TABLE NATION (
         nationkey    INT,
@@ -91,7 +91,7 @@ CREATE TABLE NATION (
         comment      VARCHAR(152)
     )
   FROM FILE '../../experiments/data/tpch/standard/nation.csv'
-  LINE DELIMITED CSV (fields := '|');
+  LINE DELIMITED CSV (delimiter := '|');
 
 CREATE TABLE REGION (
         regionkey    INT,
@@ -99,5 +99,5 @@ CREATE TABLE REGION (
         comment      VARCHAR(152)
     )
   FROM FILE '../../experiments/data/tpch/standard/region.csv'
-  LINE DELIMITED CSV (fields := '|');
+  LINE DELIMITED CSV (delimiter := '|');
 

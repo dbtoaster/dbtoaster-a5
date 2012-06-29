@@ -2,6 +2,6 @@
 
 CREATE STREAM R(A float, B float) 
   FROM FILE '../../experiments/data/simple/tiny/r.dat' LINE DELIMITED
-  CSV (fields := ',');
+  CSV ();
 
 SELECT SUM(A)/(1+SUM(B)) FROM R

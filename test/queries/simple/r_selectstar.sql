@@ -3,6 +3,6 @@
 
 CREATE STREAM R(A string, B string) 
   FROM FILE '../../experiments/data/simple/tiny/r.dat' LINE DELIMITED
-  CSV (fields := ',');
+  CSV ();
 
 SELECT * FROM R;

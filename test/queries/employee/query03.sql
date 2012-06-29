@@ -5,7 +5,7 @@ CREATE STREAM JOB(
     function    VARCHAR(20)
     ) 
   FROM FILE '../../experiments/data/employee/job.dat' LINE DELIMITED
-  CSV (fields := ',');
+  CSV ();
 
 SELECT * 
 FROM job;

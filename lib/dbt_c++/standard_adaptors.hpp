@@ -58,7 +58,7 @@ namespace dbtoaster {
           if( runtime_options::verbose() )
             cerr << "csv params: " << k << ": " << v << endl;
 
-          if ( k == "fields" ) {
+          if ( k == "delimiter" ) {
             delimiter = v;
           } else if ( k == "schema" ) {
             param_schema = v;

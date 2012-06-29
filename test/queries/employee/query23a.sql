@@ -13,7 +13,7 @@ CREATE STREAM EMPLOYEE(
     department_id   INT
     ) 
   FROM FILE '../../experiments/data/employee/employee.dat' LINE DELIMITED
-  CSV (fields := ',');
+  CSV ();
 
 SELECT department_id, count(*) AS total_employees, 
        sum(salary) AS total_salary, sum(salary)/sum(1) AS avg_salary 

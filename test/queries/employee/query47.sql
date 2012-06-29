@@ -13,7 +13,7 @@ CREATE STREAM EMPLOYEE(
     department_id   INT
     ) 
   FROM FILE '../../experiments/data/employee/employee.dat' LINE DELIMITED
-  CSV (fields := ',');
+  CSV ();
 
 CREATE STREAM DEPARTMENT(
     department_id   INT,
@@ -21,7 +21,7 @@ CREATE STREAM DEPARTMENT(
     location_id     INT
     ) 
   FROM FILE '../../experiments/data/employee/department.dat' LINE DELIMITED
-  CSV (fields := ',');
+  CSV ();
 
 SELECT e1.employee_id, e1.last_name, e1.salary, e1.department_id 
 FROM employee e1 

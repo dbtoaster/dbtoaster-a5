@@ -20,7 +20,7 @@
 
 CREATE STREAM R(A int, B int) 
   FROM FILE '../../experiments/data/simple/tiny/r.dat' LINE DELIMITED
-  CSV (fields := ',');
+  CSV ();
 
 SELECT A, SUM(B)
 FROM R

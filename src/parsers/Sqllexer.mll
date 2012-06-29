@@ -27,7 +27,6 @@ let keywords =
         "TABLE", TABLE;
         "FROM", FROM;
         "USING", USING;
-        "DELIMITER", DELIMITER;
         "SELECT", SELECT;   
         "WHERE", WHERE;
         "GROUP", GROUP;

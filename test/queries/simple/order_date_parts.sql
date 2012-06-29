@@ -10,7 +10,7 @@ CREATE STREAM ORDERS (
         comment        VARCHAR(79)
     )
   FROM FILE '../../experiments/data/tpch/tiny/orders.csv'
-  LINE DELIMITED CSV (fields := '|');
+  LINE DELIMITED CSV (delimiter := '|');
 
 SELECT EXTRACT(year FROM orderdate) AS Y,
        EXTRACT(month FROM orderdate) AS M,

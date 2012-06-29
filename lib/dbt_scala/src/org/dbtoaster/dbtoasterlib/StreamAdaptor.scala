@@ -138,7 +138,7 @@ object StreamAdaptor {
      * This adaptor parses CSV data
      *
      */
-    class CSVAdaptor(relation: String, schemaTypes: List[ColumnType], eventtype: String = "insert", deletions: String = "false", schema: String = "", fields: String = ",") extends StreamAdaptor {
+    class CSVAdaptor(relation: String, schemaTypes: List[ColumnType], eventtype: String = "insert", deletions: String = "false", schema: String = "", delimiter: String = ",") extends StreamAdaptor {
       val eventType = if (eventtype == "insert") InsertTuple else DeleteTuple
       val hasDeletions = (deletions == "true")
       
@@ -160,7 +160,7 @@ object StreamAdaptor {
 	  schemaTypes
 
       def processTuple(row: String): List[StreamEvent] = {
-        val cols = row.split(fields).toList
+        val cols = row.split(delimiter).toList
 
         val (valCols, insDel, order) = (if (hasDeletions) {
           (cols.drop(2), (if (cols(1) == "1") InsertTuple else DeleteTuple), cols(0).toInt)

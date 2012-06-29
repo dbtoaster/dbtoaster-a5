@@ -10,7 +10,7 @@ CREATE STREAM ORDERS (
         comment        VARCHAR(79)
     )
   FROM FILE '../../experiments/data/tpch/big/orders.csv'
-  LINE DELIMITED CSV (fields := '|');
+  LINE DELIMITED CSV (delimiter := '|');
 
 CREATE STREAM CUSTOMER (
         custkey      INT,
@@ -23,7 +23,7 @@ CREATE STREAM CUSTOMER (
         comment      VARCHAR(117)
     )
   FROM FILE '../../experiments/data/tpch/big/customer.csv'
-  LINE DELIMITED CSV (fields := '|');
+  LINE DELIMITED CSV (delimiter := '|');
 
 DECLARE MAP QUERY_1_1(float)[][ C1_NATIONKEY:int ] := AggSum([C1_NATIONKEY:int], 
   (CUSTOMER(C1_CUSTKEY:int, C1_NAME, C1_ADDRESS, C1_NATIONKEY:int, C1_PHONE,

@@ -1,11 +1,11 @@
 -------------------- SOURCES --------------------
 CREATE STREAM ORDERS(ORDERS_ORDERKEY int, ORDERS_CUSTKEY int, ORDERS_ORDERSTATUS string, ORDERS_TOTALPRICE float, ORDERS_ORDERDATE date, ORDERS_ORDERPRIORITY string, ORDERS_CLERK string, ORDERS_SHIPPRIORITY int, ORDERS_COMMENT string)
   FROM FILE '../../experiments/data/tpch/big/orders.csv' LINE DELIMITED
-  CSV(fields := '|');
+  CSV(delimiter := '|');
 
 CREATE STREAM CUSTOMER(CUSTOMER_CUSTKEY int, CUSTOMER_NAME string, CUSTOMER_ADDRESS string, CUSTOMER_NATIONKEY int, CUSTOMER_PHONE string, CUSTOMER_ACCTBAL float, CUSTOMER_MKTSEGMENT string, CUSTOMER_COMMENT string)
   FROM FILE '../../experiments/data/tpch/big/customer.csv' LINE DELIMITED
-  CSV(fields := '|');
+  CSV(delimiter := '|');
 
 --------------------- MAPS ----------------------
 DECLARE MAP QUERY22[][C1_NATIONKEY:int] := 

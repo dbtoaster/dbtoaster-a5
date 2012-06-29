@@ -98,8 +98,12 @@ let synch_main
   in
   let db_access_f = List.map (fun (q_name,q_access_f) ->
          (String.lowercase q_name, (fun () -> 
-           q_name^title_separator^(K3Value.string_of_value ~sep:output_separator
-                                                           (q_access_f db))
+           let v_str = (K3Value.string_of_value ~sep:output_separator
+                                                (q_access_f db))
+           in
+              q_name^
+              (if String.contains v_str '\n' then title_separator else ": ")^
+              v_str
          ))
      ) toplevel_query_accessors
   in
@@ -166,6 +170,7 @@ let synch_main
     done;
   let finish = Unix.gettimeofday () in
   print_endline ("Processing time: "^(string_of_float (finish -. start)));
+  print_endline ("---------- Results ------------");
   print_endline (String.concat "\n"
      (List.map (fun (_,f) -> f()) db_access_f))
 

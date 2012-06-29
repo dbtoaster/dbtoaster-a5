@@ -834,7 +834,7 @@ struct
             (make_list ~parens:(", ","") 
                (List.map (fun (k, v) -> 
                   match (k, v) with
-                  | "fields", "|" -> "fields = \"\\|\""
+                  | "delimiter", "|" -> "delimiter = \"\\|\""
                   | k, v -> k ^ " = \"" ^ v ^ "\"") akeys)) 
       in
       match atype with
