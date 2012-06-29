@@ -1,9 +1,8 @@
-/* Result on vwap5k:
-     sum     
--------------
- 28916017900
-(1 row)
- */
+-- Result on vwap5k:
+--     sum     
+-- -------------
+--  28916017900
+-- (1 row)
 
 CREATE STREAM bids(t FLOAT, id INT, broker_id INT, volume FLOAT, price FLOAT)
   FROM FILE '../../experiments/data/finance/standard/vwap.csv'

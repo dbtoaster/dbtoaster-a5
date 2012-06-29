@@ -1,19 +1,19 @@
-/* Result on vwap5k (with deterministic := 'yes'):
- 
- broker_id |   sum    
------------+----------
-         0 |  2446668
-         1 |  -648039
-         2 | -5363809
-         3 |   864240
-         4 |  8384852
-         5 |  3288320
-         6 | -2605617
-         7 |   243551
-         8 |  1565128
-         9 |   995180
-(10 rows)
-*/
+--  Result on vwap5k (with deterministic := 'yes'):
+--  
+--  broker_id |   sum    
+-- -----------+----------
+--          0 |  2446668
+--          1 |  -648039
+--          2 | -5363809
+--          3 |   864240
+--          4 |  8384852
+--          5 |  3288320
+--          6 | -2605617
+--          7 |   243551
+--          8 |  1565128
+--          9 |   995180
+-- (10 rows)
+
 
 CREATE STREAM bids(t FLOAT, id INT, broker_id INT, volume FLOAT, price FLOAT)
   FROM FILE '../../experiments/data/finance/standard/vwap.csv'
