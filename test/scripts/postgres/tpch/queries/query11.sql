@@ -1,5 +1,4 @@
 ﻿SET search_path = '@@DATASET@@';
--- SET search_path = 'TPCH_standard';
 
 SELECT p.s_nationkey, p.ps_partkey, SUM(p.value) AS QUERY11
 FROM

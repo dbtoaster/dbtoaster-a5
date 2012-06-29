@@ -1,11 +1,11 @@
 {
-  :path => "test/queries/tpch/query11.sql",
+  :path => "test/queries/tpch/query11a.sql",
   :datasets => {
     "standard" => {
       :toplevels => {
-        "QUERY11" => {
+        "QUERY11A" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query11.csv", /,/),
+          :expected => results_file("test/results/tpch/query11a.csv", /,/),
         }
       }
     },
@@ -13,19 +13,19 @@
     "tiny" => {
       :subs => [ [/schemas\.sql/, "schemas_tiny.sql"] ],
       :toplevels => {
-        "QUERY11" => {
+        "QUERY11A" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query11_tiny.csv", /,/)
+          :expected => results_file("test/results/tpch/query11a_tiny.csv", /,/)
         }
       }
     },
-    
+
     "big" => {
       :subs => [ [/schemas\.sql/, "schemas_big.sql"] ],
       :toplevels => {
-        "QUERY11" => {
+        "QUERY11A" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query11_big.csv", /,/)
+          :expected => results_file("test/results/tpch/query11a_big.csv", /,/)
         }
       }
     },
@@ -33,9 +33,9 @@
     "standard_del" => {
       :subs => [ [/schemas\.sql/, "schemas_del.sql"] ],
       :toplevels => {
-        "QUERY11" => {
+        "QUERY11A" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query11_del.csv", /,/)
+          :expected => results_file("test/results/tpch/query11a_del.csv", /,/)
         }
       }
     },
@@ -43,9 +43,9 @@
     "tiny_del" => {
       :subs => [ [/schemas\.sql/, "schemas_tiny_del.sql"] ],
       :toplevels => {
-        "QUERY11" => {
+        "QUERY11A" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query11_tiny_del.csv", /,/)
+          :expected => results_file("test/results/tpch/query11a_tiny_del.csv", /,/)
         }
       }
     },
@@ -53,12 +53,11 @@
     "big_del" => {
       :subs => [ [/schemas\.sql/, "schemas_big_del.sql"] ],
       :toplevels => {
-        "QUERY11" => {
+        "QUERY11A" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query11_big_del.csv", /,/)
+          :expected => results_file("test/results/tpch/query11a_big_del.csv", /,/)
         }
       }
     }
-    
   }
 }
