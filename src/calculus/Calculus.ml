@@ -677,6 +677,29 @@ let rec cmp_exprs ?(cmp_opts:CalcRing.cmp_opt_t list =
       end
    ) e1 e2
 
+(**
+   Determine whether two expressions produce entirely identical outputs.  This 
+   is a step more strict than cmp_exprs:
+
+   While cmp_exprs attempts to find a variable mapping from one expression to 
+   another, exprs_are_identical determines whether the schema of the expressions 
+   are identical (and contain the same things).
+*)   
+let exprs_are_identical ?(cmp_opts:CalcRing.cmp_opt_t list = 
+                        if Debug.active "WEAK-EXPR-EQUIV" 
+                           then [] else CalcRing.default_cmp_opts)
+                        (e1:expr_t) (e2:expr_t): bool = 
+   begin match cmp_exprs ~cmp_opts:cmp_opts e1 e2 with
+   | None -> false
+   | Some(mapping) -> 
+      (* This could be a little more general -- it should usually be safe to
+         ignore internal variables.  For example, 'tmp' in 
+            AggSum([], (tmp ^= X) * (tmp < 3))
+         but let's play it safe for now *)
+      Function.is_identity mapping
+   end
+
+
 (** 
    The full name of a variable includes its type.  That is, a variable with the
    same string name but different types will be treated as different variables.
