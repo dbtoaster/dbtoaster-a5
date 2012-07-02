@@ -72,7 +72,7 @@ in
       "S(B) * AggSum([], (A ^= B) * R(A,B))";
    test "Unliftable due to nested scope" []
       "S(A, B) * AggSum([], R(A,B) * {A = B})"
-      "S(A, B) * AggSum([], {A = B} * R(A,B))";
+      "S(A, B) * {A = B} * R(A,B)";
    test "TPCH17" [var "dPK"]
       "LI(PK, QTY) * (nested ^= AggSum([PK],((LI(PK, QTY2) * QTY2)))) * 
          {PK = dPK} * {QTY < (0.5 * nested)}"
@@ -159,49 +159,47 @@ in
       "(A ^= B) * B * {2*B} * R(B)";
    test "Cascading pair with nesting" []
       "(A ^= B) * AggSum([], (C ^= {A*2})*C)"
-      "AggSum([], {2*B})";
-   test "Cascading pair made partly invalid by nested schema" []
+      "{2*B}";
+   test "Cascading pair made partly invalid by nested schema" [var "C"]
       "(A ^= B) * AggSum([C], (C ^= {A*2})*C)"
-      "AggSum([C], (C ^= {2*B})*{2*B})";
+      "(C ^= {2*B})*{2*B}";
    test "Full expression and value into comparison" []
       "(A ^= {2*B}) * (C ^= AggSum([], R(D))) * {A < C}"
       "(C ^= AggSum([], R(D))) * {2*B < C}";
    test "Dropping unnecessary lifts 1" []
       "AggSum([], (A ^= B))"
-      "AggSum([], 1)"; (* The aggsum would be deleted by nesting_rewrites *)
+      "1";
    test "Dropping unnecessary lifts 2" []
       "AggSum([], (A ^= B)*(C ^= D))"
-      "AggSum([], 1)";
+      "1";
    test "Dropping some unnecessary lifts 2" []
       "AggSum([], (A ^= AA)*(B ^= BB)*S(B))"
-      "AggSum([BB], S(BB))"; (* BB goes from being an ivar to being an ovar *)
+      "S(BB)"; (* BB goes from being an ivar to being an ovar *)
    test "Lifts in non-normal form" []
       "AggSum([], S(B)*(B ^= BB))"
       "AggSum([], S(B)*(B ^= BB))"; (* This should get shifted left by 
                                        nesting_rewrites *)
    test "Duplicate lifts" []
-      "(A ^= 0) * (A ^= AggSum([], B))"
-      "(A ^= 0) * (A ^= AggSum([], B))";
+      "(A ^= 0) * (A ^= AggSum([], S(B)))"
+      "(A ^= 0) * (A ^= AggSum([], S(B)))";
    test "Duplicate lifts (not terminal)" []
-      "(A ^= 0) * (A ^= AggSum([], B)) * 2"
-      "(A ^= 0) * (A ^= AggSum([], B)) * 2";
+      "(A ^= 0) * (A ^= AggSum([], S(B))) * 2"
+      "(A ^= 0) * (A ^= AggSum([], S(B))) * 2";
    test "Query18 funny business" [var "query18_mLINEITEMLINEITEM_ORDERKEY"; 
                                   var "query18_mLINEITEMLINEITEM_QUANTITY"]
       "(O_OK ^= dOK) * AggSum([O_OK],(
           (AggSum([O_OK],(LINEITEM(O_OK, L3_Q)))) +
           ( (O_OK ^= dOK) * AggSum([O_OK],(LINEITEM(O_OK, L3_Q)))
        )))"
-      "AggSum([dOK],(
-          (AggSum([dOK],(LINEITEM(dOK, L3_Q)))) +
-          (AggSum([dOK],(LINEITEM(dOK, L3_Q))))
-       ))";
+      "(AggSum([dOK],(LINEITEM(dOK, L3_Q)))) +
+       (AggSum([dOK],(LINEITEM(dOK, L3_Q))))";
    test "Double lifts into an equality" [var "B"; var "C"]
       "AggSum([],(A ^= B) * (A ^= C))"
-      "AggSum([],{C = B})";
+      "{C = B}";
    test "TPCH3 lifts" [var "CUSTOMER_MKTSEGMENT"]
       "AggSum([],((CUSTOMER_MKTSEGMENT_1 ^= CUSTOMER_MKTSEGMENT) * 
                   (CUSTOMER_MKTSEGMENT_1 ^= 'BUILDING')))"
-      "AggSum([],{'BUILDING' = CUSTOMER_MKTSEGMENT})";
+      "{'BUILDING' = CUSTOMER_MKTSEGMENT}";
    test "Lift into a lifted aggsum of a lift" [var "C"]
       "(A ^= B) * (C ^= (AggSum([A], R(D) * (A ^= D))))"
       "(C ^= (AggSum([], R(D) * {D = B})))";

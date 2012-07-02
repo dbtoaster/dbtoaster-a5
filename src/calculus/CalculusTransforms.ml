@@ -130,7 +130,7 @@ let rec combine_values ?(aggressive=false) (expr:C.expr_t): C.expr_t =
          | AggSum(gb_vars, subexp) -> 
             let new_subexp = rcr subexp in
             if new_subexp = CalcRing.zero then CalcRing.zero else
-               CalcRing.mk_val (AggSum(gb_vars, new_subexp))
+               C.mk_aggsum new_subexp gb_vars
          | Lift(lift_v, subexp)    -> 
             CalcRing.mk_val (Lift(lift_v,    rcr subexp))
 (***** BEGIN EXISTS HACK *****)
@@ -348,7 +348,7 @@ let lift_equalities (global_scope:var_t list) (big_expr:C.expr_t): C.expr_t =
             let new_gb_vars = ListAsSet.inter gb_vars
                                               (snd (C.schema_of_expr new_term))
             in
-               ([], CalcRing.mk_val (AggSum(new_gb_vars, new_term)))
+               ([], C.mk_aggsum new_term new_gb_vars)
          | CalcRing.Val(Lift(v, term)) ->
             ([], CalcRing.mk_val (Lift(v, rcr_merge term)))
 (***** BEGIN EXISTS HACK *****)
@@ -521,7 +521,7 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
             let new_gb_vars = 
                ListAsSet.inter mapped_gb_vars (snd (C.schema_of_expr subexp))
             in            
-               CalcRing.mk_val (AggSum(new_gb_vars, subexp))
+               C.mk_aggsum subexp new_gb_vars
          | Rel(rn, rv) ->
             let new_rv = map_vars " relation var" rv in
                CalcRing.mk_val (Rel(rn, new_rv))
@@ -620,7 +620,7 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
                " in AggSum of: "^
                (CalculusPrinter.string_of_expr new_subexp)
             );
-            CalcRing.mk_val (AggSum(new_gb_vars, new_subexp))
+            C.mk_aggsum new_subexp new_gb_vars
       
       | CalcRing.Val(Lift(lift_v, subexp)) ->
          let subexp_schema = ListAsSet.diff schema [lift_v] in
@@ -747,7 +747,6 @@ let advance_lifts scope expr =
    )
    (fun _ x -> CalcRing.mk_neg x)
    (fun _ x ->
-      CalcRing.mk_val (
          begin match x with
             | AggSum(gb_vars, subexp) ->
                (* Advance lifts can turn output variables into input variables:
@@ -755,9 +754,9 @@ let advance_lifts scope expr =
                let new_gb_vars = 
                   ListAsSet.inter gb_vars (snd (C.schema_of_expr subexp))
                in
-                  AggSum(new_gb_vars, subexp)
-            | _ -> x
-         end))
+                  C.mk_aggsum subexp new_gb_vars
+            | _ -> CalcRing.mk_val x
+         end)
    expr
 ;;
 
@@ -834,8 +833,8 @@ let rec nesting_rewrites (expr:C.expr_t) =
                                  ListAsSet.union gb_vars
                                     (ListAsSet.inter sum_ivars term_ovars)
                               in
-                                 CalcRing.mk_val (AggSum(term_gb_vars, term)))
-                           sl)
+                                 C.mk_aggsum term term_gb_vars
+                           ) sl)
                      in
                      Debug.print "LOG-NESTINGREWRITES-DETAIL" (fun () ->
                         "Rewrote : AggSum("^
@@ -873,14 +872,14 @@ let rec nesting_rewrites (expr:C.expr_t) =
                            );
                            CalcRing.mk_prod 
                               [  unnested; 
-                                 CalcRing.mk_val (AggSum(new_gb_vars, nested)) ]
+                                 C.mk_aggsum nested new_gb_vars ]
                   | CalcRing.Val(AggSum(_, term)) ->
-                     CalcRing.mk_val (AggSum(gb_vars, term))
+                     C.mk_aggsum term gb_vars
                   | _ -> 
                      if ListAsSet.subset (snd (C.schema_of_expr subterm))
                                          gb_vars 
                      then subterm
-                     else CalcRing.mk_val (AggSum(gb_vars, subterm))
+                     else C.mk_aggsum subterm gb_vars
                end
          
 (***** BEGIN EXISTS HACK *****)
