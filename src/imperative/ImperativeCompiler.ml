@@ -1770,6 +1770,25 @@ end (* Typing *)
                      result ci (Fn(ty, Ext(Apply(lower_part^"_part")), [d_arg]))
                | _ -> failwith ("Invalid call to date_part")
                end
+            | "cast_date" | "cast_int" | "cast_float" | "cast_string" ->
+               begin match nargs with
+               | [arg] ->
+                  begin match type_of_expr_t arg with
+                     | Host(TBase(source_type)) ->
+                        let dest_type = 
+                           StandardFunctions.infer_type id [source_type]
+                        in
+                        if source_type = dest_type 
+                        then result ci arg
+                        else
+                        let cast_fn_id = id^"_from_"^
+                           (Types.string_of_type source_type) in
+                        result ci (Fn(ty, Ext(Apply(cast_fn_id)), nargs))
+                     | t -> failwith ("Cast of invalid type: "^
+                              (Imperative.string_of_type (fun _ -> "[EXT]") t))
+                  end
+               | _ -> failwith ("Invalid call to cast '"^id^"'")
+               end
             | _ -> 
               begin match nargs with
                 | [Tuple(ft_l, f)] ->

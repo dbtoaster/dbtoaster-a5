@@ -51,22 +51,28 @@ namespace dbtoaster {
   }
   
   // Type conversion functions
-  inline long cast_int(long        i) { return i; };
-  inline long cast_int(double      d) { return (long)d; };
-  inline long cast_int(const char *c) { return atoi(c); };
-  inline long cast_int(string     &s) { return cast_int(s.c_str()); };
-  inline double cast_float(long        i) { return (double)i; };
-  inline double cast_float(double      d) { return d; };
-  inline double cast_float(const char *c) { return atof(c); };
-  inline double cast_float(string     &s) { return cast_float(s.c_str()); };
+  inline long cast_int_from_float(double           d) { return (long)d; };
+  inline long cast_int_from_string(const char     *c) { return atoi(c); };
+  inline long cast_int_from_string(string         &s) { return cast_int_from_string(s.c_str()); };
+  inline double cast_float_from_int(long           i) { return (double)i; };
+  inline double cast_float_from_string(const char *c) { return atof(c); };
+  inline double cast_float_from_string(string     &s) { return cast_float_from_string(s.c_str()); };
   template <class T> 
     inline string cast_string(const T &t) {
       std::stringstream ss;
       ss << t;
       return ss.str();
     }
-  inline date cast_date(date d) { return d; }
-  inline date cast_date(const char *c) { 
+  inline string cast_string_from_int(long      i) { return cast_string(i); }
+  inline string cast_string_from_double(double d) { return cast_string(d); }
+  inline string cast_string_from_date(date ymd)   { 
+    std::stringstream ss;
+    ss << ((ymd / 10000) % 10000)
+       << ((ymd / 100  ) % 100)
+       << ((ymd        ) % 100);
+    return ss.str();
+  }
+  inline date cast_date_from_string(const char *c) { 
     unsigned int y, m, d;
     if(sscanf(c, "%u-%u-%u", &y, &m, &d) < 3){
       cerr << "Invalid date string: "<< c << endl;
@@ -76,7 +82,7 @@ namespace dbtoaster {
     }
     return (y%10000) * 10000 + (m%100) * 100 + (d%100);
   }
-  inline date cast_date(string &s) { return cast_date(s.c_str()); }
+  inline date cast_date_from_string(string &s) { return cast_date_from_string(s.c_str()); }
 }
 
 #endif //DBTOASTER_STANDARD_FUNCTIONS_H
