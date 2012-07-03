@@ -53,10 +53,14 @@ namespace dbtoaster {
   // Type conversion functions
   inline long cast_int_from_float(double           d) { return (long)d; };
   inline long cast_int_from_string(const char     *c) { return atoi(c); };
-  inline long cast_int_from_string(string         &s) { return cast_int_from_string(s.c_str()); };
+  inline long cast_int_from_string(string         &s) { 
+    return cast_int_from_string(s.c_str()); 
+  };
   inline double cast_float_from_int(long           i) { return (double)i; };
   inline double cast_float_from_string(const char *c) { return atof(c); };
-  inline double cast_float_from_string(string     &s) { return cast_float_from_string(s.c_str()); };
+  inline double cast_float_from_string(string     &s) { 
+    return cast_float_from_string(s.c_str()); 
+  };
   template <class T> 
     inline string cast_string(const T &t) {
       std::stringstream ss;
@@ -82,7 +86,9 @@ namespace dbtoaster {
     }
     return (y%10000) * 10000 + (m%100) * 100 + (d%100);
   }
-  inline date cast_date_from_string(string &s) { return cast_date_from_string(s.c_str()); }
+  inline date cast_date_from_string(string &s) { 
+    return cast_date_from_string(s.c_str()); 
+  }
 }
 
 #endif //DBTOASTER_STANDARD_FUNCTIONS_H

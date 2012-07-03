@@ -639,7 +639,7 @@ let rec cmp_exprs ?(cmp_opts:CalcRing.cmp_opt_t list =
 
          | ((External(en1,eiv1,eov1,et1,em1)), 
             (External(en2,eiv2,eov2,et2,em2))) ->
-            if ((en1 <> en2) || (et1 <> et2))
+            if ((en1 = en2) && (et1 = et2))
             then 
                let mapping = 
                   begin match (em1, em2) with
@@ -689,7 +689,7 @@ let rec cmp_exprs ?(cmp_opts:CalcRing.cmp_opt_t list =
    is a step more strict than cmp_exprs:
 
    While cmp_exprs attempts to find a variable mapping from one expression to 
-   another, exprs_are_identical determines whether the schema of the expressions 
+   another, exprs_are_identical determines whether the schema of the expressions
    are identical (and contain the same things).
 *)   
 let rec exprs_are_identical ?(cmp_opts:CalcRing.cmp_opt_t list = 

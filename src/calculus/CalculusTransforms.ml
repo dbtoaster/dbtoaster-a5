@@ -1120,6 +1120,43 @@ let rec factorize_one_polynomial ?(heuristic = default_factorize_heuristic)
                  (fun factorized -> CalcRing.mk_prod [selected; factorized])
                 )
 
+type term_map_t = {
+   definition  : C.expr_t;
+   valid       : bool ref
+}
+   
+let cancel_term_list (term_list: C.expr_t list): C.expr_t list =
+   let term_map = 
+      List.map (fun term -> 
+         { definition = term; valid = ref true }
+      ) term_list
+   in
+   ListExtras.scan_fold (fun processed_terms
+                             lhs_terms term rhs_terms ->
+      if !(term.valid) then
+         try
+            let neg_term = CalcRing.mk_neg term.definition in
+            let cancel_term =
+               List.find (fun rhs_term ->
+                  !(rhs_term.valid) &&
+                  exprs_are_identical neg_term rhs_term.definition
+               ) rhs_terms
+            in
+               term.valid := false;
+               cancel_term.valid := false;
+               Debug.print "LOG-CANCEL" (fun () ->
+                  "Canceling "^
+                  (CalculusPrinter.string_of_expr term.definition)^
+                  " with " ^
+                  (CalculusPrinter.string_of_expr cancel_term.definition)
+               );
+               processed_terms
+         with Not_found ->
+            processed_terms @ [ term.definition ]
+      else
+         processed_terms 
+    ) [] term_map
+   
 
 (**
    [factorize_polynomial scope expr]
@@ -1133,8 +1170,10 @@ let rec factorize_one_polynomial ?(heuristic = default_factorize_heuristic)
    @param expr    The calculus expression being processed
 *)
 let factorize_polynomial (scope:var_t list) (expr:C.expr_t): C.expr_t =
+   
    C.rewrite ~scope:scope 
-      (fun (scope,_) sum_terms -> factorize_one_polynomial scope sum_terms)
+      (fun (scope,_) sum_terms -> 
+         factorize_one_polynomial scope (cancel_term_list sum_terms))
       (fun _ -> CalcRing.mk_prod)
       (fun _ -> CalcRing.mk_neg)
       (fun _ -> CalcRing.mk_val)

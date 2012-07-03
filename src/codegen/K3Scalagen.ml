@@ -44,7 +44,8 @@ struct
    (** The code generator produces a tuple of code and its type *)
    type code_t = source_code_t * type_t
    type op_t = (type_t -> type_t -> 
-      (source_code_t -> source_code_t -> source_code_t) * type_t * string option)
+      (source_code_t -> source_code_t -> source_code_t) * 
+      type_t * string option)
    type db_t = unit
 
    (** The line seperator is used to format the generated code *)
@@ -489,8 +490,8 @@ struct
             in
             "(" ^ n ^ ").foreach { " ^ (wrap_function_key_val ko vo 
             (Fn(ArgNTuple(List.map (fun x -> ArgN(x)) 
-            (list_vars "v" (key_len + 1))), Tuple(k @ [v]), Unit)) body) ^ " }"        
-         ) terms)) ^ " " ^ (string_of_type common_type) ^ "(result.toList) })", 
+            (list_vars "v" (key_len + 1))), Tuple(k @ [v]), Unit)) body) ^ " }"
+         ) terms)) ^ " " ^ (string_of_type common_type) ^ "(result.toList) })",
          common_type) 
 
    (** Generates code for an operator *)
@@ -586,12 +587,13 @@ struct
          "{ val " ^ (string_of_argn ~prefix:"_" argsn) ^ str_type ^ " = " ^ 
          arg ^ ";" ^ (implicit_conversions argsn argt argst) ^ fn ^ "}"
       | ExtFn(n, a, _) -> 
+         let lower_n = String.lowercase n in
          let n_a = List.length (flatten_tuple a) in
-            if n_a = 1 then
-               "(" ^ n ^ "(" ^ arg ^ "))" 
-            else
-               "({ val arg = " ^ arg ^ "; " ^ n ^ 
-               (make_list (list_vars "arg._" n_a)) ^ "})"
+         if n_a = 1 then
+            "(" ^ lower_n ^ "(" ^ arg ^ "))" 
+         else
+            "({ val arg = " ^ arg ^ "; " ^ lower_n ^ 
+            (make_list (list_vars "arg._" n_a)) ^ "})"
       | _ -> debugfail None "Expected a function"
       end,
       fn_ret_type fnt)

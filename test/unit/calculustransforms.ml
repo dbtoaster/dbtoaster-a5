@@ -293,6 +293,53 @@ in
          "R(A) * A * D" ; "S(A) * A"]
       "(R(A) * ((A * (2 + D)) + C)) + (S(A) * A)"
 ;;
+
+Debug.activate "LOG-CANCEL";
+
+let test msg scope input output =
+   log_test ("Term cancelation ("^msg^")")
+      string_of_expr
+      (CalcRing.mk_sum (
+          CalculusTransforms.cancel_term_list (List.map parse_calc input)))
+      (parse_calc output)
+in
+   test "Basic" []
+     ["A"; "-A"]
+     "0";
+   test "Multiple terms" []
+     ["A"; "-A"; "A"]
+     "A";
+   test "Complex terms" []
+     ["A*B"; "-A"; "-A*B"]
+     "(-1 * A)";
+(*   test "Complex terms different order" []*)
+(*     ["A*B"; "-A"; "-B*A"]                *)
+(*     "(-1 * A)";                          *)
+   test "Multiple expressions" []
+     ["A"; "-B"; "B"; "A"]
+     "A + A";
+   test "Multiple expression cancelation" []
+     ["A"; "-B"; "B"; "-A"]
+     "0";  
+   test "PriceSpread" []
+     ["(-1 * ( 
+         AggSum([],
+            (((__sql_inline_agg_2 ^= (PSP_mBIDS1_L1_1(float)[][] * 0.0001)) * 
+              PSP_mBIDS4(float)[][B_VOLUME] * 
+              {B_VOLUME > __sql_inline_agg_2}))) * 
+         AggSum([],
+            (((__sql_inline_agg_1 ^= (PSP_mBIDS2_L1_1(float)[][] * 0.0001)) * 
+            {ASKS_VOLUME > __sql_inline_agg_1})))))";
+      "(AggSum([],
+           (((__sql_inline_agg_2 ^= (PSP_mBIDS1_L1_1(float)[][] * 0.0001)) * 
+             PSP_mBIDS4(float)[][B_VOLUME] * 
+             {B_VOLUME > __sql_inline_agg_2}))) *
+        AggSum([],
+           (((__sql_inline_agg_1 ^= (PSP_mBIDS2_L1_1(float)[][] * 0.0001)) * 
+             {ASKS_VOLUME > __sql_inline_agg_1}))))" ]
+     "0";
+;;
+
 let test msg scope input output =
    log_test ("Factorize Sums ("^msg^")")
       CalculusPrinter.string_of_expr
