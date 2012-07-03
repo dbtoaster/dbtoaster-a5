@@ -194,8 +194,8 @@ let partition_expr (heuristic_options:heuristic_options_t) (scope:var_t list)
                else
 
                let subexpr_rels = rels_of_expr subexpr in
-               if subexpr_rels <> [] then begin
-                  
+               if subexpr_rels <> [] then 
+               begin                  
                   (* The lift subexpression containing the event *)
                   (* relation is always materialized separately  *)
                   let lift_contains_event_rel =
@@ -217,21 +217,26 @@ let partition_expr (heuristic_options:heuristic_options_t) (scope:var_t list)
                else
                   
                let subexpr_rels = rels_of_expr subexpr in
-               if subexpr_rels <> [] 
-               then (l_term, MaterializeAsNewMap)
-(*               then begin                                          *)
-(*                  (* The lift subexpression containing the event *)*)
-(*                  (* relation is always materialized separately  *)*)
-(*                  let lift_contains_event_rel =                    *)
-(*                     match extract_event_reln event with           *)
-(*                        | Some(reln) -> List.mem reln subexpr_rels *)
-(*                        | None -> false                            *)
-(*                  in                                               *)
-(*                  if lift_contains_event_rel                       *)
-(*                  then (l_term, MaterializeAsNewMap)               *)
-(*                  else (l_term, MaterializeUnknown)                *)
-(*               end                                                 *)
+               if subexpr_rels <> [] then 
+               begin   
+                  (* The lift subexpression containing the event *)
+                  (* relation is always materialized separately  *)
+                  let lift_contains_event_rel =
+                     match extract_event_reln event with
+                        | Some(reln) -> List.mem reln subexpr_rels
+                        | None -> false
+                  in
+                  if lift_contains_event_rel
+                  then (l_term, MaterializeAsNewMap)
+                  else (l_term, MaterializeUnknown)
+               end
                else (l_term, MaterializeUnknown)
+
+               (* An alternative approach *)
+(*               if subexpr_rels <> []             *)
+(*               then (l_term, MaterializeAsNewMap)*)
+(*               else (l_term, MaterializeUnknown) *)
+
             | _ -> failwith "Not a lift term"         
       ) lift_terms in
       
