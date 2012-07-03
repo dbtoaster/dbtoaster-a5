@@ -316,22 +316,11 @@ let partition_expr (heuristic_options:heuristic_options_t) (scope:var_t list)
       then failwith "rel_lift_expr is not covered by the scope."
       else
       
-      let rel_expr_ovars = snd (schema_of_expr rel_expr) in         
-(*      let rel_lift_expr_ovars = snd (schema_of_expr rel_lift_expr) in*)
+      let rel_expr_ovars = snd (schema_of_expr rel_expr) in
       
       List.fold_left (fun (r_terms, v_terms) v_term ->
          match CalcRing.get_val v_term with
-            | Value(_) | Cmp (_, _, _) ->
-               
-(* Sanity check - the term should be covered by the scope*)
-(*               let scope_union = ListAsSet.union scope rel_lift_expr_ovars in*)
-(*               if not (covered_by_scope scope_union v_term || inputvar_allowed)*)
-(*               then                                                            *)
-(*                  (print_endline ("Scope: " ^ (string_of_vars scope_union) ^   *)
-(*                                  "\nTerm: " ^ (string_of_expr v_term));       *)
-(*                  failwith "The value term is not covered by the scope.")      *)
-(*               else                                                            *)
-               
+            | Value(_) | Cmp (_, _, _) ->               
                if covered_by_scope rel_expr_ovars v_term ||
                   (inputvar_allowed &&
                       covered_by_scope (ListAsSet.union rel_expr_ovars
@@ -357,6 +346,11 @@ let partition_expr (heuristic_options:heuristic_options_t) (scope:var_t list)
 
 
 (******************************************************************************)
+type maintaining_option_t =
+   | Unknown
+   | UpdateExpr
+   | ReplaceExpr
+
 (** For a given expression and a trigger event, decides whether it is more 
     efficient to incrementally maintain the expression or to reevaluate it 
     upon each trigger call. 
@@ -393,56 +387,59 @@ let partition_expr (heuristic_options:heuristic_options_t) (scope:var_t list)
     subexpressions, or it does not contain relation subexpressions. In both 
     cases, this method suggests the incremental maintenance.
 *)
-let rec should_update (event:Schema.event_t) (expr:expr_t)  : bool =
+let should_update (event:Schema.event_t) (expr:expr_t)  : bool =
    
-   let rcr = should_update event in
-   
-   if (Debug.active "HEURISTICS-ALWAYS-UPDATE") then true
-   (* "HEURISTICS-ALWAYS-REPLACE" makes sense only for TLQ. *)
-   (* else if (Debug.active "HEURISTICS-ALWAYS-REPLACE") then false *)
+   if (Debug.active "HEURISTICS-ALWAYS-UPDATE") then true 
    else
-      
+   
    let expr_scope = Schema.event_vars event in
-   let (do_update, do_replace) = 
+   
+   let rec get_maintaining_option expr =      
+      let rcr = get_maintaining_option in      
+      let prefer_replace = Debug.active "HEURISTICS-PREFER-REPLACE" in
+      (* A simple state machine to decide on the next maintaining option *)
+      let get_next_state current_state next_state =
+         match (current_state, next_state) with
+            | (x, y) when x = y -> x
+            | (Unknown, x) | (x, Unknown) -> x
+            | (UpdateExpr, ReplaceExpr) 
+            | (ReplaceExpr, UpdateExpr) -> if prefer_replace 
+                                           then ReplaceExpr
+                                           else UpdateExpr
+            | _ -> failwith "Unable to process next state."
+      in
+      
       (* Polynomial decomposition *)
-      List.fold_left ( fun (do_update, do_replace) (term_schema, term) ->
+      List.fold_left ( fun state (term_schema, term) ->
         
          let term_opt = optimize_expr (expr_scope, term_schema) term in
     
-         if not (CalcRing.try_cast_to_monomial term_opt) 
-         then begin
-            let local_do_update = rcr term_opt in 
-            (do_update || local_do_update,
-             do_replace || not (local_do_update)) 
-         end
+         if not (CalcRing.try_cast_to_monomial term_opt) then 
+            get_next_state state (rcr term_opt) 
          else
 
          (* Graph decomposition *)
-         let (do_update_graphs, do_replace_graphs) =  
-            List.fold_left ( fun (do_update_graph, do_replace_graph) 
-                                 (subexpr_schema, subexpr) ->
+         let maintaining_state_graph =  
+            List.fold_left ( fun state_graph (subexpr_schema, subexpr) ->
                             
                (* Subexpression optimization *)                    
                let subexpr_opt = 
                   optimize_expr (expr_scope, subexpr_schema) subexpr 
                in
 
-               if not (CalcRing.try_cast_to_monomial subexpr_opt) 
-               then begin
-                  let local_do_update = rcr subexpr_opt in 
-                  (do_update_graph || local_do_update,
-                   do_replace_graph || not (local_do_update)) 
-               end
+               if not (CalcRing.try_cast_to_monomial subexpr_opt) then 
+                  get_next_state state_graph (rcr subexpr_opt)
                else
                
-               let local_update_graph = fst (
-                  List.fold_left (fun (update_acc, scope_acc) term ->
+               let maintaining_state_local = fst (
+                  List.fold_left (fun (state_local, scope_acc) term ->
+                     let term_ovars = snd (schema_of_expr term) in
+                     (* We are only interested in Lift expressions *)
                      match CalcRing.get_val term with
 (***** BEGIN EXISTS HACK *****)
                      | Exists(subexpr)
 (***** END EXISTS HACK *****)
                      | Lift(_, subexpr) ->
-                        let (term_ivars, term_ovars) = schema_of_expr term in
                         let subexpr_rels = rels_of_expr subexpr in
                         let contains_event_rel =
                            match extract_event_reln (Some(event)) with
@@ -450,57 +447,33 @@ let rec should_update (event:Schema.event_t) (expr:expr_t)  : bool =
                               | None -> false
                         in
                         if contains_event_rel then 
-                        begin
-                           let update = match update_acc with 
-                              | Some(x) -> x
-                              | None -> false
+                           let next_state = 
+                              if ListAsSet.inter scope_acc term_ovars = [] 
+                              then ReplaceExpr
+                              else UpdateExpr
                            in
-                           (Some (update || ListAsSet.inter scope_acc
-                                                      term_ovars <> []),
-                            ListAsSet.union scope_acc term_ovars)
-                        end
-                        else (update_acc,
+                              (get_next_state state_local next_state,
+                               ListAsSet.union scope_acc term_ovars)
+                        else (state_local,
                               ListAsSet.union scope_acc term_ovars)
                      | _ ->
-                        let term_ovars = snd (schema_of_expr term) in
-                        (update_acc,
+                        (state_local,
                          ListAsSet.union scope_acc term_ovars)
-                  ) (None, expr_scope) (CalcRing.prod_list subexpr_opt)
-               ) in
-               let update_graph =  
-                  match local_update_graph with
-                     | Some(x) -> x
-                     | None    -> true      (* default to update *)
+                  ) (Unknown, expr_scope) (CalcRing.prod_list subexpr_opt)
+               ) 
                in
-                  (do_update_graph || update_graph,
-                   do_replace_graph || (not update_graph))   
-                  
-               
-(*               (* Split the expression into four parts *)                   *)
-(*               let (_, rel_expr, lift_expr, _) =                            *)
-(*                  partition_expr expr_scope (Some(event)) subexpr_opt       *)
-(*               in                                                           *)
-(*               let rel_expr_ovars = snd (schema_of_expr rel_expr) in        *)
-(*               let lift_expr_ovars = snd (schema_of_expr lift_expr) in      *)
-(*               (* We assume that all equalities have been removed *)        *)
-(*               (* by the calculus optimizer*)                               *)
-(*               let local_update_graph =                                     *)
-(*                  ((rel_expr_ovars = []) || (lift_expr_ovars = []) ||       *)
-(*                   ((ListAsSet.inter rel_expr_ovars lift_expr_ovars) <> []))*)
-(*               in                                                           *)
-(*                  (do_update_graph || local_update_graph,                   *)
-(*                   do_replace_graph || (not local_update_graph))            *)
+                  get_next_state state_graph maintaining_state_local
             
-            ) (false, false)
+            ) Unknown 
               (snd (decompose_graph expr_scope (term_schema, term_opt)))
          in
-            (do_update || do_update_graphs, do_replace || do_replace_graphs)
+            get_next_state state maintaining_state_graph
                             
-      ) (false, false) (decompose_poly expr)
+      ) Unknown (decompose_poly expr)
    in      
-      if (do_update && do_replace) || (not do_update && not do_replace) 
-      then (not (Debug.active "HEURISTICS-PREFER-REPLACE"))
-      else do_update  
+      match get_maintaining_option expr with
+         | Unknown | UpdateExpr -> true
+         | ReplaceExpr -> false 
      
 (******************************************************************************)
 
@@ -531,8 +504,8 @@ let rec should_update (event:Schema.event_t) (expr:expr_t)  : bool =
                      the materialized form of the expression. 
 *)                                  
 let rec materialize ?(scope:var_t list = []) 
-		              (heuristic_options: heuristic_options_t) 
-		              (db_schema:Schema.t) (history:ds_history_t) 
+                    (heuristic_options: heuristic_options_t) 
+                    (db_schema:Schema.t) (history:ds_history_t) 
                     (prefix:string) (event:Schema.event_t option) 
                     (expr:expr_t) : (ds_t list * expr_t) = 
 
@@ -599,7 +572,7 @@ let rec materialize ?(scope:var_t list = [])
                      let (todos_subexpr, mat_subexpr) = 
                         materialize ~scope:scope heuristic_options 
                                     db_schema history subexpr_name event 
-                                    (mk_aggsum subexpr_opt subexpr_schema)                                    
+                                    (mk_aggsum subexpr_opt subexpr_schema)
                      in
                         ((todos @ todos_subexpr,
                           CalcRing.mk_prod [mat_expr; mat_subexpr]),
@@ -796,16 +769,17 @@ and materialize_expr (heuristic_options:heuristic_options_t)
                let (todo_ivc, ivc_expr) =
                   if agg_rel_expr_ivars <> [] then
                      let (todos, mats) =  
-	                     materialize [ NoIVC; NoInputVariables ]
-	                                 db_schema history
-	                                 (prefix^"_IVC")
-	                                 event agg_rel_expr
+                        materialize [ NoIVC; NoInputVariables ]
+                                    db_schema history
+                                    (prefix^"_IVC")
+                                    event agg_rel_expr
                     in 
                        (todos, Some(mats))
                   else if (IVC.needs_runtime_ivc (Schema.table_rels db_schema)
                                                        agg_rel_expr) then
                      (Calculus.bail_out agg_rel_expr
-                         "Unsupported query.  Cannot materialize IVC inline (yet).")
+                         ("Unsupported query. " ^
+                          "Cannot materialize IVC inline (yet)."))
                   else
                      ([], None)
                in
