@@ -74,13 +74,14 @@ in
 
 let test msg 
       ?(event = Some(Schema.InsertEvent(schema_rel "R" ["dA"; "dB"])))
+      ?(heuristic_options = [Heuristics.NoIVC; Heuristics.NoInputVariables])
       input output =
    let history:Heuristics.ds_history_t = ref [] in 
    let expr = parse_calc input in 
       log_test ("Materialization ("^msg^")")
          string_of_expr
-         (snd (Heuristics.materialize 
-            test_db history "M" event expr))
+         (snd (Heuristics.materialize heuristic_options
+                                      test_db history "M" event expr))
       (parse_calc output) 
 in 
    test "Simple"

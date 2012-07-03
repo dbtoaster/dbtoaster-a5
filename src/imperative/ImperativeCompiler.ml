@@ -2643,8 +2643,10 @@ end (* Typing *)
       tab^"{}";
       "";
       "#ifdef DBT_PROFILE";
-      "boost::shared_ptr<dbtoaster::statistics::trigger_exec_stats> exec_stats;";
-      "boost::shared_ptr<dbtoaster::statistics::trigger_exec_stats> ivc_stats;";
+      ("boost::shared_ptr<dbtoaster::statistics::trigger_exec_stats> " ^ 
+       "exec_stats;");
+      ("boost::shared_ptr<dbtoaster::statistics::trigger_exec_stats> " ^ 
+       "ivc_stats;");
       "#endif";
       "";
       tab^"/* Registering relations and trigger functions */";

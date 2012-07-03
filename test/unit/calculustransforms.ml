@@ -294,8 +294,6 @@ in
       "(R(A) * ((A * (2 + D)) + C)) + (S(A) * A)"
 ;;
 
-Debug.activate "LOG-CANCEL";
-
 let test msg scope input output =
    log_test ("Term cancelation ("^msg^")")
       string_of_expr
@@ -303,6 +301,7 @@ let test msg scope input output =
           CalculusTransforms.cancel_term_list (List.map parse_calc input)))
       (parse_calc output)
 in
+(*   Debug.activate "LOG-CANCEL";*)
    test "Basic" []
      ["A"; "-A"]
      "0";

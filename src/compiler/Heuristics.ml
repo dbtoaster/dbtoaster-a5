@@ -25,6 +25,14 @@ type term_list = expr_t list
 
 (******************************************************************************)
 
+type heuristic_option_t =
+   | NoIVC
+   | NoInputVariables
+
+type heuristic_options_t = heuristic_option_t list
+
+(******************************************************************************)
+
 (** A helper function for obtaining the variable list from 
     the optional event parameter. It calls Schema.event_vars 
     if the event is passed. *)
@@ -95,7 +103,9 @@ let prepare_expr (scope:var_t list) (expr:expr_t) :
    in
       (const_terms, rel_terms, lift_terms, value_terms)    
 
-type materialize_opt_t = 
+(*****************************************************************************)
+
+type decision_options_t = 
    | MaterializeAsNewMap
    | MaterializeUnknown
 
@@ -113,13 +123,16 @@ type materialize_opt_t =
     Note: In order to minimize the need for IVC, if there is no relation at the 
     root level, then lift subexpressions containing irrelevant relations are 
     materialized separately. *)
-let partition_expr (scope:var_t list) (event:Schema.event_t option) 
-                   (expr:expr_t) : (expr_t * expr_t * expr_t * expr_t) =
+let partition_expr (heuristic_options:heuristic_options_t) (scope:var_t list) 
+                   (event:Schema.event_t option) (expr:expr_t) : 
+                   (expr_t * expr_t * expr_t * expr_t) =
 
    Debug.print "LOG-HEURISTICS-PARTITIONING" (fun () -> 
       "[Heuristics]  Partitioning - Entering partition_expr: " ^ 
       "\n\t Expr: " ^ (string_of_expr expr)
    ); 
+
+   let expr_ivars = fst (schema_of_expr expr) in
 
    let (const_terms, rel_terms, lift_terms, value_terms) = 
       prepare_expr scope expr 
@@ -132,13 +145,9 @@ let partition_expr (scope:var_t list) (event:Schema.event_t option)
       "\n\t Lift: "     ^ (string_of_expr (CalcRing.mk_prod lift_terms )) ^
       "\n\t Value:  "   ^ (string_of_expr (CalcRing.mk_prod value_terms)) 
    ); 
-   
-   let ivc_opt_enabled = 
-      not (Debug.active "HEURISTICS-IGNORE-IVC-OPTIMIZATION") 
-   in
-   let inputvar_allowed = 
-      Debug.active "HEURISTICS-IGNORE-INPUTVAR-RULE"
-   in
+      
+   let maps_no_ivc = List.mem NoIVC heuristic_options in
+   let inputvar_allowed = not (List.mem NoInputVariables heuristic_options) in
    let has_root_relation = (rel_terms <> []) in
    
    let final_const_expr = CalcRing.mk_prod const_terms in
@@ -180,7 +189,7 @@ let partition_expr (scope:var_t list) (event:Schema.event_t option)
             | Exists(subexpr) -> 
                (* If there is no root relations, materialize *)
                (* subexp in order to avoid the need for IVC  *)
-               if ivc_opt_enabled && not has_root_relation
+               if maps_no_ivc && not has_root_relation
                then (l_term, MaterializeAsNewMap)
                else
 
@@ -203,7 +212,7 @@ let partition_expr (scope:var_t list) (event:Schema.event_t option)
             | Lift(_, subexpr) -> 
                (* If there is no root relations, materialize *)
                (* subexp in order to avoid the need for IVC  *)
-               if ivc_opt_enabled && not has_root_relation
+               if maps_no_ivc && not has_root_relation
                then (l_term, MaterializeAsNewMap)
                else
                   
@@ -272,10 +281,14 @@ let partition_expr (scope:var_t list) (event:Schema.event_t option)
                         let graph_cmpnt_expr =  
                            CalcRing.mk_prod (List.map fst graph_cmpnt)
                         in
-                        if covered_by_scope rel_expr_ovars graph_cmpnt_expr ||
-                           inputvar_allowed
+                        if covered_by_scope rel_expr_ovars graph_cmpnt_expr
                         then (r_terms @ [l_term], l_terms)
-                        else (r_terms, l_terms @ [l_term])
+                        else if covered_by_scope 
+                                    (ListAsSet.union scope rel_expr_ovars)
+                                    graph_cmpnt_expr
+                        then (r_terms, l_terms @ [l_term])
+                        else bail_out expr 
+                                "The lift term is not covered by the scope."
                      end   
                   with Not_found -> failwith "The lift term cannot be found."
                   end                 
@@ -304,23 +317,26 @@ let partition_expr (scope:var_t list) (event:Schema.event_t option)
       else
       
       let rel_expr_ovars = snd (schema_of_expr rel_expr) in         
-      let rel_lift_expr_ovars = snd (schema_of_expr rel_lift_expr) in
+(*      let rel_lift_expr_ovars = snd (schema_of_expr rel_lift_expr) in*)
       
       List.fold_left (fun (r_terms, v_terms) v_term ->
          match CalcRing.get_val v_term with
             | Value(_) | Cmp (_, _, _) ->
                
-               (* Sanity check - the term should be covered by the scope *)
-               let scope_union = ListAsSet.union scope rel_lift_expr_ovars in
-               if not (covered_by_scope scope_union v_term)
-               then 
-                  (print_endline ("Scope: " ^ (string_of_vars scope_union) ^
-                                  "\nTerm: " ^ (string_of_expr v_term)); 
-                  failwith "The value term is not covered by the scope.")
-               else
+(* Sanity check - the term should be covered by the scope*)
+(*               let scope_union = ListAsSet.union scope rel_lift_expr_ovars in*)
+(*               if not (covered_by_scope scope_union v_term || inputvar_allowed)*)
+(*               then                                                            *)
+(*                  (print_endline ("Scope: " ^ (string_of_vars scope_union) ^   *)
+(*                                  "\nTerm: " ^ (string_of_expr v_term));       *)
+(*                  failwith "The value term is not covered by the scope.")      *)
+(*               else                                                            *)
                
                if covered_by_scope rel_expr_ovars v_term ||
-                  inputvar_allowed
+                  (inputvar_allowed &&
+                      covered_by_scope (ListAsSet.union rel_expr_ovars
+                                                        expr_ivars)
+                                        v_term)
                then (r_terms @ [v_term], v_terms) 
                else (r_terms, v_terms @ [v_term])
             | _ -> failwith "Not a value term."
@@ -420,33 +436,45 @@ let rec should_update (event:Schema.event_t) (expr:expr_t)  : bool =
                else
                
                let local_update_graph = fst (
-                  List.fold_left (fun (update, scope_acc) term ->
-                   match CalcRing.get_val term with
+                  List.fold_left (fun (update_acc, scope_acc) term ->
+                     match CalcRing.get_val term with
 (***** BEGIN EXISTS HACK *****)
                      | Exists(subexpr)
 (***** END EXISTS HACK *****)
                      | Lift(_, subexpr) ->
-                        let term_ovars = snd (schema_of_expr term) in
+                        let (term_ivars, term_ovars) = schema_of_expr term in
                         let subexpr_rels = rels_of_expr subexpr in
                         let contains_event_rel =
                            match extract_event_reln (Some(event)) with
                               | Some(reln) -> List.mem reln subexpr_rels
                               | None -> false
                         in
-                           if contains_event_rel
-                           then (update && ListAsSet.inter scope_acc
-                                                           term_ovars <> [],
-                                 ListAsSet.union scope_acc term_ovars)
-                           else (update,
-                                 ListAsSet.union scope_acc term_ovars)
+                        if contains_event_rel then 
+                        begin
+                           let update = match update_acc with 
+                              | Some(x) -> x
+                              | None -> false
+                           in
+                           (Some (update || ListAsSet.inter scope_acc
+                                                      term_ovars <> []),
+                            ListAsSet.union scope_acc term_ovars)
+                        end
+                        else (update_acc,
+                              ListAsSet.union scope_acc term_ovars)
                      | _ ->
                         let term_ovars = snd (schema_of_expr term) in
-                        (update,
+                        (update_acc,
                          ListAsSet.union scope_acc term_ovars)
-                  ) (true, expr_scope) (CalcRing.prod_list subexpr_opt)
+                  ) (None, expr_scope) (CalcRing.prod_list subexpr_opt)
                ) in
-                  (do_update_graph || local_update_graph,
-                   do_replace_graph || (not local_update_graph))
+               let update_graph =  
+                  match local_update_graph with
+                     | Some(x) -> x
+                     | None    -> true      (* default to update *)
+               in
+                  (do_update_graph || update_graph,
+                   do_replace_graph || (not update_graph))   
+                  
                
 (*               (* Split the expression into four parts *)                   *)
 (*               let (_, rel_expr, lift_expr, _) =                            *)
@@ -469,7 +497,7 @@ let rec should_update (event:Schema.event_t) (expr:expr_t)  : bool =
             (do_update || do_update_graphs, do_replace || do_replace_graphs)
                             
       ) (false, false) (decompose_poly expr)
-   in
+   in      
       if (do_update && do_replace) || (not do_update && not do_replace) 
       then (not (Debug.active "HEURISTICS-PREFER-REPLACE"))
       else do_update  
@@ -502,10 +530,11 @@ let rec should_update (event:Schema.event_t) (expr:expr_t)  : bool =
                      materialized afterwards (a todo list) together with 
                      the materialized form of the expression. 
 *)                                  
-let rec materialize ?(scope:var_t list = []) (db_schema:Schema.t) 
-                    (history:ds_history_t) (prefix:string) 
-                    (event:Schema.event_t option) (expr:expr_t) : 
-                    (ds_t list * expr_t) = 
+let rec materialize ?(scope:var_t list = []) 
+		              (heuristic_options: heuristic_options_t) 
+		              (db_schema:Schema.t) (history:ds_history_t) 
+                    (prefix:string) (event:Schema.event_t option) 
+                    (expr:expr_t) : (ds_t list * expr_t) = 
 
    Debug.print "LOG-HEURISTICS-DETAIL" (fun () ->
       "[Heuristics] "^(string_of_event event)^
@@ -530,8 +559,8 @@ let rec materialize ?(scope:var_t list = []) (db_schema:Schema.t)
             let term_name = (prefix^(string_of_int i)) in
             
             let (new_term_todos, new_term_mats) = 
-               materialize ~scope:scope db_schema history
-                           term_name event 
+               materialize ~scope:scope heuristic_options 
+                           db_schema history term_name event 
                            (mk_aggsum term_opt term_schema)
             in
                ((term_todos @ new_term_todos,
@@ -568,9 +597,9 @@ let rec materialize ?(scope:var_t list = []) (db_schema:Schema.t)
                         (string_of_expr subexpr_opt)
                      );
                      let (todos_subexpr, mat_subexpr) = 
-                        materialize ~scope:scope db_schema history 
-                                    subexpr_name event 
-                                    (mk_aggsum subexpr_opt subexpr_schema)
+                        materialize ~scope:scope heuristic_options 
+                                    db_schema history subexpr_name event 
+                                    (mk_aggsum subexpr_opt subexpr_schema)                                    
                      in
                         ((todos @ todos_subexpr,
                           CalcRing.mk_prod [mat_expr; mat_subexpr]),
@@ -588,8 +617,9 @@ let rec materialize ?(scope:var_t list = []) (db_schema:Schema.t)
                      );
         
                      let (todos_subexpr, mat_subexpr) = 
-                        materialize_expr db_schema history subexpr_name event 
-                                         expr_scope subexpr_schema subexpr_opt 
+                        materialize_expr heuristic_options db_schema history 
+                                         subexpr_name event expr_scope 
+                                         subexpr_schema subexpr_opt 
                      in
                      Debug.print "LOG-HEURISTICS-DETAIL" (fun () -> 
                         "[Heuristics] Materialized form: " ^
@@ -613,7 +643,7 @@ let rec materialize ?(scope:var_t list = []) (db_schema:Schema.t)
          "[Heuristics] Final Materialized Form: \n"^
          (CalculusPrinter.string_of_expr mat_expr)^"\n\n"
       );
-      if (Debug.active "HEURISTICS-IGNORE-FINAL-OPTIMIZATION") 
+      if (Debug.active "HEURISTICS-DISABLE-FINAL-OPTIMIZATION") 
       then (todos, mat_expr)
       else 
          let schema = snd (schema_of_expr mat_expr) in
@@ -621,7 +651,8 @@ let rec materialize ?(scope:var_t list = []) (db_schema:Schema.t)
    end
     
 (* Materialization of an expression of the form mk_prod [ ...] *)   
-and materialize_expr (db_schema:Schema.t) (history:ds_history_t) 
+and materialize_expr (heuristic_options:heuristic_options_t)
+                     (db_schema:Schema.t) (history:ds_history_t) 
                      (prefix:string) (event:Schema.event_t option)
                      (scope:var_t list) (schema:var_t list) 
                      (expr:expr_t) : (ds_t list * expr_t) =
@@ -635,7 +666,7 @@ and materialize_expr (db_schema:Schema.t) (history:ds_history_t)
 
    (* Divide the expression into four parts *)
    let (const_expr, rel_expr, lift_expr, value_expr) = 
-      partition_expr scope event expr 
+      partition_expr heuristic_options scope event expr
    in        
 
    let (const_expr_ivars, const_expr_ovars) = schema_of_expr const_expr in
@@ -652,18 +683,8 @@ and materialize_expr (db_schema:Schema.t) (history:ds_history_t)
    else
    
    let scope_const = ListAsSet.union scope const_expr_ovars in
-
-   if (Debug.active "HEURISTICS-IGNORE-INPUTVAR-RULE")
+   if (List.mem NoInputVariables heuristic_options)
    then begin
-      (* Sanity check - rel_exprs input variables should be in the scope *)
-      if ListAsSet.diff rel_expr_ivars scope_const <> [] then begin
-         print_endline ("Expr: " ^ string_of_expr rel_expr);
-         print_endline ("InputVars: " ^ string_of_vars rel_expr_ivars);
-         print_endline ("Scope: " ^ string_of_vars scope_const);
-         failwith ("rel_expr has input variables not covered by the scope.")
-      end
-   end 
-   else begin
       (* Sanity check - rel_exprs should not contain any input variables *) 
       if rel_expr_ivars <> [] then begin  
          print_endline ("Expr: " ^ string_of_expr rel_expr);
@@ -702,10 +723,12 @@ and materialize_expr (db_schema:Schema.t) (history:ds_history_t)
                      else begin 
                         let scope_lift = 
                            ListAsSet.union scope_const
-                                           (snd (schema_of_expr whole_expr)) in
-                        materialize ~scope:scope_lift db_schema history 
-                                    (prefix^"_E"^(string_of_int j)^"_") 
-                                    event subexpr
+                                           (snd (schema_of_expr whole_expr)) 
+                        in
+                           materialize ~scope:scope_lift heuristic_options 
+                                       db_schema history 
+                                       (prefix^"_E"^(string_of_int j)^"_") 
+                                       event subexpr
                      end 
                   in
                   let mat_lift_expr = CalcRing.mk_val (Exists(mat_expr)) in
@@ -719,10 +742,12 @@ and materialize_expr (db_schema:Schema.t) (history:ds_history_t)
                      else begin 
                         let scope_lift = 
                            ListAsSet.union scope_const
-                                           (snd (schema_of_expr whole_expr)) in
-                        materialize ~scope:scope_lift db_schema history 
-                                    (prefix^"_L"^(string_of_int j)^"_") 
-                                    event subexpr
+                                           (snd (schema_of_expr whole_expr)) 
+                        in
+                           materialize ~scope:scope_lift heuristic_options 
+                                       db_schema history 
+                                       (prefix^"_L"^(string_of_int j)^"_") 
+                                       event subexpr
                      end 
                   in
                   let mat_lift_expr = CalcRing.mk_val (Lift(v, mat_expr)) in
@@ -768,14 +793,23 @@ and materialize_expr (db_schema:Schema.t) (history:ds_history_t)
          begin match mapping_if_found with
             | None ->
                (* Compute the IVC expression *) 
-               let ivc_expr = 
-                  if (IVC.needs_runtime_ivc (Schema.table_rels db_schema)
-                                             agg_rel_expr)
-                  then (Calculus.bail_out agg_rel_expr
-                     "Unsupported query.  Cannot materialize IVC inline (yet).")
-                  else None
+               let (todo_ivc, ivc_expr) =
+                  if agg_rel_expr_ivars <> [] then
+                     let (todos, mats) =  
+	                     materialize [ NoIVC; NoInputVariables ]
+	                                 db_schema history
+	                                 (prefix^"_IVC")
+	                                 event agg_rel_expr
+                    in 
+                       (todos, Some(mats))
+                  else if (IVC.needs_runtime_ivc (Schema.table_rels db_schema)
+                                                       agg_rel_expr) then
+                     (Calculus.bail_out agg_rel_expr
+                         "Unsupported query.  Cannot materialize IVC inline (yet).")
+                  else
+                     ([], None)
                in
-                        
+                                       
                Debug.print "LOG-HEURISTICS-DETAIL" (fun () ->
                   begin match ivc_expr with
                      | None -> "[Heuristics]  ===> NO IVC <==="
@@ -793,7 +827,7 @@ and materialize_expr (db_schema:Schema.t) (history:ds_history_t)
                   ds_definition = agg_rel_expr;
                } in
                   history := new_ds :: !history;
-                  ([new_ds] @ todo_lifts, 
+                  ([new_ds] @ todo_lifts @ todo_ivc, 
                    CalcRing.mk_prod [ const_expr; 
                                       new_ds.ds_name; 
                                       mat_lift_expr; 

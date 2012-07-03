@@ -96,7 +96,8 @@ let extract_renamings ((scope,schema):schema_t) (expr:expr_t):
 
 (******************************************************************************)
 
-let compile_map (db_schema:Schema.t) (history:Heuristics.ds_history_t)
+let compile_map (heuristic_options:Heuristics.heuristic_options_t)
+                (db_schema:Schema.t) (history:Heuristics.ds_history_t) 
                 ((todo,skip_ivc):todo_t) : todo_list_t * compiled_ds_t =
    (* Sanity check: Deltas of non-numeric types don't make sense and it doesn't
       make sense to compile a map that doesn't support deltas of some form. *)
@@ -182,30 +183,32 @@ let compile_map (db_schema:Schema.t) (history:Heuristics.ds_history_t)
          );
     
          let (new_todos, materialized_delta) = 
-            Heuristics.materialize db_schema history map_prefix 
-                                   (Some(delta_event)) delta_expr
+            Heuristics.materialize heuristic_options db_schema history 
+                                   map_prefix (Some(delta_event)) delta_expr
          in
          Debug.print "LOG-COMPILE-DETAIL" (fun () ->
             "Materialized delta expr: \n"^
             (CalculusPrinter.string_of_expr materialized_delta)
          );
              
-         let (ivc_todos,todo_ivc) = 
+         let (ivc_todos,todo_ivc) =   
             if skip_ivc then ([], None) else
-            if (todo_ivars <> []) then ([], None)
-(*          then failwith "TODO: Implement IVC for maps with ivars."*)
-            else if (todo_ovars <> [])
+(*            if (todo_ivars <> []) then ([], None)                   *)
+(*            then failwith "TODO: Implement IVC for maps with ivars."*)
+(*            else                                                    *)
+            if (todo_ovars <> [])
             then if IVC.naive_needs_runtime_ivc (Schema.table_rels db_schema)
                                                 todo.ds_definition
                  then
                      let (schema_matched_ivc) = 
-                        Calculus.rename_vars delta_renamings todo.ds_definition 
+                        Calculus.rename_vars delta_renamings todo.ds_definition
                      in
                      let (ivc_todos, todo_ivc) =
-                        Heuristics.materialize db_schema 
-                                               history 
+                        Heuristics.materialize [ Heuristics.NoIVC; 
+                                                 Heuristics.NoInputVariables ]
+                                               db_schema history 
                                                (map_prefix^"_IVC")
-                                               (Some(delta_event))
+                                               (Some(delta_event)) 
                                                schema_matched_ivc
                        in (ivc_todos, Some(todo_ivc))
                  else ([], None)
@@ -243,8 +246,9 @@ let compile_map (db_schema:Schema.t) (history:Heuristics.ds_history_t)
       else begin 
          (* The expression is to be reevaluated *)
          let (new_todos, materialized_expr) = 
-            Heuristics.materialize db_schema history map_prefix 
-                                   (Some(delta_event)) optimized_defn
+            Heuristics.materialize heuristic_options db_schema 
+                                   history map_prefix (Some(delta_event)) 
+                                   optimized_defn
          in
          Debug.print "LOG-COMPILE-DETAIL" (fun () ->
             "Materialized expr: \n"^
@@ -293,7 +297,9 @@ let compile_map (db_schema:Schema.t) (history:Heuristics.ds_history_t)
       if todo_ivars <> [] then
          (* If the todo has input variables, it needs a default initializer *)
          let (init_todos,init_expr) =
-            Heuristics.materialize db_schema history (todo_name^"_init") 
+            Heuristics.materialize [ Heuristics.NoIVC; 
+                                     Heuristics.NoInputVariables ]
+                                   db_schema history (todo_name^"_init") 
                                    None optimized_defn
          in (init_todos, Some(init_expr))
       else
@@ -331,7 +337,8 @@ let compile_table ((reln, relv, relut):Schema.rel_t): compiled_ds_t =
    }
 
 (******************************************************************************)
-let compile_tlqs (db_schema:Schema.t) (history:Heuristics.ds_history_t) 
+let compile_tlqs (heuristic_options:Heuristics.heuristic_options_t)
+                 (db_schema:Schema.t) (history:Heuristics.ds_history_t) 
                  (calc_queries:tlq_list_t) : todo_list_t * tlq_list_t =
 
    let todo_lists, toplevel_queries = List.split (
@@ -340,9 +347,12 @@ let compile_tlqs (db_schema:Schema.t) (history:Heuristics.ds_history_t)
             let qschema = Calculus.schema_of_expr qexpr in
             let optimized_qexpr = CalculusTransforms.optimize_expr qschema 
                                                                    qexpr in
-            let (todos, mat_expr) = Heuristics.materialize db_schema history
-                                                           (qname^"_") None 
-                                                           optimized_qexpr in
+            let (todos, mat_expr) = 
+               Heuristics.materialize heuristic_options (* TODO check options*)
+                                      db_schema history
+                                      (qname^"_") None 
+                                      optimized_qexpr 
+            in
             let schema_ordered_expr =
                let (_,mat_ovars) = (Calculus.schema_of_expr mat_expr) in
                if mat_ovars = snd qschema then mat_expr
@@ -374,13 +384,25 @@ let compile_tlqs (db_schema:Schema.t) (history:Heuristics.ds_history_t)
 let compile (db_schema:Schema.t) (calc_queries:tlq_list_t): 
             (plan_t * tlq_list_t) =
 
+   let default_heuristic_options = 
+	   List.flatten [
+	      if Debug.active "HEURISTICS-ENABLE-MAPS-INPUTVAR" then [] 
+	      else [Heuristics.NoInputVariables];
+	      if Debug.active "HEURISTICS-ENABLE-MAPS-IVC" then []
+	      else [Heuristics.NoIVC] 
+	   ]
+   in
+
    (* First process the toplevel queries *)
    let history:Heuristics.ds_history_t   = ref [] in
    let plan   :plan_t ref                = ref [] in
-   let todo_list, tlq_list = compile_tlqs db_schema history calc_queries in
+   let todo_list, tlq_list = 
+      compile_tlqs default_heuristic_options 
+                   db_schema history calc_queries 
+   in
    let todos  :todo_list_t ref           = ref todo_list in
    let toplevel_queries : tlq_list_t ref = ref tlq_list in
-
+   
    while List.length !todos > 0 do (
       let next_ds = List.hd !todos in todos := List.tl !todos;
       Debug.print "LOG-COMPILE-DETAIL" (fun () ->
@@ -389,7 +411,8 @@ let compile (db_schema:Schema.t) (calc_queries:tlq_list_t):
          (string_of_ds (fst next_ds))
       );
       let new_todos, compiled_ds = 
-         compile_map db_schema history next_ds
+         compile_map default_heuristic_options 
+                     db_schema history next_ds
       in
       (* The order in which we concatenate new_todos decides whether 
       compilation is performed 'depth-first' or 'breadth-first' with respect 
