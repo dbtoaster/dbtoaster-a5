@@ -605,12 +605,19 @@ let value_singleton ?(multiplicity = CalcRing.one)
 let rec cmp_exprs ?(cmp_opts:CalcRing.cmp_opt_t list = 
                         if Debug.active "WEAK-EXPR-EQUIV" 
                            then [] else CalcRing.default_cmp_opts) 
+                  ?(validate = (fun _ -> true))
                    (e1:expr_t) (e2:expr_t):((var_t * var_t) list option) =
-   let rcr a b = 
-      cmp_exprs ~cmp_opts:cmp_opts a b
+   let validate_mapping wrapped_mapping = 
+      begin match wrapped_mapping with
+         | None -> None
+         | Some(mapping) -> 
+            if validate mapping then Some(mapping) else None
+      end
    in
-   CalcRing.cmp_exprs ~cmp_opts:cmp_opts Function.multimerge Function.multimerge
-                     (fun lf1 lf2 -> 
+   let rcr a b = validate_mapping (cmp_exprs ~cmp_opts:cmp_opts a b) in
+   let merge components = validate_mapping (Function.multimerge components) in
+   validate_mapping (CalcRing.cmp_exprs ~cmp_opts:cmp_opts merge merge
+      (fun lf1 lf2 -> validate_mapping (
       begin match (lf1,lf2) with
          | ((Value v1), (Value v2)) ->
             Arithmetic.cmp_values v1 v2
@@ -674,8 +681,8 @@ let rec cmp_exprs ?(cmp_opts:CalcRing.cmp_opt_t list =
 (***** END EXISTS HACK *****)
             
          | (_,_) -> None
-      end
-   ) e1 e2
+      end)
+   ) e1 e2)
 
 (**
    Determine whether two expressions produce entirely identical outputs.  This 
@@ -685,20 +692,13 @@ let rec cmp_exprs ?(cmp_opts:CalcRing.cmp_opt_t list =
    another, exprs_are_identical determines whether the schema of the expressions 
    are identical (and contain the same things).
 *)   
-let exprs_are_identical ?(cmp_opts:CalcRing.cmp_opt_t list = 
+let rec exprs_are_identical ?(cmp_opts:CalcRing.cmp_opt_t list = 
                         if Debug.active "WEAK-EXPR-EQUIV" 
                            then [] else CalcRing.default_cmp_opts)
                         (e1:expr_t) (e2:expr_t): bool = 
-   begin match cmp_exprs ~cmp_opts:cmp_opts e1 e2 with
-   | None -> false
-   | Some(mapping) -> 
-      (* This could be a little more general -- it should usually be safe to
-         ignore internal variables.  For example, 'tmp' in 
-            AggSum([], (tmp ^= X) * (tmp < 3))
-         but let's play it safe for now *)
-      Function.is_identity mapping
-   end
-
+   None <> cmp_exprs ~cmp_opts:cmp_opts 
+                     ~validate:Function.is_identity
+                     e1 e2
 
 (** 
    The full name of a variable includes its type.  That is, a variable with the

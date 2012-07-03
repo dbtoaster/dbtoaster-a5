@@ -208,3 +208,21 @@ in
   test_cmp_exprs "Sum/Prod case #1-3" ~cmp_opts:[OptProdOrderIndependent] 
                  "R(A) * (S(B) + T(C))" "(T(C) + S(B)) * R(A)" false;
   ()
+;;
+let test_identical title ?(expected = true) ?(cmp_opts = default_cmp_opts)
+                         input1 input2 =
+  let e1 = parse_calc input1 in
+  let e2 = parse_calc input2 in
+  log_boolean ("Expression Identity - ("^title^")")
+    (Calculus.exprs_are_identical ~cmp_opts:cmp_opts e1 e2)
+    (expected)
+in
+   test_identical "Same and same"
+                  "A * B" "A * B";
+   test_identical "Same out of order (opt off)" ~cmp_opts:[] 
+                                            ~expected:false
+                  "B * A" "A * B";
+   test_identical "Same out of order (opt on)" 
+                  "B * A" "A * B";
+   test_identical "Different, but mappable" ~expected:false
+                  "A * B" "A * C"
