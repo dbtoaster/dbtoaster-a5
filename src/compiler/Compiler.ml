@@ -386,7 +386,7 @@ let compile (db_schema:Schema.t) (calc_queries:tlq_list_t):
 
    let default_heuristic_options = 
 	   List.flatten [
-	      if Debug.active "HEURISTICS-ENABLE-MAPS-INPUTVAR" then [] 
+	      if (Debug.active "HEURISTICS-ENABLE-INPUTVARS") then []
 	      else [Heuristics.NoInputVariables];
 	      if Debug.active "HEURISTICS-ENABLE-MAPS-IVC" then []
 	      else [Heuristics.NoIVC] 
