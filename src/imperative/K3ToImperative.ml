@@ -88,6 +88,8 @@ struct
    | PCUpdate
    | PCValueUpdate
    | PCElementRemove  
+   
+   | Unit
  
 
   type 'a ir_t =
@@ -141,6 +143,8 @@ struct
    | PCUpdate -> "Update"
    | PCValueUpdate -> "ValueUpdate"
    | PCElementRemove -> "ElementRemove"
+   
+   | Unit -> "Unit"
   
   let string_of_tag t = match t with
     | Undecorated e -> K.string_of_expr e
@@ -437,6 +441,8 @@ struct
     | SingletonPC (id,_) | OutPC(id,_,_)  | InPC(id,_,_)  | PC(id,_,_,_) -> r id
     | _ -> failwith "invalid map element to remove"
     end
+    
+  let unit_ir metadata = Node(metadata, Decorated(Unit), [])
 
 end
 
@@ -583,8 +589,7 @@ struct
         element_remove_ir metadata
           m_e (T.typecheck_expr m_e) ([sfst()]@snd()@thd())
          
-      | K.Unit -> 
-         failwith "K3ToImperative: Unit unsupported"
+      | K.Unit -> unit_ir metadata
 
     in K.fold_expr fold_f (fun x _ -> x) None (dummy_init TInt) e
 end
@@ -794,6 +799,9 @@ struct
         | AK.Block ->
           let r = (List.rev (List.tl (List.rev cmeta_l)))@[pushi last]
           in r, [], List.map (fun x -> None) r
+
+        | AK.Unit ->
+          ([], [], [])
         
         (* Conditionals push down the symbol to both branches *)
         | AK.IfThenElse ->
@@ -1055,6 +1063,9 @@ struct
             true
           | _, _ -> failwith "invalid block return"
         in Some((List.flatten (List.map imp_of_pair rest))@li), meta_used
+      
+      | AK.Unit ->
+         (Some([]), false)
 
       | AK.IfThenElse ->
         let branch i = imp_of_list
