@@ -3,7 +3,7 @@
   :datasets => {
     "standard" => {
       :toplevels => {
-        "QUERY_1_HIGH_LINE_COUNT" => {
+        "HIGH_LINE_COUNT" => {
           :type => :onelevel,
           :expected =>  {
             ['SHIP'] => 5,
@@ -11,7 +11,7 @@
           }
         },
         
-        "QUERY_2_HIGH_LINE_COUNT" => {
+        "LOW_LINE_COUNT" => {
           :type => :onelevel,
           :expected => {
             ['SHIP'] => 10,
@@ -24,12 +24,12 @@
     "tiny" => {
       :subs => [ [/schemas\.sql/, "schemas_tiny.sql"] ],
       :toplevels => {
-        "QUERY_1_HIGH_LINE_COUNT" => {
+        "HIGH_LINE_COUNT" => {
           :type => :onelevel,
           :expected => { }
         },
         
-        "QUERY_2_HIGH_LINE_COUNT" => {
+        "LOW_LINE_COUNT" => {
           :type => :onelevel,
           :expected => { 
             ['SHIP'] => 1
@@ -41,7 +41,7 @@
     "big" => {
       :subs => [ [/schemas\.sql/, "schemas_big.sql"] ],
       :toplevels => {
-        "QUERY_1_HIGH_LINE_COUNT" => {
+        "HIGH_LINE_COUNT" => {
           :type => :onelevel,
           :expected => {
             ['SHIP'] => 620,
@@ -49,7 +49,7 @@
           }
         },
 
-        "QUERY_2_HIGH_LINE_COUNT" => {
+        "LOW_LINE_COUNT" => {
           :type => :onelevel,
           :expected => {
             ['SHIP'] => 943,
@@ -62,14 +62,14 @@
     "standard_del" => {
       :subs => [ [/schemas\.sql/, "schemas_del.sql"] ],
       :toplevels => {
-        "QUERY_1_HIGH_LINE_COUNT" => {
+        "HIGH_LINE_COUNT" => {
           :type => :onelevel,
           :expected => {
             ['SHIP'] => 2
           }
         },
 
-        "QUERY_2_HIGH_LINE_COUNT" => {
+        "LOW_LINE_COUNT" => {
           :type => :onelevel,
           :expected => {
             ['SHIP'] => 2,
@@ -82,12 +82,12 @@
     "tiny_del" => {
       :subs => [ [/schemas\.sql/, "schemas_tiny_del.sql"] ],
       :toplevels => {
-        "QUERY_1_HIGH_LINE_COUNT" => {
+        "HIGH_LINE_COUNT" => {
           :type => :onelevel,
           :expected => { }
         },
 
-        "QUERY_2_HIGH_LINE_COUNT" => {
+        "LOW_LINE_COUNT" => {
           :type => :onelevel,
           :expected => { }
         }
@@ -97,7 +97,7 @@
     "big_del" => {
       :subs => [ [/schemas\.sql/, "schemas_big_del.sql"] ],
       :toplevels => {
-        "QUERY_1_HIGH_LINE_COUNT" => {
+        "HIGH_LINE_COUNT" => {
           :type => :onelevel,
           :expected => {
             ['SHIP'] => 126,
@@ -105,7 +105,7 @@
           }
         },
 
-        "QUERY_2_HIGH_LINE_COUNT" => {
+        "LOW_LINE_COUNT" => {
           :type => :onelevel,
           :expected => {
             ['SHIP'] => 192,

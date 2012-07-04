@@ -6,7 +6,7 @@
    division is also guaranteed to be 0. */
 
 
-INCLUDE 'test/queries/tpch/schemas_tiny.sql';
+INCLUDE 'test/queries/tpch/schemas.sql';
 
 SELECT  total.o_year,
         (SUM(CASE total.name WHEN 'BRAZIL' THEN total.volume ELSE 0 END) / 
