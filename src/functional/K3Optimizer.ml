@@ -723,13 +723,17 @@ let fix_lambda_types expr =
                  ); (AVar("",TUnit),Unit)
       end
    in
-   let fix_lambda is_coll lam subexp = 
+   let rec fix_lambda is_coll lam subexp = 
       let new_lam = 
          begin match lam with
             | Lambda(arg, body) -> 
                let arg, body = fix_body is_coll arg subexp body in
                   Lambda(arg,body)
             | ExternalLambda(id,arg,ty) -> lam
+            | IfThenElse(cond,t,e) ->
+               IfThenElse(cond, 
+                  fix_lambda is_coll t subexp, 
+                  fix_lambda is_coll e subexp)
             | _ -> k3_bug lam "Invalid lambda expression"; Unit
          end
       in
@@ -910,7 +914,8 @@ let rec conservative_beta_reduction substitutions expr =
        bound variables, i.e. trigger vars and variables bound by lambdas.
  *)
 let rec lift_ifs bindings expr =
-   Debug.print "LOG-K3-OPT-LIFTIF" (fun () -> K3.string_of_expr expr);
+   Debug.print "LOG-K3-OPT-LIFTIF" (fun () -> "---------- IF -----------\n"^
+                                              (K3.string_of_expr expr));
     let lift_branches e =
         let rec expand_children acc_branches rem_branches
                                 (branch : expr_t list) acc_branch : expr_t =
@@ -985,9 +990,7 @@ let rec lift_ifs bindings expr =
             else descend_expr (lift_ifs (bindings@new_bindings)) e 
         end
     in
-    let fixpoint old_expr new_expr =
-      if old_expr = new_expr then new_expr else lift_ifs bindings new_expr
-    in fixpoint expr (simplify expr)
+    simplify expr
 
 (** predicates: list of upstream predicates and whether this expr is a
     descendant of the "then" branch for each upstream predicate *)
@@ -1693,7 +1696,7 @@ let optimize ?(optimizations=[]) trigger_vars expr =
   let r = fixpoint (inline_collection_functions [] expr) 
   in
   Debug.print "LOG-K3-OPT" (fun () -> K3.nice_string_of_expr r []);
-  Debug.print "LOG-K3-OPT" (fun () -> "===== BETA OTIMIZATIONS =====");
+  Debug.print "LOG-K3-OPT" (fun () -> "===== BETA OPTIMIZATIONS =====");
   let r1 = if List.mem Beta optimizations
              then Fixpoint.compute 
                      (Fixpoint.compose [
