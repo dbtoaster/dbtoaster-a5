@@ -1,4 +1,4 @@
-﻿SET search_path = '@@DATASET@@';
+﻿SET search_path = 'TPCH_@@DATASET@@';
 
 SELECT c.c_custkey, sum(l1.l_quantity) AS query18
 FROM customer c, orders o, lineitem l1

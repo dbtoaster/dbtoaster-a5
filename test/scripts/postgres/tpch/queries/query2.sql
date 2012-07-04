@@ -1,4 +1,4 @@
-SET search_path = '@@DATASET@@';
+SET search_path = 'TPCH_@@DATASET@@';
 
 SELECT s.s_acctbal, s.s_name, n.n_name, p.p_partkey, p.p_mfgr, s.s_address, s.s_phone, 
        s.s_comment

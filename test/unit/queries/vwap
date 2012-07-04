@@ -5,7 +5,7 @@
       :toplevels => {
         "VWAP" => {
           :type => :singleton,
-          :expected => 28916017900.0,
+          :expected => 28916017900.0
         }
       } 
     }, 
@@ -15,10 +15,20 @@
       :toplevels => {
         "VWAP" => {
           :type => :singleton,
-          :expected => 491070000.0,
+          :expected => 491070000.0
         }
       } 
-    }
+    },
+    
+    "big" => {
+      :subs => [ [/data\/finance\/standard\/vwap.csv/, "data/finance/big/vwap.csv"] ],
+      :toplevels => {
+        "VWAP" => {
+          :type => :singleton,
+          :expected => 82399928200.0
+        }
+      } 
+    }    
         
   }
 }

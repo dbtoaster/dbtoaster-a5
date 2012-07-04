@@ -1,4 +1,4 @@
-SET search_path = '@@DATASET@@';
+SET search_path = 'TPCH_@@DATASET@@';
 
 SELECT l_returnflag, l_linestatus, 
   SUM(l_quantity) AS sum_qty,

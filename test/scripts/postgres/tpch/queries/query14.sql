@@ -1,4 +1,4 @@
-﻿SET search_path = '@@DATASET@@';
+﻿SET search_path = 'TPCH_@@DATASET@@';
 
 SELECT 100.00 * (local.revenue / total.revenue) AS promo_revenue 
 FROM 

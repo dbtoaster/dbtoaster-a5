@@ -6,7 +6,7 @@
         "QUERY_1_HIGH_LINE_COUNT" => {
           :type => :onelevel,
           :expected =>  {
-            ['SHIP'] => 10,
+            ['SHIP'] => 5,
             ['MAIL'] => 5
           }
         },
@@ -14,7 +14,7 @@
         "QUERY_2_HIGH_LINE_COUNT" => {
           :type => :onelevel,
           :expected => {
-            ['SHIP'] => 5,
+            ['SHIP'] => 10,
             ['MAIL'] => 5
           }
         }
@@ -26,14 +26,14 @@
       :toplevels => {
         "QUERY_1_HIGH_LINE_COUNT" => {
           :type => :onelevel,
-          :expected => {
-            ['SHIP'] => 1
-          }
+          :expected => { }
         },
         
         "QUERY_2_HIGH_LINE_COUNT" => {
           :type => :onelevel,
-          :expected => { }
+          :expected => { 
+            ['SHIP'] => 1
+          }
         }
       }      
     },
@@ -44,16 +44,16 @@
         "QUERY_1_HIGH_LINE_COUNT" => {
           :type => :onelevel,
           :expected => {
-            ['SHIP'] => 943,
-            ['MAIL'] => 945
+            ['SHIP'] => 620,
+            ['MAIL'] => 647
           }
         },
 
         "QUERY_2_HIGH_LINE_COUNT" => {
           :type => :onelevel,
           :expected => {
-            ['SHIP'] => 620,
-            ['MAIL'] => 647
+            ['SHIP'] => 943,
+            ['MAIL'] => 945
           }
         }
       }      
@@ -65,15 +65,15 @@
         "QUERY_1_HIGH_LINE_COUNT" => {
           :type => :onelevel,
           :expected => {
-            ['SHIP'] => 2,
-            ['MAIL'] => 2
+            ['SHIP'] => 2
           }
         },
 
         "QUERY_2_HIGH_LINE_COUNT" => {
           :type => :onelevel,
           :expected => {
-            ['SHIP'] => 2
+            ['SHIP'] => 2,
+            ['MAIL'] => 2
           }
         }
       }      
@@ -100,16 +100,16 @@
         "QUERY_1_HIGH_LINE_COUNT" => {
           :type => :onelevel,
           :expected => {
-            ['SHIP'] => 192,
-            ['MAIL'] => 191
+            ['SHIP'] => 126,
+            ['MAIL'] => 114
           }
         },
 
         "QUERY_2_HIGH_LINE_COUNT" => {
           :type => :onelevel,
           :expected => {
-            ['SHIP'] => 126,
-            ['MAIL'] => 114
+            ['SHIP'] => 192,
+            ['MAIL'] => 191
           }
         }
       }      

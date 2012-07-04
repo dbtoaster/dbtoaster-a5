@@ -1,4 +1,4 @@
-﻿SET search_path = '@@DATASET@@';
+﻿SET search_path = 'TPCH_@@DATASET@@';
 
 SELECT  s.s_name, COUNT(*) AS numwait
 FROM    supplier s, lineitem l1, orders o, nation n

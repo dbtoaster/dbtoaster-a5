@@ -5,7 +5,7 @@
       :toplevels => {
         "PSP" => {
           :type => :singleton,
-          :expected => 76452380068302.0,
+          :expected => 76452380068302.0
         }
       } 
     },
@@ -15,9 +15,19 @@
       :toplevels => {
         "PSP" => {
           :type => :singleton,
-          :expected => 389562600,
+          :expected => 389562600
         }
       }    
-    }
+    },
+    
+    "big" => {
+      :subs => [ [/data\/finance\/standard\/vwap.csv/, "data/finance/big/vwap.csv"] ],
+      :toplevels => {
+        "PSP" => {
+          :type => :singleton,
+          :expected => 458315598400.0
+        }
+      }    
+    }    
   }
 }

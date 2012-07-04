@@ -1,4 +1,4 @@
-﻿SET search_path = '@@DATASET@@';
+﻿SET search_path = 'TPCH_@@DATASET@@';
 
 SELECT s.s_name, s.s_address 
 FROM supplier s, nation n

@@ -1,4 +1,4 @@
-﻿SET search_path = '@@DATASET@@';
+﻿SET search_path = 'TPCH_@@DATASET@@';
 -- SET search_path = 'TPCH_standard';
 
 SELECT supp_nation, cust_nation, l_year, SUM(volume) as revenue

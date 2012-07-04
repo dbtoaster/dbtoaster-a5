@@ -10,14 +10,25 @@
       } 
     },
     
-#    "tiny" => {
-#      :subs => [ [/data\/finance\/standard\/vwap.csv/, "data/finance/tiny/vwap.csv"] ],
-#      :toplevels => {
-#        "BSV" => {
-#          :type => :onelevel,          
-#          :expected => results_file("test/results/finance/brokervariance_tiny.csv"),
-#        }
-#      }    
-#    }
+    "tiny" => {
+      :subs => [ [/data\/finance\/standard\/vwap.csv/, "data/finance/tiny/vwap.csv"] ],
+      :toplevels => {
+        "BSV" => {
+          :type => :onelevel,          
+          :expected => results_file("test/results/finance/brokervariance_tiny.csv"),
+        }
+      }    
+    },
+
+    "big" => {
+      :subs => [ [/data\/finance\/standard\/vwap.csv/, "data/finance/big/vwap.csv"] ],
+      :toplevels => {
+        "BSV" => {
+          :type => :onelevel,          
+          :expected => results_file("test/results/finance/brokervariance_big.csv"),
+        }
+      }    
+    }
+
   }
 }

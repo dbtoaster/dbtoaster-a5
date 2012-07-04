@@ -1,4 +1,4 @@
-﻿SET search_path = '@@DATASET@@';
+﻿SET search_path = 'TPCH_@@DATASET@@';
 
 SELECT s.s_suppkey, s.s_name, s.s_address, s.s_phone, R1.total_revenue 
 FROM supplier s, 

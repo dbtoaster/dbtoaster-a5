@@ -1,4 +1,4 @@
-﻿SET search_path = '@@DATASET@@';
+﻿SET search_path = 'TPCH_@@DATASET@@';
 -- SET search_path = 'TPCH_standard';
 
 SELECT sum(l.l_extendedprice) AS query17

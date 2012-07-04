@@ -1,4 +1,4 @@
-﻿SET search_path = '@@DATASET@@';
+﻿SET search_path = 'TPCH_@@DATASET@@';
 
 SELECT  total.o_year,
         (SUM(local.volume) / SUM(total.volume)) AS mkt_share

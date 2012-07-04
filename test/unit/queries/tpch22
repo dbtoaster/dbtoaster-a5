@@ -3,9 +3,29 @@
   :datasets => {
     "standard" => {
       :toplevels => {
-        "QUERY22" => {
+        "NUMCUST" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query22.csv"),
+          :expected => {
+            [18] => 2,
+            [31] => 1,
+            [23] => 1,
+            [30] => 1,
+            [13] => 1,
+            [17] => 1,
+            [29] => 2
+          },
+        },
+        "TOTALACCTBAL" => {
+          :type => :onelevel,
+          :expected => {
+            [18] => 14647.99,
+            [31] => 9331.13,
+            [23] => 9255.67,
+            [30] => 7638.57,
+            [13] => 5679.84,
+            [17] => 9127.27,
+            [29] => 17195.08          
+          }
         }
       }
     },
@@ -13,49 +33,123 @@
     "tiny" => {
       :subs => [ [/schemas\.sql/, "schemas_tiny.sql"] ],
       :toplevels => {
-        "QUERY22" => {
+        "NUMCUST" => {
+          :type => :onelevel,
+          :expected => { },
+        },
+        "TOTALACCTBAL" => {
           :type => :onelevel,
           :expected => { }
         }
       }
     },
-
+    
     "big" => {
       :subs => [ [/schemas\.sql/, "schemas_big.sql"] ],
       :toplevels => {
-        "QUERY22" => {
+        "NUMCUST" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query22_big.csv")
+          :expected => {
+            [18] => 99,
+            [31] => 87,
+            [23] => 93,
+            [30] => 87,
+            [13] => 94,
+            [17] => 96,
+            [29] => 85
+          },
+        },
+        "TOTALACCTBAL" => {
+          :type => :onelevel,
+          :expected => {
+            [18] => 738012.52,
+            [31] => 647372.50,
+            [23] => 708285.25,
+            [30] => 646748.02,
+            [13] => 714035.05,
+            [17] => 722560.15,
+            [29] => 632693.46   
+          }
         }
       }
     },
-    
+      
     "standard_del" => {
       :subs => [ [/schemas\.sql/, "schemas_del.sql"] ],
       :toplevels => {
-        "QUERY22" => {
+        "NUMCUST" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query22_del.csv")
+          :expected => {
+            [18] => 2,
+            [31] => 1,
+            [23] => 1,
+            [30] => 1,
+            [13] => 1,
+            [17] => 1,
+            [29] => 2
+          },
+        },
+        "TOTALACCTBAL" => {
+          :type => :onelevel,
+          :expected => {
+            [18] => 14647.99,
+            [31] => 9331.13,
+            [23] => 9255.67,
+            [30] => 7638.57,
+            [13] => 5679.84,
+            [17] => 9127.27,
+            [29] => 17195.08   
+          }
         }
       }
-    },
+    },  
     
     "tiny_del" => {
       :subs => [ [/schemas\.sql/, "schemas_tiny_del.sql"] ],
       :toplevels => {
-        "QUERY22" => {
+        "NUMCUST" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query22_tiny_del.csv")
+          :expected => {
+            [30] => 1,
+            [18] => 1
+          },
+        },
+        "TOTALACCTBAL" => {
+          :type => :onelevel,
+          :expected => {
+            [30] => 7638.57,
+            [18] => 8324.07   
+          }
         }
       }
-    },
+    },  
 
     "big_del" => {
       :subs => [ [/schemas\.sql/, "schemas_big_del.sql"] ],
       :toplevels => {
-        "QUERY22" => {
+        "NUMCUST" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query22_big_del.csv")
+          :expected => {
+            [18] => 118,
+            [31] => 102,
+            [23] => 105,
+            [30] => 92,
+            [13] => 105,
+            [17] => 111,
+            [29] => 98
+          },
+        },
+        "TOTALACCTBAL" => {
+          :type => :onelevel,
+          :expected => {
+            [18] => 888958.47,
+            [31] => 767156.22,
+            [23] => 785552.60,
+            [30] => 684396.24,
+            [13] => 791753.37,
+            [17] => 841093.79,
+            [29] => 739482.63   
+          }
         }
       }
     }

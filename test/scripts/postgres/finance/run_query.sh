@@ -2,7 +2,7 @@
 
 if [ $# -eq 0 ]
 then
-  echo "Usage: `basename $0` [query3|query11|...] [standard|big|tiny|standard_del|...]"
+  echo "Usage: `basename $0` [query3|query11|...] [standard|tiny|big|huge]"
   exit 1
 fi
 

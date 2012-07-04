@@ -4,7 +4,7 @@
     "standard" => {
       :toplevels => {
         "REVENUE" => {
-          :type => :onelevel,
+          :type => :singleton,
           :expected => 77949.9186
         }
       }
@@ -14,7 +14,7 @@
       :subs => [ [/schemas\.sql/, "schemas_tiny.sql"] ],
       :toplevels => {
         "REVENUE" => {
-          :type => :onelevel,
+          :type => :singleton,
           :expected => 12474.9773
         }
       }
@@ -24,7 +24,7 @@
       :subs => [ [/schemas\.sql/, "schemas_big.sql"] ],
       :toplevels => {
         "REVENUE" => {
-          :type => :onelevel,
+          :type => :singleton,
           :expected => 11803420.2534
         }
       }
@@ -34,7 +34,7 @@
       :subs => [ [/schemas\.sql/, "schemas_del.sql"] ],
       :toplevels => {
         "REVENUE" => {
-          :type => :onelevel,
+          :type => :singleton,
           :expected => 11985.8059
         }
       }
@@ -44,8 +44,8 @@
       :subs => [ [/schemas\.sql/, "schemas_tiny_del.sql"] ],
       :toplevels => {
         "REVENUE" => {
-          :type => :onelevel,
-          :expected => { }
+          :type => :singleton,
+          :expected => 0.0
         }
       }
     },
@@ -54,7 +54,7 @@
       :subs => [ [/schemas\.sql/, "schemas_big_del.sql"] ],
       :toplevels => {
         "REVENUE" => {
-          :type => :onelevel,
+          :type => :singleton,
           :expected => 2327689.6940
         }
       }

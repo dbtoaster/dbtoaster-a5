@@ -1,4 +1,4 @@
-﻿SET search_path = '@@DATASET@@';
+﻿SET search_path = 'TPCH_@@DATASET@@';
 
 SELECT SUM(l.l_extendedprice * (1 - l.l_discount) ) AS revenue
 FROM lineitem l, part p

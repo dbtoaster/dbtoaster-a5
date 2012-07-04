@@ -1,4 +1,4 @@
-SET search_path = '@@DATASET@@';
+SET search_path = 'TPCH_@@DATASET@@';
 
 SELECT o.o_orderpriority, COUNT(*) AS order_count
 FROM   orders o

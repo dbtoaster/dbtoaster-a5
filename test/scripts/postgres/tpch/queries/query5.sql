@@ -1,4 +1,4 @@
-SET search_path = '@@DATASET@@';
+SET search_path = 'TPCH_@@DATASET@@';
 
 SELECT n.n_name, SUM(l.l_extendedprice * (1 - l.l_discount)) AS revenue 
 FROM   customer c, orders o, lineitem l, supplier s, nation n, region r

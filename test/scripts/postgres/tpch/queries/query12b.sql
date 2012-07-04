@@ -1,4 +1,4 @@
-﻿SET search_path = '@@DATASET@@';
+﻿SET search_path = 'TPCH_@@DATASET@@';
 
 SELECT l.l_shipmode, COUNT(*) as high_line_count
 FROM   orders o, lineitem l

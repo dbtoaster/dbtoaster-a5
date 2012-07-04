@@ -1,9 +1,9 @@
-﻿DROP SCHEMA "TPCH_standard" CASCADE;
+﻿DROP SCHEMA "TPCH_@@DATASET@@" CASCADE;
 
-CREATE SCHEMA "TPCH_standard"
+CREATE SCHEMA "TPCH_@@DATASET@@"
   AUTHORIZATION postgres;
 
-CREATE TABLE IF NOT EXISTS "TPCH_standard".CUSTOMER (
+CREATE TABLE IF NOT EXISTS "TPCH_@@DATASET@@".CUSTOMER (
   C_CUSTKEY    int NOT NULL,
   C_NAME       varchar(25) NOT NULL,
   C_ADDRESS    varchar(40) NOT NULL,
@@ -15,7 +15,7 @@ CREATE TABLE IF NOT EXISTS "TPCH_standard".CUSTOMER (
   PRIMARY KEY (C_CUSTKEY)
 );
 
-CREATE TABLE IF NOT EXISTS "TPCH_standard".LINEITEM (
+CREATE TABLE IF NOT EXISTS "TPCH_@@DATASET@@".LINEITEM (
   L_ORDERKEY      int NOT NULL,
   L_PARTKEY       int NOT NULL,
   L_SUPPKEY       int NOT NULL,
@@ -35,7 +35,7 @@ CREATE TABLE IF NOT EXISTS "TPCH_standard".LINEITEM (
   PRIMARY KEY (L_ORDERKEY, L_LINENUMBER)
 );
 
-CREATE TABLE IF NOT EXISTS "TPCH_standard".NATION (
+CREATE TABLE IF NOT EXISTS "TPCH_@@DATASET@@".NATION (
   N_NATIONKEY int NOT NULL,
   N_NAME      char(25) NOT NULL,
   N_REGIONKEY int NOT NULL,
@@ -43,7 +43,7 @@ CREATE TABLE IF NOT EXISTS "TPCH_standard".NATION (
   PRIMARY KEY (N_NATIONKEY)
 );
 
-CREATE TABLE IF NOT EXISTS "TPCH_standard".ORDERS (
+CREATE TABLE IF NOT EXISTS "TPCH_@@DATASET@@".ORDERS (
   O_ORDERKEY      int NOT NULL,
   O_CUSTKEY       int NOT NULL,
   O_ORDERSTATUS   char(1) NOT NULL,
@@ -56,7 +56,7 @@ CREATE TABLE IF NOT EXISTS "TPCH_standard".ORDERS (
   PRIMARY KEY (O_ORDERKEY)
 );
 
-CREATE TABLE IF NOT EXISTS "TPCH_standard".PART (
+CREATE TABLE IF NOT EXISTS "TPCH_@@DATASET@@".PART (
   P_PARTKEY     int NOT NULL,
   P_NAME        varchar(55) NOT NULL,
   P_MFGR        char(25) NOT NULL,
@@ -69,23 +69,24 @@ CREATE TABLE IF NOT EXISTS "TPCH_standard".PART (
   PRIMARY KEY (P_PARTKEY)
 );
 
-CREATE TABLE IF NOT EXISTS "TPCH_standard".PARTSUPP (
+CREATE TABLE IF NOT EXISTS "TPCH_@@DATASET@@".PARTSUPP (
   PS_PARTKEY    int NOT NULL,
   PS_SUPPKEY    int NOT NULL,
   PS_AVAILQTY   int NOT NULL,
   PS_SUPPLYCOST decimal(10,2) NOT NULL,
   PS_COMMENT    varchar(199) NOT NULL
 --  PRIMARY KEY (PS_PARTKEY,PS_SUPPKEY)
+-- For the standard and tiny datasets the reference integrity is not preserved.
 );
 
-CREATE TABLE IF NOT EXISTS "TPCH_standard".REGION (
+CREATE TABLE IF NOT EXISTS "TPCH_@@DATASET@@".REGION (
   R_REGIONKEY int NOT NULL,
   R_NAME      char(25) NOT NULL,
   R_COMMENT   varchar(152) NOT NULL,
   PRIMARY KEY (R_REGIONKEY)
 );
 
-CREATE TABLE IF NOT EXISTS "TPCH_standard".SUPPLIER (
+CREATE TABLE IF NOT EXISTS "TPCH_@@DATASET@@".SUPPLIER (
   S_SUPPKEY   int NOT NULL,
   S_NAME      char(25) NOT NULL,
   S_ADDRESS   varchar(40) NOT NULL,
@@ -96,21 +97,21 @@ CREATE TABLE IF NOT EXISTS "TPCH_standard".SUPPLIER (
   PRIMARY KEY (S_SUPPKEY)
 );
 
-DELETE FROM "TPCH_standard".LINEITEM;
-DELETE FROM "TPCH_standard".ORDERS;
-DELETE FROM "TPCH_standard".PARTSUPP;
-DELETE FROM "TPCH_standard".PART;
-DELETE FROM "TPCH_standard".SUPPLIER;
-DELETE FROM "TPCH_standard".CUSTOMER;
-DELETE FROM "TPCH_standard".NATION;
-DELETE FROM "TPCH_standard".REGION;
+DELETE FROM "TPCH_@@DATASET@@".LINEITEM;
+DELETE FROM "TPCH_@@DATASET@@".ORDERS;
+DELETE FROM "TPCH_@@DATASET@@".PARTSUPP;
+DELETE FROM "TPCH_@@DATASET@@".PART;
+DELETE FROM "TPCH_@@DATASET@@".SUPPLIER;
+DELETE FROM "TPCH_@@DATASET@@".CUSTOMER;
+DELETE FROM "TPCH_@@DATASET@@".NATION;
+DELETE FROM "TPCH_@@DATASET@@".REGION;
 
-COPY "TPCH_standard".REGION   FROM '@@DBT_DIR@@/../../experiments/data/tpch/standard/region.csv' WITH DELIMITER AS '|'; 
-COPY "TPCH_standard".NATION   FROM '@@DBT_DIR@@/../../experiments/data/tpch/standard/nation.csv' WITH DELIMITER AS '|'; 
-COPY "TPCH_standard".CUSTOMER FROM '@@DBT_DIR@@/../../experiments/data/tpch/standard/customer.csv' WITH DELIMITER AS '|'; 
-COPY "TPCH_standard".SUPPLIER FROM '@@DBT_DIR@@/../../experiments/data/tpch/standard/supplier.csv' WITH DELIMITER AS '|'; 
-COPY "TPCH_standard".PART     FROM '@@DBT_DIR@@/../../experiments/data/tpch/standard/part.csv' WITH DELIMITER AS '|'; 
-COPY "TPCH_standard".PARTSUPP FROM '@@DBT_DIR@@/../../experiments/data/tpch/standard/partsupp.csv' WITH DELIMITER AS '|'; 
-COPY "TPCH_standard".ORDERS   FROM '@@DBT_DIR@@/../../experiments/data/tpch/standard/orders.csv' WITH DELIMITER AS '|'; 
-COPY "TPCH_standard".LINEITEM FROM '@@DBT_DIR@@/../../experiments/data/tpch/standard/lineitem.csv' WITH DELIMITER AS '|'; 
+COPY "TPCH_@@DATASET@@".REGION   FROM '@@DBT_DIR@@/../../experiments/data/tpch/@@DATASET@@/region@@FILE_SUFFIX@@.csv' WITH DELIMITER AS '|'; 
+COPY "TPCH_@@DATASET@@".NATION   FROM '@@DBT_DIR@@/../../experiments/data/tpch/@@DATASET@@/nation@@FILE_SUFFIX@@.csv' WITH DELIMITER AS '|'; 
+COPY "TPCH_@@DATASET@@".CUSTOMER FROM '@@DBT_DIR@@/../../experiments/data/tpch/@@DATASET@@/customer@@FILE_SUFFIX@@.csv' WITH DELIMITER AS '|'; 
+COPY "TPCH_@@DATASET@@".SUPPLIER FROM '@@DBT_DIR@@/../../experiments/data/tpch/@@DATASET@@/supplier@@FILE_SUFFIX@@.csv' WITH DELIMITER AS '|'; 
+COPY "TPCH_@@DATASET@@".PART     FROM '@@DBT_DIR@@/../../experiments/data/tpch/@@DATASET@@/part@@FILE_SUFFIX@@.csv' WITH DELIMITER AS '|'; 
+COPY "TPCH_@@DATASET@@".PARTSUPP FROM '@@DBT_DIR@@/../../experiments/data/tpch/@@DATASET@@/partsupp@@FILE_SUFFIX@@.csv' WITH DELIMITER AS '|'; 
+COPY "TPCH_@@DATASET@@".ORDERS   FROM '@@DBT_DIR@@/../../experiments/data/tpch/@@DATASET@@/orders@@FILE_SUFFIX@@.csv' WITH DELIMITER AS '|'; 
+COPY "TPCH_@@DATASET@@".LINEITEM FROM '@@DBT_DIR@@/../../experiments/data/tpch/@@DATASET@@/lineitem@@FILE_SUFFIX@@.csv' WITH DELIMITER AS '|'; 
 
