@@ -592,7 +592,6 @@ and calc_of_condition (tables:Sql.table_t list)
             let (expr_val, expr_calc) = 
                lift_if_necessary ~t:"in" (rcr_e expr)
             in
-               print_endline "YO YO YO";
             (** Unlike the general OR, we can ensure that the condition is
                 an exclusive OR by making the list of comparisons unique *)
                CalcRing.mk_prod [expr_calc; 
