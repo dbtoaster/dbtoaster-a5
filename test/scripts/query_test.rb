@@ -15,15 +15,7 @@ def results_file(path, delim = /,/, reverse = false)
   File.open(path).readlines.
     delete_if { |l| l.chomp == "" }.  
     map do |l|
-      k = l.split(delim).map { |i| 
-        case i 
-            when /([0-9]+)\-([0-9]+)\-([0-9]+)/ then $1.to_i*10000+$2.to_i*100+$3.to_i;
-            when /[\-\+]?[0-9]+\.[0-9]*e?[\-\+]?[0-9]*/ then i.to_f;
-            when /[a-zA-Z][a-zA-Z0-9_# ]*/ then i;
-            when /[\-\+]?[0-9]+/ then i.to_i;
-            else i
-        end 
-      }
+      k = l.split(delim).map { |i| i.extract_dbt_value }
       [k, k.pop];
     end.map { |k,v| if reverse then [k.reverse,v] else [k,v] end }.to_h
 end
