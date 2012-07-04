@@ -130,11 +130,13 @@ in
       "M1(int)[][A]";       
    test "Aggregation with a lift containing an irrelevant relation"
       "AggSum([A], R(A,B) * (C ^= S(A)) * {C + 1})"
-      "M1(int)[][A] * AggSum([A], (C ^= M1_L1_1(int)[][A]) * {1 + C})";       
+      "M1(float)[][A]";
+(*      "M1(int)[][A] * AggSum([A], (C ^= M1_L1_1(int)[][A]) * {1 + C})";       *)
    test ("Aggregation with a lift containing an irrelevant relation " ^ 
          "and a comparison")
       "AggSum([A], R(A,B) * (C ^= S(A)) * {C > 0})"
-      "M1(int)[][A] * AggSum([A], (C ^= M1_L1_1(int)[][A]) * {C > 0})";     
+      "M1(int)[][A]";
+(*      "M1(int)[][A] * AggSum([A], (C ^= M1_L1_1(int)[][A]) * {C > 0})";     *)
    test ("Aggregation with a lift containing an irrelevant relation " ^ 
          "and a common variable")
       "AggSum([A], R(A,B) * (C ^= (S(B) * {B = 0})) * C)"
