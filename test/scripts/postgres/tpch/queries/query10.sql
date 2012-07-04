@@ -1,12 +1,12 @@
 ﻿SET search_path = 'TPCH_@@DATASET@@';
 
 SELECT  c.c_custkey, c.c_name, 
-        SUM(l.l_extendedprice * (1 - l.l_discount)) AS revenue, 
         c.c_acctbal,
         n.n_name,
         c.c_address,
         c.c_phone,
-        c.c_comment
+        c.c_comment,
+        SUM(l.l_extendedprice * (1 - l.l_discount)) AS revenue
 FROM    customer c, orders o, lineitem l, nation n
 WHERE   c.c_custkey = o.o_custkey
   AND   l.l_orderkey = o.o_orderkey
