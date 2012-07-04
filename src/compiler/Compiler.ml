@@ -416,12 +416,9 @@ let compile (db_schema:Schema.t) (calc_queries:tlq_list_t):
       in
       (* The order in which we concatenate new_todos decides whether 
       compilation is performed 'depth-first' or 'breadth-first' with respect 
-      to the map heirarchy. Only depth-first is correct without a topological
-      sort postprocessing step. 
-      
-      OAK: I'm not 100% convinced that this is the case.  It might be safer 
-      just to do a topo sort postprocessing step regardless.
-      *)
+      to the map heirarchy. The only difference is efficiency.  Correctness is
+      guaranteed since we do a topo sort over datastructures while creating the 
+      M3. *)
       todos     := new_todos @ !todos;
       plan      := (!plan) @ [compiled_ds]
    ) done; (!plan, !toplevel_queries)

@@ -760,19 +760,25 @@ and calc_of_sql_expr ?(materialize_query = None)
             | None -> failwith "Unexpected aggregation operator (2)"
          end
       | Sql.ExternalFn(fn, fargs) ->
-         let lifted_args, arg_calc = List.split (List.map (fun arg ->
-            let (arg_val, arg_calc) = lift_if_necessary (rcr_e arg) in
-               (arg_val, (Sql.is_agg_expr arg, arg_calc))
-         ) fargs) in
+         let (lifted_args_and_gb_vars, arg_calc) = 
+            List.split (List.map (fun arg ->
+               let raw_arg_calc = (rcr_e arg) in
+               let (arg_val, arg_calc) = lift_if_necessary raw_arg_calc in
+                  ((arg_val, snd (Calculus.schema_of_expr raw_arg_calc)),
+                   (Sql.is_agg_expr arg, arg_calc))
+            ) fargs) in
+         let lifted_args, gb_vars = List.split lifted_args_and_gb_vars in
          let (agg_args,non_agg_args) = 
             List.partition fst arg_calc
          in
-            CalcRing.mk_prod ((List.map snd (agg_args@non_agg_args))@[
-               CalcRing.mk_val (Value(
-                  ValueRing.mk_val (AFn(fn, lifted_args, 
-                     Sql.expr_type expr tables sources))
-               ))
-            ])
+            CalcRing.mk_val (AggSum(List.flatten gb_vars, 
+               CalcRing.mk_prod ((List.map snd (agg_args@non_agg_args))@[
+                  CalcRing.mk_val (Value(
+                     ValueRing.mk_val (AFn(fn, lifted_args, 
+                        Sql.expr_type expr tables sources))
+                  ))
+               ])
+            ))
       | Sql.Case(cases, else_branch) ->
          let (ret_calc, else_cond) = 
             List.fold_left (fun (ret_calc, prev_cond) (curr_cond, curr_term) -> 
