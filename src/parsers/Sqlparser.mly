@@ -88,7 +88,8 @@ let bind_select_vars q =
 %token JOIN INNER OUTER LEFT RIGHT ON NATURAL EXISTS IN SOME ALL UNION
 %token CREATE TABLE FROM USING SELECT WHERE GROUP BY HAVING ORDER
 %token SOCKET FILE FIXEDWIDTH VARSIZE OFFSET ADJUSTBY SETVALUE LINE DELIMITED
-%token EXTRACT LIST DISTINCT
+%token EXTRACT LIST DISTINCT 
+%token CASE WHEN ELSE THEN END
 %token POSTGRES RELATION PIPE
 %token ASC DESC
 %token SOURCE ARGS INSTANCE TUPLE ADAPTOR BINDINGS STREAM
@@ -313,6 +314,23 @@ expression:
                                          Sql.Var($5)])
          | _ -> bail ("Invalid field '"^field^"' referenced in EXTRACT")
    }
+| CASE expression WHEN caseSimpleWhenClauseList caseElseClause END {
+      Sql.Case(List.map (fun (cmp,ret) -> 
+         (Sql.Comparison($2,Types.Eq,cmp), ret)) $4, $5)
+   }
+| CASE WHEN caseSearchWhenClauseList caseElseClause END { Sql.Case($3, $4) }
+
+caseElseClause:
+| ELSE expression  { $2 }
+|                  { Sql.Const(CInt(0)) }
+
+caseSimpleWhenClauseList:
+| expression THEN expression                               { [$1,$3] }
+| expression THEN expression WHEN caseSimpleWhenClauseList { ($1,$3)::$5 }
+
+caseSearchWhenClauseList:
+| condition THEN expression                               { [$1,$3] }
+| condition THEN expression WHEN caseSearchWhenClauseList { ($1,$3)::$5 }
 
 functionParameters: 
 | expression COMMA functionParameters { $1::$3 }

@@ -194,6 +194,9 @@ let rec normalize_agg_target_expr ?(vars_bound = false) gb_vars expr =
             bound. *)
          Sql.ExternalFn(fn, 
             List.map (fun arg -> rcr ~b:(not (Sql.is_agg_expr arg)) arg) fargs)
+
+     | Sql.Case(cases, else_branch) -> 
+         Sql.Case(List.map (fun (c,e) -> (c,rcr e)) cases, rcr else_branch)
    end
 
 (**
@@ -770,6 +773,21 @@ and calc_of_sql_expr ?(materialize_query = None)
                      Sql.expr_type expr tables sources))
                ))
             ])
+      | Sql.Case(cases, else_branch) ->
+         let (ret_calc, else_cond) = 
+            List.fold_left (fun (ret_calc, prev_cond) (curr_cond, curr_term) -> 
+               let full_cond = (Sql.mk_and prev_cond curr_cond)
+               in (
+                  CalcRing.mk_sum [ret_calc; 
+                     CalcRing.mk_prod [rcr_c full_cond;
+                                       rcr_e curr_term]],
+                  (Sql.mk_and prev_cond (Sql.Not(curr_cond)))
+               )
+            ) (CalcRing.zero, Sql.ConstB(true))cases
+         in
+            CalcRing.mk_sum [ret_calc; 
+               CalcRing.mk_prod [rcr_c else_cond; rcr_e else_branch]]
+      
    end
 
 (**

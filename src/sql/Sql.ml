@@ -104,6 +104,11 @@ type expr_t =
                                                 only makes sense if this
                                                 expression appears in the target
                                                 (or having) clause(s). *)
+ | Case of (cond_t * expr_t) list * expr_t  (** A branching expression.  A list 
+                                                of conditions to be evaluated in 
+                                                order, and an else clause to be 
+                                                evaluated if nothing else is 
+                                                true. *)
 
 (**
    A member of the target clause (a named Sql expression).  The result of the 
@@ -299,6 +304,7 @@ let name_of_expr (expr:expr_t): string =
       | Var(_,vn,_)         -> vn
       | SQLArith(_,_,_)
       | ExternalFn(_,_)
+      | Case(_)              
       | Negation(_)         -> arbitrary "expression"
       | NestedQ(_)          -> arbitrary "nested_query"
       | Aggregate(a,_)      -> arbitrary (
@@ -345,6 +351,10 @@ let rec string_of_expr (expr:expr_t): string =
                             (string_of_expr a)^")"
       | ExternalFn(fn,fargs) -> fn^"("^(ListExtras.string_of_list ~sep:", "
                                           string_of_expr fargs)^")"
+      | Case(cases, else_branch) -> 
+         "CASE "^(String.concat " " (List.map (fun (c,e) -> 
+               "WHEN "^(string_of_cond c)^" THEN "^(string_of_expr e)) cases))^
+         " ELSE "^(string_of_expr else_branch)
 
 (**
    Produce the (Sqlprser-compatible) representation of the specified SQL 
@@ -490,6 +500,10 @@ let rec expr_type ?(strict = true) (expr:expr_t) (tables:table_t list)
                                                                 string_of_type 
                                                                 arg_types)^")")
          end
+      | Case(cases, else_branch) ->
+         Types.escalate_type_list 
+            ((expr_type else_branch tables sources) :: 
+               (List.map (fun (_,x) -> expr_type x tables sources) cases))
     
 (**
    Compute the schema of a labeled source.  Like source_schema, but the schema
@@ -778,6 +792,7 @@ and bind_cond_vars (cond:cond_t) (tables:table_t list)
 *)
 and bind_expr_vars (expr:expr_t) (tables:table_t list) 
                    (sources:labeled_source_t list): expr_t =
+   let rcr_c c = bind_cond_vars c tables sources in
    let rcr_e e = bind_expr_vars e tables sources in
    let rcr_q q = bind_select_vars ~parent_sources:sources q tables in
    Debug.print "LOG-SQL-BIND" (fun () ->
@@ -800,6 +815,9 @@ and bind_expr_vars (expr:expr_t) (tables:table_t list)
          Aggregate(CountAgg(Some(List.map bind_var fields)), rcr_e a)
       | Aggregate(agg,a) -> Aggregate(agg, rcr_e a)
       | ExternalFn(fn,fargs) -> ExternalFn(fn, List.map rcr_e fargs)
+      | Case(cases, else_branch) -> 
+         Case(List.map (fun (c,e) -> (rcr_c c, rcr_e e)) cases, 
+              rcr_e else_branch)
 
 (**
    Determine whether the indicated expression requires an aggregate computation.
@@ -816,6 +834,9 @@ let rec is_agg_expr (expr:expr_t): bool =
       | Aggregate(_,_) -> true
       | ExternalFn(fn,fargs) -> 
          List.fold_left (||) false (List.map is_agg_expr fargs)
+      | Case(cases, else_branch) -> 
+         List.fold_left (||) (is_agg_expr else_branch) 
+                        (List.map (fun (_,x) -> is_agg_expr x) cases)
 
 (**
    Determine whether the indicated SQL query is an aggregate query.

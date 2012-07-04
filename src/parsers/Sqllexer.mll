@@ -90,7 +90,12 @@ let keywords =
         "EXTRACT", EXTRACT;
         "LIKE", LIKE;
         "LIST", LIST; 
-        "DISTINCT", DISTINCT;       
+        "DISTINCT", DISTINCT;
+        "CASE", CASE;
+        "END", END;
+        "WHEN", WHEN;
+        "ELSE", ELSE;
+        "THEN", THEN;
     ]
 let _ = hashtbl_of_pair_list keyword_table keywords
 
