@@ -98,8 +98,8 @@ class GenericUnitTest
         when :singleton then 
           (diff(query[:expected], query[:result]) != "Different")
         when :onelevel then
-          expected = query[:expected];
-          result = query[:result]
+          expected = query[:expected].map { |k,v| [k.join("/"), v] }.to_h;
+          result = query[:result].map { |k,v| [k.join("/"), v] }.to_h;
           raise "Got nil result" if result.nil?;
           raise "Metadata has nil expected results" if expected.nil?;
           not ((expected.keys + result.keys).uniq.find do |k|
