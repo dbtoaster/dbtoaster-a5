@@ -304,8 +304,7 @@ type expr_t =
    | Unit (** 
          Unit operation. Does nothing, only returns value with unit type
       *)
-    
-
+   
 
 (* Expression traversal helpers *)
 
@@ -532,6 +531,18 @@ let string_of_arg a = match a with
         let f = String.concat ";"
           (List.map (fun (x,y) -> "\""^x^"\","^(string_of_type y)) args)
         in "ATuple(["^f^"])"
+    
+let rec escalate_type t1 t2 =
+   match (t1,t2) with 
+    | (TUnit,TUnit) -> TUnit
+    | (TBase(b1),TBase(b2)) -> TBase(Types.escalate_type b1 b2)
+    | (TTuple(f1),TTuple(f2)) -> TTuple(List.map2 escalate_type f1 f2)
+    | (Collection(a1,c1),
+       Collection(a2,c2)) -> Collection(a1,escalate_type c1 c2)
+    | (Fn(a1,r1), Fn(a2,r2)) -> Fn(List.map2 escalate_type a1 a2,
+                                   escalate_type r1 r2)
+    | (_, _) -> failwith ("Could not escalate "^(string_of_type t1)^", "^
+                          (string_of_type t2))
 
 let string_of_expr e =
   let ob () = pp_open_hovbox str_formatter 2 in

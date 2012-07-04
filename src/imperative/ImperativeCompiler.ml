@@ -681,13 +681,13 @@ struct
         *)
         t1
       | Host(TBase(bt1)), Host(TBase(bt2)) -> 
-         Host(TBase(escalate_type bt1 bt2))
+         Host(TBase(Types.escalate_type bt1 bt2))
       | _, _ when t1 = t2 -> t1
       | _, _ -> failwith ("incompatible types "^(sot t1)^" "^(sot t2))
     in
     let promote_types_op op t1 t2 = match t1, t2 with
       | Host(TBase(bt1)), Host(TBase(bt2)) -> 
-         Host(TBase(escalate_type bt1 bt2))
+         Host(TBase(Types.escalate_type bt1 bt2))
       | _, _ when t1 = t2 -> t1
       | _, _ -> failwith ("incompatible types for op "^
                            (string_of_op op)^" "^(sot t1)^" "^(sot t2))

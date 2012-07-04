@@ -347,15 +347,12 @@ let rec typecheck_expr e : K.type_t =
          if e_l = [] then failwith "Invalid (empty) combine operation" 
          else
             let ce_tl = List.map recur e_l in
-            List.fold_left (fun ce1_t ce2_t ->
-               begin match ce1_t, ce2_t with
-               | (K.Collection(_,c1_t), K.Collection(_,c2_t)) ->
-                  if (c1_t <> K.TUnit) && (c1_t = c2_t) then ce1_t
-                  else failwith "invalid collections for combine"
+            begin match List.fold_left K.escalate_type
+                                       (List.hd ce_tl) 
+                                       (List.tl ce_tl) with
+               | K.Collection _ as r -> r
                | _ -> failwith "invalid combine of non-collections"
-               end
-            ) (List.hd ce_tl) (List.tl ce_tl)
-
+            end
       (* e1 : t1 e2 : t2 * t1 <> Unit, t2 <> Unit, flat(t1), flat(t2) *      *)
       (* -------------------------------------------- * op(e1,e2) :          *)
       (* promote(t1,t2)                                                      *)
