@@ -12,14 +12,15 @@ type language_t =
    | Ocaml | Interpreter
 
 let languages =
+   (* string     token         human-readable string         show in help?  *)
    [  "AUTO"   , (Auto       , "automatic"                    , false); 
-      "SQL"    , (SQL        , "DBToaster SQL"                , true);
+      "SQL"    , (SQL        , "DBToaster SQL"                , false);
       "CALC"   , (Calc       , "DBToaster Relational Calculus", true);
       "PLAN"   , (MPlan      , "Materialization Plan"         , false);
       "M3"     , (M3         , "M3 Program"                   , true);
-      "DISTM3" , (DistM3     , "Distributable M3 Program"     , true);
+      "DISTM3" , (DistM3     , "Distributable M3 Program"     , false);
       "M3DM"   , (M3DM       , "M3 Domain Maintenance Program", false);
-      "K3"     , (K3         , "K3 Program"                   , true);
+      "K3"     , (K3         , "K3 Program"                   , false);
       "IMP"    , (IMP        , "Abstract Imperative Program"  , false);
       "SCALA"  , (Scala      , "Scala Code"                   , true);
       "OCAML"  , (Ocaml      , "Ocaml Code"                   , false);
@@ -101,7 +102,7 @@ let optimizations =
    ListAsSet.union (ListAsSet.multiunion optimizations_by_level) [
       "IGNORE-DELETES"; "HEURISTICS-ALWAYS-UPDATE";
       "HASH-STRINGS"; "EXPRESSIVE-TLQS"; "COMPILE-WITH-STATIC";
-      "CALC-DONT-CREATE-ZEROES";
+      "CALC-DONT-CREATE-ZEROES"; "HEURISTICS-ENABLE-INPUTVARS";
       
       (* This is generally more efficient, but doesn't respect side-effect-
          producing statements, and is unsafe *)
@@ -114,9 +115,10 @@ let specs:(Arg.key * Arg.spec * Arg.doc) list  = Arg.align [
    (  "-l", 
       (Arg.String(fun x -> output_language := parse_language x)), 
       "lang   Set the compiler's output language to lang");
-   (  "-i",
+(*     Disabled in the release.  Use .suffix instead  
+   (  "-i", 
       (Arg.String(fun x -> input_language := parse_language x)),
-      "lang   Set the compiler's input language to lang");
+      "lang   Set the compiler's input language to lang"); *)
    (  "-d",
       (Arg.String(fun x -> Debug.activate (String.uppercase x))),
       "mode   Activate indicated debugging output mode");

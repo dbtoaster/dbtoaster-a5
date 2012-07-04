@@ -1741,11 +1741,14 @@ end (* Typing *)
         | _ -> result ci (Fn(ty, MapElementRemove, nargs))
         end
 
-    | Fn(ty, External(id,arg_t,r_t), args) ->
+    | Fn(ty, External(inline_id,arg_t,r_t), args) ->
         let ci,nargs = recur args in
         if List.length nargs <> List.length args then
             failwith "invalid external function application"
-        else begin match id with
+            
+        else 
+        let id = String.lowercase inline_id in
+        begin match id with
             | "/" ->
               let arg = ssc (source_code_of_expr (List.hd nargs)) in 
                  result ci 
@@ -1754,9 +1757,19 @@ end (* Typing *)
                             arg ^ ")")), []))
             | "listmax" | "listmin" ->
               let c_fn_id = String.sub id 4 3 in
+              let arg_cast arg = 
+                 begin match (type_of_expr_t arg) with 
+                  | Host(TBase(base_t)) ->
+                     (Fn(ty, Ext(Apply("static_cast<"^
+                                       (Types.cpp_of_type base_t)^
+                                        ">")), [arg]))
+                  | _ -> failwith ("Invalid call to "^id)
+                 end
+              in
               begin match nargs with
                 | [Tuple(ft_l, f)] ->
-                  result ci (Fn(ty, Ext(Apply(c_fn_id)), f))
+                  result ci (Fn(ty, Ext(Apply(c_fn_id)), 
+                     (List.map arg_cast f)))
                 | _ -> result ci (Fn(ty, Ext(Apply(c_fn_id)), nargs))
               end
             | "date_part" ->

@@ -91,6 +91,23 @@ let string_of_type (ty: type_t): string =
       | TExternal(etype) -> etype
    end
 
+(**
+   Get the human-readable string representation of a type.  (Corresponds to
+   values accepted by Calculusparser)
+   @param ty   A type
+   @return     The human-readable representation of [ty]
+*)
+let cpp_of_type (ty: type_t): string =
+   begin match ty with
+      | TAny             -> "?"
+      | TBool            -> "bool"
+      | TInt             -> "long"
+      | TFloat           -> "double"
+      | TString          -> "string"
+      | TDate            -> "date"
+      | TExternal(etype) -> etype
+   end
+
 
 (**
    Get the string representation of a variable.  If the PRINT-VERBOSE debug mode
