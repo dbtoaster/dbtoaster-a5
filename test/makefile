@@ -217,7 +217,7 @@ query_tpch:
 	@$(FAST_QUERY_TEST) tpch5 --dataset tiny
 	@$(FAST_QUERY_TEST) tpch6 --dataset tiny
 	@$(FAST_QUERY_TEST) tpch7 --dataset tiny
-	@$(FAST_QUERY_TEST) tpch8 --dataset tiny
+#	@$(FAST_QUERY_TEST) tpch8 --dataset tiny  #slow compilation
 	@$(FAST_QUERY_TEST) tpch9 --dataset tiny
 	@$(FAST_QUERY_TEST) tpch10 --dataset tiny
 	@$(FAST_QUERY_TEST) tpch11 --dataset tiny

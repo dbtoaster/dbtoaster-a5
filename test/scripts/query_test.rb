@@ -243,6 +243,7 @@ class InterpreterUnitTest < GenericUnitTest
     cmd = "OCAMLRUNPARAM='#{$ocamlrunparam}';"+
        "#{dbt_base_cmd.join(" ")}"+
        " -d SINGLE-LINE-MAP-OUTPUT"+
+       " -d PARSEABLE-VALUES"+
        " -r 2>&1";
     IO.popen(cmd, "r") do |qin|
       starttime = Time.now;

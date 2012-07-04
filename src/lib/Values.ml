@@ -177,7 +177,9 @@ struct
     and string_of_value ?(sep = ";\n") v =
       begin match v with
       | Unit -> "unit"
-      | BaseValue(c) -> string_of_const c
+      | BaseValue(c) -> if Debug.active "PARSEABLE-VALUES"
+                        then sql_of_const c
+                        else string_of_const c
       | Tuple(fl) -> "("^(String.concat "," (List.map (string_of_value ~sep:sep)
                                                        fl))^")"
       | Fun(f) -> "<fun>"
