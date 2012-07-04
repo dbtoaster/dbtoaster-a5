@@ -228,6 +228,10 @@ let rec calc_of_query ?(query_name = None)
    );
    let source_calc = calc_of_sources tables sources in
    let cond_calc = calc_of_condition tables sources cond in
+   Debug.print "LOG-SQL-TO-CALC" (fun () ->
+      "Condition for query: \n"^
+      (CalculusPrinter.string_of_expr cond_calc)^"\n"
+   );
    let (agg_tgts, noagg_tgts) = 
       List.partition (fun (_,expr) -> Sql.is_agg_expr expr) targets in
    let check_gb_var_list tgt_name tgt_expr = 
@@ -342,6 +346,7 @@ let rec calc_of_query ?(query_name = None)
                Note that all of this must match the construction of noagg_calc 
                above.
             *)
+            let ret = 
             begin match agg_type with
                | Sql.SumAgg -> 
                   CalcRing.mk_val 
@@ -407,7 +412,10 @@ let rec calc_of_query ?(query_name = None)
                         ]
                      ]
                   ))
-            end
+            end in Debug.print "LOG-SQL-TO-CALC" (fun () ->
+               "Generated Calculus: \n"^
+               (CalculusPrinter.string_of_expr ret)^"\n"
+            ); ret
          )) tables sources tgt_expr
       )
    ) agg_tgts
@@ -584,6 +592,7 @@ and calc_of_condition (tables:Sql.table_t list)
             let (expr_val, expr_calc) = 
                lift_if_necessary ~t:"in" (rcr_e expr)
             in
+               print_endline "YO YO YO";
             (** Unlike the general OR, we can ensure that the condition is
                 an exclusive OR by making the list of comparisons unique *)
                CalcRing.mk_prod [expr_calc; 

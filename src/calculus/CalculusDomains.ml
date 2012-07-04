@@ -7,7 +7,7 @@ open Calculus
 let rec maintain (formula: Calculus.expr_t) : Calculus.expr_t =
    Calculus.fold (fun _ sl -> CalcRing.mk_sum (
                   if sl = [] then sl else 
-                     match (List.filter (fun x -> x <> CalcRing.one) []) with
+                     match (List.filter (fun x -> x <> CalcRing.one) sl) with
                         [] -> [CalcRing.one] | something_else -> something_else
                  ))
                  (fun _ -> CalcRing.mk_prod)
@@ -80,9 +80,10 @@ let mk_dom_var =
 let mk_exists (expr:expr_t): expr_t = 
    let dom_expr = (maintain expr) in
    Debug.print "LOG-MK-EXISTS" (fun () ->
-      "Making existence test with domain expression : \n" ^ (
-         (CalculusPrinter.string_of_expr dom_expr)
-      )
+      "Making existence test out of : \n"^ 
+      (CalculusPrinter.string_of_expr expr)^
+      "\nwith domain expression : \n"^
+      (CalculusPrinter.string_of_expr dom_expr)^"\n"
    );
    CalcRing.mk_val (Exists(dom_expr))
 ;;

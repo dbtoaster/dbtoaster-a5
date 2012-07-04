@@ -359,7 +359,7 @@ and string_of_cond (cond:cond_t): string =
                                "("^(string_of_expr b)^")"
       | And(a,b)      -> "("^(string_of_cond a)^") AND ("^(string_of_cond b)^")"
       | Or(a,b)       -> "("^(string_of_cond a)^") OR ("^(string_of_cond b)^")"
-      | Not(c)        -> "NOT"^(string_of_cond c)
+      | Not(c)        -> "NOT "^(string_of_cond c)
       | Exists(s)     -> "EXISTS ("^(string_of_select s)^")"
       | Like(e, s)    -> "("^(string_of_expr e)^") LIKE '"^s^"'"
       | InList(e, l)  -> "("^(string_of_expr e)^") IN VALUES ("^
