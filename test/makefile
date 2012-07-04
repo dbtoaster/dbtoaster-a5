@@ -209,14 +209,33 @@ query_employee:
 	@$(FAST_QUERY_TEST) employee/query65a
 
 query_tpch:
+	@$(FAST_QUERY_TEST) tpch1 --dataset tiny
+	@$(FAST_QUERY_TEST) tpch2 --dataset tiny
 	@$(FAST_QUERY_TEST) tpch3 --dataset tiny
 	@$(FAST_QUERY_TEST) tpch3
+	@$(FAST_QUERY_TEST) tpch4 --dataset tiny
+	@$(FAST_QUERY_TEST) tpch5 --dataset tiny
+	@$(FAST_QUERY_TEST) tpch6 --dataset tiny
+	@$(FAST_QUERY_TEST) tpch7 --dataset tiny
+	@$(FAST_QUERY_TEST) tpch8 --dataset tiny
+	@$(FAST_QUERY_TEST) tpch9 --dataset tiny
+	@$(FAST_QUERY_TEST) tpch10 --dataset tiny
 	@$(FAST_QUERY_TEST) tpch11 --dataset tiny
 #	@$(FAST_QUERY_TEST) tpch11 
+	@$(FAST_QUERY_TEST) tpch11a --dataset tiny
+	@$(FAST_QUERY_TEST) tpch12 --dataset tiny
+	@$(FAST_QUERY_TEST) tpch13 --dataset tiny
+	@$(FAST_QUERY_TEST) tpch14 --dataset tiny
+	@$(FAST_QUERY_TEST) tpch15 --dataset tiny
+	@$(FAST_QUERY_TEST) tpch16 --dataset tiny
 	@$(FAST_QUERY_TEST) tpch17 --dataset tiny
 	@$(FAST_QUERY_TEST) tpch17 
 	@$(FAST_QUERY_TEST) tpch18 --dataset tiny
 #	@$(FAST_QUERY_TEST) tpch18 #sloooow
+	@$(FAST_QUERY_TEST) tpch19 --dataset tiny
+	@$(FAST_QUERY_TEST) tpch20 --dataset tiny
+	@$(FAST_QUERY_TEST) tpch21 --dataset tiny
+	@$(FAST_QUERY_TEST) tpch22 --dataset tiny
 	@$(FAST_QUERY_TEST) tpch22a --dataset tiny
 	@$(FAST_QUERY_TEST) tpch22a
 	@$(FAST_QUERY_TEST) ssb4 --dataset tiny

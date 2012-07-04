@@ -744,7 +744,7 @@ let fix_lambda_types expr =
       );
       new_lam
    in
-   let fix_assoc lam subexp_a subexp_b =
+   let rec fix_assoc lam subexp_a subexp_b =
       let new_lam =
          begin match lam with
             | AssocLambda(arg_a, arg_b, body) -> 
@@ -753,7 +753,11 @@ let fix_lambda_types expr =
                let new_arg_b, new_body_b =
                   fix_body false arg_b subexp_b new_body_a in
                      AssocLambda(new_arg_a, new_arg_b, new_body_b)
-            | _ -> k3_bug lam "Invalid external lambda expression"; Unit
+            | IfThenElse(cond,t,e) ->
+               IfThenElse(cond, 
+                  fix_assoc t subexp_a subexp_b, 
+                  fix_assoc e subexp_a subexp_b)
+            | _ -> k3_bug lam "Invalid associative lambda expression"; Unit
          end
       in
       Debug.print "LOG-FIX-LAMBDA-TYPES" (fun () ->
@@ -1665,7 +1669,7 @@ let rec lift_if0s expr =
 let optimize ?(optimizations=[]) trigger_vars expr =
   let apply_opts e =
       Debug.print "LOG-K3-OPT-DETAIL" (fun () -> "LIFT IFS");
-    let e1 = (lift_ifs trigger_vars e) in
+    let e1 = Fixpoint.compute_with_history (lift_ifs trigger_vars) e in
       Debug.print "LOG-K3-OPT-DETAIL" (fun () -> "SIMPLIFY COLLECTIONS");
     let e2 = (simplify_collections (not(List.mem NoFilter optimizations)) e1) in
       Debug.print "LOG-K3-OPT-DETAIL" (fun () -> "SIMPLIFY IF CHAINS");
