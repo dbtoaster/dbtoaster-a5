@@ -97,8 +97,8 @@ let prepare_expr (scope:var_t list) (expr:expr_t) :
 (***** END EXISTS HACK *****) 
              | Lift (_, _) -> (rels, lifts @ [term], values)
              | AggSum (_, _) ->
-                failwith ("[prepare_expr] Error: " ^ 
-                          "AggSums are supposed to be removed.")
+                bail_out expr ("[prepare_expr] Error: " ^ 
+                               "AggSums are supposed to be removed.")
       ) ([], [], []) rest_terms
    in
       (const_terms, rel_terms, lift_terms, value_terms)    
@@ -594,10 +594,33 @@ let rec materialize ?(scope:var_t list = [])
                         "\n\t MapName: " ^ subexpr_name
                      );
         
+                     (* It is possible that the optimizer breaks the   *)
+                     (* assumption of having an aggsum-free expression.*)
+                     let contains_aggsum expr = 
+                        CalcRing.fold (List.fold_left (||) false) 
+                                      (List.fold_left (||) false) 
+                                      (fun x -> x)
+                                      (fun lf -> begin match lf with
+                                          | AggSum(_, _) -> true
+                                          | _ -> false
+                                       end) expr
+                     in
                      let (todos_subexpr, mat_subexpr) = 
-                        materialize_expr heuristic_options db_schema history 
-                                         subexpr_name event expr_scope 
-                                         subexpr_schema subexpr_opt 
+                        if contains_aggsum subexpr_opt then
+                        begin
+                           Debug.print "LOG-HEURISTICS-DETAIL" (fun () -> 
+                              "[Heuristics] Not an aggsum-free expression: " ^
+                              (string_of_expr subexpr_opt)
+                           );
+                           materialize ~scope:scope heuristic_options 
+                                       db_schema history subexpr_name event 
+                                       (mk_aggsum subexpr_opt subexpr_schema)
+                        end
+                        else begin
+                           materialize_expr heuristic_options db_schema history
+                                            subexpr_name event expr_scope 
+                                            subexpr_schema subexpr_opt
+                        end 
                      in
                      Debug.print "LOG-HEURISTICS-DETAIL" (fun () -> 
                         "[Heuristics] Materialized form: " ^
@@ -732,7 +755,7 @@ and materialize_expr (heuristic_options:heuristic_options_t)
                      ((todos @ todo, CalcRing.mk_prod [mats; mat_lift_expr]), 
                       (j + 1, CalcRing.mk_prod [whole_expr; mat_lift_expr]))
                 | _  ->
-                   Calculus.bail_out lift "Not a lift expression"
+                   bail_out lift "Not a lift expression"
           ) (([], CalcRing.one), (1, agg_rel_expr)) 
             (CalcRing.prod_list lift_expr) 
       ) 
@@ -782,7 +805,7 @@ and materialize_expr (heuristic_options:heuristic_options_t)
                        (todos, Some(mats))
                   else if (IVC.needs_runtime_ivc (Schema.table_rels db_schema)
                                                        agg_rel_expr) then
-                     (Calculus.bail_out agg_rel_expr
+                     (bail_out agg_rel_expr
                          ("Unsupported query. " ^
                           "Cannot materialize IVC inline (yet)."))
                   else
