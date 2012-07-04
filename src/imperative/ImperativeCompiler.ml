@@ -786,7 +786,11 @@ struct
           | _ -> false
         in 
         if valid then Host(r_t)
-        else failwith ("invalid "^id^" external function in imp")
+        else failwith ("invalid "^id^" external function in imp : "^
+                       (ListExtras.ocaml_of_list K.string_of_type
+                                                 (K.types_of_arg arg_t))^
+                       " vs "^
+                       (ListExtras.ocaml_of_list string_of_type arg_types))
       | Ext _ -> failwith "external function appeared in untyped imp"
     in
     let infer_expr env c_opts untyped_e =
@@ -1757,19 +1761,23 @@ end (* Typing *)
                             arg ^ ")")), []))
             | "listmax" | "listmin" ->
               let c_fn_id = String.sub id 4 3 in
-              let arg_cast arg = 
-                 begin match (type_of_expr_t arg) with 
-                  | Host(TBase(base_t)) ->
-                     (Fn(ty, Ext(Apply("static_cast<"^
-                                       (Types.cpp_of_type base_t)^
-                                        ">")), [arg]))
-                  | _ -> failwith ("Invalid call to "^id)
-                 end
+              let base_type arg = begin match (type_of_expr_t arg) with
+               | Host(TBase(base_t)) -> base_t
+               | _ -> failwith ("Invalid call to "^id)
+              end in
+              let escalate f = Types.escalate_type_list ~opname:id
+                                                        (List.map base_type f)
+              in
+              let arg_cast tgt_type arg = 
+                  (Fn(ty, Ext(Apply("static_cast<"^
+                                    (Types.cpp_of_type tgt_type)^
+                                     ">")), [arg]))
               in
               begin match nargs with
                 | [Tuple(ft_l, f)] ->
+                  let tgt_type = escalate f in
                   result ci (Fn(ty, Ext(Apply(c_fn_id)), 
-                     (List.map arg_cast f)))
+                     (List.map (arg_cast tgt_type) f)))
                 | _ -> result ci (Fn(ty, Ext(Apply(c_fn_id)), nargs))
               end
             | "date_part" ->

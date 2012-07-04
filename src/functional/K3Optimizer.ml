@@ -727,9 +727,11 @@ let fix_lambda_types expr =
       let new_lam = 
          begin match lam with
             | Lambda(arg, body) -> 
-               let arg, body = fix_body is_coll arg subexp body in
-                  Lambda(arg,body)
-            | ExternalLambda(id,arg,ty) -> lam
+               let new_arg, new_body = fix_body is_coll arg subexp body in
+                  Lambda(new_arg,new_body)
+            | ExternalLambda(id,arg,ty) -> 
+               let (new_arg, _) = fix_body false arg subexp Unit in
+                  ExternalLambda(id, new_arg, ty)
             | IfThenElse(cond,t,e) ->
                IfThenElse(cond, 
                   fix_lambda is_coll t subexp, 

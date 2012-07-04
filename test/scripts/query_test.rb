@@ -15,7 +15,7 @@ def results_file(path, delim = /,/, reverse = false)
   File.open(path).readlines.
     delete_if { |l| l.chomp == "" }.  
     map do |l|
-      k = l.split(delim).map { |i| i.extract_dbt_value }
+      k = l.split(delim).map { |i| i.mirror_chomp.extract_dbt_value }
       [k, k.pop];
     end.map { |k,v| if reverse then [k.reverse,v] else [k,v] end }.to_h
 end

@@ -10,14 +10,14 @@ class String
   end
 
   def extract_dbt_value
-    case self.mirror_chomp
-      when /^ *([0-9]+)\-([0-9]+)\-([0-9]+)$/,
-           /^ *DATE\('([0-9]+)\-([0-9]+)\-([0-9]+)'\)$/ 
+    case self
+      when /^([0-9]+)\-([0-9]+)\-([0-9]+)$/,
+           /^DATE\('([0-9]+)\-([0-9]+)\-([0-9]+)'\)$/ 
                   then ($1.to_i*10000+$2.to_i*100+$3.to_i).to_f;
-      when /^ *([\-\+]?[0-9]+\.[0-9]*e?[\-\+]?[0-9]*)$/ then $1.to_f;
-      when /^ *([\-\+]?[0-9]+)$/ then $1.to_f;
-      when /^ *'([a-zA-Z0-9_#\-,.:!? ]*)'$/ then $1
-      when /^ *([a-zA-Z0-9][a-zA-Z0-9_#\-,.:!? ]*)$/ then $1
+      when /^([\-\+]?[0-9]+\.[0-9]*e?[\-\+]?[0-9]*)$/ then $1.to_f;
+      when /^([\-\+]?[0-9]+)$/ then $1.to_f;
+      when /^'([a-zA-Z0-9_#\-,.:!? ]*)'$/ then $1
+      when /^([a-zA-Z0-9_#\-,.:!? ]*)$/ then $1
       else self
     end
   end
@@ -70,7 +70,7 @@ class OcamlDB < Hash
             v unless v == 0;
           else raise "Unknown value type: '#{contents}'"
         end
-      k = k.map { |k_elem| k_elem.extract_dbt_value }
+      k = k.map { |k_elem| k_elem.mirror_chomp.extract_dbt_value }
       k = k.reverse if reverse;
       into[k] = val unless val.nil?;
     end
