@@ -18,7 +18,7 @@
 -- 5,5 -> 1
 
 
-CREATE STREAM R(A string, B string) 
+CREATE STREAM R(A int, B int) 
   FROM FILE '../../experiments/data/simple/tiny/r.dat' LINE DELIMITED
   CSV ();
 
