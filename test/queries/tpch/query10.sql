@@ -5,12 +5,12 @@
 INCLUDE 'test/queries/tpch/schemas.sql';
 
 SELECT  c.custkey, c.name, 
-        SUM(l.extendedprice * (1 - l.discount)) AS revenue, 
         c.acctbal,
         n.name,
         c.address,
         c.phone,
-        c.comment
+        c.comment,
+        SUM(l.extendedprice * (1 - l.discount)) AS revenue
 FROM    customer c, orders o, lineitem l, nation n
 WHERE   c.custkey = o.custkey
   AND   l.orderkey = o.orderkey

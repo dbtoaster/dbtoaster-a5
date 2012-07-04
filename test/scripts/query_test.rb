@@ -82,6 +82,7 @@ class GenericUnitTest
   
   def diff(e, r)
     if (e == r)                            then "Same"
+    elsif (e.is_a? String) || (r.is_a? String) then "Different"
     elsif e == nil && r.abs < $precision   then "Close"
     elsif r == nil && e.abs < $precision   then "Close"
     elsif e == nil                         then "Different"
