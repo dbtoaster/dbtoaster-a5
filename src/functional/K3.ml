@@ -1154,6 +1154,8 @@ let nice_code_of_prog ((db_schema, (maps,patts),
    ) triggers) ^ "\n"
 )
 
+module VarMap = Map.Make (String);;
+exception AnnotationException of expr_t option * type_t option * string
 (**
 This function takes a K3 expression where the type of collections is unknown,
 determines the type of those collections and returns the K3 expression with 
@@ -1166,13 +1168,15 @@ To determine the type of a collection, two mechanisms are used:
   the type of those collections is determined by checking which type of 
   values are given when the function gets called
 *)
-module VarMap = Map.Make (String);;
 let annotate_collections e =
+  let bail ?(t = None) ?(exp = None) msg =
+     raise (AnnotationException(exp, t, msg))
+  in
   let rec _annotate_collections ?(argt = [TUnit]) e var_map = 
     let fnret f = 
       match f with
       | Fn(_, r) -> r 
-      | _ -> failwith "Function expected"
+      | _ -> bail ~t:(Some(f)) "Function expected"
     in
     let add_args args m =
       match args with
@@ -1194,13 +1198,13 @@ let annotate_collections e =
           ATuple(List.map2 (fun (id, at) rt -> 
                     (id, transfer_annotation at rt)
                 ) l ts)
-      | _, t -> failwith ("Expected Tuple, found: " ^ (string_of_type t))
+      | _, t -> bail ~t:(Some(t)) ("Expected Tuple for "^(string_of_arg args))
     in
     let type_of_schema t = List.map (fun (i, t) -> t) t in
     let type_of_collection t = 
       match t with
       | Collection(_, tp) -> tp
-      | _ -> failwith ("Collection expected, found: " ^ (string_of_type t))
+      | _ -> bail ~t:(Some(t)) ("Collection expected")
     in
     let key_val t =
       match t with
@@ -1236,7 +1240,7 @@ let annotate_collections e =
          an int (e.g. true + true) *)
       | (TBase(Types.TBool), TBase(Types.TBool)) -> Types.TInt
       | (TBase(Types.TDate), TBase(Types.TDate)) -> Types.TDate
-      | _ -> failwith ("Failed to match " ^ (string_of_type t1) ^ 
+      | _ -> bail ("Failed to match " ^ (string_of_type t1) ^ 
                        " and " ^ (string_of_type t2))
     )
     in
@@ -1257,7 +1261,7 @@ let annotate_collections e =
     | Tuple e_l -> 
       let els, tps = annotate_list e_l in 
          (Tuple(els), TTuple(tps))
-    | Project (ce, idx) -> failwith "not implemented" (* TODO: implement! *)
+    | Project (ce, idx) -> bail "not implemented" (* TODO: implement! *)
     | Singleton ce      -> 
       let ace, act = _annotate_collections ce var_map in
          (Singleton(ace), Collection(Intermediate, act))
@@ -1292,16 +1296,16 @@ let annotate_collections e =
       let ce2_e, _ = _annotate_collections ce2 var_map in
          (Leq(ce1_e, ce2_e), TBase(Types.TBool))
     | IfThenElse0 (ce1,ce2)  -> 
-      let ce1e, _ = _annotate_collections ce1 var_map in
-      let ce2e, ce2t = _annotate_collections ce2 var_map in
+      let ce1e, _ = _annotate_collections ~argt:argt ce1 var_map in
+      let ce2e, ce2t = _annotate_collections ~argt:argt ce2 var_map in
          (IfThenElse0(ce1e, ce2e), ce2t)
     | Comment(c, cexpr) ->
-      let ce, ct = _annotate_collections cexpr var_map in
+      let ce, ct = _annotate_collections ~argt:argt cexpr var_map in
          (Comment(c, ce), ct)
     | IfThenElse  (pe,te,ee) -> 
-      let pe_e, _    = _annotate_collections pe var_map in
-      let te_e, te_t = _annotate_collections te var_map in
-      let ee_e, _    = _annotate_collections ee var_map in
+      let pe_e, _    = _annotate_collections ~argt:argt pe var_map in
+      let te_e, te_t = _annotate_collections ~argt:argt te var_map in
+      let ee_e, _    = _annotate_collections ~argt:argt ee var_map in
          (IfThenElse(pe_e, te_e, ee_e), te_t)
     | Block   e_l        -> 
       let le, lt = annotate_list e_l in
@@ -1312,7 +1316,7 @@ let annotate_collections e =
         match ct with
         | Collection(_, argt) -> _annotate_collections 
                                         ~argt:[argt] fn_e var_map
-        | _ -> failwith "Expected collection"
+        | _ -> bail ~t:(Some(ct)) "Expected collection"
       in
          (Iterate(fe, ce), TUnit)
     | Lambda  (arg_e,ce) -> 
@@ -1351,8 +1355,8 @@ let annotate_collections e =
                (Flatten(c_e), Collection(Intermediate, TTuple(t @ k)))
             | Collection(_, t) -> 
                (Flatten(c_e), Collection(Intermediate, TTuple(t :: k)))
-            | _ -> failwith "Expected nested collection")
-        | _ -> failwith "Expected collection"
+            | _ -> bail ~t:(Some(v)) "Expected nested collection")
+        | _ -> bail "Expected collection"
       )
     | Aggregate(fn_e,ie,ce) -> 
       let c_e, c_t = _annotate_collections ce var_map in

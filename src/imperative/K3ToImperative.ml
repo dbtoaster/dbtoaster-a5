@@ -175,12 +175,13 @@ struct
     | Undecorated(K.ExternalLambda(_,_,_)) -> true
     | Decorated(Lambda _) -> false
     | Undecorated(K.Lambda(_,_)) -> false
-    | _ -> failwith "invalid lambda"
+    | _ -> failwith "invalid lambda (a)"
 
-  let arg_of_lambda leaf_tag = match leaf_tag with
+  let rec arg_of_lambda leaf_tag = match leaf_tag with
+    | Undecorated(K.ExternalLambda(_,x,_)) -> x
     | Decorated(Lambda(x)) -> x
     | Undecorated(K.Lambda(x,_)) -> x
-    | _ -> failwith "invalid lambda"
+    | _ -> failwith ("invalid lambda (b) ("^(string_of_tag leaf_tag)^")")
 
   let arg_of_assoc_lambda leaf_tag = match leaf_tag with
     | Decorated(AssocLambda(x,y)) -> (x,y)

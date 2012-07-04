@@ -781,14 +781,19 @@ if stage_is_active StageK3ToTargetLanguage then (
          with 
          | K3Interpreter.InterpreterException(expr,msg) ->
             (begin match expr with 
-               | Some(s) -> error ~detail:(fun () -> K3.string_of_expr s) msg
-               | None    -> error msg
+               | Some(s) -> error ~exc:true ~detail:(fun () -> K3.string_of_expr s) msg
+               | None    -> error ~exc:true msg
             end)
          | K3Typechecker.K3TypecheckError(stack,msg) ->
             bug ~exc:true ~detail:(fun () -> 
                K3Typechecker.string_of_k3_stack stack) msg
          | Failure(msg) ->
-            error msg
+            error ~exc:true msg
+         | K3.AnnotationException(None, Some(t), msg) ->
+            error ~exc:true ~detail:(fun () -> K3.string_of_type t) msg
+         | K3.AnnotationException(_, _, msg) ->
+            error ~exc:true msg
+         
                
       )   
       | Ocaml       -> bug "Ocaml codegen not implemented yet"

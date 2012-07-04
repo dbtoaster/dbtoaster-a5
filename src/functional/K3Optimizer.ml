@@ -1032,6 +1032,13 @@ let rec simplify_collections filter expr =
          | _ -> Block(b_terms)
       end
     
+    | Map(IfThenElse(cond,t,e), coll) -> 
+            IfThenElse(cond,Map(t,coll),Map(e,coll))
+    | Apply(IfThenElse(cond,t,e), coll) -> 
+            IfThenElse(cond,Apply(t,coll),Apply(e,coll))
+    | Iterate(IfThenElse(cond,t,e), coll) -> 
+            IfThenElse(cond,Iterate(t,coll),Iterate(e,coll))
+    
     | Map(map_f, Singleton(e)) -> Singleton(Apply(map_f, e))
     | Flatten(Singleton(c)) -> c
     | Flatten(Map(Lambda(map_arg, Singleton(map_body)), map_tgt)) ->
