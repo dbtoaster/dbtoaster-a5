@@ -83,47 +83,48 @@
 These flags are passed to the dbtoaster compiler with the <span class="code">-F</span> flag.  The <span class="code">-O1</span> and <span class="code">-O3</span> flags each activate a subset of these flags. <span class="code">-O2</span> is used by default (no optimization flags active).
 
 <dl>
-  <dt class="code">IGNORE-DELETES</dt>
-  <dd>Do not generate code for deletion triggers.  The resulting programs will be simpler, and sometimes have fewer datastructures, but will not support deletion events.  Not activated by default at any optimization level.</dd>
-  
-  <dt class="code">HEURISTICS-ALWAYS-UPDATE</dt>
-  <dd>In some cases, it is slightly more efficient to re-evaluate parts of the expression tree rather than computing an incremental update.  If this flag is on, the compiler will always compute updates incrementally, regardless. Not activated by default at any optimization level.</dd>  
   
   <dt class="code">HEURISTICS-ENABLE-INPUTVARS</dt>
-  <dd>Enable experimental support for incremental view caches.  Queries with joins (and correlations) on inequality predicates are implemented as a nested-loop semijoin (more complex semijoins are in development).  If this flag is on, the compiler will cache and incrementally maintain the results of this semijoin.  This is typically a bad idea, since the cost of maintaining the cached values is often higher than the cost of the nested loop scan.  However, if the domain of the variables appearing in the join predicate is small, this flag can drastically improve performance.  Future versions of DBToaster will include a cost-based optimizer that activates this flag automatically on a per-datastructure granularity.  Not activated by default at any optimization level.</dd>  
-  
-  <dt class="code">HASH-STRINGS</dt>
-  <dd>Do not use strings during evalation. All strings are replaced by their integer hash (using each runtime's native hashing mechanism).  This makes query evalation faster, but is not guaranteed to produce correct results if a hash collision occurs.  Furthermore, strings that would normally appear in the output are replaced by their integer hash values.  Not activated by default at any optimization level.</dd>  
+  <dd>Enable experimental support for incremental view caches.  Queries with joins (and correlations) on inequality predicates are implemented in a way that corresponds roughly to nested-loop one-way joins in stream processing (a tree-based implementation is in development).  If this flag is on, the compiler will cache and incrementally maintain the results of this one-way join.  This is typically a bad idea, since the cost of maintaining the cached values is often higher than the cost of the nested loop scan.  However, if the domains of the variables appearing in the join predicate are small, this flag can drastically improve performance (e.g., for the VWAP example query).  Future versions of DBToaster will include a cost-based optimizer that automatically applies this flag when appropriate.  This optimization is not activated by default at any optimization level.</dd>  
 
   <dt class="code">EXPRESSIVE-TLQS</dt>
-  <dd>By default, each user-provided (top-level) query is materialized as a single map. If this flag is turned on, the compiler will materialize top-level queries as multiple maps (if it is more efficient to do so), and only combine them when requested to do so.  For more complex queries (in particular queries that use the AVG aggregate), this results in faster processing rates and a lower overall computational cost.  However, because the final evaluation of the top-level query is only performed only on request, access latencies are higher.  Not activated by default at any optimization level.</dd>  
+  <dd>By default, each user-provided (top-level) query is materialized as a single map. If this flag is turned on, the compiler will materialize top-level queries as multiple maps (if it is more efficient to do so), and only combine them on request.  For more complex queries (in particular nested aggregate, and  AVG aggregate queries), this results in faster processing rates, and if fresh results are required less than once per update, a lower overall computational cost as well.  However, because the final evaluation of the top-level query is not performed until a result is requested, access latencies are higher.  This optimization is not activated by default at any optimization level.</dd>
+  
+  <dt class="code">IGNORE-DELETES</dt>
+  <dd>Do not generate code for deletion triggers.  The resulting programs will be simpler, and sometimes have fewer datastructures, but will not support deletion events.  This optimization is not activated by default at any optimization level.</dd>
+  
+  <dt class="code">HEURISTICS-ALWAYS-UPDATE</dt>
+  <dd>In some cases, it is slightly more efficient to re-evaluate expressions from scratch rather than maintaining them with their deltas (for example, certain queries containing nested aggregates).  Normally the compiler's heuristics will make a best-effort guess about whether to re-evaluate or incrementally maintain the expression.  If this flag is on, the compiler will incrementally maintain all expressions and never re-evaluate.</dd>  
+  
+  <dt class="code">HASH-STRINGS</dt>
+  <dd>Do not use strings during evalation. All strings are immediately replaced by their integer hashes (using each runtime's native hashing mechanism) as soon as they are parsed.  This makes query evalation faster, but is not guaranteed to produce correct results if a hash collision occurs.  Furthermore, strings that would normally appear in the output are output as their integer hash values instead.  This optimization is not activated by default at any optimization level.</dd>    
 
   <dt class="code">COMPILE-WITH-STATIC</dt>
-  <dd>Perform static linking on compiled binaries (e.g., invoke gcc with <span class="code">-static</span>).  The resulting binaries will be faster the first time they are run.  Not activated by default at any optimization level.</dd>  
+  <dd>Perform static linking on compiled binaries (e.g., invoke gcc with <span class="code">-static</span>).  The resulting binaries will be faster the first time they are run.  This optimization is not activated by default at any optimization level.</dd>  
 
   <dt class="code">CALC-DONT-CREATE-ZEROES</dt>
-  <dd>Avoid creating empty relation terms during pre-evaluation.  Empty relation terms are aggressively propagated thoughout expressions in which they occur, and may result in expressions that do not need to be incrementally maintained (because they are guaranteed to be always empty).  Activating this flag is only useful if you want to inspect the generated Calculus/M3 code by hand. Not activated by default at any optimization level.</dd>  
+  <dd>Avoid creating empty relation terms during pre-evaluation.  Empty relation terms are aggressively propagated thoughout expressions in which they occur, and may result in expressions that do not need to be incrementally maintained (because they are guaranteed to be always empty).  Activating this flag is only useful if you want to inspect the generated Calculus/M3 code by hand. This optimization is not activated by default at any optimization level.</dd>  
   
   <dt class="code">AGGRESSIVE-FACTORIZE</dt>
-  <dd>When optimizing expressions in DBToaster relational calculus, perform factorization as aggressively as possible.  For some queries, particularly those with nested subqueries, this can generate much more efficient code.  However, it makes compilation slower on some queries.  Activated by <span class="code">-O3</span>.</dd>
+  <dd>When optimizing expressions in DBToaster relational calculus, perform factorization as aggressively as possible.  For some queries, particularly those with nested subqueries, this can generate much more efficient code.  However, it makes compilation slower on some queries.  This optimization is automatically activated by <span class="code">-O3</span>.</dd>
   
   <dt class="code">AGGRESSIVE-UNIFICATION</dt>
-  <dd>When optimizing expressions in DBToaster relational calculus, inline lifted variables wherever possible, even if the lift term can not be eliminated entirely.  This can produce substantially tighter code for queries with lots of constants, but slightly increases compilation time.  Activated by <span class="code">-O3</span>.</dd>
+  <dd>When optimizing expressions in DBToaster relational calculus, inline lifted variables wherever possible, even if the lift term can not be eliminated entirely.  This can produce substantially tighter code for queries with lots of constants, but slightly increases compilation time.  This optimization is automatically activated by <span class="code">-O3</span>.</dd>
 
   <dt class="code">DELETE-ON-ZERO</dt>
-  <dd>In generated code, when a map value becomes 0, remove the value from the map.  Resulting programs are more efficient over long stretches of insertions and deletions.  Activated by <span class="code">-O3</span>.</dd>
+  <dd>In generated code, when a map value becomes 0, remove the value from the map.  Resulting programs are more efficient over long stretches of insertions and deletions.  This optimization is automatically activated by <span class="code">-O3</span>.</dd>
 
   <dt class="code">COMPILE-WITHOUT-OPT</dt>
-  <dd>Request that the second-stage compiler disable any unnecessary optimizations (e.g., by default, GCC is invoked with <span class="code">-O3</span>, but not if this flag is active). Activated by <span class="code">-O1</span>.</dd>
+  <dd>Request that the second-stage compiler disable any unnecessary optimizations (e.g., by default, GCC is invoked with <span class="code">-O3</span>, but not if this flag is active). This optimization is automatically activated by <span class="code">-O1</span>.</dd>
 
 
   <dt class="code">WEAK-EXPR-EQUIV</dt>
-  <dd>When testing for expression equivalence, perform only a naive structural comparison rather than a (at least quadratic, and potentially exponential) matching.  This accelerates compilation, but may result in the creation of duplicate maps.  Activated by <span class="code">-O1</span>.</dd>
+  <dd>When testing for expression equivalence, perform only a naive structural comparison rather than a (at least quadratic, and potentially exponential) matching.  This accelerates compilation, but may result in the creation of duplicate maps.  This optimization is automatically activated by <span class="code">-O1</span>.</dd>
     
   <dt class="code">K3-NO-OPTIMIZE</dt>
-  <dd>Do not apply functional optimizations. Activated by <span class="code">-O1</span>.</dd>
+  <dd>Do not apply functional optimizations. This optimization is automatically activated by <span class="code">-O1</span>.</dd>
   
   <dt class="code">DUMB-LIFT-DELTAS</dt>
-  <dd>When computing the viewlet transform, use the delta rule for lifts precisely as described in the PODS10 paper.  If this flag is <b>not</b> active, a postprocessing step is applied to lift deltas, that range-restricts the resulting expression to only those tuples that are affected. Activated by <span class="code">-O1</span>.</dd>
+  <dd>When computing the viewlet transform, use the delta rule for lifts precisely as described in the PODS10 paper.  If this flag is <b>not</b> active, a postprocessing step is applied to lift deltas, that range-restricts the resulting expression to only those tuples that are affected. This optimization is automatically activated by <span class="code">-O1</span>.</dd>
 
 </dl>

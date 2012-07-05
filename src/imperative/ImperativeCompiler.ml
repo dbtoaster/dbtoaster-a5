@@ -1216,10 +1216,16 @@ end (* Typing *)
     | For(_,((elem, elem_ty), elem_f),source,body) ->
         begin match type_of_expr_t source with
         | Host(TBase(TInt)) -> (* TODO: change to bool type *)
+          let next_elem = "next_"^elem in
           let cond = ssc (source_code_of_expr source) in
           cscl (
-            [Lines(["for (; "^cond^"; ++"^elem^")"])]@
-            [source_code_of_imp body])
+            [Lines([
+               (string_of_type elem_ty)^" "^next_elem^" = "^elem^stmt_delimiter;
+               "for (; "^cond^"; "^elem^" = "^next_elem^") {";
+               tab^"if( "^cond^" ) ++"^next_elem^stmt_delimiter;
+               ])]@
+            [source_code_of_imp body]@
+            [Lines ["}"]])
 
         | _ -> 
           print_endline ("invalid desugared loop, expected iterators: "^
