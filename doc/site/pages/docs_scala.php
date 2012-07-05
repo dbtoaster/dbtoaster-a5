@@ -144,7 +144,7 @@ more events.</p>
 <?=section("Retrieving results")?>
 <p>
 To retrieve the result, the <span class="code">get<i>RESULTNAME</i>()</span> functions are used. In the example above,
-the <span class="code">get<i>RESULT</i>()</span> method is simple but more complex methods may be generated
+the <span class="code">get<i>RESULTNAME</i>()</span> method is simple but more complex methods may be generated
 and the return value may be a collection instead of a single value.</p>
 
 <?=subsection("Queries computing collections")?>
