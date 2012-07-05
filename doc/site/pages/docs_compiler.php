@@ -125,8 +125,5 @@ These flags are passed to the dbtoaster compiler with the <span class="code">-F<
   
   <dt class="code">DUMB-LIFT-DELTAS</dt>
   <dd>When computing the viewlet transform, use the delta rule for lifts precisely as described in the PODS10 paper.  If this flag is <b>not</b> active, a postprocessing step is applied to lift deltas, that range-restricts the resulting expression to only those tuples that are affected. Activated by <span class="code">-O1</span>.</dd>
-  
-  <dt class="code">CALC-DONT-CREATE-ZEROES</dt>
-  <dd></dd>
 
 </dl>
