@@ -331,9 +331,36 @@ let next_sum_tmp_coll outs_el sum_type_k =
               K.base_type_of sum_type_k)
    end
 
+
+let gen_map_ret_sym = 
+   FreshVariable.declare_class "functional/M3ToK3" "map_ret_"
+
+let gen_slice_sym = 
+   FreshVariable.declare_class "functional/M3ToK3" "slice_"
+
+let gen_init_val_sym = 
+   FreshVariable.declare_class "functional/M3ToK3" "init_val_"
+
+let gen_val_ret_sym = 
+   FreshVariable.declare_class "functional/M3ToK3" "val_ret_"
+
+let gen_cmp_ret_sym = 
+   FreshVariable.declare_class "functional/M3ToK3" "cmp_ret_"
+
+let gen_lift_ret_sym = 
+   FreshVariable.declare_class "functional/M3ToK3" "lift_ret_"
+
+let gen_exists_ret_sym = 
+   FreshVariable.declare_class "functional/M3ToK3" "exists_ret_"
+
+let gen_sum_ret_sym = 
+   FreshVariable.declare_class "functional/M3ToK3" "sum_ret_"
+
 let gen_prod_ret_sym = 
    FreshVariable.declare_class "functional/M3ToK3" "prod_ret_"
+
    
+         
 (**/**)      
 (**********************************************************************)
 
@@ -373,8 +400,8 @@ let map_access_to_expr mapn ins outs map_ret_t theta_vars_el init_expr_opt =
             K.Collection(K.Unknown,K.TTuple(outs_tl@[map_ret_k])) 
       in
       
-      let map_ret_ve = K.Var("map_ret",map_ret_k) in
-      let map_out_ve = K.Var("slice",map_out_t) in
+      let map_ret_ve = K.Var(gen_map_ret_sym (),map_ret_k) in
+      let map_out_ve = K.Var(gen_slice_sym (),map_out_t) in
       
       (* Given a collection it slices it according to the bound variables *)
       (* and projects only the free variables *)
@@ -409,7 +436,7 @@ let map_access_to_expr mapn ins outs map_ret_t theta_vars_el init_expr_opt =
             let map_expr = K.InPC(mapn, ins_k, map_ret_k) in
             if init_expr_opt = None then K.Lookup(map_expr,ins_el)
             else 
-               let iv_e = K.Var("init_val", map_ret_k) in
+               let iv_e = K.Var(gen_init_val_sym (), map_ret_k) in
                let _,init_expr = extract_opt init_expr_opt in   
                let init_lambda = 
                   if Debug.active "M3TOK3-RETURN-INIT" then iv_e
@@ -438,7 +465,7 @@ let map_access_to_expr mapn ins outs map_ret_t theta_vars_el init_expr_opt =
                             (out_access_expr map_out_ve)
             else 
                let init_outs_el,ie = extract_opt init_expr_opt in
-               let iv_e = K.Var("init_val", map_out_t) in   
+               let iv_e = K.Var(gen_init_val_sym (), map_out_t) in   
                let init_expr, init_block = 
                   if ListAsSet.seteq init_outs_el outs_el then
                      ((if init_outs_el = outs_el then 
@@ -616,14 +643,14 @@ let rec calc_to_k3_expr meta ?(generate_init = false) theta_vars_el calc :
          error ("M3ToK3: Error: Incompatible argument types for " ^
                 "comparison operation: "^
                 (K.string_of_type ret1_t)^" <> "^(K.string_of_type ret2_t));
-      ([], K.Var("v",K.TBase(T.TInt)), (op_fn e1 e2)), meta
+      ([], K.Var(gen_cmp_ret_sym (),K.TBase(T.TInt)), (op_fn e1 e2)), meta
    in
    let (k3_out_el, k3_ret_v, k3_expr), k3_meta = 
      begin match calc with
       | C.Val( calc_val ) -> begin match calc_val with
          | Value( calc_val_value ) ->
                let ret_t, expr = value_to_k3_expr calc_val_value in
-               ([], K.Var("v",ret_t), expr), meta
+               ([], K.Var(gen_val_ret_sym (),ret_t), expr), meta
          | Cmp( T.Eq, c1, c2 ) -> cmp_fn ( fun e1 e2 -> K.Eq  (e1,e2) ) c1 c2
          | Cmp( T.Lt, c1, c2 ) -> cmp_fn ( fun e1 e2 -> K.Lt  (e1,e2) ) c1 c2
          | Cmp( T.Lte,c1, c2 ) -> cmp_fn ( fun e1 e2 -> K.Leq (e1,e2) ) c1 c2
@@ -768,10 +795,10 @@ let rec calc_to_k3_expr meta ?(generate_init = false) theta_vars_el calc :
             let lift_ve = K.Var((fst lift_v),lift_vt) in
             let extra_ve, ret_ve, lift_body = 
                if is_bound then 
-                  [], K.Var("lift_v",K.TBase(T.TInt)),
+                  [], K.Var(gen_lift_ret_sym (),K.TBase(T.TInt)),
                   (exprs_to_tuple (lift_outs_el@[K.Eq(lift_ret_ve,lift_ve)]))
                else
-                  [lift_ve], K.Var("lift_v",K.TBase(T.TInt)),
+                  [lift_ve], K.Var(gen_lift_ret_sym (),K.TBase(T.TInt)),
                   (exprs_to_tuple (lift_outs_el@[lift_ret_ve;one_int_val]))
             in
             let lift_lambda = 
@@ -785,7 +812,7 @@ let rec calc_to_k3_expr meta ?(generate_init = false) theta_vars_el calc :
          
          | Exists(exists_calc)          -> 
             let (exists_outs_el,exists_ret_ve,exists_e),nm = rcr exists_calc in
-            let ret_ve = K.Var("exists_v",K.TBase(T.TInt)) in
+            let ret_ve = K.Var(gen_exists_ret_sym (), K.TBase(T.TInt)) in
             let exists_body = 
                (exprs_to_tuple (exists_outs_el @ 
                                 [ K.Neq(exists_ret_ve, zero_int_val) ])) 
@@ -844,7 +871,7 @@ let rec calc_to_k3_expr meta ?(generate_init = false) theta_vars_el calc :
             ) (meta,(K.TBase(T.TInt)),[]) sum_args 
          in
                      
-         let ret_ve = K.Var("sum",ret_t) in
+         let ret_ve = K.Var(gen_sum_ret_sym (),ret_t) in
          let (hd_outs_el,hd_ret_ve,hd_s,hd_txt) = List.hd sum_exprs in
          let sum_exprs_tl = List.tl sum_exprs in
          
@@ -930,18 +957,12 @@ let rec calc_to_k3_expr meta ?(generate_init = false) theta_vars_el calc :
        let prod_expr_hd = List.hd prod_exprs in
        let prod_exprs_tl = List.tl prod_exprs in
          
-       let prod_fn (p1_outs_el,_p1_ret_ve,p1) 
-                   (p2_outs_el,_p2_ret_ve,p2) =
+       let prod_fn (p1_outs_el,p1_ret_ve,p1) 
+                   (p2_outs_el,p2_ret_ve,p2) =
          let p1_ret_t,p2_ret_t = 
-            pair_map type_of_kvar (_p1_ret_ve,_p2_ret_ve) 
+            pair_map type_of_kvar (p1_ret_ve,p2_ret_ve) 
          in
-         let p1_ret_ve = K.Var(gen_prod_ret_sym ~inline:"1" (),
-                               p1_ret_t) 
-         in
-         let p2_ret_ve = K.Var(gen_prod_ret_sym ~inline:"2" (), 
-                               p2_ret_t) 
-         in 
-         let ret_ve = K.Var("prod",
+         let ret_ve = K.Var(gen_prod_ret_sym (),
                             arithmetic_return_types p1_ret_t p2_ret_t) 
          in
          let p_outs_el,p = 
