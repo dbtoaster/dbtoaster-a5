@@ -1,4 +1,4 @@
-INCLUDE 'test/queries/tpch/schemas.sql';
+INCLUDE 'test/queries/tpch/schemas_big.sql';
 
 SELECT c1.nationkey, sum(c1.acctbal) AS query22
 FROM customer c1

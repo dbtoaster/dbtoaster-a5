@@ -781,7 +781,9 @@ if stage_is_active StageK3ToTargetLanguage then (
          with 
          | K3Interpreter.InterpreterException(expr,msg) ->
             (begin match expr with 
-               | Some(s) -> error ~exc:true ~detail:(fun () -> K3.string_of_expr s) msg
+               | Some(s) -> error ~exc:true 
+                                  ~detail:(fun () -> K3.string_of_expr s)
+                                  msg
                | None    -> error ~exc:true msg
             end)
          | K3Typechecker.K3TypecheckError(stack,msg) ->

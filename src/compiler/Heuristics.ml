@@ -205,7 +205,10 @@ let partition_expr (heuristic_options:heuristic_options_t) (scope:var_t list)
                   in
                   if lift_contains_event_rel
                   then (l_term, MaterializeAsNewMap)
-                  else (l_term, MaterializeUnknown)
+                  else 
+                     if Debug.active "MATERIALIZE-IRRELEVANT-LIFTS" 
+                     then (l_term, MaterializeAsNewMap)
+                     else (l_term, MaterializeUnknown)
                end
                else (l_term, MaterializeUnknown)
 (***** END EXISTS HACK *****)
@@ -228,14 +231,12 @@ let partition_expr (heuristic_options:heuristic_options_t) (scope:var_t list)
                   in
                   if lift_contains_event_rel
                   then (l_term, MaterializeAsNewMap)
-                  else (l_term, MaterializeUnknown)
+                  else 
+                     if Debug.active "MATERIALIZE-IRRELEVANT-LIFTS" 
+                     then (l_term, MaterializeAsNewMap)
+                     else (l_term, MaterializeUnknown)
                end
                else (l_term, MaterializeUnknown)
-
-               (* An alternative approach *)
-(*               if subexpr_rels <> []             *)
-(*               then (l_term, MaterializeAsNewMap)*)
-(*               else (l_term, MaterializeUnknown) *)
 
             | _ -> failwith "Not a lift term"         
       ) lift_terms in

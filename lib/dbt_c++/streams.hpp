@@ -190,9 +190,11 @@ struct dynamic_poset {
         pset::iterator rm_end = removals.end();
         for (; rm_it != rm_end; ++rm_it) {
             // Re-add the adaptor at its new stage.
-            if ( (*rm_it)->order() > order ) add_element(*rm_it);
-            else if ( (*rm_it)->order() < order ) {
-                cerr << "invalid adaptor order ... removing" << endl;
+            if ( (*rm_it)->order() > 0) {
+                if ( (*rm_it)->order() > order ) add_element(*rm_it);
+                else if ( (*rm_it)->order() < order ) {
+                    cerr << "invalid adaptor order ... removing" << endl;
+                }
             }
             ps->erase(*rm_it);
         }
@@ -409,24 +411,26 @@ struct dbt_file_source : public source
 
     // Get buffered events from all adaptors
     void collect_buffered_events(shared_ptr<list<event_t> >& r) {
-        dynamic_poset::iterator it = adaptors.begin();
-        dynamic_poset::iterator end = adaptors.end();
-
-        for (; it != end; ++it)
-        {
-            if ( it->second ) {
-                for (dynamic_poset::pset::iterator a_it = it->second->begin();
-                        a_it != it->second->end(); ++a_it)
-                {
-                    shared_ptr<stream_adaptor> a =
-                           dynamic_pointer_cast<stream_adaptor>(*a_it);
-                    if ( a ) a->get_buffered_events(r);
-                }
-            } else {
-                cerr << "invalid adaptors poset class at position "
-                        << it->first << endl;
-            }
+        unsigned int min_order = adaptors.order();
+        shared_ptr<dynamic_poset::class_range> range = 
+                adaptors.range(min_order);
+        if ( !range ) {
+            cerr << "invalid min order at source with empty range" << endl;
+            return;
         }
+
+        for(dynamic_poset::pset::iterator it = range->first;
+                it != range->second; ++it)
+        {
+            shared_ptr<stream_adaptor> adaptor =
+                    dynamic_pointer_cast<stream_adaptor>(*it);
+            if ( adaptor ) { 
+                adaptor->get_buffered_events(r);
+                adaptor->current_order = 0;    // mark for removal  
+            }
+            
+        }
+        adaptors.reorder_elements(min_order);
     }
 
 
@@ -450,7 +454,6 @@ struct dbt_file_source : public source
         } else if ( source_stream->is_open() ) {
             source_stream->close();
             r = shared_ptr<list<event_t> >(new list<event_t>());
-
             finalize_adaptors(r);
         }
 

@@ -105,7 +105,7 @@ type expr_t =
                                                 expression appears in the target
                                                 (or having) clause(s). *)
  | Case of (cond_t * expr_t) list * expr_t  (** A branching expression.  A list 
-                                                of conditions to be evaluated in 
+                                                of conditions to be evaluated in
                                                 order, and an else clause to be 
                                                 evaluated if nothing else is 
                                                 true. *)
