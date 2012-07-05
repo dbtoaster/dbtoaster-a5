@@ -1,15 +1,14 @@
 <p>DBToaster's runtimes currently support the following adaptors:</p>
 
 <?= chapter("CSV") ?>
-A simple string-delimited adaptor.  Fields are separated using the delimiter passed in the <b>fields</b> parameter.  If not provided, comma (",") will be used as a default delimiter.<br/>
+A simple string-delimited adaptor.  Fields are separated using the delimiter passed in the <b>delimiter</b> parameter.  If not provided, comma (",") will be used as a default delimiter.<br/>
 
 The optional deletions parameter can be used to generate a single stream of both insertions and deletions.  When set to "true", the input source is assumed to have an extra, leading column.  When the value in this column is 0, the record is treated as a deletion.  When the value is 1, the record is treated as an insertion.<br/>
 
 Fields are parsed based on the type of the corresponding column in the relation.  Ints, floats, and strings are parsed as-is.  Dates are expected to be formatted in the SQL-standard <tt>[yyyy]-[mm]-[dd]</tt> format.<br/>
 
-<div class="codeblock">
-    CREATE STREAM R(A int, B int) FROM FILE 'r.dat' 
-    LINE DELIMITED CSV (fields := '|');
+<div class="codeblock">CREATE STREAM R(A int, B int) FROM FILE 'r.dat' 
+LINE DELIMITED CSV (delimiter := '|');
 </div>
 
 <?= chapter("Order Book") ?>
@@ -23,10 +22,9 @@ An adaptor that allows reading in stock trade historical data. It assumes that a
 
 Records will be instantiated into a relation with schema &lt;T float, ID int, BROKER_ID int, VOLUME float, PRICE float&gt;.  All fields except BROKER_ID are taken directly from the input stream.  BROKER_IDs are assigned in a range from 0 to the integer value of the brokers parameter.  The value of BROKER_ID is assigned randomly, using rand() by default, or deterministically from the value of ID if the deterministic parameter is set to 'yes'.  
 
-<div class="codeblock">
-  CREATE STREAM bids(T float, ID int, BROKER_ID int, VOLUME float, PRICE float) 
-  FROM FILE 'history.csv' 
-  LINE DELIMITED orderbook (book := 'bids', brokers := '10', deterministic := 'yes');
+<div class="codeblock">CREATE STREAM bids(T float, ID int, BROKER_ID int, VOLUME float, PRICE float) 
+FROM FILE 'history.csv' 
+LINE DELIMITED orderbook (book := 'bids', brokers := '10', deterministic := 'yes');
 </div>
 
 <?= chapter("Summary") ?>
@@ -36,7 +34,7 @@ Records will be instantiated into a relation with schema &lt;T float, ID int, BR
 
 <tr>
 <td rowspan="2">CSV</td>
-<td><div class="code">fields</div></td>
+<td><div class="code">delimiter</div></td>
 <td>yes</td>
 <td>A string delimiter used to extract fields from a record. 
     If not specified, the default value is ','.</td>

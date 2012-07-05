@@ -1,0 +1,139 @@
+body {
+  color:#000000;
+  background-color:#ffffff;
+  background-image:url('9.jpg');
+  background-repeat:no-repeat;
+  background-position:center;
+  background-attachment:fixed;
+  font-size:16;
+  font-family:"Trebuchet MS","Helvetica neue",Helvetica,Arial,Verdana,sans-serif;
+}
+img {
+  border-width:2px;
+  border-color:#333333;
+  margin:5px;
+}
+img.inline_image {
+  opacity:0.7;
+  width:600px;
+  border-style:inset;
+  border-width:2px;
+  border-color:grey;
+  margin-left:auto;
+  margin-right:auto;
+}
+.overallpage {
+  margin-left:auto;
+  margin-right:auto;
+  width:900px
+}
+.menu {
+  display:inline-block;
+  top:0;
+  left:0;
+  width:250px;
+  margin-left:20px
+  vertical-align:top;
+  font-size:15px;
+}
+.leftmenuitem_l1 {
+  margin-left:-10px;
+  margin-bottom:10px;
+}
+.leftmenuitem_l2 {
+  margin-left:-30px;
+  font-size:13px;
+}
+.headerbar {
+  text-align:left;
+}
+.logobox {
+  vertical-align:bottom;
+  display:inline-block;
+  width:250px;
+}
+.topmenu {
+  text-align:center;
+  vertical-align:bottom;
+  display:inline-block;  
+}
+.topmenuitem {
+  padding:10px;
+  font-size:15;
+  margin-left:auto;
+  margin-right:auto;
+  font-weight:bold;
+  text-align:center;
+  vertical-align:middle;
+  display:inline-block;
+}
+.titlebox {
+  text-align:center;
+  font-size:30;
+  font-weight:bold;
+  margin-bottom:20px;
+}
+.pagebody {
+  display:inline-block;
+  vertical-align:top;
+}
+.contentwrapper {
+  display:inline-block;
+  position:relative;
+  width:610px;
+  vertical-align:top;
+  padding:0px;
+}
+.content {
+  opacity:1;
+  text-align:justify;
+}
+a:link {
+text-decoration:none;
+color:#003399;
+}
+a:visited {
+text-decoration:none;
+color:#003399;
+}
+a:hover {
+color:#003399;
+}
+a:active {
+color:#003399;
+}
+.code {
+  font-family: Courier, Monospace;
+}
+.codeblock {
+  font-family: Courier, Monospace;
+  margin: 10px 20px;
+  padding: 10px;
+  background-color: #cccccc;
+  white-space:pre-wrap;
+  font-size:11px
+}
+.todo {
+  margin: 10px 20px;
+  color: red;
+  font-weight: bold;
+  text-align: center;
+}
+
+dt.api{
+  font-family: Courier, Monospace;
+  font-weight: bold;
+  font-size: small;
+}
+
+.warning {
+  color: red;
+  font-weight: bold;
+}
+td.contact_university {
+  padding-right:20px;
+  padding-top:5px;
+  padding-bottom:5px;
+  text-align:left;
+  font-size:18;
+}

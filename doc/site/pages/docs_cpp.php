@@ -1,5 +1,7 @@
 
-<a name="quickstart"/>
+<div class="warning">Warning: This BETA API is not final, and subject to change before release.</div>
+
+<a name="quickstart"></a>
 <?= chapter("Quickstart Guide") ?>
 
 <p>
@@ -104,7 +106,7 @@ Printing final result:
 
 
 
-<a name="apiguide"/>
+<a name="apiguide"></a>
 <?= chapter("C++ API Guide") ?>
 
 <p>
@@ -131,7 +133,7 @@ Default implementations for some of these functions are inherited from the <tt>P
 are generated depending on the previously defined <tt>tlq_t</tt> and <tt>data_t</tt> types.
 </p>
 
-<a name="execprogram"/>
+<a name="execprogram"></a>
 <?= section("Executing the Program") ?>
 
 <p>
@@ -168,7 +170,7 @@ for stream <tt>ev.id</tt> with the arguments contained in <tt>ev.data</tt>.
 </p>
 
 
-<a name="retrieveresults"/>
+<a name="retrieveresults"></a>
 <?= section("Retrieving the Results") ?>
 
 <p>
@@ -183,7 +185,7 @@ Currently, the mechanism for taking snapshots is trivial, in that a snapshot con
 is linear in the size of the results set.
 </p>
 
-<a name="basicexample"/>
+<a name="basicexample"></a>
 <?= section("Basic Example") ?>
 
 <p>
@@ -319,7 +321,7 @@ int main(int argc, char* argv[]) {
 </div>
 </p>
 
-<a name="customexecution"/>
+<a name="customexecution"></a>
 <?= section("Custom Execution") ?>
 
 <p>
@@ -371,10 +373,10 @@ Stream events can be manually read from <b>custom sources</b> and fed into the s
 
 
 
-<a name="codereference"/>
+<a name="codereference"></a>
 <?= chapter("C++ Generated Code Reference") ?>
 
-<a name="tlq_t"/>
+<a name="tlq_t"></a>
 <?= section("<tt>struct tlq_t</tt>") ?>
 
 <p>
@@ -541,7 +543,7 @@ the final query result.
 
 </p>
 
-<a name="data_t"/>
+<a name="data_t"></a>
 <?= section("<tt>struct data_t</tt>")?>
 
 <p>
@@ -561,7 +563,7 @@ in the initialization phase of the program.
 
 
 
-<a name="program"/>
+<a name="program"></a>
 <?= section("<tt>class Program</tt>") ?>
 
 <p>
@@ -569,6 +571,3 @@ Finally, <tt>Program</tt> is a class that implements the <tt>IProgram</tt> inter
 for reading static table tuples and stream events from their sources, initializing the relevant datastructures, running the sql 
 program and retrieving its results. 
 </p>
-
-<p><a href="index.html">&lt;&lt; Index</a></p>
-</body></html>
