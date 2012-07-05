@@ -295,8 +295,8 @@ struct
     let ul, el, cl = undecorated_of_list irl in
     if (List.length ul) <> (List.length irl) then dec_f el cl
     else
-      let x,y = List.split (List.map (fun (x,y,z) -> (x,y),z) ul)
-      in undec_f x (List.flatten y)
+      let a,b = List.split (List.map (fun (u_meta,u_f,u_cl) -> (u_meta,u_f),u_cl) ul)
+      in undec_f a (List.flatten b)
 
   let tag_of_undecorated metadata e cir = match cir with
     | [] -> Leaf(metadata, Undecorated(e))

@@ -157,17 +157,6 @@ struct
   let string_of_ext_imp = 
     string_of_typed_imp string_of_ext_type string_of_ext_fn
 
-  (* Serialization code generation *)
-  let serialization_source_code_of_entry id fields =
-    let serialize_members =
-      List.map (fun (m,ty) -> "  ar & BOOST_SERIALIZATION_NVP("^m^");") fields
-    in Lines (["template<class Archive>";
-               "void serialize(Archive& ar, const unsigned int version)";
-               "{"]@serialize_members@["}"])
-
-  let source_code_of_map_serialization archive_id map_id =
-    inl(archive_id^"<<BOOST_SERIALIZATION_NVP("^map_id^")")
-
   (* Misc helpers *)
   let back l = let x = List.rev l in List.rev (List.tl x), List.hd x
   let unique l = List.fold_left
@@ -252,12 +241,22 @@ struct
            "{ return std::make_pair("^(mk_tuple k_m)^", "^v_m^"); }")
           
         in
-        let serialize = serialization_source_code_of_entry id fields in
-        
-        csc (Lines [id^"("^direct_ctor^") { "^direct_assign^" }";
-                    id^"("^pair_ctor^") { "^pair_assign^" }";
-                    pair_conversion;])
-            serialize
+    
+        let serialize = [
+           "template<class Archive>";
+           "void serialize(Archive& ar, const unsigned int version)";
+           "{";]@
+           (List.map 
+              (fun (m,ty) -> tab^"ar & BOOST_SERIALIZATION_NVP("^m^");") 
+              fields
+           )@
+           ["}";]
+        in        
+        Lines ([id^"("^direct_ctor^") { "^direct_assign^" }";
+                id^"("^pair_ctor^") { "^pair_assign^" }";
+                pair_conversion;] @ 
+               serialize)
+               
       in cscl [(inl ("struct "^id^" {")); isc tab (csc (inl str_fields)
                (if str_fields = "" then inl "" else ctor)); inl("};")]
     in
