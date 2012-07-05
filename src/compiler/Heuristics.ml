@@ -206,9 +206,9 @@ let partition_expr (heuristic_options:heuristic_options_t) (scope:var_t list)
                   if lift_contains_event_rel
                   then (l_term, MaterializeAsNewMap)
                   else 
-                     if Debug.active "MATERIALIZE-IRRELEVANT-LIFTS" 
-                     then (l_term, MaterializeAsNewMap)
-                     else (l_term, MaterializeUnknown)
+                     if Debug.active "HEURISTICS-PULL-IN-LIFTS" 
+                     then (l_term, MaterializeUnknown)
+                     else (l_term, MaterializeAsNewMap)
                end
                else (l_term, MaterializeUnknown)
 (***** END EXISTS HACK *****)
@@ -232,9 +232,9 @@ let partition_expr (heuristic_options:heuristic_options_t) (scope:var_t list)
                   if lift_contains_event_rel
                   then (l_term, MaterializeAsNewMap)
                   else 
-                     if Debug.active "MATERIALIZE-IRRELEVANT-LIFTS" 
-                     then (l_term, MaterializeAsNewMap)
-                     else (l_term, MaterializeUnknown)
+                     if Debug.active "HEURISTICS-PULL-IN-LIFTS" 
+                     then (l_term, MaterializeUnknown)
+                     else (l_term, MaterializeAsNewMap)
                end
                else (l_term, MaterializeUnknown)
 
