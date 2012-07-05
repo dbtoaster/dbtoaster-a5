@@ -29,13 +29,15 @@ This query should be saved to a file named <span class="code">rs_example.sql</sp
 <p>
 To compile the query to Scala code, we invoke the DBToaster compiler with the following command:
 <div class="codeblock">$&gt; bin/dbtoaster -l scala -o rs_example.scala rs_example.sql</div>
-This command will produce a file <span class="code">rs_example.scala</span> (or any other filename specified by the <span class="code">-o [filename]</span> switch) which contains the Scala code representing the query.</p>
+This command will produce the file <span class="code">rs_example.scala</span> (or any other filename specified by the <span class="code">-o [filename]</span> switch) which contains the Scala code representing the query.</p>
 <p>
-To compile the query to a JAR file, we invoke the DBToaster compiler with the <span class="code">-c [JARname]</span> switch:
+To compile the query to an executable JAR file, we invoke the DBToaster compiler with the <span class="code">-c [JARname]</span> switch:
 <div class="codeblock">$&gt; bin/dbtoaster -l scala -c rs_example rs_example.sql</div>
 <i>Note:</i> The ending <span class="code">.jar</span> is automatically appended to the name of the JAR.</p>
 <p>
-The resulting JAR contains a main function that can be used to test the query. It can be run using the following command assuming that the Scala DBToaster library can be found in the subdirectory <span class="code">lib/dbt_scala</span>:
+The resulting JAR contains a main function that can be used to test the query. It runs the query until there are no more
+events to be processed and prints the result. It can be run using the following command assuming that the 
+Scala DBToaster library can be found in the subdirectory <span class="code">lib/dbt_scala</span>:
 <div class="codeblock">$&gt; scala -classpath "rs_example.jar:lib/dbt_scala/dbtlib.jar" \
          org.dbtoaster.RunQuery
 </div>
@@ -46,8 +48,12 @@ After all tuples in the data files were processed, the result of the query will 
 
 <a name="apiguide"/></a>
 <?= chapter("Scala API Guide") ?>
-The following example shows how a query can be ran from your own Scala code. Suppose we have a the following source code in <span class="code">main_example.scala</span>:
-<div class="codeblock">import org.dbtoaster.Query
+In the previous example, we used the standard main function to test the query. However, to make use of the query
+in real applications, it has to be run from the application itself.
+The following example shows how a query can be run from your own Scala code. Suppose we have a the following 
+source code in <span class="code">main_example.scala</span>:
+<div class="codeblock">
+import org.dbtoaster.Query
 
 package org.example {
   object MainExample {
@@ -58,7 +64,9 @@ package org.example {
   }
 }
 </div>
-This program will start the query and output its result after it finished.
+The code representing the query is in the <span class="code">org.dbtoaster.Query</span> object.
+This program will start the query using the <span class="code">Query.run()</span> method and output its 
+result after it finished using the <span class="code">Query.printResults()</span> method.
 <p>
 To retrieve results, the <span class="code">get<i>RESULTNAME</i>()</span> of the <span class="code">Query</span> object can be used.</p>
 <p>
@@ -77,7 +85,8 @@ $&gt; scala -classpath "main_example.jar:rs_example.jar:lib/dbt_scala/dbtlib.jar
 The <span class="code">Query.run()</span> method takes a function of type <span class="code">Unit => Unit</span> as an optional argument which is called every time when an event was processed. 
 This function can be used to retrieve results while the query is still running.</p>
 <p>
-<i>Note:</i> The function will be executed on the same thread on which the query processing takes place, blocking further query processing while the function is being run.</p>
+<i>Note:</i> The function will be executed on the same thread on which the query processing takes place, blocking 
+further query processing while the function is being run.</p>
 
 <a name="generatedcode"/></a>
 <?=chapter("Generated Code Reference")?>
@@ -128,7 +137,7 @@ package org.dbtoaster {
 }
 </div></p>
 <p>
-When the <span class="code">run</span> method is called, the static tables are loaded and the processing
+When the <span class="code">run()</span> method is called, the static tables are loaded and the processing
 of events from the declared sources starts. The function returns when the sources provide no
 more events.</p>
 
