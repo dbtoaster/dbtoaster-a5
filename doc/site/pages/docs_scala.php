@@ -29,11 +29,11 @@ This query should be saved to a file named <span class="code">rs_example.sql</sp
 <p>
 To compile the query to Scala code, we invoke the DBToaster compiler with the following command:
 <div class="codeblock">$&gt; bin/dbtoaster -l scala -o rs_example.scala rs_example.sql</div>
-This command will produce a file <span class="code">rs_example.scala</span> (or any other filename specified by the <span class="code">-o [filename]</span> switch) which contains the Scala code representing the query.
+This command will produce a file <span class="code">rs_example.scala</span> (or any other filename specified by the <span class="code">-o [filename]</span> switch) which contains the Scala code representing the query.</p>
 <p>
 To compile the query to a JAR file, we invoke the DBToaster compiler with the <span class="code">-c [JARname]</span> switch:
 <div class="codeblock">$&gt; bin/dbtoaster -l scala -c rs_example rs_example.sql</div>
-<i>Note:</i> The ending <span class="code">.jar</span> is automatically appended to the name of the JAR.
+<i>Note:</i> The ending <span class="code">.jar</span> is automatically appended to the name of the JAR.</p>
 <p>
 The resulting JAR contains a main function that can be used to test the query. It can be run using the following command assuming that the Scala DBToaster library can be found in the subdirectory <span class="code">lib/dbt_scala</span>:
 <div class="codeblock">$&gt; scala -classpath "rs_example.jar:lib/dbt_scala/dbtlib.jar" \
@@ -42,7 +42,7 @@ The resulting JAR contains a main function that can be used to test the query. I
 After all tuples in the data files were processed, the result of the query will be printed:
 <div class="codeblock">Run time: 0.042 ms
 &lt;RESULT&gt;156 &lt;/RESULT&gt;
-</div>
+</div></p>
 
 <a name="apiguide"/></a>
 <?= chapter("Scala API Guide") ?>
@@ -60,11 +60,11 @@ package org.example {
 </div>
 This program will start the query and output its result after it finished.
 <p>
-To retrieve results, the <span class="code">get<i>RESULTNAME</i>()</span> of the <span class="code">Query</span> object can be used.
+To retrieve results, the <span class="code">get<i>RESULTNAME</i>()</span> of the <span class="code">Query</span> object can be used.</p>
 <p>
 <i>Note:</i>The <span class="code">get<i>RESULTNAME</i>()</span> functions are not thread-safe, meaning that results can be 
 inconsistent if they are called from another thread than the query thread. A thread-safe alternative to retrieve
-the results is planned for future versions of DBToaster.
+the results is planned for future versions of DBToaster.</p>
 <p>
 The program can be compiled to <span class="code">main_example.jar</span> using the following command (assuming that the query was compiled to a file named <span class="code">rs_example.jar</span>):
 <div class="codeblock">
@@ -75,9 +75,9 @@ The resulting program can now be launched with:
 $&gt; scala -classpath "main_example.jar:rs_example.jar:lib/dbt_scala/dbtlib.jar" org.example.MainExample
 </div>
 The <span class="code">Query.run()</span> method takes a function of type <span class="code">Unit => Unit</span> as an optional argument which is called every time when an event was processed. 
-This function can be used to retrieve results while the query is still running.
+This function can be used to retrieve results while the query is still running.</p>
 <p>
-<i>Note:</i> The function will be executed on the same thread on which the query processing takes place, blocking further query processing while the function is being run.
+<i>Note:</i> The function will be executed on the same thread on which the query processing takes place, blocking further query processing while the function is being run.</p>
 
 <a name="generatedcode"/></a>
 <?=chapter("Generated Code Reference")?>
@@ -126,19 +126,17 @@ package org.dbtoaster {
     def printResults(): Unit = ...
   }
 }
-</div>
+</div></p>
 <p>
 When the <span class="code">run</span> method is called, the static tables are loaded and the processing
 of events from the declared sources starts. The function returns when the sources provide no
-more events.
-<p>
+more events.</p>
 
 <?=section("Retrieving results")?>
 <p>
 To retrieve the result, the <span class="code">get<i>RESULTNAME</i>()</span> functions are used. In the example above,
 the <span class="code">get<i>RESULT</i>()</span> method is simple but more complex methods may be generated
-and the return value may be a collection instead of a single value.
-<p>
+and the return value may be a collection instead of a single value.</p>
 
 <?=subsection("Queries computing collections")?>
 <p>
@@ -161,16 +159,16 @@ def getRESULT_2():K3PersistentCollection[(Long), Long] = ...
 In this case, the functions return a collection containing the result. For further processing, the results can be converted 
 to lists of key-value pairs using the <span class="code">toList()</span> method of the collection class. The key in the pair corresponds 
 to the columns in the <span class="code">GROUP BY</span> clause, in our case <span class="code">r.B</span>. The value corresponds to the aggregated 
-value for the corresponding key.
+value for the corresponding key.</p>
 
 <?=subsection("Partial Materialization")?>
 <p>
 Some of the work involved in maintaining the results of a query can be saved by performing partial materialization
 and only computing the final results when invoking <span class="code">tlq_t</span>'s <span class="code">get_<i>TLQ_NAME</i></span> functions. This
 behaviour is especially desirable when the rate of querying the results is lower than the rate of updates, and
-can be enabled through the <span class="code">-F EXPRESSIVE-TLQS</span> command line flag.
-<br/>
-Below is an example of a query where partial materialization is indeed beneficial.
+can be enabled through the <span class="code">-F EXPRESSIVE-TLQS</span> command line flag.</p>
+
+<p>Below is an example of a query where partial materialization is indeed beneficial.
 <div class="codeblock">CREATE STREAM R(A int, B int)
 FROM FILE '../../experiments/data/tiny/r.dat' LINE DELIMITED
 csv ();
@@ -188,4 +186,4 @@ the results is much more complex, unlike the functions that we have seen before.
       ...
       )
     };
-</div>
+</div></p>
