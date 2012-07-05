@@ -1,5 +1,4 @@
 -- Unsupported features for this query
---   CASE     (rewritten into two equivalent, separate queries)
 --   INTERVAL (inlined into constant)
 --   ORDER BY (ignored)
 

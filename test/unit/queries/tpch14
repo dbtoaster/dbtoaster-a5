@@ -57,7 +57,9 @@
       :toplevels => {
         "COUNT" => {
           :type => :onelevel,
-          :expected => { }
+          :expected => { 
+            [0] => 1
+          }
         }
       }
     },
