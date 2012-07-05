@@ -180,11 +180,8 @@ namespace dbtoaster {
       void process(const string& data, shared_ptr<list<event_t> > dest)
       {
         // Flush any buffered tuple.
-        if ( saved_event ) {
-            dest->push_back(*saved_event);
-            saved_event = shared_ptr<event_t>();
-        }
-
+        get_buffered_events(dest);
+        
         if ( dest && schema != "" ) {
           // Interpret the schema.
           unsigned int order_before = current_order;
@@ -210,7 +207,20 @@ namespace dbtoaster {
         }
       }
 
-      void finalize(shared_ptr<list<event_t> > dest) {}
+      void finalize(shared_ptr<list<event_t> > dest) { }
+      
+      bool has_buffered_events() {
+        return (saved_event ? true : false);
+      }
+      
+      void get_buffered_events(shared_ptr<list<event_t> > dest) {
+        // Flush any buffered tuple.
+        if ( saved_event ) {
+            dest->push_back(*saved_event);
+            saved_event = shared_ptr<event_t>();
+        }
+      }
+      
     };
 
     // Replay adaptors are CSV adaptors prepended with an integer denoting the
@@ -520,6 +530,11 @@ namespace dbtoaster {
         }
 
         void finalize(shared_ptr<list<event_t> > dest) {}
+        
+        bool has_buffered_events() { return false; }
+        
+        void get_buffered_events(shared_ptr<list<event_t> > dest) {} 
+        
       };
 
       // Command line initialization of orderbook datasets.

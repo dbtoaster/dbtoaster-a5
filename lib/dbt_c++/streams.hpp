@@ -84,6 +84,11 @@ struct stream_adaptor : public ordered
             shared_ptr<list<event_t> > dest) = 0;
 
     virtual void finalize(shared_ptr<list<event_t> > dest) = 0;
+    
+    virtual bool has_buffered_events() = 0;
+    
+    virtual void get_buffered_events(shared_ptr<list<event_t> > dest) = 0;
+
 };
 
 // Framing
@@ -225,6 +230,29 @@ struct source : public ordered
     void remove_adaptor(unsigned int order, shared_ptr<stream_adaptor> a) {
         adaptors.remove_element(order, dynamic_pointer_cast<ordered>(a));
     }
+    
+    bool has_buffered_events() {    
+        dynamic_poset::iterator it = adaptors.begin();
+        dynamic_poset::iterator end = adaptors.end();
+        bool found = false;
+
+        for (; it != end; ++it)
+        {
+            if ( it->second ) {
+                for (dynamic_poset::pset::iterator a_it = it->second->begin();
+                        a_it != it->second->end(); ++a_it)
+                {
+                    shared_ptr<stream_adaptor> a =
+                            dynamic_pointer_cast<stream_adaptor>(*a_it);
+                    if ( a ) found = found || a->has_buffered_events();
+                }
+            } else {
+                cerr << "invalid adaptors poset class at position "
+                        << it->first << endl;
+            }
+        }
+        return found;
+    }
 
     virtual void init_source() = 0;
     virtual bool has_inputs() = 0;
@@ -254,7 +282,11 @@ struct dbt_file_source : public source
     void init_source() {}
 
     bool has_inputs() { 
-        return has_frame() || (source_stream && source_stream->good()); 
+        return has_frame_inputs() || has_buffered_events(); 
+    }
+    
+    bool has_frame_inputs() {
+        return has_frame() || (source_stream && source_stream->good());
     }
 
     bool has_frame() {
@@ -375,13 +407,36 @@ struct dbt_file_source : public source
         adaptors.clear();
     }
 
+    // Get buffered events from all adaptors
+    void collect_buffered_events(shared_ptr<list<event_t> >& r) {
+        dynamic_poset::iterator it = adaptors.begin();
+        dynamic_poset::iterator end = adaptors.end();
+
+        for (; it != end; ++it)
+        {
+            if ( it->second ) {
+                for (dynamic_poset::pset::iterator a_it = it->second->begin();
+                        a_it != it->second->end(); ++a_it)
+                {
+                    shared_ptr<stream_adaptor> a =
+                           dynamic_pointer_cast<stream_adaptor>(*a_it);
+                    if ( a ) a->get_buffered_events(r);
+                }
+            } else {
+                cerr << "invalid adaptors poset class at position "
+                        << it->first << endl;
+            }
+        }
+    }
+
+
     shared_ptr<list<event_t> > next_inputs() {
         shared_ptr<list<event_t> > r;
 
         if ( adaptors.empty() ) return r;
 
 
-        if ( has_inputs() ) {
+        if ( has_frame_inputs() ) {
             // get the next frame of data based on the frame type.
             shared_ptr<string> data = next_frame();
 
@@ -389,6 +444,9 @@ struct dbt_file_source : public source
                 r = shared_ptr<list<event_t> >(new list<event_t>());
                 process_adaptors(*data, r);
             }
+        } else if ( has_buffered_events() ) {
+            r = shared_ptr<list<event_t> >(new list<event_t>());
+            collect_buffered_events(r);
         } else if ( source_stream->is_open() ) {
             source_stream->close();
             r = shared_ptr<list<event_t> >(new list<event_t>());
@@ -509,12 +567,12 @@ struct source_multiplexer
         r = current->next_inputs();
 
         if ( r ) remaining -= r->size();
-        //        cerr << "Preparing to reorder multiplexer elements for " 
-        //             << current_order << endl;
+        // cerr << "Preparing to reorder multiplexer elements for " 
+        //      << current_order << endl;
         inputs.reorder_elements(current_order);
-        //        cerr << "Done reordering multiplexer elements for " 
-        //             << current_order << "; order is now " 
-        //             << inputs.order() << endl;
+        // cerr << "Done reordering multiplexer elements for " 
+        //      << current_order << "; order is now " 
+        //      << inputs.order() << endl;
 
         // remove the stream if its done.
         if ( !current->has_inputs() ) {
@@ -524,7 +582,8 @@ struct source_multiplexer
             if( runtime_options::verbose() )
                 cerr << "done with stream, " << inputs.size() 
                      << " remain" << endl;
-        } else if (current_order != current->order()) {
+        } 
+        else if (current_order != current->order()) {
             current = shared_ptr<source>();
             remaining = 0;
         }
