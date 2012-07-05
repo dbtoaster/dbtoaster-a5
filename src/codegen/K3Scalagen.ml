@@ -454,12 +454,12 @@ struct
          (** Finds the common supertype of two types **)
          let rec unify_types a b = 
             match a, b with
-            | a, b when a = b -> a
             | Int, Float | Float, Int -> Float
             | Bool, Int  | Int, Bool  -> Int
             | Collection(_, ak, at), Collection(_, bk, bt) -> 
                Collection(Intermediate, (List.map2 unify_types ak bk), 
                   unify_types at bt) 
+            | a, b when a = b -> a
             | _, _ -> 
                debugfail expr 
                   ("Cannot combine collections of different types: " ^ 
@@ -472,7 +472,7 @@ struct
          let k, v = 
             match common_type with 
             | Collection(_, k, v) -> (k, v) 
-            | _ -> debugfail expr "Combine can only combin collections" 
+            | _ -> debugfail expr "Combine can only combine collections" 
          in
          ("({ val result = Map[" ^ (string_of_type (Tuple k)) ^ "," ^ 
          (string_of_type v) ^ "]();" ^ (make_list ~sep:";" ~parens:("", ";") 
