@@ -225,6 +225,22 @@ struct
       | ArgNTuple(ags) -> List.fold_left 
          (fun x a -> x @ (flatten_args a)) [] ags
    
+   (** Finds the common supertype of two types **)
+   let rec unify_types a b = 
+      match a, b with
+      | Int, Float | Float, Int -> Float
+      | Bool, Int  | Int, Bool  -> Int
+      | Int, Date  | Date, Int  -> Date
+      | Collection(_, ak, at), Collection(_, bk, bt) -> 
+         Collection(Intermediate, (List.map2 unify_types ak bk), 
+            unify_types at bt) 
+      | Tuple(at), Tuple(bt) -> Tuple(List.map2 unify_types at bt)
+      | a, b when a = b -> a
+      | _, _ -> 
+         debugfail None 
+            ("Cannot unify types: " ^ 
+            (string_of_type a) ^ " and " ^ (string_of_type b))
+   
    (** Generates code to cast an expression n of type ot to type t*)
    let rec cast_up n ot t =
       match t, ot with
@@ -238,6 +254,11 @@ struct
          n ^ ".map { " ^ (wrap_function_key_val ko vo 
          (Fn(ArgNTuple(List.map (fun x -> ArgN(x)) 
          (list_vars "v" (key_length + 1))), Tuple(k @ [v]), rett)) body) ^ " }"
+      | Tuple(ts), Tuple(tso) when ts <> tso ->
+         "({ val v = " ^ n ^ "; " ^  
+         (make_tuple ~tpe:(string_of_type t)
+         (List.map2 (fun n (t, ot) -> cast_up n ot t) 
+         (list_vars "v._" (List.length ts)) (list_zip ts tso))) ^ "})"
       | _ -> n 
 
    and implicit_conversions argsn t1s t2s: string =  
@@ -451,20 +472,6 @@ struct
       if (List.length terms) < 1 
       then debugfail expr "Empty combines are invalid" 
       else 
-         (** Finds the common supertype of two types **)
-         let rec unify_types a b = 
-            match a, b with
-            | Int, Float | Float, Int -> Float
-            | Bool, Int  | Int, Bool  -> Int
-            | Collection(_, ak, at), Collection(_, bk, bt) -> 
-               Collection(Intermediate, (List.map2 unify_types ak bk), 
-                  unify_types at bt) 
-            | a, b when a = b -> a
-            | _, _ -> 
-               debugfail expr 
-                  ("Cannot combine collections of different types: " ^ 
-                  (string_of_type a) ^ " and " ^ (string_of_type b))
-         in
          let common_type = 
             List.fold_left (fun a (_, b) -> unify_types a b) 
             (snd (List.hd terms)) terms 
@@ -510,9 +517,16 @@ struct
       if it <> Bool then 
          debugfail expr "Type mismatch: non-bool condition"
       else
-         if tt <> et 
-         then debugfail expr "Type mismatch: unaligned condition output" 
-         else ("if(" ^ i ^ ") { " ^ t ^ " } else { " ^ e ^ " }", tt)
+         let unified_type = unify_types tt et in
+         (* Split long ifthenelse statements in multiple functions to
+            avoid the JVM limitation for function lengths *)
+         ((if (String.length t) > 1000 then
+            "({ def tb = " ^ (cast_up t tt unified_type) ^ "; def fb = " ^
+            (cast_up e et unified_type) ^ ";" ^
+            "if(" ^ i ^ ") { tb } else { fb }})"
+         else 
+            "if(" ^ i ^ ") { " ^ (cast_up t tt unified_type) ^ " } else { " ^
+            (cast_up e et unified_type) ^ " }"), unified_type)
 
    (** Generates a block of statements *)
    let block ?(expr = None) (stmts:code_t list) : code_t =
@@ -644,7 +658,7 @@ struct
          debugfail expr ("Aggregate on a non-collection: " ^ c ^ " has type " ^ 
       (string_of_type ct))
 
-   
+   (** Generates code to aggregate elements of a collection in groups *)
    let group_by_aggregate ?(expr = None) ((agg,aggt):code_t) 
          ((init,initt):code_t) ((group,groupt):code_t) 
          ((c, ct):code_t) : code_t =
