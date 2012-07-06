@@ -118,18 +118,23 @@ WHERE sumc > 2</div>
 </dd>
 
 <dt><b>NULL values</b></dt>
-<dd>DBToaster does not presently support NULL values.  The SUM or AVERAGE of an empty table is 0, and not NULL.  OUTER JOINS are not supported.</dd>
+<dd>DBToaster does not presently support NULL values.  The SUM or AVG of an empty table is 0, and not NULL.  OUTER JOINS are not supported.</dd>
+
+<dt><b>Incremental Computation with Floating Point Numbers</b></dt>
+<dd>There are several subtle issues that arise when performing incremental computations with floating point numbers:
+  <p>When using division in conjunction with aggregates, be aware that SUM and AVG return 0 for empty tables.  Once a result value becomes NAN or INFTY, it will no longer be incrementally maintainable.  We are working on a long-term fix.  In the meantime, there are two workarounds for this problem.  For some queries, you can coerce the aggregate value to be nonzero using the LISTMAX standard function (See the example query tpch/query8.sql in the DBToaster distribution for an example of how to do this).  For most queries, the -F EXPRESSIVE-TLQs optimization flag will typically materialize the divisor as a separate map (the division will be evaluated when accessing results).</p>
+  <p>The floating point standards for most target languages (including OCaml, Scala, and C++) do not have well-defined semantics for equality tests over floating point numbers.  Consequently, queries with floating-point group-by variables might produce non-unique groups (since two equivalent floating point numbers are not considered to be equal). We are working on a long-term fix.  In the meantime, the issue can be addressed by using CAST_INT, or CAST_STRING to convert floating point numbers into canonical forms.</p>
+  </ul>
 
 <dt><b>Other Notes</b></dt>
 <dd>
-<ul>
-<li>Support for division is limited.  DBToaster does not currently check for, or react to divide by zero errors.  If a result value ever becomes NAN or INFTY, it will no longer be possible to incrementally maintain it.</li>
-<li>DBToaster does not allow non-aggregate queries to evaluate to singleton values.  That is, the query
-<div class="codeblock">SELECT 1 FROM R WHERE R.A = (SELECT A FROM S)</div>
-is a compile-time error in DBToaster (while such a query would instead produce a run time error if it returned more than one tuple in SQL-92).  An equivalent, valid query would be:<br/>
-<div class="codeblock">SELECT 1 FROM R WHERE R.A IN (SELECT A FROM S)</div></li>
-<li>Variable scoping rules are slightly stricter than the SQL standard (you may need to use fully qualified names in some additional cases).</li>
-</ul>
+  <ul>
+    <li>DBToaster does not allow non-aggregate queries to evaluate to singleton values.  That is, the query
+    <div class="codeblock">SELECT 1 FROM R WHERE R.A = (SELECT A FROM S)</div>
+    is a compile-time error in DBToaster (while such a query would instead produce a run time error if it returned more than one tuple in SQL-92).  An equivalent, valid query would be:<br/>
+    <div class="codeblock">SELECT 1 FROM R WHERE R.A IN (SELECT A FROM S)</div></li>
+    <li>Variable scoping rules are slightly stricter than the SQL standard (you may need to use fully qualified names in some additional cases).</li>
+  </ul>
 </dd>
 </dl>
 </p>
@@ -173,6 +178,12 @@ Generates a single dictionary named FOO, mapping from the tuple "&lt;R.A, R.B&gt
 FROM R NATURAL JOIN S 
 GROUP BY S.C;</div>
 Generates two dictionaries named SUM_A and SUM_C, respectively containing the sums of R.A and S.C.
+
+
+<?=subsection("Multiple Queries")?>
+<div class="codeblock">SELECT SUM(R.A) AS SUM_A FROM R;
+SELECT SUM(S.C) SUM_C FROM S;</div>
+Generates two dictionaries named QUERY_1_SUM_A and QUERY_2_SUM_C, respectively containing the sums of R.A and S.C.
 
 <hr/>
 

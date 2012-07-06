@@ -9,6 +9,12 @@ $pages = array(
       "performance" => array(
         "title" => "Performance",
       ),
+      "features" => array(
+        "title" => "Features",
+        "contents" => array(
+          "roadmap" => "Feature Roadmap",
+        )
+      ),
       "research" => array(
         "title" => "Research",
         "contents" => array(
@@ -205,6 +211,12 @@ function mk_link($text, $page, $subpage = null){
       </div><!-- /content -->
     </div><!-- /contentwrapper -->
   </div><!-- /pagebody -->
+  <hr/>
+  <div class="footer">
+  <p>The views and conclusions contained in the software and documentation are those of the authors and should not be interpreted as representing official policies, either expressed or implied, of The DBToaster Consortium.</p>
+  
+  <p>Copyright (c) 2009-2012, The DBToaster Consortium. All rights reserved.</p>
+  </div>
 </div><!-- /overallpage -->
 
 </body>

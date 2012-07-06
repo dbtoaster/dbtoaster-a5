@@ -14,8 +14,7 @@
 
 <?=section("Compiling and running your first query")?>
 We start with a simple query that looks like this:
-<div class="codeblock">
-CREATE TABLE R(A int, B int) 
+<div class="codeblock">CREATE TABLE R(A int, B int) 
   FROM FILE '../../experiments/data/tiny_r.dat' LINE DELIMITED
   CSV (fields := ',');
 
@@ -52,8 +51,7 @@ In the previous example, we used the standard main function to test the query. H
 in real applications, it has to be run from the application itself.
 The following example shows how a query can be run from your own Scala code. Suppose we have a the following 
 source code in <span class="code">main_example.scala</span>:
-<div class="codeblock">
-import org.dbtoaster.Query
+<div class="codeblock">import org.dbtoaster.Query
 
 package org.example {
   object MainExample {
@@ -75,12 +73,10 @@ inconsistent if they are called from another thread than the query thread. A thr
 the results is planned for future versions of DBToaster.</p>
 <p>
 The program can be compiled to <span class="code">main_example.jar</span> using the following command (assuming that the query was compiled to a file named <span class="code">rs_example.jar</span>):
-<div class="codeblock">
-$&gt; scalac -classpath "rs_example.jar" -d main_example.jar main_example.scala
+<div class="codeblock">$&gt; scalac -classpath "rs_example.jar" -d main_example.jar main_example.scala
 </div>
 The resulting program can now be launched with:
-<div class="codeblock">
-$&gt; scala -classpath "main_example.jar:rs_example.jar:lib/dbt_scala/dbtlib.jar" org.example.MainExample
+<div class="codeblock">$&gt; scala -classpath "main_example.jar:rs_example.jar:lib/dbt_scala/dbtlib.jar" org.example.MainExample
 </div>
 The <span class="code">Query.run()</span> method takes a function of type <span class="code">Unit => Unit</span> as an optional argument which is called every time when an event was processed. 
 This function can be used to retrieve results while the query is still running.</p>
