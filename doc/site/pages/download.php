@@ -13,9 +13,9 @@
 <tr>
   <td align="right">Mac OS X</td>
   <td>&nbsp;</td>
-  <td>2493</td>
+  <td>2508</td>
   <td>&nbsp;</td>
-  <td>2012-Jul-06</td>
+  <td>2012-Jul-07</td>
   <td>&nbsp;</td>
   <td align="left">
     <a href="dist/dbtoaster_darwin_2508.tgz">Tarball</a></td>
