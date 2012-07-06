@@ -1,15 +1,5 @@
 
 
-<p>We do not claim that DBToaster is the right solution for everyone, but you should check out DBToaster if you need to
-<ul>
-<li>maintain materialized views of complex SQL queries,</li>
-<li>read these views and care about very high refresh rates / low refresh latencies,</li>
-<li>work with standing (aka continuous) rather than ad-hoc queries, i.e. you want to monitor the changing result of a given query over time, as the data changes, and</li>
-<li>do not work with extremely large datasets (this is a temporary restriction until we release our parallel/secondary storage runtimes).</li>
-</ul></p>
-
-<p>DBToaster may be also right for you even if you do not care about low view refresh latencies: DBToaster turns a set of queries into efficient specialized code for processing just these queries. DBToaster generates code that you can link into your applications. No further software (such as a separate database server or CEP engine) is required. Thus DBToaster is a very lightweight way of including fixed (parameterized) SQL queries in your applications.</p>
-
 
 <?= chapter("Materialized Views of Nested Queries") ?>
 <p>DBToaster supports efficient materialized views of nested SQL queries. Many commercial database systems support materialized views / incremental view maintenance, but no other system does so for nested SQL queries, even though they are essential for complex analytics.</p>
