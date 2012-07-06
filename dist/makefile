@@ -3,7 +3,7 @@ all: dbtoaster.tgz
 dbtoaster.tgz: dbtoaster_dist
 	tar -zcf dbtoaster.tgz dbtoaster
 	cp dbtoaster.tgz \
-	   dbtoaster$$(svn info | grep Revision | sed 's/Revision: /_/').tgz
+	   dbtoaster_$$(uname -s | tr A-Z a-z)$$(svn info | grep Revision | sed 's/Revision: /_/').tgz
 
 dbtoaster_dist: 
 	rm -rf dbtoaster
