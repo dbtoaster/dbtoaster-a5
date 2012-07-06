@@ -241,7 +241,7 @@ clean:
 	rm -f $(patsubst %,%.o,$(FILES))
 	rm -f $(patsubst %,%.annot,$(FILES))
 	rm -f bin/dbtoaster bin/dbtoaster_top bin/dbtoaster_debug
-	rm -f src/global/Driver.cmi src/global/Driver.cmo src/global/Driver.cmx
+	rm -f src/global/*.cmi src/global/*.cmo src/global/*.annot src/global/Driver.cmx
 	rm -f src/global/Driver.cmxi src/global/Driver.o
 	rm -f doc/*.aux doc/*.synctex.gz doc/*.log
 	rm -f makefile.deps
