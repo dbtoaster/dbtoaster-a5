@@ -1,6 +1,6 @@
 {\rtf1\ansi\ansicpg1252\cocoartf1038\cocoasubrtf350
 {\fonttbl\f0\fmodern\fcharset0 Courier;\f1\froman\fcharset0 TimesNewRomanPSMT;\f2\fmodern\fcharset0 Courier-Bold;
-\f3\fswiss\fcharset0 Helvetica;}
+}
 {\colortbl;\red255\green255\blue255;}
 {\info
 {\author Christoph Koch}
@@ -8,18 +8,20 @@
 \deftab720
 \pard\pardeftab720\ri0\qc
 
-\f0\fs28 \cf0 The DBToaster White Paper\
+\f0\fs32 \cf0 The DBToaster White Paper\
 \pard\pardeftab720\ri0\qc
 
 \f1\fs21 \cf0 \
 \
+\pard\pardeftab720\ri0\qc
 
-\f0 The DBToaster Consortium\
+\f0 \cf0 The DBToaster Consortium\
 c/o EPFL IC DATA, Station 14, CH-1015 Lausanne, Switzerland\
 dbtoaster@epfl.ch\
 \pard\pardeftab720\ri0
 
 \f1 \cf0 \
+\
 \
 \
 \pard\pardeftab720\ri0
@@ -84,15 +86,13 @@ DBToaster may be also right for you if you do not care so much about low latenci
 \f1\b0 \cf0 \
 \pard\pardeftab720\ri0
 
-\f0 \cf0 In a nutshell, what DBToaster does is express SQL queries in an internal calculus that allows to compute 
-\f3 \uc0\u915 
-\f0 \'c7\'f4 in the same sense as for mathematical functions -- the (discrete) derivative of any query, even the derivatives of derivatives. A derivative captures how a query result changes when the database is updated. DBToaster essentially maintains a query via the sequence of all its derivatives (that is, the derivative, the derivative of the derivative, the derivative of the derivative of the derivative, and so on). Using these, a materialized view can be kept fresh under database updates by summing up derivative function values, with no need for classical query operations such as joins.\
+\f0 \cf0 In a nutshell, what DBToaster does is express SQL queries in an internal calculus that allows to compute -- in the same sense as for mathematical functions -- the (discrete) derivative of any query, even the derivatives of derivatives. A derivative captures how a query result changes when the database is updated. DBToaster essentially maintains a query via the sequence of all its derivatives (that is, the derivative, the derivative of the derivative, the derivative of the derivative of the derivative, and so on). Using these, a materialized view can be kept fresh under database updates by summing up derivative function values, with no need for classical query operations such as joins.\
 \
 The details of the DBToaster technology are not easy to explain, and did require groundbreaking progress in the theory of databases and query algebras as well as in query optimization and compiler technology.\
 \
 The DBToaster technique performs provably better at keeping materialized views fresh than any previous technique. It even performs asymptotically better: the improvement is not by a constant factor, but grows even on a relative scale as one considers larger and larger data. This was shown in the paper\
 \
-Christoph Koch: Incremental query evaluation in a ring of databases. PODS 2010: 87-98.\
+Christoph Koch: Incremental query evaluation in a ring of databases. Proc. PODS 2010: 87-98.\
 http://www.dbtoaster.org/papers/pods2010-ring.pdf\
 \
 (Beware that this is a paper written for researchers in theoretical computer science.)\
@@ -107,7 +107,9 @@ http://www.dbtoaster.org/papers/pods2010-ring.pdf\
 \f1\b0 \cf0 \
 \pard\pardeftab720\ri0
 
-\f0 \cf0 Speed: See above, how well does it perform?\
+\f0 \cf0 Speed: See above, 
+\f2\b how well does it perform?
+\f0\b0 \
 \
 Materialized views of nested queries: DBToaster supports efficient materialized views of nested SQL queries. Many commercial database systems support materialized views / incremental view maintenance, but no other system does so for nested SQL queries, even though they are essential for complex analytics.\
 Nesting refers to the presence of select-statements (SQL queries) in the SELECT, FROM, or WHERE clauses of SQL queries.\
@@ -143,7 +145,7 @@ c/o EPFL IC DATA, Station 14,\
 CH-1015 Lausanne, Switzerland\
 \
 \
-Redistribution with or without modification are prohibited unless explicit permission is granted by the copyright holders.\
+Redistribution with or without modification is prohibited unless explicit permission is granted by the copyright holders.\
 \
 THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES\
 (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.\
@@ -160,26 +162,30 @@ The views and conclusions contained in the software and documentation are those 
 \f1\b0 \cf0 \
 \pard\pardeftab720\ri0
 
-\f0 \cf0 You are invited to perform and report on benchmark results and experimental comparisons of your system against DBToaster, but we ask you for fairness and to run DBToaster with settings that allow it to perform at its best. Specifically, the DBToaster interpreter mode is provided for your convenience and is not to be used for timing purposes. For the purpose of comparison with other data management systems, please use Please contact us if you have questions about how to optimize the performance of DBToaster.\
+\f0 \cf0 You are invited to perform and report on benchmark results and experimental comparisons of your system against DBToaster, but we ask you for fairness and to run DBToaster with settings that allow it to perform at its best. Specifically, the DBToaster interpreter mode is provided for your convenience and is not to be used for timing purposes. For the purpose of comparison with other data management systems, please use the C++ rather than the Scala backend. Please contact us if you have questions about how to optimize the performance of DBToaster.\
 \
 \
 \
-\
-Can I use DBToaster right away in my commercial/production environment?\
-\
+\pard\pardeftab720\ri0
+
+\f2\b \cf0 Can I use DBToaster right away in my commercial/production environment?\
+\pard\pardeftab720\ri0
+
+\f0\b0 \cf0 \
 No. See licensing above. You need to contact us if you want to use DBToaster for anything other than evaluation, research, and learning purposes.\
 \
 Furthermore, while we are excited about the performance of DBToaster, it is still a project in an early stage, and it may not be ready yet for your production purposes.\
 \
-However, the license allows you to find out whether (
-\f3 \uc0\u915 
-\f0 \'c7\'ffevaluation purposes
-\f3 \uc0\u915 
-\f0 \'c7\'d6) whether DBToaster is relevant to you. We would love to hear from you what features you would need to make DBToaster useful to you.\
+However, the license allows you to find out whether DBToaster is relevant to you. We would love to hear from you what features you would need to make DBToaster useful to you.\
 \
 \
-Continuity and long-term plans of the project\
 \
+\pard\pardeftab720\ri0
+
+\f2\b \cf0 Continuity and long-term plans of the project\
+\pard\pardeftab720\ri0
+
+\f0\b0 \cf0 \
 DBToaster is a research project and not a commercial venture. However:\
 \
 *	We consider DBToaster a long-term project that is still in an early phase. Expect follow-up releases that will substantially improve its features, quality, and performance.\
@@ -188,7 +194,7 @@ DBToaster is a research project and not a commercial venture. However:\
 \
 *	Despite its character as a research project, we do have the resources to create high-quality and ultimately production-quality software. We intend to provide support in the form of fixing reported bugs, (within reasonable limits) respond to questions on the use of DBToaster, and implement requested features if they are consistent with our project vision. We are committed to furthering knowledge and making our results publicly available with all the resources currently available to us: this is not in conflict with making our work relevant to as many users as possible.\
 \
-*	The current release, DBToaster1Beta1, contains features and APIs that are not considered stable. We do not provide any guarantee of backwards compatibility of applications you build using the current DBToaster APIs. Our APIs will stabilize, and we will make such commitments in the future. Starting with the release of DBToaster1 (expected in the fall of 2012), we plan to provide a matrix of stable vs. experimental features.\
+*	The current release, DBToaster Beta1, contains features and APIs that are not considered stable. We do not provide any guarantee of backwards compatibility of applications you build using the current DBToaster APIs. Our APIs will stabilize, and we will make such commitments in the future. Starting with the release of DBToaster1 (expected in the fall of 2012), we plan to provide a matrix of stable vs. experimental features.\
 \
 \
 \
@@ -255,32 +261,4 @@ Milestone 3: (June 2013?)\
 \
 Milestone 4: (Sept. 2013?)\
 *	Frontends for APL-style array processing languages (The R analytics language; Matlab; Q). That is, DBToaster will be able to compile analytical queries expressed in such languages in addition to SQL, with similar performance.\
-\
-\
-\
-\
-\pard\pardeftab720\ri0
-
-\f2\b \cf0 Why the name DBToaster? \
-\pard\pardeftab720\ri0
-
-\f1\b0 \cf0 \
-\pard\pardeftab720\ri0
-
-\f0 \cf0 (Skip this if you are adverse to geekiness.)\
-\
-Due to mysterious processes in the project leader
-\f3 \uc0\u915 
-\f0 \'c7\'d6s brain, he intuitively associates compilation with putting cheese on very hot toasted bread. (For related questions, do not contact dbtoaster@dbtoaster.org but christoph.koch@epfl.ch.)\
-\
-Another explanation suggested by others is that toasters are simple unsophisticated devices; the code generated by DBToaster is simple and does not need a sophisticated database system to execute (cf. 
-\f3 \uc0\u915 
-\f0 \'c7\'fftoaster
-\f3 \uc0\u915 
-\f0 \'c7\'d6 as an insult for robots in some science fiction movies and TV shows).\
-\
-\
-\pard\pardeftab720\ri0
-
-\f1 \cf0 \
 }
