@@ -30,7 +30,7 @@
   <td align="left">to be uploaded July 9</a></td>
 </tr>
 <tr>
-  <td align="right">Mac OS X</td>
+  <td align="right">Ubuntu</td>
   <td>&nbsp;</td>
   <td>2508</td>
   <td>&nbsp;</td>
@@ -39,7 +39,7 @@
   <td align="left">to be uploaded July 9</a></td>
 </tr>
 <tr>
-  <td align="right">Mac OS X</td>
+  <td align="right">Windows (Cygwin)</td>
   <td>&nbsp;</td>
   <td>2508</td>
   <td>&nbsp;</td>
