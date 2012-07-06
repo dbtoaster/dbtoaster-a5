@@ -6,13 +6,7 @@ Is your view refresh rate all that it could be?  Is your stream processor fright
 
 Try the new DBToaster Open Beta: 1,000-10,000 faster, and with better SQL support than existing state-of-the-art view maintenance systems.
 
-Please go to
-
-http://www.dbtoaster.org
-
-to find further information on DBToaster and to download the software.
-
-DBToaster is being developed by a team of researchers from EPFL and Johns Hopkins University.
+Available for download now, at http://www.dbtoaster.org
 
 -------------------------------
 
