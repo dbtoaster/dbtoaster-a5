@@ -19,9 +19,8 @@ clean:
 
 push_site:
 	@if [ "$(SITE_USERNAME)" ] ; then\
-		scp -r $(shell find $(patsubst %,site/%,$(SITE_SYNC_FILES)) -type f \
-						       | grep -v svn) \
-			$(SITE_USERNAME)_dbtoaster@ssh.phx.nearlyfreespeech.net:. ; \
+		scp -r site/pages/*.php \
+			$(SITE_USERNAME)_dbtoaster@ssh.phx.nearlyfreespeech.net:pages/ ; \
 	else echo "Set the SITE_USERNAME variable in makefile.local"; fi
 
 pull_site:
