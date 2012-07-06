@@ -18,7 +18,7 @@
   <td>2012-Jul-06</td>
   <td>&nbsp;</td>
   <td align="left">
-    <a href="dist/dbtoaster_darwin_2493">Tarball</a></td>
+    <a href="dist/dbtoaster_darwin_2508.tgz">Tarball</a></td>
 </tr>
 </table>
 
