@@ -18,19 +18,19 @@
 \f0 \cf0 The DBToaster Consortium\
 c/o EPFL IC DATA, Station 14, CH-1015 Lausanne, Switzerland\
 dbtoaster@epfl.ch\
-\pard\pardeftab720\ri0
+\pard\pardeftab720\ri0\ql\qnatural
 
 \f1 \cf0 \
 \
 \
 \
-\pard\pardeftab720\ri0
+\pard\pardeftab720\ri0\ql\qnatural
 
 \f2\b \cf0 What is DBToaster?\
-\pard\pardeftab720\ri0
+\pard\pardeftab720\ri0\ql\qnatural
 
 \f1\b0 \cf0 \
-\pard\pardeftab720\ri0
+\pard\pardeftab720\ri0\ql\qnatural
 
 \f0 \cf0 DBToaster constitutes a quantum leap in database technology, achieving seemingly impossible performance figures.\
 \
@@ -50,13 +50,13 @@ DBToaster is the first data management system to support such applications. It a
 \
 \
 \
-\pard\pardeftab720\ri0
+\pard\pardeftab720\ri0\ql\qnatural
 
 \f2\b \cf0 How well does it perform?\
-\pard\pardeftab720\ri0
+\pard\pardeftab720\ri0\ql\qnatural
 
 \f1\b0 \cf0 \
-\pard\pardeftab720\ri0
+\pard\pardeftab720\ri0\ql\qnatural
 
 \f0 \cf0 DBToaster has been experimentally evaluated in a peer-reviewed publication to be presented at the VLDB Conference in 2012:\
 \
@@ -74,17 +74,17 @@ We do not claim that DBToaster is the right solution for everyone, but you shoul
 *	work with standing (aka continuous) rather than ad-hoc queries, i.e. you want to monitor the changing result of a given query over time, as the data changes, and\
 *	do not work with extremely large datasets (this is a temporary restriction until we release our parallel/secondary storage runtimes).\
 \
-DBToaster may be also right for you if you do not care so much about low latencies: DBToaster turns a set of queries into efficient specialized code for processing just these queries. DBToaster generates code that you can link into your applications. No further software (such as a separate database server or CEP engine) is required. \
+DBToaster may be also right for you even if you do not care so much about low view refresh latencies: DBToaster turns a set of queries into efficient specialized code for processing just these queries. DBToaster generates code that you can link into your applications. No further software (such as a separate database server or CEP engine) is required. Thus DBToaster is a very lightweight way of including fixed (parameterized) SQL queries in your applications.\
 \
 \
 \
-\pard\pardeftab720\ri0
+\pard\pardeftab720\ri0\ql\qnatural
 
 \f2\b \cf0 How does it work?\
-\pard\pardeftab720\ri0
+\pard\pardeftab720\ri0\ql\qnatural
 
 \f1\b0 \cf0 \
-\pard\pardeftab720\ri0
+\pard\pardeftab720\ri0\ql\qnatural
 
 \f0 \cf0 In a nutshell, what DBToaster does is express SQL queries in an internal calculus that allows to compute -- in the same sense as for mathematical functions -- the (discrete) derivative of any query, even the derivatives of derivatives. A derivative captures how a query result changes when the database is updated. DBToaster essentially maintains a query via the sequence of all its derivatives (that is, the derivative, the derivative of the derivative, the derivative of the derivative of the derivative, and so on). Using these, a materialized view can be kept fresh under database updates by summing up derivative function values, with no need for classical query operations such as joins.\
 \
@@ -99,13 +99,13 @@ http://www.dbtoaster.org/papers/pods2010-ring.pdf\
 \
 \
 \
-\pard\pardeftab720\ri0
+\pard\pardeftab720\ri0\ql\qnatural
 
 \f2\b \cf0 Features\
-\pard\pardeftab720\ri0
+\pard\pardeftab720\ri0\ql\qnatural
 
 \f1\b0 \cf0 \
-\pard\pardeftab720\ri0
+\pard\pardeftab720\ri0\ql\qnatural
 
 \f0 \cf0 Speed: See above, 
 \f2\b how well does it perform?
@@ -118,13 +118,13 @@ C++ and Scala code generation: DBToaster is able to generate both C++ an Scala c
 \
 \
 \
-\pard\pardeftab720\ri0
+\pard\pardeftab720\ri0\ql\qnatural
 
 \f2\b \cf0 License\
-\pard\pardeftab720\ri0
+\pard\pardeftab720\ri0\ql\qnatural
 
 \f1\b0 \cf0 \
-\pard\pardeftab720\ri0
+\pard\pardeftab720\ri0\ql\qnatural
 
 \f0 \cf0 Copyright (c) 2009-2012, The DBToaster Consortium.\
 All rights reserved.\
@@ -154,22 +154,22 @@ The views and conclusions contained in the software and documentation are those 
 \
 \
 \
-\pard\pardeftab720\ri0
+\pard\pardeftab720\ri0\ql\qnatural
 
 \f2\b \cf0 Benchmarking and experimentation\
-\pard\pardeftab720\ri0
+\pard\pardeftab720\ri0\ql\qnatural
 
 \f1\b0 \cf0 \
-\pard\pardeftab720\ri0
+\pard\pardeftab720\ri0\ql\qnatural
 
 \f0 \cf0 You are invited to perform and report on benchmark results and experimental comparisons of your system against DBToaster, but we ask you for fairness and to run DBToaster with settings that allow it to perform at its best. Specifically, the DBToaster interpreter mode is provided for your convenience and is not to be used for timing purposes. For the purpose of comparison with other data management systems, please use the C++ rather than the Scala backend. Please contact us if you have questions about how to optimize the performance of DBToaster.\
 \
 \
 \
-\pard\pardeftab720\ri0
+\pard\pardeftab720\ri0\ql\qnatural
 
 \f2\b \cf0 Can I use DBToaster right away in my commercial/production environment?\
-\pard\pardeftab720\ri0
+\pard\pardeftab720\ri0\ql\qnatural
 
 \f0\b0 \cf0 \
 No. See licensing above. You need to contact us if you want to use DBToaster for anything other than evaluation, research, and learning purposes.\
@@ -180,10 +180,10 @@ However, the license allows you to find out whether DBToaster is relevant to you
 \
 \
 \
-\pard\pardeftab720\ri0
+\pard\pardeftab720\ri0\ql\qnatural
 
 \f2\b \cf0 Continuity and long-term plans of the project\
-\pard\pardeftab720\ri0
+\pard\pardeftab720\ri0\ql\qnatural
 
 \f0\b0 \cf0 \
 DBToaster is a research project and not a commercial venture. However:\
@@ -198,13 +198,13 @@ DBToaster is a research project and not a commercial venture. However:\
 \
 \
 \
-\pard\pardeftab720\ri0
+\pard\pardeftab720\ri0\ql\qnatural
 
 \f2\b \cf0 For researchers\
-\pard\pardeftab720\ri0
+\pard\pardeftab720\ri0\ql\qnatural
 
 \f1\b0 \cf0 \
-\pard\pardeftab720\ri0
+\pard\pardeftab720\ri0\ql\qnatural
 
 \f0 \cf0 The principles underlying DBToaster are presented in a number of technical papers available at\
 \
@@ -218,13 +218,13 @@ However, researchers can obtain, upon request, additional resources for reproduc
 \
 \
 \
-\pard\pardeftab720\ri0
+\pard\pardeftab720\ri0\ql\qnatural
 
 \f2\b \cf0 Current limitations\
-\pard\pardeftab720\ri0
+\pard\pardeftab720\ri0\ql\qnatural
 
 \f1\b0 \cf0 \
-\pard\pardeftab720\ri0
+\pard\pardeftab720\ri0\ql\qnatural
 
 \f0 \cf0 Limited SQL support: Currently DBToaster does not support all of SQL. Features not supported include:\
 *	NULL values and outer joins.\
@@ -239,13 +239,13 @@ Code generators and runtime system: DBToaster excels at producing efficient quer
 \
 \
 \
-\pard\pardeftab720\ri0
+\pard\pardeftab720\ri0\ql\qnatural
 
 \f2\b \cf0 The DBToaster roadmap\
-\pard\pardeftab720\ri0
+\pard\pardeftab720\ri0\ql\qnatural
 
 \f1\b0 \cf0 \
-\pard\pardeftab720\ri0
+\pard\pardeftab720\ri0\ql\qnatural
 
 \f0 \cf0 Milestone 1: (Sept 2012)\
 *	Implement the remaining missing SQL query features to support TPC-H, minus ORDER-BY, MIN/MAX, and NULL values/outerjoins.\

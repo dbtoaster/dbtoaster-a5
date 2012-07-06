@@ -9,6 +9,6 @@
 <li><a href="http://listes.epfl.ch/doc_en.cgi?liste=dbtoaster-announce">dbtoaster-announce</a>: A low-volume mailing list for announcements related to DBToaster.</li>
 </ul>
 
-<p>To subscribe to a mailing list, send an email to [list name]-subscribe@listes.epfl.ch and follow the instructions in the response.</p>
+<p>To subscribe to the mailing list, send an email to dbtoaster-announce-subscribe@listes.epfl.ch and follow the instructions in the email response. This email asks to send an empty reply to a given complicated email address containing a hash.</p>
 
-<p>To unsubscribe from a mailing list, send an email to [list name]-unsubscribe@listes.epfl.ch from the same email address that you subscribed with.</p>
+<p>To unsubscribe from the mailing list, send an email to dbtoaster-announce-unsubscribe@listes.epfl.ch from the same email address that you subscribed with.</p>
