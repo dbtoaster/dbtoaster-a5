@@ -9,12 +9,6 @@ $pages = array(
       "performance" => array(
         "title" => "Performance",
       ),
-      "features" => array(
-        "title" => "Features",
-        "contents" => array(
-          "roadmap" => "Feature Roadmap",
-        )
-      ),
       "research" => array(
         "title" => "Research",
         "contents" => array(
@@ -165,39 +159,40 @@ function mk_link($text, $page, $subpage = null){
       </a></div>
       <div class="topmenu">
         <div class="topmenuitem">
-          <a href="index.php?page=home">
+          <a href="index.php?page=home" class="topmenulink">
             About</a></div>
         <div class="topmenuitem">
-          <a href="index.php?page=download">
+          <a href="index.php?page=download" class="topmenulink">
             Downloads</a></div>
         <div class="topmenuitem">
-          <a href="index.php?page=docs">
+          <a href="index.php?page=docs" class="topmenulink">
             Documentation</a></div>
         <div class="topmenuitem">
-          <a href="bugs/">
+          <a href="index.php?page=bugs" class="topmenulink">
             Bug Reports</a></div>
       </div>
     </div>
     <hr/>
     <div class="menu">
-      <? if(isset($pages[$page]["contents"])) { 
-           $menu = $pages[$page]["contents"]; ?>
-        <ul>
-        <? foreach($menu as $menu_subpage_stub => $menu_subpage_info){ ?>
-          <li class="leftmenuitem_l1">
-            <a href="index.php?page=<?=$page?>&subpage=<?=$menu_subpage_stub?>">
-              <?=$menu_subpage_info["title"]?></a>
-          <? if(isset($menu_subpage_info["contents"])){ ?>
-            <ul>
-            <? foreach($menu_subpage_info["contents"] as 
-                          $menu_anchor_stub => $menu_anchor_title) { ?>
-              <li class="leftmenuitem_l2">
-                <a href="index.php?page=<?=$page?>&subpage=<?=$menu_subpage_stub?>#<?=$menu_anchor_stub?>">
-                  <?=$menu_anchor_title?></a></li>
-            <? } ?></ul>
-          <? } ?></li>
-      <? } ?></ul>
-    <? } ?>
+      <div class="menutop"></div><div class="menucontent">
+        <? if(isset($pages[$page]["contents"])) { 
+             $menu = $pages[$page]["contents"]; ?>
+          <? foreach($menu as $menu_subpage_stub => $menu_subpage_info){ ?>
+            <a href="index.php?page=<?=$page?>&subpage=<?=$menu_subpage_stub?>" class="leftlink">
+              <div class="leftmenuitem_l1">
+                <?=$menu_subpage_info["title"]?></a></div>
+            <? if(isset($menu_subpage_info["contents"])){ ?>
+              <? foreach($menu_subpage_info["contents"] as 
+                            $menu_anchor_stub => $menu_anchor_title) { ?>
+                <a href="index.php?page=<?=$page?>&subpage=<?=$menu_subpage_stub?>#<?=$menu_anchor_stub?>" class="leftlink">
+                  <div class="leftmenuitem_l2">
+                    <?=$menu_anchor_title?></div></a>
+              <? } ?>
+            <? } ?>
+          <? } ?>
+        <? } ?>
+      </div>
+      <div class="menubottom"></div>
     </div>
     <div class="contentwrapper">
       <div class="content">
@@ -207,7 +202,7 @@ function mk_link($text, $page, $subpage = null){
           include($pagepath);
         } else { ?>
           ERROR: The page you have requested does not exist.
-     <? } /* else of isset($pages[$page]) */ ?>
+      <? } /* else of isset($pages[$page]) */ ?>
       </div><!-- /content -->
     </div><!-- /contentwrapper -->
   </div><!-- /pagebody -->
