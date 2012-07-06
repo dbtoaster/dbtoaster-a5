@@ -20,6 +20,33 @@
   <td align="left">
     <a href="dist/dbtoaster_darwin_2508.tgz">Tarball</a></td>
 </tr>
+<tr>
+  <td align="right">Red Hat Linux</td>
+  <td>&nbsp;</td>
+  <td>2508</td>
+  <td>&nbsp;</td>
+  <td>2012-Jul-07</td>
+  <td>&nbsp;</td>
+  <td align="left">to be uploaded July 9</a></td>
+</tr>
+<tr>
+  <td align="right">Mac OS X</td>
+  <td>&nbsp;</td>
+  <td>2508</td>
+  <td>&nbsp;</td>
+  <td>2012-Jul-07</td>
+  <td>&nbsp;</td>
+  <td align="left">to be uploaded July 9</a></td>
+</tr>
+<tr>
+  <td align="right">Mac OS X</td>
+  <td>&nbsp;</td>
+  <td>2508</td>
+  <td>&nbsp;</td>
+  <td>2012-Jul-07</td>
+  <td>&nbsp;</td>
+  <td align="left">to be uploaded July 9</a></td>
+</tr>
 </table>
 
 <?= chapter("License") ?>
