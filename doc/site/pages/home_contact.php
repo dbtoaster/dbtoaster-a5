@@ -1,6 +1,6 @@
 <a name="contact"></a>
 <p>For general inquiries about dbtoaster, email <b>dbtoaster at epfl dot ch</b>.</p>
-<p>For bug reports, use our bug-tracker above.</p>
+<p>For bug reports, use <a href="index.php?page=bugs">our bug-tracker</a>.</p>
 
 <a name="mailing"></a>
 <h3>Mailing Lists</h3>

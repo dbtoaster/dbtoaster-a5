@@ -175,23 +175,30 @@ function mk_link($text, $page, $subpage = null){
       <div class="topmenu">
          <div id="bluemenu" class="bluetabs">
             <ul>
-               <li><a href="index.php?page=home">Home</a></li>
+               <li><a href="index.php?page=home" rel="dropmenu0_b">About</a></li>
                <li><a href="index.php?page=download" rel="dropmenu1_b">Download</a></li>
                <li><a href="index.php?page=docs" rel="dropmenu2_b">Documentation</a></li>
                <li><a href="index.php?page=home&subpage=contact" rel="dropmenu3_b">Contact</a></li>
            </ul>
          </div>
       </div>
+         <div id="dropmenu0_b" class="dropmenudiv_b">
+            <a href="index.php?page=home">Home</a>
+            <a href="index.php?page=home&subpage=performance">Performance</a>
+            <a href="index.php?page=home&subpage=features">Features</a>
+            <a href="index.php?page=home&subpage=people">Team</a>
+            <a href="index.php?page=research">For researchers</a>
+         </div>
          <div id="dropmenu1_b" class="dropmenudiv_b">
             <a href="index.php?page=download">Download</a>
-            <a href="index.php?page=home&subpage=features">Features</a>
+            <a href="index.php?page=download">License</a>
          </div>
          <div id="dropmenu2_b" class="dropmenudiv_b">
             <a href="index.php?page=docs">Getting Started</a>
             <a href="index.php?page=docs&subpage=compiler">Command-Line Reference</a>
-            <a href="index.php?page=docs&subpage=compiler#options">   Command-Line Options</a>
-            <a href="index.php?page=docs&subpage=compiler#languages">   Supported Languages</a>
-            <a href="index.php?page=docs&subpage=compiler#opt_flags">   Optimization Flags</a>
+            <a href="index.php?page=docs&subpage=compiler#options">- Command-Line Options</a>
+            <a href="index.php?page=docs&subpage=compiler#languages">- Supported Languages</a>
+            <a href="index.php?page=docs&subpage=compiler#opt_flags">- Optimization Flags</a>
             <a href="index.php?page=docs&subpage=sql">DBT-SQL Reference</a>
             <a href="index.php?page=docs&subpage=stdlib">Standard Functions</a>
             <a href="index.php?page=docs&subpage=adaptors">Standard Adaptors</a>
