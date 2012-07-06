@@ -263,15 +263,11 @@ package org.dbtoaster.dbtoasterlib {
        * @param value Value of the element
        */
       def updateValue(key: K, value: V): Unit = {
-        value match {
-          case _ => {
-            val keyVal = (key, value)
-            elems += keyVal
-            sndIdx match {
-              case Some(x) => x foreach { case (k, v) => v.update(keyVal) }
-              case None => ()
-            }
-          }
+        val keyVal = (key, value)
+        elems += keyVal
+        sndIdx match {
+          case Some(x) => x foreach { case (k, v) => v.update(keyVal) }
+          case None => ()
         }
       }
 

@@ -230,7 +230,6 @@ struct
       match a, b with
       | Int, Float | Float, Int -> Float
       | Bool, Int  | Int, Bool  -> Int
-      | Int, Date  | Date, Int  -> Date
       | Collection(_, ak, at), Collection(_, bk, bt) -> 
          Collection(Intermediate, (List.map2 unify_types ak bk), 
             unify_types at bt) 

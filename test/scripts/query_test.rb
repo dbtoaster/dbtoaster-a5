@@ -217,7 +217,7 @@ class ScalaUnitTest < GenericUnitTest
           result = $1;
           case @toplevels[q][:type]
             when :singleton then @toplevels[q][:result] = result.strip.to_f;
-            when :onelevel then @toplevels[q][:result] = CppDB.new(output);
+            when :onelevel then @toplevels[q][:result] = CppDB.new(result);
             else nil
           end
         else raise "Runtime Error"
