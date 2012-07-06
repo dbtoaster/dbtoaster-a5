@@ -927,7 +927,7 @@ struct
             ) tlqs))
       in
       let print_results = 
-         "def printResults(): Unit = { val pp = new PrettyPrinter(80, 2);" ^
+         "def printResults(): Unit = { val pp = new PrettyPrinter(8000, 2);" ^
          (make_list ~sep:";" ~parens:("",";") (List.map (fun (x, _, (c, ct)) ->
             match ct with
             | Collection(_, _, _) -> 
