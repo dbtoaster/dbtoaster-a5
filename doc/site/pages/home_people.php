@@ -17,11 +17,12 @@
 <tr><td colspan=2>&nbsp;</td></tr>
 <tr><td colspan=2 align="center"><h3>Alumni</h3></td></tr>
 
-<tr><td class="contact_university">Cornell University</t><td>Anton Morozov</td></tr>
+<tr><td class="contact_university">Cornell University</td>
+<td>Anton Morozov, Ki Suh Lee</td></tr>
 <tr><td class="contact_university">EPFL</td><td>
 Thom Popovici,
 Mohammad Tavakoli Ghinani,
-<a href="http://people.epfl.ch/cgi-bin/people?id=178682&lang=en">Roman Zoller</a>
+Roman Zoller
 </td></tr>
 
 </table>
