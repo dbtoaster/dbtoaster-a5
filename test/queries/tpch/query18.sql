@@ -1,3 +1,8 @@
+-- Unsupported features for this query
+--   ORDER BY (ignored)
+--   HAVING (rewritten as a nested query)
+
+
 INCLUDE 'test/queries/tpch/schemas.sql';
 
 SELECT c.name, c.custkey, o.orderkey, o.orderdate, o.totalprice, 

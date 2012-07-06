@@ -1,11 +1,11 @@
 {
-  :path => "test/queries/tpch/query14.sql",
+  :path => "test/queries/tpch/query17a.sql",
   :datasets => {
     "standard" => {
       :toplevels => {
-        "PROMO_REVENUE" => {
+        "QUERY17" => {
           :type => :singleton,
-          :expected => 15.2302126116          
+          :expected => 898778.73
         }
       }
     },
@@ -13,9 +13,9 @@
     "tiny" => {
       :subs => [ [/schemas\.sql/, "schemas_tiny.sql"] ],
       :toplevels => {
-        "PROMO_REVENUE" => {
+        "QUERY17" => {
           :type => :singleton,
-          :expected => 37.1406212975
+          :expected => 98015.33
         }
       }
     },
@@ -23,9 +23,9 @@
     "big" => {
       :subs => [ [/schemas\.sql/, "schemas_big.sql"] ],
       :toplevels => {
-        "PROMO_REVENUE" => {
+        "QUERY17" => {
           :type => :singleton,
-          :expected => 16.2838556890           
+          :expected => 129502082.22000033
         }
       }
     },
@@ -33,9 +33,9 @@
     "standard_del" => {
       :subs => [ [/schemas\.sql/, "schemas_del.sql"] ],
       :toplevels => {
-        "PROMO_REVENUE" => {
+        "QUERY17" => {
           :type => :singleton,
-          :expected => 16.8635452910          
+          :expected => 6087.66
         }
       }
     },
@@ -43,9 +43,9 @@
     "tiny_del" => {
       :subs => [ [/schemas\.sql/, "schemas_tiny_del.sql"] ],
       :toplevels => {
-        "PROMO_REVENUE" => {
+        "QUERY17" => {
           :type => :singleton,
-          :expected => 0
+          :expected => 0.0
         }
       }
     },
@@ -53,14 +53,11 @@
     "big_del" => {
       :subs => [ [/schemas\.sql/, "schemas_big_del.sql"] ],
       :toplevels => {
-        "PROMO_REVENUE" => {
+        "QUERY17" => {
           :type => :singleton,
-          :expected => 15.7677344539
+          :expected => 848632.43
         }
       }
     }
-    
   }
 }
-
-

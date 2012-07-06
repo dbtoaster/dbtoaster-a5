@@ -2,7 +2,7 @@
 --   INTERVAL (inlined into constant)
 
 /* Note that this query will fail to produce the correct answer on the OCaml  
-   interpreter due to a floading point error in OCaml itself.  Specifically, 
+   interpreter due to a floating point error in OCaml itself.  Specifically, 
    in OCaml, 0.06+0.01 <> 0.07.  This can not be helped. */
 
 INCLUDE 'test/queries/tpch/schemas.sql';

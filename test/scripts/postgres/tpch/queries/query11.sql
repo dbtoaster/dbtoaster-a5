@@ -1,19 +1,20 @@
 ﻿SET search_path = 'TPCH_@@DATASET@@';
 
-SELECT p.s_nationkey, p.ps_partkey, SUM(p.value) AS QUERY11
+SELECT p.ps_partkey, SUM(p.value) AS value
 FROM
   (
-    SELECT s.s_nationkey, ps.ps_partkey, sum(ps.ps_supplycost * ps.ps_availqty) AS value
-    FROM  partsupp ps, supplier s
+    SELECT ps.ps_partkey, sum(ps.ps_supplycost * ps.ps_availqty) AS value
+    FROM  partsupp ps, supplier s, nation n
     WHERE ps.ps_suppkey = s.s_suppkey
-    GROUP BY ps.ps_partkey, s.s_nationkey
-  ) p,
-  (
-    SELECT s.s_nationkey, sum(ps.ps_supplycost * ps.ps_availqty) AS value
-    FROM  partsupp ps, supplier s
+      AND s.s_nationkey = n.n_nationkey
+      AND n.n_name = 'GERMANY' 
+    GROUP BY ps.ps_partkey
+  ) p
+WHERE p.value > (
+    SELECT sum(ps.ps_supplycost * ps.ps_availqty) * 0.001 AS value
+    FROM  partsupp ps, supplier s, nation n
     WHERE ps.ps_suppkey = s.s_suppkey
-    GROUP BY s.s_nationkey
-  ) n
-WHERE p.s_nationkey = n.s_nationkey
-  AND p.value > 0.001 * n.value
-GROUP BY p.s_nationkey, p.ps_partkey;
+      AND s.s_nationkey = n.n_nationkey
+      AND n.n_name = 'GERMANY'
+  )
+GROUP BY p.ps_partkey

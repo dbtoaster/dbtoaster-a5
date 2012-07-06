@@ -221,17 +221,23 @@ query_tpch:
 	@$(FAST_QUERY_TEST) tpch9 --dataset tiny
 	@$(FAST_QUERY_TEST) tpch10 --dataset tiny
 	@$(FAST_QUERY_TEST) tpch11 --dataset tiny
-#	@$(FAST_QUERY_TEST) tpch11 
+	@$(FAST_QUERY_TEST) tpch11 
 	@$(FAST_QUERY_TEST) tpch11a --dataset tiny
+	@$(FAST_QUERY_TEST) tpch11c --dataset tiny
+#	@$(FAST_QUERY_TEST) tpch11c  # ~90s
 	@$(FAST_QUERY_TEST) tpch12 --dataset tiny
 	@$(FAST_QUERY_TEST) tpch13 --dataset tiny
 	@$(FAST_QUERY_TEST) tpch14 --dataset tiny
-	@$(FAST_QUERY_TEST) tpch15 --dataset tiny
+	@$(FAST_QUERY_TEST) tpch15 --dataset tiny  
 	@$(FAST_QUERY_TEST) tpch16 --dataset tiny
 	@$(FAST_QUERY_TEST) tpch17 --dataset tiny
 	@$(FAST_QUERY_TEST) tpch17 
+	@$(FAST_QUERY_TEST) tpch17a --dataset tiny
+	@$(FAST_QUERY_TEST) tpch17a 
 	@$(FAST_QUERY_TEST) tpch18 --dataset tiny
 #	@$(FAST_QUERY_TEST) tpch18 #sloooow
+	@$(FAST_QUERY_TEST) tpch18a --dataset tiny
+	@$(FAST_QUERY_TEST) tpch18a
 	@$(FAST_QUERY_TEST) tpch19 --dataset tiny
 	@$(FAST_QUERY_TEST) tpch20 --dataset tiny
 	@$(FAST_QUERY_TEST) tpch21 --dataset tiny
@@ -244,6 +250,9 @@ query_tpch:
 query_financial:
 	@$(FAST_QUERY_TEST) vwap --dataset tiny
 #	@$(FAST_QUERY_TEST) vwap
+	@$(FAST_QUERY_TEST) vwap --dataset tiny -d HEURISTICS-ENABLE-INPUTVARS
+	@$(FAST_QUERY_TEST) vwap -d HEURISTICS-ENABLE-INPUTVARS
+	@$(FAST_QUERY_TEST) brokervariance --dataset tiny
 	@$(FAST_QUERY_TEST) brokervariance
 	@$(FAST_QUERY_TEST) brokerspread --dataset tiny
 	@$(FAST_QUERY_TEST) brokerspread

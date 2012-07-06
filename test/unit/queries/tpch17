@@ -3,9 +3,9 @@
   :datasets => {
     "standard" => {
       :toplevels => {
-        "QUERY17" => {
+        "AVG_YEARLY" => {
           :type => :singleton,
-          :expected => 898778.73
+          :expected => 0.0
         }
       }
     },
@@ -13,9 +13,9 @@
     "tiny" => {
       :subs => [ [/schemas\.sql/, "schemas_tiny.sql"] ],
       :toplevels => {
-        "QUERY17" => {
+        "AVG_YEARLY" => {
           :type => :singleton,
-          :expected => 98015.33
+          :expected => 0.0
         }
       }
     },
@@ -23,9 +23,9 @@
     "big" => {
       :subs => [ [/schemas\.sql/, "schemas_big.sql"] ],
       :toplevels => {
-        "QUERY17" => {
+        "AVG_YEARLY" => {
           :type => :singleton,
-          :expected => 129502082.22000033
+          :expected => 23512.752857142857
         }
       }
     },
@@ -33,9 +33,9 @@
     "standard_del" => {
       :subs => [ [/schemas\.sql/, "schemas_del.sql"] ],
       :toplevels => {
-        "QUERY17" => {
+        "AVG_YEARLY" => {
           :type => :singleton,
-          :expected => 6087.66
+          :expected => 0.0
         }
       }
     },
@@ -43,7 +43,7 @@
     "tiny_del" => {
       :subs => [ [/schemas\.sql/, "schemas_tiny_del.sql"] ],
       :toplevels => {
-        "QUERY17" => {
+        "AVG_YEARLY" => {
           :type => :singleton,
           :expected => 0.0
         }
@@ -53,9 +53,9 @@
     "big_del" => {
       :subs => [ [/schemas\.sql/, "schemas_big_del.sql"] ],
       :toplevels => {
-        "QUERY17" => {
+        "AVG_YEARLY" => {
           :type => :singleton,
-          :expected => 848632.43
+          :expected => 4905.0542857142857143
         }
       }
     }
