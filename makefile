@@ -142,7 +142,12 @@ bin/dbtoaster_top: $(C_FILES) lib/.deps src/global/UnitTest.ml
 fast: bin/dbtoaster_debug bin/dbtoaster_top
 
 dist: bin/dbtoaster
-	make -C dist
+	make -C lib runtimelibs_force
+	make -C dist 
+
+disttest:
+	make -C lib runtimelibs_force
+	make -C dist test	
 
 #################################################
 

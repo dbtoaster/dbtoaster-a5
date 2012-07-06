@@ -12,7 +12,7 @@ def copy_files(files, tgt)
 end
 
 def copy_file(f, tgt)
-  system("cp #{f} #{tgt}/")
+  system("cp #{f} #{tgt}/") or exit(-1);
 end
 
 def copy_dir(d, tgt)
