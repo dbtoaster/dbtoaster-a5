@@ -27,6 +27,10 @@ refresh views as the input data changes.</p>
 <p>DBToaster may be also right for you even if you do not care about low view refresh latencies: DBToaster turns a set of queries into efficient specialized code for processing just these queries. DBToaster generates code that you can link into your applications. No further software (such as a separate database server or CEP engine) is required. Thus DBToaster is a very lightweight way of including fixed (parameterized) SQL queries in your applications.</p>
 
 
+<p>Here is a <a href="papers/whitepaper.pdf">white paper</a> that we hope can help you
+decide whether to try out DBToaster.</p>
+
+
 <h3>How can DBToaster be so fast?</h3>
 <p>Traditional relational databases are slow because they are designed to support arbitrary hand-written queries.  Nowadays though, few people execute queries directly.  Most queries are generated automatically based on templates (e.g., by PHP, C#/LINQ, Scala/SLIQ, Java/JDBC, etc...). </p>
 
