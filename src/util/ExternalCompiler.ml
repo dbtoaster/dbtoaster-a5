@@ -159,9 +159,10 @@ let scala_compiler = {
       "-unchecked";
       "-sourcepath";"lib/dbt_scala/src";
       "-classpath";"lib/dbt_scala/dbtlib.jar";
-      (if Debug.active "COMPILE-WITHOUT-OPT" then "" else "-optimise");
       "-d"; out;
-    ] in
+    ] @ 
+    (if Debug.active "COMPILE-WITHOUT-OPT" then [] else ["-optimise"]); 
+    in
 
     let sourcefiles = [
       "lib/dbt_scala/src/org/dbtoaster/RunQuery.scala";
