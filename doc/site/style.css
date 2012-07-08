@@ -19,13 +19,13 @@ img.inline_image {
   border-style:inset;
   border-width:2px;
   border-color:grey;
-  margin-left:auto;
-  margin-right:auto;
+  margin-left:50px;
+  margin-right:50px;
 }
 .overallpage {
   margin-left:auto;
   margin-right:auto;
-  width:900px
+  width:850px
 }
 .menu {
   display:inline-block;
@@ -83,9 +83,11 @@ img.inline_image {
 .contentwrapper {
   display:inline-block;
   position:relative;
-  width:610px;
+  width:700px;
   vertical-align:top;
   padding:0px;
+  margin-left:75px;
+  margin-right:75px;
 }
 .content {
   opacity:1;
