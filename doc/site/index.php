@@ -1,4 +1,4 @@
-<?
+<?php
 $pages = array(
   "home"             => "About", 
     "home_performance" => "Performance",
@@ -100,7 +100,7 @@ function mk_link($text, $page, $subpage = null, $anchor = "", $atagextras = ""){
         <?= mk_link("<img src=\"dbtoaster-logo.gif\" width=\"214\" 
                       height=\"100\" alt=\"DBToaster\"/>", "home"); ?></div>
       <div class="topmenu">
-        <? function mk_menu($tag, $page, $subpage = null) {
+        <?php function mk_menu($tag, $page, $subpage = null) {
              return "<li>".mk_link(null, $page, $subpage, "", 
                                    "rel=\"$tag\"")."</li>";
            } ?>
@@ -151,13 +151,13 @@ function mk_link($text, $page, $subpage = null, $anchor = "", $atagextras = ""){
     <hr/>
     <div class="contentwrapper">
       <div class="content">
-        <?
+        <?php
           if(isset($pages[$subpage])){ 
         ?><div class="titlebox"><?=$shorttitle?></div><?
           include($pagepath);
         } else { ?>
           ERROR: The page you have requested does not exist.
-      <? } /* else of isset($pages[$page]) */ ?>
+      <?php } /* else of isset($pages[$page]) */ ?>
       </div><!-- /content -->
     </div><!-- /contentwrapper -->
   </div><!-- /pagebody -->
