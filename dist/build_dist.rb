@@ -69,7 +69,7 @@ def build_php(script, target_dir)
   page_data = 
     sources.map do |page, subpage, dest_file|
       IO.popen("php", "w+") do |php|
-        php.puts "<? ";
+        php.puts "<?php ";
         php.puts "$_GET['page'] = '#{page}';";
         php.puts "$_GET['subpage'] = '#{subpage}';";
         php.puts "$now_building_distro = true";
