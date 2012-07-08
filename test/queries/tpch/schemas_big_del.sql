@@ -98,6 +98,6 @@ CREATE TABLE REGION (
         name         CHAR(25),
         comment      VARCHAR(152)
     )
-  FROM FILE '../../experiments/data/tpch_del/standard/region.csv'
+  FROM FILE '../../experiments/data/tpch/big_del/region.csv'
   LINE DELIMITED CSV (delimiter := '|', deletions := 'true');
 
