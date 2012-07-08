@@ -153,7 +153,7 @@ function mk_link($text, $page, $subpage = null, $anchor = "", $atagextras = ""){
       <div class="content">
         <?php
           if(isset($pages[$subpage])){ 
-        ?><div class="titlebox"><?=$shorttitle?></div><?
+        ?><div class="titlebox"><?=$shorttitle?></div><?php
           include($pagepath);
         } else { ?>
           ERROR: The page you have requested does not exist.
