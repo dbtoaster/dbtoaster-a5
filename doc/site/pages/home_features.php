@@ -62,6 +62,25 @@ is executed which determines what changes need to be effected on the materialize
 reducing the amount of work necessary to refresh a view dramatically.
 </p>
 
+<?= chapter("Powerful optimizers") ?>
+<p>
+DBToaster is a powerful optimizing compiler that implements state-of-the-art
+optimizations both from the databases and compilers research literature.
+Optimization is performed at multiple stages and levels or abstraction, from
+SQL and DBToaster's internal calculus to the backend functional and imperative
+code representations.
+</p>
+
+<?= chapter("Much more to come") ?>
+<p>
+We have big plans for DBToaster, and some key goals are outlined below.
+Purely regarding performance, we expect to be able to speed up our generated
+code by another two orders of magnitude in the typical case judging purely
+from our reverse-engineering of the code we currently produce.
+Also, sometimes our generated C++ code outperforms Scala substantially,
+and in other cases it is exactly the other way around, which suggests that
+we are not even close to being as fast as we can.
+</p>
 
 
 
@@ -69,7 +88,7 @@ reducing the amount of work necessary to refresh a view dramatically.
 <?= chapter("Feature Roadmap") ?>
 
 <table valign="top">
-<tr><th>Milestone</th><th>Expected Date</th><th>Feature Summary</th></tr>
+<tr><th>Milestone</th><th width="20%">Expected Date</th><th>Feature Summary</th></tr>
 
 <tr><th valign="top">1</th><td valign="top">Fall 2012</td>
   <td>
@@ -79,7 +98,7 @@ reducing the amount of work necessary to refresh a view dramatically.
     </ul>
   </td></tr>
   
-<tr><th valign="top">2</th><td valign="top">Winter 2012/Spring 2013</td>
+<tr><th valign="top">2</th><td valign="top">Spring 2013</td>
   <td>
     <ul>
       <li>A parallel runtime for DBToaster</li>
