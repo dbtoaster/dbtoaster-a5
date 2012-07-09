@@ -47,7 +47,8 @@
   <td>&nbsp;</td>
   <td>2012-Jul-09</td>
   <td>&nbsp;</td>
-  <td align="left">to be uploaded July 9</td>
+  <td align="left">
+    <a href="dist/dbtoaster_cygwin_nt-6.1-wow64_2538.tgz">Tarball</a></td>
 </tr>
 </table>
 
