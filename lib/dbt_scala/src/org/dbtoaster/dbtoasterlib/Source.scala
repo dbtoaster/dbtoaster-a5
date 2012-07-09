@@ -1,9 +1,9 @@
-import org.dbtoaster.dbtoasterlib.StreamAdaptor._
 import java.util.Scanner
 import java.io.InputStream
-import org.dbtoaster.dbtoasterlib.dbtoasterExceptions._
 import scala.collection.mutable.Queue
 import scala.collection.mutable.PriorityQueue
+import org.dbtoaster.dbtoasterlib.dbtoasterExceptions._
+import org.dbtoaster.dbtoasterlib.StreamAdaptor._
 
 package org.dbtoaster.dbtoasterlib {
   /**

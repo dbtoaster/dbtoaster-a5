@@ -333,6 +333,9 @@ struct
    let num_op ?(conva = identity) ?(convb = identity) opcode = 
       (fun a b -> "(" ^ conva(a) ^ ") " ^ opcode ^ " (" ^ convb(b) ^ ")")
 
+   let cmp_op ?(conva = identity) ?(convb = identity) opcode = 
+      (fun a b -> mk_bool_to_int ("(" ^ conva(a) ^ ") " ^ opcode ^ " (" ^ convb(b) ^ ")"))
+
    (** Returns a function generating code for a certain
        type of operation *)
    let f_op op_f op_b = 
@@ -361,22 +364,24 @@ struct
             (string_of_type b))))*)
    
    (** Generates a function generating code for a compare operation *)
+   (* FIX-ME: Daniel: Now K3 treats booleans as ints. When this is fixed in *)
+   (* K3, we can also fix it here as well as in 'cmp_op'. *)
    let c_op op = (fun a b -> 
       match (a, b) with
       | (Float, Float) | (String, String) | (Bool, Bool) | (Int, Int)
       | (Int, Float) | (Float, Int) -> 
-         ((num_op op), Bool, None)
+         ((cmp_op op), Int, None)
       (* Sometimes there is K3 code that compares booleans to floats, so code
          is being generated to convert the boolean to a float *)
-      | (Bool, Float) -> ((num_op op ~conva:mk_bool_to_float), Bool, None)
-      | (Float, Bool) -> ((num_op op ~convb:mk_bool_to_float), Bool, None)
-      | (Bool, Int) -> ((num_op op ~conva:mk_bool_to_int), Bool, None)
-      | (Int, Bool) -> ((num_op op ~convb:mk_bool_to_int), Bool, None)
+      | (Bool, Float) -> ((cmp_op op ~conva:mk_bool_to_float), Int, None)
+      | (Float, Bool) -> ((cmp_op op ~convb:mk_bool_to_float), Int, None)
+      | (Bool, Int) -> ((cmp_op op ~conva:mk_bool_to_int), Int, None)
+      | (Int, Bool) -> ((cmp_op op ~convb:mk_bool_to_int), Int, None)
       | (Date, Date) -> 
-         ((num_op op ~conva:mk_date_to_time ~convb:mk_date_to_time), Bool, 
+         ((cmp_op op ~conva:mk_date_to_time ~convb:mk_date_to_time), Int, 
             None)
       | (_, _) -> 
-         ((num_op op), Unit, 
+         ((cmp_op op), Unit, 
             Some((string_of_type a) ^ " [" ^ op ^ "] " ^ (string_of_type b)))
    )
 

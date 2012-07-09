@@ -846,16 +846,16 @@ let rec calc_to_k3_expr meta ?(generate_init = false) theta_vars_el calc :
                error 
                   ("M3ToK3: The schema of a sum term should " ^ 
                    "be the same as the schema of the entire sum."));
-        let new_outs_el, new_e =
-            if not (Debug.active "M3TOK3-SUM-WITHOUT-COMBINE") && 
-               e_outs_el <> outs_el then
-              (* If using combine, the sum terms must have the exact 
-                 same schema (same vars in the same order) *)
-              outs_el, K.Map( project_fn (e_outs_el@[e_ret_ve]) 
+            let new_outs_el, new_e =
+               if not (Debug.active "M3TOK3-SUM-WITHOUT-COMBINE") && 
+                  e_outs_el <> outs_el then
+                  (* If using combine, the sum terms must have the exact 
+                    same schema (same vars in the same order) *)
+                  outs_el, K.Map( project_fn (e_outs_el@[e_ret_ve]) 
                                          (outs_el@[e_ret_ve]), e)
-            else 
-              e_outs_el, e
-        in
+               else 
+                  e_outs_el, e
+            in
             let e_ret_t = type_of_kvar e_ret_ve in
             let new_ret_t = arithmetic_return_types old_ret_t e_ret_t in
             let e_txt = (CalculusPrinter.string_of_expr c) in
@@ -867,8 +867,9 @@ let rec calc_to_k3_expr meta ?(generate_init = false) theta_vars_el calc :
                let result,new_meta,new_ret_t = 
                   prepare_fn old_meta old_ret_t c 
                in
-                  new_meta,new_ret_t,old_el@[result]
-            ) (meta,(K.TBase(T.TInt)),[]) sum_args 
+               new_meta,new_ret_t,old_el@[result] ) 
+               (meta,(K.TBase(T.TInt)),[]) 
+               sum_args 
          in
                      
          let ret_ve = K.Var(gen_sum_ret_sym (),ret_t) in
@@ -926,15 +927,15 @@ let rec calc_to_k3_expr meta ?(generate_init = false) theta_vars_el calc :
                 K.Combine(List.map (fun (s_outs_el,s_ret_ve,s,_) -> s) 
                                    sum_exprs)
              in
-                (sum_result_combine, nm)
+             (sum_result_combine, nm)
          )
          else
             let sum_fn sum_e (s_outs_el,s_ret_ve,s,_) = 
                K.Add(sum_e,s) 
             in
-               (List.fold_left sum_fn hd_s sum_exprs_tl), nm
+            (List.fold_left sum_fn hd_s sum_exprs_tl), nm
          in
-           ((outs_el, ret_ve, sum_result), nm2)            
+         ((outs_el, ret_ve, sum_result), nm2)            
     
     | C.Prod( prod_args )   ->   
        (* Translate all terms of the product int K3 and make sure *)
@@ -945,7 +946,7 @@ let rec calc_to_k3_expr meta ?(generate_init = false) theta_vars_el calc :
                              old_scope c 
           in
           let new_scope = ListAsSet.union old_scope e_outs_el in
-             ((e_outs_el,e_ret_ve,e),(new_meta,new_scope))
+          ((e_outs_el,e_ret_ve,e),(new_meta,new_scope))
        in
        let (nm,_),prod_exprs = 
           List.fold_left (fun (old_extra,old_el) c -> 
@@ -1120,7 +1121,7 @@ let m3_stmt_to_k3_stmt (meta: meta_t) ?(generate_init = false)
             else 
                None
          in 
-            if (init_expr_opt != None) then 
+         if (init_expr_opt != None) then 
             K.IfThenElse( K.Member(existing_out_tier, lhs_outs_el),
                           K.Lookup(existing_out_tier, lhs_outs_el),
                           (extract_opt init_expr_opt) ), meta
@@ -1132,17 +1133,17 @@ let m3_stmt_to_k3_stmt (meta: meta_t) ?(generate_init = false)
    (* corresponding schema. Beside the trigger variables we also have *)
    (* the input variables of the "lhs_collection" in scope as we will *)
    (* update "lhs_collection" while iterating over all lhs input variables. *)
-    let (rhs_outs_el, rhs_ret_ve, incr_expr), nm =
+   let (rhs_outs_el, rhs_ret_ve, incr_expr), nm =
       if not(Debug.active "DEBUG-DM-WITH-M3") then
-        calc_to_k3_expr nm0 ~generate_init:(generate_init) 
-                        trig_w_ins_el incr_calc
+         calc_to_k3_expr nm0 ~generate_init:(generate_init) 
+                         trig_w_ins_el incr_calc
       else
-        let (rhs_outs_el, rhs_ret_ve, incr_expr), nm = 
-          calc_to_k3_expr nm0 ~generate_init:(true) 
-                          trig_w_ins_el incr_calc
+         let (rhs_outs_el, rhs_ret_ve, incr_expr), nm = 
+            calc_to_k3_expr nm0 ~generate_init:(true) 
+                            trig_w_ins_el incr_calc
         in
-          (rhs_outs_el, rhs_ret_ve, incr_expr), nm
-    in
+        (rhs_outs_el, rhs_ret_ve, incr_expr), nm
+   in
    
    (* Make sure that the lhs collection and the incr_expr have *)
    (* the same schema. *)
@@ -1167,28 +1168,18 @@ let m3_stmt_to_k3_stmt (meta: meta_t) ?(generate_init = false)
                                                 lhs_outs_el, 
                                                 K.Add(existing_v,rhs_ret_ve) )
       in
-      if ( lhs_outs_el = [] ) then
-        let inner_loop_body = 
-            lambda (rhs_outs_el@[rhs_ret_ve]) single_update_expr 
-        in
-        if rhs_outs_el = [] then
-           K.Apply(  inner_loop_body,incr_expr)  
-        else
-           K.Iterate(inner_loop_body,incr_expr)
-      else if ( update_type = Plan.ReplaceStmt ) then
-        let inner_loop_body = 
-           lambda (rhs_outs_el@[rhs_ret_ve]) single_update_expr 
-        in
-        let update_body =
-           if rhs_outs_el = [] then
-              K.Apply(  inner_loop_body,incr_expr)  
-           else
-              K.Iterate(inner_loop_body,incr_expr)
-        in
-        if free_lhs_outs_el = [] ||
-           Debug.active "UNSAFE-REPLACE" then 
-          update_body
-        else
+      let inner_loop_body=lambda (rhs_outs_el@[rhs_ret_ve]) single_update_expr 
+      in
+      let update_body =
+        if rhs_outs_el = [] then   K.Apply(  inner_loop_body,incr_expr)  
+        else                       K.Iterate(inner_loop_body,incr_expr)
+      in
+          
+      if ( update_type = Plan.UpdateStmt || 
+           free_lhs_outs_el = [] ||
+           Debug.active "UNSAFE-REPLACE" ) then
+        update_body        
+      else
         let old_slice = 
           if ListAsSet.seteq lhs_outs_el free_lhs_outs_el
           then existing_out_tier
@@ -1209,43 +1200,20 @@ let m3_stmt_to_k3_stmt (meta: meta_t) ?(generate_init = false)
              );
              update_body
            ]
-      else
-       let inner_loop_body = lambda (rhs_outs_el@[rhs_ret_ve]) 
-                                    single_update_expr in
-       if rhs_outs_el = [] then      K.Apply(  inner_loop_body,incr_expr)  
-       else                          K.Iterate(inner_loop_body,incr_expr)
+            
     in
    
    (* In order to implement a statement we iterate over all the values *)
    (* of the input variables of the lhs collection, and for each of them *)
    (* we update the corresponding output tier. *)
    let statement_expr =
-      if ( update_type = Plan.ReplaceStmt) then
-        let outer_loop_body = 
-           lambda (lhs_ins_el@[existing_out_tier]) coll_update_expr 
-        in
-        if lhs_ins_el = [] then
-           K.Apply(  outer_loop_body,lhs_collection)
-        else 
-           K.Iterate(outer_loop_body,lhs_collection)
+      let outer_loop_body = 
+        lambda (lhs_ins_el@[existing_out_tier]) coll_update_expr 
+      in
+      if lhs_ins_el = [] then
+         K.Apply(  outer_loop_body,lhs_collection)
       else
-       let coll_update_statement = 
-          if lhs_ins_el = [] then
-            coll_update_expr 
-          else
-            K.IfThenElse(
-                K.Member(lhs_collection, lhs_ins_el),
-                coll_update_expr,
-                K.Unit
-            )
-        in
-        let outer_loop_body = 
-           lambda (lhs_ins_el@[existing_out_tier]) coll_update_statement 
-        in
-        if lhs_ins_el = [] then
-           K.Apply(  outer_loop_body,lhs_collection)
-        else
-           K.Iterate(outer_loop_body,lhs_collection)
+         K.Iterate(outer_loop_body,lhs_collection)
    in
    let _ = K3Typechecker.typecheck_expr statement_expr in
       (statement_expr, nm)

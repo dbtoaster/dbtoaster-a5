@@ -170,8 +170,8 @@ let scala_compiler = {
     ] in
 
     let args = flags @ sourcefiles in
-    Debug.print "LOG-SCALA" (fun () -> (
-      ListExtras.string_of_list ~sep:" " (fun x->x) args));
+    Debug.print "LOG-SCALA" (fun () -> 
+      ("scalac "^(ListExtras.string_of_list ~sep:" " (fun x->x) args)));
     if Sys.file_exists out then
       Sys.remove out;
     Unix.execvp scalac (Array.of_list args)
