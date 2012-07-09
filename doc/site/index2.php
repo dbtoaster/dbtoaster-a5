@@ -186,6 +186,7 @@ function mk_link($text, $page, $subpage = null){
             <a href="index.php?page=home">Home</a>
             <a href="index.php?page=home&subpage=performance">Performance</a>
             <a href="index.php?page=home&subpage=features">Features</a>
+            <a href="index.php?page=home&subpage=features#roadmap">Feature Roadmap</a>
             <a href="index.php?page=home&subpage=people">Team</a>
             <a href="index.php?page=home&subpage=research">For researchers</a>
          </div>

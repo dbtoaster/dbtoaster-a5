@@ -9,6 +9,20 @@
 <?= chapter("C++ and Scala code Generation") ?>
 <p>DBToaster is able to generate both C++ an Scala code that can be integrated into applications written in these languages (as well as Java, since Scala lives in the Java ecosystem and compiles to Java Bytecode that can be linked with Java applications).</p>
 
+<?= chapter("The Viewlet Transform") ?>
+<p>Modern database management systems frequently support
+<i>incremental view maintenance</i>,
+a mechanism for taking a shortcut to efficiently refresh
+a materialized view when the base data changes. Rather than re-evaluating
+the query that defines the view, an alternative query (the <i>delta query</i>)
+is executed which determines what changes need to be effected on the materialized view to bring it up to date. DBToaster deploys a unique mechanism, the
+<i>viewlet transform</i> to shortcut this computation much more aggressively,
+reducing the amount of work necessary to refresh a view dramatically.
+</p>
+
+
+
+
 <a name="roadmap"></a>
 <?= chapter("Feature Roadmap") ?>
 
