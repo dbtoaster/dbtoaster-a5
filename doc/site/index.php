@@ -7,7 +7,7 @@ $pages = array(
     "home_contact"     => "Contact",
     "home_people"      => "The Team",
   "download"         => "Downloads",
-  "docs"             => "Documentation",
+  "docs"             => "Getting Started",
     "docs_compiler"    => "Command-Line Reference",
     "docs_sql"         => "DBT-SQL Reference",
     "docs_stdlib"      => "DBT StdLib Reference",
@@ -29,14 +29,11 @@ if(isset($_GET["subpage"]) && ($_GET["subpage"] != "index")){
 $pagepath = "pages/$subpage.php";
 
 $longtitle = "DBToaster";
-$shorttitle = "DBToaster";
 if(isset($pages[$page])){
-  $shorttitle = $pages[$page];
-  $longtitle .= ": $shorttitle";
+  $longtitle = $pages[$page];
 }
 if(isset($pages[$subpage])){
-  $shorttitle = $pages[$subpage];
-  $longtitle .= " - $shorttitle";
+  $longtitle = $pages[$subpage];
 }
 
 function add_anchor($text, $anchor){
@@ -131,15 +128,15 @@ function chain_link_docs() {
         <?= mk_link("<img src=\"dbtoaster-logo.gif\" width=\"214\" 
                       height=\"100\" alt=\"DBToaster\"/>", "home"); ?></div>
       <div class="topmenu">
-        <?php function mk_menu($tag, $page, $subpage = null) {
-             return "<li>".mk_link(null, $page, $subpage, "", 
+        <?php function mk_menu($tag, $page, $subpage = null, $title = null) {
+             return "<li>".mk_link($title, $page, $subpage, "", 
                                    "rel=\"$tag\"")."</li>";
            } ?>
          <div id="bluemenu" class="bluetabs">
             <ul>
                <?= mk_menu("dropmenu0_b", "home") ?>
                <?= mk_menu("dropmenu1_b", "download") ?>
-               <?= mk_menu("dropmenu2_b", "docs") ?>
+               <?= mk_menu("dropmenu2_b", "docs", null, "Documentation") ?>
                <?= mk_menu("dropmenu3_b", "home","contact") ?>
            </ul>
          </div>
@@ -186,7 +183,7 @@ function chain_link_docs() {
         <?= chain_link_docs(); ?>
         <?php
           if(isset($pages[$subpage])){ 
-        ?><div class="titlebox"><?=$shorttitle?></div><?php
+        ?><div class="titlebox"><?=$longtitle?></div><?php
           include($pagepath);
         } else { ?>
           ERROR: The page you have requested does not exist.

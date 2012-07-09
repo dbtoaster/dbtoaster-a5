@@ -8,7 +8,7 @@ The DBToaster compiler generates self-contained main-memory query engines that c
 
 At the heart of the DBToaster compiler is a transform that turns SQL queries into code that performs an extremely aggressive form of incremental view maintenance.
 
-Code generated from SQL queries by DBToaster is usually by 1000 to 10000 times faster at keeping views fresh than state-of-the-art database and data stream processing systems.  
+Code generated from SQL queries by DBToaster is usually 1000 to 10000 times faster at keeping views fresh than state-of-the-art database and data stream processing systems.  
 
 
 Please go to
@@ -17,5 +17,8 @@ http://www.dbtoaster.org
 
 to find further information on DBToaster and to download the software.
 
+We also invite you to our talk 'Higher-order Delta Processing for Dynamic, Frequently Fresh Views' at VLDB 2012 in Turkey to learn more.
+
+-----
 
 DBToaster is being developed by a team of researchers from EPFL and Johns Hopkins University.

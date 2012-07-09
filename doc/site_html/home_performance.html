@@ -1,0 +1,52 @@
+<html><head>
+<title>Performance</title>
+<link rel="stylesheet" type="text/css" href="style.css" />
+<script type="text/javascript" src="dropdowntabs.js"> </script>
+</head> <body>
+<a name="pagetop"></a>
+<div class="overallpage">
+  <div class="pagebody">
+    <div class="headerbar">
+      <div class="logobox">
+        <a href="index.html" ><img src="dbtoaster-logo.gif" width="214" 
+                      height="100" alt="DBToaster"/></a></div>
+      <div class="topmenu">
+                 <div id="bluemenu" class="bluetabs">
+            <ul>
+               <li><a href="index.html" rel="dropmenu0_b">About</a></li>               <li><a href="download.html" rel="dropmenu1_b">Downloads</a></li>               <li><a href="docs.html" rel="dropmenu2_b">Documentation</a></li>               <li><a href="home_contact.html" rel="dropmenu3_b">Contact</a></li>           </ul>
+         </div>
+      </div>
+         <div id="dropmenu0_b" class="dropmenudiv_b">
+           <a href="index.html" >About</a>           <a href="home_performance.html" >Performance</a>           <a href="home_features.html" >Features</a>           <a href="home_features.html#roadmap" > - Roadmap</a>           <a href="home_people.html" >The Team</a>           <a href="home_research.html" >For Researchers</a>         </div>
+         <div id="dropmenu1_b" class="dropmenudiv_b">
+           <a href="download.html" >Downloads</a>           <a href="download.html#license" >License</a>         </div>
+         <div id="dropmenu2_b" class="dropmenudiv_b">
+           <a href="docs.html" >Getting Started</a>           <a href="docs_compiler.html" >Command-Line Reference</a>           <a href="docs_compiler.html#options" > - Command-Line Options</a>           <a href="docs_compiler.html#languages" > - Supported Languages</a>           <a href="docs_compiler.html#opt_flags" > - Optimization Flags</a>           <a href="docs_sql.html" >DBT-SQL Reference</a>           <a href="docs_stdlib.html" >DBT StdLib Reference</a>           <a href="docs_adaptors.html" >DBT Adaptors Reference</a>           <a href="docs_cpp.html" >C++ Code Generation</a>           <a href="docs_scala.html" >Scala Code Generation</a>         </div>
+         <div id="dropmenu3_b" class="dropmenudiv_b">
+           <a href="home_contact.html#inquiries" >Inquiries</a>           <a href="home_contact.html#mailing" >Mailing List</a>           <a href="bugs.html" >Bug Reports</a>         </div>
+         <script type="text/javascript">
+            tabdropdown.init("bluemenu")
+         </script>
+    </div>
+    <hr/>
+    <div class="contentwrapper">
+      <div class="content">
+                <div class="titlebox">Performance</div><img src="bakeoff.png" class="inline_image" width="600" height="300"/>
+
+<p>The above graph shows a performance comparison of DBToaster-generated query engines against a commercial database system (DBX), a commercial stream processor (SPY), and several naive query evaluation strategies implemented in DBToaster that do not involve the viewlet transform.  (The commercial systems remain anonymous in accordance with the terms of their licensing agreements).</p>
+
+<p>Performance is measured in terms of the rate at which each system can produce up-to-date (fresh) views of the query results.  As you can see, DBToaster regularly outperforms the commercial systems by <b>3-4 orders of magnitude.</b></p>
+
+<p>The graph shows the performance of each system on six realtime data-warehousing queries based on the TPC-H query benchmark (Q3,Q11,Q17,Q18,Q22,SSB4), and six algorithmic trading queries (BSV, BSP, AXF, PSP, MST, VWAP).  These queries are all included as examples in the DBToaster distribution.</p>
+
+<p>Depth-0 represents a naive query evaluation strategy where each refresh requires a full re-evaluation of the entire query.  Depth-1 is a well known technique called Incremental View Maintenance.  Naive recursive is a weaker form of the Viewlet Transform (we discuss the distinctions in depth in our VLDB 2012 paper).  Each of these was implemented by a DBToaster-generated engine.</p>              </div><!-- /content -->
+    </div><!-- /contentwrapper -->
+  </div><!-- /pagebody -->
+  <hr/>
+  <div class="footer">
+  <p>Copyright (c) 2009-2012, The DBToaster Consortium. All rights reserved.</p>
+  </div>
+</div><!-- /overallpage -->
+
+</body>
+</html>

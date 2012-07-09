@@ -1,0 +1,249 @@
+body {
+  color:#000000;
+  background-color:#ffffff;
+  background-image:url('9.jpg');
+  background-repeat:no-repeat;
+  background-position:center;
+  background-attachment:fixed;
+  font-size:16;
+  font-family:"Trebuchet MS","Helvetica neue",Helvetica,Arial,Verdana,sans-serif;
+}
+img {
+  border-width:2px;
+  border-color:#333333;
+  margin:5px;
+}
+img.inline_image {
+  opacity:0.7;
+  width:600px;
+  border-style:inset;
+  border-width:2px;
+  border-color:grey;
+  margin-left:50px;
+  margin-right:50px;
+}
+.overallpage {
+  margin-left:auto;
+  margin-right:auto;
+  width:850px
+}
+.menu {
+  display:inline-block;
+  top:0;
+  left:0;
+  width:250px;
+  margin-left:20px
+  vertical-align:top;
+  font-size:15px;
+}
+.leftmenuitem_l1 {
+  margin-left:-10px;
+  margin-bottom:10px;
+  list-style-type:none;
+}
+.leftmenuitem_l2 {
+  margin-left:-5px;
+  font-size:13px;
+  list-style-type:none;
+}
+.headerbar {
+  text-align:left;
+}
+.logobox {
+  vertical-align:bottom;
+  display:inline-block;
+  width:250px;
+}
+.topmenu {
+  text-align:center;
+  vertical-align:bottom;
+  display:inline-block;  
+}
+.topmenuitem {
+  padding:10px;
+  font-size:15;
+  margin-left:auto;
+  margin-right:auto;
+  font-weight:bold;
+  text-align:center;
+  vertical-align:middle;
+  display:inline-block;
+}
+.titlebox {
+  text-align:center;
+  font-size:30;
+  font-weight:bold;
+  margin-bottom:20px;
+}
+.pagebody {
+  display:inline-block;
+  vertical-align:top;
+  margin-bottom:40px;
+}
+.contentwrapper {
+  display:inline-block;
+  position:relative;
+  width:700px;
+  vertical-align:top;
+  padding:0px;
+  margin-left:75px;
+  margin-right:75px;
+}
+.content {
+  opacity:1;
+  text-align:justify;
+}
+a:link {
+text-decoration:none;
+color:#003399;
+}
+a:visited {
+text-decoration:none;
+color:#003399;
+}
+a:hover {
+color:#003399;
+}
+a:active {
+color:#003399;
+}
+.code {
+  font-family: Courier, Monospace;
+}
+.codeblock {
+  font-family: Courier, Monospace;
+  margin: 10px 20px;
+  padding: 10px;
+  background-color: #cccccc;
+  white-space:pre-wrap;
+  font-size:11px
+}
+.todo {
+  margin: 10px 20px;
+  color: red;
+  font-weight: bold;
+  text-align: center;
+}
+
+dt.api{
+  font-family: Courier, Monospace;
+  font-weight: bold;
+  font-size: small;
+}
+
+.warning {
+  color: red;
+  font-weight: bold;
+}
+td.contact_university {
+  padding-right:20px;
+  padding-top:5px;
+  padding-bottom:5px;
+  text-align:left;
+  font-size:18;
+}
+
+.doc_chain_link {
+  width:100%;
+  text-align:center;
+  font-size:12;
+  margin-bottom:10px;
+  margin-top:10px;
+}
+.doc_chain_link_prev {
+  margin-right:10px;
+}
+.doc_chain_link_next {
+  margin-left:10px;
+}
+
+
+.footer {
+  width:600px;
+  font-size:9;
+  margin-left:auto;
+  margin-right:auto;
+  text-align:center;
+}.bluetabs{
+border-bottom: 1px solid gray;
+}
+
+.bluetabs ul{
+padding: 3px 0;
+margin-left: 0;
+margin-top: 1px;
+margin-bottom: 0;
+font: bold 12px Verdana;
+list-style-type: none;
+text-align: left; /*set to left, center, or right to align the menu as desired*/
+}
+
+.bluetabs li{
+display: inline;
+margin: 0;
+}
+
+.bluetabs li a{
+text-decoration: none;
+padding: 3px 7px;
+margin-right: 3px;
+border: 1px solid #778;
+color: #2d2b2b;
+background: white url(bluetab.gif) top left repeat-x; /*THEME CHANGE HERE*/
+}
+
+.bluetabs li a:visited{
+color: #2d2b2b;
+}
+
+.bluetabs li a:hover{
+text-decoration: underline;
+color: #2d2b2b;
+}
+
+.bluetabs li.selected{
+}
+
+.bluetabs li.selected a{ /*selected main tab style */
+background-image: url(bluetabactive.gif); /*THEME CHANGE HERE*/
+border-bottom-color: white;
+}
+
+.bluetabs li.selected a:hover{ /*selected main tab style */
+text-decoration: none;
+}
+
+/* ######### Style for Drop Down Menu ######### */
+
+.dropmenudiv_b{
+position:absolute;
+top: 0;
+border: 1px solid #918d8d; /*THEME CHANGE HERE*/
+border-width: 0 1px;
+font:normal 12px Verdana;
+line-height:18px;
+z-index:100;
+background-color: white;
+width: 200px;
+visibility: hidden;
+}
+
+
+.dropmenudiv_b a{
+width: auto;
+display: block;
+text-indent: 5px;
+border: 0 solid #918d8d; /*THEME CHANGE HERE*/
+border-bottom-width: 1px;
+padding: 2px 0;
+text-decoration: none;
+color: black;
+}
+
+* html .dropmenudiv_b a{ /*IE only hack*/
+width: 100%;
+}
+
+.dropmenudiv_b a:hover{ /*THEME CHANGE HERE*/
+background-color: #edf3f3;
+}
