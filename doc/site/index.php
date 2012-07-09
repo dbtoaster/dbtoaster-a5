@@ -85,6 +85,37 @@ function mk_link($text, $page, $subpage = null, $anchor = "", $atagextras = ""){
     return "<a href=\"index.php?page=$page$subpage$anchor\" $atagextras>$text</a>";
   }
 }
+function chain_link_docs() {
+  global $pages, $page, $subpage;
+  
+  if($page != "docs") { return ""; }
+
+  $prev = "";
+  $state = "prev";
+  $ret = "";
+  foreach($pages as $curr_stub => $curr_title) {
+    if($subpage == $curr_stub){
+      if($prev != ""){ $ret .= " &lt; ".$prev; }
+      $state = "next";
+    } else {
+      $curr_page = explode("_", $curr_stub);
+      $curr_subpage = implode("_", array_slice($curr_page, 1));
+      $curr_page = $curr_page[0];
+      
+      if($curr_page == "docs"){
+        $prev = "<span class=\"doc_chain_link_$state\">".
+                mk_link($curr_title, $curr_page, $curr_subpage).
+                "</span>";
+        if($state == "next"){
+          if($ret != "") { $ret .= " | "; }
+          $ret .= $prev." &gt; ";
+          break;
+        }
+      }
+    }
+  }
+  return "<div class=\"doc_chain_link\">$ret</div>";
+}
 
 ?>
 <html><head>
@@ -117,6 +148,7 @@ function mk_link($text, $page, $subpage = null, $anchor = "", $atagextras = ""){
            <?= mk_link(null, "home"); ?>
            <?= mk_link(null, "home", "performance"); ?>
            <?= mk_link(null, "home", "features"); ?>
+           <?= mk_link(" - Roadmap", "home", "features", "#roadmap"); ?>
            <?= mk_link(null, "home", "people"); ?>
            <?= mk_link(null, "home", "research"); ?>
          </div>
@@ -151,13 +183,15 @@ function mk_link($text, $page, $subpage = null, $anchor = "", $atagextras = ""){
     <hr/>
     <div class="contentwrapper">
       <div class="content">
+        <?= chain_link_docs(); ?>
         <?php
           if(isset($pages[$subpage])){ 
         ?><div class="titlebox"><?=$shorttitle?></div><?php
           include($pagepath);
         } else { ?>
           ERROR: The page you have requested does not exist.
-      <?php } /* else of isset($pages[$page]) */ ?>
+        <?php } /* else of isset($pages[$page]) */ ?>
+        <?= chain_link_docs(); ?>
       </div><!-- /content -->
     </div><!-- /contentwrapper -->
   </div><!-- /pagebody -->
