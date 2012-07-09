@@ -48,45 +48,6 @@ def fix_sql_file(sql_file, tgt_dir)
   end
 end
 
-def build_php(script, target_dir)
-  
-  old_dir    = Dir.getwd;
-  script_dir = File.dirname script;
-  
-  Dir.chdir script_dir;
-  
-  sources = Dir.glob("pages/*.php").map do |source|
-      source = File.basename(source, ".php");
-      parts = source.split(/_/);
-      page = parts.shift;
-      subpage = if parts.length > 0 then parts.join("_") else "index" end;
-      [ page, subpage, 
-        if source == "home" then "index.html"
-                            else "#{source}.html" end
-      ];
-    end
-    
-  page_data = 
-    sources.map do |page, subpage, dest_file|
-      IO.popen("php", "w+") do |php|
-        php.puts "<?php ";
-        php.puts "$_GET['page'] = '#{page}';";
-        php.puts "$_GET['subpage'] = '#{subpage}';";
-        php.puts "$now_building_distro = true";
-        php.puts "?>";
-        php.puts(File.open(File.basename script) { |f| f.readlines.join(""); });
-        php.close_write;
-        [ dest_file, php.readlines.join("") ];
-      end
-    end
-  
-  Dir.chdir old_dir;
-  
-  page_data.each do |dest_file, script_data|
-    File.open("#{target_dir}/#{dest_file}", "w") { |f| f.puts script_data }
-  end
-end
-
 copy_files(["../doc/README", 
             "../doc/LICENSE"], "dbtoaster");
 
@@ -100,7 +61,8 @@ copy_files(["../doc/site/9.jpg",
             "../doc/site/bluetabactive.gif",
             "../doc/site/dropdowntabs.js",
             "../doc/site/dbtoaster-logo.gif"], "dbtoaster/doc");
-build_php("../doc/site/index.php", "dbtoaster/doc");
+
+copy_files(Dir.glob("../doc/site_html/*.html"), "dbtoaster/doc");
 
 copy_files(Dir.glob("../lib/dbt_c++/*.hpp"), "dbtoaster/lib/dbt_c++");
 copy_files(Dir.glob("../lib/dbt_c++/*.cpp"), "dbtoaster/lib/dbt_c++");
