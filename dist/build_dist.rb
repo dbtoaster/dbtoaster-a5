@@ -98,7 +98,6 @@ copy_files(["../doc/site/9.jpg",
             "../doc/site/bakeoff.png",
             "../doc/site/bluetab.gif",
             "../doc/site/bluetabactive.gif",
-            "../doc/site/bluetabs.css",
             "../doc/site/dropdowntabs.js",
             "../doc/site/dbtoaster-logo.gif"], "dbtoaster/doc");
 build_php("../doc/site/index.php", "dbtoaster/doc");
