@@ -19,11 +19,13 @@ resulting from interpretation.
 <?= chapter("Support for standard SQL semantics") ?>
 <p>
 DBToaster supports traditional SQL semantics, rather than window semantics.
-This is worth noting since due to its speed and ability to process high-volumne
+This is worth noting since due to its speed and ability to process high-volume
 update streams, DBToaster will naturally be used in data stream processing
 applications. Current data stream processing systems work with limited window
 semantics to be able to process data streams. Since DBToaster does not suffer from this restriction, it can process update streams and can efficiently combine data streams with historical data. 
+</p>
 
+<p>
 Note: DBToaster's handling of the domains of GROUP-BY aggregate groups does not fully comply to the SQL standards. The discrepancy is minor: DBToaster's result is always complete according to the SQL standard, but may contain additional null value rows that an application can simply ignore. See the DBToaster documentation for details.  This incompatibility will be fixed soon.
 </p>
 
@@ -49,10 +51,10 @@ reducing the amount of work necessary to refresh a view dramatically.
 <a name="roadmap"></a>
 <?= chapter("Feature Roadmap") ?>
 
-<table>
+<table valign="top">
 <tr><th>Milestone</th><th>Expected Date</th><th>Feature Summary</th></tr>
 
-<tr><th>1</th><td>Fall 2012</td>
+<tr><th valign="top">1</th><td valign="top">Fall 2012</td>
   <td>
     <ul>
       <li>Support for all SQL functionality required by the TPC-H benchmark except ORDER-BY, MIN/MAX, and NULL-values/outer joins.</li>
@@ -60,14 +62,14 @@ reducing the amount of work necessary to refresh a view dramatically.
     </ul>
   </td></tr>
   
-<tr><th>2</th><td>Winter 2012/Spring 2013</td>
+<tr><th valign="top">2</th><td valign="top">Winter 2012/Spring 2013</td>
   <td>
     <ul>
       <li>A parallel runtime for DBToaster</li>
     </ul>
   </td></tr>  
 
-<tr><th>3</th><td>Summer 2013</td>
+<tr><th valign="top">3</th><td valign="top">Summer 2013</td>
   <td>
     <ul>
       <li>Updated backend optimizer (code fusion, beta-reduction, etc...), updated C++ code generator, generation of custom-datastructures for maintenance.  Phase out Boost.  This should lead to considerable efficiency improvements.</li>
@@ -76,7 +78,7 @@ reducing the amount of work necessary to refresh a view dramatically.
     </ul>
   </td></tr>  
 
-<tr><th>4</th><td>Fall 2013</td>
+<tr><th valign="top">4</th><td valign="top">Fall 2013</td>
   <td>
     <ul>
       <li>Frontends for APL-style array processing languages (e.g., The R analytics language, Matlab, Q).  DBToaster will be able to compile analytical queries expressed in such languages in addition to SQL, with similar performance.</li>
