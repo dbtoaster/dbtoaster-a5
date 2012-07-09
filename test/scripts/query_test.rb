@@ -50,9 +50,9 @@ class GenericUnitTest
     @toplevels
     
     if qdat[:datasets][@dataset].has_key? :subs then    
-      qfile = Tempfile.new(["query_test",".sql"]);
+      qfile = File.new("query_test.sql", "w+");
       subs = qdat[:datasets][@dataset][:subs]
-      at_exit { qfile.close! }
+      at_exit { qfile.close }
       qfile.puts(
         File.open(@qpath) do |f| 
           f.readlines.map do |l|
@@ -61,7 +61,7 @@ class GenericUnitTest
         end
       );
       qfile.flush;
-      @qpath = qfile.path;
+      @qpath = "query_test.sql";
     end
 
     @compiler_flags =
@@ -249,8 +249,8 @@ class InterpreterUnitTest < GenericUnitTest
           when /([a-zA-Z0-9_-]+): (.*)$/ then
             query = $1;
             results = $2;
-            raise "Runtime Error: #{results}" if query == "error"
-            raise "Unexpected result '#{query}'" unless 
+            raise "Runtime Error: #{results}; #{l}" if query == "error"
+            raise "Unexpected result '#{query}'; #{l}" unless 
                 @toplevels.has_key? query
             case @toplevels[query][:type]
               when :singleton then @toplevels[query][:result] = results.to_f
