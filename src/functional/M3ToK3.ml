@@ -1272,7 +1272,13 @@ let m3_to_k3 ?(generate_init = false) (m3_program : M3.prog_t) : (K.prog_t) =
    let {M3.maps = m3_prog_schema; M3.triggers = m3_prog_trigs;
         M3.queries = m3_prog_tlqs; M3.db = k3_database } = m3_program in
    let k3_prog_schema = List.map m3_map_to_k3_map !m3_prog_schema in
-   let patterns_map = Patterns.extract_patterns !m3_prog_trigs in
+   let patterns_map = 
+      List.fold_left (fun patterns_map (_,tlq) ->
+         Patterns.merge_pattern_maps 
+            patterns_map
+            (Patterns.extract_from_calc [] tlq)
+      ) (Patterns.extract_patterns !m3_prog_trigs) (!m3_prog_tlqs)
+   in
    let k3_prog_trigs, (_,sum_maps) = 
       List.fold_left
          (fun (old_trigs,om) m3_trig -> 

@@ -594,7 +594,10 @@ if stage_is_active StageCompileCalc then (
 
    (* Compile things and save the accessor expressions *)
    try 
-      let mp, tlq = Compiler.compile db_schema !calc_queries in
+      let mp, tlq = Compiler.compile ~max_depth:!max_compile_depth 
+                                     db_schema
+                                     !calc_queries 
+      in
          materialization_plan := mp;
          toplevel_queries := tlq
    with
@@ -686,6 +689,9 @@ if stage_is_active StageM3ToK3 then (
          Debug.print "LOG-PATTERNS" 
             (fun () -> Patterns.patterns_to_nice_string pats)
    with 
+      | Calculus.CalculusException(calc, msg) ->
+         bug ~exc:true ~detail:(fun () -> CalculusPrinter.string_of_expr calc)
+             msg
       | M3ToK3.M3ToK3Failure(Some(calc), _, msg) ->
          bug ~exc:true ~detail:(fun () -> Calculus.string_of_expr calc) msg
       | M3ToK3.M3ToK3Failure(_, Some(k3), msg) ->

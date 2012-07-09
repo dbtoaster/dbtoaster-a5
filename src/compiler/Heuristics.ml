@@ -28,6 +28,7 @@ type term_list = expr_t list
 type heuristic_option_t =
    | NoIVC
    | NoInputVariables
+   | ExtractRelationMaps
 
 type heuristic_options_t = heuristic_option_t list
 
@@ -480,7 +481,9 @@ let should_update (event:Schema.event_t) (expr:expr_t)  : bool =
       match get_maintaining_option expr with
          | Unknown | UpdateExpr -> true
          | ReplaceExpr -> false 
-     
+
+      
+
 (******************************************************************************)
 
 (** Perform partial materialization of a given expression according to 
@@ -521,7 +524,13 @@ let rec materialize ?(scope:var_t list = [])
       "\n\t Expr: "^(string_of_expr expr)^
       "\n\t Scope: ["^(string_of_vars scope)^"]"
    );
-
+   
+   if List.mem ExtractRelationMaps heuristic_options then 
+      materialize_relations db_schema
+                            history
+                            prefix
+                            expr
+   else
    let expr_scope = ListAsSet.union scope (extract_event_vars event) in
    let (todos, mat_expr) = fst (
       (* Polynomial decomposition *)
@@ -855,4 +864,88 @@ and materialize_expr (heuristic_options:heuristic_options_t)
    let agg_mat_expr = mk_aggsum complete_mat_expr schema in
       (todos, agg_mat_expr)
 
-        
+
+(** Perform an end-of-the line materialization on an expression.  Each stream
+    relation will be turned into a map.  
+    
+    @param minimal_maps   (optional) Normally, only the minimal subset of the 
+                          columns required to support the expression will be 
+                          materialized into the generated maps.  If explicitly
+                          set to false, all columns in the relation will be 
+                          materialized.
+    @param db_schema      Schema of the database
+    @param history        The history of used data structures
+    @param prefix         A prefix string used to name newly created maps
+    @param expr           A calculus expression
+    @return               A list of data structures that needs to be 
+                          materialized afterwards (a todo list) together with 
+                          the materialized form of the expression. 
+*)
+and materialize_relations ?(minimal_maps = true) (db_schema:Schema.t) 
+                          (history:ds_history_t) (prefix:string)
+                          (expr:expr_t): (ds_t list * expr_t) =
+   let merge op _ terms: (ds_t list * expr_t) = 
+      let (dses, exprs) = List.split terms in
+         (List.flatten dses, op exprs)
+   in
+   let rcr e: (ds_t list * expr_t) = 
+      materialize_relations ~minimal_maps:minimal_maps 
+                            db_schema
+                            history
+                            prefix
+                            e
+   in
+   let rcr_wrap wrap e: (ds_t list * expr_t) =
+      let (dses, ret_e) = rcr e in
+         (dses, CalcRing.mk_val (wrap ret_e))
+   in
+   let is_stream rel_name = 
+      let (_, _, rel_type) = Schema.rel db_schema rel_name in
+         rel_type == Schema.StreamRel
+   in
+   let curr_suffix = ref 0 in
+   let next_prefix reln = 
+      curr_suffix := !curr_suffix + 1;
+      prefix^"_raw_reln_"^(string_of_int !curr_suffix)
+   in
+   let (expr_scope, expr_schema) = Calculus.schema_of_expr expr in
+   Calculus.fold ~scope:expr_scope ~schema:expr_schema
+      (merge CalcRing.mk_sum)
+      (merge CalcRing.mk_prod)
+      (fun _ (dses,expr) -> (dses, CalcRing.mk_neg expr))
+      (fun (scope,schema) leaf -> match leaf with
+         | Rel(rname,rv) when (is_stream rname) ->
+            if minimal_maps then
+               materialize_expr []
+                                db_schema
+                                history
+                                (next_prefix rname)
+                                None
+                                scope
+                                schema
+                                (CalcRing.mk_val leaf)
+            else
+               let (dses, mat_expr) = 
+                  materialize_expr []
+                                   db_schema
+                                   history
+                                   (next_prefix rname)
+                                   None
+                                   scope
+                                   (ListAsSet.diff rv scope)
+                                   (CalcRing.mk_val leaf)
+               in
+               ( dses,
+                  CalcRing.mk_val (AggSum(
+                     ListAsSet.inter rv (ListAsSet.union scope schema),
+                     mat_expr
+                  ))
+               )
+         | Exists(subexp)      -> rcr_wrap (fun x->Exists(x     )) subexp
+         | AggSum(gb_v,subexp) -> rcr_wrap (fun x->AggSum(gb_v,x)) subexp
+         | Lift  (v,subexp)    -> rcr_wrap (fun x->Lift  (v,x   )) subexp
+            
+         | Rel _ | External _ | Cmp _ | Value _ -> ([], CalcRing.mk_val leaf)
+
+      )
+      expr

@@ -16,7 +16,9 @@ open Plan
 
 (******************************************************************************)
 
-type todo_t = ds_t * bool (* bool is true if we can skip TLQ computation *)
+type todo_t = int * ds_t * bool 
+                           (* int is the depth of the todo
+                              bool is true if we can skip TLQ computation *)
 type todo_list_t = todo_t list
 type tlq_list_t = (string * expr_t) list
 
@@ -98,7 +100,7 @@ let extract_renamings ((scope,schema):schema_t) (expr:expr_t):
 
 let compile_map (heuristic_options:Heuristics.heuristic_options_t)
                 (db_schema:Schema.t) (history:Heuristics.ds_history_t) 
-                ((todo,skip_ivc):todo_t) : todo_list_t * compiled_ds_t =
+                ((depth,todo,skip_ivc):todo_t) : todo_list_t * compiled_ds_t =
    (* Sanity check: Deltas of non-numeric types don't make sense and it doesn't
       make sense to compile a map that doesn't support deltas of some form. *)
    let (todo_name, todo_ivars, todo_ovars, todo_base_type, _) =
@@ -225,7 +227,7 @@ let compile_map (heuristic_options:Heuristics.heuristic_options_t)
          trigger_todos := 
             (** The materializer (presently) produces maps guaranteed not to
                 need IVC *)
-            (List.map (fun x -> (x, true)) (ivc_todos @ new_todos)) 
+            (List.map (fun x -> (depth+1, x, true)) (ivc_todos @ new_todos)) 
                @ !trigger_todos;
          triggers      := 
             (delta_event, {
@@ -254,7 +256,7 @@ let compile_map (heuristic_options:Heuristics.heuristic_options_t)
             "Materialized expr: \n"^
             (CalculusPrinter.string_of_expr materialized_expr)
          );
-         trigger_todos := (List.map (fun x -> (x, true)) new_todos)
+         trigger_todos := (List.map (fun x -> (depth+1, x, true)) new_todos)
                                @ !trigger_todos;
          triggers      := 
             (delta_event, {
@@ -306,7 +308,7 @@ let compile_map (heuristic_options:Heuristics.heuristic_options_t)
          ([], None)
    
    in
-      (((!trigger_todos) @ (List.map (fun x -> (x, true)) init_todos)), {
+      (((!trigger_todos) @ (List.map (fun x -> (depth+1,x, true)) init_todos)),{
          description = {
             ds_name = CalcRing.mk_val (External(
                   todo_name, todo_ivars, todo_ovars, todo_type, init_expr
@@ -363,7 +365,7 @@ let compile_tlqs (heuristic_options:Heuristics.heuristic_options_t)
                         | _ -> mat_expr
                   ))
             in
-               (  List.map (fun x -> (x, true)) todos, 
+               (  List.map (fun x -> (1, x, true)) todos, 
                   (qname, schema_ordered_expr)
                )
          ) calc_queries
@@ -372,7 +374,7 @@ let compile_tlqs (heuristic_options:Heuristics.heuristic_options_t)
             let qschema = Calculus.schema_of_expr qexpr in
             let qtype   = Calculus.type_of_expr qexpr in
             let ds_name = Plan.mk_ds_name qname qschema qtype in
-               ( [ { Plan.ds_name = ds_name; 
+               ( [ 1, { Plan.ds_name = ds_name; 
                      Plan.ds_definition = qexpr }, false ], 
                  (qname, ds_name) )
          ) calc_queries
@@ -381,7 +383,7 @@ let compile_tlqs (heuristic_options:Heuristics.heuristic_options_t)
 
 (******************************************************************************)
 
-let compile (db_schema:Schema.t) (calc_queries:tlq_list_t): 
+let compile ?(max_depth = None) (db_schema:Schema.t) (calc_queries:tlq_list_t): 
             (plan_t * tlq_list_t) =
 
    let default_heuristic_options = 
@@ -397,7 +399,15 @@ let compile (db_schema:Schema.t) (calc_queries:tlq_list_t):
    let history:Heuristics.ds_history_t   = ref [] in
    let plan   :plan_t ref                = ref [] in
    let todo_list, tlq_list = 
-      compile_tlqs default_heuristic_options 
+      let heuristic_options = 
+         default_heuristic_options @
+         (begin match max_depth with 
+            | None -> []
+            | Some(d) -> if (d > 0) then [] 
+                         else [Heuristics.ExtractRelationMaps]
+          end)
+      in 
+      compile_tlqs heuristic_options 
                    db_schema history calc_queries 
    in
    let todos  :todo_list_t ref           = ref todo_list in
@@ -405,13 +415,23 @@ let compile (db_schema:Schema.t) (calc_queries:tlq_list_t):
    
    while List.length !todos > 0 do (
       let next_ds = List.hd !todos in todos := List.tl !todos;
+      let (depth, todo, skip_todos) = next_ds in
       Debug.print "LOG-COMPILE-DETAIL" (fun () ->
          "Compiling: "^
-         (if (snd next_ds) then "(skipping todos)" else "")^
-         (string_of_ds (fst next_ds))
+         (if skip_todos then "(skipping todos)" else "")^
+         (string_of_ds todo)
       );
+      let heuristic_options = 
+         default_heuristic_options @
+         (begin match max_depth with 
+            | None -> []
+            | Some(d) -> if (d > depth) then [] 
+                         else [Heuristics.ExtractRelationMaps]
+          end)
+      in 
+      
       let new_todos, compiled_ds = 
-         compile_map default_heuristic_options 
+         compile_map heuristic_options 
                      db_schema history next_ds
       in
       (* The order in which we concatenate new_todos decides whether 
