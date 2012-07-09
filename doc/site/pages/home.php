@@ -27,16 +27,20 @@ refresh views as the input data changes.</p>
 <p>DBToaster may be also right for you even if you do not care about low view refresh latencies: DBToaster turns a set of queries into efficient specialized code for processing just these queries. DBToaster generates code that you can link into your applications. No further software (such as a separate database server or CEP engine) is required. Thus DBToaster is a very lightweight way of including fixed (parameterized) SQL queries in your applications.</p>
 
 
-<p>Here is a <a href="papers/whitepaper.pdf">white paper</a> that we hope can help you
+<p>Here is a <a href="papers/whitepaper.pdf">white paper</a> that may help you
 decide whether to try out DBToaster.</p>
 
 
 <h3>How can DBToaster be so fast?</h3>
-<p>Traditional relational databases are slow because they are designed to support arbitrary hand-written queries.  Nowadays though, few people execute queries directly.  Most queries are generated automatically based on templates (e.g., by PHP, C#/LINQ, Scala/SLIQ, Java/JDBC, etc...). </p>
-
-<p>DBToaster custom-tailors each engine it creates to the needs of a specific application.  This engine supports only query processing functionality that the application requires, avoiding the overhead of supporting unnecessary features.  The typical result is a speedup of <?=mk_link("3-4 orders of magnitude", "home", "performance")?> over existing state of the art data-management systems.</p>
+<p>Traditional relational databases are slow because they are designed to support arbitrary hand-written queries.  Nowadays though, few people execute queries directly.  Most queries are generated automatically based on templates.
+DBToaster custom-tailors each engine it creates to the needs of a specific application.  This engine supports only query processing functionality that the application requires, avoiding the overhead of supporting unnecessary features.
+</p>
 
 <p>DBToaster also employs an innovative technique that exploits incrementality to efficiently maintain query results in real-time as data changes.  As a consequence, DBToaster-generated engines provide extremely low-latency access to query results, and efficiently support monitoring of result values.
+</p>
+
+<p>
+DBToaster-generated code is typically by a factor of <?=mk_link("3-4 orders of magnitude", "home", "performance")?> faster than existing state of the art data-management systems when we measure the time it takes to refresh a view given an update to the base data.
 </p>
 
 
