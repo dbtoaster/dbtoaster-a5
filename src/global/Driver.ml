@@ -109,6 +109,7 @@ let optimizations =
       "K3-OPTIMIZE-LIFT-UPDATES";
    ]
 let opt_level = ref 2;;
+let max_compile_depth = ref None;;
 
 (************ Command Line Parsing ************)
 let specs:(Arg.key * Arg.spec * Arg.doc) list  = Arg.align [ 
@@ -140,6 +141,15 @@ let specs:(Arg.key * Arg.spec * Arg.doc) list  = Arg.align [
                Debug.activate "STEP-INTERPRETER";
                Debug.activate "LOG-INTERPRETER-UPDATES")),
       "       Run the interpreter in debugging mode");
+   (  "--depth",
+      (Arg.Int(fun d -> max_compile_depth := Some(d))),
+      "       Set the compiler's maximum recursive depth");
+   (  "--batch",
+      (Arg.Unit(fun () -> 
+         max_compile_depth := Some(0);
+         Debug.activate "EXPRESSIVE-TLQS"
+      )),
+      "       Generate a non-incremental (batch) query engine.");
    (  "-I", 
       (Arg.String(ExternalCompiler.add_env "INCLUDE_HDR")),
       "dir    Add a directory to the second-stage compiler's include path");
@@ -874,6 +884,12 @@ if stage_is_active StageCompileSource then (
    Debug.print "LOG-DRIVER" (fun () -> "Running Stage: CompileSource");
    flush_output ();
    mk_path !binary_file;
-   (!compiler).ExternalCompiler.compile !output_file !binary_file
+   try 
+      (!compiler).ExternalCompiler.compile !output_file !binary_file
+   with 
+      | Unix.Unix_error(errtype, fname, fargs) ->
+         error ~detail:(fun () -> 
+            "While running "^fname^"("^fargs^")"
+         ) ("Error while compiling: "^(Unix.error_message errtype))
 )
 ;;
