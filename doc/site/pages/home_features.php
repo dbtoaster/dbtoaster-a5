@@ -42,7 +42,7 @@
 <tr><th>Milestone 4</th><td>Fall 2013</td>
   <td>
     <ul>
-      <li>Frontends for APL-style array processing languages (e.g., The R analytics language, Matlab, Q).  DBToaster will be able to compile analytical queries expressed in such langauges in addition to SQL, with similar performance.</li>
+      <li>Frontends for APL-style array processing languages (e.g., The R analytics language, Matlab, Q).  DBToaster will be able to compile analytical queries expressed in such languages in addition to SQL, with similar performance.</li>
     </ul>
   </td></tr>  
 
@@ -55,11 +55,11 @@
 
 <p>DBToaster does not presently support SQL's NULL value semantics (including OUTER JOINs).  We are investigating several potential solutions, and will commit to a milestone once more research has been performed.</p>
 
-<p>All other unsupported features of SQL92 will be implemented as resources become available, or if there is sufficient demand.</p>
+<p>All other unsupported features of SQL92 will be implemented in a future release.</p>
 
 <?= section("Scalability") ?>
 
-<p>DBToaster's internal aggregate calculus has several properties that make it exteremely ammenable to distribution.  We are in the process of implementing a scalable distributed runtime for DBToaster, slated for release as Milestone 2.</p>
+<p>DBToaster's internal aggregate calculus has several properties that make it extremely amenable to distribution.  We are in the process of implementing a scalable distributed runtime for DBToaster, slated for release as Milestone 2.</p>
 
 <?= section("Dynamic Runtimes") ?>
 
