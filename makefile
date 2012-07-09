@@ -219,8 +219,8 @@ $(patsubst %,%.cmxi,$(FILES)) :
 
 makefile.deps: makefile $(patsubst %,%.ml,$(BASE_FILES))
 	@echo Computing Dependency Graph
-	@$(OCAMLDEP) $(patsubst %, -I %,$(DIRS)) \
-			$(patsubst %,%.ml,$(BASE_FILES)) > $@
+	$(OCAMLDEP) $(patsubst %, -I %,$(DIRS)) \
+			$(patsubst %,%.ml,$(BASE_FILES)) | tr \\\\ / | sed 's:/$$:\\: '> $@
 
 makefile.local:
 	@echo Initializing local configuration file
