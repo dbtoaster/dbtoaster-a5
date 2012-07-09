@@ -25,7 +25,7 @@
       :toplevels => {
         "COUNT" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query2_big.csv")
+          :expected => results_file("test/results/tpch/query2_big.csv", /\|/)
         }
       }
     },
@@ -55,7 +55,7 @@
       :toplevels => {
         "COUNT" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query2_big_del.csv")
+          :expected => results_file("test/results/tpch/query2_big_del.csv", /\|/)
         }
       }
     }
