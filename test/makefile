@@ -277,6 +277,7 @@ err:
 	@$(ERROR_TEST) multitargetin
 	@$(ERROR_TEST) multitargetall
 	@$(ERROR_TEST) multitargetwherels 
+	@$(ERROR_TEST) unbound_var
 
 employee: testdatahash
 	@$(QUERY_TEST) employee/query01

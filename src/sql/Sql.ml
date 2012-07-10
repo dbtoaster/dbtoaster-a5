@@ -32,31 +32,10 @@ exception SQLParseError of string
 *)
 exception FeatureUnsupported of string
 
-(**
-   An error associating a given variable with a relation or pseudorelation that
-   is the result of a nested select statement.  The first field is the affected 
-   variable, and the second field is the number of candidates that may be
-   associated with the variable.  0 means no relation/pseudorelation has a
-   variable by that name in its schema, while a number greater than 1 means that
-   more than 1 relation/pseudorelation can be associated with the variable
-*)
-exception Variable_binding_err of string * int
-
-(**
-   Obtain the human-parseable interpretation of a Variable_binding_error.
-*)
-let string_of_var_binding_err = function
-   | Variable_binding_err(var,0) ->
-      "Unable to bind variable '"^var^"'; No matching variables in scope"
-   | Variable_binding_err(var,x) ->
-      "Unable to bind variable '"^var^"'; The name is ambiguous, try "^ 
-      "using a fully qualified name."
-   | _ -> "BUG: Not a variable binding error in Sql module"
 
 
 (**/**)
 let error msg                 = raise (SqlException("", msg))
-let detailed_error detail msg = raise (SqlException(detail, msg))
 (**/**)
 
 (**
@@ -178,6 +157,44 @@ type t =
    and all select statements appearing in the file
 *)
 type file_t = table_t list * select_t list
+
+(**
+   An abstract sql entity (statements, queries, expressions, or conditions)
+*)
+type sql_entity_t = 
+   | SqlStatement  of t
+   | SqlQuery      of select_t
+   | SqlExpression of expr_t
+   | SqlCondition  of cond_t
+   | NoSqlEntity
+(**
+   An error caused by an invalid Sql expression
+*)
+exception InvalidSql of
+   string * string * sql_entity_t list
+
+(**/**)
+(** Utilities for creating InvalidSqlExpressions *)
+
+let sql_stack:sql_entity_t list ref = ref [];;
+
+let push_sql_stack (entity:sql_entity_t): unit =
+   sql_stack := entity :: !sql_stack
+
+let pop_sql_stack (): unit =
+   if !sql_stack = [] then failwith "Popping an empty sql stack"
+   else sql_stack := List.tl !sql_stack
+
+let evaluate_with_entity (entity:sql_entity_t) expr =
+   push_sql_stack entity;
+   let ret = expr () in
+   pop_sql_stack();
+   ret
+
+let invalid_sql ?(detail = "") msg =
+   raise (InvalidSql(msg,detail,!sql_stack))
+
+(**/**)
 
 (* Construction Helpers *)
 (**
@@ -422,7 +439,6 @@ and string_of_select (stmt:select_t): string =
    @return       The string representation of [stmt]
 *)
 let string_of_table ((name, vars, reltype, (source, adaptor)):table_t): string =
-   
    "CREATE "^(if reltype == Schema.TableRel then "TABLE" else "STREAM")^
    " "^name^"("^
       (ListExtras.string_of_list ~sep:", " (fun (_,v,t) ->
@@ -442,7 +458,7 @@ let find_table (t:string) (tables:table_t list): table_t =
    try 
       List.find (fun (t2,_,_,_) -> t = t2) tables
    with Not_found -> 
-      error ("Undefined relation: '"^t^"'")
+      invalid_sql ("Undefined table: '"^t^"'")
 
 ;;
 
@@ -460,59 +476,59 @@ let find_table (t:string) (tables:table_t list): table_t =
 *)
 let rec expr_type ?(strict = true) (expr:expr_t) (tables:table_t list) 
                   (sources:labeled_source_t list): type_t =
-   let tree_err msg = 
-      error (msg^": "^(string_of_expr expr))
-   in
    let return_if_numeric st msg = 
       begin match st with | TInt | TFloat -> st
                           | TAny when not strict -> st
-                          | _ -> tree_err (msg^(string_of_type st))
+                          | _ -> invalid_sql (msg^(string_of_type st))
       end
    in
    let rcr e = expr_type ~strict:strict e tables sources in
-   match expr with
-      | Const(c)        -> type_of_const c
-      | Var(v)          -> var_type ~strict:strict v tables sources
-      | SQLArith(_,Div,_) -> TFloat
-      | SQLArith(a,_,b) -> (escalate_type (rcr a) (rcr b))
-      | Negation(subexp) ->
-         return_if_numeric (rcr subexp) "Negation of "
-      | NestedQ(stmt) -> 
-         let subsch = select_schema ~strict:strict ~parent_sources:sources
-                                    tables stmt in
-            if (List.length subsch) != 1 then
-               tree_err "Nested query must return a single value"
-            else 
-               let (_,_,t) = List.hd subsch in
-                  t
-      | Aggregate(agg,subexp) -> 
-         begin match agg with
-            (* Sum takes its type from the nested expression *)
-            | SumAgg -> return_if_numeric (rcr subexp) "Aggregate of "
-            (* Count ignores the nested expression *)
-            | CountAgg _ -> TInt
-            (* Average must have numeric inputs but always returns float *)
-            | AvgAgg -> 
-               let _ = return_if_numeric (rcr subexp) "Aggregate of " in TFloat
-         end
-      | ExternalFn(fn,fargs) ->
-         let arg_types = List.map rcr fargs in
-         begin try 
-            if (not strict) && (List.exists (fun x -> x = TAny) arg_types) 
-            then TAny else
-               Functions.infer_type fn arg_types
-         with 
-            | Not_found -> tree_err ("Undeclared Function '"^fn^"'")
-            | Functions.InvalidFunctionArguments _ ->
-                           tree_err ("Invalid function arguments ("^
-                                     (ListExtras.string_of_list ~sep:", "
-                                                                string_of_type 
-                                                                arg_types)^")")
-         end
-      | Case(cases, else_branch) ->
-         Types.escalate_type_list 
-            ((expr_type else_branch tables sources) :: 
-               (List.map (fun (_,x) -> expr_type x tables sources) cases))
+   evaluate_with_entity (SqlExpression(expr)) (fun () ->
+      match expr with
+         | Const(c)        -> type_of_const c
+         | Var(v)          -> var_type ~strict:strict v tables sources
+         | SQLArith(_,Div,_) -> TFloat
+         | SQLArith(a,_,b) -> (escalate_type (rcr a) (rcr b))
+         | Negation(subexp) ->
+            return_if_numeric (rcr subexp) "Negation of "
+         | NestedQ(stmt) -> 
+            let subsch = select_schema ~strict:strict ~parent_sources:sources
+                                       tables stmt in
+               if (List.length subsch) != 1 then
+                  invalid_sql "Nested query must return a single value"
+               else 
+                  let (_,_,t) = List.hd subsch in
+                     t
+         | Aggregate(agg,subexp) -> 
+            begin match agg with
+               (* Sum takes its type from the nested expression *)
+               | SumAgg -> return_if_numeric (rcr subexp) "Aggregate of "
+               (* Count ignores the nested expression *)
+               | CountAgg _ -> TInt
+               (* Average must have numeric inputs but always returns float*)
+               | AvgAgg -> 
+                  let _ = return_if_numeric (rcr subexp) "Aggregate of " 
+                  in TFloat
+            end
+         | ExternalFn(fn,fargs) ->
+            let arg_types = List.map rcr fargs in
+            begin try 
+               if (not strict) && (List.exists (fun x -> x = TAny) arg_types) 
+               then TAny else
+                  Functions.infer_type fn arg_types
+            with 
+               | Not_found -> invalid_sql ("Undeclared Function '"^fn^"'")
+               | Functions.InvalidFunctionArguments _ ->
+                     invalid_sql ("Invalid function arguments ("^
+                                  (ListExtras.string_of_list ~sep:", "
+                                                             string_of_type 
+                                                             arg_types)^")")
+            end
+         | Case(cases, else_branch) ->
+            Types.escalate_type_list 
+               ((expr_type else_branch tables sources) :: 
+                  (List.map (fun (_,x) -> expr_type x tables sources) cases))
+   )
     
 (**
    Compute the schema of a labeled source.  Like source_schema, but the schema
@@ -576,10 +592,12 @@ and source_schema ?(strict=true) ?(parent_sources = []) (tables:table_t list)
 and select_schema ?(strict=true) ?(parent_sources = []) (tables:table_t list) 
                   (stmt:select_t): schema_t =
    let (targets, sources, _, _, _) = stmt in
-   List.map (fun (name, expr) -> 
-      (  None, name, expr_type ~strict:strict expr tables 
-                               (sources@parent_sources))
-   ) targets
+   evaluate_with_entity (SqlQuery(stmt)) (fun () ->
+      List.map (fun (name, expr) -> 
+         (  None, name, expr_type ~strict:strict expr tables 
+                                  (sources@parent_sources))
+      ) targets
+   )
 
 (**
    Find the member of a [FROM] clause that a specified SQL variable's name 
@@ -591,9 +609,6 @@ and select_schema ?(strict=true) ?(parent_sources = []) (tables:table_t list)
                   evaluated.
    @return        The element of [sources] that has a schema with a column
                   named [v]
-   @raise Variable_binding_err If no element of [sources] has a schema with a
-                               column named [v], or if multiple elements of 
-                               [sources] have columns named [v]
 *)
 and source_for_var_name (v:string) (tables:table_t list) 
                         (sources:labeled_source_t list): labeled_source_t =
@@ -619,9 +634,9 @@ and source_for_var_name (v:string) (tables:table_t list)
       ) sources
    in
       if List.length candidates = 0 then
-         raise (Variable_binding_err(v,0))
+         invalid_sql ("Unbound variable '"^v^"'")
       else if List.length candidates > 1 then
-         raise (Variable_binding_err(v,List.length candidates))
+         invalid_sql ("Ambiguous variable '"^v^"'; Provide an explicit source")
       else
          List.hd candidates
 (**
@@ -633,10 +648,6 @@ and source_for_var_name (v:string) (tables:table_t list)
    @param sources All members of the [FROM] clause in the [SELECT] statement
                   in the context of which [var] is being evaluated.
    @return        The element of [sources] that [var] is associated with.
-   @raise Variable_binding_error If [var] can not be associated with a source, 
-                                 can be associated with multiple sources, or
-                                 has already been associated with a source, 
-                                 which is not present in [sources]
 *)
 and source_for_var ((s,v,_):sql_var_t) (tables:table_t list) 
                    (sources:labeled_source_t list): labeled_source_t =
@@ -645,10 +656,9 @@ and source_for_var ((s,v,_):sql_var_t) (tables:table_t list)
          if List.mem_assoc sn sources then
             (sn,List.assoc sn sources)
          else
-            error (
-               "Unable to find source '"^sn^"' of variable '"^v^"' in scope: "^
-               (ListExtras.ocaml_of_list fst sources)
-            )
+            invalid_sql ~detail:("Valid sources: "^
+                                 (ListExtras.ocaml_of_list fst sources))
+                        ("Unbound source '"^sn^"'")
       | None -> source_for_var_name v tables sources
       
 (**
@@ -686,8 +696,8 @@ and var_type ?(strict = true) (v:sql_var_t) (tables:table_t list)
             try 
                let (_,_,t) = List.find (fun (_,vn2,_) -> vn2 = vn) sch in t
             with Not_found ->
-               detailed_error (
-                  "Scope of '"^source_name^"' is : "^
+               invalid_sql ~detail:(
+                  "Schema of '"^source_name^"' is : "^
                   (ListExtras.string_of_list ~sep:", " string_of_var sch)
                ) ("Unbound variable '"^(string_of_var v)^"'")
          )
@@ -709,8 +719,9 @@ and var_type ?(strict = true) (v:sql_var_t) (tables:table_t list)
                          [SELECT] statement.
 *)
 let rec bind_select_vars ?(parent_sources = [])
-                         ((targets,inner_sources,conds,gb,opts):select_t)
+                         (query:select_t)
                          (tables:table_t list): select_t =
+   let (targets,inner_sources,conds,gb,opts) = query in
    let sources = parent_sources @ inner_sources in
    let rcr_c c = bind_cond_vars c tables sources in
    let rcr_e e = bind_expr_vars e tables sources in
@@ -728,33 +739,33 @@ let rec bind_select_vars ?(parent_sources = [])
    let mapped_targets = 
       List.map (fun (tn,te) -> (tn,rcr_e te)) targets
    in
-   (
-      mapped_targets,
-      List.map (fun (sn,s) -> 
-         if List.length (List.filter (fun x -> x = sn)
-                           (List.map fst sources)) > 1 then (
-            error ("Duplicated source name: '"^sn^"'")
-         );
-         (sn, (match s with Table(_) -> s 
-                          | SubQ(subq) -> SubQ(rcr_q ~qn:sn subq)))
-      ) inner_sources,
-      rcr_c conds,
-      List.map (fun (s,v,t) -> 
-         if (s = None) && (List.mem_assoc v mapped_targets)
-         then 
-            begin match (List.assoc v mapped_targets) with
-               | Var(ts,tv,tt) when tv = v -> (ts, v, tt)
-               | _ -> (None, v, expr_type ~strict:true 
-                                  (List.assoc v mapped_targets) 
-                                  tables sources)
-            end
-         else 
-           ((Some(fst (source_for_var (s,v,t) tables sources))),
-            v,
-            var_type (s,v,t) tables sources)
-      ) gb,
-      opts
-   )
+      evaluate_with_entity (SqlQuery(query)) (fun () ->
+         mapped_targets,
+         List.map (fun (sn,s) -> 
+            if List.length (List.filter (fun x -> x = sn)
+                              (List.map fst sources)) > 1 then (
+               invalid_sql ("Duplicate source name: '"^sn^"'")
+            );
+            (sn, (match s with Table(_) -> s 
+                             | SubQ(subq) -> SubQ(rcr_q ~qn:sn subq)))
+         ) inner_sources,
+         rcr_c conds,
+         List.map (fun (s,v,t) -> 
+            if (s = None) && (List.mem_assoc v mapped_targets)
+            then 
+               begin match (List.assoc v mapped_targets) with
+                  | Var(ts,tv,tt) when tv = v -> (ts, v, tt)
+                  | _ -> (None, v, expr_type ~strict:true 
+                                     (List.assoc v mapped_targets) 
+                                     tables sources)
+               end
+            else 
+              ((Some(fst (source_for_var (s,v,t) tables sources))),
+               v,
+               var_type (s,v,t) tables sources)
+         ) gb,
+         opts
+      )
 
 (**
    Ensure that all variables in a SQL condition have been associated with
@@ -778,15 +789,17 @@ and bind_cond_vars (cond:cond_t) (tables:table_t list)
       (ListExtras.ocaml_of_list fst sources)^"\n\t"^
       (string_of_cond cond)
    );
-   match cond with
-      | Comparison(a,op,b) -> Comparison(rcr_e a,op,rcr_e b)
-      | And(a,b) -> And(rcr_c a,rcr_c b)
-      | Or(a,b)  -> Or(rcr_c a,rcr_c b)
-      | Not(a)   -> Not(rcr_c a)
-      | Exists(q) -> Exists(rcr_q q)
-      | ConstB(_) -> cond
-      | Like(e,s) -> Like(rcr_e e, s)
-      | InList(e,l) -> InList(rcr_e e, l)
+   evaluate_with_entity (SqlCondition(cond)) (fun () ->
+      match cond with
+         | Comparison(a,op,b) -> Comparison(rcr_e a,op,rcr_e b)
+         | And(a,b) -> And(rcr_c a,rcr_c b)
+         | Or(a,b)  -> Or(rcr_c a,rcr_c b)
+         | Not(a)   -> Not(rcr_c a)
+         | Exists(q) -> Exists(rcr_q q)
+         | ConstB(_) -> cond
+         | Like(e,s) -> Like(rcr_e e, s)
+         | InList(e,l) -> InList(rcr_e e, l)
+   )
    
 (**
    Ensure that all variables in a SQL expression have been associated with
@@ -815,19 +828,21 @@ and bind_expr_vars (expr:expr_t) (tables:table_t list)
       v,
       var_type (s,v,t) tables sources
    in
-   match expr with 
-      | Const(_) -> expr
-      | Var(v) -> Var(bind_var v)
-      | SQLArith(a,op,b) -> SQLArith(rcr_e a,op,rcr_e b)
-      | Negation(a) -> Negation(rcr_e a)
-      | NestedQ(q) -> NestedQ(rcr_q q)
-      | Aggregate(CountAgg(Some(fields)),a) -> 
-         Aggregate(CountAgg(Some(List.map bind_var fields)), rcr_e a)
-      | Aggregate(agg,a) -> Aggregate(agg, rcr_e a)
-      | ExternalFn(fn,fargs) -> ExternalFn(fn, List.map rcr_e fargs)
-      | Case(cases, else_branch) -> 
-         Case(List.map (fun (c,e) -> (rcr_c c, rcr_e e)) cases, 
-              rcr_e else_branch)
+   evaluate_with_entity (SqlExpression(expr)) (fun () ->
+      match expr with 
+         | Const(_) -> expr
+         | Var(v) -> Var(bind_var v)
+         | SQLArith(a,op,b) -> SQLArith(rcr_e a,op,rcr_e b)
+         | Negation(a) -> Negation(rcr_e a)
+         | NestedQ(q) -> NestedQ(rcr_q q)
+         | Aggregate(CountAgg(Some(fields)),a) -> 
+            Aggregate(CountAgg(Some(List.map bind_var fields)), rcr_e a)
+         | Aggregate(agg,a) -> Aggregate(agg, rcr_e a)
+         | ExternalFn(fn,fargs) -> ExternalFn(fn, List.map rcr_e fargs)
+         | Case(cases, else_branch) -> 
+            Case(List.map (fun (c,e) -> (rcr_c c, rcr_e e)) cases, 
+                 rcr_e else_branch)
+   )
 
 (**
    Determine whether the indicated expression requires an aggregate computation.
@@ -881,12 +896,13 @@ let rec push_down_nots (cond:cond_t): cond_t =
                   replaced by the corresponding wildcard expansion
 *)
 let expand_wildcard_targets (tables:table_t list) 
-                            ((targets,sources,cond,gb,opts):select_t) =
+                            (query:select_t) =
+   let (targets,sources,cond,gb,opts) = query in
    Debug.print "LOG-SQL" (fun () -> "[SQL] Expanding query: "^
-                                    (string_of_select 
-                                       (targets,sources,cond,gb,opts)));
+                                    (string_of_select query));
    let expanded_q = 
-      (  List.flatten (List.map (fun (tname, texpr) ->
+      evaluate_with_entity (SqlQuery(query)) (fun () ->
+         List.flatten (List.map (fun (tname, texpr) ->
             match texpr with
                | Var(None, "*", _) ->
                   List.map 
@@ -923,3 +939,35 @@ let reset_table_defs () =
    reference is instantiated at the end of Sqllexer. *)
 let parse_file:((string -> t list) ref) = ref (fun _ -> []) 
 (**/**)
+
+let string_of_sql_entity (entity:sql_entity_t): string =
+   match entity with 
+   | SqlStatement(Create_Table(table)) -> string_of_table table
+   | SqlStatement(Select(stmt))
+   | SqlQuery(stmt)                    -> string_of_select stmt
+   | SqlExpression(expr)               -> string_of_expr expr
+   | SqlCondition(cond)                -> string_of_cond cond
+   | NoSqlEntity                       -> "<< unknown >>"
+
+(**
+   Generate a human-parseable error message and detail message for an InvalidSql
+   exception.
+*)
+let string_of_invalid_sql (msg, detail, stack): (string * string) =
+   if stack = [] then (msg, detail) else
+   let immediate_entity = List.hd stack in
+   begin match immediate_entity with
+      | SqlExpression _ | SqlCondition _ -> 
+         let rec string_of_outermost_terms last_entity curr_stack =
+            begin match curr_stack with
+               | [] -> "\n\tin "^(string_of_sql_entity last_entity)
+               | (SqlQuery(q))::_ -> 
+                  "\n\tin "^(string_of_sql_entity last_entity)^
+                  "\n\tin "^(string_of_select q)
+               | hd::rest -> string_of_outermost_terms hd rest
+            end
+         in (msg^(string_of_outermost_terms immediate_entity (List.tl stack)),
+             detail)
+         
+      | _ -> (msg ^"\n\tin " ^(string_of_sql_entity immediate_entity), detail)
+   end
