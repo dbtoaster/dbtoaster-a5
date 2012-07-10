@@ -19,8 +19,10 @@ open Constants
 
 (**
    A generic exception pertaining to SQL.
+   
+   The first string is detailed information about the error or ""
 *)
-exception SqlException of string
+exception SqlException of string * string
 (**
    An error that occurs during parsing.
 *)
@@ -53,7 +55,8 @@ let string_of_var_binding_err = function
 
 
 (**/**)
-let error msg = raise (SqlException(msg))
+let error msg                 = raise (SqlException("", msg))
+let detailed_error detail msg = raise (SqlException(detail, msg))
 (**/**)
 
 (**
@@ -670,7 +673,7 @@ and var_type ?(strict = true) (v:sql_var_t) (tables:table_t list)
    match t with
       | TAny when strict -> 
          (* Try to dereference the variable and figure out its type *)
-         let (_,source) = source_for_var v tables sources in
+         let (source_name,source) = source_for_var v tables sources in
          let sch = (
             match source with 
                | Table(table) -> 
@@ -683,10 +686,10 @@ and var_type ?(strict = true) (v:sql_var_t) (tables:table_t list)
             try 
                let (_,_,t) = List.find (fun (_,vn2,_) -> vn2 = vn) sch in t
             with Not_found ->
-               error ("Bug in Sql.var_type: Found schema for variable '"^
-                      (string_of_var v)^"': "^
-                      (ListExtras.string_of_list ~sep:", " string_of_var sch)^
-                      "; but variable not found inside")
+               detailed_error (
+                  "Scope of '"^source_name^"' is : "^
+                  (ListExtras.string_of_list ~sep:", " string_of_var sch)
+               ) ("Unbound variable '"^(string_of_var v)^"'")
          )
       | _ -> t
 

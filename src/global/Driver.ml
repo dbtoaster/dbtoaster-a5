@@ -482,8 +482,10 @@ if stage_is_active StageParseSQL then (
       ) !files
    with 
       | Sql.SQLParseError(msg)
-      | Sql.SqlException(msg) ->
+      | Sql.SqlException("",msg) ->
          error ~exc:true ("Sql Error: "^msg)
+      | Sql.SqlException(detail,msg) ->
+         error ~exc:true ~detail:(fun () -> detail) ("Sql Error: "^msg)
       | Sql.Variable_binding_err(_,_) as vb_err ->
          error ~exc:true ("Sql Error: "^(Sql.string_of_var_binding_err vb_err))
       | Parsing.Parse_error ->
@@ -535,8 +537,10 @@ if stage_is_active StageSQLToCalc then (
                (SqlToCalculus.calc_of_query tables q))
             queries);         
       with 
-         | Sql.SqlException(msg) ->
+         | Sql.SqlException("",msg) ->
             error ~exc:true ("Sql Error: "^msg)
+         | Sql.SqlException(detail,msg) ->
+            error ~exc:true ~detail:(fun () -> detail) ("Sql Error: "^msg)
 
 )
 ;;
