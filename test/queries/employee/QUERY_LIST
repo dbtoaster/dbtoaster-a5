@@ -149,10 +149,10 @@ Set Operators:
 33. Select department_id, count(*) “No. of employees” from employee where to_char(hire_date,’yyyy’)=1985 and to_char(hire_date,’mon’)=’apr’ group by to_char(hire_date,’yyyy’), to_char(hire_date,’mon’), department_id having count(*)>=3
 34. Select * from employee where salary=(select max(salary) from employee)
 35. Select * from employee where department_id IN (select department_id from department where name=’SALES’)
-36. Select * from employee where job_id in (select job_id from job where function=’CLERK’
+36. Select * from employee where job_id in (select job_id from job where job_function=’CLERK’
 37. Select * from employee where department_id=(select department_id from department where location_id=(select location_id from location where regional_group=’New York’))
 38. Select * from employee where department_id=(select department_id from department where name=’SALES’ group by department_id)
-39. Update employee set salary=salary*10/100 wehre job_id=(select job_id from job where function=’CLERK’)
+39. Update employee set salary=salary*10/100 wehre job_id=(select job_id from job where job_function=’CLERK’)
 40. delete from employee where department_id=(select department_id from department where name=’ACCOUNTING’)
 41. Select * from employee where salary=(select max(salary) from employee where salary <(select max(salary) from employee))
 42. Select distinct e.salary from employee where & no-1=(select count(distinct salary) from employee where sal>e.salary)
@@ -162,12 +162,12 @@ Set Operators:
 46. Select name from department d where not exists (select last_name from employee e where d.department_id=e.department_id)
 47. Select employee_id, last_name, salary, department_id from employee e where salary > (select avg(salary) from employee where department_id=e.department_id)
 48. Select employee_id, last_name, name from employee e, department d where e.department_id=d.department_id
-49. Select employee_id, last_name, function from employee e, job j where e.job_id=j.job_id
+49. Select employee_id, last_name, job_function from employee e, job j where e.job_id=j.job_id
 50. Select employee_id, last_name, name, regional_group from employee e, department d, location l where e.department_id=d.department_id and d.location_id=l.location_id
 51. Select name, count(*) from employee e, department d where d.department_id=e.department_id group by name
 52. Select name, count(*) from employee e, department d where d.department_id=e.department_id group by name having name=’SALES’
 53. Select name, count(*) from employee e, department d where d.department_id=e.department_id group by name having count (*)>=5 order by name
-54. Select function, count(*) from employee e, job j where j.job_id=e.job_id group by function
+54. Select job_function, count(*) from employee e, job j where j.job_id=e.job_id group by job_function
 55. Select regional_group, count(*) from employee e, department d, location l where e.department_id=d.department_id and d.location_id=l.location_id and regional_group="BOSTON" group by regional_group
 56. Select employee_id, last_name, grade_id from employee e, salary_grade s where salary between lower_bound and upper_bound order by last_name
 57. Select grade_id, count(*) from employee e, salary_grade s where salary between lower_bound and upper_bound group by grade_id order by grade_id desc
@@ -177,6 +177,6 @@ Set Operators:
 61. Select m.manager_id, count(*) from employee e, employee m where e.employee_id=m.manager_id group by m.manager_id
 62. Select last_name, d.department_id, d.name from employee e, department d where e.department_id(+)=d.department_id
 63. Select last_name, d.department_id, d.name from employee e, department d where e.department_id(+)=d.department_id and d.department_idin (select department_id from department where name IN ('SALES','OPERATIONS'))
-64. Select function from job where job_id in (Select job_id from employee where department_id=(select department_id from department where name='SALES')) union Select function from job where job_id in (Select job_id from employee where department_id=(select department_id from department where name='ACCOUNTING'))
-65. Select function from job where job_id in (Select job_id from employee where department_id=(select department_id from department where name='SALES')) union all Select function from job where job_id in (Select job_id from employee where department_id=(select department_id from department where name='ACCOUNTING'))
-66. Select function from job where job_id in (Select job_id from employee where department_id=(select department_id from department where name='RESEARCH')) intersect Select function from job where job_id in (Select job_id from employee where department_id=(select department_id from department where name='ACCOUNTING')) order by function
+64. Select job_function from job where job_id in (Select job_id from employee where department_id=(select department_id from department where name='SALES')) union Select job_function from job where job_id in (Select job_id from employee where department_id=(select department_id from department where name='ACCOUNTING'))
+65. Select job_function from job where job_id in (Select job_id from employee where department_id=(select department_id from department where name='SALES')) union all Select job_function from job where job_id in (Select job_id from employee where department_id=(select department_id from department where name='ACCOUNTING'))
+66. Select job_function from job where job_id in (Select job_id from employee where department_id=(select department_id from department where name='RESEARCH')) intersect Select job_function from job where job_id in (Select job_id from employee where department_id=(select department_id from department where name='ACCOUNTING')) order by job_function

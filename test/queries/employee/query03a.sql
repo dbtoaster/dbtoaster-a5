@@ -2,10 +2,10 @@
 
 CREATE STREAM JOB(
     job_id      INT,
-    function    VARCHAR(20)
+    job_function    VARCHAR(20)
     ) 
   FROM FILE '../../experiments/data/employee/job.dat' LINE DELIMITED
   CSV ();
 
-SELECT job_id, function 
+SELECT job_id, job_function 
 FROM job;

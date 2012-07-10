@@ -69,8 +69,8 @@ let rec provenance_of_expr ?(in_scope=[]) ?(inline_vars=[]) (expr:expr_t):
                derives its value from these variables. The value doesn't 
                introduce any new variables into scope, but the value itself 
                derives its value from the variables in scope. *)
-            join (List.map (Function.apply_strict scope) vars)
-         with Function.NonFunctionalMappingException -> (
+            join (List.map (ListAsFunction.apply_strict scope) vars)
+         with ListAsFunction.NonFunctionalMappingException -> (
             error ~detail:(fun () ->
                "Expression:\n"^(CalculusPrinter.string_of_expr expr)^"\n"^
                "Vars:"^(ListExtras.ocaml_of_list string_of_var vars)^"\n"^

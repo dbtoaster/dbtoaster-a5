@@ -90,6 +90,7 @@ let bind_select_vars q =
 %token SOCKET FILE FIXEDWIDTH VARSIZE OFFSET ADJUSTBY SETVALUE LINE DELIMITED
 %token EXTRACT LIST DISTINCT 
 %token CASE WHEN ELSE THEN END
+%token FUNCTION RETURNS EXTERNAL
 %token POSTGRES RELATION PIPE
 %token ASC DESC
 %token SOURCE ARGS INSTANCE TUPLE ADAPTOR BINDINGS STREAM
@@ -124,9 +125,19 @@ dbtoasterSqlStmtList:
                                  { $1 @ $3 }
 
 dbtoasterSqlStmt:
-| INCLUDE STRING         { (!Sql.parse_file) $2 }
-| createTableStmt        { [Sql.Create_Table($1)] }
-| selectStmt             { [Sql.Select(bind_select_vars $1)] }
+| INCLUDE STRING           { (!Sql.parse_file) $2 }
+| createTableStmt          { [Sql.Create_Table($1)] }
+| selectStmt               { [Sql.Select(bind_select_vars $1)] }
+| functionDeclarationStmt  { [] }
+
+functionDeclarationStmt:
+| CREATE FUNCTION ID LPAREN fieldList RPAREN RETURNS typeDefn 
+  AS functionDefinition {
+         Functions.declare_usr_function $3 (List.map (fun (_,_,x)->x) $5) $8 $10 
+      }
+
+functionDefinition:
+| EXTERNAL STRING { $2 }
 
 //
 // Create table statements

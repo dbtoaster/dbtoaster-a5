@@ -771,11 +771,15 @@ and calc_of_sql_expr ?(materialize_query = None)
          let (agg_args,non_agg_args) = 
             List.partition fst arg_calc
          in
+         let { Functions.ret_type       = impl_type;
+               Functions.implementation = impl_name;
+             } = (Functions.declaration fn
+                     (List.map Arithmetic.type_of_value lifted_args))
+         in
             CalcRing.mk_val (AggSum(List.flatten gb_vars, 
                CalcRing.mk_prod ((List.map snd (agg_args@non_agg_args))@[
                   CalcRing.mk_val (Value(
-                     ValueRing.mk_val (AFn(fn, lifted_args, 
-                        Sql.expr_type expr tables sources))
+                     ValueRing.mk_val (AFn(impl_name,lifted_args,impl_type))
                   ))
                ])
             ))

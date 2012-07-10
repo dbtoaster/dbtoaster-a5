@@ -857,16 +857,16 @@ let rec conservative_beta_reduction substitutions expr =
       (* External function application to constants *)
       | Apply(ExternalLambda(fn_name, AVar(_,_), TBase(fn_type)), 
               Const(x)) 
-        when StandardFunctions.function_is_defined fn_name ->
-          Const(StandardFunctions.invoke fn_name [x] fn_type)
+        when Functions.function_is_defined fn_name ->
+          Const(Functions.invoke fn_name [x] fn_type)
 
       (* External function application to constant tuples *)
       | Apply(ExternalLambda(fn_name, ATuple(vt_l), TBase(fn_type)),
               Tuple(fields)) 
         when ((List.length vt_l) = (List.length fields)) &&
-              (StandardFunctions.function_is_defined fn_name) &&
+              (Functions.function_is_defined fn_name) &&
               (List.for_all (function Const(_)->true | _->false) fields) ->
-          Const(StandardFunctions.invoke fn_name (
+          Const(Functions.invoke fn_name (
                 List.map (function 
                   Const(x) -> x
                   (* We should have filtered this case out in the case stmt. *)

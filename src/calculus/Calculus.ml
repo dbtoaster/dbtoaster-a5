@@ -484,13 +484,16 @@ let rec all_vars (expr:expr_t): var_t list =
    @return           [mapping] extended such that it doesn't clobber any 
                      existing variables in [expr]
 *)
-let find_safe_var_mapping (mapping:(var_t,var_t) Function.table_fn_t) 
-                          (expr:expr_t): (var_t,var_t) Function.table_fn_t =
+let find_safe_var_mapping (mapping:(var_t,var_t) ListAsFunction.table_fn_t) 
+                          (expr:expr_t): 
+                          (var_t,var_t) ListAsFunction.table_fn_t =
    let expr_vars = all_vars expr in
-   let static_names = ListAsSet.diff (expr_vars) (Function.dom mapping) in
-   let problem_names = ListAsSet.inter static_names (Function.img mapping) in
+   let static_names = 
+      ListAsSet.diff (expr_vars) (ListAsFunction.dom mapping) in
+   let problem_names = 
+      ListAsSet.inter static_names (ListAsFunction.img mapping) in
    let final_var_names = 
-      ListAsSet.diff (ListAsSet.union static_names (Function.img mapping))
+      ListAsSet.diff (ListAsSet.union static_names (ListAsFunction.img mapping))
                      problem_names
    in
    (* Use a simple iterative approach to find a safe name to reassign each 
@@ -518,9 +521,9 @@ let find_safe_var_mapping (mapping:(var_t,var_t) Function.table_fn_t)
    @param expr       A Calculus expression
    @return           [expr] with all variables subjected to [mapping]
 *)
-let rename_vars (mapping:(var_t,var_t)Function.table_fn_t) 
+let rename_vars (mapping:(var_t,var_t)ListAsFunction.table_fn_t) 
                 (expr:expr_t):expr_t = 
-   let remap_one = (Function.apply_if_present mapping) in
+   let remap_one = (ListAsFunction.apply_if_present mapping) in
    let remap = List.map remap_one in
    let remap_value = Arithmetic.rename_vars mapping in
    rewrite_leaves
@@ -600,7 +603,7 @@ let value_singleton ?(multiplicity = CalcRing.one)
    @return          If [e1] and [e2] compute the same thing, return a Some-
                     wrapped mapping from the schema/variables of [e1] to the 
                     schema/variables of [e2], suitable for application with the 
-                    [Function] module.  Otherwise return None.  
+                    [ListAsFunction] module.  Otherwise return None.  
 *)
 let rec cmp_exprs ?(cmp_opts:CalcRing.cmp_opt_t list = 
                         if Debug.active "WEAK-EXPR-EQUIV" 
@@ -615,7 +618,8 @@ let rec cmp_exprs ?(cmp_opts:CalcRing.cmp_opt_t list =
       end
    in
    let rcr a b = validate_mapping (cmp_exprs ~cmp_opts:cmp_opts a b) in
-   let merge components = validate_mapping (Function.multimerge components) in
+   let merge components = 
+      validate_mapping (ListAsFunction.multimerge components) in
    validate_mapping (CalcRing.cmp_exprs ~cmp_opts:cmp_opts merge merge
       (fun lf1 lf2 -> validate_mapping (
       begin match (lf1,lf2) with
@@ -627,7 +631,7 @@ let rec cmp_exprs ?(cmp_opts:CalcRing.cmp_opt_t list =
                | None -> None
                | Some(mappings) -> 
                     if ((List.length gb1) = (List.length gb2)) then  
-                        Function.merge mappings (List.combine gb1 gb2)
+                        ListAsFunction.merge mappings (List.combine gb1 gb2)
                     else None                     
             end
          
@@ -653,7 +657,7 @@ let rec cmp_exprs ?(cmp_opts:CalcRing.cmp_opt_t list =
                   | Some(s) -> 
                      if ((List.length eiv1) = (List.length eiv2)) &&
                         ((List.length eov1) = (List.length eov2)) 
-                     then Function.multimerge 
+                     then ListAsFunction.multimerge 
                              [ s; 
                                (List.combine eiv1 eiv2); 
                                (List.combine eov1 eov2) ]
@@ -666,14 +670,14 @@ let rec cmp_exprs ?(cmp_opts:CalcRing.cmp_opt_t list =
             begin match (Arithmetic.cmp_values va1 va2,
                          Arithmetic.cmp_values vb1 vb2) with
                | ((Some(mappings1)),(Some(mappings2))) ->
-                  Function.merge mappings1 mappings2
+                  ListAsFunction.merge mappings1 mappings2
                | _ -> None
             end
             
          | ((Lift(v1,sub1)), (Lift(v2,sub2))) ->
             begin match rcr sub1 sub2 with
                | None -> None
-               | Some(new_mappings) -> Function.merge [v1,v2] new_mappings
+               | Some(new_mappings) -> ListAsFunction.merge [v1,v2] new_mappings
             end
          
 (***** BEGIN EXISTS HACK *****)
@@ -697,7 +701,7 @@ let rec exprs_are_identical ?(cmp_opts:CalcRing.cmp_opt_t list =
                            then [] else CalcRing.default_cmp_opts)
                         (e1:expr_t) (e2:expr_t): bool = 
    None <> cmp_exprs ~cmp_opts:cmp_opts 
-                     ~validate:Function.is_identity
+                     ~validate:ListAsFunction.is_identity
                      e1 e2
 
 (** 

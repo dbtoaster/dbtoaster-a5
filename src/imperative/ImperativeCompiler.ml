@@ -1802,7 +1802,10 @@ end (* Typing *)
                   begin match type_of_expr_t arg with
                      | Host(TBase(source_type)) ->
                         let dest_type = 
-                           StandardFunctions.infer_type id [source_type]
+                           begin match r_t with 
+                              | TBase(dest_type) -> dest_type
+                              | _ -> failwith "Invalid cast function"
+                           end
                         in
                         if source_type = dest_type 
                         then result ci arg

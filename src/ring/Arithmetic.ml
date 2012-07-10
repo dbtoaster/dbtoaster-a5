@@ -116,15 +116,15 @@ let rec vars_of_value (v: value_t): var_t list =
    @param v       A value
    @return        [v] with [mapping] applied to all of its variables
 *)
-let rec rename_vars (mapping:(var_t,var_t)Function.table_fn_t) (v: value_t): 
-                    value_t =
+let rec rename_vars (mapping:(var_t,var_t)ListAsFunction.table_fn_t) 
+                    (v: value_t): value_t =
    ValueRing.fold
       ValueRing.mk_sum
       ValueRing.mk_prod
       ValueRing.mk_neg
       (fun lf -> ValueRing.mk_val (begin match lf with
          | AConst(c)     -> lf
-         | AVar(v)       -> AVar(Function.apply_if_present mapping v)
+         | AVar(v)       -> AVar(ListAsFunction.apply_if_present mapping v)
          | AFn(fn,fa,ft) -> AFn(fn, List.map (rename_vars mapping) fa, ft)
       end))
       v
@@ -168,8 +168,8 @@ let rec cmp_values ?(cmp_opts:ValueRing.cmp_opt_t list =
    let rcr = cmp_values ~cmp_opts:cmp_opts in
    
    ValueRing.cmp_exprs ~cmp_opts:cmp_opts 
-      Function.multimerge 
-      Function.multimerge 
+      ListAsFunction.multimerge 
+      ListAsFunction.multimerge 
       (fun lf1 lf2 ->
          match (lf1,lf2) with 
             | ((AConst(c1)),(AConst(c2))) ->
@@ -181,7 +181,7 @@ let rec cmp_values ?(cmp_opts:ValueRing.cmp_opt_t list =
             | ((AFn(fn1,subt1,ft1)),(AFn(fn2,subt2,ft2))) ->
                if (fn1 <> fn2) || (ft1 <> ft2) then None
                else begin try 
-                  Function.multimerge (List.map2 (fun a b -> 
+                  ListAsFunction.multimerge (List.map2 (fun a b -> 
                   begin match rcr a b with 
                      | None -> raise Not_found
                      | Some(s) -> s
@@ -252,8 +252,7 @@ let rec eval ?(scope=StringMap.empty) (v:value_t): const_t =
             if StringMap.mem v scope then StringMap.find v scope
             else failwith 
                     ("Variable "^v^" not found while evaluating arithmetic")
-         | AFn(fn,fargs,ftype) ->
-            StandardFunctions.invoke fn
+         | AFn(fn,fargs,ftype) -> Functions.invoke fn
                                      (List.map (eval ~scope:scope) fargs)
                                      ftype
    ) v
@@ -291,10 +290,10 @@ let rec eval_partial ?(scope=[]) (v:value_t): value_t =
                                       | ValueRing.Val(AConst(c)) -> c
                                       | _ -> raise Not_found) fargs)
                in
-                  mk_const (StandardFunctions.invoke fname farg_vals ftype)
+                  mk_const (Functions.invoke fname farg_vals ftype)
             with 
                | Not_found
-               | StandardFunctions.InvalidInvocation(_) ->
+               | Functions.InvalidInvocation(_) ->
                   ValueRing.mk_val (AFn(fname, fargs, ftype))
             end
          | AVar(vn, vt) ->

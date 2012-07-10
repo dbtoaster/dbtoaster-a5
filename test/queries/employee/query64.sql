@@ -25,13 +25,13 @@ CREATE STREAM DEPARTMENT(
 
 CREATE STREAM JOB(
     job_id      INT,
-    function    VARCHAR(20)
+    job_function    VARCHAR(20)
     ) 
   FROM FILE '../../experiments/data/employee/job.dat' LINE DELIMITED
   CSV ();
 
 
-SELECT function 
+SELECT job_function 
 FROM job 
 WHERE job_id IN (SELECT job_id 
                  FROM employee 
@@ -39,7 +39,7 @@ WHERE job_id IN (SELECT job_id
                                         FROM department 
                                         WHERE name = 'SALES')) 
 UNION
-SELECT function 
+SELECT job_function 
 FROM job 
 WHERE job_id IN (SELECT job_id 
                  FROM employee 

@@ -4,7 +4,7 @@ FILES=\
 	src/util/Debug\
 	src/util/ListAsSet\
 	src/util/ListExtras\
-	src/util/Function\
+	src/util/ListAsFunction\
 	src/util/HyperGraph\
 	src/util/Fixpoint\
 	src/util/MainCpp\
@@ -14,7 +14,7 @@ FILES=\
 	src/global/Types\
 	src/global/Constants\
 	src/global/Schema\
-	src/lib/StandardFunctions\
+	src/global/Functions\
 	src/sql/Sql\
 	src/sql/SqlClient\
 	src/ring/Ring\
@@ -46,6 +46,7 @@ FILES=\
 	src/imperative/K3ToImperative\
 	src/imperative/ImperativeCompiler\
         src/lib/Sources\
+	src/lib/StandardFunctions\
 	src/lib/StandardAdaptors\
 	src/lib/SliceableMap\
 	src/lib/Values\
@@ -219,7 +220,7 @@ $(patsubst %,%.cmxi,$(FILES)) :
 
 makefile.deps: makefile $(patsubst %,%.ml,$(BASE_FILES))
 	@echo Computing Dependency Graph
-	$(OCAMLDEP) $(patsubst %, -I %,$(DIRS)) \
+	@$(OCAMLDEP) $(patsubst %, -I %,$(DIRS)) \
 			$(patsubst %,%.ml,$(BASE_FILES)) | tr \\\\ / | sed 's:/$$:\\: '> $@
 
 makefile.local:

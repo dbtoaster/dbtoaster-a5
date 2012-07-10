@@ -25,12 +25,12 @@ CREATE STREAM DEPARTMENT(
 
 CREATE STREAM JOB(
     job_id      INT,
-    function    VARCHAR(20)
+    job_function    VARCHAR(20)
     ) 
   FROM FILE '../../experiments/data/employee/job.dat' LINE DELIMITED
   CSV ();
 
-SELECT function 
+SELECT job_function 
 FROM job j1, (SELECT e1.job_id
               FROM employee e1
               WHERE e1.department_id = (SELECT d1.department_id 

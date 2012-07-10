@@ -1,8 +1,8 @@
 --  List all job details
 
 CREATE STREAM JOB(
-    job_id      INT,
-    function    VARCHAR(20)
+    job_id       INT,
+    job_function VARCHAR(20)
     ) 
   FROM FILE '../../experiments/data/employee/job.dat' LINE DELIMITED
   CSV ();

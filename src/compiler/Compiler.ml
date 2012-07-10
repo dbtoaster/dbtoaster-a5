@@ -234,9 +234,9 @@ let compile_map (heuristic_options:Heuristics.heuristic_options_t)
                Plan.target_map = 
                   CalcRing.mk_val (External(
                      todo_name, 
-                     List.map (Function.apply_if_present delta_renamings) 
+                     List.map (ListAsFunction.apply_if_present delta_renamings) 
                               todo_ivars,
-                     List.map (Function.apply_if_present delta_renamings) 
+                     List.map (ListAsFunction.apply_if_present delta_renamings) 
                               todo_ovars,
                      todo_base_type,
                      todo_ivc  

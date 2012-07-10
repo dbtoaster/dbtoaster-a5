@@ -17,7 +17,7 @@ CREATE STREAM EMPLOYEE(
 
 CREATE STREAM JOB(
     job_id      INT,
-    function    VARCHAR(20)
+    job_function    VARCHAR(20)
     ) 
   FROM FILE '../../experiments/data/employee/job.dat' LINE DELIMITED
   CSV ();
@@ -26,4 +26,4 @@ SELECT *
 FROM employee 
 WHERE job_id IN (SELECT job_id 
                  FROM job 
-                 WHERE function='CLERK')
+                 WHERE job_function='CLERK')

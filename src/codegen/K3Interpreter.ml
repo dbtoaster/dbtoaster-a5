@@ -495,7 +495,7 @@ struct
                                   (ListExtras.string_of_list string_of_const
                                                              fn_args));
                 *)
-                let ret_c = StandardFunctions.invoke fn_id fn_args 
+                let ret_c = Functions.invoke fn_id fn_args 
                                                      (base_type_of fn_t) in
                 let ret_t = K3.TBase(Constants.type_of_const ret_c) in
                 if( fn_t <> ret_t) then
@@ -505,7 +505,7 @@ struct
                          (K3.string_of_type fn_t)^" <> "^
                          (K3.string_of_type ret_t));
                          BaseValue(ret_c)
-            with StandardFunctions.InvalidInvocation(msg) -> 
+            with Functions.InvalidInvocation(msg) -> 
                         bail ~expr:expr msg
         in Fun fn)
 

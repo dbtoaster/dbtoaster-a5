@@ -96,6 +96,9 @@ let keywords =
         "WHEN", WHEN;
         "ELSE", ELSE;
         "THEN", THEN;
+        "EXTERNAL", EXTERNAL;
+        "FUNCTION", FUNCTION;
+        "RETURNS", RETURNS;
     ]
 let _ = hashtbl_of_pair_list keyword_table keywords
 
