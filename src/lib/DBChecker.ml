@@ -143,24 +143,29 @@ struct
          let prefix = if List.length !(db_session.queries) > 1 
                       then "QUERY_"^(string_of_int !i)^"_" else "" in
          let (real_query,real_schema) = 
+            (* Can we use SqlToCalculus.cast_query_to_aggregate here? *)
             if Sql.is_agg_query q.stmt then
                (q.stmt, q.schema)
             else
-               let (targets, sources, condition, gb) = q.stmt in
+               let (targets, sources, condition, gb, opts) = q.stmt in
                   (( targets @ ["COUNT", 
-                        Sql.Aggregate(Sql.CountAgg(None), 
+                        Sql.Aggregate(Sql.CountAgg(
+                                      (if List.mem Sql.Select_Distinct opts
+                                       then Some([]) else None)),
                                       Sql.Const(Constants.CInt(1)))],
                      sources, condition,
                      List.map (fun (tn,te) -> 
                         (None, tn, Sql.expr_type te !(db_session.tables) 
                                                     sources)) 
-                        targets
+                        targets,
+                        
+                     List.filter (fun x -> x <> Sql.Select_Distinct) opts
                   ), (q.schema @ ["COUNT", Types.TInt]))
          in
          let db_result = I.query !(db_session.client) real_query real_schema in
          let db_hashtbl = to_hashtbl db_result in
          let target_name = 
-            let (targets, _, _, _) = real_query in
+            let (targets, _, _, _,_) = real_query in
             prefix^(fst (List.nth targets ((List.length targets) - 1)))
          in
             try 

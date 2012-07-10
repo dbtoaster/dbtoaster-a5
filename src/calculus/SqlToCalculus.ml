@@ -78,7 +78,7 @@ let var_of_sql_var ((rel,vn,vt):Sql.sql_var_t):var_t =
 *)
 let cast_query_to_aggregate (tables:Sql.table_t list)
                             (query:Sql.select_t):Sql.select_t =
-   let (targets,sources,cond,gb_vars) = query in
+   let (targets,sources,cond,gb_vars,opts) = query in
    let (new_targets,new_gb_vars) = 
       if Sql.is_agg_query query 
       then (
@@ -94,8 +94,10 @@ let cast_query_to_aggregate (tables:Sql.table_t list)
          if gb_vars <> [] then (
             Sql.error "Non-aggregate query with group-by variables";
          );
-         (  targets @ ["COUNT", Sql.Aggregate(  Sql.SumAgg, 
-                                                (Sql.Const(CInt(1))))],
+         (  targets @ ["COUNT", Sql.Aggregate(  
+                     Sql.CountAgg(if List.mem Sql.Select_Distinct opts
+                                  then Some([]) else None), 
+                     (Sql.Const(CInt(1))))],
             (List.map (fun (target_name, target_expr) ->
                let target_source = begin match target_expr with
                   | Sql.Var(v_source,v_name,_) when v_name = target_name ->
@@ -110,7 +112,7 @@ let cast_query_to_aggregate (tables:Sql.table_t list)
          )
       )
    in
-      (new_targets, sources, cond, new_gb_vars)
+      (new_targets, sources, cond, new_gb_vars, opts)
 
 (**
    [normalize_agg_target_expr gb_vars expr]
@@ -222,12 +224,12 @@ let rec calc_of_query ?(query_name = None)
                       (tables:Sql.table_t list) 
                       (query:Sql.select_t): 
                       (string * C.expr_t) list = 
-   let (targets,sources,cond,gb_vars) = 
+   let (targets,sources,cond,gb_vars,opts) = 
       cast_query_to_aggregate tables query 
    in
    Debug.print "LOG-SQL-TO-CALC" (fun () -> 
       "Cast query is now : "^
-      (Sql.string_of_select (targets,sources,cond,gb_vars))
+      (Sql.string_of_select (targets,sources,cond,gb_vars,opts))
    );
    let source_calc = calc_of_sources tables sources in
    let cond_calc = calc_of_condition tables sources cond in
@@ -733,7 +735,7 @@ and calc_of_sql_expr ?(materialize_query = None)
 
       | Sql.Negation(e) -> CalcRing.mk_neg (rcr_e e)
       | Sql.NestedQ(q)  -> 
-         let (q_targets,q_sources,q_cond,q_gb_vars) = q in
+         let (q_targets,q_sources,q_cond,q_gb_vars,_) = q in
          if (q_gb_vars <> []) || (* Group-by not allowed *)
             (List.length q_targets <> 1) || (* Only one target *)
             ((not (Sql.is_agg_query q)) && (q_sources <> [])) 

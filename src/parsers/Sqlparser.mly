@@ -56,14 +56,14 @@ let natural_join lhs rhs =
 
 let scan_for_existence (op_name:string) (q:Sql.select_t) (cmp_op:cmp_t) 
                        (expr:Sql.expr_t) =
-   let (targets, sources, cond, gb_vars) = q in
+   let (targets, sources, cond, gb_vars, _) = q in
    let (_,tgt) = match targets with [tgt] -> tgt | _ -> 
       bail ("Target of "^op_name^" clause should produce a single column")
    in 
    if Sql.is_agg_expr tgt
    then Sql.Comparison(expr, cmp_op, Sql.NestedQ(q))
    else Sql.Exists(["unused", Sql.Const(CInt(1))], sources, 
-              (Sql.And(cond, Sql.Comparison(expr, cmp_op, tgt))), gb_vars)
+              (Sql.And(cond, Sql.Comparison(expr, cmp_op, tgt))), gb_vars, [])
 
 
 let bind_select_vars q =
@@ -270,15 +270,20 @@ groupByClause:
 |                      { [] }
 
 selectStmt: 
-    SELECT targetList
+    SELECT optionalDistinct 
+    targetList
     fromClause
     whereClause
     groupByClause
     {
-      let (from, join_conds) = $3 in
+      let (from, join_conds) = $4 in
          Sql.expand_wildcard_targets (List.map snd !table_defs)
-            ($2, from, Sql.mk_and join_conds $4, $5)
+            ($3, from, Sql.mk_and join_conds $5, $6, $2)
     }
+
+optionalDistinct:
+|           { [] }
+| DISTINCT  { [Sql.Select_Distinct] }
 
 //
 // Expressions

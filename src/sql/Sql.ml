@@ -86,6 +86,9 @@ type arith_t = Sum | Prod | Sub | Div
 *)
 type agg_t = SumAgg | CountAgg of sql_var_t list option | AvgAgg
 
+type select_option_t = 
+   | Select_Distinct
+
 (**
    A Sql expression (which appears in either the target clause, or as part of a 
    comparison condition)
@@ -156,7 +159,8 @@ and select_t =
    (* SELECT      *) target_t list *
    (* FROM        *) labeled_source_t list *
    (* WHERE       *) cond_t *
-   (* GROUP BY    *) sql_var_t list
+   (* GROUP BY    *) sql_var_t list *
+   (* etc...      *) select_option_t list
 
 (**
    A SQL statement.  This can be either a [CREATE TABLE] statement or a [SELECT]
@@ -385,8 +389,10 @@ and string_of_cond (cond:cond_t): string =
    @return      The string representation of [stmt]
 *)
 and string_of_select (stmt:select_t): string =
-   let (target,from,where,gb) = stmt in
-   "SELECT "^(ListExtras.string_of_list ~sep:", " 
+   let (target,from,where,gb,opts) = stmt in
+   "SELECT "^
+   (if List.mem Select_Distinct opts then "DISTINCT " else "")^
+   (ListExtras.string_of_list ~sep:", " 
                               (fun (n,e) -> (string_of_expr e)^" AS "^n)
                               target)^
    (if List.length from > 0 then
@@ -566,7 +572,7 @@ and source_schema ?(strict=true) ?(parent_sources = []) (tables:table_t list)
 *)
 and select_schema ?(strict=true) ?(parent_sources = []) (tables:table_t list) 
                   (stmt:select_t): schema_t =
-   let (targets, sources, _, _) = stmt in
+   let (targets, sources, _, _, _) = stmt in
    List.map (fun (name, expr) -> 
       (  None, name, expr_type ~strict:strict expr tables 
                                (sources@parent_sources))
@@ -700,7 +706,7 @@ and var_type ?(strict = true) (v:sql_var_t) (tables:table_t list)
                          [SELECT] statement.
 *)
 let rec bind_select_vars ?(parent_sources = [])
-                         ((targets,inner_sources,conds,gb):select_t)
+                         ((targets,inner_sources,conds,gb,opts):select_t)
                          (tables:table_t list): select_t =
    let sources = parent_sources @ inner_sources in
    let rcr_c c = bind_cond_vars c tables sources in
@@ -714,7 +720,7 @@ let rec bind_select_vars ?(parent_sources = [])
    Debug.print "LOG-SQL-BIND" (fun () ->
       "[SQL-BIND] Binding query with sources: "^
       (ListExtras.ocaml_of_list fst sources)^"\n\t"^
-      (string_of_select (targets,inner_sources,conds,gb))
+      (string_of_select (targets,inner_sources,conds,gb,opts))
    );
    let mapped_targets = 
       List.map (fun (tn,te) -> (tn,rcr_e te)) targets
@@ -743,7 +749,8 @@ let rec bind_select_vars ?(parent_sources = [])
            ((Some(fst (source_for_var (s,v,t) tables sources))),
             v,
             var_type (s,v,t) tables sources)
-      ) gb
+      ) gb,
+      opts
    )
 
 (**
@@ -843,7 +850,7 @@ let rec is_agg_expr (expr:expr_t): bool =
    @param stmt   A SQL [SELECT] statement
    @return       True if [stmt] describes an aggregate query
 *)
-let is_agg_query ((targets,_,_,_):select_t): bool =
+let is_agg_query ((targets,_,_,_,_):select_t): bool =
    List.exists is_agg_expr (List.map snd targets)
 ;;
 
@@ -871,10 +878,10 @@ let rec push_down_nots (cond:cond_t): cond_t =
                   replaced by the corresponding wildcard expansion
 *)
 let expand_wildcard_targets (tables:table_t list) 
-                            ((targets,sources,cond,gb):select_t) =
+                            ((targets,sources,cond,gb,opts):select_t) =
    Debug.print "LOG-SQL" (fun () -> "[SQL] Expanding query: "^
                                     (string_of_select 
-                                       (targets,sources,cond,gb)));
+                                       (targets,sources,cond,gb,opts)));
    let expanded_q = 
       (  List.flatten (List.map (fun (tname, texpr) ->
             match texpr with
@@ -891,7 +898,7 @@ let expand_wildcard_targets (tables:table_t list)
                | _ -> [tname,texpr]
                
          ) targets),
-         sources, cond, gb)
+         sources, cond, gb, opts)
    in
       Debug.print "LOG-SQL" (fun () -> "[SQL] Expanded query: "^
                                        (string_of_select expanded_q));
