@@ -159,7 +159,10 @@ type t =
 type file_t = table_t list * select_t list
 
 (**
-   An abstract sql entity (statements, queries, expressions, or conditions)
+   An abstract sql entity (any type in sql)
+   
+   This type is used primarilly for error handling to provide context for
+   error messages.  
 *)
 type sql_entity_t = 
    | SqlStatement  of t
@@ -940,6 +943,9 @@ let reset_table_defs () =
 let parse_file:((string -> t list) ref) = ref (fun _ -> []) 
 (**/**)
 
+(**
+   The string representation of an abstract SQL entity.
+*)
 let string_of_sql_entity (entity:sql_entity_t): string =
    match entity with 
    | SqlStatement(Create_Table(table)) -> string_of_table table
