@@ -3,8 +3,8 @@ include ../../makefile.inc
 FILES := $(patsubst %,../../src/%,\
 	util/ListExtras\
 	util/ListAsSet\
-	util/Function\
 	util/Debug\
+	global/Functions\
 	global/Types\
 	global/Schema\
 	ring/Ring\

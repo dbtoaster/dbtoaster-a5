@@ -253,6 +253,7 @@ clean:
 superclean: clean
 	rm -f $(shell find src -name "*.cmi") $(shell find src -name "*.cmo")
 	rm -f $(shell find src -name "*.cmxi") $(shell find src -name "*.cmx")
+	rm -f $(shell find src -name "*.annot") $(shell find src -name "*.o")
 	      
 
 distclean: superclean
