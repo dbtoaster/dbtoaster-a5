@@ -6,15 +6,17 @@ UNIT_TEST=sh -c 'echo ==== $$1 ====; $(DBTOASTER_TOP) $$1' --
 
 QUERY_TEST := scripts/query_test.rb $(QUERY_TEST_FLAGS)
 
-ifneq ($(COMPILE_INTERPRETER), 0)
+ifeq ($(TEST_INTERPRETER), 1)
 	QUERY_TEST += -t interpreter 
 endif
-
-ifeq ($(COMPILE_SCALA), 1)
+ifeq ($(TEST_CPP), 1)
+	QUERY_TEST += -t cpp $(CPP_TEST_FLAGS)
+endif
+ifeq ($(TEST_SCALA), 1)
 	QUERY_TEST += -t scala $(SCALA_TEST_FLAGS)
 endif
-ifeq ($(COMPILE_CPP), 1)
-	QUERY_TEST += -t cpp $(CPP_TEST_FLAGS)
+ifeq ($(TEST_ALL), 1)
+	QUERY_TEST += -t all $(CPP_TEST_FLAGS) $(SCALA_TEST_FLAGS)
 endif
 
 FAST_QUERY_TEST=$(QUERY_TEST) -d weak-expr-equiv
@@ -115,6 +117,7 @@ query_simple:
 	@$(FAST_QUERY_TEST) simple/r_deepscoping
 	@$(FAST_QUERY_TEST) simple/r_impossibleineq
 	@$(FAST_QUERY_TEST) simple/r_ineqandeq
+test2:
 	@$(FAST_QUERY_TEST) simple/r_lift_of_count
 	@$(FAST_QUERY_TEST) simple/r_nonjoineq
 	@$(FAST_QUERY_TEST) simple/r_possibleineq

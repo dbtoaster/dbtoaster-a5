@@ -1,0 +1,124 @@
+#!/bin/bash
+
+BINDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+
+out_src_file="-"
+out_src_lang="-"
+out_bin_file="-"
+
+option="-"
+option_flag=0
+new_args=""
+
+compile_cmd=""
+
+inc_flags=`echo "$DBT_HDR" | sed 's/:/ -I/g'`
+[ $inc_flags ] && { inc_flags="-I$inc_flags"; }
+inc_flags="-I. $inc_flags"
+lib_flags=`echo "$DBT_LIB" | sed 's/:/ -L/g'`
+[ $lib_flags ] && { lib_flags="-L$lib_flags"; }
+
+cpp_compile_flags=""
+cpp_opt_flag="-O3"
+cpp_mt_flag=""
+
+scala_compile_flags="-deprecation -unchecked -sourcepath lib/dbt_scala/src -classpath lib/dbt_scala/dbtlib.jar"
+scala_opt_flag="-optimise"
+
+
+for arg in "$@"; do
+    if [[ ($arg != "-c") && ( ($option_flag == 0) || ($option != "-c") ) ]]; then
+        new_args="$new_args $arg"
+    fi
+	
+	if [ $option_flag = 1 ]; then
+		if [ $option = "-o" ]; then
+			out_src_file=$arg
+		elif [ $option = "-l" ]; then
+            out_src_lang=$arg
+        elif [ $option = "-c" ]; then
+			out_bin_file=$arg
+		elif [ $option = "-I" ]; then
+            inc_flags="$inc_flags -I$arg"
+        elif [ $option = "-L" ]; then
+            lib_flags="$lib_flags -L$arg"
+        elif [ $option = "-d" ]; then
+			debug_flag=${arg^^}
+            if [ $debug_flag = "COMPILE-WITH-PROFILE" ]; then
+                cpp_compile_flags="$cpp_compile_flags -pg"
+            elif [ $debug_flag = "COMPILE-WITH-GDB" ]; then
+                cpp_compile_flags="$cpp_compile_flags -g"
+            elif [ $debug_flag = "COMPILE-WITHOUT-OPT" ]; then
+                cpp_opt_flag=""
+                scala_opt_flag=""
+            elif [ $debug_flag = "COMPILE-WITH-STATIC" ]; then
+                cpp_compile_flags="$cpp_compile_flags -static"
+            elif [ $debug_flag = "MT" ]; then
+                cpp_mt_flag="-mt"
+            fi
+        fi
+		option_flag=0
+        option="-"
+    fi    
+
+	if [ ${arg:0:1} = "-" ]; then
+		option_flag=1
+		option=$arg
+    fi
+done
+    
+if [ $out_bin_file != "-" ]; then
+    #echo "------------ Compiling $out_bin_file ----------------"
+
+    src_extension="hpp"
+    if [ $out_src_lang != "-" ]; then
+        [ $out_src_lang != "cpp" -a $out_src_lang != "scala" ] && \
+            { echo "$0: Binaries can be created only for C++ and Scala languages , exiting..." ; exit 1; }
+        [ $out_src_lang == "scala" ] && { src_extension="scala"; }
+
+    elif [ ${out_src_file} != "-" ]; then
+        out_src_file_ext=${out_src_file##*.}
+        out_src_file_ext=${out_src_file_ext,,}
+        [[ $out_src_file_ext && $out_src_file_ext == "scala" ]] && { src_extension="scala"; }
+    fi
+  
+	if [ ${out_src_file} = "-" ]; then
+		out_src_file=`mktemp -q /tmp/tmp.XXXXXX.${src_extension}`
+        [ $? -ne 0 ] && { echo "$0: Can't create temp file, exiting..." ; exit 1; }
+		
+		new_args="$new_args -o $out_src_file"		
+	fi
+
+    if [ $src_extension == "hpp" ]; then
+        main_file="$BINDIR/../lib/dbt_c++/main.cpp"
+
+        boost_libs="-lboost_program_options -lboost_serialization -lboost_system -lboost_filesystem -lboost_chrono -lboost_thread"
+        cpp_libs="-lpthread"
+        for lib in $boost_libs; do
+            cpp_libs="$lib$cpp_mt_flag $cpp_libs"
+        done;
+
+        compile_cmd="g++ $main_file -include $out_src_file -o $out_bin_file $cpp_compile_flags $cpp_opt_flag $inc_flags $lib_flags $cpp_libs"
+    fi
+
+    if [ $src_extension == "scala" ]; then
+        main_file="$BINDIR/../lib/dbt_scala/src/org/dbtoaster/RunQuery.scala"
+
+        out_bin_file_ext=${out_bin_file##*.}
+        out_bin_file_ext=${out_bin_file_ext,,}
+        [[ (-z $out_bin_file_ext) || ($out_bin_file_ext != "jar") ]] && { out_bin_file="$out_bin_file.jar"; }
+        
+        compile_cmd="scalac $scala_compile_flags $scala_opt_flag -d $out_bin_file $main_file $out_src_file"
+    fi
+
+    mkdir -p $(dirname $out_bin_file)
+fi
+
+
+#echo
+#echo $0 $@
+
+#echo "$BINDIR/dbtoaster_release $new_args";
+$BINDIR/dbtoaster_release $new_args;
+#echo $compile_cmd;
+$compile_cmd;

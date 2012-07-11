@@ -27,6 +27,7 @@ namespace dbtoaster{
     };
 }
 
+
 /**
  * In order to compile this file one would have to include a header containing
  * the definition of "dbtoaster::Program" and "dbtoaster::Program::snapshot_t"

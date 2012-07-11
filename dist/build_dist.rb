@@ -51,7 +51,7 @@ end
 copy_files(["../doc/README", 
             "../doc/LICENSE"], "dbtoaster");
 
-copy_files(["../bin/dbtoaster"], "dbtoaster/bin");
+copy_files(["../bin/dbtoaster","../bin/dbtoaster_release"], "dbtoaster/bin");
 copy_files([], "dbtoaster/lib");
 
 copy_files(["../doc/site/9.jpg",

@@ -329,7 +329,7 @@ GetoptLong.new(
 end
 
 tests.uniq!
-tests = [ScalaUnitTest, InterpreterUnitTest] if tests.empty?;
+tests = [InterpreterUnitTest] if tests.empty?;
 
 queries = ARGV
 

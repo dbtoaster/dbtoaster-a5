@@ -110,7 +110,7 @@ OPT_FLAGS +=\
 #################################################
 
 all: makefile.local versioncheck bin/dbtoaster_top bin/dbtoaster_debug \
-		 bin/dbtoaster runtimelibs
+		 bin/dbtoaster_release bin/dbtoaster runtimelibs
 
 versioncheck:
 	@if [ $(shell ocaml -version | sed 's/.*version \(.*\)$$/\1/' | \
@@ -128,7 +128,7 @@ lib/.deps:
 	@make -C lib dependencies
 	@touch lib/.deps
 
-bin/dbtoaster: $(O_FILES) lib/.deps src/global/Driver.ml
+bin/dbtoaster_release: $(O_FILES) lib/.deps src/global/Driver.ml
 	@echo "Linking DBToaster (Optimized)"
 	@$(OCAMLOPT) $(OPT_FLAGS) -o $@ $(O_FILES) src/global/Driver.ml
 
@@ -139,6 +139,8 @@ bin/dbtoaster_debug: $(C_FILES) lib/.deps src/global/Driver.ml
 bin/dbtoaster_top: $(C_FILES) lib/.deps src/global/UnitTest.ml
 	@echo "Linking DBToaster Top"
 	@$(OCAMLMKTOP) $(OCAML_FLAGS) -o $@ $(C_FILES) src/global/UnitTest.ml
+
+bin/dbtoaster: bin/dbtoaster_release 
 
 fast: bin/dbtoaster_debug bin/dbtoaster_top
 
@@ -241,7 +243,7 @@ clean:
 	rm -f $(O_FILES) $(O_INCLUDES)
 	rm -f $(patsubst %,%.o,$(FILES))
 	rm -f $(patsubst %,%.annot,$(FILES))
-	rm -f bin/dbtoaster bin/dbtoaster_top bin/dbtoaster_debug
+	rm -f bin/dbtoaster_release bin/dbtoaster_top bin/dbtoaster_debug
 	rm -f src/global/*.cmi src/global/*.cmo src/global/*.annot src/global/Driver.cmx
 	rm -f src/global/Driver.cmxi src/global/Driver.o
 	rm -f doc/*.aux doc/*.synctex.gz doc/*.log
