@@ -41,7 +41,7 @@ package org.dbtoaster.dbtoasterlib {
         case "YEAR"  => c.get(java.util.Calendar.YEAR)
         case "MONTH" => c.get(java.util.Calendar.MONTH)
         case "DAY"   => c.get(java.util.Calendar.DAY_OF_MONTH)
-        case _ => throw new dbtoasterExceptions.DBTFatalError(
+        case _ => throw new DBToasterExceptions.DBTFatalError(
                                 "Invalid date part.")
       }
     }

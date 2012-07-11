@@ -1,5 +1,5 @@
 import java.io.InputStream
-import org.dbtoaster.dbtoasterlib.dbtoasterExceptions._
+import org.dbtoaster.dbtoasterlib.DBToasterExceptions._
 import scala.util.Random
 import scala.collection.mutable.Map
 import java.text.SimpleDateFormat

@@ -2464,7 +2464,7 @@ end (* Typing *)
   let preamble opts = Lines
       ( (if Debug.active "CPP-TRACE" then ["#define DBT_TRACE   1"] else [])@
         (if opts.profile             then ["#define DBT_PROFILE 1"] else [])@
-        ["#include <lib/dbt_c++/program_base.hpp>";
+        ["#include \"program_base.hpp\"";
          "";
          "namespace dbtoaster {";])
          

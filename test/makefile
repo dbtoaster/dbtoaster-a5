@@ -117,7 +117,6 @@ query_simple:
 	@$(FAST_QUERY_TEST) simple/r_deepscoping
 	@$(FAST_QUERY_TEST) simple/r_impossibleineq
 	@$(FAST_QUERY_TEST) simple/r_ineqandeq
-test2:
 	@$(FAST_QUERY_TEST) simple/r_lift_of_count
 	@$(FAST_QUERY_TEST) simple/r_nonjoineq
 	@$(FAST_QUERY_TEST) simple/r_possibleineq

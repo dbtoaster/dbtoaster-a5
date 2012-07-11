@@ -1016,7 +1016,7 @@ struct
                "org.dbtoaster.dbtoasterlib.StreamAdaptor._";
                "org.dbtoaster.dbtoasterlib.K3Collection._";
                "org.dbtoaster.dbtoasterlib.Source._";
-               "org.dbtoaster.dbtoasterlib.dbtoasterExceptions._";
+               "org.dbtoaster.dbtoasterlib.DBToasterExceptions._";
                "org.dbtoaster.dbtoasterlib.ImplicitConversions._";
                "org.dbtoaster.dbtoasterlib.StdFunctions._";
                "scala.collection.mutable.Map";

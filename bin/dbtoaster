@@ -1,6 +1,9 @@
 #!/bin/bash
 
 BINDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
+DIR="$BINDIR/.."
+CPP_LIBDIR="$DIR/lib/dbt_c++"
+SCALA_LIBDIR="$DIR/lib/dbt_scala"
 
 out_src_file="-"
 out_src_lang="-"
@@ -14,7 +17,7 @@ compile_cmd=""
 
 inc_flags=`echo "$DBT_HDR" | sed 's/:/ -I/g'`
 [ $inc_flags ] && { inc_flags="-I$inc_flags"; }
-inc_flags="-I. $inc_flags"
+inc_flags="-I$CPP_LIBDIR $inc_flags"
 lib_flags=`echo "$DBT_LIB" | sed 's/:/ -L/g'`
 [ $lib_flags ] && { lib_flags="-L$lib_flags"; }
 
@@ -22,7 +25,7 @@ cpp_compile_flags=""
 cpp_opt_flag="-O3"
 cpp_mt_flag=""
 
-scala_compile_flags="-deprecation -unchecked -sourcepath lib/dbt_scala/src -classpath lib/dbt_scala/dbtlib.jar"
+scala_compile_flags="-deprecation -unchecked -sourcepath $SCALA_LIBDIR/src -classpath $SCALA_LIBDIR/dbtlib.jar"
 scala_opt_flag="-optimise"
 
 
@@ -90,7 +93,7 @@ if [ $out_bin_file != "-" ]; then
 	fi
 
     if [ $src_extension == "hpp" ]; then
-        main_file="$BINDIR/../lib/dbt_c++/main.cpp"
+        main_file="$CPP_LIBDIR/main.cpp"
 
         boost_libs="-lboost_program_options -lboost_serialization -lboost_system -lboost_filesystem -lboost_chrono -lboost_thread"
         cpp_libs="-lpthread"
@@ -102,7 +105,7 @@ if [ $out_bin_file != "-" ]; then
     fi
 
     if [ $src_extension == "scala" ]; then
-        main_file="$BINDIR/../lib/dbt_scala/src/org/dbtoaster/RunQuery.scala"
+        main_file="$SCALA_LIBDIR/src/org/dbtoaster/RunQuery.scala"
 
         out_bin_file_ext=${out_bin_file##*.}
         out_bin_file_ext=${out_bin_file_ext,,}

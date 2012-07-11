@@ -1,4 +1,4 @@
-import org.dbtoaster.dbtoasterlib.dbtoasterExceptions._
+import org.dbtoaster.dbtoasterlib.DBToasterExceptions._
 import xml._
 import java.util.Date
 import java.text.SimpleDateFormat
