@@ -334,7 +334,8 @@ struct
       (fun a b -> "(" ^ conva(a) ^ ") " ^ opcode ^ " (" ^ convb(b) ^ ")")
 
    let cmp_op ?(conva = identity) ?(convb = identity) opcode = 
-      (fun a b -> mk_bool_to_int ("(" ^ conva(a) ^ ") " ^ opcode ^ " (" ^ convb(b) ^ ")"))
+      (fun a b -> mk_bool_to_int ("(" ^ conva(a) ^ ") " ^ opcode ^ 
+                                  " (" ^ convb(b) ^ ")"))
 
    (** Returns a function generating code for a certain
        type of operation *)

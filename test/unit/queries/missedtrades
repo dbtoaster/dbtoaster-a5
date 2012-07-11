@@ -5,29 +5,77 @@
       :toplevels => {
         "MST" => {
           :type => :onelevel,
-          :expected => results_file("test/results/finance/missedtrades.csv"),        
+          :expected => {
+            [0] => 239782239208000,
+            [1] => 286899643129600,
+            [2] => 433537462536000,
+            [3] => 312939869850400,
+            [4] => 312350670268000,
+            [5] => 299944210634000,
+            [6] => 216415140659200,
+            [7] => 359784753867200,
+            [8] => 348506222234400,
+            [9] => 179492362576000
+          }  
         }
       } 
     },
-    
+           
     "tiny" => {
-      :subs => [ [/data\/finance\/standard\/vwap.csv/, "data/finance/tiny/vwap.csv"] ],
+      :subs => [ [/data\/finance\/standard\/finance.csv/, "data/finance/tiny/finance.csv"] ],
       :toplevels => {
         "MST" => {
           :type => :onelevel,
-          :expected => results_file("test/results/finance/missedtrades_tiny.csv"),
+          :expected => {
+            [2] => 7633000,
+            [3] => 2068653000,
+            [4] => 1299183000,
+            [7] => 546353000
+          }
         }
       }    
     },
     
     "big" => {
-      :subs => [ [/data\/finance\/standard\/vwap.csv/, "data/finance/big/vwap.csv"] ],
+      :subs => [ [/data\/finance\/standard\/finance.csv/, "data/finance/big/finance.csv"] ],
       :toplevels => {
         "MST" => {
           :type => :onelevel,
-          :expected => results_file("test/results/finance/missedtrades_big.csv"),
+          :expected => {
+            [0] => 1.202028703414e+15,
+            [1] => 977082260165000,
+            [2] => 987614315734000,
+            [3] => 1.0498270569e+15,
+            [4] => 980024650235000,
+            [5] => 1.033808999581e+15,
+            [6] => 1.031200037506e+15,
+            [7] => 1.106733940586e+15,
+            [8] => 1.063389224594e+15,
+            [9] => 1.116607893835e+15
+          }
         }
       }    
-    }    
+    },
+    
+    "huge" => {
+      :subs => [ [/data\/finance\/standard\/finance.csv/, "data/finance/huge/finance.csv"] ],
+      :toplevels => {
+        "MST" => {
+          :type => :onelevel,
+          :expected => {
+            [0] => -148271324600,
+            [1] => 67451405400,
+            [2] => -162405532000,
+            [3] => 125375620300,
+            [4] => 82845755400,
+            [5] => 650496818400,
+            [6] => -61404191000,
+            [7] => 316287154700,
+            [8] => 109112419500,
+            [9] => -18897351000
+          }
+        }
+      }    
+    }        
   }
 }

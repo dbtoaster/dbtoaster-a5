@@ -1,6 +1,6 @@
 ﻿SET search_path = 'TPCH_@@DATASET@@';
 
-SELECT l.l_shipmode, COUNT(*) as high_line_count
+SELECT quote_literal(l.l_shipmode), COUNT(*) as high_line_count
 FROM   orders o, lineitem l
 WHERE  o.o_orderpriority IN ('1-URGENT', '2-HIGH')
   AND  o.o_orderkey = l.l_orderkey

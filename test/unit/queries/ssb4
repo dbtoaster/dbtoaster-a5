@@ -5,7 +5,7 @@
       :toplevels => {
         "SSB4" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/ssb4.csv"),
+          :expected => results_file("test/results/tpch/ssb4_standard.csv"),
         }
       }
     },
@@ -35,7 +35,7 @@
       :toplevels => {
         "SSB4" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/ssb4_del.csv"),
+          :expected => results_file("test/results/tpch/ssb4_standard_del.csv"),
         }
       }
     },

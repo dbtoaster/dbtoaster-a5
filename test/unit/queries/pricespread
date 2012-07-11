@@ -5,13 +5,13 @@
       :toplevels => {
         "PSP" => {
           :type => :singleton,
-          :expected => 76452380068302.0
+          :expected => 76452380068302
         }
       } 
     },
     
     "tiny" => {
-      :subs => [ [/data\/finance\/standard\/vwap.csv/, "data/finance/tiny/vwap.csv"] ],
+      :subs => [ [/data\/finance\/standard\/finance.csv/, "data/finance/tiny/finance.csv"] ],
       :toplevels => {
         "PSP" => {
           :type => :singleton,
@@ -21,13 +21,23 @@
     },
     
     "big" => {
-      :subs => [ [/data\/finance\/standard\/vwap.csv/, "data/finance/big/vwap.csv"] ],
+      :subs => [ [/data\/finance\/standard\/finance.csv/, "data/finance/big/finance.csv"] ],
       :toplevels => {
         "PSP" => {
           :type => :singleton,
-          :expected => 458315598400.0
+          :expected => 458315598400
         }
       }    
-    }    
+    },
+    
+    "huge" => {
+      :subs => [ [/data\/finance\/standard\/finance.csv/, "data/finance/huge/finance.csv"] ],
+      :toplevels => {
+        "PSP" => {
+          :type => :singleton,
+          :expected => 43505400
+        }
+      }    
+    }        
   }
 }

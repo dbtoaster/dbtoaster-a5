@@ -1,11 +1,11 @@
 ﻿SET search_path = 'TPCH_@@DATASET@@';
 
-SELECT nation, o_year, SUM(amount) AS sum_profit 
+SELECT quote_literal(nation), o_year, SUM(amount) AS sum_profit 
 FROM (
   SELECT n.n_name AS nation, 
          EXTRACT(year from o.o_orderdate) AS o_year,
-         l.l_extendedprice * (1 - l.l_discount) - ps.ps_supplycost * l.l_quantity
-            AS amount
+         (l.l_extendedprice * (1 - l.l_discount) - 
+          ps.ps_supplycost * l.l_quantity) AS amount
   FROM   part p, supplier s, lineitem l, partsupp ps, orders o, nation n
   WHERE  s.s_suppkey = l.l_suppkey
     AND  ps.ps_suppkey = l.l_suppkey 

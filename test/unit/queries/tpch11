@@ -25,7 +25,7 @@
       :toplevels => {
         "QUERY11" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query11_big.csv", /,/)
+          :expected => results_file("test/results/tpch/query11_big.csv", /\|/)
         }
       }
     },
@@ -55,7 +55,7 @@
       :toplevels => {
         "QUERY11" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query11_big_del.csv", /,/)
+          :expected => results_file("test/results/tpch/query11_big_del.csv", /\|/)
         }
       }
     }

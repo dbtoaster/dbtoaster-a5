@@ -1,6 +1,6 @@
 SET search_path = 'TPCH_@@DATASET@@';
 
-SELECT o.o_orderpriority, COUNT(*) AS order_count
+SELECT quote_literal(o.o_orderpriority), COUNT(*) AS order_count
 FROM   orders o
 WHERE  o.o_orderdate >= DATE('1993-07-01')
   AND  o.o_orderdate <  DATE('1993-10-01')

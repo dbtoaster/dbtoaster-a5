@@ -5,7 +5,7 @@
       :toplevels => {
         "SUPPLIER_CNT" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query16.csv")
+          :expected => results_file("test/results/tpch/query16_standard.csv", /\|/)
         }
       }
     },
@@ -15,7 +15,7 @@
       :toplevels => {
         "SUPPLIER_CNT" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query16_tiny.csv")
+          :expected => results_file("test/results/tpch/query16_tiny.csv", /\|/)
         }
       }
     },
@@ -25,7 +25,7 @@
       :toplevels => {
         "SUPPLIER_CNT" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query16_big.csv")
+          :expected => results_file("test/results/tpch/query16_big.csv", /\|/)
         }
       }
     },
@@ -35,7 +35,7 @@
       :toplevels => {
         "SUPPLIER_CNT" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query16_del.csv")
+          :expected => results_file("test/results/tpch/query16_standard_del.csv", /\|/)
         }
       }
     },
@@ -45,7 +45,7 @@
       :toplevels => {
         "SUPPLIER_CNT" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query16_tiny_del.csv")
+          :expected => results_file("test/results/tpch/query16_tiny_del.csv", /\|/)
         }
       }
     },
@@ -55,7 +55,7 @@
       :toplevels => {
         "SUPPLIER_CNT" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query16_big_del.csv")
+          :expected => results_file("test/results/tpch/query16_big_del.csv", /\|/)
         }
       }
     }

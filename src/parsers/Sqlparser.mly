@@ -133,8 +133,8 @@ dbtoasterSqlStmt:
 functionDeclarationStmt:
 | CREATE FUNCTION ID LPAREN fieldList RPAREN RETURNS typeDefn 
   AS functionDefinition {
-         Functions.declare_usr_function $3 (List.map (fun (_,_,x)->x) $5) $8 $10 
-      }
+    Functions.declare_usr_function $3 (List.map (fun (_,_,x)->x) $5) $8 $10 
+  }
 
 functionDefinition:
 | EXTERNAL STRING { $2 }

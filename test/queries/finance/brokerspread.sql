@@ -1,18 +1,5 @@
---  broker_id |      sum      
--- -----------+---------------
---          6 |  -55136926200
---          8 |   92711476900
---          2 |  186526996800
---          1 | -114956214400
---          3 |   85729885500
---          4 |   18596229300
---          5 |  158875988600
---          9 |  140073076900
---          7 |  -27166878800
---          0 |   78933620700
-
 CREATE STREAM bids(t FLOAT, id INT, broker_id INT, volume FLOAT, price FLOAT)
-  FROM FILE '../../experiments/data/finance/standard/vwap.csv'
+  FROM FILE '../../experiments/data/finance/standard/finance.csv'
   LINE DELIMITED orderbook (book := 'bids', brokers := '10', 
                             deterministic := 'yes');
 

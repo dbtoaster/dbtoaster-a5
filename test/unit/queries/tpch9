@@ -5,7 +5,7 @@
       :toplevels => {
         "SUM_PROFIT" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query9.csv")
+          :expected => results_file("test/results/tpch/query9_standard.csv", /\|/)
         }
       }
     },
@@ -15,7 +15,7 @@
       :toplevels => {
         "SUM_PROFIT" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query9_tiny.csv")
+          :expected => results_file("test/results/tpch/query9_tiny.csv", /\|/)
         }
       }
     },
@@ -25,7 +25,7 @@
       :toplevels => {
         "SUM_PROFIT" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query9_big.csv")
+          :expected => results_file("test/results/tpch/query9_big.csv", /\|/)
         }
       }
     },
@@ -35,7 +35,7 @@
       :toplevels => {
         "SUM_PROFIT" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query9_del.csv")
+          :expected => results_file("test/results/tpch/query9_standard_del.csv", /\|/)
         }
       }
     },

@@ -7,7 +7,8 @@ package org.dbtoaster.dbtoasterlib {
       //type appendType = 
     }
 
-    final case class K3TupleCons[H, T <: K3Tuple](head: H, tail: T) extends K3Tuple {
+    final case class K3TupleCons[H, T <: K3Tuple](head: H, tail: T) 
+            extends K3Tuple {
       def :+:[H](v: H) = K3TupleCons(v, this)
       def append[V](v: V): K3Tuple = K3TupleCons(head, tail.append(v))
 
@@ -25,7 +26,8 @@ package org.dbtoaster.dbtoasterlib {
 
     final case object K3TupleNil extends K3Tuple {
       def :+:[H](v: H) = K3TupleCons(v, this)
-      def append[V](v: V): K3TupleCons[V, K3TupleNil.type] = K3TupleCons(v, K3TupleNil)
+      def append[V](v: V): K3TupleCons[V, K3TupleNil.type] = 
+            K3TupleCons(v, K3TupleNil)
 
       def toList: List[Any] = List[Any]()
 

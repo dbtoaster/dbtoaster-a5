@@ -16,8 +16,8 @@ class String
                   then ($1.to_i*10000+$2.to_i*100+$3.to_i).to_f;
       when /^([\-\+]?[0-9]+\.[0-9]*e?[\-\+]?[0-9]*)$/ then $1.to_f;
       when /^([\-\+]?[0-9]+)$/ then $1.to_f;
-      when /^'([a-zA-Z0-9_#\-,.:!? ]*)'$/ then $1
-      when /^([a-zA-Z0-9_#\-,.:!? ]*)$/ then $1
+      when /^'([a-zA-Z0-9_#\-,.:;!? ]*)'$/ then $1
+      when /^([a-zA-Z0-9_#\-,.:;!? ]*)$/ then $1
       else self
     end
   end
@@ -27,7 +27,7 @@ class OcamlDB < Hash
   def initialize(db_string, reverse_key = true)
     tok = Tokenizer.new(
       db_string,
-        /\[|\]|->|DATE\('[0-9]+\-[0-9]+\-[0-9]+'\)|[\-\+]?[0-9]+\.?[0-9]*e[\-\+]?[0-9]*|[\-\+]?[0-9]+\.?[0-9]*|'[a-zA-Z0-9_#\-\s,.:!?]*'|<pat=[^>]*>|SingleMap|DoubleMap|TupleList|\(|\)|;/
+        /\[|\]|->|DATE\('[0-9]+\-[0-9]+\-[0-9]+'\)|[\-\+]?[0-9]+\.?[0-9]*e[\-\+]?[0-9]*|[\-\+]?[0-9]+\.?[0-9]*|'[a-zA-Z0-9_#\-\s,.:;!?]*'|<pat=[^>]*>|SingleMap|DoubleMap|TupleList|\(|\)|;/
     )
     tok.next while (tok.peek == "SingleMap") || tok.peek == "DoubleMap" || tok.peek == "TupleList" || (tok.peek == "(");
     raise "Not A Database (Got '#{tok.peek}')" unless tok.peek == "[";

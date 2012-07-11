@@ -10,10 +10,14 @@ package org.dbtoaster.dbtoasterlib {
       def contains(key: K): Boolean
       def lookup(key: K, defval: V): V
       def toList(): List[Tuple2[K, V]]
-      def map[K2, V2](f: Tuple2[K, V] => Tuple2[K2, V2]): K3IntermediateCollection[K2, V2]
+      def map[K2, V2](f: Tuple2[K, V] => 
+            Tuple2[K2, V2]): K3IntermediateCollection[K2, V2]
       def foreach(f: Tuple2[K, V] => Unit): Unit
-      def slice[KP](keyPart: KP, idx: List[Int]): K3IntermediateCollection[K, V]
-      def groupByAggregate[K2, V2](init: V2, group: Tuple2[K, V] => K2, fn: Tuple2[K, V] => V2 => V2): K3IntermediateCollection[K2, V2]
+      def slice[KP](keyPart: KP, idx: List[Int]): 
+            K3IntermediateCollection[K, V]
+      def groupByAggregate[K2, V2](init: V2, group: Tuple2[K, V] => K2, 
+                                   fn: Tuple2[K, V] => V2 => V2):
+                                  K3IntermediateCollection[K2, V2]
       def fold[Y](init: Y, fn: Tuple2[K, V] => Y => Y): Y
       def flatten[K2, V2](): K3IntermediateCollection[K2, V2]
       def toPersistentCollection(): K3PersistentCollection[K, V]
@@ -27,9 +31,15 @@ package org.dbtoaster.dbtoasterlib {
         getResult.foldLeft("") {
           case (str, (k, v)) =>
             try {
-              str + "<item>" + (k.asInstanceOf[Product].productIterator.foldLeft((0, "")) { case ((i, str), k) => (i + 1, str + "<__a" + i + ">" + k + "</__a" + i + ">") })._2 + "<__av>" + v + "</__av></item>\n"
+              str + "<item>" + 
+              (k.asInstanceOf[Product].productIterator.foldLeft((0, "")) { 
+                case ((i, str), k) => 
+                (i + 1, str + "<__a" + i + ">" + k + "</__a" + i + ">") })._2 +
+              "<__av>" + v + "</__av></item>\n"
             } catch {
-              case e: java.lang.ClassCastException => str + "<item><__a0>" + k + "</__a0><__av>" + v + "</__av></item>\n"
+              case e: java.lang.ClassCastException => 
+                str + "<item><__a0>" + k + "</__a0><__av>" + 
+                v + "</__av></item>\n"
             }
         }
       }
@@ -76,8 +86,10 @@ package org.dbtoaster.dbtoasterlib {
       }
     }
 
-    class K3PersistentCollection[K, V](elems: Map[K, V], sndIdx: Option[Map[String, Index[K, V]]]) extends K3Collection[K, V] {
-      def map[K2, V2](f: Tuple2[K, V] => Tuple2[K2, V2]): K3IntermediateCollection[K2, V2] = {
+    class K3PersistentCollection[K, V](elems: Map[K, V], 
+        sndIdx: Option[Map[String, Index[K, V]]]) extends K3Collection[K, V] {
+      def map[K2, V2](f: Tuple2[K, V] => Tuple2[K2, V2]): 
+            K3IntermediateCollection[K2, V2] = {
         K3IntermediateCollection[K2, V2](elems.toList.map(f))
       }
 
@@ -107,15 +119,20 @@ package org.dbtoaster.dbtoasterlib {
 
       def foreach(f: Tuple2[K, V] => Unit): Unit = elems.foreach(f)
 
-      def slice[KP](keyPart: KP, idx: List[Int]): K3IntermediateCollection[K, V] = {
+      def slice[KP](keyPart: KP, idx: List[Int]): 
+            K3IntermediateCollection[K, V] = {
         val strIdx = idx map (_.toString()) reduceLeft(_ + "_" + _);
         sndIdx match {
-          case Some(x) => K3IntermediateCollection(x.get(strIdx).get.slice(keyPart).toList)
+          case Some(x) => K3IntermediateCollection(x.get(strIdx).get.
+                                slice(keyPart).toList)
           case None => throw new IllegalArgumentException
         }
       }
 
-      def groupByAggregate[K2, V2](init: V2, group: Tuple2[K, V] => K2, fn: Tuple2[K, V] => V2 => V2): K3IntermediateCollection[K2, V2] = {
+      def groupByAggregate[K2, V2](init: V2, 
+                                   group: Tuple2[K, V] => K2, 
+                                   fn: Tuple2[K, V] => V2 => V2):
+                                  K3IntermediateCollection[K2, V2] = {
         val groupedCollection = elems.foldLeft(Map[K2, V2]()) {
           case (grps, keyval) =>
             val key = group(keyval)
@@ -141,36 +158,55 @@ package org.dbtoaster.dbtoasterlib {
       def toPersistentCollection(): K3PersistentCollection[K, V] = this
     }
     
-    class K3ResultCollection [K, V](elems: TrieMap[K, V], sndIdx: Option[Map[String, Index[K, V]]]) extends K3PersistentCollection[K, V](elems, sndIdx) with QueryResult[K, V] {
+    class K3ResultCollection [K, V](elems: TrieMap[K, V], 
+                                    sndIdx: Option[Map[String, Index[K, V]]]) 
+            extends K3PersistentCollection[K, V](elems, sndIdx) 
+            with QueryResult[K, V] {
       def getResult: scala.collection.Map[K, V] = elems.readOnlySnapshot
     }
 
-    class K3FullPersistentCollection[K1, K2, V](felems: Map[K1, K3PersistentCollection[K2, V]], fsndIdx: Option[Map[String, Index[K1, K3PersistentCollection[K2, V]]]]) extends K3PersistentCollection[K1, K3PersistentCollection[K2, V]](felems, fsndIdx) {
+    class K3FullPersistentCollection[K1, K2, V](
+            felems: Map[K1, K3PersistentCollection[K2, V]], 
+            fsndIdx: Option[Map[String, 
+                            Index[K1, K3PersistentCollection[K2, V]]]]) 
+        extends K3PersistentCollection[K1, 
+                K3PersistentCollection[K2, V]](felems, fsndIdx) {
       def updateValue(inKey: K1, outKey: K2, value: V): Unit = {
         felems.get(inKey) match {
           case Some(outerMap) => outerMap.updateValue(outKey, value)
-          case None => felems += ((inKey, new K3PersistentCollection[K2, V](Map((outKey -> value)), None)))
+          case None => 
+            felems += ((inKey, new K3PersistentCollection[K2, V](
+                                    Map((outKey -> value)), None)))
         }
       }
     }
     
     //TODO Result class for Full Collection?
     /*
-    class K3FullResultCollection[K1, K2, V](felems: TrieMap[K1, K3ResultCollection[K2, V]], fsndIdx: Option[Map[String, Index[K1, K3ResultCollection[K2, V]]]]) extends K3PersistentCollection[K1, K3ResultCollection[K2, V]](felems, fsndIdx) {
+    class K3FullResultCollection[K1, K2, V](
+            felems: TrieMap[K1, K3ResultCollection[K2, V]], 
+            fsndIdx: Option[Map[String, Index[K1, K3ResultCollection[K2, V]]]])
+        extends K3PersistentCollection[K1, 
+                    K3ResultCollection[K2, V]](felems, fsndIdx) {
       //TODO avoid code duplication?
       def updateValue(inKey: K1, outKey: K2, value: V): Unit = {
         felems.get(inKey) match {
           case Some(outerMap) => outerMap.updateValue(outKey, value)
-          case None => felems += ((inKey, new K3ResultCollection[K2, V](TrieMap((outKey -> value)), None)))
+          case None => 
+            felems += ((inKey, new K3ResultCollection[K2, V](
+                                    TrieMap((outKey -> value)), None)))
         }
       }
       def getResult: scala.collection.Map[K1, K3ResultCollection[K2, V]] = ...
     }
     */
 
-    // Note that intermediate collections can have different values with the same key
-    case class K3IntermediateCollection[K, V](elems: List[Tuple2[K, V]]) extends K3Collection[K, V] {
-      def map[K2, V2](f: Tuple2[K, V] => Tuple2[K2, V2]): K3IntermediateCollection[K2, V2] =
+    // Note that intermediate collections can have different values 
+    // with the same key
+    case class K3IntermediateCollection[K, V](elems: List[Tuple2[K, V]]) 
+            extends K3Collection[K, V] {
+      def map[K2, V2](f: Tuple2[K, V] => Tuple2[K2, V2]): 
+                     K3IntermediateCollection[K2, V2] =
         K3IntermediateCollection(elems.map(f))
 
       def contains(key: K): Boolean = {
@@ -190,12 +226,18 @@ package org.dbtoaster.dbtoasterlib {
       def foreach(f: Tuple2[K, V] => Unit): Unit =
         elems.foreach(f)
 
-      def slice[K2](keyPart: K2, idx: List[Int]): K3IntermediateCollection[K, V] = {
+      def slice[K2](keyPart: K2, idx: List[Int]): 
+            K3IntermediateCollection[K, V] = {
         val kp = keyPart.asInstanceOf[Product].productIterator.toList
-        K3IntermediateCollection(elems.filter { case (k, v) => println(k + "," + kp); (kp zip idx).forall { case (kp, i) => kp == k.asInstanceOf[Product].productElement(i) } })
+        K3IntermediateCollection(elems.filter { 
+            case (k, v) => println(k + "," + kp); (kp zip idx).forall { 
+                case (kp, i) => 
+                    kp == k.asInstanceOf[Product].productElement(i) } })
       }
 
-      def groupByAggregate[K2, V2](init: V2, group: Tuple2[K, V] => K2, fn: Tuple2[K, V] => V2 => V2): K3IntermediateCollection[K2, V2] = {
+      def groupByAggregate[K2, V2](init: V2, group: Tuple2[K, V] => K2, 
+                                   fn: Tuple2[K, V] => V2 => V2):
+                                  K3IntermediateCollection[K2, V2] = {
         val groupedCollection = elems.foldLeft(Map[K2, V2]()) {
           case (grps, keyval) =>
             val key = group(keyval)
@@ -217,7 +259,8 @@ package org.dbtoaster.dbtoasterlib {
         K3IntermediateCollection(elems.foldLeft(List[Tuple2[K2, V2]]()) {
           (agg, elem) =>
             (agg, elem) match {
-              case (agg, ((), v)) => agg ::: v.asInstanceOf[K3Collection[K2, V2]].toList
+              case (agg, ((), v)) => 
+                    agg ::: v.asInstanceOf[K3Collection[K2, V2]].toList
               case _ => throw new IllegalArgumentException(elem.toString)
             }
         })

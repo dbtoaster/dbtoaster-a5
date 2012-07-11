@@ -4,19 +4,19 @@ CREATE SCHEMA "FINANCE_@@DATASET@@"
   AUTHORIZATION postgres;
 
 CREATE TABLE IF NOT EXISTS "FINANCE_@@DATASET@@".ASKS (
-  T         float(53), 
+  T         float, 
   ID        int, 
   BROKER_ID int, 
-  VOLUME    float(53), 
-  PRICE     float(53)
+  VOLUME    float, 
+  PRICE     float
 );
 
 CREATE TABLE IF NOT EXISTS "FINANCE_@@DATASET@@".BIDS (
-  T         float(53), 
+  T         float, 
   ID        int, 
   BROKER_ID int, 
-  VOLUME    float(53), 
-  PRICE     float(53)
+  VOLUME    float,
+  PRICE     float
 );
 
 

@@ -1,6 +1,6 @@
 ﻿SET search_path = 'TPCH_@@DATASET@@';
 
-SELECT  cntrycode,
+SELECT  quote_literal(cntrycode),
         COUNT(*) AS numcust,
         SUM(custsale.c_acctbal) AS totalacctbal
 FROM (
@@ -9,7 +9,7 @@ FROM (
   WHERE  (SUBSTRING(c.c_phone from 1 for 2) IN
               ('13', '31', '23', '29', '30', '18', '17'))
     AND  c.c_acctbal > (
-            SELECT AVG(c2.c_acctbal)
+            SELECT COALESCE(AVG(c2.c_acctbal), 0)
             FROM   customer c2
             WHERE  c2.c_acctbal > 0.00
             AND    (SUBSTRING(c2.c_phone from 1 for 2) IN 

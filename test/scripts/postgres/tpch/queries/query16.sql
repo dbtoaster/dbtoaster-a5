@@ -1,7 +1,7 @@
 ﻿SET search_path = 'TPCH_@@DATASET@@';
 
-SELECT  p.p_brand,
-        p.p_type,
+SELECT  quote_literal(p.p_brand),
+        quote_literal(p.p_type),
         p.p_size,
         COUNT(DISTINCT ps.ps_suppkey) AS supplier_cnt
 FROM    partsupp ps, part p

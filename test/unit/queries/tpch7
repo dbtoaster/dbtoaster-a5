@@ -25,7 +25,12 @@
       :toplevels => {
         "REVENUE" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query7_big.csv")
+          :expected => {
+            ['GERMANY', 'FRANCE',  1996] => 5557312.1121,
+            ['FRANCE', ' GERMANY', 1996] => 5224779.5736,
+            ['GERMANY', 'FRANCE',  1995] => 6232818.7037,
+            ['FRANCE',  'GERMANY', 1995] => 4637235.1501          
+          }
         }
       }
     },
@@ -55,7 +60,12 @@
       :toplevels => {
         "REVENUE" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query7_big_del.csv")
+          :expected => {
+            ['FRANCE',  'GERMANY', 1996] => 1373480.8998,
+            ['FRANCE',  'GERMANY', 1995] => 775813.5264,
+            ['GERMANY', 'FRANCE',  1995] => 1389978.0797,
+            ['GERMANY', 'FRANCE',  1996] => 1196977.7510          
+          }
         }
       }
     }

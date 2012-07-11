@@ -5,29 +5,78 @@
       :toplevels => {
         "BSP" => {
           :type => :onelevel,
-          :expected => results_file("test/results/finance/brokerspread.csv"),        
+          :expected => {
+            [0] => 78933620700,
+            [1] => -114956214400,
+            [2] => 186526996800,
+            [3] => 85729885500,
+            [4] => 18596229300,
+            [5] => 158875988600,
+            [6] => -55136926200,
+            [7] => -27166878800,
+            [8] => 92711476900,
+            [9] => 140073076900         
+          }
         }
       } 
     },
     
     "tiny" => {
-      :subs => [ [/data\/finance\/standard\/vwap.csv/, "data/finance/tiny/vwap.csv"] ],
+      :subs => [ [/data\/finance\/standard\/finance.csv/, "data/finance/tiny/finance.csv"] ],
       :toplevels => {
         "BSP" => {
           :type => :onelevel,          
-          :expected => results_file("test/results/finance/brokerspread_tiny.csv"),
+          :expected => {
+            [0] => 1534094000,
+            [2] => 155980000,
+            [3] => 28610000,
+            [7] => -274580000,
+            [8] => 172644000          
+          }
+        }
+      }    
+    },
+        
+    "big" => {
+      :subs => [ [/data\/finance\/standard\/finance.csv/, "data/finance/big/finance.csv"] ],
+      :toplevels => {
+        "BSP" => {
+          :type => :onelevel,          
+          :expected => {
+            [0] => -624372635000,
+            [1] => -1373352042700,
+            [2] => -535811059000,
+            [3] => -251514925800,
+            [4] => 584707979500,
+            [5] => 1755421056000,
+            [6] => -226283237700,
+            [7] => -443621451000,
+            [8] => 1112501100500,
+            [9] => 1120289661000          
+          }
         }
       }    
     },
     
-    "big" => {
-      :subs => [ [/data\/finance\/standard\/vwap.csv/, "data/finance/big/vwap.csv"] ],
+    "huge" => {
+      :subs => [ [/data\/finance\/standard\/finance.csv/, "data/finance/huge/finance.csv"] ],
       :toplevels => {
         "BSP" => {
           :type => :onelevel,          
-          :expected => results_file("test/results/finance/brokerspread_big.csv"),
+          :expected => {
+            [0] => 51429787400,
+            [1] => 70252988100,
+            [2] => 107552983400,
+            [3] => 167014792500,
+            [4] => 148763411300,
+            [5] => -14395332300,
+            [6] => 42047089800,
+            [7] => 1548177000,
+            [8] => 75624332600,
+            [9] => 157772882200          
+          }
         }
       }    
-    }    
+    }            
   }
 }

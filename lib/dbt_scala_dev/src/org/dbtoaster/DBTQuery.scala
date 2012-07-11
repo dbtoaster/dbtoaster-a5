@@ -29,7 +29,7 @@ abstract class DBTQuery[T] {
     // makes sure that result requests have priority over tuple events
     while(run) {
       receiveWithin(0) {
-      	case RequestResult => reply(getResult)
+        case RequestResult => reply(getResult)
         case TIMEOUT =>
           receive {
             case Tuple(event) => dispatcher(event)

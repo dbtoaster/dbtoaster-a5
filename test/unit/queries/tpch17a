@@ -25,7 +25,7 @@
       :toplevels => {
         "QUERY17" => {
           :type => :singleton,
-          :expected => 129502082.22000033
+          :expected => 129502082.22
         }
       }
     },

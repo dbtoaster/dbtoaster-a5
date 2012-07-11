@@ -5,7 +5,7 @@
       :toplevels => {
         "QUERY11A" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query11a.csv", /,/),
+          :expected => results_file("test/results/tpch/query11a_standard.csv", /\|/)
         }
       }
     },
@@ -15,7 +15,7 @@
       :toplevels => {
         "QUERY11A" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query11a_tiny.csv", /,/)
+          :expected => results_file("test/results/tpch/query11a_tiny.csv", /\|/)
         }
       }
     },
@@ -25,7 +25,7 @@
       :toplevels => {
         "QUERY11A" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query11a_big.csv", /,/)
+          :expected => results_file("test/results/tpch/query11a_big.csv", /\|/)
         }
       }
     },
@@ -35,7 +35,7 @@
       :toplevels => {
         "QUERY11A" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query11a_del.csv", /,/)
+          :expected => results_file("test/results/tpch/query11a_standard_del.csv", /\|/)
         }
       }
     },
@@ -45,7 +45,7 @@
       :toplevels => {
         "QUERY11A" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query11a_tiny_del.csv", /,/)
+          :expected => results_file("test/results/tpch/query11a_tiny_del.csv", /\|/)
         }
       }
     },
@@ -55,7 +55,7 @@
       :toplevels => {
         "QUERY11A" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query11a_big_del.csv", /,/)
+          :expected => results_file("test/results/tpch/query11a_big_del.csv", /\|/)
         }
       }
     }

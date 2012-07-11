@@ -2,7 +2,7 @@ SET search_path = 'TPCH_@@DATASET@@';
 
 SELECT sn.n_regionkey, 
        cn.n_regionkey,
-       PART.p_type,
+       quote_literal(PART.p_type),
        SUM(LINEITEM.l_quantity) AS ssb4
 FROM   CUSTOMER, ORDERS, LINEITEM, PART, SUPPLIER, NATION cn, NATION sn
 WHERE  CUSTOMER.c_custkey = ORDERS.o_custkey

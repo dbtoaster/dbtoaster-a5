@@ -64,10 +64,13 @@ package org.dbtoaster.dbtoasterlib {
      * @param framingType The framing type that should be used
      * @return The source
      */
-    def createInputStreamSource(in: InputStream, adaptors: List[StreamAdaptor], framingType: FramingType) = {
+    def createInputStreamSource(in: InputStream, 
+                                adaptors: List[StreamAdaptor],
+                                framingType: FramingType) = {
       framingType match {
         case Delimited(delim) => DelimitedStreamSource(in, adaptors, delim)
-        case _ => throw new DBTNotImplementedException("Framing type not supported (yet): " + framingType)
+        case _ => throw new DBTNotImplementedException(
+                    "Framing type not supported (yet): " + framingType)
       }
     }
 
@@ -75,7 +78,9 @@ package org.dbtoaster.dbtoasterlib {
      * Reads events from an InputStream, assumes that the events are ordered
      *
      */
-    case class DelimitedStreamSource(in: InputStream, adaptors: List[StreamAdaptor], delim: String) extends Source {
+    case class DelimitedStreamSource(in: InputStream, 
+                                     adaptors: List[StreamAdaptor], 
+                                     delim: String) extends Source {
       val eventQueue = new Queue[StreamEvent]()
       val scanner: Scanner = new Scanner(in).useDelimiter(delim)
 
@@ -87,7 +92,8 @@ package org.dbtoaster.dbtoasterlib {
       def nextInput(): DBTEvent = {
         if (eventQueue.isEmpty && scanner.hasNextLine()) {
           val eventStr: String = scanner.nextLine()
-          adaptors.foreach(adaptor => adaptor.processTuple(eventStr).foreach(x => eventQueue.enqueue(x)))
+          adaptors.foreach(adaptor => 
+            adaptor.processTuple(eventStr).foreach(x => eventQueue.enqueue(x)))
         }
 
         if (eventQueue.isEmpty)
@@ -98,8 +104,8 @@ package org.dbtoaster.dbtoasterlib {
     }
 
     /**
-     * Multiplexes a list of sources while preserving the orDBT of events (assuming
-     * that the sources themselves are ordered)
+     * Multiplexes a list of sources while preserving the orDBT of events 
+     * (assuming that the sources themselves are ordered)
      *
      */
     class SourceMultiplexer(sources: List[Source]) {
@@ -108,11 +114,12 @@ package org.dbtoaster.dbtoasterlib {
 
       def init(): Unit = ()
 
-      def hasInput(): Boolean = !sources.forall(s => !s.hasInput()) || !queue.isEmpty
+      def hasInput(): Boolean = !sources.forall(s => !s.hasInput()) ||
+                                !queue.isEmpty
 
       def nextInput(): DBTEvent = {
-        // Make sure to get an event from every source and return the one with the lowest
-        // order number
+        // Make sure to get an event from every source and return the one 
+        // with the lowest order number
         sources.foreach(x => {
           def getEvent(): Unit = {
             if (x.hasInput()) {

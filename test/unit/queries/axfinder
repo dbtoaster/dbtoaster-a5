@@ -5,29 +5,81 @@
       :toplevels => {
         "AXFINDER" => {
           :type => :onelevel,
-          :expected => results_file("test/results/finance/axfinder.csv"),        
+          :expected => {
+            [0] => 2446668,
+            [1] => -648039,
+            [2] => -5363809,
+            [3] => 864240,
+            [4] => 8384852,
+            [5] => 3288320,
+            [6] => -2605617,
+            [7] => 243551,
+            [8] => 1565128,
+            [9] => 995180
+          }        
         }
       } 
-    },
-    
+    },  
+        
     "tiny" => {
-      :subs => [ [/data\/finance\/standard\/vwap.csv/, "data/finance/tiny/vwap.csv"] ],
+      :subs => [ [/data\/finance\/standard\/finance.csv/, "data/finance/tiny/finance.csv"] ],
       :toplevels => {
         "AXFINDER" => {
           :type => :onelevel,          
-          :expected => results_file("test/results/finance/axfinder_tiny.csv"),
+          :expected => {
+            [0] => 7590,
+            [2] => -1395,
+            [3] => 95,
+            [5] => 1080,
+            [6] => 490,
+            [7] => -907,
+            [8] => 2419,
+            [9] => 45
+          }
         }
       }    
     },
     
     "big" => {
-      :subs => [ [/data\/finance\/standard\/vwap.csv/, "data/finance/big/vwap.csv"] ],
+      :subs => [ [/data\/finance\/standard\/finance.csv/, "data/finance/big/finance.csv"] ],
       :toplevels => {
         "AXFINDER" => {
           :type => :onelevel,          
-          :expected => results_file("test/results/finance/axfinder_big.csv"),
+          :expected => {
+            [0] => 406708694,
+            [1] => 504513000,
+            [2] => 642867259,
+            [3] => 417922899,
+            [4] => 475942210,
+            [5] => 336750793,
+            [6] => 490693602,
+            [7] => 505016852,
+            [8] => 415909379,
+            [9] => 621532060          
+          }
         }
       }    
-    }    
+    },
+
+    "huge" => {
+      :subs => [ [/data\/finance\/standard\/finance.csv/, "data/finance/huge/finance.csv"] ],
+      :toplevels => {
+        "AXFINDER" => {
+          :type => :onelevel,          
+          :expected => {
+            [0] => -157321,
+            [1] => 1128991,
+            [2] => 31618,
+            [3] => 491289,
+            [4] => 319036,
+            [5] => 1751717,
+            [6] => 321134,
+            [7] => 983671,
+            [8] => 10808,
+            [9] => -103203           
+          }
+        }
+      }    
+    }        
   }
 }

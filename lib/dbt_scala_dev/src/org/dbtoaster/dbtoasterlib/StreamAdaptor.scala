@@ -26,53 +26,75 @@ package org.dbtoaster.dbtoasterlib {
       { override def toDouble(col: String) = col.hashCode().toDouble }
     
 
-    case class StreamEvent(eventType: EventType, order: Int, relation: String, vals: List[Any])
+    case class StreamEvent(eventType: EventType, order: Int, relation: String, 
+                           vals: List[Any])
       extends Ordered[StreamEvent] {
       def compare(other: StreamEvent) = other.order.compareTo(this.order)
     }
 
     /*
-let li_schema =
-   "int,int,int,int,int,float,float,float,hash,hash,date,date,date,hash,hash,hash"
-
+let li_schema = "int,int,int,int,int,float,float,float," + 
+                "hash,hash,date,date,date,hash,hash,hash"
 let lineitem_params = csv_params "|" li_schema "insert"
-let order_params    = csv_params "|" "int,int,hash,float,date,hash,hash,int,hash" "insert"
-let part_params     = csv_params "|" "int,hash,hash,hash,hash,int,hash,float,hash" "insert"
+let order_params    = csv_params "|" 
+                         "int,int,hash,float,date,hash,hash,int,hash" "insert"
+let part_params     = csv_params "|" 
+                         "int,hash,hash,hash,hash,int,hash,float,hash" "insert"
 let partsupp_params = csv_params "|" "int,int,int,float,hash" "insert"
-let customer_params = csv_params "|" "int,hash,hash,int,hash,float,hash,hash" "insert"
-let supplier_params = csv_params "|" "int,hash,hash,int,hash,float,hash" "insert"
+let customer_params = csv_params "|" 
+                         "int,hash,hash,int,hash,float,hash,hash" "insert"
+let supplier_params = csv_params "|" 
+                         "int,hash,hash,int,hash,float,hash" "insert"
 let nation_params   = csv_params "|" "int,hash,int,hash" "insert"
 let region_params   = csv_params "|" "int,hash,hash" "insert"
 
      */
 
     val tpchparams = Map(
-      "lineitem" -> List(("fields", "\\|"), ("eventtype", "insert"), ("schema", "int,int,int,int,int,float,float,float,hash,hash,date,date,date,hash,hash,hash")),
-      "customer" -> List(("fields", "\\|"), ("eventtype", "insert"), ("schema", "int,hash,hash,int,hash,float,hash,hash")),
-      "orders" -> List(("fields", "\\|"), ("eventtype", "insert"), ("schema", "int,int,hash,float,date,hash,hash,int,hash")),
-      "part" -> List(("fields", "\\|"), ("eventtype", "insert"), ("schema", "int,hash,hash,hash,hash,int,hash,float,hash")),
-      "partsupp" -> List(("fields", "\\|"), ("eventtype", "insert"), ("schema", "int,int,int,float,hash")),
-      "nation" -> List(("fields", "\\|"), ("eventtype", "insert"), ("schema", "int,hash,int,hash")),
-      "region" -> List(("fields", "\\|"), ("eventtype", "insert"), ("schema", "int,hash,hash")),
-      "supplier" -> List(("fields", "\\|"), ("eventtype", "insert"), ("schema", "int,hash,hash,int,hash,float,hash")))
+      "lineitem" -> List(("fields", "\\|"), ("eventtype", "insert"), 
+                         ("schema", 
+                          "int,int,int,int,int,float,float,float," +
+                          "hash,hash,date,date,date,hash,hash,hash")),
+      "customer" -> List(("fields", "\\|"), ("eventtype", "insert"), 
+                         ("schema", "int,hash,hash,int,hash,float,hash,hash")),
+      "orders" -> List(("fields", "\\|"), ("eventtype", "insert"), 
+                       ("schema", 
+                        "int,int,hash,float,date,hash,hash,int,hash")),
+      "part" -> List(("fields", "\\|"), ("eventtype", "insert"), 
+                     ("schema", 
+                      "int,hash,hash,hash,hash,int,hash,float,hash")),
+      "partsupp" -> List(("fields", "\\|"), ("eventtype", "insert"), 
+                         ("schema", "int,int,int,float,hash")),
+      "nation" -> List(("fields", "\\|"), ("eventtype", "insert"), 
+                       ("schema", "int,hash,int,hash")),
+      "region" -> List(("fields", "\\|"), ("eventtype", "insert"), 
+                       ("schema", "int,hash,hash")),
+      "supplier" -> List(("fields", "\\|"), ("eventtype", "insert"), 
+                         ("schema", "int,hash,hash,int,hash,float,hash")))
 
-    def createAdaptor(adaptorType: String, relation: String, params: List[(String, String)]): StreamAdaptor = {
-      if (verbose) println("Create Adaptor: " + adaptorType + ", " + relation + ", " + params)
+    def createAdaptor(adaptorType: String, relation: String, 
+                      params: List[(String, String)]): StreamAdaptor = {
+      if (verbose) println("Create Adaptor: " + adaptorType + ", " + 
+                            relation + ", " + params)
       (adaptorType, tpchparams.get(adaptorType)) match {
         case ("csv", _) => createCSVAdaptor(relation, params)
         case ("orderbook", _) => createOrderbookAdaptor(relation, params)
         case (_, Some(x)) => createCSVAdaptor(relation, (x ::: params))
-        case _ => throw new IllegalArgumentException("No adaptor for: " + adaptorType)
+        case _ => throw new IllegalArgumentException(
+                        "No adaptor for: " + adaptorType)
       }
     }
 
-    def createOrderbookAdaptor(relation: String, params: List[(String, String)]): OrderbookAdaptor = {
+    def createOrderbookAdaptor(relation: String, 
+                               params: List[(String, String)]): 
+                               OrderbookAdaptor = {
       var orderbookType: OrderbookType = Asks
       var brokers: Int = 10
       var deterministic: Boolean = false
       var insertOnly: Boolean = false
 
-      def parseParams(params: List[(String, String)]): OrderbookAdaptor = params match {
+      def parseParams(params: List[(String, String)]): 
+            OrderbookAdaptor = params match {
         case x :: xs =>
           x match {
             case ("book", b) => orderbookType = if (b == "bids") Bids else Asks
@@ -81,19 +103,22 @@ let region_params   = csv_params "|" "int,hash,hash" "insert"
             case ("insertOnly", b) => insertOnly = (b == "yes")
           }
           parseParams(xs)
-        case Nil => new OrderbookAdaptor(relation, orderbookType, brokers, deterministic, insertOnly)
+        case Nil => new OrderbookAdaptor(relation, orderbookType, brokers,
+                                         deterministic, insertOnly)
       }
 
       parseParams(params)
     }
 
-    def createCSVAdaptor(relation: String, params: List[(String, String)]): CSVAdaptor = {
+    def createCSVAdaptor(relation: String, params: List[(String, String)]):
+            CSVAdaptor = {
       var eventType: Option[EventType] = None
       var deletions: Boolean = false
       var colTypes: List[ColumnType] = List()
       var delimiter: Option[String] = None
 
-      def parseParams(params: List[(String, String)]): CSVAdaptor = params match {
+      def parseParams(params: List[(String, String)]): 
+            CSVAdaptor = params match {
         case x :: xs => {
           x match {
             case ("fields", d) => delimiter = Some(d)
@@ -111,12 +136,15 @@ let region_params   = csv_params "|" "int,hash,hash" "insert"
 
               s.split(",").iterator.foreach(x => parseColType(x))
             }
-            case ("eventtype", t) => eventType = Some(if (t == "insert") InsertTuple else DeleteTuple)
+            case ("eventtype", t) => 
+                eventType = Some(if (t == "insert") InsertTuple 
+                                 else DeleteTuple)
             case ("deletions", t) => deletions = (t == "true")
           }
           parseParams(xs)
         }
-        case Nil => new CSVAdaptor(relation, deletions, colTypes, delimiter.get)
+        case Nil => 
+            new CSVAdaptor(relation, deletions, colTypes, delimiter.get)
       }
 
       parseParams(params)
@@ -126,13 +154,16 @@ let region_params   = csv_params "|" "int,hash,hash" "insert"
       def processTuple(row: String): List[StreamEvent]
     }
 
-    class CSVAdaptor(relation: String, deletions: Boolean, colTypes: List[ColumnType], delimiter: String) extends StreamAdaptor {
+    class CSVAdaptor(relation: String, deletions: Boolean, 
+                     colTypes: List[ColumnType], delimiter: String) 
+                     extends StreamAdaptor {
       def processTuple(row: String): List[StreamEvent] = {
         // TODO: use fold instead of map and get rid of vars
         val cols = row.split(delimiter).toList
         
         val (valCols, insDel, order) = (if(deletions) {
-          (cols.drop(2), (if(cols(1) == "1") InsertTuple else DeleteTuple), cols(0).toInt)
+          (cols.drop(2), (if(cols(1) == "1") InsertTuple 
+                          else DeleteTuple), cols(0).toInt)
         } else (cols, InsertTuple, 0))
 
         val vals = (valCols zip colTypes).map {
@@ -142,12 +173,16 @@ let region_params   = csv_params "|" "int,hash,hash" "insert"
       }
     }
 
-    class OrderbookAdaptor(relation: String, orderbookType: OrderbookType, brokers: Int, deterministic: Boolean, insertOnly: Boolean) extends StreamAdaptor {
+    class OrderbookAdaptor(relation: String, orderbookType: OrderbookType,
+                           brokers: Int, deterministic: Boolean, 
+                           insertOnly: Boolean) extends StreamAdaptor {
       val asks: Map[Int, OrderbookRow] = Map()
       val bids: Map[Int, OrderbookRow] = Map()
 
-      case class OrderbookRow(t: Int, id: Int, brokerId: Int, volume: Double, price: Double) {
-        def toList: List[Any] = List[Any](t.toDouble, id.toDouble, brokerId.toDouble, volume, price)
+      case class OrderbookRow(t: Int, id: Int, brokerId: Int, 
+                              volume: Double, price: Double) {
+        def toList: List[Any] = List[Any](t.toDouble, id.toDouble,
+                                          brokerId.toDouble, volume, price)
       }
 
       def processTuple(row: String): List[StreamEvent] = {
@@ -159,14 +194,16 @@ let region_params   = csv_params "|" "int,hash,hash" "insert"
 
         rows(2) match {
           case "B" if orderbookType == Bids => {
-            val brokerId = (if (deterministic) id else Random.nextInt) % brokers
+            val brokerId = (if (deterministic) id 
+                            else Random.nextInt) % brokers
             val row = OrderbookRow(t, id, brokerId, volume, price)
             bids += ((id, row))
             List(StreamEvent(InsertTuple, t, relation, row.toList))
           }
 
           case "S" if orderbookType == Asks => {
-            val brokerId = (if (deterministic) id else Random.nextInt) % brokers
+            val brokerId = (if (deterministic) id 
+                            else Random.nextInt) % brokers
             val row = OrderbookRow(t, id, brokerId, volume, price)
             asks += ((id, row))
             List(StreamEvent(InsertTuple, t, relation, row.toList))
@@ -195,7 +232,8 @@ let region_params   = csv_params "|" "int,hash,hash" "insert"
                     else {
                       val newRow = OrderbookRow(t, id, b, newVolume, p)
                       asks += ((id, newRow))
-                      List(StreamEvent(InsertTuple, t, relation, newRow.toList))
+                      List(StreamEvent(InsertTuple, t, relation, 
+                                       newRow.toList))
                     })
                 }
                 case None => Nil
@@ -205,9 +243,13 @@ let region_params   = csv_params "|" "int,hash,hash" "insert"
 
           case "D" | "F" => {
             bids.get(id) match {
-              case Some(x) => { bids -= id; List(StreamEvent(DeleteTuple, t, relation, x.toList)) }
+              case Some(x) => 
+                { bids -= id; 
+                  List(StreamEvent(DeleteTuple, t, relation, x.toList)) }
               case None => asks.get(id) match {
-                case Some(x) => { asks -= id; List(StreamEvent(DeleteTuple, t, relation, x.toList)) }
+                case Some(x) => 
+                { asks -= id; 
+                  List(StreamEvent(DeleteTuple, t, relation, x.toList)) }
                 case None => Nil
               }
             }

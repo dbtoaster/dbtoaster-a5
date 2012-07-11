@@ -85,8 +85,8 @@ let declare_std_function (name:string)
 (** 
    Declare a new user-defined function
 *)
-let declare_usr_function (name:string) (arg_types:type_t list) (ret_type:type_t) 
-                         (implementation:string): unit =
+let declare_usr_function (name:string) (arg_types:type_t list) 
+                         (ret_type:type_t) (implementation:string): unit =
    let upper_name = String.uppercase name in
    standard_functions := 
       StringMap.remove upper_name !standard_functions;

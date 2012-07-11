@@ -29,5 +29,4 @@ FROM
       AND  (o.orderdate BETWEEN DATE('1995-01-01') AND DATE('1996-12-31'))
       AND  p.type = 'ECONOMY ANODIZED STEEL'
   ) total
---WHERE local.o_year = total.o_year
 GROUP BY total.o_year;

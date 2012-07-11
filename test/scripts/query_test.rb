@@ -52,7 +52,7 @@ class GenericUnitTest
     if qdat[:datasets][@dataset].has_key? :subs then    
       qfile = File.new("query_test.sql", "w+");
       subs = qdat[:datasets][@dataset][:subs]
-      at_exit { qfile.close }
+      at_exit { qfile.close; File.delete("query_test.sql") }
       qfile.puts(
         File.open(@qpath) do |f| 
           f.readlines.map do |l|

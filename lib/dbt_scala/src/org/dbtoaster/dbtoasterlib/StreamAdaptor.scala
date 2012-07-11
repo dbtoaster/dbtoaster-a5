@@ -5,7 +5,7 @@ import scala.collection.mutable.Map
 import java.text.SimpleDateFormat
 
 package org.dbtoaster.dbtoasterlib {
-  /**
+/**
  * This object contains the differen stream adaptors supported
  * by DBToaster
  *
@@ -66,7 +66,8 @@ object StreamAdaptor {
     /**
      * A stream event representing some data that has been updated
      */
-    case class StreamEvent(eventType: EventType, order: Long, relation: String, vals: List[Any])
+    case class StreamEvent(eventType: EventType, order: Long, 
+                           relation: String, vals: List[Any])
       extends Ordered[StreamEvent] with DBTEvent {
       def compare(other: StreamEvent) = other.order.compareTo(this.order)
     }
@@ -85,10 +86,12 @@ object StreamAdaptor {
      * @param params The paramaters for the adaptor
      * @return The created adaptor
      */
-    def createAdaptor(adaptorType: String, relation: String, params: List[(String, String)]): StreamAdaptor = {
+    def createAdaptor(adaptorType: String, relation: String, 
+                      params: List[(String, String)]): StreamAdaptor = {
       adaptorType match {
         case "orderbook" => createOrderbookAdaptor(relation, params)
-        case _ => throw new IllegalArgumentException("No adaptor for: " + adaptorType)
+        case _ => throw new IllegalArgumentException(
+                                "No adaptor for: " + adaptorType)
       }
     }
 
@@ -99,14 +102,16 @@ object StreamAdaptor {
      * @param params The parameters for this adapter
      * @return The created orderbook adaptor
      */
-    def createOrderbookAdaptor(relation: String, params: List[(String, String)]): OrderbookAdaptor = {
+    def createOrderbookAdaptor(relation: String, 
+                params: List[(String, String)]): OrderbookAdaptor = {
       // Standard values for the parameters
       var orderbookType: OrderbookType = Asks
       var brokers: Int = 10
       var deterministic: Boolean = false
       var insertOnly: Boolean = false
 
-      def parseParams(params: List[(String, String)]): OrderbookAdaptor = params match {
+      def parseParams(params: List[(String, String)]): 
+               OrderbookAdaptor = params match {
         case x :: xs =>
           x match {
             case ("book", b) => orderbookType = if (b == "bids") Bids else Asks
@@ -115,7 +120,9 @@ object StreamAdaptor {
             case ("insertOnly", b) => insertOnly = (b == "yes")
           }
           parseParams(xs)
-        case Nil => new OrderbookAdaptor(relation, orderbookType, brokers, deterministic, insertOnly)
+        case Nil => new OrderbookAdaptor(relation, orderbookType, 
+                                         brokers, deterministic, 
+                                         insertOnly)
       }
 
       parseParams(params)
@@ -138,7 +145,10 @@ object StreamAdaptor {
      * This adaptor parses CSV data
      *
      */
-    class CSVAdaptor(relation: String, schemaTypes: List[ColumnType], eventtype: String = "insert", deletions: String = "false", schema: String = "", delimiter: String = ",") extends StreamAdaptor {
+    class CSVAdaptor(relation: String, schemaTypes: List[ColumnType], 
+                     eventtype: String = "insert", deletions: String = "false",
+                     schema: String = "", delimiter: String = ",") 
+                     extends StreamAdaptor {
       val eventType = if (eventtype == "insert") InsertTuple else DeleteTuple
       val hasDeletions = (deletions == "true")
       
@@ -155,15 +165,16 @@ object StreamAdaptor {
 
       val colTypes: List[ColumnType] = 
         if(schemaTypes.isEmpty) 
-	  schema.split(",").iterator.toList.map(x => parseColType(x)) 
-	else
-	  schemaTypes
+          schema.split(",").iterator.toList.map(x => parseColType(x)) 
+        else
+          schemaTypes
 
       def processTuple(row: String): List[StreamEvent] = {
         val cols = row.split(delimiter).toList
 
         val (valCols, insDel, order) = (if (hasDeletions) {
-          (cols.drop(2), (if (cols(1) == "1") InsertTuple else DeleteTuple), cols(0).toInt)
+          (cols.drop(2), (if (cols(1) == "1") InsertTuple 
+                          else DeleteTuple), cols(0).toInt)
         } else (cols, eventType, 0))
 
         val vals: List[Any] = (valCols zip colTypes).map {
@@ -172,7 +183,8 @@ object StreamAdaptor {
               case (v, IntColumn) => v.toLong
               case (v, FloatColumn) => v.toDouble
               case (v, OrderColumn) => v.toLong
-              case (v, DateColumn) => new SimpleDateFormat("yyyy-MM-dd").parse(v)
+              case (v, DateColumn) => 
+                new SimpleDateFormat("yyyy-MM-dd").parse(v)
               case (v, StringColumn) => v
               case _ => ""
             }
@@ -185,12 +197,16 @@ object StreamAdaptor {
      * This adaptor parses orderbook data
      *
      */
-    class OrderbookAdaptor(relation: String, orderbookType: OrderbookType, brokers: Long, deterministic: Boolean, insertOnly: Boolean) extends StreamAdaptor {
+    class OrderbookAdaptor(relation: String, orderbookType: OrderbookType,
+                           brokers: Long, deterministic: Boolean, 
+                           insertOnly: Boolean) extends StreamAdaptor {
       val asks: Map[Long, OrderbookRow] = Map()
       val bids: Map[Long, OrderbookRow] = Map()
 
-      case class OrderbookRow(t: Long, id: Long, brokerId: Long, volume: Double, price: Double) {
-        def toList: List[Any] = List[Any](t.toDouble, id, brokerId, volume, price)
+      case class OrderbookRow(t: Long, id: Long, brokerId: Long, 
+                              volume: Double, price: Double) {
+        def toList: List[Any] = List[Any](t.toDouble, id, brokerId, 
+                                          volume, price)
       }
 
       def processTuple(row: String): List[StreamEvent] = {
@@ -202,14 +218,16 @@ object StreamAdaptor {
 
         rows(2) match {
           case "B" if orderbookType == Bids => {
-            val brokerId = (if (deterministic) id else Random.nextInt) % brokers
+            val brokerId = (if (deterministic) id 
+                            else Random.nextInt) % brokers
             val row = OrderbookRow(t, id, brokerId, volume, price)
             bids += ((id, row))
             List(StreamEvent(InsertTuple, t, relation, row.toList))
           }
 
           case "S" if orderbookType == Asks => {
-            val brokerId = (if (deterministic) id else Random.nextInt) % brokers
+            val brokerId = (if (deterministic) id 
+                            else Random.nextInt) % brokers
             val row = OrderbookRow(t, id, brokerId, volume, price)
             asks += ((id, row))
             List(StreamEvent(InsertTuple, t, relation, row.toList))
@@ -238,7 +256,8 @@ object StreamAdaptor {
                     else {
                       val newRow = OrderbookRow(t, id, b, newVolume, p)
                       asks += ((id, newRow))
-                      List(StreamEvent(InsertTuple, t, relation, newRow.toList))
+                      List(StreamEvent(InsertTuple, t, relation, 
+                                       newRow.toList))
                     })
                 }
                 case None => Nil
@@ -248,9 +267,13 @@ object StreamAdaptor {
 
           case "D" | "F" => {
             bids.get(id) match {
-              case Some(x) => { bids -= id; List(StreamEvent(DeleteTuple, t, relation, x.toList)) }
+              case Some(x) => { bids -= id; 
+                                List(StreamEvent(DeleteTuple, t, 
+                                                 relation, x.toList)) }
               case None => asks.get(id) match {
-                case Some(x) => { asks -= id; List(StreamEvent(DeleteTuple, t, relation, x.toList)) }
+                case Some(x) => { asks -= id; 
+                                  List(StreamEvent(DeleteTuple, t, 
+                                                   relation, x.toList)) }
                 case None => Nil
               }
             }

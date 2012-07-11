@@ -14,7 +14,8 @@ import scala.collection.mutable.Map;
 import collection.concurrent.TrieMap
 
 package org.dbtoaster {
-  object Query3 extends DBTQuery[K3ResultCollection[Tuple3[Double,Double,Double], Double]] {
+  object Query3 extends DBTQuery[K3ResultCollection[
+                                    Tuple3[Double,Double,Double], Double]] {
     //implicit def boolToDouble(dbl: Boolean) = if(dbl) 1.0 else 0.0;
 
     val sources = new SourceMultiplexer(List(createInputStreamSource(new FileInputStream("tpchdata/lineitem_del.csv"), List(createAdaptor("lineitem", "LINEITEM", List(("deletions", "true")))), Delimited("\n")),createInputStreamSource(new FileInputStream("tpchdata/customer_del.csv"), List(createAdaptor("customer", "CUSTOMER", List(("deletions", "true")))), Delimited("\n")),createInputStreamSource(new FileInputStream("tpchdata/orders_del.csv"), List(createAdaptor("orders", "ORDERS", List(("deletions", "true")))), Delimited("\n"))));
@@ -56,7 +57,7 @@ package org.dbtoaster {
 
     var QUERY_1_1_pCUSTOMER1_pORDERS1 = new K3PersistentCollection[(Double), Double](Map(), None) /* out */;
 
-    def dispatcher(event: Option[StreamEvent]): Unit = {	//, onEventProcessedHandler: Unit => Unit): Unit = {
+    def dispatcher(event: Option[StreamEvent]): Unit = {   //, onEventProcessedHandler: Unit => Unit): Unit = {
       def onInsertLINEITEM(var_QUERY_1_1_pCUSTOMER1_pORDERS1LINEITEM_LINEITEM__ORDERKEY: Double,var_QUERY_1_1_pCUSTOMER1_pORDERS1LINEITEM_PARTKEY: Double,var_QUERY_1_1_pCUSTOMER1_pORDERS1LINEITEM_SUPPKEY: Double,var_QUERY_1_1_pCUSTOMER1_pORDERS1LINEITEM_LINENUMBER: Double,var_QUERY_1_1_pCUSTOMER1_pORDERS1LINEITEM_QUANTITY: Double,var_QUERY_1_1_pCUSTOMER1_pORDERS1LINEITEM_EXTENDEDPRICE: Double,var_QUERY_1_1_pCUSTOMER1_pORDERS1LINEITEM_DISCOUNT: Double,var_QUERY_1_1_pCUSTOMER1_pORDERS1LINEITEM_TAX: Double,var_QUERY_1_1_pCUSTOMER1_pORDERS1LINEITEM_RETURNFLAG: Double,var_QUERY_1_1_pCUSTOMER1_pORDERS1LINEITEM_LINESTATUS: Double,var_QUERY_1_1_pCUSTOMER1_pORDERS1LINEITEM_SHIPDATE: Double,var_QUERY_1_1_pCUSTOMER1_pORDERS1LINEITEM_COMMITDATE: Double,var_QUERY_1_1_pCUSTOMER1_pORDERS1LINEITEM_RECEIPTDATE: Double,var_QUERY_1_1_pCUSTOMER1_pORDERS1LINEITEM_SHIPINSTRUCT: Double,var_QUERY_1_1_pCUSTOMER1_pORDERS1LINEITEM_SHIPMODE: Double,var_QUERY_1_1_pCUSTOMER1_pORDERS1LINEITEM_LINEITEM__COMMENT: Double): Unit = {
         (QUERY_1_1_pLINEITEM1.slice((var_QUERY_1_1_pCUSTOMER1_pORDERS1LINEITEM_LINEITEM__ORDERKEY), List(0))).foreach {
           (x:Tuple2[Tuple3[Double,Double,Double], Double]) => {

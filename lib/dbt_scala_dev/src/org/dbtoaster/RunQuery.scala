@@ -14,9 +14,11 @@ package org.dbtoaster {
       val timeStart = System.currentTimeMillis()
       Query3.run()
       println("Query started.")
-      var result: Option[K3PersistentCollection[Tuple3[Double,Double,Double], Double]] = None
+      var result: Option[K3PersistentCollection[Tuple3[Double,Double,Double],
+                                                Double]] = None
       do {
-        println("Intermediate result: " + trimStr(Query3.intermediateResult.getResult.toString))
+        println("Intermediate result: " + 
+                trimStr(Query3.intermediateResult.getResult.toString))
         result = Query3.finalResult.get(10)
       } while (!result.isDefined)
       println("Final result: " + trimStr(result.get.toString))

@@ -1,6 +1,7 @@
 SET search_path = 'TPCH_@@DATASET@@';
 
-SELECT n.n_name, SUM(l.l_extendedprice * (1 - l.l_discount)) AS revenue 
+SELECT quote_literal(n.n_name), 
+       SUM(l.l_extendedprice * (1 - l.l_discount)) AS revenue 
 FROM   customer c, orders o, lineitem l, supplier s, nation n, region r
 WHERE  c.c_custkey = o.o_custkey
   AND  l.l_orderkey = o.o_orderkey 

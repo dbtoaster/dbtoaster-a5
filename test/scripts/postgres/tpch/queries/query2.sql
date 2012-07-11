@@ -1,7 +1,9 @@
 SET search_path = 'TPCH_@@DATASET@@';
 
-SELECT s.s_acctbal, s.s_name, n.n_name, p.p_partkey, p.p_mfgr, s.s_address, s.s_phone, 
-       s.s_comment
+SELECT s.s_acctbal, quote_literal(s.s_name), 
+       quote_literal(n.n_name), p.p_partkey, 
+       quote_literal(p.p_mfgr), quote_literal(s.s_address), 
+       quote_literal(s.s_phone), quote_literal(s.s_comment), COUNT(*)
 FROM part p, supplier s, partsupp ps, nation n, region r
 WHERE p.p_partkey = ps.ps_partkey
   AND s.s_suppkey = ps.ps_suppkey
@@ -17,5 +19,7 @@ WHERE p.p_partkey = ps.ps_partkey
                      AND s2.s_nationkey = n2.n_nationkey
                      AND n2.n_regionkey = r2.r_regionkey
                      AND r2.r_name = 'EUROPE'
-                     AND ps2.ps_supplycost < ps.ps_supplycost));
+                     AND ps2.ps_supplycost < ps.ps_supplycost))
+GROUP BY s.s_acctbal, s.s_name, n.n_name, p.p_partkey, 
+         p.p_mfgr, s.s_address, s.s_phone, s.s_comment
 

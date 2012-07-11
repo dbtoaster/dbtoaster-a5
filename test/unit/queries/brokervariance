@@ -5,30 +5,83 @@
       :toplevels => {
         "BSV" => {
           :type => :onelevel,
-          :expected => results_file("test/results/finance/brokervariance.csv"),        
+          :expected => {
+            [0] => 4.0334671670305e+19,
+            [1] => 5.9781572957322e+19,
+            [2] => 6.17510503499351e+19,
+            [3] => 3.4751400571778e+19,
+            [4] => 2.51233622524291e+19,
+            [5] => 3.40312046250151e+19,
+            [6] => 7.30538269162506e+19,
+            [7] => 6.3620755521508e+19,
+            [8] => 5.59806787474923e+19,
+            [9] => 2.93439405772813e+19
+          }
         }
       } 
     },
-    
+        
     "tiny" => {
-      :subs => [ [/data\/finance\/standard\/vwap.csv/, "data/finance/tiny/vwap.csv"] ],
+      :subs => [ [/data\/finance\/standard\/finance.csv/, "data/finance/tiny/finance.csv"] ],
       :toplevels => {
         "BSV" => {
           :type => :onelevel,          
-          :expected => results_file("test/results/finance/brokervariance_tiny.csv"),
+          :expected => {
+            [0] => 2.968836684845e+17,
+            [2] => 3.798043605e+16,
+            [3] => 1.22562005e+15,
+            [4] => 4.82653125e+15,
+            [5] => 1692800000000,
+            [6] => 1508584500000,
+            [7] => 1.885876205e+16,
+            [8] => 4.7809531125e+15,
+            [9] => 126756125000
+          }
         }
       }    
     },
 
     "big" => {
-      :subs => [ [/data\/finance\/standard\/vwap.csv/, "data/finance/big/vwap.csv"] ],
+      :subs => [ [/data\/finance\/standard\/finance.csv/, "data/finance/big/finance.csv"] ],
       :toplevels => {
         "BSV" => {
           :type => :onelevel,          
-          :expected => results_file("test/results/finance/brokervariance_big.csv"),
+          :expected => {
+            [0] => 3.54937188204818e+20,
+            [1] => 4.11486600656288e+20,
+            [2] => 3.78755656241119e+20,
+            [3] => 2.38403115920899e+20,
+            [4] => 2.76836127818115e+20,
+            [5] => 3.38637240268647e+20,
+            [6] => 4.64464455233939e+20,
+            [7] => 5.69985281327607e+20,
+            [8] => 4.58801435466774e+20,
+            [9] => 3.7255119764373e+20
+          }
         }
       }    
-    }
+    },
+           
+    "huge" => {
+      :subs => [ [/data\/finance\/standard\/finance.csv/, "data/finance/huge/finance.csv"] ],
+      :toplevels => {
+        "BSV" => {
+          :type => :onelevel,          
+          :expected => {
+            [0] => 1.1425723990819e+20,
+            [1] => 9.23389443075754e+19,
+            [2] => 8.8435825897912e+19,
+            [3] => 1.0272337988104e+20,
+            [4] => 5.50384321131024e+19,
+            [5] => 7.7325044573377e+19,
+            [6] => 6.92104408348959e+19,
+            [7] => 6.20282125579218e+19,
+            [8] => 6.74805926522883e+19,
+            [9] => 1.10353652686042e+20
+          }
+        }
+      }    
+    }    
 
   }
 }

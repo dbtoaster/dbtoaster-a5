@@ -18,10 +18,13 @@ package org.dbtoaster.dbtoasterlib {
       def nextInput(): Option[StreamEvent]
     }
 
-    def createInputStreamSource(in: InputStream, adaptors: List[StreamAdaptor], framingType: FramingType) = {
+    def createInputStreamSource(in: InputStream, 
+                                adaptors: List[StreamAdaptor], 
+                                framingType: FramingType) = {
       framingType match {
         case Delimited(delim) => DelimitedStreamSource(in, adaptors, delim)
-        case _ => throw new NotImplementedException("Framing type not supported (yet): " + framingType)
+        case _ => throw new NotImplementedException(
+                    "Framing type not supported (yet): " + framingType)
       }
     }
 
@@ -29,7 +32,9 @@ package org.dbtoaster.dbtoasterlib {
      * Reads events from an InputStream, assumes that the events are ordered
      *
      */
-    case class DelimitedStreamSource(in: InputStream, adaptors: List[StreamAdaptor], delim: String) extends Source {
+    case class DelimitedStreamSource(in: InputStream, 
+                                     adaptors: List[StreamAdaptor], 
+                                     delim: String) extends Source {
       val eventQueue = new Queue[StreamEvent]()
       val scanner: Scanner = new Scanner(in).useDelimiter(delim)
 
@@ -41,7 +46,8 @@ package org.dbtoaster.dbtoasterlib {
       def nextInput(): Option[StreamEvent] = {
         if (eventQueue.isEmpty) {
           val eventStr: String = scanner.nextLine()
-          adaptors.foreach(adaptor => adaptor.processTuple(eventStr).foreach(x => eventQueue.enqueue(x)))
+          adaptors.foreach(adaptor => 
+            adaptor.processTuple(eventStr).foreach(x => eventQueue.enqueue(x)))
         }
 
         if (eventQueue.isEmpty)
@@ -52,8 +58,8 @@ package org.dbtoaster.dbtoasterlib {
     }
 
     /**
-     * Multiplexes a list of sources while preserving the ordering of events (assuming
-     * that the sources themselves are ordered)
+     * Multiplexes a list of sources while preserving the ordering of events 
+     * (assuming that the sources themselves are ordered)
      *
      */
     class SourceMultiplexer(sources: List[Source]) {
@@ -62,11 +68,12 @@ package org.dbtoaster.dbtoasterlib {
 
       def init(): Unit = ()
 
-      def hasInput(): Boolean = !sources.forall(s => !s.hasInput()) || !queue.isEmpty
+      def hasInput(): Boolean = !sources.forall(s => !s.hasInput()) || 
+                                !queue.isEmpty
 
       def nextInput(): Option[StreamEvent] = {
-        // Make sure to get an event from every source and return the one with the lowest
-        // order number
+        // Make sure to get an event from every source and return the one 
+        // with the lowest order number
         sources.foreach(x => {
           def getEvent(): Unit = {
             if (x.hasInput()) {
