@@ -23,7 +23,7 @@ let languages =
       "K3"     , (K3         , "K3 Program"                   , false);
       "IMP"    , (IMP        , "Abstract Imperative Program"  , false);
       "SCALA"  , (Scala      , "Scala Code"                   , true);
-      "OCAML"  , (Ocaml      , "Ocaml Code"                   , false);
+    (*"OCAML"  , (Ocaml      , "Ocaml Code"                   , false); *)
       "RUN"    , (Interpreter, "Ocaml Interpreter"            , false);
       "CPP"    , (CPP        , "C++ Code"                     , true);
    ]
