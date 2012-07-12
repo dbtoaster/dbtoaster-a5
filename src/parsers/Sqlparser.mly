@@ -3,7 +3,8 @@ open Types
 open Constants
 ;;
 
-let bail msg = raise (Sql.SQLParseError(msg))
+let bail ?(loc = symbol_start_pos ()) msg = 
+   raise (Sql.SQLParseError(msg, loc))
 
 let (table_defs:((string * Sql.table_t) list ref)) = Sql.global_table_defs
 
@@ -123,18 +124,27 @@ dbtoasterSqlStmtList:
 | dbtoasterSqlStmt EOSTMT EOF    { $1 }
 | dbtoasterSqlStmt EOSTMT dbtoasterSqlStmtList
                                  { $1 @ $3 }
+| error {
+      bail "Expected ';'"
+   }
 
 dbtoasterSqlStmt:
 | INCLUDE STRING           { (!Sql.parse_file) $2 }
 | createTableStmt          { [Sql.Create_Table($1)] }
 | selectStmt               { [Sql.Select(bind_select_vars $1)] }
 | functionDeclarationStmt  { [] }
+| error  { 
+      bail "Invalid DBT-SQL statement";
+   }
 
 functionDeclarationStmt:
 | CREATE FUNCTION ID LPAREN fieldList RPAREN RETURNS typeDefn 
   AS functionDefinition {
     Functions.declare_usr_function $3 (List.map (fun (_,_,x)->x) $5) $8 $10 
   }
+| error {
+      bail "Invalid CREATE FUNCTION declaration"
+   }
 
 functionDefinition:
 | EXTERNAL STRING { $2 }
@@ -147,6 +157,7 @@ framingStmt:
 |   LINE DELIMITED                  { Schema.Delimited("\n") }
 |   STRING DELIMITED                { Schema.Delimited($1) }
 
+
 adaptorParams:
 |   ID SETVALUE STRING                     { [(String.lowercase $1,$3)] }
 |   ID SETVALUE STRING COMMA adaptorParams { (String.lowercase $1,$3)::$5 }
@@ -155,6 +166,9 @@ adaptorStmt:
 |   ID LPAREN RPAREN               { (String.lowercase $1, []) }
 |   ID LPAREN adaptorParams RPAREN { (String.lowercase $1, $3) }
 |   ID                             { (String.lowercase $1, []) }
+| error {
+      bail "Not a valid adaptor declaration"
+   }
 
 bytestreamParams: 
 |   framingStmt adaptorStmt { ($1, $2) }
@@ -166,6 +180,9 @@ sourceStmt:
   { (Schema.SocketSource(Unix.inet_addr_of_string $2, $3, fst $4), snd $4) }
 |   SOCKET INT bytestreamParams
   { (Schema.SocketSource(Unix.inet_addr_any, $2, fst $3), snd $3) }
+| error {
+      bail "Invalid source statement"
+   }
 
 typeDefn:
 | TYPE                      { $1 }
@@ -174,6 +191,9 @@ typeDefn:
 | VARCHAR                   { TString }
 | CHAR                      { TString }
 | DATE                      { TDate    }
+| error {
+      bail "Invalid type declaration"
+   } 
 
 fieldList:
 | ID typeDefn                    { [None, String.uppercase $1, $2] }
@@ -190,6 +210,9 @@ createTableStmt:
 |   CREATE tableOrStream ID LPAREN fieldList RPAREN FROM sourceStmt { 
       mk_tbl (String.uppercase $3, $5, $2, $8)
     }
+| error {
+      bail "Invalid CREATE TABLE statement"
+   }
 
 
 //
@@ -198,10 +221,16 @@ createTableStmt:
 targetItem:
 | expression       { (String.uppercase (Sql.name_of_expr $1), $1) }
 | expression AS ID { (String.uppercase $3, $1) }
+| error {
+      bail "Invalid output column declaration"
+   }
 
 targetList:
 | targetItem                  { [$1] }
 | targetItem COMMA targetList { $1 :: $3 }
+| error {
+      bail "Expected ','"
+   }
 
 fromItem: // ((source, name), schema)
 | ID        { ((String.uppercase $1, (Sql.Table(String.uppercase $1))), 
@@ -216,6 +245,9 @@ fromItem: // ((source, name), schema)
 | LPAREN selectStmt RPAREN AS ID
             { ((String.uppercase $5, (Sql.SubQ($2))), 
                select_schema (String.uppercase $5) $2) }
+| error {
+      bail "Invalid source declaration in a FROM clause"
+   }
 
 fromJoin:
 | fromJoin JOIN fromItem ON condition
@@ -252,6 +284,9 @@ fromList:
               let (rhs_tbls, rhs_cond) = $3 in
                   (lhs_tbls @ rhs_tbls, Sql.mk_and lhs_cond rhs_cond) }
 | fromJoin  { let (tbl, join_cond, _) = $1 in (tbl, join_cond) }
+| error {
+      bail "Expected ','"
+   }
 
 fromClause:
 | FROM fromList { $2 }
@@ -260,6 +295,9 @@ fromClause:
 whereClause:
 | WHERE condition { $2 }
 |                 { Sql.ConstB(true) }
+| error {
+      bail "Invalid WHERE clause"
+   }
 
 groupByList:
 | variable                   { [$1] }
@@ -268,6 +306,9 @@ groupByList:
 groupByClause:
 | GROUP BY groupByList { $3 }
 |                      { [] }
+| error {
+      bail "Invalid GROUP BY clause"
+   }
 
 selectStmt: 
     SELECT optionalDistinct 
@@ -280,6 +321,9 @@ selectStmt:
          Sql.expand_wildcard_targets (List.map snd !table_defs)
             ($3, from, Sql.mk_and join_conds $5, $6, $2)
     }
+| error {
+      bail "Invalid SELECT statement"
+   }
 
 optionalDistinct:
 |           { [] }
@@ -335,6 +379,9 @@ expression:
          (Sql.Comparison($2,Types.Eq,cmp), ret)) $4, $5)
    }
 | CASE WHEN caseSearchWhenClauseList caseElseClause END { Sql.Case($3, $4) }
+| error {
+      bail "Invalid SQL expression"
+   }
 
 caseElseClause:
 | ELSE expression  { $2 }
@@ -399,6 +446,9 @@ condition:
    }
 | expression cmpOp ALL LPAREN selectStmt RPAREN { 
       Sql.Not(scan_for_existence "ALL" $5 (inverse_of_cmp $2) $1)
+   }
+| error {
+      bail "Invalid boolean predicate"
    }
 
 constantList:

@@ -184,7 +184,7 @@ and comment depth = parse
    (* Initialize the Sqlparser's parsing capabilities, so that we can have
       include directives *)
    Sql.parse_file := (fun fname -> 
-      let lexbuff = Lexing.from_channel (open_in fname) in
+      let lexbuff = ParsingExtras.lexbuf_for_file fname in
          Sqlparser.dbtoasterSqlStmtList tokenize lexbuff   
    )
 }

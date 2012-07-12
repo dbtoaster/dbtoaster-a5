@@ -11,6 +11,7 @@ FILES=\
 	src/util/ExternalCompiler\
 	src/util/SourceCode\
 	src/util/FreshVariable\
+	src/util/ParsingExtras\
 	src/global/Types\
 	src/global/Constants\
 	src/global/Schema\

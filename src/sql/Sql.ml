@@ -25,8 +25,9 @@ open Constants
 exception SqlException of string * string
 (**
    An error that occurs during parsing.
+   The string is an message, the integer is a 
 *)
-exception SQLParseError of string
+exception SQLParseError of string * Lexing.position
 (**
    A feature of SQL that is unsupported is encountered.
 *)

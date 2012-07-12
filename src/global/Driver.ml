@@ -473,15 +473,16 @@ if stage_is_active StageParseSQL then (
    Debug.print "LOG-DRIVER" (fun () -> "Running Stage: ParseSQL");
    try 
       List.iter (fun f ->
-         let lexbuff = 
-            Lexing.from_channel (if f <> "-" then (open_in f) else stdin) in
+         let lexbuff = ParsingExtras.lexbuf_for_file_or_stdin f in
          let sql_parsed_file = Sqlparser.dbtoasterSqlFile Sqllexer.tokenize 
                                                           lexbuff 
          in
          sql_program := Sql.merge_files !sql_program sql_parsed_file
       ) !files
    with 
-      | Sql.SQLParseError(msg)
+      | Sql.SQLParseError(msg, pos) ->
+         error ~exc:true ("Syntax error: "^msg^" "^(
+                          ParsingExtras.format_error_at_position pos))
       | Sql.SqlException("",msg) ->
          error ~exc:true ("Sql Error: "^msg)
       | Sql.SqlException(detail,msg) ->
