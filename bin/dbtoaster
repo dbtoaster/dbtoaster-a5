@@ -16,10 +16,10 @@ new_args=""
 compile_cmd=""
 
 inc_flags=`echo "$DBT_HDR" | sed 's/:/ -I/g'`
-[ $inc_flags ] && { inc_flags="-I$inc_flags"; }
+[[ $inc_flags != "" ]] && { inc_flags="-I$inc_flags"; }
 inc_flags="-I$CPP_LIBDIR $inc_flags"
 lib_flags=`echo "$DBT_LIB" | sed 's/:/ -L/g'`
-[ $lib_flags ] && { lib_flags="-L$lib_flags"; }
+[[ $lib_flags != "" ]] && { lib_flags="-L$lib_flags"; }
 
 cpp_compile_flags=""
 cpp_opt_flag="-O3"
