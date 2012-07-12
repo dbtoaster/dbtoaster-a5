@@ -1000,8 +1000,8 @@ let rec calc_to_k3_expr meta ?(generate_init = false) theta_vars_el calc :
          in (prod_result, nm)
             
       | C.Neg( neg_arg ) ->
-         rcr (C.Prod( [(C.Val(Value(V.Val(AConst(Const.CInt(-1))))));
-                       neg_arg] ))
+         rcr (CalcRing.mk_prod( [ Calculus.mk_value (Arithmetic.mk_int(-1));
+                                  neg_arg] ))
    end 
    in
    

@@ -549,7 +549,7 @@ let rec materialize ?(scope:var_t list = [])
             let (new_term_todos, new_term_mats) = 
                materialize ~scope:scope heuristic_options 
                            db_schema history term_name event 
-                           (mk_aggsum term_opt term_schema)
+                           (Calculus.mk_aggsum term_schema term_opt)
             in
                ((term_todos @ new_term_todos,
                  CalcRing.mk_sum [term_mats; new_term_mats]),
@@ -587,7 +587,8 @@ let rec materialize ?(scope:var_t list = [])
                      let (todos_subexpr, mat_subexpr) = 
                         materialize ~scope:scope heuristic_options 
                                     db_schema history subexpr_name event 
-                                    (mk_aggsum subexpr_opt subexpr_schema)
+                                    (Calculus.mk_aggsum subexpr_schema 
+                                                        subexpr_opt)
                      in
                         ((todos @ todos_subexpr,
                           CalcRing.mk_prod [mat_expr; mat_subexpr]),
@@ -624,7 +625,8 @@ let rec materialize ?(scope:var_t list = [])
                            );
                            materialize ~scope:scope heuristic_options 
                                        db_schema history subexpr_name event 
-                                       (mk_aggsum subexpr_opt subexpr_schema)
+                                       (Calculus.mk_aggsum subexpr_schema 
+                                                           subexpr_opt)
                         end
                         else begin
                            materialize_expr heuristic_options db_schema history
@@ -715,7 +717,7 @@ and materialize_expr (heuristic_options:heuristic_options_t)
                              value_expr_ivars ]
    in
 
-   let agg_rel_expr = mk_aggsum rel_expr extended_schema in
+   let agg_rel_expr = Calculus.mk_aggsum extended_schema rel_expr in
    let (agg_rel_expr_ivars, agg_rel_expr_ovars) = 
       schema_of_expr agg_rel_expr 
    in
@@ -742,7 +744,7 @@ and materialize_expr (heuristic_options:heuristic_options_t)
                                        event subexpr
                      end 
                   in
-                  let mat_lift_expr = CalcRing.mk_val (Exists(mat_expr)) in
+                  let mat_lift_expr = Calculus.mk_exists mat_expr in
                      ((todos @ todo, CalcRing.mk_prod [mats; mat_lift_expr]), 
                       (j + 1, CalcRing.mk_prod [whole_expr; mat_lift_expr])) 
 (***** END EXISTS HACK *****)
@@ -761,7 +763,7 @@ and materialize_expr (heuristic_options:heuristic_options_t)
                                        event subexpr
                      end 
                   in
-                  let mat_lift_expr = CalcRing.mk_val (Lift(v, mat_expr)) in
+                  let mat_lift_expr = Calculus.mk_lift v mat_expr in
                      ((todos @ todo, CalcRing.mk_prod [mats; mat_lift_expr]), 
                       (j + 1, CalcRing.mk_prod [whole_expr; mat_lift_expr]))
                 | _  ->
@@ -829,13 +831,12 @@ and materialize_expr (heuristic_options:heuristic_options_t)
                   end
                );
                let new_ds = {
-                  ds_name = CalcRing.mk_val (
-                     External(prefix,
-                              agg_rel_expr_ivars,
-                              agg_rel_expr_ovars,
-                              type_of_expr agg_rel_expr,
-                              ivc_expr)
-                  );
+                  ds_name = Calculus.mk_external 
+                               prefix
+                               agg_rel_expr_ivars
+                               agg_rel_expr_ovars
+                               (type_of_expr agg_rel_expr)
+                               ivc_expr;
                   ds_definition = agg_rel_expr;
                } in
                   history := new_ds :: !history;
@@ -861,7 +862,7 @@ and materialize_expr (heuristic_options:heuristic_options_t)
          end
    in
    (* If necessary, add aggregation to the whole materialized expression *)
-   let agg_mat_expr = mk_aggsum complete_mat_expr schema in
+   let agg_mat_expr = Calculus.mk_aggsum schema complete_mat_expr in
       (todos, agg_mat_expr)
 
 
@@ -936,10 +937,9 @@ and materialize_relations ?(minimal_maps = true) (db_schema:Schema.t)
                                    (CalcRing.mk_val leaf)
                in
                ( dses,
-                  CalcRing.mk_val (AggSum(
-                     ListAsSet.inter rv (ListAsSet.union scope schema),
-                     mat_expr
-                  ))
+                 Calculus.mk_aggsum 
+                    (ListAsSet.inter rv (ListAsSet.union scope schema))
+                    mat_expr                  
                )
          | Exists(subexp)      -> rcr_wrap (fun x->Exists(x     )) subexp
          | AggSum(gb_v,subexp) -> rcr_wrap (fun x->AggSum(gb_v,x)) subexp

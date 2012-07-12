@@ -184,9 +184,9 @@ query_employee:
 	@$(FAST_QUERY_TEST) employee/query16a
 	@$(FAST_QUERY_TEST) employee/query17a
 	@$(FAST_QUERY_TEST) employee/query22
-	@$(FAST_QUERY_TEST) employee/query35b   
+#	@$(FAST_QUERY_TEST) employee/query35b   
 	@$(FAST_QUERY_TEST) employee/query35c
-	@$(FAST_QUERY_TEST) employee/query36b  
+#	@$(FAST_QUERY_TEST) employee/query36b  
 	@$(FAST_QUERY_TEST) employee/query36c 
 	@$(FAST_QUERY_TEST) employee/query37
 	@$(FAST_QUERY_TEST) employee/query38a

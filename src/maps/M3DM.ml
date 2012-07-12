@@ -54,7 +54,7 @@ let get_map_postfix postfix (expr: Calculus.expr_t):
    let (ename,eins,eouts,etype,emeta) = 
       get_map_information_from_expr expr 
    in
-      CalcRing.Val(External(ename^postfix, eins, eouts, Types.TInt, None))
+      Calculus.mk_external (ename^postfix) eins eouts Types.TInt None
 
 let get_map_status (expr: Calculus.expr_t): Calculus.expr_t = 
    get_map_postfix "_status" expr
@@ -67,7 +67,7 @@ let get_map_input_output_domain ?(input = false)
    in
    let out_vars = if input then eins else eouts in
    let postfix  = if input then "_input" else "_output" in
-      CalcRing.Val(External(ename^postfix, [], out_vars, Types.TInt, None))
+      Calculus.mk_external (ename^postfix) [] out_vars Types.TInt None
 
 let get_map_output_domain (expr: Calculus.expr_t): Calculus.expr_t =
    get_map_input_output_domain ~input:false expr
@@ -85,7 +85,7 @@ let get_relation_of_event (event_input: Schema.event_t):
         
 let get_singleton_tuple (relation: Schema.rel_t): Calculus.expr_t =
    let (rname, rvars, _) = relation in
-        CalcRing.Val(External(rname^"_singleton", [], rvars, Types.TInt, None))
+        Calculus.mk_external (rname^"_singleton") [] rvars Types.TInt None
 
 let singleton_tuple_is_for_event (event_input: Schema.event_t)
                                  (test_singleton_tuple: Calculus.expr_t): 
@@ -167,7 +167,7 @@ let rec simplify_formula (event_input: Schema.event_t)
                      else *)
                   let (rq, rb) = aux(subexp) in
                   if rb = true 
-                  then (CalcRing.Val(AggSum(gb_vars, rq)), true) 
+                  then (Calculus.mk_aggsum gb_vars rq, true) 
                   else should_be_removed
                | Rel(rname, rvars)    -> 
                   if rvars = [] then should_be_removed else (e, true)
@@ -189,7 +189,7 @@ let rec simplify_formula (event_input: Schema.event_t)
 (***** BEGIN EXISTS HACK *****)
                | Exists(subexp) -> (e, true)
 (***** END EXISTS HACK *****)
-                (* (CalcRing.Val(Lift(target, fst (aux subexp))), true)*)
+(*                 (Calculus.mk_lift target (fst (aux subexp)), true)*)
                | Value(v) -> (e, true) 
             end
          | CalcRing.Neg(q) -> let (rq, rb) = aux(q) in
@@ -200,7 +200,7 @@ let rec simplify_formula (event_input: Schema.event_t)
       aux expr
 
 let mk_dm_trigger (left_domain: Calculus.expr_t)
-                    (update_domain: Calculus.expr_t):Plan.stmt_t= 
+                  (update_domain: Calculus.expr_t):Plan.stmt_t= 
    {
        target_map = left_domain;
        update_type = Plan.UpdateStmt;
@@ -255,7 +255,7 @@ let rec maintain (context: Calculus.expr_t)
           (*| Value(v) -> 
                let value = Arithmetic.sign_of_value(v) in
                let new_context = 
-                  CalcRing.mk_prod ([context; CalcRing.Val(Value(value))])
+                  CalcRing.mk_prod ([context; Calculus.mk_value value])
                in
                   ([], new_context) *)
             | External(ename,eins,eouts,etype,emeta) ->
@@ -268,7 +268,7 @@ let rec maintain (context: Calculus.expr_t)
                  else CalcRing.mk_prod ([context; output_domain]) 
                in
                let update_domain = 
-                  CalcRing.Val(AggSum(input_vars, context))
+                  Calculus.mk_aggsum input_vars context
                   (*TODO, unnecessary usage of AggSum *)
                in 
                let dm_statement = mk_dm_trigger (input_domain) 
@@ -279,7 +279,7 @@ let rec maintain (context: Calculus.expr_t)
             (* let (trlist, context1) = maintain (context) (subexp) in *)
                let (trlist, _) = maintain (context) (subexp) in 
                let (_, context1) = maintain (CalcRing.one) (subexp) in
-               let right_context = CalcRing.Val(AggSum(gb_vars, context1)) in
+               let right_context = Calculus.mk_aggsum gb_vars context1 in
                   (trlist, CalcRing.mk_prod ([context; right_context]))
             | Rel(rname, rvars)    -> 
                 ([], CalcRing.mk_prod ([context; formula]))
@@ -292,14 +292,14 @@ let rec maintain (context: Calculus.expr_t)
             | Exists(subexp) -> 
                let (trlist, _) = maintain(context)(subexp) in
             (* let (_, context1) = maintain(CalcRing.one)(subexp) in
-               let new_formula = CalcRing.Val(Lift(target, context1)) in
+               let new_formula = Calculus.mk_lift target context1 in
                   (trlist, CalcRing.mk_prod ([context; new_formula]))*)
                   (trlist, CalcRing.mk_prod ([context; formula]))
 (***** END EXISTS HACK *****)
             | Lift(target, subexp)    -> 
                let (trlist, _) = maintain(context)(subexp) in
             (* let (_, context1) = maintain(CalcRing.one)(subexp) in
-               let new_formula = CalcRing.Val(Lift(target, context1)) in
+               let new_formula = Calculus.mk_lift target context1 in
                   (trlist, CalcRing.mk_prod ([context; new_formula]))*)
                   (trlist, CalcRing.mk_prod ([context; formula]))
          end
@@ -330,9 +330,10 @@ let maintain_statement (statement:Plan.stmt_t)
          if left_output_vars_wo_triggers <> [] && 
             not(ListAsSet.seteq left_output_vars_wo_triggers
                                 query_domain_out)
-         then CalcRing.Val(AggSum(
-            ListAsSet.inter query_domain_out left_output_vars_wo_triggers,
-            query_domain)) 
+         then Calculus.mk_aggsum 
+                 (ListAsSet.inter query_domain_out 
+                                  left_output_vars_wo_triggers)
+                 query_domain 
          else
             query_domain
       in
@@ -421,7 +422,7 @@ let make_DM_maps (m3_db: Schema.t) (m3_maps: map_t list) : map_t list =
       let unit_map = 
          let dummy_m3_map = ("dummy_map", [], [], Types.TInt) in
          let (ename,eins,eouts,etype) = dummy_m3_map in
-            CalcRing.Val(External(ename, eins, eouts, etype, None))
+            Calculus.mk_external ename eins eouts etype None
       in
          add_map (unit_map);
    !dm_maps

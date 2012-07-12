@@ -33,20 +33,20 @@ for arg in "$@"; do
     if [[ ($arg != "-c") && ( ($option_flag == 0) || ($option != "-c") ) ]]; then
         new_args="$new_args $arg"
     fi
-	
-	if [ $option_flag = 1 ]; then
-		if [ $option = "-o" ]; then
-			out_src_file=$arg
-		elif [ $option = "-l" ]; then
+    
+    if [ $option_flag = 1 ]; then
+        if [ $option = "-o" ]; then
+            out_src_file=$arg
+        elif [ $option = "-l" ]; then
             out_src_lang=$arg
         elif [ $option = "-c" ]; then
-			out_bin_file=$arg
-		elif [ $option = "-I" ]; then
+            out_bin_file=$arg
+        elif [ $option = "-I" ]; then
             inc_flags="$inc_flags -I$arg"
         elif [ $option = "-L" ]; then
             lib_flags="$lib_flags -L$arg"
         elif [ $option = "-d" ]; then
-			debug_flag=${arg^^}
+            debug_flag=${arg}
             if [ $debug_flag = "COMPILE-WITH-PROFILE" ]; then
                 cpp_compile_flags="$cpp_compile_flags -pg"
             elif [ $debug_flag = "COMPILE-WITH-GDB" ]; then
@@ -60,13 +60,13 @@ for arg in "$@"; do
                 cpp_mt_flag="-mt"
             fi
         fi
-		option_flag=0
+        option_flag=0
         option="-"
     fi    
 
-	if [ ${arg:0:1} = "-" ]; then
-		option_flag=1
-		option=$arg
+    if [ ${arg:0:1} = "-" ]; then
+        option_flag=1
+        option=$arg
     fi
 done
     
@@ -85,12 +85,12 @@ if [ $out_bin_file != "-" ]; then
         [[ $out_src_file_ext && $out_src_file_ext == "scala" ]] && { src_extension="scala"; }
     fi
   
-	if [ ${out_src_file} = "-" ]; then
-		out_src_file=`mktemp -q /tmp/tmp.XXXXXX.${src_extension}`
+    if [ ${out_src_file} = "-" ]; then
+        out_src_file=`mktemp -q /tmp/tmp.XXXXXX.${src_extension}`
         [ $? -ne 0 ] && { echo "$0: Can't create temp file, exiting..." ; exit 1; }
-		
-		new_args="$new_args -o $out_src_file"		
-	fi
+        
+        new_args="$new_args -o $out_src_file"       
+    fi
 
     if [ $src_extension == "hpp" ]; then
         main_file="$CPP_LIBDIR/main.cpp"

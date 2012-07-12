@@ -91,7 +91,7 @@ in
       "AggSum([A], R(A,B))"
       "M1(int)[][A]";
    test "Binary sum with an aggregation"
-      "AggSum([A], R(A,B) + S(A,C))"
+      "AggSum([A], R(A,B) + S(A,B))"
       "(M1(int)[][A] + M2(int)[][A])";
    test "Join with an aggregation"
       "AggSum([A], R(A,B) * S(B,C))"

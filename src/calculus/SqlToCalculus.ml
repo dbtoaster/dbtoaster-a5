@@ -47,7 +47,7 @@ let lift_if_necessary ?(t="agg") ?(vt=TAny) (calc:C.expr_t):
       | CalcRing.Val(Value(x)) -> (x, CalcRing.one)
       | _ -> 
          let v = tmp_var t (Types.escalate_type vt (C.type_of_expr calc)) in
-         (  mk_var v, CalcRing.mk_val (Lift(v, calc))  )
+         (  Arithmetic.mk_var v, C.mk_lift v calc  )
       
 
 (**
@@ -223,9 +223,9 @@ let rec normalize_agg_target_expr ?(vars_bound = false) gb_vars expr =
 let rec calc_of_query ?(query_name = None)
                       (tables:Sql.table_t list) 
                       (query:Sql.select_t): 
-                      (string * C.expr_t) list = 
+                      (string * C.expr_t) list =   
    let (targets,sources,cond,gb_vars,opts) = 
-      cast_query_to_aggregate tables query 
+      cast_query_to_aggregate tables query
    in
    Debug.print "LOG-SQL-TO-CALC" (fun () -> 
       "Cast query is now : "^
@@ -299,19 +299,19 @@ let rec calc_of_query ?(query_name = None)
                simple renaming) *)
             let tgt_var = (tgt_name, (Sql.expr_type tgt_expr tables sources)) in
             let calc_expr = calc_of_sql_expr tables sources tgt_expr in
-               (tgt_var, CalcRing.mk_val (Lift(tgt_var,
-                  match ((Calculus.type_of_expr calc_expr), (snd tgt_var)) with
-                  | (a, b) when a = b -> calc_expr
-                  | _ -> 
-                     Sql.error ("Sql target expression '"^
-                                (Sql.string_of_expr tgt_expr)^
-                                "' translated to different type ("^
-                                (Types.string_of_type 
-                                  (Calculus.type_of_expr calc_expr))^
-                                ") from its expected type ("^
-                                (Types.string_of_type (snd tgt_var))^
-                                ")"));
-               ))
+               (tgt_var, C.mk_lift tgt_var
+                  (match ((C.type_of_expr calc_expr), (snd tgt_var)) with
+                   | (a, b) when a = b -> calc_expr
+                   | _ -> 
+                      Sql.error ("Sql target expression '"^
+                                 (Sql.string_of_expr tgt_expr)^
+                                 "' translated to different type ("^
+                                 (Types.string_of_type 
+                                   (C.type_of_expr calc_expr))^
+                                 ") from its expected type ("^
+                                 (Types.string_of_type (snd tgt_var))^
+                                 ")"))
+               )
    ) noagg_tgts) in
    let noagg_calc = CalcRing.mk_prod noagg_terms in
    (* There might be group-by targets that are not represented in the target
@@ -337,7 +337,7 @@ let rec calc_of_query ?(query_name = None)
          calc_of_sql_expr ~materialize_query:(Some(fun agg_type agg_calc ->
             Debug.print "LOG-SQL-TO-CALC" (fun () -> 
                "Materializing target: "^(tgt_name)^
-               " with calculus: "^(Calculus.string_of_expr agg_calc)
+               " with calculus: "^(C.string_of_expr agg_calc)
             );
             (** Get the schema of the lifted variables as follows:
                1 - If the query is unnamed (i.e., the root query) then we take 
@@ -354,69 +354,56 @@ let rec calc_of_query ?(query_name = None)
             let ret = 
             begin match agg_type with
                | Sql.SumAgg -> 
-                  CalcRing.mk_val 
-                     (AggSum(new_gb_vars,
-                        CalcRing.mk_prod 
-                           [source_calc; cond_calc; agg_calc; noagg_calc]
-                     ))
+                  C.mk_aggsum new_gb_vars
+                        (CalcRing.mk_prod 
+                            [source_calc; cond_calc; agg_calc; noagg_calc])
                | Sql.CountAgg(None) -> (* COUNT( * ) *)
-                  CalcRing.mk_val 
-                     (AggSum(new_gb_vars,
-                        CalcRing.mk_prod [source_calc; cond_calc; noagg_calc]
-                     ))
+                  C.mk_aggsum new_gb_vars 
+                     (CalcRing.mk_prod [source_calc; cond_calc; noagg_calc])
                | Sql.CountAgg(Some([])) -> (* COUNT(DISTINCT) *)
-                  CalcRing.mk_val 
-                     (AggSum(new_gb_vars,
-                        CalculusDomains.mk_exists
-                           (CalcRing.mk_prod 
-                              [source_calc; cond_calc; noagg_calc])
-                     ))
+                  C.mk_aggsum new_gb_vars 
+                     (CalculusDomains.mk_exists
+                         (CalcRing.mk_prod 
+                            [source_calc; cond_calc; noagg_calc]))
                | Sql.CountAgg(Some(fields)) -> (* COUNT(DISTINCT ... ) *)
-                  CalcRing.mk_val 
-                     (AggSum(new_gb_vars,
-                        CalculusDomains.mk_exists
-                           (CalcRing.mk_val 
-                              (AggSum(ListAsSet.union new_gb_vars 
-                                                      (List.map var_of_sql_var
-                                                                fields), 
-                                 CalcRing.mk_prod 
-                                    [source_calc; cond_calc; noagg_calc])))
-                     ))
+                  C.mk_aggsum new_gb_vars 
+                     (CalculusDomains.mk_exists
+                         (C.mk_aggsum  
+                             (ListAsSet.union 
+                                 new_gb_vars (List.map var_of_sql_var fields))
+                             (CalcRing.mk_prod 
+                                 [source_calc; cond_calc; noagg_calc])))
                | Sql.AvgAgg -> 
                   let count_var = tmp_var "average_count" TInt in
-                  CalcRing.mk_val (AggSum(new_gb_vars,
-                     CalcRing.mk_prod [
-                        (** The value being averaged *)
-                        CalcRing.mk_val
-                           (AggSum(new_gb_vars,
-                              CalcRing.mk_prod 
-                                 [source_calc; cond_calc; agg_calc; noagg_calc]
-                           ));
-                        (* The (lifted) count of the value being averaged *)
-                        CalcRing.mk_val (Lift(count_var, 
-                           (CalcRing.mk_val 
-                              (AggSum(new_gb_vars,
-                                 CalcRing.mk_prod 
-                                    [source_calc; cond_calc; noagg_calc]
-                              )))));
-                        (* 1/COUNT *)
-                        CalcRing.mk_prod [
-                           CalcRing.mk_val (Value(
-                              ValueRing.mk_val (AFn("/", [
-                                 (* Hack to ensure that we don't ever get NAN:
-                                    make sure that the count is always >= 1 *)
-                                 ValueRing.mk_val(AFn("listmax", [
-                                    Arithmetic.mk_int 1;
-                                    Arithmetic.mk_var count_var
-                                 ], TInt))
-                              ], TFloat))
-                           ));
-                           CalcRing.mk_val (Cmp(Neq, 
-                              Arithmetic.mk_int 0, 
-                              Arithmetic.mk_var count_var))
-                        ]
-                     ]
-                  ))
+                  C.mk_aggsum new_gb_vars
+                     (CalcRing.mk_prod [
+                         (** The value being averaged *)
+                         C.mk_aggsum new_gb_vars
+                            (CalcRing.mk_prod 
+                                [source_calc; cond_calc; agg_calc; noagg_calc]
+                            );
+                         (* The (lifted) count of the value being averaged *)
+                         C.mk_lift count_var 
+                            (C.mk_aggsum new_gb_vars
+                                (CalcRing.mk_prod 
+                                    [source_calc; cond_calc; noagg_calc]));
+                         (* 1/COUNT *)
+                         CalcRing.mk_prod [
+                            C.mk_value (
+                               Arithmetic.mk_fn "/" [
+                                  (* Hack to ensure that we don't ever get NAN:
+                                     make sure that the count is always >= 1 *)
+                                  Arithmetic.mk_fn "listmax" [
+                                     Arithmetic.mk_int 1;
+                                     Arithmetic.mk_var count_var
+                                  ] TInt
+                               ] TFloat
+                            );
+                            C.mk_cmp Neq 
+                               (Arithmetic.mk_int 0) 
+                               (Arithmetic.mk_var count_var)
+                         ]
+                      ])
             end in Debug.print "LOG-SQL-TO-CALC" (fun () ->
                "Generated Calculus: \n"^
                (CalculusPrinter.string_of_expr ret)^"\n"
@@ -448,11 +435,9 @@ and calc_of_sources (tables:Sql.table_t list)
    CalcRing.mk_prod (List.flatten [
       List.map (fun ((ref_name:string),(rel_name:string)) -> 
          let (_,sch,_,_) = Sql.find_table rel_name tables in
-            CalcRing.mk_val (Rel(
-               rel_name,
-               List.map (fun (_,vn,vt) -> 
-                              var_of_sql_var ((Some(ref_name)),vn,vt)) sch
-            ))
+            C.mk_rel rel_name
+               (List.map (fun (_,vn,vt) -> 
+                              var_of_sql_var ((Some(ref_name)),vn,vt)) sch)
       ) rels;
       List.map (fun (ref_name, q) ->
          if Sql.is_agg_query q
@@ -519,9 +504,10 @@ and calc_of_condition (tables:Sql.table_t list)
       else
          CalcRing.mk_prod [
             expr_calc;
-            CalcRing.mk_val (wrapper (Arithmetic.ValueRing.mk_val
-               (AFn("regexp_match", [Arithmetic.mk_string like_regexp;
-                                     expr_val], TInt))
+            CalcRing.mk_val (wrapper (
+               Arithmetic.mk_fn "regexp_match" 
+                                [Arithmetic.mk_string like_regexp; expr_val] 
+                                TInt
             ))
          ]
    in
@@ -534,12 +520,11 @@ and calc_of_condition (tables:Sql.table_t list)
                                                (C.type_of_expr e2_calc) in
             let (e1_val, e1_calc) = lift_if_necessary ~vt:field_ty e1_calc in
             let (e2_val, e2_calc) = lift_if_necessary ~vt:field_ty e2_calc in
-               CalcRing.mk_val (AggSum([], 
-                  CalcRing.mk_prod [
-                     e1_calc; e2_calc;
-                     CalcRing.mk_val (Cmp(cmp, e1_val, e2_val));
-                  ]
-               ))
+               C.mk_aggsum [] 
+                  (CalcRing.mk_prod [
+                      e1_calc; e2_calc;
+                      C.mk_cmp cmp e1_val e2_val;
+                   ])
          | Sql.And(c1,c2) -> CalcRing.mk_prod [rcr_c c1; rcr_c c2]
          | Sql.Or(c1,c2)  -> 
             let rec extract_ors = (function
@@ -555,10 +540,11 @@ and calc_of_condition (tables:Sql.table_t list)
                (* A little hackery is needed here to handle the case where
                   both c1 and c2 are true; To deal with this, we explicitly 
                   check to see if c1 and c2 are both greater than 0 *)
-               CalcRing.mk_val (AggSum([], 
-                  CalcRing.mk_prod [or_calc; 
-                     CalcRing.mk_val (Cmp(Gt, or_val, mk_int 0))]
-               ))
+               C.mk_aggsum [] 
+                  (CalcRing.mk_prod [or_calc; 
+                                     C.mk_cmp Gt 
+                                              or_val 
+                                              (Arithmetic.mk_int 0)])
          | Sql.Not(Sql.Exists(q)) ->
             (* The exists operator is only bound for elements in the domain.  
                Since we're explicitly looking for cases that are not in the 
@@ -566,7 +552,7 @@ and calc_of_condition (tables:Sql.table_t list)
             begin match rcr_q q with
             | [_,q_calc_unlifted] ->
                CalculusDomains.mk_not_exists 
-                  (CalcRing.mk_val (AggSum([], q_calc_unlifted)))
+                  (C.mk_aggsum [] q_calc_unlifted)
             | _ -> (failwith "Nested subqueries must have exactly 1 argument")
             end
 
@@ -574,7 +560,7 @@ and calc_of_condition (tables:Sql.table_t list)
             begin match rcr_q q with
             | [_,q_calc_unlifted] ->
                CalculusDomains.mk_exists 
-                  (CalcRing.mk_val (AggSum([], q_calc_unlifted)))
+                  (C.mk_aggsum [] q_calc_unlifted)
 
             | _ -> (failwith "Nested subqueries must have exactly 1 argument")
             end
@@ -590,7 +576,7 @@ and calc_of_condition (tables:Sql.table_t list)
                lift_if_necessary ~t:"in" (rcr_e expr)
             in
                CalcRing.mk_prod (expr_calc::(List.map (fun x -> 
-                  CalcRing.mk_val (Cmp(Neq, Arithmetic.mk_const x, expr_val)))
+                  C.mk_cmp Neq (Arithmetic.mk_const x) expr_val)
                      (ListAsSet.uniq l)))
 
          | Sql.InList(expr, l) ->
@@ -601,7 +587,7 @@ and calc_of_condition (tables:Sql.table_t list)
                 an exclusive OR by making the list of comparisons unique *)
                CalcRing.mk_prod [expr_calc; 
                   CalcRing.mk_sum (List.map (fun x -> 
-                     CalcRing.mk_val (Cmp(Eq, Arithmetic.mk_const x, expr_val)))
+                     C.mk_cmp Eq (Arithmetic.mk_const x) expr_val)
                         (ListAsSet.uniq l))
                ]
          
@@ -669,10 +655,10 @@ and calc_of_sql_expr ?(materialize_query = None)
          | None -> failwith "Unexpected aggregation operator (1)"
          | Some(m) -> 
             let count_agg = m (Sql.CountAgg(None)) CalcRing.one in
-            let (_,count_sch) = Calculus.schema_of_expr count_agg in
+            let (_,count_sch) = C.schema_of_expr count_agg in
             CalcRing.mk_prod [
-               CalcRing.mk_val (AggSum(count_sch,
-                  CalcRing.mk_val (Lift((tmp_var "dummy" TInt), count_agg))));
+               C.mk_aggsum count_sch
+                  (C.mk_lift (tmp_var "dummy" TInt) count_agg);
                calc_expr
             ]
       end
@@ -680,9 +666,9 @@ and calc_of_sql_expr ?(materialize_query = None)
    
    begin match expr with
       | Sql.Const(c) -> 
-         CalcRing.mk_val (Value(mk_const c))
+         C.mk_value (Arithmetic.mk_const c)
       | Sql.Var(v)   -> 
-         CalcRing.mk_val (Value(mk_var (var_of_sql_var v)))
+         C.mk_value (Arithmetic.mk_var (var_of_sql_var v))
       | Sql.SQLArith(e1, ((Sql.Sum | Sql.Sub) as op), e2) ->
          let e1_calc, e2_base_calc =
             begin match ((Sql.is_agg_expr e1), (Sql.is_agg_expr e2)) with
@@ -719,19 +705,17 @@ and calc_of_sql_expr ?(materialize_query = None)
          in 
          
          let nested_schema = 
-            (ListAsSet.union (snd (Calculus.schema_of_expr ce1))
-                             (snd (Calculus.schema_of_expr ce2)))
+            (ListAsSet.union (snd (C.schema_of_expr ce1))
+                             (snd (C.schema_of_expr ce2)))
          in
-            CalcRing.mk_val (AggSum(nested_schema, 
-            CalcRing.mk_prod [
-               ( if needs_order_flip 
-                 then CalcRing.mk_prod [e2_calc; ce1]
-                 else CalcRing.mk_prod [ce1; e2_calc]
-               );
-               CalcRing.mk_val (Value(ValueRing.mk_val (
-                  AFn("/", [e2_val], TFloat)
-               )))]
-         ))
+            C.mk_aggsum nested_schema 
+               (CalcRing.mk_prod [
+                   ( if needs_order_flip 
+                     then CalcRing.mk_prod [e2_calc; ce1]
+                     else CalcRing.mk_prod [ce1; e2_calc]
+                   );
+                   C.mk_value (Arithmetic.mk_fn "/" [e2_val] TFloat)    
+               ])
 
       | Sql.Negation(e) -> CalcRing.mk_neg (rcr_e e)
       | Sql.NestedQ(q)  -> 
@@ -766,7 +750,7 @@ and calc_of_sql_expr ?(materialize_query = None)
             List.split (List.map (fun arg ->
                let raw_arg_calc = (rcr_e arg) in
                let (arg_val, arg_calc) = lift_if_necessary raw_arg_calc in
-                  ((arg_val, snd (Calculus.schema_of_expr raw_arg_calc)),
+                  ((arg_val, snd (C.schema_of_expr raw_arg_calc)),
                    (Sql.is_agg_expr arg, arg_calc))
             ) fargs) in
          let lifted_args, gb_vars = List.split lifted_args_and_gb_vars in
@@ -778,13 +762,12 @@ and calc_of_sql_expr ?(materialize_query = None)
              } = (Functions.declaration fn
                      (List.map Arithmetic.type_of_value lifted_args))
          in
-            CalcRing.mk_val (AggSum(List.flatten gb_vars, 
-               CalcRing.mk_prod ((List.map snd (agg_args@non_agg_args))@[
-                  CalcRing.mk_val (Value(
-                     ValueRing.mk_val (AFn(impl_name,lifted_args,impl_type))
-                  ))
-               ])
-            ))
+            C.mk_aggsum (List.flatten gb_vars) 
+               (CalcRing.mk_prod 
+                  ((List.map snd (agg_args @ non_agg_args)) @
+                   [ C.mk_value 
+                        (Arithmetic.mk_fn impl_name lifted_args impl_type) 
+                   ]))
       | Sql.Case(cases, else_branch) ->
          let (ret_calc, else_cond) = 
             List.fold_left (fun (ret_calc, prev_cond) (curr_cond, curr_term) -> 

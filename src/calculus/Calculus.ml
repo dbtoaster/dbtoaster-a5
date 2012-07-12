@@ -60,8 +60,8 @@ CalcBase : sig
       val  one: t
    end = struct
       type t = (CalcRing.expr_t) calc_leaf_t
-      let zero = Value(mk_int 0)
-      let one  = Value(mk_int 1)
+      let zero = Value(Arithmetic.mk_int 0)
+      let one  = Value(Arithmetic.mk_int 1)
    end and
 (** The Calculus ring *)
 CalcRing : Ring.Ring with type leaf_t = CalcBase.t
@@ -724,12 +724,40 @@ let sanity_check_variable_names expr =
             )
       ) var_names
 
-(**
-   Add AggSum around a given expression if necessary. 
-*)            
-let mk_aggsum (e: expr_t) (schema: var_t list) =
-   let expr_ovars = snd (schema_of_expr e) in
-   let expr_schema = ListAsSet.inter expr_ovars schema in
-   if (ListAsSet.seteq expr_ovars expr_schema) then e
-   else CalcRing.mk_val (AggSum(expr_schema, e))
+(* Construction Helpers *)
+
+(** Create a Value expression *)
+let mk_value (value: value_t) : expr_t = 
+   CalcRing.mk_val (Value(value))
+
+(** Create an AggSum expression if necessary *)            
+let mk_aggsum (gb_vars: var_t list) (expr: expr_t) : expr_t =
+   let expr_ovars = snd (schema_of_expr expr) in
+   let new_gb_vars = ListAsSet.inter gb_vars expr_ovars in
+   if (ListAsSet.seteq expr_ovars new_gb_vars) then expr
+   else CalcRing.mk_val (AggSum(new_gb_vars, expr))
+
+(** Create a Rel expression *)            
+let mk_rel (name: string) (vars: var_t list) : expr_t =
+   CalcRing.mk_val (Rel(name, vars))
+   
+(** Create an External expression *)   
+let mk_external (name: string) (ivars: var_t list) (ovars: var_t list)
+                (base_type: type_t) (ivc_expr: expr_t option) : expr_t =
+   CalcRing.mk_val (External(name, ivars, ovars, base_type, ivc_expr))
+
+(** Create a Cmp expression *)
+let mk_cmp (op: cmp_t) (lhs: value_t) (rhs: value_t) : expr_t = 
+   CalcRing.mk_val (Cmp(op, lhs, rhs))
+   
+(** Create a Lift expression *)   
+let mk_lift (var: var_t) (expr: expr_t) : expr_t =
+   CalcRing.mk_val (Lift(var, expr))
+      
+(***** BEGIN EXISTS HACK *****)
+(** Create an Exists expression *)      
+let mk_exists (expr: expr_t) : expr_t =
+   CalcRing.mk_val (Exists(expr))
+   
+(***** END EXISTS HACK *****)
       

@@ -17,12 +17,12 @@ let rec maintain (formula: Calculus.expr_t) : Calculus.expr_t =
          | External _ -> 
             failwith "Domain Maintenance on a materialized expression"
          | AggSum(gb_vars,subexp) -> 
-            CalcRing.mk_val (AggSum(gb_vars,maintain subexp))
+            Calculus.mk_aggsum gb_vars (maintain subexp)
          | Rel _
          | Cmp _
          | Lift _ -> CalcRing.mk_val lf
 (***** BEGIN EXISTS HACK *****)
-         | Exists(subexp) -> CalcRing.mk_val (Exists(subexp))
+         | Exists(subexp) -> Calculus.mk_exists subexp
 (***** END EXISTS HACK *****)
       )
       formula
@@ -54,7 +54,7 @@ let rec maintain (formula: Calculus.expr_t) : Calculus.expr_t =
             | AggSum(gb_vars, subexp) -> 
                let (context1) = maintain (CalcRing.one) (subexp) in
                let right_context = 
-                  CalcRing.Val(AggSum(gb_vars, context1)) 
+                  Calculus.mk_aggsum gb_vars context1 
                in
                   (CalcRing.mk_prod ([context; right_context]))
             | Rel(rname, rvars) -> 
@@ -85,20 +85,19 @@ let mk_exists (expr:expr_t): expr_t =
       "\nwith domain expression : \n"^
       (CalculusPrinter.string_of_expr dom_expr)^"\n"
    );
-   CalcRing.mk_val (Exists(dom_expr))
+   Calculus.mk_exists dom_expr
 ;;
 
 let mk_not_exists (expr:expr_t): expr_t =
    let dom_expr = (maintain expr) in
    let dom_var = (mk_dom_var (), TInt) in
    let (_,ovars) = Calculus.schema_of_expr expr in
-   CalcRing.mk_val (AggSum(ovars, 
+   Calculus.mk_aggsum ovars 
       (CalcRing.mk_prod [
-         CalcRing.mk_val (Lift(dom_var, dom_expr));
-         CalcRing.mk_val (Cmp(Eq, Arithmetic.mk_int 0, 
-                                  Arithmetic.mk_var dom_var))
+         Calculus.mk_lift dom_var dom_expr;
+         Calculus.mk_cmp Eq (Arithmetic.mk_int 0) 
+                            (Arithmetic.mk_var dom_var)
       ])
-   ))
 ;;
 (***** END EXISTS HACK *****)
 
@@ -115,7 +114,7 @@ let mk_not_exists (expr:expr_t): expr_t =
    an expression that has these semantics.  
 *)
 let mk_domain_restricted_lift (lift_v:var_t) (lift_expr:expr_t): expr_t =
-   let lift = CalcRing.mk_val (Lift(lift_v, lift_expr)) in
+   let lift = Calculus.mk_lift lift_v lift_expr in
 
    Debug.print "LOG-MK-DR-LIFT" (fun () ->
       "Generating domain restricted lift of : ("^
@@ -135,6 +134,6 @@ let mk_domain_restricted_lift (lift_v:var_t) (lift_expr:expr_t): expr_t =
    (* Otherwise we need to actually do some domain tracking. *)
    (* If all else fails, we need to create a new variable for the lifted 
       expression, test, and then project it all away. *)
-   CalcRing.mk_prod [ mk_exists lift_expr; lift ]
+   CalcRing.mk_prod [ Calculus.mk_exists lift_expr; lift ]
 
 

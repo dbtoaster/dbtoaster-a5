@@ -41,7 +41,7 @@ let rec combine_values ?(aggressive=false) (expr:C.expr_t): C.expr_t =
       if val_list = [] then calc_op calc_list
       else let val_term = 
          if aggressive then 
-            CalcRing.mk_val (Value(Arithmetic.eval_partial (val_op val_list)))
+            C.mk_value (Arithmetic.eval_partial (val_op val_list))
          else
          (* If we let it run free, combine values would be a little too 
             aggressive.  Specifically consider the expression 
@@ -72,8 +72,8 @@ let rec combine_values ?(aggressive=false) (expr:C.expr_t): C.expr_t =
                      (List.tl partitioned_variable_values)
             else number_values :: partitioned_variable_values
          in
-            calc_op (List.map (fun val_list -> CalcRing.mk_val (
-               Value(Arithmetic.eval_partial (val_op val_list))
+            calc_op (List.map (fun val_list -> C.mk_value (
+               Arithmetic.eval_partial (val_op val_list)
             )) (final_term_components))
       in      
       if calc_list = [] then val_term 
@@ -82,7 +82,8 @@ let rec combine_values ?(aggressive=false) (expr:C.expr_t): C.expr_t =
    CalcRing.fold
       (merge true  CalcRing.mk_sum  ValueRing.mk_sum)
       (merge false CalcRing.mk_prod ValueRing.mk_prod)
-      (fun x -> CalcRing.mk_prod [CalcRing.mk_val (Value(mk_int (-1))); x])
+      (fun x -> CalcRing.mk_prod [ C.mk_value (Arithmetic.mk_int (-1)); 
+                                   x ])
       (fun lf -> (match lf with
          | Cmp((Neq|Lt|Gt ),x,y) when x = y  -> 
          (* Zero is contageous.  This particular case following case wreaks 
@@ -110,34 +111,34 @@ let rec combine_values ?(aggressive=false) (expr:C.expr_t): C.expr_t =
                         | CBool(true) -> CalcRing.one
                         | CBool(false) -> 
                            if Debug.active "CALC-DONT-CREATE-ZEROES" 
-                           then CalcRing.mk_val 
-                                 (Cmp(op, ValueRing.mk_val (AConst(x_const)),
-                                          ValueRing.mk_val (AConst(y_const))))
+                           then C.mk_cmp op 
+                                   (Arithmetic.mk_const(x_const))
+                                   (Arithmetic.mk_const(y_const))
                            else CalcRing.zero
                         | _ -> C.bail_out (CalcRing.mk_val lf)
                                  "Unexpected return value of comparison op"
                      end
                | (x_val, y_val) -> 
-                  let ret = CalcRing.mk_val (Cmp(op, x_val, y_val)) in
+                  let ret = C.mk_cmp op x_val y_val in
                      Debug.print "LOG-COMBINE-VALUES" (fun () ->
                         "Combining "^(C.string_of_leaf lf)^" into "^
                         (C.string_of_expr ret)
                      ); ret
             end
          
-         | Value(v) -> CalcRing.mk_val (Value(Arithmetic.eval_partial v))
+         | Value(v) -> C.mk_value (Arithmetic.eval_partial v)
          | Rel(_,_) | External(_) -> CalcRing.mk_val lf
          | AggSum(gb_vars, subexp) -> 
             let new_subexp = rcr subexp in
             if new_subexp = CalcRing.zero then CalcRing.zero else
-               C.mk_aggsum new_subexp gb_vars
+               C.mk_aggsum gb_vars new_subexp
          | Lift(lift_v, subexp)    -> 
-            CalcRing.mk_val (Lift(lift_v,    rcr subexp))
+            C.mk_lift lift_v (rcr subexp)
 (***** BEGIN EXISTS HACK *****)
          | Exists(subexp)    -> 
             let new_subexp = rcr subexp in
             if new_subexp = CalcRing.zero then CalcRing.zero else
-               CalcRing.mk_val (Exists(new_subexp))
+               C.mk_exists new_subexp
 (***** END EXISTS HACK *****)
       ))
       expr
@@ -173,14 +174,17 @@ let lift_equalities (global_scope:var_t list) (big_expr:C.expr_t): C.expr_t =
       "Lift Equalities: "^(CalculusPrinter.string_of_expr big_expr) 
    );
    let candidate_term (local_scope:var_t list) (candidate:lift_candidate_t) = 
-      CalcRing.mk_val (match candidate with
+      match candidate with
          | BidirectionalLift(x, y)  -> 
             if (List.mem x local_scope)
             then if (List.mem y local_scope)
-                 then (Cmp(Eq, mk_var x, mk_var y))
-                 else (Lift(y, CalcRing.mk_val (Value(mk_var x))))
+                 then C.mk_cmp Eq (Arithmetic.mk_var x) 
+                                         (Arithmetic.mk_var y)
+                 else C.mk_lift y 
+                         (C.mk_value (Arithmetic.mk_var x))
             else if (List.mem y local_scope)
-                 then (Lift(x, CalcRing.mk_val (Value(mk_var y))))
+                 then C.mk_lift x
+                         (C.mk_value (Arithmetic.mk_var y))
                  else (Debug.print "LOG-CALCOPT-DETAIL" (fun () ->
                         "Scope of error is : " ^
                         (ListExtras.ocaml_of_list string_of_var local_scope)
@@ -196,9 +200,8 @@ let lift_equalities (global_scope:var_t list) (big_expr:C.expr_t): C.expr_t =
                       );
                  failwith "Error: lifted equality past scope of value")
             else if (List.mem x local_scope)
-                 then (Cmp(Eq, mk_var x, y))
-                 else (Lift(x, CalcRing.mk_val (Value(y))))
-      )
+                 then C.mk_cmp Eq (Arithmetic.mk_var x) y
+                 else C.mk_lift x (C.mk_value y)
    in
    let merge (local_scope:var_t list)
              ((candidates:((lift_candidate_t) list list)),
@@ -283,8 +286,7 @@ let lift_equalities (global_scope:var_t list) (big_expr:C.expr_t): C.expr_t =
                         );
                         (  commuting_eqs, 
                            CalcRing.mk_prod [
-                              CalcRing.mk_val (
-                                 Lift(x, CalcRing.mk_val (Value(y))));
+                              C.mk_lift x (C.mk_value y);
                               updated_lhs])
                      ) else
                         (* Neither x nor y enter scope here.  We commute the
@@ -313,8 +315,8 @@ let lift_equalities (global_scope:var_t list) (big_expr:C.expr_t): C.expr_t =
                         );
                         (  commuting_eqs, 
                            CalcRing.mk_prod [
-                              CalcRing.mk_val (
-                                 Lift(y, CalcRing.mk_val (Value(mk_var x))));
+                              C.mk_lift y 
+                                 (C.mk_value (Arithmetic.mk_var x));
                               updated_lhs])
                      | (true, false) -> (* x enters scope, y does not: 
                                            lift into x *)
@@ -326,8 +328,8 @@ let lift_equalities (global_scope:var_t list) (big_expr:C.expr_t): C.expr_t =
                         );
                         (  commuting_eqs, 
                            CalcRing.mk_prod [
-                              CalcRing.mk_val (
-                                 Lift(x, CalcRing.mk_val (Value(mk_var y))));
+                              C.mk_lift x 
+                                 (C.mk_value (Arithmetic.mk_var y));
                               updated_lhs])
                      | (false, false) -> (* neither enters scope: commute *)
                         (  commuting_eqs @ [candidate], updated_lhs  )
@@ -348,12 +350,12 @@ let lift_equalities (global_scope:var_t list) (big_expr:C.expr_t): C.expr_t =
             let new_gb_vars = ListAsSet.inter gb_vars
                                               (snd (C.schema_of_expr new_term))
             in
-               ([], C.mk_aggsum new_term new_gb_vars)
+               ([], C.mk_aggsum new_gb_vars new_term)
          | CalcRing.Val(Lift(v, term)) ->
-            ([], CalcRing.mk_val (Lift(v, rcr_merge term)))
+            ([], C.mk_lift v (rcr_merge term))
 (***** BEGIN EXISTS HACK *****)
          | CalcRing.Val(Exists(term)) ->
-            ([], CalcRing.mk_val (Exists(rcr_merge term)))
+            ([], C.mk_exists (rcr_merge term))
 (***** END EXISTS HACK *****)
          | CalcRing.Val(Cmp(Eq, x, y)) when x = y ->
             (* X = X is a no-op *)
@@ -500,10 +502,10 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
             values. *)
          | Value(ValueRing.Val(AVar(v))) when v = lift_v -> expr_sub
          | Value(v) when List.mem lift_v (Arithmetic.vars_of_value v) -> 
-            CalcRing.mk_val (Value(
+            C.mk_value(
                Arithmetic.eval_partial 
                   ~scope:[lift_v, val_sub " value expression"] v
-            ))
+            )
          | Value(_) -> CalcRing.mk_val x
          | AggSum(gb_vars, subexp) ->
             (* subexp is rewritten.  We just need to update gb_vars properly.
@@ -521,34 +523,33 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
             let new_gb_vars = 
                ListAsSet.inter mapped_gb_vars (snd (C.schema_of_expr subexp))
             in            
-               C.mk_aggsum subexp new_gb_vars
+               C.mk_aggsum new_gb_vars subexp
          | Rel(rn, rv) ->
             let new_rv = map_vars " relation var" rv in
-               CalcRing.mk_val (Rel(rn, new_rv))
+               C.mk_rel rn new_rv
 
          | External(en, eiv, eov, et, em) ->
             (* The metadata is already rewritten *)
             let new_eiv = map_vars "n external input var" eiv in
             let new_eov = map_vars "n external output var" eov in
-               CalcRing.mk_val (External(en, new_eiv, new_eov, et, em))
+               C.mk_external en new_eiv new_eov et em
 
          | Cmp(op, lhs, rhs) when 
             (List.mem lift_v (Arithmetic.vars_of_value lhs)) ||
             (List.mem lift_v (Arithmetic.vars_of_value rhs)) ->
             let new_lhs = Arithmetic.eval_partial 
-                     ~scope:[lift_v, val_sub " cmp expression"] 
-                            lhs in
+                     ~scope:[lift_v, val_sub " cmp expression"] lhs 
+            in
             let new_rhs = Arithmetic.eval_partial 
-                     ~scope:[lift_v, val_sub " cmp expression"] 
-                            rhs in
-               CalcRing.mk_val (Cmp(op, new_lhs, new_rhs))
+                     ~scope:[lift_v, val_sub " cmp expression"] rhs 
+            in
+               C.mk_cmp op new_lhs new_rhs
 
-         | Cmp(op, lhs, rhs) ->
-            CalcRing.mk_val (Cmp(op, lhs, rhs))
+         | Cmp(op, lhs, rhs) -> C.mk_cmp op lhs rhs
 
 
 (***** BEGIN EXISTS HACK *****)
-         | Exists(subexp) -> CalcRing.mk_val (Exists(subexp))
+         | Exists(subexp) -> C.mk_exists subexp
             (* Subexp is rewritten.  No changes need to be made here *)
 (***** END EXISTS HACK *****)
 
@@ -561,15 +562,14 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
                for the sake of code simplicity we take a slight hit: we cannot
                do comparisons over expressions. *)
             begin match combine_values ~aggressive:true subexp with
-               | _ when force -> CalcRing.mk_val (Lift(v, subexp))
+               | _ when force -> C.mk_lift v subexp
                | CalcRing.Val(Value(subexp_v)) ->
-                  CalcRing.mk_val (Cmp(Eq, subexp_v,
-                     val_sub ~aggressive:true " lift comparison"
-                  ))
+                  C.mk_cmp 
+                     Eq subexp_v (val_sub ~aggressive:true " lift comparison")
                | _ -> raise (CouldNotUnifyException("Conflicting Lift"))
             end
             (* the subexp is already rewritten *)
-         | Lift(v, subexp) -> CalcRing.mk_val (Lift(v, subexp))
+         | Lift(v, subexp) -> C.mk_lift v subexp
             
       end) expr
       in 
@@ -596,7 +596,7 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
       
 (***** BEGIN EXISTS HACK *****)
       | CalcRing.Val(Exists(subexp)) -> 
-         CalcRing.mk_val (Exists(rcr scope schema subexp))
+         C.mk_exists (rcr scope schema subexp)
 (***** END EXISTS HACK *****)
       
       | CalcRing.Val(AggSum(gb_vars, subexp)) ->
@@ -620,7 +620,7 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
                " in AggSum of: "^
                (CalculusPrinter.string_of_expr new_subexp)
             );
-            C.mk_aggsum new_subexp new_gb_vars
+            C.mk_aggsum new_gb_vars new_subexp
       
       | CalcRing.Val(Lift(lift_v, subexp)) ->
          let subexp_schema = ListAsSet.diff schema [lift_v] in
@@ -632,7 +632,7 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
                   "Could not unify "^(string_of_var lift_v)^" because: "^msg^
                   " in terminal lift"
                );
-               CalcRing.mk_val (Lift(lift_v, new_subexp))
+               C.mk_lift lift_v new_subexp
          )
 
       | CalcRing.Sum(sum_terms) ->
@@ -673,7 +673,7 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
                   ListAsSet.diff schema new_scope
                in
                   CalcRing.mk_prod [
-                     CalcRing.mk_val (Lift(lift_v, new_subexp));
+                     C.mk_lift lift_v new_subexp;
                      rcr new_scope new_schema simplified_rest
                   ]
             )
@@ -714,7 +714,7 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
 let advance_lifts scope expr =
    Debug.print "LOG-CALCOPT-DETAIL" (fun () -> 
       "Advance Lifts: "^(CalculusPrinter.string_of_expr expr));
-   Calculus.rewrite ~scope:scope (fun _ x -> CalcRing.mk_sum x)
+   C.rewrite ~scope:scope (fun _ x -> CalcRing.mk_sum x)
    (fun (scope, _) pl ->
       Debug.print "LOG-ADVANCE-LIFTS" (fun () -> 
          "Advance Lifts: processing " ^
@@ -754,7 +754,7 @@ let advance_lifts scope expr =
                let new_gb_vars = 
                   ListAsSet.inter gb_vars (snd (C.schema_of_expr subexp))
                in
-                  C.mk_aggsum subexp new_gb_vars
+                  C.mk_aggsum new_gb_vars subexp
             | _ -> CalcRing.mk_val x
          end)
    expr
@@ -833,7 +833,7 @@ let rec nesting_rewrites (expr:C.expr_t) =
                                  ListAsSet.union gb_vars
                                     (ListAsSet.inter sum_ivars term_ovars)
                               in
-                                 C.mk_aggsum term term_gb_vars
+                                 C.mk_aggsum term_gb_vars term
                            ) sl)
                      in
                      Debug.print "LOG-NESTINGREWRITES-DETAIL" (fun () ->
@@ -872,14 +872,14 @@ let rec nesting_rewrites (expr:C.expr_t) =
                            );
                            CalcRing.mk_prod 
                               [  unnested; 
-                                 C.mk_aggsum nested new_gb_vars ]
+                                 C.mk_aggsum new_gb_vars nested ]
                   | CalcRing.Val(AggSum(_, term)) ->
-                     C.mk_aggsum term gb_vars
+                     C.mk_aggsum gb_vars term
                   | _ -> 
                      if ListAsSet.subset (snd (C.schema_of_expr subterm))
                                          gb_vars 
                      then subterm
-                     else C.mk_aggsum subterm gb_vars
+                     else C.mk_aggsum gb_vars subterm
                end
          
 (***** BEGIN EXISTS HACK *****)
@@ -890,9 +890,9 @@ let rec nesting_rewrites (expr:C.expr_t) =
                | CalcRing.Val(Value(ValueRing.Val(AConst(CInt(_))))) ->
                   CalcRing.one
                | CalcRing.Val(Value(ValueRing.Val(AConst(_)))) ->
-                  Calculus.bail_out (CalcRing.mk_val e) 
+                  C.bail_out (CalcRing.mk_val e) 
                      "Exists with a non-integer value"
-               | subexp -> CalcRing.mk_val (Exists(subexp))
+               | subexp -> C.mk_exists subexp
             end               
             
 (***** END EXISTS HACK *****)
@@ -917,16 +917,16 @@ let rec nesting_rewrites (expr:C.expr_t) =
                else if List.mem v nested_ivars
                then begin match nested with
                   | CalcRing.Val (Value(cmp_val)) ->
-                     CalcRing.mk_val (Cmp(Eq, Arithmetic.mk_var v, cmp_val))
+                     C.mk_cmp Eq (Arithmetic.mk_var v) cmp_val
                   | _ ->
                      let temp_var = mk_temp_var nested in
                         CalcRing.mk_prod [
-                           CalcRing.mk_val (Lift(temp_var, nested));
-                           CalcRing.mk_val (Cmp(Eq, Arithmetic.mk_var v,
-                                                    Arithmetic.mk_var temp_var))
+                           C.mk_lift temp_var nested;
+                           C.mk_cmp Eq (Arithmetic.mk_var v)
+                                              (Arithmetic.mk_var temp_var)
                         ]
                   end
-               else CalcRing.mk_val (Lift(v, nested))
+               else C.mk_lift v nested
             in lift_expr
          | _ -> CalcRing.mk_val e
       end)

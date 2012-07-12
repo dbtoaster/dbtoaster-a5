@@ -69,7 +69,7 @@ let rec delta_of_expr (delta_event:Schema.event_t) (expr:C.expr_t): C.expr_t =
          else
          let definition_terms = 
             Calculus.value_singleton 
-               (List.combine relv (List.map mk_var delta_relv))
+               (List.combine relv (List.map Arithmetic.mk_var delta_relv))
          in apply_sign definition_terms
       else CalcRing.zero
    in
@@ -98,13 +98,16 @@ let rec delta_of_expr (delta_event:Schema.event_t) (expr:C.expr_t): C.expr_t =
                   then Calculus.value_singleton
                      ~multiplicity:(
                         CalcRing.mk_prod (
-                           (CalcRing.mk_val (Value(mk_var delta_value))) :: 
+                           (Calculus.mk_value 
+                               (Arithmetic.mk_var delta_value)) :: 
                            (List.map (fun (iv,div) ->
-                              CalcRing.mk_val (Cmp(Eq, mk_var iv, mk_var div))
+                               Calculus.mk_cmp Eq (Arithmetic.mk_var iv) 
+                                                  (Arithmetic.mk_var div)
                            ) (List.combine ext_ivars delta_ivars))
                         )
                      )
-                     (List.combine ext_ovars (List.map mk_var delta_ovars))
+                     (List.combine ext_ovars 
+                                   (List.map Arithmetic.mk_var delta_ovars))
                   else CalcRing.zero
                )
             )
@@ -125,7 +128,7 @@ let rec delta_of_expr (delta_event:Schema.event_t) (expr:C.expr_t): C.expr_t =
                let sub_t_delta = rcr sub_t in
                   if sub_t_delta = CalcRing.zero
                   then CalcRing.zero
-                  else CalcRing.mk_val (AggSum(gb_vars, rcr sub_t))
+                  else Calculus.mk_aggsum gb_vars (rcr sub_t)
          (*****************************************)
             | Rel(reln,relv) -> delta_of_rel reln relv
          (*****************************************)
@@ -164,13 +167,9 @@ let rec delta_of_expr (delta_event:Schema.event_t) (expr:C.expr_t): C.expr_t =
                   CalcRing.mk_prod [
                      delta_lhs;
                      CalcRing.mk_sum [
-                        CalcRing.mk_val (
-                           Lift(v, CalcRing.mk_sum [
-                              sub_t;
-                              delta_rhs
-                           ])
-                        );
-                        CalcRing.mk_neg (CalcRing.mk_val (Lift(v, sub_t)))
+                        Calculus.mk_lift v 
+                           (CalcRing.mk_sum [sub_t; delta_rhs]);
+                        CalcRing.mk_neg (Calculus.mk_lift v sub_t)
                      ]
                   ]
                )
@@ -190,13 +189,9 @@ let rec delta_of_expr (delta_event:Schema.event_t) (expr:C.expr_t): C.expr_t =
                   CalcRing.mk_prod [
                      delta_lhs;
                      CalcRing.mk_sum [
-                        CalcRing.mk_val (
-                           Exists(CalcRing.mk_sum [
-                              sub_t;
-                              delta_rhs
-                           ])
-                        );
-                        CalcRing.mk_neg (CalcRing.mk_val (Exists(sub_t)))
+                        Calculus.mk_exists 
+                           (CalcRing.mk_sum [sub_t; delta_rhs]);
+                        CalcRing.mk_neg (Calculus.mk_exists sub_t)
                      ]
                   ]
                )

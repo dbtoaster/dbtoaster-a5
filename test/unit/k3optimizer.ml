@@ -18,13 +18,13 @@ in
 
 (****** Beta reduction ******)
 
-k3_map "QUERY22(float)[][C1_NATIONKEY:int]";
-k3_map "QUERY22_mCUSTOMER1_L3_1(int)[][ORDERS_CUSTKEY:int]";
-k3_map "QUERY22_mCUSTOMER1_L2_1(float)[][]";
-k3_map "QUERY22_mCUSTOMER1(float)[]
-               [C1_CUSTKEY:int,C1_NATIONKEY:int,C1_ACCTBAL:float]";
-k3_map "COUNT(int)[][S_C : int]";
-k3_map "COUNT_mR1_L2_1(int)[][S_A : int]";
+let _ = k3_map "QUERY22(float)[][C1_NATIONKEY:int]";;
+let _ = k3_map "QUERY22_mCUSTOMER1_L3_1(int)[][ORDERS_CUSTKEY:int]";;
+let _ = k3_map "QUERY22_mCUSTOMER1_L2_1(float)[][]";;
+let _ = k3_map "QUERY22_mCUSTOMER1(float)[]
+               [C1_CUSTKEY:int,C1_NATIONKEY:int,C1_ACCTBAL:float]";;
+let _ = k3_map "COUNT(int)[][S_C : int]";;
+let _ = k3_map "COUNT_mR1_L2_1(int)[][S_A : int]";;
 
 let test msg expr expected =
    log_test ("Beta Reduction ( "^msg^" )")

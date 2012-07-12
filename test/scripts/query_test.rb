@@ -146,6 +146,7 @@ class CppUnitTest < GenericUnitTest
     unless $skip_compile then
       compile_cmd = 
         "OCAMLRUNPARAM='#{$ocamlrunparam}';" +
+        $timeout_compile +
         (dbt_base_cmd + [
         "-l","cpp",
         "-o","bin/queries/#{@qname}.hpp",
@@ -158,7 +159,8 @@ class CppUnitTest < GenericUnitTest
     end
     return if $compile_only;
     starttime = Time.now;
-    IO.popen("bin/queries/#{@qname} #{$executable_args.join(" ")}",
+    IO.popen($timeout_exec + 
+             "bin/queries/#{@qname} #{$executable_args.join(" ")}",
              "r") do |qin|
       output = qin.readlines;
       endtime = Time.now;
@@ -194,6 +196,7 @@ class ScalaUnitTest < GenericUnitTest
 	       File::exists?("bin/queries/#{@qname}.jar");
       compile_cmd = 
         "OCAMLRUNPARAM='#{$ocamlrunparam}';" +
+        $timeout_compile + 
         (dbt_base_cmd + [
         "-l","scala",
         "-o","bin/queries/#{@qname}.scala",
@@ -206,7 +209,11 @@ class ScalaUnitTest < GenericUnitTest
     end
     return if $compile_only;
     starttime = Time.now;
-    IO.popen("scala -J-Xmx2048M -classpath \"bin/queries/#{@qname}.jar:lib/dbt_scala/dbtlib.jar\" org.dbtoaster.RunQuery", "r") do |qin|
+    IO.popen($timeout_exec +
+             "scala -J-Xmx2048M " + 
+             "-classpath \"bin/queries/#{@qname}.jar:" + 
+                          "lib/dbt_scala/dbtlib.jar\" " + 
+             "org.dbtoaster.RunQuery", "r") do |qin|
       output = qin.readlines;
       endtime = Time.now;
       output = output.map { |l| l.chomp.strip }.join("");
@@ -234,6 +241,7 @@ end
 class InterpreterUnitTest < GenericUnitTest
   def run
     cmd = "OCAMLRUNPARAM='#{$ocamlrunparam}';"+
+       "#{$timeout_exec}"+
        "#{dbt_base_cmd.join(" ")}"+
        " -d SINGLE-LINE-MAP-OUTPUT"+
        " -d PARSEABLE-VALUES"+
@@ -278,6 +286,8 @@ $depth = nil;
 $verbose = false;
 $compile_only = false;
 $dataset = nil;
+$timeout_exec = "";
+$timeout_compile = "";
 $compiler_args = [];
 $executable_args = [];
 $dump_query = false;
@@ -295,6 +305,8 @@ GetoptLong.new(
   [ '--strict',          GetoptLong::NO_ARGUMENT],
   [ '--compile-only',    GetoptLong::NO_ARGUMENT],
   [ '--dataset',         GetoptLong::REQUIRED_ARGUMENT],
+  [ '--timeout',         GetoptLong::REQUIRED_ARGUMENT],  
+  [ '--timeout-compile', GetoptLong::REQUIRED_ARGUMENT],    
   [ '--trace',           GetoptLong::OPTIONAL_ARGUMENT],
   [ '--dump-query',      GetoptLong::NO_ARGUMENT],
   [ '--memprofiling',    GetoptLong::NO_ARGUMENT],
@@ -309,7 +321,9 @@ GetoptLong.new(
         when 'cpp'         then tests.push CppUnitTest
         when 'interpreter' then tests.push InterpreterUnitTest
         when 'scala'       then tests.push ScalaUnitTest
-        when 'all'         then tests = [CppUnitTest, InterpreterUnitTest, ScalaUnitTest]
+        when 'all'         then tests = [CppUnitTest, 
+                                         InterpreterUnitTest, 
+                                         ScalaUnitTest]
       end
     when '-d' then $debug_flags.push(arg)
     when '--depth' then $depth = arg
@@ -317,6 +331,14 @@ GetoptLong.new(
     when '-v', '--verbose' then $verbose = true;
     when '--compile-only' then $compile_only = true;
     when '--dataset' then $dataset = arg;
+    when '--timeout' then 
+      if system("which -s timeout") && !arg.nil?
+      then $timeout_exec = "timeout #{arg} " 
+      end
+    when '--timeout-compile' then 
+      if system("which -s timeout") && !arg.nil?
+      then $timeout_compile = "timeout #{arg} " 
+      end
     when '--trace' then $executable_args += ["-t", "QUERY_1_1", "-s", 
                                              if arg.nil? then "100" 
                                                          else arg end ];
@@ -350,7 +372,15 @@ queries.each do |tquery|
       (if $executable_args.empty? then [] 
                                   else [["runtime args", 
                                          ["'#{$executable_args.join(" ")}'"]]] 
-                                  end)
+                                  end)+
+      (if $timeout_exec.empty? then []
+                               else [["execution timeout",
+                                      ["#{$timeout_exec.split(" ")[1]}"]]]
+                               end)+
+      (if $timeout_compile.empty? then []
+                               else [["compile timeout",
+                                      ["#{$timeout_compile.split(" ")[1]}"]]]
+                               end)                               
     opt_string =
       if opt_terms.empty? then ""
       else " with #{opt_terms.map{|k,tm|"#{k} #{tm.join(", ")}"}.join("; ")}"

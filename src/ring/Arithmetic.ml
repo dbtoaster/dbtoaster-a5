@@ -62,6 +62,10 @@ let mk_string (s:string ):value_t = ValueRing.mk_val (AConst(CString(s)))
 let mk_const  (c:const_t):value_t = ValueRing.mk_val (AConst(c))
 (** Produce the value equivalent of a variable *)
 let mk_var    (v:var_t  ):value_t = ValueRing.mk_val (AVar(v))
+(** Produce the value equivalent of a function *)
+let mk_fn (n:string) (a:value_t list) (t:type_t):value_t = 
+   ValueRing.mk_val (AFn(n,a,t))
+             
 
 (**** Stringifiers ****)
 (**

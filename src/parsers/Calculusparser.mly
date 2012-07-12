@@ -127,14 +127,14 @@ valueExpr:
 | valueExpr MINUS valueExpr   { ValueRing.mk_sum  [$1; ValueRing.mk_neg $3] }
 | MINUS valueExpr             { match $2 with
                                 | ValueRing.Val(AConst(c)) ->
-                                 ValueRing.mk_val 
-                                    (AConst(Constants.Math.prod c (CInt(-1)))) 
+                                     Arithmetic.mk_const
+                                        (Constants.Math.prod c (CInt(-1)))  
                                 | _ -> ValueRing.mk_neg $2 }
 | valueLeaf                   { $1 }
 
 valueLeaf:
-| constant                    { ValueRing.mk_val (AConst $1) }
-| variable                    { ValueRing.mk_val (AVar $1) }
+| constant                    { Arithmetic.mk_const $1 }
+| variable                    { Arithmetic.mk_var $1 }
 | functionDefn                { ValueRing.mk_val $1 }
 
 calculusExpr:
@@ -149,25 +149,25 @@ ivcCalculusExpr:
 | ivcCalculusExpr MINUS ivcCalculusExpr 
                                   { CalcRing.mk_sum [$1; CalcRing.mk_neg $3] }
 | MINUS ivcCalculusExpr           { CalcRing.mk_neg $2 }
-| LBRACE valueExpr RBRACE         { CalcRing.mk_val (Value $2) }
-| valueLeaf                       { CalcRing.mk_val (Value $1) }
+| LBRACE valueExpr RBRACE         { Calculus.mk_value $2 }
+| valueLeaf                       { Calculus.mk_value $1 }
 | AGGSUM LPAREN LBRACKET emptyVariableList RBRACKET COMMA ivcCalculusExpr RPAREN
-                                  { CalcRing.mk_val (AggSum($4, $7)) }
+                                  { Calculus.mk_aggsum $4 $7 }
 | relationDefn                    { let (reln, relv) = $1 in
-                                    CalcRing.mk_val (Rel(reln, relv)) }
+                                    Calculus.mk_rel reln relv }
 | externalDefn                    { let (en, iv, ov, et, em) = $1 in
-                                    CalcRing.mk_val (External(en,iv,ov,et,em)) }
+                                    Calculus.mk_external en iv ov et em }
 | LBRACE valueExpr comparison valueExpr RBRACE
-                                  { CalcRing.mk_val (Cmp($3,$2,$4)) }
+                                  { Calculus.mk_cmp $3 $2 $4 }
 | LPAREN variable LIFT ivcCalculusExpr RPAREN
   { let (var_n, var_t) = $2 in 
    let (e_type) = 
       if Debug.active "PARSE-CALC-WITH-FLOAT-VARS" then var_t
       else Calculus.type_of_expr $4 in
    let target = (var_n, e_type) in
-    CalcRing.mk_val (Lift(target, $4)) }
+      Calculus.mk_lift target $4 }
 //(***** BEGIN EXISTS HACK *****)
-| EXISTS LPAREN calculusExpr RPAREN { CalcRing.mk_val (Exists($3)) }
+| EXISTS LPAREN calculusExpr RPAREN { Calculus.mk_exists $3 }
 //(***** END EXISTS HACK *****)
 
 comparison:
@@ -261,13 +261,14 @@ mapProgramStatement:
 mapView:
 | DECLARE mapViewMetadata MAP externalDefnWithoutMeta 
   SETVALUE ivcCalculusExpr { 
-      let (name, ivars, ovars, dtype, _) = $4 in
+      let (name, ivars, ovars, dtype, meta) = $4 in
       (  {
             Plan.ds_name = Plan.mk_ds_name name (ivars,ovars) dtype;
             Plan.ds_definition = $6
          },
          if List.mem MapIsQuery $2
-         then [name, CalcRing.mk_val (External($4))] else []
+         then [name, Calculus.mk_external name ivars ovars dtype meta] 
+         else []
       )
    }
 
@@ -307,9 +308,10 @@ mapTriggerStmtList:
 |                                          { [] }
 
 mapTriggerStmt:
-| externalDefn mapTriggerType ivcCalculusExpr { 
+| externalDefn mapTriggerType ivcCalculusExpr {
+      let (en, iv, ov, et, em) = $1 in 
       Calculus.sanity_check_variable_names $3;
-      {  target_map  = CalcRing.mk_val (External($1));
+      {  target_map  = Calculus.mk_external en iv ov et em;
          update_type = $2;
          update_expr = $3
       }

@@ -86,7 +86,7 @@ let rec format_value (v:value_t) =
          
       | ValueRing.Neg(element) -> 
          !fmt.string "(";
-         format_list format_value " *" [(mk_int (-1)); element];
+         format_list format_value " *" [(Arithmetic.mk_int (-1)); element];
          !fmt.string ")"
          
       | ValueRing.Val(AConst(_)) | ValueRing.Val(AVar(_)) -> 
@@ -127,7 +127,7 @@ let rec format_expr ?(show_type = false) (expr:expr_t) =
       | CalcRing.Neg(element) -> 
          !fmt.string "(";
          format_list format_expr " *"
-                     [  (CalcRing.mk_val (Value(mk_int (-1))));
+                     [  Calculus.mk_value (Arithmetic.mk_int (-1));
                         element ];
          !fmt.string ")"
 

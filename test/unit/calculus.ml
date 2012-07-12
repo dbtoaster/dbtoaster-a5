@@ -6,9 +6,9 @@ open UnitTest
 
 
 let test_expr = 
-   mk_prod [
-      mk_val (Value(mk_int 1));
-      mk_val (rel "R" ["a";"b"])
+   CalcRing.mk_prod [
+      Calculus.mk_value (Arithmetic.mk_int 1);
+      Calculus.mk_rel "R" (List.map var ["a";"b"])
    ]
 ;;
 
@@ -40,18 +40,16 @@ log_test "Parsing"
    string_of_expr
    (parse_calc "R(A,B) * S(B,C) * {A+C} * {A < C}")
    (CalcRing.mk_prod [
-      CalcRing.mk_val (rel "R" ["A"; "B"]);
-      CalcRing.mk_val (rel "S" ["B"; "C"]);
-      CalcRing.mk_val (Value(
+      Calculus.mk_rel "R" (List.map var ["A"; "B"]);
+      Calculus.mk_rel "S" (List.map var ["B"; "C"]);
+      Calculus.mk_value (
          ValueRing.mk_sum [
             Arithmetic.mk_var (var "A");
             Arithmetic.mk_var (var "C")
          ]
-      ));
-      CalcRing.mk_val (Cmp(Lt,
-         Arithmetic.mk_var (var "A"),
-         Arithmetic.mk_var (var "C")
-      ))
+      );
+      Calculus.mk_cmp Lt (Arithmetic.mk_var (var "A"))
+                         (Arithmetic.mk_var (var "C"))
    ])
 ;;
 

@@ -38,7 +38,8 @@ let extract_renamings ((scope,schema):schema_t) (expr:expr_t):
             CalcRing.Val(Value(ValueRing.Val(AVar(v2))))))
                when (List.mem v2 scope) && (List.mem v1 scope) ->
                   (mappings, expr_terms @ [
-                     CalcRing.mk_val (Cmp(Eq, mk_var v1, mk_var v2))
+                     Calculus.mk_cmp Eq (Arithmetic.mk_var v1) 
+                                        (Arithmetic.mk_var v2)
                   ])
 
          | _ ->  (mappings, expr_terms @ [term])
@@ -63,7 +64,8 @@ let extract_renamings ((scope,schema):schema_t) (expr:expr_t):
                 | x::rest -> 
                   (  (orig_var, x), 
                      CalcRing.mk_prod (List.map (fun y -> 
-                        CalcRing.mk_val (Cmp(Eq, mk_var x, mk_var y))
+                        Calculus.mk_cmp Eq (Arithmetic.mk_var x) 
+                                           (Arithmetic.mk_var y)
                      ) rest)
                   )
             )
@@ -80,14 +82,13 @@ let extract_renamings ((scope,schema):schema_t) (expr:expr_t):
          (fun leaf -> (begin match leaf with
             | AggSum(gb_vars, subexp) ->
                let new_subexp = fix_schemas subexp in
-               CalcRing.mk_val (AggSum(
-                  ListAsSet.inter gb_vars (snd (schema_of_expr new_subexp)),
+               Calculus.mk_aggsum 
+                  (ListAsSet.inter gb_vars (snd (schema_of_expr new_subexp)))
                   new_subexp
-               ))
             | Lift(var1, CalcRing.Val(Value(ValueRing.Val(AVar(var2)))))
                   when var1 = var2 -> CalcRing.one
             | Lift(var, subexp) -> 
-               CalcRing.mk_val (Lift(var, fix_schemas subexp))
+               Calculus.mk_lift var (fix_schemas subexp)
             | _ -> CalcRing.mk_val leaf
          end))
          expr
@@ -232,15 +233,16 @@ let compile_map (heuristic_options:Heuristics.heuristic_options_t)
          triggers      := 
             (delta_event, {
                Plan.target_map = 
-                  CalcRing.mk_val (External(
-                     todo_name, 
-                     List.map (ListAsFunction.apply_if_present delta_renamings) 
-                              todo_ivars,
-                     List.map (ListAsFunction.apply_if_present delta_renamings) 
-                              todo_ovars,
-                     todo_base_type,
-                     todo_ivc  
-                  ));
+                  Calculus.mk_external 
+                     todo_name 
+                     (List.map 
+                        (ListAsFunction.apply_if_present delta_renamings) 
+                        todo_ivars)
+                     (List.map 
+                         (ListAsFunction.apply_if_present delta_renamings) 
+                         todo_ovars)
+                     todo_base_type
+                     todo_ivc;
                Plan.update_type = Plan.UpdateStmt;
                Plan.update_expr = materialized_delta
             }) :: !triggers
@@ -310,9 +312,8 @@ let compile_map (heuristic_options:Heuristics.heuristic_options_t)
    in
       (((!trigger_todos) @ (List.map (fun x -> (depth+1,x, true)) init_todos)),{
          description = {
-            ds_name = CalcRing.mk_val (External(
-                  todo_name, todo_ivars, todo_ovars, todo_type, init_expr
-               ));
+            ds_name = Calculus.mk_external todo_name todo_ivars todo_ovars 
+                                           todo_type init_expr;
             ds_definition = optimized_defn
          };
          ds_triggers = !triggers
@@ -323,7 +324,7 @@ let compile_table ((reln, relv, relut):Schema.rel_t): compiled_ds_t =
    let map_name = (Plan.mk_ds_name ("_"^reln) ([],relv) TInt) in {
       Plan.description = {
          Plan.ds_name       = map_name ;
-         Plan.ds_definition = (CalcRing.mk_val (Rel(reln, relv)))
+         Plan.ds_definition = Calculus.mk_rel reln relv
       };
       Plan.ds_triggers = (List.map (fun (event, update_expr) ->
          (event, {
@@ -359,11 +360,11 @@ let compile_tlqs (heuristic_options:Heuristics.heuristic_options_t)
                let (_,mat_ovars) = (Calculus.schema_of_expr mat_expr) in
                if mat_ovars = snd qschema then mat_expr
                else 
-                  CalcRing.mk_val (AggSum(snd qschema, 
-                     match mat_expr with   
-                        | CalcRing.Val(AggSum(_,as_expr)) -> as_expr
-                        | _ -> mat_expr
-                  ))
+                  Calculus.mk_aggsum (snd qschema) 
+                     (match mat_expr with   
+                      | CalcRing.Val(AggSum(_,as_expr)) -> as_expr
+                      | _ -> mat_expr
+                     )
             in
                (  List.map (fun x -> (1, x, true)) todos, 
                   (qname, schema_ordered_expr)

@@ -1,0 +1,632 @@
+##### DATASET tiny  #####
+
+##  DATASET tiny: Optimization Level O3  ##
+
+# VLDB 2012 TPCH test cases
+
+tpch3   -t interpreter --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch11a -t interpreter --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch17a -t interpreter --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch18a -t interpreter --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch22a -t interpreter --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+ssb4    -t interpreter --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+
+tpch3   -t cpp --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch11a -t cpp --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch17a -t cpp --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch18a -t cpp --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch22a -t cpp --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+ssb4    -t cpp --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+
+tpch3   -t scala --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch11a -t scala --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch17a -t scala --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch18a -t scala --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch22a -t scala --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+ssb4    -t scala --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+
+
+# VLDB 2012 financial test cases
+
+axfinder       -t interpreter --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+brokerspread   -t interpreter --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+brokervariance -t interpreter --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+missedtrades   -t interpreter --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+pricespread    -t interpreter --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+vwap           -t interpreter --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+vwap           -t interpreter --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200 -d HEURISTICS-ENABLE-INPUTVARS
+
+axfinder       -t cpp --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+brokerspread   -t cpp --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+brokervariance -t cpp --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+missedtrades   -t cpp --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+pricespread    -t cpp --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+vwap           -t cpp --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+vwap           -t cpp --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200 -d HEURISTICS-ENABLE-INPUTVARS
+
+axfinder       -t scala --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+brokerspread   -t scala --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+brokervariance -t scala --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+missedtrades   -t scala --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+pricespread    -t scala --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+vwap           -t scala --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+vwap           -t scala --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200 -d HEURISTICS-ENABLE-INPUTVARS
+
+
+# TPCH test cases
+
+tpch1   -t interpreter --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch2   -t interpreter --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch3   -t interpreter --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch4   -t interpreter --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch5   -t interpreter --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch6   -t interpreter --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch7   -t interpreter --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch8   -t interpreter --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200 --timeout-compile 1200
+tpch9   -t interpreter --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch10  -t interpreter --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200 
+tpch11  -t interpreter --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200 --timeout-compile 1200
+tpch11  -t interpreter --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200 --timeout-compile 1200 -d COMPILE-WITHOUT-OPT
+tpch11c -t interpreter --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200 --timeout-compile 1200
+tpch11c -t interpreter --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200 --timeout-compile 1200 -d COMPILE-WITHOUT-OPT
+tpch12  -t interpreter --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch13  -t interpreter --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch14  -t interpreter --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch15  -t interpreter --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch16  -t interpreter --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch17  -t interpreter --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch18  -t interpreter --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch19  -t interpreter --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch20  -t interpreter --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch21  -t interpreter --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch22  -t interpreter --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+
+tpch1   -t cpp --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch2   -t cpp --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch3   -t cpp --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch4   -t cpp --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch5   -t cpp --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch6   -t cpp --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch7   -t cpp --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch8   -t cpp --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200 --timeout-compile 1200
+tpch9   -t cpp --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch10  -t cpp --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200 
+tpch11  -t cpp --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200 --timeout-compile 1200
+tpch11  -t cpp --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200 --timeout-compile 1200 -d COMPILE-WITHOUT-OPT
+tpch11c -t cpp --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200 --timeout-compile 1200
+tpch11c -t cpp --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200 --timeout-compile 1200 -d COMPILE-WITHOUT-OPT
+tpch12  -t cpp --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch13  -t cpp --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch14  -t cpp --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch15  -t cpp --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch16  -t cpp --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch17  -t cpp --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch18  -t cpp --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch19  -t cpp --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch20  -t cpp --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch21  -t cpp --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch22  -t cpp --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+
+tpch1   -t scala --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch2   -t scala --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch3   -t scala --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch4   -t scala --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch5   -t scala --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch6   -t scala --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch7   -t scala --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch8   -t scala --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200 --timeout-compile 1200
+tpch9   -t scala --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch10  -t scala --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200 
+tpch11  -t scala --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200 --timeout-compile 1200
+tpch11  -t scala --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200 --timeout-compile 1200 -d COMPILE-WITHOUT-OPT
+tpch11c -t scala --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200 --timeout-compile 1200
+tpch11c -t scala --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200 --timeout-compile 1200 -d COMPILE-WITHOUT-OPT
+tpch12  -t scala --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch13  -t scala --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch14  -t scala --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch15  -t scala --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch16  -t scala --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch17  -t scala --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch18  -t scala --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch19  -t scala --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch20  -t scala --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch21  -t scala --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+tpch22  -t scala --dataset tiny --ignore-errors -d mt -f -O3 --timeout 1200
+
+
+##  DATASET tiny: Optimization Level O2  ##
+
+
+# VLDB 2012 TPCH test cases
+
+tpch3   -t interpreter --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch11a -t interpreter --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch17a -t interpreter --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch18a -t interpreter --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch22a -t interpreter --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+ssb4    -t interpreter --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+
+tpch3   -t cpp --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch11a -t cpp --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch17a -t cpp --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch18a -t cpp --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch22a -t cpp --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+ssb4    -t cpp --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+
+tpch3   -t scala --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch11a -t scala --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch17a -t scala --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch18a -t scala --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch22a -t scala --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+ssb4    -t scala --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+
+
+# VLDB 2012 financial test cases
+
+axfinder       -t interpreter --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+brokerspread   -t interpreter --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+brokervariance -t interpreter --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+missedtrades   -t interpreter --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+pricespread    -t interpreter --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+vwap           -t interpreter --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+vwap           -t interpreter --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200 -d HEURISTICS-ENABLE-INPUTVARS
+
+axfinder       -t cpp --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+brokerspread   -t cpp --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+brokervariance -t cpp --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+missedtrades   -t cpp --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+pricespread    -t cpp --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+vwap           -t cpp --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+vwap           -t cpp --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200 -d HEURISTICS-ENABLE-INPUTVARS
+
+axfinder       -t scala --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+brokerspread   -t scala --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+brokervariance -t scala --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+missedtrades   -t scala --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+pricespread    -t scala --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+vwap           -t scala --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+vwap           -t scala --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200 -d HEURISTICS-ENABLE-INPUTVARS
+
+
+# TPCH test cases
+
+tpch1   -t interpreter --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch2   -t interpreter --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch3   -t interpreter --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch4   -t interpreter --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch5   -t interpreter --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch6   -t interpreter --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch7   -t interpreter --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch8   -t interpreter --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200 --timeout-compile 1200
+tpch9   -t interpreter --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch10  -t interpreter --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200 
+tpch11  -t interpreter --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200 --timeout-compile 1200
+tpch11  -t interpreter --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200 --timeout-compile 1200 -d COMPILE-WITHOUT-OPT
+tpch11c -t interpreter --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200 --timeout-compile 1200
+tpch11c -t interpreter --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200 --timeout-compile 1200 -d COMPILE-WITHOUT-OPT
+tpch12  -t interpreter --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch13  -t interpreter --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch14  -t interpreter --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch15  -t interpreter --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch16  -t interpreter --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch17  -t interpreter --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch18  -t interpreter --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch19  -t interpreter --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch20  -t interpreter --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch21  -t interpreter --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch22  -t interpreter --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+
+tpch1   -t cpp --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch2   -t cpp --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch3   -t cpp --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch4   -t cpp --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch5   -t cpp --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch6   -t cpp --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch7   -t cpp --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch8   -t cpp --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200 --timeout-compile 1200
+tpch9   -t cpp --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch10  -t cpp --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200 
+tpch11  -t cpp --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200 --timeout-compile 1200
+tpch11  -t cpp --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200 --timeout-compile 1200 -d COMPILE-WITHOUT-OPT
+tpch11c -t cpp --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200 --timeout-compile 1200
+tpch11c -t cpp --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200 --timeout-compile 1200 -d COMPILE-WITHOUT-OPT
+tpch12  -t cpp --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch13  -t cpp --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch14  -t cpp --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch15  -t cpp --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch16  -t cpp --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch17  -t cpp --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch18  -t cpp --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch19  -t cpp --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch20  -t cpp --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch21  -t cpp --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch22  -t cpp --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+
+tpch1   -t scala --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch2   -t scala --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch3   -t scala --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch4   -t scala --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch5   -t scala --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch6   -t scala --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch7   -t scala --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch8   -t scala --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200 --timeout-compile 1200
+tpch9   -t scala --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch10  -t scala --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200 
+tpch11  -t scala --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200 --timeout-compile 1200
+tpch11  -t scala --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200 --timeout-compile 1200 -d COMPILE-WITHOUT-OPT
+tpch11c -t scala --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200 --timeout-compile 1200
+tpch11c -t scala --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200 --timeout-compile 1200 -d COMPILE-WITHOUT-OPT
+tpch12  -t scala --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch13  -t scala --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch14  -t scala --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch15  -t scala --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch16  -t scala --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch17  -t scala --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch18  -t scala --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch19  -t scala --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch20  -t scala --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch21  -t scala --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+tpch22  -t scala --dataset tiny --ignore-errors -d mt -f -O2 --timeout 1200
+
+
+##  DATASET tiny: Optimization Level O1  ##
+
+
+# VLDB 2012 TPCH test cases
+
+tpch3   -t interpreter --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch11a -t interpreter --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch17a -t interpreter --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch18a -t interpreter --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch22a -t interpreter --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+ssb4    -t interpreter --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+
+tpch3   -t cpp --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch11a -t cpp --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch17a -t cpp --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch18a -t cpp --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch22a -t cpp --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+ssb4    -t cpp --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+
+tpch3   -t scala --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch11a -t scala --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch17a -t scala --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch18a -t scala --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch22a -t scala --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+ssb4    -t scala --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+
+
+# VLDB 2012 financial test cases
+
+axfinder       -t interpreter --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+brokerspread   -t interpreter --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+brokervariance -t interpreter --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+missedtrades   -t interpreter --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+pricespread    -t interpreter --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+vwap           -t interpreter --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+vwap           -t interpreter --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200 -d HEURISTICS-ENABLE-INPUTVARS
+
+axfinder       -t cpp --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+brokerspread   -t cpp --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+brokervariance -t cpp --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+missedtrades   -t cpp --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+pricespread    -t cpp --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+vwap           -t cpp --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+vwap           -t cpp --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200 -d HEURISTICS-ENABLE-INPUTVARS
+
+axfinder       -t scala --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+brokerspread   -t scala --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+brokervariance -t scala --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+missedtrades   -t scala --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+pricespread    -t scala --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+vwap           -t scala --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+vwap           -t scala --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200 -d HEURISTICS-ENABLE-INPUTVARS
+
+
+# TPCH test cases
+
+tpch1   -t interpreter --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch2   -t interpreter --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch3   -t interpreter --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch4   -t interpreter --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch5   -t interpreter --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch6   -t interpreter --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch7   -t interpreter --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch8   -t interpreter --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200 --timeout-compile 1200
+tpch9   -t interpreter --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch10  -t interpreter --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200 
+tpch11  -t interpreter --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200 --timeout-compile 1200
+tpch11  -t interpreter --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200 --timeout-compile 1200 -d COMPILE-WITHOUT-OPT
+tpch11c -t interpreter --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200 --timeout-compile 1200
+tpch11c -t interpreter --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200 --timeout-compile 1200 -d COMPILE-WITHOUT-OPT
+tpch12  -t interpreter --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch13  -t interpreter --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch14  -t interpreter --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch15  -t interpreter --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch16  -t interpreter --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch17  -t interpreter --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch18  -t interpreter --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch19  -t interpreter --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch20  -t interpreter --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch21  -t interpreter --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch22  -t interpreter --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+
+tpch1   -t cpp --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch2   -t cpp --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch3   -t cpp --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch4   -t cpp --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch5   -t cpp --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch6   -t cpp --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch7   -t cpp --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch8   -t cpp --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200 --timeout-compile 1200
+tpch9   -t cpp --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch10  -t cpp --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200 
+tpch11  -t cpp --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200 --timeout-compile 1200
+tpch11  -t cpp --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200 --timeout-compile 1200 -d COMPILE-WITHOUT-OPT
+tpch11c -t cpp --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200 --timeout-compile 1200
+tpch11c -t cpp --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200 --timeout-compile 1200 -d COMPILE-WITHOUT-OPT
+tpch12  -t cpp --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch13  -t cpp --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch14  -t cpp --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch15  -t cpp --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch16  -t cpp --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch17  -t cpp --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch18  -t cpp --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch19  -t cpp --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch20  -t cpp --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch21  -t cpp --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch22  -t cpp --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+
+tpch1   -t scala --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch2   -t scala --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch3   -t scala --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch4   -t scala --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch5   -t scala --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch6   -t scala --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch7   -t scala --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch8   -t scala --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200 --timeout-compile 1200
+tpch9   -t scala --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch10  -t scala --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200 
+tpch11  -t scala --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200 --timeout-compile 1200
+tpch11  -t scala --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200 --timeout-compile 1200 -d COMPILE-WITHOUT-OPT
+tpch11c -t scala --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200 --timeout-compile 1200
+tpch11c -t scala --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200 --timeout-compile 1200 -d COMPILE-WITHOUT-OPT
+tpch12  -t scala --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch13  -t scala --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch14  -t scala --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch15  -t scala --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch16  -t scala --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch17  -t scala --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch18  -t scala --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch19  -t scala --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch20  -t scala --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch21  -t scala --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+tpch22  -t scala --dataset tiny --ignore-errors -d mt -f -O1 --timeout 1200
+
+
+##### DATASET tiny_del  #####
+
+##  DATASET tiny_del: Optimization Level O3  ##
+
+
+# VLDB 2012 TPCH test cases
+
+tpch3   -t cpp --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200
+tpch11a -t cpp --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200
+tpch17a -t cpp --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200
+tpch18a -t cpp --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200
+tpch22a -t cpp --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200
+ssb4    -t cpp --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200
+
+tpch3   -t scala --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200
+tpch11a -t scala --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200
+tpch17a -t scala --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200
+tpch18a -t scala --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200
+tpch22a -t scala --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200
+ssb4    -t scala --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200
+
+
+# TPCH test cases
+
+tpch1   -t cpp --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200
+tpch2   -t cpp --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200
+tpch3   -t cpp --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200
+tpch4   -t cpp --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200
+tpch5   -t cpp --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200
+tpch6   -t cpp --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200
+tpch7   -t cpp --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200
+tpch8   -t cpp --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200 --timeout-compile 1200
+tpch9   -t cpp --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200
+tpch10  -t cpp --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200 
+tpch11  -t cpp --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200 --timeout-compile 1200
+tpch11  -t cpp --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200 --timeout-compile 1200 -d COMPILE-WITHOUT-OPT
+tpch11c -t cpp --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200 --timeout-compile 1200
+tpch11c -t cpp --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200 --timeout-compile 1200 -d COMPILE-WITHOUT-OPT
+tpch12  -t cpp --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200
+tpch13  -t cpp --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200
+tpch14  -t cpp --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200
+tpch15  -t cpp --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200
+tpch16  -t cpp --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200
+tpch17  -t cpp --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200
+tpch18  -t cpp --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200
+tpch19  -t cpp --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200
+tpch20  -t cpp --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200
+tpch21  -t cpp --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200
+tpch22  -t cpp --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200
+
+tpch1   -t scala --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200
+tpch2   -t scala --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200
+tpch3   -t scala --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200
+tpch4   -t scala --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200
+tpch5   -t scala --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200
+tpch6   -t scala --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200
+tpch7   -t scala --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200
+tpch8   -t scala --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200 --timeout-compile 1200
+tpch9   -t scala --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200
+tpch10  -t scala --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200 
+tpch11  -t scala --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200 --timeout-compile 1200
+tpch11  -t scala --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200 --timeout-compile 1200 -d COMPILE-WITHOUT-OPT
+tpch11c -t scala --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200 --timeout-compile 1200
+tpch11c -t scala --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200 --timeout-compile 1200 -d COMPILE-WITHOUT-OPT
+tpch12  -t scala --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200
+tpch13  -t scala --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200
+tpch14  -t scala --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200
+tpch15  -t scala --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200
+tpch16  -t scala --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200
+tpch17  -t scala --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200
+tpch18  -t scala --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200
+tpch19  -t scala --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200
+tpch20  -t scala --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200
+tpch21  -t scala --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200
+tpch22  -t scala --dataset tiny_del --ignore-errors -d mt -f -O3 --timeout 1200
+
+
+##  DATASET tiny_del: Optimization Level O2  ##
+
+
+# VLDB 2012 TPCH test cases
+
+tpch3   -t cpp --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200
+tpch11a -t cpp --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200
+tpch17a -t cpp --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200
+tpch18a -t cpp --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200
+tpch22a -t cpp --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200
+ssb4    -t cpp --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200
+
+tpch3   -t scala --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200
+tpch11a -t scala --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200
+tpch17a -t scala --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200
+tpch18a -t scala --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200
+tpch22a -t scala --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200
+ssb4    -t scala --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200
+
+
+# TPCH test cases
+
+tpch1   -t cpp --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200
+tpch2   -t cpp --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200
+tpch3   -t cpp --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200
+tpch4   -t cpp --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200
+tpch5   -t cpp --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200
+tpch6   -t cpp --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200
+tpch7   -t cpp --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200
+tpch8   -t cpp --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200 --timeout-compile 1200
+tpch9   -t cpp --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200
+tpch10  -t cpp --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200 
+tpch11  -t cpp --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200 --timeout-compile 1200
+tpch11  -t cpp --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200 --timeout-compile 1200 -d COMPILE-WITHOUT-OPT
+tpch11c -t cpp --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200 --timeout-compile 1200
+tpch11c -t cpp --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200 --timeout-compile 1200 -d COMPILE-WITHOUT-OPT
+tpch12  -t cpp --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200
+tpch13  -t cpp --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200
+tpch14  -t cpp --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200
+tpch15  -t cpp --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200
+tpch16  -t cpp --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200
+tpch17  -t cpp --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200
+tpch18  -t cpp --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200
+tpch19  -t cpp --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200
+tpch20  -t cpp --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200
+tpch21  -t cpp --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200
+tpch22  -t cpp --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200
+
+tpch1   -t scala --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200
+tpch2   -t scala --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200
+tpch3   -t scala --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200
+tpch4   -t scala --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200
+tpch5   -t scala --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200
+tpch6   -t scala --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200
+tpch7   -t scala --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200
+tpch8   -t scala --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200 --timeout-compile 1200
+tpch9   -t scala --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200
+tpch10  -t scala --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200 
+tpch11  -t scala --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200 --timeout-compile 1200
+tpch11  -t scala --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200 --timeout-compile 1200 -d COMPILE-WITHOUT-OPT
+tpch11c -t scala --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200 --timeout-compile 1200
+tpch11c -t scala --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200 --timeout-compile 1200 -d COMPILE-WITHOUT-OPT
+tpch12  -t scala --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200
+tpch13  -t scala --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200
+tpch14  -t scala --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200
+tpch15  -t scala --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200
+tpch16  -t scala --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200
+tpch17  -t scala --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200
+tpch18  -t scala --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200
+tpch19  -t scala --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200
+tpch20  -t scala --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200
+tpch21  -t scala --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200
+tpch22  -t scala --dataset tiny_del --ignore-errors -d mt -f -O2 --timeout 1200
+
+
+##  DATASET tiny_del: Optimization Level O1  ##
+
+
+# VLDB 2012 TPCH test cases
+
+tpch3   -t cpp --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200
+tpch11a -t cpp --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200
+tpch17a -t cpp --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200
+tpch18a -t cpp --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200
+tpch22a -t cpp --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200
+ssb4    -t cpp --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200
+
+tpch3   -t scala --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200
+tpch11a -t scala --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200
+tpch17a -t scala --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200
+tpch18a -t scala --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200
+tpch22a -t scala --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200
+ssb4    -t scala --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200
+
+
+# TPCH test cases
+
+tpch1   -t cpp --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200
+tpch2   -t cpp --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200
+tpch3   -t cpp --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200
+tpch4   -t cpp --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200
+tpch5   -t cpp --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200
+tpch6   -t cpp --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200
+tpch7   -t cpp --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200
+tpch8   -t cpp --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200 --timeout-compile 1200
+tpch9   -t cpp --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200
+tpch10  -t cpp --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200 
+tpch11  -t cpp --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200 --timeout-compile 1200
+tpch11  -t cpp --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200 --timeout-compile 1200 -d COMPILE-WITHOUT-OPT
+tpch11c -t cpp --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200 --timeout-compile 1200
+tpch11c -t cpp --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200 --timeout-compile 1200 -d COMPILE-WITHOUT-OPT
+tpch12  -t cpp --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200
+tpch13  -t cpp --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200
+tpch14  -t cpp --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200
+tpch15  -t cpp --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200
+tpch16  -t cpp --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200
+tpch17  -t cpp --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200
+tpch18  -t cpp --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200
+tpch19  -t cpp --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200
+tpch20  -t cpp --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200
+tpch21  -t cpp --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200
+tpch22  -t cpp --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200
+
+tpch1   -t scala --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200
+tpch2   -t scala --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200
+tpch3   -t scala --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200
+tpch4   -t scala --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200
+tpch5   -t scala --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200
+tpch6   -t scala --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200
+tpch7   -t scala --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200
+tpch8   -t scala --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200 --timeout-compile 1200
+tpch9   -t scala --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200
+tpch10  -t scala --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200 
+tpch11  -t scala --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200 --timeout-compile 1200
+tpch11  -t scala --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200 --timeout-compile 1200 -d COMPILE-WITHOUT-OPT
+tpch11c -t scala --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200 --timeout-compile 1200
+tpch11c -t scala --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200 --timeout-compile 1200 -d COMPILE-WITHOUT-OPT
+tpch12  -t scala --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200
+tpch13  -t scala --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200
+tpch14  -t scala --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200
+tpch15  -t scala --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200
+tpch16  -t scala --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200
+tpch17  -t scala --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200
+tpch18  -t scala --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200
+tpch19  -t scala --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200
+tpch20  -t scala --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200
+tpch21  -t scala --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200
+tpch22  -t scala --dataset tiny_del --ignore-errors -d mt -f -O1 --timeout 1200
+

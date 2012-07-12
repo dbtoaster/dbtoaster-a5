@@ -178,7 +178,7 @@ let derive_initializer ?(scope = [])
          match lf with
          | Rel(rn, rv) ->
             if List.mem rn table_names
-            then CalcRing.mk_val (Rel(rn,rv))
+            then Calculus.mk_rel rn rv
             else CalcRing.zero
          | AggSum(gb_vars, original_subexp) ->
             let subexp = rcr original_subexp in
@@ -200,9 +200,8 @@ let derive_initializer ?(scope = [])
             let bound_schema = ListAsSet.union scope subexp_ovars in
             let unbound_schema = ListAsSet.diff gb_vars bound_schema in
                if unbound_schema = []
-               then CalcRing.mk_val (AggSum(ListAsSet.inter gb_vars
-                                                            subexp_ovars,
-                                            subexp))
+               then Calculus.mk_aggsum 
+                       (ListAsSet.inter gb_vars subexp_ovars) subexp
                else CalcRing.zero
 
          | Exists(original_subexp) ->
@@ -218,7 +217,7 @@ let derive_initializer ?(scope = [])
             );
                if ListAsSet.diff original_ovars new_ovars <> [] 
                   then CalcRing.zero
-                  else CalcRing.mk_val (Exists(subexp))         
+                  else Calculus.mk_exists subexp         
          
          | Lift(v, original_subexp) ->
             let (_,original_ovars) = Calculus.schema_of_expr original_subexp in
@@ -233,7 +232,7 @@ let derive_initializer ?(scope = [])
             );
                if ListAsSet.diff original_ovars new_ovars <> [] 
                   then CalcRing.zero
-                  else CalcRing.mk_val (Lift(v, subexp))
+                  else Calculus.mk_lift v subexp
 
          | _ -> CalcRing.mk_val lf
       ) (CalculusTransforms.optimize_expr (Calculus.schema_of_expr curr_expr) 
