@@ -112,7 +112,7 @@ class EmailLogger < BufferedLogger
   end
   
   def handle_flush(data)
-    sender  = "xthemage@mac.com"
+    sender  = "dbtoaster@epfl.ch"
     full    = "DBT Nightly Tester"
     subject = "DBT Nightly Test Report for #{Time.now}"
     IO.popen("sendmail -f \"#{sender}\" -F \"#{full}\" #{@address}", "w+") do |sm|
