@@ -81,7 +81,6 @@ if [ $out_bin_file != "-" ]; then
 
     elif [ ${out_src_file} != "-" ]; then
         out_src_file_ext=${out_src_file##*.}
-        out_src_file_ext=${out_src_file_ext,,}
         [[ $out_src_file_ext && $out_src_file_ext == "scala" ]] && { src_extension="scala"; }
     fi
   
@@ -108,7 +107,6 @@ if [ $out_bin_file != "-" ]; then
         main_file="$SCALA_LIBDIR/src/org/dbtoaster/RunQuery.scala"
 
         out_bin_file_ext=${out_bin_file##*.}
-        out_bin_file_ext=${out_bin_file_ext,,}
         [[ (-z $out_bin_file_ext) || ($out_bin_file_ext != "jar") ]] && { out_bin_file="$out_bin_file.jar"; }
         
         compile_cmd="scalac $scala_compile_flags $scala_opt_flag -d $out_bin_file $main_file $out_src_file"
