@@ -41,7 +41,7 @@ lib_flags="-L$CPP_LIBDIR $lib_flags"
 cpp_compile_flags=""
 cpp_opt_flag="-O3"
 boost_libs="-lboost_program_options -lboost_serialization -lboost_system -lboost_filesystem -lboost_chrono -lboost_thread"
-cpp_libs="-lpthread -ldbtoaster $boost_libs"
+cpp_libs="-ldbtoaster $boost_libs -lpthread"
 
 scala_compile_flags="-deprecation -unchecked -classpath $SCALA_LIBDIR/dbtlib.jar"
 scala_opt_flag="-optimise"
@@ -81,10 +81,11 @@ for arg in "$@"; do
 		elif [ $debug_flag = "COMPILE-WITH-STATIC" ]; then
 			cpp_compile_flags="$cpp_compile_flags -static"
 		elif [ $debug_flag = "MT" ]; then
-			cpp_libs="-lpthread -ldbtoaster";
+			cpp_libs="-ldbtoaster";
 			for lib in $boost_libs; do
 				cpp_libs="$cpp_libs ${lib}-mt";
 			done;
+            cpp_libs="$cpp_libs -lpthread"
 		elif [ $debug_flag = "LOG-DBTOASTER" ]; then
 			log_dbtoaster=1
 		elif [ $debug_flag = "LOG-GCC" ]; then
