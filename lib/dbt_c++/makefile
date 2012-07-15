@@ -1,4 +1,5 @@
 include ../../makefile.inc
+include ../../makefile.local
 
 HDR_FILES := event.hpp \
 	iprogram.hpp \
@@ -34,11 +35,11 @@ warn: $(FILES)
 	@echo -e "--------------------------------------------------\n"
 
 $(LIB_OBJ) : $(OBJ_FILES)
-	ar crf $@ $^
+	ar cr $@ $^ 
 	
 $(OBJ_FILES) : %.o : %.cpp $(HDR_FILES)
 	@echo Compiling $<
-	@g++ -O3 -c $<
+	@g++ $(patsubst %,-I %,$(CPP_HDR_PATH)) -O3 -c $<
 
 clean: 
 	rm -f *.o $(LIB_OBJ)

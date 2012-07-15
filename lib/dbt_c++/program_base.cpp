@@ -98,13 +98,13 @@ ProgramBase::relation_t::relation_t(
 ******************************************************************************/
 
 relation_id_t ProgramBase::get_relation_id(string r_name) {
-	typename map<string, shared_ptr<relation_t> >::iterator it =
+	map<string, shared_ptr<relation_t> >::iterator it =
 			relations_by_name.find(r_name);
 	return (it != relations_by_name.end()) ? it->second->id : -1;
 }
 
 string ProgramBase::get_relation_name(relation_id_t s_id) {
-	typename map<relation_id_t, shared_ptr<relation_t> >::iterator it =
+	map<relation_id_t, shared_ptr<relation_t> >::iterator it =
 			relations_by_id.find(s_id);
 	return (it != relations_by_id.end()) ? it->second->name : "";
 }
@@ -136,7 +136,7 @@ void ProgramBase::add_trigger(
 			string r_name, 
 			event_type ev_type, 
 			ProgramBase::trigger_fn_t fn) {
-	typename map<string, ProgramBase::relation_ptr_t>::iterator it =
+	map<string, ProgramBase::relation_ptr_t>::iterator it =
 			relations_by_name.find(r_name);
 	if (it == relations_by_name.end()) {
 		cerr << "Relation not found: " << r_name << endl;
@@ -259,7 +259,7 @@ void ProgramBase::set_log_count_every(
 void ProgramBase::process_event(event_t* _evt, bool process_table) {
 	event_t& evt(*_evt);
 	
-	typename map<relation_id_t, 
+	map<relation_id_t, 
 				 shared_ptr<ProgramBase::relation_t> >::iterator r_it =
 			relations_by_id.find(evt.id);
 	if( r_it != relations_by_id.end() &&
@@ -319,7 +319,7 @@ void ProgramBase::trace(const path& trace_file, bool debug) {
 void ProgramBase::trace(std::ostream &ofs, bool debug) {
 	std::auto_ptr<boost::archive::xml_oarchive> oa;
 
-	typename map<string, ProgramBase::map_ptr_t>::iterator it = 
+	map<string, ProgramBase::map_ptr_t>::iterator it = 
 			maps_by_name.begin();
 	for (; it != maps_by_name.end(); it++)
 	#ifndef DBT_TRACE_ALL
