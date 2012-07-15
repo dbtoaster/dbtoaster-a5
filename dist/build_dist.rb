@@ -35,7 +35,7 @@ def fix_sql_file(sql_file, tgt_dir)
                       gsub(/tiny\//, "").
                       gsub(/big\//, "").
                       gsub(/--.*/, "").
-                      gsub(/data\/finance\/vwap.csv/, 
+                      gsub(/data\/finance\/finance.csv/, 
                                       "data/finance.csv") }.
           delete_if { |l| 
             if l.chomp != "" then output_next_blank = true; false;
@@ -64,6 +64,7 @@ copy_files(["../doc/site/9.jpg",
 
 copy_files(Dir.glob("../doc/site_html/*.html"), "dbtoaster/doc");
 
+copy_files(Dir.glob("../lib/dbt_c++/*.a"), "dbtoaster/lib/dbt_c++");
 copy_files(Dir.glob("../lib/dbt_c++/*.hpp"), "dbtoaster/lib/dbt_c++");
 copy_files(Dir.glob("../lib/dbt_c++/*.cpp"), "dbtoaster/lib/dbt_c++");
 
@@ -81,7 +82,7 @@ copy_files(Dir.glob("../../../experiments/data/simple/tiny/*.dat"),
                                           "dbtoaster/examples/data/simple");
 copy_files(Dir.glob("../../../experiments/data/tpch/tiny/*.csv"), 
                                           "dbtoaster/examples/data/tpch");
-system("cp ../../../experiments/data/finance/tiny/vwap.csv\
+system("cp ../../../experiments/data/finance/tiny/finance.csv\
                                           dbtoaster/examples/data/finance.csv");
 
 copy_files([], "dbtoaster/examples/queries/simple");

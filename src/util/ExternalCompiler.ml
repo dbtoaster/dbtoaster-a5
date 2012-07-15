@@ -142,7 +142,7 @@ let cpp_compiler = {
          Debug.print "LOG-GCC" (fun () -> (
             ListExtras.string_of_list ~sep:" " (fun x->x) cpp_args));
          at_exit (fun () -> Unix.unlink main_fname);
-         output_string main_stream MainCpp.code;
+         (*output_string main_stream MainCpp.code;*)
          flush main_stream;
          Unix.execvp cpp_cc (Array.of_list cpp_args)
    )

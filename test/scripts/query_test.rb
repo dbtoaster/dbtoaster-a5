@@ -210,8 +210,8 @@ class ScalaUnitTest < GenericUnitTest
     return if $compile_only;
     starttime = Time.now;
     IO.popen($timeout_exec +
-             "scala -J-Xmx2048M " + 
-             "-classpath \"bin/queries/#{@qname}.jar:" + 
+             "scala -J-Xmx1024M " + 
+             "-classpath \"bin/queries/#{@qname}.jar#{$path_delim}" + 
                           "lib/dbt_scala/dbtlib.jar\" " + 
              "org.dbtoaster.RunQuery", "r") do |qin|
       output = qin.readlines;
@@ -293,6 +293,7 @@ $executable_args = [];
 $dump_query = false;
 $log_detail = false;
 $always_return_success = false;
+$path_delim = ':';
 
 GetoptLong.new(
   [ '-f',                GetoptLong::REQUIRED_ARGUMENT],
@@ -310,7 +311,8 @@ GetoptLong.new(
   [ '--trace',           GetoptLong::OPTIONAL_ARGUMENT],
   [ '--dump-query',      GetoptLong::NO_ARGUMENT],
   [ '--memprofiling',    GetoptLong::NO_ARGUMENT],
-  [ '--ignore-errors',   GetoptLong::NO_ARGUMENT]
+  [ '--ignore-errors',   GetoptLong::NO_ARGUMENT],
+  [ '--path-delim',      GetoptLong::REQUIRED_ARGUMENT]
 ).each do |opt, arg|
   case opt
     when '-f' then $opts.push(arg)
@@ -347,6 +349,7 @@ GetoptLong.new(
     when '--memprofiling' then 
       $compiler_args += ["-l", "cpp:prof", "-g", "^-ltcmalloc"]
     when '--ignore-errors' then $strict = false; $always_return_success = true;
+	when '--path-delim' then $path_delim = arg;
   end
 end
 

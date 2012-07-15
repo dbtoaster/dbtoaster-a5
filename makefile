@@ -7,7 +7,6 @@ FILES=\
 	src/util/ListAsFunction\
 	src/util/HyperGraph\
 	src/util/Fixpoint\
-	src/util/MainCpp\
 	src/util/ExternalCompiler\
 	src/util/SourceCode\
 	src/util/FreshVariable\
@@ -124,14 +123,18 @@ runtimelibs: $(O_FILES) $(C_FILES)
 	@echo Making Runtime Libraries
 	@make -C lib runtimelibs
 
-lib/.deps:
+lib/.deps: runtimelibs
 	@echo Making Library Dependencies
 	@make -C lib dependencies
 	@touch lib/.deps
 
-bin/dbtoaster_release: $(O_FILES) lib/.deps src/global/Driver.ml
+bin/dbtoaster_release: $(O_FILES) lib/.deps src/global/Driver.ml bin/dbtoaster_debug
 	@echo "Linking DBToaster (Optimized)"
-	@$(OCAMLOPT) $(OPT_FLAGS) -o $@ $(O_FILES) src/global/Driver.ml
+	@if [ $(shell uname -o) != "Cygwin" ] ; then \
+		$(OCAMLOPT) $(OPT_FLAGS) -o $@ $(O_FILES) src/global/Driver.ml; \
+	else \
+		cp bin/dbtoaster_debug bin/dbtoaster_release; \
+	fi
 
 bin/dbtoaster_debug: $(C_FILES) lib/.deps src/global/Driver.ml
 	@echo "Linking DBToaster (Debug)"
@@ -146,11 +149,9 @@ bin/dbtoaster: bin/dbtoaster_release
 fast: bin/dbtoaster_debug bin/dbtoaster_top
 
 dist: bin/dbtoaster
-	make -C lib runtimelibs_force
 	make -C dist 
 
-disttest:
-	make -C lib runtimelibs_force
+disttest: bin/dbtoaster
 	make -C dist test	
 
 #################################################
@@ -178,12 +179,6 @@ queries: bin/dbtoaster
 
 #################################################
 
-
-src/util/MainCpp.ml : lib/dbt_c++/main.cpp
-	@echo "Generating $@ from $< :"
-	@echo "let code = \"" > $@
-	@cat $< | sed s/\"/\\\\\"/g >> $@
-	@echo "\";;" >> $@
 
 $(C_FILES) : %.cmo : %.ml
 	@if [ -f $(*).mli ] ; then \

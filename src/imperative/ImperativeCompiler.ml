@@ -354,7 +354,7 @@ struct
     begin match t with
       Host K.TUnit -> inl ("void")
     | Host(K.TBase(TFloat)) -> inl ("double")
-    | Host(K.TBase(TInt)) -> inl ("long")
+    | Host(K.TBase(TInt)) -> inl ("long long")
     | Host(K.TBase(TString)) -> inl ("string")
     | Host(K.TBase(TDate))   -> inl ("date") 
                                 (* at the moment: typedef long date *)
@@ -1112,7 +1112,7 @@ end (* Typing *)
               wrap_neg_with_parens 
                  (if r.[(String.length r)-1] = '.' then r^"0" else r)
          | CInt x ->
-              "static_cast<long>("^(string_of_int x)^")"
+              "static_cast<long long>("^(string_of_int x)^")"
          | CString s ->
             if Debug.active "HASH-STRINGS"
             then "static_cast<int>(string_hash(\""^(String.escaped s)^"\"))"
@@ -2679,7 +2679,7 @@ end (* Typing *)
       "#endif";
       "";
       tab^"/* Registering relations and trigger functions */";
-      tab^"void register_data(ProgramBase<tlq_t>& pb) {";];
+      tab^"void register_data(ProgramBase& pb) {";];
       isc (tab^tab) (Lines r_l);
       isc (tab^tab) register_relations;
       isc (tab^tab) register_table_triggers;
@@ -2987,11 +2987,11 @@ struct
     let main_fn = (isc tab (cscl ~delim:"\n"
         ([Lines [
          "/* Type definition providing a way to execute the sql program */";
-         "class Program : public ProgramBase<tlq_t>";
+         "class Program : public ProgramBase";
          "{";
          "public:";
          tab^"Program(int argc = 0, char* argv[] = 0) : " ^
-             "ProgramBase<tlq_t>(argc,argv) {";
+             "ProgramBase(argc,argv) {";
          tab^tab^"data.register_data(*this);";];
          isc (tab^tab) sources_and_adaptors;
          isc tab (inl "}");

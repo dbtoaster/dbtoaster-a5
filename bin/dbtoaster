@@ -1,72 +1,104 @@
 #!/bin/bash
 
+in_list() {
+   local search="$1"
+   shift
+   local list=("$@")
+   for elem in "${list[@]}" ; do
+	   [[ "$elem" == "$search" ]] && return 0
+   done
+   return 1
+}
+
+
 BINDIR="$( cd "$( dirname "${BASH_SOURCE[0]}" )" && pwd )"
-DIR="$BINDIR/.."
-CPP_LIBDIR="$DIR/lib/dbt_c++"
-SCALA_LIBDIR="$DIR/lib/dbt_scala"
+if [ $( uname -o ) == "Cygwin" ]; then
+	BINDIR="$( cygpath --windows $BINDIR )"
+fi
+BINDIR="\"$BINDIR\""
+CPP_LIBDIR="$BINDIR/../lib/dbt_c++"
+SCALA_LIBDIR="$BINDIR/../lib/dbt_scala"
 
 out_src_file="-"
 out_src_lang="-"
 out_bin_file="-"
 
 option="-"
-option_flag=0
+filter_options="-c -d -D -I -L"
 new_args=""
 
 compile_cmd=""
 
+def_flags=""
 inc_flags=`echo "$DBT_HDR" | sed 's/:/ -I/g'`
 [[ $inc_flags != "" ]] && { inc_flags="-I$inc_flags"; }
 inc_flags="-I$CPP_LIBDIR $inc_flags"
 lib_flags=`echo "$DBT_LIB" | sed 's/:/ -L/g'`
 [[ $lib_flags != "" ]] && { lib_flags="-L$lib_flags"; }
+lib_flags="-L$CPP_LIBDIR $lib_flags"
+
 
 cpp_compile_flags=""
 cpp_opt_flag="-O3"
-cpp_mt_flag=""
+boost_libs="-lboost_program_options -lboost_serialization -lboost_system -lboost_filesystem -lboost_chrono -lboost_thread"
+cpp_libs="-lpthread -ldbtoaster $boost_libs"
 
-scala_compile_flags="-deprecation -unchecked -sourcepath $SCALA_LIBDIR/src -classpath $SCALA_LIBDIR/dbtlib.jar"
+scala_compile_flags="-deprecation -unchecked -classpath $SCALA_LIBDIR/dbtlib.jar"
 scala_opt_flag="-optimise"
 
+log_dbtoaster=0
+
+compile_log=""
+log_gcc=0
+log_scala=0
 
 for arg in "$@"; do
-    if [[ ($arg != "-c") && ( ($option_flag == 0) || ($option != "-c") ) ]]; then
-        new_args="$new_args $arg"
+    if ! in_list $arg $filter_options && ! in_list $option $filter_options; then
+	    new_args="$new_args $arg";
     fi
-    
-    if [ $option_flag = 1 ]; then
-        if [ $option = "-o" ]; then
-            out_src_file=$arg
-        elif [ $option = "-l" ]; then
-            out_src_lang=$arg
-        elif [ $option = "-c" ]; then
-            out_bin_file=$arg
-        elif [ $option = "-I" ]; then
-            inc_flags="$inc_flags -I$arg"
-        elif [ $option = "-L" ]; then
-            lib_flags="$lib_flags -L$arg"
-        elif [ $option = "-d" ]; then
-            debug_flag=${arg}
-            if [ $debug_flag = "COMPILE-WITH-PROFILE" ]; then
-                cpp_compile_flags="$cpp_compile_flags -pg"
-            elif [ $debug_flag = "COMPILE-WITH-GDB" ]; then
-                cpp_compile_flags="$cpp_compile_flags -g"
-            elif [ $debug_flag = "COMPILE-WITHOUT-OPT" ]; then
-                cpp_opt_flag=""
-                scala_opt_flag=""
-            elif [ $debug_flag = "COMPILE-WITH-STATIC" ]; then
-                cpp_compile_flags="$cpp_compile_flags -static"
-            elif [ $debug_flag = "MT" ]; then
-                cpp_mt_flag="-mt"
-            fi
-        fi
-        option_flag=0
-        option="-"
-    fi    
+	
+	if [ $option = "-o" ]; then
+		out_src_file=$arg
+	elif [ $option = "-l" ]; then
+		out_src_lang=$arg
+	elif [ $option = "-c" ]; then
+		out_bin_file=$arg
+	elif [ $option = "-D" ]; then
+		def_flags="$def_flags -D $arg"
+	elif [ $option = "-I" ]; then
+		inc_flags="$inc_flags -I\"$arg\""
+	elif [ $option = "-L" ]; then
+		lib_flags="$lib_flags -L\"$arg\""
+	elif [ $option = "-d" ]; then
+		debug_flag=$(echo $arg | tr '[:lower:]' '[:upper:]')
+        if [ $debug_flag = "COMPILE-WITH-PROFILE" ]; then
+			cpp_compile_flags="$cpp_compile_flags -pg"
+		elif [ $debug_flag = "COMPILE-WITH-GDB" ]; then
+			cpp_compile_flags="$cpp_compile_flags -g"
+		elif [ $debug_flag = "COMPILE-WITHOUT-OPT" ]; then
+			cpp_opt_flag=""
+			scala_opt_flag=""
+		elif [ $debug_flag = "COMPILE-WITH-STATIC" ]; then
+			cpp_compile_flags="$cpp_compile_flags -static"
+		elif [ $debug_flag = "MT" ]; then
+			cpp_libs="-lpthread -ldbtoaster";
+			for lib in $boost_libs; do
+				cpp_libs="$cpp_libs ${lib}-mt";
+			done;
+		elif [ $debug_flag = "LOG-DBTOASTER" ]; then
+			log_dbtoaster=1
+		elif [ $debug_flag = "LOG-GCC" ]; then
+			log_gcc=1
+		elif [ $debug_flag = "LOG-SCALA" ]; then
+			log_scala=1
+		else
+			new_args="$new_args -d $arg"
+		fi
+	fi
+	option="-"
 
-    if [ ${arg:0:1} = "-" ]; then
-        option_flag=1
-        option=$arg
+	if [ ${arg:0:1} = "-" ]; then
+		option=$arg
     fi
 done
     
@@ -92,34 +124,39 @@ if [ $out_bin_file != "-" ]; then
     fi
 
     if [ $src_extension == "hpp" ]; then
+		! which g++ &>/dev/null && { echo "Unable to compile C++ code: g++ not found!"; exit 1; }
         main_file="$CPP_LIBDIR/main.cpp"
 
-        boost_libs="-lboost_program_options -lboost_serialization -lboost_system -lboost_filesystem -lboost_chrono -lboost_thread"
-        cpp_libs="-lpthread"
-        for lib in $boost_libs; do
-            cpp_libs="$lib$cpp_mt_flag $cpp_libs"
-        done;
-
-        compile_cmd="g++ $main_file -include $out_src_file -o $out_bin_file $cpp_compile_flags $cpp_opt_flag $inc_flags $lib_flags $cpp_libs"
+        compile_flags="$cpp_compile_flags $cpp_opt_flag $def_flags $inc_flags $lib_flags $cpp_libs"
+        compile_cmd="g++ $main_file -include $out_src_file -o $out_bin_file $compile_flags"
+		[ $log_gcc -eq 1 ] && { compile_log="$compile_log $compile_cmd"; }
     fi
 
     if [ $src_extension == "scala" ]; then
+		! which scalac &>/dev/null && { echo "Unable to compile Scala code: scalac not found!"; exit 1; }
+		jar_file="$SCALA_LIBDIR/dbtlib.jar"
+		eval [ ! -f $jar_file ] && { echo "$0: dbtlib.jar not built, exiting..." ; exit 1; }
         main_file="$SCALA_LIBDIR/src/org/dbtoaster/RunQuery.scala"
 
         out_bin_file_ext=${out_bin_file##*.}
+		out_bin_file_ext=$(echo $out_bin_file_ext | tr '[:upper:]' '[:lower:]')
         [[ (-z $out_bin_file_ext) || ($out_bin_file_ext != "jar") ]] && { out_bin_file="$out_bin_file.jar"; }
         
-        compile_cmd="scalac $scala_compile_flags $scala_opt_flag -d $out_bin_file $main_file $out_src_file"
+		compile_flags="$scala_compile_flags $scala_opt_flag"
+        compile_cmd="scalac $main_file $out_src_file -d $out_bin_file $compile_flags"
+		[ $log_scala -eq 1 ] && { compile_log="$compile_log $compile_cmd"; }
     fi
 
-    mkdir -p $(dirname $out_bin_file)
+    mkdir -p $(dirname "$out_bin_file")
 fi
 
 
 #echo
 #echo $0 $@
 
-#echo "$BINDIR/dbtoaster_release $new_args";
-$BINDIR/dbtoaster_release $new_args;
-#echo $compile_cmd;
-$compile_cmd;
+dbtoaster_cmd="$BINDIR/dbtoaster_release $new_args"
+[ $log_dbtoaster -eq 1 ] && { echo $dbtoaster_cmd; }
+eval $dbtoaster_cmd;
+
+[ "$compile_log" ] && { echo $compile_log; }
+eval $compile_cmd;
