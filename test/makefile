@@ -224,12 +224,12 @@ query_tpch:
 #	@$(FAST_QUERY_TEST) tpch6 --dataset tiny  #F.P. error on the interpreter
 	@$(FAST_QUERY_TEST) tpch7 --dataset tiny
 #	@$(FAST_QUERY_TEST) tpch8 --dataset tiny  #slow compilation
-	@$(FAST_QUERY_TEST) tpch9 --dataset tiny
+	@$(FAST_QUERY_TEST) tpch9 --dataset tiny  #slow compilation
 	@$(FAST_QUERY_TEST) tpch10 --dataset tiny
 	@$(FAST_QUERY_TEST) tpch11 --dataset tiny
 	@$(FAST_QUERY_TEST) tpch11 
 	@$(FAST_QUERY_TEST) tpch11a --dataset tiny
-	@$(FAST_QUERY_TEST) tpch11c --dataset tiny
+	@$(FAST_QUERY_TEST) tpch11c --dataset tiny  #slow compilation
 #	@$(FAST_QUERY_TEST) tpch11c  # ~90s
 	@$(FAST_QUERY_TEST) tpch12 --dataset tiny
 	@$(FAST_QUERY_TEST) tpch13 --dataset tiny

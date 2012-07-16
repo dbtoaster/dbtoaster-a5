@@ -38,7 +38,8 @@ warn: $(FILES)
 	
 
 $(LIB_OBJ) : $(OBJ_FILES)
-	ar cr $@ $^ 
+	@echo "Linking $@"
+	@ar cr $@ $^ 
 	
 $(OBJ_FILES) : %.o : %.cpp $(HDR_FILES)
 	@echo Compiling $<
