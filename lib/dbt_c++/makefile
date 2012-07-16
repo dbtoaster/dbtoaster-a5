@@ -30,9 +30,12 @@ TARGET:=$(shell which $(G++) &>/dev/null && echo $(LIB_OBJ) || echo warn)
 all: $(TARGET)
 
 warn: $(FILES)
-	@echo -e "\n--------------------------------------------------"
+	@echo 
+	@echo "------------------------------------------------------------"
 	@echo "Warning: C++ library will not be built: $(G++) not found!"
-	@echo -e "--------------------------------------------------\n"
+	@echo "------------------------------------------------------------"
+	@echo 
+	
 
 $(LIB_OBJ) : $(OBJ_FILES)
 	ar cr $@ $^ 

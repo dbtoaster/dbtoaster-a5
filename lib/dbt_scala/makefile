@@ -10,9 +10,11 @@ TARGET:=$(shell which $(SCALAC) &>/dev/null && echo $(LIBJAR) || echo warn)
 all: $(TARGET)
 
 warn: $(FILES)
-	@echo "\n\n----------------------------------------"
+	@echo 
+	@echo "------------------------------------------------------------"
 	@echo "Warning: Scala library will not be built: $(SCALAC) not found!"
-	@echo "----------------------------------------\n\n"
+	@echo "------------------------------------------------------------"
+	@echo 
 
 	
 $(LIBJAR): $(FILES)

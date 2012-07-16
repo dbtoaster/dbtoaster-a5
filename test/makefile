@@ -6,7 +6,7 @@ UNIT_TEST=sh -c 'echo ==== $$1 ====; $(DBTOASTER_TOP) $$1' --
 
 QUERY_TEST := scripts/query_test.rb $(QUERY_TEST_FLAGS)
 
-ifeq ($(shell uname -o), Cygwin)
+ifneq (,$(findstring CYGWIN,$(shell uname)))
 	QUERY_TEST += --path-delim \;
 endif
 
