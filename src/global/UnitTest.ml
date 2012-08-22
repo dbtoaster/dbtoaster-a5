@@ -5,7 +5,7 @@
   parsers, etc...
 *)
 
-open Types
+open Type
 open Constants
 open Ring
 open Arithmetic
@@ -201,7 +201,7 @@ let parse_k3 (expr:string):K3.expr_t =
 ;;   
 
 (*************************** Type constructors ****************************)
-let var v = (v,Types.TFloat);;
+let var v = (v,Type.TFloat);;
 let rel rn rv = (Calculus.Rel(rn, List.map var rv));;
 let schema_rel (reln:string) (relv:string list) = 
    (reln, List.map var relv, Schema.StreamRel);;

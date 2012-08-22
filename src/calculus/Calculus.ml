@@ -12,7 +12,7 @@
    in any way.
 *)
 
-open Types
+open Type
 open Arithmetic
 
 (**

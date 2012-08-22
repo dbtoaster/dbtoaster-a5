@@ -5,7 +5,7 @@ FILES := $(patsubst %,../../src/%,\
 	util/ListAsSet\
 	util/Debug\
 	global/Functions\
-	global/Types\
+	global/Type\
 	global/Schema\
 	ring/Ring\
 	ring/Arithmetic\

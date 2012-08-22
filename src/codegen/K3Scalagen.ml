@@ -3,7 +3,7 @@ open M3
 open K3
 open Database
 open Format
-open Types
+open Type
 open Constants
 open Patterns
 

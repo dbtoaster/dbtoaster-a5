@@ -4,7 +4,7 @@
 *)
 
 open Ring
-open Types
+open Type
 open Constants
 open Arithmetic
 open Calculus
@@ -46,7 +46,7 @@ let lift_if_necessary ?(t="agg") ?(vt=TAny) (calc:C.expr_t):
    match (CalculusTransforms.combine_values ~aggressive:true calc) with
       | CalcRing.Val(Value(x)) -> (x, CalcRing.one)
       | _ -> 
-         let v = tmp_var t (Types.escalate_type vt (C.type_of_expr calc)) in
+         let v = tmp_var t (Type.escalate_type vt (C.type_of_expr calc)) in
          (  Arithmetic.mk_var v, C.mk_lift v calc  )
       
 
@@ -56,7 +56,7 @@ let lift_if_necessary ?(t="agg") ?(vt=TAny) (calc:C.expr_t):
    Translate a bound SQL variable to a standard DBToaster variable.  This 
    involves (a consistent) renaming (of) the variable to ensure its uniqueness.
    @param var  A SQL variable
-   @return     The [Types]-style variable corresponding to [var]
+   @return     The [Type]-style variable corresponding to [var]
 *)
 let var_of_sql_var ((rel,vn,vt):Sql.sql_var_t):var_t = 
    begin match rel with
@@ -306,10 +306,10 @@ let rec calc_of_query ?(query_name = None)
                       Sql.error ("Sql target expression '"^
                                  (Sql.string_of_expr tgt_expr)^
                                  "' translated to different type ("^
-                                 (Types.string_of_type 
+                                 (Type.string_of_type 
                                    (C.type_of_expr calc_expr))^
                                  ") from its expected type ("^
-                                 (Types.string_of_type (snd tgt_var))^
+                                 (Type.string_of_type (snd tgt_var))^
                                  ")"))
                )
    ) noagg_tgts) in
@@ -516,7 +516,7 @@ and calc_of_condition (tables:Sql.table_t list)
          | Sql.Comparison(e1,cmp,e2) -> 
             let e1_calc = rcr_e e1 in
             let e2_calc = rcr_e e2 in
-            let field_ty = Types.escalate_type (C.type_of_expr e1_calc)
+            let field_ty = Type.escalate_type (C.type_of_expr e1_calc)
                                                (C.type_of_expr e2_calc) in
             let (e1_val, e1_calc) = lift_if_necessary ~vt:field_ty e1_calc in
             let (e2_val, e2_calc) = lift_if_necessary ~vt:field_ty e2_calc in

@@ -14,7 +14,7 @@
 ]}
 *)
 
-open Types
+open Type
 open Constants
 
 (**
@@ -42,7 +42,7 @@ let error msg                 = raise (SqlException("", msg))
 (**
    A SQL variable.  The first field is the (optional) relation or 
    pseudorelation that the variable is associated with.  Distinct from 
-   [Types.var_t], because of this optional relation association.
+   [Type.var_t], because of this optional relation association.
 *)
 type sql_var_t = string option * string * type_t
 
@@ -529,7 +529,7 @@ let rec expr_type ?(strict = true) (expr:expr_t) (tables:table_t list)
                                                              arg_types)^")")
             end
          | Case(cases, else_branch) ->
-            Types.escalate_type_list 
+            Type.escalate_type_list 
                ((expr_type else_branch tables sources) :: 
                   (List.map (fun (_,x) -> expr_type x tables sources) cases))
    )

@@ -1,6 +1,6 @@
 open Ring
 open Arithmetic
-open Types
+open Type
 open Calculus
 open Plan
 open M3
@@ -54,7 +54,7 @@ let get_map_postfix postfix (expr: Calculus.expr_t):
    let (ename,eins,eouts,etype,emeta) = 
       get_map_information_from_expr expr 
    in
-      Calculus.mk_external (ename^postfix) eins eouts Types.TInt None
+      Calculus.mk_external (ename^postfix) eins eouts Type.TInt None
 
 let get_map_status (expr: Calculus.expr_t): Calculus.expr_t = 
    get_map_postfix "_status" expr
@@ -67,7 +67,7 @@ let get_map_input_output_domain ?(input = false)
    in
    let out_vars = if input then eins else eouts in
    let postfix  = if input then "_input" else "_output" in
-      Calculus.mk_external (ename^postfix) [] out_vars Types.TInt None
+      Calculus.mk_external (ename^postfix) [] out_vars Type.TInt None
 
 let get_map_output_domain (expr: Calculus.expr_t): Calculus.expr_t =
    get_map_input_output_domain ~input:false expr
@@ -85,7 +85,7 @@ let get_relation_of_event (event_input: Schema.event_t):
         
 let get_singleton_tuple (relation: Schema.rel_t): Calculus.expr_t =
    let (rname, rvars, _) = relation in
-        Calculus.mk_external (rname^"_singleton") [] rvars Types.TInt None
+        Calculus.mk_external (rname^"_singleton") [] rvars Type.TInt None
 
 let singleton_tuple_is_for_event (event_input: Schema.event_t)
                                  (test_singleton_tuple: Calculus.expr_t): 
@@ -420,7 +420,7 @@ let make_DM_maps (m3_db: Schema.t) (m3_maps: map_t list) : map_t list =
          add_map (get_singleton_tuple rel)
       ) (Schema.rels m3_db);
       let unit_map = 
-         let dummy_m3_map = ("dummy_map", [], [], Types.TInt) in
+         let dummy_m3_map = ("dummy_map", [], [], Type.TInt) in
          let (ename,eins,eouts,etype) = dummy_m3_map in
             Calculus.mk_external ename eins eouts etype None
       in

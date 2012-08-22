@@ -3,7 +3,7 @@ module K = K3
 module Make = functor (CG : K3Codegen.CG) ->
 struct
 
-open Types
+open Type
 open Schema
 open CG
 open K3Typechecker

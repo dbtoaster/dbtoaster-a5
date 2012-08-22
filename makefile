@@ -11,7 +11,7 @@ FILES=\
 	src/util/SourceCode\
 	src/util/FreshVariable\
 	src/util/ParsingExtras\
-	src/global/Types\
+	src/global/Type\
 	src/global/Constants\
 	src/global/Schema\
 	src/global/Functions\

@@ -1,4 +1,4 @@
-open Types
+open Type
 open Constants
 open Arithmetic
 open Values

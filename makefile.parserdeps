@@ -3,18 +3,18 @@
 # for the generated parser files.
 
 CALC_PARSER_DEPS =\
-  src/global/Types\
+  src/global/Type\
   src/ring/Arithmetic\
   src/calculus/Calculus\
   src/compiler/Plan\
   src/maps/M3
 
 SQL_PARSER_DEPS =\
-  src/global/Types\
+  src/global/Type\
   src/sql/Sql
 
 K3_PARSER_DEPS =\
-  src/global/Types\
+  src/global/Type\
   src/functional/K3
 
 src/parsers/Calculusparser.cmo: $(patsubst %,%.cmo,$(CALC_PARSER_DEPS))

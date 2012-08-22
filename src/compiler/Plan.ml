@@ -31,7 +31,7 @@ type ds_t = {
 }
 
 (** Construct a ds_name for a ds_t *)
-let mk_ds_name ?(ivc = None) (name:string) (schema:schema_t) (t:Types.type_t)=
+let mk_ds_name ?(ivc = None) (name:string) (schema:schema_t) (t:Type.type_t)=
    Calculus.mk_external name (fst schema) (snd schema) t ivc
 
 (** Extract the name, schema, type, and ivc code from a ds_name *)

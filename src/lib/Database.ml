@@ -92,7 +92,7 @@ sig
 
    (* initializer *)
    val zero : value_t
-   val zero_of_type : Types.type_t -> value_t
+   val zero_of_type : Type.type_t -> value_t
 
    val string_of_value : ?sep:string -> value_t -> string
    val string_of_smap : ?sep:string -> single_map_t -> string
@@ -137,7 +137,7 @@ sig
     type map_t = single_map_t Map.t
 
     val zero : t
-    val zero_of_type : Types.type_t -> t
+    val zero_of_type : Type.type_t -> t
     val string_of_value : ?sep:string -> t -> string
     val string_of_smap : ?sep:string -> single_map_t -> string
     val string_of_map : ?sep:string -> map_t -> string

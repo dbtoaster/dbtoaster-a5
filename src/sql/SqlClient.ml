@@ -1,4 +1,4 @@
-open Types
+open Type
 open Constants
 
 module type Interface = sig
@@ -13,13 +13,13 @@ module type Interface = sig
    val destroy: sql_channel_t -> unit
 
    val create_table: sql_channel_t -> ?temporary:bool ->
-                     string -> Types.var_t list -> unit
-   val insert: sql_channel_t -> string -> Types.var_t list -> 
+                     string -> Type.var_t list -> unit
+   val insert: sql_channel_t -> string -> Type.var_t list -> 
                Constants.const_t list list -> unit
-   val delete: sql_channel_t -> string -> Types.var_t list -> 
+   val delete: sql_channel_t -> string -> Type.var_t list -> 
                Constants.const_t list list -> unit
    val query: ?field_separator:string -> sql_channel_t -> Sql.select_t -> 
-              Types.var_t list -> Constants.const_t list list
+              Type.var_t list -> Constants.const_t list list
 end 
 
 module Postgres : Interface = struct
@@ -44,7 +44,7 @@ module Postgres : Interface = struct
       !data
    ;;
 
-   let convert_schema (sch:Types.var_t list):string = 
+   let convert_schema (sch:Type.var_t list):string = 
       "("^
          " _id serial, "^
          (ListExtras.string_of_list ~sep:", " (fun (vn,vt) ->  
@@ -78,7 +78,7 @@ module Postgres : Interface = struct
                              (string_of_int d)
    ;;
 
-   let const_of_string (_str:string) (const_type:Types.type_t) : 
+   let const_of_string (_str:string) (const_type:Type.type_t) : 
                        Constants.const_t =
       let str = trim _str in
       match const_type with
@@ -148,7 +148,7 @@ module Postgres : Interface = struct
    let destroy x = let _ = Unix.close_process x in ()
    
    let create_table (channel: sql_channel_t) ?(temporary = false) 
-                    (tname:string) (tschema:Types.var_t list): unit =
+                    (tname:string) (tschema:Type.var_t list): unit =
       let cmd = "CREATE " ^
          (if temporary then "TEMPORARY " else "")^
          "TABLE "^tname^
@@ -170,7 +170,7 @@ module Postgres : Interface = struct
          put channel cmd
    ;;
 
-   let insert (channel:sql_channel_t) (tname:string) (tschema:Types.var_t list)
+   let insert (channel:sql_channel_t) (tname:string) (tschema:Type.var_t list)
               (data:Constants.const_t list list): unit =
       let cmd = 
          "INSERT INTO " ^ tname ^ "("^
@@ -187,7 +187,7 @@ module Postgres : Interface = struct
          put channel cmd
    ;;
 
-   let delete (channel:sql_channel_t) (tname:string) (tschema:Types.var_t list)
+   let delete (channel:sql_channel_t) (tname:string) (tschema:Type.var_t list)
               (data:Constants.const_t list list): unit =
       List.iter (fun tuple ->
          let cmd =
@@ -206,7 +206,7 @@ module Postgres : Interface = struct
    ;;
 
    let query ?(field_separator:string = "|") (channel:sql_channel_t) 
-             (query:Sql.select_t) (schema:Types.var_t list) : 
+             (query:Sql.select_t) (schema:Type.var_t list) : 
              Constants.const_t list list =
       let cmd = (Sql.string_of_select query)^"\n" in
          Debug.print "LOG-SQLCLIENT" (fun () ->

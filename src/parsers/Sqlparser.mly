@@ -1,5 +1,5 @@
 %{
-open Types
+open Type
 open Constants
 ;;
 
@@ -72,7 +72,7 @@ let bind_select_vars q =
 
 %}
 
-%token <Types.type_t> TYPE
+%token <Type.type_t> TYPE
 %token <string> ID STRING
 %token <int> INT   
 %token <float> FLOAT
@@ -376,7 +376,7 @@ expression:
    }
 | CASE expression WHEN caseSimpleWhenClauseList caseElseClause END {
       Sql.Case(List.map (fun (cmp,ret) -> 
-         (Sql.Comparison($2,Types.Eq,cmp), ret)) $4, $5)
+         (Sql.Comparison($2,Type.Eq,cmp), ret)) $4, $5)
    }
 | CASE WHEN caseSearchWhenClauseList caseElseClause END { Sql.Case($3, $4) }
 | error {

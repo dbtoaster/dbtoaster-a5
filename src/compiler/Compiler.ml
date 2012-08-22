@@ -10,7 +10,7 @@
 
 open Ring
 open Arithmetic
-open Types
+open Type
 open Calculus
 open Plan
 

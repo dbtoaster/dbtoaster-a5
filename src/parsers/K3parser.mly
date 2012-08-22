@@ -1,6 +1,6 @@
 %{    
    open Calculus
-   open Types
+   open Type
    open Constants
    open K3
    exception K3ParseError of string
@@ -12,7 +12,7 @@
    type k3_program_t = K3.prog_t
    (*
    type k3_map_t = K3.map_t
-   type map_schema_t = (Types.var_t list * Types.var_t list)
+   type map_schema_t = (Type.var_t list * Type.var_t list)
    *)
 
     
@@ -111,7 +111,7 @@
    let varK3Type_to_varType = List.map (fun (v,t) -> (v,base_type_of t))
 %}
 
-%token <Types.type_t> TYPE
+%token <Type.type_t> TYPE
 %token <int> INTEGER
 %token <string> ID CONST_STRING 
 %token <float> CONST_FLOAT
@@ -234,24 +234,24 @@ varList:
 
 varItem:
 | ID COLON typeItem                                      { ($1, $3) }
-| ID                                                     { ($1, Types.TInt) }
+| ID                                                     { ($1, Type.TInt) }
 
 typeItem:
-| INT                                                      { Types.TInt }
-| FLOAT                                                    { Types.TFloat }
-| STRINGTYPE                                               { Types.TString }
-| DATE                                                     { Types.TDate }
+| INT                                                      { Type.TInt }
+| FLOAT                                                    { Type.TFloat }
+| STRINGTYPE                                               { Type.TString }
+| DATE                                                     { Type.TDate }
 
 
 k3Type:
 | INT
-   { TBase(Types.TInt) }
+   { TBase(Type.TInt) }
 | FLOAT
-   { TBase(Types.TFloat) }
+   { TBase(Type.TFloat) }
 | DATE
-   { TBase(Types.TDate) }
+   { TBase(Type.TDate) }
 | STRINGTYPE
-   { TBase(Types.TString) }
+   { TBase(Type.TString) }
 | UNIT                                                     { TUnit }
 | LT k3TypeList GT                                         { TTuple($2) }
 | COLLECTION LPAREN k3Type RPAREN
@@ -347,7 +347,7 @@ constStatement:
 
 varStatement:
 | ID COLON k3Type   { Var($1, $3 ) }
-| ID                { Var($1, TBase(Types.TInt)) }
+| ID                { Var($1, TBase(Type.TInt)) }
 
 tupleStatement:
 | LT statementElementList GT                                { Tuple($2) }

@@ -27,7 +27,7 @@
    module.
 *)
 
-open Types
+open Type
 open Constants
 ;;
 
@@ -147,7 +147,7 @@ let implementation (fn:string) (argtypes:type_t list):string =
 
 (**/**)
 let escalate (argtypes:type_t list) = 
-   try Types.escalate_type_list argtypes
+   try Type.escalate_type_list argtypes
    with Failure(msg) -> raise (InvalidFunctionArguments(msg))
 
 let inference_error (): type_t =

@@ -293,7 +293,7 @@ let create_pattern_map_from_access mapn theta_vars key_vars =
    @param calc        An M3 calculus expression.
    @return            The pattern map for all map accesses in [calc]
 *)
-let rec extract_from_calc (theta_vars: Types.var_t list) 
+let rec extract_from_calc (theta_vars: Type.var_t list) 
                            (calc: Calculus.expr_t) : pattern_map = 
    let sum_pattern_fn _ sum_pats : pattern_map = 
         List.fold_left merge_pattern_maps (empty_pattern_map()) sum_pats 

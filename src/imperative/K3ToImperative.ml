@@ -23,7 +23,7 @@
  
  *)
 
-open Types
+open Type
 open Constants
 open Schema
 open K3
@@ -1117,7 +1117,7 @@ struct
                Debug.print "LOG-K3-TO-IMP" (fun () -> 
                   "Tuple Types for "^x^": "^
                   (ListExtras.ocaml_of_list (function 
-                        TBase(bt) -> Types.string_of_type bt
+                        TBase(bt) -> Type.string_of_type bt
                         | _ -> "Non-base-type") (List.map snd it_l))
                );
                x, t, false, bind_arg arg (Var (None,(x,t)))

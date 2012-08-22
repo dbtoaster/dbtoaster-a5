@@ -36,9 +36,9 @@ open Format
 
 (* Metadata for code generation *)
 
-(** Variable identifiers.  This is distinct from [Types.var_t] because K3 
+(** Variable identifiers.  This is distinct from [Type.var_t] because K3 
     variables can have more complex types ([K3.type_t], rather than 
-    [Types.type_t]) *)
+    [Type.type_t]) *)
 type id_t = string
 
 (** Collection identifiers *)
@@ -51,7 +51,7 @@ type collection_type_t =
     | Intermediate    (** The collection is intermediate **)
 
 (**K3 Typing primitives.  This needs to be more extensive than the primitive
-   types defined in the Types module.  We include those via TBase.
+   types defined in the Type module.  We include those via TBase.
 
    Note that the collection type is used for both persistent and temporary 
    collections.  Maps are collections of tuples, where the tuple includes key 
@@ -75,7 +75,7 @@ type collection_type_t =
  *)
 type type_t =
     | TUnit                               (** Unit type; No data content   *)
-    | TBase      of Types.type_t          (** Primitive type, see Types    *)
+    | TBase      of Type.type_t          (** Primitive type, see Type    *)
     | TTuple     of type_t list           (** Tuples of nested objects     *)
     | Collection of collection_type_t * 
                     type_t                (** Collections (typically bags) *)
@@ -517,7 +517,7 @@ let types_of_arg a = match a with
 let rec string_of_type t =
     match t with
       TUnit -> "TUnit" 
-    | TBase(b_t) -> Types.string_of_type b_t
+    | TBase(b_t) -> Type.string_of_type b_t
     | TTuple(t_l) -> "TTuple(" ^ 
                      (String.concat " ; " (List.map string_of_type t_l)) ^ ")"
     | Collection(k,c_t) ->
@@ -535,7 +535,7 @@ let string_of_arg a = match a with
 let rec escalate_type t1 t2 =
    match (t1,t2) with 
     | (TUnit,TUnit) -> TUnit
-    | (TBase(b1),TBase(b2)) -> TBase(Types.escalate_type b1 b2)
+    | (TBase(b1),TBase(b2)) -> TBase(Type.escalate_type b1 b2)
     | (TTuple(f1),TTuple(f2)) -> TTuple(List.map2 escalate_type f1 f2)
     | (Collection(a1,c1),
        Collection(a2,c2)) -> Collection(a1,escalate_type c1 c2)
@@ -653,7 +653,7 @@ let rec code_of_expr e =
    let rcr ex = "("^(code_of_expr ex)^")" in
    let rec ttostr t = "("^(match t with
       | TUnit -> "K3.TUnit"
-      | TBase( b_t ) -> "K3.TBase(Types."^(Types.ocaml_of_type b_t)^")"
+      | TBase( b_t ) -> "K3.TBase(Type."^(Type.ocaml_of_type b_t)^")"
       | TTuple(tlist) -> 
          "K3.TTuple("^(ListExtras.ocaml_of_list ttostr tlist)^")"
       | Collection(_,subt) -> "K3.Collection("^(ttostr subt)^")"
@@ -677,7 +677,7 @@ let rec code_of_expr e =
           | Constants.CInt _ -> "CInt"
           | Constants.CBool _ -> "CBool" 
           | Constants.CDate _ -> "CDate" 
-        in "K3.Const(Types."^const_ts^"("^(Constants.string_of_const c)^"))"
+        in "K3.Const(Type."^const_ts^"("^(Constants.string_of_const c)^"))"
       | Var (id,t) -> "K3.Var(\""^id^"\","^(ttostr t)^")"
       | Tuple e_l -> "K3.Tuple("^
                (ListExtras.string_of_list ~sep:";" rcr e_l)^")"
@@ -801,7 +801,7 @@ let nice_string_of_expr ?(type_is_needed = false) e maps =
   let fnl () = pp_force_newline str_formatter () in
   let rec ttostr t = (match t with
       | TUnit -> "unit"
-      | TBase( b_t ) -> Types.string_of_type b_t
+      | TBase( b_t ) -> Type.string_of_type b_t
       | TTuple(tlist) -> 
          "<"^(ListExtras.string_of_list ttostr tlist)^">"
       | Collection(_,subt) -> "Collection("^(ttostr subt)^")"
@@ -981,7 +981,7 @@ let rec nice_code_of_expr e =
    let rcr ex = (nice_code_of_expr ex) in
    let rec ttostr t = (match t with
       | TUnit -> "unit"
-      | TBase( b_t ) -> (Types.ocaml_of_type b_t)
+      | TBase( b_t ) -> (Type.ocaml_of_type b_t)
       | TTuple(tlist) -> 
          "<"^(ListExtras.string_of_list ttostr tlist)^">"
       | Collection(_,subt) -> "Collection("^(ttostr subt)^")"
@@ -1085,7 +1085,7 @@ let collection_of_float_list (l : float list) =
 
 
 (* Incremental section *)
-type map_t = string * (Types.var_t list) * (Types.var_t list) * Types.type_t
+type map_t = string * (Type.var_t list) * (Type.var_t list) * Type.type_t
 type schema_t = (map_t list * Patterns.pattern_map)
 type statement_t = expr_t
 type trigger_t = Schema.event_t * statement_t list
@@ -1115,9 +1115,9 @@ let rec get_expr_map_schema (e: expr_t) : map_t list =
 let code_of_prog ((_,(maps,_),triggers,_):prog_t): string = (
    "--------------------- MAPS ----------------------\n"^
    (ListExtras.string_of_list ~sep:"\n\n" (fun (mapn, mapiv, mapov, mapt) ->
-      "DECLARE "^mapn^"("^(Types.string_of_type mapt)^")"^
-      (ListExtras.ocaml_of_list Types.string_of_type (List.map snd mapiv))^
-      (ListExtras.ocaml_of_list Types.string_of_type (List.map snd mapov))
+      "DECLARE "^mapn^"("^(Type.string_of_type mapt)^")"^
+      (ListExtras.ocaml_of_list Type.string_of_type (List.map snd mapiv))^
+      (ListExtras.ocaml_of_list Type.string_of_type (List.map snd mapov))
    ) maps)^"\n\n"^
    "--------------------- TRIGGERS ----------------------\n"^
    (ListExtras.string_of_list ~sep:"\n\n" (fun (event, stmts) ->
@@ -1130,12 +1130,12 @@ let code_of_prog ((_,(maps,_),triggers,_):prog_t): string = (
 let nice_code_of_prog ((db_schema, (maps,patts),
                         triggers, tl_queries):prog_t) : 
                       string = (
-   let string_of_var_type (n, t) = n ^ " : " ^ (Types.string_of_type t) in
+   let string_of_var_type (n, t) = n ^ " : " ^ (Type.string_of_type t) in
    "--------------------- SCHEMA ----------------------\n"^
    Schema.code_of_schema db_schema ^ "\n" ^
    "--------------------- MAPS ----------------------\n"^
    (ListExtras.string_of_list ~sep:"\n\n" (fun (mapn, mapiv, mapov, mapt) ->
-      mapn^"("^(Types.string_of_type mapt)^")"^
+      mapn^"("^(Type.string_of_type mapt)^")"^
       "["^(ListExtras.string_of_list ~sep:"," string_of_var_type mapiv)^"]"^
       "["^(ListExtras.string_of_list ~sep:"," string_of_var_type mapov)^"];"
    ) maps)^"\n\n"^
@@ -1239,18 +1239,18 @@ let annotate_collections e =
     in
     let type_of_op t1 t2 = TBase(
       match (t1, t2) with
-      | (TBase(Types.TBool), TBase(Types.TFloat))
-      | (TBase(Types.TFloat), TBase(Types.TBool))
-      | (TBase(Types.TFloat), TBase(Types.TFloat)) -> Types.TFloat
-      | (TBase(Types.TBool), TBase(Types.TInt))
-      | (TBase(Types.TInt), TBase(Types.TBool))
-      | (TBase(Types.TInt), TBase(Types.TInt)) -> Types.TInt
-      | (TBase(Types.TFloat), TBase(Types.TInt)) -> Types.TFloat
-      | (TBase(Types.TInt), TBase(Types.TFloat)) -> Types.TFloat
+      | (TBase(Type.TBool), TBase(Type.TFloat))
+      | (TBase(Type.TFloat), TBase(Type.TBool))
+      | (TBase(Type.TFloat), TBase(Type.TFloat)) -> Type.TFloat
+      | (TBase(Type.TBool), TBase(Type.TInt))
+      | (TBase(Type.TInt), TBase(Type.TBool))
+      | (TBase(Type.TInt), TBase(Type.TInt)) -> Type.TInt
+      | (TBase(Type.TFloat), TBase(Type.TInt)) -> Type.TFloat
+      | (TBase(Type.TInt), TBase(Type.TFloat)) -> Type.TFloat
       (* NOTE: calculations with two bools result in 
          an int (e.g. true + true) *)
-      | (TBase(Types.TBool), TBase(Types.TBool)) -> Types.TInt
-      | (TBase(Types.TDate), TBase(Types.TDate)) -> Types.TDate
+      | (TBase(Type.TBool), TBase(Type.TBool)) -> Type.TInt
+      | (TBase(Type.TDate), TBase(Type.TDate)) -> Type.TDate
       | _ -> bail ("Failed to match " ^ (string_of_type t1) ^ 
                        " and " ^ (string_of_type t2))
     )
@@ -1258,11 +1258,11 @@ let annotate_collections e =
     match e with
     | Const c -> (e, TBase(
       match c with
-      | Constants.CFloat _  -> Types.TFloat
-      | Constants.CString _ -> Types.TString
-      | Constants.CInt _    -> Types.TInt
-      | Constants.CBool _   -> Types.TBool
-      | Constants.CDate _   -> Types.TDate)) 
+      | Constants.CFloat _  -> Type.TFloat
+      | Constants.CString _ -> Type.TString
+      | Constants.CInt _    -> Type.TInt
+      | Constants.CBool _   -> Type.TBool
+      | Constants.CDate _   -> Type.TDate)) 
     | Var (id,t) -> 
       if VarMap.mem id var_map then
         let tp = VarMap.find id var_map in
@@ -1293,19 +1293,19 @@ let annotate_collections e =
     | Eq   (ce1,ce2)    -> 
       let ce1_e, _ = _annotate_collections ce1 var_map in
       let ce2_e, _ = _annotate_collections ce2 var_map in
-         (Eq(ce1_e, ce2_e), TBase(Types.TBool))
+         (Eq(ce1_e, ce2_e), TBase(Type.TBool))
     | Neq  (ce1,ce2)    ->
       let ce1_e, _ = _annotate_collections ce1 var_map in
       let ce2_e, _ = _annotate_collections ce2 var_map in
-         (Neq(ce1_e, ce2_e), TBase(Types.TBool))
+         (Neq(ce1_e, ce2_e), TBase(Type.TBool))
     | Lt   (ce1,ce2)    ->       
       let ce1_e, _ = _annotate_collections ce1 var_map in
       let ce2_e, _ = _annotate_collections ce2 var_map in
-         (Lt(ce1_e, ce2_e), TBase(Types.TBool))
+         (Lt(ce1_e, ce2_e), TBase(Type.TBool))
     | Leq  (ce1,ce2)    ->       
       let ce1_e, _ = _annotate_collections ce1 var_map in
       let ce2_e, _ = _annotate_collections ce2 var_map in
-         (Leq(ce1_e, ce2_e), TBase(Types.TBool))
+         (Leq(ce1_e, ce2_e), TBase(Type.TBool))
     | IfThenElse0 (ce1,ce2)  -> 
       let ce1e, _ = _annotate_collections ~argt:argt ce1 var_map in
       let ce2e, ce2t = _annotate_collections ~argt:argt ce2 var_map in
@@ -1404,7 +1404,7 @@ let annotate_collections e =
         [Collection(Persistent, TTuple((type_of_schema outs) @ [t]))])))
     | Member(me,ke) -> 
       (Member(fst (_annotate_collections me var_map), 
-              fst (annotate_list ke)), TBase(Types.TBool))
+              fst (annotate_list ke)), TBase(Type.TBool))
     | Lookup(me,ke) -> 
       let ce, ct = _annotate_collections me var_map in
          (Lookup(ce, fst (annotate_list ke)), 

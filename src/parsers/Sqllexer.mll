@@ -1,7 +1,7 @@
 {   
 open Sqlparser   
 open Lexing   
-open Types
+open Type
 
 let init_line lexbuf =
     let pos = lexbuf.Lexing.lex_curr_p in

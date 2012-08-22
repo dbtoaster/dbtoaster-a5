@@ -1,7 +1,7 @@
 (** Values.
  *)
 
-open Types
+open Type
 open Constants
 
 module type Value =

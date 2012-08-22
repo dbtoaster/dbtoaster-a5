@@ -13,7 +13,7 @@
      }
   *)
 
-open Types
+open Type
 open Arithmetic
 open Calculus
 open CalculusDecomposition

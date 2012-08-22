@@ -14,7 +14,7 @@
  *
  *)
 
-open Types
+open Type
 open Constants
 open Schema
 open Values
@@ -116,14 +116,14 @@ let preprocessors : (string * (string -> string list -> string list)) list =
 (* TODO: better hashing function control *)
 (* TODO: handle "event" and "order" schema elements, as seen in C++ adaptors *)
 let build_tuple (reln,relv,_) param_val support_sch =
-   let types = (List.map Types.string_of_type support_sch) @ 
+   let types = (List.map Type.string_of_type support_sch) @ 
                (Str.split (Str.regexp ",") param_val) in
    let full_sch = (List.map (fun x -> ("tmp",x)) support_sch) @ relv in
    let assert_type vn vt scht cmpt= 
       if vt <> cmpt then failwith (
          "Mismatch between schema of "^reln^" and schema provided to CSV "^
          "adaptor: '"^param_val^"'.  Adaptor schema is "^scht^
-         ", but relation schema says "^(Types.string_of_type vt)^
+         ", but relation schema says "^(Type.string_of_type vt)^
          " for variable "^vn
       )
    in
@@ -149,7 +149,7 @@ let build_tuple (reln,relv,_) param_val support_sch =
      with | Invalid_argument("List.map2") ->
                failwith ("Schema mismatch: Adaptor got ["^param_val^"]; while "^
                          "expecting schema: "^
-                         (ListExtras.ocaml_of_list Types.string_of_var relv))
+                         (ListExtras.ocaml_of_list Type.string_of_var relv))
    in
    let num_fns = List.length build_fns in
    let extend_fn = List.hd (List.rev build_fns) in
@@ -183,12 +183,12 @@ let build_tuple (reln,relv,_) param_val support_sch =
 let build_rel_tuple (reln,relv,relt) support_sch =
    let synthesized_schema =
       ListExtras.string_of_list ~sep:"," 
-         (fun (_,t) -> Types.string_of_type t) relv
+         (fun (_,t) -> Type.string_of_type t) relv
    in build_tuple (reln,relv,relt) synthesized_schema support_sch 
 
 (* Constructors: param key, const fn *)
 let constructors rel_sch : 
-      (string * (string -> Types.type_t list -> string list -> const_t list)) 
+      (string * (string -> Type.type_t list -> string list -> const_t list)) 
             list =
    [("schema", (build_tuple rel_sch))]
 
@@ -234,7 +234,7 @@ let parametrized_event param_val =
 let event_constructors : 
       (string * ((string -> const_t list -> 
                     (adaptor_event_t * const_t list) list) * 
-                 (string -> Types.type_t list))) list =
+                 (string -> Type.type_t list))) list =
    [  ("eventtype", (constant_event, (function _ -> []))); 
       ("triggers",  (parametrized_event, (function _ -> [TInt])));
       ("deletions", ((function "true" -> parametrized_event "0:insert,1:delete"

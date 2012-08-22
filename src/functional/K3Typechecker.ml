@@ -1,4 +1,4 @@
-open Types
+open Type
 open Constants
 module K = K3
 
@@ -359,13 +359,13 @@ let rec typecheck_expr e : K.type_t =
       | K.Add (ce1, ce2) -> tc_op (recur ce1) (recur ce2)
       | K.Mult (ce1, ce2) -> tc_op (recur ce1) (recur ce2)
       | K.Eq (ce1, ce2) -> ignore(tc_op (recur ce1) (recur ce2));
-                           K.TBase(Types.TInt)
+                           K.TBase(Type.TInt)
       | K.Neq (ce1, ce2) -> ignore(tc_op (recur ce1) (recur ce2)); 
-                            K.TBase(Types.TInt)
+                            K.TBase(Type.TInt)
       | K.Lt (ce1, ce2) -> ignore(tc_op (recur ce1) (recur ce2));
-                           K.TBase(Types.TInt)
+                           K.TBase(Type.TInt)
       | K.Leq (ce1, ce2) -> ignore(tc_op (recur ce1) (recur ce2));
-                            K.TBase(Types.TInt)
+                            K.TBase(Type.TInt)
 
       (* e1 : t1 e2 : t2 * t1 <> Unit, t2 <> Unit, flat(t1) *                *)
       (* -------------------------------------------- * op(e1,e2) : t2       *)

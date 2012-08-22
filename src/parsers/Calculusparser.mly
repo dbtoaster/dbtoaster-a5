@@ -1,5 +1,5 @@
 %{
-open Types
+open Type
 open Constants
 open Calculus
 open Arithmetic
@@ -21,7 +21,7 @@ type map_metadata =
 
 %}
 
-%token <Types.type_t> TYPE
+%token <Type.type_t> TYPE
 %token <string> ID STRING
 %token <int> INT
 %token <float> FLOAT
@@ -171,8 +171,8 @@ ivcCalculusExpr:
 //(***** END EXISTS HACK *****)
 
 comparison:
-| EQ  { Types.Eq  } | NEQ { Types.Neq } | LT  { Types.Lt  } 
-| LTE { Types.Lte } | GT  { Types.Gt  } | GTE { Types.Gte }
+| EQ  { Type.Eq  } | NEQ { Type.Neq } | LT  { Type.Lt  } 
+| LTE { Type.Lte } | GT  { Type.Gt  } | GTE { Type.Gte }
 
 relationDefn:
 | ID LPAREN RPAREN                                  { ($1, []) }

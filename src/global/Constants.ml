@@ -2,7 +2,7 @@
    Global system for wrapping typed primitive constants throughout DBToaster
 *)
 
-open Types
+open Type
 ;;
 
 (** Basic Constants *)
@@ -273,7 +273,7 @@ module Math = struct
       end)
    (** Perform a type-escalating not-equals comparison *)
    let cmp_neq a b = CBool((cmp_eq a b) = CBool(false))
-   (** Find the type-escalating comparison operation for a Types.cmp_t *)
+   (** Find the type-escalating comparison operation for a Type.cmp_t *)
    let cmp op =
       begin match op with 
          | Lt  -> cmp_lt

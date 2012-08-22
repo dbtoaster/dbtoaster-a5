@@ -1,7 +1,7 @@
 (**
    Tools for breaking a Calculus expression up into its component parts.
 *)
-open Types
+open Type
 open Ring
 open Arithmetic
 open Calculus

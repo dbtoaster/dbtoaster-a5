@@ -42,7 +42,7 @@
 *)
 
 open Calculus
-open Types
+open Type
 open Provenance
 
 (**/**)

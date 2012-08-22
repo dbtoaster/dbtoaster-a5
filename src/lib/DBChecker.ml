@@ -13,7 +13,7 @@ struct
 
    type query_t = {
       stmt    : Sql.select_t;
-      schema  : Types.var_t list;    
+      schema  : Type.var_t list;    
    }
     
    type db_session_t = {
@@ -32,12 +32,12 @@ struct
       ) !(db_session.tables)
    
     
-   let convert_schema (schema : Sql.schema_t) : Types.var_t list =
+   let convert_schema (schema : Sql.schema_t) : Type.var_t list =
       List.map (fun (_,n,t) -> (n,t)) schema
    
           
    let get_schema (db_session : db_session_t) 
-                  (table_name : string) : Types.var_t list =
+                  (table_name : string) : Type.var_t list =
       let (_, schema, _, _) = get_table db_session table_name in
          convert_schema schema
     
@@ -121,7 +121,7 @@ struct
          let value_b = try List.hd (Hashtbl.find hashtbl_b key)
                        with Not_found -> default key in
          let error =
-            Constants.Math.div2 Types.TFloat  
+            Constants.Math.div2 Type.TFloat  
                (Constants.Math.sum value_a (Constants.Math.neg value_b))
                (Constants.Math.sum value_a value_b)  
          in
@@ -160,7 +160,7 @@ struct
                         targets,
                         
                      List.filter (fun x -> x <> Sql.Select_Distinct) opts
-                  ), (q.schema @ ["COUNT", Types.TInt]))
+                  ), (q.schema @ ["COUNT", Type.TInt]))
          in
          let db_result = I.query !(db_session.client) real_query real_schema in
          let db_hashtbl = to_hashtbl db_result in

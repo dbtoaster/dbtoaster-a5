@@ -5,7 +5,7 @@ open Arithmetic
 open Calculus
 open M3ToK3
 
-module T = Types
+module T = Type
 module V = Arithmetic.ValueRing
 module C = Calculus.CalcRing
 module K = K3
@@ -122,7 +122,7 @@ let collection_ivc_gc_var stmt_info =
         rhs_ret_ve, 
         incr_expr) = stmt_info 
    in
-   let domain_type = K.TBase(Types.TInt) in
+   let domain_type = K.TBase(Type.TInt) in
    let free_lhs_outs_el = ListAsSet.diff lhs_outs_el trig_args_el in
    let collection_ivc_gc_t  = 
       if free_lhs_outs_el = [] 

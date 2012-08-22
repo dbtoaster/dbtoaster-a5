@@ -12,7 +12,7 @@
    to be deterministic and to have no side effects.
 *)
 
-open Types
+open Type
 open Constants
 
 (**

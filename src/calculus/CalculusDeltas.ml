@@ -2,7 +2,7 @@
    Computing the delta of a Calculus expression.
 *)
 
-open Types
+open Type
 open Ring
 open Arithmetic
 open Calculus

@@ -392,7 +392,7 @@
  *        subbing as in the 3-way join.
  *)
 
-open Types
+open Type
 open Constants
 open K3
 

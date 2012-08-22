@@ -4,7 +4,7 @@
    variables in this expression.
 *)
 
-open Types
+open Type
 open Calculus
 
 let (_,_,error,bug) = Debug.Logger.functions_for_module "CALCULUSPROVENANCE"

@@ -4,7 +4,7 @@
    These functions are defined through the Functions module
 *)
 
-open Types
+open Type
 open Constants
 open Functions
 ;;
@@ -123,7 +123,7 @@ let cast (arglist:const_t list) (ftype:type_t) =
                   (string_of_type ftype)^": "^msg))
    end
 ;; List.iter (fun (t, valid_in) ->
-      declare_std_function ("cast_"^(Types.string_of_type t))
+      declare_std_function ("cast_"^(Type.string_of_type t))
                            cast
                            (function [a] when List.mem a valid_in -> t
                                    | _ -> inference_error ())

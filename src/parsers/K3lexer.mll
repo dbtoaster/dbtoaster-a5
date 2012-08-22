@@ -69,9 +69,9 @@ let keywords =
          "CHAR",       CHAR;
          "DATE",       DATE;
          "STRING", STRINGTYPE;
-         "INTEGER", TYPE(Types.TInt);
-         "DOUBLE", TYPE(Types.TFloat);
-         "DECIMAL", TYPE(Types.TFloat);
+         "INTEGER", TYPE(Type.TInt);
+         "DOUBLE", TYPE(Type.TFloat);
+         "DECIMAL", TYPE(Type.TFloat);
          "EXTERNALLAMBDA", EXTERNALLAMBDA;
    ]
 let _ = hashtbl_of_pair_list keyword_table keywords

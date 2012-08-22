@@ -2,7 +2,7 @@
    Tools for optimizing/simplifying Calculus Expressions
 *)
 
-open Types
+open Type
 open Constants
 open Ring
 open Arithmetic
@@ -369,14 +369,14 @@ let lift_equalities (global_scope:var_t list) (big_expr:C.expr_t): C.expr_t =
             );
             ([BidirectionalLift(x, y)], CalcRing.one)
          | CalcRing.Val(Cmp(Eq, ValueRing.Val(AVar(x)), y)) 
-               when (Types.can_escalate_type (type_of_value y) (snd x)) ->
+               when (Type.can_escalate_type (type_of_value y) (snd x)) ->
             Debug.print "LOG-LIFT-EQUALITIES" (fun () -> 
                "Unidirectional lift candidate "^(string_of_var x)^" ^= "^
                (CalculusPrinter.string_of_value y)
             );
             ([UnidirectionalLift(x, y)], CalcRing.one)
          | CalcRing.Val(Cmp(Eq, x, ValueRing.Val(AVar(y))))
-               when (Types.can_escalate_type (type_of_value x) (snd y)) ->
+               when (Type.can_escalate_type (type_of_value x) (snd y)) ->
             Debug.print "LOG-LIFT-EQUALITIES" (fun () -> 
                "Unidirectional lift candidate "^(string_of_var y)^" ^= "^
                (CalculusPrinter.string_of_value x)

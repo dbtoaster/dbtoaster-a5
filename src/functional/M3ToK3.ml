@@ -4,7 +4,7 @@
 open Arithmetic
 open Calculus
 
-module T = Types
+module T = Type
 module Const = Constants
 module V = Arithmetic.ValueRing
 module C = Calculus.CalcRing
@@ -74,7 +74,7 @@ let m3_map_to_k3_map (m3_map: M3.map_t) : K.map_t =
          in 
             (map_name, input_vars, output_vars, map_type )
       | M3.DSTable(rel_name, rel_schema,_) -> 
-         (rel_name, [], rel_schema, Types.TInt )
+         (rel_name, [], rel_schema, T.TInt )
 
 (**/**)
 

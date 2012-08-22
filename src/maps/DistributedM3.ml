@@ -14,7 +14,7 @@
    fix the mistake (and propagate any further corrections as-needed).
 *)
 
-open Types
+open Type
 open Schema
 open Plan
 open M3

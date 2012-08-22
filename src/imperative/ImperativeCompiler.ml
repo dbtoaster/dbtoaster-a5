@@ -1,4 +1,4 @@
-open Types
+open Type
 open Constants
 open Schema
 open K3
@@ -680,13 +680,13 @@ struct
         *)
         t1
       | Host(TBase(bt1)), Host(TBase(bt2)) -> 
-         Host(TBase(Types.escalate_type bt1 bt2))
+         Host(TBase(Type.escalate_type bt1 bt2))
       | _, _ when t1 = t2 -> t1
       | _, _ -> failwith ("incompatible types "^(sot t1)^" "^(sot t2))
     in
     let promote_types_op op t1 t2 = match t1, t2 with
       | Host(TBase(bt1)), Host(TBase(bt2)) -> 
-         Host(TBase(Types.escalate_type bt1 bt2))
+         Host(TBase(Type.escalate_type bt1 bt2))
       | _, _ when t1 = t2 -> t1
       | _, _ -> failwith ("incompatible types for op "^
                            (string_of_op op)^" "^(sot t1)^" "^(sot t2))
@@ -1770,12 +1770,12 @@ end (* Typing *)
                | Host(TBase(base_t)) -> base_t
                | _ -> failwith ("Invalid call to "^id)
               end in
-              let escalate f = Types.escalate_type_list ~opname:id
+              let escalate f = Type.escalate_type_list ~opname:id
                                                         (List.map base_type f)
               in
               let arg_cast tgt_type arg = 
                   (Fn(ty, Ext(Apply("static_cast<"^
-                                    (Types.cpp_of_type tgt_type)^
+                                    (Type.cpp_of_type tgt_type)^
                                      ">")), [arg]))
               in
               begin match nargs with
@@ -1811,7 +1811,7 @@ end (* Typing *)
                         then result ci arg
                         else
                         let cast_fn_id = id^"_from_"^
-                           (Types.string_of_type source_type) in
+                           (Type.string_of_type source_type) in
                         result ci (Fn(ty, Ext(Apply(cast_fn_id)), nargs))
                      | t -> failwith ("Cast of invalid type: "^
                               (Imperative.string_of_type (fun _ -> "[EXT]") t))
@@ -2229,7 +2229,7 @@ end (* Typing *)
   let infer_types = Typing.infer_types
 
   (* Profiling code generation *)
-  let string_of_m3_type t = Types.string_of_type t
+  let string_of_m3_type t = Type.string_of_type t
 
   let profile_map_value_update c_id t_l =
     let c_t, c_entry_t = (c_id^"_map"), (c_id^"_entry") in 
@@ -2433,7 +2433,7 @@ end (* Typing *)
     let iarg_decls, iargs = List.split (List.map
         (fun (a,ty) ->
           let i_t = imp_type_of_calc_type ty in
-          (Types.string_of_type ty)^" "^a, Var(i_t, (a, i_t)))
+          (Type.string_of_type ty)^" "^a, Var(i_t, (a, i_t)))
         (Schema.event_vars event))
     in
     let imp_stmts = match imp with | Block(_,s) -> s

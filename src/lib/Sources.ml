@@ -1,5 +1,5 @@
 open Schema
-open Types
+open Type
 open Constants
 open Values
 
