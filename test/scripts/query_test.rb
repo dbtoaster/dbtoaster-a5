@@ -241,7 +241,6 @@ end
 
 class InterpreterUnitTest < GenericUnitTest
   def run
-  put RUBY_PLATFORM;
     cmd = "OCAMLRUNPARAM='#{$ocamlrunparam}';"+
        "#{$timeout_exec}"+
        "#{dbt_base_cmd.join(" ")}"+
