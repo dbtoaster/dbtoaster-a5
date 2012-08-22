@@ -1,4 +1,4 @@
-module T = Types
+module T = Type
 module C = Constants
 module K = K3
 module MK = M3ToK3

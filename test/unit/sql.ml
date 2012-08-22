@@ -1,10 +1,10 @@
 open UnitTest
-open Types
+open Type
 ;;
 
 let test msg expr exp_type =
    log_test ("Sql Expression Types ( "^msg^" )") 
-            (Types.string_of_type)
+            (Type.string_of_type)
             (Sql.expr_type (parse_sql_expr expr) [
                "R", [Some("R"), "A", TFloat;
                      Some("R"), "B", TInt], Schema.StreamRel,

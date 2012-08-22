@@ -1,4 +1,4 @@
-open Types
+open Type
 open Ring
 open Arithmetic
 open Calculus

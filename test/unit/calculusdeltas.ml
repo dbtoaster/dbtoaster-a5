@@ -1,6 +1,6 @@
 open Schema
 open Calculus
-open Types
+open Type
 open UnitTest
 ;;
 Debug.activate "PARSE-CALC-WITH-FLOAT-VARS"
@@ -167,7 +167,7 @@ test "TPCH11" (InsertEvent(schema_rel "PARTSUPP" ["dPK"; "dSK"; "dAQ"; "dSC"]))
 ;;
 
 test "Employee37 dEmployee" 
-   (InsertEvent("LOCATION", [var "dLID"; "dRG", Types.TString], 
+   (InsertEvent("LOCATION", [var "dLID"; "dRG", Type.TString], 
                 Schema.StreamRel))
    "AggSum([COUNT_DID], 
       ((__sql_inline_agg_1 ^=

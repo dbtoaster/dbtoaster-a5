@@ -4,7 +4,7 @@ open Patterns
 open K3
 open K3Compiler
 open Values.K3Value
-open Types
+open Type
 open Constants
 ;;
 module Interpreter = K3Compiler.Make(K3Interpreter.K3CG)
