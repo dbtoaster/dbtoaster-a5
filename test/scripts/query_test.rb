@@ -210,7 +210,8 @@ class ScalaUnitTest < GenericUnitTest
     return if $compile_only;
     starttime = Time.now;
     IO.popen($timeout_exec +
-             "scala -J-Xmx1024M " + 
+             "scala -J-Xmx2048M -J-XX:+HeapDumpOnOutOfMemoryError " + 
+			 "-J-XX:+UseParallelGC -J-XX:+UseParallelOldGC " +
              "-classpath \"bin/queries/#{@qname}.jar#{$path_delim}" + 
                           "lib/dbt_scala/dbtlib.jar\" " + 
              "org.dbtoaster.RunQuery", "r") do |qin|
@@ -240,6 +241,7 @@ end
 
 class InterpreterUnitTest < GenericUnitTest
   def run
+  put RUBY_PLATFORM;
     cmd = "OCAMLRUNPARAM='#{$ocamlrunparam}';"+
        "#{$timeout_exec}"+
        "#{dbt_base_cmd.join(" ")}"+
@@ -293,7 +295,7 @@ $executable_args = [];
 $dump_query = false;
 $log_detail = false;
 $always_return_success = false;
-$path_delim = ':';
+$path_delim = (if RUBY_PLATFORM =~ /cygwin/ then ';' else ':' end);
 
 GetoptLong.new(
   [ '-f',                GetoptLong::REQUIRED_ARGUMENT],
