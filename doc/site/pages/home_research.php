@@ -26,6 +26,7 @@ Proc. VLDB 2009, Demo paper.
 <a name="presentations"></a>
 <h3>Presentations</h3>
 <ul>
+<li><b>Oliver</b> at VLDB 2012: <a href="http://www.dbtoaster.org/papers/pvldb2012-dbtoaster-oak.pdf">Higher-Order Delta Processing for Dynamic, Frequently Fresh Views.</a></li>
 <li><b>Yanif</b> at CIDR 2011: <a href="http://www.dbtoaster.org/papers/cidr2011-dbtoaster-yna.pptx">Agile Views in a Dynamic Data Management System.</a></li>
 <li><b>Christoph</b> at the EPFL KTN Seminar: <a href="http://slideshot.epfl.ch/play/ktn_koch">Rethinking the Foundations of Databases</a></li>
 <li><b>Christoph</b> at AKBC2010: <a href="http://videolectures.net/akbc2010_koch_fivm/">DBToaster</a></li>
