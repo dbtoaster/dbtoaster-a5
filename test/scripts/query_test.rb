@@ -1,11 +1,12 @@
 #!/usr/bin/env ruby
-require "#{File.dirname($0)}/util.rb"
-require "#{File.dirname($0)}/db_parser.rb"
+
+require "./#{File.dirname($0)}/util.rb"
+require "./#{File.dirname($0)}/db_parser.rb"
 require 'getoptlong'
 require 'tempfile'
 
-$dbt_path = "#{File.dirname($0)}/../.."
-$dbt = "bin/dbtoaster"
+$dbt_path = "./#{File.dirname($0)}/../.."
+$dbt = "./bin/dbtoaster"
 $ocamlrunparam = "b,l=20M"
 Dir.chdir $dbt_path
 

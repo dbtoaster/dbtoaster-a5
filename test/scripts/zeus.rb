@@ -1,5 +1,5 @@
 #!/usr/bin/env ruby
-require "#{File.dirname($0)}/util.rb"
+require "./#{File.dirname($0)}/util.rb"
 require "tempfile"
 require "getoptlong"
 

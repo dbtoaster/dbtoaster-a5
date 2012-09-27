@@ -1,4 +1,4 @@
-require "#{File.dirname($0)}/util.rb"
+require "./#{File.dirname($0)}/util.rb"
 
 class String
   def mirror_chomp

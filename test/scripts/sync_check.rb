@@ -1,6 +1,6 @@
 #!/usr/bin/env ruby
-require "#{File.dirname($0)}/util.rb"
-require "#{File.dirname($0)}/db_parser.rb"
+require "./#{File.dirname($0)}/util.rb"
+require "./#{File.dirname($0)}/db_parser.rb"
 require 'tempfile'
 
 script = ARGV.shift;

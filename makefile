@@ -129,13 +129,15 @@ lib/.deps: runtimelibs
 	@touch lib/.deps
 
 bin/dbtoaster_release: $(O_FILES) lib/.deps src/global/Driver.ml bin/dbtoaster_debug
-	@echo "Linking DBToaster (Optimized) $(OSTYPE)"
-	@if uname | grep -i cygwin ; then \
-		cp bin/dbtoaster_debug bin/dbtoaster_release; \
-	else \
-		$(OCAMLOPT) $(OPT_FLAGS) -o $@ $(O_FILES) src/global/Driver.ml; \
-	fi
-
+	@echo "Linking DBToaster (Optimized)"
+	@$(OCAMLOPT) $(OPT_FLAGS) -o $@ $(O_FILES) src/global/Driver.ml;
+	
+#@if uname | grep -i cygwin ; then \
+#	cp bin/dbtoaster_debug bin/dbtoaster_release; \
+#else \
+#	$(OCAMLOPT) $(OPT_FLAGS) -o $@ $(O_FILES) src/global/Driver.ml; \
+#fi
+	
 bin/dbtoaster_debug: $(C_FILES) lib/.deps src/global/Driver.ml
 	@echo "Linking DBToaster (Debug)"
 	@$(OCAMLCC) $(OCAML_FLAGS) -o $@ $(C_FILES) src/global/Driver.ml

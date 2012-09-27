@@ -143,6 +143,10 @@ if [ $out_bin_file != "-" ]; then
 		out_bin_file_ext=$(echo $out_bin_file_ext | tr '[:upper:]' '[:lower:]')
         [[ (-z $out_bin_file_ext) || ($out_bin_file_ext != "jar") ]] && { out_bin_file="$out_bin_file.jar"; }
         
+		if [[ $( uname -s ) == CYGWIN* ]]; then
+			out_src_file="$( cygpath --windows $out_src_file )"
+			out_src_file="\"$out_src_file\""
+		fi
 		compile_flags="$scala_compile_flags $scala_opt_flag"
         compile_cmd="scalac $main_file $out_src_file -d $out_bin_file $compile_flags"
 		[ $log_scala -eq 1 ] && { compile_log="$compile_log $compile_cmd"; }
