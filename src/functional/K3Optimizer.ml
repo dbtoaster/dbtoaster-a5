@@ -1001,8 +1001,24 @@ let rec lift_ifs bindings expr =
 (** predicates: list of upstream predicates and whether this expr is a
     descendant of the "then" branch for each upstream predicate *)
 let rec simplify_if_chains predicates expr =
+    (* checks whether an expression contains side effects *)
+    let has_side_effects expr =
+      let check expr = 
+        begin match expr with
+        | PCUpdate _ -> true
+        | PCValueUpdate _ -> true
+        | PCElementRemove _ -> true
+        | _ -> false
+        end
+      in
+      let aux _ parts_contained e =
+        (List.exists (fun x -> x) (List.flatten parts_contained)) || (check expr)
+      in fold_expr aux (fun x _ -> x) None false expr
+    in
     let rcr new_branch = simplify_if_chains (predicates@new_branch) in
     match expr with
+    | IfThenElse(pe,te,ee) when te = ee && not (has_side_effects pe) &&
+      not (Debug.active "K3-NO-IF-REMOVE") -> te
     | IfThenElse(pe,te,ee) ->
         if List.mem_assoc pe predicates then
             rcr [] (if List.assoc pe predicates then te else ee)
