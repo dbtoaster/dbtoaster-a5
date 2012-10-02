@@ -304,6 +304,9 @@ type expr_t =
    | Unit (** 
          Unit operation. Does nothing, only returns value with unit type
       *)
+   | LookupOrElse of expr_t * expr_t list * expr_t (**
+         Collection, key, expression
+      *)
    
 
 (* Expression traversal helpers *)
@@ -347,6 +350,7 @@ let get_branches (e : expr_t) : expr_t list list =
     | PCValueUpdate    (me,ine,oute,ve)     -> [[me];ine;oute;[ve]]
     | PCElementRemove  (me,ine,oute)        -> [[me];ine;oute]
     | Unit                                  -> []
+    | LookupOrElse      (me,ke,te)          -> [[me];ke;[te]]
     end
 
 (* Tree reconstruction, given a list of branches.
@@ -405,6 +409,7 @@ let rebuild_expr e (parts : expr_t list list) =
     | PCElementRemove  (me,ine,oute)        -> 
        PCElementRemove(sfst(),snd(),thd())
     | Unit                                  -> e
+    | LookupOrElse     (me,ke,te)           -> LookupOrElse(sfst(), snd(), sthd())
     end
 
 (* Apply a function to all its children *)
@@ -457,6 +462,8 @@ let descend_expr (f : expr_t -> expr_t) e =
                                                                List.map f ine,
                                                                List.map f oute)
     | Unit                                  -> e
+    | LookupOrElse     (me,ke,te)           -> LookupOrElse(f me, List.map f ke,
+                                                        f te)
     end
 
 
@@ -645,6 +652,7 @@ let string_of_expr e =
     | PCUpdate _          -> pop ~lb:[1] "PCUpdate"
     | PCValueUpdate   _   -> pop ~lb:[1;2] "PCValueUpdate"
     | PCElementRemove _   -> pop ~lb:[1;2] "PCElementRemove"
+    | LookupOrElse _      -> pop ~lb:[1;2] "LookupOrElse"
     in pp_set_margin str_formatter 80; flush_str_formatter (aux e)
 
 let string_of_exprs e_l = ListExtras.string_of_list string_of_expr e_l
@@ -758,6 +766,9 @@ let rec code_of_expr e =
                                 (ListExtras.ocaml_of_list rcr ine)^
                                 ","^(ListExtras.ocaml_of_list rcr oute)^")"
       | Unit -> "K3.Unit"
+      | LookupOrElse(me,ke,ve) -> 
+            "K3.Lookup("^(rcr me)^","^(ListExtras.ocaml_of_list rcr ke)^","^
+              (rcr ve)^")"
 
 let get_pc_schema pce maps = 
    let rec get_pc_name expression = match expression with
@@ -974,6 +985,7 @@ let nice_string_of_expr ?(type_is_needed = false) e maps =
     | PCUpdate _          -> pop ~lb:[1] "PCUpdate"
     | PCValueUpdate   _   -> pop ~lb:[1;2] "PCValueUpdate"
     | PCElementRemove _   -> pop ~lb:[1;2] "PCElementRemove"
+    | LookupOrElse _      -> pop ~lb:[1;2] "LookupOrElse"
     (*| External         efn_id               -> pop "External" *)
     in pp_set_margin str_formatter 80; flush_str_formatter (aux e)
 
@@ -1073,6 +1085,8 @@ let rec nice_code_of_expr e =
             "PCElementRemove("^(rcr me)^","^(ListExtras.ocaml_of_list rcr ine)^
                                 ","^(ListExtras.ocaml_of_list rcr oute)^")"
       | Unit -> "()"
+      | LookupOrElse(me,ke,ve) -> "LookupOrElse("^(rcr me)^","^
+            (ListExtras.ocaml_of_list rcr ke)^","^(rcr ve)^")"
 
 (* Native collection constructors *)
 let collection_of_list (l : expr_t list) =
@@ -1441,6 +1455,10 @@ let annotate_collections e =
       let oute_e, _ = annotate_list oute in
          (PCElementRemove(m_e, ine_e, oute_e), TUnit)
     | Unit -> (e, TUnit)
+    | LookupOrElse(me,ke,ve) -> 
+      let ce, ct = _annotate_collections me var_map in
+      (LookupOrElse(ce, fst (annotate_list ke), fst
+      (_annotate_collections ve var_map)), snd (key_val (type_of_collection ct)))
   in
   if Debug.active "NO-COLLECTION-ANNOTATION" 
   then e 

@@ -46,8 +46,18 @@ package org.dbtoaster.dbtoasterlib {
       }
     }
     
+	import scala.collection.mutable.Map
+	val regexpCache = Map[String, java.util.regex.Pattern]()
     def regexp_match(regexp: String, str: String): Int = {
-      val pattern = java.util.regex.Pattern.compile(regexp)
+	  val pattern = regexpCache.get(regexp) match {
+	    case Some(x) => x
+	    case _ => {
+		  val pattern = java.util.regex.Pattern.compile(regexp)
+		  regexpCache += ((regexp, pattern))
+		  pattern
+		}
+	  }
+	  
       val matcher = pattern.matcher(str)
       if (matcher.find) 1 else 0
     }

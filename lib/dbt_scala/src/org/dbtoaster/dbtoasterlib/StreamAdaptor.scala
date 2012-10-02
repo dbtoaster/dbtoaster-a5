@@ -151,6 +151,7 @@ object StreamAdaptor {
                      extends StreamAdaptor {
       val eventType = if (eventtype == "insert") InsertTuple else DeleteTuple
       val hasDeletions = (deletions == "true")
+      val dateFormatParser = new SimpleDateFormat("yyyy-MM-dd")
       
       def parseColType(col: String): ColumnType = {
         col match {
@@ -163,33 +164,34 @@ object StreamAdaptor {
         }
       }
 
-      val colTypes: List[ColumnType] = 
+      val colTypes: Array[ColumnType] = 
         if(schemaTypes.isEmpty) 
-          schema.split(",").iterator.toList.map(x => parseColType(x)) 
+          schema.split(",").map(x => parseColType(x)) 
         else
-          schemaTypes
+          schemaTypes.toArray
 
       def processTuple(row: String): List[StreamEvent] = {
-        val cols = row.split(delimiter).toList
+        val cols = row.split(delimiter)
 
         val (valCols, insDel, order) = (if (hasDeletions) {
           (cols.drop(2), (if (cols(1) == "1") InsertTuple 
                           else DeleteTuple), cols(0).toInt)
         } else (cols, eventType, 0))
 
-        val vals: List[Any] = (valCols zip colTypes).map {
-          x =>
-            x match {
-              case (v, IntColumn) => v.toLong
-              case (v, FloatColumn) => v.toDouble
-              case (v, OrderColumn) => v.toLong
-              case (v, DateColumn) => 
-                new SimpleDateFormat("yyyy-MM-dd").parse(v)
-              case (v, StringColumn) => v
-              case _ => ""
+        val vals2: Array[Any] = (valCols, colTypes).zipped.map {
+          case (v, t) =>
+            t match {
+              case IntColumn => v.toLong
+              case FloatColumn => v.toDouble
+              case OrderColumn => v.toLong
+              case DateColumn => dateFormatParser.parse(v)
+              case StringColumn => v
+              case _ => v
             }
         }
-        List(StreamEvent(insDel, order, relation, vals))
+        val vals3 = vals2.toList
+        val vals = List[Any]()
+        List(StreamEvent(insDel, order, relation, vals3))
       }
     }
 

@@ -633,7 +633,14 @@ let rec typecheck_expr e : K.type_t =
             | _ -> failwith "invalid target for map element remove"
          end
       | K.Unit -> K.TUnit
-
+	  (* TODO: check if defval is the same type as the value of the map *)
+      | K.LookupOrElse (me, ke, ve) -> 
+         let v_tpe = 
+		    tc_pcop (fun mv_t _ -> mv_t) (recur me) (List.map recur ke) 
+		 in
+		 if v_tpe = (recur ve) then v_tpe else 
+		    failwith "type of default value does not match type of collection"
+			
    with 
       | Failure(x)                -> expr_error e x
       | K3TypecheckError(stack,x) -> expr_error ~old_stack:stack e x

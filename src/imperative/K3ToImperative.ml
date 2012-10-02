@@ -577,6 +577,9 @@ struct
       | K.Filter _ ->
         failwith "TODO: implement filter in K3ToImperative"
 
+      | K.LookupOrElse _ ->
+        failwith "TODO: implement LookupOrElse in K3ToImperative"
+
       | K.SingletonPC _ | K.OutPC _ | K.InPC _ | K.PC _ -> 
         undecorated_ir metadata e
 

@@ -1,9 +1,12 @@
 import java.util.Scanner
-import java.io.InputStream
+import java.io._
 import scala.collection.mutable.Queue
 import scala.collection.mutable.PriorityQueue
+import scala.collection.mutable.Map
 import org.dbtoaster.dbtoasterlib.DBToasterExceptions._
 import org.dbtoaster.dbtoasterlib.StreamAdaptor._
+import scala.actors.Actor
+import scala.actors.Actor._
 
 package org.dbtoaster.dbtoasterlib {
   /**
@@ -19,14 +22,16 @@ package org.dbtoaster.dbtoasterlib {
     case class FixedSize(len: Int) extends FramingType
     case class Delimited(delim: String) extends FramingType
 
+    case class EventMessage(s: Source, e: DBTEvent)
+
     /**
      * Abstract definition of a Source
      */
-    abstract class Source() {
+    abstract class Source() extends Actor {
       /**
        * Initializes the source
        */
-      def init(): Unit
+      def init(receiver: Actor): Unit
 
       /**
        * Checks whether a source has more input
@@ -64,7 +69,7 @@ package org.dbtoaster.dbtoasterlib {
      * @param framingType The framing type that should be used
      * @return The source
      */
-    def createInputStreamSource(in: InputStream, 
+    def createInputStreamSource(in: InputStreamReader, 
                                 adaptors: List[StreamAdaptor],
                                 framingType: FramingType) = {
       framingType match {
@@ -78,13 +83,15 @@ package org.dbtoaster.dbtoasterlib {
      * Reads events from an InputStream, assumes that the events are ordered
      *
      */
-    case class DelimitedStreamSource(in: InputStream, 
+    case class DelimitedStreamSource(in: InputStreamReader, 
                                      adaptors: List[StreamAdaptor], 
                                      delim: String) extends Source {
       val eventQueue = new Queue[StreamEvent]()
       val scanner: Scanner = new Scanner(in).useDelimiter(delim)
+      var recvr: Actor = null;
 
-      def init(): Unit = {
+      def init(receiver: Actor): Unit = {
+        recvr = receiver
       }
 
       def hasInput(): Boolean = scanner.hasNextLine() || !eventQueue.isEmpty
@@ -101,6 +108,17 @@ package org.dbtoaster.dbtoasterlib {
         else
           eventQueue.dequeue()
       }
+
+      def act() {
+        while(scanner.hasNextLine()) {
+          val eventStr: String = scanner.nextLine()
+
+          adaptors.foreach(adaptor => 
+            adaptor.processTuple(eventStr).foreach(x => recvr ! EventMessage(this, x)))
+        }
+
+        recvr ! EventMessage(this, EndOfStream)
+      }
     }
 
     /**
@@ -108,35 +126,51 @@ package org.dbtoaster.dbtoasterlib {
      * (assuming that the sources themselves are ordered)
      *
      */
-    class SourceMultiplexer(sources: List[Source]) {
+    class SourceMultiplexer(query: Actor, sources: List[Source]) extends Actor {
       var counter = 0
-      val queue: PriorityQueue[StreamEvent] = PriorityQueue()
+      val queues: Map[Source, PriorityQueue[StreamEvent]] = 
+        Map() ++= sources.map(x => (x, PriorityQueue[StreamEvent]()))
+      val queueDone: PriorityQueue[StreamEvent] = PriorityQueue()
 
-      def init(): Unit = ()
-
-      def hasInput(): Boolean = !sources.forall(s => !s.hasInput()) ||
-                                !queue.isEmpty
-
-      def nextInput(): DBTEvent = {
-        // Make sure to get an event from every source and return the one 
-        // with the lowest order number
-        sources.foreach(x => {
-          def getEvent(): Unit = {
-            if (x.hasInput()) {
-              x.nextInput() match {
-                case e @ StreamEvent(_, _, _, _) => queue.enqueue(e)
-                case EndOfStream => getEvent()
-              }
-            } else ()
-          }
-          getEvent()
-        })
-
-        if (!queue.isEmpty)
-          queue.dequeue()
-        else
-          EndOfStream
+      def sendEvent(): Unit = {
+        if(queues.isEmpty) {
+          queueDone.foreach(e => query ! e)
+          query ! EndOfStream
+          exit()
+        }
+        else if(queues.forall { case (_, q) => !q.isEmpty }) {
+          val minQueues = (queues.values ++ (
+            if(queueDone.isEmpty) 
+              List() 
+            else 
+              List(queueDone))).reduceLeft((a, b) => 
+                if(a.head < b.head) a else b)
+          query ! minQueues.dequeue
+        }
       }
+	  
+  	  def act() {
+        if(sources.isEmpty) {
+          query ! EndOfStream
+          exit() 
+        }
+
+        sources.foreach(x => { x.init(this); x.start })
+
+  		  while(true) {
+          receive {
+            case EventMessage(s, EndOfStream) => {
+              queueDone ++= queues(s)
+              queues -= s
+              sendEvent
+            }
+            case EventMessage(s, e: StreamEvent) => {
+              queues(s).enqueue(e)
+              sendEvent
+            }
+          }
+  			}
+  		}
     }
   }
 }

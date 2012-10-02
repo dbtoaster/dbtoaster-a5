@@ -41,6 +41,15 @@ package org.dbtoaster.dbtoasterlib {
        */
       def lookup(key: K): V
 
+	  /**
+       * Looks up an element in the collection given a key
+       *
+       * @param key The key of that should be looked up
+	   * @param defVal The default value to be used if the key is not found
+       * @return The value of the element
+       */
+      def lookup(key: K, defVal: V): V
+	  
       /**
        * Turns the collection into a list of key-value tuples
        *
@@ -269,6 +278,11 @@ package org.dbtoaster.dbtoasterlib {
         case None => throw new DBTFatalError("lookup of a non-existant key")
         case Some(v) => v
       }
+	  
+	  def lookup(key: K, defVal: V): V = elems.get(key) match {
+        case None => defVal
+        case Some(v) => v
+      }
 
       /**
        * Updates an element in the collection
@@ -418,6 +432,13 @@ package org.dbtoaster.dbtoasterlib {
           case Some((k, v)) => v
         }
       }
+	  
+	  def lookup(key: K, defVal: V): V = {
+		(elems.find { case (k, v) => k == key }) match {
+		  case None => defVal
+		  case Some((k, v)) => v
+		}
+	  }
 
       def foreach(f: Tuple2[K, V] => Unit): Unit =
         elems.foreach(f)

@@ -212,7 +212,7 @@ class ScalaUnitTest < GenericUnitTest
     starttime = Time.now;
     IO.popen($timeout_exec +
              "scala -J-Xmx2048M -J-XX:+HeapDumpOnOutOfMemoryError " + 
-			 "-J-XX:+UseParallelGC -J-XX:+UseParallelOldGC " +
+			 #"-J-XX:+AggressiveOpts -J-XX:+UseCompressedOops " +
              "-classpath \"bin/queries/#{@qname}.jar#{$path_delim}" + 
                           "lib/dbt_scala/dbtlib.jar\" " + 
              "org.dbtoaster.RunQuery", "r") do |qin|
@@ -220,6 +220,9 @@ class ScalaUnitTest < GenericUnitTest
       endtime = Time.now;
       output = output.map { |l| l.chomp.strip }.join("");
       @runtime = (endtime - starttime).to_f;
+      if /<runtime>(.*)<\/runtime>/ =~ output then
+        @runtime = $1;
+      end
       
       @toplevels.keys.each do |q| 
         if /<#{q}[^>]*>(.*)<\/#{q}>/ =~ output then

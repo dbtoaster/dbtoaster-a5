@@ -1121,8 +1121,14 @@ let m3_stmt_to_k3_stmt (meta: meta_t) ?(generate_init = false)
             else 
                None
          in 
-         if (init_expr_opt != None) then 
+         if (init_expr_opt != None) then (*
             K.IfThenElse( K.Member(existing_out_tier, lhs_outs_el),
+                          K.Lookup(existing_out_tier, lhs_outs_el),
+                          (extract_opt init_expr_opt) ), meta*)
+			if Debug.active "GENERATE-DEF-VAL-LOOKUPS" then
+			   K.LookupOrElse(existing_out_tier, lhs_outs_el, (extract_opt init_expr_opt)), meta
+			else 
+			   K.IfThenElse( K.Member(existing_out_tier, lhs_outs_el),
                           K.Lookup(existing_out_tier, lhs_outs_el),
                           (extract_opt init_expr_opt) ), meta
          else 

@@ -916,6 +916,9 @@ struct
     (* unit operation which has no effect *)
     let unit_operation =
       Eval(Some(K3.Unit), fun th db -> Unit) 
+	  
+	let lookup_def_val ?(expr = None) tcollection key_l val_k =
+	  bail ~expr:expr "LookupDefVal not implemented in the interpreter"  
     
     (* Top level code generation *)
     let trigger event stmt_block =

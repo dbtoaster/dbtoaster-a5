@@ -8,7 +8,6 @@ open Schema
 open CG
 open K3Typechecker
 
-
 let rec compile_k3_expr e =
     let rcr = compile_k3_expr in
     let tc_fn_rt e = 
@@ -125,7 +124,13 @@ let rec compile_k3_expr e =
         | _ -> failwith "invalid map value to remove"
         end
     | K.Unit -> unit_operation
+	| K.LookupOrElse(m_e, ke_l, v_e) -> lookup_def_val ~expr:(debug e) (rcr m_e) 
+        (List.map rcr ke_l) (rcr v_e)
     end
+	
+
+let compile_expr_to_string e: string = to_string (compile_k3_expr e)
+
 
 let compile_triggers_noopt (trigs:K3.trigger_t list) : code_t list =
    List.map (fun (event, cs) ->
@@ -163,7 +168,6 @@ let compile_query_to_string prog: string =
   to_string (compile_k3_to_code prog)
 
 end
-
 
 let optimize_prog ?(optimizations=[]) (schema, patterns, trigs) =
   let opt_trigs = List.map (fun (event, _, cs) ->

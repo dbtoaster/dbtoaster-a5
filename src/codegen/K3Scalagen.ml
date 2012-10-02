@@ -55,6 +55,9 @@ struct
    (** Keeps track of the number of sources that we have seen so far *)
    let source_count = ref 0
 
+   let consts = Hashtbl.create 2
+   let nb_consts = ref 0
+
    (** Splits a list l into two lists at element number n *)
    let list_split l n = 
       let rec _list_split l1 l2 n =
@@ -264,8 +267,9 @@ struct
       (make_list ~parens:("", ";") ~sep:";" 
          (List.map2 (fun v (t1, t2) -> 
             "val " ^ v ^ ":" ^ (string_of_type t2) ^ " = " ^ (cast_up ("_" ^ v) 
-            t1 t2)) (flatten_args argsn) (list_zip (flatten_tuple t1s) 
-            (flatten_tuple t2s))))
+            t1 t2) ^ " /* " ^ (string_of_type t1) ^ " => " ^ 
+            (string_of_type t2) ^ " */") (flatten_args argsn) 
+            (list_zip (flatten_tuple t1s) (flatten_tuple t2s))))
 
    (** Generates the header of a function *)
    and wrap_function argt fnt f: string = 
@@ -307,11 +311,11 @@ struct
             ) 
          in
          "(x:Tuple2[" ^ (string_of_type (Tuple(ktt))) ^ ", " ^ 
-         (string_of_type vtt) ^ "]) => { x match { case " ^ 
+         (string_of_type vtt) ^ "]) => { val " ^ 
          (string_of_argn ~prefix:"_" argsnkv) ^ 
-         " => {" ^
+         " = x; " ^
          (implicit_conversions argsn (Tuple([Tuple(ktt); vtt])) argst) ^ 
-         f_body ^ "} } }" 
+         f_body ^ " }" 
       | ExtFn(n, _, _) -> n ^ " _"
       | _ -> debugfail None "Expected a function"
 
@@ -414,8 +418,22 @@ struct
       | CInt(y) -> ((string_of_int y) ^ "L", Int)
       | CFloat(y) -> (string_of_float y, Float)
       | CString(y) -> ("\"" ^ y ^ "\"", String)
-      | CDate(y,m,d) -> ("new GregorianCalendar(" ^ (string_of_int y) ^ "," ^ 
-         (string_of_int m) ^ " - 1," ^ (string_of_int d) ^ ").getTime()", Date)
+      | CDate(y,m,d) -> 
+         let v = 
+            "new GregorianCalendar(" ^ (string_of_int y) ^ "," ^ 
+            (string_of_int m) ^ " - 1," ^ (string_of_int d) ^ ").getTime();" 
+         in
+         let cstr = 
+            if Hashtbl.mem consts v then
+               Hashtbl.find consts v
+            else (
+               nb_consts := !nb_consts + 1;
+               let str = ("c" ^ (string_of_int !nb_consts)) in
+               Hashtbl.add consts v str;
+               str
+            )
+         in
+         (cstr, Date)
    
    (** Generates the code for a variable *)
    let var ?(expr = None) (v:K3.id_t) (t:K3.type_t) : code_t = 
@@ -426,12 +444,13 @@ struct
       if (List.length c) = 0 then 
          debugfail expr "Tuple has 0 elements"
       else 
-         let t = Tuple(List.map (fun (_,t)->t) c) in
+         let t = Tuple(List.map (fun (_, t)->t) c) in
          (make_tuple ~tpe:(string_of_type t)
-         (List.map (fun (s,_) -> "(" ^ s ^ ")") c), t)
+         (List.map (fun (s, _) -> "(" ^ s ^ ")") c), t)
 
    (** Generates code for the projection of a tuple *)
-   let project ?(expr = None) ((tuple,tuplet):code_t) (f:int list) : code_t =
+   let project ?(expr = None) ((tuple, tuplet):code_t) 
+         (f:int list) : code_t =
       let tuple_members = 
          match tuplet with 
          | Tuple(t) -> t 
@@ -454,7 +473,7 @@ struct
 
    (** Generates the code for the creation of a singleton collection.
        Note: the new collection will be an intermediate collection *)
-   let singleton ?(expr = None) ((d,dt):code_t) (t:K3.type_t) : code_t =
+   let singleton ?(expr = None) ((d, dt):code_t) (t:K3.type_t) : code_t =
       let kt, vt, v = 
          match (map_type t) with
          | Tuple(t) -> 
@@ -479,7 +498,7 @@ struct
       else 
          let common_type = 
             List.fold_left (fun a (_, b) -> unify_types a b) 
-            (snd (List.hd terms)) terms 
+            (match (List.hd terms) with (_, t) -> t) terms 
          in
          let k, v = 
             match common_type with 
@@ -507,8 +526,8 @@ struct
          common_type) 
 
    (** Generates code for an operator *)
-   let op ?(expr = None) ((mk_op):op_t) ((a,at):code_t) 
-         ((b,bt):code_t) : code_t =
+   let op ?(expr = None) ((mk_op):op_t) ((a, at):code_t) 
+         ((b, bt):code_t) : code_t =
       let (op_f,rt,err) = (mk_op at bt) in
       (match err with 
       | None -> () 
@@ -517,15 +536,15 @@ struct
       ((op_f a b), rt)
 
    (** Generates code for an if-then-else statement *)
-   let ifthenelse ?(expr = None) ((i,it):code_t) ((t,tt):code_t) 
-         ((e,et):code_t) : code_t =
+   let ifthenelse ?(expr = None) ((i, it):code_t) ((t, tt):code_t)
+         ((e, et):code_t) : code_t =
       if it <> Bool then 
          debugfail expr "Type mismatch: non-bool condition"
       else
          let unified_type = unify_types tt et in
          (* Split long ifthenelse statements in multiple functions to
             avoid the JVM limitation for function lengths *)
-         ((if (String.length t) > 1000 then
+         ((if (String.length t) > 10000 then
             "({ def tb = " ^ (cast_up t tt unified_type) ^ "; def fb = " ^
             (cast_up e et unified_type) ^ ";" ^
             "if(" ^ i ^ ") { tb } else { fb }})"
@@ -535,16 +554,18 @@ struct
 
    (** Generates a block of statements *)
    let block ?(expr = None) (stmts:code_t list) : code_t =
-      (make_list ~parens:("{","}") ~sep:"; " (List.map (fun (s,_) -> s) stmts),
-         if (List.length stmts) < 1 then Unit 
-         else (snd (List.hd (List.rev stmts))))
+      (make_list ~parens:("{","}") ~sep:"; " 
+         (List.map (fun (s, _) -> s) stmts),
+         (if (List.length stmts) < 1 then Unit 
+         else (snd (List.hd (List.rev stmts)))))
    
    (** Adds some comment to a piece of code *)
    let comment ?(expr = None) (comment:string) ((c, ct):code_t) : code_t = 
       (" /* " ^ comment ^ " */ " ^ c, ct)
   
    (** Generates to code to iterate over a collection *)
-   let iterate ?(expr = None) ((fn,fnt):code_t) ((c, ct):code_t) : code_t =
+   let iterate ?(expr = None) ((fn, fnt):code_t) 
+         ((c, ct):code_t) : code_t =
       match ct with
       | Collection(_, kt, vt) -> ("(" ^ c ^ ").foreach { " ^ 
          (wrap_function_key_val kt vt fnt fn) ^ " }", Unit)
@@ -562,7 +583,7 @@ struct
    
        Note: Only the code for the body is generated, the header
        gets generated where the function is applied *)
-   let lambda ?(expr = None) (args:K3.arg_t) ((b,bt):code_t) : code_t =
+   let lambda ?(expr = None) (args:K3.arg_t) ((b, bt):code_t) : code_t =
       let argsn, argst = map_args_type args in
       (b, Fn(argsn, argst, bt))
 
@@ -597,7 +618,8 @@ struct
    
        Note: For lambda functions, a val assignment is generated
        instead of a function to reduce nesting *)
-   let apply ?(expr = None) ((fn,fnt):code_t) ((arg,argt):code_t) : code_t = (
+   let apply ?(expr = None) ((fn, fnt):code_t) 
+         ((arg, argt):code_t) : code_t = (
       begin match fnt with
       | Fn(argsn, argst, rett) ->
          let str_type = 
@@ -618,7 +640,7 @@ struct
       fn_ret_type fnt)
 
    (** This function generates code to map from one collection to another *)
-   let map ?(expr = None) ((fn,fnt):code_t) (exprt:K3.type_t) 
+   let map ?(expr = None) ((fn, fnt):code_t) (exprt:K3.type_t) 
          ((c, ct):code_t) : code_t =
       let (keyt,valt) = 
          match (fn_ret_type fnt) with
@@ -651,8 +673,8 @@ struct
 
    (** Generates a code to aggregate elements of a collection (e.g. calculating
        the sum of a certain element *)
-   let aggregate ?(expr = None) ((fn,fnt):code_t) ((init,initt):code_t) (
-      (c, ct):code_t) : code_t =
+   let aggregate ?(expr = None) ((fn, fnt):code_t) ((init, initt):code_t) 
+         ((c, ct):code_t) : code_t =
       match ct with
       | Collection(_, kt, vt) ->
          (c ^ ".fold(" ^ init ^ ", { " ^ 
@@ -664,8 +686,8 @@ struct
       (string_of_type ct))
 
    (** Generates code to aggregate elements of a collection in groups *)
-   let group_by_aggregate ?(expr = None) ((agg,aggt):code_t) 
-         ((init,initt):code_t) ((group,groupt):code_t) 
+   let group_by_aggregate ?(expr = None) ((agg, aggt):code_t) 
+         ((init, initt):code_t) ((group, groupt):code_t) 
          ((c, ct):code_t) : code_t =
       let key_type = 
          match (fn_ret_type groupt) with 
@@ -679,13 +701,12 @@ struct
          (wrap_function_key_val (Tuple(kt) :: [vt]) 
             (fn_ret_type aggt) aggt agg) ^ 
          " })", 
-            Collection(Intermediate, key_type,(fn_ret_type (fn_ret_type aggt)))
-         )
+            Collection(Intermediate, key_type,(fn_ret_type (fn_ret_type aggt))))
       | _ -> debugfail expr ("groupByAggregate on a non-collection: " ^ c ^ 
          " has type " ^ (string_of_type ct))
 
    (** Generates code to flatten a collection *)
-   let flatten ?(expr = None) ((c,ct):code_t) : code_t =
+   let flatten ?(expr = None) ((c, ct):code_t) : code_t =
       match ct with
       | Collection(_, [],Collection(_, ki,t)) ->
          (("(" ^ c ^ ").flatten()"), Collection(Intermediate, ki, t))
@@ -693,33 +714,33 @@ struct
          " has type " ^ (string_of_type ct))
    
    (** Generates code to check whether a certain key is part of a collection *)
-   let exists ?(expr = None) ((c,ct):code_t) (key:code_t list) : code_t =
+   let exists ?(expr = None) ((c, ct):code_t) (key:code_t list) : code_t =
       match ct with 
       |  Collection(_, kt,vt) when kt <> [] ->
          ("(" ^ c ^ ").contains(" ^ (make_tuple 
-            (List.map (fun (s,_) -> s) key)) ^ 
+            (List.map (fun (s, _) -> s) key)) ^ 
          ")", Bool)
       | _ -> debugfail expr "Existence check on a non-collection"
 
    (** Generates code to get the value for a certain key in a collection *)
-   let lookup ?(expr = None) ((c,ct):code_t) (key:code_t list) : code_t =
+   let lookup ?(expr = None) ((c, ct):code_t) (key:code_t list) : code_t =
       match ct with 
       | Collection(_, kt, vt) when kt <> [] ->
          ("(" ^ c ^ ").lookup(" ^ (make_tuple 
-            (List.map (fun (s,_) -> s) key)) ^ ")", vt)
+            (List.map (fun (s, _) -> s) key)) ^ ")", vt)
       | _ -> debugfail expr ("Lookup on a non-collection: " ^ c ^ 
          " has type " ^ (string_of_type ct))
       
   (* map, partial key, pattern -> slice *)
-  let slice ?(expr = None) ((c,ct):code_t) (pkey:code_t list) 
+  let slice ?(expr = None) ((c, ct):code_t) (pkey:code_t list) 
            (pattern:int list) : code_t =
     if List.length pattern <> List.length pkey then
        debugfail expr ("Error: slice pattern and key length mismatch")
     else
-    if List.length pattern = 0 then (c,ct)
+    if List.length pattern = 0 then (c, ct)
     else
     match ct with 
-    | Collection(Persistent, kt,vt) when kt <> [] ->
+    | Collection(Persistent, kt, vt) when kt <> [] ->
       (c ^ ".slice(" ^ (make_tuple (List.map fst pkey)) ^ ", List" ^ 
         (make_list (List.map string_of_int pattern)) ^ ")", 
       Collection(Intermediate, kt, vt))
@@ -730,7 +751,8 @@ struct
     | _ -> debugfail expr "Slice on a non-collection"
 
    (** Generates code to filter the elements of a collection *)
-   let filter ?(expr = None) ((fn,fnt):code_t) ((c, ct):code_t) : code_t =
+   let filter ?(expr = None) ((fn, fnt):code_t) 
+         ((c, ct):code_t) : code_t =
       match ct with
       | Collection(_, kt, vt) ->
          (c ^ ".filter({ " ^
@@ -756,48 +778,49 @@ struct
 
   let get_map ?(expr = None) ((ins,outs):(K3.schema*K3.schema))  
              (t:K3.type_t) (map:K3.coll_id_t): code_t =
-    (map, Collection(Persistent, (List.map (fun (_,x) -> map_type x) ins),
-             Collection(Persistent, (List.map (fun (_,x) -> map_type x) outs),
+    (map, Collection(Persistent, (List.map (fun (_, x) -> map_type x) ins),
+             Collection(Persistent, (List.map (fun (_, x) -> map_type x) outs),
                          map_type t)))
 
    (** Generates code to update a persistent value *)
-   let update_value ?(expr = None) (map:K3.coll_id_t) ((v,vt):code_t): code_t =
-      (map ^ ".update(" ^ v ^ ")",Unit)
+   let update_value ?(expr = None) (map:K3.coll_id_t) 
+         ((v, vt):code_t): code_t =
+      (map ^ ".update(" ^ v ^ ")", Unit)
 
    (** Generates code to update a value in a persistent in map *)
    let update_in_map_value ?(expr = None) (map:K3.coll_id_t) 
-      (key:code_t list) ((v,vt):code_t): code_t =
+         (key:code_t list) ((v, vt):code_t): code_t =
       (map ^ ".updateValue(" ^ 
          (make_tuple (List.map fst key)) ^ ", " ^ v ^ ")", Unit)
 
    (** Generates code to update a value in a persistent out map *)
    let update_out_map_value ?(expr = None) (map:K3.coll_id_t) 
-      (key:code_t list) ((v,vt):code_t): code_t =
+         (key:code_t list) ((v, vt):code_t): code_t =
       (map ^ ".updateValue(" ^ 
          (make_tuple (List.map fst key)) ^ ", " ^ v ^ ")", Unit)
 
    (** Generates code to update a value in a persistent full map *)
    let update_map_value ?(expr = None) (map:K3.coll_id_t) (inkey:code_t list)
-      (outkey:code_t list) ((v,vt):code_t): code_t =
+         (outkey:code_t list) ((v, vt):code_t): code_t =
       (map ^ ".updateValue(" ^ (make_tuple (List.map fst inkey)) ^ ", " ^ 
          (make_tuple (List.map fst outkey)) ^ ", " ^ v ^ ")", Unit)
 
    (** Generates code to update a persistent in map *)
    let update_in_map ?(expr = None) (map:K3.coll_id_t) (v:code_t): code_t =
-      (map ^ ".updateInMap()",Unit)
+      (map ^ ".updateInMap()", Unit)
       
    (** Generates code to update a persistent out map *)
    let update_out_map ?(expr = None) (map:K3.coll_id_t) (v:code_t): code_t =
-      (map ^ ".updateOutMap()",Unit)
+      (map ^ ".updateOutMap()", Unit)
 
    (** Generates code to update a map in a persistent full map *)
    let update_map ?(expr = None) (map:K3.coll_id_t) (inkey:code_t list) 
-      ((v,vt):code_t): code_t =
+      ((v, vt):code_t): code_t =
       let conversion = match vt with
       | Collection(_, _, _) -> ".toPersistentCollection()"
       | _ -> "" in
       (map ^ ".updateValue(" ^ (make_tuple (List.map fst inkey)) ^ ", " ^ 
-         v ^ conversion ^ ")",Unit)
+         v ^ conversion ^ ")", Unit)
    
    let remove_in_map_element ?(expr = None) (map:K3.coll_id_t) 
          (inkey:code_t list) : code_t =
@@ -816,6 +839,15 @@ struct
 
    (* Generates code that does nothing *)
    let unit_operation : code_t = ("()", Unit) 
+
+   let lookup_def_val ?(expr = None) ((c, ct):code_t) (key:code_t list) 
+         ((v, vt):code_t): code_t =
+      match ct with 
+      | Collection(_, kt, vt) when kt <> [] ->
+         ("(" ^ c ^ ").lookup(" ^ (make_tuple 
+            (List.map (fun (s, _) -> s) key)) ^ ", " ^ v ^ ")", vt)
+      | _ -> debugfail expr ("Lookup on a non-collection: " ^ c ^ 
+         " has type " ^ (string_of_type ct))      
    
    (** Generates code for a trigger function *)
    let trigger (eventt:Schema.event_t) (code:code_t list): code_t =
@@ -833,7 +865,7 @@ struct
       in
       let fn_def = "def on" ^ prefix ^ var_def in
       let stmts = (make_list ~parens:("{","}") ~sep:"; " 
-         (List.map (fun (s,_) -> s) code)) 
+         (List.map (fun (s, _) -> s) code)) 
       in
       (fn_def ^ " = " ^ stmts, Trigger(eventt))
 
@@ -883,7 +915,7 @@ struct
       let source_init = 
          match source with 
          | Schema.FileSource(s, f) -> 
-            "createInputStreamSource(new FileInputStream(\"" ^ s ^ 
+            "createInputStreamSource(new FileReader(\"" ^ s ^ 
             "\"), List" ^ (make_list adaptors_strings) ^ ", " ^ 
             (string_of_framing_type f) ^ ")"
          | Schema.SocketSource(_, _, _) -> 
@@ -928,18 +960,20 @@ struct
          (triggers:code_t list) 
          (tlqs:(string * K3.expr_t * code_t) list): code_t = 
       let str_tlqs = 
-         (make_list ~sep:";" ~parens:("",";") (List.map (fun (n, _, (c, ct)) ->
-            "def get" ^ n ^ "():" ^ (string_of_type ct) ^ " = {" ^ c ^ "}"
+         (make_list ~sep:";" ~parens:("",";") (List.map 
+            (fun (n, _, (c, ct)) ->
+               "def get" ^ n ^ "():" ^ (string_of_type ct) ^ " = {" ^ c ^ "}"
             ) tlqs))
       in
       let print_results = 
          "def printResults(): Unit = { val pp = new PrettyPrinter(8000, 2);" ^
-         (make_list ~sep:";" ~parens:("",";") (List.map (fun (x, _, (c, ct)) ->
-            match ct with
-            | Collection(_, _, _) -> 
-               "println(pp.format(<" ^ x ^ ">{ get" ^ x ^ "().toXML() }" ^ 
-               "</" ^ x ^ ">))"
-            | _ -> "println(pp.format(<" ^ x ^ ">{ get" ^ x ^ "() }" ^ 
+         (make_list ~sep:";" ~parens:("",";") 
+            (List.map (fun (x, _, (c, ct)) ->
+               match ct with
+               | Collection(_, _, _) -> 
+                  "println(pp.format(<" ^ x ^ ">{ get" ^ x ^ "().toXML() }" ^ 
+                  "</" ^ x ^ ">))"
+               | _ -> "println(pp.format(<" ^ x ^ ">{ get" ^ x ^ "() }" ^ 
                "</" ^ x ^ ">))") tlqs)) ^ 
          " }" 
       in
@@ -962,13 +996,14 @@ struct
                      in
                      let map_pattern (vars,ids): string = (
                         let vars = (list_vars "x" (List.length tpe)) in 
-                        let sids = (List.map string_of_int ids) in
+                        let sids = (List.map string_of_int ids) in                       
                         (make_list ~sep:"_" ~parens:("\"","\"") sids) ^ 
                         " -> SecondaryIndex[" ^ 
                         (make_type_list (list_project tpe ids)) ^
                         "," ^ (make_type_list tpe) ^ ", " ^ valt ^ 
                         "](x => x match { case " ^ (make_tuple vars) ^ " => " ^
                         (make_tuple (list_project vars ids)) ^ " })")
+
                      in 
                      match pat with 
                      | Patterns.In(([],[])) -> agg
@@ -1003,32 +1038,41 @@ struct
       in
       (* The code for the run function *)
       let run = 
-         "def run(onEventProcessedHandler: Unit => Unit = (_ => ())): Unit =" ^
-         "{ fillTables(); dispatcher(StreamEvent(SystemInitialized, 0, \"\"," ^
-         "List()), onEventProcessedHandler) }"
+         "def act(): Unit =" ^
+         "{ fillTables();" ^
+         "sources.start;" ^
+         "onSystemInitialized();" ^
+         "while(true) {" ^
+         "receive { " ^
+         "case EndOfStream => {" ^
+         "supervisor ! DBTDone; " ^
+         "exit(); }" ^
+         "case e: DBTEvent => dispatcher(e) }}}"
       in
       (* Imports for the Scala code *)
       let imports = 
          (make_list ~sep:";" ~parens:("",";") (List.map 
             (fun x -> "import " ^ x)
             [ 
-               "java.io.FileInputStream";
+               "java.io._";
                "org.dbtoaster.dbtoasterlib.StreamAdaptor._";
                "org.dbtoaster.dbtoasterlib.K3Collection._";
                "org.dbtoaster.dbtoasterlib.Source._";
                "org.dbtoaster.dbtoasterlib.DBToasterExceptions._";
                "org.dbtoaster.dbtoasterlib.ImplicitConversions._";
                "org.dbtoaster.dbtoasterlib.StdFunctions._";
+               "org.dbtoaster.dbtoasterlib.QueryInterface._";
                "scala.collection.mutable.Map";
                "java.util.Date";
                "java.util.GregorianCalendar";
                "xml._";
+               "scala.actors.Actor";
+               "scala.actors.Actor._"
             ])
          )
       in
       let dispatcher = 
-         "def dispatcher(event: DBTEvent, onEventProcessedHandler: " ^
-         "Unit => Unit): Unit = { event match { " ^
+         "def dispatcher(event: DBTEvent): Unit = { event match { " ^
          (make_list ~parens:("",";") ~sep:";" 
          (List.map (fun x -> (
             match (snd x) with 
@@ -1064,9 +1108,7 @@ struct
          "case _ => " ^
          "throw DBTFatalError(\"Event could not be dispatched: \" + event)" ^
          "} " ^
-         "onEventProcessedHandler();" ^
-         "if(sources.hasInput()) dispatcher(sources.nextInput(), " ^ 
-         "onEventProcessedHandler) }" 
+         "supervisor ! DBTTupleProcessed; }" 
       in
       let str_sources = 
          (make_list ~parens:("",";") ~sep:";" 
@@ -1076,7 +1118,7 @@ struct
       in
       (* Code to multiplex available sources *)
       let str_streams = 
-         "val sources = new SourceMultiplexer(List" ^ 
+         "val sources = new SourceMultiplexer(this, List" ^ 
          (make_list (List.map (fun (_, _, os) -> 
             match os with 
             | Some(s, _) -> s 
@@ -1098,8 +1140,14 @@ struct
          ) tables)) ^
          "}"
       in 
+      let set_supervisor = 
+         "def setSupervisor(supervisor: Actor) = this.supervisor = supervisor;"
+      in
       imports ^
-      " package org.dbtoaster { object Query { " ^
+      " package org.dbtoaster { " ^
+      "class Query() " ^ 
+      "extends DBTQuery { var supervisor: Actor = null;" ^ set_supervisor ^
+      (Hashtbl.fold (fun a b c -> "val " ^ b ^ " = " ^ a ^ ";" ^ c) consts "") ^
       str_sources ^ str_streams ^ str_schema ^ str_tlqs ^ triggers ^ 
       filltables ^ dispatcher ^ run ^ print_results ^ " }}", 
       Unit
@@ -1118,6 +1166,7 @@ struct
             let npos = pos + 1 in
             match str.[pos] with
             | '{' -> let nind = ind + 2 in ( 
+               if newline then Buffer.add_string buffer (make_indent ind);
                Buffer.add_char buffer '{'; 
                _format_code npos nind true buffer
             )
@@ -1140,11 +1189,11 @@ struct
       _format_code 0 0 true (Buffer.create 1)
    
    (** Writes the formatted code to a channel *)
-   let output ((code,_):code_t) (out:out_channel): unit =
+   let output ((code, _):code_t) (out:out_channel): unit =
       output_string out (format_code code)
       
    (** Returns the formatted code *)
-   let to_string ((code,_):code_t): string =
+   let to_string ((code, _):code_t): string =
       format_code code
 
 end

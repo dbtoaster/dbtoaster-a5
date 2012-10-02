@@ -181,6 +181,9 @@ sig
         
     (* unit operation which has no effect *)
     val unit_operation : code_t 
+	
+	val lookup_def_val : ?expr:K3.expr_t option -> code_t -> 
+	    code_t list -> code_t -> code_t
 
     (* fn id -> code
      * -- code generator should be able to hooks to implementations of
