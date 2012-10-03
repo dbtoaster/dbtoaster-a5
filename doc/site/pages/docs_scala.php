@@ -15,11 +15,11 @@
 <?=section("Compiling and running your first query")?>
 We start with a simple query that looks like this:
 <div class="codeblock">CREATE TABLE R(A int, B int) 
-  FROM FILE '../../experiments/data/tiny_r.dat' LINE DELIMITED
+  FROM FILE 'examples/data/tiny_r.dat' LINE DELIMITED
   CSV (fields := ',');
 
 CREATE STREAM S(B int, C int) 
-  FROM FILE '../../experiments/data/tiny_s.dat' LINE DELIMITED
+  FROM FILE 'examples/data/tiny_s.dat' LINE DELIMITED
   CSV (fields := ',');
 
 SELECT SUM(r.A*s.C) as RESULT FROM R r, S s WHERE r.B = s.B;
@@ -147,11 +147,11 @@ and the return value may be a collection instead of a single value.</p>
 <p>
 Consider the following query:
 <div class="codeblock">CREATE STREAM R(A int, B int) 
-  FROM FILE '../../experiments/data/tiny/r.dat' LINE DELIMITED
+  FROM FILE 'examples/data/tiny/r.dat' LINE DELIMITED
   CSV (fields := ',');
 
 CREATE STREAM S(B int, C int) 
-  FROM FILE '../../experiments/data/tiny/s.dat' LINE DELIMITED
+  FROM FILE 'examples/data/tiny/s.dat' LINE DELIMITED
   CSV (fields := ',');
 
 SELECT r.B, SUM(r.A*s.C) as RESULT_1, SUM(r.A+s.C) as RESULT_2 FROM R r, S s WHERE r.B = s.B GROUP BY r.B;
@@ -175,7 +175,7 @@ can be enabled through the <span class="code">-F EXPRESSIVE-TLQS</span> command 
 
 <p>Below is an example of a query where partial materialization is indeed beneficial.
 <div class="codeblock">CREATE STREAM R(A int, B int)
-FROM FILE '../../experiments/data/tiny/r.dat' LINE DELIMITED
+FROM FILE 'examples/data/tiny/r.dat' LINE DELIMITED
 csv ();
 
 SELECT r2.C FROM (
@@ -185,7 +185,7 @@ SELECT r2.C FROM (
 When compiling this query with the <span class="code">-F EXPRESSIVE-TLQS</span> command line flag, the function to retrieve
 the results is much more complex, unlike the functions that we have seen before. It uses the partial materialization 
 <span class="code">COUNT_1_E1_1</span> to compute the result:
-<div class="codeblock">$&gt; bin/dbtoaster -l scala -F EXPRESSIVE-TLQS test/queries/simple/r_lift_of_count.sql 
+<div class="codeblock">$&gt; bin/dbtoaster -l scala -F EXPRESSIVE-TLQS examples/queries/simple/r_lift_of_count.sql 
     def getCOUNT():K3IntermediateCollection[(Long), Long] = {
       (COUNT_1_E1_1.map((y:Tuple2[(Long),Long]) => 
       ...

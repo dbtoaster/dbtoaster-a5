@@ -12,13 +12,13 @@ produces a C++ header file containing a set of datastructures (<tt>tlq_t</tt>, <
 </p>
 <p>
 Let's consider the following sql query:
-<div class="codeblock">$&gt; cat test/queries/simple/rs_example1.sql
+<div class="codeblock">$&gt; cat examples/queries/simple/rs_example1.sql
 CREATE TABLE R(A int, B int) 
-  FROM FILE '../../experiments/data/tiny/r.dat' LINE DELIMITED
+  FROM FILE 'examples/data/tiny/r.dat' LINE DELIMITED
   CSV (fields := ',');
 
 CREATE STREAM S(B int, C int) 
-  FROM FILE '../../experiments/data/tiny/s.dat' LINE DELIMITED
+  FROM FILE 'examples/data/tiny/s.dat' LINE DELIMITED
   CSV (fields := ',');
 
 SELECT SUM(r.A*s.C) as RESULT FROM R r, S s WHERE r.B = s.B;
@@ -26,7 +26,7 @@ SELECT SUM(r.A*s.C) as RESULT FROM R r, S s WHERE r.B = s.B;
 
 The corresponding C++ header file can be obtained by running:
 
-<div class="codeblock">$&gt; bin/dbtoaster test/queries/simple/rs_example1.sql -l cpp -o rs_example1.hpp</div>
+<div class="codeblock">$&gt; bin/dbtoaster examples/queries/simple/rs_example1.sql -l cpp -o rs_example1.hpp</div>
 </p>
 
 <p>
@@ -35,7 +35,7 @@ the generated header file against <tt>lib/dbt_c++/main.cpp</tt>, which provides 
 sql program and printing the results. 
 </p>
 <p>
-<b>Requirements:</b> The Boost header files and the following library binaries: <tt>boost_program_options</tt>, 
+<b>Requirements:</b> Besides <tt>g++</tt>, the Boost header files and the following library binaries: <tt>boost_program_options</tt>, 
 <tt>boost_serialization</tt>, <tt>boost_system</tt>, <tt>boost_filesystem</tt>, <tt>boost_chrono</tt> and 
 <tt>boost_thread</tt> have to be present on the system since the generated code makes use of them.
 If these can't be found in the paths searched by default by <tt>g++</tt> then their location has to be explicitly
@@ -46,10 +46,15 @@ provided to DBToaster. This can be done in one of the following two ways, either
 </ul>
 <div class="codeblock">$&gt; export DBT_HDR=<i>path-to-boost-include-dir</i>
 $&gt; export DBT_LIB=<i>path-to-boost-lib-dir</i>
-$&gt; bin/dbtoaster test/queries/simple/rs_example1.sql -l cpp -c rs_example1</div>
+$&gt; bin/dbtoaster examples/queries/simple/rs_example1.sql -l cpp -c rs_example1</div>
 or through the <tt>-I</tt> and <tt>-L</tt> command line flags:
-<div class="codeblock">$&gt; bin/dbtoaster test/queries/simple/rs_example1.sql -l cpp -c rs_example1 -I <i>path-to-boost-include-dir</i> -L <i>path-to-boost-lib-dir</i></div>
+<div class="codeblock">$&gt; bin/dbtoaster examples/queries/simple/rs_example1.sql -l cpp -c rs_example1 -I <i>path-to-boost-include-dir</i> -L <i>path-to-boost-lib-dir</i></div>
+
+Additionally, if only the multi-threaded versions of the Boost libraries are available, as is the case with some Cygwin provided distributions, one also needs to add the <tt>-d MT</tt> flag when compiling queries to binaries.</p>
+<div class="codeblock">$&gt; bin/dbtoaster examples/queries/simple/rs_example1.sql -l cpp -c rs_example1 -d MT</div>
 </p>
+
+
 <p>
 Running the compiled binary will result in the following output:
 <div class="codeblock">$&gt; ./rs_example1
@@ -191,7 +196,7 @@ is linear in the size of the results set.
 <p>
 We will use as an example the C++ code generated for the <tt>rs_example1.sql</tt> sql program introduced above. In the interest
 of clarity some implementation details are omitted.
-<div class="codeblock">$&gt; bin/dbtoaster test/queries/simple/rs_example1.sql -l cpp -o rs_example1.hpp
+<div class="codeblock">$&gt; bin/dbtoaster examples/queries/simple/rs_example1.sql -l cpp -o rs_example1.hpp
 #include &lt;lib/dbt_c++/program_base.hpp&gt;
 
 namespace dbtoaster {
@@ -395,13 +400,13 @@ the corresponding <tt>get_RESULT</tt> function will return either a <tt>boost::m
 
 <p>
 Let's consider the following example:
-<div class="codeblock">$&gt; cat test/queries/simple/rs_example2.sql
+<div class="codeblock">$&gt; cat examples/queries/simple/rs_example2.sql
 CREATE STREAM R(A int, B int) 
-  FROM FILE '../../experiments/data/tiny/r.dat' LINE DELIMITED
+  FROM FILE 'examples/data/tiny/r.dat' LINE DELIMITED
   CSV (fields := ',');
 
 CREATE STREAM S(B int, C int) 
-  FROM FILE '../../experiments/data/tiny/s.dat' LINE DELIMITED
+  FROM FILE 'examples/data/tiny/s.dat' LINE DELIMITED
   CSV (fields := ',');
 
 SELECT r.B, SUM(r.A*s.C) as RESULT_1, SUM(r.A+s.C) as RESULT_2 FROM R r, S s WHERE r.B = s.B GROUP BY r.B;
@@ -467,9 +472,9 @@ can be enabled through the <tt>-F EXPRESSIVE-TLQS</tt> command line flag.
 <br/>
 Below is an example of a query where partial materialization is indeed beneficial.
 
-<div class="codeblock">$&gt; cat test/queries/simple/r_lift_of_count.sql
+<div class="codeblock">$&gt; cat examples/queries/simple/r_lift_of_count.sql
 CREATE STREAM R(A int, B int)
-FROM FILE '../../experiments/data/tiny/r.dat' LINE DELIMITED
+FROM FILE 'examples/data/tiny/r.dat' LINE DELIMITED
 csv ();
 
 SELECT r2.C FROM (
@@ -479,7 +484,7 @@ SELECT r2.C FROM (
 
 <b>Generated <tt>tlq_t</tt> without <tt>-F EXPRESSIVE-TLQS</tt>:</b> We can see that <tt>get_COUNT()</tt>
 simply returns the materialized view of the results.
-<div class="codeblock">$&gt; bin/dbtoaster test/queries/simple/r_lift_of_count.sql -l cpp
+<div class="codeblock">$&gt; bin/dbtoaster examples/queries/simple/r_lift_of_count.sql -l cpp
 
     ...
 
@@ -512,7 +517,7 @@ perfoms some final computation for constructing the end result in a temporary <t
 We should remark that <tt>tlq_t</tt> no longer contains the full materialized view of the results <tt>COUNT_map COUNT;</tt>
 but a partial materialization <tt>COUNT_1_E1_1_map COUNT_1_E1_1;</tt> used by <tt>get_COUNT()</tt> in computing 
 the final query result.
-<div class="codeblock">$&gt; bin/dbtoaster test/queries/simple/r_lift_of_count.sql -l cpp -F EXPRESSIVE-TLQS
+<div class="codeblock">$&gt; bin/dbtoaster examples/queries/simple/r_lift_of_count.sql -l cpp -F EXPRESSIVE-TLQS
 
     ...
 
