@@ -22,6 +22,7 @@ SCALA_LIBDIR="$BINDIR/../lib/dbt_scala"
 out_src_file="-"
 out_src_lang="-"
 out_bin_file="-"
+tmp_out_src_file=""
 
 option="-"
 filter_options="-c -d -D -I -L"
@@ -118,9 +119,10 @@ if [ $out_bin_file != "-" ]; then
     fi
   
     if [ ${out_src_file} = "-" ]; then
-        out_src_file=`mktemp -q /tmp/tmp.XXXXXX.${src_extension}`
+        tmp_out_src_file=`mktemp -q /tmp/dbtoaster.${src_extension}.XXXXXX`
         [ $? -ne 0 ] && { echo "$0: Can't create temp file, exiting..." ; exit 1; }
         
+        out_src_file=$tmp_out_src_file
         new_args="$new_args -o $out_src_file"       
     fi
 
@@ -165,3 +167,6 @@ eval $dbtoaster_cmd;
 
 [ "$compile_log" ] && { echo $compile_log; }
 eval $compile_cmd;
+
+# Delete any temporary files 
+[ "$tmp_out_src_file" ] && { rm -fr $tmp_out_src_file; }
