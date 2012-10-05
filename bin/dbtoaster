@@ -123,6 +123,7 @@ if [ $out_bin_file != "-" ]; then
         [ $? -ne 0 ] && { echo "$0: Can't create temp file, exiting..." ; exit 1; }
         
         out_src_file=${tmp_out_src_file}.${src_extension}
+        tmp_out_src_file="${tmp_out_src_file} ${out_src_file}"
         new_args="$new_args -o $out_src_file"       
     fi
 
