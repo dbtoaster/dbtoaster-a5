@@ -40,7 +40,21 @@ AtimesD: 306
 <p>
 To use DBToaster to create a standalone binary, invoke it with <tt>-c [binary name]</tt>.  The binary can be invoked directly.  Like the interpreter, it will print the results of all queries once all data has been processed.  </p>
 
+<p><b>Requirements:</b>
+Note that in order to compile binaries, DBToaster will invoke g++.  DBToaster relies on pthreads and several Boost libraries ("program_options", "serialization", "system", "filesystem", "chrono", and "thread").  These must all be in your binary, include, and respectively, library search paths.  The -I and -L flags may be used to pass individual include and library paths (respectively) to g++, or the environment variables DBT_HDR, and DBT_LIB may be used to store a colon-separated list of search paths.</p> 
+
+<p>Additionally, if only the multi-threaded versions of the Boost libraries are available, as is the case with some Cygwin or MacPorts provided distributions, one also needs to add the <tt>-d MT</tt> flag when compiling queries to binaries.</p>
+
+<p>The following command line will generate the <tt>rst</tt> executable:
 <div class="codeblock">$&gt; bin/dbtoaster examples/queries/simple/rst.sql -c rst
+</div>
+, or if the <tt>-d MT</tt> flag is needed:
+<div class="codeblock">$&gt; bin/dbtoaster examples/queries/simple/rst.sql -c rst -d MT
+</div>
+</p>
+<p>
+Running the <tt>rst</tt> executable will produce the following output:
+<div class="codeblock">
 $&gt; ./rst
 &lt;?xml version="1.0" encoding="UTF-8" standalone="yes" ?&gt;
 &lt;!DOCTYPE boost_serialization&gt;
@@ -48,26 +62,20 @@ $&gt; ./rst
 &lt;ATIMESD&gt;306&lt;/ATIMESD&gt;
 &lt;/boost_serialization&gt;
 </div>
-
-<p>
-Note that in order to compile binaries, DBToaster will invoke g++.  DBToaster relies on pthreads and several Boost libraries ("program_options", "serialization", "system", "filesystem", "chrono", and "thread").  These must all be in your binary, include, and library search paths.  The -I and -L flags may be used to pass individual include and library paths (respectively) to g++, or the environment variables DBT_HDR, and DBT_LIB may be used to store a colon-separated list of search paths.</p> 
-
-<p>Additionally, if only the multi-threaded versions of the Boost libraries are available, as is the case with some Cygwin provided distributions, one also needs to add the <tt>-d MT</tt> flag when compiling queries to binaries.</p>
-
-<div class="codeblock">$&gt; bin/dbtoaster examples/queries/simple/rst.sql -c rst -d MT
-</div>
-
-<p>
-To produce a scala jar file, invoke dbtoaster with <tt>-l scala</tt>, and the <tt>-c [binary name]</tt> flag as above.  DBToaster will produce <tt>[binary name].jar</tt>, which can be run using java as a normal scala program.
 </p>
+
+<p>
+To produce a scala jar file, invoke dbtoaster with <tt>-l scala</tt>, and the <tt>-c [binary name]</tt> flag as above.  DBToaster will produce <tt>[binary name].jar</tt>, which can be run as a normal scala program.
+</p>
+
+<p><b>Requirements:</b>
+Note that in order to produce jar files, DBToaster will invoke the scalac compiler, which needs to be reacheable through the binary search paths of the system. Also, on Windows, make sure to use <tt>;</tt> as the classpath separator instead of <tt>:</tt>.
 
 <div class="codeblock">$&gt; bin/dbtoaster examples/queries/simple/rst.sql -l scala -c rst
 $&gt; scala -classpath "rst.jar:lib/dbt_scala/dbtlib.jar" org.dbtoaster.RunQuery
 Run time: 0.261 s
 &lt;ATIMESD&gt;306 &lt;/ATIMESD&gt;
 </div>
-
-<p>Note that on Windows the classpath separator is <tt>;</tt> instead of <tt>:</tt>.
 </p>
 
 <?= chapter("Generating Source Code") ?>
