@@ -630,8 +630,11 @@ let rec cmp_exprs ?(cmp_opts:CalcRing.cmp_opt_t list =
             begin match rcr sub1 sub2 with
                | None -> None
                | Some(mappings) -> 
-                    if ((List.length gb1) = (List.length gb2)) then  
-                        ListAsFunction.merge mappings (List.combine gb1 gb2)
+                    if (((List.length gb1) = (List.length gb2)) &&
+                        (ListAsSet.seteq 
+                          (List.map (ListAsFunction.apply_strict mappings) gb1)
+                          gb2)) then 
+                       Some(mappings)
                     else None                     
             end
          
