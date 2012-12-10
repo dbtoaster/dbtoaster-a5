@@ -192,3 +192,50 @@ the results is much more complex, unlike the functions that we have seen before.
       )
     };
 </div></p>
+
+<?=section("Using queries in Java programs")?>
+<p>
+Since Scala is compatible with Java, it is possible to use the queries in Java applications. 
+In order to use a query in Java, the Java application has to reference three libraries: 
+<ul>
+	<li>The library containing the generated code for the query</li>
+	<li>The Scala library</li>
+	<li>Scala DBToaster library</li>
+</ul>
+</p>
+<p>
+The following code snippet illustrates how a query can be executed from within a Java application:
+<div class="codeblock">
+import org.dbtoaster.dbtoasterlib.*;
+import org.dbtoaster.*;
+
+public class MainClass {
+	public static void main(String[] args) {
+		final Query q = new Query();
+		
+		QueryInterface.DBTMessageReceiver rcvr = new QueryInterface.DBTMessageReceiver() {
+			public void onTupleProcessed() {
+				// do nothing
+			}
+			
+			public void onQueryDone() {
+				// print the results
+				q.printResults();
+			}
+		};
+		
+		QueryInterface.QuerySupervisor supervisor = new QueryInterface.QuerySupervisor(q, rcvr);
+		supervisor.start();
+	}
+}
+</div>
+This program executes the referenced query and prints the result once there are no more tuples
+to be processed.
+</p>
+<?=subsection("Compiling in eclipse")?>
+To compile the previously presented program in eclipse (with the official Scala plugin installed), 
+we can create a new Java project with a single <span class="code">.java</span>-file containing 
+the program. In the Java Build Path section of the project's properties the previously listed 
+libraries have to be added. The Scala library can be added by clicking the "Add Library" button,
+while the other libraries can be added as external JARs. After adding the libraries to the project,
+the project should compile and execute the query once run.

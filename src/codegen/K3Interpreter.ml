@@ -12,7 +12,12 @@ exception InterpreterException of K3.expr_t option * string
 
 (**/**)
 let bail ?(expr = None) msg =
-   raise (InterpreterException(expr, msg))
+  begin match expr with
+    | Some(e) -> raise (InterpreterException(expr, msg ^ " in " ^ 
+                        (string_of_expr e)))
+    | None -> raise (InterpreterException(expr, msg))
+  end
+   
 (**/**)
 
 module K3CG : K3Codegen.CGI
@@ -423,7 +428,8 @@ struct
            in
              Env.add (fst th) var (BaseValue(const_val)), snd th
         | ATuple(vt_l) -> 
-            bail ~expr:expr ("cannot bind a float to a tuple")
+            bail ~expr:expr ("cannot bind a float " ^ (string_of_const f) ^ 
+                             " to a tuple " ^ (string_of_arg arg))
         end
 
     let bind_tuple expr arg th t = begin match arg with
@@ -761,24 +767,26 @@ struct
 
     (* filter fn, collection -> filter *)
     let filter ?(expr = None) filter_fn collection =
-        Eval(expr, fun th db ->
-    let f: (Values.K3Value.t -> bool) = 
-        match (get_eval filter_fn) th db with
-            | Fun f -> (fun x ->
-                (let v = (f x) in begin match v with 
-                    | BaseValue(CFloat(x)) -> x <> 0.0 
-                    | BaseValue(CInt(x))   -> x <> 0
-                    | _ -> bail ~expr:expr ("invalid filter function")
-                end))
+      Eval(expr, fun th db ->
+        let f: (Values.K3Value.t -> bool) = 
+          match (get_eval filter_fn) th db with
+            | Fun fn -> (fun x -> (
+              let v = (fn x) in 
+              begin match v with 
+                | BaseValue(CFloat(x)) -> x <> 0.0 
+                | BaseValue(CInt(x))   -> x <> 0
+                | _ -> bail ~expr:expr ("invalid filter function")
+              end))
             | _ -> bail ~expr:expr ("expected filter function")
-    in
+        in
         begin match (get_eval collection) th db with
-            | TupleList l -> TupleList(List.filter (fun t -> f t) l)
-            | SingleMap m -> TupleList(smc_to_tlc (MC.filter f m)) 
-            | MapCollection m -> ListCollection(nmc_to_c (MC.filter f m))
-            | v -> bail ~expr:expr 
-                       ("invalid tuple collection in filter : "^
-                        (string_of_value v))
+          | TupleList l -> TupleList(List.filter (fun t -> f t) l)
+          | SingleMap m -> TupleList(List.filter (fun t -> f t) (smc_to_tlc m))
+          | MapCollection m -> ListCollection(List.filter (fun t -> f t)
+              (nmc_to_c m))
+          | v -> bail ~expr:expr 
+                     ("invalid tuple collection in filter : "^
+                      (string_of_value v))
         end)
         
     (* Database retrieval methods *)

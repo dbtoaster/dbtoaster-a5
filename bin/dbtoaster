@@ -150,6 +150,9 @@ if [ $out_bin_file != "-" ]; then
 			out_src_file="$( cygpath --windows $out_src_file )"
 			out_src_file="\"$out_src_file\""
 		fi
+		if [ -f $out_bin_file ]; then
+			rm $out_bin_file
+		fi
 		compile_flags="$scala_compile_flags $scala_opt_flag"
         compile_cmd="scalac $main_file $out_src_file -d $out_bin_file $compile_flags"
 		[ $log_scala -eq 1 ] && { compile_log="$compile_log $compile_cmd"; }
@@ -171,3 +174,5 @@ eval $compile_cmd;
 
 # Delete any temporary files 
 [ "$tmp_out_src_file" ] && { rm -fr $tmp_out_src_file; }
+
+exit 0;

@@ -211,8 +211,7 @@ class ScalaUnitTest < GenericUnitTest
     return if $compile_only;
     starttime = Time.now;
     IO.popen($timeout_exec +
-             "scala -J-Xmx2048M -J-XX:+HeapDumpOnOutOfMemoryError " + 
-			 #"-J-XX:+AggressiveOpts -J-XX:+UseCompressedOops " +
+             "scala -J-Xmx2048M -J-XX:+HeapDumpOnOutOfMemoryError " +
              "-classpath \"bin/queries/#{@qname}.jar#{$path_delim}" + 
                           "lib/dbt_scala/dbtlib.jar\" " + 
              "org.dbtoaster.RunQuery", "r") do |qin|

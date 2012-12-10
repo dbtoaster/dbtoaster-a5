@@ -4,6 +4,6 @@ package org.dbtoaster.dbtoasterlib {
     * used by queries.
     */
   object ImplicitConversions {
-    implicit def boolToLong(b: Boolean): Long = if(b) 1.toLong else 0.toLong 
+    implicit def boolToLong(b: Boolean): Long = if(b) 1L else 0L
   }
 } 

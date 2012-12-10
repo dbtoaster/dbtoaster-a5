@@ -1,4 +1,5 @@
 (** K3 Scala Generator *)
+
 open M3
 open K3
 open Database
@@ -242,7 +243,14 @@ struct
          debugfail None 
             ("Cannot unify types: " ^ 
             (string_of_type a) ^ " and " ^ (string_of_type b))
-   
+
+   (** Returns code to cast a Boolean into a Double *)
+   let mk_bool_to_float a = "(if(" ^ a ^ ") 1.0 else 0.0)"
+
+   (** Returns code to cast a Boolean into an Int *)
+   let mk_bool_to_int a = "(if(" ^ a ^ ") 1L else 0L)"
+   let mk_date_to_time a = a ^ ".getTime()"
+
    (** Generates code to cast an expression n of type ot to type t*)
    let rec cast_up n ot t =
       match t, ot with
@@ -261,6 +269,7 @@ struct
          (make_tuple ~tpe:(string_of_type t)
          (List.map2 (fun n (t, ot) -> cast_up n ot t) 
          (list_vars "v._" (List.length ts)) (list_zip ts tso))) ^ "})"
+      | Int, Bool -> mk_bool_to_int n
       | _ -> n 
 
    and implicit_conversions argsn t1s t2s: string =  
@@ -275,7 +284,7 @@ struct
    and wrap_function argt fnt f: string = 
       match fnt with
       | Fn(argsn, argst, rett) ->
-         "(x:" ^ (string_of_type argt) ^ ") => { x match { case " ^ 
+         "(y:" ^ (string_of_type argt) ^ ") => { y match { case " ^ 
          (string_of_argn argsn) ^ " => {" ^ f ^ "} } }" 
       | ExtFn(n, _, _) -> n ^ " _"
       | _ -> debugfail None "Expected a function"
@@ -324,13 +333,6 @@ struct
   
    (** The identity function *)
    let identity a = a
-
-   (** Returns code to cast a Boolean into a Double *)
-   let mk_bool_to_float a = "(if(" ^ a ^ ") 1.0 else 0.0)"
-
-   (** Returns code to cast a Boolean into an Int *)
-   let mk_bool_to_int a = "(if(" ^ a ^ ") 1L else 0L)"
-   let mk_date_to_time a = a ^ ".getTime()"
    
    (** Returns a function generating code for a arithmetic 
        operation with casting if necessary *)
@@ -338,8 +340,7 @@ struct
       (fun a b -> "(" ^ conva(a) ^ ") " ^ opcode ^ " (" ^ convb(b) ^ ")")
 
    let cmp_op ?(conva = identity) ?(convb = identity) opcode = 
-      (fun a b -> mk_bool_to_int ("(" ^ conva(a) ^ ") " ^ opcode ^ 
-                                  " (" ^ convb(b) ^ ")"))
+      (fun a b -> ("(" ^ conva(a) ^ ") " ^ opcode ^ " (" ^ convb(b) ^ ")"))
 
    (** Returns a function generating code for a certain
        type of operation *)
@@ -347,7 +348,8 @@ struct
       (fun a b -> 
          match (a, b) with
          | (Float, Float) -> ((num_op op_f), Float, None)
-         | (Bool, Bool)   -> ((num_op op_b), Int, None)
+         | (Bool, Bool)   -> ((num_op ~conva:mk_bool_to_int 
+                                      ~convb:mk_bool_to_int op_b), Int, None)
          | (Bool, Float)  -> ((num_op op_f), Float, None)
          | (Float, Bool)  -> ((num_op op_f), Float, None)
          | (Float, Int)   -> ((num_op op_f), Float, None)
@@ -375,15 +377,15 @@ struct
       match (a, b) with
       | (Float, Float) | (String, String) | (Bool, Bool) | (Int, Int)
       | (Int, Float) | (Float, Int) -> 
-         ((cmp_op op), Int, None)
+         ((cmp_op op), Bool, None)
       (* Sometimes there is K3 code that compares booleans to floats, so code
          is being generated to convert the boolean to a float *)
-      | (Bool, Float) -> ((cmp_op op ~conva:mk_bool_to_float), Int, None)
-      | (Float, Bool) -> ((cmp_op op ~convb:mk_bool_to_float), Int, None)
-      | (Bool, Int) -> ((cmp_op op ~conva:mk_bool_to_int), Int, None)
-      | (Int, Bool) -> ((cmp_op op ~convb:mk_bool_to_int), Int, None)
+      | (Bool, Float) -> ((cmp_op op ~conva:mk_bool_to_float), Bool, None)
+      | (Float, Bool) -> ((cmp_op op ~convb:mk_bool_to_float), Bool, None)
+      | (Bool, Int) -> ((cmp_op op ~conva:mk_bool_to_int), Bool, None)
+      | (Int, Bool) -> ((cmp_op op ~convb:mk_bool_to_int), Bool, None)
       | (Date, Date) -> 
-         ((cmp_op op ~conva:mk_date_to_time ~convb:mk_date_to_time), Int, 
+         ((cmp_op op ~conva:mk_date_to_time ~convb:mk_date_to_time), Bool, 
             None)
       | (_, _) -> 
          ((cmp_op op), Unit, 
@@ -485,7 +487,7 @@ struct
          | t -> [], [t], "v"
       in
       let tpe = Collection(Intermediate, kt, List.hd vt) in
-      ("{ val v = " ^ d ^ ";" ^ (string_of_type tpe) ^ "(List(" ^ v ^ ")) }", 
+      ("{ val v = " ^ d ^ "; new " ^ (string_of_type tpe) ^ "(List(" ^ v ^ ")) }", 
          tpe)
       
    (** Generates code to combine two collections
@@ -522,7 +524,7 @@ struct
             "(" ^ n ^ ").foreach { " ^ (wrap_function_key_val ko vo 
             (Fn(ArgNTuple(List.map (fun x -> ArgN(x)) 
             (list_vars "v" (key_len + 1))), Tuple(k @ [v]), Unit)) body) ^ " }"
-         ) terms)) ^ " " ^ (string_of_type common_type) ^ "(result.toList) })",
+         ) terms)) ^ " new " ^ (string_of_type common_type) ^ "(result) })",
          common_type) 
 
    (** Generates code for an operator *)
@@ -755,10 +757,9 @@ struct
          ((c, ct):code_t) : code_t =
       match ct with
       | Collection(_, kt, vt) ->
-         (c ^ ".filter({ " ^
-            (wrap_function_key_val 
-               (Tuple(kt) :: [vt]) (fn_ret_type fnt) fnt fn) ^ 
-            " })", ct)
+         (c ^ ".filter(" ^
+            (wrap_function_key_val kt vt fnt fn) ^
+            ")", ct)
       | _ -> debugfail expr ("Filter of a non-collection: " ^ c ^ 
          " has type " ^ (string_of_type ct))
    
@@ -1040,8 +1041,8 @@ struct
       let run = 
          "def act(): Unit =" ^
          "{ fillTables();" ^
-         "sources.start;" ^
          "onSystemInitialized();" ^
+         "sources.start;" ^
          "while(true) {" ^
          "receive { " ^
          "case EndOfStream => {" ^

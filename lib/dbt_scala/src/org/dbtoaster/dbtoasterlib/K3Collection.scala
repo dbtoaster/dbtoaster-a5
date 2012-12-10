@@ -55,7 +55,7 @@ package org.dbtoaster.dbtoasterlib {
        *
        * @return The list of elements
        */
-      def toList(): List[Tuple2[K, V]]
+      def toIterable(): Iterable[Tuple2[K, V]]
 
       /**
        * Calls the function f on every element of the collection
@@ -145,7 +145,7 @@ package org.dbtoaster.dbtoasterlib {
        * @return The XML representing the collection
        */
       def toXML(): List[Elem] = {
-        toList().foldLeft(List[Elem]()) {
+        toIterable().foldLeft(List[Elem]()) {
           case (l, (k, v)) =>
             (try {
               val keyXML: List[xml.Elem] = (
@@ -268,7 +268,11 @@ package org.dbtoaster.dbtoasterlib {
         sndIdx: Option[Map[String, Index[K, V]]]) extends K3Collection[K, V] {
       def map[K2, V2](f: Tuple2[K, V] => 
                          Tuple2[K2, V2]): K3IntermediateCollection[K2, V2] = {
-        K3IntermediateCollection[K2, V2](elems.toList.map(f))
+		// IMPORTANT: we need the toList here because the map function can
+		//            produce the same key multiple times.
+		//            Removing it will result in hours of debugging once
+		//            you encounter a query that relies on the property.
+        new K3IntermediateCollection[K2, V2](elems.toList.map(f))
       }
 
       def contains(key: K): Boolean =
@@ -319,15 +323,15 @@ package org.dbtoaster.dbtoasterlib {
         val strIdx = idx.foldLeft("")(
             { case (agg, nb) => agg + (if (agg != "") "_" else "") + nb })
         sndIdx match {
-          case Some(x) => K3IntermediateCollection(x.get(strIdx).
-                                get.slice(keyPart).toList)
+          case Some(x) => new K3IntermediateCollection(x.get(strIdx).
+                                get.slice(keyPart))
           case None => throw new IllegalArgumentException
         }
       }
 
       def filter(f: Tuple2[K, V] => Boolean): 
             K3IntermediateCollection[K, V] = {
-        K3IntermediateCollection(elems.filter(f).toList)
+        new K3IntermediateCollection(elems.filter(f))
       }
 
       def groupByAggregate[K2, V2](init: V2, group: Tuple2[K, V] => K2, 
@@ -343,7 +347,7 @@ package org.dbtoaster.dbtoasterlib {
             grps += ((key, value))
           case _ => throw new DBTFatalError("Group By Aggregate failed")
         }
-        K3IntermediateCollection(groupedCollection.toList)
+        new K3IntermediateCollection(groupedCollection)
       }
 
       def fold[Y](init: Y, fn: Tuple2[K, V] => Y => Y): Y = {
@@ -353,7 +357,7 @@ package org.dbtoaster.dbtoasterlib {
       def flatten[K2, V2](): K3IntermediateCollection[K2, V2] =
         throw new DBTFatalError("flatten of non-nested collection")
 
-      def toList(): List[Tuple2[K, V]] = elems.toList
+      def toIterable(): Iterable[Tuple2[K, V]] = elems
 
       override def toString = {
         elems.foldLeft("") {
@@ -416,11 +420,11 @@ package org.dbtoaster.dbtoasterlib {
      * @param <K> The key type
      * @param <V> The value type
      */
-    case class K3IntermediateCollection[K, V](elems: List[Tuple2[K, V]]) 
+    class K3IntermediateCollection[K, V](elems: Iterable[Tuple2[K, V]]) 
         extends K3Collection[K, V] {
       def map[K2, V2](f: Tuple2[K, V] => Tuple2[K2, V2]):
                      K3IntermediateCollection[K2, V2] =
-        K3IntermediateCollection(elems.map(f))
+        new K3IntermediateCollection(elems.map(f))
 
       def contains(key: K): Boolean = {
         (elems.find { case (k, v) => k == key }) != None
@@ -446,9 +450,8 @@ package org.dbtoaster.dbtoasterlib {
       def slice[K2](keyPart: K2, idx: List[Int]): 
                    K3IntermediateCollection[K, V] = {
         val kp = keyPart.asInstanceOf[Product].productIterator.toList
-        K3IntermediateCollection(elems.filter 
+        new K3IntermediateCollection(elems.filter 
             { case (k, v) => 
-                println(k + "," + kp); 
                 (kp zip idx).forall { 
                     case (kp, i) => 
                       kp == k.asInstanceOf[Product].productElement(i) } })
@@ -456,13 +459,23 @@ package org.dbtoaster.dbtoasterlib {
 
       def filter(f: Tuple2[K, V] => Boolean): 
             K3IntermediateCollection[K, V] = {
-        K3IntermediateCollection(elems.filter(f))
+        new K3IntermediateCollection(elems.filter(f))
       }
 
       def groupByAggregate[K2, V2](init: V2, group: Tuple2[K, V] => K2, 
                                    fn: Tuple2[K, V] => V2 => V2):
                                   K3IntermediateCollection[K2, V2] = {
-        val groupedCollection = elems.foldLeft(Map[K2, V2]()) {
+		/*val result = Map[K2, V2]()
+        elems.foreach(keyval => {
+            val key = group(keyval)
+            val value = result.get(key) match {
+              case Some(v) => fn(keyval)(v)
+              case None => fn(keyval)(init)
+            }
+            result += ((key, value))
+		  }
+        )
+        new K3IntermediateCollection(result)*/        val groupedCollection = elems.foldLeft(Map[K2, V2]()) {
           case (grps, keyval) =>
             val key = group(keyval)
             val value = grps.get(key) match {
@@ -472,7 +485,7 @@ package org.dbtoaster.dbtoasterlib {
             grps += ((key, value))
           case _ => throw new DBTFatalError("Group By Aggregate failed")
         }
-        K3IntermediateCollection(groupedCollection.toList)
+        new K3IntermediateCollection(groupedCollection)
       }
 
       def fold[Y](init: Y, fn: Tuple2[K, V] => Y => Y): Y = {
@@ -480,17 +493,17 @@ package org.dbtoaster.dbtoasterlib {
       }
 
       def flatten[K2, V2](): K3IntermediateCollection[K2, V2] = {
-        K3IntermediateCollection(elems.foldLeft(List[Tuple2[K2, V2]]()) {
+        new K3IntermediateCollection(elems.foldLeft(List[Tuple2[K2, V2]]()) {
           (agg, elem) =>
             (agg, elem) match {
               case (agg, ((), v)) => 
-                agg ::: v.asInstanceOf[K3Collection[K2, V2]].toList
+                agg ++ v.asInstanceOf[K3Collection[K2, V2]].toIterable
               case _ => throw new IllegalArgumentException(elem.toString)
             }
         })
       }
 
-      def toList(): List[Tuple2[K, V]] = elems
+      def toIterable(): Iterable[Tuple2[K, V]] = elems
 
       def toPersistentCollection(): K3PersistentCollection[K, V] =
         new K3PersistentCollection[K, V](Map() ++ elems, None)

@@ -1164,6 +1164,17 @@ let rec simplify_collections filter expr =
         let rmap_f, rmap_c = get_map_parts rmap in
         let new_iter_f = compose iter_f rmap_f
         in Iterate(new_iter_f, rmap_c)
+
+    (* Merge successive filter functions *)
+    | Filter(Lambda(fargs, f), Filter(Lambda(gargs, g), c)) ->
+        let fa, ga = (get_arg_vars_w_types fargs), (get_arg_vars_w_types gargs) 
+        in
+        let renamings = 
+          List.map2 (fun (fv, ft) (gv, gt) -> AVar(gv, gt), Var(fv, ft)) fa ga
+        in
+        let newg = 
+          List.fold_left (fun e sub -> substitute sub e) g renamings
+        in Filter(Lambda(fargs, Mult(f, newg)), c)
         
     | _ -> ne
 

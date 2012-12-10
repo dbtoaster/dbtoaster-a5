@@ -970,10 +970,22 @@ let rec calc_to_k3_expr meta ?(generate_init = false) theta_vars_el calc :
             begin match p1_outs_el,p2_outs_el with
                | [],[] -> [], K.Mult(p1,p2)
                |  _,[] -> p1_outs_el,
-                          K.Map( lambda (p1_outs_el@[p1_ret_ve])
-                                        (K.Tuple(p1_outs_el @ 
-                                                 [K.Mult(p1_ret_ve,p2)])),
+                  (* Express the multiplication as a filter *)
+                  (* function if the right-hand factor is a comparison *)
+                  begin match p2 with
+                     | K.Lt (e1, e2) 
+                     | K.Leq(e1, e2) 
+                     | K.Eq (e1, e2) 
+                     | K.Neq(e1, e2) 
+                       when Debug.active "USE-FILTER" -> 
+                        K.Filter(lambda (p1_outs_el@[p1_ret_ve]) p2, p1)
+                     | _             -> 
+                        K.Map(lambda (p1_outs_el@[p1_ret_ve])
+                           (K.Tuple(p1_outs_el @ 
+                                    [K.Mult(p1_ret_ve,p2)])),
                                  p1)
+                  end
+ 
                | [], _ -> p2_outs_el,
                           K.Map( lambda (p2_outs_el@[p2_ret_ve])   
                                         (K.Tuple(p2_outs_el @ 

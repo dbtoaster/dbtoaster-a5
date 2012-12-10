@@ -572,8 +572,10 @@ let rec typecheck_expr e : K.type_t =
       | K.Filter (fn_e, ce) ->
          let (fn_t, c_t) = (recur fn_e, recur ce) in
          begin match fn_t with
-            | K.Fn(args, K.TBase(TBool)) when ((List.length args) == 2) -> c_t
-            | _ -> failwith "invalid filter function"
+            | K.Fn(args, ret_t) when is_flat ret_t -> c_t
+            | _ -> failwith ("invalid filter function, fn: " ^ 
+                             (K.string_of_expr fn_e) ^ ", fn type: " ^ 
+                             (K.string_of_type fn_t))
          end
 
       | K.PCUpdate (me, ke, te) ->

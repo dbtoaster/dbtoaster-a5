@@ -22,6 +22,7 @@ package org.dbtoaster {
           if(trace) {
             counter += 1
             if(counter % 1000 == 0) {
+              fw.write(counter + "\t" + (System.currentTimeMillis() - timeStart) / 1000.0)
               fw.newLine()
               print(".")
             }
@@ -37,14 +38,14 @@ package org.dbtoaster {
           else {
             println("<runtime>" + runtime + "</runtime>")
           }
+
+          if(trace) 
+            fw.close();
         }
       }
 
       val r = new QuerySupervisor(q, msgRcvr)
       r.start
-
-      if(trace) 
-        fw.close();
     }
   }
 }
