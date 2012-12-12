@@ -1175,12 +1175,7 @@ let rec simplify_collections filter expr =
         let newg = 
           List.fold_left (fun e sub -> substitute sub e) g renamings
         in Filter(Lambda(fargs, Mult(f, newg)), c)
-
-    | Filter(Lambda(fargs, f), l) ->
-        begin match K3Typechecker.typecheck_expr l with
-        | Collection(_, _) -> ne
-        | _ -> Mult(f, l)
-        end
+        
     | _ -> ne
 
     end

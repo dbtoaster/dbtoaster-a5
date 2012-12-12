@@ -972,12 +972,20 @@ let rec calc_to_k3_expr meta ?(generate_init = false) theta_vars_el calc :
                | K.Leq(e1, e2), _ 
                | K.Eq (e1, e2), _ 
                | K.Neq(e1, e2), _ ->
-                  Some(K.Filter(lambda (p2_outs_el@[p2_ret_ve]) p1, p2))
+                  begin match K3Typechecker.typecheck_expr p2 with
+                  | K.Collection(_, _) -> 
+                    Some(K.Filter(lambda (p2_outs_el@[p2_ret_ve]) p1, p2))
+                  | _ -> None
+                  end
                | _, K.Lt (e1, e2) 
                | _, K.Leq(e1, e2) 
                | _, K.Eq (e1, e2) 
                | _, K.Neq(e1, e2) ->
-                  Some(K.Filter(lambda (p1_outs_el@[p1_ret_ve]) p2, p1))          
+                  begin match K3Typechecker.typecheck_expr p1 with
+                  | K.Collection(_, _) -> 
+                    Some(K.Filter(lambda (p1_outs_el@[p1_ret_ve]) p2, p1))
+                  | _ -> None
+                  end
                | _, _ -> None
             end
          in
