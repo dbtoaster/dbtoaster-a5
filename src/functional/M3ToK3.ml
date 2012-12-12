@@ -966,30 +966,33 @@ let rec calc_to_k3_expr meta ?(generate_init = false) theta_vars_el calc :
          let ret_ve = K.Var(gen_prod_ret_sym (),
                             arithmetic_return_types p1_ret_t p2_ret_t) 
          in
+         let p_filter = 
+            begin match p1, p2 with
+               | K.Lt (e1, e2), _ 
+               | K.Leq(e1, e2), _ 
+               | K.Eq (e1, e2), _ 
+               | K.Neq(e1, e2), _ ->
+                  Some(K.Filter(lambda (p2_outs_el@[p2_ret_ve]) p1, p2))
+               | _, K.Lt (e1, e2) 
+               | _, K.Leq(e1, e2) 
+               | _, K.Eq (e1, e2) 
+               | _, K.Neq(e1, e2) ->
+                  Some(K.Filter(lambda (p1_outs_el@[p1_ret_ve]) p2, p1))          
+               | _, _ -> None
+            end
+         in
          let p_outs_el,p = 
             begin match p1_outs_el,p2_outs_el with
                | [],[] -> [], K.Mult(p1,p2)
                |  _,[] -> p1_outs_el,
-                  (* Express the multiplication as a filter *)
-                  (* function if the right-hand factor is a comparison *)
-                  begin match p2 with
-                     | K.Lt (e1, e2) 
-                     | K.Leq(e1, e2) 
-                     | K.Eq (e1, e2) 
-                     | K.Neq(e1, e2) 
-                       when Debug.active "USE-FILTER" -> 
-                        K.Filter(lambda (p1_outs_el@[p1_ret_ve]) p2, p1)
-                     | _             -> 
                         K.Map(lambda (p1_outs_el@[p1_ret_ve])
                            (K.Tuple(p1_outs_el @ 
                                     [K.Mult(p1_ret_ve,p2)])),
-                                 p1)
-                  end
- 
+                                 p1) 
                | [], _ -> p2_outs_el,
-                          K.Map( lambda (p2_outs_el@[p2_ret_ve])   
-                                        (K.Tuple(p2_outs_el @ 
-                                         [K.Mult(p2_ret_ve,p1)])),
+                        K.Map( lambda (p2_outs_el@[p2_ret_ve])   
+                            (K.Tuple(p2_outs_el @ 
+                                     [K.Mult(p2_ret_ve,p1)])),
                                  p2)
                |  _, _ -> 
                   let union_el = (ListAsSet.union p1_outs_el p2_outs_el) in
@@ -1004,7 +1007,10 @@ let rec calc_to_k3_expr meta ?(generate_init = false) theta_vars_el calc :
                                       p1) )
             end
          in
-            (p_outs_el, ret_ve, p)
+         begin match p_filter with
+            | Some(x) when Debug.active "USE-FILTER" -> (p_outs_el, ret_ve, x)
+            | _ -> (p_outs_el, ret_ve, p)
+          end
        in
          
           let prod_result = 

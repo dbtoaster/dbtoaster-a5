@@ -784,6 +784,11 @@ struct
           | SingleMap m -> TupleList(List.filter (fun t -> f t) (smc_to_tlc m))
           | MapCollection m -> ListCollection(List.filter (fun t -> f t)
               (nmc_to_c m))
+          | BaseValue(CInt i) -> 
+              if f (BaseValue(CInt i)) then 
+                BaseValue(CInt(i)) 
+              else 
+                BaseValue(CInt(0))
           | v -> bail ~expr:expr 
                      ("invalid tuple collection in filter : "^
                       (string_of_value v))

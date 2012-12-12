@@ -1229,7 +1229,9 @@ let annotate_collections e =
     let type_of_collection t = 
       match t with
       | Collection(_, tp) -> tp
-      | _ -> bail ~t:(Some(t)) ("Collection expected")
+      | _ -> bail ~t:(Some(t)) ("Collection expected but " ^ 
+                                (string_of_type t) ^ " found in " ^ 
+                                (string_of_expr e))
     in
     let key_val t =
       match t with
@@ -1437,7 +1439,8 @@ let annotate_collections e =
                             ~argt:[type_of_collection c_t] 
                             fn_e var_map 
       in
-         (Filter(f_e, c_e), Collection(Intermediate, type_of_collection c_t))
+        (Filter(f_e, c_e), 
+         Collection(Intermediate, type_of_collection c_t))
     | PCUpdate(me,ke,te) -> 
       let m_e, _ = _annotate_collections me var_map in
       let k_e, _ = annotate_list ke in
