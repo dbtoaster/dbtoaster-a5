@@ -1165,6 +1165,25 @@ let rec simplify_collections filter expr =
         let new_iter_f = compose iter_f rmap_f
         in Iterate(new_iter_f, rmap_c)
 
+    (* Remove filter function if it is followed by an aggregation *)
+    | Aggregate(AssocLambda(at, AVar(aas, aast), 
+                Add(Var(aas2, aas2t), agg_f)), init, 
+                Filter(Lambda(fargs, f), (Slice(_, _, _) as mp)))
+    | Aggregate(AssocLambda(at, AVar(aas, aast), 
+                Add(Var(aas2, aas2t), agg_f)), init, 
+                Filter(Lambda(fargs, f), (OutPC(_, _, _) as mp))) 
+                  when aas == aas2 ->
+        let fa, aa = (get_arg_vars_w_types fargs), (get_arg_vars_w_types at) 
+        in
+        let renamings = 
+          List.map2 (fun (fv, ft) (gv, gt) -> AVar(gv, gt), Var(fv, ft)) fa aa
+        in
+        let newf = 
+          List.fold_left (fun e sub -> substitute sub e) f renamings
+        in 
+        Aggregate(AssocLambda(at, AVar(aas, aast), Add(Var(aas2, aas2t), 
+                  Mult(agg_f, newf))), init, mp) 
+
     (* Merge successive filter functions *)
     | Filter(Lambda(fargs, f), Filter(Lambda(gargs, g), c)) ->
         let fa, ga = (get_arg_vars_w_types fargs), (get_arg_vars_w_types gargs) 
@@ -1175,7 +1194,7 @@ let rec simplify_collections filter expr =
         let newg = 
           List.fold_left (fun e sub -> substitute sub e) g renamings
         in Filter(Lambda(fargs, Mult(f, newg)), c)
-        
+
     | _ -> ne
 
     end
