@@ -4,10 +4,8 @@ open Calculus
 open UnitTest
 ;;
 
-Debug.activate "PARSE-CALC-WITH-FLOAT-VARS"
-(*Debug.active "HEURISTICS-IGNORE-FINAL-OPTIMIZATION"*)
-(*Debug.activate "HEURISTICS-IGNORE-IVC-OPTIMIZATION"*)
-(*Debug.activate "IVC-OPTIMIZE-EXPR"*)
+Debug.activate "PARSE-CALC-WITH-FLOAT-VARS";
+(*Debug.activate "HEURISTICS-PULL-IN-LIFTS";*)
 ;;
 
 let test_db = mk_db [
@@ -75,12 +73,13 @@ in
 let test msg 
       ?(event = Some(Schema.InsertEvent(schema_rel "R" ["dA"; "dB"])))
       ?(heuristic_options = [Heuristics.NoIVC; Heuristics.NoInputVariables])
+         ?(scope = [])
       input output =
    let history:Heuristics.ds_history_t = ref [] in 
    let expr = parse_calc input in 
       log_test ("Materialization ("^msg^")")
          string_of_expr
-         (snd (Heuristics.materialize heuristic_options
+         (snd (Heuristics.materialize ~scope:scope heuristic_options
                                       test_db history "M" event expr))
       (parse_calc output) 
 in 
@@ -100,24 +99,21 @@ in
       "AggSum([A], R(A,B) * {A < B})"
       "M1(int)[][A]";
    test "Aggregation with an input variable"
-      "(C ^= 0) * (L ^= (AggSum([A], R(A,B) * {A < C})))"
-      "(C ^= 0) * (L ^= (M1_L2_1(int)[][A] * {A < C}))";
+       "(C ^= 0) * S(A) * (L ^= (AggSum([A], R(A,B) * {A < C})))"
+       "(C ^= 0) * M1(int)[][A] * (L ^= (M1_L2_1(int)[][A] * {A < C}))";
    test "Extending output schema due to an input variable"
-      "(C ^= 0) * (L ^= (AggSum([A], R(A,B) * {B < C})))"
-      "(C ^= 0) * (L ^= (AggSum([A], M1_L2_1(int)[][A,B] * {B < C})))";
+      "(C ^= 0) * S(A) * (L ^= (AggSum([A], R(A,B) * {B < C})))"
+      "(C ^= 0) * M1(int)[][A] * (L ^= (AggSum([A], M1_L2_1(int)[][A,B] * 
+                {B < C})))";
    test "Graph Decomposition"
       "AggSum([A], R(A,B) * S(C,D))"
       "M1(int)[][A] * M2(int)[][]";
    test "Map reuse"
       "AggSum([A], R(A,B) + R(A,B))"
-      (if (Debug.active "HEURISTICS-IGNORE-FINAL-OPTIMIZATION") 
-       then "(M1(int)[][A] + M1(int)[][A])"
-       else "(M1(int)[][A] * 2)"); 
+      "(M1(int)[][A] * 2)"; 
    test "Map reuse with renaming"
       "AggSum([A], R(A,B) * (S(C,E) + S(D,E)))"
-      (if (Debug.active "HEURISTICS-IGNORE-FINAL-OPTIMIZATION") 
-       then "(M1(int)[][A] * M2(int)[][]) + (M1(int)[][A] * M2(int)[][])"
-       else "M2(int)[][] * M1(int)[][A] * 2"); 
+      "M2(int)[][] * M1(int)[][A] * 2"; 
    test "Map reuse with renaming"
       "(R(A,B) * S(C,D)) + (R(B,C) * S(A,D))"
       "(M1(int)[][A,B] * M2(int)[][C,D]) + (M1(int)[][B,C] * M2(int)[][A,D])";
@@ -144,52 +140,50 @@ in
    test ("Aggregation with a lift containing an irrelevant relation " ^ 
          "and a common variable")
       "AggSum([A], R(A,B) * (C ^= (S(B) * {B = 0})) * C)"
-      "M1(int)[][A]";     
-   test "Aggregation with a lift containing a relevant relation"
-      "AggSum([A], R(A,B) * (E ^= R(C,D) * B))"
-      "AggSum([A], (M1_L1_1(int)[][A,B] * (E ^= M1_L1_1(int)[][C, D] * B)))";
+      "M1(int)[][A]";
    test "Aggregation with a lift containing a relevant relation and a condition"
-      "AggSum([A], R(A,B) * (E ^= R(C,D) * B) * {E > 0})"
-      "AggSum([A], (M1_L1_1(int)[][A,B] * 
+      "AggSum([A], R(A,B) * S(C,D) * (E ^= R(C,D) * B) * {E > 0})"
+      "AggSum([A], (M1_L1_1(int)[][A,B] * M1_P_2(int)[][C,D] *  
                    (E ^= M1_L1_1(int)[][C,D] * B) * {E > 0}))";  
    test "Aggregation with a lift containing a relevant relation and a variable"
-      "AggSum([A], R(A,B) * (E ^= R(C,D) * B) * E)"
-      "AggSum([A], (M1_L1_1(int)[][A,B] * 
-                    (E ^= M1_L1_1(int)[][C,D] * B) * E))";    
+      "AggSum([A], R(A,B) * S(C,D) * (E ^= R(C,D) * B) * E)"
+      "AggSum([A], (M1(float)[][A] * M2(int)[][]))";     
+         
    test ("Aggregation with a lift containing a relevant relation " ^ 
          "and a common variable")
-      "AggSum([A], R(A,B) * (E ^= R(C,D) * {A = C}) * {E > 0})"
-      (if (Debug.active "HEURISTICS-IGNORE-FINAL-OPTIMIZATION") 
-       then "AggSum([A], M1(int)[][A] * (E ^= M1_L1_1(int)[][A,D]) * {E > 0})"
-       else "M1(int)[][A] * AggSum([A], (E ^= M1_L1_1(int)[][A,D]) * {E > 0})");
+      "AggSum([A], R(A,B) * S(C,D) * (E ^= ({A = C} * R(C,D))) * {E > 0})"
+      "M1_P_1(int)[][A] * AggSum([], M1_P_2(int)[][C,D] * 
+             (E ^= ({A = C} * M1_L1_2(int)[][C,D])) * {E > 0})";
     
    test "Extending schema due to a lift"
-      "AggSum([A], R(A,B) * S(C,D) * (E ^= R(F,G) * C))"
-      "(M1(int)[][A] * AggSum([], M2(int)[][C] * 
-        (E ^= M2_L1_1(int)[][F,G] * C)))";
+      "AggSum([A], R(A,B) * S(C,D) * (E ^= R(B,D) * C) * {E > 0})"
+      "AggSum([A], M1_L1_1(int)[][A,B] * M1_P_2(int)[][C,D] * 
+        (E ^= M1_L1_1(int)[][B,D] * C) * {E > 0})";
 
    test "Mapping example"
-      "R(A) * S(C) * (E ^= R(B) * S(D)) * 5"      
-      "(E ^= M1_L1_1(int)[][B] * M1_L1_2(int)[][D]) * 
-       M1_L1_1(int)[][A] * M1_L1_2(int)[][C] * 5";
+      "R(A) * S(C) * (E ^= (R(C) * S(A))) * 5"      
+      "(M1_L1_1(int)[][A] * M1_L1_2(int)[][C] * 
+          (E ^= (M1_L1_1(int)[][C] * M1_L1_2(int)[][A])) * 5)";
     
    test "Aggregation with a lift containing an irrelevant relation"
-      "AggSum([A], R(A,B) * (C ^= S(D)))"
-      (if (not (Debug.active "HEURISTICS-IGNORE-IVC-OPTIMIZATION")) 
-       then "AggSum([], (C ^= M1_L1_1(int)[][D])) * M2(int)[][A]"     
-       else if (Debug.active "IVC-OPTIMIZE-EXPR") 
-       then "M1(int)[][](1) * M2(int)[][A]"
-       else "M1(int)[][](AggSum([],((C ^= 0)))) * M2(int)[][A]");
-                       
-   test ("Aggregation with a lift containing an irrelevant relation " ^ 
+      "AggSum([A,C], R(A,B) * (C ^= S(B)))"
+      (if (not (Debug.active("HEURISTICS-PULL-IN-LIFTS")))
+       then "AggSum([A,C], M1(int)[][A,B] * (C ^= M1_L1_1(int)[][B]))"
+       else "M1(int)[][A,C]");
+         
+   test ("Aggregation with a lift containing an irrelevant relation " ^
          "and comparison")
-      "AggSum([A], R(A,B) * (C ^= S(D)) * {C > 0})"
-      (if (not (Debug.active "HEURISTICS-IGNORE-IVC-OPTIMIZATION")) 
-       then "AggSum([], (C ^= M1_L1_1(int)[][D]) * {C > 0}) * M2(int)[][A]"
-       else if (Debug.active "IVC-OPTIMIZE-EXPR") 
-       then "M1(int)[][] * M2(int)[][A]"
-       else "M1(int)[][](AggSum([],(((C ^= 0) * {C > 0})))) * M2(int)[][A]");
-       
+      "AggSum([A,C], R(A,B) * (C ^= S(B)) * {C > 0})"
+      (if (not (Debug.active("HEURISTICS-PULL-IN-LIFTS")))
+       then "AggSum([A,C], M1(int)[][A,B] * (C ^= M1_L1_1(int)[][B]) * {C > 0})"
+       else "M1(int)[][A,C]");
+
+   test "Testing IVC optimization - no root relation - OFF case"
+       ~heuristic_options:[Heuristics.NoIVC; Heuristics.NoInputVariables]
+       ~scope:[("B", TFloat)]
+      "AggSum([C], (C ^= R(B)))"
+      "AggSum([C], (C ^= M1_L1_1(int)[][B]))";
+                                                                               
    test "RExistsNestedAgg Delta Chunk"
       "R(A, B) *
        (foo ^= ( AggSum([], (X ^= R(A,B) + {dA = A} * dB) *

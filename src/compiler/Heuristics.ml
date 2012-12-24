@@ -77,14 +77,11 @@ let prepare_expr (scope:var_t list) (expr:expr_t) :
 
    (* Extract constant terms *)
    let (const_terms, rest_terms) = 
-      List.fold_left (fun (const_terms, rest_terms) term ->
+      List.partition (fun term ->
          match CalcRing.get_val term with
-            | Value(_) | Cmp(_, _, _) ->
-               if covered_by_scope scope term
-               then (const_terms @ [term], rest_terms)
-               else (const_terms, rest_terms @ [term])
-            | _ -> (const_terms, rest_terms @ [term])
-      ) ([], []) expr_terms
+            | Value(_) | Cmp(_, _, _) -> covered_by_scope scope term
+            | _ -> false           
+      ) expr_terms
    in
 
    (* Reorganize the rest *)
@@ -113,7 +110,7 @@ type decision_options_t =
 
 (** Split an expression into four parts: 
     {ol
-      {li value terms that depends solely on the trigger variables }
+      {li value terms that depend solely on the trigger variables }
       {li base relations, irrelevant lift expressions with respect to the 
           event relation that also contain no input variables, and 
           subexpressions with no input variables (comparisons, variables 
@@ -180,10 +177,14 @@ let partition_expr (heuristic_options:heuristic_options_t) (scope:var_t list)
       (* output variables of the relation term.           *)
       
                               
-      (* Preprocessing step to mark those lifts that are  *)
-      (* going to be materialized separately for sure.    *)
-      (* Essentially, all lifts are singletons and are    *)
-      (* always materialize separately. *)
+      (* Preprocessing step to mark those lifts that are      *)
+      (* going to be materialized separately for sure.        *)
+      (* Lift subexpressions containing the event relation    *)
+         (* are always materialized separately. Subexpressions   *)
+         (* that contain other relations are also materialized   *)
+         (* as new maps, unless HEURISTICS-PULL-IN-LIFTS is on.  *)
+         (* The materialization strategies of the remaining lift *)
+         (* suexpressions are going to be determined later on.   *)
       let lift_terms_annot = List.map (fun l_term ->
          match CalcRing.get_val l_term with
 (***** BEGIN EXISTS HACK *****)
@@ -288,6 +289,7 @@ let partition_expr (heuristic_options:heuristic_options_t) (scope:var_t list)
                         let graph_cmpnt_expr =  
                            CalcRing.mk_prod (List.map fst graph_cmpnt)
                         in
+                        (* Add only if that does not change the schema *)
                         if covered_by_scope rel_expr_ovars graph_cmpnt_expr
                         then (r_terms @ [l_term], l_terms)
                         else if covered_by_scope 
@@ -440,11 +442,13 @@ let should_update (event:Schema.event_t) (expr:expr_t)  : bool =
                
                let maintaining_state_local = fst (
                   List.fold_left (fun (state_local, scope_acc) term ->
-                     let term_ovars = snd (schema_of_expr term) in
+                     let (term_ivars, term_ovars) = 
+                        schema_of_expr ~lift_group_by_vars_are_inputs:true term 
+                     in
                      (* We are only interested in Lift expressions *)
                      match CalcRing.get_val term with
 (***** BEGIN EXISTS HACK *****)
-                     | Exists(subexpr)
+                     | Exists(subexpr)  
 (***** END EXISTS HACK *****)
                      | Lift(_, subexpr) ->
                         let subexpr_rels = rels_of_expr subexpr in
@@ -455,7 +459,8 @@ let should_update (event:Schema.event_t) (expr:expr_t)  : bool =
                         in
                         if contains_event_rel then 
                            let next_state = 
-                              if ListAsSet.inter scope_acc term_ovars = [] 
+                              if ListAsSet.inter scope_acc
+                                 (ListAsSet.union term_ivars term_ovars) = []
                               then ReplaceExpr
                               else UpdateExpr
                            in
@@ -706,7 +711,7 @@ and materialize_expr (heuristic_options:heuristic_options_t)
       end
    end;
                      
-   (* Extended the schema with the input variables of other expressions *) 
+   (* Extend the schema with the input variables of other expressions *) 
    let extended_schema = 
       ListAsSet.multiunion [ schema;
                              scope_const;
@@ -771,8 +776,8 @@ and materialize_expr (heuristic_options:heuristic_options_t)
           ) (([], CalcRing.one), (1, agg_rel_expr)) 
             (CalcRing.prod_list lift_expr) 
       ) 
-   in  
-      
+   in    
+               
    Debug.print "LOG-HEURISTICS-DETAIL" (fun () -> 
       "[Heuristics]  Relation AggSum expression: " ^ 
       (string_of_expr agg_rel_expr) ^
@@ -787,14 +792,24 @@ and materialize_expr (heuristic_options:heuristic_options_t)
    ); 
       
    (* The actual materialization of agg_rel_expr *)   
-   let (todos, complete_mat_expr) = 
-      if (rels_of_expr rel_expr) = [] 
-      then (todo_lifts, 
-            CalcRing.mk_prod [ const_expr; 
-                               agg_rel_expr; 
-                               mat_lift_expr; 
-                               value_expr ])
-      else        
+    let (todo_rels, mat_rel_expr) = 
+       if (rels_of_expr rel_expr) = []
+         then ([], agg_rel_expr)
+         else
+            
+      (* Check if rel_expr can be further decomposed *)
+      (* e.g. R(A) * S(C) * (E ^= (R(C) * S(A)))     *)   
+      let (_, components) = 
+         decompose_graph scope_const (agg_rel_expr_ovars, rel_expr) 
+      in
+      if (List.length components > 1) 
+      then
+            materialize ~scope:scope_const heuristic_options 
+                                           db_schema history 
+                                           (prefix^"_P_")
+                                           event agg_rel_expr
+      else
+            
          (* Try to found an already existing map *)
          let (found_ds, mapping_if_found) = 
             List.fold_left (fun result i ->
@@ -840,11 +855,7 @@ and materialize_expr (heuristic_options:heuristic_options_t)
                   ds_definition = agg_rel_expr;
                } in
                   history := new_ds :: !history;
-                  ([new_ds] @ todo_lifts @ todo_ivc, 
-                   CalcRing.mk_prod [ const_expr; 
-                                      new_ds.ds_name; 
-                                      mat_lift_expr; 
-                                      value_expr ])
+                  (new_ds :: todo_ivc, new_ds.ds_name)
                          
             | Some(mapping) ->
                Debug.print "LOG-HEURISTICS-DETAIL" (fun () -> 
@@ -854,17 +865,25 @@ and materialize_expr (heuristic_options:heuristic_options_t)
                   (ListExtras.ocaml_of_list 
                       (fun ((a, _), (b, _)) -> a ^ "->" ^ b) mapping)
                );
-               (todo_lifts, 
-                CalcRing.mk_prod [ const_expr; 
-                                   (rename_vars mapping found_ds.ds_name); 
-                                   mat_lift_expr; 
-                                   value_expr ])
+               ([], rename_vars mapping found_ds.ds_name)
          end
-   in
+    in   
+    
    (* If necessary, add aggregation to the whole materialized expression *)
-   let agg_mat_expr = Calculus.mk_aggsum schema complete_mat_expr in
-      (todos, agg_mat_expr)
-
+    (* Hack to extend the original schema. E.g. expression {A=C} * R(C,D) *)
+    (* has "D" in the output schema when evaluate with "A" and "C" in the *)
+    (* scope. This hack extends the schema with "C".                      *)   
+    let extended_original_schema = 
+        ListAsSet.union schema (ListAsSet.inter scope agg_rel_expr_ovars)
+    in
+    let whole_mat_expr = CalcRing.mk_prod [ const_expr; 
+                                           mat_rel_expr; 
+                                           mat_lift_expr; 
+                                           value_expr ] 
+   in 
+     (todo_rels @ todo_lifts, 
+        Calculus.mk_aggsum extended_original_schema whole_mat_expr)
+ 
 
 (** Perform an end-of-the line materialization on an expression.  Each stream
     relation will be turned into a map.  
