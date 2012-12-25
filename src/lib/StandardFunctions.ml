@@ -97,6 +97,184 @@ let substring (arglist:const_t list) (ftype:type_t) =
       | _ -> invalid_args "substring" arglist ftype
 ;; declare_std_function "substring" substring
          (function [TString; TInt; TInt] -> TString | _-> inference_error ()) ;;
+  
+type vector_t = float * float * float
+  
+let vec_of_list (v: float list): vector_t = 
+  match v with 
+    | [x; y; z] -> (x, y, z)
+    | _ -> failwith "vector is not 3D!";;
+
+let calc_vec_length (v1: vector_t): float = 
+  let (x1, y1, z1) = v1 in
+  sqrt(x1*.x1+.y1*.y1+.z1*.z1);;
+
+let calc_vec_dot (v1: vector_t) (v2: vector_t): float = 
+  let (x1, y1, z1) = v1 in
+  let (x2, y2, z2) = v2 in
+  x1*.x2+.y1*.y2+.z1*.z2;;
+
+let calc_vec_cross (v1: vector_t) (v2: vector_t): vector_t =
+  let (x1, y1, z1) = v1 in
+  let (x2, y2, z2) = v2 in
+  let x = (y1*.z2-.z1*.y2) in
+  let y = (z1*.x2-.x1*.z2) in
+  let z = (x1*.y2-.y1*.x2) in
+  (x,y,z);;
+
+
+let calc_dihedral_angle (inputs: float list): float =
+  match inputs with 
+    | [x1; y1; z1;
+      x2; y2; z2; 
+      x3; y3; z3; 
+      x4; y4; z4] ->
+      let v1_x = x2-.x1 in
+      let v1_y = y2-.y1 in 
+      let v1_z = z2-.z1 in 
+      let v2_x = x3-.x2 in 
+      let v2_y = y3-.y2 in 
+      let v2_z = z3-.z2 in 
+      let v3_x = x4-.x3 in 
+      let v3_y = y4-.y3 in 
+      let v3_z = z4-.z3 in 
+      let v1 = (v1_x, v1_y, v1_z) in 
+      let v2 = (v2_x, v2_y, v2_z) in 
+      let v3 = (v3_x, v3_y, v3_z) in 
+    
+      let n1 = calc_vec_cross(v1)(v2) in 
+      let n2 = calc_vec_cross(v2)(v3) in 
+      atan2 (calc_vec_length(v2) *. calc_vec_dot(v1)(n2)) 
+        (calc_vec_dot(n1)(n2))
+    | _ -> failwith "incorrect inputs for dihedral_angle";;
+
+let pi = 4.0 *. atan 1.0;;
+
+let calc_radian (degree: float): float =
+  (degree /. 180.0) *. pi
+
+let radians (arglist:const_t list) (ftype:type_t) =
+   match arglist with
+      | [CFloat(x)] ->
+        CFloat(calc_radian(x))
+      | [CInt(x)] ->
+        CFloat(calc_radian(float_of_int x))
+      | _ -> invalid_args "radians" arglist ftype
+;; declare_std_function "radians" radians
+(function [TFloat] -> TFloat | [TInt] -> TFloat | _-> inference_error ()) ;;
+
+let pow_sig (arglist:const_t list) (ftype:type_t) =
+   match arglist with
+     | [CFloat(x); CFloat(y)] ->
+       CFloat(x ** y)
+     | [CInt(x); CInt(y)] ->
+       CFloat((float_of_int x) ** (float_of_int y))
+     | [CInt(x); CFloat(y)] ->
+       CFloat((float_of_int x) ** (y))
+     | [CFloat(x); CInt(y)] ->
+       CFloat((x) ** (float_of_int y))
+      | _ -> invalid_args "pow" arglist ftype
+;; declare_std_function "pow" pow_sig
+(function [TFloat; TFloat] -> TFloat 
+  | [TInt; TInt] -> TFloat 
+  | [TFloat; TInt] -> TFloat 
+  | [TInt; TFloat] -> TFloat 
+  | _-> inference_error ()) ;;
+
+let vec_length (arglist:const_t list) (ftype:type_t) =
+   match arglist with
+      | [CFloat(x); CFloat(y); CFloat(z)] ->
+        CFloat(calc_vec_length(x, y, z))
+      | [CInt(x); CInt(y); CInt(z)] ->
+        let v = List.map float_of_int [x; y; z] in
+        CFloat(calc_vec_length(vec_of_list v))
+      | _ -> invalid_args "vec_length" arglist ftype
+;; declare_std_function "vec_length" vec_length
+         (function [TFloat; TFloat; TFloat] -> TFloat | _-> inference_error ()) ;;
+
+let vec_dot (arglist:const_t list) (ftype:type_t) =
+   match arglist with
+     | [CFloat(x1); CFloat(y1); CFloat(z1);
+       CFloat(x2); CFloat(y2); CFloat(z2)] ->
+       let v1 = [x1; y1; z1] in
+       let v2 = [x2; y2; z2] in
+       CFloat(calc_vec_dot(vec_of_list v1)(vec_of_list v2))
+     | [CInt(x1); CInt(y1); CInt(z1);
+       CInt(x2); CInt(y2); CInt(z2)] ->
+       let v1 = List.map float_of_int [x1; y1; z1] in
+       let v2 = List.map float_of_int [x2; y2; z2] in
+       CInt(int_of_float(calc_vec_dot(vec_of_list v1)(vec_of_list v2)))
+      | _ -> invalid_args "vec_dot" arglist ftype
+;; declare_std_function "vec_dot" vec_dot
+(function 
+  [TFloat; TFloat; TFloat;
+    TFloat; TFloat; TFloat] ->
+    TFloat | _-> inference_error ()) ;;
+
+
+(* it had some problems with types! So I decided to comment it out!
+let vec_cross (arglist:const_t list) (ftype:type_t) =
+   match arglist with
+     | [CFloat(x1); CFloat(y1); CFloat(z1);
+       CFloat(x2); CFloat(y2); CFloat(z2)] ->
+       let v1 = [x1; y1; z1] in
+       let v2 = [x2; y2; z2] in
+       let res = calc_vec_cross(v1)(v2) in
+       List.map (fun x -> CFloat(x)) res
+     | [CInt(x1); CInt(y1); CInt(z1);
+       CInt(x2); CInt(y2); CInt(z2)] ->
+       let v1 = List.map float [x1; y1; z1] in
+       let v2 = List.map float [x2; y2; z2] in
+       let res = calc_vec_cross(v1)(v2) in
+       List.map (fun x -> CInt(int_of_float(x))) res
+      | _ -> invalid_args "vec_cross" arglist ftype
+;; declare_std_function "vec_cross" vec_cross
+(function 
+  [TFloat; TFloat; TFloat;
+    TFloat; TFloat; TFloat] ->
+    [TFloat; TFloat; TFloat] | _-> inference_error ()) ;;
+ *)
+  
+(**TODO*)
+let hash (arglist:const_t list) (ftype:type_t) =
+   match arglist with
+      | [CInt(x1)] ->
+        CInt(x1)
+      | _ -> invalid_args "hash" arglist ftype
+;; declare_std_function "hash" hash
+(function [TInt] -> TInt | _-> inference_error ()) ;;
+
+
+let dihedral_angle (arglist:const_t list) (ftype:type_t) =
+   match arglist with
+     | [CFloat(x1); CFloat(y1); CFloat(z1);
+       CFloat(x2); CFloat(y2); CFloat(z2);
+       CFloat(x3); CFloat(y3); CFloat(z3);
+       CFloat(x4); CFloat(y4); CFloat(z4)
+       ] ->
+       let inputs = [x1; y1; z1;
+         x2; y2; z2;
+         x3; y3; z3;
+         x4; y4; z4] in
+       CFloat(calc_dihedral_angle(inputs))
+     | [CInt(x1); CInt(y1); CInt(z1);
+       CInt(x2); CInt(y2); CInt(z2);
+       CInt(x3); CInt(y3); CInt(z3);
+       CInt(x4); CInt(y4); CInt(z4)
+       ] ->
+       let int_inputs = [x1; y1; z1;
+         x2; y2; z2;
+         x3; y3; z3;
+         x4; y4; z4] in
+       let inputs = List.map float_of_int int_inputs in
+       CFloat(calc_dihedral_angle(inputs))
+      | _ -> invalid_args "dihedral_angle" arglist ftype
+;; declare_std_function "dihedral_angle" dihedral_angle
+(function [TFloat; TFloat; TFloat;
+  TFloat; TFloat; TFloat;
+  TFloat; TFloat; TFloat;
+  TFloat; TFloat; TFloat;] -> TFloat | _-> inference_error ()) ;;
+
 
 (** 
    Type casting -- cast to a particular type

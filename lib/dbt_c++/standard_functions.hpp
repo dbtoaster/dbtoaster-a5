@@ -19,6 +19,15 @@ namespace dbtoaster {
   string substring(string &s, long start, long len);  
   int regexp_match(const char *regex, string &s);
   
+  // Vector functions
+  float vec_dot(float x1, float y1, float z1, 
+              float x2, float y2, float z2);
+  float vec_length(float x1, float y1, float z1);
+  float dihedral_angle(float x1, float y1, float z1, 
+                    float x2, float y2, float z2,
+                    float x3, float y3, float z3,
+                    float x4, float y4, float z4);
+  
   // Type conversion functions
   inline long cast_int_from_float(double           d) { return (long)d; };
   inline long cast_int_from_string(const char     *c) { return atoi(c); };
@@ -41,6 +50,7 @@ namespace dbtoaster {
   inline date cast_date_from_string(string &s) { 
     return cast_date_from_string(s.c_str()); 
   }
+  
 }
 
 #endif //DBTOASTER_STANDARD_FUNCTIONS_H

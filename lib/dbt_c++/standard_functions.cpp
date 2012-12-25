@@ -4,6 +4,7 @@
 #include <iostream>
 #include <sstream>
 #include <regex.h>
+#include <math.h>
 
 namespace dbtoaster {
 
@@ -23,6 +24,60 @@ long day_part(date d) {
 // String functions
 string substring(string &s, long start, long len){
 	return s.substr(start, len);
+}
+
+float vec_length(float x, float y, float z){
+  return sqrt(x*x+y*y+z*z);
+}
+
+float vec_dot(float x1, float y1, float z1, 
+              float x2, float y2, float z2){
+  return x1*x2+y1*y2+z1*z2;
+}
+
+void vec_cross(float x1, float y1, float z1, 
+               float x2, float y2, float z2,
+               float& x, float& y, float& z){
+  x = (y1*z2-z1*y2);
+  y = (z1*x2-x1*z2);
+  z = (x1*y2-y1*x2);
+}
+
+float dihedral_angle(float x1, float y1, float z1, 
+                    float x2, float y2, float z2,
+                    float x3, float y3, float z3,
+                    float x4, float y4, float z4){
+  float v1_x, v1_y, v1_z;
+  float v2_x, v2_y, v2_z;
+  float v3_x, v3_y, v3_z;
+  float n1_x, n1_y, n1_z;
+  float n2_x, n2_y, n2_z;
+  
+  v1_x = x2-x1;
+  v1_y = y2-y1;
+  v1_z = z2-z1;
+
+  v2_x = x3-x2;
+  v2_y = y3-y2;
+  v2_z = z3-z2;
+
+  v3_x = x4-x3;
+  v3_y = y4-y3;
+  v3_z = z4-z3;
+
+  vec_cross(v1_x, v1_y, v1_z,
+            v2_x, v2_y, v2_z,
+            n1_x, n1_y, n1_z);
+  vec_cross(v2_x, v2_y, v2_z,
+            v3_x, v3_y, v3_z,
+            n2_x, n2_y, n2_z);
+  
+  return atan2(vec_length(v2_x, v2_y, v2_z)*vec_dot(v1_x,v1_y,v1_z,n2_x,n2_y,n2_z), 
+                vec_dot(n1_x, n1_y, n1_z, n2_x, n2_y, n2_z));
+}
+
+float radians(float degree) {
+  return degree / 180 * 3.141592653589793238462643383279502884;
 }
 
 int regexp_match(const char *regex, string &s){

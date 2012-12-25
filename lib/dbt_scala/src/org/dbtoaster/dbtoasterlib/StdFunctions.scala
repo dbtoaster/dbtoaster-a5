@@ -64,6 +64,13 @@ package org.dbtoaster.dbtoasterlib {
     
     def substring(str: String, start: Long, length: Long): String =
       str.substring (start.toInt, (start + length).toInt)
+      
+      
+    def vec_length = VectorFunctions.vec_length _
+    def vec_dot = VectorFunctions.vec_dot _
+    def dihedral_angle = VectorFunctions.dihedral_angle _
+    def radians(degree: Double): Double = degree / 180 * 3.141592653589793238462643383279502884
+    def pow(x: Double, y: Double): Double = math.pow(x, y)
 
     /* Type conversion functions */
     def cast_int(l: Long): Long = l
@@ -84,6 +91,56 @@ package org.dbtoaster.dbtoasterlib {
     def cast_date (s: String): java.util.Date = {
       val dateFormat = new java.text.SimpleDateFormat("yyyy-MM-dd")
         dateFormat.parse(s)
+    }
+  }
+  
+  object VectorFunctions {
+    case class Vector(val x: Double, y: Double, z: Double) {
+      def -(v: Vector): Vector = {
+        Vector(x-v.x, y-v.y, z-v.z)
+      }
+      
+      def length: Double = 
+        math.sqrt(x*x + y*y + z*z)
+      
+      def apply(v: Vector): Double =
+        x*v.x + y*v.y + z*v.z
+        
+      def *(v: Vector): Vector = { 
+        val nx = (y*v.z-z*v.y)
+        val ny = (z*v.x-x*v.z)
+        val nz = (x*v.y-y*v.x)
+        Vector(nx, ny, nz)
+      }
+    }
+    
+    def vec_length(x: Double, y: Double, z: Double): Double =
+      Vector(x, y, z).length
+      
+    def vec_dot(x1: Double, y1: Double, z1: Double,
+                x2: Double, y2: Double, z2: Double): Double = {
+      val v1 = Vector(x1, y1, z1)
+      val v2 = Vector(x2, y2, z2)
+      v1(v2)
+    }
+    
+    def dihedral_angle(x1: Double, y1: Double, z1: Double,
+                       x2: Double, y2: Double, z2: Double,
+                       x3: Double, y3: Double, z3: Double,
+                       x4: Double, y4: Double, z4: Double): Double = {
+      val p1 = Vector(x1, y1, z1)
+      val p2 = Vector(x2, y2, z2)
+      val p3 = Vector(x3, y3, z3)
+      val p4 = Vector(x4, y4, z4)
+      
+      val v1 = p2 - p1
+      val v2 = p3 - p2
+      val v3 = p4 - p3
+
+      val n1 = v1 * v2
+      val n2 = v2 * v3
+      
+      math.atan2 ( v2.length * v1(n2) , n1(n2) )
     }
   }
 }
