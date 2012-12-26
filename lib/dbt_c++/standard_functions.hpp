@@ -23,10 +23,21 @@ namespace dbtoaster {
   float vec_dot(float x1, float y1, float z1, 
               float x2, float y2, float z2);
   float vec_length(float x1, float y1, float z1);
+  float vector_angle(float x1, float y1, float z1, 
+              float x2, float y2, float z2);
   float dihedral_angle(float x1, float y1, float z1, 
                     float x2, float y2, float z2,
                     float x3, float y3, float z3,
                     float x4, float y4, float z4);
+  
+  // Math funtions
+  float radians(float degree);
+  float degrees(float radian);
+  float pow(float a, float b);
+/*  float pow(float a, int b);
+  float pow(int a, float b);
+  float pow(int a, int b);
+ */
   
   // Type conversion functions
   inline long cast_int_from_float(double           d) { return (long)d; };

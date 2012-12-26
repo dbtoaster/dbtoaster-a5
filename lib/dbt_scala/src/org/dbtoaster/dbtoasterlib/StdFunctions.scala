@@ -68,9 +68,15 @@ package org.dbtoaster.dbtoasterlib {
       
     def vec_length = VectorFunctions.vec_length _
     def vec_dot = VectorFunctions.vec_dot _
+    def vector_angle = VectorFunctions.vector_angle _
     def dihedral_angle = VectorFunctions.dihedral_angle _
-    def radians(degree: Double): Double = degree / 180 * 3.141592653589793238462643383279502884
+    
+    val PI = 3.141592653589793238462643383279502884
+    def radians(degree: Double): Double = degree * PI / 180
+    def degrees(radian: Double): Double = radian * 180 / PI 
     def pow(x: Double, y: Double): Double = math.pow(x, y)
+    def sqrt(x: Double): Double = math.sqrt(x)
+    def cos(x: Double): Double = math.cos(x)
 
     /* Type conversion functions */
     def cast_int(l: Long): Long = l
@@ -112,6 +118,13 @@ package org.dbtoaster.dbtoasterlib {
         val nz = (x*v.y-y*v.x)
         Vector(nx, ny, nz)
       }
+      
+      def angle(v: Vector): Double = 
+        math.acos (
+          this.apply(v) / (
+            this.length * v.length
+          )
+        )
     }
     
     def vec_length(x: Double, y: Double, z: Double): Double =
@@ -122,6 +135,13 @@ package org.dbtoaster.dbtoasterlib {
       val v1 = Vector(x1, y1, z1)
       val v2 = Vector(x2, y2, z2)
       v1(v2)
+    }
+    
+    def vector_angle(x1: Double, y1: Double, z1: Double,
+                x2: Double, y2: Double, z2: Double): Double = {
+      val v1 = Vector(x1, y1, z1)
+      val v2 = Vector(x2, y2, z2)
+      v1.angle(v2)
     }
     
     def dihedral_angle(x1: Double, y1: Double, z1: Double,

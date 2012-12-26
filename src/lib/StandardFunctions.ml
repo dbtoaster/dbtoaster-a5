@@ -97,7 +97,9 @@ let substring (arglist:const_t list) (ftype:type_t) =
       | _ -> invalid_args "substring" arglist ftype
 ;; declare_std_function "substring" substring
          (function [TString; TInt; TInt] -> TString | _-> inference_error ()) ;;
-  
+
+(* Vector operations *)
+
 type vector_t = float * float * float
   
 let vec_of_list (v: float list): vector_t = 
@@ -113,6 +115,11 @@ let calc_vec_dot (v1: vector_t) (v2: vector_t): float =
   let (x1, y1, z1) = v1 in
   let (x2, y2, z2) = v2 in
   x1*.x2+.y1*.y2+.z1*.z2;;
+
+let calc_vec_angle (v1: vector_t) (v2: vector_t): float = 
+  acos( calc_vec_dot(v1)(v2) /.
+         ( calc_vec_length (v1) *. calc_vec_length (v2) ) 
+      )
 
 let calc_vec_cross (v1: vector_t) (v2: vector_t): vector_t =
   let (x1, y1, z1) = v1 in
@@ -148,39 +155,6 @@ let calc_dihedral_angle (inputs: float list): float =
         (calc_vec_dot(n1)(n2))
     | _ -> failwith "incorrect inputs for dihedral_angle";;
 
-let pi = 4.0 *. atan 1.0;;
-
-let calc_radian (degree: float): float =
-  (degree /. 180.0) *. pi
-
-let radians (arglist:const_t list) (ftype:type_t) =
-   match arglist with
-      | [CFloat(x)] ->
-        CFloat(calc_radian(x))
-      | [CInt(x)] ->
-        CFloat(calc_radian(float_of_int x))
-      | _ -> invalid_args "radians" arglist ftype
-;; declare_std_function "radians" radians
-(function [TFloat] -> TFloat | [TInt] -> TFloat | _-> inference_error ()) ;;
-
-let pow_sig (arglist:const_t list) (ftype:type_t) =
-   match arglist with
-     | [CFloat(x); CFloat(y)] ->
-       CFloat(x ** y)
-     | [CInt(x); CInt(y)] ->
-       CFloat((float_of_int x) ** (float_of_int y))
-     | [CInt(x); CFloat(y)] ->
-       CFloat((float_of_int x) ** (y))
-     | [CFloat(x); CInt(y)] ->
-       CFloat((x) ** (float_of_int y))
-      | _ -> invalid_args "pow" arglist ftype
-;; declare_std_function "pow" pow_sig
-(function [TFloat; TFloat] -> TFloat 
-  | [TInt; TInt] -> TFloat 
-  | [TFloat; TInt] -> TFloat 
-  | [TInt; TFloat] -> TFloat 
-  | _-> inference_error ()) ;;
-
 let vec_length (arglist:const_t list) (ftype:type_t) =
    match arglist with
       | [CFloat(x); CFloat(y); CFloat(z)] ->
@@ -190,7 +164,8 @@ let vec_length (arglist:const_t list) (ftype:type_t) =
         CFloat(calc_vec_length(vec_of_list v))
       | _ -> invalid_args "vec_length" arglist ftype
 ;; declare_std_function "vec_length" vec_length
-         (function [TFloat; TFloat; TFloat] -> TFloat | _-> inference_error ()) ;;
+(function [TFloat; TFloat; TFloat] -> TFloat |
+  [TInt; TInt; TInt] -> TFloat | _-> inference_error ()) ;;
 
 let vec_dot (arglist:const_t list) (ftype:type_t) =
    match arglist with
@@ -206,6 +181,25 @@ let vec_dot (arglist:const_t list) (ftype:type_t) =
        CInt(int_of_float(calc_vec_dot(vec_of_list v1)(vec_of_list v2)))
       | _ -> invalid_args "vec_dot" arglist ftype
 ;; declare_std_function "vec_dot" vec_dot
+(function 
+  [TFloat; TFloat; TFloat;
+    TFloat; TFloat; TFloat] ->
+    TFloat | _-> inference_error ()) ;;
+
+let vector_angle (arglist:const_t list) (ftype:type_t) =
+   match arglist with
+     | [CFloat(x1); CFloat(y1); CFloat(z1);
+       CFloat(x2); CFloat(y2); CFloat(z2)] ->
+       let v1 = [x1; y1; z1] in
+       let v2 = [x2; y2; z2] in
+       CFloat(calc_vec_angle(vec_of_list v1)(vec_of_list v2))
+     | [CInt(x1); CInt(y1); CInt(z1);
+       CInt(x2); CInt(y2); CInt(z2)] ->
+       let v1 = List.map float_of_int [x1; y1; z1] in
+       let v2 = List.map float_of_int [x2; y2; z2] in
+       CInt(int_of_float(calc_vec_angle(vec_of_list v1)(vec_of_list v2)))
+      | _ -> invalid_args "vector_angle" arglist ftype
+;; declare_std_function "vector_angle" vector_angle
 (function 
   [TFloat; TFloat; TFloat;
     TFloat; TFloat; TFloat] ->
@@ -234,16 +228,6 @@ let vec_cross (arglist:const_t list) (ftype:type_t) =
     TFloat; TFloat; TFloat] ->
     [TFloat; TFloat; TFloat] | _-> inference_error ()) ;;
  *)
-  
-(**TODO*)
-let hash (arglist:const_t list) (ftype:type_t) =
-   match arglist with
-      | [CInt(x1)] ->
-        CInt(x1)
-      | _ -> invalid_args "hash" arglist ftype
-;; declare_std_function "hash" hash
-(function [TInt] -> TInt | _-> inference_error ()) ;;
-
 
 let dihedral_angle (arglist:const_t list) (ftype:type_t) =
    match arglist with
@@ -274,6 +258,84 @@ let dihedral_angle (arglist:const_t list) (ftype:type_t) =
   TFloat; TFloat; TFloat;
   TFloat; TFloat; TFloat;
   TFloat; TFloat; TFloat;] -> TFloat | _-> inference_error ()) ;;
+
+  
+(**TODO*)
+let hash (arglist:const_t list) (ftype:type_t) =
+   match arglist with
+      | [CInt(x1)] ->
+        CInt(x1)
+      | _ -> invalid_args "hash" arglist ftype
+;; declare_std_function "hash" hash
+(function [TInt] -> TInt | _-> inference_error ()) ;;
+
+(* Math operations *)
+
+let pi = 4.0 *. atan 1.0;;
+
+let calc_radian (degree: float): float =
+  (degree *. pi) /. 180.0
+
+let radians (arglist:const_t list) (ftype:type_t) =
+   match arglist with
+      | [CFloat(x)] ->
+        CFloat(calc_radian(x))
+      | [CInt(x)] ->
+        CFloat(calc_radian(float_of_int x))
+      | _ -> invalid_args "radians" arglist ftype
+;; declare_std_function "radians" radians
+(function [TFloat] -> TFloat | [TInt] -> TFloat | _-> inference_error ()) ;;
+
+let calc_degree (radian: float): float =
+  (radian *. 180.0) /. pi
+
+let degrees (arglist:const_t list) (ftype:type_t) =
+   match arglist with
+      | [CFloat(x)] ->
+        CFloat(calc_degree(x))
+      | [CInt(x)] ->
+        CFloat(calc_degree(float_of_int x))
+      | _ -> invalid_args "degrees" arglist ftype
+;; declare_std_function "degrees" degrees
+(function [TFloat] -> TFloat | [TInt] -> TFloat | _-> inference_error ()) ;;
+
+let math_sqrt (arglist:const_t list) (ftype:type_t) =
+   match arglist with
+      | [CFloat(x)] ->
+        CFloat(sqrt(x))
+      | [CInt(x)] ->
+        CFloat(sqrt(float_of_int x))
+      | _ -> invalid_args "sqrt" arglist ftype
+;; declare_std_function "sqrt" math_sqrt
+(function [TFloat] -> TFloat | [TInt] -> TFloat | _-> inference_error ()) ;;
+
+let math_cos (arglist:const_t list) (ftype:type_t) =
+   match arglist with
+      | [CFloat(x)] ->
+        CFloat(cos(x))
+      | [CInt(x)] ->
+        CFloat(cos(float_of_int x))
+      | _ -> invalid_args "cos" arglist ftype
+;; declare_std_function "cos" math_cos
+(function [TFloat] -> TFloat | [TInt] -> TFloat | _-> inference_error ()) ;;
+
+let math_pow (arglist:const_t list) (ftype:type_t) =
+   match arglist with
+     | [CFloat(x); CFloat(y)] ->
+       CFloat(x ** y)
+     | [CInt(x); CInt(y)] ->
+       CFloat((float_of_int x) ** (float_of_int y))
+     | [CInt(x); CFloat(y)] ->
+       CFloat((float_of_int x) ** (y))
+     | [CFloat(x); CInt(y)] ->
+       CFloat((x) ** (float_of_int y))
+      | _ -> invalid_args "pow" arglist ftype
+;; declare_std_function "pow" math_pow
+(function [TFloat; TFloat] -> TFloat 
+  | [TInt; TInt] -> TFloat 
+  | [TFloat; TInt] -> TFloat 
+  | [TInt; TFloat] -> TFloat 
+  | _-> inference_error ()) ;;
 
 
 (** 

@@ -43,6 +43,12 @@ void vec_cross(float x1, float y1, float z1,
   z = (x1*y2-y1*x2);
 }
 
+float vector_angle(float x1, float y1, float z1, 
+              float x2, float y2, float z2){
+  return acos(vec_dot(x1,y1,z1,x2,y2,z2) /
+               (vec_length(x1,y1,z1)*vec_length(x2,y2,z2)));
+}
+
 float dihedral_angle(float x1, float y1, float z1, 
                     float x2, float y2, float z2,
                     float x3, float y3, float z3,
@@ -76,9 +82,28 @@ float dihedral_angle(float x1, float y1, float z1,
                 vec_dot(n1_x, n1_y, n1_z, n2_x, n2_y, n2_z));
 }
 
+const float PI = 3.141592653589793238462643383279502884;
+
 float radians(float degree) {
-  return degree / 180 * 3.141592653589793238462643383279502884;
+  return degree * PI / 180;
 }
+
+float degrees(float radian) {
+  return radian * 180 / PI;
+}
+
+float pow(float a, float b) {
+  return ::pow(a, b);
+}
+/*float pow(float a, int b) {
+  return ::pow(a, (float)b);
+}
+float pow(int a, float b) {
+  return ::pow((float)a, b);
+}
+float pow(int a, int b) {
+  return ::pow((float)a, (float)b);
+}*/
 
 int regexp_match(const char *regex, string &s){
 	//TODO: Caching regexes, or possibly inlining regex construction
