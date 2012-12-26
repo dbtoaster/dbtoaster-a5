@@ -380,14 +380,28 @@ in
                      [ [(VK.BaseValue(C.CFloat(4.)))],
                        (VK.BaseValue(C.CInt(1)))];
       test_expr_coll2 " Lift Collection "
-                     ~env:["A", (C.CFloat(2.));]
-                     "( L ^= ( R[][A,B] ) )"
-                     [ [(VK.BaseValue(C.CFloat(2.)));
-                        (VK.BaseValue(C.CFloat(4.)))],
-                       (VK.BaseValue(C.CInt(1)));
+                     ~env:[]
+                     "QR[][A,B] * ( L ^= ( R[][A,B] ) )"
+                     [ [(VK.BaseValue(C.CFloat(1.)));
+                        (VK.BaseValue(C.CFloat(1.)));
+                        (VK.BaseValue(C.CFloat(1.)))],
+                       (VK.BaseValue(C.CFloat(1.)));
                        [(VK.BaseValue(C.CFloat(1.)));
+                        (VK.BaseValue(C.CFloat(2.)));
                         (VK.BaseValue(C.CFloat(2.)))],
-                       (VK.BaseValue(C.CInt(1)));
+                       (VK.BaseValue(C.CFloat(2.)));
+                       [(VK.BaseValue(C.CFloat(2.)));
+                        (VK.BaseValue(C.CFloat(1.)));
+                        (VK.BaseValue(C.CFloat(2.)))],
+                       (VK.BaseValue(C.CFloat(2.)));
+                       [(VK.BaseValue(C.CFloat(2.)));
+                        (VK.BaseValue(C.CFloat(2.)));
+                        (VK.BaseValue(C.CFloat(4.)))],
+                       (VK.BaseValue(C.CFloat(4.)));
+                       [(VK.BaseValue(C.CFloat(1.)));
+                        (VK.BaseValue(C.CFloat(3.)));
+                        (VK.BaseValue(C.CFloat(3.)))],
+                       (VK.BaseValue(C.CFloat(3.)));                       
                      ];
                      
       test_expr " Sum Singleton "
