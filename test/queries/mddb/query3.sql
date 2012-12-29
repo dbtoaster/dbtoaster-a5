@@ -64,45 +64,41 @@ as DihedralE,
      and   P.t = P2.t and P.t = P3.t and P.t = P4.t) as R
   group by R.t)
 as ImproperE,
-( select NBPairs.t, sum(NBPairs.vw_ij) as vw_ij, sum(NBPairs.e_ij) as e_ij from 
-    (
-    select R.t, R.atom_id1, R.atom_id2,
-             R.eps_ij*(pow(R.rmin_ij/R.r_ij, 12)-2*pow(R.rmin_ij/R.r_ij, 6))  as vw_ij,
-             q_ij/r_ij                                              as e_ij
-      from
-        (select P.t, NB1.atom_id1                            as atom_id1,
-                     NB2.atom_id1                            as atom_id2,
-                     sqrt(NB1.eps*NB2.eps)                  as eps_ij,
-                     NB1.rmin+NB2.rmin                      as rmin_ij,
-                     vec_length(P.x-P2.x,P.y-P2.y,P.z-P2.z) as r_ij,
-                     NB1.charge1 * NB2.charge1                as q_ij
-         from NonBonded NB1,   NonBonded NB2,
-              AtomPositions P, AtomPositions P2
-         where NB1.atom_id1 = P.atom_id
-         and   NB2.atom_id1 = P2.atom_id
-         and   P.atom_id <> P2.atom_id
-         and   P.t = P2.t
-         and   vec_length(P.x-P2.x,P.y-P2.y,P.z-P2.z) <= 12
+( select R.t, sum(R.acoef / pow(R.r_ij, 12.0)
+                  - R.bcoef / pow(R.r_ij, 6.0)) AS vw_ij,
+            sum(R.q_ij / R.r_ij) AS e_ij
+  from
+    (select P.t, NB.atom_id1 as atom_id1, NB.atom_id2 as atom_id2,
+                 NB.acoef                                       as acoef,
+                 NB.bcoef                                       as bcoef,
+                 vec_length(p.x - p2.x, p.y - p2.y, p.z - p2.z) as r_ij,
+                 332 * NB.charge1 * NB.charge2                  as q_ij
+     from NonBonded NB,
+          AtomPositions P, AtomPositions P2
+     where NB.atom_id1 = P.atom_id
+     and   NB.atom_id2 = P2.atom_id
+     and   P.atom_id <> P2.atom_id
+     and   P.t = P2.t
+     and   vec_length(P.x-P2.x,P.y-P2.y,P.z-P2.z) <= 12
 
-         -- Avoid non-bonded pairs that actually exist as a bond.
-         and (
-              not exists
-                (select B.atom_id1 from Bonds B
-                 where (B.atom_id1 = NB1.atom_id1 and B.atom_id2 = NB2.atom_id2)
-                    or (B.atom_id2 = NB1.atom_id2 and B.atom_id1 = NB2.atom_id1))
-             )
+     -- Avoid non-bonded pairs that actually exist as a bond.
+     and (
+          not exists
+            (select B.atom_id1 from Bonds B
+             where (B.atom_id1 = NB.atom_id1 and B.atom_id2 = NB.atom_id2)
+                or (B.atom_id2 = NB.atom_id1 and B.atom_id1 = NB.atom_id2))
+         )
 
-         -- We don't need to check 1-2 or 2-3 pairs since these are already
-         -- checked above in the bonds.
-         and (
-              not exists
-                (select A.atom_id1 from Angles A
-                 where (A.atom_id1 = NB1.atom_id1 and A.atom_id3 = NB2.atom_id2)
-                    or (A.atom_id1 = NB2.atom_id1 and A.atom_id3 = NB1.atom_id2))
-             )
-         ) as R 
-    ) as NBPairs
-  group by NBPairs.t
+     -- We don't need to check 1-2 or 2-3 pairs since these are already
+     -- checked above in the bonds.
+     and (
+          not exists
+            (select A.atom_id1 from Angles A
+             where (A.atom_id1 = NB.atom_id1 and A.atom_id3 = NB.atom_id2)
+                or (A.atom_id1 = NB.atom_id2 and A.atom_id3 = NB.atom_id1))
+         )
+     ) as R
+  group by R.t
 ) as NonBondedE
 where BondE.t = AngleE.t
 and   BondE.t = DihedralE.t
