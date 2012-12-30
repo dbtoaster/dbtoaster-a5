@@ -521,7 +521,7 @@ if stage_is_active StageSQLToCalc then (
       SqlToCalculus.extract_sql_schema db_schema tables;
       
       (* Then convert the queries into calculus. Most of this code lives in
-         ring/SqlToCalculus, but we still need to iterate over all of the
+         calculus/SqlToCalculus, but we still need to iterate over all of the
          queries that we were given, and do some target renaming to ensure that
          each of the root level queries has a unique name. *)
       let rename_query = 

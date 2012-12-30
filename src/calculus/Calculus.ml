@@ -629,13 +629,14 @@ let rec cmp_exprs ?(cmp_opts:CalcRing.cmp_opt_t list =
          | ((AggSum(gb1, sub1)), (AggSum(gb2, sub2))) ->
             begin match rcr sub1 sub2 with
                | None -> None
-               | Some(mappings) -> 
-                    if (((List.length gb1) = (List.length gb2)) &&
-                        (ListAsSet.seteq 
-                          (List.map (ListAsFunction.apply_strict mappings) gb1)
-                          gb2)) then 
-                       Some(mappings)
-                    else None                     
+               | Some(mappings) ->
+                  (* Eliminate duplicates from mappings *)
+                  let mappings_as_set = ListAsSet.no_duplicates mappings in
+                  let map_fn = ListAsFunction.apply_strict mappings_as_set in
+                  if (((List.length gb1) = (List.length gb2)) &&
+                      (ListAsSet.seteq (List.map map_fn gb1) gb2)) 
+                  then Some(mappings_as_set)
+                  else None
             end
          
          | ((Rel(rn1,rv1)), (Rel(rn2,rv2))) ->
