@@ -18,7 +18,7 @@ create stream AtomPositions (
 -- These will be preloaded prior to trajectory ingestion.
 
 -- Chemical information about an atom.
-create stream AtomMeta (
+create table AtomMeta (
     protein_id   int,
     atom_id      int,
     atom_type    varchar(100),
