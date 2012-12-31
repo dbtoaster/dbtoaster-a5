@@ -869,7 +869,7 @@ and materialize_expr (heuristic_options:heuristic_options_t)
          end
     in   
     
-   (* If necessary, add aggregation to the whole materialized expression *)
+    (* If necessary, add aggregation to the whole materialized expression *)
     (* Hack to extend the original schema. E.g. expression {A=C} * R(C,D) *)
     (* has "D" in the output schema when evaluate with "A" and "C" in the *)
     (* scope. This hack extends the schema with "C".                      *)   

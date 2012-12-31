@@ -1,0 +1,19 @@
+{
+  :path => "test/queries/simple/rs_column_mapping_1.sql",
+  :datasets => {
+    "standard" => {
+      :toplevels => {
+        "COUNT" => {
+          :type => :onelevel,
+          :expected => {
+            [1] => 4,
+            [2] => 12,
+            [3] => 13,
+            [4] => 4,
+            [5] => 9
+          }
+        }
+      }
+    }
+  }
+}

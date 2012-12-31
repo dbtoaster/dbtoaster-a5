@@ -152,6 +152,9 @@ query_simple:
 	@$(FAST_QUERY_TEST) simple/singleton_renaming_conflict
 	@$(FAST_QUERY_TEST) simple/ss_math
 	@$(FAST_QUERY_TEST) simple/invalid_schema_fn
+	@$(FAST_QUERY_TEST) simple/rs_column_mapping_1
+	@$(FAST_QUERY_TEST) simple/rs_column_mapping_2
+	@$(FAST_QUERY_TEST) simple/rs_column_mapping_3
 
 query_zeus:
 	@$(FAST_QUERY_TEST) zeus/11564068

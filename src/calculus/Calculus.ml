@@ -618,6 +618,12 @@ let rec cmp_exprs ?(cmp_opts:CalcRing.cmp_opt_t list =
       end
    in
    let rcr a b = validate_mapping (cmp_exprs ~cmp_opts:cmp_opts a b) in
+   let merge_variables rv1 rv2 =
+      if ((List.length rv1) != (List.length rv2)) then None
+      else try 
+         ListAsFunction.multimerge (List.map2 (fun a b -> [a,b]) rv1 rv2)
+       with Not_found -> None
+   in   
    let merge components = 
       validate_mapping (ListAsFunction.multimerge components) in
    validate_mapping (CalcRing.cmp_exprs ~cmp_opts:cmp_opts merge merge
@@ -630,20 +636,16 @@ let rec cmp_exprs ?(cmp_opts:CalcRing.cmp_opt_t list =
             begin match rcr sub1 sub2 with
                | None -> None
                | Some(mappings) ->
-                  (* Eliminate duplicates from mappings *)
-                  let mappings_as_set = ListAsSet.no_duplicates mappings in
-                  let map_fn = ListAsFunction.apply_strict mappings_as_set in
+                  let map_fn = ListAsFunction.apply_strict mappings in
                   if (((List.length gb1) = (List.length gb2)) &&
-                      (ListAsSet.seteq (List.map map_fn gb1) gb2)) 
-                  then Some(mappings_as_set)
+                      (ListAsSet.seteq (List.map map_fn gb1) gb2))
+                  then Some(mappings)
                   else None
             end
          
          | ((Rel(rn1,rv1)), (Rel(rn2,rv2))) ->
             if (rn1 <> rn2) then None else
-            if ((List.length rv1) = (List.length rv2)) 
-            then Some(List.combine rv1 rv2)
-            else None
+               merge_variables rv1 rv2
 
          | ((External(en1,eiv1,eov1,et1,em1)), 
             (External(en2,eiv2,eov2,et2,em2))) ->
@@ -659,13 +661,13 @@ let rec cmp_exprs ?(cmp_opts:CalcRing.cmp_opt_t list =
                begin match mapping with
                   | None -> None
                   | Some(s) -> 
-                     if ((List.length eiv1) = (List.length eiv2)) &&
-                        ((List.length eov1) = (List.length eov2)) 
-                     then ListAsFunction.multimerge 
-                             [ s; 
-                               (List.combine eiv1 eiv2); 
-                               (List.combine eov1 eov2) ]
-                     else None
+                     match (merge_variables eiv1 eiv2, 
+                            merge_variables eov1 eov2) with
+                        | (Some(eiv_mapping), Some(eov_mapping)) ->
+                           ListAsFunction.multimerge [s;
+                                                      eiv_mapping;
+                                                      eov_mapping]
+                        | (_,_) -> None
                end
             else None
 

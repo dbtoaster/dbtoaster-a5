@@ -11,8 +11,8 @@ create stream AtomPositions (
     x       float,
     y       float,
     z       float
-)   FROM FILE '../../experiments/data/tpch/standard/lineitem.csv'
-  LINE DELIMITED CSV (delimiter := '|');
+)   FROM FILE '../../experiments/data/mddb/standard/atomposition.csv'
+  LINE DELIMITED CSV;
 
 -- Static tables
 -- These will be preloaded prior to trajectory ingestion.
@@ -26,8 +26,8 @@ create table AtomMeta (
     residue_id   int,
     residue_name varchar(100),
     segment_name varchar(100)
-)   FROM FILE '../../experiments/data/tpch/standard/lineitem.csv'
-  LINE DELIMITED CSV (delimiter := '|');
+)   FROM FILE '../../experiments/data/mddb/standard/atommeta.csv'
+  LINE DELIMITED CSV;
 
 -- Protein structure information, as bonded atom pairs, triples and dihedrals
 create table Bonds (
@@ -36,7 +36,8 @@ create table Bonds (
     atom_id2     int,
     bond_const   float,
     bond_length  float
-);
+)   FROM FILE '../../experiments/data/mddb/standard/bonds.csv'
+  LINE DELIMITED CSV;
 
 create table Angles (
     protein_id  int,
@@ -45,7 +46,8 @@ create table Angles (
     atom_id3    int,
     angle_const float,
     angle       float
-);
+)   FROM FILE '../../experiments/data/mddb/standard/angles.csv'
+  LINE DELIMITED CSV;
 
 create table Dihedrals (
     protein_id  int,
@@ -56,7 +58,8 @@ create table Dihedrals (
     force_const float,
     n           float,
     delta       float
-);
+)   FROM FILE '../../experiments/data/mddb/standard/dihedrals.csv'
+  LINE DELIMITED CSV;
 
 create table ImproperDihedrals (
     protein_id  int,
@@ -66,7 +69,8 @@ create table ImproperDihedrals (
     atom_id4    int,
     force_const float,
     delta       float
-);
+)   FROM FILE '../../experiments/data/mddb/standard/improperdihedrals.csv'
+  LINE DELIMITED CSV;
 
 create table NonBonded (
     protein_id  int,
@@ -80,14 +84,16 @@ create table NonBonded (
     bcoef       float,
     charge1     float,
     charge2     float
-);
+)   FROM FILE '../../experiments/data/mddb/standard/nonbonded.csv'
+  LINE DELIMITED CSV;
 
 -- A helper table to automatically generate unique ids for conformations
 create table ConformationPoints (
   trj_id        int,
   t             int,
   point_id      int
-);
+) FROM FILE '../../experiments/data/mddb/standard/conformationpoints.csv'
+  LINE DELIMITED CSV;
 
 -- A helper table for conformation features, to ensure equivalence of
 -- features over whole trajectories.
@@ -97,7 +103,9 @@ create table Dimensions (
     atom_id3    int,
     atom_id4    int,
     dim_id      int
-);
+) FROM FILE '../../experiments/data/mddb/standard/dimensions.csv'
+  LINE DELIMITED CSV;
+  
 ---create index Dimensions_idIndex on Dimensions (dim_id);
 
 -- An n-dimensional histogram specification.
@@ -106,7 +114,8 @@ create table Buckets (
   bucket_id       int,
   bucket_start    float,
   bucket_end      float  
-);
+) FROM FILE '../../experiments/data/mddb/standard/buckets.csv'
+  LINE DELIMITED CSV;
 
 
 -- Utility functions.
