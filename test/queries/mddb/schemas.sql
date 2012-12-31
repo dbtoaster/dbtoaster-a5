@@ -11,7 +11,7 @@ create stream AtomPositions (
     x       float,
     y       float,
     z       float
-)   FROM FILE '../../experiments/data/mddb/standard/atomposition.csv'
+)   FROM FILE '../../experiments/data/mddb/standard/atompositions.csv'
   LINE DELIMITED CSV;
 
 -- Static tables
