@@ -71,6 +71,14 @@ package org.dbtoaster.dbtoasterlib {
     def vector_angle = VectorFunctions.vector_angle _
     def dihedral_angle = VectorFunctions.dihedral_angle _
     
+    def hash(number: Long): Long = {
+      var v: Long = number * 3935559000370003845L + 2691343689449507681L
+      v ^= v >> 21; v^= v << 37; v ^= v >> 4
+      v *= 4768777413237032717L
+      v ^= v >> 20; v^= v << 41; v ^= v >> 5
+      v
+    }
+    
     val PI = 3.141592653589793238462643383279502884
     def radians(degree: Double): Double = degree * PI / 180
     def degrees(radian: Double): Double = radian * 180 / PI 

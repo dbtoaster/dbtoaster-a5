@@ -82,6 +82,16 @@ float dihedral_angle(float x1, float y1, float z1,
                 vec_dot(n1_x, n1_y, n1_z, n2_x, n2_y, n2_z));
 }
 
+long long hash(long long v) {
+   
+   v = v * 3935559000370003845 + 2691343689449507681;
+   v ^= v >> 21; v^= v << 37; v ^= v >> 4;
+   v *= 4768777413237032717LL;
+   v ^= v >> 20; v^= v << 41; v ^= v >> 5;
+   
+   return v;
+}
+
 const float PI = 3.141592653589793238462643383279502884;
 
 float radians(float degree) {
