@@ -353,14 +353,7 @@ struct
 
     begin match t with
       Host K.TUnit -> inl ("void")
-    | Host(K.TBase(TFloat)) -> inl ("double")
-    | Host(K.TBase(TInt)) -> inl ("long long")
-    | Host(K.TBase(TString)) -> inl ("string")
-    | Host(K.TBase(TDate))   -> inl ("date") 
-                                (* at the moment: typedef long date *)
-    | Host(K.TBase(TBool)) -> inl ("bool")
-    | Host(K.TBase(TAny)) -> inl ("??")
-    | Host(K.TBase(TExternal(ext_type))) -> inl (ext_type)
+    | Host(K.TBase(x)) -> inl (cpp_of_type x)
     | Host(K.TTuple(tl)) -> 
         if List.length tl = 1 then inl (of_host_list tl)
         else inl (mk_tuple_ty (List.map string_of_type (types_of_host_list tl)))
@@ -2229,18 +2222,16 @@ end (* Typing *)
   let infer_types = Typing.infer_types
 
   (* Profiling code generation *)
-  let string_of_m3_type t = Type.string_of_type t
-
-  let profile_map_value_update c_id t_l =
+  let profile_map_value_update c_id t_l map_t =
     let c_t, c_entry_t = (c_id^"_map"), (c_id^"_entry") in 
     let (k_decl,k) = snd (List.fold_left
         (fun (id,(dacc,vacc)) t ->
-          (id+1,(dacc@[(string_of_m3_type t)^" k"^(string_of_int id)],
+          (id+1,(dacc@[(cpp_of_type t)^" k"^(string_of_int id)],
                  vacc@["k"^(string_of_int id)])))
       (0,([],[])) t_l)
     in
     Lines(["void "^c_id^"_value_update("^c_t^"& m, "^
-            (String.concat ", " k_decl)^", double v)";
+            (String.concat ", " k_decl)^", "^(cpp_of_type map_t)^" v)";
            "{";
            "  "^c_t^"::iterator it = m.find("^(mk_tuple k)^");";
            "  if (it != m.end()) {";
@@ -2252,20 +2243,20 @@ end (* Typing *)
            "  }";
            "}"])
 
-  let profile_nested_map_value_update c_id in_tl out_tl =
+  let profile_nested_map_value_update c_id in_tl out_tl map_t =
     let c_out_id = c_id^"_out" in
     let c_t, c_entry_t, c_out_t, c_out_entry_t =
       c_id^"_map", c_id^"_entry", c_id^"_out_map", c_id^"_out_entry" in
     let get_decl_and_val i t_l = snd (List.fold_left
         (fun (id,(dacc,vacc)) t ->
-          (id+1,(dacc@[(string_of_m3_type t)^" k"^(string_of_int id)],
+          (id+1,(dacc@[(cpp_of_type t)^" k"^(string_of_int id)],
                  vacc@["k"^(string_of_int id)])))
       (i,([],[])) t_l)
     in
     let in_k_decl, in_k = get_decl_and_val 0 in_tl in
     let out_k_decl, out_k = get_decl_and_val (List.length in_tl) out_tl in
     Lines(["void "^c_id^"_value_update("^c_t^"& m, "^
-             (String.concat ", " (in_k_decl@out_k_decl))^", double v)";
+             (String.concat ", " (in_k_decl@out_k_decl))^", "^(cpp_of_type map_t)^" v)";
            "{";
            "  "^c_t^"::iterator it = m.find("^(mk_tuple in_k)^");";
            "  if (it != m.end()) {";
@@ -2280,10 +2271,10 @@ end (* Typing *)
            "  }";
            "}"])
 
-  let profile_map_update c_id in_tl out_tl =
+  let profile_map_update c_id in_tl out_tl map_t =
     let in_k_decl, in_k = snd (List.fold_left
         (fun (id,(dacc,vacc)) t ->
-          (id+1,(dacc@[(string_of_m3_type t)^" k"^(string_of_int id)],
+          (id+1,(dacc@[(cpp_of_type t)^" k"^(string_of_int id)],
                  vacc@["k"^(string_of_int id)])))
       (0,([],[])) in_tl)
     in
@@ -2292,8 +2283,8 @@ end (* Typing *)
     in
     let c_update_t =
       let t_l = if out_tl = [] then in_tl else out_tl in
-      let update_k_t = mk_tuple_ty (List.map string_of_m3_type t_l)
-      in "map<"^update_k_t^",double>"
+      let update_k_t = mk_tuple_ty (List.map cpp_of_type t_l)
+      in "map<"^update_k_t^","^(cpp_of_type map_t)^">"
     in
     let indirect_sc =
       let target_var, target_t, target_entry_t =
@@ -2341,7 +2332,7 @@ end (* Typing *)
     let c_t, c_entry_t = (c_id^"_map"), (c_id^"_entry") in 
     let (k_decl,k) = snd (List.fold_left
         (fun (id,(dacc,vacc)) t ->
-          (id+1,(dacc@[(string_of_m3_type t)^" k"^(string_of_int id)],
+          (id+1,(dacc@[(cpp_of_type t)^" k"^(string_of_int id)],
                  vacc@["k"^(string_of_int id)])))
       (0,([],[])) t_l)
     in
@@ -2352,16 +2343,16 @@ end (* Typing *)
            "}"])
 
   let declare_profiling (schema: K3.map_t list) =
-    cscl ~delim:"\n" (List.flatten (List.map (fun (id, in_tl, out_tl,_) ->
+    cscl ~delim:"\n" (List.flatten (List.map (fun (id, in_tl, out_tl, map_t) ->
       match List.map snd in_tl, List.map snd out_tl with
         | [],[] -> []
         | (x as i),([] as o) | ([] as i),(x as o) ->
-          [profile_map_value_update id x;
-           profile_map_update id i o] 
+          [profile_map_value_update id x map_t;
+           profile_map_update id i o map_t] 
         | x,y ->
-          [profile_map_value_update (id^"_out") y;
-           profile_nested_map_value_update id x y;
-           profile_map_update id x y])
+          [profile_map_value_update (id^"_out") y map_t;
+           profile_nested_map_value_update id x y map_t;
+           profile_map_update id x y map_t])
      schema))
 
   let profile_ivc (schema : K3.map_t list) map_ivc_ids stmt_name imp =
