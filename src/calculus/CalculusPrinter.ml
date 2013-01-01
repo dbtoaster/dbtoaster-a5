@@ -112,21 +112,22 @@ let rec format_value (v:value_t) =
    @param expr   The Calculus expression to dump
 *)
 let rec format_expr ?(show_type = false) (expr:expr_t) = 
+   let rcr = format_expr ~show_type:show_type in
    !fmt.bopen 0;
    begin match expr with
       | CalcRing.Sum(sl)  -> 
          !fmt.string "(";
-         format_list format_expr " +" ~default:"0" sl;
+         format_list rcr " +" ~default:"0" sl;
          !fmt.string ")"
          
       | CalcRing.Prod(pl) -> 
          !fmt.string "(";
-         format_list format_expr " *" ~default:"1" pl;
+         format_list rcr " *" ~default:"1" pl;
          !fmt.string ")"
          
       | CalcRing.Neg(element) -> 
          !fmt.string "(";
-         format_list format_expr " *"
+         format_list rcr " *"
                      [  Calculus.mk_value (Arithmetic.mk_int (-1));
                         element ];
          !fmt.string ")"
@@ -147,7 +148,7 @@ let rec format_expr ?(show_type = false) (expr:expr_t) =
          !fmt.string "]";
          !fmt.string ", ";
          !fmt.break 0 !line_indent;
-         format_expr subexp;
+         rcr subexp;
          !fmt.string ")"
       
       | CalcRing.Val(Rel(reln, relv)) ->
@@ -181,7 +182,7 @@ let rec format_expr ?(show_type = false) (expr:expr_t) =
             | None -> ()
             | Some(ivcexpr) -> 
                !fmt.string ":(";
-               format_expr ivcexpr;
+               rcr ivcexpr;
                !fmt.string ")"
          end
       
@@ -199,14 +200,14 @@ let rec format_expr ?(show_type = false) (expr:expr_t) =
          !fmt.string (string_of_var v);
          !fmt.string " ^=";
          !fmt.break 1 !line_indent;
-         format_expr subexp;
+         rcr subexp;
          !fmt.string ")";
 
 (***** BEGIN EXISTS HACK *****)
       | CalcRing.Val(Exists(subexp)) ->
          !fmt.string "EXISTS(";
          !fmt.break 1 !line_indent;
-         format_expr subexp;
+         rcr subexp;
          !fmt.string ")";
 (***** END EXISTS HACK *****)
       
@@ -234,6 +235,6 @@ let string_of_value v =
    @param e    A Calculus expression
    @return     The pretty-printed string representation of [e]
 *)
-let string_of_expr ?(show_type = false) e =
+let string_of_expr ?(show_type = Debug.active "PRINT-VERBOSE") e =
   format_expr ~show_type:show_type e;
    flush_str_formatter ()

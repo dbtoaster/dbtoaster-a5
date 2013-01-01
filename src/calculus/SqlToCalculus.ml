@@ -658,7 +658,7 @@ and calc_of_sql_expr ?(materialize_query = None)
             let (_,count_sch) = C.schema_of_expr count_agg in
             CalcRing.mk_prod [
                C.mk_aggsum count_sch
-                  (C.mk_lift (tmp_var "dummy" TInt) count_agg);
+                  (C.CalcRing.mk_val (C.Exists(count_agg)));
                calc_expr
             ]
       end

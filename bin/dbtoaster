@@ -165,7 +165,7 @@ fi
 #echo
 #echo $0 $@
 
-dbtoaster_cmd="$BINDIR/dbtoaster_release $new_args"
+dbtoaster_cmd="$BINDIR/dbtoaster_debug $new_args"
 [ $log_dbtoaster -eq 1 ] && { echo $dbtoaster_cmd; }
 eval $dbtoaster_cmd;
 

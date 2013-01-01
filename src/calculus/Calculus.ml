@@ -123,8 +123,8 @@ let rec string_of_leaf (leaf:CalcRing.leaf_t): string =
 *)
 and string_of_expr (expr:expr_t): string =
    let (sum_op, prod_op, neg_op) = 
-      if Debug.active "PRINT-VERBOSE" then (" U ", " |><| ", "(<>:-1)*")
-                                      else (" + ", " * ", "-1 * ")
+      if Debug.active "PRINT-RINGS" then (" U ", " |><| ", "(<>:-1)*")
+                                    else (" + ", " * ", "-1 * ")
    in
    CalcRing.fold
       (fun sum_list  -> "("^(String.concat sum_op sum_list )^")")
@@ -150,7 +150,8 @@ let bail_out expr msg =
    @param expr  A Calculus expression
    @return      A pair of the set of input and output variables of [expr]
 *)
-let rec schema_of_expr ?(lift_group_by_vars_are_inputs = false)
+let rec schema_of_expr ?(lift_group_by_vars_are_inputs = 
+                                (not (Debug.active "LIFTS-PRESERVE-OVARS")))
                        (expr:expr_t):(var_t list * var_t list) =
    let rcr a = schema_of_expr a in
    CalcRing.fold 
