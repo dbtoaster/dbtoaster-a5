@@ -14,7 +14,7 @@ namespace dbtoaster {
   namespace adaptors {
 
     using namespace std;
-	using namespace boost;
+    using namespace boost;
     using namespace dbtoaster;
     using namespace dbtoaster::streams;
 
@@ -75,7 +75,7 @@ namespace dbtoaster {
       // Struct to represent messages coming off a socket/historical file
       struct order_book_message {
           double t;
-          long long id;
+          long id;
           string action;
           double volume;
           double price;
@@ -85,8 +85,8 @@ namespace dbtoaster {
       // order id.
       struct order_book_tuple {
           double t;
-          long long id;
-          long long broker_id;
+          long id;
+          long broker_id;
           double volume;
           double price;
           order_book_tuple() {}

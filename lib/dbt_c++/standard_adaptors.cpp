@@ -70,7 +70,6 @@ string csv_adaptor::parse_schema(string s)
 	  else if ( ty == "order" )     r += "o";
 	  else if ( ty == "int" )       r += "l";
 	  else if ( ty == "long" )      r += "l";
-	  else if ( ty == "long long" ) r += "l";
 	  else if ( ty == "float" )     r += "f";
 	  else if ( ty == "double" )    r += "f";
 	  else if ( ty == "date" )      r += "d";
@@ -126,12 +125,11 @@ csv_adaptor::interpret_event(const string& schema, const string& data)
 	  string field = copy_range<std::string>(*field_it);
 	  istringstream iss(field);
 	  bool ins; unsigned int o;
-	  int y,m,d;
-	  double f; long long l;
+	  int y,m,d; double f;
 	  vector<string> date_fields;
 	  switch (*schema_it) {
 		case 'e': iss >> ins; insert = ins; break;
-		case 'l': iss >> l; tuple.push_back(l); break;
+		//case 'l': iss >> l; tuple.push_back(l); break;
 		case 'f': iss >> f; tuple.push_back(f); break;
 		case 'h': tuple.push_back(static_cast<int>(field_hash(field)));
 				  break;
@@ -369,16 +367,14 @@ void order_book_adaptor::process_message(const order_book_message& msg,
 
 	if ( msg.action == "B" ) {
 	  if (type == tbids || type == both) {
-		r.broker_id = 
-		  (deterministic ? msg.id : ((long long) rand())) % num_brokers;
+		r.broker_id = (deterministic ? msg.id : rand()) % num_brokers;
 		(*bids)[msg.id] = r;
 		t = insert_tuple;
 	  } else valid = false;
 	}
 	else if ( msg.action == "S" ) {
 	  if (type == tasks || type == both) {
-		r.broker_id = 
-		  (deterministic ? msg.id : ((long long) rand())) % num_brokers;
+		r.broker_id = (deterministic ? msg.id : rand()) % num_brokers;
 		(*asks)[msg.id] = r;
 		t = insert_tuple;
 	  } else valid = false;

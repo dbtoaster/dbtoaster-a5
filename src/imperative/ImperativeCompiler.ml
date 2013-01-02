@@ -1104,15 +1104,17 @@ end (* Typing *)
            let r = string_of_float x in
               wrap_neg_with_parens 
                  (if r.[(String.length r)-1] = '.' then r^"0" else r)
-         | CInt x ->
-              "static_cast<long long>("^(string_of_int x)^")"
+         
+         | CInt x -> "static_cast<"^(cpp_of_type TInt)^">("^(string_of_int x)^")"
+         
          | CString s ->
             if Debug.active "HASH-STRINGS"
-            then "static_cast<int>(string_hash(\""^(String.escaped s)^"\"))"
+            then "static_cast<"^(cpp_of_type TInt)^">(string_hash(\""^(String.escaped s)^"\"))"
             else "\""^(String.escaped s)^"\""
+         
          | CBool(true) -> "true"
          | CBool(false) -> "false"
-         | CDate(y,m,d) -> "static_cast<long>(" ^ 
+         | CDate(y,m,d) -> "static_cast<"^(cpp_of_type TInt)^">(" ^ 
                            (string_of_int (y*10000+m*100+d)) ^ ")" 
                            (* TODO must be change with appropriate 
                             * object in c++ *)
