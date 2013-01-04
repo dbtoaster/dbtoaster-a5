@@ -124,12 +124,11 @@ csv_adaptor::interpret_event(const string& schema, const string& data)
 	{
 	  string field = copy_range<std::string>(*field_it);
 	  istringstream iss(field);
-	  bool ins; unsigned int o;
-	  int y,m,d; double f;
+	  bool ins; unsigned int o; int y,m,d; double f; long l;
 	  vector<string> date_fields;
 	  switch (*schema_it) {
 		case 'e': iss >> ins; insert = ins; break;
-		//case 'l': iss >> l; tuple.push_back(l); break;
+		case 'l': iss >> l; tuple.push_back(l); break;
 		case 'f': iss >> f; tuple.push_back(f); break;
 		case 'h': tuple.push_back(static_cast<int>(field_hash(field)));
 				  break;
