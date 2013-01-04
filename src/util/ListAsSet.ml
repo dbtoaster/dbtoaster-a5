@@ -75,6 +75,13 @@ let no_duplicates l = multiunion (List.map (fun x -> [x]) l)
 let uniq = no_duplicates
 
 (** 
+   Check if a list has no duplicates. 
+   @param l  A list
+   @return   true if all elements in l are distinct
+*)
+let has_no_duplicates l = (no_duplicates l) = l
+
+(** 
    Computes all subsets of r that have exactly k elements.
    does not produce duplicate sets if r does not have duplicates.
    sorting -- e.g. (List.sort Pervasives.compare l) --

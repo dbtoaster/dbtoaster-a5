@@ -442,9 +442,7 @@ let should_update (event:Schema.event_t) (expr:expr_t)  : bool =
                
                let maintaining_state_local = fst (
                   List.fold_left (fun (state_local, scope_acc) term ->
-                     let (term_ivars, term_ovars) = 
-                        schema_of_expr ~lift_group_by_vars_are_inputs:true term 
-                     in
+                     let (_, term_ovars) = schema_of_expr term in
                      (* We are only interested in Lift expressions *)
                      match CalcRing.get_val term with
 (***** BEGIN EXISTS HACK *****)
@@ -458,9 +456,9 @@ let should_update (event:Schema.event_t) (expr:expr_t)  : bool =
                               | None -> false
                         in
                         if contains_event_rel then 
+                           let (_, subexpr_ovars) = schema_of_expr subexpr in                        
                            let next_state = 
-                              if ListAsSet.inter scope_acc
-                                 (ListAsSet.union term_ivars term_ovars) = []
+                              if ListAsSet.inter scope_acc subexpr_ovars = []
                               then ReplaceExpr
                               else UpdateExpr
                            in
@@ -610,8 +608,8 @@ let rec materialize ?(scope:var_t list = [])
                         "\n\t MapName: " ^ subexpr_name
                      );
         
-                     (* It is possible that the optimizer breaks the   *)
-                     (* assumption of having an aggsum-free expression.*)
+                     (* A sanity check that the optimizer has not broken   *)
+                     (* the assumption of having an aggsum-free expression.*)
                      let contains_aggsum expr = 
                         CalcRing.fold (List.fold_left (||) false) 
                                       (List.fold_left (||) false) 
@@ -621,23 +619,15 @@ let rec materialize ?(scope:var_t list = [])
                                           | _ -> false
                                        end) expr
                      in
+                     if contains_aggsum subexpr_opt then
+                        bail_out subexpr_opt ("The calculus optimizer has" ^ 
+                           "reintroduced an AggSum into the expression")
+                     else
+                     
                      let (todos_subexpr, mat_subexpr) = 
-                        if contains_aggsum subexpr_opt then
-                        begin
-                           Debug.print "LOG-HEURISTICS-DETAIL" (fun () -> 
-                              "[Heuristics] Not an aggsum-free expression: " ^
-                              (string_of_expr subexpr_opt)
-                           );
-                           materialize ~scope:scope heuristic_options 
-                                       db_schema history subexpr_name event 
-                                       (Calculus.mk_aggsum subexpr_schema 
-                                                           subexpr_opt)
-                        end
-                        else begin
-                           materialize_expr heuristic_options db_schema history
-                                            subexpr_name event expr_scope 
-                                            subexpr_schema subexpr_opt
-                        end 
+                        materialize_expr heuristic_options db_schema history
+                                         subexpr_name event expr_scope 
+                                         subexpr_schema subexpr_opt
                      in
                      Debug.print "LOG-HEURISTICS-DETAIL" (fun () -> 
                         "[Heuristics] Materialized form: " ^
@@ -727,7 +717,7 @@ and materialize_expr (heuristic_options:heuristic_options_t)
       schema_of_expr agg_rel_expr 
    in
 
-   (* Extracted lifts are always materialized separately *)   
+      (* Extracted lifts are always materialized separately *)   
    let (todo_lifts, mat_lift_expr) = 
       if lift_expr = CalcRing.one then ([], lift_expr) else      
       fst (
@@ -817,7 +807,7 @@ and materialize_expr (heuristic_options:heuristic_options_t)
                else (i, (cmp_exprs i.ds_definition agg_rel_expr))
             ) ( { ds_name = CalcRing.one; 
                  ds_definition = CalcRing.one}, None) !history
-         in 
+         in         
          begin match mapping_if_found with
             | None ->
                (* Compute the IVC expression *) 

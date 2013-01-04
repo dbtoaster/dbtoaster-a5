@@ -524,15 +524,25 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
                ListAsSet.inter mapped_gb_vars (snd (C.schema_of_expr subexp))
             in            
                C.mk_aggsum new_gb_vars subexp
-         | Rel(rn, rv) ->
+         | Rel(rn, rv) ->           
             let new_rv = map_vars " relation var" rv in
-               C.mk_rel rn new_rv
-
+            if ListAsSet.has_no_duplicates new_rv
+            then C.mk_rel rn new_rv
+            else 
+               (* In order to prevent expressions of the form R(dA,dA), *)
+               (* we transform (B^=dA)*R(dA,B) into R(dA,B)*(B=dA).     *)
+               let subexp_v = var_sub " relation var" in
+               CalcRing.mk_prod [ C.mk_rel rn rv;
+                                  C.mk_cmp Eq (Arithmetic.mk_var lift_v)
+                                              (Arithmetic.mk_var subexp_v) ]
          | External(en, eiv, eov, et, em) ->
             (* The metadata is already rewritten *)
             let new_eiv = map_vars "n external input var" eiv in
             let new_eov = map_vars "n external output var" eov in
-               C.mk_external en new_eiv new_eov et em
+            if ListAsSet.has_no_duplicates new_eiv &&
+               ListAsSet.has_no_duplicates new_eov
+            then C.mk_external en new_eiv new_eov et em
+            else failwith "Error: External term contains the same variables"
 
          | Cmp(op, lhs, rhs) when 
             (List.mem lift_v (Arithmetic.vars_of_value lhs)) ||

@@ -237,7 +237,10 @@ in
    test ~scope:[var "A"; var "B"]  
         "Empty schema, Lift order" [] 
    "(BETA ^= {B = 'FRANCE' }) * (ALPHA ^= (A + 1)) * -1 * ALPHA * BETA"
-   "(-1 * ((A + 1)) * ({B = 'FRANCE'}))"
+   "(-1 * ((A + 1)) * ({B = 'FRANCE'}))";
+   test "Relation with duplicate entries" []
+      "(B ^= dA) * R(dA,B)"
+      "R(dA,B) * {B = dA}"   
 
 ;;
 let test msg input output =
