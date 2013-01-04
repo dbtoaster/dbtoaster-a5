@@ -180,11 +180,11 @@ let partition_expr (heuristic_options:heuristic_options_t) (scope:var_t list)
       (* Preprocessing step to mark those lifts that are      *)
       (* going to be materialized separately for sure.        *)
       (* Lift subexpressions containing the event relation    *)
-         (* are always materialized separately. Subexpressions   *)
-         (* that contain other relations are also materialized   *)
-         (* as new maps, unless HEURISTICS-PULL-IN-LIFTS is on.  *)
-         (* The materialization strategies of the remaining lift *)
-         (* suexpressions are going to be determined later on.   *)
+      (* are always materialized separately. Subexpressions   *)
+      (* that contain other relations are also materialized   *)
+      (* as new maps, unless HEURISTICS-PULL-IN-LIFTS is on.  *)
+      (* The materialization strategies of the remaining lift *)
+      (* suexpressions are going to be determined later on.   *)
       let lift_terms_annot = List.map (fun l_term ->
          match CalcRing.get_val l_term with
 (***** BEGIN EXISTS HACK *****)
@@ -286,6 +286,10 @@ let partition_expr (heuristic_options:heuristic_options_t) (scope:var_t list)
                             annot = MaterializeAsNewMap) graph_cmpnt) 
                      then (r_terms, l_terms @ [l_term])
                      else begin
+                        if Debug.active "HEURISTICS-PULL-OUT-VALUES"
+                        then (r_terms, l_terms @ [l_term])
+                        else 
+                        
                         let graph_cmpnt_expr =  
                            CalcRing.mk_prod (List.map fst graph_cmpnt)
                         in
@@ -329,7 +333,11 @@ let partition_expr (heuristic_options:heuristic_options_t) (scope:var_t list)
       
       List.fold_left (fun (r_terms, v_terms) v_term ->
          match CalcRing.get_val v_term with
-            | Value(_) | Cmp (_, _, _) ->               
+            | Value(_) | Cmp (_, _, _) ->
+               if Debug.active "HEURISTICS-PULL-OUT-VALUES"
+               then (r_terms, v_terms @ [v_term])
+               else          
+                                                     
                if covered_by_scope rel_expr_ovars v_term ||
                   (inputvar_allowed &&
                       covered_by_scope (ListAsSet.union rel_expr_ovars
@@ -456,7 +464,7 @@ let should_update (event:Schema.event_t) (expr:expr_t)  : bool =
                               | None -> false
                         in
                         if contains_event_rel then 
-                           let (_, subexpr_ovars) = schema_of_expr subexpr in                        
+                           let (_, subexpr_ovars) = schema_of_expr subexpr in
                            let next_state = 
                               if ListAsSet.inter scope_acc subexpr_ovars = []
                               then ReplaceExpr

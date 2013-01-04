@@ -458,7 +458,10 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
       let map_vars msg = 
          List.map (fun x -> if x = lift_v then var_sub msg else x)
       in
-      
+      let make_cmp msg =
+         let subexp_v = var_sub msg in
+         C.mk_cmp Eq (Arithmetic.mk_var lift_v) (Arithmetic.mk_var subexp_v)
+      in
       (* If the lift variable is in the schema, then we can't unify it --
          Otherwise, we'd shrink the schema.  In some cases, a unification of 
          this sort is actually possible, but we don't handle them here.  
@@ -531,10 +534,8 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
             else 
                (* In order to prevent expressions of the form R(dA,dA), *)
                (* we transform (B^=dA)*R(dA,B) into R(dA,B)*(B=dA).     *)
-               let subexp_v = var_sub " relation var" in
-               CalcRing.mk_prod [ C.mk_rel rn rv;
-                                  C.mk_cmp Eq (Arithmetic.mk_var lift_v)
-                                              (Arithmetic.mk_var subexp_v) ]
+               CalcRing.mk_prod [ C.mk_rel rn rv; 
+                                  make_cmp " relation var" ]
          | External(en, eiv, eov, et, em) ->
             (* The metadata is already rewritten *)
             let new_eiv = map_vars "n external input var" eiv in
@@ -542,8 +543,16 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
             if ListAsSet.has_no_duplicates new_eiv &&
                ListAsSet.has_no_duplicates new_eov
             then C.mk_external en new_eiv new_eov et em
-            else failwith "Error: External term contains the same variables"
-
+            else
+            
+            (* In order to prevent expressions of the form M[][dA,dA], *)
+            (* we transform (B^=dA)*M[][dA,B] into M[][dA,B]*(B=dA).   *)
+            CalcRing.mk_prod [ 
+               C.mk_external en (if ListAsSet.has_no_duplicates new_eiv 
+                                 then new_eiv else eiv) 
+                                (if ListAsSet.has_no_duplicates new_eov 
+                                 then new_eov else eov) et em;
+               make_cmp " n external var" ]
          | Cmp(op, lhs, rhs) when 
             (List.mem lift_v (Arithmetic.vars_of_value lhs)) ||
             (List.mem lift_v (Arithmetic.vars_of_value rhs)) ->
