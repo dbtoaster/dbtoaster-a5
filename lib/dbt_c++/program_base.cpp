@@ -34,11 +34,16 @@ void ProgramBase::logger_t::log(string& relation_name, event_t& evt) {
 	if (!log_stream)
 		return;
 
-	if (log_relation_name)
-		(*log_stream) << relation_name << ",";
-	if (log_event_type)
-		(*log_stream) << evt.type << ",";
-	(*log_stream) << setprecision(15) << evt.data << endl;
+    if (log_relation_name)
+        (*log_stream) << relation_name << "|";
+    if (log_event_type)
+        (*log_stream) << evt.type << "|";
+//  (*log_stream) << setprecision(15) << evt.data << endl;  
+    for(size_t i = 0 ; i < evt.data.size(); ++i) {
+        (*log_stream) << setprecision(15) << evt.data[i];
+        if (i < evt.data.size() - 1) (*log_stream) << "|";
+    }
+    (*log_stream) << endl;
 }
 
 /******************************************************************************
