@@ -21,7 +21,7 @@ typedef long date;
  * Type definitions of data-structures used for representing events.
  */
 
-enum event_type { insert_tuple = 0, delete_tuple, system_ready_event };
+enum event_type { delete_tuple=0, insert_tuple, system_ready_event };
 typedef int relation_id_t;
 typedef std::vector<boost::any> event_args_t;
 
