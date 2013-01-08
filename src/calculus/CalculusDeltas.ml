@@ -126,9 +126,17 @@ let rec delta_of_expr (delta_event:Schema.event_t) (expr:C.expr_t): C.expr_t =
          (*****************************************)
             | AggSum(gb_vars, sub_t) -> 
                let sub_t_delta = rcr sub_t in
+               (* It's possible that the lift delta can introduce new output
+                  variables, since it can pull range restrictions that normally
+                  would appear only inside the lift out of the lift.
+                  We need to update the group-by vars of the term accordingly.*)
+               let ins = fst (Calculus.schema_of_expr sub_t) in
+               let outs = snd (Calculus.schema_of_expr sub_t_delta) in
+               let new_gb_vars = ListAsSet.union gb_vars
+                                                 (ListAsSet.inter ins outs) in
                   if sub_t_delta = CalcRing.zero
                   then CalcRing.zero
-                  else Calculus.mk_aggsum gb_vars (rcr sub_t)
+                  else Calculus.mk_aggsum new_gb_vars (rcr sub_t)
          (*****************************************)
             | Rel(reln,relv) -> delta_of_rel reln relv
          (*****************************************)

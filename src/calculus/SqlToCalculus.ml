@@ -648,8 +648,8 @@ and calc_of_sql_expr ?(materialize_query = None)
    
    (* In order to support expressions like A + Sum(B) where A is a group-by 
       variable, we need to extend the schema of the non-aggregate term to 
-      include the grouping terms.  For now, we do this by means of a lift into
-      a dummy variable *)
+      include the grouping terms.  We use an Exists to bind the required 
+      domain *)
    let extend_sum_with_agg calc_expr = 
       begin match materialize_query with
          | None -> failwith "Unexpected aggregation operator (1)"

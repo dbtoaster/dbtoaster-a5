@@ -553,11 +553,9 @@ in
             + 
          ((BETA ^= R(dA, dB) + 1) * (ALPHA ^= R(dA,dB) + 1))
        )";
-    Debug.activate "NO-VISUAL-DIFF";
     test "Consistent handling of output vars in lifts" [] []
         "AggSum([B], (R(B, C) * 
                       AggSum([], (CMPVAR ^= AggSum([], (S(A) * {B = A}))) *
                                  {0 = CMPVAR})
                 ))))"
         "AggSum([B], R(B, C) * AggSum([], (CMPVAR ^= S(B)) * (CMPVAR ^= 0)))";
-
