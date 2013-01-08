@@ -1211,10 +1211,28 @@ type opt_t =
    | OptNestingRewrites
    | OptFactorizePolynomial
 ;;
+let string_of_opt = (function
+   | OptCombineValues           -> "OptCombineValues"
+   | OptCombineValuesAggressive -> "OptCombineValuesAggressive"
+   | OptLiftEqualities          -> "OptLiftEqualities"
+   | OptAdvanceLifts            -> "OptAdvanceLifts"
+   | OptUnifyLifts              -> "OptUnifyLifts"
+   | OptNestingRewrites         -> "OptNestingRewrites"
+   | OptFactorizePolynomial     -> "OptFactorizePolynomial"
+)
+;;
 let default_optimizations = 
    [  OptLiftEqualities; OptAdvanceLifts; OptUnifyLifts; OptNestingRewrites;
       OptFactorizePolynomial; OptCombineValues]
 ;;
+let private_time_hash:(opt_t, float) Hashtbl.t = Hashtbl.create 10;;
+let dump_timings () = 
+   Hashtbl.iter (fun opt time ->
+      print_endline ("[CalculusTransforms] TIME: "^(string_of_opt opt)^" -> "^
+                     (string_of_float time))
+   ) private_time_hash
+;;
+
 (**
   optimize_expr
     Given an expression apply the above optimizations to it until a fixed point
@@ -1229,7 +1247,24 @@ let optimize_expr ?(optimizations = default_optimizations)
       (CalculusPrinter.string_of_expr expr)
    );
    let fp_1 = ref (fun x -> sanity_check_variable_names x; x) in
-   let include_opt o new_fn = Fixpoint.build_if optimizations fp_1 o new_fn in
+   let include_opt_base o new_fn = 
+     Fixpoint.build_if optimizations fp_1 o new_fn 
+   in
+   let include_opt o new_fn = 
+      if not (Debug.active "TIME-CALCOPT") 
+      then include_opt_base o new_fn 
+      else
+         let timed_fn x = 
+            let start = Unix.time() in
+            let result = new_fn x in
+            let duration = Unix.time() -. start in 
+            let tot = duration +. if (Hashtbl.mem private_time_hash o)
+                                  then Hashtbl.find private_time_hash o
+                                  else 0.0
+            in Hashtbl.replace private_time_hash o tot; 
+               result
+         in include_opt_base o timed_fn
+   in
       include_opt OptAdvanceLifts            (advance_lifts scope);
       include_opt OptUnifyLifts              (unify_lifts scope schema);
       include_opt OptLiftEqualities          (lift_equalities scope);

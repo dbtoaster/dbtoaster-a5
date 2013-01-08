@@ -628,6 +628,10 @@ if stage_is_active StageCompileCalc then (
       error msg
 )
 ;;
+if Debug.active "TIME-CALCOPT" then (
+   CalculusTransforms.dump_timings ()
+)
+;;
 if stage_is_active StagePrintPlan then (
    Debug.print "LOG-DRIVER" (fun () -> "Running Stage: PrintPlan");
    output_endline (Compiler.string_of_plan !materialization_plan)
