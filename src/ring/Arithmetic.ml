@@ -304,6 +304,8 @@ let rec eval_partial ?(scope=[]) (v:value_t): value_t =
             if List.mem_assoc (vn,vt) scope 
                then (List.assoc (vn,vt) scope)
                else ValueRing.mk_val lf
+         | AConst(CFloat(0.0)) | AConst(CInt(0)) -> ValueRing.zero
+         | AConst(CFloat(1.0)) | AConst(CInt(1)) -> ValueRing.one
          | AConst(c) -> ValueRing.mk_val lf
       )
       v

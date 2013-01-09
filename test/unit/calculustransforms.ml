@@ -42,6 +42,13 @@ in
    test "Self-comparison"
       "R(A) * {A = A}"
       "R(A)";
+   test "Cast float ValueRing.zero to int"
+      "R(A) * {1.0-1.0}"
+      "0";
+   test "Cast float ValueRing.one to int"
+      "R(A) * {0.5+0.5}"
+      "R(A)";
+            
 (* This optimization temporarilly disabled, until we figure out what to do about
    the change in schema
    test "Self-anticomparison"
