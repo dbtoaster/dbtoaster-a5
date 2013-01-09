@@ -176,7 +176,7 @@ test "Employee37 dEmployee"
              LOCATION(D_LOCATION_ID, L_REGIONAL_GROUP:string)))) *
       DEPARTMENT(COUNT_DID, D_NAME, D_LOCATION_ID) *
       {__sql_inline_agg_1 > 0}))"
-   "AggSum([COUNT_DID], 
+   "AggSum([COUNT_DID, D_LOCATION_ID], 
       ((D_LOCATION_ID ^= dLID) *
        ((__sql_inline_agg_1 ^=
           (AggSum([D_LOCATION_ID], 
