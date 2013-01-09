@@ -627,15 +627,23 @@ let rec materialize ?(scope:var_t list = [])
                                           | _ -> false
                                        end) expr
                      in
-                     if contains_aggsum subexpr_opt then
-                        bail_out subexpr_opt ("The calculus optimizer has" ^ 
-                           "reintroduced an AggSum into the expression")
-                     else
-                     
-                     let (todos_subexpr, mat_subexpr) = 
-                        materialize_expr heuristic_options db_schema history
-                                         subexpr_name event expr_scope 
-                                         subexpr_schema subexpr_opt
+                     let (todos_subexpr, mat_subexpr) =
+                        
+                        if contains_aggsum subexpr_opt then
+                        begin
+                           Debug.print "LOG-HEURISTICS-DETAIL" (fun () ->
+                              "[Heuristics] Not an aggsum-free expression: " ^
+                              (string_of_expr subexpr_opt)
+                           );
+                           materialize ~scope:scope heuristic_options
+                                       db_schema history subexpr_name event
+                                       (Calculus.mk_aggsum subexpr_schema
+                                                           subexpr_opt)
+                        end
+                        else
+                           materialize_expr heuristic_options db_schema history
+                                            subexpr_name event expr_scope
+                                            subexpr_schema subexpr_opt
                      in
                      Debug.print "LOG-HEURISTICS-DETAIL" (fun () -> 
                         "[Heuristics] Materialized form: " ^
