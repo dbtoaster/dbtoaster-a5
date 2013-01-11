@@ -1168,10 +1168,10 @@ let rec simplify_collections filter expr =
     (* Remove filter function if it is followed by an aggregation *)
     | Aggregate(AssocLambda(at, AVar(aas, aast), 
                 Add(Var(aas2, aas2t), agg_f)), init, 
-                Filter(Lambda(fargs, f), (Slice(_, _, _) as mp)))
-    | Aggregate(AssocLambda(at, AVar(aas, aast), 
+                Filter(Lambda(fargs, f), mp))
+    (* | Aggregate(AssocLambda(at, AVar(aas, aast), 
                 Add(Var(aas2, aas2t), agg_f)), init, 
-                Filter(Lambda(fargs, f), (OutPC(_, _, _) as mp))) 
+                Filter(Lambda(fargs, f), (OutPC(_, _, _) as mp))) *)
                   when aas == aas2 ->
         let fa, aa = (get_arg_vars_w_types fargs), (get_arg_vars_w_types at) 
         in

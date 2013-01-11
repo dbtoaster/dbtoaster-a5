@@ -6,45 +6,48 @@ import org.dbtoaster.dbtoasterlib.QueryInterface._
 
 package org.dbtoaster {
   object RunQuery {
+    def printProgress(i: Int) {
+	  val t = System.nanoTime() / 1000
+	  val us = t % 1000000
+	  val s = t / 1000000
+	  println(i + " tuples processed at " + s + "s+" + us + "us")
+	}
+  
     def main(args: Array[String]) {
       var counter = 0
-      val trace = args.contains("--trace")
-    
-      val fw = if(trace) {
-        new BufferedWriter(new FileWriter("trace.txt"))
-      } else null
-
+	  val logCountIdx = args.indexOf("--log-count")
+	  val logCount: Int = 
+	    if(logCountIdx >= 0) 
+	      args(logCountIdx + 1).toInt
+		else
+		  -1
+		  
       val q = new Query()
 
-      val timeStart = System.currentTimeMillis()
+      val timeStart = System.nanoTime()
       val msgRcvr = new DBTMessageReceiver {
-        def onTupleProcessed(): Unit = {
-          if(trace) {
-            counter += 1
-            if(counter % 1000 == 0) {
-              fw.write(counter + "\t" + (System.currentTimeMillis() - timeStart) / 1000.0)
-              fw.newLine()
-              print(".")
-            }
-          }
+        def onTupleProcessed(): Unit = {		  
+		  if(logCount > 0) {
+		    counter += 1
+		    if(counter % logCount == 0) {
+			  printProgress(counter)
+			}
+		  }
         }
 
         def onQueryDone(): Unit = {
+	      if(logCount > 0 && counter % logCount != 0)
+	        printProgress(counter)
+			
+	      val runtime = (System.nanoTime() - timeStart) / 1000.0
+          println("<runtime>" + runtime + "</runtime>")
           q.printResults()  
-          val runtime = (System.currentTimeMillis() - timeStart) / 1000.0
-          if(args.contains("--time-only")) {
-            println("" + runtime)
-          }
-          else {
-            println("<runtime>" + runtime + "</runtime>")
-          }
-
-          if(trace) 
-            fw.close();
         }
       }
 
       val r = new QuerySupervisor(q, msgRcvr)
+	  if(logCount > 0)
+	    printProgress(0)
       r.start
     }
   }

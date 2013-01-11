@@ -679,7 +679,13 @@ struct
          ((c, ct):code_t) : code_t =
       match ct with
       | Collection(_, kt, vt) ->
-         (c ^ ".fold(" ^ init ^ ", { " ^ 
+         let foldfn = 
+            begin match initt with
+            | Int when not (Debug.active "NO-SPEC") -> "foldLong"
+            | _   -> "fold"
+            end
+         in
+         (c ^ "." ^ foldfn ^ "(" ^ init ^ ", { " ^ 
             (wrap_function_key_val (Tuple(kt) :: [vt]) 
             (fn_ret_type fnt) fnt fn) ^ 
             " })", (fn_ret_type (fn_ret_type fnt)))

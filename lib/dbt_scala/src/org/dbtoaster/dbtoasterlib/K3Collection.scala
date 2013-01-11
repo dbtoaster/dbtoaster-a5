@@ -108,6 +108,7 @@ package org.dbtoaster.dbtoasterlib {
        * @return The value after calling the function for each element
        */
       def fold[Y](init: Y, fn: Tuple2[K, V] => Y => Y): Y
+      def foldLong(init: Long, fn: Tuple2[K, V] => Long => Long): Long
 
       /**
        * Flattens a nested collection
@@ -354,6 +355,12 @@ package org.dbtoaster.dbtoasterlib {
         elems.foldLeft(init) { case (y, kv) => fn(kv)(y) }
       }
 
+      def foldLong(init: Long, fn: Tuple2[K, V] => Long => Long): Long = {
+        var result = init
+        elems.foreach(kv => { result = fn(kv)(result) })
+        result
+      }
+
       def flatten[K2, V2](): K3IntermediateCollection[K2, V2] =
         throw new DBTFatalError("flatten of non-nested collection")
 
@@ -491,6 +498,13 @@ package org.dbtoaster.dbtoasterlib {
       def fold[Y](init: Y, fn: Tuple2[K, V] => Y => Y): Y = {
         elems.foldLeft(init) { case (y, kv) => fn(kv)(y) }
       }
+
+      def foldLong(init: Long, fn: Tuple2[K, V] => Long => Long): Long = {
+        var result = init
+        elems.foreach(kv => { result = fn(kv)(result) })
+        result
+      }
+
 
       def flatten[K2, V2](): K3IntermediateCollection[K2, V2] = {
         new K3IntermediateCollection(elems.foldLeft(List[Tuple2[K2, V2]]()) {
