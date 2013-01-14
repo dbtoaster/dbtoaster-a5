@@ -39,7 +39,7 @@ package org.dbtoaster {
 	      if(logCount > 0 && counter % logCount != 0)
 	        printProgress(counter)
 			
-	      val runtime = (System.nanoTime() - timeStart) / 1000.0
+	      val runtime = (System.nanoTime() - timeStart) / 1000000000.0
           println("<runtime>" + runtime + "</runtime>")
           q.printResults()  
         }

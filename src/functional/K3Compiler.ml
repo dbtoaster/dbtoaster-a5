@@ -35,7 +35,7 @@ let rec compile_k3_expr e =
     
     | K.Comment(c, cexp) -> comment ~expr:(debug e) c (rcr cexp)
 
-    | K.IfThenElse(p,t,e) -> ifthenelse ~expr:(debug e) (rcr p) (rcr t) (rcr e)
+    | K.IfThenElse(p,t,eb) -> ifthenelse ~expr:(debug e) (rcr p) (rcr t) (rcr eb)
 
     | K.Block(e_l) -> block ~expr:(debug e) (List.map rcr e_l)
     | K.Iterate(fn_e, c_e) -> iterate ~expr:(debug e) (rcr fn_e) (rcr c_e)

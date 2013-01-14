@@ -34,5 +34,24 @@ package org.dbtoaster.dbtoasterlib {
 		trait DBTQuery extends Actor {
 			def setSupervisor(supervisor: Actor): Unit
 		}
+
+		class DBTTimer(name: String) {
+			var t = 0L
+
+			def update(dt: Long): Unit = {
+				t += dt
+			}
+
+			def print(): Unit = {
+				println(name + ": " + t / 1000000000.0)
+			}
+		}
+
+		def time[T](t: DBTTimer)(f: => T): T = {
+			val start = System.nanoTime()
+			val r = f
+			t.update(System.nanoTime() - start)
+			r
+		}
 	}
 }

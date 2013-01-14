@@ -418,7 +418,7 @@ struct
       match c with 
       | CBool(y) -> (string_of_bool y, Bool)
       | CInt(y) -> ((string_of_int y) ^ "L", Int)
-      | CFloat(y) -> (string_of_float y, Float)
+      | CFloat(y) -> ((string_of_float y) ^ "0", Float)
       | CString(y) -> ("\"" ^ y ^ "\"", String)
       | CDate(y,m,d) -> 
          let v = 
@@ -546,12 +546,19 @@ struct
          let unified_type = unify_types tt et in
          (* Split long ifthenelse statements in multiple functions to
             avoid the JVM limitation for function lengths *)
-         ((if (String.length t) > 10000 then
-            "({ def tb = " ^ (cast_up t tt unified_type) ^ "; def fb = " ^
+         let tmt = 
+            begin match (Debug.active "IVC-TIMER"), expr with
+            | true, Some(K3.IfThenElse(K3.Member(_, _), _, _)) ->
+               "time(ivcTimer) { " ^ t ^ " }" 
+            | _, _ -> t
+            end
+         in
+         ((if (String.length tmt) > 10000 then
+            "({ def tb = " ^ (cast_up tmt tt unified_type) ^ "; def fb = " ^
             (cast_up e et unified_type) ^ ";" ^
             "if(" ^ i ^ ") { tb } else { fb }})"
          else 
-            "if(" ^ i ^ ") { " ^ (cast_up t tt unified_type) ^ " } else { " ^
+            "if(" ^ i ^ ") { " ^ (cast_up tmt tt unified_type) ^ " } else { " ^
             (cast_up e et unified_type) ^ " }"), unified_type)
 
    (** Generates a block of statements *)
@@ -982,6 +989,7 @@ struct
                   "</" ^ x ^ ">))"
                | _ -> "println(pp.format(<" ^ x ^ ">{ get" ^ x ^ "() }" ^ 
                "</" ^ x ^ ">))") tlqs)) ^ 
+         (if Debug.active "IVC-TIMER" then "ivcTimer.print();" else "") ^ 
          " }" 
       in
       let str_schema =
@@ -1153,7 +1161,9 @@ struct
       imports ^
       " package org.dbtoaster { " ^
       "class Query() " ^ 
-      "extends DBTQuery { var supervisor: Actor = null;" ^ set_supervisor ^
+      "extends DBTQuery { var supervisor: Actor = null;" ^ 
+      (if Debug.active "IVC-TIMER" then "val ivcTimer = new DBTTimer(\"IVC\");" else "") ^
+      set_supervisor ^
       (Hashtbl.fold (fun a b c -> "val " ^ b ^ " = " ^ a ^ ";" ^ c) consts "") ^
       str_sources ^ str_streams ^ str_schema ^ str_tlqs ^ triggers ^ 
       filltables ^ dispatcher ^ run ^ print_results ^ " }}", 
