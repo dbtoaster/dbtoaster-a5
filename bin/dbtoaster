@@ -70,6 +70,8 @@ for arg in "$@"; do
 		inc_flags="$inc_flags -I\"$arg\""
 	elif [ $option = "-L" ]; then
 		lib_flags="$lib_flags -L\"$arg\""
+	elif [ $option = "-g" ]; then
+		cpp_compile_flags="$cpp_compile_flags \"$arg\""
 	elif [ $option = "-d" ]; then
 		debug_flag=$(echo $arg | tr '[:lower:]' '[:upper:]')
         if [ $debug_flag = "COMPILE-WITH-PROFILE" ]; then
@@ -165,7 +167,7 @@ fi
 #echo
 #echo $0 $@
 
-dbtoaster_cmd="$BINDIR/dbtoaster_debug $new_args"
+dbtoaster_cmd="$BINDIR/dbtoaster_release $new_args"
 [ $log_dbtoaster -eq 1 ] && { echo $dbtoaster_cmd; }
 eval $dbtoaster_cmd;
 

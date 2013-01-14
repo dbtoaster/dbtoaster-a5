@@ -156,6 +156,9 @@ let specs:(Arg.key * Arg.spec * Arg.doc) list  = Arg.align [
    (  "-L", 
       (Arg.String(ExternalCompiler.add_env "INCLUDE_LIB")),
       "dir    Add a directory to the second-stage compiler's library path");
+   (  "-g",
+      (Arg.String(ExternalCompiler.add_flag)),
+      "arg    Pass through an argument to the second-stage compiler");
    (  "-O1",
       (Arg.Unit(fun () -> opt_level := 1)),
       "       Produce less efficient code faster");
