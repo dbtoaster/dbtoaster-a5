@@ -15,7 +15,7 @@ namespace adaptors {
 ******************************************************************************/
 
 csv_adaptor::csv_adaptor(relation_id_t _id) 
-		: id(_id), type(insert_tuple), delimiter(",") 
+		: id(_id), type(insert_tuple), schema(""), delimiter(",") 
 {}
 
 csv_adaptor::csv_adaptor(relation_id_t _id, string sch)
@@ -246,6 +246,7 @@ order_book_tuple::order_book_tuple(const order_book_message& msg) {
 	id = msg.id;
 	volume = msg.volume;
 	price = msg.price;
+        broker_id = 0;
 }
 
 order_book_tuple& order_book_tuple::operator=(order_book_tuple& other) {
@@ -285,7 +286,9 @@ order_book_adaptor::order_book_adaptor(relation_id_t sid, int num_params,
 	bids = shared_ptr<order_book>(new order_book());
 	asks = shared_ptr<order_book>(new order_book());
 	deterministic = false;
+        insert_only = false;
 	num_brokers = 10;
+        type = tbids;
 
 	for (int i = 0; i < num_params; ++i) {
 		string k = params[i].first;
@@ -475,7 +478,7 @@ void order_book_adaptor::process(const string& data, shared_ptr<list<event_t> > 
 	// Grab a message from the data.
 	order_book_message r;
 	bool valid = parse_message(data, r);
-
+	  
 	if ( valid ) {
 	  // Process its action, updating the internal book.
 	  process_message(r, dest);
