@@ -1,5 +1,6 @@
 import scala.actors.Actor
 import scala.actors.Actor._
+import xml._
 
 package org.dbtoaster.dbtoasterlib {
 	object QueryInterface {
@@ -37,21 +38,29 @@ package org.dbtoaster.dbtoasterlib {
 
 		class DBTTimer(name: String) {
 			var t = 0L
-
-			def update(dt: Long): Unit = {
-				t += dt
-			}
+			var nesting = 0
 
 			def print(): Unit = {
-				println(name + ": " + t / 1000000000.0)
+				println(new PrettyPrinter(8000, 2).format(<xml>{t / 1000000000.0}</xml>.copy(label = name)))
 			}
-		}
 
-		def time[T](t: DBTTimer)(f: => T): T = {
-			val start = System.nanoTime()
-			val r = f
-			t.update(System.nanoTime() - start)
-			r
+			def sampledTime(): Long = {
+				val samples = 10
+				var tm = 0L
+				for(i <- 1 to samples) 
+				   tm += System.nanoTime
+				tm / samples
+			}
+
+			def time[T](f: => T): T = {
+				val start = System.nanoTime
+				nesting += 1
+				val r = f
+				nesting -= 1
+				if(nesting == 0)
+					t += System.nanoTime - start
+				r
+			}
 		}
 	}
 }

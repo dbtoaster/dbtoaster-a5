@@ -546,20 +546,20 @@ struct
          let unified_type = unify_types tt et in
          (* Split long ifthenelse statements in multiple functions to
             avoid the JVM limitation for function lengths *)
-         let tmt = 
+         let tmt, emt = 
             begin match (Debug.active "IVC-TIMER"), expr with
             | true, Some(K3.IfThenElse(K3.Member(_, _), _, _)) ->
-               "time(ivcTimer) { " ^ t ^ " }" 
-            | _, _ -> t
+               "incTimer.time { " ^ t ^ " }", "ivcTimer.time { " ^ e ^ " }"
+            | _, _ -> t, e
             end
          in
          ((if (String.length tmt) > 10000 then
             "({ def tb = " ^ (cast_up tmt tt unified_type) ^ "; def fb = " ^
-            (cast_up e et unified_type) ^ ";" ^
+            (cast_up emt et unified_type) ^ ";" ^
             "if(" ^ i ^ ") { tb } else { fb }})"
          else 
             "if(" ^ i ^ ") { " ^ (cast_up tmt tt unified_type) ^ " } else { " ^
-            (cast_up e et unified_type) ^ " }"), unified_type)
+            (cast_up emt et unified_type) ^ " }"), unified_type)
 
    (** Generates a block of statements *)
    let block ?(expr = None) (stmts:code_t list) : code_t =
@@ -989,7 +989,7 @@ struct
                   "</" ^ x ^ ">))"
                | _ -> "println(pp.format(<" ^ x ^ ">{ get" ^ x ^ "() }" ^ 
                "</" ^ x ^ ">))") tlqs)) ^ 
-         (if Debug.active "IVC-TIMER" then "ivcTimer.print();" else "") ^ 
+         (if Debug.active "IVC-TIMER" then "ivcTimer.print; incTimer.print;" else "") ^ 
          " }" 
       in
       let str_schema =
@@ -1161,8 +1161,11 @@ struct
       imports ^
       " package org.dbtoaster { " ^
       "class Query() " ^ 
-      "extends DBTQuery { var supervisor: Actor = null;" ^ 
-      (if Debug.active "IVC-TIMER" then "val ivcTimer = new DBTTimer(\"IVC\");" else "") ^
+      "extends DBTQuery { var supervisor: Actor = null;" ^ (
+         if Debug.active "IVC-TIMER" then 
+            "val ivcTimer = new DBTTimer(\"IVC\");" ^
+            "val incTimer = new DBTTimer(\"INC\");" 
+         else "") ^
       set_supervisor ^
       (Hashtbl.fold (fun a b c -> "val " ^ b ^ " = " ^ a ^ ";" ^ c) consts "") ^
       str_sources ^ str_streams ^ str_schema ^ str_tlqs ^ triggers ^ 
