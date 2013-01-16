@@ -24,7 +24,8 @@ package org.dbtoaster {
         val us = t % 1000000
         val s = t / 1000000
         println(i + " tuples processed at " + s + "s+" + us + "us")
-        q.printMapSizes
+        if(logMapSizes)
+          q.printMapSizes
       }
 
       val timeStart = System.nanoTime()
