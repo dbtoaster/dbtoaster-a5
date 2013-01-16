@@ -801,23 +801,56 @@ struct
          ((v, vt):code_t): code_t =
       (map ^ ".update(" ^ v ^ ")", Unit)
 
+   (** Gets the representation of zero for a given type **)
+   let get_zero (t: type_t): string =
+      begin match t with 
+      | Int -> "0L"
+      | Float -> "0.0"
+      | _ -> debugfail None ("Expected int or float")
+      end
+
    (** Generates code to update a value in a persistent in map *)
    let update_in_map_value ?(expr = None) (map:K3.coll_id_t) 
          (key:code_t list) ((v, vt):code_t): code_t =
-      (map ^ ".updateValue(" ^ 
-         (make_tuple (List.map fst key)) ^ ", " ^ v ^ ")", Unit)
+      let kc = make_tuple (List.map fst key) in
+      let uc = map ^ ".updateValue(" ^ kc ^ ", " ^ v ^ ")" in
+      let rc = map ^ ".remove(" ^ kc ^ ")" in
+      let c = 
+         if Debug.active "DELETE-ON-ZERO" then
+            let z = get_zero vt in
+            "(if(" ^ v ^ " != " ^ z ^ ") " ^ uc ^ " else " ^ rc ^ ")"
+         else uc
+      in
+      (c, Unit)
 
    (** Generates code to update a value in a persistent out map *)
    let update_out_map_value ?(expr = None) (map:K3.coll_id_t) 
          (key:code_t list) ((v, vt):code_t): code_t =
-      (map ^ ".updateValue(" ^ 
-         (make_tuple (List.map fst key)) ^ ", " ^ v ^ ")", Unit)
+      let kc = make_tuple (List.map fst key) in
+      let uc = map ^ ".updateValue(" ^ kc ^ ", " ^ v ^ ")" in
+      let rc = map ^ ".remove(" ^ kc ^ ")" in
+      let c = 
+         if Debug.active "DELETE-ON-ZERO" then
+            let z = get_zero vt in
+            "(if(" ^ v ^ " != " ^ z ^ ") " ^ uc ^ " else " ^ rc ^ ")"
+         else uc
+      in
+      (c, Unit)
 
    (** Generates code to update a value in a persistent full map *)
    let update_map_value ?(expr = None) (map:K3.coll_id_t) (inkey:code_t list)
          (outkey:code_t list) ((v, vt):code_t): code_t =
-      (map ^ ".updateValue(" ^ (make_tuple (List.map fst inkey)) ^ ", " ^ 
-         (make_tuple (List.map fst outkey)) ^ ", " ^ v ^ ")", Unit)
+      let ikc = make_tuple (List.map fst inkey) in
+      let okc = make_tuple (List.map fst outkey) in
+      let uc = map ^ ".updateValue(" ^ ikc ^ ", " ^ okc ^ ", " ^ v ^ ")" in
+      let rc = map ^ ".remove(" ^ ikc ^ "," ^ okc ^ ")" in
+      let c = 
+         if Debug.active "DELETE-ON-ZERO" then
+            let z = get_zero vt in
+            "(if(" ^ v ^ " != " ^ z ^ ") " ^ uc ^ " else " ^ rc ^ ")"
+         else uc
+      in
+      (c, Unit)
 
    (** Generates code to update a persistent in map *)
    let update_in_map ?(expr = None) (map:K3.coll_id_t) (v:code_t): code_t =

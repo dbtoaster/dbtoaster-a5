@@ -245,9 +245,12 @@ package org.dbtoaster.dbtoasterlib {
         val keyPart = project(key)
 
         index.get(keyPart) match {
-          case Some(m) => m -= key
-          case None => throw new DBTFatalError(
-                            "deletion of a non-existant key")
+          case Some(m) => {
+            m -= key
+            if(m.isEmpty)
+              index -= keyPart
+          }
+          case None => ()
         }
       }
 
@@ -413,8 +416,7 @@ package org.dbtoaster.dbtoasterlib {
       def remove(inKey: K1, outKey: K2): Unit = {
         felems.get(inKey) match {
           case Some(outerMap) => outerMap.remove(outKey)
-          case None => 
-            throw new DBTFatalError("deletion of a non-existant element")
+          case None => ()
         }
       }
     }
