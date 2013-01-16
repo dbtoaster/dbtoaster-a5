@@ -1070,17 +1070,20 @@ struct
             (fun (id,ivars,ovars,t) ->
                let str_val_t = string_of_type (map_base_type t) in
                match (ivars, ovars) with
-               | ([], []) -> "var " ^ id ^ " = SimpleVal[" ^ str_val_t ^ "](0)"
+               | ([], []) -> "var " ^ id ^ " = SimpleVal[" ^ str_val_t ^ 
+                  "](\"" ^ id ^"\", 0)"
                | ([], os) -> "var " ^ id ^ " = new K3PersistentCollection[" ^
-                  (make_type_list os) ^ ", " ^ str_val_t ^ "](Map(), " ^ 
-                  (sndIdx id os str_val_t) ^ 
+                  (make_type_list os) ^ ", " ^ str_val_t ^ "]" ^
+                  "(\"" ^ id ^ "\", Map(), " ^ (sndIdx id os str_val_t) ^ 
                   ") /* out */"
                | (is, []) -> "var " ^ id ^ " = new K3PersistentCollection[" ^ 
-                  (make_type_list is) ^ ", " ^ str_val_t ^ "](Map(), " ^ 
+                  (make_type_list is) ^ ", " ^ str_val_t ^ "]" ^
+                  "(\"" ^ id ^ "\", Map(), " ^ 
                   (sndIdx id is str_val_t) ^ ") /* in */"
                | (is, os) -> "var " ^ id ^ 
                   " = new K3FullPersistentCollection[" ^ (make_type_list is) ^ 
-                  "," ^ (make_type_list os) ^ ", " ^ str_val_t ^ "](Map(), " ^ 
+                  "," ^ (make_type_list os) ^ ", " ^ str_val_t ^ "]" ^ 
+                  "(\"" ^ id ^ "\", Map(), " ^ 
                   (sndIdx id is str_val_t) ^ ") /* full */") 
             schemas))
       in
@@ -1191,6 +1194,13 @@ struct
       let set_supervisor = 
          "def setSupervisor(supervisor: Actor) = this.supervisor = supervisor;"
       in
+      let print_maps = 
+         "def printMapSizes() = {" ^
+         (make_list ~parens:("",";") ~sep:";" (List.map 
+            (fun (id,ivars,ovars,t) -> id ^ ".printSize") 
+            schemas)) ^
+         "}"
+      in
       imports ^
       " package org.dbtoaster { " ^
       "class Query() " ^ 
@@ -1202,7 +1212,7 @@ struct
       set_supervisor ^
       (Hashtbl.fold (fun a b c -> "val " ^ b ^ " = " ^ a ^ ";" ^ c) consts "") ^
       str_sources ^ str_streams ^ str_schema ^ str_tlqs ^ triggers ^ 
-      filltables ^ dispatcher ^ run ^ print_results ^ " }}", 
+      filltables ^ dispatcher ^ run ^ print_results ^ print_maps ^ " }}", 
       Unit
 
    (** This function formats a piece of scala code 

@@ -5,14 +5,7 @@ import org.dbtoaster.dbtoasterlib.DBToasterExceptions._
 import org.dbtoaster.dbtoasterlib.QueryInterface._
 
 package org.dbtoaster {
-  object RunQuery {
-    def printProgress(i: Int) {
-	  val t = System.nanoTime() / 1000
-	  val us = t % 1000000
-	  val s = t / 1000000
-	  println(i + " tuples processed at " + s + "s+" + us + "us")
-	}
-  
+  object RunQuery {  
     def main(args: Array[String]) {
       var counter = 0
 	  val logCountIdx = args.indexOf("--log-count")
@@ -21,8 +14,18 @@ package org.dbtoaster {
 	      args(logCountIdx + 1).toInt
 		else
 		  -1
+
+      val logMapSizes = args.contains("--log-map-sizes")
 		  
       val q = new Query()
+
+      def printProgress(i: Int) {
+        val t = System.nanoTime() / 1000
+        val us = t % 1000000
+        val s = t / 1000000
+        println(i + " tuples processed at " + s + "s+" + us + "us")
+        q.printMapSizes
+      }
 
       val timeStart = System.nanoTime()
       val msgRcvr = new DBTMessageReceiver {

@@ -23,8 +23,7 @@ package org.dbtoaster.dbtoasterlib {
 							msgRcv.onQueryDone()
 							exit()
 						}
-						case DBTTupleProcessed => 
-						{
+						case DBTTupleProcessed => {
 							msgRcv.onTupleProcessed()
 						}
 					}

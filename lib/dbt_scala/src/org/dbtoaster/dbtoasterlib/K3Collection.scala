@@ -199,7 +199,7 @@ package org.dbtoaster.dbtoasterlib {
      *
      * @param <T> The type of the value
      */
-    case class SimpleVal[T](defval: T) {
+    case class SimpleVal[T](name: String, defval: T) {
       var v: T = defval
 
       /**
@@ -219,6 +219,8 @@ package org.dbtoaster.dbtoasterlib {
       }
 
       override def toString(): String = v.toString
+
+      def printSize() = println(name + ": 1")
     }
 
     /**
@@ -268,7 +270,7 @@ package org.dbtoaster.dbtoasterlib {
      * @param <K> The key type
      * @param <V> The value type
      */
-    class K3PersistentCollection[K, V](elems: Map[K, V], 
+    class K3PersistentCollection[K, V](name: String, elems: Map[K, V], 
         sndIdx: Option[Map[String, Index[K, V]]]) extends K3Collection[K, V] {
       def map[K2, V2](f: Tuple2[K, V] => 
                          Tuple2[K2, V2]): K3IntermediateCollection[K2, V2] = {
@@ -377,6 +379,10 @@ package org.dbtoaster.dbtoasterlib {
       }
 
       def toPersistentCollection(): K3PersistentCollection[K, V] = this
+
+      def printSize() = {
+        println(name + ": " + elems.size)
+      }
     }
 
     /**
@@ -387,10 +393,11 @@ package org.dbtoaster.dbtoasterlib {
      * @param <V> Value type
      */
     class K3FullPersistentCollection[K1, K2, V](
+        name: String, 
         felems: Map[K1, K3PersistentCollection[K2, V]], 
         fsndIdx: Option[Map[String, Index[K1, K3PersistentCollection[K2, V]]]])
         extends K3PersistentCollection[K1, 
-                    K3PersistentCollection[K2, V]](felems, fsndIdx) {
+                    K3PersistentCollection[K2, V]](name, felems, fsndIdx) {
       /**
        * Updates an element of the collection
        *
@@ -403,7 +410,7 @@ package org.dbtoaster.dbtoasterlib {
           case Some(outerMap) => outerMap.updateValue(outKey, value)
           case None => felems += 
             ((inKey, 
-              new K3PersistentCollection[K2, V](Map((outKey -> value)), None)))
+              new K3PersistentCollection[K2, V](name + "_out", Map((outKey -> value)), None)))
         }
       }
 
@@ -522,7 +529,7 @@ package org.dbtoaster.dbtoasterlib {
       def toIterable(): Iterable[Tuple2[K, V]] = elems
 
       def toPersistentCollection(): K3PersistentCollection[K, V] =
-        new K3PersistentCollection[K, V](Map() ++ elems, None)
+        new K3PersistentCollection[K, V]("from_intermediate", Map() ++ elems, None)
     }
 
   }

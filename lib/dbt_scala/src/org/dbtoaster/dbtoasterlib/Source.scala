@@ -122,7 +122,7 @@ package org.dbtoaster.dbtoasterlib {
     }
 
     /**
-     * Multiplexes a list of sources while preserving the orDBT of events 
+     * Multiplexes a list of sources while preserving the order of events 
      * (assuming that the sources themselves are ordered)
      *
      */
@@ -131,6 +131,7 @@ package org.dbtoaster.dbtoasterlib {
       val queues: Map[Source, PriorityQueue[StreamEvent]] = 
         Map() ++= sources.map(x => (x, PriorityQueue[StreamEvent]()))
       val queueDone: PriorityQueue[StreamEvent] = PriorityQueue()
+      var currMax = 0L
 
       def sendEvent(): Unit = {
         if(queues.isEmpty) {
@@ -144,11 +145,19 @@ package org.dbtoaster.dbtoasterlib {
               List() 
             else 
               List(queueDone))).reduceLeft((a, b) => 
-                if(a.head < b.head) a else b)
-          query ! minQueues.dequeue
+                if(a.head.order < b.head.order) a else b)
+          val r = minQueues.dequeue
+
+          // Check the ordering of tuples
+          if(r.order >= currMax)
+            currMax = r.order
+          else if(r.order < currMax)
+            throw new DBTFatalError("Ordering not correct: " + r.order + " < " + currMax)
+
+          query ! r
         }
       }
-	  
+
   	  def act() {
         if(sources.isEmpty) {
           query ! EndOfStream
