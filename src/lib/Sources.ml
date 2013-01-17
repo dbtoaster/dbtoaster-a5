@@ -4,6 +4,7 @@ open Constants
 open Values
 
 type stream_event_t = event_t * const_t list
+type ordered_stream_event_t = int * stream_event_t
 type adaptor_event_t = AInsert | ADelete
 
 (* Data sources *)
@@ -18,7 +19,8 @@ type adaptor_event_t = AInsert | ADelete
  *    adaptors+relations *)
 module Adaptors =
 struct
-   type adaptor = string -> (adaptor_event_t * const_t list) list
+   type event = (int * adaptor_event_t * const_t list) 
+   type adaptor = string -> event list
    type adaptor_generator = Schema.rel_t -> (string * string) list -> adaptor
    type adaptor_registry = (string, adaptor_generator) Hashtbl.t
    
@@ -46,13 +48,13 @@ sig
    val create: source_t -> (Schema.rel_t * Adaptors.adaptor) list ->
                string -> t 
    val has_next: t -> bool
-   val next: t -> t * (stream_event_t option)
+   val next: t -> t * (ordered_stream_event_t option)
    val name_of_source: t -> string
 end
 
 module type SyncMultiplexer = functor (S : SyncSource) ->
 sig
-   type t = (S.t ref) list
+   type t
    val create : unit -> t
    val add_stream: t -> S.t -> t
    val remove_stream: t -> S.t -> t
@@ -63,7 +65,7 @@ end
 module type AsyncSource =
 sig
    type t
-   type handler = stream_event_t -> unit
+   type handler = ordered_stream_event_t -> unit
 
    val create: source_t -> (Schema.rel_t * Adaptors.adaptor) list -> t
    val set_handler: t -> handler -> t
@@ -90,7 +92,7 @@ module FileSource : SyncSource =
 struct
    type fs_t = framing_t * in_channel
    type t = fs_t option * (Schema.rel_t * Adaptors.adaptor) list * 
-            (stream_event_t list ref) * string
+            (ordered_stream_event_t list ref) * string
 
    let create source_t rels_adaptors name: t =
       match source_t with
@@ -133,7 +135,7 @@ struct
    let has_next fs = let (ns,_,buf,_) = fs in not((ns = None) && (!buf = []))
 
    (* returns (_, None) at end of file *)
-   let next (fs:t) : t * (stream_event_t option) =
+   let next (fs:t) : t * (ordered_stream_event_t option) =
       let (ns,ra,buf,name) = fs in
          if !buf <> [] then
             let e = List.hd (!buf)
@@ -142,14 +144,15 @@ struct
          begin
             let (new_ns, tuple) = get_input ns in
             if tuple <> "" then
-               let (events:stream_event_t list) = List.flatten (List.map
+               let (events:ordered_stream_event_t list) = List.flatten (List.map
                   (fun (rel, adaptor) -> 
-                     List.map (fun (event,fields) -> 
-                        (  begin match event with
+                     List.map (fun (order,event,fields) -> 
+                        (  order,
+                           (begin match event with
                               | AInsert -> InsertEvent(rel)
                               | ADelete -> DeleteEvent(rel)
                               end, 
-                           fields
+                           fields)
                         )) (adaptor tuple)
                      ) ra) in
                if List.length events > 0 then
@@ -165,30 +168,77 @@ end
 
 module SM : SyncMultiplexer = functor (S : SyncSource) ->
 struct
-   type t = (S.t ref) list
+   
+   type source = { 
+      src : S.t ref;
+      buf : ordered_stream_event_t option ref;
+   }
+   
+   type t = source list
    
    let create () = []
 
-   let add_stream fm s = fm@[(ref s)]
+   let add_stream fm s = fm@[{ src = ref s; buf = ref None }]
    
-   let remove_stream fm s = List.filter (fun x -> !x <> s) fm
+   let remove_stream fm s = List.filter (fun { src = x } -> !x <> s) fm
    
-   let has_next fm = List.exists (fun x -> S.has_next !x) fm
+   let source_has_next { src = s; buf = b } = 
+      (!b <> None) || (S.has_next !s)
+   
+   let has_next fm = List.exists (fun x -> source_has_next x) fm
+   
+   let fill_buffers fm : unit = 
+      List.iter (fun { src = s; buf = b } ->
+         if (!b = None) && (S.has_next !s) then (
+            let new_s, new_b = S.next !s in
+               b := new_b;
+               s := new_s;
+         )
+      ) fm
+   
+   let filter_done fm = List.filter source_has_next fm
+   
+   let count_candidates = List.fold_left (fun (ord, cnt) { buf = b } ->
+      match !b with None -> (ord, cnt)
+         | Some(evt_ord, _) ->
+            if (evt_ord = ord) then (ord, cnt+1)
+            else if (evt_ord < ord) then (evt_ord, 1)
+            else (ord, cnt)
+   ) (max_int, 0)
    
    (* returns (_, None) at end of file *)
    let next fm : t * (stream_event_t option) =
-      let nfm = ref fm in
-      let i = ref (Random.int (List.length !nfm)) in
+      let curr_fm = ref fm in
       let event = ref None in
-      while ((List.length (!nfm)) > 0) && (!event = None) do
-         let s = List.nth !nfm !i in
-         let next = (S.next !s) in
-         event := snd next;
-         s := fst next;
-         nfm := List.filter (fun x -> S.has_next !x) (!nfm);
-         if (List.length (!nfm) > 0) then i := Random.int(List.length (!nfm));
+      while (List.length !curr_fm > 0) && (!event = None) do (
+         Debug.print "LOG-SOURCES" (fun () -> "[SOURCES] Filling Buffers");
+         fill_buffers fm;
+         let ord, cnt = count_candidates fm in
+         if cnt > 0 then (
+            Debug.print "LOG-SOURCES" (fun () -> 
+               "[SOURCES] "^(string_of_int cnt)^" sources at order "^
+               (string_of_int ord)
+            );
+            let rec find_nth c = (function 
+               | [] -> failwith "Fewer events in multiplexer than expected"
+               | ({ buf = b })::rest -> 
+                  begin match !b with
+                     | None -> find_nth c rest
+                     | Some(evt_ord, evt_data) -> 
+                        if evt_ord = ord then
+                           if c <= 0 then (b := None; (evt_data))
+                           else find_nth (c-1) rest
+                        else find_nth c rest
+                  end
+            ) in
+            event := Some(find_nth (Random.int cnt) !curr_fm)
+         );
+         Debug.print "LOG-SOURCES" (fun () -> "[SOURCES] Filtering sources");
+         curr_fm := filter_done !curr_fm
+      );
       done;
-      (!nfm, !event)
+      Debug.print "LOG-SOURCES" (fun () -> "[SOURCES] Returning event");
+      (!curr_fm, !event)
 end
 
 module FileMultiplexer = SM(FileSource)

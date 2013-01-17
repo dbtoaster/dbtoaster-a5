@@ -176,6 +176,9 @@ struct
                ) in
                
                let k3_hashtbl = K3Value.to_hashtbl k3_result in
+               Debug.print "LOG-DBCHECK-RESULT" (fun () ->
+                  "[DBCheck] Result: " ^ (K3Value.to_string k3_result)
+               );
                if (not (cmp_hashtbl db_hashtbl k3_hashtbl)) 
                then begin
                   print_hashtbl "========= Expected =========" db_hashtbl;

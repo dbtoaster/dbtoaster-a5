@@ -121,11 +121,13 @@ module Postgres : Interface = struct
                failwith ("Improperly formatted date: "^str)  
          | TAny | TExternal(_) -> failwith "Unsupported type in Sql client"
 
+   let convert_field = (function 
+      | CDate(_,_,_) as x -> "'"^(string_of_const x)^"'"
+      | x -> (string_of_const x)
+   )
+
    let convert_row ?(sep = ", ") (data:Constants.const_t list):string =
-      ListExtras.string_of_list ~sep:sep (function 
-         | CDate(_,_,_) as x -> "'"^(string_of_const x)^"'"
-         | x        -> string_of_const x
-      ) data
+      ListExtras.string_of_list ~sep:sep convert_field data
    ;;
    
    let create ?(database = None) ?(username = None) ?(password = None) 
@@ -195,8 +197,8 @@ module Postgres : Interface = struct
             " WHERE _id = (SELECT max(_id) FROM " ^ tname ^ " WHERE " ^
             (String.concat " AND " (
                List.map2 (fun (vn,_) c -> 
-                  vn ^ "=" ^ (string_of_const c)) tschema tuple
-            )) ^ ")"
+                  vn ^ "=" ^ (convert_field c)) tschema tuple
+            )) ^ ");\n"
          in
             Debug.print "LOG-SQLCLIENT" (fun () ->
                "[SQL client] Delete from: " ^ cmd

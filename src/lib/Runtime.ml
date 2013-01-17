@@ -57,9 +57,9 @@ let synch_init (table_sources:FileSource.t list) (db:DB.db_t): unit =
       while !not_done do 
          let (new_source,event) = FileSource.next !source in
          begin match event with
-            | Some(Schema.InsertEvent(reln,_,_),fields) -> 
+            | Some(_, (Schema.InsertEvent(reln,_,_),fields)) -> 
                   update_map reln fields 1
-            | Some(Schema.DeleteEvent(reln,_,_),fields) -> 
+            | Some(_, (Schema.DeleteEvent(reln,_,_),fields)) -> 
                   update_map reln fields (-1)
             | None -> not_done := false
             | _ -> failwith "Unexpected event during initialization"

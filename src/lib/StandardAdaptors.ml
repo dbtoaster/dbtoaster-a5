@@ -1,4 +1,4 @@
-(*
+0(*
  * Terminology:
  * -- adaptor: a function to create structured tuples from raw input data
  * -- generator: a function to create an adaptor, in essence compiling
@@ -206,8 +206,8 @@ let postprocessors : (string * (string -> const_t list -> const_t list)) list =
 
 let constant_event param_val =
   match param_val with
-    | "insert" -> (fun fields -> [(AInsert, fields)])
-    | "delete" -> (fun fields -> [(ADelete, fields)])
+    | "insert" -> (fun fields -> [(0, AInsert,  fields)])
+    | "delete" -> (fun fields -> [(0, ADelete, fields)])
     | _ -> failwith ("invalid event type "^param_val)
 
 let parametrized_event param_val =
@@ -222,9 +222,18 @@ let parametrized_event param_val =
      CFloat(float(Hashtbl.hash (Constants.string_of_const cnst) ) )
   in
     (fun fields -> 
-      if (List.length fields) <= 0 then raise AbortEventConstruction
-      else try
-        [(List.assoc (hash_constant(List.hd fields)) rules, List.tl fields)]
+      if (List.length fields) <= 1 then raise AbortEventConstruction
+      else 
+      let order = List.hd fields in
+      let ins_del = List.hd (List.tl fields) in
+      let remaining_fields = List.tl (List.tl fields) in
+      try
+        [ (
+            Constants.int_of_const order,
+            List.assoc (hash_constant(ins_del)) rules, 
+            remaining_fields
+          )
+        ]
       with Not_found -> failwith ("No rule for identifying insert/delete")
     )
     
@@ -233,13 +242,13 @@ let parametrized_event param_val =
 
 let event_constructors : 
       (string * ((string -> const_t list -> 
-                    (adaptor_event_t * const_t list) list) * 
+                    (int * adaptor_event_t * const_t list) list) * 
                  (string -> Type.type_t list))) list =
    [  ("eventtype", (constant_event, (function _ -> []))); 
-      ("triggers",  (parametrized_event, (function _ -> [TInt])));
-      ("deletions", ((function "true" -> parametrized_event "0:insert,1:delete"
+      ("triggers",  (parametrized_event, (function _ -> [TInt; TInt])));
+      ("deletions", ((function "true" -> parametrized_event "1:insert,0:delete"
                               | _     -> constant_event "insert"),
-                     (function "true" -> [TInt]
+                     (function "true" -> [TInt; TInt]
                               | _     -> [])))
    ]
   
@@ -382,8 +391,8 @@ let orderbook_generator rel_sch params =
    let getv tuple = List.nth tuple v_idx in
    let getp tuple = List.nth tuple p_idx in
 
-   let insert tuple = (AInsert, tuple) in
-   let delete tuple = (ADelete, tuple) in
+   let insert tuple = (0, AInsert, tuple) in
+   let delete tuple = (0, ADelete, tuple) in
 
    (* Common actions across book types *)
    let adaptor_common action order_id tuple =
