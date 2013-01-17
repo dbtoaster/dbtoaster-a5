@@ -146,6 +146,7 @@ package org.dbtoaster.dbtoasterlib {
             else 
               List(queueDone))).reduceLeft((a, b) => 
                 if(a.head.order < b.head.order) a else b)
+          
           val r = minQueues.dequeue
 
           // Check the ordering of tuples

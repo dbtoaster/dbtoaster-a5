@@ -806,19 +806,22 @@ struct
       begin match t with 
       | Int -> "0L"
       | Float -> "0.0"
-      | _ -> debugfail None ("Expected int or float")
+      | Bool -> "false"
+      | _ -> debugfail None ("Expected int or float but found " ^ 
+         (string_of_type t))
       end
 
    (** Generates code to update a value in a persistent in map *)
    let update_in_map_value ?(expr = None) (map:K3.coll_id_t) 
          (key:code_t list) ((v, vt):code_t): code_t =
       let kc = make_tuple (List.map fst key) in
-      let uc = map ^ ".updateValue(" ^ kc ^ ", " ^ v ^ ")" in
+      let nv = "val nv = " ^ v ^ ";" in
+      let uc = map ^ ".updateValue(" ^ kc ^ ", nv)" in
       let rc = map ^ ".remove(" ^ kc ^ ")" in
       let c = 
          if Debug.active "DELETE-ON-ZERO" then
             let z = get_zero vt in
-            "(if(" ^ v ^ " != " ^ z ^ ") " ^ uc ^ " else " ^ rc ^ ")"
+            "{" ^ nv ^ "if(nv != " ^ z ^ ") " ^ uc ^ " else " ^ rc ^ "}"
          else uc
       in
       (c, Unit)
@@ -827,12 +830,13 @@ struct
    let update_out_map_value ?(expr = None) (map:K3.coll_id_t) 
          (key:code_t list) ((v, vt):code_t): code_t =
       let kc = make_tuple (List.map fst key) in
-      let uc = map ^ ".updateValue(" ^ kc ^ ", " ^ v ^ ")" in
+      let nv = "val nv = " ^ v ^ ";" in
+      let uc = map ^ ".updateValue(" ^ kc ^ ", nv)" in
       let rc = map ^ ".remove(" ^ kc ^ ")" in
       let c = 
          if Debug.active "DELETE-ON-ZERO" then
             let z = get_zero vt in
-            "(if(" ^ v ^ " != " ^ z ^ ") " ^ uc ^ " else " ^ rc ^ ")"
+            "{" ^ nv ^ "if(nv != " ^ z ^ ") " ^ uc ^ " else " ^ rc ^ "}"
          else uc
       in
       (c, Unit)
@@ -842,12 +846,13 @@ struct
          (outkey:code_t list) ((v, vt):code_t): code_t =
       let ikc = make_tuple (List.map fst inkey) in
       let okc = make_tuple (List.map fst outkey) in
-      let uc = map ^ ".updateValue(" ^ ikc ^ ", " ^ okc ^ ", " ^ v ^ ")" in
+      let nv = "val nv = " ^ v ^ ";" in
+      let uc = map ^ ".updateValue(" ^ ikc ^ ", " ^ okc ^ ", nv)" in
       let rc = map ^ ".remove(" ^ ikc ^ "," ^ okc ^ ")" in
       let c = 
          if Debug.active "DELETE-ON-ZERO" then
             let z = get_zero vt in
-            "(if(" ^ v ^ " != " ^ z ^ ") " ^ uc ^ " else " ^ rc ^ ")"
+            "{" ^ nv ^ "if(nv != " ^ z ^ ") " ^ uc ^ " else " ^ rc ^ "}"
          else uc
       in
       (c, Unit)

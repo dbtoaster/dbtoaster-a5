@@ -272,6 +272,8 @@ package org.dbtoaster.dbtoasterlib {
      */
     class K3PersistentCollection[K, V](name: String, elems: Map[K, V], 
         sndIdx: Option[Map[String, Index[K, V]]]) extends K3Collection[K, V] {
+      var lastSize = 0
+
       def map[K2, V2](f: Tuple2[K, V] => 
                          Tuple2[K2, V2]): K3IntermediateCollection[K2, V2] = {
 		// IMPORTANT: we need the toList here because the map function can
@@ -381,7 +383,9 @@ package org.dbtoaster.dbtoasterlib {
       def toPersistentCollection(): K3PersistentCollection[K, V] = this
 
       def printSize() = {
-        println(name + ": " + elems.size)
+        val currSize = elems.size
+        println(name + ": " + currSize + "(" + (currSize - lastSize) + ")")
+        lastSize = currSize
       }
     }
 
