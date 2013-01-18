@@ -220,7 +220,7 @@ class ScalaUnitTest < GenericUnitTest
       output = output.map { |l| l.chomp.strip }.join("");
       @runtime = (endtime - starttime).to_f;
       if /<runtime>(.*)<\/runtime>/ =~ output then
-        @runtime = $1;
+        @runtime = ($1.to_f / 1000000.0).to_f;
       end
       
       @toplevels.keys.each do |q| 

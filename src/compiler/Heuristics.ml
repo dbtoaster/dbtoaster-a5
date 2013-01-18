@@ -23,6 +23,7 @@ open Plan
 type ds_history_t = ds_t list ref
 type term_list = expr_t list
 
+
 (******************************************************************************)
 
 type heuristic_option_t =
@@ -33,6 +34,9 @@ type heuristic_option_t =
 type heuristic_options_t = heuristic_option_t list
 
 (******************************************************************************)
+
+let raw_curr_suffix = ref 0 
+
 
 (** A helper function for obtaining the variable list from 
     the optional event parameter. It calls Schema.event_vars 
@@ -909,7 +913,7 @@ and materialize_expr (heuristic_options:heuristic_options_t)
 *)
 and materialize_relations ?(minimal_maps = true) (db_schema:Schema.t) 
                           (history:ds_history_t) (prefix:string)
-                          (expr:expr_t): (ds_t list * expr_t) =
+                          (expr:expr_t): (ds_t list * expr_t) =                           
    let merge op _ terms: (ds_t list * expr_t) = 
       let (dses, exprs) = List.split terms in
          (List.flatten dses, op exprs)
@@ -929,10 +933,9 @@ and materialize_relations ?(minimal_maps = true) (db_schema:Schema.t)
       let (_, _, rel_type) = Schema.rel db_schema rel_name in
          rel_type == Schema.StreamRel
    in
-   let curr_suffix = ref 0 in
    let next_prefix reln = 
-      curr_suffix := !curr_suffix + 1;
-      prefix^"_raw_reln_"^(string_of_int !curr_suffix)
+      raw_curr_suffix := !raw_curr_suffix + 1;
+      prefix^"_raw_reln_"^(string_of_int !raw_curr_suffix)
    in
    let (expr_scope, expr_schema) = Calculus.schema_of_expr expr in
    Calculus.fold ~scope:expr_scope ~schema:expr_schema

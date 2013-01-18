@@ -99,7 +99,8 @@ let extract_renamings ((scope,schema):schema_t) (expr:expr_t):
 
 (******************************************************************************)
 
-let compile_map (heuristic_options:Heuristics.heuristic_options_t)
+let compile_map (compute_delta:bool)
+                (heuristic_options:Heuristics.heuristic_options_t)
                 (db_schema:Schema.t) (history:Heuristics.ds_history_t) 
                 ((depth,todo,skip_ivc):todo_t) : todo_list_t * compiled_ds_t =
    (* Sanity check: Deltas of non-numeric types don't make sense and it doesn't
@@ -156,7 +157,7 @@ let compile_map (heuristic_options:Heuristics.heuristic_options_t)
       let prefixed_relv = List.map (fun (n,t) -> (map_prefix^n, t)) relv in
       let delta_event = mk_evt (reln, prefixed_relv, Schema.StreamRel) in
             
-      if (Heuristics.should_update delta_event optimized_defn) 
+      if (compute_delta && Heuristics.should_update delta_event optimized_defn) 
       then begin
                  
          (* The expression is to be incrementally maintained *)
@@ -351,7 +352,7 @@ let compile_tlqs (heuristic_options:Heuristics.heuristic_options_t)
             let optimized_qexpr = CalculusTransforms.optimize_expr qschema 
                                                                    qexpr in
             let (todos, mat_expr) = 
-               Heuristics.materialize heuristic_options (* TODO check options*)
+               Heuristics.materialize heuristic_options
                                       db_schema history
                                       (qname^"_") None 
                                       optimized_qexpr 
@@ -376,7 +377,7 @@ let compile_tlqs (heuristic_options:Heuristics.heuristic_options_t)
             let qtype   = Calculus.type_of_expr qexpr in
             let ds_name = Plan.mk_ds_name qname qschema qtype in
                ( [ 1, { Plan.ds_name = ds_name; 
-                     Plan.ds_definition = qexpr }, false ], 
+                        Plan.ds_definition = qexpr }, false ], 
                  (qname, ds_name) )
          ) calc_queries
     ) in 
@@ -388,27 +389,17 @@ let compile ?(max_depth = None) (db_schema:Schema.t) (calc_queries:tlq_list_t):
             (plan_t * tlq_list_t) =
 
    let default_heuristic_options = 
-      List.flatten [
-         if (Debug.active "HEURISTICS-ENABLE-INPUTVARS") then []
-         else [Heuristics.NoInputVariables];
-         if Debug.active "HEURISTICS-ENABLE-MAPS-IVC" then []
-         else [Heuristics.NoIVC] 
-      ]
+      (if Debug.active "HEURISTICS-ENABLE-INPUTVARS" 
+       then [] else [Heuristics.NoInputVariables]) @
+      (if Debug.active "HEURISTICS-ENABLE-MAPS-IVC" 
+       then [] else [Heuristics.NoIVC]) 
    in
 
    (* First process the toplevel queries *)
    let history:Heuristics.ds_history_t   = ref [] in
    let plan   :plan_t ref                = ref [] in
    let todo_list, tlq_list = 
-      let heuristic_options = 
-         default_heuristic_options @
-         (begin match max_depth with 
-            | None -> []
-            | Some(d) -> if (d > 0) then [] 
-                         else [Heuristics.ExtractRelationMaps]
-          end)
-      in 
-      compile_tlqs heuristic_options 
+      compile_tlqs default_heuristic_options 
                    db_schema history calc_queries 
    in
    let todos  :todo_list_t ref           = ref todo_list in
@@ -422,17 +413,17 @@ let compile ?(max_depth = None) (db_schema:Schema.t) (calc_queries:tlq_list_t):
          (if skip_todos then "(skipping todos)" else "")^
          (string_of_ds todo)
       );
-      let heuristic_options = 
-         default_heuristic_options @
-         (begin match max_depth with 
-            | None -> []
-            | Some(d) -> if (d > depth) then [] 
-                         else [Heuristics.ExtractRelationMaps]
-          end)
-      in 
-      
+      let (compute_delta, heuristic_options) = 
+         begin match max_depth with
+            | None -> (true, default_heuristic_options)
+            | Some(max_d) -> ((max_d > 0) || (depth > 1),
+                              default_heuristic_options @  
+                              if (max_d > depth) then []
+                              else [Heuristics.ExtractRelationMaps])
+         end
+      in
       let new_todos, compiled_ds = 
-         compile_map heuristic_options 
+         compile_map compute_delta heuristic_options 
                      db_schema history next_ds
       in
       (* The order in which we concatenate new_todos decides whether 
