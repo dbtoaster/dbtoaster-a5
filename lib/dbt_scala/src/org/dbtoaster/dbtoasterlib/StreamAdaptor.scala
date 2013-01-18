@@ -238,7 +238,7 @@ object StreamAdaptor {
           case "E" => {
             // TODO: Make code more readable/maintainable
             bids.get(id) match {
-              case Some(x @ OrderbookRow(t, id, b, v, p)) => {
+              case Some(x @ OrderbookRow(_, id, b, v, p)) => {
                 val newVolume = v - volume
 
                 List(StreamEvent(DeleteTuple, t, relation, x.toList)) :::
@@ -250,7 +250,7 @@ object StreamAdaptor {
                   })
               }
               case None => asks.get(id) match {
-                case Some(x @ OrderbookRow(t, id, b, v, p)) => {
+                case Some(x @ OrderbookRow(_, id, b, v, p)) => {
                   val newVolume = v - volume
 
                   List(StreamEvent(DeleteTuple, t, relation, x.toList)) :::
