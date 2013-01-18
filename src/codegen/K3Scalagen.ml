@@ -822,7 +822,7 @@ struct
          if Debug.active "DELETE-ON-ZERO" then
             let z = get_zero vt in
             "{" ^ nv ^ "if(nv != " ^ z ^ ") " ^ uc ^ " else " ^ rc ^ "}"
-         else uc
+         else "{" ^ nv ^ uc ^ "}"
       in
       (c, Unit)
 
@@ -837,7 +837,7 @@ struct
          if Debug.active "DELETE-ON-ZERO" then
             let z = get_zero vt in
             "{" ^ nv ^ "if(nv != " ^ z ^ ") " ^ uc ^ " else " ^ rc ^ "}"
-         else uc
+         else "{" ^ nv ^ uc ^ "}"
       in
       (c, Unit)
 
@@ -853,7 +853,7 @@ struct
          if Debug.active "DELETE-ON-ZERO" then
             let z = get_zero vt in
             "{" ^ nv ^ "if(nv != " ^ z ^ ") " ^ uc ^ " else " ^ rc ^ "}"
-         else uc
+         else "{" ^ nv ^ uc ^ "}"
       in
       (c, Unit)
 
