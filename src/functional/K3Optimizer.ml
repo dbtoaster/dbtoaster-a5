@@ -920,8 +920,6 @@ let rec conservative_beta_reduction substitutions expr =
        bound variables, i.e. trigger vars and variables bound by lambdas.
  *)
 let rec lift_ifs bindings expr =
-   Debug.print "LOG-K3-OPT-LIFTIF" (fun () -> "---------- IF -----------\n"^
-                                              (K3.string_of_expr expr));
     let lift_branches e =
         let rec expand_children acc_branches rem_branches
                                 (branch : expr_t list) acc_branch : expr_t =
@@ -973,7 +971,7 @@ let rec lift_ifs bindings expr =
         | AssocLambda(arg1_e,arg2_e,IfThenElse(pe,te,ee)) ->
             if (arg_uses [arg1_e; arg2_e] pe) = [] then e
             else IfThenElse(pe, AssocLambda(arg1_e,arg2_e,te),
-                                AssocLambda(arg1_e,arg2_e,te))
+                                AssocLambda(arg1_e,arg2_e,ee))
 
         (* For if-chains, we just want the next level to have the same
          * predicate. *)
@@ -996,7 +994,13 @@ let rec lift_ifs bindings expr =
             else descend_expr (lift_ifs (bindings@new_bindings)) e 
         end
     in
-    simplify expr
+    let ret = simplify expr in
+    Debug.print "LOG-K3-OPT-LIFTIF" (fun () -> 
+      "[K3LiftIfs] Transformed -------------------------- \n"^
+         (K3.string_of_expr expr)^
+      "\n[K3LiftIfs] Into \n"^
+         (K3.string_of_expr ret)
+    ); ret
 
 (** predicates: list of upstream predicates and whether this expr is a
     descendant of the "then" branch for each upstream predicate *)
@@ -1722,18 +1726,29 @@ let rec lift_if0s expr =
   end
 
 let optimize ?(optimizations=[]) trigger_vars expr =
+  let log_state e = 
+     Debug.print "LOG-K3-OPT-STEPS" (fun () ->
+       (K3.nice_string_of_expr e [])^
+       "\n----------------------------------------------"
+     )
+  in
   let apply_opts e =
+      log_state e;
       Debug.print "LOG-K3-OPT-DETAIL" (fun () -> "LIFT IFS");
     let e1 = Fixpoint.compute_with_history (lift_ifs trigger_vars) e in
+      log_state e1;
       Debug.print "LOG-K3-OPT-DETAIL" (fun () -> "SIMPLIFY COLLECTIONS");
     let e2 = (simplify_collections (not(List.mem NoFilter optimizations)) e1) in
+      log_state e2;
       Debug.print "LOG-K3-OPT-DETAIL" (fun () -> "SIMPLIFY IF CHAINS");
     let e3 = (simplify_if_chains [] e2) in
+      log_state e3;
     let e5 =
        if (Debug.active "K3-OPTIMIZE-LIFT-UPDATES") then
          begin
            Debug.print "LOG-K3-OPT-DETAIL" (fun () -> "LIFT UPDATES");
            let e4 = (lift_updates trigger_vars e3) in
+             log_state e4;
              e4
          end
        else
@@ -1744,10 +1759,6 @@ let optimize ?(optimizations=[]) trigger_vars expr =
                                         else fix_lambda_types e5
   in
   let rec fixpoint e =
-    Debug.print "LOG-K3-OPT-STEPS" (fun () ->
-      (K3.nice_string_of_expr e [])^
-      "\n----------------------------------------------"
-    );
     let new_e = apply_opts e in
     if e = new_e then e else fixpoint new_e    
   in 
