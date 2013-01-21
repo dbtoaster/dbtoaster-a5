@@ -4,7 +4,7 @@ INCLUDE 'test/queries/mddb/schemas.sql';
 -- Single unified version of query 3.
 --
 select BondE.t,
-       sum(BondE.e + AngleE.e + DihedralE.e
+       sum(BondE.e + AngleE.e + DihedralE.e + ImproperE.e
            + NonBondedE.vw_ij + NonBondedE.e_ij) as e
 from 
 ( select P.t,
