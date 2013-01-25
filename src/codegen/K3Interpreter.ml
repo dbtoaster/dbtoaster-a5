@@ -821,7 +821,7 @@ struct
     let update_value ?(expr = None) id value = Eval(expr, fun th db ->
       let v = (get_update_value th db value) in
         Debug.print "LOG-INTERPRETER-UPDATES" (fun () -> 
-           "\nUPDATE '"^id^"'[-][-] := "^(K3Value.to_string v)
+           "UPDATE '"^id^"'[-][-] := "^(K3Value.to_string v)
         );
         DB.update_value id v db; Unit)
     
@@ -831,7 +831,7 @@ struct
           let key = (get_update_key th db in_kl) in
           let v = (get_update_value th db value) in
           Debug.print "LOG-INTERPRETER-UPDATES" (fun () -> 
-             "\nUPDATE '"^id^"'["^
+             "UPDATE '"^id^"'["^
              (String.concat "; " (List.map K3Value.to_string key))^
              "][-] := "^(K3Value.to_string v)
           );
@@ -843,7 +843,7 @@ struct
           let key = (get_update_key th db out_kl) in
           let v = (get_update_value th db value) in
           Debug.print "LOG-INTERPRETER-UPDATES" (fun () -> 
-             "\nUPDATE '"^id^"'[-]["^
+             "UPDATE '"^id^"'[-]["^
              (String.concat "; " (List.map K3Value.to_string key))^
              "] := "^(K3Value.to_string v)
           );
@@ -856,7 +856,7 @@ struct
       let out_key = (get_update_key th db out_kl) in
       let v = (get_update_value th db value) in
         Debug.print "LOG-INTERPRETER-UPDATES" (fun () -> 
-           "\nUPDATE '"^id^"'["^
+           "UPDATE '"^id^"'["^
            (String.concat "; " (List.map K3Value.to_string in_key))^
            "]["^
            (String.concat "; " (List.map K3Value.to_string out_key))^
@@ -893,7 +893,7 @@ struct
        Eval(expr, fun th db ->
           let key = (get_update_key th db in_kl) in
           Debug.print "LOG-INTERPRETER-UPDATES" (fun () -> 
-             "\nREMOVE '"^id^"'["^
+             "REMOVE '"^id^"'["^
               (String.concat "; " (List.map K3Value.to_string key))^
               "][-]"
           );
@@ -904,7 +904,7 @@ struct
        Eval(expr, fun th db ->
           let key = (get_update_key th db out_kl) in
            Debug.print "LOG-INTERPRETER-UPDATES" (fun () -> 
-              "\nREMOVE '"^id^"'[-]["^
+              "REMOVE '"^id^"'[-]["^
               (String.concat "; " (List.map K3Value.to_string key))^
               "]"
            ); 
@@ -917,7 +917,7 @@ struct
       let in_key = (get_update_key th db in_kl) in
       let out_key = (get_update_key th db out_kl) in
         Debug.print "LOG-INTERPRETER-UPDATES" (fun () -> 
-           "\nREMOVE '"^id^"'["^
+           "REMOVE '"^id^"'["^
            (String.concat "; " (List.map K3Value.to_string in_key))^
            "]["^
            (String.concat "; " (List.map K3Value.to_string out_key))^
@@ -953,9 +953,11 @@ struct
       Trigger (event, (fun tuple db -> 
         let theta = Env.make (List.map fst (Schema.event_vars event))
                              (translate_tuple tuple), [] in
+          Debug.print "LOG-INTERPRETER-TRIGGERS" (fun () -> "\n"^
+             (Schema.string_of_event event)^" <- ["^
+                (String.concat "; " 
+                   (List.map Constants.string_of_const tuple))^"]");
           List.iter (fun cstmt -> 
-            Debug.print "LOG-INTERPRETER-TRIGGERS" (fun () -> 
-               "Processing trigger "^(Schema.string_of_event event));
             match (get_eval cstmt) theta db with
             | Unit -> ()
             | _ as d -> bail  

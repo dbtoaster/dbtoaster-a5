@@ -424,7 +424,12 @@ let map_access_to_expr mapn ins outs map_ret_t theta_vars_el init_expr_opt =
         | ([], y) ->       
             let map_expr = K.OutPC(mapn, outs_k, map_ret_k) in
             if free_vars_el = [] then 
-               if init_expr_opt = None then K.Lookup(map_expr,outs_el)
+               if init_expr_opt = None then
+                  if Debug.active "M3TOK3-SKIP-LOOKUP-VALIDATION"
+                  then K.Lookup(map_expr,outs_el) 
+                  else K.IfThenElse(K.Member(map_expr,outs_el), 
+                                    K.Lookup(map_expr,outs_el),
+                                    init_val_from_type map_ret_t)
                else 
                   let _,init_expr = extract_opt init_expr_opt in
                   K.IfThenElse(K.Member(map_expr,outs_el), 
