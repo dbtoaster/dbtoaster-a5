@@ -333,6 +333,7 @@ let rec degree_of_expr (expr:expr_t): int =
    @return         The final folded value
 *)
 let rec fold ?(scope = []) ?(schema = [])
+             ?(extend_schema_aggresively = false)
              (sum_fn:   schema_t -> 'a list         -> 'a)
              (prod_fn:  schema_t -> 'a list         -> 'a)
              (neg_fn:   schema_t -> 'a              -> 'a)
@@ -353,7 +354,11 @@ let rec fold ?(scope = []) ?(schema = [])
             ) (
                (* extend the schema with variables required by the next *)
                ListAsSet.multiunion
-                  (schema::(List.map (fun x -> fst (schema_of_expr x)) next))
+                  (schema::(List.map (fun x -> 
+                     let (xin,xout) = schema_of_expr x in
+                     if extend_schema_aggresively 
+                     then ListAsSet.union xin xout
+                     else xin) next))
             ) curr
          ) terms)
       | CalcRing.Neg(term) -> neg_fn (scope,schema) (rcr scope schema term)

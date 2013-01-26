@@ -540,12 +540,6 @@ let rec materialize ?(scope:var_t list = [])
       "\n\t Scope: ["^(string_of_vars scope)^"]"
    );
    
-   if List.mem ExtractRelationMaps heuristic_options then 
-      materialize_relations db_schema
-                            history
-                            prefix
-                            expr
-   else
    let expr_scope = ListAsSet.union scope (extract_event_vars event) in
    let (todos, mat_expr) = fst (
       (* Polynomial decomposition *)
@@ -639,15 +633,24 @@ let rec materialize ?(scope:var_t list = [])
                               "[Heuristics] Not an aggsum-free expression: " ^
                               (string_of_expr subexpr_opt)
                            );
-                           materialize ~scope:scope heuristic_options
-                                       db_schema history subexpr_name event
-                                       (Calculus.mk_aggsum subexpr_schema
-                                                           subexpr_opt)
+                           materialize ~scope:scope 
+                                 heuristic_options
+                                 db_schema
+                                 history
+                                 subexpr_name
+                                 event
+                                 (Calculus.mk_aggsum subexpr_schema
+                                                     subexpr_opt)
                         end
                         else
-                           materialize_expr heuristic_options db_schema history
-                                            subexpr_name event expr_scope
-                                            subexpr_schema subexpr_opt
+                           materialize_expr heuristic_options 
+                                 db_schema 
+                                 history
+                                 subexpr_name
+                                 event
+                                 expr_scope
+                                 subexpr_schema
+                                 subexpr_opt
                      in
                      Debug.print "LOG-HEURISTICS-DETAIL" (fun () -> 
                         "[Heuristics] Materialized form: " ^
@@ -819,7 +822,16 @@ and materialize_expr (heuristic_options:heuristic_options_t)
                                            (prefix^"_P_")
                                            event agg_rel_expr
       else
-            
+         (*** HERE COMES THE ACTUAL MATERIALIZATION ***)   
+         if List.mem ExtractRelationMaps heuristic_options then
+            materialize_relations db_schema
+                                  history
+                                  prefix
+                                  scope_const
+                                  agg_rel_expr_ovars
+                                  agg_rel_expr
+         else   
+                                    
          (* Try to found an already existing map *)
          let (found_ds, mapping_if_found) = 
             List.fold_left (fun result i ->
@@ -913,20 +925,23 @@ and materialize_expr (heuristic_options:heuristic_options_t)
 *)
 and materialize_relations ?(minimal_maps = true) (db_schema:Schema.t) 
                           (history:ds_history_t) (prefix:string)
+                          (expr_scope:var_t list) (expr_schema:var_t list)
                           (expr:expr_t): (ds_t list * expr_t) =                           
    let merge op _ terms: (ds_t list * expr_t) = 
       let (dses, exprs) = List.split terms in
          (List.flatten dses, op exprs)
    in
-   let rcr e: (ds_t list * expr_t) = 
+   let rcr scope schema e: (ds_t list * expr_t) = 
       materialize_relations ~minimal_maps:minimal_maps 
                             db_schema
                             history
                             prefix
+                            scope
+                            schema
                             e
    in
-   let rcr_wrap wrap e: (ds_t list * expr_t) =
-      let (dses, ret_e) = rcr e in
+   let rcr_wrap wrap scope schema e: (ds_t list * expr_t) =
+      let (dses, ret_e) = rcr scope schema e in
          (dses, CalcRing.mk_val (wrap ret_e))
    in
    let is_stream rel_name = 
@@ -937,41 +952,32 @@ and materialize_relations ?(minimal_maps = true) (db_schema:Schema.t)
       raw_curr_suffix := !raw_curr_suffix + 1;
       prefix^"_raw_reln_"^(string_of_int !raw_curr_suffix)
    in
-   let (expr_scope, expr_schema) = Calculus.schema_of_expr expr in
    Calculus.fold ~scope:expr_scope ~schema:expr_schema
+                 ~extend_schema_aggresively:true
       (merge CalcRing.mk_sum)
       (merge CalcRing.mk_prod)
       (fun _ (dses,expr) -> (dses, CalcRing.mk_neg expr))
       (fun (scope,schema) leaf -> match leaf with
          | Rel(rname,rv) when (is_stream rname) ->
-            if minimal_maps then
+            let rel_schema = 
+               if minimal_maps 
+               then (ListAsSet.inter rv (ListAsSet.union scope schema))
+               else schema
+            in
                materialize_expr []
                                 db_schema
                                 history
                                 (next_prefix rname)
                                 None
                                 scope
-                                schema
+                                rel_schema
                                 (CalcRing.mk_val leaf)
-            else
-               let (dses, mat_expr) = 
-                  materialize_expr []
-                                   db_schema
-                                   history
-                                   (next_prefix rname)
-                                   None
-                                   scope
-                                   (ListAsSet.diff rv scope)
-                                   (CalcRing.mk_val leaf)
-               in
-               ( dses,
-                 Calculus.mk_aggsum 
-                    (ListAsSet.inter rv (ListAsSet.union scope schema))
-                    mat_expr                  
-               )
-         | Exists(subexp)      -> rcr_wrap (fun x->Exists(x     )) subexp
-         | AggSum(gb_v,subexp) -> rcr_wrap (fun x->AggSum(gb_v,x)) subexp
-         | Lift  (v,subexp)    -> rcr_wrap (fun x->Lift  (v,x   )) subexp
+         | Exists(subexp)      -> rcr_wrap (fun x->Exists(x     )) 
+                                           scope schema subexp
+         | AggSum(gb_v,subexp) -> rcr_wrap (fun x->AggSum(gb_v,x)) 
+                                           scope gb_v subexp
+         | Lift  (v,subexp)    -> rcr_wrap (fun x->Lift  (v,x   )) 
+                                           scope [] subexp
             
          | Rel _ | External _ | Cmp _ | Value _ -> ([], CalcRing.mk_val leaf)
 
