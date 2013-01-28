@@ -923,10 +923,12 @@ and materialize_expr (heuristic_options:heuristic_options_t)
                           materialized afterwards (a todo list) together with 
                           the materialized form of the expression. 
 *)
-and materialize_relations ?(minimal_maps = true) (db_schema:Schema.t) 
-                          (history:ds_history_t) (prefix:string)
-                          (expr_scope:var_t list) (expr_schema:var_t list)
-                          (expr:expr_t): (ds_t list * expr_t) =                           
+and materialize_relations ?(minimal_maps = 
+                               Debug.active "HEURISTICS-MINIMAL-MAPS") 
+                          (db_schema:Schema.t) (history:ds_history_t) 
+                          (prefix:string) (expr_scope:var_t list) 
+                          (expr_schema:var_t list) (expr:expr_t) : 
+                          (ds_t list * expr_t) =                           
    let merge op _ terms: (ds_t list * expr_t) = 
       let (dses, exprs) = List.split terms in
          (List.flatten dses, op exprs)
