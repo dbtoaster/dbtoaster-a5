@@ -964,7 +964,7 @@ and materialize_relations ?(minimal_maps =
             let rel_schema = 
                if minimal_maps 
                then (ListAsSet.inter rv (ListAsSet.union scope schema))
-               else schema
+               else rv
             in
                materialize_expr []
                                 db_schema
