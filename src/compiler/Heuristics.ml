@@ -301,9 +301,9 @@ let partition_expr (heuristic_options:heuristic_options_t) (scope:var_t list)
                         (* Add only if that does not change the schema *)
                         if covered_by_scope rel_expr_ovars graph_cmpnt_expr
                         then (r_terms @ [l_term], l_terms)
-                        else if covered_by_scope 
+                        else if (covered_by_scope 
                                     (ListAsSet.union scope rel_expr_ovars)
-                                    graph_cmpnt_expr
+                                    graph_cmpnt_expr) || inputvar_allowed
                         then (r_terms, l_terms @ [l_term])
                         else bail_out expr 
                                 "The lift term is not covered by the scope."
