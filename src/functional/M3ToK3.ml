@@ -437,9 +437,9 @@ let map_access_to_expr mapn ins outs map_ret_t theta_vars_el init_expr_opt =
             else
                slice_and_project map_expr
                      
-        | ( x,[]) -> 
+        | (x, []) -> 
             let map_expr = K.InPC(mapn, ins_k, map_ret_k) in
-            if init_expr_opt = None then K.Lookup(map_expr,ins_el)
+            if init_expr_opt = None then K.Lookup(map_expr,ins_el) 
             else 
                let iv_e = K.Var(gen_init_val_sym (), map_ret_k) in
                let _,init_expr = extract_opt init_expr_opt in   
@@ -454,12 +454,14 @@ let map_access_to_expr mapn ins outs map_ret_t theta_vars_el init_expr_opt =
                             K.Lookup(map_expr,ins_el), 
                             apply_lambda [iv_e] [init_expr] init_lambda )
                                  
-        | ( x, y) ->
+        | (x, y) ->
             let map_expr = K.PC(mapn, ins_k, outs_k, map_ret_k) in
                                     
             let out_access_expr coll_ve =   
                if free_vars_el = [] then 
-                  K.Lookup(coll_ve,outs_el)
+                  K.IfThenElse(K.Member(coll_ve,outs_el),
+                               K.Lookup(coll_ve,outs_el),
+                               init_val_from_type map_ret_t)
                else
                   slice_and_project coll_ve
             in
@@ -1132,7 +1134,7 @@ let m3_stmt_to_k3_stmt (meta: meta_t) ?(generate_init = false)
       else
          let init_expr_opt = 
             if not generate_init then None
-            else if init_calc_opt != None then(
+            else if init_calc_opt != None then (
                let init_calc = extract_opt init_calc_opt in
                let init_result, init_meta = 
                   calc_to_k3_expr meta ~generate_init:generate_init 
@@ -1146,22 +1148,19 @@ let m3_stmt_to_k3_stmt (meta: meta_t) ?(generate_init = false)
                      ("M3ToK3: Initialization expression of lhs map should " ^
                       "produce a singleton."));
                let _ = escalate_type (type_of_kvar init_ret_ve) map_k3_type in
-               Some(init_expr))
-            else if lhs_ins_el = [] then
-               Some(init_val_from_type map_type)
-            else 
-               None
+               Some(init_expr))    
+            (*Return default init value irrespective of the type of the map*)
+            else Some(init_val_from_type map_type)
+
          in 
-         if (init_expr_opt != None) then (*
-            K.IfThenElse( K.Member(existing_out_tier, lhs_outs_el),
-                          K.Lookup(existing_out_tier, lhs_outs_el),
-                          (extract_opt init_expr_opt) ), meta*)
-			if Debug.active "GENERATE-DEF-VAL-LOOKUPS" then
-			   K.LookupOrElse(existing_out_tier, lhs_outs_el, (extract_opt init_expr_opt)), meta
-			else 
-			   K.IfThenElse( K.Member(existing_out_tier, lhs_outs_el),
-                          K.Lookup(existing_out_tier, lhs_outs_el),
-                          (extract_opt init_expr_opt) ), meta
+         if (init_expr_opt != None) then 
+            if Debug.active "GENERATE-DEF-VAL-LOOKUPS" then
+               K.LookupOrElse(existing_out_tier, lhs_outs_el, 
+                              (extract_opt init_expr_opt)), meta
+            else 
+               K.IfThenElse( K.Member(existing_out_tier, lhs_outs_el),
+                             K.Lookup(existing_out_tier, lhs_outs_el),
+                             (extract_opt init_expr_opt) ), meta
          else 
             K.Lookup(existing_out_tier, lhs_outs_el), meta
    in
