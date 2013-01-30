@@ -328,24 +328,6 @@ struct
       in
       match fnt with
       | Fn(argsn, argst, rett) ->
-         let argsnkv = 
-            match ktt with 
-            | [] -> ArgNTuple(ArgN("()") :: [argsn])
-            | Tuple(t) :: ts -> (
-               match argsn with 
-               | ArgNTuple(ns) -> 
-                  let k, v  = list_split ns ((List.length ns - 1)) in
-                  ArgNTuple(ArgNTuple(k) :: v)
-               | _ -> debugfail None "Excpected tuple of argument names"
-               )
-            | _  -> ( 
-               match argsn with 
-               | ArgNTuple(ns) -> 
-                  let k, v  = list_split ns ((List.length ns - 1)) in
-                  ArgNTuple(ArgNTuple(k) :: v)
-               | _ -> debugfail None "Excpected tuple of argument names"
-            ) 
-         in
          "(x:Tuple2[" ^ (string_of_type (Tuple(ktt))) ^ ", " ^ 
          (string_of_type vtt) ^ "]) => { " ^
          (implicit_conversions ~pfx:(Some("x")) argsn 
