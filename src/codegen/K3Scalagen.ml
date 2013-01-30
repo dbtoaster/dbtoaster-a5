@@ -251,6 +251,30 @@ struct
    let mk_bool_to_int a = "(if(" ^ a ^ ") 1L else 0L)"
    let mk_date_to_time a = a ^ ".getTime()"
 
+   (** Generates a list of indices with the same length as the list
+       passed to the function *)
+   let list_index l = 
+      let rec _list_index i l =
+         match l with
+         | [] -> []
+         | x :: xs -> i :: (_list_index (i + 1) xs)
+      in
+      (_list_index 1 l)
+
+   (** Generates a list of indices correpsonding to the structure
+       of the tuple *)
+   let tuple_index tp = 
+      let rec _tuple_index pfx tp: string list =
+         match tp with
+         | Tuple([x]) -> (_tuple_index pfx x)
+         | Tuple(ls) -> (List.fold_left  
+               (fun a (i, x) -> a @ 
+                  (_tuple_index (pfx ^ "._" ^ (string_of_int i)) x))
+               [] (list_zip (list_index ls) ls))
+         | _ -> [pfx]
+      in
+      (_tuple_index "" tp)
+
    (** Generates code to cast an expression n of type ot to type t*)
    let rec cast_up n ot t =
       match t, ot with
@@ -272,12 +296,15 @@ struct
       | Int, Bool -> mk_bool_to_int n
       | _ -> n 
 
-   and implicit_conversions argsn t1s t2s: string =  
+   and implicit_conversions ?(pfx = None) argsn t1s t2s: string =  
+      let fa = flatten_args argsn in
+      let ti = tuple_index t1s in 
       (make_list ~parens:("", ";") ~sep:";" 
-         (List.map2 (fun v (t1, t2) -> 
-            "val " ^ v ^ ":" ^ (string_of_type t2) ^ " = " ^ (cast_up ("_" ^ v) 
+         (List.map2 (fun (i, v) (t1, t2) -> 
+            "val " ^ v ^ ":" ^ (string_of_type t2) ^ " = " ^ (cast_up (
+               match pfx with | None -> "_" ^ v | Some(p) -> p ^ i) 
             t1 t2) ^ " /* " ^ (string_of_type t1) ^ " => " ^ 
-            (string_of_type t2) ^ " */") (flatten_args argsn) 
+            (string_of_type t2) ^ " */") (list_zip ti fa)
             (list_zip (flatten_tuple t1s) (flatten_tuple t2s))))
 
    (** Generates the header of a function *)
@@ -320,10 +347,9 @@ struct
             ) 
          in
          "(x:Tuple2[" ^ (string_of_type (Tuple(ktt))) ^ ", " ^ 
-         (string_of_type vtt) ^ "]) => { val " ^ 
-         (string_of_argn ~prefix:"_" argsnkv) ^ 
-         " = x; " ^
-         (implicit_conversions argsn (Tuple([Tuple(ktt); vtt])) argst) ^ 
+         (string_of_type vtt) ^ "]) => { " ^
+         (implicit_conversions ~pfx:(Some("x")) argsn 
+            (Tuple([Tuple(ktt); vtt])) argst) ^
          f_body ^ " }" 
       | ExtFn(n, _, _) -> n ^ " _"
       | _ -> debugfail None "Expected a function"
