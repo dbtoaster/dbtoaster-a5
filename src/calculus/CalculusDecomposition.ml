@@ -59,6 +59,9 @@ let decompose_poly (expr:C.expr_t):(var_t list * C.expr_t) list =
 *)
 let decompose_graph (scope:var_t list) ((schema,expr):(var_t list * C.expr_t)):
                     var_t list * (var_t list * C.expr_t) list =
+   
+   if Debug.active "CALC-NO-DECOMPOSITION" then (schema, [(schema, expr)]) else
+                              
    let get_vars term = 
       let i,o = C.schema_of_expr term 
       in ListAsSet.diff (ListAsSet.union i o) scope

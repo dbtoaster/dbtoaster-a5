@@ -1240,12 +1240,15 @@ let dump_timings () =
 *)
 let optimize_expr ?(optimizations = default_optimizations)
                   ((scope,schema):C.schema_t) (expr:C.expr_t): C.expr_t =
+
    Debug.print "LOG-CALCOPT-STEPS" (fun () ->
       "CalculusTransforms asked to optimize: "^
       (ListExtras.ocaml_of_list string_of_var scope)^
       (ListExtras.ocaml_of_list string_of_var schema)^"\n"^
       (CalculusPrinter.string_of_expr expr)
    );
+   if Debug.active "CALC-NO-OPTIMIZE" then expr else
+      
    let fp_1 = ref (fun x -> sanity_check_variable_names x; x) in
    let include_opt_base o new_fn = 
      Fixpoint.build_if optimizations fp_1 o new_fn 

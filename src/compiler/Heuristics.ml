@@ -77,6 +77,7 @@ let covered_by_scope scope expr =
     assumes an aggsum-free product-only representation of the expression. *)
 let prepare_expr (scope:var_t list) (expr:expr_t) : 
                  (term_list * term_list * term_list * term_list) =
+
    let expr_terms = CalcRing.prod_list expr in
 
    (* Extract constant terms *)
@@ -413,6 +414,12 @@ let should_update (event:Schema.event_t) (expr:expr_t)  : bool =
    if (Debug.active "HEURISTICS-ALWAYS-UPDATE") then true 
    else
    
+   (* The materializer assumes expressions without Neg nodes.          *)
+   (* In cases when the calculus optimizer is disabled, that might be  *)
+   (* violated. We guard against these cases by calling combine_values.*)
+   (* In the future this restriction should be removed.                *)
+   let expr_combined = combine_values expr in
+   
    let expr_scope = Schema.event_vars event in
    
    let rec get_maintaining_option expr =      
@@ -493,7 +500,7 @@ let should_update (event:Schema.event_t) (expr:expr_t)  : bool =
                             
       ) Unknown (decompose_poly expr)
    in      
-      match get_maintaining_option expr with
+      match get_maintaining_option expr_combined with
          | Unknown | UpdateExpr -> true
          | ReplaceExpr -> false 
 
@@ -667,7 +674,12 @@ let rec materialize ?(scope:var_t list = [])
                    CalcRing.mk_sum [term_mats; new_term_mats] ), 
                  k)
          end           
-      ) (([], CalcRing.zero), 1) (decompose_poly expr)
+      ) (([], CalcRing.zero), 1) 
+        (* The materializer assumes expressions without Neg nodes.          *)
+        (* In cases when the calculus optimizer is disabled, that might be  *)
+        (* violated. We guard against these cases by calling combine_values.*)
+        (* In the future this restriction should be removed.                *)
+        (decompose_poly (combine_values expr))
    )
    in begin
       Debug.print "LOG-HEURISTICS-DETAIL" (fun () ->
