@@ -52,7 +52,7 @@ struct
    (** The line seperator is used to format the generated code *)
    let line_sep = "\n"
    (** The maximum number of elements that are supported in one Scala tuple *)
-   let max_tuple_elems = 22
+   let max_tuple_elems = 100
    (** Keeps track of the number of sources that we have seen so far *)
    let source_count = ref 0
 
