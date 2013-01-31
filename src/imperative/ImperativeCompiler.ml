@@ -1778,6 +1778,11 @@ end (* Typing *)
                   let tgt_type = escalate f in
                   result ci (Fn(ty, Ext(Apply(c_fn_id)), 
                      (List.map (arg_cast tgt_type) f)))
+                | [Var (_,(v,Host(TTuple([TBase(_); TBase(_)]))))] ->
+                  let arg = ssc (source_code_of_expr (List.hd nargs)) in
+                  result ci (Fn(ty, Ext(Apply(c_fn_id)),
+                     [ Fn(ty, Ext(Inline("at_c<0>(" ^ arg ^ ")")), []);
+                       Fn(ty, Ext(Inline("at_c<1>(" ^ arg ^ ")")), []) ]))
                 | _ -> result ci (Fn(ty, Ext(Apply(c_fn_id)), nargs))
               end
             | "date_part" ->
@@ -1813,6 +1818,18 @@ end (* Typing *)
                   end
                | _ -> failwith ("Invalid call to cast '"^id^"'")
                end
+            | "regexp_match" ->
+              begin match nargs with
+                | [Tuple(ft_l, f)] ->
+                  result ci (Fn(ty, Ext(Apply(String.lowercase id)), f))
+                | [Var (_,(v,Host(TTuple([TBase(_); TBase(_)]))))] ->                  
+                  let arg = ssc (source_code_of_expr (List.hd nargs)) in
+                  result ci (Fn(ty, Ext(Apply(String.lowercase id)),
+                     [ Fn(ty, Ext(Inline("at_c<0>(" ^ arg ^ ").c_str()")), []);
+                       Fn(ty, Ext(Inline("at_c<1>(" ^ arg ^ ")")), []) ]))
+                | _ -> result ci (Fn(ty, Ext(Apply(String.lowercase id)), 
+                                     nargs))
+              end                                           
             | _ -> 
               begin match nargs with
                 | [Tuple(ft_l, f)] ->

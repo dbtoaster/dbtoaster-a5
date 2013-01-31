@@ -783,9 +783,11 @@ and materialize_expr (heuristic_options:heuristic_options_t)
                      if rels_of_expr subexpr = []
                      then ([], subexpr)
                      else begin 
-                        let scope_lift = 
-                           ListAsSet.union scope_const
-                                           (snd (schema_of_expr whole_expr)) 
+                        let (sub_ivars, sub_ovars) = schema_of_expr subexpr in
+                        let scope_lift = ListAsSet.inter
+                           (ListAsSet.union sub_ivars sub_ovars)
+                           (ListAsSet.union scope_const
+                                            (snd (schema_of_expr whole_expr))) 
                         in
                            materialize ~scope:scope_lift heuristic_options 
                                        db_schema history 
