@@ -169,13 +169,44 @@ struct
 
   let types_of_host_list l = List.map (fun t -> Host t) l  
 
-  let mk_tuple l =
-    if List.length l = 1 then List.hd l
-    else "boost::fusion::make_tuple("^(String.concat "," l)^")"
+let max_tuple_elems = 12
 
-  let mk_tuple_ty l =
+let list_split (l: 'a list) (n: int) : 'a list list =
+  let rec list_split_0 l0 n res =
+   let list_splitter l n = 
+      let rec _list_split l1 l2 n =
+         if(n > 0) then
+            match l2 with
+            | x :: xs -> _list_split (l1 @ [x]) xs (n - 1)
+            | [] -> (l1, [])
+         else
+            (l1, l2)
+      in
+      _list_split [] l n
+   in
+     if (List.length l0) > n then
+	    let (left_list, right) = list_splitter l0 n in
+	    list_split_0 right n (res@[left_list])
+     else 
+	    res @ [l0]
+  in
+  list_split_0 l n []  
+  
+  let rec mk_tuple l =
     if List.length l = 1 then List.hd l
-    else "boost::fusion::tuple<"^(String.concat "," l)^">"
+    else if (Debug.active "WIDE-TUPLE-C" && List.length l > max_tuple_elems) then 
+	  let all = list_split l max_tuple_elems in
+	  let new_all = List.map (fun x -> mk_tuple x) all in
+	    "boost::fusion::make_tuple("^(String.concat "," new_all)^")"
+	else "boost::fusion::make_tuple("^(String.concat "," l)^")"
+
+  let rec mk_tuple_ty l =
+    if List.length l = 1 then List.hd l
+    else if (Debug.active "WIDE-TUPLE-C" && List.length l > max_tuple_elems) then 
+	  let all = list_split l max_tuple_elems in
+	  let new_all = List.map (fun x -> mk_tuple_ty x) all in
+	    "boost::fusion::tuple<"^(String.concat "," new_all)^" > "
+    else "boost::fusion::tuple<"^(String.concat "," l)^" > "
 
 
   let imp_type_of_calc_type t = Host(K.TBase(t))

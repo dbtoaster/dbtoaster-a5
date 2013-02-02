@@ -163,12 +163,43 @@ let unique l =
    
 let keys_from_kvars kvars  = List.map (fun kv -> (name_of_kvar kv,kv)) kvars
 
+let max_tuple_elems = 30
+
+let list_split (l: 'a list) (n: int) : 'a list list =
+  let rec list_split_0 l0 n res =
+   let list_splitter l n = 
+      let rec _list_split l1 l2 n =
+         if(n > 0) then
+            match l2 with
+            | x :: xs -> _list_split (l1 @ [x]) xs (n - 1)
+            | [] -> (l1, [])
+         else
+            (l1, l2)
+      in
+      _list_split [] l n
+   in
+     if (List.length l0) > n then
+	    let (left_list, right) = list_splitter l0 n in
+	    list_split_0 right n (res@[left_list])
+     else 
+	    res @ [l0]
+  in
+  list_split_0 l n []  
+
+let exprs_to_tuple_wide (el: K.expr_t list) = 
+   let splitted_list = list_split el max_tuple_elems in
+   let elems = List.map (fun x -> if List.length x > 1 then K.Tuple(x) else List.hd x) splitted_list in
+      K.Tuple(elems)
+
 let exprs_to_tuple (el: K.expr_t list) = 
-   begin match el with
-      |  [] -> error "M3ToK3: invalid empty expressions list"  
-      | [e] -> e
-      | _   -> K.Tuple(el)
-   end
+   if Debug.active "WIDE-TUPLE" && (List.length el) > max_tuple_elems then
+      exprs_to_tuple_wide el
+   else 
+      begin match el with
+         |  [] -> error "M3ToK3: invalid empty expressions list"  
+         | [e] -> e
+         | _   -> K.Tuple(el)
+      end
 
 (**/**)
 
@@ -190,6 +221,26 @@ let lambda_args v_el =
             K.ATuple(v_l)
    end
 
+let tuple_var_create (elems: K.expr_t list) num : K.expr_t = 
+    let tuple_type = 
+	   let elems_type = k3_expr_to_k3_type elems in
+	   if List.length elems > 1 then K.TTuple(elems_type) else List.hd elems_type
+	in
+	     K.Var("__tup_"^(string_of_int num),
+		    tuple_type
+		 )
+		 
+let rec lambda_gen l body n = 
+      begin match l with
+      | [] -> error "M3ToK3: invalid empty variables list" 
+      | [x] -> K.Apply(K.Lambda(lambda_args x, body), tuple_var_create x n)
+      | x :: xs ->
+	     let l_args = lambda_args x in
+	     let tup = tuple_var_create x n in (** TODO *)
+         let wrap_body = lambda_gen xs body (n+1) in
+         K.Apply(K.Lambda(l_args, wrap_body), tup)
+	  end
+   
 (**[lambda v_el body]
 
    Constructs a lambda expression from the expression [body] with the 
@@ -198,7 +249,23 @@ let lambda_args v_el =
    @param body The body of the lambda expression.
    @return     The K3 lambda expression expecting [v_el] as arguments and
                computing [body]. *)
-let lambda v_el body = K.Lambda( lambda_args v_el, body)
+let rec lambda v_el body =
+   if Debug.active "WIDE-TUPLE" && (List.length v_el) > max_tuple_elems then
+      lambda_wide v_el body
+   else
+      K.Lambda( lambda_args v_el, body)
+	  
+and lambda_wide v_el body =
+   let args = list_split v_el max_tuple_elems in
+   let rec args_create l n = 
+      begin match l with
+      | [] -> error "M3ToK3: invalid empty variables list" 
+	  | [arg] -> [tuple_var_create arg n]
+	  | x :: xs ->
+	     (tuple_var_create x n) :: args_create xs (n+1)
+      end in
+   let v_args = args_create args 1 in (** TODO *)
+   K.Lambda(lambda_args v_args, lambda_gen args body 1)
 
 (**[assoc_lambda v1_el v2_el body]
 
@@ -209,8 +276,23 @@ let lambda v_el body = K.Lambda( lambda_args v_el, body)
    @param body  The body of the associative lambda expression.
    @return      The K3 associative lambda expression expecting [v1_el] and
                 [v2_el] as arguments and computing [body]. *)
-let assoc_lambda v1_el v2_el body = 
-   K.AssocLambda( lambda_args v1_el, lambda_args v2_el, body )
+let rec assoc_lambda v1_el v2_el body = 
+   if Debug.active "WIDE-TUPLE" && ((List.length v1_el) > max_tuple_elems || (List.length v2_el) > max_tuple_elems) then
+      assoc_lambda_wide v1_el v2_el body
+   else
+      K.AssocLambda( lambda_args v1_el, lambda_args v2_el, body )
+	  
+and assoc_lambda_wide v1_el v2_el body =
+   let args = list_split v1_el max_tuple_elems in
+   let rec args_create l n = 
+      begin match l with
+      | [] -> error "M3ToK3: invalid empty variables list" 
+	  | [arg] -> [tuple_var_create arg n]
+	  | x :: xs ->
+	     (tuple_var_create x n) :: args_create xs (n+1)
+      end in
+   let v_args = args_create args 1 in (** TODO *)
+   K.AssocLambda(lambda_args v_args, lambda_args v2_el, lambda_gen args body 1)
 
 (**[apply_lambda v_el el body]
 
@@ -1001,17 +1083,26 @@ let rec calc_to_k3_expr meta ?(generate_init = false) theta_vars_el calc :
                | [],[] -> [], K.Mult(p1,p2)
                |  _,[] -> p1_outs_el,
                         K.Map(lambda (p1_outs_el@[p1_ret_ve])
-                           (K.Tuple(p1_outs_el @ 
+(*                           (K.Tuple(p1_outs_el @ 
+                                    [K.Mult(p1_ret_ve,p2)])),
+*)
+                           (exprs_to_tuple(p1_outs_el @ 
                                     [K.Mult(p1_ret_ve,p2)])),
                                  p1) 
                | [], _ -> p2_outs_el,
                         K.Map( lambda (p2_outs_el@[p2_ret_ve])   
-                            (K.Tuple(p2_outs_el @ 
+(*                            (K.Tuple(p2_outs_el @ 
+                                     [K.Mult(p2_ret_ve,p1)])),
+*)
+                            (exprs_to_tuple(p2_outs_el @ 
                                      [K.Mult(p2_ret_ve,p1)])),
                                  p2)
                |  _, _ -> 
                   let union_el = (ListAsSet.union p1_outs_el p2_outs_el) in
-                  let prod_e = K.Tuple(union_el @  
+(*                  let prod_e = K.Tuple(union_el @  
+                                       [K.Mult(p1_ret_ve,p2_ret_ve)]) 
+*)
+                  let prod_e = exprs_to_tuple(union_el @  
                                        [K.Mult(p1_ret_ve,p2_ret_ve)]) 
                   in
                   let nested = K.Map(lambda (p2_outs_el @ 
@@ -1044,7 +1135,9 @@ let rec calc_to_k3_expr meta ?(generate_init = false) theta_vars_el calc :
          | K3Typechecker.K3TypecheckError(stack,msg) ->
             raise (K3Typechecker.K3TypecheckError(stack,msg ^
                      ("\nin calc expr: "^
-                     (CalculusPrinter.string_of_expr calc))))
+                     (CalculusPrinter.string_of_expr calc)) ^
+					 ("\nfor k3 expr: ")^
+					 (K3.nice_string_of_expr k3_expr [])))
           
   in
      (k3_out_el, k3_ret_v, k3_expr), k3_meta
