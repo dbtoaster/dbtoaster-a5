@@ -162,6 +162,8 @@ let partition_expr (heuristic_options:heuristic_options_t) (scope:var_t list)
       
    let maps_no_ivc = List.mem NoIVC heuristic_options in
    let inputvar_allowed = not (List.mem NoInputVariables heuristic_options) in
+   let aggressive_inputvar_allowed = 
+      Debug.active ("HEURISTICS-AGGRESSIVE-INPUTVARS") in
    let has_root_relation = (rel_terms <> []) in
    
    let final_const_expr = CalcRing.mk_prod const_terms in
@@ -311,7 +313,7 @@ let partition_expr (heuristic_options:heuristic_options_t) (scope:var_t list)
                         in
                         (* Add only if that does not change the schema *)
                         if (covered_by_scope rel_expr_ovars graph_cmpnt_expr) ||
-                           (inputvar_allowed &&
+                           (inputvar_allowed && aggressive_inputvar_allowed &&
                                covered_by_scope (ListAsSet.union rel_expr_ovars
                                                            expr_ivars)
                                                 graph_cmpnt_expr)

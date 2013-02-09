@@ -93,6 +93,9 @@ These flags are passed to the dbtoaster compiler with the <span class="code">-F<
   <dt class="code">HEURISTICS-ENABLE-INPUTVARS</dt>
   <dd>Enable experimental support for incremental view caches.  Queries with joins (and correlations) on inequality predicates are implemented in a way that corresponds roughly to nested-loop one-way joins in stream processing (a tree-based implementation is in development).  If this flag is on, the compiler will cache and incrementally maintain the results of this one-way join.  This is typically a bad idea, since the cost of maintaining the cached values is often higher than the cost of the nested loop scan.  However, if the domains of the variables appearing in the join predicate are small, this flag can drastically improve performance (e.g., for the VWAP example query).  Future versions of DBToaster will include a cost-based optimizer that automatically applies this flag when appropriate.  This optimization is not activated by default at any optimization level.</dd>  
 
+  <dt class="code">HEURISTICS-AGGRESSIVE-INPUTVARS</dt>
+  <dd> Enable experimental support for aggresive materialization of maps with input variables (view caches). It requires the HEURISTICS-ENABLE-INPUTVARS flag to be active. If the calculus optimizations are disabled (see CALC-NO-OPTIMIZE), this option might significantly prolong the compilation time. Note: the C++ backend might fail to compile certain classes of queries when this flag is on.</dd>  
+
   <dt class="code">HEURISTICS-PULL-OUT-VALUES</dt>
   <dd>Prevent value terms (variables and comparisons) from being materialized inside maps. In certain cases (e.g., mddb/query2.sql), this option reduces the number of generated maps and speed-ups the compilation time at the expense of doing more computation at runtime.</dd>  
 
