@@ -217,6 +217,44 @@ query_employee:
 	@$(FAST_QUERY_TEST) employee/query64a
 	@$(FAST_QUERY_TEST) employee/query65a
 
+tpch_test:
+	@$(QUERY_TEST) tpch1
+	@$(QUERY_TEST) tpch2
+	@$(QUERY_TEST) tpch3
+	@$(QUERY_TEST) tpch4 
+	@$(QUERY_TEST) tpch5 
+	@$(QUERY_TEST) tpch6  #F.P. error on the interpreter
+	@$(QUERY_TEST) tpch7 
+	@$(QUERY_TEST) tpch8   #slow compilation
+	@$(QUERY_TEST) tpch9   #slow compilation
+	@$(QUERY_TEST) tpch10 
+	@$(QUERY_TEST) tpch11 
+	@$(QUERY_TEST) tpch11a 
+	@$(QUERY_TEST) tpch12 
+	@$(QUERY_TEST) tpch13 
+	@$(QUERY_TEST) tpch14
+	@$(QUERY_TEST) tpch15  
+	@$(QUERY_TEST) tpch16 
+	@$(QUERY_TEST) tpch17 
+	@$(QUERY_TEST) tpch17a 
+	@$(QUERY_TEST) tpch18 
+	@$(QUERY_TEST) tpch18a
+	@$(QUERY_TEST) tpch19 
+	@$(QUERY_TEST) tpch20
+	@$(QUERY_TEST) tpch21 
+	@$(QUERY_TEST) tpch22 
+	@$(QUERY_TEST) tpch22a
+	@$(QUERY_TEST) ssb4
+
+financial_test:
+	@$(QUERY_TEST) vwap
+	@$(QUERY_TEST) vwap -d HEURISTICS-ENABLE-INPUTVARS
+	@$(QUERY_TEST) brokervariance
+	@$(QUERY_TEST) brokerspread
+#	@$(QUERY_TEST) missedtrades
+	@$(QUERY_TEST) axfinder
+	@$(QUERY_TEST) pricespread
+
 query_tpch:
 	@$(FAST_QUERY_TEST) tpch1 --dataset tiny
 	@$(FAST_QUERY_TEST) tpch2 --dataset tiny
@@ -224,15 +262,15 @@ query_tpch:
 	@$(FAST_QUERY_TEST) tpch3
 	@$(FAST_QUERY_TEST) tpch4 --dataset tiny
 	@$(FAST_QUERY_TEST) tpch5 --dataset tiny
-#	@$(FAST_QUERY_TEST) tpch6 --dataset tiny  #F.P. error on the interpreter
+	@$(FAST_QUERY_TEST) tpch6 --dataset tiny  #F.P. error on the interpreter
 	@$(FAST_QUERY_TEST) tpch7 --dataset tiny
-#	@$(FAST_QUERY_TEST) tpch8 --dataset tiny  #slow compilation
+	@$(FAST_QUERY_TEST) tpch8 --dataset tiny  #slow compilation
 	@$(FAST_QUERY_TEST) tpch9 --dataset tiny  #slow compilation
 	@$(FAST_QUERY_TEST) tpch10 --dataset tiny
 	@$(FAST_QUERY_TEST) tpch11 --dataset tiny
 	@$(FAST_QUERY_TEST) tpch11 
 	@$(FAST_QUERY_TEST) tpch11a --dataset tiny
-	@$(FAST_QUERY_TEST) tpch11c --dataset tiny  #slow compilation
+#	@$(FAST_QUERY_TEST) tpch11c --dataset tiny  #slow compilation
 #	@$(FAST_QUERY_TEST) tpch11c  # ~90s
 	@$(FAST_QUERY_TEST) tpch12 --dataset tiny
 	@$(FAST_QUERY_TEST) tpch13 --dataset tiny

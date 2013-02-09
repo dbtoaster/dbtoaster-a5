@@ -82,6 +82,8 @@ copy_files(Dir.glob("../../../experiments/data/simple/tiny/*.dat"),
                                           "dbtoaster/examples/data/simple");
 copy_files(Dir.glob("../../../experiments/data/tpch/tiny/*.csv"), 
                                           "dbtoaster/examples/data/tpch");
+copy_files(Dir.glob("../../../experiments/data/mddb/standard/*.csv"), 
+                                          "dbtoaster/examples/data/mddb");
 system("cp ../../../experiments/data/finance/tiny/finance.csv\
                                           dbtoaster/examples/data/finance.csv");
 
@@ -101,3 +103,10 @@ copy_files([], "dbtoaster/examples/queries/finance");
 Dir.glob("../test/queries/finance/*.sql").each { |f| 
       fix_sql_file(f, "dbtoaster/examples/queries/finance"); }
 
+copy_files([], "dbtoaster/examples/queries/mddb");
+Dir.glob("../test/queries/mddb/query*.sql").
+  delete_if { |f| not /query[1-2]+.sql/ =~ f }.
+  each { |f| 
+      fix_sql_file(f, "dbtoaster/examples/queries/mddb"); }
+fix_sql_file("../test/queries/mddb/schemas.sql", 
+                          "dbtoaster/examples/queries/mddb");
