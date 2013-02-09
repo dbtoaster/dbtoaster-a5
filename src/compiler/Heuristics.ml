@@ -64,6 +64,14 @@ let string_of_event (event:Schema.event_t option) : string =
 let string_of_expr = CalculusPrinter.string_of_expr
 let string_of_vars = ListExtras.string_of_list string_of_var
 
+let string_of_options (heuristic_options:heuristic_options_t) : string =
+   ((if List.mem NoIVC heuristic_options
+     then "NoIVC: true " else "NoIVC: false ") ^
+    (if List.mem NoInputVariables heuristic_options
+     then "NoInputVariables: true " else "NoInputVariables: false ") ^
+    (if List.mem ExtractRelationMaps heuristic_options
+     then "ExtractRelationMaps: true " else "ExtractRelationMaps: false "))   
+   
 let covered_by_scope scope expr = 
    let expr_ivars = fst (Calculus.schema_of_expr expr) in
       ListAsSet.diff expr_ivars scope = []
@@ -132,7 +140,10 @@ let partition_expr (heuristic_options:heuristic_options_t) (scope:var_t list)
 
    Debug.print "LOG-HEURISTICS-PARTITIONING" (fun () -> 
       "[Heuristics]  Partitioning - Entering partition_expr: " ^ 
-      "\n\t Expr: " ^ (string_of_expr expr)
+      "\n\t Expr: " ^ (string_of_expr expr) ^
+      "\n\t Scope: " ^ (ListExtras.string_of_list string_of_var scope) ^
+      "\n\t Event: " ^ (string_of_event event) ^
+      "\n\t Options: " ^ (string_of_options heuristic_options)
    ); 
 
    let expr_ivars = fst (schema_of_expr expr) in
@@ -299,7 +310,11 @@ let partition_expr (heuristic_options:heuristic_options_t) (scope:var_t list)
                            CalcRing.mk_prod (List.map fst graph_cmpnt)
                         in
                         (* Add only if that does not change the schema *)
-                        if covered_by_scope rel_expr_ovars graph_cmpnt_expr
+                        if (covered_by_scope rel_expr_ovars graph_cmpnt_expr) ||
+                           (inputvar_allowed &&
+                               covered_by_scope (ListAsSet.union rel_expr_ovars
+                                                           expr_ivars)
+                                                graph_cmpnt_expr)
                         then (r_terms @ [l_term], l_terms)
                         else if (covered_by_scope 
                                     (ListAsSet.union scope rel_expr_ovars)
@@ -324,14 +339,14 @@ let partition_expr (heuristic_options:heuristic_options_t) (scope:var_t list)
    
       (* Sanity check - rel_expr should be covered by the scope *)
       if not (covered_by_scope scope rel_expr)
-      then failwith "rel_expr is not covered by the scope."
+      then bail_out rel_expr "rel_expr is not covered by the scope."
       else                  
 
       let rel_lift_expr = CalcRing.mk_prod (new_rl_terms @ new_l_terms) in
       
       (* Sanity check - rel_lift_expr should be covered by the scope *)
       if not (covered_by_scope scope rel_lift_expr)
-      then failwith "rel_lift_expr is not covered by the scope."
+      then bail_out rel_lift_expr "rel_lift_expr is not covered by the scope."
       else
       
       let rel_expr_ovars = snd (schema_of_expr rel_expr) in
@@ -411,9 +426,15 @@ type maintaining_option_t =
 *)
 let should_update (event:Schema.event_t) (expr:expr_t)  : bool =
    
-   if (Debug.active "HEURISTICS-ALWAYS-UPDATE") then true 
-   else
+   Debug.print "LOG-HEURISTICS-STRATEGY-DETAIL" (fun () ->
+      "[Heuristics Strategy] Asked to decide on:"^
+      "\n\t Expr: "^(string_of_expr expr)^
+      "\n\t Event: "^(string_of_event (Some(event)))
+   );
    
+   if (Debug.active "HEURISTICS-ALWAYS-UPDATE") then true 
+   else 
+         
    (* The materializer assumes expressions without Neg nodes.          *)
    (* In cases when the calculus optimizer is disabled, that might be  *)
    (* violated. We guard against these cases by calling combine_values.*)
@@ -500,10 +521,16 @@ let should_update (event:Schema.event_t) (expr:expr_t)  : bool =
                             
       ) Unknown (decompose_poly expr)
    in      
+   let decision = 
       match get_maintaining_option expr_combined with
          | Unknown | UpdateExpr -> true
          | ReplaceExpr -> false 
-
+   in
+      Debug.print "LOG-HEURISTICS-STRATEGY-DETAIL" (fun () ->
+         "[Heuristics Strategy] Decision should update:"^
+         (string_of_bool decision)
+      );
+      decision
       
 
 (******************************************************************************)
@@ -563,8 +590,12 @@ let rec materialize ?(scope:var_t list = [])
             let term_name = (prefix^(string_of_int i)) in
             
             let (new_term_todos, new_term_mats) = 
-               materialize ~scope:scope heuristic_options 
-                           db_schema history term_name event 
+               materialize ~scope:scope 
+                           heuristic_options 
+                           db_schema 
+                           history 
+                           term_name 
+                           event 
                            (Calculus.mk_aggsum term_schema term_opt)
             in
                ((term_todos @ new_term_todos,
@@ -601,8 +632,12 @@ let rec materialize ?(scope:var_t list = [])
                         (string_of_expr subexpr_opt)
                      );
                      let (todos_subexpr, mat_subexpr) = 
-                        materialize ~scope:scope heuristic_options 
-                                    db_schema history subexpr_name event 
+                        materialize ~scope:scope 
+                                    heuristic_options 
+                                    db_schema 
+                                    history 
+                                    subexpr_name 
+                                    event 
                                     (Calculus.mk_aggsum subexpr_schema 
                                                         subexpr_opt)
                      in
@@ -641,23 +676,23 @@ let rec materialize ?(scope:var_t list = [])
                               (string_of_expr subexpr_opt)
                            );
                            materialize ~scope:scope 
-                                 heuristic_options
-                                 db_schema
-                                 history
-                                 subexpr_name
-                                 event
-                                 (Calculus.mk_aggsum subexpr_schema
-                                                     subexpr_opt)
+                                       heuristic_options
+                                       db_schema
+                                       history
+                                       subexpr_name
+                                       event
+                                       (Calculus.mk_aggsum subexpr_schema
+                                                           subexpr_opt)
                         end
                         else
                            materialize_expr heuristic_options 
-                                 db_schema 
-                                 history
-                                 subexpr_name
-                                 event
-                                 expr_scope
-                                 subexpr_schema
-                                 subexpr_opt
+                                            db_schema 
+                                            history
+                                            subexpr_name
+                                            event
+                                            expr_scope
+                                            subexpr_schema
+                                            subexpr_opt
                      in
                      Debug.print "LOG-HEURISTICS-DETAIL" (fun () -> 
                         "[Heuristics] Materialized form: " ^
@@ -752,7 +787,7 @@ and materialize_expr (heuristic_options:heuristic_options_t)
       schema_of_expr agg_rel_expr 
    in
 
-      (* Extracted lifts are always materialized separately *)   
+   (* Extracted lifts are always materialized separately *)   
    let (todo_lifts, mat_lift_expr) = 
       if lift_expr = CalcRing.one then ([], lift_expr) else      
       fst (
@@ -763,15 +798,20 @@ and materialize_expr (heuristic_options:heuristic_options_t)
                   let (todo, mat_expr) =
                      if rels_of_expr subexpr = []
                      then ([], subexpr)
-                     else begin 
-                        let scope_lift = 
-                           ListAsSet.union scope_const
-                                           (snd (schema_of_expr whole_expr)) 
+                     else begin
+                        let (sub_ivars, sub_ovars) = schema_of_expr subexpr in
+                        let scope_lift = ListAsSet.inter
+                           (ListAsSet.union sub_ivars sub_ovars)
+                           (ListAsSet.union scope_const
+                                            (snd (schema_of_expr whole_expr))) 
                         in
-                           materialize ~scope:scope_lift heuristic_options 
-                                       db_schema history 
+                           materialize ~scope:scope_lift 
+                                       heuristic_options 
+                                       db_schema 
+                                       history 
                                        (prefix^"_E"^(string_of_int j)^"_") 
-                                       event subexpr
+                                       event 
+                                       subexpr
                      end 
                   in
                   let mat_lift_expr = Calculus.mk_exists mat_expr in
@@ -789,10 +829,13 @@ and materialize_expr (heuristic_options:heuristic_options_t)
                            (ListAsSet.union scope_const
                                             (snd (schema_of_expr whole_expr))) 
                         in
-                           materialize ~scope:scope_lift heuristic_options 
-                                       db_schema history 
+                           materialize ~scope:scope_lift 
+                                       heuristic_options 
+                                       db_schema 
+                                       history 
                                        (prefix^"_L"^(string_of_int j)^"_") 
-                                       event subexpr
+                                       event 
+                                       subexpr
                      end 
                   in
                   let mat_lift_expr = Calculus.mk_lift v mat_expr in
@@ -831,10 +874,13 @@ and materialize_expr (heuristic_options:heuristic_options_t)
       in
       if (List.length components > 1) 
       then
-            materialize ~scope:scope_const heuristic_options 
-                                           db_schema history 
-                                           (prefix^"_P_")
-                                           event agg_rel_expr
+            materialize ~scope:scope_const 
+                        heuristic_options 
+                        db_schema 
+                        history 
+                        (prefix^"_P_")
+                        event 
+                        agg_rel_expr
       else
          (*** HERE COMES THE ACTUAL MATERIALIZATION ***)   
          if List.mem ExtractRelationMaps heuristic_options then
@@ -860,10 +906,13 @@ and materialize_expr (heuristic_options:heuristic_options_t)
                let (todo_ivc, ivc_expr) =
                   if agg_rel_expr_ivars <> [] then
                      let (todos, mats) =  
-                        materialize [ NoIVC; NoInputVariables ]
-                                    db_schema history
+                        materialize ~scope:scope_const
+                                    [ NoIVC; NoInputVariables ]
+                                    db_schema 
+                                    history
                                     (prefix^"_IVC")
-                                    event agg_rel_expr
+                                    event 
+                                    agg_rel_expr
                     in 
                        (todos, Some(mats))
                   else if (IVC.needs_runtime_ivc (Schema.table_rels db_schema)

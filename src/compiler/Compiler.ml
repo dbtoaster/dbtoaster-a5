@@ -159,7 +159,6 @@ let compile_map (compute_delta:bool)
             
       if (compute_delta && Heuristics.should_update delta_event optimized_defn) 
       then begin
-                 
          (* The expression is to be incrementally maintained *)
          let delta_expr_unoptimized = 
             (CalculusDeltas.delta_of_expr delta_event optimized_defn)
@@ -187,8 +186,13 @@ let compile_map (compute_delta:bool)
          );
     
          let (new_todos, materialized_delta) = 
-            Heuristics.materialize heuristic_options db_schema history 
-                                   map_prefix (Some(delta_event)) delta_expr
+            Heuristics.materialize ~scope:todo_ivars
+                                   heuristic_options 
+                                   db_schema 
+                                   history 
+                                   map_prefix 
+                                   (Some(delta_event)) 
+                                   delta_expr
          in
          Debug.print "LOG-COMPILE-DETAIL" (fun () ->
             "Materialized delta expr: \n"^
@@ -208,7 +212,8 @@ let compile_map (compute_delta:bool)
                         Calculus.rename_vars delta_renamings todo.ds_definition
                      in
                      let (ivc_todos, todo_ivc) =
-                        Heuristics.materialize [ Heuristics.NoIVC; 
+                        Heuristics.materialize ~scope:todo_ivars
+                                               [ Heuristics.NoIVC; 
                                                  Heuristics.NoInputVariables ]
                                                db_schema history 
                                                (map_prefix^"_IVC")
@@ -251,8 +256,11 @@ let compile_map (compute_delta:bool)
       else begin 
          (* The expression is to be reevaluated *)
          let (new_todos, materialized_expr) = 
-            Heuristics.materialize heuristic_options db_schema 
-                                   history map_prefix (Some(delta_event)) 
+            Heuristics.materialize ~scope:todo_ivars
+                                   heuristic_options 
+                                   db_schema 
+                                   history map_prefix 
+                                   (Some(delta_event)) 
                                    optimized_defn
          in
          Debug.print "LOG-COMPILE-DETAIL" (fun () ->
@@ -302,7 +310,8 @@ let compile_map (compute_delta:bool)
       if todo_ivars <> [] then
          (* If the todo has input variables, it needs a default initializer *)
          let (init_todos,init_expr) =
-            Heuristics.materialize [ Heuristics.NoIVC; 
+            Heuristics.materialize ~scope:todo_ivars
+                                   [ Heuristics.NoIVC; 
                                      Heuristics.NoInputVariables ]
                                    db_schema history (todo_name^"_init") 
                                    None optimized_defn
