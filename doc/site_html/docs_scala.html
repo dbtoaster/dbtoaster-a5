@@ -47,11 +47,11 @@
 
 <h4>1.2. Compiling and running your first query</h4>We start with a simple query that looks like this:
 <div class="codeblock">CREATE TABLE R(A int, B int) 
-  FROM FILE '../../experiments/data/tiny_r.dat' LINE DELIMITED
+  FROM FILE 'examples/data/tiny_r.dat' LINE DELIMITED
   CSV (fields := ',');
 
 CREATE STREAM S(B int, C int) 
-  FROM FILE '../../experiments/data/tiny_s.dat' LINE DELIMITED
+  FROM FILE 'examples/data/tiny_s.dat' LINE DELIMITED
   CSV (fields := ',');
 
 SELECT SUM(r.A*s.C) as RESULT FROM R r, S s WHERE r.B = s.B;
@@ -175,11 +175,11 @@ and the return value may be a collection instead of a single value.</p>
 <h5>3.1.1. Queries computing collections</h5><p>
 Consider the following query:
 <div class="codeblock">CREATE STREAM R(A int, B int) 
-  FROM FILE '../../experiments/data/tiny/r.dat' LINE DELIMITED
+  FROM FILE 'examples/data/tiny/r.dat' LINE DELIMITED
   CSV (fields := ',');
 
 CREATE STREAM S(B int, C int) 
-  FROM FILE '../../experiments/data/tiny/s.dat' LINE DELIMITED
+  FROM FILE 'examples/data/tiny/s.dat' LINE DELIMITED
   CSV (fields := ',');
 
 SELECT r.B, SUM(r.A*s.C) as RESULT_1, SUM(r.A+s.C) as RESULT_2 FROM R r, S s WHERE r.B = s.B GROUP BY r.B;
@@ -202,7 +202,7 @@ can be enabled through the <span class="code">-F EXPRESSIVE-TLQS</span> command 
 
 <p>Below is an example of a query where partial materialization is indeed beneficial.
 <div class="codeblock">CREATE STREAM R(A int, B int)
-FROM FILE '../../experiments/data/tiny/r.dat' LINE DELIMITED
+FROM FILE 'examples/data/tiny/r.dat' LINE DELIMITED
 csv ();
 
 SELECT r2.C FROM (
@@ -212,13 +212,58 @@ SELECT r2.C FROM (
 When compiling this query with the <span class="code">-F EXPRESSIVE-TLQS</span> command line flag, the function to retrieve
 the results is much more complex, unlike the functions that we have seen before. It uses the partial materialization 
 <span class="code">COUNT_1_E1_1</span> to compute the result:
-<div class="codeblock">$&gt; bin/dbtoaster -l scala -F EXPRESSIVE-TLQS test/queries/simple/r_lift_of_count.sql 
+<div class="codeblock">$&gt; bin/dbtoaster -l scala -F EXPRESSIVE-TLQS examples/queries/simple/r_lift_of_count.sql 
     def getCOUNT():K3IntermediateCollection[(Long), Long] = {
       (COUNT_1_E1_1.map((y:Tuple2[(Long),Long]) => 
       ...
       )
     };
-</div></p>        <div class="doc_chain_link"> &lt; <span class="doc_chain_link_prev"><a href="docs_cpp.html" >C++ Code Generation</a></span></div>      </div><!-- /content -->
+</div></p>
+
+<h4>3.2. Using queries in Java programs</h4><p>
+Since Scala is compatible with Java, it is possible to use the queries in Java applications. 
+In order to use a query in Java, the Java application has to reference three libraries: 
+<ul>
+	<li>The library containing the generated code for the query</li>
+	<li>The Scala library</li>
+	<li>Scala DBToaster library</li>
+</ul>
+</p>
+<p>
+The following code snippet illustrates how a query can be executed from within a Java application:
+<div class="codeblock">
+import org.dbtoaster.dbtoasterlib.*;
+import org.dbtoaster.*;
+
+public class MainClass {
+	public static void main(String[] args) {
+		final Query q = new Query();
+		
+		QueryInterface.DBTMessageReceiver rcvr = new QueryInterface.DBTMessageReceiver() {
+			public void onTupleProcessed() {
+				// do nothing
+			}
+			
+			public void onQueryDone() {
+				// print the results
+				q.printResults();
+			}
+		};
+		
+		QueryInterface.QuerySupervisor supervisor = new QueryInterface.QuerySupervisor(q, rcvr);
+		supervisor.start();
+	}
+}
+</div>
+This program executes the referenced query and prints the result once there are no more tuples
+to be processed.
+</p>
+<h5>3.2.1. Compiling in eclipse</h5>To compile the previously presented program in eclipse (with the official Scala plugin installed), 
+we can create a new Java project with a single <span class="code">.java</span>-file containing 
+the program. In the Java Build Path section of the project's properties the previously listed 
+libraries have to be added. The Scala library can be added by clicking the "Add Library" button,
+while the other libraries can be added as external JARs. After adding the libraries to the project,
+the project should compile and execute the query once run.        <div class="doc_chain_link"> &lt; <span class="doc_chain_link_prev"><a href="docs_cpp.html" >C++ Code Generation</a></span></div>      </div><!-- /content -->
     </div><!-- /contentwrapper -->
   </div><!-- /pagebody -->
   <hr/>
