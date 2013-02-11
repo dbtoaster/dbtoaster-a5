@@ -82,7 +82,7 @@ copy_files(Dir.glob("../../../experiments/data/simple/tiny/*.dat"),
                                           "dbtoaster/examples/data/simple");
 copy_files(Dir.glob("../../../experiments/data/tpch/tiny/*.csv"), 
                                           "dbtoaster/examples/data/tpch");
-copy_files(Dir.glob("../../../experiments/data/mddb/standard/*.csv"), 
+copy_files(Dir.glob("../../../experiments/data/mddb/tiny/*.csv"), 
                                           "dbtoaster/examples/data/mddb");
 system("cp ../../../experiments/data/finance/tiny/finance.csv\
                                           dbtoaster/examples/data/finance.csv");
@@ -110,3 +110,5 @@ Dir.glob("../test/queries/mddb/query*.sql").
       fix_sql_file(f, "dbtoaster/examples/queries/mddb"); }
 fix_sql_file("../test/queries/mddb/schemas.sql", 
                           "dbtoaster/examples/queries/mddb");
+system("cp ../test/queries/mddb/README dbtoaster/examples/queries/mddb/README");
+

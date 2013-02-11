@@ -13,6 +13,29 @@
 <tr>
   <td align="right">Mac OS X</td>
   <td>&nbsp;</td>
+  <td>2827</td>
+  <td>&nbsp;</td>
+  <td>2013-Feb-11</td>
+  <td>&nbsp;</td>
+  <td align="left">
+    <a href="dist/dbtoaster_darwin_2827.tgz">Tarball</a></td>
+</tr>
+</table>
+
+<a name="latest"><h4>Older releases</h4></a>
+<table width="500px">
+<tr>
+  <th width="25%" align="right">Platform</th>
+  <td width="5%">&nbsp;</td>
+  <th width="20%" align="left">Revision</th>
+  <td width="5%">&nbsp;</td>
+  <th width="20%" align="left">Date</th>
+  <td width="5%">&nbsp;</td>
+  <th width="20%" align="left">Download</th>
+</tr>
+<tr>
+  <td align="right">Mac OS X</td>
+  <td>&nbsp;</td>
   <td>2525</td>
   <td>&nbsp;</td>
   <td>2012-Jul-09</td>
