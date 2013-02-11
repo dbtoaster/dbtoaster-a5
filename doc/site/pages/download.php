@@ -20,6 +20,16 @@
   <td align="left">
     <a href="dist/dbtoaster_darwin_2827.tgz">Tarball</a></td>
 </tr>
+<tr>
+  <td align="right">Ubuntu 12.10 (x86-64)</td>
+  <td>&nbsp;</td>
+  <td>2827</td>
+  <td>&nbsp;</td>
+  <td>2013-Feb-11</td>
+  <td>&nbsp;</td>
+  <td align="left">
+    <a href="dist/dbtoaster_ubuntu12.10_x86_64_2827.tgz">Tarball</a></td>
+</tr>
 </table>
 
 <a name="latest"><h4>Older releases</h4></a>
