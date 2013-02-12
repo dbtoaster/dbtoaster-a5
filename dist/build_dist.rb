@@ -93,7 +93,7 @@ Dir.glob("../test/queries/simple/r*.sql").each { |f|
 
 copy_files([], "dbtoaster/examples/queries/tpch");
 Dir.glob("../test/queries/tpch/query*.sql").
-  delete_if { |f| not /query[0-9]+.sql/ =~ f }.
+  delete_if { |f| not /query[0-9]+a?.sql/ =~ f }.
   each { |f| 
       fix_sql_file(f, "dbtoaster/examples/queries/tpch"); }
 fix_sql_file("../test/queries/tpch/schemas.sql", 
