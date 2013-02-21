@@ -2,12 +2,12 @@
 <h3>Publications</h3>
 <ul>
 
-<li><a href="http://infoscience.epfl.ch/record/183767/files/main.pdf">DBToaster: Higher-order Delta Processing for Dynamic, Frequently Fresh Views. </a><br/>
+<li><a href="http://www.dbtoaster.org/papers/2013-dbtoaster-report.pdf">DBToaster: Higher-order Delta Processing for Dynamic, Frequently Fresh Views. </a><br/>
 Christoph Koch, Yanif Ahmad, Oliver Kennedy, Milos Nikolic, Andres N&ouml;tzli, Daniel Lupei, and Amir Shaikhha<br/>
 Technical Report, 2013.
 </li>
 
-<li><a href="http://vldb.org/pvldb/vol5/p968_yanifahmad_vldb2012.pdf">DBToaster: Higher-order Delta Processing for Dynamic, Frequently Fresh Views. </a><br/>
+<li><a href="http://www.dbtoaster.org/papers/pvldb2012-dbtoaster.pdf">DBToaster: Higher-order Delta Processing for Dynamic, Frequently Fresh Views. </a><br/>
 Yanif Ahmad, Oliver Kennedy, Christoph Koch, and Milos Nikolic<br/>
 Proc. VLDB 2012, Istanbul, Turkey.
 </li>
