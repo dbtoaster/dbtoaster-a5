@@ -7,6 +7,11 @@ Christoph Koch, Yanif Ahmad, Oliver Kennedy, Milos Nikolic, Andres N&ouml;tzli, 
 Technical Report, 2013.
 </li>
 
+<li><a href="http://www.dbtoaster.org/papers/2013-ring-report.pdf">Incremental Query Evaluation in a Ring of Databases. </a><br/>
+Christoph Koch<br/>
+Technical Report, 2013. 
+</li>
+
 <li><a href="http://www.dbtoaster.org/papers/pvldb2012-dbtoaster.pdf">DBToaster: Higher-order Delta Processing for Dynamic, Frequently Fresh Views. </a><br/>
 Yanif Ahmad, Oliver Kennedy, Christoph Koch, and Milos Nikolic<br/>
 Proc. VLDB 2012, Istanbul, Turkey.
@@ -31,6 +36,7 @@ Proc. VLDB 2009, Demo paper.
 <a name="presentations"></a>
 <h3>Presentations</h3>
 <ul>
+<li><b>Milos</b> at EcoCloud 2013: <a href="http://www.dbtoaster.org/papers/ecocloud2013-dbtoaster-mn.pdf">DBToaster: Do It Fast, Do It Incrementally.</a></li>
 <li><b>Oliver</b> at VLDB 2012: <a href="http://www.dbtoaster.org/papers/pvldb2012-dbtoaster-oak.pdf">Higher-Order Delta Processing for Dynamic, Frequently Fresh Views.</a></li>
 <li><b>Yanif</b> at CIDR 2011: <a href="http://www.dbtoaster.org/papers/cidr2011-dbtoaster-yna.pptx">Agile Views in a Dynamic Data Management System.</a></li>
 <li><b>Christoph</b> at the EPFL KTN Seminar: <a href="http://slideshot.epfl.ch/play/ktn_koch">Rethinking the Foundations of Databases</a></li>
