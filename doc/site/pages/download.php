@@ -23,12 +23,12 @@
 <tr>
   <td align="right">Ubuntu 12.04 (x86-64)</td>
   <td>&nbsp;</td>
-  <td>2998</td>
+  <td>2827</td>
   <td>&nbsp;</td>
-  <td>2013-Jul-25</td>
+  <td>2013-Feb-11</td>
   <td>&nbsp;</td>
   <td align="left">
-    <a href="dist/dbtoaster_ubuntu12.04_x86_64_2998.tgz">Tarball</a></td>
+    <a href="dist/dbtoaster_ubuntu12.04_x86_64_2827.tgz">Tarball</a></td>
 </tr>
 <tr>
   <td align="right">Windows (Cygwin)</td>
