@@ -388,6 +388,3 @@ let extract_patterns (triggers : M3.trigger_t list) : pattern_map =
    List.fold_left merge_pattern_maps 
                         (empty_pattern_map()) 
                         (List.map extract_from_trigger triggers)
-
-
-

@@ -96,6 +96,7 @@ let optimizations_by_level =
          "AGGRESSIVE-FACTORIZE";
          "AGGRESSIVE-UNIFICATION";
          "DELETE-ON-ZERO";
+         "OPTIMIZE-PATTERNS";
       ];
    ]
 let optimizations = 

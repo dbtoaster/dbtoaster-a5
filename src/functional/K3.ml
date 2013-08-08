@@ -1466,3 +1466,55 @@ let annotate_collections e =
   if Debug.active "NO-COLLECTION-ANNOTATION" 
   then e 
   else fst (_annotate_collections e VarMap.empty)
+
+let rec extract_patterns_from_k3 e : Patterns.pattern_map =
+   let bail ?(t = None) ?(exp = None) msg =
+      raise (AnnotationException(exp, t, msg))
+   in
+   let extract_patterns_from_expr_list e_l : Patterns.pattern_map =
+      List.fold_left (fun pmap expr -> Patterns.merge_pattern_maps 
+                                          (extract_patterns_from_k3 expr) pmap) 
+         (Patterns.empty_pattern_map()) e_l
+   in
+   match e with
+   | Tuple e_l -> extract_patterns_from_expr_list e_l
+   | Project (ce, idx) -> bail "not implemented" (* TODO: implement! *)
+   | Singleton e -> extract_patterns_from_k3 e
+   | Combine e_l -> extract_patterns_from_expr_list e_l
+   | Add  (e1,e2)
+   | Mult (e1,e2)
+   | Eq   (e1,e2)
+   | Neq  (e1,e2)
+   | Lt   (e1,e2)
+   | Leq  (e1,e2)
+   | IfThenElse0 (e1,e2) -> extract_patterns_from_expr_list [e1; e2]
+   | Comment(_, e) -> extract_patterns_from_k3 e
+   | IfThenElse  (e1,e2,e3) -> extract_patterns_from_expr_list [e1; e2; e3]
+   | Block e_l -> extract_patterns_from_expr_list e_l
+   | Iterate (e1,e2) -> extract_patterns_from_expr_list [e1; e2]
+   | Lambda  (_,e)
+   | AssocLambda(_,_,e) -> extract_patterns_from_k3 e
+   | Apply(e1,e2) 
+   | Map(e1,e2) -> extract_patterns_from_expr_list [e1; e2]
+   | Flatten(e) -> extract_patterns_from_k3 e
+   | Aggregate(e1,e2,e3) -> extract_patterns_from_expr_list [e1; e2; e3]
+   | Member(e,e_l) -> extract_patterns_from_expr_list (e :: e_l)
+   | Lookup(e,e_l) -> extract_patterns_from_expr_list (e :: e_l)
+   | Slice(OutPC(id, _, _), schema, pattern) ->
+      let ids, exprs = List.split pattern in
+      let schema_ids, _ = List.split schema in 
+      Patterns.merge_pattern_maps 
+         (extract_patterns_from_expr_list exprs) 
+            (Patterns.singleton_pattern_map 
+               (id, Patterns.make_out_pattern schema_ids ids))
+   | PCUpdate(e1,e_l,e2) -> extract_patterns_from_expr_list (e1 :: e2 :: e_l)
+   | PCValueUpdate(e1,e_l1,e_l2,e2) -> 
+      extract_patterns_from_expr_list (e1 :: e2 :: e_l1 @ e_l2)
+   | PCElementRemove(e,e_l1,e_l2) -> 
+      extract_patterns_from_expr_list (e :: e_l1 @ e_l2)
+   | LookupOrElse(e1,e_l,e2) -> 
+      extract_patterns_from_expr_list (e1 :: e2 :: e_l)
+   | _ -> Patterns.empty_pattern_map()
+
+
+

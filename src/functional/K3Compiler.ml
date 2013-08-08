@@ -134,10 +134,9 @@ let compile_expr_to_string e: string = to_string (compile_k3_expr e)
 
 let compile_triggers_noopt (trigs:K3.trigger_t list) : code_t list =
    List.map (fun (event, cs) ->
-      let stmts = List.map (fun x -> 
-         compile_k3_expr (K3.annotate_collections x)) cs 
-      in
-         trigger event stmts
+      let annotated = List.map (fun x -> K3.annotate_collections x) cs in
+      let stmts = List.map (fun x -> compile_k3_expr x) annotated in
+      trigger event stmts
    ) trigs
 
 let compile_triggers (trigs:K3.trigger_t list) : code_t list =
@@ -159,7 +158,15 @@ let compile_k3_to_code ((dbschema,(schema,patterns),trigs,
    let compiled_streams = List.map (fun (s,ra) -> CG.source s ra) streams in
    let compiled_tlqs    = List.map (fun (n,q) -> (n,q,compile_k3_expr q)) 
                                    toplevel_queries in
-      (main  schema patterns compiled_tables compiled_streams ctrigs 
+   let patterns_opt = 
+      if Debug.active "OPTIMIZE-PATTERNS" then
+         List.fold_left (fun acc (_,x) -> 
+          List.fold_left (fun a x -> 
+           Patterns.merge_pattern_maps a (K.extract_patterns_from_k3 x)) acc x)
+         (Patterns.empty_pattern_map()) trigs 
+      else patterns
+    in
+      (main  schema patterns_opt compiled_tables compiled_streams ctrigs 
              compiled_tlqs)
 
 ;;
