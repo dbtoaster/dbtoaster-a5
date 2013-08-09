@@ -76,43 +76,48 @@ let var_of_sql_var ((rel,vn,vt):Sql.sql_var_t):var_t =
    @param stmt   A SQL query
    @return       [stmt] rewritten to be an aggregate query.
 *)
-let cast_query_to_aggregate (tables:Sql.table_t list)
+let rec cast_query_to_aggregate (tables:Sql.table_t list)
                             (query:Sql.select_t):Sql.select_t =
-   let (targets,sources,cond,gb_vars,opts) = query in
-   let (new_targets,new_gb_vars) = 
-      if Sql.is_agg_query query 
-      then (
-         Debug.print "LOG-SQL-TO-CALC" (fun () -> 
-            "Compiling Unchanged: "^(Sql.string_of_select query)
-         );
-         (targets, gb_vars)
-      )
-      else (
-         Debug.print "LOG-SQL-TO-CALC" (fun () -> 
-            "Casting to Aggregate: "^(Sql.string_of_select query)
-         );
-         if gb_vars <> [] then (
-            Sql.error "Non-aggregate query with group-by variables";
-         );
-         (  targets @ ["COUNT", Sql.Aggregate(  
-                     Sql.CountAgg(if List.mem Sql.Select_Distinct opts
-                                  then Some([]) else None), 
-                     (Sql.Const(CInt(1))))],
-            (List.map (fun (target_name, target_expr) ->
-               let target_source = begin match target_expr with
-                  | Sql.Var(v_source,v_name,_) when v_name = target_name ->
-                     v_source
-                  | _ -> None
-               end in
-               (  target_source, 
-                  target_name, 
-                  (Sql.expr_type target_expr tables sources)
-               )
-            ) targets)
-         )
-      )
-   in
-      (new_targets, sources, cond, new_gb_vars, opts)
+   if Sql.is_agg_query query
+   then (
+      Debug.print "LOG-SQL-TO-CALC" (fun () -> 
+         "Compiling Unchanged: "^(Sql.string_of_select query)
+      );
+      query
+   )
+   else (
+      match query with 
+      | Sql.Select(targets,sources,cond,gb_vars,opts) ->
+         let (new_targets,new_gb_vars) = 
+            Debug.print "LOG-SQL-TO-CALC" (fun () -> 
+               "Casting to Aggregate: "^(Sql.string_of_select query)
+            );
+            if gb_vars <> [] then (
+               Sql.error "Non-aggregate query with group-by variables";
+            );
+            (  targets @ ["COUNT", Sql.Aggregate(  
+                        Sql.CountAgg(if List.mem Sql.Select_Distinct opts
+                                     then Some([]) else None), 
+                        (Sql.Const(CInt(1))))],
+               (List.map (fun (target_name, target_expr) ->
+                  let target_source = begin match target_expr with
+                     | Sql.Var(v_source,v_name,_) when v_name = target_name ->
+                        v_source
+                     | _ -> None
+                  end in
+                  (  target_source, 
+                     target_name, 
+                     (Sql.expr_type target_expr tables sources)
+                  )
+               ) targets)
+            )
+         in
+         Sql.Select(new_targets, sources, cond, new_gb_vars, opts)
+      | Sql.Union(s1, s2) -> 
+         let rcr stmt = cast_query_to_aggregate tables stmt in
+         Sql.Union(rcr s1, rcr s2)
+   )
+
 
 (**
    [normalize_agg_target_expr gb_vars expr]
@@ -201,6 +206,25 @@ let rec normalize_agg_target_expr ?(vars_bound = false) gb_vars expr =
          Sql.Case(List.map (fun (c,e) -> (c,rcr e)) cases, rcr else_branch)
    end
 
+
+let rec calc_of_query ?(query_name = None)
+                      (tables:Sql.table_t list) 
+                      (query:Sql.select_t): 
+                      (string * C.expr_t) list = 
+   let agg_query = cast_query_to_aggregate tables query in
+   Debug.print "LOG-SQL-TO-CALC" (fun () -> 
+      "Cast query is now : "^
+      (Sql.string_of_select agg_query)
+   );
+   match agg_query with
+   | Sql.Union(s1, s2) -> 
+      let rcr stmt = calc_of_query ~query_name:query_name tables stmt in
+      let lift_stmt name stmt = CalcRing.mk_prod [CalculusDomains.mk_exists stmt; C.mk_lift (name, C.type_of_expr stmt) stmt] in
+      List.map (fun ((n1, e1), (n2, e2)) -> (n1, CalcRing.mk_sum [lift_stmt n1 e1; lift_stmt n1 e2])) 
+               (List.combine (rcr s1) (rcr s2))
+   | Sql.Select _ -> (calc_of_select ~query_name:query_name tables agg_query)
+
+
 (**
    [calc_of_query tables stmt]
    
@@ -220,17 +244,16 @@ let rec normalize_agg_target_expr ?(vars_bound = false) gb_vars expr =
    @return       A Calculus expression for every non-group-by target in [stmt], 
                  and the name of the corresponding target
 *)
-let rec calc_of_query ?(query_name = None)
-                      (tables:Sql.table_t list) 
-                      (query:Sql.select_t): 
-                      (string * C.expr_t) list =   
+and calc_of_select ?(query_name = None)
+                   (tables:Sql.table_t list) 
+                   (query:Sql.select_t): 
+                   (string * C.expr_t) list =   
    let (targets,sources,cond,gb_vars,opts) = 
-      cast_query_to_aggregate tables query
+      match query with
+      | Sql.Select(targets,sources,cond,gb_vars,opts) -> 
+         (targets,sources,cond,gb_vars,opts) 
+      | _ -> Sql.error ("Expected select statement")
    in
-   Debug.print "LOG-SQL-TO-CALC" (fun () -> 
-      "Cast query is now : "^
-      (Sql.string_of_select (targets,sources,cond,gb_vars,opts))
-   );
    let source_calc = calc_of_sources tables sources in
    let cond_calc = calc_of_condition tables sources cond in
    Debug.print "LOG-SQL-TO-CALC" (fun () ->
@@ -719,7 +742,13 @@ and calc_of_sql_expr ?(materialize_query = None)
 
       | Sql.Negation(e) -> CalcRing.mk_neg (rcr_e e)
       | Sql.NestedQ(q)  -> 
-         let (q_targets,q_sources,q_cond,q_gb_vars,_) = q in
+         let (q_targets,q_sources,q_cond,q_gb_vars,_) = 
+            match q with
+            | Sql.Select(targets,sources,cond,gb_vars,opts) -> 
+               (targets,sources,cond,gb_vars,opts) 
+            | _ -> 
+               Sql.error ("Target-nested subqueries with UNION not supported")
+         in
          if (q_gb_vars <> []) || (* Group-by not allowed *)
             (List.length q_targets <> 1) || (* Only one target *)
             ((not (Sql.is_agg_query q)) && (q_sources <> [])) 

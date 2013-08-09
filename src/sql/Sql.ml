@@ -139,6 +139,8 @@ and labeled_source_t = string * source_t
    by clause.
 *)
 and select_t =
+   | Union of select_t * select_t
+   | Select of
    (* SELECT      *) target_t list *
    (* FROM        *) labeled_source_t list *
    (* WHERE       *) cond_t *
@@ -151,7 +153,7 @@ and select_t =
 *)
 type t = 
  | Create_Table of table_t
- | Select       of select_t
+ | SelectStmt   of select_t
 
 (**
    The content of a SQL file.  This includes all the tables defined in the file
@@ -209,7 +211,7 @@ let invalid_sql ?(detail = "") msg =
 let mk_file (stmt:t): file_t =
    match stmt with
     | Create_Table(table) -> ([table], [])
-    | Select(select)      -> ([], [select])
+    | SelectStmt(select)  -> ([], [select])
 
 (**
    Merge the content of two SQL files.
@@ -413,26 +415,28 @@ and string_of_cond (cond:cond_t): string =
    @return      The string representation of [stmt]
 *)
 and string_of_select (stmt:select_t): string =
-   let (target,from,where,gb,opts) = stmt in
-   "SELECT "^
-   (if List.mem Select_Distinct opts then "DISTINCT " else "")^
-   (ListExtras.string_of_list ~sep:", " 
-                              (fun (n,e) -> (string_of_expr e)^" AS "^n)
-                              target)^
-   (if List.length from > 0 then
-         " FROM "^(ListExtras.string_of_list ~sep:", " (fun (n,s) -> 
-            (match s with 
-               | Table(t) -> t
-               | SubQ(s) -> "("^(string_of_select s)^")"
-            )^" AS "^n
-         ) from)
-      else "")^
-   (if where <> ConstB(true) then
-         " WHERE "^(string_of_cond where)
-      else "")^
-   (if List.length gb > 0 then
-         " GROUP BY "^(ListExtras.string_of_list ~sep:", " string_of_var gb)
-      else "")
+   match stmt with
+   | Union(s1, s2) -> (string_of_select s1) ^ " UNION " ^ (string_of_select s2)
+   | Select(target, from, where, gb, opts) ->
+      "SELECT "^
+      (if List.mem Select_Distinct opts then "DISTINCT " else "")^
+      (ListExtras.string_of_list ~sep:", " 
+                                 (fun (n,e) -> (string_of_expr e)^" AS "^n)
+                                 target)^
+      (if List.length from > 0 then
+            " FROM "^(ListExtras.string_of_list ~sep:", " (fun (n,s) -> 
+               (match s with 
+                  | Table(t) -> t
+                  | SubQ(s) -> "("^(string_of_select s)^")"
+               )^" AS "^n
+            ) from)
+         else "")^
+      (if where <> ConstB(true) then
+            " WHERE "^(string_of_cond where)
+         else "")^
+      (if List.length gb > 0 then
+            " GROUP BY "^(ListExtras.string_of_list ~sep:", " string_of_var gb)
+         else "")
 (*      ^*)
 (*   ";" *)
 
@@ -595,13 +599,23 @@ and source_schema ?(strict=true) ?(parent_sources = []) (tables:table_t list)
 *)
 and select_schema ?(strict=true) ?(parent_sources = []) (tables:table_t list) 
                   (stmt:select_t): schema_t =
-   let (targets, sources, _, _, _) = stmt in
-   evaluate_with_entity (SqlQuery(stmt)) (fun () ->
-      List.map (fun (name, expr) -> 
-         (  None, name, expr_type ~strict:strict expr tables 
-                                  (sources@parent_sources))
-      ) targets
-   )
+   match stmt with
+   | Union(s1, s2) ->
+      let rcr stmt = 
+         select_schema ~strict:strict ~parent_sources:parent_sources tables stmt 
+      in
+      let sch1, sch2 = (rcr s1, rcr s2) in
+      if sch1 = sch2 then
+         sch1
+      else
+         invalid_sql "Schemas do not match"
+   | Select(targets, sources, _, _, _) ->
+       evaluate_with_entity (SqlQuery(stmt)) (fun () ->
+          List.map (fun (name, expr) -> 
+             (  None, name, expr_type ~strict:strict expr tables 
+                                      (sources@parent_sources))
+          ) targets
+       )
 
 (**
    Find the member of a [FROM] clause that a specified SQL variable's name 
@@ -725,51 +739,57 @@ and var_type ?(strict = true) (v:sql_var_t) (tables:table_t list)
 let rec bind_select_vars ?(parent_sources = [])
                          (query:select_t)
                          (tables:table_t list): select_t =
-   let (targets,inner_sources,conds,gb,opts) = query in
-   let sources = parent_sources @ inner_sources in
-   let rcr_c c = bind_cond_vars c tables sources in
-   let rcr_e e = bind_expr_vars e tables sources in
-   let rcr_q ?(qn = "") q = 
-      (* When recurring on a subquery, we filter out the subquery itself *)
-      bind_select_vars 
-         ~parent_sources:(List.filter (fun (sn,_) -> sn <> qn) sources)
-         q tables 
-   in
-   Debug.print "LOG-SQL-BIND" (fun () ->
-      "[SQL-BIND] Binding query with sources: "^
-      (ListExtras.ocaml_of_list fst sources)^"\n\t"^
-      (string_of_select (targets,inner_sources,conds,gb,opts))
-   );
-   let mapped_targets = 
-      List.map (fun (tn,te) -> (tn,rcr_e te)) targets
-   in
-      evaluate_with_entity (SqlQuery(query)) (fun () ->
-         mapped_targets,
-         List.map (fun (sn,s) -> 
-            if List.length (List.filter (fun x -> x = sn)
-                              (List.map fst sources)) > 1 then (
-               invalid_sql ("Duplicate source name: '"^sn^"'")
-            );
-            (sn, (match s with Table(_) -> s 
-                             | SubQ(subq) -> SubQ(rcr_q ~qn:sn subq)))
-         ) inner_sources,
-         rcr_c conds,
-         List.map (fun (s,v,t) -> 
-            if (s = None) && (List.mem_assoc v mapped_targets)
-            then 
-               begin match (List.assoc v mapped_targets) with
-                  | Var(ts,tv,tt) when tv = v -> (ts, v, tt)
-                  | _ -> (None, v, expr_type ~strict:true 
-                                     (List.assoc v mapped_targets) 
-                                     tables sources)
-               end
-            else 
-              ((Some(fst (source_for_var (s,v,t) tables sources))),
-               v,
-               var_type (s,v,t) tables sources)
-         ) gb,
-         opts
-      )
+   match query with
+   | Union(s1, s2) ->
+      let rcr stmt = 
+         bind_select_vars ~parent_sources:parent_sources stmt tables 
+      in 
+      Union(rcr s1, rcr s2)
+   | Select(targets,inner_sources,conds,gb,opts) ->
+      let sources = parent_sources @ inner_sources in
+      let rcr_c c = bind_cond_vars c tables sources in
+      let rcr_e e = bind_expr_vars e tables sources in
+      let rcr_q ?(qn = "") q = 
+         (* When recurring on a subquery, we filter out the subquery itself *)
+         bind_select_vars 
+            ~parent_sources:(List.filter (fun (sn,_) -> sn <> qn) sources)
+            q tables 
+      in
+      Debug.print "LOG-SQL-BIND" (fun () ->
+         "[SQL-BIND] Binding query with sources: "^
+         (ListExtras.ocaml_of_list fst sources)^"\n\t"^
+         (string_of_select query)
+      );
+      let mapped_targets = 
+         List.map (fun (tn,te) -> (tn,rcr_e te)) targets
+      in
+         evaluate_with_entity (SqlQuery(query)) (fun () -> Select(
+            mapped_targets,
+            List.map (fun (sn,s) -> 
+               if List.length (List.filter (fun x -> x = sn)
+                                 (List.map fst sources)) > 1 then (
+                  invalid_sql ("Duplicate source name: '"^sn^"'")
+               );
+               (sn, (match s with Table(_) -> s 
+                                | SubQ(subq) -> SubQ(rcr_q ~qn:sn subq)))
+            ) inner_sources,
+            rcr_c conds,
+            List.map (fun (s,v,t) -> 
+               if (s = None) && (List.mem_assoc v mapped_targets)
+               then 
+                  begin match (List.assoc v mapped_targets) with
+                     | Var(ts,tv,tt) when tv = v -> (ts, v, tt)
+                     | _ -> (None, v, expr_type ~strict:true 
+                                        (List.assoc v mapped_targets) 
+                                        tables sources)
+                  end
+               else 
+                 ((Some(fst (source_for_var (s,v,t) tables sources))),
+                  v,
+                  var_type (s,v,t) tables sources)
+            ) gb,
+            opts)
+         )
 
 (**
    Ensure that all variables in a SQL condition have been associated with
@@ -872,8 +892,12 @@ let rec is_agg_expr (expr:expr_t): bool =
    @param stmt   A SQL [SELECT] statement
    @return       True if [stmt] describes an aggregate query
 *)
-let is_agg_query ((targets,_,_,_,_):select_t): bool =
-   List.exists is_agg_expr (List.map snd targets)
+let rec is_agg_query (stmt): bool =
+   match stmt with 
+   (* TODO: Check whether this is the correct behavior for UNIONs *)
+   | Union(s1, s2) -> (is_agg_query s1) && (is_agg_query s2)
+   | Select(targets, _, _, _, _) -> 
+      List.exists is_agg_expr (List.map snd targets)
 ;;
 
 let rec push_down_nots (cond:cond_t): cond_t =
@@ -899,33 +923,37 @@ let rec push_down_nots (cond:cond_t): cond_t =
    @return        [stmt] rewritten with all targets consisting of AVar(_,*,_)
                   replaced by the corresponding wildcard expansion
 *)
-let expand_wildcard_targets (tables:table_t list) 
+let rec expand_wildcard_targets (tables:table_t list) 
                             (query:select_t) =
-   let (targets,sources,cond,gb,opts) = query in
-   Debug.print "LOG-SQL" (fun () -> "[SQL] Expanding query: "^
-                                    (string_of_select query));
-   let expanded_q = 
-      evaluate_with_entity (SqlQuery(query)) (fun () ->
-         List.flatten (List.map (fun (tname, texpr) ->
-            match texpr with
-               | Var(None, "*", _) ->
-                  List.map 
-                     (fun expr -> (name_of_expr (Var(expr)), (Var(expr)))) (
-                        List.flatten (List.map (labeled_source_schema tables) 
-                                               sources)
-                     )
-               | Var(Some(source), "*", _) ->
-                  List.map (fun expr -> (name_of_expr (Var(expr)), (Var(expr))))
-                           (labeled_source_schema tables
-                              (source,(List.assoc source sources)))
-               | _ -> [tname,texpr]
-               
-         ) targets),
-         sources, cond, gb, opts)
-   in
-      Debug.print "LOG-SQL" (fun () -> "[SQL] Expanded query: "^
-                                       (string_of_select expanded_q));
-      expanded_q
+   match query with
+   | Union(s1, s2) -> 
+      let rcr stmt = expand_wildcard_targets tables stmt in
+      Union(rcr s1, rcr s2)
+   | Select(targets,sources,cond,gb,opts) ->
+      Debug.print "LOG-SQL" (fun () -> "[SQL] Expanding query: "^
+                                       (string_of_select query));
+      let expanded_q = 
+         evaluate_with_entity (SqlQuery(query)) (fun () -> Select(
+            List.flatten (List.map (fun (tname, texpr) ->
+               match texpr with
+                  | Var(None, "*", _) ->
+                     List.map 
+                        (fun expr -> (name_of_expr (Var(expr)), (Var(expr)))) (
+                           List.flatten (List.map (labeled_source_schema tables) 
+                                                  sources)
+                        )
+                  | Var(Some(source), "*", _) ->
+                     List.map (fun expr -> (name_of_expr (Var(expr)), (Var(expr))))
+                              (labeled_source_schema tables
+                                 (source,(List.assoc source sources)))
+                  | _ -> [tname,texpr]
+                  
+            ) targets),
+            sources, cond, gb, opts))
+      in
+         Debug.print "LOG-SQL" (fun () -> "[SQL] Expanded query: "^
+                                          (string_of_select expanded_q));
+         expanded_q
 (**/**)
 let global_table_defs:(string * table_t) list ref = ref []
 ;;
@@ -950,7 +978,7 @@ let parse_file:((string -> t list) ref) = ref (fun _ -> [])
 let string_of_sql_entity (entity:sql_entity_t): string =
    match entity with 
    | SqlStatement(Create_Table(table)) -> string_of_table table
-   | SqlStatement(Select(stmt))
+   | SqlStatement(SelectStmt(stmt))
    | SqlQuery(stmt)                    -> string_of_select stmt
    | SqlExpression(expr)               -> string_of_expr expr
    | SqlCondition(cond)                -> string_of_cond cond

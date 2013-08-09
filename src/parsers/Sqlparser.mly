@@ -55,16 +55,20 @@ let natural_join lhs rhs =
    in
       (cond, lhs @ (List.map snd sch))
 
-let scan_for_existence (op_name:string) (q:Sql.select_t) (cmp_op:cmp_t) 
-                       (expr:Sql.expr_t) =
-   let (targets, sources, cond, gb_vars, _) = q in
-   let (_,tgt) = match targets with [tgt] -> tgt | _ -> 
-      bail ("Target of "^op_name^" clause should produce a single column")
-   in 
-   if Sql.is_agg_expr tgt
-   then Sql.Comparison(expr, cmp_op, Sql.NestedQ(q))
-   else Sql.Exists(["unused", Sql.Const(CInt(1))], sources, 
-              (Sql.And(cond, Sql.Comparison(expr, cmp_op, tgt))), gb_vars, [])
+let rec scan_for_existence (op_name:string) (q:Sql.select_t) (cmp_op:cmp_t) 
+                           (expr:Sql.expr_t) =
+   match q with
+   | Sql.Union(s1, s2) -> 
+      let rcr stmt = scan_for_existence op_name stmt cmp_op expr in
+      Sql.Or(rcr s1, rcr s2)
+   | Sql.Select(targets, sources, cond, gb_vars, _) ->
+      let (_,tgt) = match targets with [tgt] -> tgt | _ -> 
+         bail ("Target of "^op_name^" clause should produce a single column")
+      in 
+      if Sql.is_agg_expr tgt
+      then Sql.Comparison(expr, cmp_op, Sql.NestedQ(q))
+      else Sql.Exists(Sql.Select(["unused", Sql.Const(CInt(1))], sources, 
+               (Sql.And(cond, Sql.Comparison(expr, cmp_op, tgt))), gb_vars, []))
 
 
 let bind_select_vars q =
@@ -131,7 +135,7 @@ dbtoasterSqlStmtList:
 dbtoasterSqlStmt:
 | INCLUDE STRING           { (!Sql.parse_file) $2 }
 | createTableStmt          { [Sql.Create_Table($1)] }
-| selectStmt               { [Sql.Select(bind_select_vars $1)] }
+| selectStmt               { [Sql.SelectStmt(bind_select_vars $1)] }
 | functionDeclarationStmt  { [] }
 | error  { 
       bail "Invalid DBT-SQL statement";
@@ -311,7 +315,9 @@ groupByClause:
    }
 
 selectStmt: 
-    SELECT optionalDistinct 
+| selectStmt UNION selectStmt { Sql.Union($1, $3) }
+| LPAREN selectStmt RPAREN { $2 }
+| SELECT optionalDistinct 
     targetList
     fromClause
     whereClause
@@ -319,7 +325,7 @@ selectStmt:
     {
       let (from, join_conds) = $4 in
          Sql.expand_wildcard_targets (List.map snd !table_defs)
-            ($3, from, Sql.mk_and join_conds $5, $6, $2)
+            (Sql.Select($3, from, Sql.mk_and join_conds $5, $6, $2))
     }
 | error {
       bail "Invalid SELECT statement"
