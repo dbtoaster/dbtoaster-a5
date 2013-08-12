@@ -222,8 +222,7 @@ class ScalaUnitTest < GenericUnitTest
       if /<runtime>(.*)<\/runtime>/ =~ output then
         @runtime = ($1.to_f / 1000000.0).to_f;
       end
-      
-      print output;
+
       @toplevels.keys.each do |q| 
         if /<#{q}[^>]*>(.*)<\/#{q}>/ =~ output then
           result = $1;
