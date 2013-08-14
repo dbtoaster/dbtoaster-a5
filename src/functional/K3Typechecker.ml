@@ -609,7 +609,9 @@ let rec typecheck_expr e : K.type_t =
                with Failure x | Invalid_argument x
                   -> failwith ("map value update: "^x)
                else 
-                  failwith "map value update: invalid update value expression"
+                  failwith 
+                     ("map value update: invalid update value expression" ^
+                     (K.string_of_expr e))
          in
          begin match me with
             | K.SingletonPC(id, t) -> ignore(aux [] t [] ve); K.TUnit

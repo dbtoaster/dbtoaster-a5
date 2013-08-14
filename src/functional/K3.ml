@@ -1135,7 +1135,7 @@ let code_of_prog ((_,(maps,_),triggers,_):prog_t): string = (
    ) maps)^"\n\n"^
    "--------------------- TRIGGERS ----------------------\n"^
    (ListExtras.string_of_list ~sep:"\n\n" (fun (event, stmts) ->
-      "ON "^(Schema.string_of_event event)^" : {"^
+      (Schema.string_of_event event)^" : {"^
       (ListExtras.string_of_list ~sep:"\n\t" string_of_expr stmts)^
       "}"
    ) triggers)^"\n"
@@ -1467,9 +1467,10 @@ let annotate_collections e =
   then e 
   else fst (_annotate_collections e VarMap.empty)
 
+exception ExtractionException of expr_t option * type_t option * string
 let rec extract_patterns_from_k3 e : Patterns.pattern_map =
    let bail ?(t = None) ?(exp = None) msg =
-      raise (AnnotationException(exp, t, msg))
+      raise (ExtractionException(exp, t, msg))
    in
    let extract_patterns_from_expr_list e_l : Patterns.pattern_map =
       List.fold_left (fun pmap expr -> Patterns.merge_pattern_maps 
@@ -1516,5 +1517,139 @@ let rec extract_patterns_from_k3 e : Patterns.pattern_map =
       extract_patterns_from_expr_list (e1 :: e2 :: e_l)
    | _ -> Patterns.empty_pattern_map()
 
+let mk_var_name = 
+   FreshVariable.declare_class "functional/K3" "unique_vars" 
 
+exception NotImplementedException of expr_t option * type_t option * string
 
+(**
+   [unique_vars_expr ~renamings(...) e]
+   
+   Takes an expression and changes variable names such that they are unique
+   in that expression. This helps to avoid name clashes
+   when transforming a program (e.g. to an imperative representation)
+
+   @param renamings (optional) Variables in scope with their renamings
+   @param e         A K3 expression
+   @return          The K3 expression with unique variables
+*)
+let unique_vars_expr ?(renamings = VarMap.empty) e : expr_t = 
+   let rec _unique_vars e renamings : expr_t =
+      let bail ?(t = None) ?(exp = None) msg =
+         raise (NotImplementedException(exp, t, msg))
+      in
+      (* mk_unique_args generates a unique name for each argument and
+         adds the renaming to the map of renamings *)
+      let mk_unique_args renamings args = 
+         let modify_renamings renamings id =
+            let fresh_var = mk_var_name ~inline:("_" ^ id) () in
+            (VarMap.add id fresh_var renamings, fresh_var) 
+         in
+         match args with
+         | AVar (id, t) -> 
+            let n_renamings, n_id = modify_renamings renamings id in
+            (n_renamings, AVar (n_id, t))
+         | ATuple argl ->
+            let n_renamings, n_argl = 
+               List.fold_left (fun (acc, args) (id, tp) ->
+                  let n_renamings, n_id = modify_renamings acc id in
+                  (n_renamings, args @ [n_id, tp])
+               ) (renamings, []) argl
+            in 
+            (n_renamings, ATuple n_argl)
+      in
+      let rcr e = _unique_vars e renamings in
+      let rcrl e_l = List.map rcr e_l in
+      match e with
+      | Const c -> e
+      | Var (id, t) -> 
+         Var (VarMap.find id renamings, t)
+      | Tuple e_l -> Tuple (rcrl e_l)
+      | Project (ce, idx) -> bail "not implemented" (* TODO: implement! *)
+      | Singleton ce -> Singleton (rcr ce) 
+      | Combine e_l -> Combine (rcrl e_l)
+      | Add (ce1, ce2) -> Add (rcr ce1, rcr ce2)
+      | Mult (ce1, ce2) -> Mult (rcr ce1, rcr ce2)
+      | Eq (ce1, ce2) -> Eq (rcr ce1, rcr ce2)
+      | Neq (ce1, ce2) -> Neq (rcr ce1, rcr ce2)
+      | Lt (ce1, ce2) -> Lt (rcr ce1, rcr ce2)
+      | Leq (ce1, ce2) -> Leq (rcr ce1, rcr ce2)
+      | IfThenElse0 (ce1, ce2) -> IfThenElse0 (rcr ce1, rcr ce2)
+      | Comment (c, cexpr) -> Comment (c, rcr cexpr)
+      | IfThenElse (pe, te, ee) -> IfThenElse (rcr pe, rcr te, rcr ee)
+      | Block e_l -> Block (List.map rcr e_l)
+      | Iterate (fn_e, c) -> Iterate (rcr fn_e, rcr c)
+      | Lambda  (arg_e, ce) -> 
+         let n_renamings, n_arg_e = mk_unique_args renamings arg_e in
+         let n_ce = _unique_vars ce n_renamings in
+         Lambda (n_arg_e, n_ce)
+      | AssocLambda (arg1, arg2, ce) -> 
+         let n_renamings, n_arg1 = mk_unique_args renamings arg1 in
+         let n_renamings, n_arg2 = mk_unique_args n_renamings arg2 in
+         let n_ce = _unique_vars ce n_renamings in
+         AssocLambda (n_arg1, n_arg2, n_ce)
+      | ExternalLambda (fn_id, arg, fn_t) -> e
+      | Apply (fn_e, arg_e) -> Apply (rcr fn_e, rcr arg_e)
+      | Map (fn_e, ce) -> Map (rcr fn_e, rcr ce)
+      | Flatten (ce) -> Flatten (rcr ce)
+      | Aggregate (fn_e, ie, ce) -> Aggregate (rcr fn_e, rcr ie, rcr ce)
+      | GroupByAggregate(fn_e, ie, ge, ce) ->
+         GroupByAggregate(rcr fn_e, rcr ie, rcr ge, rcr ce)
+      | SingletonPC _
+      | InPC _
+      | OutPC _
+      | PC _ -> e
+      | Member (me, ke) -> Member (rcr me, rcrl ke)
+      | Lookup (me, ke) -> Lookup (rcr me, rcrl ke)
+      | Slice (me, sch, pat_ve) -> 
+         let ids, e_l = List.split pat_ve in
+         Slice (rcr me, sch, List.combine ids (rcrl e_l))
+      | Filter (fn_e, ce) -> Filter (rcr fn_e, rcr ce)
+      | PCUpdate (me, ke, te) -> PCUpdate (rcr me, rcrl ke, rcr te)
+      | PCValueUpdate (me, ine, oute, ve) -> 
+         PCValueUpdate (rcr me, rcrl ine, rcrl oute, rcr ve)
+      | PCElementRemove (me, ine, oute) -> 
+         PCElementRemove (rcr me, rcrl ine, rcrl oute)
+      | Unit -> e
+      | LookupOrElse (me, ke, ve) -> LookupOrElse (rcr me, rcrl ke, rcr ve)
+   in
+   _unique_vars e renamings
+
+(**
+   [unique_vars_prog prog]
+   
+   Takes a program and changes variable names such that they are unique
+   in the trigger that they belong to. This helps to avoid name clashes
+   when transforming a program (e.g. to an imperative representation)
+
+   @param prog    A K3 program.
+   @return        The K3 program with unique variables.
+*)
+let unique_vars_prog (prog:prog_t) : prog_t =
+   let db_schema, (maps,patts), triggers, tl_queries = prog in
+   let n_tl_queries = 
+      List.map (fun (n, e) -> (n, unique_vars_expr e)) tl_queries 
+   in
+   let n_triggers = 
+      List.map (fun (t, stmts) -> (t, 
+            let vars = 
+               match t with
+               | Schema.InsertEvent (_, vs, _)
+               | Schema.DeleteEvent (_, vs, _) -> vs
+               | Schema.CorrectiveUpdate (_, vs1, vs2, v, _) -> 
+                  v :: vs1 @ vs2
+               | Schema.SystemInitializedEvent -> []
+            in
+            let ids, _ = List.split vars in
+            let renamings = List.fold_left (fun acc x -> 
+                                             VarMap.add x x acc) 
+                                           VarMap.empty ids 
+            in
+            List.map (fun stmt -> 
+                        unique_vars_expr ~renamings:renamings stmt) 
+                     stmts
+         )
+      ) 
+      triggers
+   in
+   (db_schema, (maps,patts), n_triggers, n_tl_queries)

@@ -220,7 +220,10 @@ let rec calc_of_query ?(query_name = None)
    | Sql.Union(s1, s2) -> 
       let rcr stmt = calc_of_query ~query_name:query_name tables stmt in
       let lift_stmt name stmt = CalcRing.mk_prod [CalculusDomains.mk_exists stmt; C.mk_lift (name, C.type_of_expr stmt) stmt] in
-      List.map (fun ((n1, e1), (n2, e2)) -> (n1, CalcRing.mk_sum [lift_stmt n1 e1; lift_stmt n1 e2])) 
+      List.map (fun ((n1, e1), (n2, e2)) -> 
+                  let ln = n1 in
+                  (ln, CalcRing.mk_sum [lift_stmt ln e1; lift_stmt ln e2])
+               ) 
                (List.combine (rcr s1) (rcr s2))
    | Sql.Select _ -> (calc_of_select ~query_name:query_name tables agg_query)
 
