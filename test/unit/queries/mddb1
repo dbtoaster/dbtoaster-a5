@@ -1,0 +1,23 @@
+{
+  :path => "test/queries/mddb/query1.sql",
+  :datasets => {
+    "standard" => {
+      :toplevels => {
+        "RDF" => {
+          :type => :onelevel,
+          :expected => { }
+        }
+      }
+    },
+    
+    "tiny" => {
+      :subs => [ [/schemas\.sql/, "schemas_tiny.sql"] ],
+      :toplevels => {
+        "RDF" => {
+          :type => :onelevel,
+          :expected => { }
+        }
+      }
+    }
+  }
+}
