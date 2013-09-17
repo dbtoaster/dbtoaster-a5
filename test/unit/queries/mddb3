@@ -1,0 +1,23 @@
+{
+  :path => "test/queries/mddb/query3.sql",
+  :datasets => {
+    "standard" => {
+      :toplevels => {
+        "COUNT" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/mddb/query3_standard.csv")
+        }
+      }
+    },
+
+    "tiny" => {
+      :subs => [ [/schemas\.sql/, "schemas_tiny.sql"] ],
+      :toplevels => {
+        "COUNT" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/mddb/query3_tiny.csv")
+        }
+      }
+    }
+  }
+}

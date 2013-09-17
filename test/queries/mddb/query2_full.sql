@@ -6,7 +6,7 @@ INCLUDE 'test/queries/mddb/schemas.sql';
 -- to a hash-based implementation that will be fine provided the
 -- input data is relatively sparse, and thus will have few collisions
 -- (rather than MDDB's array-based approach).
-select bucket_id, count() from (
+select bucket_id, count(*) from (
   select S.point_id, sum(hash(B.bucket_id)) as bucket_id from 
   (
     select C.point_id, C.trj_id, C.t, N.dim_id, N.phi_psi from
