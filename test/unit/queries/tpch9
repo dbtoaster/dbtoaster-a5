@@ -55,7 +55,8 @@
       :toplevels => {
         "SUM_PROFIT" => {
           :type => :onelevel,
-          :expected => results_file("test/results/tpch/query9_big_del.csv")
+          :expected => results_file("test/results/tpch/query9_big_del.csv", 
+          /\|/)
         }
       }
     }
