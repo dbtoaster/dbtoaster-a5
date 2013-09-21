@@ -19,6 +19,10 @@ module ProvenanceBase = struct
    type t = lf_t
    let zero = AnySource
    let one  = NoSource
+
+   let is_zero (v: t) = (v = zero)
+
+   let is_one (v: t) = (v = one)  
 end
 
 module ProvenanceRing = Ring.Make(ProvenanceBase)

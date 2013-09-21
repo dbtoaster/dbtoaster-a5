@@ -14,6 +14,7 @@
 
 open Type
 open Arithmetic
+open Constants
 
 (**
    Template for the base type for externals (maps).  Consists of (respectively):
@@ -55,22 +56,83 @@ type ('term_t) calc_leaf_t =
 
 module rec
 CalcBase : sig
-      type t = (CalcRing.expr_t) calc_leaf_t
+      type t = (CalcRingBase.expr_t) calc_leaf_t
       val  zero: t
       val  one: t
+
+      val is_zero: t -> bool
+      val is_one: t -> bool
    end = struct
-      type t = (CalcRing.expr_t) calc_leaf_t
+      type t = (CalcRingBase.expr_t) calc_leaf_t
       let zero = Value(Arithmetic.mk_int 0)
       let one  = Value(Arithmetic.mk_int 1)
+
+      let is_zero (v: t) =
+         match v with
+         | Value(c) -> ValueRing.is_zero c
+         | _        -> false
+
+      let is_one (v: t) =
+         match v with
+         | Value(c) -> ValueRing.is_one c
+         | _        -> false   
    end and
-(** The Calculus ring *)
-CalcRing : Ring.Ring with type leaf_t = CalcBase.t
+
+(** The base for the Calculus ring *)
+CalcRingBase : Ring.Ring with type leaf_t = CalcBase.t
          = Ring.Make(CalcBase)
 
 (** Elements of the Calculus ring. *)
-type expr_t = CalcRing.expr_t
+type expr_t = CalcRingBase.expr_t
 (** Base type for describing an External (map). *)
-type external_t = CalcRing.expr_t external_leaf_t
+type external_t = CalcRingBase.expr_t external_leaf_t
+
+(**
+   The calculus ring with overwritten mk_sum/mk_prod functions that preserve the 
+   type of the expression when simplifying.
+*)
+module CalcRing = struct
+   include CalcRingBase
+
+   (**
+      Compute the type of the specified Calculus expression
+      @param expr  A Calculus expression
+      @return      The type that [expr] evaluates to
+   *)
+   let rec type_of_expr (expr:expr_t): type_t =
+      let rcr a = type_of_expr a in
+      fold
+         (escalate_type_list ~opname:"[+]")
+         (escalate_type_list ~opname:"[*]")
+         (fun x->x)
+         (fun lf -> begin match lf with
+            | Value(v)                -> (type_of_value v)
+            | External(_,_,_,etype,_) -> etype
+            | AggSum(_, subexp)       -> rcr subexp
+            | Rel(_,_)                -> TInt
+            | Cmp(_,_,_)              -> TInt (* Since we're not using truth, but
+                                                 rather truthiness: the # of
+                                                 truths encountered thus far *)
+            | Lift(_,_)               -> TInt
+(***** BEGIN EXISTS HACK *****)
+            | Exists(_)               -> TInt
+(***** END EXISTS HACK *****)
+         end)
+         expr
+
+   let mk_sum  l =
+      let t = type_of_expr (Sum(List.flatten (List.map sum_list l))) in
+      CalcRingBase.mk_sum_with_elem
+         (mk_val (Value(ValueRing.mk_val (AConst(zero_of_type t)))))
+         l
+
+   let mk_prod l =
+      let t = type_of_expr (Prod(List.flatten (List.map prod_list l))) in
+      CalcRingBase.mk_prod_with_elem
+         (mk_val (Value(ValueRing.mk_val (AConst(zero_of_type t)))))
+         (mk_val (Value(ValueRing.mk_val (AConst(one_of_type t)))))
+         l
+end
 
 (** The scope and schema of an expression, the available input variables when
     an expression is evaluated, and the set of output variables that the 
@@ -216,26 +278,8 @@ let rec schema_of_expr ?(lift_group_by_vars_are_inputs =
    @param expr  A Calculus expression
    @return      The type that [expr] evaluates to
 *)
-let rec type_of_expr (expr:expr_t): type_t =
-   let rcr a = type_of_expr a in
-   CalcRing.fold
-      (escalate_type_list ~opname:"[+]")
-      (escalate_type_list ~opname:"[*]")
-      (fun x->x)
-      (fun lf -> begin match lf with
-         | Value(v)                -> (type_of_value v)
-         | External(_,_,_,etype,_) -> etype
-         | AggSum(_, subexp)       -> rcr subexp
-         | Rel(_,_)                -> TInt
-         | Cmp(_,_,_)              -> TInt (* Since we're not using truth, but
-                                              rather truthiness: the # of
-                                              truths encountered thus far *)
-         | Lift(_,_)               -> TInt
-(***** BEGIN EXISTS HACK *****)
-         | Exists(_)               -> TInt
-(***** END EXISTS HACK *****)
-      end)
-      expr
+let type_of_expr (expr:expr_t): type_t =
+   CalcRing.type_of_expr expr
 
 (**
    Obtain the set of all relations appearing in the specified Calculus 

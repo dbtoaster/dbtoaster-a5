@@ -12,6 +12,16 @@ sig
   type t
   val  zero: t
   val  one:  t
+
+  (** Checks whether a base value is zero. This method should be used
+      instead of comparing directly with the val zero because zero
+      might have multiple representations (e.g. int, float) *)
+  val is_zero: t -> bool
+
+   (** Checks whether a base value is one. This method should be used
+      instead of comparing directly with the val one because one
+      might have multiple representations (e.g. int, float) *)
+  val is_one: t -> bool
 end
 ;;
 
@@ -54,6 +64,9 @@ sig
    (** the zero- and one-elements of the ring *)
    val zero: expr_t
    val one:  expr_t
+
+   val is_zero: expr_t -> bool
+   val is_one: expr_t -> bool
     
    (** Default comparison options. See cmp_opt_t *)
    val default_cmp_opts : cmp_opt_t list
@@ -66,8 +79,11 @@ sig
    val mk_val: leaf_t -> expr_t
 
    (** turns a list l of expressions into \bigsum l and \bigprod l, resp. *)
+   val mk_sum_with_elem:  expr_t -> (expr_t list) -> expr_t
+   val mk_prod_with_elem: expr_t -> expr_t -> (expr_t list) -> expr_t
    val mk_sum:  (expr_t list) -> expr_t
    val mk_prod: (expr_t list) -> expr_t
+   
    val mk_neg:  expr_t -> expr_t
 
    (** accessing the contents of an expression *)
@@ -262,6 +278,16 @@ struct
    let zero = Val(T.zero)  (** Sum [] *)
    let one  = Val(T.one)   (** Prod [] *)
 
+   let is_zero (e: expr_t): bool =
+      match e with
+      | Val(c) -> T.is_zero c
+      | _      -> false
+
+   let is_one (e: expr_t): bool =
+      match e with
+      | Val(c) -> T.is_one c
+      | _      -> false
+         
    let default_cmp_opts = [OptSumOrderIndependent; OptProdOrderIndependent];;
 
    let  sum_list e = match e with  Sum(l) -> l | _ -> [e]
@@ -272,20 +298,23 @@ struct
    (** any construction of complex expressions is done with mk_sum and mk_prod,
       which enforce the representation invariant.
    *)
-   let mk_sum  l =
+   let mk_sum_with_elem  zero l =
       let l2 = (List.filter (fun x -> x <> zero) l) in
       if(l2 = []) then zero
       else if (List.tl l2) = [] then (List.hd l2)
       else Sum(List.flatten (List.map sum_list l2))
 
-   let mk_prod l =
-      let zeroes = (List.filter (fun x -> x = zero) l) in
+   let mk_prod_with_elem zero one l =
+      let zeroes = (List.filter is_zero l) in
       if (zeroes <> []) then zero
       else
-         let l2 = (List.filter (fun x -> x <> one) l) in
+         let l2 = (List.filter (fun x -> not (is_one x)) l) in
          if (l2 = []) then one
          else if ((List.tl l2) = []) then List.hd l2
          else Prod(List.flatten (List.map prod_list l2))
+
+   let mk_sum l = mk_sum_with_elem zero l
+   let mk_prod l = mk_prod_with_elem zero one l
 
    let mk_neg e = match e with Neg(e1) -> e1 | _ -> Neg(e)
 

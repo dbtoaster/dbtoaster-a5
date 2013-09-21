@@ -25,29 +25,84 @@ type 'term arithmetic_leaf_t =
 
 module rec 
 ValueBase : sig
-      type t = ValueRing.expr_t arithmetic_leaf_t
+      type t = ValueRingBase.expr_t arithmetic_leaf_t
       val  zero: t
       val  one: t
+
+      val is_zero: t -> bool
+      val is_one: t -> bool
    end = struct
-      type t = ValueRing.expr_t arithmetic_leaf_t
+      type t = ValueRingBase.expr_t arithmetic_leaf_t
       let zero = AConst(CInt(0))
       let one  = AConst(CInt(1))
+
+      let is_zero (v: t) =
+         match v with
+         | AConst(c) -> is_zero c
+         | _         -> false
+
+      let is_one (v: t) =
+         match v with
+         | AConst(c) -> is_one c
+         | _         -> false   
    end and
+
 (**
-   The value ring
+   The base for the value ring
 *)
-ValueRing : Ring.Ring with type leaf_t = ValueBase.t
+ValueRingBase : Ring.Ring with type leaf_t = ValueBase.t
          = Ring.Make(ValueBase)
 
 (**
    The base type for the Arithmetic ring (see [arithmetic_leaf_t] above)
 *)
-type value_leaf_t = ValueRing.leaf_t
+type value_leaf_t = ValueRingBase.leaf_t
 
 (**
    Values, or elements of the Arithmetic ring
 *)
-type value_t      = ValueRing.expr_t
+type value_t      = ValueRingBase.expr_t
+
+(**
+   The value ring with overwritten mk_sum/mk_prod functions that preserve the 
+   type of the expression when simplifying.
+*)
+module ValueRing = struct
+   include ValueRingBase
+
+   (**** Typechecker ****)
+   (**
+      Compute the type of the specified value.
+      @param v   A value
+      @return    The type of [v]
+   *)
+   let rec type_of_value (a_value: value_t): type_t =
+      fold
+         (escalate_type_list ~opname:"+")
+         (escalate_type_list ~opname:"*")
+         (fun t -> match t with | TInt | TFloat -> t 
+           | _ -> failwith ("Can not compute type of -1 * "^(string_of_type t)))
+         (fun leaf -> match leaf with 
+            | AConst(c)  -> type_of_const c
+            | AVar(_,vt) -> vt
+            | AFn(_,fn_args,fn_type) ->
+               List.iter (fun x -> let _ = type_of_value x in ())
+                         fn_args;
+               fn_type
+         )
+         a_value
+
+   let mk_sum  l =
+      let t = type_of_value (Sum(List.flatten (List.map sum_list l))) in
+      ValueRingBase.mk_sum_with_elem (Val(AConst(zero_of_type t))) l
+
+   let mk_prod l =
+      let t = type_of_value (Prod(List.flatten (List.map prod_list l))) in
+      ValueRingBase.mk_prod_with_elem
+         (Val(AConst(zero_of_type t))) 
+         (Val(AConst(one_of_type t)))
+         l
+end
 
 (**** Constructors ****)
 (** Produce the value equivalent of a boolean *)
@@ -140,20 +195,7 @@ let rec rename_vars (mapping:(var_t,var_t)ListAsFunction.table_fn_t)
    @return    The type of [v]
 *)
 let rec type_of_value (a_value: value_t): type_t =
-   ValueRing.fold
-      (escalate_type_list ~opname:"+")
-      (escalate_type_list ~opname:"*")
-      (fun t -> match t with | TInt | TFloat -> t 
-        | _ -> failwith ("Can not compute type of -1 * "^(string_of_type t)))
-      (fun leaf -> match leaf with 
-         | AConst(c)  -> type_of_const c
-         | AVar(_,vt) -> vt
-         | AFn(_,fn_args,fn_type) ->
-            List.iter (fun x -> let _ = type_of_value x in ())
-                      fn_args;
-            fn_type
-      )
-      a_value
+   ValueRing.type_of_value a_value
 
 
 (**
@@ -304,8 +346,6 @@ let rec eval_partial ?(scope=[]) (v:value_t): value_t =
             if List.mem_assoc (vn,vt) scope 
                then (List.assoc (vn,vt) scope)
                else ValueRing.mk_val lf
-         | AConst(CFloat(0.0)) | AConst(CInt(0)) -> ValueRing.zero
-         | AConst(CFloat(1.0)) | AConst(CInt(1)) -> ValueRing.one
          | AConst(c) -> ValueRing.mk_val lf
       )
       v

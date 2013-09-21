@@ -138,6 +138,20 @@ let sql_of_const (a: const_t): string =
       | CDate(y,m,d) -> "DATE('"^(string_of_const a)^"')"
    end
 
+let is_zero (a:const_t): bool =
+   match a with 
+   | CInt(0)
+   | CBool(false) 
+   | CFloat(0.0) -> true
+   | _ -> false
+
+let is_one (a:const_t): bool =
+   match a with 
+   | CInt(1)
+   | CBool(true) 
+   | CFloat(1.0) -> true
+   | _ -> false
+
 (**** Zero Constants ****)
 (**
    Returns a constant reprezenting zero of type [zt].
@@ -151,6 +165,21 @@ let zero_of_type zt : const_t =
       | TInt  -> CInt(0)
       | TFloat -> CFloat(0.)
       | _ -> failwith ("Cannot produce zero of type '"^(string_of_type zt)^"'")
+   end
+
+(**** One Constants ****)
+(**
+   Returns a constant representing one of type [zt].
+   @param zt    A type. Can be TBool, TInt or TFloat.
+   @return      The constant one of type [zt]
+   @raise Failure If there is no one constant corrsponding to [zt]
+*)  
+let one_of_type zt : const_t = 
+   begin match zt with
+      | TBool -> CBool(true)
+      | TInt  -> CInt(1)
+      | TFloat -> CFloat(1.)
+      | _ -> failwith ("Cannot produce one of type '"^(string_of_type zt)^"'")
    end
 
 (**** Type Casting ****)
