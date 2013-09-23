@@ -83,7 +83,7 @@ sig
    val mk_prod_with_elem: expr_t -> expr_t -> (expr_t list) -> expr_t
    val mk_sum:  (expr_t list) -> expr_t
    val mk_prod: (expr_t list) -> expr_t
-   
+
    val mk_neg:  expr_t -> expr_t
 
    (** accessing the contents of an expression *)
@@ -299,7 +299,7 @@ struct
       which enforce the representation invariant.
    *)
    let mk_sum_with_elem  zero l =
-      let l2 = (List.filter (fun x -> x <> zero) l) in
+      let l2 = (List.filter (fun x -> not (is_zero x)) l) in
       if(l2 = []) then zero
       else if (List.tl l2) = [] then (List.hd l2)
       else Sum(List.flatten (List.map sum_list l2))
