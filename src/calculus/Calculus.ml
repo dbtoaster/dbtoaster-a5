@@ -122,16 +122,29 @@ module CalcRing = struct
 
    let mk_sum  l =
       let t = type_of_expr (Sum(List.flatten (List.map sum_list l))) in
-      CalcRingBase.mk_sum_with_elem
-         (mk_val (Value(ValueRing.mk_val (AConst(zero_of_type t)))))
-         l
+      let z = 
+         begin match zero_of_type_opt t with
+         | Some(z) -> Some(mk_val (Value(ValueRing.mk_val (AConst(z)))))
+         | None    -> None
+         end
+      in
+      CalcRingBase.mk_sum_with_elem z l
 
    let mk_prod l =
       let t = type_of_expr (Prod(List.flatten (List.map prod_list l))) in
-      CalcRingBase.mk_prod_with_elem
-         (mk_val (Value(ValueRing.mk_val (AConst(zero_of_type t)))))
-         (mk_val (Value(ValueRing.mk_val (AConst(one_of_type t)))))
-         l
+      let z = 
+         begin match zero_of_type_opt t with
+         | Some(z) -> Some(mk_val (Value(ValueRing.mk_val (AConst(z)))))
+         | None    -> None
+         end
+      in
+      let o = 
+         begin match one_of_type_opt t with
+         | Some(o) -> Some(mk_val (Value(ValueRing.mk_val (AConst(o)))))
+         | None    -> None
+         end
+      in
+      CalcRingBase.mk_prod_with_elem z o l
 end
 
 (** The scope and schema of an expression, the available input variables when

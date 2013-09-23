@@ -152,6 +152,22 @@ let is_one (a:const_t): bool =
    | CFloat(1.0) -> true
    | _ -> false
 
+let zero_of_type_opt zt : const_t option = 
+   begin match zt with
+      | TBool -> Some(CBool(false))
+      | TInt  -> Some(CInt(0))
+      | TFloat -> Some(CFloat(0.))
+      | _ -> None
+   end
+
+let one_of_type_opt zt : const_t option = 
+   begin match zt with
+      | TBool -> Some(CBool(true))
+      | TInt  -> Some(CInt(1))
+      | TFloat -> Some(CFloat(1.))
+      | _ -> None
+   end
+
 (**** Zero Constants ****)
 (**
    Returns a constant reprezenting zero of type [zt].

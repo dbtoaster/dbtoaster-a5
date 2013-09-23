@@ -94,14 +94,29 @@ module ValueRing = struct
 
    let mk_sum  l =
       let t = type_of_value (Sum(List.flatten (List.map sum_list l))) in
-      ValueRingBase.mk_sum_with_elem (Val(AConst(zero_of_type t))) l
+      let z = 
+         begin match zero_of_type_opt t with
+         | Some(z) -> Some(Val(AConst(z)))
+         | None    -> None
+         end
+      in
+      ValueRingBase.mk_sum_with_elem z l
 
    let mk_prod l =
       let t = type_of_value (Prod(List.flatten (List.map prod_list l))) in
-      ValueRingBase.mk_prod_with_elem
-         (Val(AConst(zero_of_type t))) 
-         (Val(AConst(one_of_type t)))
-         l
+      let z = 
+         begin match zero_of_type_opt t with
+         | Some(z) -> Some(Val(AConst(z)))
+         | None    -> None
+         end
+      in
+      let o = 
+         begin match one_of_type_opt t with
+         | Some(o) -> Some(Val(AConst(o)))
+         | None    -> None
+         end
+      in
+      ValueRingBase.mk_prod_with_elem z o l
 end
 
 (**** Constructors ****)

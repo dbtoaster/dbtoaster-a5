@@ -79,8 +79,9 @@ sig
    val mk_val: leaf_t -> expr_t
 
    (** turns a list l of expressions into \bigsum l and \bigprod l, resp. *)
-   val mk_sum_with_elem:  expr_t -> (expr_t list) -> expr_t
-   val mk_prod_with_elem: expr_t -> expr_t -> (expr_t list) -> expr_t
+   val mk_sum_with_elem:  expr_t option -> (expr_t list) -> expr_t
+   val mk_prod_with_elem: 
+      expr_t option -> expr_t option -> (expr_t list) -> expr_t
    val mk_sum:  (expr_t list) -> expr_t
    val mk_prod: (expr_t list) -> expr_t
 
@@ -300,21 +301,33 @@ struct
    *)
    let mk_sum_with_elem  zero l =
       let l2 = (List.filter (fun x -> not (is_zero x)) l) in
-      if(l2 = []) then zero
+      if(l2 = []) then
+         begin match zero with
+         | Some(z) -> z
+         | None    -> failwith ("No zero element defined")
+         end
       else if (List.tl l2) = [] then (List.hd l2)
       else Sum(List.flatten (List.map sum_list l2))
 
    let mk_prod_with_elem zero one l =
       let zeroes = (List.filter is_zero l) in
-      if (zeroes <> []) then zero
+      if (zeroes <> []) then 
+         begin match zero with
+         | Some(z) -> z
+         | None    -> failwith ("No zero element defined")
+         end
       else
          let l2 = (List.filter (fun x -> not (is_one x)) l) in
-         if (l2 = []) then one
+         if (l2 = []) then
+            begin match one with
+            | Some(o) -> o
+            | None    -> failwith ("No one element defined")
+            end
          else if ((List.tl l2) = []) then List.hd l2
          else Prod(List.flatten (List.map prod_list l2))
 
-   let mk_sum l = mk_sum_with_elem zero l
-   let mk_prod l = mk_prod_with_elem zero one l
+   let mk_sum l = mk_sum_with_elem (Some(zero)) l
+   let mk_prod l = mk_prod_with_elem (Some(zero)) (Some(one)) l
 
    let mk_neg e = match e with Neg(e1) -> e1 | _ -> Neg(e)
 
