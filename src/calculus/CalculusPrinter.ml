@@ -161,11 +161,9 @@ let rec format_expr ?(show_type = false) (expr:expr_t) =
          
       | CalcRing.Val(External(extn, ivars, ovars, extt, extivc)) ->
          !fmt.string extn;
-         if(extt <> TFloat) then (
-            !fmt.string "(";
-            dump string_of_type extt;
-            !fmt.string ")"
-         );
+         !fmt.string "(";
+         dump string_of_type extt;
+         !fmt.string ")";
          !fmt.cut ();
          !fmt.string "[";
          !fmt.bopen 0;
