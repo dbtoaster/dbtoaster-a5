@@ -1143,7 +1143,14 @@ type term_map_t = {
    definition  : C.expr_t;
    valid       : bool ref
 }
+
+(**
+   [cancel_term_list term_list]
    
+   Removes terms from a list that cancel each other out when summed up.
+   
+   @param term_list The list of terms to process
+*)
 let cancel_term_list (term_list: C.expr_t list): C.expr_t list =
    let term_map = 
       List.map (fun term -> 

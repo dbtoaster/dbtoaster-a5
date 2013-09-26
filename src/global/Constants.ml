@@ -138,6 +138,11 @@ let sql_of_const (a: const_t): string =
       | CDate(y,m,d) -> "DATE('"^(string_of_const a)^"')"
    end
 
+(**
+   Checks whether a value is zero.
+   @param v     The value.
+   @return      True if the value is zero.
+*)  
 let is_zero (a:const_t): bool =
    match a with 
    | CInt(0)
@@ -145,6 +150,11 @@ let is_zero (a:const_t): bool =
    | CFloat(0.0) -> true
    | _ -> false
 
+(**
+   Checks whether a value is one.
+   @param a     The value.
+   @return      True if the value is one.
+*)  
 let is_one (a:const_t): bool =
    match a with 
    | CInt(1)
@@ -152,25 +162,9 @@ let is_one (a:const_t): bool =
    | CFloat(1.0) -> true
    | _ -> false
 
-let zero_of_type_opt zt : const_t option = 
-   begin match zt with
-      | TBool -> Some(CBool(false))
-      | TInt  -> Some(CInt(0))
-      | TFloat -> Some(CFloat(0.))
-      | _ -> None
-   end
-
-let one_of_type_opt zt : const_t option = 
-   begin match zt with
-      | TBool -> Some(CBool(true))
-      | TInt  -> Some(CInt(1))
-      | TFloat -> Some(CFloat(1.))
-      | _ -> None
-   end
-
 (**** Zero Constants ****)
 (**
-   Returns a constant reprezenting zero of type [zt].
+   Returns a constant representing zero of type [zt].
    @param zt    A type. Can be TBool, TInt or TFloat.
    @return      The constant zero of type [zt]
    @raise Failure If there is no zero constant corrsponding to [zt]
@@ -183,19 +177,48 @@ let zero_of_type zt : const_t =
       | _ -> failwith ("Cannot produce zero of type '"^(string_of_type zt)^"'")
    end
 
+(**
+   Returns a constant option representing zero of type [zt].
+   @param zt    A type. Can be TBool, TInt or TFloat.
+   @return      The constant zero of type [zt], None if it does not exist for
+                the given type
+*)  
+let zero_of_type_opt zt : const_t option = 
+   begin match zt with
+      | TBool -> Some(CBool(false))
+      | TInt  -> Some(CInt(0))
+      | TFloat -> Some(CFloat(0.))
+      | _ -> None
+   end
+
+
 (**** One Constants ****)
 (**
-   Returns a constant representing one of type [zt].
-   @param zt    A type. Can be TBool, TInt or TFloat.
-   @return      The constant one of type [zt]
-   @raise Failure If there is no one constant corrsponding to [zt]
+   Returns a constant representing one of type [ot].
+   @param ot    A type. Can be TBool, TInt or TFloat.
+   @return      The constant one of type [ot]
+   @raise Failure If there is no one constant corrsponding to [ot]
 *)  
-let one_of_type zt : const_t = 
-   begin match zt with
+let one_of_type ot : const_t = 
+   begin match ot with
       | TBool -> CBool(true)
       | TInt  -> CInt(1)
       | TFloat -> CFloat(1.)
-      | _ -> failwith ("Cannot produce one of type '"^(string_of_type zt)^"'")
+      | _ -> failwith ("Cannot produce one of type '"^(string_of_type ot)^"'")
+   end
+
+(**
+   Returns a constant optionrepresenting one of type [ot].
+   @param ot    A type. Can be TBool, TInt or TFloat.
+   @return      The constant one of type [ot], None if it does not exist for
+                the given type
+*)  
+let one_of_type_opt ot : const_t option = 
+   begin match ot with
+      | TBool -> Some(CBool(true))
+      | TInt  -> Some(CInt(1))
+      | TFloat -> Some(CFloat(1.))
+      | _ -> None
    end
 
 (**** Type Casting ****)
