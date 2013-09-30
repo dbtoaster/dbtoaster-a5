@@ -611,7 +611,9 @@ and calc_of_condition (tables:Sql.table_t list)
          
          | Sql.Not(Sql.InList(expr, l)) ->
             let (expr_val, expr_calc) = 
-               lift_if_necessary ~t:"in" (rcr_e expr)
+               let t = Sql.expr_type expr tables sources in
+               let v = Some(tmp_var "in" t) in
+               lower_if_value (rcr_et v expr)
             in
                CalcRing.mk_prod (expr_calc::(List.map (fun x -> 
                   C.mk_cmp Neq (Arithmetic.mk_const x) expr_val)
