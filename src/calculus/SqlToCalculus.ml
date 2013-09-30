@@ -48,7 +48,15 @@ let lift_if_necessary ?(t="agg") ?(vt=TAny) (calc:C.expr_t):
       | _ -> 
          let v = tmp_var t (Type.escalate_type vt (C.type_of_expr calc)) in
          (  Arithmetic.mk_var v, C.mk_lift v calc  )
-      
+
+
+let lower_if_value (calc:C.expr_t): (value_t * C.expr_t) = 
+   match calc with
+   | CalcRing.Val(C.Lift(v, CalcRing.Val(Value(x)))) -> 
+      (x, CalcRing.one)
+   | CalcRing.Val(C.Lift(v, c)) -> (Arithmetic.mk_var v, c)
+   | CalcRing.Val(AggSum(v :: [], c)) -> (Arithmetic.mk_var v, calc)
+   | _ -> failwith ("Expected Val, found: " ^ (C.string_of_expr calc))
 
 (**
    [var_of_sql_var var]
@@ -324,6 +332,9 @@ and calc_of_select ?(query_name = None)
                up into a variable of the appropriate name (this also covers
                simple renaming) *)
             let tgt_var = (tgt_name, (Sql.expr_type tgt_expr tables sources)) in
+            (tgt_var, calc_of_sql_expr 
+               ~tgt_var:(Some(tgt_var)) tables sources tgt_expr)
+(*
             let calc_expr = calc_of_sql_expr tables sources tgt_expr in
                (tgt_var, C.mk_lift tgt_var
                   (match ((C.type_of_expr calc_expr), (snd tgt_var)) with
@@ -337,7 +348,7 @@ and calc_of_select ?(query_name = None)
                                  ") from its expected type ("^
                                  (Type.string_of_type (snd tgt_var))^
                                  ")"))
-               )
+               )*)
    ) noagg_tgts) in
    let noagg_calc = CalcRing.mk_prod noagg_terms in
    (* There might be group-by targets that are not represented in the target
@@ -518,6 +529,7 @@ and calc_of_condition (tables:Sql.table_t list)
                       (sources:Sql.labeled_source_t list)
                       (cond:Sql.cond_t):
                       C.expr_t =
+   let rcr_et tgt_var e = calc_of_sql_expr ~tgt_var:tgt_var tables sources e in
    let rcr_e e = calc_of_sql_expr tables sources e in
    let rcr_c c = calc_of_condition tables sources c in
    let calc_of_like wrapper expr like = 
@@ -607,7 +619,9 @@ and calc_of_condition (tables:Sql.table_t list)
 
          | Sql.InList(expr, l) ->
             let (expr_val, expr_calc) = 
-               lift_if_necessary ~t:"in" (rcr_e expr)
+               let t = Sql.expr_type expr tables sources in
+               let v = Some(tmp_var "in" t) in
+               lower_if_value (rcr_et v expr)
             in
             (** Unlike the general OR, we can ensure that the condition is
                 an exclusive OR by making the list of comparisons unique *)
@@ -660,7 +674,8 @@ and calc_of_condition (tables:Sql.table_t list)
                   subquery with >1 target or if it contains an aggregate
                   function where none is expected).
 *)
-and calc_of_sql_expr ?(materialize_query = None)
+and calc_of_sql_expr ?(tgt_var = None)
+                     ?(materialize_query = None)
                      (tables:Sql.table_t list) 
                      (sources:Sql.labeled_source_t list)
                      (expr:Sql.expr_t): C.expr_t =
@@ -689,133 +704,143 @@ and calc_of_sql_expr ?(materialize_query = None)
             ]
       end
    in
-   
-   begin match expr with
-      | Sql.Const(c) -> 
-         C.mk_value (Arithmetic.mk_const c)
-      | Sql.Var(v)   -> 
-         C.mk_value (Arithmetic.mk_var (var_of_sql_var v))
-      | Sql.SQLArith(e1, ((Sql.Sum | Sql.Sub) as op), e2) ->
-         let e1_calc, e2_base_calc =
-            begin match ((Sql.is_agg_expr e1), (Sql.is_agg_expr e2)) with
-               | (true, true) | (false,false) -> (rcr_e e1, rcr_e e2)
-               | (false,true) -> (extend_sum_with_agg (rcr_e e1), (rcr_e e2))
-               | (true,false) -> ((rcr_e e1), extend_sum_with_agg (rcr_e e2))
-            end
-         in
-         let e2_calc = if op = Sql.Sub then CalcRing.mk_neg e2_base_calc
-                                       else e2_base_calc 
-         in
-            CalcRing.mk_sum [e1_calc; e2_calc]
-      | Sql.SQLArith(e1, Sql.Prod, e2) ->
-         CalcRing.mk_prod [rcr_e e1; rcr_e e2]
-      | Sql.SQLArith(e1, Sql.Div, e2) ->
-         let ce1 = rcr_e e1 in
-         let ce2 = rcr_e e2 in
-         let (e2_val, e2_calc) = lift_if_necessary ce2 in
+   let calc, contains_target = 
+      begin match expr with
+         | Sql.Const(c) -> 
+            C.mk_value (Arithmetic.mk_const c), false
+         | Sql.Var(v)   -> 
+            C.mk_value (Arithmetic.mk_var (var_of_sql_var v)), false
+         | Sql.SQLArith(e1, ((Sql.Sum | Sql.Sub) as op), e2) ->
+            let e1_calc, e2_base_calc =
+               begin match ((Sql.is_agg_expr e1), (Sql.is_agg_expr e2)) with
+                  | (true, true) | (false,false) -> (rcr_e e1, rcr_e e2)
+                  | (false,true) -> (extend_sum_with_agg (rcr_e e1), (rcr_e e2))
+                  | (true,false) -> ((rcr_e e1), extend_sum_with_agg (rcr_e e2))
+               end
+            in
+            let e2_calc = if op = Sql.Sub then CalcRing.mk_neg e2_base_calc
+                                          else e2_base_calc 
+            in
+               CalcRing.mk_sum [e1_calc; e2_calc], false
+         | Sql.SQLArith(e1, Sql.Prod, e2) ->
+            CalcRing.mk_prod [rcr_e e1; rcr_e e2], false
+         | Sql.SQLArith(e1, Sql.Div, e2) ->
+            let ce1 = rcr_e e1 in
+            let ce2 = rcr_e e2 in
+            let (e2_val, e2_calc) = lift_if_necessary ce2 in
 
-         (* The ordering of ce1/e1_calc and e2_calc needs to pay attention to
-            which variables are bound where.  Specifically, if e2 is an 
-            aggregate expression and e1 is not (i.e., the entire thing is an
-            aggregate expression, but there are computations going on outside
-            of the aggregate), then it's possible that e2 will bind group by
-            variables that are used in e1.  In this case, we need to flip the
-            order of the lift operations.  
+            (* The ordering of ce1/e1_calc and e2_calc needs to pay attention to
+               which variables are bound where.  Specifically, if e2 is an 
+               aggregate expression and e1 is not (i.e., the entire thing is an
+               aggregate expression, but there are computations going on outside
+               of the aggregate), then it's possible that e2 will bind group by
+               variables that are used in e1.  In this case, we need to flip the
+               order of the lift operations.  
 
-            The equivalent operations are performed for the other arithmetic
-            operators in [normalize_agg_target_expr] above, since the correct
-            rewrite behavior for some of those can not be determined locally.
-         *)
-         let needs_order_flip = 
-            (not (Sql.is_agg_expr e1)) && (Sql.is_agg_expr e2)
-         in 
+               The equivalent operations are performed for the other arithmetic
+               operators in [normalize_agg_target_expr] above, since the correct
+               rewrite behavior for some of those can not be determined locally.
+            *)
+            let needs_order_flip = 
+               (not (Sql.is_agg_expr e1)) && (Sql.is_agg_expr e2)
+            in 
+            
+            let nested_schema = 
+               (ListAsSet.union (snd (C.schema_of_expr ce1))
+                                (snd (C.schema_of_expr ce2)))
+            in
+               C.mk_aggsum nested_schema 
+                  (CalcRing.mk_prod [
+                      ( if needs_order_flip 
+                        then CalcRing.mk_prod [e2_calc; ce1]
+                        else CalcRing.mk_prod [ce1; e2_calc]
+                      );
+                      C.mk_value (Arithmetic.mk_fn "/" [e2_val] TFloat)    
+                  ]), false
+
+         | Sql.Negation(e) -> CalcRing.mk_neg (rcr_e e), false
+         | Sql.NestedQ(q)  -> 
+            let (q_targets,q_sources,q_cond,q_gb_vars,_) = 
+               match q with
+               | Sql.Select(targets,sources,cond,gb_vars,opts) -> 
+                  (targets,sources,cond,gb_vars,opts) 
+               | _ -> 
+                  Sql.error ("Target-nested subqueries with UNION not supported")
+            in
+            if (q_gb_vars <> []) || (* Group-by not allowed *)
+               (List.length q_targets <> 1) || (* Only one target *)
+               ((not (Sql.is_agg_query q)) && (q_sources <> [])) 
+                            (* And if it has any sources, it had better be an
+                               aggregate query *)
+            then
+               (* This should get caught much earlier... but let's be safe *)
+               Sql.error ("Target-nested subqueries must produce exactly 1 "^
+                          "column, and either be aggregate queries or not have "^
+                          "a FROM clause")
+            else
+               (* If it's an aggregate query, then we do the standard thing, but
+                  only return the one (nameless) target. *)
+               if Sql.is_agg_query q then snd (List.hd (rcr_q q)), false
+               (* If it's not an aggregate query, then all we care about is the 
+                  condition and the single target that we have. *)
+               else 
+                  CalcRing.mk_prod 
+                     [rcr_c q_cond; rcr_e (snd (List.hd (q_targets)))], false
+
+         | Sql.Aggregate(agg, expr) -> 
+            begin match materialize_query with
+               | Some(mq) -> (mq agg (rcr_e ~is_agg:true expr))
+               | None -> failwith "Unexpected aggregation operator (2)"
+            end, false
+         | Sql.ExternalFn(fn, fargs) ->
+            let (lifted_args_and_gb_vars, arg_calc) = 
+               List.split (List.map (fun arg ->
+                  let raw_arg_calc = (rcr_e arg) in
+                  let (arg_val, arg_calc) = lift_if_necessary raw_arg_calc in
+                     ((arg_val, snd (C.schema_of_expr raw_arg_calc)),
+                      (Sql.is_agg_expr arg, arg_calc))
+               ) fargs) in
+            let lifted_args, gb_vars = List.split lifted_args_and_gb_vars in
+            let (agg_args,non_agg_args) = 
+               List.partition fst arg_calc
+            in
+            let { Functions.ret_type       = impl_type;
+                  Functions.implementation = impl_name;
+                } = (Functions.declaration fn
+                        (List.map Arithmetic.type_of_value lifted_args))
+            in
+            let v = 
+               match tgt_var with
+               | None -> tmp_var "ext" impl_type
+               | Some(t) -> t
+            in
+               C.mk_aggsum (v :: (List.flatten gb_vars)) 
+                  (CalcRing.mk_prod 
+                     ((List.map snd (agg_args @ non_agg_args)) @
+                      [
+                        let calc = C.mk_value (Arithmetic.mk_fn impl_name lifted_args impl_type) in
+                        C.mk_lift v calc 
+                      ])), true
+         | Sql.Case(cases, else_branch) ->
+            let (ret_calc, else_cond) = 
+               List.fold_left (fun (ret_calc, prev_cond) (curr_cond, curr_term) -> 
+                  let full_cond = (Sql.mk_and prev_cond curr_cond)
+                  in (
+                     CalcRing.mk_sum [ret_calc; 
+                        CalcRing.mk_prod [rcr_c full_cond;
+                                          rcr_e curr_term]],
+                     (Sql.mk_and prev_cond (Sql.Not(curr_cond)))
+                  )
+               ) (CalcRing.zero, Sql.ConstB(true))cases
+            in
+               CalcRing.mk_sum [ret_calc; 
+                  CalcRing.mk_prod [rcr_c else_cond; rcr_e else_branch]], false
          
-         let nested_schema = 
-            (ListAsSet.union (snd (C.schema_of_expr ce1))
-                             (snd (C.schema_of_expr ce2)))
-         in
-            C.mk_aggsum nested_schema 
-               (CalcRing.mk_prod [
-                   ( if needs_order_flip 
-                     then CalcRing.mk_prod [e2_calc; ce1]
-                     else CalcRing.mk_prod [ce1; e2_calc]
-                   );
-                   C.mk_value (Arithmetic.mk_fn "/" [e2_val] TFloat)    
-               ])
-
-      | Sql.Negation(e) -> CalcRing.mk_neg (rcr_e e)
-      | Sql.NestedQ(q)  -> 
-         let (q_targets,q_sources,q_cond,q_gb_vars,_) = 
-            match q with
-            | Sql.Select(targets,sources,cond,gb_vars,opts) -> 
-               (targets,sources,cond,gb_vars,opts) 
-            | _ -> 
-               Sql.error ("Target-nested subqueries with UNION not supported")
-         in
-         if (q_gb_vars <> []) || (* Group-by not allowed *)
-            (List.length q_targets <> 1) || (* Only one target *)
-            ((not (Sql.is_agg_query q)) && (q_sources <> [])) 
-                         (* And if it has any sources, it had better be an
-                            aggregate query *)
-         then
-            (* This should get caught much earlier... but let's be safe *)
-            Sql.error ("Target-nested subqueries must produce exactly 1 "^
-                       "column, and either be aggregate queries or not have "^
-                       "a FROM clause")
-         else
-            (* If it's an aggregate query, then we do the standard thing, but
-               only return the one (nameless) target. *)
-            if Sql.is_agg_query q then snd (List.hd (rcr_q q))
-            (* If it's not an aggregate query, then all we care about is the 
-               condition and the single target that we have. *)
-            else 
-               CalcRing.mk_prod 
-                  [rcr_c q_cond; rcr_e (snd (List.hd (q_targets)))]
-
-      | Sql.Aggregate(agg, expr) -> 
-         begin match materialize_query with
-            | Some(mq) -> (mq agg (rcr_e ~is_agg:true expr))
-            | None -> failwith "Unexpected aggregation operator (2)"
-         end
-      | Sql.ExternalFn(fn, fargs) ->
-         let (lifted_args_and_gb_vars, arg_calc) = 
-            List.split (List.map (fun arg ->
-               let raw_arg_calc = (rcr_e arg) in
-               let (arg_val, arg_calc) = lift_if_necessary raw_arg_calc in
-                  ((arg_val, snd (C.schema_of_expr raw_arg_calc)),
-                   (Sql.is_agg_expr arg, arg_calc))
-            ) fargs) in
-         let lifted_args, gb_vars = List.split lifted_args_and_gb_vars in
-         let (agg_args,non_agg_args) = 
-            List.partition fst arg_calc
-         in
-         let { Functions.ret_type       = impl_type;
-               Functions.implementation = impl_name;
-             } = (Functions.declaration fn
-                     (List.map Arithmetic.type_of_value lifted_args))
-         in
-            C.mk_aggsum (List.flatten gb_vars) 
-               (CalcRing.mk_prod 
-                  ((List.map snd (agg_args @ non_agg_args)) @
-                   [ C.mk_value 
-                        (Arithmetic.mk_fn impl_name lifted_args impl_type) 
-                   ]))
-      | Sql.Case(cases, else_branch) ->
-         let (ret_calc, else_cond) = 
-            List.fold_left (fun (ret_calc, prev_cond) (curr_cond, curr_term) -> 
-               let full_cond = (Sql.mk_and prev_cond curr_cond)
-               in (
-                  CalcRing.mk_sum [ret_calc; 
-                     CalcRing.mk_prod [rcr_c full_cond;
-                                       rcr_e curr_term]],
-                  (Sql.mk_and prev_cond (Sql.Not(curr_cond)))
-               )
-            ) (CalcRing.zero, Sql.ConstB(true))cases
-         in
-            CalcRing.mk_sum [ret_calc; 
-               CalcRing.mk_prod [rcr_c else_cond; rcr_e else_branch]]
-      
-   end
+      end
+   in
+      match tgt_var, contains_target with
+      | Some(v), false -> C.mk_lift v calc
+      | _, _           -> calc
 
 (**
    [extract_sql_schema db tables]
