@@ -49,7 +49,18 @@ let lift_if_necessary ?(t="agg") ?(vt=TAny) (calc:C.expr_t):
          let v = tmp_var t (Type.escalate_type vt (C.type_of_expr calc)) in
          (  Arithmetic.mk_var v, C.mk_lift v calc  )
 
+(**
+   [lower_if_value calc]
 
+   This utility function removes the lift around an expression if the
+   expression consists only of a value. In any case, the function
+   returns a value that holds the result of the expression (either
+   a reference to a variable or the value itself).
+
+   @param calc The expression to be processed
+   @return     A tuple of the value holding the result of the expression
+               and the expression itself
+   *)
 let lower_if_value (calc:C.expr_t): (value_t * C.expr_t) = 
    match calc with
    | CalcRing.Val(C.Lift(v, CalcRing.Val(Value(x)))) -> 
@@ -334,21 +345,6 @@ and calc_of_select ?(query_name = None)
             let tgt_var = (tgt_name, (Sql.expr_type tgt_expr tables sources)) in
             (tgt_var, calc_of_sql_expr 
                ~tgt_var:(Some(tgt_var)) tables sources tgt_expr)
-(*
-            let calc_expr = calc_of_sql_expr tables sources tgt_expr in
-               (tgt_var, C.mk_lift tgt_var
-                  (match ((C.type_of_expr calc_expr), (snd tgt_var)) with
-                   | (a, b) when a = b -> calc_expr
-                   | _ -> 
-                      Sql.error ("Sql target expression '"^
-                                 (Sql.string_of_expr tgt_expr)^
-                                 "' translated to different type ("^
-                                 (Type.string_of_type 
-                                   (C.type_of_expr calc_expr))^
-                                 ") from its expected type ("^
-                                 (Type.string_of_type (snd tgt_var))^
-                                 ")"))
-               )*)
    ) noagg_tgts) in
    let noagg_calc = CalcRing.mk_prod noagg_terms in
    (* There might be group-by targets that are not represented in the target
