@@ -807,18 +807,18 @@ and calc_of_sql_expr ?(tgt_var = None)
                 } = (Functions.declaration fn
                         (List.map Arithmetic.type_of_value lifted_args))
             in
-            let v = 
+            let agg_res = 
                match tgt_var with
-               | None -> tmp_var "ext" impl_type
-               | Some(t) -> t
+               | None -> []
+               | Some(t) -> [t]
             in
-               C.mk_aggsum (v :: (List.flatten gb_vars)) 
+               C.mk_aggsum (agg_res @ (List.flatten gb_vars)) 
                   (CalcRing.mk_prod 
                      ((List.map snd (agg_args @ non_agg_args)) @
                       [
                         let calc = C.mk_value (Arithmetic.mk_fn impl_name lifted_args impl_type) in
-                        C.mk_lift v calc 
-                      ])), true
+                        if agg_res = [] then calc else C.mk_lift (List.hd agg_res) calc 
+                      ])), agg_res != []
          | Sql.Case(cases, else_branch) ->
             let (ret_calc, else_cond) = 
                List.fold_left (fun (ret_calc, prev_cond) (curr_cond, curr_term) -> 
