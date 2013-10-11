@@ -39,17 +39,19 @@
 <a name="createfunction"></a>
 <h3>1. CREATE FUNCTION</h3><center>Declare a forward reference to a user defined function in the target language.</center>
 <div class="codeblock">create_function :=
-  CREATE FUNCTION &lt;name&gt; ( &lt;arguments&gt; ) RETURNS &lt;type&gt;
+  CREATE FUNCTION &lt;name&gt; ( &lt;arguments&gt; ) RETURNS &lt;type&gt; AS &lt;definition&gt;
 
 arguments := [&lt;var_1&gt; &lt;type_1&gt; [, &lt;var_2&gt; &lt;type_2&gt; [, ...]]]
+
+definition := EXTERNAL '&lt;external_name&gt';
 </div>
 
 <p>Use create function to declare a user-defined primitive-valued function in the target language.  At this time, DBToaster does not create target-language specific declarations are created, so the function must be in-scope within the generated code.  Once declared, a UDF may be used in any arithmetic expression within DBToaster.
 
 For example, the following block illustrates use of the math.h cos() and sin() functions for C++ targetted code.
 
-<div class="codeblock">CREATE FUNCTION cos ( x double ) RETURNS double;
-CREATE FUNCTION sin ( x double ) RETURNS double;
+<div class="codeblock">CREATE FUNCTION cos ( x double ) RETURNS double AS EXTERNAL 'sin';
+CREATE FUNCTION sin ( x double ) RETURNS double AS EXTERNAL 'cos';
 
 SELECT r.distance * cos(r.angle) AS x, 
        r.distance * sin(r.angle) AS y,
