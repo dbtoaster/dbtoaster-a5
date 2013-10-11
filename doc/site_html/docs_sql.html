@@ -33,8 +33,33 @@
     <hr/>
     <div class="contentwrapper">
       <div class="content">
-        <div class="doc_chain_link"> &lt; <span class="doc_chain_link_prev"><a href="docs_compiler.html" >Command-Line Reference</a></span> | <span class="doc_chain_link_next"><a href="docs_stdlib.html" >DBT StdLib Reference</a></span> &gt; </div>        <div class="titlebox">DBT-SQL Reference</div><a name="create"></a>
-<h3>1. CREATE</h3><center>Declare a relation for use in the query.</center>
+        <div class="doc_chain_link"> &lt; <span class="doc_chain_link_prev"><a href="docs_compiler.html" >Command-Line Reference</a></span> | <span class="doc_chain_link_next"><a href="docs_stdlib.html" >DBT StdLib Reference</a></span> &gt; </div>        <div class="titlebox">DBT-SQL Reference</div>
+
+
+<a name="createfunction"></a>
+<h3>1. CREATE FUNCTION</h3><center>Declare a forward reference to a user defined function in the target language.</center>
+<div class="codeblock">create_function :=
+  CREATE FUNCTION &lt;name&gt; ( &lt;arguments&gt; ) RETURNS &lt;type&gt;
+
+arguments := [&lt;var_1&gt; &lt;type_1&gt; [, &lt;var_2&gt; &lt;type_2&gt; [, ...]]]
+</div>
+
+<p>Use create function to declare a user-defined primitive-valued function in the target language.  At this time, DBToaster does not create target-language specific declarations are created, so the function must be in-scope within the generated code.  Once declared, a UDF may be used in any arithmetic expression within DBToaster.
+
+For example, the following block illustrates use of the math.h cos() and sin() functions for C++ targetted code.
+
+<div class="codeblock">CREATE FUNCTION cos ( x double ) RETURNS double;
+CREATE FUNCTION sin ( x double ) RETURNS double;
+
+SELECT r.distance * cos(r.angle) AS x, 
+       r.distance * sin(r.angle) AS y,
+FROM RadialMeasurements r;
+</div>
+
+<hr/>
+
+<a name="create"></a>
+<h3>2. CREATE TABLE/STREAM</h3><center>Declare a relation for use in the query.</center>
 <div class="codeblock">create_statement := 
   CREATE { TABLE | STREAM } &lt;name&gt; ( &lt;schema&gt; ) 
          [&lt;source_declaration&gt;]
@@ -76,14 +101,23 @@ source_adaptor :=
 <p>The adaptor declares how to parse fields out of each record.  See below for documentation on DBToaster's standard adaptors package.
 </p>
 
-<h4>1.1. Example</h4><div class="codeblock">CREATE STREAM R(a int, b date)
+<h4>2.1. Example</h4><div class="codeblock">CREATE STREAM R(a int, b date)
 FROM FILE 'examples/data/r.dat' LINE DELIMITED 
 CSV (fields := '|')
 </div>
 
 <hr/>
+
+<a name="include"></a>
+<h3>3. INCLUDE</h3><center>Import a secondary SQL file</center>
+<div class="codeblock">include_statement := INCLUDE 'file'
+</div>
+
+Import the contents of the selected file into DBToaster.  The file path is interpreted relative to the current working directory.
+
+<hr/>
 <a name="select"></a>
-<h3>2. SELECT</h3><center>Declare a query to monitor</center>
+<h3>4. SELECT</h3><center>Declare a query to monitor</center>
 
 <div class="codeblock">select_statement := 
   SELECT &lt;target_1&gt; [, &lt;target_2&gt; [, ...]] 
@@ -182,41 +216,34 @@ WHERE sumc > 2</div>
 
 <p>If multiple SELECT statements occur in the same file, the result names of each query will be prefixed with "QUERY#_", where # is an integer.</p>
 
-<h4>2.1. Examples</h4>
+<h4>4.1. Examples</h4>
 <div class="codeblock">CREATE STREAM R(A int, B int);
 CREATE STREAM S(B int, C int);</div>
 
-<h5>2.1.1. Non-aggregate query</h5><div class="codeblock">SELECT * FROM R;</div>
+<h5>4.1.1. Non-aggregate query</h5><div class="codeblock">SELECT * FROM R;</div>
 Generates a single dictionary named COUNT, mapping from the tuple "&lt;R.A, R.B&gt;" to the number of time each tuple occurs in R.
 
-<h5>2.1.2. Aggregate query</h5><div class="codeblock">SELECT SUM(R.A * S.C) AS sum_ac FROM R NATURAL JOIN S;</div>
+<h5>4.1.2. Aggregate query</h5><div class="codeblock">SELECT SUM(R.A * S.C) AS sum_ac FROM R NATURAL JOIN S;</div>
 Generates a single constant integer named SUM_AC containing the query result.
 
-<h5>2.1.3. Aggregate group-by query (one group-by var)</h5><div class="codeblock">SELECT S.C, SUM(R.A) AS sum_a 
+<h5>4.1.3. Aggregate group-by query (one group-by var)</h5><div class="codeblock">SELECT S.C, SUM(R.A) AS sum_a 
 FROM R NATURAL JOIN S 
 GROUP BY S.C;</div>
 Generates a dictionary named SUM_A mapping from values of S.C to the sums of R.A.
 
-<h5>2.1.4. Aggregate group-by query (multiple group-by vars)</h5><div class="codeblock">SELECT R.A, R.B, COUNT(*) AS foo FROM R GROUP BY R.A, R.B;</div>
+<h5>4.1.4. Aggregate group-by query (multiple group-by vars)</h5><div class="codeblock">SELECT R.A, R.B, COUNT(*) AS foo FROM R GROUP BY R.A, R.B;</div>
 Generates a single dictionary named FOO, mapping from the tuple "&lt;R.A, R.B&gt;" to the number of time each tuple occurs in R.
 
-<h5>2.1.5. Query with multiple aggregates</h5><div class="codeblock">SELECT SUM(R.A) AS sum_a, SUM(S.C) AS sum_c 
+<h5>4.1.5. Query with multiple aggregates</h5><div class="codeblock">SELECT SUM(R.A) AS sum_a, SUM(S.C) AS sum_c 
 FROM R NATURAL JOIN S 
 GROUP BY S.C;</div>
 Generates two dictionaries named SUM_A and SUM_C, respectively containing the sums of R.A and S.C.
 
 
-<h5>2.1.6. Multiple Queries</h5><div class="codeblock">SELECT SUM(R.A) AS SUM_A FROM R;
+<h5>4.1.6. Multiple Queries</h5><div class="codeblock">SELECT SUM(R.A) AS SUM_A FROM R;
 SELECT SUM(S.C) SUM_C FROM S;</div>
 Generates two dictionaries named QUERY_1_SUM_A and QUERY_2_SUM_C, respectively containing the sums of R.A and S.C.
 
-<hr/>
-
-<a name="include"></a>
-<h3>3. INCLUDE</h3><div class="codeblock">include_statement := INCLUDE 'file'
-</div>
-
-Import the contents of the selected file into DBToaster.  The file path is interpreted relative to the current working directory.
 
         <div class="doc_chain_link"> &lt; <span class="doc_chain_link_prev"><a href="docs_compiler.html" >Command-Line Reference</a></span> | <span class="doc_chain_link_next"><a href="docs_stdlib.html" >DBT StdLib Reference</a></span> &gt; </div>      </div><!-- /content -->
     </div><!-- /contentwrapper -->

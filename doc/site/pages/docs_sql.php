@@ -1,5 +1,31 @@
+
+
+
+<a name="createfunction"></a>
+<?=chapter("CREATE FUNCTION") ?>
+<center>Declare a forward reference to a user defined function in the target language.</center>
+<div class="codeblock">create_function :=
+  CREATE FUNCTION &lt;name&gt; ( &lt;arguments&gt; ) RETURNS &lt;type&gt;
+
+arguments := [&lt;var_1&gt; &lt;type_1&gt; [, &lt;var_2&gt; &lt;type_2&gt; [, ...]]]
+</div>
+
+<p>Use create function to declare a user-defined primitive-valued function in the target language.  At this time, DBToaster does not create target-language specific declarations are created, so the function must be in-scope within the generated code.  Once declared, a UDF may be used in any arithmetic expression within DBToaster.
+
+For example, the following block illustrates use of the math.h cos() and sin() functions for C++ targetted code.
+
+<div class="codeblock">CREATE FUNCTION cos ( x double ) RETURNS double;
+CREATE FUNCTION sin ( x double ) RETURNS double;
+
+SELECT r.distance * cos(r.angle) AS x, 
+       r.distance * sin(r.angle) AS y,
+FROM RadialMeasurements r;
+</div>
+
+<hr/>
+
 <a name="create"></a>
-<?= chapter("CREATE") ?>
+<?= chapter("CREATE TABLE/STREAM") ?>
 <center>Declare a relation for use in the query.</center>
 <div class="codeblock">create_statement := 
   CREATE { TABLE | STREAM } &lt;name&gt; ( &lt;schema&gt; ) 
@@ -47,6 +73,16 @@ source_adaptor :=
 FROM FILE 'examples/data/r.dat' LINE DELIMITED 
 CSV (fields := '|')
 </div>
+
+<hr/>
+
+<a name="include"></a>
+<?=chapter("INCLUDE") ?>
+<center>Import a secondary SQL file</center>
+<div class="codeblock">include_statement := INCLUDE 'file'
+</div>
+
+Import the contents of the selected file into DBToaster.  The file path is interpreted relative to the current working directory.
 
 <hr/>
 <a name="select"></a>
@@ -185,12 +221,4 @@ Generates two dictionaries named SUM_A and SUM_C, respectively containing the su
 SELECT SUM(S.C) SUM_C FROM S;</div>
 Generates two dictionaries named QUERY_1_SUM_A and QUERY_2_SUM_C, respectively containing the sums of R.A and S.C.
 
-<hr/>
-
-<a name="include"></a>
-<?=chapter("INCLUDE") ?>
-<div class="codeblock">include_statement := INCLUDE 'file'
-</div>
-
-Import the contents of the selected file into DBToaster.  The file path is interpreted relative to the current working directory.
 

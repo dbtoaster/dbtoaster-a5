@@ -66,6 +66,12 @@
 <dt class="code">-D &lt;macro&gt;</dt>
 <dd>When invoking a second-stage compiler with the <span class="code">-c</span> flag, define the preprocessor macro <span class="code">macro</span>.</dd>
 
+<dt class="code">-g &lt;arg&gt;</dt>
+<dd>When invoking a second-stage compiler with the <span class="code">-c</span> flag, pass through the argument <span class="code">arg</span>.</dd>
+
+<dt class="code">--depth &lt;level&gt;</dt>
+<dd>Limit the compiler's maximum recursive depth. By default, DBToaster compiles queries with the depth set to infinity. </dd>
+
 <dt class="code">--custom-prefix &lt;prefix&gt;</dt>
 <dd>Prefix all dbtoaster-generated symbols with this character string.  Use this if DBToaster generates a symbol that conflicts with a symbol in user code.  (Default: "__")</dd>
 
@@ -119,6 +125,12 @@ These flags are passed to the dbtoaster compiler with the <span class="code">-F<
   <dt class="code">HEURISTICS-ENABLE-INPUTVARS</dt>
   <dd>Enable experimental support for incremental view caches.  Queries with joins (and correlations) on inequality predicates are implemented in a way that corresponds roughly to nested-loop one-way joins in stream processing (a tree-based implementation is in development).  If this flag is on, the compiler will cache and incrementally maintain the results of this one-way join.  This is typically a bad idea, since the cost of maintaining the cached values is often higher than the cost of the nested loop scan.  However, if the domains of the variables appearing in the join predicate are small, this flag can drastically improve performance (e.g., for the VWAP example query).  Future versions of DBToaster will include a cost-based optimizer that automatically applies this flag when appropriate.  This optimization is not activated by default at any optimization level.</dd>  
 
+  <dt class="code">HEURISTICS-AGGRESSIVE-INPUTVARS</dt>
+  <dd> Enable experimental support for aggresive materialization of maps with input variables (view caches). It requires the HEURISTICS-ENABLE-INPUTVARS flag to be active. If the calculus optimizations are disabled (see CALC-NO-OPTIMIZE), this option might significantly prolong the compilation time. Note: the C++ backend might fail to compile certain classes of queries when this flag is on.</dd>  
+
+  <dt class="code">HEURISTICS-PULL-OUT-VALUES</dt>
+  <dd>Prevent value terms (variables and comparisons) from being materialized inside maps. In certain cases (e.g., mddb/query2.sql), this option reduces the number of generated maps and speed-ups the compilation time at the expense of doing more computation at runtime.</dd>  
+
   <dt class="code">EXPRESSIVE-TLQS</dt>
   <dd>By default, each user-provided (top-level) query is materialized as a single map. If this flag is turned on, the compiler will materialize top-level queries as multiple maps (if it is more efficient to do so), and only combine them on request.  For more complex queries (in particular nested aggregate, and  AVG aggregate queries), this results in faster processing rates, and if fresh results are required less than once per update, a lower overall computational cost as well.  However, because the final evaluation of the top-level query is not performed until a result is requested, access latencies are higher.  This optimization is not activated by default at any optimization level.</dd>
   
@@ -149,10 +161,18 @@ These flags are passed to the dbtoaster compiler with the <span class="code">-F<
   <dt class="code">COMPILE-WITHOUT-OPT</dt>
   <dd>Request that the second-stage compiler disable any unnecessary optimizations (e.g., by default, GCC is invoked with <span class="code">-O3</span>, but not if this flag is active). This optimization is automatically activated by <span class="code">-O1</span>.</dd>
 
+  <dt class="code">WIDE-TUPLE</dt>
+  <dd>Use nested tuples in generated C++ programs. This option is mostly used at lower compilation levels (depth 0 or 1) to overcome the Boost limitation that tuples may contain at most 50 attributes.</dd>
 
   <dt class="code">WEAK-EXPR-EQUIV</dt>
   <dd>When testing for expression equivalence, perform only a naive structural comparison rather than a (at least quadratic, and potentially exponential) matching.  This accelerates compilation, but may result in the creation of duplicate maps.  This optimization is automatically activated by <span class="code">-O1</span>.</dd>
     
+  <dt class="code">CALC-NO-OPTIMIZE</dt>
+  <dd>Do not apply calculus optimizations that simplify delta expressions. This option prevents range restrictions from being propragated through expressions, which usually leads to significantly worse performance. The resulting code is close to what the naive recursive incremental algorithm would produce. This flag is not activated by default at any optimization level.</dd>
+    
+  <dt class="code">CALC-NO-DECOMPOSITION</dt>
+  <dd>Do not apply query decomposition when computing deltas. This option is not activated by default at any optimization level.</dd>
+        
   <dt class="code">K3-NO-OPTIMIZE</dt>
   <dd>Do not apply functional optimizations. This optimization is automatically activated by <span class="code">-O1</span>.</dd>
   
