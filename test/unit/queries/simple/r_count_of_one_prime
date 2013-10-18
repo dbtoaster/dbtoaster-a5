@@ -1,12 +1,12 @@
 {
-  :path => "test/queries/simple/r_count_of_one.sql",
+  :path => "test/queries/simple/r_count_of_one_prime.sql",
   :datasets => {
     "standard" => {
       :toplevels => {
         "COUNT" => {
           :type => :onelevel,
           :expected => {
-            [1] => 1
+            [3,1] => 1
           }
         }
       } 
