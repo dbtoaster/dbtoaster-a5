@@ -1029,7 +1029,7 @@ and rewrite_having_query (tables:table_t list)
                 outer_gb,
                 ConstB(true),
                 []) 
-      | _ -> failwith ("Bug: UNION cannot have a HAVING clause")
+      | _ -> query 
    in 
    Debug.print "LOG-REWRITE-HAVING" 
                (fun () -> "[SQL] Rewritten query: "^
