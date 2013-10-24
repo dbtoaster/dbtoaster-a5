@@ -117,8 +117,10 @@ function chain_link_docs() {
 ?>
 <html><head>
 <title><?=$longtitle?></title>
-<link rel="stylesheet" type="text/css" href="style.css" />
-<script type="text/javascript" src="dropdowntabs.js"> </script>
+<link rel="stylesheet" type="text/css" href="css/style.css" />
+<link rel="stylesheet" type="text/css" href="css/bootstrap.min.css" media="screen" />
+<link rel="stylesheet" type="text/css" href="css/bootstrap-theme.min.css" />
+<!--<script type="text/javascript" src="dropdowntabs.js"> </script>-->
 
 <?php if(!isset($now_building_distro)) { ?>
   <script type="text/javascript">
@@ -140,61 +142,70 @@ function chain_link_docs() {
 <a name="pagetop"></a>
 <div class="overallpage">
   <div class="pagebody">
-    <div class="headerbar">
-      <div class="logobox">
+    <div class="logobox">
         <?= mk_link("<img src=\"dbtoaster-logo.gif\" width=\"214\" 
-                      height=\"100\" alt=\"DBToaster\"/>", "home"); ?></div>
-      <div class="topmenu">
-        <?php function mk_menu($tag, $page, $subpage = null, $title = null) {
-             return "<li>".mk_link($title, $page, $subpage, "", 
-                                   "rel=\"$tag\"")."</li>";
-           } ?>
-         <div id="bluemenu" class="bluetabs">
-            <ul>
-               <?= mk_menu("dropmenu0_b", "home") ?>
-               <?= mk_menu("dropmenu1_b", "download") ?>
-               <?= mk_menu("dropmenu2_b", "docs", null, "Documentation") ?>
-               <?= mk_menu("dropmenu3_b", "home","contact") ?>
-           </ul>
-         </div>
-      </div>
-         <div id="dropmenu0_b" class="dropmenudiv_b">
-           <?= mk_link(null, "home"); ?>
-           <?= mk_link(null, "home", "performance"); ?>
-           <?= mk_link(null, "home", "features"); ?>
-           <?= mk_link(" - Roadmap", "home", "features", "#roadmap"); ?>
-           <?= mk_link(null, "home", "people"); ?>
-           <?= mk_link(null, "home", "research"); ?>
-         </div>
-         <div id="dropmenu1_b" class="dropmenudiv_b">
-           <?= mk_link(null, "download", null); ?>
-           <?= mk_link("License", "download", null, "#license"); ?>
-         </div>
-         <div id="dropmenu2_b" class="dropmenudiv_b">
-           <?= mk_link("Getting Started", "docs"); ?>
-           <?= mk_link(null, "docs", "compiler"); ?>
-           <?= mk_link(" - Command-Line Options", "docs", "compiler", 
-                                                          "#options"); ?>
-           <?= mk_link(" - Supported Languages", "docs", "compiler", 
-                                                          "#languages"); ?>
-           <?= mk_link(" - Optimization Flags", "docs", "compiler", 
-                                                          "#opt_flags"); ?>
-           <?= mk_link(null, "docs", "sql"); ?>
-           <?= mk_link(null, "docs", "stdlib"); ?>
-           <?= mk_link(null, "docs", "adaptors"); ?>
-           <?= mk_link(null, "docs", "cpp"); ?>
-           <?= mk_link(null, "docs", "scala"); ?>
-         </div>
-         <div id="dropmenu3_b" class="dropmenudiv_b">
-           <?= mk_link("Inquiries", "home", "contact", "#inquiries"); ?>
-           <?= mk_link("Mailing List", "home", "contact", "#mailing"); ?>
-           <?= mk_link(null, "bugs"); ?>
-         </div>
-         <script type="text/javascript">
-            tabdropdown.init("bluemenu")
-         </script>
+                    height=\"100\" alt=\"DBToaster\"/>", "home"); ?>
     </div>
-    <hr/>
+    <div class="navbar navbar-default">
+      <div class="navbar-header">
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+      </div>
+      <div class="navbar-collapse collapse">
+        <ul class="nav navbar-nav">
+          <li class="dropdown">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown">About <b class="caret"></b></a>
+            <ul class="dropdown-menu">
+              <li><?= mk_link(null, "home"); ?></li>
+              <li><?= mk_link(null, "home", "performance"); ?></li>
+              <li><?= mk_link(null, "home", "features"); ?></li>
+              <li><?= mk_link(" - Roadmap", "home", "features", "#roadmap"); ?></li>
+              <li><?= mk_link(null, "home", "people"); ?></li>
+              <li><?= mk_link(null, "home", "research"); ?></li>
+            </ul>
+          </li>
+          <li class="dropdown">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown">Downloads <b class="caret"></b></a>
+            <ul class="dropdown-menu">
+              <li><?= mk_link(null, "download", null); ?></li>
+              <li><?= mk_link("License", "download", null, "#license"); ?></li>
+            </ul>
+          </li>
+          <li class="dropdown">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown">Documentation <b class="caret"></b></a>
+            <ul class="dropdown-menu">
+              <li><?= mk_link("Getting Started", "docs"); ?></li>
+              <li><?= mk_link(null, "docs", "compiler"); ?></li>
+              <li><?= mk_link(" - Command-Line Options", "docs", "compiler", 
+                                                        "#options"); ?></li>
+              <li><?= mk_link(" - Supported Languages", "docs", "compiler", 
+                                                        "#languages"); ?></li>
+              <li><?= mk_link(" - Optimization Flags", "docs", "compiler", 
+                                                        "#opt_flags"); ?></li>
+              <li><?= mk_link(null, "docs", "sql"); ?></li>
+              <li><?= mk_link(null, "docs", "stdlib"); ?></li>
+              <li><?= mk_link(null, "docs", "adaptors"); ?></li>
+              <li><?= mk_link(null, "docs", "cpp"); ?></li>
+              <li><?= mk_link(null, "docs", "scala"); ?></li>
+            </ul>
+          </li>
+          <li class="dropdown">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown">Contact <b class="caret"></b></a>
+            <ul class="dropdown-menu">
+              <li><?= mk_link("Inquiries", "home", "contact", "#inquiries"); ?></li>
+
+              <li><?= mk_link("Mailing List", "home", "contact", "#mailing"); ?></li>
+
+              <li><?= mk_link(null, "bugs"); ?></li>
+
+            </ul>
+          </li>
+        </ul>
+      </div>
+    </div>
     <div class="contentwrapper">
       <div class="content">
         <?= chain_link_docs(); ?>
@@ -214,6 +225,9 @@ function chain_link_docs() {
   <p>Copyright (c) 2009-2012, The DBToaster Consortium. All rights reserved.</p>
   </div>
 </div><!-- /overallpage -->
+
+<script type="text/javascript" src="js/jquery-2.0.3.min.js"> </script>
+<script type="text/javascript" src="js/bootstrap.min.js"> </script>
 
 </body>
 </html>

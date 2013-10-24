@@ -1,5 +1,5 @@
-<img src="engine_bakeoff0.png" class="inline_image" width="600" height="300"/>
-<img src="engine_bakeoff1.png" class="inline_image" width="600" height="300"/>
+<img src="engine_bakeoff0.png" class="inline_image" width="600" />
+<img src="engine_bakeoff1.png" class="inline_image" width="600" />
 
 <p>The above graphs show a performance comparison of DBToaster-generated query engines against a commercial database system (DBX), a commercial stream processor (SPY), and several naive query evaluation strategies implemented in DBToaster that do not involve the Higher-Order incremental view maintenance. (The commercial systems remain anonymous in accordance with the terms of their licensing agreements).</p>
 
