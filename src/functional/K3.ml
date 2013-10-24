@@ -582,14 +582,9 @@ let string_of_expr e =
                           ps (","^(string_of_type t)); ps ")"; cb() in
     match e with
     | Const c -> 
-      let const_ts = match c with
-        | Constants.CFloat _ -> "CFloat"
-        | Constants.CString _ -> "CString"
-        | Constants.CInt _ -> "CInt"
-        | Constants.CBool _ -> "CBool" 
-        | Constants.CDate _ -> "CDate" 
-      in ob(); ps ("Const("^const_ts^"("^(Constants.string_of_const c)^"))"); 
-         cb()
+      ob(); 
+      ps ("K3.Const(" ^ (Constants.ocaml_of_const ~prefix:true c) ^ ")");
+      cb()
     | Var (id,t) -> ob(); ps "Var("; pid id; ps ","; 
                                      ps (string_of_type t); ps ")"; cb()
 
@@ -679,13 +674,7 @@ let rec code_of_expr e =
    in
    match e with
       | Const c -> 
-        let const_ts = match c with
-          | Constants.CFloat _ -> "CFloat"
-          | Constants.CString _ -> "CString" 
-          | Constants.CInt _ -> "CInt"
-          | Constants.CBool _ -> "CBool" 
-          | Constants.CDate _ -> "CDate" 
-        in "K3.Const(Type."^const_ts^"("^(Constants.string_of_const c)^"))"
+         "K3.Const(" ^ (Constants.ocaml_of_const ~prefix:true c) ^ ")"
       | Var (id,t) -> "K3.Var(\""^id^"\","^(ttostr t)^")"
       | Tuple e_l -> "K3.Tuple("^
                (ListExtras.string_of_list ~sep:";" rcr e_l)^")"
@@ -885,15 +874,11 @@ let nice_string_of_expr ?(type_is_needed = false) e maps =
     in
     match e with
     | Const c -> 
-      let const_ts = match c with
-        | Constants.CFloat _ -> "float"
-        | Constants.CString _ -> "string"
-        | Constants.CInt _ -> "int"
-        | Constants.CBool _ -> "bool" 
-        | Constants.CDate _ -> "CDate"
-      in ob(); ps (Constants.string_of_const c);
-         if type_is_needed then ps (":"^(const_ts));
-         cb()
+      let const_ts = Type.string_of_type (Constants.type_of_const c) in
+      ob(); 
+      ps (Constants.string_of_const c);
+      if type_is_needed then ps (":"^(const_ts));
+      cb()
     | Var (id,t) -> 
          ob(); pid id; 
          ps (":"^(ttostr t));
@@ -1272,13 +1257,7 @@ let annotate_collections e =
     )
     in
     match e with
-    | Const c -> (e, TBase(
-      match c with
-      | Constants.CFloat _  -> Type.TFloat
-      | Constants.CString _ -> Type.TString
-      | Constants.CInt _    -> Type.TInt
-      | Constants.CBool _   -> Type.TBool
-      | Constants.CDate _   -> Type.TDate)) 
+    | Const c -> (e, TBase(Constants.type_of_const c))
     | Var (id,t) -> 
       if VarMap.mem id var_map then
         let tp = VarMap.find id var_map in

@@ -15,6 +15,5 @@ SELECT returnflag, linestatus,
   AVG(discount) AS avg_disc,
   COUNT(*) AS count_order
 FROM lineitem
-WHERE shipdate <= DATE('1997-09-01')
-GROUP BY returnflag, linestatus;
-  
+WHERE shipdate <= DATE('1998-12-01') - interval '457' day (3) 
+GROUP BY returnflag, linestatus;  

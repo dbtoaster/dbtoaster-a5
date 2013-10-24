@@ -15,5 +15,5 @@ WHERE  c.custkey = o.custkey
   AND  n.regionkey = r.regionkey 
   AND  r.name = 'ASIA'
   AND  o.orderdate >= DATE('1994-01-01')
-  AND  o.orderdate <  DATE('1995-01-01')
+  AND  o.orderdate <  DATE('1994-01-01') + interval '1' year 
 GROUP BY n.name

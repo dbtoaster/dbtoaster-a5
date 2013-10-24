@@ -1149,6 +1149,9 @@ end (* Typing *)
                            (string_of_int (y*10000+m*100+d)) ^ ")" 
                            (* TODO must be change with appropriate 
                             * object in c++ *)
+         | CInterval _ -> 
+            failwith ("Intervals at runtime are not " ^ 
+                      "supported by the C++ backend")
        end)
  
     | Var (_,(v,_)) -> inl(v)

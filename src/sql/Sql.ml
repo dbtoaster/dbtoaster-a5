@@ -145,6 +145,7 @@ and select_t =
    (* FROM        *) labeled_source_t list *
    (* WHERE       *) cond_t *
    (* GROUP BY    *) sql_var_t list *
+   (* HAVING      *) cond_t *
    (* etc...      *) select_option_t list
 
 (**
@@ -356,6 +357,7 @@ let string_of_const (const:Constants.const_t):string =
      | CFloat(av) -> string_of_float av
      | CString(av) -> "'"^av^"'"   
      | CDate _     -> Constants.sql_of_const const
+     | CInterval _ -> Constants.sql_of_const const
 
 (**
    Produce the (Sqlparser-compatible) representation of the specified SQL 
@@ -417,7 +419,7 @@ and string_of_cond (cond:cond_t): string =
 and string_of_select (stmt:select_t): string =
    match stmt with
    | Union(s1, s2) -> (string_of_select s1) ^ " UNION " ^ (string_of_select s2)
-   | Select(target, from, where, gb, opts) ->
+   | Select(target, from, where, gb, having, opts) ->
       "SELECT "^
       (if List.mem Select_Distinct opts then "DISTINCT " else "")^
       (ListExtras.string_of_list ~sep:", " 
@@ -436,6 +438,9 @@ and string_of_select (stmt:select_t): string =
          else "")^
       (if List.length gb > 0 then
             " GROUP BY "^(ListExtras.string_of_list ~sep:", " string_of_var gb)
+         else "")^
+      (if having <> ConstB(true) then
+            " HAVING "^(string_of_cond having)
          else "")
 (*      ^*)
 (*   ";" *)
@@ -609,7 +614,7 @@ and select_schema ?(strict=true) ?(parent_sources = []) (tables:table_t list)
          sch1
       else
          invalid_sql "Schemas do not match"
-   | Select(targets, sources, _, _, _) ->
+   | Select(targets, sources, _, _, _, _) ->
        evaluate_with_entity (SqlQuery(stmt)) (fun () ->
           List.map (fun (name, expr) -> 
              (  None, name, expr_type ~strict:strict expr tables 
@@ -745,7 +750,7 @@ let rec bind_select_vars ?(parent_sources = [])
          bind_select_vars ~parent_sources:parent_sources stmt tables 
       in 
       Union(rcr s1, rcr s2)
-   | Select(targets,inner_sources,conds,gb,opts) ->
+   | Select(targets,inner_sources,conds,gb,having,opts) ->
       let sources = parent_sources @ inner_sources in
       let rcr_c c = bind_cond_vars c tables sources in
       let rcr_e e = bind_expr_vars e tables sources in
@@ -788,6 +793,7 @@ let rec bind_select_vars ?(parent_sources = [])
                   v,
                   var_type (s,v,t) tables sources)
             ) gb,
+            rcr_c having,
             opts)
          )
 
@@ -896,7 +902,7 @@ let rec is_agg_query (stmt): bool =
    match stmt with 
    (* TODO: Check whether this is the correct behavior for UNIONs *)
    | Union(s1, s2) -> (is_agg_query s1) && (is_agg_query s2)
-   | Select(targets, _, _, _, _) -> 
+   | Select(targets, _, _, _, _, _) -> 
       List.exists is_agg_expr (List.map snd targets)
 ;;
 
@@ -915,6 +921,121 @@ let rec push_down_nots (cond:cond_t): cond_t =
    end
 
 ;;
+
+let rec rewrite_having_expr (q_name:string) 
+                            (tables:table_t list)
+                            (sources:labeled_source_t list)
+                            (expr:expr_t): (expr_t * (string * expr_t) list) =
+   let rcr_c c = rewrite_having_cond q_name tables sources c in
+   let rcr e = rewrite_having_expr q_name tables sources e in
+   match expr with 
+   | Const(_) -> (expr, [])
+   | Var(_) -> (expr, [])
+   | SQLArith(a,op,b) -> 
+      let ra, ral = rcr a in 
+      let rb, rbl = rcr b in
+      (SQLArith(ra, op, rb), ral @ rbl)
+   | Negation(e) -> 
+      let re, rel = rcr e in
+      (Negation(re), rel)
+   | NestedQ(q) -> (expr, [])
+   | Aggregate(_,_) ->
+      let t = expr_type expr tables sources in 
+      let n = mk_sym ~inline:("_agg") () in
+      (Var(Some(q_name),n,t), [n, expr])
+   | ExternalFn(fn,fargs) -> 
+      let rfargs = List.map rcr fargs in
+      let rfargsl = List.fold_left (@) [] (List.map snd rfargs) in
+      (ExternalFn(fn, List.map fst rfargs), rfargsl)
+   | Case(cases, else_branch) ->
+      let rc, rcl = 
+         List.fold_left 
+            (fun (rcases, rcasesl) (cond, expr) -> 
+               let rcond, rcondl = rcr_c cond in
+               let re, rel = rcr expr in
+               (rcases @ [(rcond, re)], rcasesl @ rcondl @ rel)) 
+            ([], []) 
+            cases
+      in 
+      let re, rel = rcr else_branch in
+      (Case(rc, re), rcl @ rel)
+
+and rewrite_having_cond (q_name:string)
+                        (tables:table_t list)
+                        (sources:labeled_source_t list)
+                        (cond:cond_t): (cond_t * (string * expr_t) list) =
+   let rcr_c c = rewrite_having_cond q_name tables sources c in
+   let rcr_e e = rewrite_having_expr q_name tables sources e in
+   match cond with
+   | Comparison(a,op,b) ->
+      let ra, ral = rcr_e a in 
+      let rb, rbl = rcr_e b in
+      (Comparison(ra, op, rb), ral @ rbl)
+   | And(a,b) ->
+      let ra, ral = rcr_c a in 
+      let rb, rbl = rcr_c b in
+      (And(ra, rb), ral @ rbl)
+   | Or(a,b) -> 
+      let ra, ral = rcr_c a in 
+      let rb, rbl = rcr_c b in
+      (Or(ra, rb), ral @ rbl)
+   | Not(e) -> 
+      let re, rel = rcr_c e in
+      (Not(re), rel)
+   | Exists(s) -> cond, []
+   | ConstB(_) -> cond, []
+   | Like(e,s) -> 
+      let re, rel = rcr_e e in
+      (Like(re, s), rel)
+   | InList(e, l) -> 
+      let re, rel = rcr_e e in
+      (InList(re, l), rel)
+
+and rewrite_having_query (tables:table_t list)  
+                         (query:select_t) =
+   Debug.print "LOG-REWRITE-HAVING" (fun () -> "[SQL] Rewriting having in: " ^
+                                               (string_of_select query));
+   let rewritten_query =
+      match query with
+      | Select(_, _, _, _, ConstB(true), _) -> query
+      | Select(targets,sources,cond,gb,having,opts) ->
+         let inner_query_name = mk_sym ~inline:("_inner") () in
+         let h_replaced_aggs, h_agg_tgs = 
+            rewrite_having_cond inner_query_name tables sources having 
+         in
+         let inner_query = 
+            Select(targets @ h_agg_tgs,sources,cond,gb,ConstB(true),opts) 
+         in
+         let outer_targets =
+            List.map (fun (n,e) ->
+                        let t = expr_type e tables sources in
+                        let v = Var(Some(inner_query_name), n, t) in
+                        let te = 
+                           if is_agg_expr e then Aggregate(SumAgg, v) else v 
+                        in
+                        (n, te)) 
+                     targets 
+         in
+         let outer_gb =
+            List.fold_left (fun outer_gb (_, e) ->
+                              match e with
+                              | Var(v) -> v :: outer_gb  
+                              | _      -> outer_gb)
+                           [] outer_targets         
+         in 
+         Select(outer_targets,
+                [(inner_query_name,SubQ(inner_query))],
+                h_replaced_aggs,
+                outer_gb,
+                ConstB(true),
+                []) 
+      | _ -> failwith ("Bug: UNION cannot have a HAVING clause")
+   in 
+   Debug.print "LOG-REWRITE-HAVING" 
+               (fun () -> "[SQL] Rewritten query: "^
+                          (string_of_select rewritten_query));
+   rewritten_query
+
 (**
    Expand all targets of type * and *.* and something.*.  Does not recur into
    nested select statements.
@@ -923,13 +1044,13 @@ let rec push_down_nots (cond:cond_t): cond_t =
    @return        [stmt] rewritten with all targets consisting of AVar(_,*,_)
                   replaced by the corresponding wildcard expansion
 *)
-let rec expand_wildcard_targets (tables:table_t list) 
-                            (query:select_t) =
+let rec expand_wildcard_targets (tables:table_t list)
+                                (query:select_t) =
    match query with
    | Union(s1, s2) -> 
       let rcr stmt = expand_wildcard_targets tables stmt in
       Union(rcr s1, rcr s2)
-   | Select(targets,sources,cond,gb,opts) ->
+   | Select(targets,sources,cond,gb,having,opts) ->
       Debug.print "LOG-SQL" (fun () -> "[SQL] Expanding query: "^
                                        (string_of_select query));
       let expanded_q = 
@@ -949,7 +1070,7 @@ let rec expand_wildcard_targets (tables:table_t list)
                   | _ -> [tname,texpr]
                   
             ) targets),
-            sources, cond, gb, opts))
+            sources, cond, gb, having, opts))
       in
          Debug.print "LOG-SQL" (fun () -> "[SQL] Expanded query: "^
                                           (string_of_select expanded_q));

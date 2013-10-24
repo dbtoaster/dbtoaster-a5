@@ -13,6 +13,11 @@ type cmp_t =
  | Gt (** Greater than *) | Gte (** Greater than or equal *) 
  | Neq (** Not equal *)
 
+(** Interval types *)
+type interval_type_t = 
+   | TYearMonth
+   | TDay
+
 (** Basic Types *)
 type type_t = 
    | TBool                 (** Boolean *)
@@ -20,6 +25,7 @@ type type_t =
    | TFloat                (** Floating point number *)
    | TString               (** A string of bounded length n (0 is infinite) *)
    | TDate                 (** Date *)
+   | TInterval of interval_type_t   (** Year-Month Interval *)
    | TAny                  (** An unspecified type *)
    | TExternal of string   (** An externally defined type *)
 
@@ -71,6 +77,10 @@ let ocaml_of_type (ty: type_t): string =
       | TFloat           -> "TFloat"
       | TString          -> "TString"
       | TDate            -> "TDate"
+      | TInterval(TYearMonth) -> 
+         "TInterval(TYearMonth)"
+      | TInterval(TDay) ->
+         "TInterval(TDay)" 
       | TExternal(etype) -> "TExternal(\""^etype^"\")"
    end
 
@@ -88,6 +98,10 @@ let string_of_type (ty: type_t): string =
       | TFloat           -> "float"
       | TString          -> "string"
       | TDate            -> "date"
+      | TInterval(TYearMonth) -> 
+         "year_month_interval"
+      | TInterval(TDay) -> 
+         "day_interval"
       | TExternal(etype) -> etype
    end
 
@@ -105,6 +119,10 @@ let cpp_of_type (ty: type_t): string =
       | TFloat           -> "double"
       | TString          -> "string"
       | TDate            -> "date"
+      | TInterval(TYearMonth) -> 
+         "year_month_interval"
+      | TInterval(TDay) -> 
+         "day_interval"
       | TExternal(etype) -> etype
    end
 
@@ -155,6 +173,9 @@ let escalate_type ?(opname="<op>") (a:type_t) (b:type_t): type_t =
       | (TInt,TBool) | (TBool,TInt) -> TInt
       | (TBool,TFloat) | (TFloat,TBool) -> TFloat
       | (TInt,TFloat) | (TFloat,TInt) -> TFloat
+      | (TDate,TInterval _) | (TInterval _, TDate) -> TDate
+      | (TInterval(it), TInt) | (TInt, TInterval(it)) -> TInterval(it)
+      | (TInterval(it), TFloat) | (TFloat, TInterval(it)) -> TInterval(it)
       | _ -> failwith ("Can not compute type of "^(string_of_type a)^" "^
                        opname^" "^(string_of_type b))
    end

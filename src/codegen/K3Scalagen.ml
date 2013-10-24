@@ -189,6 +189,9 @@ struct
       | TDate -> Date
       | TAny -> Any
       | TExternal(s) -> External(s)
+      | TInterval _ -> 
+         failwith ("Intervals at runtime are not " ^ 
+                   "supported by the Scala backend")
 
    (** Maps a K3 type to a Scala backend type 
        Note: Collections should be annotated *)
@@ -435,6 +438,8 @@ struct
             )
          in
          (cstr, Date)
+      | CInterval _ -> failwith ("Intervals at runtime are not " ^ 
+                                 "supported by the Scala backend")
    
    (** Generates the code for a variable *)
    let var ?(expr = None) (v:K3.id_t) (t:K3.type_t) : code_t = 

@@ -106,7 +106,7 @@ let rec cast_query_to_aggregate (tables:Sql.table_t list)
    )
    else (
       match query with 
-      | Sql.Select(targets,sources,cond,gb_vars,opts) ->
+      | Sql.Select(targets,sources,cond,gb_vars,having,opts) ->
          let (new_targets,new_gb_vars) = 
             Debug.print "LOG-SQL-TO-CALC" (fun () -> 
                "Casting to Aggregate: "^(Sql.string_of_select query)
@@ -131,7 +131,7 @@ let rec cast_query_to_aggregate (tables:Sql.table_t list)
                ) targets)
             )
          in
-         Sql.Select(new_targets, sources, cond, new_gb_vars, opts)
+         Sql.Select(new_targets, sources, cond, new_gb_vars, having, opts)
       | Sql.Union(s1, s2) -> 
          let rcr stmt = cast_query_to_aggregate tables stmt in
          Sql.Union(rcr s1, rcr s2)
@@ -230,7 +230,8 @@ let rec calc_of_query ?(query_name = None)
                       (tables:Sql.table_t list) 
                       (query:Sql.select_t): 
                       (string * C.expr_t) list = 
-   let agg_query = cast_query_to_aggregate tables query in
+   let re_hv_query = Sql.rewrite_having_query tables query in 
+   let agg_query = cast_query_to_aggregate tables re_hv_query in
    Debug.print "LOG-SQL-TO-CALC" (fun () -> 
       "Cast query is now : "^
       (Sql.string_of_select agg_query)
@@ -256,7 +257,9 @@ let rec calc_of_query ?(query_name = None)
    by adding an implicit [COUNT( * )]).  If the query is an aggregate, then 
    all non-group-by target columns generate a separate Calculus expression 
    (hence, it is possible for this function to return multiple Calculus
-   expressions).
+   expressions). Note that the method expects a SQL query without a HAVING
+   clause.
+
    @param query_name (optional) If this string is not None, then the expected
                      output schema of the group-by variables of this query will 
                      be rebound to a relation with the specified name (e.g., 
@@ -272,8 +275,10 @@ and calc_of_select ?(query_name = None)
                    (string * C.expr_t) list =   
    let (targets,sources,cond,gb_vars,opts) = 
       match query with
-      | Sql.Select(targets,sources,cond,gb_vars,opts) -> 
+      | Sql.Select(targets,sources,cond,gb_vars,Sql.ConstB(true),opts) -> 
          (targets,sources,cond,gb_vars,opts) 
+      | Sql.Select(_,_,_,_,_,_) -> 
+         failwith ("Bug: Expected SELECT statement without HAVING clause")
       | _ -> Sql.error ("Expected select statement")
    in
    let source_calc = calc_of_sources tables sources in
@@ -760,10 +765,15 @@ and calc_of_sql_expr ?(tgt_var = None)
          | Sql.NestedQ(q)  -> 
             let (q_targets,q_sources,q_cond,q_gb_vars,_) = 
                match q with
-               | Sql.Select(targets,sources,cond,gb_vars,opts) -> 
+               | Sql.Select(targets,sources,cond,gb_vars,
+                            Sql.ConstB(true),opts) -> 
                   (targets,sources,cond,gb_vars,opts) 
+               | Sql.Select(_,_,_,_,_,_) ->
+                  failwith 
+                     ("Bug: Expected SELECT statement without HAVING clause")
                | _ -> 
-                  Sql.error ("Target-nested subqueries with UNION not supported")
+                  Sql.error 
+                     ("Target-nested subqueries with UNION not supported")
             in
             if (q_gb_vars <> []) || (* Group-by not allowed *)
                (List.length q_targets <> 1) || (* Only one target *)

@@ -98,17 +98,6 @@ struct
         | BaseValue(c) -> float_of_const c
         | _ -> bail ("invalid float: "^(string_of_value x))
 
-    let float_of_const_t x = 
-      match x with CFloat(f)    -> f 
-                 | CString(s)   -> 
-                     if Debug.active "HASH-STRINGS" then 
-                        (float_of_int (Hashtbl.hash s))
-                     else bail ("invalid float: "^(string_of_const x))
-                 | CInt(i)      -> float_of_int i
-                 | CBool(true)  -> 1.
-                 | CBool(false) -> 0.
-                 | CDate _      -> bail ("invalid float: "^(string_of_const x))
-
     let const_of_value x = match x with
       | BaseValue(c) -> c
       | _ -> bail ("invalid const_t: "^(string_of_value x))

@@ -5,13 +5,18 @@
 open Type
 ;;
 
+type interval_t =
+   | CYearMonth of int * int (** Year-month-interval *)
+   | CDay       of int       (** Day interval *) 
+
 (** Basic Constants *)
 type const_t = 
-   | CBool   of bool            (** Boolean  *)
-   | CInt    of int             (** Integer *)
-   | CFloat  of float           (** Float *)
-   | CString of string          (** String *)
-   | CDate   of int * int * int (** Date *)
+   | CBool         of bool              (** Boolean  *)
+   | CInt          of int               (** Integer *)
+   | CFloat        of float             (** Float *)
+   | CString       of string            (** String *)
+   | CDate         of int * int * int   (** Date *)
+   | CInterval     of interval_t        (** Interval *)
 
 (**** Basic Operations ****)
 (** 
@@ -21,11 +26,13 @@ type const_t =
 *)
 let type_of_const (a:const_t): type_t =
    begin match a with
-      | CBool(_)   -> TBool
-      | CInt(_)    -> TInt
-      | CFloat(_)  -> TFloat
-      | CString(s) -> TString
-      | CDate _    -> TDate
+      | CBool(_)     -> TBool
+      | CInt(_)      -> TInt
+      | CFloat(_)    -> TFloat
+      | CString(s)   -> TString
+      | CDate _      -> TDate
+      | CInterval(CYearMonth _) -> TInterval(TYearMonth)
+      | CInterval(CDay _)       -> TInterval(TDay)
    end
 
 (** 
@@ -43,6 +50,7 @@ let int_of_const (a:const_t): int =
       | CFloat(av)   -> int_of_float av
       | CString(av)  -> int_of_string av
       | CDate _      -> failwith ("Cannot produce integer of date")
+      | CInterval _  -> failwith ("Cannot produce integer of interval")
    end
 
 (**
@@ -60,6 +68,7 @@ let float_of_const (a:const_t): float =
       | CFloat(av)   -> av
       | CString(av)  -> float_of_string av
       | CDate _      -> failwith ("Cannot produce float of date")
+      | CInterval _  -> failwith ("Cannot produce float of interval")
    end
 
 
@@ -83,7 +92,31 @@ let parse_date str =
          ("Invalid day ("^(string_of_int d)^") in date: "^str);
       CDate(y,m,d)
    ) else
-      failwith ("Improperly formatted date: "^str)    
+      failwith ("Improperly formatted date: "^str)   
+
+(**
+   [parse_interval time_unit value]
+   
+   Parses a time unit and a value encoded as a string and converts 
+   it into an Interval constant.
+   @param time_unit  The time unit (day, month, year)
+   @param value      The value
+   @iv_qual          Interval qualifier as defined in the SQL 92 standard
+   @return           The Interval constant
+*)
+let parse_interval (time_unit: string) 
+                   (value: string) 
+                   (iv_qual: int option): const_t =
+   let int_value = int_of_string value in
+   match time_unit, iv_qual with
+   | "DAY", Some(3) -> 
+      CInterval(CDay(int_value))
+   | "DAY", _ -> failwith ("DBToaster currently only support dates, no times")
+   | "MONTH", _ ->  
+      CInterval(CYearMonth(0, int_value))
+   | "YEAR", _ -> 
+      CInterval(CYearMonth(int_value, 0))
+   | str, _ -> failwith ("Expected DAY, MONTH or YEAR found: " ^ str)
       
 (**** Conversion to Strings ****)
 
@@ -102,7 +135,10 @@ let string_of_const (a: const_t): string =
       | CDate(y,m,d) -> (string_of_int y) ^ "-" ^
                         (string_of_int m) ^ "-" ^
                         (string_of_int d)
-   end
+      | CInterval(CDay(d)) -> string_of_int d   
+      | CInterval(CYearMonth(y,m)) -> (string_of_int y) ^ "-" ^ 
+                                      (string_of_int m)
+end
 
 (**
    Get the string representation (corresponding to the OCaml defined above) of
@@ -110,16 +146,22 @@ let string_of_const (a: const_t): string =
    @param a   A constant
    @return    The string representation of the OCaml constant declaration of [a]
 *)
-let ocaml_of_const (a: const_t): string =
+let ocaml_of_const ?(prefix=false) (a: const_t): string =
+   let str_pfx = if(prefix) then "Constants." else "" in
    begin match a with
-      | CBool(true)  -> "CBool(true)"
-      | CBool(false) -> "CBool(false)"
-      | CInt(i)      -> "CInt("^(string_of_int i)^")"
-      | CFloat(f)    -> "CInt("^(string_of_float f)^")"
-      | CString(s)   -> "CString(\""^s^"\")"
-      | CDate(y,m,d) -> "CDate("^(string_of_int y)^","^
-                                 (string_of_int m)^","^
-                                 (string_of_int d)^")"
+      | CBool(true)  -> str_pfx ^ "CBool(true)"
+      | CBool(false) -> str_pfx ^ "CBool(false)"
+      | CInt(i)      -> str_pfx ^ "CInt("^(string_of_int i)^")"
+      | CFloat(f)    -> str_pfx ^ "CInt("^(string_of_float f)^")"
+      | CString(s)   -> str_pfx ^ "CString(\""^s^"\")"
+      | CDate(y,m,d) -> str_pfx ^ "CDate(" ^ (string_of_int y) ^ "," ^
+                                             (string_of_int m) ^ "," ^
+                                             (string_of_int d) ^ ")"
+      | CInterval(CDay(d)) -> 
+         str_pfx ^ "CInterval(" ^ str_pfx ^ "CDay(" ^ (string_of_int d) ^ "))"   
+      | CInterval(CYearMonth(y,m)) ->
+         str_pfx ^ "CInterval(" ^ str_pfx ^ "CYearMonth(" ^ 
+         (string_of_int y) ^ "," ^ (string_of_int m) ^ "))"
    end
 
 (**
@@ -136,6 +178,9 @@ let sql_of_const (a: const_t): string =
       | CFloat(f)    -> (string_of_float f)
       | CString(s)   -> "'"^s^"'"
       | CDate(y,m,d) -> "DATE('"^(string_of_const a)^"')"
+      | CInterval(CYearMonth(y,m)) -> 
+         "INTERVAL '" ^ (string_of_int y) ^ "-" ^ (string_of_int m) ^ "' YEAR" 
+      | CInterval(CDay(d)) -> "INTERVAL '" ^ (string_of_int d) ^ "' DAY '3'" 
    end
 
 (**
@@ -238,83 +283,153 @@ let type_cast (t:type_t) (a:const_t) =
          failwith ("Cannot cast "^(string_of_const a)^" to "^(string_of_type t))
    end
 
+(**
+   Casts a DBToaster date into a unix time
+   @param date A date in the DBToaster form
+   @return The unix time of [date]
+*) 
+let date_to_unix_time (date: const_t): Unix.tm = 
+   begin match date with
+   | CDate(y,m,d) -> 
+      {Unix.tm_sec=0; tm_min=0; tm_hour=0;
+            tm_mday=d; tm_mon=m; tm_year=y;
+            tm_wday=0; tm_yday=0; tm_isdst=false}
+   | _ -> failwith ("Expected date, found: " ^ (string_of_const date))
+   end
+
+(**
+   Casts a unix time to a DBToaster date (ignoring time of the date)
+   @param tm A unix time
+   @return The DBToaster date of [tm]
+*)
+let unix_time_to_date (tm: float): const_t =
+   let {Unix.tm_sec=_; tm_min=_; tm_hour=_;
+     tm_mday=d; tm_mon=m; tm_year=y;
+     tm_wday=_; tm_yday=_; tm_isdst=_} = Unix.localtime tm 
+   in
+   CDate(y, m, d)
+
+(**
+   Adds an interval to a date
+   @param a A date
+   @param b An interval
+   @result The result of adding [b] to date [a]
+*)
+let (+<>) (a: const_t) (b: const_t): const_t =
+   match a, b with
+   | CDate(_), CInterval(CDay(ds))->
+      let tm, _ = Unix.mktime (date_to_unix_time a) in
+      let res = tm +. 24. *. 60. *. 60. *. (float_of_int ds) in 
+      unix_time_to_date res 
+   | CDate(y,m,d), CInterval(CYearMonth(y_iv,m_iv)) ->
+      CDate(y + y_iv, m + m_iv, d)
+   | _, _ -> failwith ("Expected date + interval") 
+
 (** Math operations over constants ****)
 module Math = struct
-   (**
-      Perform a type-escalating binary arithmetic operation over two constants
-      @param b_op   The operation to apply to boolean constants
-      @param i_op   The operation to apply to integer constants
-      @param f_op   The operation to apply to floating point constants
-      @param a      A constant
-      @param b      A constant
-      @return       The properly wrapped result of applying [b_op], [i_op], or 
-                    [f_op] to [a] and [b], as appropriate.
-      @raise Failure If [a] or [b] is a string.
-   *)
-   let binary_op (b_op: bool   -> bool   -> bool)
-                 (i_op: int    -> int    -> int)
-                 (f_op: float  -> float  -> float)
-                 (op_type: type_t)
-                 (a: const_t) (b: const_t): const_t =
-      begin match (a,b,op_type) with
-         | (CBool(av),  CBool(bv), (TBool|TAny)) -> CBool(b_op av bv)
-         | (CBool(_),   CBool(_),  TInt)
-         | (CBool(_),   CInt(_),   (TInt|TAny))
-         | (CInt(_),    CBool(_),  (TInt|TAny)) 
-         | (CInt(_),    CInt(_),   (TInt|TAny))  -> 
-            CInt(i_op (int_of_const a) (int_of_const b))
-         
-         | (CBool(_),   CBool(_),  TFloat)
-         | (CInt(_),    CInt(_),   TFloat)      
-         | (CFloat(_), (CBool(_)|CInt(_)|(CFloat(_))), (TFloat|TAny))
-         | ((CBool(_)|CInt(_)), CFloat(_), (TFloat|TAny)) -> 
-            CFloat(f_op (float_of_const a) (float_of_const b))
-         | (CString(_), _, _) | (_, CString(_), _) -> 
-            failwith "Binary math op over a string"
-         | (CDate _, _, _) | (_, CDate _, _) -> 
-            failwith "Binary math op over a date"
-         | (_,   _,  _) -> 
-            failwith ("Binary math op with incompatible return type: "^
-                      (string_of_const a)^" "^(string_of_const b)^
-                      " -> "^(string_of_type op_type))
-      end
-   
    (** Perform type-escalating addition over two constants *)
-   let sum  = binary_op ( fun x->failwith "sum of booleans" ) ( + ) ( +. ) TAny
+   let sum (a: const_t) (b: const_t): const_t = 
+      begin match (a, b) with
+      | CBool(av), CBool(bv) -> failwith ("Sum of booleans") 
+      | CBool(_), CInt(_) | CInt(_),  CBool(_) | CInt(_),  CInt(_) ->
+         CInt((int_of_const a) + (int_of_const b))
+      | CFloat(_), (CBool(_) | CInt(_) | CFloat(_))
+      | (CBool(_) | CInt(_)), CFloat(_) -> 
+         CFloat((float_of_const a) +. (float_of_const b))
+      | (CDate(_) as d), (CInterval(_) as iv)
+      | (CInterval(_) as iv), (CDate(_) as d) -> d +<> iv
+      | CInterval(CDay(ds1)), CInterval(CDay(ds2)) -> CInterval(CDay(ds1 + ds2))
+      | CInterval(CYearMonth(y1,m1)), CInterval(CYearMonth(y2,m2)) ->
+         CInterval(CYearMonth(y1 + y2, m1 + m2))
+      | _, _ -> 
+         failwith ("Sum of " ^
+                   (string_of_const a) ^ " and " ^ (string_of_const b))
+      end    
+
    (** Perform type-escalating addition over an arbitrary number of constants *)
    let suml = List.fold_left sum (CInt(0))
+
    (** Perform type-escalating multiplication over two constants *)
-   let prod = binary_op ( && ) ( * ) ( *. ) TAny
+   let prod (a: const_t) (b: const_t): const_t = 
+      begin match (a, b) with
+      | CBool(av), CBool(bv) -> CBool(av && bv) 
+      | CBool(_), CInt(_) | CInt(_),  CBool(_) | CInt(_),  CInt(_) ->
+         CInt((int_of_const a) * (int_of_const b))
+      | CFloat(_), (CBool(_) | CInt(_) | CFloat(_))
+      | (CBool(_) | CInt(_)), CFloat(_) -> 
+         CFloat((float_of_const a) *. (float_of_const b))
+      | ((CBool(_) | CInt(_)) as i), CInterval(CDay(ds))
+      | CInterval(CDay(ds)), ((CBool(_) | CInt(_)) as i) ->
+         CInterval(CDay(ds * (int_of_const i)))
+      | ((CBool(_) | CInt(_)) as i), CInterval(CYearMonth(y,m))
+      | CInterval(CYearMonth(y,m)), ((CBool(_) | CInt(_)) as i) ->
+         let ib = int_of_const i in
+         CInterval(CYearMonth(y * ib, m * ib))
+      | _, _ -> 
+         failwith ("Multiplication of " ^
+                   (string_of_const a) ^ " and " ^ (string_of_const b))
+      end   
+ 
    (** Perform type-escalating multiplication over an arbitrary number of 
        constants *)
-   let prodl= List.fold_left prod (CInt(1))
+   let prodl = List.fold_left prod (CInt(1))
+
    (** Negate a constant *)
-   let neg  = binary_op (fun _-> failwith "Negation of a boolean") 
-                        ( * ) ( *. ) TAny (CInt(-1))
-   (** Compute the multiplicative inverse of a constant *)
-   let div1 dtype a   = binary_op (fun _->failwith "Dividing a boolean 1") 
-                            (/) (/.) dtype (CInt(1)) a
+   let neg (a: const_t): const_t = prod (CInt(-1)) a   
+
    (** Perform type-escalating division of two constants *)
-   let div2 dtype a b = binary_op (fun _->failwith "Dividing a boolean 2")
-                            (/) (/.) dtype a b
+   let div2 dtype a b =       
+      begin match (a, b, dtype) with
+      | (CBool(av),  CBool(bv), (TBool|TAny)) -> 
+         failwith ("Division of booleans")
+      | (CBool(_),   CBool(_),  TInt)
+      | (CBool(_),   CInt(_),   (TInt|TAny))
+      | (CInt(_),    CBool(_),  (TInt|TAny)) 
+      | (CInt(_),    CInt(_),   (TInt|TAny))  -> 
+         CInt((int_of_const a) / (int_of_const b))      
+      | (CBool(_),   CBool(_),  TFloat)
+      | (CInt(_),    CInt(_),   TFloat)      
+      | (CFloat(_), (CBool(_)|CInt(_)|(CFloat(_))), (TFloat|TAny))
+      | ((CBool(_)|CInt(_)), CFloat(_), (TFloat|TAny)) -> 
+         CFloat((float_of_const a) /. (float_of_const b))
+      | (_,   _,  _) -> 
+         failwith ("Division of " ^
+                   (string_of_const a) ^ " and " ^ (string_of_const b)) 
+      end
+
+   (** Compute the multiplicative inverse of a constant *)
+   let div1 dtype a = div2 dtype (CInt(1)) a 
    
    (**/**)
-   let comparison_op (opname:string) (iop:int -> int -> bool) 
-                     (fop:float -> float -> bool) (a:const_t)
+   let comparison_op (opname:string) 
+                     (iop:int -> int -> bool) 
+                     (fop:float -> float -> bool) 
+                     (a:const_t)
                      (b:const_t):const_t =
       let op_type = (escalate_type ~opname:opname (type_of_const a) 
                                                   (type_of_const b)) in
       begin match op_type with
-         | TInt -> CBool(iop (int_of_const a) (int_of_const b))
-         | TFloat -> CBool(fop (float_of_const a) (float_of_const b))
-         | TDate -> 
-           begin
-             match a, b with
-               | CDate(y1,m1,d1), CDate(y2,m2,d2) ->
-                 CBool(iop (y1*10000+m1*100+d1) (y2*10000+m2*100+d2))
-               | _ -> failwith (opname^" over invalid types")
-           end
+      | TInt -> CBool(iop (int_of_const a) (int_of_const b))
+      | TFloat -> CBool(fop (float_of_const a) (float_of_const b))
+      | TDate -> 
+         begin match a, b with
+         | CDate(y1,m1,d1), CDate(y2,m2,d2) ->
+            CBool(iop (y1*10000+m1*100+d1) (y2*10000+m2*100+d2))
          | _ -> failwith (opname^" over invalid types")
+         end
+      | TInterval(TYearMonth) ->
+         begin match a, b with
+         | CInterval(CYearMonth(y1,m1)), CInterval(CYearMonth(y2,m2)) ->
+            CBool(iop (y1 * 10000 + m1) (y2 * 10000 + m2))
+         | _ -> failwith (opname^" over invalid types")
+         end
+      | TInterval(TDay) ->
+         begin match a, b with
+         | CInterval(CDay(d1)), CInterval(CDay(d2)) ->
+            CBool(iop d1 d2)
+         | _ -> failwith (opname^" over invalid types")
+         end
+      | _ -> failwith (opname^" over invalid types")
       end
    (**/**)
    
@@ -335,6 +450,8 @@ module Math = struct
          | (CString(_), _) | (_,CString(_))-> failwith "= of string and other"
          | (CDate(y1,m1,d1), CDate(y2,m2,d2))-> y1=y2 && m1=m2 && d1=d2
          | (CDate _, _) | (_, CDate _)     -> failwith "= of date and other"
+         | (CInterval _, _) | (_, CInterval _) -> 
+            failwith "= of interval and other"
          | (CFloat(_), _) | (_,CFloat(_))-> 
             (float_of_const a) = (float_of_const b)
          | (CInt(av), CInt(bv))          -> av = bv

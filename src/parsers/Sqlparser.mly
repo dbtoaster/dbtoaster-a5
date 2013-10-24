@@ -61,14 +61,16 @@ let rec scan_for_existence (op_name:string) (q:Sql.select_t) (cmp_op:cmp_t)
    | Sql.Union(s1, s2) -> 
       let rcr stmt = scan_for_existence op_name stmt cmp_op expr in
       Sql.Or(rcr s1, rcr s2)
-   | Sql.Select(targets, sources, cond, gb_vars, _) ->
+   (* XXX: Verify that this is the right way to handle HAVING clauses *)
+   | Sql.Select(targets, sources, cond, gb_vars, having, _) ->
       let (_,tgt) = match targets with [tgt] -> tgt | _ -> 
          bail ("Target of "^op_name^" clause should produce a single column")
       in 
       if Sql.is_agg_expr tgt
       then Sql.Comparison(expr, cmp_op, Sql.NestedQ(q))
       else Sql.Exists(Sql.Select(["unused", Sql.Const(CInt(1))], sources, 
-               (Sql.And(cond, Sql.Comparison(expr, cmp_op, tgt))), gb_vars, []))
+            (Sql.And(cond, Sql.Comparison(expr, cmp_op, tgt))), 
+             gb_vars, having, []))
 
 
 let bind_select_vars q =
@@ -93,7 +95,7 @@ let bind_select_vars q =
 %token JOIN INNER OUTER LEFT RIGHT ON NATURAL EXISTS IN SOME ALL UNION
 %token CREATE TABLE FROM USING SELECT WHERE GROUP BY HAVING ORDER
 %token SOCKET FILE FIXEDWIDTH VARSIZE OFFSET ADJUSTBY SETVALUE LINE DELIMITED
-%token EXTRACT LIST DISTINCT 
+%token EXTRACT LIST DISTINCT HAVING 
 %token CASE WHEN ELSE THEN END
 %token FUNCTION RETURNS EXTERNAL
 %token POSTGRES RELATION PIPE
@@ -103,6 +105,7 @@ let bind_select_vars q =
 %token EOF
 %token SUMAGG COUNTAGG AVGAGG MAXAGG MINAGG
 %token INCLUDE
+%token INTERVAL
 
 %left AND OR NOT
 %left EQ NE LT LE GT GE
@@ -303,6 +306,13 @@ whereClause:
       bail "Invalid WHERE clause"
    }
 
+havingClause:
+| HAVING condition { $2 }
+|                  { Sql.ConstB(true) }
+| error {
+      bail "Invalid HAVING clause"
+   }
+
 groupByList:
 | variable                   { [$1] }
 | variable COMMA groupByList { $1 :: $3 }
@@ -322,10 +332,11 @@ selectStmt:
     fromClause
     whereClause
     groupByClause
+    havingClause
     {
       let (from, join_conds) = $4 in
-         Sql.expand_wildcard_targets (List.map snd !table_defs)
-            (Sql.Select($3, from, Sql.mk_and join_conds $5, $6, $2))
+      Sql.expand_wildcard_targets (List.map snd !table_defs)
+         (Sql.Select($3, from, Sql.mk_and join_conds $5, $6, $7, $2))
     }
 | error {
       bail "Invalid SELECT statement"
@@ -467,3 +478,9 @@ constant:
 | FLOAT                         { CFloat($1) }
 | STRING                        { CString($1) }
 | DATE LPAREN STRING RPAREN     { Constants.parse_date $3 }
+| INTERVAL STRING ID { 
+      Constants.parse_interval (String.uppercase $3) $2 None
+   }
+| INTERVAL STRING ID LPAREN INT RPAREN { 
+      Constants.parse_interval (String.uppercase $3) $2 (Some($5))
+   }

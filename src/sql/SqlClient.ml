@@ -57,6 +57,7 @@ module Postgres : Interface = struct
                | TFloat  -> "float"
                | TString -> "varchar(1000)"
                | TDate   -> "date"
+               | TInterval _ -> "interval"
             )
          ) sch)^
       ")"   
@@ -65,18 +66,6 @@ module Postgres : Interface = struct
    let trim str = 
       let str = Str.replace_first (Str.regexp "^[ ]+") "" str in
       Str.replace_first (Str.regexp "[ ]+$") "" str;;           
-
-   let string_of_const (const:Constants.const_t):string =
-      match const with
-         | CBool(true)    -> "1"
-         | CBool(false)   -> "0"
-         | CInt(av)       -> string_of_int av
-         | CFloat(av)     -> string_of_float av
-         | CString(av)    -> "'" ^ av ^ "'"  
-         | CDate(y, m, d) -> (string_of_int y) ^ "-" ^
-                             (string_of_int m) ^ "-" ^ 
-                             (string_of_int d)
-   ;;
 
    let const_of_string (_str:string) (const_type:Type.type_t) : 
                        Constants.const_t =
@@ -119,13 +108,13 @@ module Postgres : Interface = struct
                CDate(y, m, d)
             ) else
                failwith ("Improperly formatted date: "^str)  
+         | TInterval _ -> 
+            failwith ("Converting string to interval currently not " ^
+                      "supported in Sql client")
          | TAny | TExternal(_) -> failwith "Unsupported type in Sql client"
 
-   let convert_field = (function 
-      | CDate(_,_,_) as x -> "'"^(string_of_const x)^"'"
-      | x -> (string_of_const x)
-   )
-
+   let convert_field = (function x -> Constants.sql_of_const x)
+ 
    let convert_row ?(sep = ", ") (data:Constants.const_t list):string =
       ListExtras.string_of_list ~sep:sep convert_field data
    ;;

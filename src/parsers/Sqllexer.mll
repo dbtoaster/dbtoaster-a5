@@ -100,6 +100,7 @@ let keywords =
         "FUNCTION", FUNCTION;
         "RETURNS", RETURNS;
         "UNION", UNION;
+        "INTERVAL", INTERVAL;
     ]
 let _ = hashtbl_of_pair_list keyword_table keywords
 
