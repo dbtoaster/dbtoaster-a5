@@ -30,4 +30,7 @@ pull_site:
 								 $(SITE_SYNC_FILES)) site/ ;\
 	else echo "Set the SITE_USERNAME variable in makefile.local"; fi
 
+local_server:
+	cd site;	php -S localhost:8000   
+
 .PHONY: all clean push_site
