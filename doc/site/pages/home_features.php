@@ -87,37 +87,23 @@ we are not even close to being as fast as we can.
 <a name="roadmap"></a>
 <?= chapter("Feature Roadmap") ?>
 
-<table valign="top">
-<tr><th>Milestone</th><th width="20%">Expected Date</th><th>Feature Summary</th></tr>
+<table class="table" valign="top">
+<thead><th>Milestone</th><th width="20%">Expected Date</th><th>Feature summary</th></thead>
 
-<tr><th valign="top">1</th><td valign="top">Fall 2012</td>
+<tr><td><strong>1</strong></td><td valign="top">Fall 2013</td>
   <td>
     <ul>
-      <li>Support for all SQL functionality required by the TPC-H benchmark except ORDER-BY, MIN/MAX, and NULL-values/outer joins.</li>
-      <li>Further performance improvements</li>
+      <li>Support for all SQL functionality required by the TPC-H benchmark except LIMIT, ORDER-BY, MIN/MAX, and NULL-values/outer joins.</li>
+      <li>Performance improvements</li>
+      <li>Bug fixes</li>
     </ul>
   </td></tr>
   
-<tr><th valign="top">2</th><td valign="top">Spring 2013</td>
+<tr><td valign="top"><strong>2</strong></td><td valign="top">Winter 2013/2014</td>
   <td>
     <ul>
-      <li>A parallel runtime for DBToaster</li>
-    </ul>
-  </td></tr>  
-
-<tr><th valign="top">3</th><td valign="top">Summer 2013</td>
-  <td>
-    <ul>
-      <li>Updated backend optimizer (code fusion, beta-reduction, etc...), updated C++ code generator, generation of custom-datastructures for maintenance.  Phase out Boost.  This should lead to considerable efficiency improvements.</li>
-      <li>Synthesis of tree-based datastructures for efficiently processing and indexing theta-joins.</li>
-      <li>Support order; Support for ORDER-BY, MIN and MAX</li>
-    </ul>
-  </td></tr>  
-
-<tr><th valign="top">4</th><td valign="top">Fall 2013</td>
-  <td>
-    <ul>
-      <li>Frontends for APL-style array processing languages (e.g., The R analytics language, Matlab, Q).  DBToaster will be able to compile analytical queries expressed in such languages in addition to SQL, with similar performance.</li>
+      <li>Support for transaction processing</li>
+      <li>New backend with vastly better performance</li>
     </ul>
   </td></tr>  
 

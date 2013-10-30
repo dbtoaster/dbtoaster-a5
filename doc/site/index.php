@@ -120,7 +120,7 @@ function chain_link_docs() {
 <link rel="stylesheet" type="text/css" href="css/style.css" />
 <link rel="stylesheet" type="text/css" href="css/bootstrap.min.css" media="screen" />
 <link rel="stylesheet" type="text/css" href="css/bootstrap-theme.min.css" />
-<!--<script type="text/javascript" src="dropdowntabs.js"> </script>-->
+<link href="//netdna.bootstrapcdn.com/font-awesome/4.0.1/css/font-awesome.css" rel="stylesheet">
 
 <?php if(!isset($now_building_distro)) { ?>
   <script type="text/javascript">
@@ -162,7 +162,7 @@ function chain_link_docs() {
               <li><?= mk_link(null, "home"); ?></li>
               <li><?= mk_link(null, "home", "performance"); ?></li>
               <li><?= mk_link(null, "home", "features"); ?></li>
-              <li><?= mk_link(" - Roadmap", "home", "features", "#roadmap"); ?></li>
+              <li><?= mk_link('<small><i class="fa fa-caret-square-o-right"></i> Roadmap</small>', "home", "features", "#roadmap"); ?></li>
               <li><?= mk_link(null, "home", "people"); ?></li>
               <li><?= mk_link(null, "home", "research"); ?></li>
             </ul>
@@ -179,11 +179,11 @@ function chain_link_docs() {
             <ul class="dropdown-menu">
               <li><?= mk_link("Getting Started", "docs"); ?></li>
               <li><?= mk_link(null, "docs", "compiler"); ?></li>
-              <li><?= mk_link(" - Command-Line Options", "docs", "compiler", 
+              <li><?= mk_link('<small><i class="fa fa-caret-square-o-right"></i> Command-Line Options</small>', "docs", "compiler", 
                                                         "#options"); ?></li>
-              <li><?= mk_link(" - Supported Languages", "docs", "compiler", 
+              <li><?= mk_link('<small><i class="fa fa-caret-square-o-right"></i> Supported Languages</small>', "docs", "compiler", 
                                                         "#languages"); ?></li>
-              <li><?= mk_link(" - Optimization Flags", "docs", "compiler", 
+              <li><?= mk_link('<small><i class="fa fa-caret-square-o-right"></i> Optimization Flags</small>', "docs", "compiler", 
                                                         "#opt_flags"); ?></li>
               <li><?= mk_link(null, "docs", "sql"); ?></li>
               <li><?= mk_link(null, "docs", "stdlib"); ?></li>

@@ -1,98 +1,71 @@
 
 <a name="latest"><h4>DBToaster Public Beta</h4></a>
-<table width="500px">
-<tr>
+<table class="table">
+<thead>
   <th width="25%" align="right">Platform</th>
-  <td width="5%">&nbsp;</td>
   <th width="20%" align="left">Revision</th>
-  <td width="5%">&nbsp;</td>
   <th width="20%" align="left">Date</th>
-  <td width="5%">&nbsp;</td>
   <th width="20%" align="left">Download</th>
-</tr>
+</thead>
 <tr>
   <td align="right">Mac OS X</td>
-  <td>&nbsp;</td>
   <td>2827</td>
-  <td>&nbsp;</td>
   <td>2013-Feb-11</td>
-  <td>&nbsp;</td>
   <td align="left">
-    <a href="dist/dbtoaster_darwin_2827.tgz">Tarball</a></td>
+    <a class="btn btn-primary" href="dist/dbtoaster_darwin_2827.tgz">Tarball</a></td>
 </tr>
 <tr>
   <td align="right">Ubuntu 12.04 (x86-64)</td>
-  <td>&nbsp;</td>
   <td>2827</td>
-  <td>&nbsp;</td>
   <td>2013-Feb-11</td>
-  <td>&nbsp;</td>
   <td align="left">
-    <a href="dist/dbtoaster_ubuntu12.04_x86_64_2827.tgz">Tarball</a></td>
+    <a class="btn btn-primary" href="dist/dbtoaster_ubuntu12.04_x86_64_2827.tgz">Tarball</a></td>
 </tr>
 <tr>
   <td align="right">Windows (Cygwin)</td>
-  <td>&nbsp;</td>
   <td>2827</td>
-  <td>&nbsp;</td>
   <td>2013-Feb-11</td>
-  <td>&nbsp;</td>
   <td align="left">
-    <a href="dist/dbtoaster_cygwin_nt-6.1-wow64_2827.tgz">Tarball</a></td>
+    <a class="btn btn-primary" href="dist/dbtoaster_cygwin_nt-6.1-wow64_2827.tgz">Tarball</a></td>
 </tr>
 </table>
 
 <a name="latest"><h4>Older releases</h4></a>
-<table width="500px">
-<tr>
+<table class="table">
+<thead>
   <th width="25%" align="right">Platform</th>
-  <td width="5%">&nbsp;</td>
   <th width="20%" align="left">Revision</th>
-  <td width="5%">&nbsp;</td>
   <th width="20%" align="left">Date</th>
-  <td width="5%">&nbsp;</td>
   <th width="20%" align="left">Download</th>
-</tr>
-<tr>
+</thead>
+<tbody>
   <td align="right">Mac OS X</td>
-  <td>&nbsp;</td>
   <td>2525</td>
-  <td>&nbsp;</td>
   <td>2012-Jul-09</td>
-  <td>&nbsp;</td>
   <td align="left">
-    <a href="dist/dbtoaster_darwin_2525.tgz">Tarball</a></td>
-</tr>
-<tr>
+    <a class="btn btn-primary" href="dist/dbtoaster_darwin_2525.tgz">Tarball</a></td>
+</tbody>
+<tbody>
   <td align="right">Red Hat Fedora 17 (x86-64)</td>
-  <td>&nbsp;</td>
   <td>2525</td>
-  <td>&nbsp;</td>
   <td>2012-Jul-09</td>
-  <td>&nbsp;</td>
   <td align="left">
-    <a href="dist/dbtoaster_fedora17_x86_64_2525.tgz">Tarball</a></td>
-</tr>
-<tr>
+    <a class="btn btn-primary" href="dist/dbtoaster_fedora17_x86_64_2525.tgz">Tarball</a></td>
+</tbody>
+<tbody>
   <td align="right">Ubuntu 12.04 (x86-64)</td>
-  <td>&nbsp;</td>
   <td>2525</td>
-  <td>&nbsp;</td>
   <td>2012-Jul-09</td>
-  <td>&nbsp;</td>
   <td align="left">
-    <a href="dist/dbtoaster_ubuntu12.04_x86_64_2525.tgz">Tarball</a></td>
-</tr>
-<tr>
+    <a class="btn btn-primary" href="dist/dbtoaster_ubuntu12.04_x86_64_2525.tgz">Tarball</a></td>
+</tbody>
+<tbody>
   <td align="right">Windows (Cygwin)</td>
-  <td>&nbsp;</td>
   <td>2576</td>
-  <td>&nbsp;</td>
   <td>2012-Jul-09</td>
-  <td>&nbsp;</td>
   <td align="left">
-    <a href="dist/dbtoaster_cygwin_nt-6.1-wow64_2576.tgz">Tarball</a></td>
-</tr>
+    <a class="btn btn-primary" href="dist/dbtoaster_cygwin_nt-6.1-wow64_2576.tgz">Tarball</a></td>
+</tbody>
 </table>
 
 <?= chapter("License", "license") ?>
@@ -107,7 +80,7 @@
 <p>THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL DAMAGES
 (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF SUCH DAMAGE.</p>
 
-<div class="warning">We plan to distribute future releases of DBToaster under a more relaxed license.</div>
+<div class="text-warning">We plan to distribute future releases of DBToaster under a more relaxed license.</div>
 
 <?= chapter("Benchmarking and Experimentation") ?>
 

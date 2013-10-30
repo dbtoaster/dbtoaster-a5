@@ -93,20 +93,6 @@ img.inline_image {
   opacity:1;
   text-align:justify;
 }
-a:link {
-text-decoration:none;
-color:#003399;
-}
-a:visited {
-text-decoration:none;
-color:#003399;
-}
-a:hover {
-color:#003399;
-}
-a:active {
-color:#003399;
-}
 .code {
   font-family: Courier, Monospace;
 }
