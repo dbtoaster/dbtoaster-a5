@@ -436,8 +436,8 @@ conditionAtom:
 
 condition: 
 | conditionAtom                   { $1 }
-| condition AND conditionAtom     { Sql.And($1, $3) }
-| condition OR conditionAtom      { Sql.Or($1, $3) }
+| condition AND condition         { Sql.And($1, $3) }
+| condition OR condition          { Sql.Or($1, $3) }
 | NOT condition                   { Sql.Not($2) }
 | TRUE                            { Sql.ConstB(true) }
 | FALSE                           { Sql.ConstB(false) }
