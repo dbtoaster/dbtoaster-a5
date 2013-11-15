@@ -2757,7 +2757,7 @@ end (* Typing *)
       (fun acc ((a:Schema.adaptor_t),((r,fields,_):Schema.rel_t)) ->
         if List.mem_assoc (fst a) valid_adaptors then
           let a_t_id = List.assoc (fst a) valid_adaptors in
-          let a_spt = "shared_ptr<"^a_t_id^" >" in
+          let a_spt = "boost::shared_ptr<"^a_t_id^" >" in
           let a_id, a_t = gensym(), Target(Type(a_spt,None)) in
           let a_params =
             let ud_params = snd a in
@@ -2798,7 +2798,7 @@ end (* Typing *)
               [Fn(Target(Type("string",None)), Ext(Inline(quote d)), [])])))
           in
           let ad_arr_id, ad_ptr_t, ad_arr_t =
-            let t = Target(Type("shared_ptr<stream_adaptor>",None)) in
+            let t = Target(Type("boost::shared_ptr<stream_adaptor>",None)) in
             gensym(), t, array_of_type t in
           let ad_arr = mk_array (List.map fst adaptor_meta) in
           let ad_arr_decl = Decl(unit, (array_of_id ad_arr_id, ad_ptr_t),
@@ -2806,11 +2806,11 @@ end (* Typing *)
           in
           let al_id, al_t =
             gensym(), 
-            Target(Type("std::list<shared_ptr<stream_adaptor> >",None))
+            Target(Type("std::list<boost::shared_ptr<stream_adaptor> >",None))
           in
           let ad_arr_it_expr = 
             ad_arr_id ^ ", " ^ ad_arr_id ^ " + sizeof(" ^
-            ad_arr_id ^ ") / sizeof(shared_ptr<stream_adaptor>)"
+            ad_arr_id ^ ") / sizeof(boost::shared_ptr<stream_adaptor>)"
           in
           let al_decl = Decl(unit, (al_id, al_t),
             Some(Fn(al_t, Ext(Constructor(al_t)),
@@ -2819,7 +2819,7 @@ end (* Typing *)
           let s_id, s_t, s_ptr_t =
             let x = "dbt_file_source" in 
             gensym(), Target(Type(x,None)),
-            Target(Type("shared_ptr<"^x^">",None))
+            Target(Type("boost::shared_ptr<"^x^">",None))
           in
           let s_ctor =
             let dbt_fs_ctor = ssc (source_code_of_expr

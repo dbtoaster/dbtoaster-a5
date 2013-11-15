@@ -71,27 +71,27 @@ unsigned int dynamic_poset::order() {
 	return poset.empty()? (0) : poset.begin()->first; 
 }
 
-shared_ptr<dynamic_poset::class_range> dynamic_poset::range(unsigned int order) {
-	shared_ptr<dynamic_poset::class_range> r;
+boost::shared_ptr<dynamic_poset::class_range> dynamic_poset::range(unsigned int order) {
+	boost::shared_ptr<dynamic_poset::class_range> r;
 	iterator it = find(order);
 	if ( it == end() || !(it->second) ) return r;
-	r = shared_ptr<dynamic_poset::class_range>(
+	r = boost::shared_ptr<dynamic_poset::class_range>(
 			new dynamic_poset::class_range( it->second->begin(), 
 											it->second->end()));
 	return r;
 }
 
-void dynamic_poset::add_element(shared_ptr<ordered> e) {
+void dynamic_poset::add_element(boost::shared_ptr<ordered> e) {
 	//        cerr << "Adding element at " << e->order() << endl;
 	if ( !poset[e->order()] ) {
-		poset[e->order()] = shared_ptr<pset>(new pset());
+		poset[e->order()] = boost::shared_ptr<pset>(new pset());
 		poset[e->order()]->insert(e);
 	} else {
 		poset[e->order()]->insert(e);
 	}
 }
 
-void dynamic_poset::remove_element(shared_ptr<ordered> e) {
+void dynamic_poset::remove_element(boost::shared_ptr<ordered> e) {
 	unsigned int o = e->order();
 	iterator it = find(o);
 	//        cerr << "Removing element at " << e->order() 
@@ -102,7 +102,7 @@ void dynamic_poset::remove_element(shared_ptr<ordered> e) {
 
 // Helper to update an element's position, by removing it from a
 // specific stage.
-void dynamic_poset::remove_element(unsigned int order, shared_ptr<ordered> e) {
+void dynamic_poset::remove_element(unsigned int order, boost::shared_ptr<ordered> e) {
 	iterator it = poset.find(order);
 	if ( it != poset.end() ) it->second->erase(e);
 }
@@ -111,7 +111,7 @@ void dynamic_poset::reorder_elements(unsigned int order) {
 	//        cerr << "Reordering elements at " << order << endl;
 	iterator it = find(order);
 	if ( it == end() ) return;
-	shared_ptr<pset> ps = it->second;
+	boost::shared_ptr<pset> ps = it->second;
 	pset removals;
 
 	// Process adaptors, tracking those that have changed their position.
@@ -151,11 +151,11 @@ source::source(frame_descriptor& f, adaptor_list& a) : frame_info(f) {
 	}
 }
 
-void source::add_adaptor(shared_ptr<stream_adaptor> a) {
+void source::add_adaptor(boost::shared_ptr<stream_adaptor> a) {
 	adaptors.add_element(dynamic_pointer_cast<ordered>(a));
 }
 
-void source::remove_adaptor(unsigned int order, shared_ptr<stream_adaptor> a) {
+void source::remove_adaptor(unsigned int order, boost::shared_ptr<stream_adaptor> a) {
 	adaptors.remove_element(order, dynamic_pointer_cast<ordered>(a));
 }
 
@@ -170,7 +170,7 @@ bool source::has_buffered_events() {
 			for (dynamic_poset::pset::iterator a_it = it->second->begin();
 					a_it != it->second->end(); ++a_it)
 			{
-				shared_ptr<stream_adaptor> a =
+				boost::shared_ptr<stream_adaptor> a =
 						dynamic_pointer_cast<stream_adaptor>(*a_it);
 				if ( a ) found = found || a->has_buffered_events();
 			}
@@ -191,14 +191,14 @@ dbt_file_source::dbt_file_source(
 {
 	if ( boost::filesystem::exists( path ) )
 	{
-		source_stream = shared_ptr<file_stream>(new file_stream(path));
+		source_stream = boost::shared_ptr<file_stream>(new file_stream(path));
 		if( runtime_options::verbose() )
 			cerr << "reading from " << path
 				 << " with " << a.size() << " adaptors" << endl;
 	}
 	else
 		cerr << "File not found: " << path << endl;
-	buffer = shared_ptr<string>(new string());
+	buffer = boost::shared_ptr<string>(new string());
 }
 
 bool dbt_file_source::has_frame() {
@@ -211,17 +211,17 @@ bool dbt_file_source::has_frame() {
 	return r;
 }
 
-shared_ptr<string> dbt_file_source::frame_from_buffer() {
-	shared_ptr<string> r;
+boost::shared_ptr<string> dbt_file_source::frame_from_buffer() {
+	boost::shared_ptr<string> r;
 	if (frame_info.type == fixed_size) {
-		r = shared_ptr<string>(
+		r = boost::shared_ptr<string>(
 				new string(buffer->substr(0,frame_info.size)));
-		buffer = shared_ptr<string>(
+		buffer = boost::shared_ptr<string>(
 				new string(buffer->substr(frame_info.size, string::npos)));
 	} else if ( frame_info.type == delimited ) {
 		size_t delim_pos = buffer->find(frame_info.delimiter);
-		r = shared_ptr<string>(new string(buffer->substr(0, delim_pos)));
-		buffer = shared_ptr<string>(
+		r = boost::shared_ptr<string>(new string(buffer->substr(0, delim_pos)));
+		buffer = boost::shared_ptr<string>(
 				new string(buffer->substr(
 						delim_pos+frame_info.delimiter.size(),
 						string::npos)));
@@ -229,8 +229,8 @@ shared_ptr<string> dbt_file_source::frame_from_buffer() {
 	return r;
 }
 
-shared_ptr<string> dbt_file_source::next_frame() {
-	shared_ptr<string> r;
+boost::shared_ptr<string> dbt_file_source::next_frame() {
+	boost::shared_ptr<string> r;
 
 	char buf[((frame_info.size<1024) ? 1024 : frame_info.size)];
 
@@ -277,10 +277,10 @@ shared_ptr<string> dbt_file_source::next_frame() {
 // Process adaptors in the first stage, accumulating and returning
 // stream events
 void dbt_file_source::process_adaptors(
-		string& data, shared_ptr<list<event_t> >& r) 
+		string& data, boost::shared_ptr<list<event_t> >& r) 
 {
 	unsigned int min_order = adaptors.order();
-	shared_ptr<dynamic_poset::class_range> range = 
+	boost::shared_ptr<dynamic_poset::class_range> range = 
 			adaptors.range(min_order);
 	if ( !range ) {
 		cerr << "invalid min order at source with empty range" << endl;
@@ -290,7 +290,7 @@ void dbt_file_source::process_adaptors(
 	for(dynamic_poset::pset::iterator it = range->first;
 			it != range->second; ++it)
 	{
-		shared_ptr<stream_adaptor> adaptor =
+		boost::shared_ptr<stream_adaptor> adaptor =
 				dynamic_pointer_cast<stream_adaptor>(*it);
 		if ( adaptor ) adaptor->process(data, r);
 	}
@@ -298,7 +298,7 @@ void dbt_file_source::process_adaptors(
 }
 
 // Finalize all adaptors, accumulating stream events.
-void dbt_file_source::finalize_adaptors(shared_ptr<list<event_t> >& r) 
+void dbt_file_source::finalize_adaptors(boost::shared_ptr<list<event_t> >& r) 
 {
 	dynamic_poset::iterator it = adaptors.begin();
 	dynamic_poset::iterator end = adaptors.end();
@@ -309,7 +309,7 @@ void dbt_file_source::finalize_adaptors(shared_ptr<list<event_t> >& r)
 			for (dynamic_poset::pset::iterator a_it = it->second->begin();
 					a_it != it->second->end(); ++a_it)
 			{
-				shared_ptr<stream_adaptor> a =
+				boost::shared_ptr<stream_adaptor> a =
 						dynamic_pointer_cast<stream_adaptor>(*a_it);
 				if ( a ) a->finalize(r);
 			}
@@ -324,10 +324,10 @@ void dbt_file_source::finalize_adaptors(shared_ptr<list<event_t> >& r)
 
 // Get buffered events from all adaptors
 void dbt_file_source::collect_buffered_events(
-										shared_ptr<list<event_t> >& r) 
+										boost::shared_ptr<list<event_t> >& r) 
 {
 	unsigned int min_order = adaptors.order();
-	shared_ptr<dynamic_poset::class_range> range = 
+	boost::shared_ptr<dynamic_poset::class_range> range = 
 			adaptors.range(min_order);
 	if ( !range ) {
 		cerr << "invalid min order at source with empty range" << endl;
@@ -337,7 +337,7 @@ void dbt_file_source::collect_buffered_events(
 	for(dynamic_poset::pset::iterator it = range->first;
 			it != range->second; ++it)
 	{
-		shared_ptr<stream_adaptor> adaptor =
+		boost::shared_ptr<stream_adaptor> adaptor =
 				dynamic_pointer_cast<stream_adaptor>(*it);
 		if ( adaptor ) { 
 			adaptor->get_buffered_events(r);
@@ -349,26 +349,26 @@ void dbt_file_source::collect_buffered_events(
 }
 
 
-shared_ptr<list<event_t> > dbt_file_source::next_inputs() {
-	shared_ptr<list<event_t> > r;
+boost::shared_ptr<list<event_t> > dbt_file_source::next_inputs() {
+	boost::shared_ptr<list<event_t> > r;
 
 	if ( adaptors.empty() ) return r;
 
 
 	if ( has_frame_inputs() ) {
 		// get the next frame of data based on the frame type.
-		shared_ptr<string> data = next_frame();
+		boost::shared_ptr<string> data = next_frame();
 
 		if ( data ) {
-			r = shared_ptr<list<event_t> >(new list<event_t>());
+			r = boost::shared_ptr<list<event_t> >(new list<event_t>());
 			process_adaptors(*data, r);
 		}
 	} else if ( has_buffered_events() ) {
-		r = shared_ptr<list<event_t> >(new list<event_t>());
+		r = boost::shared_ptr<list<event_t> >(new list<event_t>());
 		collect_buffered_events(r);
 	} else if ( source_stream->is_open() ) {
 		source_stream->close();
-		r = shared_ptr<list<event_t> >(new list<event_t>());
+		r = boost::shared_ptr<list<event_t> >(new list<event_t>());
 		finalize_adaptors(r);
 	}
 
@@ -385,20 +385,20 @@ source_multiplexer::source_multiplexer(int seed, int st)
 }
 
 source_multiplexer::source_multiplexer( int seed, int st, 
-										set<shared_ptr<source> >& s)
+										set<boost::shared_ptr<source> >& s)
 {
 	source_multiplexer(seed, st);
-	set<shared_ptr<source> >::iterator it = s.begin();
-	set<shared_ptr<source> >::iterator end = s.end();
+	set<boost::shared_ptr<source> >::iterator it = s.begin();
+	set<boost::shared_ptr<source> >::iterator end = s.end();
 	for(; it != end; ++it) add_source(*it);
 	current_order = inputs.order();
 }
 
-void source_multiplexer::add_source(shared_ptr<source> s) {
+void source_multiplexer::add_source(boost::shared_ptr<source> s) {
 	inputs.add_element(dynamic_pointer_cast<ordered>(s));
 }
 
-void source_multiplexer::remove_source(shared_ptr<source> s) {
+void source_multiplexer::remove_source(boost::shared_ptr<source> s) {
 	inputs.remove_element(dynamic_pointer_cast<ordered>(s));
 }
 
@@ -406,11 +406,11 @@ void source_multiplexer::init_source() {
 	dynamic_poset::iterator it = inputs.begin();
 	dynamic_poset::iterator end = inputs.end();
 	for (; it != end; ++it) {
-		shared_ptr<dynamic_poset::class_range> r = inputs.range(it->first);
+		boost::shared_ptr<dynamic_poset::class_range> r = inputs.range(it->first);
 		if ( r ) {
 			for (dynamic_poset::pset::iterator it = r->first; 
 				 it != r->second; ++it) {
-				shared_ptr<source> s = dynamic_pointer_cast<source>(*it);
+				boost::shared_ptr<source> s = dynamic_pointer_cast<source>(*it);
 				if ( s ) s->init_source();
 			}
 		} else {
@@ -425,12 +425,12 @@ bool source_multiplexer::has_inputs() {
 	dynamic_poset::iterator it = inputs.begin();
 	dynamic_poset::iterator end = inputs.end();
 	for (; it != end && !found; ++it) {
-		shared_ptr<dynamic_poset::class_range> r = inputs.range(it->first);
+		boost::shared_ptr<dynamic_poset::class_range> r = inputs.range(it->first);
 		if ( r ) {
 			for (dynamic_poset::pset::iterator it = r->first;
 					it != r->second && !found; ++it)
 			{
-				shared_ptr<source> s = dynamic_pointer_cast<source>(*it);
+				boost::shared_ptr<source> s = dynamic_pointer_cast<source>(*it);
 				if ( s ) found = found || s->has_inputs();
 			}
 		} else {
@@ -441,9 +441,9 @@ bool source_multiplexer::has_inputs() {
 	return found;
 }
 
-shared_ptr<list<event_t> > source_multiplexer::next_inputs()
+boost::shared_ptr<list<event_t> > source_multiplexer::next_inputs()
 {
-	shared_ptr<list<event_t> > r;
+	boost::shared_ptr<list<event_t> > r;
 	// pick a random stream until we find one that's not done,
 	// and process its frame.
 	while ( !current || remaining <= 0 ) {
@@ -462,7 +462,7 @@ shared_ptr<list<event_t> > source_multiplexer::next_inputs()
 								  (rand() / (RAND_MAX + 1.0)));
 			dynamic_poset::pset::iterator c_it = it->second->begin();
 			advance(c_it, id);
-			shared_ptr<source> c = dynamic_pointer_cast<source>(*c_it);
+			boost::shared_ptr<source> c = dynamic_pointer_cast<source>(*c_it);
 			if ( !c || (c && !c->has_inputs()) ) {
 				it->second->erase(c_it);
 			} else {
@@ -491,14 +491,14 @@ shared_ptr<list<event_t> > source_multiplexer::next_inputs()
 	// remove the stream if its done.
 	if ( !current->has_inputs() ) {
 		remove_source(current);
-		current = shared_ptr<source>();
+		current = boost::shared_ptr<source>();
 		remaining = 0;
 		if( runtime_options::verbose() )
 			cerr << "done with stream, " << inputs.size() 
 				 << " remain" << endl;
 	} 
 	else if (current_order != current->order()) {
-		current = shared_ptr<source>();
+		current = boost::shared_ptr<source>();
 		remaining = 0;
 	}
 	return r;
@@ -509,12 +509,12 @@ shared_ptr<list<event_t> > source_multiplexer::next_inputs()
 	stream_registry
 ******************************************************************************/
 void stream_registry::register_adaptor( string source_name, 
-									    shared_ptr<stream_adaptor> a) 
+									    boost::shared_ptr<stream_adaptor> a) 
 {
 	source_adaptors[source_name].push_back(a);
 }
 
-void stream_registry::register_source(string name, shared_ptr<source> src) {
+void stream_registry::register_source(string name, boost::shared_ptr<source> src) {
 	if (data_sources.find(name) != data_sources.end()) {
 		cerr << "Re-registering source \"" << name << "\"" << endl;
 	}
@@ -522,22 +522,22 @@ void stream_registry::register_source(string name, shared_ptr<source> src) {
 	if ( multiplexer ) { multiplexer->add_source(src); }
 }
 
-shared_ptr<dbt_file_source> stream_registry::initialize_file_source(
+boost::shared_ptr<dbt_file_source> stream_registry::initialize_file_source(
 		string stream_name, string file_name, frame_descriptor& f)
 {
-	shared_ptr<dbt_file_source> s;
+	boost::shared_ptr<dbt_file_source> s;
 	if ( source_adaptors.find(stream_name) != source_adaptors.end() ) {
-		s = shared_ptr<dbt_file_source>(new dbt_file_source(
+		s = boost::shared_ptr<dbt_file_source>(new dbt_file_source(
 				stream_name, f, source_adaptors[stream_name]));
 		register_source(stream_name, s);
 	}
 	return s;
 }
 
-void stream_registry::register_multiplexer(shared_ptr<source_multiplexer> m) {
+void stream_registry::register_multiplexer(boost::shared_ptr<source_multiplexer> m) {
 	multiplexer = m;
 	if ( data_sources.size() > 0 ) {
-		map<string, shared_ptr<source> >::iterator src_it =
+		map<string, boost::shared_ptr<source> >::iterator src_it =
 				data_sources.begin();
 		for (; src_it != data_sources.end(); ++src_it) {
 			multiplexer->add_source(src_it->second);

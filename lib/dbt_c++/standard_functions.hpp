@@ -1,6 +1,7 @@
 #ifndef DBTOASTER_STANDARD_FUNCTIONS_H
 #define DBTOASTER_STANDARD_FUNCTIONS_H
 
+#include <cstdlib>
 #include <string>
 using namespace std;
 

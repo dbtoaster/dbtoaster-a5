@@ -161,7 +161,7 @@ csv_adaptor::interpret_event(const string& schema, const string& data)
 	return make_tuple(valid, insert, tuple);
 }
 
-void csv_adaptor::process(const string& data, shared_ptr<list<event_t> > dest)
+void csv_adaptor::process(const string& data, boost::shared_ptr<list<event_t> > dest)
 {
 	// Flush any buffered tuple.
 	get_buffered_events(dest);
@@ -177,7 +177,7 @@ void csv_adaptor::process(const string& data, shared_ptr<list<event_t> > dest)
 		event_t e(insert? insert_tuple : delete_tuple, id, get<2>(evt));
 		// Buffer on change of order.
 		if ( current_order > order_before ) {
-		  saved_event = shared_ptr<event_t>(new event_t(e));
+		  saved_event = boost::shared_ptr<event_t>(new event_t(e));
 		} else {
 		  dest->push_back(e);
 		}
@@ -191,17 +191,17 @@ void csv_adaptor::process(const string& data, shared_ptr<list<event_t> > dest)
 	}
 }
 
-void csv_adaptor::finalize(shared_ptr<list<event_t> > dest) { }
+void csv_adaptor::finalize(boost::shared_ptr<list<event_t> > dest) { }
 
 bool csv_adaptor::has_buffered_events() {
 	return (saved_event ? true : false);
 }
 
-void csv_adaptor::get_buffered_events(shared_ptr<list<event_t> > dest) {
+void csv_adaptor::get_buffered_events(boost::shared_ptr<list<event_t> > dest) {
 	// Flush any buffered tuple.
 	if ( saved_event ) {
 		dest->push_back(*saved_event);
-		saved_event = shared_ptr<event_t>();
+		saved_event = boost::shared_ptr<event_t>();
 	}
 }
       
@@ -273,8 +273,8 @@ order_book_adaptor::order_book_adaptor(
 		relation_id_t sid, int nb, order_book_type t)
           : id(sid), num_brokers(nb), type(t)
 {
-	bids = shared_ptr<order_book>(new order_book());
-	asks = shared_ptr<order_book>(new order_book());
+	bids = boost::shared_ptr<order_book>(new order_book());
+	asks = boost::shared_ptr<order_book>(new order_book());
 	deterministic = false;
 	insert_only = false;
 }
@@ -283,8 +283,8 @@ order_book_adaptor::order_book_adaptor(relation_id_t sid, int num_params,
 				   pair<string, string> params[])
 {
 	id = sid;
-	bids = shared_ptr<order_book>(new order_book());
-	asks = shared_ptr<order_book>(new order_book());
+	bids = boost::shared_ptr<order_book>(new order_book());
+	asks = boost::shared_ptr<order_book>(new order_book());
 	deterministic = false;
         insert_only = false;
 	num_brokers = 10;
@@ -361,7 +361,7 @@ bool order_book_adaptor::parse_message(const string& data, order_book_message& r
 }
 
 void order_book_adaptor::process_message(const order_book_message& msg,
-					 shared_ptr<list<event_t> > dest)
+					 boost::shared_ptr<list<event_t> > dest)
 {
 	bool valid = true;
 	order_book_tuple r(msg);
@@ -473,7 +473,7 @@ void order_book_adaptor::process_message(const order_book_message& msg,
 	}
 }
 
-void order_book_adaptor::process(const string& data, shared_ptr<list<event_t> > dest)
+void order_book_adaptor::process(const string& data, boost::shared_ptr<list<event_t> > dest)
 {
 	// Grab a message from the data.
 	order_book_message r;
@@ -491,7 +491,7 @@ void order_book_adaptor::process(const string& data, shared_ptr<list<event_t> > 
 ******************************************************************************/
 
 order_book_streams::order_book_streams(string file_name, string params,
-				   shared_ptr<source_multiplexer> m)
+				   boost::shared_ptr<source_multiplexer> m)
   : r(m), sid(0), data_file(file_name)
 {
 	init(parse_params(params));
@@ -501,7 +501,7 @@ vector<order_book_streams::stream_params> order_book_streams::parse_params(
 			string params) 
 {
 	vector<order_book_streams::stream_params> r;
-	shared_ptr<order_book_streams::stream_params> current;
+	boost::shared_ptr<order_book_streams::stream_params> current;
 
 	vector<string> tmp; split(tmp, params, is_any_of(","));
 	for (vector<string>::iterator it = tmp.begin(); 
@@ -511,7 +511,7 @@ vector<order_book_streams::stream_params> order_book_streams::parse_params(
 		if ( p_parts.size() == 2 ) {
 		  if ( p_parts[0] == "book" ) {
 			if ( current ) r.push_back(*current);
-			current = shared_ptr<order_book_streams::stream_params>(
+			current = boost::shared_ptr<order_book_streams::stream_params>(
 								new order_book_streams::stream_params());
 			to_lower(p_parts[1]);
 			current->first = p_parts[1];
@@ -535,11 +535,11 @@ void order_book_streams::init(vector<order_book_streams::stream_params> params) 
 		for (int i = 0; i < params.size(); ++i) {
 		  order_book_streams::stream_params& p = params[i];
 		  frame_descriptor fdesc("\n");
-		  shared_ptr<order_book_adaptor> a = shared_ptr<order_book_adaptor>(
+		  boost::shared_ptr<order_book_adaptor> a = boost::shared_ptr<order_book_adaptor>(
 			new order_book_adaptor(sid, p.second.size(), &(p.second[0])));
 		  if ( a ) {
 			r.register_adaptor(p.first, a);
-			shared_ptr<source> s = r.initialize_file_source(p.first,
+			boost::shared_ptr<source> s = r.initialize_file_source(p.first,
 															data_file,
 															fdesc);
 			if ( s ) {

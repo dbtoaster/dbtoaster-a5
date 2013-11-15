@@ -11,6 +11,7 @@
 #define FUSION_MAX_VECTOR_SIZE 50
 
 #include <map>
+
 #include <boost/archive/xml_oarchive.hpp>
 #include <boost/serialization/map.hpp>
 #include <boost/filesystem/path.hpp>
@@ -34,7 +35,7 @@
 #include "standard_adaptors.hpp"
 #include "standard_functions.hpp"
 
-using namespace ::std;
+//using namespace ::std;
 using namespace ::boost;
 
 using namespace ::boost::filesystem;
@@ -119,14 +120,14 @@ public:
 
         map_t(serialize_fn_t _serialize_fn);
     };
-    typedef shared_ptr<map_t> map_ptr_t;
+    typedef boost::shared_ptr<map_t> map_ptr_t;
 
     typedef boost::function<void(const event_args_t&)> trigger_fn_t;
 
     struct logger_t {
         typedef stream<file_sink> file_stream_t;
 
-        shared_ptr<file_stream_t> log_stream;
+        boost::shared_ptr<file_stream_t> log_stream;
         bool log_relation_name;
         bool log_event_type;
 
@@ -137,10 +138,10 @@ public:
     struct trigger_t {
         string name;
         trigger_fn_t fn;
-        shared_ptr<logger_t> logger;
+        boost::shared_ptr<logger_t> logger;
 
         trigger_t(string r_name, event_type ev_type, trigger_fn_t t_fn,
-                    shared_ptr<logger_t> t_logger);
+                    boost::shared_ptr<logger_t> t_logger);
         void log(string& relation_name, event_t& evt);
     };
 
@@ -149,15 +150,15 @@ public:
         bool is_table;
         relation_id_t id;
 
-        shared_ptr<trigger_t> trigger[2];
+        boost::shared_ptr<trigger_t> trigger[2];
 
         relation_t(string r_name, bool r_is_table, relation_id_t r_id,
                 trigger_fn_t ins_trigger_fn = 0, 
                 trigger_fn_t del_trigger_fn = 0,
-                shared_ptr<logger_t> ins_logger = shared_ptr<logger_t>(),
-                shared_ptr<logger_t> del_logger = shared_ptr<logger_t>());
+                boost::shared_ptr<logger_t> ins_logger = boost::shared_ptr<logger_t>(),
+                boost::shared_ptr<logger_t> del_logger = boost::shared_ptr<logger_t>());
     };
-    typedef shared_ptr<relation_t> relation_ptr_t;
+    typedef boost::shared_ptr<relation_t> relation_ptr_t;
 
     relation_id_t get_relation_id(string r_name);
     string        get_relation_name(relation_id_t s_id);
@@ -172,7 +173,7 @@ public:
 		serialize_fn_t fn = 
 			boost::bind(&serializer::template fn<T>,
 						::boost::lambda::_1, make_nvp(m_name.c_str(), t));
-		map_ptr_t m = shared_ptr<map_t>(new map_t(fn));
+		map_ptr_t m = boost::shared_ptr<map_t>(new map_t(fn));
 		maps_by_name[m_name] = m;
 		return;
 	}
@@ -180,7 +181,7 @@ public:
     void add_relation(string r_name, bool is_table = false, 
                       relation_id_t s_id = -1);
     void add_trigger(string r_name, event_type ev_type, trigger_fn_t fn);
-    void add_source(shared_ptr<streams::source> source, 
+    void add_source(boost::shared_ptr<streams::source> source, 
                     bool is_table_source = false);
 
     ProgramBase(int argc = 0, char* argv[] = 0);
@@ -195,7 +196,7 @@ protected:
     void process_stream_event(event_t* _evt);
 	
 	
-    shared_ptr<runtime::runtime_options> run_opts;
+    boost::shared_ptr<runtime::runtime_options> run_opts;
     source_multiplexer stream_multiplexer;
     source_multiplexer table_multiplexer;
 
@@ -218,9 +219,9 @@ public:
     unsigned int stats_period;
     string stats_file;
 
-    shared_ptr<trigger_exec_stats> exec_stats;
-    shared_ptr<trigger_exec_stats> ivc_stats;
-    shared_ptr<delta_size_stats> delta_stats;
+    boost::shared_ptr<trigger_exec_stats> exec_stats;
+    boost::shared_ptr<trigger_exec_stats> ivc_stats;
+    boost::shared_ptr<delta_size_stats> delta_stats;
 #endif // DBT_PROFILE
 
 };

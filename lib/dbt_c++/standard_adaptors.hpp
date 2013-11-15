@@ -25,7 +25,7 @@ namespace dbtoaster {
       string schema;
       string delimiter;
       
-      shared_ptr<event_t> saved_event;
+      boost::shared_ptr<event_t> saved_event;
 
       csv_adaptor(relation_id_t _id);
       csv_adaptor(relation_id_t _id, string sch);
@@ -39,11 +39,11 @@ namespace dbtoaster {
       // Interpret the schema.
       tuple<bool, bool, event_args_t> interpret_event(const string& schema,
                                                       const string& data);
-      void process(const string& data, shared_ptr<list<event_t> > dest);
+      void process(const string& data, boost::shared_ptr<list<event_t> > dest);
 
-      void finalize(shared_ptr<list<event_t> > dest);      
+      void finalize(boost::shared_ptr<list<event_t> > dest);      
       bool has_buffered_events();      
-      void get_buffered_events(shared_ptr<list<event_t> > dest);
+      void get_buffered_events(boost::shared_ptr<list<event_t> > dest);
       
     };
 
@@ -102,8 +102,8 @@ namespace dbtoaster {
         relation_id_t id;
         int num_brokers;
         order_book_type type;
-        shared_ptr<order_book> bids;
-        shared_ptr<order_book> asks;
+        boost::shared_ptr<order_book> bids;
+        boost::shared_ptr<order_book> asks;
         bool deterministic;
         bool insert_only;
 
@@ -117,12 +117,12 @@ namespace dbtoaster {
         // Expected message format: t, id, action, volume, price
         bool parse_message(const string& data, order_book_message& r);
         void process_message(const order_book_message& msg,
-                             shared_ptr<list<event_t> > dest);
-        void process(const string& data, shared_ptr<list<event_t> > dest);
+                             boost::shared_ptr<list<event_t> > dest);
+        void process(const string& data, boost::shared_ptr<list<event_t> > dest);
 
-        void finalize(shared_ptr<list<event_t> > dest) {}        
+        void finalize(boost::shared_ptr<list<event_t> > dest) {}        
         bool has_buffered_events() { return false; }        
-        void get_buffered_events(shared_ptr<list<event_t> > dest) {}         
+        void get_buffered_events(boost::shared_ptr<list<event_t> > dest) {}         
       };
 
       // Command line initialization of orderbook datasets.
@@ -135,7 +135,7 @@ namespace dbtoaster {
         string data_file;
 
         order_book_streams(string file_name, string params,
-                           shared_ptr<source_multiplexer> m);
+                           boost::shared_ptr<source_multiplexer> m);
 
         vector<stream_params> parse_params(string params);
         void init(vector<stream_params> params);

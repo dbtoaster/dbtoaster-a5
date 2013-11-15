@@ -4,9 +4,7 @@
 #include <string>
 #include <vector>
 
-#include <tr1/unordered_set>
-
-#include <boost/shared_ptr.hpp>
+#include <boost/unordered_set.hpp>
 #include <boost/filesystem/path.hpp>
 #include <boost/program_options/options_description.hpp>
 #include <boost/program_options/variables_map.hpp>
@@ -18,13 +16,12 @@ namespace dbtoaster {
   namespace runtime {
 
     using namespace std;
-    using namespace tr1;
     using namespace boost;
     using namespace boost::filesystem;
     using namespace boost::program_options;
     
     struct runtime_options {
-      shared_ptr<options_description> opt_desc;
+      boost::shared_ptr<options_description> opt_desc;
       variables_map opt_map;
       positional_options_description pos_options;
 

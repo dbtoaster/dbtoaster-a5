@@ -38,7 +38,7 @@ lib_flags=`echo "$DBT_LIB" | sed 's/:/ -L/g'`
 [[ $lib_flags != "" ]] && { lib_flags="-L$lib_flags"; }
 lib_flags="-L$CPP_LIBDIR $lib_flags"
 
-
+gpp="g++"
 cpp_compile_flags=""
 cpp_opt_flag="-O3"
 boost_libs="-lboost_program_options -lboost_serialization -lboost_system -lboost_filesystem -lboost_chrono -lboost_thread"
@@ -134,7 +134,7 @@ if [ $out_bin_file != "-" ]; then
         main_file="$CPP_LIBDIR/main.cpp"
 
         compile_flags="$cpp_compile_flags $cpp_opt_flag $def_flags $inc_flags $lib_flags $cpp_libs"
-        compile_cmd="g++ $main_file -include $out_src_file -o $out_bin_file $compile_flags"
+        compile_cmd="$gpp $main_file -include $out_src_file -o $out_bin_file $compile_flags"
 		[ $log_gcc -eq 1 ] && { compile_log="$compile_log $compile_cmd"; }
     fi
 
