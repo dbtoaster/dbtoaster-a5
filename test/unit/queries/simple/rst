@@ -3,9 +3,9 @@
   :datasets => {
     "standard" => {
       :toplevels => {
-        "ATIMESD" => {
+        "QUERY_0" => {
           :type => :singleton,
-          :expected => 18753367048934.0
+          :expected => 18753367048934
         }
       }
     }
