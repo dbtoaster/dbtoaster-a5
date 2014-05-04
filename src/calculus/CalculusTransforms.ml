@@ -341,7 +341,7 @@ let lift_equalities (global_scope:var_t list) (big_expr:C.expr_t): C.expr_t =
                 CalcRing.mk_prod [updated_lhs; rhs_term])
          | CalcRing.Neg(nt) -> 
             let (eqs, term) = rcr scope nt in
-               (eqs, CalcRing.mk_neg nt)
+               (eqs, CalcRing.mk_neg term)
          | CalcRing.Val(AggSum(gb_vars, term)) ->
             (** It's possible that we'll take advantage of a variable in-scope
                 to unify some of the gb-vars away.  If this happens, we need
