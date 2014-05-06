@@ -5,11 +5,11 @@
       :toplevels => {
         "__SQL_SUM_AGGREGATE_1" => {
           :type => :singleton,
-          :expected => 108
+          :expected => 156
         },
         "__SQL_SUM_AGGREGATE_2" => {
           :type => :singleton,
-          :expected => 156
+          :expected => 108
         }
       } 
     }
