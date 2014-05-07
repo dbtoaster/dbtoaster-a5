@@ -2,7 +2,7 @@
 --   ORDER BY (ignored)
 --   LIMIT    (ignored)
 
-INCLUDE 'test/queries/tpch/schemas.sql';
+INCLUDE '../alpha5/test/queries/tpch/schemas.sql';
 
 SELECT ORDERS.orderkey, 
        ORDERS.orderdate,

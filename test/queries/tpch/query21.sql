@@ -2,7 +2,7 @@
 -- ORDER BY (ignored)
 -- LIMIT    (ignored)
 
-INCLUDE 'test/queries/tpch/schemas.sql';
+INCLUDE '../alpha5/test/queries/tpch/schemas.sql';
 
 SELECT  s.name, COUNT(*) AS numwait
 FROM    supplier s, lineitem l1, orders o, nation n

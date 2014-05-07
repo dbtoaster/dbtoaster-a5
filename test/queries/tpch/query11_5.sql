@@ -1,4 +1,4 @@
-INCLUDE 'test/queries/tpch/schemas.sql';
+INCLUDE '../alpha5/test/queries/tpch/schemas.sql';
 
 SELECT p.nationkey, p.partkey, SUM(p.value) AS QUERY11
 FROM

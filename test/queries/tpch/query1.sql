@@ -3,7 +3,7 @@
 --   ORDER BY (ignored)
 --   LIMIT    (ignored)
 
-INCLUDE 'test/queries/tpch/schemas.sql';
+INCLUDE '../alpha5/test/queries/tpch/schemas.sql';
 
 SELECT returnflag, linestatus, 
   SUM(quantity) AS sum_qty,
@@ -15,5 +15,5 @@ SELECT returnflag, linestatus,
   AVG(discount) AS avg_disc,
   COUNT(*) AS count_order
 FROM lineitem
-WHERE shipdate <= DATE('1998-12-01') - interval '457' day (3) 
+WHERE shipdate <= DATE('1997-09-01')
 GROUP BY returnflag, linestatus;  
