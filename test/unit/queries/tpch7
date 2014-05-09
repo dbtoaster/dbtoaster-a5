@@ -27,7 +27,7 @@
           :type => :onelevel,
           :expected => {
             ['GERMANY', 'FRANCE',  1996] => 5557312.1121,
-            ['FRANCE', ' GERMANY', 1996] => 5224779.5736,
+            ['FRANCE', 'GERMANY', 1996] => 5224779.5736,
             ['GERMANY', 'FRANCE',  1995] => 6232818.7037,
             ['FRANCE',  'GERMANY', 1995] => 4637235.1501          
           }
