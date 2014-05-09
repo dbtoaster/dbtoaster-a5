@@ -2,70 +2,77 @@
 <a name="latest"><h4>DBToaster Public Beta</h4></a>
 <table class="table">
 <thead>
-  <th width="25%" align="right">Platform</th>
+  <th width="30%" align="right">Binaries</th>
   <th width="20%" align="left">Revision</th>
   <th width="20%" align="left">Date</th>
-  <th width="20%" align="left">Download</th>
+  <th width="20%" align="left">Download</th>  
 </thead>
 <tr>
-  <td align="right">Mac OS X</td>
+  <td align="left"> &nbsp;&nbsp; Mac OS X</td>
   <td>2827</td>
   <td>2013-Feb-11</td>
   <td align="left">
     <a class="btn btn-primary" href="dist/dbtoaster_darwin_2827.tgz">Tarball</a></td>
 </tr>
 <tr>
-  <td align="right">Ubuntu 12.04 (x86-64)</td>
+  <td align="left"> &nbsp;&nbsp; Ubuntu 12.04 (x86-64)</td>
   <td>2827</td>
   <td>2013-Feb-11</td>
   <td align="left">
     <a class="btn btn-primary" href="dist/dbtoaster_ubuntu12.04_x86_64_2827.tgz">Tarball</a></td>
 </tr>
 <tr>
-  <td align="right">Windows (Cygwin)</td>
+  <td align="left">&nbsp;&nbsp; Windows (Cygwin)</td>
   <td>2827</td>
   <td>2013-Feb-11</td>
   <td align="left">
     <a class="btn btn-primary" href="dist/dbtoaster_cygwin_nt-6.1-wow64_2827.tgz">Tarball</a></td>
 </tr>
+<tr>
+  <td align="left"><b>Documentation</b></td>
+  <td>2827</td>
+  <td>2013-Feb-11</td>
+  <td align="left">
+    <a class="btn btn-primary" href="dist/dbtoaster_doc_2827.pdf">&nbsp;&nbsp;PDF&nbsp;&nbsp;</a></td>
+</tr>
 </table>
 
-<a name="latest"><h4>Older releases</h4></a>
+<a name="older"><h4>Older releases</h4></a>
 <table class="table">
 <thead>
-  <th width="25%" align="right">Platform</th>
+  <th width="30%" align="right">Binaries</th>
   <th width="20%" align="left">Revision</th>
   <th width="20%" align="left">Date</th>
   <th width="20%" align="left">Download</th>
 </thead>
-<tbody>
-  <td align="right">Mac OS X</td>
+<tr>
+  <td align="left">&nbsp;&nbsp; Mac OS X</td>
   <td>2525</td>
   <td>2012-Jul-09</td>
   <td align="left">
     <a class="btn btn-primary" href="dist/dbtoaster_darwin_2525.tgz">Tarball</a></td>
-</tbody>
-<tbody>
-  <td align="right">Red Hat Fedora 17 (x86-64)</td>
+</tr>
+<tr>
+  <td align="left">&nbsp;&nbsp; Red Hat Fedora 17 (x86-64)</td>
   <td>2525</td>
   <td>2012-Jul-09</td>
   <td align="left">
     <a class="btn btn-primary" href="dist/dbtoaster_fedora17_x86_64_2525.tgz">Tarball</a></td>
-</tbody>
-<tbody>
-  <td align="right">Ubuntu 12.04 (x86-64)</td>
+</tr>
+<tr>
+  <td align="left">&nbsp;&nbsp; Ubuntu 12.04 (x86-64)</td>
   <td>2525</td>
   <td>2012-Jul-09</td>
   <td align="left">
     <a class="btn btn-primary" href="dist/dbtoaster_ubuntu12.04_x86_64_2525.tgz">Tarball</a></td>
-</tbody>
-<tbody>
-  <td align="right">Windows (Cygwin)</td>
+</tr>
+<tr>
+  <td align="left">&nbsp;&nbsp; Windows (Cygwin)</td>
   <td>2576</td>
   <td>2012-Jul-09</td>
   <td align="left">
     <a class="btn btn-primary" href="dist/dbtoaster_cygwin_nt-6.1-wow64_2576.tgz">Tarball</a></td>
-</tbody>
+</tr>
 </table>
 
 <?= chapter("License", "license") ?>
