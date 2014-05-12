@@ -3,11 +3,11 @@
   :datasets => {
     "standard" => {
       :toplevels => {
-        "__SQL_SUM_AGGREGATE_1" => {
+        "AGG1" => {
           :type => :singleton,
           :expected => 156
         },
-        "__SQL_SUM_AGGREGATE_2" => {
+        "AGG2" => {
           :type => :singleton,
           :expected => 108
         }
