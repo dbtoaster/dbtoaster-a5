@@ -1,88 +1,149 @@
-
 <div class="warning">Warning: This BETA API is not final, and subject to change before release.</div>
 
 <a name="quickstart"></a>
-<?=chapter("Quickstart Guide")?>
 
-<?=section("Prerequisites")?>
-<ul>
-	<li>DBToaster Beta1</li>
-	<li>Scala 2.9.2</li>
-	<li>JVM (preferably a 64-bit version)</li>
-</ul>
-<i>Note:</i> The following steps have been tested on Fedora 14 (64-bit) and Ubuntu 12.04 (32-bit), the commands may be slightly different for other operating systems
+<?=chapter("Compiling and running a query")?>
 
-<?=section("Compiling and running your first query")?>
-We start with a simple query that looks like this:
-<div class="codeblock">CREATE TABLE R(A int, B int) 
-  FROM FILE 'examples/data/tiny_r.dat' LINE DELIMITED
-  CSV (fields := ',');
+<p>
+   <i>Note:</i> To compile and run queries using the Scala backend requires the Scala compiler to be installed. Please refer to <?= mk_link("Getting Started", "docs"); ?> for details 
+</p>
+
+<p>
+   DBToaster generates a JAR file for a query when using the <tt>-l scala</tt> and the <tt>-c &lt;file&gt;</tt> switch:
+</p>
+
+<div class="codeblock">
+$> cat examples/queries/simple/rst.sql
+CREATE STREAM R(A int, B int) 
+  FROM FILE 'examples/data/simple/r.dat' LINE DELIMITED csv;
 
 CREATE STREAM S(B int, C int) 
-  FROM FILE 'examples/data/tiny_s.dat' LINE DELIMITED
-  CSV (fields := ',');
+  FROM FILE 'examples/data/simple/s.dat' LINE DELIMITED csv;
 
-SELECT SUM(r.A*s.C) as RESULT FROM R r, S s WHERE r.B = s.B;
+CREATE STREAM T(C int, D int)
+  FROM FILE 'examples/data/simple/t.dat' LINE DELIMITED csv;
+
+SELECT sum(A*D) AS AtimesD FROM R,S,T WHERE R.B=S.B AND S.C=T.C;
+$> bin/dbtoaster -c test.jar -l scala examples/queries/simple/rst.sql
 </div>
-This query should be saved to a file named <span class="code">rs_example.sql</span>.
+
 <p>
-To compile the query to Scala code, we invoke the DBToaster compiler with the following command:
-<div class="codeblock">$&gt; bin/dbtoaster -l scala -o rs_example.scala rs_example.sql</div>
-This command will produce the file <span class="code">rs_example.scala</span> (or any other filename specified by the <span class="code">-o [filename]</span> switch) which contains the Scala code representing the query.</p>
-<p>
-To compile the query to an executable JAR file, we invoke the DBToaster compiler with the <span class="code">-c [JARname]</span> switch:
-<div class="codeblock">$&gt; bin/dbtoaster -l scala -c rs_example rs_example.sql</div>
-<i>Note:</i> The ending <span class="code">.jar</span> is automatically appended to the name of the JAR.</p>
-<p>
-The resulting JAR contains a main function that can be used to test the query. It runs the query until there are no more
-events to be processed and prints the result. It can be run using the following command assuming that the 
-Scala DBToaster library can be found in the subdirectory <span class="code">lib/dbt_scala</span>:
-<div class="codeblock">$&gt; scala -classpath "rs_example.jar:lib/dbt_scala/dbtlib.jar" \
-         org.dbtoaster.RunQuery
+   The command above compiles the query to <tt>test.jar</tt>.
+   It can now be run as follows:
+</p>
+
+<div class="codeblock">
+$> java -classpath "rst.jar:lib/dbt_scala/*" ddbt.gen.Dbtoaster
+Java 1.7.0_45, Scala 2.10.3
+Time: 0.008s (30/0)
+ATIMESD:
+306
 </div>
-After all tuples in the data files were processed, the result of the query will be printed:
-<div class="codeblock">Run time: 0.042 ms
-&lt;RESULT&gt;156 &lt;/RESULT&gt;
-</div></p>
+
+<p>
+   After processing all insertions and deletions, the final result is printed 
+</p>
 
 <a name="apiguide"/></a>
 <?= chapter("Scala API Guide") ?>
-In the previous example, we used the standard main function to test the query. However, to make use of the query
-in real applications, it has to be run from the application itself.
-The following example shows how a query can be run from your own Scala code. Suppose we have a the following 
-source code in <span class="code">main_example.scala</span>:
-<div class="codeblock">import org.dbtoaster.Query
+<p>
+   In the previous example, we used the standard main function to test the query. 
+   However, to use the query in real applications, it has to be run from within an application.
+</p>
 
-package org.example {
-  object MainExample {
-    def main(args: Array[String]) {
-      Query.run()
-      Query.printResults()
-    }
+<p>
+   The following listing shows a simple example application that communicates with the query class.
+   The communication between the application and the query class is handled using <a href="http://akka.io/">akka</a>.
+</p>
+
+<div class="codeblock">
+package org.dbtoaster
+
+import ddbt.gen._
+import ddbt.lib.Messages._
+import akka.actor._
+
+object ExampleApp {
+  def main(args: Array[String]) {
+    val system = ActorSystem("mySystem")
+    val q = system.actorOf(Props[Dbtoaster], "Query")
+
+    // Send events
+    q ! TupleEvent(0, TupleInsert, "R", List(5L, 2L))
+    q ! TupleEvent(1, TupleInsert, "S", List(2L, 3L))
+    q ! TupleEvent(2, TupleInsert, "T", List(3L, 4L))
+
+    // Retrieve result
+    val to=akka.util.Timeout(1L << 42)
+    val result = scala.concurrent.Await.result(akka.pattern.ask(q, EndOfStream)(to), to.duration).asInstanceOf[(StreamStat,List[Any])]
+
+    println("Result: " + result._2(0))
+
+    system.shutdown
   }
 }
 </div>
-The code representing the query is in the <span class="code">org.dbtoaster.Query</span> object.
-This program will start the query using the <span class="code">Query.run()</span> method and output its 
-result after it finished using the <span class="code">Query.printResults()</span> method.
+
 <p>
-To retrieve results, the <span class="code">get<i>RESULTNAME</i>()</span> of the <span class="code">Query</span> object can be used.</p>
+   This example first creates an ActorSystem and then launches the query actor.
+   The events are sent to the query using <tt>TupleEvent</tt> messages with the following structure:
+</p>
+
+<table class="table">
+   <tr>
+      <th>Argument</th>
+      <th>Comment</th>
+   </tr>
+   <tr>
+      <td class="code">ord: Int</td>
+      <td>Order number of the event.</td>
+   </tr>
+   <tr>
+      <td class="code">op:TupleOp</td>
+      <td><tt>TupleInsert</tt> for an insertion, <tt>TupleDelete</tt> for a deletion.</td>
+   </tr>
+   <tr>
+      <td class="code">stream:String</td>
+      <td>Name of the stream as it appears in the SQL file.</td>
+   </tr>
+   <tr>
+      <td class="code">data:List[Any]</td>
+      <td>The values of the tuple that was inserted into/deleted from the stream.</td>
+   </tr>
+</table>
+
 <p>
-<i>Note:</i>The <span class="code">get<i>RESULTNAME</i>()</span> functions are not thread-safe, meaning that results can be 
-inconsistent if they are called from another thread than the query thread. A thread-safe alternative to retrieve
-the results is planned for future versions of DBToaster.</p>
+   To retrieve the final result, an <tt>EndOfStream</tt> message is sent to the query actor.
+   Alternatively the intermediate result of a query can be retrieved using a <tt>GetSnapshot</tt> message with the following structure:
+</p>
+
+<table class="table">
+   <tr>
+      <th>Argument</th>
+      <th>Comment</th>
+   </tr>
+   <tr>
+      <td class="code">view:List[Int]</td>
+      <td>List of maps that a snapshot is taken of.</td>
+   </tr>
+</table>
+
 <p>
-The program can be compiled to <span class="code">main_example.jar</span> using the following command (assuming that the query was compiled to a file named <span class="code">rs_example.jar</span>):
-<div class="codeblock">$&gt; scalac -classpath "rs_example.jar" -d main_example.jar main_example.scala
+   Assuming that the example code has been saved as <tt>example.scala</tt>, it can be compiled with:
+</p>
+
+<div class="codeblock">
+$> scalac -classpath "rst.jar:lib/dbt_scala/*" -d example.jar example.scala
 </div>
-The resulting program can now be launched with:
-<div class="codeblock">$&gt; scala -classpath "main_example.jar:rs_example.jar:lib/dbt_scala/dbtlib.jar" org.example.MainExample
-</div>
-The <span class="code">Query.run()</span> method takes a function of type <span class="code">Unit => Unit</span> as an optional argument which is called every time when an event was processed. 
-This function can be used to retrieve results while the query is still running.</p>
+
 <p>
-<i>Note:</i> The function will be executed on the same thread on which the query processing takes place, blocking 
-further query processing while the function is being run.</p>
+   It can then be launched with the following command:
+</p>
+
+<div class="codeblock">
+$> java -classpath "rst.jar:lib/dbt_scala/*:example.jar" org.dbtoaster.ExampleApp
+Result: 20
+</div>
 
 <a name="generatedcode"/></a>
 <?=chapter("Generated Code Reference")?>
