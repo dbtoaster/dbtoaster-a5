@@ -114,6 +114,12 @@ let prepare_expr (scope:var_t list) (expr:expr_t) :
    in
       (const_terms, rel_terms, lift_terms, value_terms)    
 
+let reorganize_expr (scope:var_t list) (expr:expr_t) : expr_t = 
+   let (const_terms, rel_terms, lift_terms, value_terms) = 
+      prepare_expr scope expr 
+   in
+   CalcRing.mk_prod (List.flatten [const_terms; rel_terms; lift_terms; value_terms]) 
+
 (*****************************************************************************)
 
 type decision_options_t = 
@@ -436,7 +442,7 @@ let should_update (event:Schema.event_t) (expr:expr_t)  : bool =
    
    if (Debug.active "HEURISTICS-ALWAYS-UPDATE") then true 
    else 
-         
+   
    (* The materializer assumes expressions without Neg nodes.          *)
    (* In cases when the calculus optimizer is disabled, that might be  *)
    (* violated. We guard against these cases by calling combine_values.*)
@@ -511,7 +517,8 @@ let should_update (event:Schema.event_t) (expr:expr_t)  : bool =
                      | _ ->
                         (state_local,
                          ListAsSet.union scope_acc term_ovars)
-                  ) (Unknown, expr_scope) (CalcRing.prod_list subexpr_opt)
+                  ) (Unknown, expr_scope) 
+                    (CalcRing.prod_list (reorganize_expr expr_scope subexpr_opt))
                ) 
                in
                   get_next_state state_graph maintaining_state_local
