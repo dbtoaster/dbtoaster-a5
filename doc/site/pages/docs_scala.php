@@ -147,156 +147,176 @@ Result: 20
 
 <a name="generatedcode"/></a>
 <?=chapter("Generated Code Reference")?>
-The DBToaster Scala codegenerator generates a single file containing an object <span class="code">Query</span> in the package <span class="code">org.dbtoaster</span>.
 <p>
-For the previous example the generated code looks like this:
-<div class="codeblock">// Imports
-import java.io.FileInputStream;
+   The Scala code generator generates a single file containing an object and an actor for a query.
+   Both of them are called <tt>Query</tt> by default if no other name has been specified using the <tt>-n <name></tt> switch.
+</p>
+
+<p>
+   The code generated for the previous example looks as follows:
+</p>
+
+<div class="codeblock">
+package ddbt.gen
+import ddbt.lib._
 ...
 
-package org.dbtoaster {
-  // The generated object
-  object Query {
-    // Declaration of sources
-    val s1 = createInputStreamSource(
-          new FileInputStream("../../experiments/data/simple/tiny/r.dat"), ...
-      );
-    ...
+// Query object used for standalone binaries
+object Query {
+  import Helper._
+  def execute(args:Array[String],f:List[Any]=>Unit) = ...
 
-    // Data structures holding the intermediate result
-    var RESULT = SimpleVal[Long](0);
-    ...
-
-    // Functions to retrieve the result
-    def getRESULT():Long = {
-      RESULT.get()
-    };
-
-    // Trigger functions
-    def onInsertR(var_R_A: Long,var_R_B: Long) = ...
-    ...
-    def onDeleteS(var_S_B: Long,var_S_C: Long) = ...
-    
-    // Functions that handle static tables and system initialization
-    def onSystemInitialized() = ...
-    def fillTables(): Unit = ...
-    
-    // Function that dispatches events to the appropriate trigger functions 
-    def dispatcher(event: DBTEvent, 
-                   onEventProcessedHandler: Unit => Unit): Unit = ...
-    
-    // (Blocking) function to start the execution of the query
-    def run(onEventProcessedHandler: Unit => Unit = (_ => ())): Unit = ...
-    
-    // Prints the query results in some XML-like form (for debugging) 
-    def printResults(): Unit = ...
+  def main(args:Array[String]) {
+    execute(args,(res:List[Any])=>{
+      println("ATIMESD:\n"+M3Map.toStr(res(0))+"\n")
+    })
   }
 }
-</div></p>
-<p>
-When the <span class="code">run()</span> method is called, the static tables are loaded and the processing
-of events from the declared sources starts. The function returns when the sources provide no
-more events.</p>
 
-<?=section("Retrieving results")?>
-<p>
-To retrieve the result, the <span class="code">get<i>RESULTNAME</i>()</span> functions are used. In the example above,
-the <span class="code">get<i>RESULTNAME</i>()</span> method is simple but more complex methods may be generated
-and the return value may be a collection instead of a single value.</p>
+// Query actor
+class Query extends Actor {
+  import ddbt.lib.Messages._
+  import ddbt.lib.Functions._
 
-<?=subsection("Queries computing collections")?>
-<p>
-Consider the following query:
-<div class="codeblock">CREATE STREAM R(A int, B int) 
-  FROM FILE 'examples/data/tiny/r.dat' LINE DELIMITED
-  CSV (fields := ',');
+  // Maps/singletons that hold intermediate results
+  var ATIMESD = 0L
+  val ATIMESD_mT1 = M3Map.make[Long,Long]();
+  ...
 
-CREATE STREAM S(B int, C int) 
-  FROM FILE 'examples/data/tiny/s.dat' LINE DELIMITED
-  CSV (fields := ',');
+  // Triggers
+  def onAddR(r_a:Long, r_b:Long) {
+    ATIMESD += (ATIMESD_mR1.get(r_b) * r_a);
+    ATIMESD_mT1_mR1.slice(0,r_b).foreach { (k1,v1) =>
+      val atimesd_mtt_c = k1._2;
+      ATIMESD_mT1.add(atimesd_mtt_c,(v1 * r_a));
+    }
+    ATIMESD_mS1.add(r_b,r_a);
+  }
 
-SELECT r.B, SUM(r.A*s.C) as RESULT_1, SUM(r.A+s.C) as RESULT_2 FROM R r, S s WHERE r.B = s.B GROUP BY r.B;
+  def onDelR(r_a:Long, r_b:Long) { ... }
+  ...
+  def onDelT(t_c:Long, t_d:Long) { ... }
+  def onSystemReady() { }
+
+  ...
+  def receive = {
+    case TupleEvent(ord,TupleInsert,"R",List(v0:Long,v1:Long)) => if (t1>0 && (tN&127)==0) { val t=System.nanoTime; if (t>t1) { t1=t; tS=1; context.become(receive_skip) } else tN+=1 } else tN+=1; onAddR(v0,v1)
+    ...
+    case StreamInit(timeout) => onSystemReady(); t0=System.nanoTime; if (timeout>0) t1=t0+timeout*1000000L
+    case EndOfStream | GetSnapshot(_) => t1=System.nanoTime;  sender ! (StreamStat(t1-t0,tN,tS),List(ATIMESD))
+  }
+}
 </div>
-In this case two functions are being generated that can be called to retrieve the result, each of them representing
-one of the result columns:
-<div class="codeblock">def getRESULT_1():K3PersistentCollection[(Long), Long] = ...
-def getRESULT_2():K3PersistentCollection[(Long), Long] = ...
-</div>
-In this case, the functions return a collection containing the result. For further processing, the results can be converted 
-to lists of key-value pairs using the <span class="code">toList()</span> method of the collection class. The key in the pair corresponds 
-to the columns in the <span class="code">GROUP BY</span> clause, in our case <span class="code">r.B</span>. The value corresponds to the aggregated 
-value for the corresponding key.</p>
 
-<?=subsection("Partial Materialization")?>
+<?=section("The query object")?>
 <p>
-Some of the work involved in maintaining the results of a query can be saved by performing partial materialization
-and only computing the final results when invoking <span class="code">tlq_t</span>'s <span class="code">get_<i>TLQ_NAME</i></span> functions. This
-behaviour is especially desirable when the rate of querying the results is lower than the rate of updates, and
-can be enabled through the <span class="code">-F EXPRESSIVE-TLQS</span> command line flag.</p>
+   The query object contains the code used by the standalone binary to execute the query.
+   Its <tt>execute</tt> method reads from the input streams specified in the query file and sends them to the query actor.
+   The <tt>main</tt> method calls execute and prints the result when all tuples have been processed.
+</p>
 
-<p>Below is an example of a query where partial materialization is indeed beneficial.
-<div class="codeblock">CREATE STREAM R(A int, B int)
-FROM FILE 'examples/data/tiny/r.dat' LINE DELIMITED
-csv ();
+<?=section("The query actor")?>
+<p>
+   The actual query processor lives in the query actor.
+   Events like tuple insertions and deletions are communicated to the actor using actor messages as described previously.
+   The <tt>receive</tt> method routes events to the appropriate trigger method.
+   For every stream <tt>R</tt>, there is an insertion <tt>onAddR</tt> and a deletion trigger <tt>onDelR</tt>.
+   These trigger methods are responsible of updating the intermediate result.
+   The map and singleton data structures at the top of the actor hold the intermediate result.
+</p>
 
-SELECT r2.C FROM (
-  SELECT r1.A, COUNT(*) AS C FROM R r1 GROUP BY r1.A
-) r2;
-</div>
-When compiling this query with the <span class="code">-F EXPRESSIVE-TLQS</span> command line flag, the function to retrieve
-the results is much more complex, unlike the functions that we have seen before. It uses the partial materialization 
-<span class="code">COUNT_1_E1_1</span> to compute the result:
-<div class="codeblock">$&gt; bin/dbtoaster -l scala -F EXPRESSIVE-TLQS examples/queries/simple/r_lift_of_count.sql 
-    def getCOUNT():K3IntermediateCollection[(Long), Long] = {
-      (COUNT_1_E1_1.map((y:Tuple2[(Long),Long]) => 
-      ...
-      )
-    };
-</div></p>
+<p>
+   The <tt>onSystemReady</tt> trigger is responsible of loading static information (<tt>CREATE TABLE</tt> statements in the query file) before the actual processing begins.
+</p>
+
+<p>
+   The <tt>EndOfStream</tt> message is sent from the event source when it is exhausted. The query actor replies to this message with the current processing statistics (processing time, number of tuples processed, number of tuples skipped) and one or multiple query results.
+</p>
+
+<p>
+   The <tt>GetSnapshot</tt> message can be used by an application to access the intermediate result. The query actor replies to this message with the current processing statistics and the results that the message asks for.
+</p>
+
+<p>
+   The whole process is guarded by a timeout. If the timeout is reached, the actor will stop to process tuples.
+</p>
 
 <?=section("Using queries in Java programs")?>
 <p>
-Since Scala is compatible with Java, it is possible to use the queries in Java applications. 
-In order to use a query in Java, the Java application has to reference three libraries: 
-<ul>
-	<li>The library containing the generated code for the query</li>
-	<li>The Scala library</li>
-	<li>Scala DBToaster library</li>
-</ul>
+   <i>Note:</i> The DBToaster library currently does not offer a nice interface for Java applications. We are planning to add a nicer future once the Scala interface is stable.
 </p>
 <p>
-The following code snippet illustrates how a query can be executed from within a Java application:
-<div class="codeblock">
-import org.dbtoaster.dbtoasterlib.*;
-import org.dbtoaster.*;
+   Since Scala is compatible with Java, it is possible to use the generated queries in Java applications.
+   In order to use a query in Java, the Java application has to reference the libraries present in the <tt>lib/dbt_scala</tt> folder as well as the Scala library.
+</p>
 
-public class MainClass {
-	public static void main(String[] args) {
-		final Query q = new Query();
-		
-		QueryInterface.DBTMessageReceiver rcvr = new QueryInterface.DBTMessageReceiver() {
-			public void onTupleProcessed() {
-				// do nothing
-			}
-			
-			public void onQueryDone() {
-				// print the results
-				q.printResults();
-			}
-		};
-		
-		QueryInterface.QuerySupervisor supervisor = new QueryInterface.QuerySupervisor(q, rcvr);
-		supervisor.start();
-	}
+<p>
+   The following Java code is equivalent to the Scala code presented in the example above:
+</p>
+
+<div class="codeblock">
+import ddbt.gen.*;
+import ddbt.lib.Messages.*;
+
+import akka.actor.ActorRef;
+import akka.actor.ActorSystem;
+import akka.actor.Props;
+import akka.actor.Inbox;
+
+import scala.Tuple2;
+import scala.collection.immutable.List;
+import scala.collection.immutable.List$;
+import scala.collection.immutable.$colon$colon;
+import scala.concurrent.duration.Duration;
+import java.util.concurrent.TimeUnit;
+
+class ExampleApp {
+   public static final int TUPLE_DELETE = 0x00;
+   public static final int TUPLE_INSERT = 0x01;
+
+   public static List&lt;Object&gt; tuple(Object ... ts) {
+      List&lt;Object&gt; result = List$.MODULE$.empty();
+      for(int i = ts.length; i > 0; i--) {
+         result = new $colon$colon&lt;Object&gt;(ts[i - 1], result);
+      }
+      return result;
+   }
+
+   public static void main(String[] args) {
+      ActorSystem system = ActorSystem.create("mySystem");
+
+      final ActorRef q = system.actorOf(Props.create(Dbtoaster.class), "Query");
+
+      // Send events
+      q.tell(new TupleEvent(0, TUPLE_INSERT, "R", tuple(5L, 2L)), null);
+      q.tell(new TupleEvent(1, TUPLE_INSERT, "S", tuple(2L, 3L)), null);
+      q.tell(new TupleEvent(2, TUPLE_INSERT, "T", tuple(3L, 4L)), null);
+
+      // Retrieve result
+      final Inbox inbox = Inbox.create(system);
+      inbox.send(q, EndOfStream$.MODULE$);
+      Tuple2 result = (Tuple2) (inbox.receive(Duration.create(1L << 23, TimeUnit.SECONDS)));
+
+      System.out.println("Result: " + result._2().toString());
+      system.shutdown();
+  }
 }
 </div>
-This program executes the referenced query and prints the result once there are no more tuples
-to be processed.
+
+<p>
+   This code can be compiled as follows (assuming that it has been saved to <tt>ExampleApp.java</tt>):
 </p>
-<?=subsection("Compiling in eclipse")?>
-To compile the previously presented program in eclipse (with the official Scala plugin installed), 
-we can create a new Java project with a single <span class="code">.java</span>-file containing 
-the program. In the Java Build Path section of the project's properties the previously listed 
-libraries have to be added. The Scala library can be added by clicking the "Add Library" button,
-while the other libraries can be added as external JARs. After adding the libraries to the project,
-the project should compile and execute the query once run.
+
+<div class="codeblock">
+$> javac -classpath "rst.jar:lib/dbt_scala/*" ExampleApp.java
+$> jar cvf exampleapp.jar ExampleApp.class
+</div>
+
+<p>
+   The resulting <tt>exampleapp.jar</tt> can be launched using the following command:
+</p>
+
+<div class="codeblock">
+$> java -classpath "rst.jar:lib/dbt_scala/*:exampleapp.jar" ExampleApp
+Result: List(20)
+</div>
