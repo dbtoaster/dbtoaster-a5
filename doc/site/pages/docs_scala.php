@@ -304,7 +304,7 @@ class ExampleApp {
 </div>
 
 <p>
-   This code can be compiled as follows (assuming that it has been saved to <tt>ExampleApp.java</tt>):
+   If this code has been saved to <tt>ExampleApp.java</tt> and the Scala library has been copied to <tt>lib/dbt_scala</tt>, it can be compiled as follows:
 </p>
 
 <div class="codeblock">
