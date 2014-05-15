@@ -117,7 +117,7 @@ function chain_link_docs() {
 
 ?>
 <html><head>
-<title><?=$longtitle?></title>
+<title>DBToaster - <?=$longtitle?></title>
 <link rel="stylesheet" type="text/css" href="css/style.css" />
 <link rel="stylesheet" type="text/css" href="css/bootstrap.min.css" media="screen" />
 <link rel="stylesheet" type="text/css" href="css/bootstrap-theme.min.css" />
