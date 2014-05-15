@@ -52,7 +52,6 @@ Printing final result:
 &lt;/snap&gt;
 &lt;/boost_serialization&gt;
 </div>
-
 If the generated binary is run with the <tt>--async</tt> flag, it will also print intermediary results as frequently
 as possible while the sql program is running in a separate thread.
 
@@ -446,6 +445,7 @@ If the given query has no aggregates the <tt>COUNT(*)</tt> aggregate will be com
 consequently the resulting collections will be guaranteed not to have any duplicate keys.
 </p>
 
+<? /*
 <?=subsection("Partial Materialization")?>
 <p>
 Some of the work involved in maintaining the results of a query can be saved by performing partial materialization
@@ -471,14 +471,14 @@ simply returns the materialized view of the results.
 
     ...
 
-    /* Type definition providing a way to access the results of the sql program */
+    /* Type definition providing a way to access the results of the sql program * /
     struct tlq_t{
         tlq_t()
         {}
         
         ...
 
-        /* Functions returning / computing the results of top level queries */
+        /* Functions returning / computing the results of top level queries * /
         COUNT_map& get_COUNT(){
             COUNT_map& __v_1 = COUNT;
             return __v_1;
@@ -486,7 +486,7 @@ simply returns the materialized view of the results.
 
     protected:
 
-        /* Data structures used for storing / computing top level queries */
+        /* Data structures used for storing / computing top level queries * /
         COUNT_map COUNT;
 
     };
@@ -504,23 +504,23 @@ the final query result.
 
     ...
 
-    /* Type definition providing a way to access the results of the sql program */
+    /* Type definition providing a way to access the results of the sql program * /
     struct tlq_t{
         tlq_t()
         {}
         
         ...
 
-        /* Functions returning / computing the results of top level queries */
+        /* Functions returning / computing the results of top level queries * /
         map&lt;long,long&gt; get_COUNT(){
             map&lt;long,long&gt; __v_41;
-            /* Result computation based on COUNT_1_E1_1 */
+            /* Result computation based on COUNT_1_E1_1 * /
             return __v_41;
         }
 
     protected:
 
-        /* Data structures used for storing / computing top level queries */
+        /* Data structures used for storing / computing top level queries * /
         COUNT_1_E1_1_map COUNT_1_E1_1;
 
     };
@@ -530,7 +530,7 @@ the final query result.
 </div>
 
 </p>
-
+*/ ?>
 <a name="data_t"></a>
 <?= section("<tt>struct data_t</tt>")?>
 
