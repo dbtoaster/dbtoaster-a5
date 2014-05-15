@@ -77,6 +77,12 @@ object StreamAdaptor {
      * this stream
      */
     case object EndOfStream extends DBTEvent
+    
+    /**
+     * This event is generated when there is no more tuples on
+     * this stream
+     */
+    case object ErrorInStream extends DBTEvent
 
     /**
      * Creates an adaptor from the parameters passed
