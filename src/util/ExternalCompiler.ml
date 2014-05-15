@@ -178,6 +178,35 @@ let scala_compiler = {
    )
 };;
 
+let lms_compiler = {
+   extension = ".scala";
+   compile = (fun in_file_name out_file_name ->
+    let out = out_file_name ^ ".jar" in
+    let scalac = "java" in
+
+    let flags = [
+      ""; "-Xmx3g";
+      "-classpath"; "lib/dbt_scala/scala-library.jar:lib/dbt_scala/scala-compiler.jar:lib/dbt_scala/scala-reflect.jar:lib/dbt_scala/dbtlib.jar:lib/dbt_scala/lms.jar:lib/dbt_scala/toasterbooster.jar";
+      "-Dscala.usejavacp=true"; "scala.tools.nsc.Main";
+      "-deprecation"; "-unchecked";
+      "-sourcepath"; "lib/dbt_scala/src";
+      "-optimise"; "-d"; out;
+    ]
+    in
+
+    let sourcefiles = [
+      in_file_name
+    ] in
+
+    let args = flags @ sourcefiles in
+    Debug.print "LOG-SCALA" (fun () -> 
+      ("scalac " ^ (ListExtras.string_of_list ~sep:" " (fun x->x) args)));
+    if Sys.file_exists out then
+      Sys.remove out;
+    Unix.execvp scalac (Array.of_list args)
+   )
+};;
+
 (**
    A dummy "compiler" that will error if you try to compile something with it.
 *)

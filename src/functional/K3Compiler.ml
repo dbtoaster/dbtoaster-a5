@@ -132,25 +132,26 @@ let rec compile_k3_expr e =
 let compile_expr_to_string e: string = to_string (compile_k3_expr e)
 
 
-let compile_triggers_noopt (trigs:K3.trigger_t list) : code_t list =
+let compile_triggers_noopt (schema:K3.map_t list) (trigs:K3.trigger_t list) : code_t list =
    List.map (fun (event, cs) ->
-      let annotated = List.map (fun x -> K3.annotate_collections x) cs in
-      let stmts = List.map (fun x -> compile_k3_expr x) annotated in
-      trigger event stmts
+      let stmts = List.map (fun x -> 
+         compile_k3_expr (K3.annotate_collections x)) cs 
+      in
+         trigger schema event stmts
    ) trigs
 
-let compile_triggers (trigs:K3.trigger_t list) : code_t list =
+let compile_triggers (schema:K3.map_t list) (trigs:K3.trigger_t list) : code_t list =
   List.map (fun (event, cs) ->
       let args = List.map fst (event_vars event) in
       let stmts = List.map compile_k3_expr
         (List.map (K3Optimizer.optimize args) cs) 
-      in trigger event stmts)
+      in trigger schema event stmts)
     trigs
     
 let compile_k3_to_code ((dbschema,(schema,patterns),trigs,
                          toplevel_queries) : K3.prog_t): 
                           code_t =
-   let ctrigs = compile_triggers_noopt trigs in
+   let ctrigs = compile_triggers_noopt schema trigs in
    let (tables,streams) =
       Schema.partition_sources_by_type dbschema
    in
@@ -158,15 +159,7 @@ let compile_k3_to_code ((dbschema,(schema,patterns),trigs,
    let compiled_streams = List.map (fun (s,ra) -> CG.source s ra) streams in
    let compiled_tlqs    = List.map (fun (n,q) -> (n,q,compile_k3_expr q)) 
                                    toplevel_queries in
-   let patterns_opt = 
-      if Debug.active "OPTIMIZE-PATTERNS" then
-         List.fold_left (fun acc (_,x) -> 
-          List.fold_left (fun a x -> 
-           Patterns.merge_pattern_maps a (K.extract_patterns_from_k3 x)) acc x)
-         (Patterns.empty_pattern_map()) trigs 
-      else patterns
-    in
-      (main  schema patterns_opt compiled_tables compiled_streams ctrigs 
+      (main  schema patterns compiled_tables compiled_streams ctrigs 
              compiled_tlqs)
 
 ;;

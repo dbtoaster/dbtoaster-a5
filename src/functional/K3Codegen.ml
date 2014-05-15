@@ -195,7 +195,7 @@ sig
     (* Toplevel: sources and main *)
     (* event, rel, trigger args, statement code block -> trigger code *)
     val trigger :
-        Schema.event_t -> code_t list -> code_t
+        K3.map_t list -> Schema.event_t -> code_t list -> code_t
 
     (* source type, framing type, (relation * adaptor type) list 
      * -> source impl type,

@@ -47,7 +47,7 @@ struct
     type eval_t      = env_t -> db_t -> value_t
     type code_t      =
           Eval of K3.expr_t option * eval_t
-        | Trigger of Schema.event_t * (Constants.const_t list -> db_t -> unit)
+        | Trigger of K3.map_t list * Schema.event_t * (Constants.const_t list -> db_t -> unit)
         | Main of (unit -> unit) 
 
     type op_t        = value_t -> value_t -> value_t
@@ -80,7 +80,7 @@ struct
         | _ -> bail "unable to eval expr"
 
     let get_trigger e = match e with
-        | Trigger(x,y) -> (x,y)
+        | Trigger(s,x,y) -> (x,y)
         | _ -> bail "unable to eval trigger"
 
     let rec is_flat (t:K3.type_t) = match t with
@@ -923,7 +923,7 @@ struct
 	  bail ~expr:expr "LookupDefVal not implemented in the interpreter"  
     
     (* Top level code generation *)
-    let trigger event stmt_block =
+    let trigger schema event stmt_block =
       let translate_tuple = 
          if Debug.active "HASH-STRINGS" then
             List.fold_right (fun (_,vart) translate_rest ->
@@ -939,7 +939,7 @@ struct
          else
             (List.map (fun x -> BaseValue(x)))
       in
-      Trigger (event, (fun tuple db -> 
+      Trigger (schema, event, (fun tuple db -> 
         let theta = Env.make (List.map fst (Schema.event_vars event))
                              (translate_tuple tuple), [] in
           Debug.print "LOG-INTERPRETER-TRIGGERS" (fun () -> "\n"^
@@ -1055,6 +1055,6 @@ struct
  
     let rec eval dbc c vars vals db = match c with
       | Eval(_, f) -> f (Env.make vars (List.map value_of_const_t vals), []) db
-      | Trigger(evt,trig_fn) -> trig_fn vals db; Unit
+      | Trigger(schema, evt,trig_fn) -> trig_fn vals db; Unit
       | Main(f) -> db_checker := dbc; f(); Unit
 end

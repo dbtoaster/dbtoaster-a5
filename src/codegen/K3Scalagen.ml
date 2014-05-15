@@ -14,8 +14,17 @@ exception K3SException of string
 (** This module implements a code generator that turns K3 code into
     Scala code.
 *)
-module K3S =
+module K3S = functor(LMS_SELECTOR : sig val useLMS: bool;; val replaceWithLMSOptimizedCode: bool end) ->
 struct
+
+   open LMS_SELECTOR
+
+   let constant_value t : string =
+      if useLMS then "unit(" ^ t ^ ")" else t ^ "";;
+
+   let rep_value t : string =
+      if useLMS then "Rep[" ^ t ^ "]" else t ^ "";;
+
    (** Describes which type of collection we are dealing with *)
    type collection_type_t = Unknown | Persistent | Intermediate
 
@@ -127,7 +136,7 @@ struct
          (List.map (fun x -> string_of_argn ~prefix:prefix x) ns)
    
    (** Returns a string of a tuple and nests it if necessary *) 
-   let rec string_of_tuple_type t : string =
+   let rec string_of_tuple_type ?(explicitTuple = true) t: string =
       let nb_elems = (List.length t) in 
       let elems = 
          if nb_elems > max_tuple_elems then
@@ -139,11 +148,10 @@ struct
       match t with 
       | []      -> "Unit"
       | x :: [] -> "(" ^ x ^ ")"
-      | _       -> "Tuple" ^ (string_of_int (List.length elems)) ^ 
-      (make_list ~parens:("[", "]") elems)
+      | _       -> if explicitTuple then ("Tuple" ^ (string_of_int (List.length elems)) ^ (make_list ~parens:("[", "]") elems)) else " "
 
    (** Returns the string representation of type t *)
-   let rec string_of_type t : string = 
+   let rec string_of_type_noLMS t : string = 
       match t with 
       | Float -> "Double"
       | Bool -> "Boolean"
@@ -154,19 +162,46 @@ struct
       | External(s) -> s
       | Unit -> "Unit"
       | Fn(_, arg, ret) -> 
-         (string_of_type arg) ^ " => " ^ (string_of_type ret)
+         (string_of_type_noLMS arg) ^ " => " ^ (string_of_type_noLMS ret)
       | ExtFn(_, arg, ret) -> 
-         (string_of_type arg) ^ " => " ^ (string_of_type ret)
-      | Tuple(elems) -> (string_of_tuple_type (List.map string_of_type elems))
+         (string_of_type_noLMS arg) ^ " => " ^ (string_of_type_noLMS ret)
+      | Tuple(elems) -> (string_of_tuple_type (List.map string_of_type_noLMS elems))
       | Collection(tpe, keys_t, val_t) -> 
          let type_string = match tpe with 
          | Intermediate -> "K3IntermediateCollection"
          | Persistent -> "K3PersistentCollection"
          | Unknown -> "K3Collection" in
          type_string ^ "[" ^
-         (string_of_tuple_type (List.map string_of_type keys_t)) ^ ", " ^ 
-         (string_of_type val_t) ^ "]"
+         (string_of_tuple_type (List.map string_of_type_noLMS keys_t)) ^ ", " ^ 
+         (string_of_type_noLMS val_t) ^ "]"
       | Trigger(event_t) -> "Trigger"
+
+   let rec string_of_type_withLMS t : string = 
+      match t with 
+      | Float -> "Rep[Double]"
+      | Bool -> "Rep[Boolean]"
+      | Int -> if Debug.active "BIG-INT" then "Rep[BigInt]" else "Rep[Long]"
+      | String -> "Rep[String]"
+      | Date -> "Rep[Date]"
+      | Any -> "Rep[Any]"
+      | External(s) -> s
+      | Unit -> "Rep[Unit]"
+      | Fn(_, arg, ret) -> 
+         (string_of_type_withLMS arg) ^ " => " ^ (string_of_type_withLMS ret)
+      | ExtFn(_, arg, ret) -> 
+         (string_of_type_withLMS arg) ^ " => " ^ (string_of_type_withLMS ret)
+      | Tuple(elems) -> (string_of_tuple_type ~explicitTuple:false (List.map string_of_type_withLMS elems))
+      | Collection(tpe, keys_t, val_t) -> 
+         let type_string = match tpe with 
+         | Intermediate -> "Rep[K3IntermediateCollection"
+         | Persistent -> "Rep[K3PersistentCollection"
+         | Unknown -> "Rep[K3Collection" in
+         type_string ^ "[" ^
+         (string_of_tuple_type (List.map string_of_type_noLMS keys_t)) ^ ", " ^ 
+         (string_of_type_noLMS val_t) ^ "]]"
+      | Trigger(event_t) -> "Rep[Trigger]"
+
+   let rec string_of_type t : string = if useLMS then string_of_type_withLMS t else string_of_type_noLMS t
 
    let debug_string ((x, t):code_t) : string =
       (string_of_type t) ^ ": " ^ x
@@ -248,10 +283,10 @@ struct
             (string_of_type a) ^ " and " ^ (string_of_type b))
 
    (** Returns code to cast a Boolean into a Double *)
-   let mk_bool_to_float a = "(if(" ^ a ^ ") 1.0 else 0.0)"
+   let mk_bool_to_float a = if useLMS then "(if(" ^ a ^ ") unit(1.0) else unit(0.0))" else "(if(" ^ a ^ ") 1.0 else 0.0)"
 
    (** Returns code to cast a Boolean into an Int *)
-   let mk_bool_to_int a = "(if(" ^ a ^ ") 1L else 0L)"
+   let mk_bool_to_int a = if useLMS then "(if(" ^ a ^ ") unit(1L) else unit(0L))" else "(if(" ^ a ^ ") 1L else 0L)"
    let mk_date_to_time a = a ^ ".getTime()"
 
    (** Generates a list of indices with the same length as the list
@@ -314,8 +349,8 @@ struct
    and wrap_function argt fnt f: string = 
       match fnt with
       | Fn(argsn, argst, rett) ->
-         "(y:" ^ (string_of_type argt) ^ ") => { y match { case " ^ 
-         (string_of_argn argsn) ^ " => {" ^ f ^ "} } }" 
+         "(" ^ (string_of_argn argsn) ^ ":" ^ (string_of_type argt) ^ ") => { " ^ 
+         f ^ " }" 
       | ExtFn(n, _, _) -> n ^ " _"
       | _ -> debugfail None "Expected a function"
 
@@ -331,8 +366,9 @@ struct
       in
       match fnt with
       | Fn(argsn, argst, rett) ->
-         "(x:Tuple2[" ^ (string_of_type (Tuple(ktt))) ^ ", " ^ 
-         (string_of_type vtt) ^ "]) => { " ^
+
+         "(x:" ^ (if useLMS then "Rep[" else "") ^ "Tuple2[" ^ (string_of_type_noLMS (Tuple(ktt))) ^ ", " ^ 
+         (string_of_type_noLMS vtt) ^ "]" ^ (if useLMS then "]" else "") ^ ") => { " ^
          (implicit_conversions ~pfx:(Some("x")) argsn 
             (Tuple([Tuple(ktt); vtt])) argst) ^
          f_body ^ " }" 
@@ -344,50 +380,86 @@ struct
   
    (** The identity function *)
    let identity a = a
+   let int_to_double a = if useLMS then "(" ^ a ^ ").asInstanceOf[Rep[Double]]" else a
+   (**let int_to_double a = if useLMS then "rep_asinstanceof((" ^ a ^ ").asInstanceOf[Rep[Long]], manifest[Long], manifest[Double])" else a*)
    
+   let make_vargen prefix =
+      let count = ref (-1) in
+         fun () ->
+           incr count;
+           prefix ^ string_of_int !count
    (** Returns a function generating code for a arithmetic 
        operation with casting if necessary *)
-   let num_op ?(conva = identity) ?(convb = identity) opcode = 
-      (fun a b -> "(" ^ conva(a) ^ ") " ^ opcode ^ " (" ^ convb(b) ^ ")")
+   let fresh_anArg = (make_vargen "an")
+   let fresh_bnArg = (make_vargen "bn")
+   let num_op ?(conva = identity) ?(convb = identity) ?(switchOperands = false) opcode = 
+      let aArg = fresh_anArg () in
+      let bArg = fresh_bnArg () in
+      if switchOperands then
+         if useLMS then
+            (fun a b -> "{ val " ^ bArg ^  " = (" ^ conva(b) ^ "); val " ^ aArg ^ " = (" ^ convb(a) ^ "); " ^ bArg ^ " " ^ opcode ^ " " ^ aArg ^ "}")
+         else
+            (fun a b -> "(" ^ conva(b) ^ ") " ^ opcode ^ " (" ^ convb(a) ^ ")")
+      else
+         if useLMS then
+            (fun a b -> "{ val " ^ aArg ^  " = (" ^ conva(a) ^ "); val " ^ bArg ^ " = (" ^ convb(b) ^ "); " ^ aArg ^ " " ^ opcode ^ " " ^ bArg ^ "}")
+         else
+            (fun a b -> "(" ^ conva(a) ^ ") " ^ opcode ^ " (" ^ convb(b) ^ ")")
 
+   let fresh_acArg = (make_vargen "ac")
+   let fresh_bcArg = (make_vargen "bc")
    let cmp_op ?(conva = identity) ?(convb = identity) opcode = 
-      (fun a b -> mk_bool_to_int ("(" ^ conva(a) ^ ") " ^ opcode ^ " (" ^ convb(b) ^ ")"))
+      let aArg = fresh_acArg () in
+      let bArg = fresh_bcArg () in
+      if useLMS then
+         (fun a b -> "{ val " ^ aArg ^  " = (" ^ conva(a) ^ "); val " ^ bArg ^ " = (" ^ convb(b) ^ "); " ^ aArg ^ " " ^ opcode ^ " " ^ bArg ^ "}")
+      else
+         (fun a b -> ("(" ^ conva(a) ^ ") " ^ opcode ^ " (" ^ convb(b) ^ ")"))
 
    (** Returns a function generating code for a certain
        type of operation *)
-   let f_op op_f op_b = 
+   let f_op op_f op_b switchOperands = 
       (fun a b -> 
          match (a, b) with
-         | (Float, Float) -> ((num_op op_f), Float, None)
+         | (Float, Float) -> ((num_op ~switchOperands:switchOperands op_f), Float, None)
          | (Bool, Bool)   -> ((num_op ~conva:mk_bool_to_int 
                                       ~convb:mk_bool_to_int op_b), Int, None)
-         | (Bool, Float)  -> ((num_op op_f), Float, None)
-         | (Float, Bool)  -> ((num_op op_f), Float, None)
-         | (Float, Int)   -> ((num_op op_f), Float, None)
-         | (Int, Float)   -> ((num_op op_f), Float, None)
-         | (Int, Int)     -> ((num_op op_f), Int, None)
-         | (Int, Bool)    -> ((num_op op_f), Int, None)
-         | (Bool, Int)    -> ((num_op op_f), Int, None)
+         | (Bool, Float)  -> ((num_op ~conva:mk_bool_to_float ~switchOperands:switchOperands op_f), Float, None)
+         | (Float, Bool)  -> ((num_op ~convb:mk_bool_to_float ~switchOperands:switchOperands op_f), Float, None)
+         | (Float, Int)   -> ((num_op ~convb:int_to_double ~switchOperands:switchOperands op_f), Float, None)
+         | (Int, Float)   -> ((num_op ~conva:int_to_double ~switchOperands:switchOperands op_f), Float, None)
+         | (Int, Int)     -> ((num_op ~switchOperands:switchOperands op_f), Int, None)
+         | (Int, Bool)    -> ((num_op ~convb:mk_bool_to_int ~switchOperands:switchOperands op_f), Int, None)
+         | (Bool, Int)    -> ((num_op ~conva:mk_bool_to_int ~switchOperands:switchOperands op_f), Int, None)
          | (_, _) -> 
             ((num_op op_f), Unit, 
                Some((string_of_type a) ^ " [" ^ op_f ^ "||" ^ op_b ^ "] " ^
                (string_of_type b)))
       )
+(*
+   let fixed_op (t1:type_t) (t2:type_t) (rett:type_t) 
+         (op:string -> string -> string) =
+      (fun a b -> if (a = t1) && (b = t2) 
+         then (op, rett, None)  
+         else (op, Unit, Some((string_of_type a) ^ " [cmp] " ^ 
+            (string_of_type b))))*)
    
    (** Generates a function generating code for a compare operation *)
+   (* FIX-ME: Daniel: Now K3 treats booleans as ints. When this is fixed in *)
+   (* K3, we can also fix it here as well as in 'cmp_op'. *)
    let c_op op = (fun a b -> 
       match (a, b) with
-      | (Float, Float) | (String, String) | (Bool, Bool) | (Int, Int)
-      | (Int, Float) | (Float, Int) -> 
-         ((cmp_op op), Int, None)
+      | (Float, Float) | (String, String) | (Bool, Bool) | (Int, Int) -> ((cmp_op op), Bool, None)
+      | (Int, Float) -> ((cmp_op op ~conva:int_to_double), Bool, None)
+      | (Float, Int) -> ((cmp_op op ~convb:int_to_double), Bool, None)
       (* Sometimes there is K3 code that compares booleans to floats, so code
          is being generated to convert the boolean to a float *)
-      | (Bool, Float) -> ((cmp_op op ~conva:mk_bool_to_float), Int, None)
-      | (Float, Bool) -> ((cmp_op op ~convb:mk_bool_to_float), Int, None)
-      | (Bool, Int) -> ((cmp_op op ~conva:mk_bool_to_int), Int, None)
-      | (Int, Bool) -> ((cmp_op op ~convb:mk_bool_to_int), Int, None)
+      | (Bool, Float) -> ((cmp_op op ~conva:mk_bool_to_float), Bool, None)
+      | (Float, Bool) -> ((cmp_op op ~convb:mk_bool_to_float), Bool, None)
+      | (Bool, Int) -> ((cmp_op op ~conva:mk_bool_to_int), Bool, None)
+      | (Int, Bool) -> ((cmp_op op ~convb:mk_bool_to_int), Bool, None)
       | (Date, Date) -> 
-         ((cmp_op op ~conva:mk_date_to_time ~convb:mk_date_to_time), Int, 
+         ((cmp_op op ~conva:mk_date_to_time ~convb:mk_date_to_time), Bool, 
             None)
       | (_, _) -> 
          ((cmp_op op), Unit, 
@@ -395,8 +467,8 @@ struct
    )
 
    (** Implementation of arithmetic and comparision operators *)
-   let add_op         : op_t = (f_op "+" "+")
-   let mult_op        : op_t = (f_op "*" "*")
+   let add_op         : op_t = (f_op "+" "+" false)
+   let mult_op        : op_t = (f_op "*" "*" false)
    let eq_op          : op_t = (c_op "==")
    let neq_op         : op_t = (c_op "!=")
    let lt_op          : op_t = (c_op "<")
@@ -418,26 +490,29 @@ struct
    (** Generates the code for a constant expression *)
    let const ?(expr = None) (c:const_t) : code_t = 
       match c with 
-      | CBool(y) -> (string_of_bool y, Bool)
-      | CInt(y) -> ((string_of_int y) ^ "L", Int)
-      | CFloat(y) -> ((string_of_float y) ^ "0", Float)
-      | CString(y) -> ("\"" ^ y ^ "\"", String)
-      | CDate(y,m,d) -> 
+      | CBool(y) -> (constant_value(string_of_bool y), Bool)
+      | CInt(y) -> (constant_value((string_of_int y) ^ "L"), Int)
+      | CFloat(y) -> (constant_value((string_of_float y) ^ "0"), Float)
+      | CString(y) -> (constant_value("\"" ^ y ^ "\""), String)
+      | CDate(y,m,d) ->
          let v = 
             "new GregorianCalendar(" ^ (string_of_int y) ^ "," ^ 
-            (string_of_int m) ^ " - 1," ^ (string_of_int d) ^ ").getTime();" 
-         in
-         let cstr = 
-            if Hashtbl.mem consts v then
-               Hashtbl.find consts v
-            else (
-               nb_consts := !nb_consts + 1;
-               let str = ("c" ^ (string_of_int !nb_consts)) in
-               Hashtbl.add consts v str;
-               str
-            )
-         in
-         (cstr, Date)
+            (string_of_int m) ^ " - 1," ^ (string_of_int d) ^ ").getTime()" 
+         in 
+         if useLMS then
+            (constant_value(v), Date)
+         else 
+            let cstr = 
+               if Hashtbl.mem consts v then
+                  Hashtbl.find consts v
+               else (
+                  nb_consts := !nb_consts + 1;
+                  let str = ("c" ^ (string_of_int !nb_consts)) in
+                  Hashtbl.add consts v str;
+                  str
+               )
+            in
+            (constant_value(cstr), Date)
       | CInterval _ -> failwith ("Intervals at runtime are not " ^ 
                                  "supported by the Scala backend")
    
@@ -491,8 +566,11 @@ struct
          | t -> [], [t], "v"
       in
       let tpe = Collection(Intermediate, kt, List.hd vt) in
-      ("{ val v = " ^ d ^ "; new " ^ (string_of_type tpe) ^ "(List(" ^ v ^ ")) }", 
-         tpe)
+      ("{ val v = " ^ d ^ "; " ^ (
+         if useLMS 
+         then "newSingleton" ^ (string_of_type_noLMS tpe) ^ "(" ^ v ^ ") }"
+         else "new " ^ (string_of_type_noLMS tpe) ^ "(List(" ^ v ^ ")) }"
+      ), tpe)
       
    (** Generates code to combine two collections
        
@@ -511,25 +589,46 @@ struct
             | Collection(_, k, v) -> (k, v) 
             | _ -> debugfail expr "Combine can only combine collections" 
          in
-         ("({ val result = Map[" ^ (string_of_type (Tuple k)) ^ "," ^ 
-         (string_of_type v) ^ "]();" ^ (make_list ~sep:";" ~parens:("", ";") 
-         (List.map (fun (n, t) ->
-            let ko, vo = 
-               match t with 
-               | Collection(_, ko, vo) -> ko, vo 
-               | _ -> debugfail None "Expected collection" 
-            in
-            let key_len = List.length ko in
-            let v_var =  "v" ^ (string_of_int (key_len + 1)) in
-            let body = "val t = " ^ (make_tuple (list_vars "v" (key_len))) ^ 
-               "; result += ((t, (result.get(t) match { case Some(v) => v + " ^
-               v_var ^ "; case _ => " ^ v_var ^ " })))" 
-            in
-            "(" ^ n ^ ").foreach { " ^ (wrap_function_key_val ko vo 
-            (Fn(ArgNTuple(List.map (fun x -> ArgN(x)) 
-            (list_vars "v" (key_len + 1))), Tuple(k @ [v]), Unit)) body) ^ " }"
-         ) terms)) ^ " new " ^ (string_of_type common_type) ^ "(result) })",
-         common_type) 
+         if(useLMS) then
+            ("({ val result = newK3PersistentCollection[" ^ (string_of_type_noLMS (Tuple k)) ^ "," ^ 
+            (string_of_type_noLMS v) ^ "](\"INTERMEDIATE_WITH_UPDATE\", unit(Map[" ^ (string_of_type_noLMS (Tuple k)) ^ "," ^ 
+            (string_of_type_noLMS v) ^ "]()), unit(None));" ^ (make_list ~sep:";" ~parens:("", ";") 
+            (List.map (fun (n, t) ->
+               let ko, vo = 
+                  match t with 
+                  | Collection(_, ko, vo) -> ko, vo 
+                  | _ -> debugfail None "Expected collection" 
+               in
+               let key_len = List.length ko in
+               let v_var =  "v" ^ (string_of_int (key_len + 1)) in
+               let body = "val t = " ^ (make_tuple (list_vars "v" (key_len))) ^ 
+                  "; result.updateValue (t, (result.lookup(t) + " ^ v_var ^ "))" 
+               in
+               "(" ^ n ^ ").foreach { " ^ (wrap_function_key_val ko vo 
+               (Fn(ArgNTuple(List.map (fun x -> ArgN(x)) 
+               (list_vars "v" (key_len + 1))), Tuple(k @ [v]), Unit)) body) ^ " }"
+            ) terms)) ^ " newK3PC" ^ (string_of_type_noLMS common_type) ^ "(result) })",
+            common_type) 
+         else
+            ("({ val result = Map[" ^ (string_of_type (Tuple k)) ^ "," ^ 
+            (string_of_type v) ^ "]();" ^ (make_list ~sep:";" ~parens:("", ";") 
+            (List.map (fun (n, t) ->
+               let ko, vo = 
+                  match t with 
+                  | Collection(_, ko, vo) -> ko, vo 
+                  | _ -> debugfail None "Expected collection" 
+               in
+               let key_len = List.length ko in
+               let v_var =  "v" ^ (string_of_int (key_len + 1)) in
+               let body = "val t = " ^ (make_tuple (list_vars "v" (key_len))) ^ 
+                  "; result += ((t, (result.get(t) match { case Some(v) => v + " ^
+                  v_var ^ "; case _ => " ^ v_var ^ " })))" 
+               in
+               "(" ^ n ^ ").foreach { " ^ (wrap_function_key_val ko vo 
+               (Fn(ArgNTuple(List.map (fun x -> ArgN(x)) 
+               (list_vars "v" (key_len + 1))), Tuple(k @ [v]), Unit)) body) ^ " }"
+            ) terms)) ^ " new " ^ (string_of_type common_type) ^ "(result) })",
+            common_type) 
 
    (** Generates code for an operator *)
    let op ?(expr = None) ((mk_op):op_t) ((a, at):code_t) 
@@ -655,14 +754,14 @@ struct
    (** This function generates code to map from one collection to another *)
    let map ?(expr = None) ((fn, fnt):code_t) (exprt:K3.type_t) 
          ((c, ct):code_t) : code_t =
-      let (keyt,valt) = 
+      let (keyt,valt,reslist) = 
          match (fn_ret_type fnt) with
          |  Tuple(retlist) ->
             if retlist = []
             then debugfail expr "Mapping function with empty ret"
             else ((List.rev (List.tl (List.rev retlist))),
-               (List.hd (List.rev retlist)))
-         |  x -> ([], x)
+               (List.hd (List.rev retlist)),retlist)
+         |  x -> ([], x, x :: [])
       in
       let kt, vt, wrapped_fn = 
          match ct with 
@@ -673,14 +772,22 @@ struct
       let key_length = (List.length keyt) in
       let convert_to_key_value = 
          match keyt with
-         | [] -> make_tuple ("()" :: "v" :: [])
-         | x -> (string_of_type (Tuple((Tuple(keyt)) :: [valt]))) ^ "(" ^ 
+         | [] -> if useLMS then "v" else (make_tuple ("()" :: "v" :: []))
+         | x -> (string_of_type (Tuple((Tuple(keyt)) :: [valt]))) ^ (if useLMS then "make_tuple2" else "") ^ "(" ^ (if useLMS && key_length > 1 then "make_tuple" ^ (string_of_int key_length) else "") ^ 
             (make_list (list_vars "v._" key_length)) ^ ", v._" ^ 
             (string_of_int (key_length + 1)) ^ ")"
       in
-      (c ^ ".map((y:Tuple2[" ^ 
-      (string_of_tuple_type (List.map string_of_type kt)) ^ 
-      "," ^ (string_of_type vt) ^ "]) => { val v = ({ " ^ wrapped_fn ^ 
+      let convert_to_key_value_ret_type = 
+         match keyt with
+         | [] -> ""
+         | x ->  ": " ^ (if useLMS then "Rep[" else "") ^ 
+         string_of_tuple_type (List.map string_of_type_noLMS reslist) ^
+         (if useLMS then "]" else "")
+      in
+      (c ^ ".map((y:" ^ (if useLMS then "Rep[" else "") ^ "Tuple2[" ^ 
+      (string_of_tuple_type (List.map string_of_type_noLMS kt)) ^ 
+      "," ^ (string_of_type_noLMS vt) ^ "]" ^ (if useLMS then "]" else "") ^ 
+      ") => { val v" ^ convert_to_key_value_ret_type ^ " = ({ " ^ wrapped_fn ^ 
       " })(y); " ^ 
       convert_to_key_value ^ " })", Collection(Intermediate, keyt,valt))
 
@@ -728,7 +835,8 @@ struct
    let flatten ?(expr = None) ((c, ct):code_t) : code_t =
       match ct with
       | Collection(_, [],Collection(_, ki,t)) ->
-         (("(" ^ c ^ ").flatten()"), Collection(Intermediate, ki, t))
+         (("(" ^ c ^ ").flatten[" ^ ( (string_of_tuple_type (List.map string_of_type_noLMS ki)) ^ ", " ^ 
+         (string_of_type_noLMS t) ) ^ "]"), Collection(Intermediate, ki, t))
       | _ -> debugfail expr ("Flatten on a non-collection: " ^ c ^ 
          " has type " ^ (string_of_type ct))
    
@@ -906,7 +1014,7 @@ struct
          " has type " ^ (string_of_type ct))      
    
    (** Generates code for a trigger function *)
-   let trigger (eventt:Schema.event_t) (code:code_t list): code_t =
+   let trigger (schemas:K3.map_t list) (eventt:Schema.event_t) (code:code_t list): code_t =
       let prefix, vars =
          match eventt with
          (* TODO: Implement corrective updates *)
@@ -914,16 +1022,28 @@ struct
             debugfail None "Corrective updates not implemented yet"
          | Schema.InsertEvent(rel, vars, tpe) -> ("Insert" ^ rel, vars) 
          | Schema.DeleteEvent(rel, vars, tpe) -> ("Delete" ^ rel, vars)
-         | Schema.SystemInitializedEvent -> ("SystemInitialized", []) 
+         | Schema.SystemInitializedEvent -> ("SystemInitialized", [])
       in
-      let var_def = (make_list (List.map (fun (n, t) -> 
-         "var_" ^ n ^ ": " ^ (string_of_type (map_base_type t))) vars)) 
+      let total_param_len = List.length vars (*+ List.length schemas*)
       in
-      let fn_def = "def on" ^ prefix ^ var_def in
-      let stmts = (make_list ~parens:("{","}") ~sep:"; " 
-         (List.map (fun (s, _) -> s) code)) 
+      let total_param = string_of_int (total_param_len)
       in
-      (fn_def ^ " = " ^ stmts, Trigger(eventt))
+      let var_def = if total_param_len > 0 then (make_list (List.map (fun (n, t) -> 
+               "var_" ^ n ^ ": " ^ (string_of_type (map_base_type t))) vars))
+               else (if useLMS then "(var_dummy: Rep[Unit])" else "()")
+      in
+      let fn_def = ("def on" ^ prefix ^ var_def)
+      in
+      let conversion_stmts =  if useLMS then
+            (make_list ~parens:("","") ~sep:"" (List.map (fun (id,ivars,ovars,t) -> "val " ^ id ^ " = " ^ id ^ "_orig.mutable;") schemas))
+         else ""
+      in
+      let stmts = "{" ^ conversion_stmts ^ ( 
+         if useLMS then ( (make_list ~parens:("","") ~sep:"; " (List.map (fun (s, _) -> s) code)) )  
+         else ( (make_list ~parens:("{","}") ~sep:"; " (List.map (fun (s, _) -> s) code)) ) 
+      ) ^ "}"
+      in
+      (fn_def ^ " = " ^ stmts ^ (if useLMS then ("toplevel" ^ (if total_param_len > 0 then total_param else "1") ^ "(\"on" ^ prefix ^ "\") { " ^ "on" ^ prefix ^ " }") else ""), Trigger(eventt))
 
    (** This function generates code for sources *)
    let source (source:Schema.source_t) 
@@ -991,7 +1111,7 @@ struct
                   (make_list (List.map (fun (n, _) -> "var_" ^ n) vars)) in
                let knt = 
                   (make_list (List.map (fun (n, t) -> "var_" ^ n ^ ":" ^ 
-                  string_of_type (map_base_type t)) vars)) 
+                  string_of_type_noLMS (map_base_type t)) vars)) 
                in
                knt ^ ") => " ^ 
                "if(" ^ rel ^ ".contains(" ^ k ^ ")) { val count = " ^ rel ^ 
@@ -1018,7 +1138,7 @@ struct
       let str_tlqs = 
          (make_list ~sep:";" ~parens:("",";") (List.map 
             (fun (n, _, (c, ct)) ->
-               "def get" ^ n ^ "():" ^ (string_of_type ct) ^ " = {" ^ c ^ "}"
+               "def get" ^ n ^ "():" ^ (string_of_type_noLMS ct) ^ " = {" ^ c ^ "}"
             ) tlqs))
       in
       let print_results = 
@@ -1034,11 +1154,11 @@ struct
          (if Debug.active "IVC-TIMER" then "ivcTimer.print; incTimer.print;" else "") ^ 
          " }" 
       in
+      let make_type_list t: string = 
+         string_of_tuple_type 
+            (List.map (fun (n, t) -> string_of_type_noLMS (map_base_type t)) t) 
+      in
       let str_schema =
-         let make_type_list t: string = 
-            string_of_tuple_type 
-               (List.map (fun (n, t) -> string_of_type (map_base_type t)) t) 
-         in
          let sndIdx rel tpe valt =
             try
             (* find patterns for a certain map *)
@@ -1077,22 +1197,22 @@ struct
          in
          (make_list ~parens:("",";") ~sep:";" (List.map 
             (fun (id,ivars,ovars,t) ->
-               let str_val_t = string_of_type (map_base_type t) in
+               let str_val_t = string_of_type_noLMS (map_base_type t) in
                match (ivars, ovars) with
-               | ([], []) -> "var " ^ id ^ " = SimpleVal[" ^ str_val_t ^ 
+               | ([], []) -> "val " ^ id ^ " = SimpleVal[" ^ str_val_t ^ 
                   "](\"" ^ id ^"\", 0)"
-               | ([], os) -> "var " ^ id ^ " = new K3PersistentCollection[" ^
+               | ([], os) -> "val " ^ id ^ " = new K3PersistentCollection[" ^
                   (make_type_list os) ^ ", " ^ str_val_t ^ "]" ^
-                  "(\"" ^ id ^ "\", Map(), " ^ (sndIdx id os str_val_t) ^ 
+                  "(\"" ^ id ^ "\", " ^ (if useLMS then "new java.util.HashMap[" ^ (make_type_list os) ^ ", " ^ str_val_t ^ "]" else "Map()") ^ ", " ^ (sndIdx id os str_val_t) ^ 
                   ") /* out */"
-               | (is, []) -> "var " ^ id ^ " = new K3PersistentCollection[" ^ 
+               | (is, []) -> "val " ^ id ^ " = new K3PersistentCollection[" ^ 
                   (make_type_list is) ^ ", " ^ str_val_t ^ "]" ^
-                  "(\"" ^ id ^ "\", Map(), " ^ 
+                  "(\"" ^ id ^ "\", " ^ (if useLMS then "new java.util.HashMap[" ^ (make_type_list is) ^ ", " ^ str_val_t ^ "]" else "Map()") ^ ", " ^ 
                   (sndIdx id is str_val_t) ^ ") /* in */"
-               | (is, os) -> "var " ^ id ^ 
+               | (is, os) -> "val " ^ id ^ 
                   " = new K3FullPersistentCollection[" ^ (make_type_list is) ^ 
                   "," ^ (make_type_list os) ^ ", " ^ str_val_t ^ "]" ^ 
-                  "(\"" ^ id ^ "\", Map(), " ^ 
+                  "(\"" ^ id ^ "\", " ^ (if useLMS then "new java.util.HashMap[" ^ (make_type_list is) ^ ", K3PersistentCollection[" ^ (make_type_list os) ^ ", " ^ str_val_t ^ "]]" else "Map()") ^ ", " ^ 
                   (sndIdx id is str_val_t) ^ ") /* full */") 
             schemas))
       in
@@ -1100,7 +1220,7 @@ struct
       let run = 
          "def act(): Unit =" ^
          "{ fillTables();" ^
-         "onSystemInitialized();" ^
+         (if useLMS then "onSystemInitialized(());" else "onSystemInitialized();") ^
          "sources.start;" ^
          "while(true) {" ^
          "receive { " ^
@@ -1113,7 +1233,7 @@ struct
       let imports = 
          (make_list ~sep:";" ~parens:("",";") (List.map 
             (fun x -> "import " ^ x)
-            [ 
+            (if (useLMS && (not replaceWithLMSOptimizedCode) ) then [ 
                "java.io._";
                "org.dbtoaster.dbtoasterlib.StreamAdaptor._";
                "org.dbtoaster.dbtoasterlib.K3Collection._";
@@ -1123,12 +1243,30 @@ struct
                "org.dbtoaster.dbtoasterlib.StdFunctions._";
                "org.dbtoaster.dbtoasterlib.QueryInterface._";
                "scala.collection.mutable.Map";
+               "scala.collection.JavaConversions.mapAsScalaMap";
+               "java.util.Date";
+               "java.util.GregorianCalendar";
+               "xml._";
+               "scala.virtualization.lms.common._";
+               "scala.virtualization.lms.internal._";
+               "dbtoptimizer._";
+            ] else [ 
+               "java.io._";
+               "org.dbtoaster.dbtoasterlib.StreamAdaptor._";
+               "org.dbtoaster.dbtoasterlib.K3Collection._";
+               "org.dbtoaster.dbtoasterlib.Source._";
+               "org.dbtoaster.dbtoasterlib.DBToasterExceptions._";
+               "org.dbtoaster.dbtoasterlib.ImplicitConversions._";
+               "org.dbtoaster.dbtoasterlib.StdFunctions._";
+               "org.dbtoaster.dbtoasterlib.QueryInterface._";
+               "scala.collection.mutable.Map";
+               "scala.collection.JavaConversions.mapAsScalaMap";
                "java.util.Date";
                "java.util.GregorianCalendar";
                "xml._";
                "scala.actors.Actor";
                "scala.actors.Actor._"
-            ])
+            ]))
          )
       in
       let dispatcher = 
@@ -1156,10 +1294,16 @@ struct
                   make_list ~parens:("", "::Nil") ~sep:"::"
                      (List.map (fun (n, t) ->
                         "(var_" ^ n ^ ": " ^ 
-                        (string_of_type (map_base_type t)) ^ ")") vars))) ^
+                        (string_of_type_noLMS (map_base_type t)) ^ ")") vars))) ^
                ") => on" ^ 
                trigger_type ^ rel ^ 
-               (make_list (List.map (fun (n, t) -> "var_" ^ n) vars))
+               ( if useLMS then
+                  (make_list ~parens:("(",")") ~sep:", " (List.map (fun (n, t) -> "var_" ^ n) vars))
+                  (*^ (make_list ~parens:(", ",")") ~sep:", " (List.map 
+                     (fun (id,ivars,ovars,t) -> id ) schemas) )*)
+                  else
+                  (make_list (List.map (fun (n, t) -> "var_" ^ n) vars))
+               )
             | t -> 
                debugfail None ("Trigger expected but found " ^ 
                (string_of_type t))
@@ -1185,11 +1329,60 @@ struct
             | _ -> debugfail None "Missing source name"
             ) streams)) ^ ");"
       in
-      (* Code for the triggers *)
+      let intermediate_ds_vals = 
+         (make_list ~parens:("","; ") ~sep:"; " (List.map 
+               (fun (id,ivars,ovars,t) ->
+                  let str_val_t = string_of_type_noLMS (map_base_type t) in
+                  "val " ^ match (ivars, ovars) with
+                  | ([], []) -> id ^ "_orig : " ^ rep_value ("SimpleVal[" ^ str_val_t ^ "]") ^ " = fresh[" ^ ("SimpleVal[" ^ str_val_t ^ "]") ^ "]"
+                  | ([], os) -> id ^ "_orig : " ^ rep_value ("K3PersistentCollection[" ^ (make_type_list os) ^ ", " ^ str_val_t ^ "]") ^ " = fresh[" ^ ("K3PersistentCollection[" ^ (make_type_list os) ^ ", " ^ str_val_t ^ "]") ^ "]"
+                  | (is, []) -> id ^ "_orig : " ^ rep_value ("K3PersistentCollection[" ^ (make_type_list is) ^ ", " ^ str_val_t ^ "]") ^ " = fresh[" ^ ("K3PersistentCollection[" ^ (make_type_list is) ^ ", " ^ str_val_t ^ "]") ^ "]"
+                  | (is, os) -> id ^ "_orig : " ^ rep_value ("K3FullPersistentCollection[" ^ (make_type_list is) ^ "," ^ (make_type_list os) ^ ", " ^ str_val_t ^ "]") ^ " = fresh[" ^ ("K3FullPersistentCollection[" ^ (make_type_list is) ^ "," ^ (make_type_list os) ^ ", " ^ str_val_t ^ "]") ^ "]"
+               ) schemas))
+      in
+      let class_args = 
+         (make_list ~parens:("classArgs = "," Nil;") ~sep:" " (List.map 
+               (fun (id,ivars,ovars,t) -> id ^ "_orig ::") schemas))
+      in
+      let class_args_application = 
+         (make_list ~parens:("","") ~sep:", " (List.map 
+               (fun (id,ivars,ovars,t) -> id) schemas))
+      in
+      let trigger_defs = 
+         (make_list ~parens:("","") ~sep:"" 
+         (List.map (fun (b, bt) -> (match bt with
+         | Trigger(Schema.CorrectiveUpdate(_, _, _, _, _)) -> 
+            debugfail None "Corrective updates not implemented yet"
+         | Trigger(Schema.InsertEvent(rel, vars, tpe)) -> "val onInsert" ^ rel ^ " = new onInsert" ^ rel ^ "(" ^ class_args_application ^ ");"
+         | Trigger(Schema.DeleteEvent(rel, vars, tpe)) -> "val onDelete" ^ rel ^ " = new onDelete" ^ rel ^ "(" ^ class_args_application ^ ");"
+         | Trigger(Schema.SystemInitializedEvent)      -> "val onSystemInitialized = new onSystemInitialized(" ^ class_args_application ^ ");"
+         | _ -> "")) triggers)) 
+      in
+      let trigger_actions = 
+         (make_list ~parens:("","") ~sep:"" 
+         (List.map (fun (b, bt) -> (match bt with
+         | Trigger(Schema.CorrectiveUpdate(_, _, _, _, _)) -> 
+            debugfail None "Corrective updates not implemented yet"
+         | Trigger(Schema.InsertEvent(rel, vars, tpe)) -> b ^ ";"
+         | Trigger(Schema.DeleteEvent(rel, vars, tpe)) -> b ^ ";"
+         | Trigger(Schema.SystemInitializedEvent)      -> b ^ ";"
+         | _ -> "")) triggers)) 
+      in
+      let trigger_globals = 
+         (make_list ~parens:("","") ~sep:"" 
+         (List.map (fun (b, bt) -> (match bt with
+         | Trigger(Schema.CorrectiveUpdate(_, _, _, _, _)) -> 
+            debugfail None "Corrective updates not implemented yet"
+         | Trigger(Schema.InsertEvent(rel, vars, tpe)) -> ""
+         | Trigger(Schema.DeleteEvent(rel, vars, tpe)) -> ""
+         | Trigger(Schema.SystemInitializedEvent)      -> ""
+         | _ -> b ^ ";")) triggers)) 
+      in
+      (* Code for the triggers 
       let triggers = 
          (make_list ~parens:("",";") ~sep:";" 
          (List.map (fun (b, bt) -> b) triggers)) 
-      in
+      in*)
       (* Code to load the static tables *)
       let filltables = 
          "def fillTables(): Unit = {" ^
@@ -1212,16 +1405,25 @@ struct
       in
       imports ^
       " package org.dbtoaster { " ^
-      "class Query() " ^ 
-      "extends DBTQuery { var supervisor: Actor = null;" ^ (
-         if Debug.active "IVC-TIMER" then 
-            "val ivcTimer = new DBTTimer(\"IVC\");" ^
-            "val incTimer = new DBTTimer(\"INC\");" 
-         else "") ^
-      set_supervisor ^
-      (Hashtbl.fold (fun a b c -> "val " ^ b ^ " = " ^ a ^ ";" ^ c) consts "") ^
-      str_sources ^ str_streams ^ str_schema ^ str_tlqs ^ triggers ^ 
-      filltables ^ dispatcher ^ run ^ print_results ^ print_maps ^ " }}", 
+         (if useLMS && not(replaceWithLMSOptimizedCode) then "" 
+          else "class Query() extends DBTQuery { var supervisor: Actor = null;" ^
+            (if Debug.active "IVC-TIMER" then 
+               "val ivcTimer = new DBTTimer(\"IVC\");" ^
+               "val incTimer = new DBTTimer(\"INC\");" 
+            else "") ^
+            set_supervisor ^
+            (Hashtbl.fold (fun a b c -> "val " ^ b ^ " = " ^ a ^ ";" ^ c) consts "") ^
+            str_sources ^ str_streams ^ str_schema ^ (if useLMS then trigger_defs else "") ^ str_tlqs ^ (if useLMS then "" else trigger_actions) ^ trigger_globals ^
+            filltables ^ dispatcher ^ run ^ print_results ^ print_maps ^ " }") ^ 
+         (if (useLMS && not(replaceWithLMSOptimizedCode)) then
+               "object QueryGenerator {" ^ 
+               "  trait Prog extends DSL {" ^ intermediate_ds_vals ^ class_args ^ trigger_actions  ^ "}" ^
+               "  def main(args: Array[String]): Unit = {" ^
+               "   (new Impl(args(0), \"org.dbtoaster\") with Prog).emitAll()" ^
+               "  } "^
+               "}"
+          else "") ^ 
+      "}", 
       Unit
 
    (** This function formats a piece of scala code 
@@ -1270,4 +1472,15 @@ struct
 
 end
 
-module K3CG : K3Codegen.CG = K3S
+module K3CG : K3Codegen.CG = K3S (struct 
+   let useLMS = false
+   let replaceWithLMSOptimizedCode = false
+end)
+module K3CG_LMS : K3Codegen.CG = K3S(struct 
+   let useLMS = true
+   let replaceWithLMSOptimizedCode = false
+end)
+module K3CG_ScalaLMSOpt : K3Codegen.CG = K3S(struct 
+   let useLMS = true
+   let replaceWithLMSOptimizedCode = true
+end)

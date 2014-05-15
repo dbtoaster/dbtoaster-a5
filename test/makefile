@@ -19,8 +19,11 @@ endif
 ifeq ($(TEST_SCALA), 1)
 	QUERY_TEST += -t scala $(SCALA_TEST_FLAGS)
 endif
+ifeq ($(TEST_SCALAOPT), 1)
+	QUERY_TEST += -t scalaopt $(SCALAOPT_TEST_FLAGS)
+endif
 ifeq ($(TEST_ALL), 1)
-	QUERY_TEST += -t all $(CPP_TEST_FLAGS) $(SCALA_TEST_FLAGS)
+	QUERY_TEST += -t all $(CPP_TEST_FLAGS) $(SCALA_TEST_FLAGS) $(SCALAOPT_TEST_FLAGS)
 endif
 
 FAST_QUERY_TEST=$(QUERY_TEST) -d weak-expr-equiv
@@ -292,6 +295,72 @@ query_tpch:
 	@$(FAST_QUERY_TEST) tpch22a --dataset tiny
 	@$(FAST_QUERY_TEST) tpch22a
 	@$(FAST_QUERY_TEST) ssb4 --dataset tiny
+#	@$(FAST_QUERY_TEST) ssb4
+
+query_tpch_standard:
+	@$(FAST_QUERY_TEST) tpch1 --dataset standard
+	@$(FAST_QUERY_TEST) tpch2 --dataset standard
+	@$(FAST_QUERY_TEST) tpch3 --dataset standard
+	@$(FAST_QUERY_TEST) tpch4 --dataset standard
+	@$(FAST_QUERY_TEST) tpch5 --dataset standard
+#	@$(FAST_QUERY_TEST) tpch6 --dataset standard  #F.P. error on the interpreter
+	@$(FAST_QUERY_TEST) tpch7 --dataset standard
+	@$(FAST_QUERY_TEST) tpch8 --dataset standard  #slow compilation
+	@$(FAST_QUERY_TEST) tpch9 --dataset standard  #slow compilation
+	@$(FAST_QUERY_TEST) tpch10 --dataset standard
+	@$(FAST_QUERY_TEST) tpch11 --dataset standard
+	@$(FAST_QUERY_TEST) tpch11a --dataset standard
+#	@$(FAST_QUERY_TEST) tpch11c --dataset standard  #slow compilation
+#	@$(FAST_QUERY_TEST) tpch11c  # ~90s
+	@$(FAST_QUERY_TEST) tpch12 --dataset standard
+	@$(FAST_QUERY_TEST) tpch13 --dataset standard
+	@$(FAST_QUERY_TEST) tpch14 --dataset standard
+#	@$(FAST_QUERY_TEST) tpch15 --dataset standard  
+	@$(FAST_QUERY_TEST) tpch16 --dataset standard
+	@$(FAST_QUERY_TEST) tpch17 --dataset standard
+	@$(FAST_QUERY_TEST) tpch17a --dataset standard
+	@$(FAST_QUERY_TEST) tpch18 --dataset standard
+#	@$(FAST_QUERY_TEST) tpch18 #sloooow
+	@$(FAST_QUERY_TEST) tpch18a --dataset standard
+	@$(FAST_QUERY_TEST) tpch19 --dataset standard
+	@$(FAST_QUERY_TEST) tpch20 --dataset standard
+	@$(FAST_QUERY_TEST) tpch21 --dataset standard
+	@$(FAST_QUERY_TEST) tpch22 --dataset standard
+	@$(FAST_QUERY_TEST) tpch22a --dataset standard
+	@$(FAST_QUERY_TEST) ssb4 --dataset standard
+#	@$(FAST_QUERY_TEST) ssb4
+
+query_tpch_big:
+	@$(FAST_QUERY_TEST) tpch1 --dataset big
+	@$(FAST_QUERY_TEST) tpch2 --dataset big
+	@$(FAST_QUERY_TEST) tpch3 --dataset big
+	@$(FAST_QUERY_TEST) tpch4 --dataset big
+	@$(FAST_QUERY_TEST) tpch5 --dataset big
+#	@$(FAST_QUERY_TEST) tpch6 --dataset big  #F.P. error on the interpreter
+	@$(FAST_QUERY_TEST) tpch7 --dataset big
+	@$(FAST_QUERY_TEST) tpch8 --dataset big  #slow compilation
+	@$(FAST_QUERY_TEST) tpch9 --dataset big  #slow compilation
+	@$(FAST_QUERY_TEST) tpch10 --dataset big
+	@$(FAST_QUERY_TEST) tpch11 --dataset big
+	@$(FAST_QUERY_TEST) tpch11a --dataset big
+#	@$(FAST_QUERY_TEST) tpch11c --dataset big  #slow compilation
+#	@$(FAST_QUERY_TEST) tpch11c  # ~90s
+	@$(FAST_QUERY_TEST) tpch12 --dataset big
+	@$(FAST_QUERY_TEST) tpch13 --dataset big
+	@$(FAST_QUERY_TEST) tpch14 --dataset big
+#	@$(FAST_QUERY_TEST) tpch15 --dataset big  
+	@$(FAST_QUERY_TEST) tpch16 --dataset big
+	@$(FAST_QUERY_TEST) tpch17 --dataset big
+	@$(FAST_QUERY_TEST) tpch17a --dataset big
+	@$(FAST_QUERY_TEST) tpch18 --dataset big
+#	@$(FAST_QUERY_TEST) tpch18 #sloooow
+	@$(FAST_QUERY_TEST) tpch18a --dataset big
+	@$(FAST_QUERY_TEST) tpch19 --dataset big
+	@$(FAST_QUERY_TEST) tpch20 --dataset big
+	@$(FAST_QUERY_TEST) tpch21 --dataset big
+	@$(FAST_QUERY_TEST) tpch22 --dataset big
+	@$(FAST_QUERY_TEST) tpch22a --dataset big
+	@$(FAST_QUERY_TEST) ssb4 --dataset big
 #	@$(FAST_QUERY_TEST) ssb4
 
 query_financial:

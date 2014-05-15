@@ -8,24 +8,25 @@ let (inform, warn, error, bug) = Debug.Logger.functions_for_module ""
 
 (************ Language Names ************)
 type language_t =
-   | Auto | SQL | Calc | MPlan | DistM3 | M3 | M3DM | K3 | IMP | CPP | Scala 
-   | Ocaml | Interpreter
+   | Auto | SQL | Calc | MPlan | DistM3 | M3 | M3DM | K3 | IMP | CPP | Scala
+   | LMS  | Ocaml | Interpreter
 
 let languages =
    (* string     token         human-readable string         show in help?  *)
-   [  "AUTO"   , (Auto       , "automatic"                    , false); 
-      "SQL"    , (SQL        , "DBToaster SQL"                , false);
-      "CALC"   , (Calc       , "DBToaster Relational Calculus", true);
-      "PLAN"   , (MPlan      , "Materialization Plan"         , false);
-      "M3"     , (M3         , "M3 Program"                   , true);
-      "DISTM3" , (DistM3     , "Distributable M3 Program"     , false);
-      "M3DM"   , (M3DM       , "M3 Domain Maintenance Program", false);
-      "K3"     , (K3         , "K3 Program"                   , false);
-      "IMP"    , (IMP        , "Abstract Imperative Program"  , false);
-      "SCALA"  , (Scala      , "Scala Code"                   , true);
-    (*"OCAML"  , (Ocaml      , "Ocaml Code"                   , false); *)
-      "RUN"    , (Interpreter, "Ocaml Interpreter"            , false);
-      "CPP"    , (CPP        , "C++ Code"                     , true);
+   [  "AUTO"         , (Auto       , "automatic"                      , false); 
+      "SQL"          , (SQL        , "DBToaster SQL"                  , false);
+      "CALC"         , (Calc       , "DBToaster Relational Calculus"  , true);
+      "PLAN"         , (MPlan      , "Materialization Plan"           , false);
+      "M3"           , (M3         , "M3 Program"                     , true);
+      "DISTM3"       , (DistM3     , "Distributable M3 Program"       , false);
+      "M3DM"         , (M3DM       , "M3 Domain Maintenance Program"  , false);
+      "K3"           , (K3         , "K3 Program"                     , false);
+      "IMP"          , (IMP        , "Abstract Imperative Program"    , false);
+      "SCALA"        , (Scala      , "Scala Code"                     , true);
+      "LMS"          , (LMS        , "LMS-friendly Scala Code"        , false);
+    (*"OCAML"        , (Ocaml      , "Ocaml Code"                     , false); *)
+      "RUN"          , (Interpreter, "Ocaml Interpreter"              , false);
+      "CPP"          , (CPP        , "C++ Code"                       , true);
    ]
 
 let input_language  = ref Auto
@@ -59,21 +60,25 @@ let rec mk_path p =
             raise (Arg.Bad(dir^" already exists and is not a directory."))
    )
       
-let output s = 
+let output_static outfile_name outfile_handle s = 
    let fh = 
-      match !output_filehandle with 
+      match !outfile_handle with 
       | None -> 
          let fh = 
-            if !output_file = "-" then stdout
+            if !outfile_name = "-" then stdout
             else (
-               mk_path !output_file;
-               open_out !output_file )
+               mk_path !outfile_name;
+               open_out !outfile_name )
          in
             output_filehandle := Some(fh); fh
       | Some(fh) -> fh
    in
       output_string fh s
 ;;
+
+let output_endline_static outfile_name outfile_handle s = output_static outfile_name outfile_handle (s^"\n");;
+      
+let output s = output_static output_file output_filehandle s;;
 
 let output_endline s = output (s^"\n");;
 
@@ -97,6 +102,10 @@ let optimizations_by_level =
          "AGGRESSIVE-UNIFICATION";
          "DELETE-ON-ZERO";
          "OPTIMIZE-PATTERNS";
+      ];
+      (** -O4 **) [
+         "K3-NO-OPTIMIZE";
+         "LMS-OPTIMIZE";
       ];
    ]
 let optimizations = 
@@ -169,6 +178,9 @@ let specs:(Arg.key * Arg.spec * Arg.doc) list  = Arg.align [
    (  "-O3",
       (Arg.Unit(fun () -> opt_level := 3)),
       "       Produce the most efficient code possible");
+   (  "-O4",
+      (Arg.Unit(fun () -> opt_level := 4)),
+      "       Produce the upper most efficient code possible using LMS");
    (  "-D", 
       (Arg.String(ExternalCompiler.add_flag ~switch:"-D")),
       "macro Define a macro when invoking the second-stage compiler");
@@ -282,6 +294,7 @@ type stage_t =
    | StageParseK3
  | K3Marker
    | StageOptimizeK3
+   | StageOptimizeLMS
    | StagePrintK3
    | StageK3ToTargetLanguage
  | FunctionalTargetMarker
@@ -314,7 +327,7 @@ let core_stages =
       PlanMarker;  (* -> *) StagePlanToM3;
       M3Marker;    (* -> *) StageM3DomainMaintenance; StageM3ToK3; 
                             StageM3DMToK3;
-      K3Marker;    (* -> *) StageOptimizeK3; StageK3ToTargetLanguage;
+      K3Marker;    (* -> *) StageOptimizeK3; StageOptimizeLMS; StageK3ToTargetLanguage;
       FunctionalTargetMarker; StageImpToTargetLanguage; 
       ImperativeTargetMarker; 
    ]
@@ -332,27 +345,28 @@ let imperative_stages = compile_stages ImperativeTargetMarker;;
 
 let active_stages = ref (ListAsSet.inter
    ((match !input_language with
-      | Auto -> bug "input language still auto"; []
-      | SQL  -> StageParseSQL::(stages_from SQLMarker)
-      | Calc -> StageParseCalc::(stages_from CalcMarker)
-      | M3   -> StageParseM3::(stages_from M3Marker)
-      | K3   -> StageParseK3::(stages_from K3Marker)
-      | _    -> error "Unsupported input language"; []
+      | Auto     -> bug "input language still auto"; []
+      | SQL      -> StageParseSQL::(stages_from SQLMarker)
+      | Calc     -> StageParseCalc::(stages_from CalcMarker)
+      | M3       -> StageParseM3::(stages_from M3Marker)
+      | K3       -> StageParseK3::(stages_from K3Marker)
+      | _        -> error "Unsupported input language"; []
     )@output_stages@optional_stages)
    ((match !output_language with
-      | Auto   -> bug "output language still auto"; []
-      | SQL    -> StagePrintSQL::(stages_to SQLMarker)
-      | Calc   -> StagePrintCalc::(stages_to CalcMarker)
-      | MPlan  -> StagePrintPlan::(stages_to PlanMarker)
-      | M3     -> StagePrintM3::(stages_to M3Marker)
-      | DistM3 -> StagePrintM3::StageM3ToDistM3::(stages_to M3Marker)
-      | M3DM   -> StagePrintM3DomainMaintenance::
+      | Auto     -> bug "output language still auto"; []
+      | SQL      -> StagePrintSQL::(stages_to SQLMarker)
+      | Calc     -> StagePrintCalc::(stages_to CalcMarker)
+      | MPlan    -> StagePrintPlan::(stages_to PlanMarker)
+      | M3       -> StagePrintM3::(stages_to M3Marker)
+      | DistM3   -> StagePrintM3::StageM3ToDistM3::(stages_to M3Marker)
+      | M3DM     -> StagePrintM3DomainMaintenance::
                      (stages_to StageM3DomainMaintenance)
-      | K3     -> StagePrintK3::StageOptimizeK3::(stages_to K3Marker)
-      | IMP    -> StagePrintImp::(stages_to FunctionalTargetMarker)
-      | Scala  -> functional_stages ExternalCompiler.scala_compiler
-      | Ocaml  -> functional_stages ExternalCompiler.ocaml_compiler
-      | CPP    -> imperative_stages ExternalCompiler.cpp_compiler
+      | K3       -> StagePrintK3::StageOptimizeK3::(stages_to K3Marker)
+      | IMP      -> StagePrintImp::(stages_to FunctionalTargetMarker)
+      | Scala    -> functional_stages ExternalCompiler.scala_compiler
+      | LMS      -> Debug.deactivate "LMS-OPTIMIZE"; StageOutputSource::(stages_to FunctionalTargetMarker)
+      | Ocaml    -> functional_stages ExternalCompiler.ocaml_compiler
+      | CPP      -> imperative_stages ExternalCompiler.cpp_compiler
          (* CPP is defined as a functional stage because the IMP implementation
             desperately needs to be redone before we can actually use it as an 
             reasonable intermediate representation.  For now, we avoid the
@@ -799,6 +813,71 @@ if stage_is_active StagePrintK3 then (
 ;;
 module K3InterpreterCG = K3Compiler.Make(K3Interpreter.K3CG)
 module K3ScalaCompiler = K3Compiler.Make(K3Scalagen.K3CG)
+module K3LMSCompiler = K3Compiler.Make(K3Scalagen.K3CG_LMS)
+module K3ScalaLMSOptCompiler = K3Compiler.Make(K3Scalagen.K3CG_ScalaLMSOpt)
+;;
+if (stage_is_active StageOptimizeLMS) then (
+   if (Debug.active "LMS-OPTIMIZE") then (
+      Debug.print "LOG-DRIVER" (fun () -> "Running Stage: OptimizeLMS");
+
+      let lms_source_code = [K3LMSCompiler.compile_query_to_string !k3_program] in
+      let outfile = ref (!output_file ^ "-lms.scala") in
+      let outfile_handle = (
+               mk_path !outfile;
+               open_out !outfile ) in
+      let outfile_handle_option = ref (Some(outfile_handle)) in
+      List.iter (output_endline_static outfile outfile_handle_option) lms_source_code;
+      flush outfile_handle;
+      print_endline ("Compiling LMS-friendly code: " ^ (!output_file ^ "-lms.scala"));
+
+      let a = Unix.fork () in
+      match a with
+         | 0 ->  ExternalCompiler.lms_compiler.ExternalCompiler.compile !outfile (!output_file ^ "-lmsopt")
+         | -1 -> Printf.printf "%s" "error accured on fork for compiling LMS code\n"
+         | _ -> let check_exit_status = (function
+            | Unix.WEXITED r -> r
+            | _ -> -1000) in
+            let childid, returncode = Unix.wait () in
+            Debug.print "LOG-SCALA" (fun () -> "Compiling LMS Code: parent process => " ^ (string_of_int (Unix.getpid ())));
+            Debug.print "LOG-SCALA" (fun () -> "Compiling LMS Code: child " ^ (string_of_int childid) ^ " closed with status code " ^ (string_of_int (check_exit_status returncode)));
+
+      print_endline ("Executing compiled LMS-friendly code: " ^ (!output_file ^ "-lmsopt.jar"));
+      
+      if Sys.file_exists (!output_file ^ "-lmscomp.scala") then
+         Sys.remove (!output_file ^ "-lmscomp.scala");
+      let syscall cmd = (
+         let ic, oc = Unix.open_process cmd in
+         let buf = Buffer.create 16 in
+         (try
+            while true do
+              Buffer.add_channel buf ic 1
+           done
+          with End_of_file -> ());
+         let _ = Unix.close_process (ic, oc) in
+         (Buffer.contents buf)
+      ) in
+
+      let read_file filename = 
+         let lines = ref [] in
+         let chan = open_in filename in
+         try
+           while true; do
+             lines := input_line chan :: !lines
+           done; []
+         with End_of_file ->
+           close_in chan;
+           List.rev !lines in
+      let _ = syscall ("java -classpath lib/dbt_scala/scala-library.jar:lib/dbt_scala/scala-compiler.jar:lib/dbt_scala/scala-reflect.jar:lib/dbt_scala/dbtlib.jar:lib/dbt_scala/lms.jar:lib/dbt_scala/toasterbooster.jar:" ^
+      (!output_file ^ "-lmsopt.jar") ^ " -Dscala.usejavacp=true scala.tools.nsc.MainGenericRunner org.dbtoaster.QueryGenerator " ^ (!output_file ^ "-lmscomp.scala")) in
+      let lms_optimized_triggers = read_file (!output_file ^ "-lmscomp.scala") in
+      Sys.remove (!output_file ^ "-lmscomp.scala");
+      source_code := !source_code @ lms_optimized_triggers;
+      if Sys.file_exists (!output_file ^ "-lms.scala") then
+         Sys.remove (!output_file ^ "-lms.scala");
+      if Sys.file_exists (!output_file ^ "-lmsopt.jar") then
+         Sys.remove (!output_file ^ "-lmsopt.jar");
+   )
+)
 ;;
 if stage_is_active StageK3ToTargetLanguage then (
    Debug.print "LOG-DRIVER" (fun () -> "Running Stage: K3ToTargetLanguage");
@@ -832,9 +911,10 @@ if stage_is_active StageK3ToTargetLanguage then (
                
       )   
       | Ocaml       -> bug "Ocaml codegen not implemented yet"
+      | LMS       -> 
+         source_code := !source_code @ [K3LMSCompiler.compile_query_to_string !k3_program]
       | Scala       -> 
-         source_code := [K3ScalaCompiler.compile_query_to_string !k3_program]
-         
+         source_code := !source_code @ [ (if (Debug.active "LMS-OPTIMIZE") then K3ScalaLMSOptCompiler.compile_query_to_string !k3_program else K3ScalaCompiler.compile_query_to_string !k3_program)]
          (* All imperative languages now produce IMP *)
       | IMP
       | CPP         -> 
@@ -867,8 +947,8 @@ if stage_is_active StagePrintImp then (
 if stage_is_active StageImpToTargetLanguage then (
    Debug.print "LOG-DRIVER" (fun () -> "Running Stage: ImpToTargetLanguage");
    source_code := 
-      ImperativeCompiler.Compiler.compile_imp !imperative_opts
-                                              !imperative_program
+      !source_code @ (ImperativeCompiler.Compiler.compile_imp !imperative_opts
+                                              !imperative_program)
 )
 ;;
 
