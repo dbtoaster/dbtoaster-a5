@@ -192,6 +192,11 @@ package org.dbtoaster.dbtoasterlib {
        * @return The matching elements
        */
       def slice[PK](keyPart: PK): Map[K, V]
+
+      /**
+       * Removes all bindings from the map.
+       */
+      def clear(): Unit
     }
 
     /**
@@ -262,6 +267,13 @@ package org.dbtoaster.dbtoasterlib {
           case None => Map[K, V]()
         }
       }
+
+      /**
+       * Removes all bindings from the map.
+       */
+      def clear(): Unit = {
+        index.clear
+      }
     }
 
     /**
@@ -273,6 +285,20 @@ package org.dbtoaster.dbtoasterlib {
     class K3PersistentCollection[K, V](name: String, elems: Map[K, V], 
         sndIdx: Option[Map[String, Index[K, V]]]) extends K3Collection[K, V] {
       var lastSize = 0
+
+      def fold[Y](init: Y, fn: (K,V) => Y => Y): Y = {
+        fold(init, fn.tupled)
+      }
+      
+      def foldLong(init: Long, fn: (K,V) => Long => Long): Long = {
+        foldLong(init, fn.tupled)
+      }
+      
+      def map[K2, V2](f: (K,V) => (K2, V2)): K3IntermediateCollection[K2, V2] = {
+        map(f.tupled)
+      }
+
+      def foreach(f: (K,V) => Unit): Unit = foreach(f.tupled)
 
       def map[K2, V2](f: Tuple2[K, V] => 
                          Tuple2[K2, V2]): K3IntermediateCollection[K2, V2] = {
@@ -291,7 +317,7 @@ package org.dbtoaster.dbtoasterlib {
         case Some(v) => v
       }
 	  
-	  def lookup(key: K, defVal: V): V = elems.get(key) match {
+      def lookup(key: K, defVal: V): V = elems.get(key) match {
         case None => defVal
         case Some(v) => v
       }
@@ -331,8 +357,10 @@ package org.dbtoaster.dbtoasterlib {
         val strIdx = idx.foldLeft("")(
             { case (agg, nb) => agg + (if (agg != "") "_" else "") + nb })
         sndIdx match {
-          case Some(x) => new K3IntermediateCollection(x.get(strIdx).
-                                get.slice(keyPart))
+          case Some(x) => new K3IntermediateCollection(x.get(strIdx) match {
+            case Some(y) => y.slice(keyPart)
+            case None => (List[(K,V)]()).toIterable
+          })
           case None => throw new IllegalArgumentException
         }
       }
@@ -387,6 +415,17 @@ package org.dbtoaster.dbtoasterlib {
         println(name + ": " + currSize + "(" + (currSize - lastSize) + ")")
         lastSize = currSize
       }
+
+      /**
+       * Removes all bindings from the map.
+       */
+      def clear(): Unit = {
+        elems.clear
+        sndIdx match {
+          case Some(idx) => idx foreach { case (k, v) => v.clear }
+          case None =>
+        }
+      }
     }
 
     /**
@@ -430,6 +469,21 @@ package org.dbtoaster.dbtoasterlib {
           case None => ()
         }
       }
+
+      /**
+       * Removes all bindings from the map.
+       */
+      override def clear(): Unit = {
+        felems.foreach {
+          x => x._2.clear
+        }
+        fsndIdx match {
+          case Some(idxMap) => idxMap foreach {
+            x => x._2.clear
+          }
+          case None =>
+        }
+      }
     }
 
     /**
@@ -442,9 +496,23 @@ package org.dbtoaster.dbtoasterlib {
      */
     class K3IntermediateCollection[K, V](elems: Iterable[Tuple2[K, V]]) 
         extends K3Collection[K, V] {
+      def fold[Y](init: Y, fn: (K,V) => Y => Y): Y = {
+        fold(init, fn.tupled)
+      }
+      
+      def foldLong(init: Long, fn: (K,V) => Long => Long): Long = {
+        foldLong(init, fn.tupled)
+      }
+      
+      def map[K2, V2](f: (K,V) => (K2, V2)): K3IntermediateCollection[K2, V2] = {
+        map(f.tupled)
+      }
+
       def map[K2, V2](f: Tuple2[K, V] => Tuple2[K2, V2]):
                      K3IntermediateCollection[K2, V2] =
         new K3IntermediateCollection(elems.map(f))
+
+      def foreach(f: (K,V) => Unit): Unit = foreach(f.tupled)
 
       def contains(key: K): Boolean = {
         (elems.find { case (k, v) => k == key }) != None
