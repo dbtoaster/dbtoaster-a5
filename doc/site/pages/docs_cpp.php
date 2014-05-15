@@ -1,5 +1,8 @@
-
 <div class="warning">Warning: This BETA API is not final, and subject to change before release.</div>
+
+<p>
+   <i>Note:</i> To compile and run queries using the C++ backend requires g++ and the boost libraries to be installed. Please refer to <?= mk_link("Getting Started", "docs"); ?> for details 
+</p>
 
 <a name="quickstart"></a>
 <?= chapter("Quickstart Guide") ?>
@@ -34,26 +37,6 @@ Alternatively, DBToaster can build a standalone binary (if the <tt>-c [binary na
 the generated header file against <tt>lib/dbt_c++/main.cpp</tt>, which provides code for executing the 
 sql program and printing the results. 
 </p>
-<p>
-<b>Requirements:</b> Besides <tt>g++</tt>, the Boost header files and the following library binaries: <tt>boost_program_options</tt>, 
-<tt>boost_serialization</tt>, <tt>boost_system</tt>, <tt>boost_filesystem</tt>, <tt>boost_chrono</tt> and 
-<tt>boost_thread</tt> have to be present on the system since the generated code makes use of them.
-If these can't be found in the paths searched by default by <tt>g++</tt> then their location has to be explicitly
-provided to DBToaster. This can be done in one of the following two ways, either through the environment variables:
-<ul>
-<li><b>DBT_HDR</b> which should contain the path to Boost's <tt>include</tt> folder;</li>
-<li><b>DBT_LIB</b> which should contain the path to Boost's <tt>lib</tt> folder.</li>
-</ul>
-<div class="codeblock">$&gt; export DBT_HDR=<i>path-to-boost-include-dir</i>
-$&gt; export DBT_LIB=<i>path-to-boost-lib-dir</i>
-$&gt; bin/dbtoaster examples/queries/simple/rs_example1.sql -l cpp -c rs_example1</div>
-or through the <tt>-I</tt> and <tt>-L</tt> command line flags:
-<div class="codeblock">$&gt; bin/dbtoaster examples/queries/simple/rs_example1.sql -l cpp -c rs_example1 -I <i>path-to-boost-include-dir</i> -L <i>path-to-boost-lib-dir</i></div>
-
-Additionally, if only the multi-threaded versions of the Boost libraries are available, as is the case with some Cygwin provided distributions, one also needs to add the <tt>-d MT</tt> flag when compiling queries to binaries.</p>
-<div class="codeblock">$&gt; bin/dbtoaster examples/queries/simple/rs_example1.sql -l cpp -c rs_example1 -d MT</div>
-</p>
-
 
 <p>
 Running the compiled binary will result in the following output:

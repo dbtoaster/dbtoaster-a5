@@ -1,13 +1,12 @@
 <div class="warning">Warning: This BETA API is not final, and subject to change before release.</div>
 
-<a name="quickstart"></a>
-
-<?=chapter("Compiling and running a query")?>
-
 <p>
    <i>Note:</i> To compile and run queries using the Scala backend requires the Scala compiler to be installed. Please refer to <?= mk_link("Getting Started", "docs"); ?> for details 
 </p>
 
+<a name="quickstart"></a>
+
+<?=chapter("Compiling and running a query")?>
 <p>
    DBToaster generates a JAR file for a query when using the <tt>-l scala</tt> and the <tt>-c &lt;file&gt;</tt> switch:
 </p>
