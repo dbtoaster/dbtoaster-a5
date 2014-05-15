@@ -134,8 +134,6 @@ let mk_domain_restricted_lift (lift_v:var_t) (lift_expr:expr_t): expr_t =
    (* Otherwise we need to actually do some domain tracking. *)
    (* If all else fails, we need to create a new variable for the lifted 
       expression, test, and then project it all away. *)
-   CalcRing.mk_prod [ mk_exists lift_expr; lift ]
-   
-
+   CalcRing.mk_prod [ Calculus.mk_exists lift_expr; lift ]
 
 
