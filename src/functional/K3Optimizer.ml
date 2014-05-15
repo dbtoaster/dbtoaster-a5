@@ -1,7 +1,7 @@
 (**
   K3 normalization and optimization
 
-{b Lifting (aka K3 expression normalization):}
+{by Lifting (aka K3 expression normalization):}
 
 - conditionals:
   - the point of lifting is to enable optimization of pre, post code in
