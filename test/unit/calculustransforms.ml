@@ -42,9 +42,9 @@ in
    test "Self-comparison"
       "R(A) * {A = A}"
       "R(A)";
-   test "Cast float ValueRing.zero to int"
+   test "Cast float ValueRing.zero to float"
       "R(A) * {1.0-1.0}"
-      "0";
+      "0.0"; 
    test "Cast float ValueRing.one to int"
       "R(A) * {0.5+0.5}"
       "R(A)";
@@ -515,7 +515,7 @@ in
                      {-1})) *
             {__sql_inline_agg_1 > 0} *
             AggSum([dLID], DEPARTMENT(COUNT_DID, D_NAME, dLID)))))";
-   test "Zeus Query 96434723 dS" ["COUNT_mSSB"; "COUNT_mSSC"] 
+    test "Zeus Query 96434723 dS" ["COUNT_mSSB"; "COUNT_mSSC"] 
                                  ["B1"; "C1"; "LB71Y"; "GKKEOF"; "QKKF7PYI"]
       "(AggSum([B1, C1, LB71Y, GKKEOF], 
            (COUNTS1(int)[][NPZL_7DKV_B,NPZL_7DKV_C] * 
@@ -526,7 +526,7 @@ in
             (GKKEOF ^= (NPZL_7DKV_C * {(NPZL_7DKV_B * NPZL_7DKV_B)})) *
             (C1 ^= NPZL_7DKV_C))) *
         (QKKF7PYI ^= COUNTSS_C))"
-      "(LB71Y ^= (COUNTSS_B * COUNTSS_C)) * (B1 ^= 0) * (GKKEOF ^= 0) *
+      "(LB71Y ^= (COUNTSS_B * COUNTSS_C)) * (B1 ^= 0) * (GKKEOF ^= 0.) *
         (QKKF7PYI ^= COUNTSS_C) *
         AggSum([C1], 
            (__sql_inline_not_1 ^= 0) * (NPZL_7DKV_B ^= 0) *

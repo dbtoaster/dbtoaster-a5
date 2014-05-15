@@ -14,6 +14,9 @@ struct
 
    (* what is below is not part of the Ring.Base module type *)
 
+    let is_zero (v: t) = match v with | zero -> true | _    -> false
+
+    let is_one (v: t) = match v with | one -> true | _   -> false  
 
    let delta x = match x with Const c -> zero | Incr c -> (Const c);;
 end;;
@@ -105,6 +108,10 @@ struct
 
    let  zero = A
    let  one  = B
+
+   let is_zero (v: t) = match v with | zero -> true | _    -> false
+
+   let is_one (v: t) = match v with | one -> true | _   -> false  
 
    let data x = match x with A -> A2 | B -> B2 | C(y) -> C2
 end
