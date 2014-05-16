@@ -13,9 +13,9 @@ The DBToaster compiler is used to generate incremental maintenance (M3) programs
 Several dependencies are needed to run DBToaster.
 
 <?= section("Windows")?>
-We tested DBToaster successfully on Windows 7 with Java 7 and <a href="http://cygwin.com/">Cygwin (32-bit)</a>.
+We tested DBToaster successfully on Windows 7 with the Oracle JRE 8 and <a href="http://cygwin.com/">Cygwin (32-bit)</a>.
 
-To launch DBToaster, install Ocaml 4.01.0-1 and launch it through the Cygwin shell.
+To launch DBToaster, launch it through the Cygwin shell (no package required besides the basic ones).
 
 <p>
    To generate standalone C++ binaries the following packages are required additionally:
@@ -37,8 +37,6 @@ To launch DBToaster, install Ocaml 4.01.0-1 and launch it through the Cygwin she
 <?= section("OS X")?>
 
 We recommend <a href="http://brew.sh/">Homebrew</a> to install the required dependencies on OS X as well as Java 7.
-
-To run DBToaster the pacakge <tt>ocaml</tt> is required.
 
 <p>
    Install the <tt>scala</tt> formula to compile Scala standalone binaries and <tt>boost</tt> to compile C++ standalone binaries.
@@ -115,7 +113,6 @@ $> ./b2
 
 <ul>
    <li>Java 7</li>
-   <li>Ocaml</li>
 </ul>
 
 <p>
