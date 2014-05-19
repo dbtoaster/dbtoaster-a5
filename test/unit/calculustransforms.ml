@@ -106,6 +106,12 @@ in
    test "Schema-Permitted with Nested Agg" [var "A"]
       "R(A) * (B ^= AggSum([], R(C) * {C < A}))"
       "(B ^= AggSum([], R(C) * {C < A})) * R(A)";
+   test "Forbidden by Lift Scope" []
+      "R(A,B) * (C ^= AggSum([A], R(A,B) * (X ^= B))) * {C > 0}"   
+      "R(A,B) * (C ^= AggSum([A], R(A,B) * (X ^= B))) * {C > 0}";
+   test "Forbidden by Agg Scope" []  
+      "R(A,B) * (AggSum([A], R(A,B) * (X ^= B)))"   
+      "R(A,B) * (AggSum([A], R(A,B) * (X ^= B)))";      
 ;;
 
 let test ?(scope=[]) msg schema input output =
@@ -232,9 +238,12 @@ in
    test "Materialized terminal lift" [var "B"]
       "AggSum([A], (M1_L1_1(int)[][A,B] * (E ^= M1_L1_1(int)[][] * B)))"
       "AggSum([A], M1_L1_1(int)[][A,B])";
-   test "Aggregation over a non-agg lift" [var "A"]
+    test "Aggregation over a non-agg lift" [var "A"]
       "AggSum([A], R(A,B) * (E ^= R(C,D) * B))"
-      "AggSum([A], R(A,B) * (E ^= R(C,D) * B))";
+      "AggSum([A], R(A,B) * (E ^= R(C,D) * B))"; 
+    test ~scope:[var "C"; var "D"] "Aggregation over an agg lift" [var "A"]
+      "AggSum([A], R(A,B) * (E ^= R(C,D) * B))"
+      "AggSum([A], R(A,B))"; 
    test "Lift in a sum, ivar on RHS" []
       "(R(A) + (A ^= B)) * {A < 3}"
       "(R(A) + (A ^= B)) * {A < 3}";
@@ -247,7 +256,10 @@ in
    "(-1 * ((A + 1)) * ({B = 'FRANCE'}))";
    test "Relation with duplicate entries" []
       "(B ^= dA) * R(dA,B)"
-      "R(dA,B) * {B = dA}"   
+      "R(dA,B) * {B = dA}";
+   test "Forbidden by scope" [var "B"]
+      "(B ^= 4) * R(B) * AggSum([], R(A, B) * B)"
+      "(B ^= 4) * R(B) * AggSum([], R(A, B) * B)";
 
 ;;
 let test msg input output =
@@ -566,3 +578,38 @@ in
                                  {0 = CMPVAR})
                 ))))"
         "AggSum([B], R(B, C) * AggSum([], (CMPVAR ^= S(B)) * (CMPVAR ^= 0)))";
+    
+    test "LiftAndSchemas" ["dA"; "dB"; "dC"] ["R_A"; "R_B"]
+        "((R_B ^= 42) * 
+           AggSum([R_B, R_A], ((R_A ^= dA) * (R_B ^= dB) * (R_C ^= dC) * R_C)))"
+        "(R_B ^= dB) * (R_A ^= dA) * (R_B ^= 42) * dC";
+    test "TPCH-8" []["TOTAL_NAME"]
+        "((TOTAL_NAME ^= 42) * R(R_A, R_B, R_C) * (TOTAL_VOLUME ^= R_C) *
+  (TOTAL_NAME ^= R_B) * (TOTAL_YEAR ^= R_A) * TOTAL_VOLUME *
+  (__sql_inline_agg_2 ^=
+    AggSum([], 
+      ((__sql_inline_agg_1 ^=
+         AggSum([TOTAL_YEAR], 
+           (AggSum([TOTAL_YEAR, TOTAL_NAME, TOTAL_VOLUME], 
+              (R(R_A, R_B, R_C) * (TOTAL_VOLUME ^= R_C) *
+                (TOTAL_NAME ^= R_B) * (TOTAL_YEAR ^= R_A))) *
+             TOTAL_VOLUME))) *
+        {[listmax:int](1, __sql_inline_agg_1)}))) *
+  {[/:float](__sql_inline_agg_2)})"
+        "((TOTAL_NAME ^= 42) * R(R_A, R_B, R_C) *
+  (__sql_inline_agg_2 ^=
+    AggSum([], 
+      ((__sql_inline_agg_1 ^=
+         AggSum([R_A], 
+           (AggSum([R_A, TOTAL_NAME, TOTAL_VOLUME], 
+              (R(R_A, R_B, R_C) * (TOTAL_NAME ^= R_B) *
+                (TOTAL_VOLUME ^= R_C))) *
+             TOTAL_VOLUME))) *
+        {[listmax:int](1, __sql_inline_agg_1)}))) *
+  (TOTAL_NAME ^= R_B) * R_C * {[/:float](__sql_inline_agg_2)})";
+    test "LiftAndScope" [] ["A"; "B"]
+       "R(A,B) * (X ^= 5) * (Y ^= AggSum([A], R(A,B) * (X ^= B))) * {Y < 0}"
+       "R(A,B) * (Y ^= AggSum([A], R(A,B))) * {Y < 0}";
+    test "LiftAndScope2" [] ["A"; "B"]
+       "(X ^= 5) * R(A,B) * (Y ^= AggSum([A], R(A,B) * (X ^= B))) * {Y < 0}"
+       "R(A,B) * (Y ^= AggSum([A], R(A,B))) * {Y < 0}";

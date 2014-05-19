@@ -497,10 +497,12 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
       if not (C.expr_is_singleton ~scope:scope expr_sub) then (
          if force then expr else
          raise (CouldNotUnifyException("Can only unify lifts of singletons"));
-      ) else
-      
+      ) else 
+
+      let expr_scope = ListAsSet.union scope [lift_v] in
       let rewritten = 
-      C.rewrite_leaves (fun _ x -> begin match x with
+      C.rewrite_leaves ~scope:expr_scope ~schema:schema 
+        (fun _ x -> begin match x with
          (* No Arithmetic over lone values means they can take non-float/int
             values. *)
          | Value(ValueRing.Val(AVar(v))) when v = lift_v -> expr_sub
@@ -590,7 +592,8 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
             (* the subexp is already rewritten *)
          | Lift(v, subexp) -> C.mk_lift v subexp
             
-      end) expr
+      end) 
+      (fun (local_scope, _) _ -> List.mem lift_v local_scope) expr
       in 
          Debug.print "LOG-UNIFY-LIFTS" (fun () ->
             "Successfully unified ("^(string_of_var lift_v)^" ^= "^
@@ -736,8 +739,9 @@ let advance_lifts scope expr =
    C.rewrite ~scope:scope (fun _ x -> CalcRing.mk_sum x)
    (fun (scope, _) pl ->
       Debug.print "LOG-ADVANCE-LIFTS" (fun () -> 
-         "Advance Lifts: processing " ^
-         (CalculusPrinter.string_of_expr (CalcRing.mk_prod pl)));
+         "Advance Lifts: processing " ^         
+         (CalculusPrinter.string_of_expr (CalcRing.mk_prod pl)) ^
+         (ListExtras.ocaml_of_list string_of_var scope));
       CalcRing.mk_prod (
          List.fold_left (fun curr_ret curr_term ->
             begin match curr_term with
@@ -776,6 +780,7 @@ let advance_lifts scope expr =
                   C.mk_aggsum new_gb_vars subexp
             | _ -> CalcRing.mk_val x
          end)
+   (fun _ _ -> true)
    expr
 ;;
 
@@ -1203,6 +1208,7 @@ let factorize_polynomial (scope:var_t list) (expr:C.expr_t): C.expr_t =
       (fun _ -> CalcRing.mk_prod)
       (fun _ -> CalcRing.mk_neg)
       (fun _ -> CalcRing.mk_val)
+      (fun _ _ -> true)      
       (if Debug.active "AGGRESSIVE-FACTORIZE" 
          then combine_values (CalcRing.polynomial_expr expr)
          else expr)

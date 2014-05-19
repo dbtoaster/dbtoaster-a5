@@ -446,35 +446,48 @@ let expr_is_singleton ?(scope=[]) (expr:expr_t): bool =
    @param prod_fn  The function to fold down elements joined by a product
    @param neg_fn   The function to fold down a negated element
    @param leaf_fn  The function to transform a leaf element
+   @param leaf_descend_fn The function to decide whether to descent 
    @param e        A Calculus expression
    @return         The final folded value
 *)
-let rec rewrite ?(scope = []) ?(schema = [])
+let rec rewrite ?(scope = []) ?(schema = []) 
              (sum_fn:   schema_t -> expr_t list     -> expr_t)
              (prod_fn:  schema_t -> expr_t list     -> expr_t)
              (neg_fn:   schema_t -> expr_t          -> expr_t)
              (leaf_fn:  schema_t -> CalcRing.leaf_t -> expr_t)
+             (leaf_descend_fn: schema_t -> CalcRing.leaf_t -> bool)
              (e: expr_t): expr_t =
    let rcr e_scope e_schema = 
-      rewrite ~scope:e_scope ~schema:e_schema sum_fn prod_fn neg_fn leaf_fn
+      rewrite ~scope:e_scope ~schema:e_schema 
+        sum_fn prod_fn neg_fn leaf_fn leaf_descend_fn
    in
    fold ~scope:scope ~schema:schema sum_fn prod_fn neg_fn 
         (fun (local_scope, local_schema) lf ->
-            leaf_fn (local_scope, local_schema) (begin match lf with
-                  | AggSum(gb_vars,sub_t) -> 
-                     (AggSum(gb_vars,(rcr local_scope gb_vars sub_t)))
-                  | Lift(v,sub_t) -> 
-                     (Lift(v,(rcr local_scope 
-                                  (ListAsSet.diff local_schema [v])
-                                  sub_t)))
-                  | External(en, eiv, eov, et, Some(em)) ->
-                     (External(en, eiv, eov, et, Some(rcr eiv eov em)))
-(***** BEGIN EXISTS HACK *****)
-                  | Exists(subexp) -> 
-                     (Exists(rcr local_scope local_schema subexp))
-(***** END EXISTS HACK *****)
-                  | _ -> lf
-         end)
+           leaf_fn (local_scope, local_schema) (
+             let (lf_ivars, lf_ovars) = schema_of_expr (CalcRing.mk_val lf) in
+             let lf_vars = ListAsSet.union lf_ivars lf_ovars in
+             let lf_scope = ListAsSet.inter local_scope lf_vars in 
+             begin match lf with
+                 | AggSum(gb_vars,sub_t) -> 
+                    if (leaf_descend_fn (lf_scope, local_schema) lf) 
+                    then (AggSum(gb_vars,(rcr lf_scope gb_vars sub_t)))
+                    else lf
+                 | Lift(v,sub_t) -> 
+                    if (leaf_descend_fn (lf_scope, local_schema) lf) 
+                    then (Lift(v,(rcr lf_scope 
+                                     (ListAsSet.diff local_schema [v])
+                                     sub_t)))
+                    else lf
+                 | External(en, eiv, eov, et, Some(em)) ->
+                    if (leaf_descend_fn (lf_scope, local_schema) lf) 
+                    then (External(en, eiv, eov, et, Some(rcr eiv eov em)))
+                    else lf
+                 | Exists(subexp) -> 
+                    if (leaf_descend_fn (lf_scope, local_schema) lf) 
+                    then (Exists(rcr lf_scope local_schema subexp))
+                    else lf
+                 | _ -> lf
+             end)
    ) e
 
 
@@ -489,17 +502,20 @@ let rec rewrite ?(scope = []) ?(schema = [])
    @param scope    (optional) The scope in which [e] is evaluated
    @param schema   (optional) The schema expected of [e]
    @param leaf_fn  The function to transform a leaf element
+   @param leaf_descend_fn The function to decide whether to descent    
    @param e        A Calculus expression
    @return         The final folded value
 *)
-let rewrite_leaves ?(scope = []) ?(schema = [])
+let rewrite_leaves ?(scope = []) ?(schema = []) 
                    (leaf_fn:schema_t -> CalcRing.leaf_t -> expr_t)
+                   (leaf_descend_fn:schema_t -> CalcRing.leaf_t -> bool)
                    (e: expr_t): expr_t =
-   rewrite ~scope:scope ~schema:schema
+   rewrite ~scope:scope ~schema:schema 
       (fun _ e -> CalcRing.mk_sum e)
       (fun _ e -> CalcRing.mk_prod e)
       (fun _ e -> CalcRing.mk_neg e)
-      leaf_fn e
+      leaf_fn 
+      leaf_descend_fn e
 
 (**
    Erase all the IVC metadata from externals in the specified expression
@@ -511,7 +527,7 @@ let strip_calc_metadata:(expr_t -> expr_t) =
       | External(en, eiv, eov, et, em) ->
          CalcRing.mk_val (External(en, eiv, eov, et, None))
       | _ -> CalcRing.mk_val lf
-   )
+   ) (fun _ _ -> true)
 
 (**
    Obtain a list of all variables that appear in the specified expression, even 
@@ -602,7 +618,7 @@ let rename_vars (mapping:(var_t,var_t)ListAsFunction.table_fn_t)
 (***** BEGIN EXISTS HACK *****)
          | Exists(subexp)             -> Exists(subexp)
 (***** END EXISTS HACK *****)
-      end))
+      end)) (fun _ _ -> true)
       expr
    
 (**

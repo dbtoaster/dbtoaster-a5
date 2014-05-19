@@ -217,3 +217,9 @@ test "SumADivB"
          {[/:float](__sql_inline_agg_2)}
     )))"
 ;;
+
+test ~opt_out:true "LiftInSchema"
+    (InsertEvent(schema_rel "R" ["dA"; "dB"; "dC"]))
+    "((R_B ^= 42) * AggSum([R_B, R_A], (R(R_A, R_B, R_C) * R_C)))"
+    "(R_B ^= dB) * (R_A ^= dA) * (R_B ^= 42) * dC"
+;;

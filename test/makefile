@@ -88,6 +88,8 @@ query_simple:
 	@$(FAST_QUERY_TEST) simple/r_btimesa
 	@$(FAST_QUERY_TEST) simple/r_btimesacorrelated
 	@$(FAST_QUERY_TEST) simple/r_count
+	@$(FAST_QUERY_TEST) simple/r_case
+	@$(FAST_QUERY_TEST) simple/r_case2
 	@$(FAST_QUERY_TEST) simple/r_divb
 	@$(FAST_QUERY_TEST) simple/r_existsnestedagg
 	@$(FAST_QUERY_TEST) simple/r_gbasumb
