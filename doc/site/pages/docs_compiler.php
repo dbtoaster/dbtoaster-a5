@@ -83,13 +83,15 @@
 These flags are passed to the dbtoaster compiler with the <span class="code">-F</span> flag.  The <span class="code">-O1</span> and <span class="code">-O3</span> flags each activate a subset of these flags. <span class="code">-O2</span> is used by default (no optimization flags active).
 
 <dl>
-  
+<!--
+   The new backend currently does not handle input variables: https://github.com/TCKnet/DDBToaster/issues/23
+
   <dt class="code">HEURISTICS-ENABLE-INPUTVARS</dt>
   <dd>Enable experimental support for incremental view caches.  Queries with joins (and correlations) on inequality predicates are implemented in a way that corresponds roughly to nested-loop one-way joins in stream processing (a tree-based implementation is in development).  If this flag is on, the compiler will cache and incrementally maintain the results of this one-way join.  This is typically a bad idea, since the cost of maintaining the cached values is often higher than the cost of the nested loop scan.  However, if the domains of the variables appearing in the join predicate are small, this flag can drastically improve performance (e.g., for the VWAP example query).  Future versions of DBToaster will include a cost-based optimizer that automatically applies this flag when appropriate.  This optimization is not activated by default at any optimization level.</dd>  
 
   <dt class="code">HEURISTICS-AGGRESSIVE-INPUTVARS</dt>
   <dd> Enable experimental support for aggresive materialization of maps with input variables (view caches). It requires the HEURISTICS-ENABLE-INPUTVARS flag to be active. If the calculus optimizations are disabled (see CALC-NO-OPTIMIZE), this option might significantly prolong the compilation time. Note: the C++ backend might fail to compile certain classes of queries when this flag is on.</dd>  
-
+-->
   <dt class="code">HEURISTICS-PULL-OUT-VALUES</dt>
   <dd>Prevent value terms (variables and comparisons) from being materialized inside maps. In certain cases (e.g., mddb/query2.sql), this option reduces the number of generated maps and speed-ups the compilation time at the expense of doing more computation at runtime.</dd>  
 
@@ -102,9 +104,6 @@ These flags are passed to the dbtoaster compiler with the <span class="code">-F<
   <dt class="code">HEURISTICS-ALWAYS-UPDATE</dt>
   <dd>In some cases, it is slightly more efficient to re-evaluate expressions from scratch rather than maintaining them with their deltas (for example, certain queries containing nested aggregates).  Normally the compiler's heuristics will make a best-effort guess about whether to re-evaluate or incrementally maintain the expression.  If this flag is on, the compiler will incrementally maintain all expressions and never re-evaluate.</dd>  
   
-  <dt class="code">HASH-STRINGS</dt>
-  <dd>Do not use strings during evalation. All strings are immediately replaced by their integer hashes (using each runtime's native hashing mechanism) as soon as they are parsed.  This makes query evalation faster, but is not guaranteed to produce correct results if a hash collision occurs.  Furthermore, strings that would normally appear in the output are output as their integer hash values instead.  This optimization is not activated by default at any optimization level.</dd>    
-
   <dt class="code">COMPILE-WITH-STATIC</dt>
   <dd>Perform static linking on compiled binaries (e.g., invoke gcc with <span class="code">-static</span>).  The resulting binaries will be faster the first time they are run.  This optimization is not activated by default at any optimization level.</dd>  
 
@@ -122,9 +121,6 @@ These flags are passed to the dbtoaster compiler with the <span class="code">-F<
 
   <dt class="code">COMPILE-WITHOUT-OPT</dt>
   <dd>Request that the second-stage compiler disable any unnecessary optimizations (e.g., by default, GCC is invoked with <span class="code">-O3</span>, but not if this flag is active). This optimization is automatically activated by <span class="code">-O1</span>.</dd>
-
-  <dt class="code">WIDE-TUPLE</dt>
-  <dd>Use nested tuples in generated C++ programs. This option is mostly used at lower compilation levels (depth 0 or 1) to overcome the Boost limitation that tuples may contain at most 50 attributes.</dd>
 
   <dt class="code">WEAK-EXPR-EQUIV</dt>
   <dd>When testing for expression equivalence, perform only a naive structural comparison rather than a (at least quadratic, and potentially exponential) matching.  This accelerates compilation, but may result in the creation of duplicate maps.  This optimization is automatically activated by <span class="code">-O1</span>.</dd>

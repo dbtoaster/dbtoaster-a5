@@ -240,7 +240,48 @@ class Query extends Actor {
    The whole process is guarded by a timeout. If the timeout is reached, the actor will stop to process tuples.
 </p>
 
-<?=section("Using queries in Java programs")?>
+<?=section("Partial materialization")?>
+
+<p>
+   Some of the work involved in maintaining the results of a query can be saved by performing partial materialization and only materialize the result when requested (i.e. when all tuples have been processed).
+   This behaviour is especially desirable when the rate of querying the results is lower than the rate of updates, and can be enabled through the <tt>-F EXPRESSIVE-TLQS</tt> command line flag.
+</p>
+
+<p>
+   Below is an example of a query where partial materialization is indeed beneficial (this query can be found as <tt>examples/queries/simple/r_lif_of_count.sql</tt> in the DBToaster download).
+</p>
+
+<div class="codeblock">
+CREATE STREAM R(A int, B int)
+FROM FILE 'examples/data/tiny/r.dat' LINE DELIMITED
+csv ();
+
+SELECT r2.C FROM (
+  SELECT r1.A, COUNT(*) AS C FROM R r1 GROUP BY r1.A
+) r2;
+</div>
+
+<p>
+   When compiling this query with <tt>-F EXPRESSIVE-TLQS</tt>, the generated code now has functions representing top-level results:
+</p>
+
+<div class="codeblock">
+def COUNT() = {
+   val mCOUNT = M3Map.make[Long,Long]()
+   val agg1 = M3Map.temp[Long,Long]()
+   COUNT_1_E1_1.foreach { (r2_a,v1) =>
+      val l1 = COUNT_1_E1_1.get(r2_a);
+      agg1.add(l1,(if (v1 != 0) 1L else 0L));
+   }
+   agg1.foreach { (r2_c,v2) =>
+      mCOUNT.add(r2_c,v2)
+   }
+
+   mCOUNT
+}
+</div>
+
+<?=chapter("Using queries in Java programs")?>
 <p>
    <i>Note:</i> The DBToaster library currently does not offer a nice interface for Java applications. We are planning to add a nicer future once the Scala interface is stable.
 </p>
