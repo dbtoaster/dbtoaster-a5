@@ -233,3 +233,25 @@ width: 100%;
 .dropmenudiv_b a:hover{ /*THEME CHANGE HERE*/
 background-color: #edf3f3;
 }
+
+.axis {
+  font: 10pt sans-serif;
+}
+
+.axis path,
+.axis line {
+  fill: none;
+  stroke: #000;
+}
+
+.barscala {
+  fill: #7fc97f;
+}
+
+.barscalalms {
+  fill: #beaed4;
+}
+
+.barcpp {
+  fill: #fdc086;
+}
