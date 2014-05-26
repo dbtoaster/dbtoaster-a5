@@ -132,7 +132,7 @@ let string_of_m3 (prog:prog_t): string =
       match x with DSTable(_) -> false | _ -> true) !(prog.maps)))^"\n\n"^
    "-------------------- QUERIES --------------------\n"^
    (ListExtras.string_of_list ~sep:"\n\n" (fun (qname,qdefn) ->
-      "DECLARE QUERY "^qname^" := "^(Calculus.string_of_expr qdefn)^";"
+      "DECLARE QUERY "^qname^" :=\n"^(CalculusPrinter.string_of_expr qdefn)^";"
    ) !(prog.queries))^"\n\n"^
    "------------------- TRIGGERS --------------------\n"^
    (ListExtras.string_of_list ~sep:"\n\n" string_of_trigger !(prog.triggers))

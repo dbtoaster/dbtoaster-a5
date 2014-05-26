@@ -146,11 +146,11 @@ let mk_fn (n:string) (a:value_t list) (t:type_t):value_t =
 *)
 let rec string_of_value_leaf (leaf:value_leaf_t): string =
    begin match leaf with
-      | AConst(c) -> sql_of_const c
-      | AVar(v)   -> string_of_var v
-      | AFn(fname,fargs,ftype) ->
-         "[" ^ fname ^ " : " ^ (string_of_type ftype) ^ 
-         "](" ^ (ListExtras.string_of_list string_of_value fargs) ^ ")"
+   | AConst(c) -> sql_of_const c
+   | AVar(v)   -> string_of_var v
+   | AFn(fname,fargs,ftype) ->
+      "[" ^ fname ^ " : " ^ (string_of_type ftype) ^ "](" ^
+      (ListExtras.string_of_list ~sep:", " string_of_value fargs) ^ ")"
    end
 
 (**

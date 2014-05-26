@@ -160,33 +160,32 @@ type schema_t = (var_t list * var_t list)
    @param leaf  A base element of the Calculus ring
    @return      The string representation of [leaf]
 *)
-let rec string_of_leaf (leaf:CalcRing.leaf_t): string = 
+let rec string_of_leaf (leaf:CalcRing.leaf_t): string =
    begin match leaf with
-      | Value(ValueRing.Val(AVar(_)|AConst(_)) as v) -> 
+      | Value(ValueRing.Val(AVar(_)|AConst(_)) as v) ->
          (Arithmetic.string_of_value v)
-      | Value(v) -> 
+      | Value(v) ->
          "{"^(Arithmetic.string_of_value v)^"}"
-         
       | External(ename,eins,eouts,etype,emeta) ->
          ename^
          "("^(string_of_type etype)^")"^"["^
          (ListExtras.string_of_list ~sep:", " string_of_var eins)^"]["^
          (ListExtras.string_of_list ~sep:", " string_of_var eouts)^"]"^
-         (match emeta with | None -> "" 
+         (match emeta with | None -> ""
                            | Some(s) -> ":("^(string_of_expr s)^")")
-      | AggSum(gb_vars, subexp) -> 
+      | AggSum(gb_vars, subexp) ->
          "AggSum(["^(ListExtras.string_of_list ~sep:", " string_of_var gb_vars)^
          "],("^(string_of_expr subexp)^"))"
-      | Rel(rname, rvars)       -> 
+      | Rel(rname, rvars)       ->
          rname^"("^(ListExtras.string_of_list ~sep:", " string_of_var rvars)^")"
-      | Cmp(op,subexp1,subexp2) -> 
+      | Cmp(op,subexp1,subexp2) ->
          "{"^(string_of_value subexp1)^" "^
              (string_of_cmp op)^
          " "^(string_of_value subexp2)^"}"
-      | Lift(target, subexp)    -> 
+      | Lift(target, subexp)    ->
          "("^(string_of_var target)^" ^= "^(string_of_expr subexp)^")"
 (***** BEGIN EXISTS HACK *****)
-      | Exists(subexp) -> 
+      | Exists(subexp) ->
          "Exists("^(string_of_expr subexp)^")"
 (***** END EXISTS HACK *****)
    end
