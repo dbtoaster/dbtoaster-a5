@@ -244,14 +244,45 @@ background-color: #edf3f3;
   stroke: #000;
 }
 
-.barscala {
-  fill: #7fc97f;
-}
-
-.barscalalms {
-  fill: #beaed4;
+rect:hover {
+  stroke: #888;
+  stroke-width: 1pt;
 }
 
 .barcpp {
   fill: #fdc086;
+}
+
+.barrep {
+  fill: #a6cee3;
+}
+
+.bardbx {
+  fill: #1f78b4;
+}
+
+.barspy {
+  fill: #b2df8a;
+}
+
+.barscala {
+  fill: #33a02c;
+}
+
+.barscalalms {
+  fill: #fdbf6f;
+}
+
+.barcpp {
+  fill: #ff7f00;
+}
+
+.barivm {
+  fill: #fb9a99;
+}
+
+.datatooltip {
+  border: 1pt solid #888;
+  background-color: #ddd;
+  padding: 2pt;
 }

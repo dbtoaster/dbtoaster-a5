@@ -1,34 +1,113 @@
 <script src="http://d3js.org/d3.v3.min.js"></script>
 
-<div class="bakeoff"></div>
-<script>
+<label class="checkbox-inline">
+   <input class="filter_data" id="cb_rep" type="checkbox"> REP
+</label>
+<label class="checkbox-inline">
+   <input class="filter_data" id="cb_dbx" type="checkbox" checked> DBX
+</label>
+<label class="checkbox-inline">
+   <input class="filter_data" id="cb_spy" type="checkbox" checked> SPY
+</label>
+<label class="checkbox-inline" id="lbl_scala">
+   <input class="filter_data" id="cb_scala" type="checkbox"> Scala
+</label>
+<label class="checkbox-inline">
+   <input class="filter_data" id="cb_scalalms" type="checkbox"> Scala + LMS
+</label>
+<label class="checkbox-inline">
+   <input class="filter_data" id="cb_cpp" type="checkbox" checked> C++
+</label>
+<label class="checkbox-inline">
+   <input class="filter_data" id="cb_ivm" type="checkbox"> IVM
+</label>
 
-var margin = {top: 20, right: 20, bottom: 70, left: 40},
-    width = 600 - margin.left - margin.right,
+<div class="bakeoff">
+</div>
+
+<script>
+var tooltip = d3.select("body")
+   .append("div")
+   .attr("class", "datatooltip")
+   .style("position", "absolute")
+   .style("z-index", "10")
+   .style("visibility", "hidden");
+
+var margin = {top: 20, right: 20, bottom: 70, left: 60},
+    width = 700 - margin.left - margin.right,
     height = 300 - margin.top - margin.bottom;
 
+var bakeoff = d3.select(".bakeoff")
+
 var x = d3.scale.ordinal().rangeRoundBands([0, width], .05);
+var y = d3.scale.log().range([height, 0]);
 
-var y = d3.scale.linear().range([height, 0]);
-
-var xAxis = d3.svg.axis()
-   .scale(x)
-   .orient("bottom");
-
-var yAxis = d3.svg.axis()
-   .scale(y)
-   .orient("left")
-   .ticks(10);
-
-var svg = d3.select(".bakeoff").append("svg")
+var svg = bakeoff.append("svg")
       .attr("height", height + margin.top + margin.bottom)
    .append("g")
       .attr("transform",
          "translate(" + margin.left + "," + margin.top + ")");
 
-d3.csv("data/bakeoff.csv", function(error, data) {
+function drawBars(rawData, rawGroups) {
+   var groups = rawGroups.filter(function (g) {
+      return d3.select("#cb_" + g).node().checked;
+   });
+   var data = rawData.filter(function (d) {
+      return groups.indexOf(d.group) >= 0;
+   });
+
+   var barwidth = x.rangeBand() / (groups.length + 1);
+   var bars = svg.selectAll("rect").data(data);
+
+   bars.enter().append("rect")
+      .attr("class", function(d) { return "bar" + d.group; })
+      .attr("x", function(d) { return x(d.query) + (0.5 + groups.indexOf(d.group)) * barwidth; })
+      .attr("width", barwidth)
+      .on("mouseover", function(d) { return tooltip.text(d.v + " Tuples/s").style("visibility", "visible"); })
+      .on("mousemove", function(d) { return tooltip.style("top", (event.pageY - 10) + "px").style("left",(event.pageX + 10) + "px"); })
+      .on("mouseout", function(d) { return tooltip.style("visibility", "hidden");})
+      .attr("y", height)
+      .attr("height", 0)
+      .transition()
+      .attr("y", function(d) { return y(d.v); })
+      .attr("height", function(d) { return height - y(d.v); });
+
+   bars.transition()
+      .attr("class", function(d) { return "bar" + d.group; })
+      .attr("x", function(d) { return x(d.query) + (0.5 + groups.indexOf(d.group)) * barwidth; })
+      .attr("width", barwidth)
+      .attr("y", height)
+      .attr("height", 0)
+      .attr("y", function(d) { return y(d.v); })
+      .attr("height", function(d) { return height - y(d.v); });
+
+   bars.exit().transition().attr("y", height).attr("height", 0).remove();
+}
+
+d3.csv("data/bakeoff.csv", function(error, rawInput) {
+   var data = [];
+   var groups = ["rep", "dbx", "spy", "scala", "scalalms", "cpp", "ivm"];
+
+   rawInput.forEach(function (d) {
+      groups.forEach(function (g) {
+         var newData = { query: d.query, group: g, v: d[g] };
+         data.push(newData);
+      });
+   });
+
    x.domain(data.map(function(d) { return d.query; }));
-   y.domain([0, d3.max(data, function(d) { return Math.max(d.cpp, d.scala, d.scalalms); })]);
+   y.domain([1, d3.max(data, function(d) { return Math.max(d.v); })]).nice();
+
+   var xAxis = d3.svg.axis()
+      .scale(x)
+      .orient("bottom");
+
+   var yAxis = d3.svg.axis()
+      .scale(y)
+      .orient("left")
+      .ticks(10);
+
+   drawBars(data, groups);
 
    svg.append("g")
       .attr("class", "x axis")
@@ -45,40 +124,13 @@ d3.csv("data/bakeoff.csv", function(error, data) {
       .call(yAxis)
    .append("text")
       .attr("transform", "rotate(-90)")
-      .attr("y", 6)
-      .attr("dy", ".71em")
+      .attr("dy", "-3.5em")
       .style("text-anchor", "end")
-      .text("Execution time (s)");
+      .text("Average Refresh Rate (1/s)");
 
-   var groups = ["scala", "scalalms", "cpp"];
-   var barwidth = x.rangeBand() / (groups.length + 1)
-
-   svg.selectAll("bar")
-      .data(data)
-   .enter().append("rect")
-      .attr("class", "barscala")
-      .attr("x", function(d) { return x(d.query) + 0.5 * barwidth; })
-      .attr("width", barwidth)
-      .attr("y", function(d) { return y(d.scala); })
-      .attr("height", function(d) { return height - y(d.scala); });
-
-   svg.selectAll("bar")
-      .data(data)
-   .enter().append("rect")
-      .attr("class", "barscalalms")
-      .attr("x", function(d) { return x(d.query) + 1.5 * barwidth; })
-      .attr("width", barwidth)
-      .attr("y", function(d) { return y(d.scalalms); })
-      .attr("height", function(d) { return height - y(d.scalalms); });
-
-   svg.selectAll("bar")
-      .data(data)
-   .enter().append("rect")
-      .attr("class", "barcpp")
-      .attr("x", function(d) { return x(d.query) + 2.5 * barwidth; })
-      .attr("width", barwidth)
-      .attr("y", function(d) { return y(d.cpp); })
-      .attr("height", function(d) { return height - y(d.cpp); });
+   d3.selectAll(".filter_data").on("change", function() {
+      drawBars(data, groups);
+   });
 });
 
 </script>
