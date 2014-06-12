@@ -143,7 +143,9 @@ let compile_map (compute_delta:bool)
    in
    let triggers = ref [] in
    let trigger_todos = ref [] in
-   let events = (if (Debug.active "IGNORE-DELETES")
+   let events = (if (Debug.active "BATCH-UPDATES")
+                 then [(fun (rname,_,_) -> Schema.BatchUpdate(rname)), ""]
+                 else if (Debug.active "IGNORE-DELETES")
                  then [(fun x -> Schema.InsertEvent(x)), ""]
                  else [(fun x -> Schema.DeleteEvent(x)), "_m";
                        (fun x -> Schema.InsertEvent(x)), "_p"])

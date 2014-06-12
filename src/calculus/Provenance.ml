@@ -115,6 +115,15 @@ let rec provenance_of_expr ?(in_scope=[]) ?(inline_vars=[]) (expr:expr_t):
                rel_source rn
             )
 
+      | CalcRing.Val(DeltaRel(rn,rv)) ->
+            (  List.map (fun v -> (v, rel_source rn)) rv,
+               rel_source rn
+            )
+            
+      | CalcRing.Val(DomainDelta(subexp)) ->
+         let (var_prov, val_prov) = rcr scope subexp in
+            ( var_prov, inline_source )
+
       | CalcRing.Val(AggSum(gb_vars, subexp)) ->
          (* The value provenance is affected by any gb_vars that get projected
             away and aggregated over *)

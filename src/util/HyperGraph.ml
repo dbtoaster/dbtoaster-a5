@@ -2,18 +2,18 @@
    Tools for working with HyperGraphs, and in particular identifying connected
    components
 
- compute the connected components of the hypergraph where the nodes
+   compute the connected components of the hypergraph where the nodes
    in guard_set may be ignored.
    factorizes a MultiNatJoin of leaves given in list form.
 
    The top-level result list thus conceptually is a MultiProduct.
    
    connected_unique_components treats the edge list as a set; Each edge appears 
-   exactly once in the returned component list.  
+      exactly once in the returned component list.  
    connected_components treats the edge list as a bag.
    
    Edges in any individual returned edge list are not guaranteed to be in the
-   same order that they were first received in.  HOWEVER, two edges will never
+   same order that they were first received in.  However, two edges will never
    be reordered (with respect to their initial order) unless:
       The two edges are part of separate, disconnected components in the 
       subgraph consisting of all edges to the left of (and including) the 
@@ -32,11 +32,11 @@
 *)
 let rec connected_unique_components (get_nodes: 'edge_t -> 'node_t list)
                                     (hypergraph: 'edge_t list): 
-                                       ('edge_t list list) =
+                                    ('edge_t list list) =
    if hypergraph = [] then []
    else
-   (* Given a horizon of (connected) nodes and a set of edges, find the full set
-      of nodes connected to at least one node in the horizon *)
+   (* Given a horizon of (connected) nodes and a set of edges, find the full 
+      set of nodes connected to at least one node in the horizon *)
    let rec expand_node_horizon horizon graph_edge_nodes = 
       let horizon_extensions =
          List.filter (fun edge_nodes -> 

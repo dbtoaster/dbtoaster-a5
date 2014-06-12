@@ -27,7 +27,7 @@ let showdiff exp_str fnd_str =
        | _ -> ()
 ;;
 let log_test (title:string) (to_s:'a -> string) 
-                  (result:'a) (expected:'a) : unit =
+             (result:'a) (expected:'a) : unit =
    if result = expected then print_endline (title^": Passed")
    else (
       print_endline (title^": Failed");

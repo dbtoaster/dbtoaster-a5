@@ -318,6 +318,9 @@ let rec extract_from_calc (theta_vars: Type.var_t list)
 (***** END EXISTS HACK *****)
          | Calculus.Rel( reln, relv ) -> 
             create_pattern_map_from_access reln tvars relv
+         | Calculus.DeltaRel _ 
+         | Calculus.DomainDelta _ ->
+            failwith "M3Patterns does not support batch updates yet"   
          | Calculus.External( mapn, inv, outv, _, init_calc_opt ) -> 
             (* all input variables must be bound at this point in order 
                to be able to evaluate the expression *)

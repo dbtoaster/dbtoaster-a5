@@ -19,6 +19,8 @@ let rec maintain (formula: Calculus.expr_t) : Calculus.expr_t =
          | AggSum(gb_vars,subexp) -> 
             Calculus.mk_aggsum gb_vars (maintain subexp)
          | Rel _
+         | DeltaRel _
+         | DomainDelta _
          | Cmp _
          | Lift _ -> CalcRing.mk_val lf
 (***** BEGIN EXISTS HACK *****)

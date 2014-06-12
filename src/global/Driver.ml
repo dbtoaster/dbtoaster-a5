@@ -154,12 +154,15 @@ let specs:(Arg.key * Arg.spec * Arg.doc) list  = Arg.align [
    (  "--depth",
       (Arg.Int(fun d -> max_compile_depth := Some(d))),
       "       Set the compiler's maximum recursive depth");
-   (  "--batch",
+   (  "--reeval",
       (Arg.Unit(fun () -> 
          max_compile_depth := Some(0);
          Debug.activate "EXPRESSIVE-TLQS"
       )),
-      "       Generate a non-incremental (batch) query engine.");
+      "       Generate a non-incremental query engine.");
+   (  "--batch",
+      (Arg.Unit(fun () -> Debug.activate "BATCH-UPDATES")),
+      "       Generate a batch query engine.");
    (  "-I", 
       (Arg.String(ExternalCompiler.add_env "INCLUDE_HDR")),
       "dir    Add a directory to the second-stage compiler's include path");

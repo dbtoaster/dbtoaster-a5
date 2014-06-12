@@ -47,9 +47,14 @@ let extract_lifts scope expr =
             if (commutes ~scope:scope rhs term)
             then (CalcRing.mk_prod [lhs; term], rhs)
             else (lhs, CalcRing.mk_prod [rhs; term])
+
+         | CalcRing.Val(DomainDelta _) -> 
+            (CalcRing.mk_prod [lhs; term], rhs)
+
          | _ -> (lhs, CalcRing.mk_prod [rhs; term])
+   
    ) (CalcRing.one, CalcRing.one) (CalcRing.prod_list opt_expr)
-      
+   
 (**
    [delta_of_expr delta_event expr]
    
@@ -59,6 +64,13 @@ let extract_lifts scope expr =
    @return              The delta of [expr] with respect to [delta_event]
 *)
 let rec delta_of_expr (delta_event:Schema.event_t) (expr:C.expr_t): C.expr_t =
+
+   let template_batch_delta_of_rel delta_reln reln relv = 
+      if delta_reln = reln then
+         let deltarel = C.mk_deltarel reln relv in
+            CalcRing.mk_prod [ C.mk_domain deltarel; deltarel ]
+      else CalcRing.zero
+   in
    let template_delta_of_rel apply_sign (delta_reln,delta_relv,_) reln relv =
       if delta_reln = reln then 
          if (List.length relv) <> (List.length delta_relv)
@@ -75,20 +87,25 @@ let rec delta_of_expr (delta_event:Schema.event_t) (expr:C.expr_t): C.expr_t =
    in
    let empty_delta_of_rel (_:string) (_:var_t list) = CalcRing.zero in
    let error_delta_of_ext (_:external_t) = 
-      error expr "Can not take delta of an external"
+      error expr "Cannot take delta of an external"
    in
    let (delta_of_rel, delta_of_ext) =
       begin match delta_event with
          | Schema.InsertEvent(delta_rel) -> 
             (
-               (template_delta_of_rel (fun x -> x) delta_rel), 
+               (template_delta_of_rel (fun x -> x) delta_rel),
                (error_delta_of_ext)
             )
          | Schema.DeleteEvent(delta_rel) -> 
             (
-               (template_delta_of_rel CalcRing.mk_neg delta_rel), 
+               (template_delta_of_rel CalcRing.mk_neg delta_rel),
                (error_delta_of_ext)
             )
+         | Schema.BatchUpdate(delta_reln) ->
+            (  
+               (template_batch_delta_of_rel delta_reln), 
+               (error_delta_of_ext)
+            )            
          | Schema.CorrectiveUpdate(delta_ext_name, delta_ivars, delta_ovars,  
                                    delta_value, _) ->
             (
@@ -136,9 +153,13 @@ let rec delta_of_expr (delta_event:Schema.event_t) (expr:C.expr_t): C.expr_t =
                                                  (ListAsSet.inter ins outs) in
                   if sub_t_delta = CalcRing.zero
                   then CalcRing.zero
-                  else Calculus.mk_aggsum new_gb_vars (rcr sub_t)
+                  else Calculus.mk_aggsum new_gb_vars sub_t_delta
          (*****************************************)
             | Rel(reln,relv) -> delta_of_rel reln relv
+         (*****************************************)
+            | DeltaRel(_,_) -> CalcRing.zero
+         (*****************************************)
+            | DomainDelta(_) -> CalcRing.zero
          (*****************************************)
             | External(e) -> delta_of_ext e
          (*****************************************)

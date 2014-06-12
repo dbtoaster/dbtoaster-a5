@@ -754,6 +754,9 @@ let rec calc_to_k3_expr meta ?(generate_init = false) theta_vars_el calc :
             in
                ((rel_outs_el, rel_ret_ve, expr), meta)
          
+         | DeltaRel _ | DomainDelta _ -> 
+            failwith "M3ToK3 does not support batch updates yet"
+
          | External(mapn, eins, eouts, ext_type, einit_calc_opt) ->
             (* init_expr_opt will contain if required the schema of the
                initialization expression and the expression itself. *)

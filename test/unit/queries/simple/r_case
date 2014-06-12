@@ -1,0 +1,25 @@
+{
+  :path => "test/queries/simple/r_case.sql",
+  :datasets => {
+    "standard" => {
+      :toplevels => {
+        "QUERY_1_MKT_SHARE_1" => {
+          :type => :onelevel,
+          :expected => {
+            [1] => 1.0,
+            [2] => 0.857142857143,
+            [5] => 0.375
+          }
+        },
+        "QUERY_2_MKT_SHARE_2" => {
+          :type => :onelevel,
+          :expected => {
+            [1] => 1.0,
+            [2] => 0.857142857143,
+            [5] => 0.375
+          }
+        }
+      }
+    }
+  }
+}

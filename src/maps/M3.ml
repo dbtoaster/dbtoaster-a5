@@ -196,11 +196,13 @@ let add_rel (prog:prog_t) ?(source = Schema.NoSource)
                           ?(adaptor = ("", []))
                           (rel:Schema.rel_t): unit = 
    Schema.add_rel prog.db ~source:source ~adaptor:adaptor rel;
-   let (_,_,t) = rel in if t = Schema.TableRel then
+   let (rname,_,t) = rel in 
+   if t = Schema.TableRel then
       prog.maps     := (DSTable(rel)) :: !(prog.maps)
    else
       prog.triggers := { event = (Schema.InsertEvent(rel)); statements=ref [] }
                     :: { event = (Schema.DeleteEvent(rel)); statements=ref [] }
+                    :: { event = (Schema.BatchUpdate(rname)); statements=ref [] }
                     :: !(prog.triggers)
 ;;
 
@@ -273,8 +275,8 @@ let add_stmt (prog:prog_t) (event:Schema.event_t)
 *)
 let default_triggers () = 
    List.map (fun x -> { event = x; statements = ref [] })
-   [  Schema.SystemInitializedEvent;
-   ];;
+   [  Schema.SystemInitializedEvent ]
+;;
 
 (**[init db]
    
@@ -291,11 +293,12 @@ let init (db:Schema.t): prog_t =
       maps    = ref (List.map (fun x -> DSTable(x)) db_tables);
       triggers = 
          ref ((List.map (fun x -> { event = x; statements = ref [] })
-                       (List.flatten 
-                          (List.map (fun x -> 
-                                       [  Schema.InsertEvent(x); 
-                                          Schema.DeleteEvent(x)])
-                                    db_streams))) @
+            (List.flatten 
+               (List.map (fun (rname, rvars, rtype) -> 
+                     [  Schema.InsertEvent(rname, rvars, rtype); 
+                        Schema.DeleteEvent(rname, rvars, rtype);
+                        Schema.BatchUpdate(rname)  ])
+                     db_streams))) @
                (default_triggers ()));
       db = db
    }
@@ -309,7 +312,8 @@ let finalize (prog: prog_t): prog_t =
       List.filter (fun trigger -> 
          match trigger.event with 
          | Schema.InsertEvent(_, _, _) 
-         | Schema.DeleteEvent(_, _, _) ->
+         | Schema.DeleteEvent(_, _, _)
+         | Schema.BatchUpdate(_) ->
             !(trigger.statements) <> []
          | _ -> true
       ) (get_triggers prog)

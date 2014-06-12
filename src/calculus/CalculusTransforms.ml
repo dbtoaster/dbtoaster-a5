@@ -127,7 +127,8 @@ let rec combine_values ?(aggressive=false) (expr:C.expr_t): C.expr_t =
             end
          
          | Value(v) -> C.mk_value (Arithmetic.eval_partial v)
-         | Rel(_,_) | External(_) -> CalcRing.mk_val lf
+         | Rel(_,_) | DeltaRel(_,_) 
+         | External(_) | DomainDelta(_) -> CalcRing.mk_val lf
          | AggSum(gb_vars, subexp) -> 
             let new_subexp = rcr subexp in
             if new_subexp = CalcRing.zero then CalcRing.zero else
@@ -385,6 +386,8 @@ let lift_equalities (global_scope:var_t list) (big_expr:C.expr_t): C.expr_t =
          | CalcRing.Val(Cmp _) 
          | CalcRing.Val(External _)
          | CalcRing.Val(Rel _)
+         | CalcRing.Val(DeltaRel _)
+         | CalcRing.Val(DomainDelta _)
          | CalcRing.Val(Value _) -> 
             ([], expr)
       end
@@ -512,7 +515,15 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
                   ~scope:[lift_v, val_sub " value expression"] v
             )
          | Value(_) -> CalcRing.mk_val x
-         | AggSum(gb_vars, subexp) ->
+         | AggSum(gb_vars, subexp) ->         
+            let subexp_ovars = snd (C.schema_of_expr subexp) in         
+
+            (*  Update gb_vars only if unification has removed 
+                lift_v from the schema of subexp; counterexample:
+                   S(C) * (A ^= C) * AggSum([A], R(B) * (A ^= B)) 
+                Here, we don't update gb_vars ([A]).             *)
+            if List.mem lift_v subexp_ovars then C.mk_aggsum gb_vars subexp else
+ 
             (* subexp is rewritten.  We just need to update gb_vars properly.
                This can only change (in this unify function) if the lhs variable
                appears in the GB terms.  
@@ -523,11 +534,9 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
                   - If the variable is not bound in the expression, but the 
                     subst is (and is a variable), then the new subst had better 
                     already be in the group-by variables.  
-            *)
+            *)        
             let mapped_gb_vars = map_vars "n aggsum group-by var" gb_vars in
-            let new_gb_vars = 
-               ListAsSet.inter mapped_gb_vars (snd (C.schema_of_expr subexp))
-            in            
+            let new_gb_vars = ListAsSet.inter mapped_gb_vars subexp_ovars in            
                C.mk_aggsum new_gb_vars subexp
          | Rel(rn, rv) ->           
             let new_rv = map_vars " relation var" rv in
@@ -538,6 +547,16 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
                (* we transform (B^=dA)*R(dA,B) into R(dA,B)*(B=dA).     *)
                CalcRing.mk_prod [ C.mk_rel rn rv; 
                                   make_cmp " relation var" ]
+         | DeltaRel(rn, rv) ->           
+            let new_rv = map_vars " delta relation var" rv in
+            if ListAsSet.has_no_duplicates new_rv
+            then C.mk_rel rn new_rv
+            else 
+               (* In order to prevent expressions of the form R(dA,dA), *)
+               (* we transform (B^=dA)*R(dA,B) into R(dA,B)*(B=dA).     *)
+               CalcRing.mk_prod [ C.mk_rel rn rv; 
+                                  make_cmp " delta relation var" ]
+         | DomainDelta(subexp) -> C.mk_domain subexp
          | External(en, eiv, eov, et, em) ->
             (* The metadata is already rewritten *)
             let new_eiv = map_vars "n external input var" eiv in
@@ -613,6 +632,8 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
       begin match expr with 
       | CalcRing.Val(Value(_))
       | CalcRing.Val(Rel(_,_)) 
+      | CalcRing.Val(DeltaRel(_,_))
+      | CalcRing.Val(DomainDelta(_)) 
       | CalcRing.Val(External(_)) 
       | CalcRing.Val(Cmp(_,_,_)) -> expr
       
@@ -711,7 +732,9 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
          let new_head = rcr scope head_schema head in
          let (_, head_ovars) = C.schema_of_expr new_head in
          let new_scope = ListAsSet.union scope head_ovars in
-         let new_schema = ListAsSet.diff schema head_ovars in
+         let new_schema = ListAsSet.inter rest_ovars 
+            (ListAsSet.union schema head_ovars) 
+         in
             CalcRing.mk_prod [
                new_head; 
                rcr new_scope new_schema (CalcRing.mk_prod rest)
@@ -720,6 +743,136 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
       | CalcRing.Prod([]) -> CalcRing.one
    end in 
       rcr big_scope big_schema big_expr
+
+
+let unify_domains (big_scope:var_t list) (big_schema:var_t list) 
+                (big_expr:C.expr_t): C.expr_t =
+   Debug.print "LOG-CALCOPT-DETAIL" (fun () ->
+      let (in_sch, out_sch) = C.schema_of_expr big_expr in
+      "Unify Domains: "^
+      (ListExtras.ocaml_of_list string_of_var in_sch)^
+      (ListExtras.ocaml_of_list string_of_var out_sch)^": \n"^
+      (CalculusPrinter.string_of_expr big_expr) 
+   );
+   let unify (domain_expr:C.expr_t) (scope: var_t list) (schema:var_t list)
+             (expr:C.expr_t): C.expr_t =
+
+      let rewritten =       
+      C.rewrite_leaves ~scope:scope ~schema:schema 
+        (fun _ x -> begin match x with
+
+          | DomainDelta(e) ->
+            let subexpr = CalcRing.mk_val x in
+            let subexpr_ovars = snd (C.schema_of_expr subexpr) in
+            let domain_ovars  = snd (C.schema_of_expr domain_expr) in
+            if ListAsSet.subset subexpr_ovars domain_ovars &&
+               C.cmp_exprs domain_expr subexpr <> None
+            then CalcRing.one
+            else subexpr
+
+         | _ -> CalcRing.mk_val x
+      end) 
+      (fun _ _ -> true) expr
+      in 
+         Debug.print "LOG-UNIFY-DOMAINS" (fun () ->
+            "Successfully unified "^
+            (CalculusPrinter.string_of_expr domain_expr)^" in: "^
+            (CalculusPrinter.string_of_expr expr)^"\nto: "^
+            (CalculusPrinter.string_of_expr rewritten)
+         ); rewritten
+   in
+   let rec rcr (scope:var_t list) (schema:var_t list) (expr:C.expr_t):C.expr_t =
+      Debug.print "LOG-UNIFY-DOMAINS" (fun () ->
+         "Attempting to unify domains in: "^
+         (ListExtras.ocaml_of_list string_of_var scope)^
+         (ListExtras.ocaml_of_list string_of_var schema)^"\n"^
+         (CalculusPrinter.string_of_expr expr)
+      );
+      begin match expr with 
+      | CalcRing.Val(Value(_))
+      | CalcRing.Val(Rel(_,_)) 
+      | CalcRing.Val(DeltaRel(_,_)) 
+      | CalcRing.Val(DomainDelta(_))
+      | CalcRing.Val(External(_)) 
+      | CalcRing.Val(Cmp(_,_,_)) -> expr
+      
+(***** BEGIN EXISTS HACK *****)
+      | CalcRing.Val(Exists(subexp)) -> 
+         C.mk_exists (rcr scope schema subexp)
+(***** END EXISTS HACK *****)
+      
+      | CalcRing.Val(AggSum(gb_vars, subexp)) ->
+         let new_subexp = rcr scope gb_vars subexp in
+         let (orig_ivars,_) = C.schema_of_expr subexp in
+         let (_,new_ovars) = C.schema_of_expr new_subexp in
+         (* Unifying lifts can do some wonky things to the schema of subexp.
+            Among other things, previously unbound variables can become bound,
+            and previously bound variables can become unbound.  A variable in
+            the schema of an expression will never be unified (although the lift
+            can be propagated up and out of the aggsum via nesting_rewrites) *)
+         let new_gb_vars = 
+            ListAsSet.union
+               (ListAsSet.inter gb_vars new_ovars)
+               (ListAsSet.inter orig_ivars new_ovars)
+         in
+            Debug.print "LOG-UNIFY-DOMAINS" (fun () ->
+               "Updating group-by variables from "^
+               (ListExtras.ocaml_of_list string_of_var gb_vars)^" to "^
+               (ListExtras.ocaml_of_list string_of_var new_gb_vars)^
+               " in AggSum of: "^
+               (CalculusPrinter.string_of_expr new_subexp)
+            );
+            C.mk_aggsum new_gb_vars new_subexp
+      
+      | CalcRing.Val(Lift(lift_v, subexp)) ->
+         C.mk_lift lift_v (rcr scope schema subexp)
+
+      | CalcRing.Sum(sum_terms) ->
+         (* This is a bit of a hack for now.  The schema of every term in the
+            sum needs to be kept identical.  Factorize will pull out any lifts 
+            shared across terms in the sum, and poly decomposition will allow
+            unification within a sum.  *)
+         let (_,sum_schema) = C.schema_of_expr expr in
+         let full_schema = ListAsSet.union sum_schema schema in
+            CalcRing.mk_sum (List.map (rcr scope full_schema) sum_terms)
+      
+      | CalcRing.Neg(neg_term) ->
+         CalcRing.mk_neg ((rcr scope schema) neg_term)
+      
+      | CalcRing.Prod(CalcRing.Val(DomainDelta(subexp))::rest) ->
+          let head_expr  = C.mk_domain subexp in
+          let head_ovars = snd (C.schema_of_expr head_expr) in
+          let rest_expr  = CalcRing.mk_prod rest in
+          let rest_ovars = snd (C.schema_of_expr rest_expr) in
+          let new_scope = ListAsSet.union scope head_ovars in
+          let new_schema = 
+            ListAsSet.inter (ListAsSet.union schema head_ovars) rest_ovars
+          in
+          CalcRing.mk_prod [ head_expr; 
+            rcr scope schema (unify head_expr new_scope new_schema rest_expr)]
+
+      | CalcRing.Prod(head::rest) ->
+         let (rest_ivars, rest_ovars) = 
+            C.schema_of_expr (CalcRing.mk_prod rest) 
+         in
+         let head_schema = 
+            (ListAsSet.multiunion [schema; rest_ivars; rest_ovars]) 
+         in
+         let new_head = rcr scope head_schema head in
+         let (_, head_ovars) = C.schema_of_expr new_head in
+         let new_scope = ListAsSet.union scope head_ovars in
+         let new_schema = ListAsSet.inter rest_ovars
+            (ListAsSet.union schema head_ovars) 
+         in
+            CalcRing.mk_prod [
+               new_head; 
+               rcr new_scope new_schema (CalcRing.mk_prod rest)
+            ]
+
+      | CalcRing.Prod([]) -> CalcRing.one
+   end in 
+      rcr big_scope big_schema big_expr
+
 
 (**
   [advance_lifts scope expr]
@@ -742,30 +895,41 @@ let advance_lifts scope expr =
          "Advance Lifts: processing " ^         
          (CalculusPrinter.string_of_expr (CalcRing.mk_prod pl)) ^
          (ListExtras.ocaml_of_list string_of_var scope));
-      CalcRing.mk_prod (
-         List.fold_left (fun curr_ret curr_term ->
-            begin match curr_term with
-               | CalcRing.Val(Lift(_,_)) -> 
-                  begin match ( 
-                     ListExtras.scan_fold (fun ret_term lhs rhs_hd rhs_tl ->
-                        if ret_term <> None then ret_term else
-                        let local_scope = 
-                           ListAsSet.union scope
-                              (snd (C.schema_of_expr (CalcRing.mk_prod lhs)))
-                        in
-                        if C.commutes ~scope:local_scope 
-                                      (CalcRing.mk_prod (rhs_hd::rhs_tl))
-                                      curr_term
-                        then Some(lhs@[curr_term;rhs_hd]@rhs_tl)
-                        else None
-                     ) None curr_ret
-                  ) with
-                     |  Some(s) -> s
-                     |  None    -> curr_ret @ [curr_term]
-                  end
-               | _ -> curr_ret @ [curr_term]
-            end
-         ) [] pl
+
+      (* First, push delta domains and delta terms to the front *)
+      let (delta_domains, delta_rels, pl_rest) = 
+        List.fold_right (fun term (domains, deltas, rest) ->
+          begin match term with
+            | CalcRing.Val(DeltaRel _) -> (domains, term :: deltas, rest)
+            | CalcRing.Val(DomainDelta _) -> (term :: domains, deltas, rest)
+            | _ -> (domains, deltas, term :: rest)
+          end
+        ) pl ([], [], [])
+      in
+      CalcRing.mk_prod ( 
+        (List.fold_left (fun curr_ret curr_term ->
+          begin match curr_term with
+             | CalcRing.Val(Lift(_,_)) -> 
+                begin match ( 
+                  ListExtras.scan_fold (fun ret_term lhs rhs_hd rhs_tl ->
+                    if ret_term <> None then ret_term else
+                      let local_scope = 
+                         ListAsSet.union scope
+                            (snd (C.schema_of_expr (CalcRing.mk_prod lhs)))
+                      in
+                      let rhs = rhs_hd::rhs_tl in
+                      if C.commutes ~scope:local_scope 
+                                    (CalcRing.mk_prod rhs) curr_term
+                      then Some(lhs@[curr_term]@rhs)
+                      else None
+                   ) None curr_ret
+                ) with
+                   |  Some(s) -> s
+                   |  None    -> curr_ret @ [curr_term]
+                end
+             | _ -> curr_ret @ [curr_term]
+          end
+        ) [] (delta_domains @ delta_rels @ pl_rest) )
       )
    )
    (fun _ x -> CalcRing.mk_neg x)
@@ -819,6 +983,9 @@ let advance_lifts scope expr =
     
     [Lift(A, f(A)) => [A = f(A)]] (or equivalent)
 
+    [AggSum([...], Domain(GB1, ...) * B) = Domain(GB2,...) * AggSum([...], B)]
+        IF GB2 <> []
+
    @param expr    The calculus expression being processed
 *)
 let rec nesting_rewrites (expr:C.expr_t) = 
@@ -871,32 +1038,62 @@ let rec nesting_rewrites (expr:C.expr_t) =
                      );
                      rewritten
                   | CalcRing.Prod(pl) ->
-                     let (unnested,nested) = 
-                        List.fold_left (fun (unnested,nested) term->
-                           if (C.commutes nested term) && 
+                      (* Extract delta domains out of AggSum *)
+                      let (domain_unnested, domain_nested) =
+                        List.fold_left (fun (lhs, rhs) term ->
+                          match term with 
+                            | CalcRing.Val(DomainDelta(
+                                CalcRing.Val(DeltaRel(rn,rvals)))) 
+                            | CalcRing.Val(DomainDelta(
+                                CalcRing.Val(AggSum(_, 
+                                  CalcRing.Val(DeltaRel(rn,rvals)))))) ->
+                              (* update gb_vars *)
+                              let domain_gb_vars = 
+                                ListAsSet.inter gb_vars 
+                                                (snd (C.schema_of_expr term)) 
+                              in
+                              if domain_gb_vars = [] 
+                              then (lhs, CalcRing.mk_prod [rhs; term]) 
+                              else (CalcRing.mk_prod [ 
+                                      lhs; C.mk_domain 
+                                              (C.mk_aggsum domain_gb_vars 
+                                                  (C.mk_deltarel rn rvals))],
+                                    rhs)
+                            | _ -> (lhs, CalcRing.mk_prod [rhs; term])
+                        ) (CalcRing.one, CalcRing.one) pl in
+                      
+                      let scope_domain = 
+                        snd (C.schema_of_expr domain_unnested) in
+                          
+                      let (unnested, nested) = 
+                        List.fold_left (fun (unnested, nested) term->
+                           if (C.commutes ~scope:scope_domain nested term) && 
                               (ListAsSet.subset (snd (C.schema_of_expr term))
                                                 gb_vars)
                            then (CalcRing.mk_prod [unnested; term], nested)
                            else (unnested, CalcRing.mk_prod [nested; term])
-                        ) (CalcRing.one, CalcRing.one) pl in
-                        let new_gb_vars = 
+                        ) (CalcRing.one, CalcRing.one) 
+                          (CalcRing.prod_list domain_nested) in
+                      let new_gb_vars = 
                            ListAsSet.inter gb_vars 
                                            (snd (C.schema_of_expr nested))
-                        in
-                           Debug.print "LOG-NESTINGREWRITES-DETAIL" (fun () ->
-                              "Nesting rewrites lifting out:\n"^
-                              (string_of_expr unnested)^
-                              "\n\tand keeping in:\n"^
-                              (string_of_expr nested)^
-                              "\n\twith output variables : "^
-                              (ListExtras.ocaml_of_list fst 
-                                    (snd (C.schema_of_expr nested)))^
-                              "\n\tMaking the new group-by variables:\n"^
-                              (ListExtras.ocaml_of_list fst new_gb_vars)
-                           );
-                           CalcRing.mk_prod 
-                              [  unnested; 
-                                 C.mk_aggsum new_gb_vars nested ]
+                      in
+                        Debug.print "LOG-NESTINGREWRITES-DETAIL" (fun () ->
+                            "Nesting rewrites lifting out:\n"^
+                            (string_of_expr unnested)^
+                            "\n\tand keeping in:\n"^
+                            (string_of_expr nested)^
+                            "\n\twith output variables : "^
+                            (ListExtras.ocaml_of_list fst 
+                                  (snd (C.schema_of_expr nested)))^
+                            "\n\tMaking the new group-by variables:\n"^
+                            (ListExtras.ocaml_of_list fst new_gb_vars)
+                         );
+                         CalcRing.mk_prod 
+                            [  domain_unnested; 
+                               unnested; 
+                               C.mk_aggsum new_gb_vars nested ]
+
                   | CalcRing.Val(AggSum(_, term)) ->
                      C.mk_aggsum gb_vars term
                   | _ -> 
@@ -1145,49 +1342,101 @@ let rec factorize_one_polynomial ?(heuristic = default_factorize_heuristic)
                 )
 
 type term_map_t = {
-   definition  : C.expr_t;
-   valid       : bool ref
+   definition     : C.expr_t;
+   neg_definition : C.expr_t;
+   valid          : bool ref
 }
 
 (**
-   [cancel_term_list term_list]
-   
-   Removes terms from a list that cancel each other out when summed up.
-   
-   @param term_list The list of terms to process
+  Removes Negs from the expression. 
+  To be on the safe side, we don't rely on combine_values here.
+  Instead, we explicitly replace Negs with * {-1} in the expression.  
 *)
-let cancel_term_list (term_list: C.expr_t list): C.expr_t list =
-   let term_map = 
-      List.map (fun term -> 
-         { definition = term; valid = ref true }
-      ) term_list
-   in
-   ListExtras.scan_fold (fun processed_terms
-                             lhs_terms term rhs_terms ->
-      if !(term.valid) then
-         try
-            let neg_term = CalcRing.mk_neg term.definition in
-            let cancel_term =
-               List.find (fun rhs_term ->
-                  !(rhs_term.valid) &&
-                  exprs_are_identical neg_term rhs_term.definition
-               ) rhs_terms
-            in
-               term.valid := false;
-               cancel_term.valid := false;
-               Debug.print "LOG-CANCEL" (fun () ->
-                  "Canceling "^
-                  (CalculusPrinter.string_of_expr term.definition)^
-                  " with " ^
-                  (CalculusPrinter.string_of_expr cancel_term.definition)
-               );
-               processed_terms
-         with Not_found ->
-            processed_terms @ [ term.definition ]
-      else
-         processed_terms 
-    ) [] term_map
+let erase_negs = 
+  CalcRing.fold 
+      CalcRing.mk_sum 
+      CalcRing.mk_prod
+      (fun x -> CalcRing.mk_prod [ C.mk_value (Arithmetic.mk_int (-1)); x ])
+      CalcRing.mk_val 
+;;
+
+(**
+   [cancel_terms expr]
    
+   Removes opposite terms from the expression. 
+   
+   @param expr The processing expression
+*)
+let cancel_terms (expr: C.expr_t): C.expr_t =
+
+  (* Replace Negs with with * {-1} in the expression and
+     gather and evaluate all number values in a product list. *)
+  let neg_term (term: C.expr_t) = 
+    let (number_values, rest) = List.fold_right (fun term (v, c) ->
+      match term with
+        | CalcRing.Val(Value(new_v)) when 
+            Arithmetic.vars_of_value new_v = [] -> (new_v :: v, c)
+        | _  -> (v, term :: c)
+    ) (CalcRing.prod_list term) ([],[]) in
+    let new_number_values = 
+      Arithmetic.eval_partial (
+        ValueRing.mk_prod (Arithmetic.mk_int (-1) :: number_values))
+    in 
+      CalcRing.mk_prod (C.mk_value new_number_values :: rest)
+  in 
+  let cancel (expr:C.expr_t) =
+    let poly_list = CalculusDecomposition.decompose_poly (erase_negs expr) in
+    let term_map = 
+      List.map (fun (term_schema, term) -> 
+        { definition     = C.mk_aggsum term_schema term;
+          neg_definition = C.mk_aggsum term_schema (neg_term term);
+          valid          = ref true }
+      ) poly_list 
+    in
+    Debug.print "LOG-CANCEL" (fun () ->
+      "Attempting to cancel "^
+      (ListExtras.ocaml_of_list (fun term -> 
+        CalculusPrinter.string_of_expr term.definition) term_map)
+    );    
+    let (new_terms, changed) =
+      ListExtras.scan_fold (fun (ret_terms, changed) lhs term rhs ->
+        if not !(term.valid) then (ret_terms, changed) else
+        try
+          (* Try to find the matching term *)
+          let cancel_term = List.find (fun cand_term -> 
+            Debug.print "LOG-CANCEL-DETAIL" (fun () ->
+              "Comparing \n  "^
+               (C.string_of_expr term.neg_definition)^
+               " with \n  "^
+               (C.string_of_expr cand_term.definition)
+            );
+            !(cand_term.valid) && 
+            (exprs_are_identical term.neg_definition cand_term.definition)
+          ) rhs in
+          term.valid := false;
+          cancel_term.valid := false;
+          
+          Debug.print "LOG-CANCEL" (fun () ->
+            "Canceling "^
+            (CalculusPrinter.string_of_expr term.definition)^
+            " with " ^
+            (CalculusPrinter.string_of_expr cancel_term.definition)
+          );
+          (ret_terms, true)
+        with Not_found -> (ret_terms @ [ term.definition ], changed)
+      ) ([], false) term_map
+    in
+    if changed then CalcRing.mk_sum new_terms else expr 
+  in
+
+  C.rewrite 
+    (fun _ sum_terms -> cancel (CalcRing.mk_sum sum_terms))
+    (fun _ -> CalcRing.mk_prod)
+    (fun _ -> CalcRing.mk_neg)
+    (fun _ -> CalcRing.mk_val)
+    (fun _ _ -> true)      
+    expr
+;;
 
 (**
    [factorize_polynomial scope expr]
@@ -1201,17 +1450,16 @@ let cancel_term_list (term_list: C.expr_t list): C.expr_t list =
    @param expr    The calculus expression being processed
 *)
 let factorize_polynomial (scope:var_t list) (expr:C.expr_t): C.expr_t =
-   
+
    C.rewrite ~scope:scope 
-      (fun (scope,_) sum_terms -> 
-         factorize_one_polynomial scope (cancel_term_list sum_terms))
+      (fun (scope,_) sum_terms -> factorize_one_polynomial scope sum_terms)
       (fun _ -> CalcRing.mk_prod)
       (fun _ -> CalcRing.mk_neg)
       (fun _ -> CalcRing.mk_val)
       (fun _ _ -> true)      
       (if Debug.active "AGGRESSIVE-FACTORIZE" 
-         then combine_values (CalcRing.polynomial_expr expr)
-         else expr)
+       then combine_values expr
+       else expr)
 ;;
  
 
@@ -1221,8 +1469,10 @@ type opt_t =
    | OptLiftEqualities
    | OptAdvanceLifts
    | OptUnifyLifts
+   | OptUnifyDomains
    | OptNestingRewrites
    | OptFactorizePolynomial
+   | OptCancelTerms
 ;;
 let string_of_opt = (function
    | OptCombineValues           -> "OptCombineValues"
@@ -1230,13 +1480,16 @@ let string_of_opt = (function
    | OptLiftEqualities          -> "OptLiftEqualities"
    | OptAdvanceLifts            -> "OptAdvanceLifts"
    | OptUnifyLifts              -> "OptUnifyLifts"
+   | OptUnifyDomains            -> "OptUnifyDomains"
    | OptNestingRewrites         -> "OptNestingRewrites"
    | OptFactorizePolynomial     -> "OptFactorizePolynomial"
+   | OptCancelTerms             -> "OptCancelTerms"
 )
 ;;
 let default_optimizations = 
-   [  OptLiftEqualities; OptAdvanceLifts; OptUnifyLifts; OptNestingRewrites;
-      OptFactorizePolynomial; OptCombineValues]
+   [  OptLiftEqualities; OptAdvanceLifts; OptUnifyDomains; 
+      OptUnifyLifts; OptNestingRewrites; OptFactorizePolynomial; 
+      OptCombineValues; OptCancelTerms ]
 ;;
 let private_time_hash:(opt_t, float) Hashtbl.t = Hashtbl.create 10;;
 let dump_timings () = 
@@ -1281,7 +1534,9 @@ let optimize_expr ?(optimizations = default_optimizations)
                result
          in include_opt_base o timed_fn
    in
+      include_opt OptCancelTerms             (cancel_terms);
       include_opt OptAdvanceLifts            (advance_lifts scope);
+      include_opt OptUnifyDomains            (unify_domains scope schema);
       include_opt OptUnifyLifts              (unify_lifts scope schema);
       include_opt OptLiftEqualities          (lift_equalities scope);
       include_opt OptNestingRewrites         (nesting_rewrites);

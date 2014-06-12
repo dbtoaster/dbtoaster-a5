@@ -89,7 +89,6 @@ query_simple:
 	@$(FAST_QUERY_TEST) simple/r_btimesacorrelated
 	@$(FAST_QUERY_TEST) simple/r_count
 	@$(FAST_QUERY_TEST) simple/r_case
-	@$(FAST_QUERY_TEST) simple/r_case2
 	@$(FAST_QUERY_TEST) simple/r_divb
 	@$(FAST_QUERY_TEST) simple/r_existsnestedagg
 	@$(FAST_QUERY_TEST) simple/r_gbasumb
@@ -135,6 +134,7 @@ query_simple:
 	@$(FAST_QUERY_TEST) simple/r_sum_out_of_aggregate
 	@$(FAST_QUERY_TEST) simple/r_unique_counts_by_a
 	@$(FAST_QUERY_TEST) simple/r_multinest
+	@$(FAST_QUERY_TEST) simple/r_nestedfrom
 	@$(FAST_QUERY_TEST) simple/rr_ormyself
 	@$(FAST_QUERY_TEST) simple/rs
 	@$(FAST_QUERY_TEST) simple/rs_cmpnest

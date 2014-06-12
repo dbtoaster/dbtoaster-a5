@@ -126,10 +126,8 @@ let rec format_expr ?(show_type = false) (expr:expr_t) =
          !fmt.string ")"
          
       | CalcRing.Neg(element) -> 
-         !fmt.string "(";
-         format_list rcr " *"
-                     [  Calculus.mk_value (Arithmetic.mk_int (-1));
-                        element ];
+         !fmt.string "(NEG * ";
+         rcr element;
          !fmt.string ")"
 
       | CalcRing.Val(Value(ValueRing.Val(AVar(_) | AConst(_)) as v)) ->
@@ -158,7 +156,22 @@ let rec format_expr ?(show_type = false) (expr:expr_t) =
          format_list (dump string_of_var) "," relv;
          !fmt.bclose ();
          !fmt.string ")"
-         
+
+      | CalcRing.Val(DeltaRel(reln, relv)) ->
+         !fmt.string "DELTA(";
+         !fmt.string reln;
+         !fmt.string "(";
+         !fmt.bopen 0;
+         format_list (dump string_of_var) "," relv;
+         !fmt.bclose ();
+         !fmt.string "))"
+               
+      | CalcRing.Val(DomainDelta(subexp)) ->
+         !fmt.string "DOMAIN(";
+         !fmt.break 1 !line_indent;
+         rcr subexp;
+         !fmt.string ")";
+
       | CalcRing.Val(External(extn, ivars, ovars, extt, extivc)) ->
          !fmt.string extn;
          !fmt.string "(";

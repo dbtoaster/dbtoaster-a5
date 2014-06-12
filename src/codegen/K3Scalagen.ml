@@ -1020,6 +1020,9 @@ struct
          (* TODO: Implement corrective updates *)
          | Schema.CorrectiveUpdate(_, _, _, _, _) -> 
             debugfail None "Corrective updates not implemented yet"
+         (* TODO: Implement batch updates *)            
+         | Schema.BatchUpdate _ -> 
+            debugfail None "Batch updates not implemented yet"
          | Schema.InsertEvent(rel, vars, tpe) -> ("Insert" ^ rel, vars) 
          | Schema.DeleteEvent(rel, vars, tpe) -> ("Delete" ^ rel, vars)
          | Schema.SystemInitializedEvent -> ("SystemInitialized", [])
@@ -1280,6 +1283,9 @@ struct
                (* TODO: Implement corrective updates *)
                | Schema.CorrectiveUpdate(_, _, _, _, _) -> 
                   debugfail None "Corrective updates not implemented yet"
+               (* TODO: Implement batch updates *)
+               | Schema.BatchUpdate _ -> 
+                  debugfail None "Batch updates not implemented yet"
                | Schema.InsertEvent(rel, vars, tpe) -> 
                   ("InsertTuple", "Insert", rel, vars)
                | Schema.DeleteEvent(rel, vars, tpe) -> 
@@ -1353,6 +1359,8 @@ struct
          (List.map (fun (b, bt) -> (match bt with
          | Trigger(Schema.CorrectiveUpdate(_, _, _, _, _)) -> 
             debugfail None "Corrective updates not implemented yet"
+         | Trigger(Schema.BatchUpdate _) -> 
+            debugfail None "Batch updates not implemented yet"
          | Trigger(Schema.InsertEvent(rel, vars, tpe)) -> "val onInsert" ^ rel ^ " = new onInsert" ^ rel ^ "(" ^ class_args_application ^ ");"
          | Trigger(Schema.DeleteEvent(rel, vars, tpe)) -> "val onDelete" ^ rel ^ " = new onDelete" ^ rel ^ "(" ^ class_args_application ^ ");"
          | Trigger(Schema.SystemInitializedEvent)      -> "val onSystemInitialized = new onSystemInitialized(" ^ class_args_application ^ ");"
@@ -1363,6 +1371,8 @@ struct
          (List.map (fun (b, bt) -> (match bt with
          | Trigger(Schema.CorrectiveUpdate(_, _, _, _, _)) -> 
             debugfail None "Corrective updates not implemented yet"
+         | Trigger(Schema.BatchUpdate _) -> 
+            debugfail None "Batch updates not implemented yet"
          | Trigger(Schema.InsertEvent(rel, vars, tpe)) -> b ^ ";"
          | Trigger(Schema.DeleteEvent(rel, vars, tpe)) -> b ^ ";"
          | Trigger(Schema.SystemInitializedEvent)      -> b ^ ";"
@@ -1373,6 +1383,8 @@ struct
          (List.map (fun (b, bt) -> (match bt with
          | Trigger(Schema.CorrectiveUpdate(_, _, _, _, _)) -> 
             debugfail None "Corrective updates not implemented yet"
+         | Trigger(Schema.BatchUpdate _) -> 
+            debugfail None "Batch updates not implemented yet"
          | Trigger(Schema.InsertEvent(rel, vars, tpe)) -> ""
          | Trigger(Schema.DeleteEvent(rel, vars, tpe)) -> ""
          | Trigger(Schema.SystemInitializedEvent)      -> ""

@@ -120,6 +120,8 @@ let is_calculus_relation (expr: Calculus.expr_t): bool =
    in
       begin match leaf with
          | Rel(_, _) -> true
+         | DeltaRel _ 
+         | DomainDelta _ -> failwith "M3DM does not support batch updates yet"
          | _ -> false
       end
 
@@ -171,6 +173,9 @@ let rec simplify_formula (event_input: Schema.event_t)
                   else should_be_removed
                | Rel(rname, rvars)    -> 
                   if rvars = [] then should_be_removed else (e, true)
+               | DeltaRel _ 
+               | DomainDelta _ ->
+                  failwith "M3DM does not support batch updates yet"
                | External(ename,eins,eouts,etype,emeta) ->
                   if eouts = [] 
                   then should_be_removed 
@@ -283,6 +288,9 @@ let rec maintain (context: Calculus.expr_t)
                   (trlist, CalcRing.mk_prod ([context; right_context]))
             | Rel(rname, rvars)    -> 
                 ([], CalcRing.mk_prod ([context; formula]))
+            | DeltaRel _ 
+            | DomainDelta _ ->
+               failwith "M3DM does not support batch updates yet"
             | Cmp(op,subexp1,subexp2) -> 
                if Debug.active "DEBUG-DM-COMPARISON" 
                then let right_context = formula in

@@ -20,7 +20,6 @@ let test ?(opt_in=false) ?(opt_out=false) msg event input output =
          ))
       )
       (parse_calc output)
-
 ;;
 
 test "TPCH17 simple" (InsertEvent(schema_rel "P" ["dPK"]))
@@ -223,3 +222,51 @@ test ~opt_out:true "LiftInSchema"
     "((R_B ^= 42) * AggSum([R_B, R_A], (R(R_A, R_B, R_C) * R_C)))"
     "(R_B ^= dB) * (R_A ^= dA) * (R_B ^= 42) * dC"
 ;;
+
+Debug.activate "BATCH-UPDATES";
+Debug.activate "NO-VISUAL-DIFF"; 
+
+test ~opt_out:true "DoubleLift"
+  (BatchUpdate("R"))
+  "AggSum([], (X ^= (AggSum([B], R(A, B) * {A > 10}))) * 
+              (Y ^= (AggSum([B], R(A,B)))) * {X = 0} * {Y > 3})"
+  "AggSum([], 
+    ((X ^= 0) * DOMAIN( AggSum([B], DELTA(R(A, B)))) * 
+      (((Y ^= AggSum([B], R(A, B))) *
+         (X ^= AggSum([B], (R(A, B) * {A > 10}))) * {-1}) +
+        ((X ^=
+           (AggSum([B], (R(A, B) * {A > 10})) +
+             AggSum([B], (DELTA(R(A, B)) * {A > 10})))) *
+          (Y ^= (AggSum([B], R(A, B)) + AggSum([B], DELTA(R(A, B))))))) *
+      {Y > 3}))"
+;; 
+ 
+test ~opt_out:true "Exists and Lift"
+  (BatchUpdate("R"))
+  "EXISTS(AggSum([A], R(A,B))) *
+   AggSum([], (X ^=AggSum([A], R(A,B) * B)) * {X > 100})"
+  "(DOMAIN( AggSum([A], DELTA(R(A, B)))) *
+  ((EXISTS( AggSum([A], R(A, B))) *
+     AggSum([], ((X ^= AggSum([A], (R(A, B) * B))) * {X > 100})) * {-1}) +
+    (EXISTS( (AggSum([A], R(A, B)) + AggSum([A], DELTA(R(A, B))))) *
+      AggSum([], 
+        ((X ^= (AggSum([A], (R(A, B) * B)) + AggSum([A], (DELTA(R(A, B)) * B)))) *
+          {X > 100})))))"
+;;  
+
+test ~opt_out:true "Nested Exists"
+  (BatchUpdate("R"))
+  "EXISTS(
+     EXISTS(AggSum([A], R(A,B))) *
+     AggSum([], (X ^=AggSum([A], R(A,B) * B)) * {X > 100})
+  )"
+  "(DOMAIN( AggSum([A], DELTA(R(A, B)))) *
+    (EXISTS(
+       (EXISTS( (AggSum([A], R(A, B)) + AggSum([A], DELTA(R(A, B))))) *
+         AggSum([], 
+           ((X ^= (AggSum([A], (R(A, B) * B)) + AggSum([A], (DELTA(R(A, B)) * B)))) *
+             {X > 100})))) +
+      (EXISTS(
+         (EXISTS( AggSum([A], R(A, B))) *
+           AggSum([], ((X ^= AggSum([A], (R(A, B) * B))) * {X > 100})))) *
+        {-1})))"; 

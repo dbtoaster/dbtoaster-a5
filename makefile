@@ -21,10 +21,10 @@ FILES=\
 	src/ring/Arithmetic\
 	src/calculus/Calculus\
 	src/calculus/CalculusPrinter\
+	src/calculus/CalculusDecomposition\
 	src/calculus/CalculusTransforms\
 	src/calculus/CalculusDomains\
 	src/calculus/CalculusDeltas\
-	src/calculus/CalculusDecomposition\
 	src/calculus/SqlToCalculus\
 	src/calculus/Provenance\
 	src/compiler/Plan\

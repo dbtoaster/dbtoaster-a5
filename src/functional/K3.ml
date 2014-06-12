@@ -1615,6 +1615,8 @@ let unique_vars_prog (prog:prog_t) : prog_t =
                match t with
                | Schema.InsertEvent (_, vs, _)
                | Schema.DeleteEvent (_, vs, _) -> vs
+               | Schema.BatchUpdate _ -> 
+                    failwith "K3 does not support batch updates yet"
                | Schema.CorrectiveUpdate (_, vs1, vs2, v, _) -> 
                   v :: vs1 @ vs2
                | Schema.SystemInitializedEvent -> []

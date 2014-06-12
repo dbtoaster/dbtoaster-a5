@@ -41,6 +41,10 @@ type ('term_t) calc_leaf_t =
                                                  nested sub-term being 
                                                  aggregated over *)
    | Rel      of string * var_t list         (** A base relation *)
+   | DeltaRel of string * var_t list         (** A delta relation 
+                                                 (for batch updates) *)
+   | DomainDelta of 'term_t                  (** A domain of delta 
+                                                 (for batch updates) *)
    | External of 'term_t external_leaf_t     (** An external (map) *)
    | Cmp      of cmp_t * value_t * value_t   (** A comparison between two 
                                                  values *)
@@ -110,6 +114,8 @@ module CalcRing = struct
             | External(_,_,_,etype,_) -> etype
             | AggSum(_, subexp)       -> rcr subexp
             | Rel(_,_)                -> TInt
+            | DeltaRel(_,_)           -> TInt
+            | DomainDelta(_)          -> TInt
             | Cmp(_,_,_)              -> TInt (* Since we're not using truth, but
                                                  rather truthiness: the # of
                                                  truths encountered thus far *)
@@ -178,6 +184,11 @@ let rec string_of_leaf (leaf:CalcRing.leaf_t): string =
          "],("^(string_of_expr subexp)^"))"
       | Rel(rname, rvars)       ->
          rname^"("^(ListExtras.string_of_list ~sep:", " string_of_var rvars)^")"
+      | DeltaRel(rname, rvars)  -> 
+         "DELTA("^rname^"("^
+         (ListExtras.string_of_list ~sep:", " string_of_var rvars)^"))"
+      | DomainDelta(subexp) -> 
+         "DOMAIN("^(string_of_expr subexp)^")"
       | Cmp(op,subexp1,subexp2) ->
          "{"^(string_of_value subexp1)^" "^
              (string_of_cmp op)^
@@ -198,7 +209,7 @@ let rec string_of_leaf (leaf:CalcRing.leaf_t): string =
 and string_of_expr (expr:expr_t): string =
    let (sum_op, prod_op, neg_op) = 
       if Debug.active "PRINT-RINGS" then (" U ", " |><| ", "(<>:-1)*")
-                                    else (" + ", " * ", "-1 * ")
+                                    else (" + ", " * ", "NEG * ")
    in
    CalcRing.fold
       (fun sum_list  -> "("^(String.concat sum_op sum_list )^")")
@@ -245,7 +256,7 @@ let rec schema_of_expr ?(lift_group_by_vars_are_inputs =
       (fun prod_vars ->
          List.fold_left (fun (old_ivars, old_ovars) (new_ivars, new_ovars) ->
             (* The following expression treats [A] * R(A) as having A as an
-               output variable.  This is correct as long as A is in the scope
+               input variable.  This is correct as long as A is in the scope
                when this expression is evaluated, but that might be incorrect
             *)
             (  (ListAsSet.union (ListAsSet.diff new_ivars old_ovars)
@@ -271,6 +282,8 @@ let rec schema_of_expr ?(lift_group_by_vars_are_inputs =
                   )
                else (ivars, gb_vars)
          | Rel(_,rvars) -> ([],rvars)
+         | DeltaRel(_,rvars) -> ([],rvars)
+         | DomainDelta(subexp) -> rcr subexp
          | Cmp(_,v1,v2) ->
             (ListAsSet.union (vars_of_value v1) (vars_of_value v2), [])
          | Lift(target, subexp) ->
@@ -311,6 +324,8 @@ let rec rels_of_expr (expr:expr_t): string list =
             | External(_,_,_,_,Some(em)) -> rels_of_expr em
             | AggSum(_, subexp)   -> rcr subexp
             | Rel(rn,_)           -> [rn]
+            | DeltaRel(rn,_)      -> []
+            | DomainDelta(subexp) -> rcr subexp
             | Cmp(_,_,_)          -> []
             | Lift(_,subexp)      -> rcr subexp
 (***** BEGIN EXISTS HACK *****)
@@ -336,7 +351,9 @@ let rec externals_of_expr (expr:expr_t): string list =
             | External(en,_,_,_,Some(ivc)) -> en::(externals_of_expr ivc)
             | External(en,_,_,_,None) -> [en]
             | AggSum(_, subexp)   -> rcr subexp
-            | Rel(_,_)           -> []
+            | Rel(_,_)            -> []
+            | DeltaRel(_,_)       -> []
+            | DomainDelta(subexp) -> rcr subexp
             | Cmp(_,_,_)          -> []
             | Lift(_,subexp)      -> rcr subexp
 (***** BEGIN EXISTS HACK *****)
@@ -362,6 +379,8 @@ let rec degree_of_expr (expr:expr_t): int =
             | External(_,_,_,_,_) -> 0
             | AggSum(_, subexp)   -> rcr subexp
             | Rel(rn,_)           -> 1
+            | DeltaRel(rn,_)      -> 1
+            | DomainDelta(subexp) -> rcr subexp
             | Cmp(_,_,_)          -> 0
             | Lift(_,subexp)      -> rcr subexp
 (***** BEGIN EXISTS HACK *****)
@@ -544,6 +563,8 @@ let rec all_vars (expr:expr_t): var_t list =
                                                     | Some(s) -> all_vars s))
          | AggSum(_, subexp) -> all_vars subexp
          | Rel(_,ov) -> ListAsSet.uniq ov
+         | DeltaRel(_,ov) -> ListAsSet.uniq ov
+         | DomainDelta(subexp) -> all_vars subexp
          | Cmp(_,v1,v2) -> ListAsSet.uniq ((Arithmetic.vars_of_value v1) @
                                            (Arithmetic.vars_of_value v2))
          | Lift(var,subexp) -> ListAsSet.union [var] (all_vars subexp)
@@ -611,6 +632,8 @@ let rename_vars (mapping:(var_t,var_t)ListAsFunction.table_fn_t)
                                                   et, em)
          | AggSum(gb_vars, subexp)    -> AggSum(remap gb_vars, subexp)
          | Rel(rn,rv)                 -> Rel(rn, remap rv)
+         | DeltaRel(rn,rv)            -> DeltaRel(rn, remap rv)
+         | DomainDelta(subexp)        -> DomainDelta(subexp)
          | Cmp(op,v1,v2)              -> Cmp(op, remap_value v1, 
                                                  remap_value v2)
          | Lift(var,subexp)           -> Lift(remap_one var, subexp)
@@ -685,7 +708,7 @@ let value_singleton ?(multiplicity = CalcRing.one)
 *)
 let rec cmp_exprs ?(cmp_opts:CalcRing.cmp_opt_t list = 
                         if Debug.active "WEAK-EXPR-EQUIV" 
-                           then [] else CalcRing.default_cmp_opts) 
+                        then [] else CalcRing.default_cmp_opts) 
                   ?(validate = (fun _ -> true))
                    (e1:expr_t) (e2:expr_t):((var_t * var_t) list option) =
    let validate_mapping wrapped_mapping = 
@@ -720,10 +743,14 @@ let rec cmp_exprs ?(cmp_opts:CalcRing.cmp_opt_t list =
                   then Some(mappings)
                   else None
             end
-         
+                  
+         | ((DomainDelta(sub1)),(DomainDelta(sub2))) -> rcr sub1 sub2
+
+         | ((DeltaRel(rn1,rv1)), (DeltaRel(rn2,rv2))) ->
+            if (rn1 <> rn2) then None else merge_variables rv1 rv2
+
          | ((Rel(rn1,rv1)), (Rel(rn2,rv2))) ->
-            if (rn1 <> rn2) then None else
-               merge_variables rv1 rv2
+            if (rn1 <> rn2) then None else merge_variables rv1 rv2
 
          | ((External(en1,eiv1,eov1,et1,em1)), 
             (External(en2,eiv2,eov2,et2,em2))) ->
@@ -825,6 +852,14 @@ let mk_aggsum (gb_vars: var_t list) (expr: expr_t) : expr_t =
 let mk_rel (name: string) (vars: var_t list) : expr_t =
    CalcRing.mk_val (Rel(name, vars))
    
+(** Create a DeltaRel expression *)            
+let mk_deltarel (name: string) (vars: var_t list) : expr_t =
+   CalcRing.mk_val (DeltaRel(name, vars))
+
+(** Create a DomainDelta expression *)            
+let mk_domain (expr: expr_t) : expr_t =
+   CalcRing.mk_val (DomainDelta(expr))
+
 (** Create an External expression *)   
 let mk_external (name: string) (ivars: var_t list) (ovars: var_t list)
                 (base_type: type_t) (ivc_expr: expr_t option) : expr_t =

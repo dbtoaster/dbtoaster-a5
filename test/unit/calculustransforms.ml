@@ -48,6 +48,9 @@ in
    test "Cast float ValueRing.one to int"
       "R(A) * {0.5+0.5}"
       "R(A)";
+   test "Sums, Constants, and Vars"
+      "{A} + {B} + 1"
+      "{1 + A} + {B}";
             
 (* This optimization temporarilly disabled, until we figure out what to do about
    the change in schema
@@ -319,11 +322,10 @@ in
 let test msg scope input output =
    log_test ("Term cancelation ("^msg^")")
       string_of_expr
-      (CalcRing.mk_sum (
-          CalculusTransforms.cancel_term_list (List.map parse_calc input)))
+      (CalculusTransforms.cancel_terms 
+        (CalcRing.mk_sum (List.map parse_calc input)))
       (parse_calc output)
 in
-(*   Debug.activate "LOG-CANCEL";*)
    test "Basic" []
      ["A"; "-A"]
      "0";
@@ -332,10 +334,10 @@ in
      "A";
    test "Complex terms" []
      ["A*B"; "-A"; "-A*B"]
-     "(-1 * A)";
-(*   test "Complex terms different order" []*)
-(*     ["A*B"; "-A"; "-B*A"]                *)
-(*     "(-1 * A)";                          *)
+     "({-1} * A)";
+   test "Complex terms different order" []
+     ["A*B"; "-A"; "-B*A"]                
+     "({-1} * A)";                          
    test "Multiple expressions" []
      ["A"; "-B"; "B"; "A"]
      "A + A";
@@ -367,7 +369,6 @@ let test msg scope input output =
       (CalculusTransforms.factorize_polynomial scope (parse_calc input))
       (parse_calc output)
 in
-(*   Debug.activate "LOG-FACTORIZE";*)
    test "Basic" []
       "(A * B)+(A * C)"
       "A * (B + C)";
@@ -380,9 +381,9 @@ in
    test "Multiple Decreasing Possibilities" []
       "(R(A) * A * 2)+(R(A) * C)+(R(A) * A * D)+(S(A) * A)"
       "(R(A) * ((A * (2 + D)) + C)) + (S(A) * A)";
-   test "Multiple Decreasing With Negs" []
+(*     test "Multiple Decreasing With Negs" []
       "(R(A) * A * 2)+(R(A) * C)-((R(A) * A * D)+(S(A) * A))"
-      "(R(A) * (A * (2+({-1}*D)))+C)+({-1} * S(A) * A)";
+      "(R(A) * (A * (2+({-1}*D)))+C)+({-1} * S(A) * A)";  *)
 ;;
 let test ?(opts = CalculusTransforms.default_optimizations)
          ?(skip_opts = [])
@@ -468,25 +469,21 @@ in
        {QTY < 0.5 * nested}";
    Debug.activate "NO-VISUAL-DIFF";
    test "TPCH17 dLineitem" ["dPK"; "dQTY"] ["QTY"; "nested"]
-      "P(PK) * 
-       (((PK ^= dPK) * (QTY ^= dQTY) * 
-         (nested ^= AggSum([PK], L(PK, QTY2) * QTY2)))
-        + 
-        ((L(PK, QTY) + (PK ^= dPK) * (QTY ^= dQTY)) * (PK ^= dPK) *
-         (
-             (nested ^= AggSum([PK], L(PK, QTY2) * QTY2) + 
-                        (AggSum([],((QTY2 ^= dQTY) * QTY2)))) -
-             (nested ^= AggSum([PK], L(PK, QTY2) * QTY2))
-         )))"
-      "P(dPK) * (
-          (L(dPK, QTY) * (
-            (nested ^= AggSum([dPK], L(dPK, QTY2) * QTY2) + dQTY) +
-            (nested ^= AggSum([dPK], L(dPK, QTY2) * QTY2)) * {-1}
-          )) +
-          ((QTY ^= dQTY) * 
-            (nested ^= AggSum([dPK], L(dPK, QTY2) * QTY2) + dQTY)
-          )
-       )";
+    "P(PK) * 
+     (((PK ^= dPK) * (QTY ^= dQTY) * 
+       (nested ^= AggSum([PK], L(PK, QTY2) * QTY2)))
+      + 
+      ((L(PK, QTY) + (PK ^= dPK) * (QTY ^= dQTY)) * (PK ^= dPK) *
+       (
+           (nested ^= AggSum([PK], L(PK, QTY2) * QTY2) + 
+                      (AggSum([],((QTY2 ^= dQTY) * QTY2)))) -
+           (nested ^= AggSum([PK], L(PK, QTY2) * QTY2))
+       )))"
+    "(P(dPK) *
+  ((L(dPK, QTY) *
+     ((nested ^= (AggSum([dPK], (L(dPK, QTY2) * QTY2)) + dQTY)) +
+       ((nested ^= AggSum([dPK], (L(dPK, QTY2) * QTY2))) * {-1}))) +
+    ((nested ^= (AggSum([dPK], (L(dPK, QTY2) * QTY2)) + dQTY)) * (QTY ^= dQTY))))";
    test "SumNestedInTarget Delta" ["dA"; "dB"] []
       "AggSum([], 
           (((R1_A ^= dA) *
@@ -495,7 +492,7 @@ in
              ((R1_A ^= dA) * (R1_B ^= dB))) *
             AggSum([R1_A], 
                ((R1_A ^= dA) * (R2_B ^= dB))))))"
-      "AggSum([dA], R(dA, R2_B)) + AggSum([dA], R(dA, R1_B)) + 1";
+      "AggSum([dA], R(dA, R2_B)) + AggSum([dA], R(dA, R1_B)) + 1"; 
    test "Employee37 dEmployee dLineitem" ["dLID"; "dRG"] ["COUNT_DID"]
       "AggSum([COUNT_DID], 
           (AggSum([__sql_inline_agg_1, D_LOCATION_ID], 
@@ -568,9 +565,9 @@ in
          )
       )"
       "(A ^= dA) * (B ^= dB) * (
-         ((BETA ^= R(dA, dB)) * (ALPHA ^= R(dA,dB)) * {-1}) 
+         ((BETA ^= R(dA, dB)) * (ALPHA ^= R(dA,dB)) * {-1})
             + 
-         ((BETA ^= R(dA, dB) + 1) * (ALPHA ^= R(dA,dB) + 1))
+         ((ALPHA ^= R(dA,dB) + 1) * (BETA ^= R(dA, dB) + 1))
        )";
     test "Consistent handling of output vars in lifts" [] []
         "AggSum([B], (R(B, C) * 
@@ -585,31 +582,42 @@ in
         "(R_B ^= dB) * (R_A ^= dA) * (R_B ^= 42) * dC";
     test "TPCH-8" []["TOTAL_NAME"]
         "((TOTAL_NAME ^= 42) * R(R_A, R_B, R_C) * (TOTAL_VOLUME ^= R_C) *
-  (TOTAL_NAME ^= R_B) * (TOTAL_YEAR ^= R_A) * TOTAL_VOLUME *
-  (__sql_inline_agg_2 ^=
-    AggSum([], 
-      ((__sql_inline_agg_1 ^=
-         AggSum([TOTAL_YEAR], 
-           (AggSum([TOTAL_YEAR, TOTAL_NAME, TOTAL_VOLUME], 
-              (R(R_A, R_B, R_C) * (TOTAL_VOLUME ^= R_C) *
-                (TOTAL_NAME ^= R_B) * (TOTAL_YEAR ^= R_A))) *
-             TOTAL_VOLUME))) *
-        {[listmax:int](1, __sql_inline_agg_1)}))) *
-  {[/:float](__sql_inline_agg_2)})"
+          (TOTAL_NAME ^= R_B) * (TOTAL_YEAR ^= R_A) * TOTAL_VOLUME *
+          (__sql_inline_agg_2 ^=
+            AggSum([], 
+              ((__sql_inline_agg_1 ^=
+                 AggSum([TOTAL_YEAR], 
+                   (AggSum([TOTAL_YEAR, TOTAL_NAME, TOTAL_VOLUME], 
+                      (R(R_A, R_B, R_C) * (TOTAL_VOLUME ^= R_C) *
+                        (TOTAL_NAME ^= R_B) * (TOTAL_YEAR ^= R_A))) *
+                     TOTAL_VOLUME))) *
+                {[listmax:int](1, __sql_inline_agg_1)}))) *
+          {[/:float](__sql_inline_agg_2)})"
         "((TOTAL_NAME ^= 42) * R(R_A, R_B, R_C) *
-  (__sql_inline_agg_2 ^=
-    AggSum([], 
-      ((__sql_inline_agg_1 ^=
-         AggSum([R_A], 
-           (AggSum([R_A, TOTAL_NAME, TOTAL_VOLUME], 
-              (R(R_A, R_B, R_C) * (TOTAL_NAME ^= R_B) *
-                (TOTAL_VOLUME ^= R_C))) *
-             TOTAL_VOLUME))) *
-        {[listmax:int](1, __sql_inline_agg_1)}))) *
-  (TOTAL_NAME ^= R_B) * R_C * {[/:float](__sql_inline_agg_2)})";
+          (__sql_inline_agg_2 ^=
+            AggSum([], 
+              ((__sql_inline_agg_1 ^=
+                 AggSum([R_A], 
+                   (AggSum([R_A, TOTAL_NAME, TOTAL_VOLUME], 
+                      (R(R_A, R_B, R_C) * (TOTAL_NAME ^= R_B) *
+                        (TOTAL_VOLUME ^= R_C))) *
+                     TOTAL_VOLUME))) *
+                {[listmax:int](1, __sql_inline_agg_1)}))) *
+          (TOTAL_NAME ^= R_B) * R_C * {[/:float](__sql_inline_agg_2)})";
+    
     test "LiftAndScope" [] ["A"; "B"]
        "R(A,B) * (X ^= 5) * (Y ^= AggSum([A], R(A,B) * (X ^= B))) * {Y < 0}"
        "R(A,B) * (Y ^= AggSum([A], R(A,B))) * {Y < 0}";
+    
     test "LiftAndScope2" [] ["A"; "B"]
        "(X ^= 5) * R(A,B) * (Y ^= AggSum([A], R(A,B) * (X ^= B))) * {Y < 0}"
        "R(A,B) * (Y ^= AggSum([A], R(A,B))) * {Y < 0}";
+
+    test "Unify lifts and group-by variables" [] ["A"; "C"]
+       "S(C) * (A ^= C) * AggSum([A], R(B) * (A ^= B)) "
+       "S(C) * (A ^= C) * AggSum([A], R(B) * (A ^= B)) ";
+
+    (* test "LiftsAndSchemas" [] ["A"]
+      "AggSum([X], (X ^= 42) * R(A, B) * (X ^= B))"
+      "(X ^= 42) * AggSum([X], R(A, X))"
+      (* "(X ^= 42) * AggSum([X],  R(A, B) * (X ^= B))" *) *)

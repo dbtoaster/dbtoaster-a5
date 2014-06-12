@@ -143,8 +143,8 @@ in
       "M1(int)[][A]";
    test "Aggregation with a lift containing a relevant relation and a condition"
       "AggSum([A], R(A,B) * S(C,D) * (E ^= R(C,D) * B) * {E > 0})"
-      "AggSum([A], (M1_L1_1(int)[][A,B] * M1_P_2(int)[][C,D] *  
-                   (E ^= M1_L1_1(int)[][C,D] * B) * {E > 0}))";  
+      "AggSum([A], (M1_P_1(int)[][A,B] * M1_P_2(int)[][C,D] *  
+                   (E ^= M1_P_1(int)[][C,D] * B) * {E > 0}))";  
    test "Aggregation with a lift containing a relevant relation and a variable"
       "AggSum([A], R(A,B) * S(C,D) * (E ^= R(C,D) * B) * E)"
       "AggSum([A], (M1(float)[][A] * M2(int)[][]))";     
@@ -157,13 +157,12 @@ in
     
    test "Extending schema due to a lift"
       "AggSum([A], R(A,B) * S(C,D) * (E ^= R(B,D) * C) * {E > 0})"
-      "AggSum([A], M1_L1_1(int)[][A,B] * M1_P_2(int)[][C,D] * 
-        (E ^= M1_L1_1(int)[][B,D] * C) * {E > 0})";
-
+      "AggSum([A], M1_P_1(int)[][A,B] * M1_P_2(int)[][C,D] * 
+        (E ^= M1_P_1(int)[][B,D] * C) * {E > 0})";
    test "Mapping example"
       "R(A) * S(C) * (E ^= (R(C) * S(A))) * 5"      
-      "(M1_L1_1(int)[][A] * M1_L1_2(int)[][C] * 
-          (E ^= (M1_L1_1(int)[][C] * M1_L1_2(int)[][A])) * 5)";
+      "(M1_P_1(int)[][A] * M1_P_2(int)[][C] * 
+          (E ^= (M1_P_1(int)[][C] * M1_P_2(int)[][A])) * 5)";
     
    test "Aggregation with a lift containing an irrelevant relation"
       "AggSum([A,C], R(A,B) * (C ^= S(B)))"
@@ -188,8 +187,8 @@ in
       "R(A, B) *
        (foo ^= ( AggSum([], (X ^= R(A,B) + {dA = A} * dB) *
                             {(3 * A) < X})))"
-      "M1_L1_1_L1_1(int)[][A,B] * 
-       (foo ^= ( AggSum([], (X ^= (M1_L1_1_L1_1(int)[][A,B] + 
+      "M1(int)[][A,B] * 
+       (foo ^= ( AggSum([], (X ^= (M1(int)[][A,B] + 
                             {dA = A} * dB)) * 
                             {(3 * A) < X})))"
 ;;

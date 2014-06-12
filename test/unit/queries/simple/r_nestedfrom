@@ -1,0 +1,17 @@
+{
+  :path => "test/queries/simple/r_nestedfrom.sql",
+  :datasets => {
+    "standard" => {
+      :toplevels => {
+        "Q" => {
+          :type => :onelevel,
+          :expected => {
+            [2] => 7,
+            [4] => 9,
+            [5] => 8 
+          }
+        }
+      }
+    }
+  }
+}

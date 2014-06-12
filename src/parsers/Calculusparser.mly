@@ -36,7 +36,7 @@ type map_metadata =
 %token DECLARE QUERY MAP PARTIAL INITIALIZED
 %token FILE SOCKET FIXEDWIDTH LINE DELIMITED
 %token AGGSUM
-%token LIFT SETVALUE INCREMENT EXISTS
+%token LIFT SETVALUE INCREMENT EXISTS DOMAIN DELTA
 %token CORRECT WITH FOR
 
 // start
@@ -169,6 +169,9 @@ ivcCalculusExpr:
 //(***** BEGIN EXISTS HACK *****)
 | EXISTS LPAREN calculusExpr RPAREN { Calculus.mk_exists $3 }
 //(***** END EXISTS HACK *****)
+| DOMAIN LPAREN calculusExpr RPAREN { Calculus.mk_domain $3 }
+| DELTA LPAREN relationDefn RPAREN { let (reln, relv) = $3 in
+                                     Calculus.mk_deltarel reln relv }
 
 comparison:
 | EQ  { Type.Eq  } | NEQ { Type.Neq } | LT  { Type.Lt  } 
