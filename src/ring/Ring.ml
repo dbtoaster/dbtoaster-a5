@@ -434,7 +434,7 @@ struct
 
    let simplify (e: expr_t) =
       apply_to_leaves (fun x -> mk_val x) e
-    
+
    let rec cmp_exprs ?(cmp_opts:cmp_opt_t list = default_cmp_opts)
                      (sum_f: 'a list -> 'a option)
                      (prod_f: 'a list -> 'a option)
@@ -445,43 +445,47 @@ struct
       let rcr a b = cmp_exprs ~cmp_opts:cmp_opts sum_f prod_f leaf_f a b in
       let rcr_all order_indep merge_fn al bl = 
          if List.length al <> List.length bl then None
-         else begin try 
-            if (order_indep) 
-            then merge_fn (fst(
-               (* For each term of the first expression find the equivalent *)
-               (* yet unmatched term from the second expression, if exists *)
-               List.fold_left (fun (mappings, bl_matched) a ->
-                  let bl_unmatched = ListAsSet.diff bl bl_matched in
-                  let (found_b, mapping_if_found) =
-                     find_expr rcr a bl_unmatched
-                  in
-                     match (mapping_if_found) with
-                        | Some(new_mapping) -> (new_mapping :: mappings,
-                                                found_b :: bl_matched);
-                        | None -> raise Not_found
-               ) ([],[]) al)) 
-            else merge_fn (List.map2 (fun a b -> 
-               begin match rcr a b with
-                  | None -> raise Not_found
-                  | Some(s) -> s
-               end) al bl)
-         with Not_found -> None
-         end
+         else if order_indep then
+            (* For each term of the first expression find an equivalent *)
+            (* yet unmatched term from the second expression, if exists *)
+            ListExtras.scan_fold (fun mappings a_lhs a_curr a_rhs ->
+               if mappings <> None then mappings else
+               
+               ListExtras.scan_fold (fun mappings b_lhs b_curr b_rhs ->
+                  if mappings <> None then mappings else
+
+                  begin match rcr a_curr b_curr with
+                     | Some(curr_mappings) ->
+                        begin match rcr (mk_prod (a_lhs @ a_rhs)) 
+                                        (mk_prod (b_lhs @ b_rhs)) with
+                           | Some(rest_mappings) ->
+                              begin 
+                                 try 
+                                    merge_fn [curr_mappings; rest_mappings]
+                                 with Not_found -> None
+                              end
+                           | None -> None
+                        end
+                     | None -> None
+                  end
+               ) None bl
+            ) None al
+         else 
+            try
+               merge_fn (List.map2 (fun a b -> 
+                  match rcr a b with
+                     | Some(s) -> s               
+                     | None -> raise Not_found
+                  ) al bl)
+            with Not_found -> None         
       in
-      match (a,b) with
-        (Val  xa, Val  xb) -> leaf_f  xa xb
-      | (Neg  ae, Neg  be) -> rcr     ae be 
-      | (Sum  ae, Sum  be) -> rcr_all sum_order_indep  sum_f  ae be 
-      | (Prod ae, Prod be) -> rcr_all prod_order_indep prod_f ae be 
-      | _ -> None
-   and
-      find_expr (cmp_f: expr_t -> expr_t -> 'a option)
-                (a: expr_t) (bl: expr_t list) : (expr_t * 'a option) =
-         List.fold_left (fun (e, mapping) b ->
-            if (mapping = None) 
-            then (b, cmp_f a b)
-            else (e, mapping);
-         ) (zero, None) bl 
+         match (a,b) with
+            | (Val  xa, Val  xb) -> leaf_f  xa xb
+            | (Neg  ae, Neg  be) -> rcr     ae be 
+            | (Sum  ae, Sum  be) -> rcr_all sum_order_indep  sum_f  ae be 
+            | (Prod ae, Prod be) -> rcr_all prod_order_indep prod_f ae be 
+            | _ -> None
+
 
    let multiply_out (lhs:expr_t list) (sum:expr_t) (rhs:expr_t list):
                     expr_t list =
