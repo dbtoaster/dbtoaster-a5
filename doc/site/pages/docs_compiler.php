@@ -68,13 +68,6 @@
     <td>A Scala class implementing the queries.</td>
   </tr>
 
-  <tr>
-    <td>Scala-LMS</td>
-    <td class="code">scalalms</td>
-    <td>output/compiled</td>
-    <td>LMS optimized Scala class.</td>
-  </tr>
-
 </table>
 
 <a name="opt_flags"></a>
@@ -107,17 +100,11 @@ These flags are passed to the dbtoaster compiler with the <span class="code">-F<
   <dt class="code">COMPILE-WITH-STATIC</dt>
   <dd>Perform static linking on compiled binaries (e.g., invoke gcc with <span class="code">-static</span>).  The resulting binaries will be faster the first time they are run.  This optimization is not activated by default at any optimization level.</dd>  
 
-  <dt class="code">CALC-DONT-CREATE-ZEROES</dt>
-  <dd>Avoid creating empty relation terms during pre-evaluation.  Empty relation terms are aggressively propagated thoughout expressions in which they occur, and may result in expressions that do not need to be incrementally maintained (because they are guaranteed to be always empty).  Activating this flag is only useful if you want to inspect the generated Calculus/M3 code by hand. This optimization is not activated by default at any optimization level.</dd>  
-  
   <dt class="code">AGGRESSIVE-FACTORIZE</dt>
   <dd>When optimizing expressions in DBToaster relational calculus, perform factorization as aggressively as possible.  For some queries, particularly those with nested subqueries, this can generate much more efficient code.  However, it makes compilation slower on some queries.  This optimization is automatically activated by <span class="code">-O3</span>.</dd>
   
   <dt class="code">AGGRESSIVE-UNIFICATION</dt>
   <dd>When optimizing expressions in DBToaster relational calculus, inline lifted variables wherever possible, even if the lift term can not be eliminated entirely.  This can produce substantially tighter code for queries with lots of constants, but slightly increases compilation time.  This optimization is automatically activated by <span class="code">-O3</span>.</dd>
-
-  <dt class="code">DELETE-ON-ZERO</dt>
-  <dd>In generated code, when a map value becomes 0, remove the value from the map.  Resulting programs are more efficient over long stretches of insertions and deletions.  This optimization is automatically activated by <span class="code">-O3</span>.</dd>
 
   <dt class="code">COMPILE-WITHOUT-OPT</dt>
   <dd>Request that the second-stage compiler disable any unnecessary optimizations (e.g., by default, GCC is invoked with <span class="code">-O3</span>, but not if this flag is active). This optimization is automatically activated by <span class="code">-O1</span>.</dd>

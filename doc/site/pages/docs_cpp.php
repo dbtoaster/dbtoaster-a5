@@ -1,7 +1,7 @@
 <div class="warning">Warning: This BETA API is not final, and subject to change before release.</div>
 
 <p>
-   <i>Note:</i> To compile and run queries using the C++ backend requires g++ and the boost libraries to be installed. Please refer to <?= mk_link("Getting Started", "docs"); ?> for details 
+   <i>Note:</i> To compile and run queries using the C++ backend requires g++ 4.7 or above. Please refer to <?= mk_link("Getting Started", "docs"); ?> for details 
 </p>
 
 <a name="quickstart"></a>
@@ -41,16 +41,9 @@ sql program and printing the results.
 <p>
 Running the compiled binary will result in the following output:
 <div class="codeblock">$&gt; ./rs_example1
-&lt;?xml version="1.0" encoding="UTF-8" standalone="yes" ?&gt;
-&lt;!DOCTYPE boost_serialization&gt;
-&lt;boost_serialization signature="serialization::archive" version="9"&gt;
-Initializing program:
-Running program:
-Printing final result:
-&lt;snap class_id="0" tracking_level="0" version="0"&gt;
+&lt;snap&gt;
         &lt;RESULT&gt;156&lt;/RESULT&gt;
 &lt;/snap&gt;
-&lt;/boost_serialization&gt;
 </div>
 If the generated binary is run with the <tt>--async</tt> flag, it will also print intermediary results as frequently
 as possible while the sql program is running in a separate thread.
