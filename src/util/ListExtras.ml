@@ -150,9 +150,10 @@ let ocaml_of_list (string_of_elem: 'a -> string) (l: 'a list) =
    @param l   The list to look for the element in
    @return    The index of the element in the list 
 *)
-let index_of (a:'a) (l:'a list): int =
+let index_of ?(cmp_fn:('a -> 'a -> bool) = (fun x y -> x = y))
+             (a:'a) (l:'a list): int =
    let idx, fnd = (List.fold_left (fun (i,r) e -> 
-      if r then (i,r) else if e = a then (i,true) else (i+1,false)
+      if r then (i,r) else if cmp_fn e a then (i,true) else (i+1,false)
    ) (0,false) l) in
       if fnd then idx else raise Not_found
 
@@ -184,8 +185,9 @@ let sublist (start:int) (cnt:int) (l:'a list):'a list =
              [l] before the first occurrence of [a], and all the elements that 
              occur after.
 *)
-let split_at_pivot (a:'a) (l:'a list): 'a list * 'a list =
-   let idx = index_of a l in
+let split_at_pivot ?(cmp_fn:('a -> 'a -> bool) = (fun x y -> x = y))
+                   (a:'a) (l:'a list): 'a list * 'a list =
+   let idx = index_of ~cmp_fn:cmp_fn a l in
       (sublist 0 (idx) l, sublist (idx+1) (-1) l)
 
 (**

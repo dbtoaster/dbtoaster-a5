@@ -707,10 +707,10 @@ let value_singleton ?(multiplicity = CalcRing.one)
                     [ListAsFunction] module.  Otherwise return None.  
 *)
 let rec cmp_exprs ?(cmp_opts:CalcRing.cmp_opt_t list = 
-                        if Debug.active "WEAK-EXPR-EQUIV" 
-                        then [] else CalcRing.default_cmp_opts) 
+                        if Debug.active "WEAK-EXPR-EQUIV" then [] 
+                        else CalcRing.default_cmp_opts) 
                   ?(validate = (fun _ -> true))
-                   (e1:expr_t) (e2:expr_t):((var_t * var_t) list option) =
+                  (e1:expr_t) (e2:expr_t):((var_t * var_t) list option) =
    let validate_mapping wrapped_mapping = 
       begin match wrapped_mapping with
          | None -> None
@@ -718,7 +718,7 @@ let rec cmp_exprs ?(cmp_opts:CalcRing.cmp_opt_t list =
             if validate mapping then Some(mapping) else None
       end
    in
-   let rcr a b = validate_mapping (cmp_exprs ~cmp_opts:cmp_opts a b) in
+   let rcr a b = cmp_exprs ~cmp_opts:cmp_opts a b in
    let merge_variables rv1 rv2 =
       if ((List.length rv1) != (List.length rv2)) then None
       else try 
@@ -726,7 +726,8 @@ let rec cmp_exprs ?(cmp_opts:CalcRing.cmp_opt_t list =
        with Not_found -> None
    in   
    let merge components = 
-      validate_mapping (ListAsFunction.multimerge components) in
+      validate_mapping (ListAsFunction.multimerge components) 
+   in
    validate_mapping (CalcRing.cmp_exprs ~cmp_opts:cmp_opts merge merge
       (fun lf1 lf2 -> validate_mapping (
       begin match (lf1,lf2) with
@@ -738,9 +739,11 @@ let rec cmp_exprs ?(cmp_opts:CalcRing.cmp_opt_t list =
                | None -> None
                | Some(mappings) ->
                   let map_fn = ListAsFunction.apply_strict mappings in
-                  if (((List.length gb1) = (List.length gb2)) &&
-                      (ListAsSet.seteq (List.map map_fn gb1) gb2))
-                  then Some(mappings)
+                  if List.length gb1 = List.length gb2 &&
+                     ListAsSet.seteq (List.map map_fn gb1) gb2
+                  (* Relevant mappings involve only input/output variables *)
+                  then Some(List.map (fun v -> (v, map_fn v)) 
+                              (ListAsSet.union gb1 (fst(schema_of_expr sub1))))
                   else None
             end
                   
@@ -807,9 +810,9 @@ let rec cmp_exprs ?(cmp_opts:CalcRing.cmp_opt_t list =
    another, exprs_are_identical determines whether the schema of the expressions
    are identical (and contain the same things).
 *)   
-let rec exprs_are_identical ?(cmp_opts:CalcRing.cmp_opt_t list = 
-                        if Debug.active "WEAK-EXPR-EQUIV" 
-                           then [] else CalcRing.default_cmp_opts)
+let exprs_are_identical ?(cmp_opts:CalcRing.cmp_opt_t list = 
+                              if Debug.active "WEAK-EXPR-EQUIV" then [] 
+                              else CalcRing.default_cmp_opts)
                         (e1:expr_t) (e2:expr_t): bool = 
    None <> cmp_exprs ~cmp_opts:cmp_opts 
                      ~validate:ListAsFunction.is_identity
