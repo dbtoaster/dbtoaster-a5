@@ -113,7 +113,7 @@ in
       "(M1(int)[][A] * 2)"; 
    test "Map reuse with renaming"
       "AggSum([A], R(A,B) * (S(C,E) + S(D,E)))"
-      "M1(int)[][A] * M2(int)[][] * 2"; 
+      "M2(int)[][] * M1(int)[][A] * 2"; 
    test "Map reuse with renaming"
       "(R(A,B) * S(C,D)) + (R(B,C) * S(A,D))"
       "(M1(int)[][A,B] * M2(int)[][C,D]) + (M1(int)[][B,C] * M2(int)[][A,D])";

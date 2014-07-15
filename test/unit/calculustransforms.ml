@@ -303,6 +303,7 @@ let test msg scope input output =
           scope (List.map parse_calc input))
       (parse_calc output)
 in
+(*   Debug.activate "LOG-FACTORIZE";*)
    test "Basic" []
       ["(A * B)";"(A * C)"]
       "A * (B + C)";
@@ -315,32 +316,7 @@ in
    test "Multiple Decreasing Possibilities" []
       [  "R(A) * A * 2" ; "R(A) * C" ; 
          "R(A) * A * D" ; "S(A) * A"]
-      "(R(A) * ((A * (2 + D)) + C)) + (S(A) * A)";
-   test "Delta Domains" []
-    ["(DOMAIN(
-      AggSum([O_ORDERKEY], 
-        DELTA(LINEITEM(O_ORDERKEY, L2_PARTKEY, L2_SUPPKEY, L2_LINENUMBER,
-                         L2_QUANTITY, L2_EXTENDEDPRICE, L2_DISCOUNT, L2_TAX,
-                         L2_RETURNFLAG, L2_LINESTATUS, L2_SHIPDATE,
-                         L2_COMMITDATE, L2_RECEIPTDATE, L2_SHIPINSTRUCT,
-                         L2_SHIPMODE, L2_COMMENT)))) *
-        M1(float)[][O_ORDERKEY])"; 
-    "(DOMAIN(
-       AggSum([O_ORDERKEY], 
-         DELTA(LINEITEM(O_ORDERKEY, L_PARTKEY, L_SUPPKEY, L_LINENUMBER,
-                          L_QUANTITY, L_EXTENDEDPRICE, L_DISCOUNT, L_TAX,
-                          L_RETURNFLAG, L_LINESTATUS, L_SHIPDATE,
-                          L_COMMITDATE, L_RECEIPTDATE, L_SHIPINSTRUCT,
-                          L_SHIPMODE, L_COMMENT)))) *
-        M2(float)[][O_ORDERKEY])"]
-    "DOMAIN(
-      AggSum([O_ORDERKEY], 
-        DELTA(LINEITEM(O_ORDERKEY, L2_PARTKEY, L2_SUPPKEY, L2_LINENUMBER,
-                         L2_QUANTITY, L2_EXTENDEDPRICE, L2_DISCOUNT, L2_TAX,
-                         L2_RETURNFLAG, L2_LINESTATUS, L2_SHIPDATE,
-                         L2_COMMITDATE, L2_RECEIPTDATE, L2_SHIPINSTRUCT,
-                         L2_SHIPMODE, L2_COMMENT)))) *
-     (M1(float)[][O_ORDERKEY] + M2(float)[][O_ORDERKEY])";
+      "(R(A) * ((A * (2 + D)) + C)) + (S(A) * A)"
 ;;
 
 let test msg scope input output =
@@ -438,7 +414,6 @@ in
              {LQTY < nested}
           ))
        ))";
-
    test "TPCH17 full raw" [] []
       "AggSum([],(
           ( LINEITEM(L_PARTKEY, L_QUANTITY, L_EXTENDEDPRICE) * 
@@ -470,14 +445,12 @@ in
             L_EXTENDEDPRICE
          )
       ))";
-
    test "TPCH17 dPart Tricky Term" ["dPK"] []
       "(PK ^= dPK) * LI(PK, QTY) * (alpha ^= 0) * (
           (nested ^= (AggSum([PK], LI(PK, QTY2) * QTY2) + alpha)) -
           (nested ^= (AggSum([PK], LI(PK, QTY2) * QTY2)))
        ) * {QTY < 0.5 * nested}"
       "0";
-
    test "TPCH17 dPart Full" ["dPK"] [] 
       "( ((PK ^= dPK) * LI(PK, QTY) *
           (nested ^= (AggSum([PK], LI(PK,QTY2) * QTY2))))
@@ -494,7 +467,7 @@ in
        ) * {QTY < 0.5 * nested}"
       "(nested ^= (AggSum([dPK], LI(dPK,QTY2) * QTY2))) * LI(dPK,QTY) *
        {QTY < 0.5 * nested}";
-
+   Debug.activate "NO-VISUAL-DIFF";
    test "TPCH17 dLineitem" ["dPK"; "dQTY"] ["QTY"; "nested"]
     "P(PK) * 
      (((PK ^= dPK) * (QTY ^= dQTY) * 
@@ -510,9 +483,7 @@ in
   ((L(dPK, QTY) *
      ((nested ^= (AggSum([dPK], (L(dPK, QTY2) * QTY2)) + dQTY)) +
        ((nested ^= AggSum([dPK], (L(dPK, QTY2) * QTY2))) * {-1}))) +
-    ((nested ^= (AggSum([dPK], (L(dPK, QTY2) * QTY2)) + dQTY)) * 
-        (QTY ^= dQTY))))";
-
+    ((nested ^= (AggSum([dPK], (L(dPK, QTY2) * QTY2)) + dQTY)) * (QTY ^= dQTY))))";
    test "SumNestedInTarget Delta" ["dA"; "dB"] []
       "AggSum([], 
           (((R1_A ^= dA) *
@@ -521,8 +492,7 @@ in
              ((R1_A ^= dA) * (R1_B ^= dB))) *
             AggSum([R1_A], 
                ((R1_A ^= dA) * (R2_B ^= dB))))))"
-      "(AggSum([dA], R(dA, R2_B)) * 2) + 1"; 
-
+      "AggSum([dA], R(dA, R2_B)) + AggSum([dA], R(dA, R1_B)) + 1"; 
    test "Employee37 dEmployee dLineitem" ["dLID"; "dRG"] ["COUNT_DID"]
       "AggSum([COUNT_DID], 
           (AggSum([__sql_inline_agg_1, D_LOCATION_ID], 
@@ -554,7 +524,6 @@ in
                      {-1})) *
             {__sql_inline_agg_1 > 0} *
             AggSum([dLID], DEPARTMENT(COUNT_DID, D_NAME, dLID)))))";
-
     test "Zeus Query 96434723 dS" ["COUNT_mSSB"; "COUNT_mSSC"] 
                                  ["B1"; "C1"; "LB71Y"; "GKKEOF"; "QKKF7PYI"]
       "(AggSum([B1, C1, LB71Y, GKKEOF], 
@@ -573,7 +542,6 @@ in
            COUNTS1(int)[][NPZL_7DKV_B, NPZL_7DKV_C] *
            (__sql_inline_not_1 ^= {NPZL_7DKV_C = 2}) *
            (C1 ^= NPZL_7DKV_C)
-
          )";
    test "Factorizing deltas of products of lifts" ["dA"; "dB"] 
                                                   ["A"; "B"; "ALPHA"; "BETA"]
@@ -596,7 +564,7 @@ in
             )
          )
       )"
-      "(B ^= dB) * (A ^= dA) * (
+      "(A ^= dA) * (B ^= dB) * (
          ((BETA ^= R(dA, dB)) * (ALPHA ^= R(dA,dB)) * {-1})
             + 
          ((ALPHA ^= R(dA,dB) + 1) * (BETA ^= R(dA, dB) + 1))
@@ -612,7 +580,6 @@ in
         "((R_B ^= 42) * 
            AggSum([R_B, R_A], ((R_A ^= dA) * (R_B ^= dB) * (R_C ^= dC) * R_C)))"
         "(R_B ^= dB) * (R_A ^= dA) * (R_B ^= 42) * dC";
-
     test "TPCH-8" []["TOTAL_NAME"]
         "((TOTAL_NAME ^= 42) * R(R_A, R_B, R_C) * (TOTAL_VOLUME ^= R_C) *
           (TOTAL_NAME ^= R_B) * (TOTAL_YEAR ^= R_A) * TOTAL_VOLUME *

@@ -1177,13 +1177,12 @@ let default_factorize_heuristic (lhs_candidates,rhs_candidates)
    Debug.print "LOG-FACTORIZE" (fun () ->
       "Candidates for factorization: \n"^
       ListExtras.string_of_list ~sep:"\n" string_of_expr 
-                                (lhs_candidates @ rhs_candidates)
+                               (lhs_candidates @ rhs_candidates)
    );
    let increment_count term list = 
-      List.map (fun (cterm, count) -> 
-        (cterm, if C.exprs_are_identical term cterm 
-                then count + 1 else count)
-      ) list
+      if List.mem_assoc term list then
+         (term, (List.assoc term list) + 1)::(List.remove_assoc term list)
+      else list
    in
    let (lhs_counts,rhs_counts) =
       List.fold_left (fun old_counts product_term -> 
@@ -1280,8 +1279,7 @@ let rec factorize_one_polynomial ?(heuristic = default_factorize_heuristic)
       List.fold_left (fun (factorized,unfactorized) term ->
          try 
             let (lhs_of_selected,rhs_of_selected) =
-               ListExtras.split_at_pivot ~cmp_fn:C.exprs_are_identical  
-                                         selected (CalcRing.prod_list term) in
+               ListExtras.split_at_pivot selected (CalcRing.prod_list term) in
             Debug.print "LOG-FACTORIZE" (fun () ->
                "Split "^(CalculusPrinter.string_of_expr term)^" into "^
                (CalculusPrinter.string_of_expr 
@@ -1343,32 +1341,6 @@ let rec factorize_one_polynomial ?(heuristic = default_factorize_heuristic)
                  (fun factorized -> CalcRing.mk_prod [selected; factorized])
                 )
 
-
-(**
-   [factorize_polynomial scope expr]
-   
-   Invokes polynomial factorization throughout an arbitrary Calculus expression 
-   wherever possible as described above in factorize_one_polynomial.
-   
-   @param scope   Any variables defined outside of the expression being 
-                  evaluated.  This includes trigger variables, input variables 
-                  from the map on the lhs of the statement being evaluated.
-   @param expr    The calculus expression being processed
-*)
-let factorize_polynomial (scope:var_t list) (expr:C.expr_t): C.expr_t =
-
-   C.rewrite ~scope:scope 
-      (fun (scope,_) sum_terms -> factorize_one_polynomial scope sum_terms)
-      (fun _ -> CalcRing.mk_prod)
-      (fun _ -> CalcRing.mk_neg)
-      (fun _ -> CalcRing.mk_val)
-      (fun _ _ -> true)      
-      (if Debug.active "AGGRESSIVE-FACTORIZE" 
-       then combine_values expr
-       else expr)
-;;
- 
-
 type term_map_t = {
    definition     : C.expr_t;
    neg_definition : C.expr_t;
@@ -1377,7 +1349,6 @@ type term_map_t = {
 
 (**
   Removes Negs from the expression. 
-
   To be on the safe side, we don't rely on combine_values here.
   Instead, we explicitly replace Negs with * {-1} in the expression.  
 *)
@@ -1467,6 +1438,30 @@ let cancel_terms (expr: C.expr_t): C.expr_t =
     expr
 ;;
 
+(**
+   [factorize_polynomial scope expr]
+   
+   Invokes polynomial factorization throughout an arbitrary Calculus expression 
+   wherever possible as described above in factorize_one_polynomial.
+   
+   @param scope   Any variables defined outside of the expression being 
+                  evaluated.  This includes trigger variables, input variables 
+                  from the map on the lhs of the statement being evaluated.
+   @param expr    The calculus expression being processed
+*)
+let factorize_polynomial (scope:var_t list) (expr:C.expr_t): C.expr_t =
+
+   C.rewrite ~scope:scope 
+      (fun (scope,_) sum_terms -> factorize_one_polynomial scope sum_terms)
+      (fun _ -> CalcRing.mk_prod)
+      (fun _ -> CalcRing.mk_neg)
+      (fun _ -> CalcRing.mk_val)
+      (fun _ _ -> true)      
+      (if Debug.active "AGGRESSIVE-FACTORIZE" 
+       then combine_values expr
+       else expr)
+;;
+ 
 
 type opt_t = 
    | OptCombineValues

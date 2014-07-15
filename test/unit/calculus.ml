@@ -205,38 +205,6 @@ in
                  "R(A) * (S(B) + T(C))" "(T(C) + S(B)) * R(A)" false;
   test_cmp_exprs "Sum/Prod case #1-3" ~cmp_opts:[OptProdOrderIndependent] 
                  "R(A) * (S(B) + T(C))" "(T(C) + S(B)) * R(A)" false;
-
-  test_cmp_exprs "Scope case #1"
-                 "EXISTS(AggSum([A],R(A,B))) * R(A,B)"
-                 "EXISTS(AggSum([E],R(E,C))) * R(E,D)" true;                 
-  test_cmp_exprs "Scope case #2 with input vars"
-                 "AggSum([A],R(A,B) * {F > 0}) * R(A,B) * {F = B}"
-                 "AggSum([E],R(E,C) * {G > 0}) * R(E,D) * {G = D}" true;
-  test_cmp_exprs "Scope case #3 with input vars"
-                 "AggSum([A],R(A,B) * {F > 0}) * R(A,B) * {F = B}"
-                 "AggSum([E],R(E,C) * {G > 0}) * R(E,D) * {F = D}" false;
-
-  test_cmp_exprs "Repeated sum terms #1" ~cmp_opts:[]
-                 "A + A" "B + B" true;
-  test_cmp_exprs "Repeated sum terms #2" ~cmp_opts:[OptSumOrderIndependent]
-                 "A + A" "B + B" true;                 
-  test_cmp_exprs "Repeated prod terms #1" ~cmp_opts:[]
-                 "A * A" "B * B" true;
-  test_cmp_exprs "Repeated prod terms #2" ~cmp_opts:[OptProdOrderIndependent]
-                 "A * A" "B * B" true;               
-
-  test_cmp_exprs "Multiple mappings #1" ~cmp_opts:[]
-                 "R(A) + R(C)" "R(B) + R(A)" true;
-  test_cmp_exprs "Multiple mappings #2" ~cmp_opts:[OptSumOrderIndependent]
-                 "R(A) + R(C)" "R(B) + R(A)" true;
-  test_cmp_exprs "Multiple mappings #3" ~cmp_opts:[]
-                 "R(A) + R(C) + S(A)" "R(A) + R(B) + S(B)" false;
-  test_cmp_exprs "Multiple mappings #4" ~cmp_opts:[OptSumOrderIndependent]
-                 "R(A) + R(C) + S(A)" "R(A) + R(B) + S(B)" true;  
-  (* We don't propagate multiple mappings through expression trees,
-     so the following equivalence is not detected. *)                 
-  (* test_cmp_exprs "Multiple mappings #5" ~cmp_opts:[OptSumOrderIndependent]
-                 "(R(A) + R(C)) * S(C)" "(R(B) + R(A)) * S(B)" true; *)
   ()
 ;;
 let test_identical title ?(expected = true) ?(cmp_opts = default_cmp_opts)
@@ -255,46 +223,4 @@ in
    test_identical "Same out of order (opt on)" 
                   "B * A" "A * B";
    test_identical "Different, but mappable" ~expected:false
-                  "A * B" "A * C";
-   test_identical "Comparisons #1"
-                  "{S_B = 20}" "{S_B = 20}";
-   test_identical "Comparisons #2"
-                  "{S_B = (20 + 16)}" "{S_B = (20 + 16)}";
-   test_identical "Comparisons #3"
-                  "{S_B = (20 + 20)}" "{S_B = (20 + 20)}";
-   test_identical "Scope-aware mapping"
-                  "AggSum([A], R(A,B))" "AggSum([A], R(A,C))";
-
-   test_identical "Scope-aware mapping 2"
-      "DOMAIN(AggSum([O_ORDERKEY], 
-          DELTA(LINEITEM(O_ORDERKEY, L2_PARTKEY, L2_SUPPKEY, L2_LINENUMBER,
-                  L2_QUANTITY, L2_EXTENDEDPRICE, L2_DISCOUNT, L2_TAX,
-                  L2_RETURNFLAG, L2_LINESTATUS, L2_SHIPDATE,
-                  L2_COMMITDATE, L2_RECEIPTDATE, L2_SHIPINSTRUCT,
-                  L2_SHIPMODE, L2_COMMENT))))"
-      "DOMAIN(AggSum([O_ORDERKEY], 
-         DELTA(LINEITEM(O_ORDERKEY, L_PARTKEY, L_SUPPKEY, L_LINENUMBER,
-                  L_QUANTITY, L_EXTENDEDPRICE, L_DISCOUNT, L_TAX,
-                  L_RETURNFLAG, L_LINESTATUS, L_SHIPDATE,
-                  L_COMMITDATE, L_RECEIPTDATE, L_SHIPINSTRUCT,
-                  L_SHIPMODE, L_COMMENT))))";
-
-  test_identical "Simple Zeus 48183500"
-    "AggSum([BV0ZRLQKV_A, BV0ZRLQKV_B, NKMBTT1VV, S_B, S_C, OYXB_E_B, 
-             OYXB_E_C, WCWZWIFH, Q8EHFQVS3, RB1M0UL], 
-      (COUNT_mS1(int)[][BV0ZRLQKV_A, BV0ZRLQKV_B, OYXB_E_B, 
-                        OYXB_E_C, NKMBTT1VV] *
-      (S_C ^= COUNT_mSS_C) * (RB1M0UL ^= (0.014679976512 * S_C)) *
-      (Q8EHFQVS3 ^= S_C) * (WCWZWIFH ^= (17890.08 * S_C)) *
-      (S_B ^= COUNT_mSS_B)))"
-    "AggSum([BV0ZRLQKV_A, BV0ZRLQKV_B, NKMBTT1VV, S_B, S_C, OYXB_E_B, 
-             OYXB_E_C, WCWZWIFH, Q8EHFQVS3, RB1M0UL], 
-      (COUNT_mS1(int)[][BV0ZRLQKV_A, BV0ZRLQKV_B, OYXB_E_B, 
-                        OYXB_E_C, NKMBTT1VV] *
-      (S_C ^= COUNT_mSS_C) * (RB1M0UL ^= (0.014679976512 * S_C)) *
-      (Q8EHFQVS3 ^= S_C) * (WCWZWIFH ^= (17890.08 * S_C)) *
-      (S_B ^= COUNT_mSS_B)))";
-
-  test_identical "Simple Zeus 48183500 -- comparisons only"
-    "({S_B = (20 + (-1 * S_C) + BV0ZRLQKV_A + BV0ZRLQKV_A)})"
-    "({S_B = (20 + (-1 * S_C) + BV0ZRLQKV_A + BV0ZRLQKV_A)})";
+                  "A * B" "A * C"
