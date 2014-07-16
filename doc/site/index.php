@@ -14,7 +14,6 @@ $pages = array(
     "docs_adaptors"    => "DBT Adaptors Reference",
     "docs_cpp"         => "C++ Code Generation",
     "docs_scala"       => "Scala Code Generation",
-    "docs_scalalms"    => "Scala-LMS Code Generation",
   "bugs"             => "Bug Reports",
 );
 
@@ -191,7 +190,6 @@ function chain_link_docs() {
               <li><?= mk_link(null, "docs", "adaptors"); ?></li>
               <li><?= mk_link(null, "docs", "cpp"); ?></li>
               <li><?= mk_link(null, "docs", "scala"); ?></li>
-              <li><?= mk_link(null, "docs", "scalalms"); ?></li>
             </ul>
           </li>
           <li class="dropdown">

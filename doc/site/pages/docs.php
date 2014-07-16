@@ -139,5 +139,5 @@ $&gt; ls
 rst.hpp      rst.scala
 </div>
 
-See <?= mk_link(null, "docs", "scala"); ?>, <?= mk_link(null, "docs", "scalalms"); ?>, and <?= mk_link(null, "docs", "cpp"); ?> for details.
+See <?= mk_link(null, "docs", "scala"); ?> and <?= mk_link(null, "docs", "cpp"); ?> for details.
 

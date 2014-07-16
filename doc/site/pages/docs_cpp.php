@@ -49,12 +49,9 @@ If the generated binary is run with the <tt>--async</tt> flag, it will also prin
 as possible while the sql program is running in a separate thread.
 
 <div class="codeblock">$&gt; ./rs_example1 --async
-&lt;?xml version="1.0" encoding="UTF-8" standalone="yes" ?&gt;
-&lt;!DOCTYPE boost_serialization&gt;
-&lt;boost_serialization signature="serialization::archive" version="9"&gt;
 Initializing program:
 Running program:
-&lt;snap class_id="0" tracking_level="0" version="0"&gt;
+&lt;snap&gt;
         &lt;RESULT&gt;0&lt;/RESULT&gt;
 &lt;/snap&gt;
 &lt;snap&gt;
@@ -79,7 +76,6 @@ Printing final result:
 &lt;snap&gt;
         &lt;RESULT&gt;156&lt;/RESULT&gt;
 &lt;/snap&gt;
-&lt;/boost_serialization&gt;
 </div>
 </p>
 
@@ -370,7 +366,7 @@ that returns the query result corresponding to <tt>SELECT SUM(r.A*s.C) as RESULT
 <p>
 In the example above the result consisted of a single value. 
 If however our query has a <tt>GROUP BY</tt> clause its result is a collection and
-the corresponding <tt>get_RESULT</tt> function will return either a <tt>boost::multi_index_container</tt> or a <tt>std::map</tt>.
+the corresponding <tt>get_RESULT</tt> function will return either a <tt>MultiHashMap</tt>.
 </p>
 
 <p>
