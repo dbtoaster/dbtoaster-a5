@@ -78,149 +78,149 @@ bigquery:	testdatahash
 query: testdatahash query_simple query_zeus query_employee query_tpch query_financial
 
 query_simple:
-	@$(FAST_QUERY_TEST) simple/r_aggcomparison
-	@$(FAST_QUERY_TEST) simple/r_aggofnested
-	@$(FAST_QUERY_TEST) simple/r_aggofnestedagg
-	@$(FAST_QUERY_TEST) simple/r_agtb
-	@$(FAST_QUERY_TEST) simple/r_agtbexists
-	@$(FAST_QUERY_TEST) simple/r_avg
-	@$(FAST_QUERY_TEST) simple/r_bigsumstar
-	@$(FAST_QUERY_TEST) simple/r_btimesa
-	@$(FAST_QUERY_TEST) simple/r_btimesacorrelated
-	@$(FAST_QUERY_TEST) simple/r_count
-	@$(FAST_QUERY_TEST) simple/r_case
-	@$(FAST_QUERY_TEST) simple/r_divb
-	@$(FAST_QUERY_TEST) simple/r_existsnestedagg
-	@$(FAST_QUERY_TEST) simple/r_gbasumb
-	@$(FAST_QUERY_TEST) simple/r_gtealldynamic
-	@$(FAST_QUERY_TEST) simple/r_gtesomedynamic
-	@$(FAST_QUERY_TEST) simple/r_gtsomedynamic
-	@$(FAST_QUERY_TEST) simple/r_indynamic
-	@$(FAST_QUERY_TEST) simple/r_instatic
-	@$(FAST_QUERY_TEST) simple/r_ltallagg
-	@$(FAST_QUERY_TEST) simple/r_ltallavg
-	@$(FAST_QUERY_TEST) simple/r_ltalldynamic
-	@$(FAST_QUERY_TEST) simple/r_natselfjoin
-	@$(FAST_QUERY_TEST) simple/r_nogroupby
-	@$(FAST_QUERY_TEST) simple/r_selectstar
-	@$(FAST_QUERY_TEST) simple/r_simplenest
-	@$(FAST_QUERY_TEST) simple/r_smallstar
-	@$(FAST_QUERY_TEST) simple/r_starofnested
-	@$(FAST_QUERY_TEST) simple/r_starofnestedagg
-	@$(FAST_QUERY_TEST) simple/r_sumadivsumb
-	@$(FAST_QUERY_TEST) simple/r_sumdivgrp
-	@$(FAST_QUERY_TEST) simple/r_sumnestedintarget
-	@$(FAST_QUERY_TEST) simple/r_sumnestedintargetwitheq
-	@$(FAST_QUERY_TEST) simple/r_sumstar
-	@$(FAST_QUERY_TEST) simple/t_lifttype
-	@$(FAST_QUERY_TEST) simple/r_ltallcorravg
-	@$(FAST_QUERY_TEST) simple/inequality_selfjoin
-	@$(FAST_QUERY_TEST) simple/miraculous_minus
-	@$(FAST_QUERY_TEST) simple/miraculous_minus2
-	@$(FAST_QUERY_TEST) simple/m3k3unable2escalate
-	@$(FAST_QUERY_TEST) simple/r_sumoutsideofagg
-	@$(FAST_QUERY_TEST) simple/rst
-	@$(FAST_QUERY_TEST) simple/r_count_of_one
-	@$(FAST_QUERY_TEST) simple/r_count_of_one_prime
-	@$(FAST_QUERY_TEST) simple/r_deepscoping
-	@$(FAST_QUERY_TEST) simple/r_impossibleineq
-	@$(FAST_QUERY_TEST) simple/r_ineqandeq
-	@$(FAST_QUERY_TEST) simple/r_lift_of_count
-	@$(FAST_QUERY_TEST) simple/r_nonjoineq
-	@$(FAST_QUERY_TEST) simple/r_possibleineq
-	@$(FAST_QUERY_TEST) simple/r_possibleineqwitheq
-	@$(FAST_QUERY_TEST) simple/r_sum_gb_all_out_of_aggregate
-	@$(FAST_QUERY_TEST) simple/r_sum_gb_out_of_aggregate
-	@$(FAST_QUERY_TEST) simple/r_sum_out_of_aggregate
-	@$(FAST_QUERY_TEST) simple/r_unique_counts_by_a
-	@$(FAST_QUERY_TEST) simple/r_multinest
-	@$(FAST_QUERY_TEST) simple/r_nestedfrom
-	@$(FAST_QUERY_TEST) simple/rr_ormyself
-	@$(FAST_QUERY_TEST) simple/rs
-	@$(FAST_QUERY_TEST) simple/rs_cmpnest
-	@$(FAST_QUERY_TEST) simple/rs_eqineq
-	@$(FAST_QUERY_TEST) simple/rs_ineqonnestedagg
-	@$(FAST_QUERY_TEST) simple/rs_inequality
-	@$(FAST_QUERY_TEST) simple/rs_ineqwithnestedagg
-	@$(FAST_QUERY_TEST) simple/rs_joinon
-	@$(FAST_QUERY_TEST) simple/rs_joinwithnestedagg
-	@$(FAST_QUERY_TEST) simple/rs_natjoin
-	@$(FAST_QUERY_TEST) simple/rs_natjoinineq
-	@$(FAST_QUERY_TEST) simple/rs_natjoinpartstar
-	@$(FAST_QUERY_TEST) simple/rs_selectconstcmp
-	@$(FAST_QUERY_TEST) simple/rs_selectpartstar
-	@$(FAST_QUERY_TEST) simple/rs_selectstar
-	@$(FAST_QUERY_TEST) simple/rs_simple
-	@$(FAST_QUERY_TEST) simple/rs_stringjoin
-	@$(FAST_QUERY_TEST) simple/rstar
-	@$(FAST_QUERY_TEST) simple/rtt_or_with_stars
-	@$(FAST_QUERY_TEST) simple/singleton_renaming_conflict
-	@$(FAST_QUERY_TEST) simple/ss_math
-	@$(FAST_QUERY_TEST) simple/invalid_schema_fn
-	@$(FAST_QUERY_TEST) simple/rs_column_mapping_1
-	@$(FAST_QUERY_TEST) simple/rs_column_mapping_2
-	@$(FAST_QUERY_TEST) simple/rs_column_mapping_3
+	@$(QUERY_TEST) simple/r_aggcomparison
+	@$(QUERY_TEST) simple/r_aggofnested
+	@$(QUERY_TEST) simple/r_aggofnestedagg
+	@$(QUERY_TEST) simple/r_agtb
+	@$(QUERY_TEST) simple/r_agtbexists
+	@$(QUERY_TEST) simple/r_avg
+	@$(QUERY_TEST) simple/r_bigsumstar
+	@$(QUERY_TEST) simple/r_btimesa
+	@$(QUERY_TEST) simple/r_btimesacorrelated
+	@$(QUERY_TEST) simple/r_count
+	@$(QUERY_TEST) simple/r_case
+	@$(QUERY_TEST) simple/r_divb
+	@$(QUERY_TEST) simple/r_existsnestedagg
+	@$(QUERY_TEST) simple/r_gbasumb
+	@$(QUERY_TEST) simple/r_gtealldynamic
+	@$(QUERY_TEST) simple/r_gtesomedynamic
+	@$(QUERY_TEST) simple/r_gtsomedynamic
+	@$(QUERY_TEST) simple/r_indynamic
+	@$(QUERY_TEST) simple/r_instatic
+	@$(QUERY_TEST) simple/r_ltallagg
+	@$(QUERY_TEST) simple/r_ltallavg
+	@$(QUERY_TEST) simple/r_ltalldynamic
+	@$(QUERY_TEST) simple/r_natselfjoin
+	@$(QUERY_TEST) simple/r_nogroupby
+	@$(QUERY_TEST) simple/r_selectstar
+	@$(QUERY_TEST) simple/r_simplenest
+	@$(QUERY_TEST) simple/r_smallstar
+	@$(QUERY_TEST) simple/r_starofnested
+	@$(QUERY_TEST) simple/r_starofnestedagg
+	@$(QUERY_TEST) simple/r_sumadivsumb
+	@$(QUERY_TEST) simple/r_sumdivgrp
+	@$(QUERY_TEST) simple/r_sumnestedintarget
+	@$(QUERY_TEST) simple/r_sumnestedintargetwitheq
+	@$(QUERY_TEST) simple/r_sumstar
+	@$(QUERY_TEST) simple/t_lifttype
+	@$(QUERY_TEST) simple/r_ltallcorravg
+	@$(QUERY_TEST) simple/inequality_selfjoin
+	@$(QUERY_TEST) simple/miraculous_minus
+	@$(QUERY_TEST) simple/miraculous_minus2
+	@$(QUERY_TEST) simple/m3k3unable2escalate
+	@$(QUERY_TEST) simple/r_sumoutsideofagg
+	@$(QUERY_TEST) simple/rst
+	@$(QUERY_TEST) simple/r_count_of_one
+	@$(QUERY_TEST) simple/r_count_of_one_prime
+	@$(QUERY_TEST) simple/r_deepscoping
+	@$(QUERY_TEST) simple/r_impossibleineq
+	@$(QUERY_TEST) simple/r_ineqandeq
+	@$(QUERY_TEST) simple/r_lift_of_count
+	@$(QUERY_TEST) simple/r_nonjoineq
+	@$(QUERY_TEST) simple/r_possibleineq
+	@$(QUERY_TEST) simple/r_possibleineqwitheq
+	@$(QUERY_TEST) simple/r_sum_gb_all_out_of_aggregate
+	@$(QUERY_TEST) simple/r_sum_gb_out_of_aggregate
+	@$(QUERY_TEST) simple/r_sum_out_of_aggregate
+	@$(QUERY_TEST) simple/r_unique_counts_by_a
+	@$(QUERY_TEST) simple/r_multinest
+	@$(QUERY_TEST) simple/r_nestedfrom
+	@$(QUERY_TEST) simple/rr_ormyself
+	@$(QUERY_TEST) simple/rs
+	@$(QUERY_TEST) simple/rs_cmpnest
+	@$(QUERY_TEST) simple/rs_eqineq
+	@$(QUERY_TEST) simple/rs_ineqonnestedagg
+	@$(QUERY_TEST) simple/rs_inequality
+	@$(QUERY_TEST) simple/rs_ineqwithnestedagg
+	@$(QUERY_TEST) simple/rs_joinon
+	@$(QUERY_TEST) simple/rs_joinwithnestedagg
+	@$(QUERY_TEST) simple/rs_natjoin
+	@$(QUERY_TEST) simple/rs_natjoinineq
+	@$(QUERY_TEST) simple/rs_natjoinpartstar
+	@$(QUERY_TEST) simple/rs_selectconstcmp
+	@$(QUERY_TEST) simple/rs_selectpartstar
+	@$(QUERY_TEST) simple/rs_selectstar
+	@$(QUERY_TEST) simple/rs_simple
+	@$(QUERY_TEST) simple/rs_stringjoin
+	@$(QUERY_TEST) simple/rstar
+	@$(QUERY_TEST) simple/rtt_or_with_stars
+	@$(QUERY_TEST) simple/singleton_renaming_conflict
+	@$(QUERY_TEST) simple/ss_math
+	@$(QUERY_TEST) simple/invalid_schema_fn
+	@$(QUERY_TEST) simple/rs_column_mapping_1
+	@$(QUERY_TEST) simple/rs_column_mapping_2
+	@$(QUERY_TEST) simple/rs_column_mapping_3
 
 query_zeus:
-	@$(FAST_QUERY_TEST) zeus/11564068
-	@$(FAST_QUERY_TEST) zeus/12811747
-	@$(FAST_QUERY_TEST) zeus/37494577
-	@$(FAST_QUERY_TEST) zeus/39765730
-	@$(FAST_QUERY_TEST) zeus/48183500
-	@$(FAST_QUERY_TEST) zeus/52548748
-	@$(FAST_QUERY_TEST) zeus/59977251
-	@$(FAST_QUERY_TEST) zeus/75453299
-	@$(FAST_QUERY_TEST) zeus/94384934
-	@$(FAST_QUERY_TEST) zeus/95497049
-	@$(FAST_QUERY_TEST) zeus/96434723
+	@$(QUERY_TEST) zeus/11564068
+	@$(QUERY_TEST) zeus/12811747
+	@$(QUERY_TEST) zeus/37494577
+	@$(QUERY_TEST) zeus/39765730
+	@$(QUERY_TEST) zeus/48183500
+	@$(QUERY_TEST) zeus/52548748
+	@$(QUERY_TEST) zeus/59977251
+	@$(QUERY_TEST) zeus/75453299
+	@$(QUERY_TEST) zeus/94384934
+	@$(QUERY_TEST) zeus/95497049
+	@$(QUERY_TEST) zeus/96434723
 
 query_employee:
-	@$(FAST_QUERY_TEST) employee/query01
-	@$(FAST_QUERY_TEST) employee/query01a
-	@$(FAST_QUERY_TEST) employee/query02
-	@$(FAST_QUERY_TEST) employee/query02a
-	@$(FAST_QUERY_TEST) employee/query03
-	@$(FAST_QUERY_TEST) employee/query03a
-	@$(FAST_QUERY_TEST) employee/query05
-	@$(FAST_QUERY_TEST) employee/query06
-	@$(FAST_QUERY_TEST) employee/query07
-	@$(FAST_QUERY_TEST) employee/query08
-	@$(FAST_QUERY_TEST) employee/query08a
-	@$(FAST_QUERY_TEST) employee/query09
-	@$(FAST_QUERY_TEST) employee/query09a
-	@$(FAST_QUERY_TEST) employee/query10
-	@$(FAST_QUERY_TEST) employee/query10a
-	@$(FAST_QUERY_TEST) employee/query11b
-	@$(FAST_QUERY_TEST) employee/query12a
-	@$(FAST_QUERY_TEST) employee/query16
-	@$(FAST_QUERY_TEST) employee/query16a
-	@$(FAST_QUERY_TEST) employee/query17a
-	@$(FAST_QUERY_TEST) employee/query22
-#	@$(FAST_QUERY_TEST) employee/query35b   
-	@$(FAST_QUERY_TEST) employee/query35c
-#	@$(FAST_QUERY_TEST) employee/query36b  
-	@$(FAST_QUERY_TEST) employee/query36c 
-	@$(FAST_QUERY_TEST) employee/query37
-	@$(FAST_QUERY_TEST) employee/query38a
-	@$(FAST_QUERY_TEST) employee/query39
-	@$(FAST_QUERY_TEST) employee/query40
-	@$(FAST_QUERY_TEST) employee/query48
-	@$(FAST_QUERY_TEST) employee/query49
-	@$(FAST_QUERY_TEST) employee/query50
-	@$(FAST_QUERY_TEST) employee/query51
-	@$(FAST_QUERY_TEST) employee/query52a
-	@$(FAST_QUERY_TEST) employee/query54
-	@$(FAST_QUERY_TEST) employee/query55
-	@$(FAST_QUERY_TEST) employee/query56a
-	@$(FAST_QUERY_TEST) employee/query57a
-	@$(FAST_QUERY_TEST) employee/query58a
-	@$(FAST_QUERY_TEST) employee/query59
-	@$(FAST_QUERY_TEST) employee/query60
-	@$(FAST_QUERY_TEST) employee/query61
-	@$(FAST_QUERY_TEST) employee/query62a
-	@$(FAST_QUERY_TEST) employee/query63a
-	@$(FAST_QUERY_TEST) employee/query64a
-	@$(FAST_QUERY_TEST) employee/query65a
+	@$(QUERY_TEST) employee/query01
+	@$(QUERY_TEST) employee/query01a
+	@$(QUERY_TEST) employee/query02
+	@$(QUERY_TEST) employee/query02a
+	@$(QUERY_TEST) employee/query03
+	@$(QUERY_TEST) employee/query03a
+	@$(QUERY_TEST) employee/query05
+	@$(QUERY_TEST) employee/query06
+	@$(QUERY_TEST) employee/query07
+	@$(QUERY_TEST) employee/query08
+	@$(QUERY_TEST) employee/query08a
+	@$(QUERY_TEST) employee/query09
+	@$(QUERY_TEST) employee/query09a
+	@$(QUERY_TEST) employee/query10
+	@$(QUERY_TEST) employee/query10a
+	@$(QUERY_TEST) employee/query11b
+	@$(QUERY_TEST) employee/query12a
+	@$(QUERY_TEST) employee/query16
+	@$(QUERY_TEST) employee/query16a
+	@$(QUERY_TEST) employee/query17a
+	@$(QUERY_TEST) employee/query22
+#	@$(QUERY_TEST) employee/query35b   
+	@$(QUERY_TEST) employee/query35c
+#	@$(QUERY_TEST) employee/query36b  
+	@$(QUERY_TEST) employee/query36c 
+	@$(QUERY_TEST) employee/query37
+	@$(QUERY_TEST) employee/query38a
+	@$(QUERY_TEST) employee/query39
+	@$(QUERY_TEST) employee/query40
+	@$(QUERY_TEST) employee/query48
+	@$(QUERY_TEST) employee/query49
+	@$(QUERY_TEST) employee/query50
+	@$(QUERY_TEST) employee/query51
+	@$(QUERY_TEST) employee/query52a
+	@$(QUERY_TEST) employee/query54
+	@$(QUERY_TEST) employee/query55
+	@$(QUERY_TEST) employee/query56a
+	@$(QUERY_TEST) employee/query57a
+	@$(QUERY_TEST) employee/query58a
+	@$(QUERY_TEST) employee/query59
+	@$(QUERY_TEST) employee/query60
+	@$(QUERY_TEST) employee/query61
+	@$(QUERY_TEST) employee/query62a
+	@$(QUERY_TEST) employee/query63a
+	@$(QUERY_TEST) employee/query64a
+	@$(QUERY_TEST) employee/query65a
 
 tpch_test:
 	@$(QUERY_TEST) tpch1
@@ -261,125 +261,125 @@ financial_test:
 	@$(QUERY_TEST) pricespread
 
 query_tpch:
-	@$(FAST_QUERY_TEST) tpch1 --dataset tiny
-	@$(FAST_QUERY_TEST) tpch2 --dataset tiny
-	@$(FAST_QUERY_TEST) tpch3 --dataset tiny
-	@$(FAST_QUERY_TEST) tpch3
-	@$(FAST_QUERY_TEST) tpch4 --dataset tiny
-	@$(FAST_QUERY_TEST) tpch5 --dataset tiny
-#	@$(FAST_QUERY_TEST) tpch6 --dataset tiny  #F.P. error on the interpreter
-	@$(FAST_QUERY_TEST) tpch7 --dataset tiny
-	@$(FAST_QUERY_TEST) tpch8 --dataset tiny  #slow compilation
-	@$(FAST_QUERY_TEST) tpch9 --dataset tiny  #slow compilation
-	@$(FAST_QUERY_TEST) tpch10 --dataset tiny
-	@$(FAST_QUERY_TEST) tpch11 --dataset tiny
-	@$(FAST_QUERY_TEST) tpch11 
-	@$(FAST_QUERY_TEST) tpch11a --dataset tiny
-#	@$(FAST_QUERY_TEST) tpch11c --dataset tiny  #slow compilation
-#	@$(FAST_QUERY_TEST) tpch11c  # ~90s
-	@$(FAST_QUERY_TEST) tpch12 --dataset tiny
-	@$(FAST_QUERY_TEST) tpch13 --dataset tiny
-	@$(FAST_QUERY_TEST) tpch14 --dataset tiny
-#	@$(FAST_QUERY_TEST) tpch15 --dataset tiny  
-	@$(FAST_QUERY_TEST) tpch16 --dataset tiny
-	@$(FAST_QUERY_TEST) tpch17 --dataset tiny
-	@$(FAST_QUERY_TEST) tpch17 
-	@$(FAST_QUERY_TEST) tpch17a --dataset tiny
-	@$(FAST_QUERY_TEST) tpch17a 
-	@$(FAST_QUERY_TEST) tpch18 --dataset tiny
-#	@$(FAST_QUERY_TEST) tpch18 #sloooow
-	@$(FAST_QUERY_TEST) tpch18a --dataset tiny
-	@$(FAST_QUERY_TEST) tpch18a
-	@$(FAST_QUERY_TEST) tpch19 --dataset tiny
-	@$(FAST_QUERY_TEST) tpch20 --dataset tiny
-	@$(FAST_QUERY_TEST) tpch21 --dataset tiny
-	@$(FAST_QUERY_TEST) tpch22 --dataset tiny
-	@$(FAST_QUERY_TEST) tpch22a --dataset tiny
-	@$(FAST_QUERY_TEST) tpch22a
-	@$(FAST_QUERY_TEST) ssb4 --dataset tiny
-#	@$(FAST_QUERY_TEST) ssb4
+	@$(QUERY_TEST) tpch1 --dataset tiny
+	@$(QUERY_TEST) tpch2 --dataset tiny
+	@$(QUERY_TEST) tpch3 --dataset tiny
+	@$(QUERY_TEST) tpch3
+	@$(QUERY_TEST) tpch4 --dataset tiny
+	@$(QUERY_TEST) tpch5 --dataset tiny
+#	@$(QUERY_TEST) tpch6 --dataset tiny  #F.P. error on the interpreter
+	@$(QUERY_TEST) tpch7 --dataset tiny
+	@$(QUERY_TEST) tpch8 --dataset tiny  #slow compilation
+	@$(QUERY_TEST) tpch9 --dataset tiny  #slow compilation
+	@$(QUERY_TEST) tpch10 --dataset tiny
+	@$(QUERY_TEST) tpch11 --dataset tiny
+	@$(QUERY_TEST) tpch11 
+	@$(QUERY_TEST) tpch11a --dataset tiny
+#	@$(QUERY_TEST) tpch11c --dataset tiny  #slow compilation
+#	@$(QUERY_TEST) tpch11c  # ~90s
+	@$(QUERY_TEST) tpch12 --dataset tiny
+	@$(QUERY_TEST) tpch13 --dataset tiny
+	@$(QUERY_TEST) tpch14 --dataset tiny
+#	@$(QUERY_TEST) tpch15 --dataset tiny  
+	@$(QUERY_TEST) tpch16 --dataset tiny
+	@$(QUERY_TEST) tpch17 --dataset tiny
+	@$(QUERY_TEST) tpch17 
+	@$(QUERY_TEST) tpch17a --dataset tiny
+	@$(QUERY_TEST) tpch17a 
+	@$(QUERY_TEST) tpch18 --dataset tiny
+#	@$(QUERY_TEST) tpch18 #sloooow
+	@$(QUERY_TEST) tpch18a --dataset tiny
+	@$(QUERY_TEST) tpch18a
+	@$(QUERY_TEST) tpch19 --dataset tiny
+	@$(QUERY_TEST) tpch20 --dataset tiny
+	@$(QUERY_TEST) tpch21 --dataset tiny
+	@$(QUERY_TEST) tpch22 --dataset tiny
+	@$(QUERY_TEST) tpch22a --dataset tiny
+	@$(QUERY_TEST) tpch22a
+	@$(QUERY_TEST) ssb4 --dataset tiny
+#	@$(QUERY_TEST) ssb4
 
 query_tpch_standard:
-	@$(FAST_QUERY_TEST) tpch1 --dataset standard
-	@$(FAST_QUERY_TEST) tpch2 --dataset standard
-	@$(FAST_QUERY_TEST) tpch3 --dataset standard
-	@$(FAST_QUERY_TEST) tpch4 --dataset standard
-	@$(FAST_QUERY_TEST) tpch5 --dataset standard
-#	@$(FAST_QUERY_TEST) tpch6 --dataset standard  #F.P. error on the interpreter
-	@$(FAST_QUERY_TEST) tpch7 --dataset standard
-	@$(FAST_QUERY_TEST) tpch8 --dataset standard  #slow compilation
-	@$(FAST_QUERY_TEST) tpch9 --dataset standard  #slow compilation
-	@$(FAST_QUERY_TEST) tpch10 --dataset standard
-	@$(FAST_QUERY_TEST) tpch11 --dataset standard
-	@$(FAST_QUERY_TEST) tpch11a --dataset standard
-#	@$(FAST_QUERY_TEST) tpch11c --dataset standard  #slow compilation
-#	@$(FAST_QUERY_TEST) tpch11c  # ~90s
-	@$(FAST_QUERY_TEST) tpch12 --dataset standard
-	@$(FAST_QUERY_TEST) tpch13 --dataset standard
-	@$(FAST_QUERY_TEST) tpch14 --dataset standard
-#	@$(FAST_QUERY_TEST) tpch15 --dataset standard  
-	@$(FAST_QUERY_TEST) tpch16 --dataset standard
-	@$(FAST_QUERY_TEST) tpch17 --dataset standard
-	@$(FAST_QUERY_TEST) tpch17a --dataset standard
-	@$(FAST_QUERY_TEST) tpch18 --dataset standard
-#	@$(FAST_QUERY_TEST) tpch18 #sloooow
-	@$(FAST_QUERY_TEST) tpch18a --dataset standard
-	@$(FAST_QUERY_TEST) tpch19 --dataset standard
-	@$(FAST_QUERY_TEST) tpch20 --dataset standard
-	@$(FAST_QUERY_TEST) tpch21 --dataset standard
-	@$(FAST_QUERY_TEST) tpch22 --dataset standard
-	@$(FAST_QUERY_TEST) tpch22a --dataset standard
-	@$(FAST_QUERY_TEST) ssb4 --dataset standard
-#	@$(FAST_QUERY_TEST) ssb4
+	@$(QUERY_TEST) tpch1 --dataset standard
+	@$(QUERY_TEST) tpch2 --dataset standard
+	@$(QUERY_TEST) tpch3 --dataset standard
+	@$(QUERY_TEST) tpch4 --dataset standard
+	@$(QUERY_TEST) tpch5 --dataset standard
+#	@$(QUERY_TEST) tpch6 --dataset standard  #F.P. error on the interpreter
+	@$(QUERY_TEST) tpch7 --dataset standard
+	@$(QUERY_TEST) tpch8 --dataset standard  #slow compilation
+	@$(QUERY_TEST) tpch9 --dataset standard  #slow compilation
+	@$(QUERY_TEST) tpch10 --dataset standard
+	@$(QUERY_TEST) tpch11 --dataset standard
+	@$(QUERY_TEST) tpch11a --dataset standard
+#	@$(QUERY_TEST) tpch11c --dataset standard  #slow compilation
+#	@$(QUERY_TEST) tpch11c  # ~90s
+	@$(QUERY_TEST) tpch12 --dataset standard
+	@$(QUERY_TEST) tpch13 --dataset standard
+	@$(QUERY_TEST) tpch14 --dataset standard
+#	@$(QUERY_TEST) tpch15 --dataset standard  
+	@$(QUERY_TEST) tpch16 --dataset standard
+	@$(QUERY_TEST) tpch17 --dataset standard
+	@$(QUERY_TEST) tpch17a --dataset standard
+	@$(QUERY_TEST) tpch18 --dataset standard
+#	@$(QUERY_TEST) tpch18 #sloooow
+	@$(QUERY_TEST) tpch18a --dataset standard
+	@$(QUERY_TEST) tpch19 --dataset standard
+	@$(QUERY_TEST) tpch20 --dataset standard
+	@$(QUERY_TEST) tpch21 --dataset standard
+	@$(QUERY_TEST) tpch22 --dataset standard
+	@$(QUERY_TEST) tpch22a --dataset standard
+	@$(QUERY_TEST) ssb4 --dataset standard
+#	@$(QUERY_TEST) ssb4
 
 query_tpch_big:
-	@$(FAST_QUERY_TEST) tpch1 --dataset big
-	@$(FAST_QUERY_TEST) tpch2 --dataset big
-	@$(FAST_QUERY_TEST) tpch3 --dataset big
-	@$(FAST_QUERY_TEST) tpch4 --dataset big
-	@$(FAST_QUERY_TEST) tpch5 --dataset big
-#	@$(FAST_QUERY_TEST) tpch6 --dataset big  #F.P. error on the interpreter
-	@$(FAST_QUERY_TEST) tpch7 --dataset big
-	@$(FAST_QUERY_TEST) tpch8 --dataset big  #slow compilation
-	@$(FAST_QUERY_TEST) tpch9 --dataset big  #slow compilation
-	@$(FAST_QUERY_TEST) tpch10 --dataset big
-	@$(FAST_QUERY_TEST) tpch11 --dataset big
-	@$(FAST_QUERY_TEST) tpch11a --dataset big
-#	@$(FAST_QUERY_TEST) tpch11c --dataset big  #slow compilation
-#	@$(FAST_QUERY_TEST) tpch11c  # ~90s
-	@$(FAST_QUERY_TEST) tpch12 --dataset big
-	@$(FAST_QUERY_TEST) tpch13 --dataset big
-	@$(FAST_QUERY_TEST) tpch14 --dataset big
-#	@$(FAST_QUERY_TEST) tpch15 --dataset big  
-	@$(FAST_QUERY_TEST) tpch16 --dataset big
-	@$(FAST_QUERY_TEST) tpch17 --dataset big
-	@$(FAST_QUERY_TEST) tpch17a --dataset big
-	@$(FAST_QUERY_TEST) tpch18 --dataset big
-#	@$(FAST_QUERY_TEST) tpch18 #sloooow
-	@$(FAST_QUERY_TEST) tpch18a --dataset big
-	@$(FAST_QUERY_TEST) tpch19 --dataset big
-	@$(FAST_QUERY_TEST) tpch20 --dataset big
-	@$(FAST_QUERY_TEST) tpch21 --dataset big
-	@$(FAST_QUERY_TEST) tpch22 --dataset big
-	@$(FAST_QUERY_TEST) tpch22a --dataset big
-	@$(FAST_QUERY_TEST) ssb4 --dataset big
-#	@$(FAST_QUERY_TEST) ssb4
+	@$(QUERY_TEST) tpch1 --dataset big
+	@$(QUERY_TEST) tpch2 --dataset big
+	@$(QUERY_TEST) tpch3 --dataset big
+	@$(QUERY_TEST) tpch4 --dataset big
+	@$(QUERY_TEST) tpch5 --dataset big
+#	@$(QUERY_TEST) tpch6 --dataset big  #F.P. error on the interpreter
+	@$(QUERY_TEST) tpch7 --dataset big
+	@$(QUERY_TEST) tpch8 --dataset big  #slow compilation
+	@$(QUERY_TEST) tpch9 --dataset big  #slow compilation
+	@$(QUERY_TEST) tpch10 --dataset big
+	@$(QUERY_TEST) tpch11 --dataset big
+	@$(QUERY_TEST) tpch11a --dataset big
+#	@$(QUERY_TEST) tpch11c --dataset big  #slow compilation
+#	@$(QUERY_TEST) tpch11c  # ~90s
+	@$(QUERY_TEST) tpch12 --dataset big
+	@$(QUERY_TEST) tpch13 --dataset big
+	@$(QUERY_TEST) tpch14 --dataset big
+#	@$(QUERY_TEST) tpch15 --dataset big  
+	@$(QUERY_TEST) tpch16 --dataset big
+	@$(QUERY_TEST) tpch17 --dataset big
+	@$(QUERY_TEST) tpch17a --dataset big
+	@$(QUERY_TEST) tpch18 --dataset big
+#	@$(QUERY_TEST) tpch18 #sloooow
+	@$(QUERY_TEST) tpch18a --dataset big
+	@$(QUERY_TEST) tpch19 --dataset big
+	@$(QUERY_TEST) tpch20 --dataset big
+	@$(QUERY_TEST) tpch21 --dataset big
+	@$(QUERY_TEST) tpch22 --dataset big
+	@$(QUERY_TEST) tpch22a --dataset big
+	@$(QUERY_TEST) ssb4 --dataset big
+#	@$(QUERY_TEST) ssb4
 
 query_financial:
-	@$(FAST_QUERY_TEST) vwap --dataset tiny
-#	@$(FAST_QUERY_TEST) vwap
-	@$(FAST_QUERY_TEST) vwap --dataset tiny -d HEURISTICS-ENABLE-INPUTVARS
-	@$(FAST_QUERY_TEST) vwap -d HEURISTICS-ENABLE-INPUTVARS
-	@$(FAST_QUERY_TEST) brokervariance --dataset tiny
-	@$(FAST_QUERY_TEST) brokervariance
-	@$(FAST_QUERY_TEST) brokerspread --dataset tiny
-	@$(FAST_QUERY_TEST) brokerspread
-	@$(FAST_QUERY_TEST) missedtrades --dataset tiny
-#	@$(FAST_QUERY_TEST) missedtrades
-	@$(FAST_QUERY_TEST) axfinder --dataset tiny
-	@$(FAST_QUERY_TEST) axfinder
-	@$(FAST_QUERY_TEST) pricespread --dataset tiny
-	@$(FAST_QUERY_TEST) pricespread
+	@$(QUERY_TEST) vwap --dataset tiny
+#	@$(QUERY_TEST) vwap
+	@$(QUERY_TEST) vwap --dataset tiny -d HEURISTICS-ENABLE-INPUTVARS
+	@$(QUERY_TEST) vwap -d HEURISTICS-ENABLE-INPUTVARS
+	@$(QUERY_TEST) brokervariance --dataset tiny
+	@$(QUERY_TEST) brokervariance
+	@$(QUERY_TEST) brokerspread --dataset tiny
+	@$(QUERY_TEST) brokerspread
+	@$(QUERY_TEST) missedtrades --dataset tiny
+#	@$(QUERY_TEST) missedtrades
+	@$(QUERY_TEST) axfinder --dataset tiny
+	@$(QUERY_TEST) axfinder
+	@$(QUERY_TEST) pricespread --dataset tiny
+	@$(QUERY_TEST) pricespread
 
 local: 
 	@for i in $(LOCAL_UNIT_TESTS); do \

@@ -707,7 +707,9 @@ let value_singleton ?(multiplicity = CalcRing.one)
                     [ListAsFunction] module.  Otherwise return None.  
 *)
 let rec cmp_exprs ?(cmp_opts:CalcRing.cmp_opt_t list = 
-                        if Debug.active "WEAK-EXPR-EQUIV" then [] 
+                        if Debug.active "STRONG-EXPR-EQUIV" then 
+                        CalcRing.full_cmp_opts
+                        else if Debug.active "WEAK-EXPR-EQUIV" then [] 
                         else CalcRing.default_cmp_opts) 
                   ?(validate = (fun _ -> true))
                   (e1:expr_t) (e2:expr_t):((var_t * var_t) list option) =
@@ -731,7 +733,7 @@ let rec cmp_exprs ?(cmp_opts:CalcRing.cmp_opt_t list =
    validate_mapping (CalcRing.cmp_exprs ~cmp_opts:cmp_opts merge merge
       (fun lf1 lf2 -> validate_mapping (
       begin match (lf1,lf2) with
-         | ((Value v1), (Value v2)) ->
+         | ((Value v1), (Value v2)) -> 
             Arithmetic.cmp_values v1 v2
          
          | ((AggSum(gb1, sub1)), (AggSum(gb2, sub2))) ->
@@ -811,8 +813,10 @@ let rec cmp_exprs ?(cmp_opts:CalcRing.cmp_opt_t list =
    are identical (and contain the same things).
 *)   
 let exprs_are_identical ?(cmp_opts:CalcRing.cmp_opt_t list = 
-                              if Debug.active "WEAK-EXPR-EQUIV" then [] 
-                              else CalcRing.default_cmp_opts)
+                              if Debug.active "STRONG-EXPR-EQUIV" then 
+                              CalcRing.full_cmp_opts
+                              else if Debug.active "WEAK-EXPR-EQUIV" then [] 
+                              else CalcRing.default_cmp_opts) 
                         (e1:expr_t) (e2:expr_t): bool = 
    None <> cmp_exprs ~cmp_opts:cmp_opts 
                      ~validate:ListAsFunction.is_identity

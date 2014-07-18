@@ -225,13 +225,19 @@ in
   test_cmp_exprs "Repeated prod terms #2" ~cmp_opts:[OptProdOrderIndependent]
                  "A * A" "B * B" true;               
 
+  test_cmp_exprs "Problem 1" ~cmp_opts:[]
+          "((AggSum([COUNT_pRR_A],(R(COUNT_pRR_A, R2_B))) * (1 + 1)) + 1)"
+          "((AggSum([COUNT_pRR_A],(R(COUNT_pRR_A, R2_B))) * (1 + 1)) + 1)"
+          true; 
+          
   test_cmp_exprs "Multiple mappings #1" ~cmp_opts:[]
                  "R(A) + R(C)" "R(B) + R(A)" true;
   test_cmp_exprs "Multiple mappings #2" ~cmp_opts:[OptSumOrderIndependent]
                  "R(A) + R(C)" "R(B) + R(A)" true;
   test_cmp_exprs "Multiple mappings #3" ~cmp_opts:[]
                  "R(A) + R(C) + S(A)" "R(A) + R(B) + S(B)" false;
-  test_cmp_exprs "Multiple mappings #4" ~cmp_opts:[OptSumOrderIndependent]
+  test_cmp_exprs "Multiple mappings #4" 
+                 ~cmp_opts:[OptSumOrderIndependent; OptMultipleMappings]
                  "R(A) + R(C) + S(A)" "R(A) + R(B) + S(B)" true;  
   (* We don't propagate multiple mappings through expression trees,
      so the following equivalence is not detected. *)                 
