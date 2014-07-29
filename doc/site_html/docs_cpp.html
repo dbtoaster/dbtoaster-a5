@@ -1,40 +1,82 @@
 <html><head>
-<title>C++ Code Generation</title>
-<link rel="stylesheet" type="text/css" href="style.css" />
-<script type="text/javascript" src="dropdowntabs.js"> </script>
+<title>DBToaster - C++ Code Generation</title>
+<link rel="stylesheet" type="text/css" href="css/style.css" />
+<link rel="stylesheet" type="text/css" href="css/bootstrap.min.css" media="screen" />
+<link rel="stylesheet" type="text/css" href="css/bootstrap-theme.min.css" />
+<link href="//netdna.bootstrapcdn.com/font-awesome/4.0.1/css/font-awesome.css" rel="stylesheet">
 
 
 </head> <body>
 <a name="pagetop"></a>
 <div class="overallpage">
   <div class="pagebody">
-    <div class="headerbar">
-      <div class="logobox">
+    <div class="logobox">
         <a href="index.html" ><img src="dbtoaster-logo.gif" width="214" 
-                      height="100" alt="DBToaster"/></a></div>
-      <div class="topmenu">
-                 <div id="bluemenu" class="bluetabs">
-            <ul>
-               <li><a href="index.html" rel="dropmenu0_b">About</a></li>               <li><a href="download.html" rel="dropmenu1_b">Downloads</a></li>               <li><a href="docs.html" rel="dropmenu2_b">Documentation</a></li>               <li><a href="home_contact.html" rel="dropmenu3_b">Contact</a></li>           </ul>
-         </div>
+                    height="100" alt="DBToaster"/></a>    </div>
+    <div class="navbar navbar-default">
+      <div class="navbar-header">
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
       </div>
-         <div id="dropmenu0_b" class="dropmenudiv_b">
-           <a href="index.html" >About</a>           <a href="home_performance.html" >Performance</a>           <a href="home_features.html" >Features</a>           <a href="home_features.html#roadmap" > - Roadmap</a>           <a href="home_people.html" >The Team</a>           <a href="home_research.html" >For Researchers</a>         </div>
-         <div id="dropmenu1_b" class="dropmenudiv_b">
-           <a href="download.html" >Downloads</a>           <a href="download.html#license" >License</a>         </div>
-         <div id="dropmenu2_b" class="dropmenudiv_b">
-           <a href="docs.html" >Getting Started</a>           <a href="docs_compiler.html" >Command-Line Reference</a>           <a href="docs_compiler.html#options" > - Command-Line Options</a>           <a href="docs_compiler.html#languages" > - Supported Languages</a>           <a href="docs_compiler.html#opt_flags" > - Optimization Flags</a>           <a href="docs_sql.html" >DBT-SQL Reference</a>           <a href="docs_stdlib.html" >DBT StdLib Reference</a>           <a href="docs_adaptors.html" >DBT Adaptors Reference</a>           <a href="docs_cpp.html" >C++ Code Generation</a>           <a href="docs_scala.html" >Scala Code Generation</a>         </div>
-         <div id="dropmenu3_b" class="dropmenudiv_b">
-           <a href="home_contact.html#inquiries" >Inquiries</a>           <a href="home_contact.html#mailing" >Mailing List</a>           <a href="bugs.html" >Bug Reports</a>         </div>
-         <script type="text/javascript">
-            tabdropdown.init("bluemenu")
-         </script>
+      <div class="navbar-collapse collapse">
+        <ul class="nav navbar-nav">
+          <li class="dropdown">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown">About <b class="caret"></b></a>
+            <ul class="dropdown-menu">
+              <li><a href="index.html" >About</a></li>
+              <li><a href="home_performance.html" >Performance</a></li>
+              <li><a href="home_features.html" >Features</a></li>
+              <li><a href="home_features.html#roadmap" ><small><i class="fa fa-caret-square-o-right"></i> Roadmap</small></a></li>
+              <li><a href="home_people.html" >The Team</a></li>
+              <li><a href="home_research.html" >For Researchers</a></li>
+            </ul>
+          </li>
+          <li class="dropdown">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown">Downloads <b class="caret"></b></a>
+            <ul class="dropdown-menu">
+              <li><a href="download.html" >Downloads</a></li>
+              <li><a href="download.html#license" >License</a></li>
+            </ul>
+          </li>
+          <li class="dropdown">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown">Documentation <b class="caret"></b></a>
+            <ul class="dropdown-menu">
+              <li><a href="docs.html" >Getting Started</a></li>
+              <li><a href="docs_compiler.html" >Command-Line Reference</a></li>
+              <li><a href="docs_compiler.html#options" ><small><i class="fa fa-caret-square-o-right"></i> Command-Line Options</small></a></li>
+              <li><a href="docs_compiler.html#languages" ><small><i class="fa fa-caret-square-o-right"></i> Supported Languages</small></a></li>
+              <li><a href="docs_compiler.html#opt_flags" ><small><i class="fa fa-caret-square-o-right"></i> Optimization Flags</small></a></li>
+              <li><a href="docs_sql.html" >DBT-SQL Reference</a></li>
+              <li><a href="docs_stdlib.html" >DBT StdLib Reference</a></li>
+              <li><a href="docs_adaptors.html" >DBT Adaptors Reference</a></li>
+              <li><a href="docs_cpp.html" >C++ Code Generation</a></li>
+              <li><a href="docs_scala.html" >Scala Code Generation</a></li>
+            </ul>
+          </li>
+          <li class="dropdown">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown">Contact <b class="caret"></b></a>
+            <ul class="dropdown-menu">
+              <li><a href="home_contact.html#inquiries" >Inquiries</a></li>
+
+              <li><a href="home_contact.html#mailing" >Mailing List</a></li>
+
+              <li><a href="bugs.html" >Bug Reports</a></li>
+
+            </ul>
+          </li>
+        </ul>
+      </div>
     </div>
-    <hr/>
     <div class="contentwrapper">
       <div class="content">
-        <div class="doc_chain_link"> &lt; <span class="doc_chain_link_prev"><a href="docs_adaptors.html" >DBT Adaptors Reference</a></span> | <span class="doc_chain_link_next"><a href="docs_scala.html" >Scala Code Generation</a></span> &gt; </div>        <div class="titlebox">C++ Code Generation</div>
-<div class="warning">Warning: This BETA API is not final, and subject to change before release.</div>
+        <div class="doc_chain_link"> &lt; <span class="doc_chain_link_prev"><a href="docs_adaptors.html" >DBT Adaptors Reference</a></span> | <span class="doc_chain_link_next"><a href="docs_scala.html" >Scala Code Generation</a></span> &gt; </div>        <div class="titlebox">C++ Code Generation</div><div class="warning">Warning: This BETA API is not final, and subject to change before release.</div>
+
+<p>
+   <i>Note:</i> To compile and run queries using the C++ backend requires g++ 4.7 or above. Please refer to <a href="docs.html" >Getting Started</a> for details 
+</p>
 
 <a name="quickstart"></a>
 <h3>1. Quickstart Guide</h3>
@@ -68,52 +110,21 @@ Alternatively, DBToaster can build a standalone binary (if the <tt>-c [binary na
 the generated header file against <tt>lib/dbt_c++/main.cpp</tt>, which provides code for executing the 
 sql program and printing the results. 
 </p>
-<p>
-<b>Requirements:</b> Besides <tt>g++</tt>, the Boost header files and the following library binaries: <tt>boost_program_options</tt>, 
-<tt>boost_serialization</tt>, <tt>boost_system</tt>, <tt>boost_filesystem</tt>, <tt>boost_chrono</tt> and 
-<tt>boost_thread</tt> have to be present on the system since the generated code makes use of them.
-If these can't be found in the paths searched by default by <tt>g++</tt> then their location has to be explicitly
-provided to DBToaster. This can be done in one of the following two ways, either through the environment variables:
-<ul>
-<li><b>DBT_HDR</b> which should contain the path to Boost's <tt>include</tt> folder;</li>
-<li><b>DBT_LIB</b> which should contain the path to Boost's <tt>lib</tt> folder.</li>
-</ul>
-<div class="codeblock">$&gt; export DBT_HDR=<i>path-to-boost-include-dir</i>
-$&gt; export DBT_LIB=<i>path-to-boost-lib-dir</i>
-$&gt; bin/dbtoaster examples/queries/simple/rs_example1.sql -l cpp -c rs_example1</div>
-or through the <tt>-I</tt> and <tt>-L</tt> command line flags:
-<div class="codeblock">$&gt; bin/dbtoaster examples/queries/simple/rs_example1.sql -l cpp -c rs_example1 -I <i>path-to-boost-include-dir</i> -L <i>path-to-boost-lib-dir</i></div>
-
-Additionally, if only the multi-threaded versions of the Boost libraries are available, as is the case with some Cygwin provided distributions, one also needs to add the <tt>-d MT</tt> flag when compiling queries to binaries.</p>
-<div class="codeblock">$&gt; bin/dbtoaster examples/queries/simple/rs_example1.sql -l cpp -c rs_example1 -d MT</div>
-</p>
-
 
 <p>
 Running the compiled binary will result in the following output:
 <div class="codeblock">$&gt; ./rs_example1
-&lt;?xml version="1.0" encoding="UTF-8" standalone="yes" ?&gt;
-&lt;!DOCTYPE boost_serialization&gt;
-&lt;boost_serialization signature="serialization::archive" version="9"&gt;
-Initializing program:
-Running program:
-Printing final result:
-&lt;snap class_id="0" tracking_level="0" version="0"&gt;
+&lt;snap&gt;
         &lt;RESULT&gt;156&lt;/RESULT&gt;
 &lt;/snap&gt;
-&lt;/boost_serialization&gt;
 </div>
-
 If the generated binary is run with the <tt>--async</tt> flag, it will also print intermediary results as frequently
 as possible while the sql program is running in a separate thread.
 
 <div class="codeblock">$&gt; ./rs_example1 --async
-&lt;?xml version="1.0" encoding="UTF-8" standalone="yes" ?&gt;
-&lt;!DOCTYPE boost_serialization&gt;
-&lt;boost_serialization signature="serialization::archive" version="9"&gt;
 Initializing program:
 Running program:
-&lt;snap class_id="0" tracking_level="0" version="0"&gt;
+&lt;snap&gt;
         &lt;RESULT&gt;0&lt;/RESULT&gt;
 &lt;/snap&gt;
 &lt;snap&gt;
@@ -138,7 +149,6 @@ Printing final result:
 &lt;snap&gt;
         &lt;RESULT&gt;156&lt;/RESULT&gt;
 &lt;/snap&gt;
-&lt;/boost_serialization&gt;
 </div>
 </p>
 
@@ -421,7 +431,7 @@ that returns the query result corresponding to <tt>SELECT SUM(r.A*s.C) as RESULT
 <h5>3.1.1. Queries computing collections</h5><p>
 In the example above the result consisted of a single value. 
 If however our query has a <tt>GROUP BY</tt> clause its result is a collection and
-the corresponding <tt>get_RESULT</tt> function will return either a <tt>boost::multi_index_container</tt> or a <tt>std::map</tt>.
+the corresponding <tt>get_RESULT</tt> function will return either a <tt>MultiHashMap</tt>.
 </p>
 
 <p>
@@ -489,90 +499,6 @@ If the given query has no aggregates the <tt>COUNT(*)</tt> aggregate will be com
 consequently the resulting collections will be guaranteed not to have any duplicate keys.
 </p>
 
-<h5>3.1.2. Partial Materialization</h5><p>
-Some of the work involved in maintaining the results of a query can be saved by performing partial materialization
-and only computing the final results when invoking <tt>tlq_t</tt>'s <tt>get_<i>TLQ_NAME</i></tt> functions. This
-behaviour is especially desirable when the rate of querying the results is lower than the rate of updates, and
-can be enabled through the <tt>-F EXPRESSIVE-TLQS</tt> command line flag.
-<br/>
-Below is an example of a query where partial materialization is indeed beneficial.
-
-<div class="codeblock">$&gt; cat examples/queries/simple/r_lift_of_count.sql
-CREATE STREAM R(A int, B int)
-FROM FILE 'examples/data/tiny/r.dat' LINE DELIMITED
-csv ();
-
-SELECT r2.C FROM (
-  SELECT r1.A, COUNT(*) AS C FROM R r1 GROUP BY r1.A
-) r2;
-</div>
-
-<b>Generated <tt>tlq_t</tt> without <tt>-F EXPRESSIVE-TLQS</tt>:</b> We can see that <tt>get_COUNT()</tt>
-simply returns the materialized view of the results.
-<div class="codeblock">$&gt; bin/dbtoaster examples/queries/simple/r_lift_of_count.sql -l cpp
-
-    ...
-
-    /* Type definition providing a way to access the results of the sql program */
-    struct tlq_t{
-        tlq_t()
-        {}
-        
-        ...
-
-        /* Functions returning / computing the results of top level queries */
-        COUNT_map& get_COUNT(){
-            COUNT_map& __v_1 = COUNT;
-            return __v_1;
-        }
-
-    protected:
-
-        /* Data structures used for storing / computing top level queries */
-        COUNT_map COUNT;
-
-    };
-
-    ...
-
-</div>
-
-<b>Generated <tt>tlq_t</tt> with <tt>-F EXPRESSIVE-TLQS</tt>:</b> We can see that <tt>get_COUNT()</tt>
-perfoms some final computation for constructing the end result in a temporary <tt>std::map</tt> before returning it.
-We should remark that <tt>tlq_t</tt> no longer contains the full materialized view of the results <tt>COUNT_map COUNT;</tt>
-but a partial materialization <tt>COUNT_1_E1_1_map COUNT_1_E1_1;</tt> used by <tt>get_COUNT()</tt> in computing 
-the final query result.
-<div class="codeblock">$&gt; bin/dbtoaster examples/queries/simple/r_lift_of_count.sql -l cpp -F EXPRESSIVE-TLQS
-
-    ...
-
-    /* Type definition providing a way to access the results of the sql program */
-    struct tlq_t{
-        tlq_t()
-        {}
-        
-        ...
-
-        /* Functions returning / computing the results of top level queries */
-        map&lt;long,long&gt; get_COUNT(){
-            map&lt;long,long&gt; __v_41;
-            /* Result computation based on COUNT_1_E1_1 */
-            return __v_41;
-        }
-
-    protected:
-
-        /* Data structures used for storing / computing top level queries */
-        COUNT_1_E1_1_map COUNT_1_E1_1;
-
-    };
-
-    ...
-
-</div>
-
-</p>
-
 <a name="data_t"></a>
 <h4>3.2. <tt>struct data_t</tt></h4>
 <p>
@@ -607,6 +533,9 @@ program and retrieving its results.
   <p>Copyright (c) 2009-2012, The DBToaster Consortium. All rights reserved.</p>
   </div>
 </div><!-- /overallpage -->
+
+<script type="text/javascript" src="js/jquery-2.0.3.min.js"> </script>
+<script type="text/javascript" src="js/bootstrap.min.js"> </script>
 
 </body>
 </html>

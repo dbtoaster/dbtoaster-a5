@@ -1,207 +1,326 @@
 <html><head>
-<title>Scala Code Generation</title>
-<link rel="stylesheet" type="text/css" href="style.css" />
-<script type="text/javascript" src="dropdowntabs.js"> </script>
+<title>DBToaster - Scala Code Generation</title>
+<link rel="stylesheet" type="text/css" href="css/style.css" />
+<link rel="stylesheet" type="text/css" href="css/bootstrap.min.css" media="screen" />
+<link rel="stylesheet" type="text/css" href="css/bootstrap-theme.min.css" />
+<link href="//netdna.bootstrapcdn.com/font-awesome/4.0.1/css/font-awesome.css" rel="stylesheet">
 
 
 </head> <body>
 <a name="pagetop"></a>
 <div class="overallpage">
   <div class="pagebody">
-    <div class="headerbar">
-      <div class="logobox">
+    <div class="logobox">
         <a href="index.html" ><img src="dbtoaster-logo.gif" width="214" 
-                      height="100" alt="DBToaster"/></a></div>
-      <div class="topmenu">
-                 <div id="bluemenu" class="bluetabs">
-            <ul>
-               <li><a href="index.html" rel="dropmenu0_b">About</a></li>               <li><a href="download.html" rel="dropmenu1_b">Downloads</a></li>               <li><a href="docs.html" rel="dropmenu2_b">Documentation</a></li>               <li><a href="home_contact.html" rel="dropmenu3_b">Contact</a></li>           </ul>
-         </div>
+                    height="100" alt="DBToaster"/></a>    </div>
+    <div class="navbar navbar-default">
+      <div class="navbar-header">
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
       </div>
-         <div id="dropmenu0_b" class="dropmenudiv_b">
-           <a href="index.html" >About</a>           <a href="home_performance.html" >Performance</a>           <a href="home_features.html" >Features</a>           <a href="home_features.html#roadmap" > - Roadmap</a>           <a href="home_people.html" >The Team</a>           <a href="home_research.html" >For Researchers</a>         </div>
-         <div id="dropmenu1_b" class="dropmenudiv_b">
-           <a href="download.html" >Downloads</a>           <a href="download.html#license" >License</a>         </div>
-         <div id="dropmenu2_b" class="dropmenudiv_b">
-           <a href="docs.html" >Getting Started</a>           <a href="docs_compiler.html" >Command-Line Reference</a>           <a href="docs_compiler.html#options" > - Command-Line Options</a>           <a href="docs_compiler.html#languages" > - Supported Languages</a>           <a href="docs_compiler.html#opt_flags" > - Optimization Flags</a>           <a href="docs_sql.html" >DBT-SQL Reference</a>           <a href="docs_stdlib.html" >DBT StdLib Reference</a>           <a href="docs_adaptors.html" >DBT Adaptors Reference</a>           <a href="docs_cpp.html" >C++ Code Generation</a>           <a href="docs_scala.html" >Scala Code Generation</a>         </div>
-         <div id="dropmenu3_b" class="dropmenudiv_b">
-           <a href="home_contact.html#inquiries" >Inquiries</a>           <a href="home_contact.html#mailing" >Mailing List</a>           <a href="bugs.html" >Bug Reports</a>         </div>
-         <script type="text/javascript">
-            tabdropdown.init("bluemenu")
-         </script>
+      <div class="navbar-collapse collapse">
+        <ul class="nav navbar-nav">
+          <li class="dropdown">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown">About <b class="caret"></b></a>
+            <ul class="dropdown-menu">
+              <li><a href="index.html" >About</a></li>
+              <li><a href="home_performance.html" >Performance</a></li>
+              <li><a href="home_features.html" >Features</a></li>
+              <li><a href="home_features.html#roadmap" ><small><i class="fa fa-caret-square-o-right"></i> Roadmap</small></a></li>
+              <li><a href="home_people.html" >The Team</a></li>
+              <li><a href="home_research.html" >For Researchers</a></li>
+            </ul>
+          </li>
+          <li class="dropdown">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown">Downloads <b class="caret"></b></a>
+            <ul class="dropdown-menu">
+              <li><a href="download.html" >Downloads</a></li>
+              <li><a href="download.html#license" >License</a></li>
+            </ul>
+          </li>
+          <li class="dropdown">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown">Documentation <b class="caret"></b></a>
+            <ul class="dropdown-menu">
+              <li><a href="docs.html" >Getting Started</a></li>
+              <li><a href="docs_compiler.html" >Command-Line Reference</a></li>
+              <li><a href="docs_compiler.html#options" ><small><i class="fa fa-caret-square-o-right"></i> Command-Line Options</small></a></li>
+              <li><a href="docs_compiler.html#languages" ><small><i class="fa fa-caret-square-o-right"></i> Supported Languages</small></a></li>
+              <li><a href="docs_compiler.html#opt_flags" ><small><i class="fa fa-caret-square-o-right"></i> Optimization Flags</small></a></li>
+              <li><a href="docs_sql.html" >DBT-SQL Reference</a></li>
+              <li><a href="docs_stdlib.html" >DBT StdLib Reference</a></li>
+              <li><a href="docs_adaptors.html" >DBT Adaptors Reference</a></li>
+              <li><a href="docs_cpp.html" >C++ Code Generation</a></li>
+              <li><a href="docs_scala.html" >Scala Code Generation</a></li>
+            </ul>
+          </li>
+          <li class="dropdown">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown">Contact <b class="caret"></b></a>
+            <ul class="dropdown-menu">
+              <li><a href="home_contact.html#inquiries" >Inquiries</a></li>
+
+              <li><a href="home_contact.html#mailing" >Mailing List</a></li>
+
+              <li><a href="bugs.html" >Bug Reports</a></li>
+
+            </ul>
+          </li>
+        </ul>
+      </div>
     </div>
-    <hr/>
     <div class="contentwrapper">
       <div class="content">
-        <div class="doc_chain_link"> &lt; <span class="doc_chain_link_prev"><a href="docs_cpp.html" >C++ Code Generation</a></span></div>        <div class="titlebox">Scala Code Generation</div>
-<div class="warning">Warning: This BETA API is not final, and subject to change before release.</div>
+        <div class="doc_chain_link"> &lt; <span class="doc_chain_link_prev"><a href="docs_cpp.html" >C++ Code Generation</a></span></div>        <div class="titlebox">Scala Code Generation</div><div class="warning">Warning: This BETA API is not final, and subject to change before release.</div>
+
+<p>
+   <i>Note:</i> To compile and run queries using the Scala backend requires the Scala compiler to be installed. Please refer to <a href="docs.html" >Getting Started</a> for details 
+</p>
 
 <a name="quickstart"></a>
-<h3>1. Quickstart Guide</h3>
-<h4>1.1. Prerequisites</h4><ul>
-	<li>DBToaster Beta1</li>
-	<li>Scala 2.9.2</li>
-	<li>JVM (preferably a 64-bit version)</li>
-</ul>
-<i>Note:</i> The following steps have been tested on Fedora 14 (64-bit) and Ubuntu 12.04 (32-bit), the commands may be slightly different for other operating systems
 
-<h4>1.2. Compiling and running your first query</h4>We start with a simple query that looks like this:
-<div class="codeblock">CREATE TABLE R(A int, B int) 
-  FROM FILE 'examples/data/tiny_r.dat' LINE DELIMITED
-  CSV (fields := ',');
+<h3>1. Compiling and running a query</h3><p>
+   DBToaster generates a JAR file for a query when using the <tt>-l scala</tt> and the <tt>-c &lt;file&gt;</tt> switch:
+</p>
+
+<div class="codeblock">
+$> cat examples/queries/simple/rst.sql
+CREATE STREAM R(A int, B int) 
+  FROM FILE 'examples/data/simple/r.dat' LINE DELIMITED csv;
 
 CREATE STREAM S(B int, C int) 
-  FROM FILE 'examples/data/tiny_s.dat' LINE DELIMITED
-  CSV (fields := ',');
+  FROM FILE 'examples/data/simple/s.dat' LINE DELIMITED csv;
 
-SELECT SUM(r.A*s.C) as RESULT FROM R r, S s WHERE r.B = s.B;
+CREATE STREAM T(C int, D int)
+  FROM FILE 'examples/data/simple/t.dat' LINE DELIMITED csv;
+
+SELECT sum(A*D) AS AtimesD FROM R,S,T WHERE R.B=S.B AND S.C=T.C;
+$> bin/dbtoaster -c test.jar -l scala examples/queries/simple/rst.sql
 </div>
-This query should be saved to a file named <span class="code">rs_example.sql</span>.
+
 <p>
-To compile the query to Scala code, we invoke the DBToaster compiler with the following command:
-<div class="codeblock">$&gt; bin/dbtoaster -l scala -o rs_example.scala rs_example.sql</div>
-This command will produce the file <span class="code">rs_example.scala</span> (or any other filename specified by the <span class="code">-o [filename]</span> switch) which contains the Scala code representing the query.</p>
-<p>
-To compile the query to an executable JAR file, we invoke the DBToaster compiler with the <span class="code">-c [JARname]</span> switch:
-<div class="codeblock">$&gt; bin/dbtoaster -l scala -c rs_example rs_example.sql</div>
-<i>Note:</i> The ending <span class="code">.jar</span> is automatically appended to the name of the JAR.</p>
-<p>
-The resulting JAR contains a main function that can be used to test the query. It runs the query until there are no more
-events to be processed and prints the result. It can be run using the following command assuming that the 
-Scala DBToaster library can be found in the subdirectory <span class="code">lib/dbt_scala</span>:
-<div class="codeblock">$&gt; scala -classpath "rs_example.jar:lib/dbt_scala/dbtlib.jar" \
-         org.dbtoaster.RunQuery
+   The command above compiles the query to <tt>test.jar</tt>.
+   It can now be run as follows:
+</p>
+
+<div class="codeblock">
+$> java -classpath "rst.jar:lib/dbt_scala/*" ddbt.gen.Dbtoaster
+Java 1.7.0_45, Scala 2.10.3
+Time: 0.008s (30/0)
+ATIMESD:
+306
 </div>
-After all tuples in the data files were processed, the result of the query will be printed:
-<div class="codeblock">Run time: 0.042 ms
-&lt;RESULT&gt;156 &lt;/RESULT&gt;
-</div></p>
+
+<p>
+   After processing all insertions and deletions, the final result is printed 
+</p>
 
 <a name="apiguide"/></a>
-<h3>2. Scala API Guide</h3>In the previous example, we used the standard main function to test the query. However, to make use of the query
-in real applications, it has to be run from the application itself.
-The following example shows how a query can be run from your own Scala code. Suppose we have a the following 
-source code in <span class="code">main_example.scala</span>:
-<div class="codeblock">import org.dbtoaster.Query
+<h3>2. Scala API Guide</h3><p>
+   In the previous example, we used the standard main function to test the query. 
+   However, to use the query in real applications, it has to be run from within an application.
+</p>
 
-package org.example {
-  object MainExample {
-    def main(args: Array[String]) {
-      Query.run()
-      Query.printResults()
-    }
+<p>
+   The following listing shows a simple example application that communicates with the query class.
+   The communication between the application and the query class is handled using <a href="http://akka.io/">akka</a>.
+</p>
+
+<div class="codeblock">
+package org.dbtoaster
+
+import ddbt.gen._
+import ddbt.lib.Messages._
+import akka.actor._
+
+object ExampleApp {
+  def main(args: Array[String]) {
+    val system = ActorSystem("mySystem")
+    val q = system.actorOf(Props[Dbtoaster], "Query")
+
+    // Send events
+    q ! TupleEvent(0, TupleInsert, "R", List(5L, 2L))
+    q ! TupleEvent(1, TupleInsert, "S", List(2L, 3L))
+    q ! TupleEvent(2, TupleInsert, "T", List(3L, 4L))
+
+    // Retrieve result
+    val to=akka.util.Timeout(1L << 42)
+    val result = scala.concurrent.Await.result(akka.pattern.ask(q, EndOfStream)(to), to.duration).asInstanceOf[(StreamStat,List[Any])]
+
+    println("Result: " + result._2(0))
+
+    system.shutdown
   }
 }
 </div>
-The code representing the query is in the <span class="code">org.dbtoaster.Query</span> object.
-This program will start the query using the <span class="code">Query.run()</span> method and output its 
-result after it finished using the <span class="code">Query.printResults()</span> method.
+
 <p>
-To retrieve results, the <span class="code">get<i>RESULTNAME</i>()</span> of the <span class="code">Query</span> object can be used.</p>
+   This example first creates an ActorSystem and then launches the query actor.
+   The events are sent to the query using <tt>TupleEvent</tt> messages with the following structure:
+</p>
+
+<table class="table">
+   <tr>
+      <th>Argument</th>
+      <th>Comment</th>
+   </tr>
+   <tr>
+      <td class="code">ord: Int</td>
+      <td>Order number of the event.</td>
+   </tr>
+   <tr>
+      <td class="code">op:TupleOp</td>
+      <td><tt>TupleInsert</tt> for an insertion, <tt>TupleDelete</tt> for a deletion.</td>
+   </tr>
+   <tr>
+      <td class="code">stream:String</td>
+      <td>Name of the stream as it appears in the SQL file.</td>
+   </tr>
+   <tr>
+      <td class="code">data:List[Any]</td>
+      <td>The values of the tuple that was inserted into/deleted from the stream.</td>
+   </tr>
+</table>
+
 <p>
-<i>Note:</i>The <span class="code">get<i>RESULTNAME</i>()</span> functions are not thread-safe, meaning that results can be 
-inconsistent if they are called from another thread than the query thread. A thread-safe alternative to retrieve
-the results is planned for future versions of DBToaster.</p>
+   To retrieve the final result, an <tt>EndOfStream</tt> message is sent to the query actor.
+   Alternatively the intermediate result of a query can be retrieved using a <tt>GetSnapshot</tt> message with the following structure:
+</p>
+
+<table class="table">
+   <tr>
+      <th>Argument</th>
+      <th>Comment</th>
+   </tr>
+   <tr>
+      <td class="code">view:List[Int]</td>
+      <td>List of maps that a snapshot is taken of.</td>
+   </tr>
+</table>
+
 <p>
-The program can be compiled to <span class="code">main_example.jar</span> using the following command (assuming that the query was compiled to a file named <span class="code">rs_example.jar</span>):
-<div class="codeblock">$&gt; scalac -classpath "rs_example.jar" -d main_example.jar main_example.scala
+   Assuming that the example code has been saved as <tt>example.scala</tt>, it can be compiled with:
+</p>
+
+<div class="codeblock">
+$> scalac -classpath "rst.jar:lib/dbt_scala/*" -d example.jar example.scala
 </div>
-The resulting program can now be launched with:
-<div class="codeblock">$&gt; scala -classpath "main_example.jar:rs_example.jar:lib/dbt_scala/dbtlib.jar" org.example.MainExample
-</div>
-The <span class="code">Query.run()</span> method takes a function of type <span class="code">Unit => Unit</span> as an optional argument which is called every time when an event was processed. 
-This function can be used to retrieve results while the query is still running.</p>
+
 <p>
-<i>Note:</i> The function will be executed on the same thread on which the query processing takes place, blocking 
-further query processing while the function is being run.</p>
+   It can then be launched with the following command:
+</p>
+
+<div class="codeblock">
+$> java -classpath "rst.jar:lib/dbt_scala/*:example.jar" org.dbtoaster.ExampleApp
+Result: 20
+</div>
 
 <a name="generatedcode"/></a>
-<h3>3. Generated Code Reference</h3>The DBToaster Scala codegenerator generates a single file containing an object <span class="code">Query</span> in the package <span class="code">org.dbtoaster</span>.
+<h3>3. Generated Code Reference</h3><p>
+   The Scala code generator generates a single file containing an object and an actor for a query.
+   Both of them are called <tt>Query</tt> by default if no other name has been specified using the <tt>-n <name></tt> switch.
+</p>
+
 <p>
-For the previous example the generated code looks like this:
-<div class="codeblock">// Imports
-import java.io.FileInputStream;
+   The code generated for the previous example looks as follows:
+</p>
+
+<div class="codeblock">
+package ddbt.gen
+import ddbt.lib._
 ...
 
-package org.dbtoaster {
-  // The generated object
-  object Query {
-    // Declaration of sources
-    val s1 = createInputStreamSource(
-          new FileInputStream("../../experiments/data/simple/tiny/r.dat"), ...
-      );
-    ...
+// Query object used for standalone binaries
+object Query {
+  import Helper._
+  def execute(args:Array[String],f:List[Any]=>Unit) = ...
 
-    // Data structures holding the intermediate result
-    var RESULT = SimpleVal[Long](0);
-    ...
-
-    // Functions to retrieve the result
-    def getRESULT():Long = {
-      RESULT.get()
-    };
-
-    // Trigger functions
-    def onInsertR(var_R_A: Long,var_R_B: Long) = ...
-    ...
-    def onDeleteS(var_S_B: Long,var_S_C: Long) = ...
-    
-    // Functions that handle static tables and system initialization
-    def onSystemInitialized() = ...
-    def fillTables(): Unit = ...
-    
-    // Function that dispatches events to the appropriate trigger functions 
-    def dispatcher(event: DBTEvent, 
-                   onEventProcessedHandler: Unit => Unit): Unit = ...
-    
-    // (Blocking) function to start the execution of the query
-    def run(onEventProcessedHandler: Unit => Unit = (_ => ())): Unit = ...
-    
-    // Prints the query results in some XML-like form (for debugging) 
-    def printResults(): Unit = ...
+  def main(args:Array[String]) {
+    execute(args,(res:List[Any])=>{
+      println("ATIMESD:\n"+M3Map.toStr(res(0))+"\n")
+    })
   }
 }
-</div></p>
+
+// Query actor
+class Query extends Actor {
+  import ddbt.lib.Messages._
+  import ddbt.lib.Functions._
+
+  // Maps/singletons that hold intermediate results
+  var ATIMESD = 0L
+  val ATIMESD_mT1 = M3Map.make[Long,Long]();
+  ...
+
+  // Triggers
+  def onAddR(r_a:Long, r_b:Long) {
+    ATIMESD += (ATIMESD_mR1.get(r_b) * r_a);
+    ATIMESD_mT1_mR1.slice(0,r_b).foreach { (k1,v1) =>
+      val atimesd_mtt_c = k1._2;
+      ATIMESD_mT1.add(atimesd_mtt_c,(v1 * r_a));
+    }
+    ATIMESD_mS1.add(r_b,r_a);
+  }
+
+  def onDelR(r_a:Long, r_b:Long) { ... }
+  ...
+  def onDelT(t_c:Long, t_d:Long) { ... }
+  def onSystemReady() { }
+
+  ...
+  def receive = {
+    case TupleEvent(ord,TupleInsert,"R",List(v0:Long,v1:Long)) => if (t1>0 && (tN&127)==0) { val t=System.nanoTime; if (t>t1) { t1=t; tS=1; context.become(receive_skip) } else tN+=1 } else tN+=1; onAddR(v0,v1)
+    ...
+    case StreamInit(timeout) => onSystemReady(); t0=System.nanoTime; if (timeout>0) t1=t0+timeout*1000000L
+    case EndOfStream | GetSnapshot(_) => t1=System.nanoTime;  sender ! (StreamStat(t1-t0,tN,tS),List(ATIMESD))
+  }
+}
+</div>
+
+<h4>3.1. The query object</h4><p>
+   The query object contains the code used by the standalone binary to execute the query.
+   Its <tt>execute</tt> method reads from the input streams specified in the query file and sends them to the query actor.
+   The <tt>main</tt> method calls execute and prints the result when all tuples have been processed.
+</p>
+
+<h4>3.2. The query actor</h4><p>
+   The actual query processor lives in the query actor.
+   Events like tuple insertions and deletions are communicated to the actor using actor messages as described previously.
+   The <tt>receive</tt> method routes events to the appropriate trigger method.
+   For every stream <tt>R</tt>, there is an insertion <tt>onAddR</tt> and a deletion trigger <tt>onDelR</tt>.
+   These trigger methods are responsible of updating the intermediate result.
+   The map and singleton data structures at the top of the actor hold the intermediate result.
+</p>
+
 <p>
-When the <span class="code">run()</span> method is called, the static tables are loaded and the processing
-of events from the declared sources starts. The function returns when the sources provide no
-more events.</p>
+   The <tt>onSystemReady</tt> trigger is responsible of loading static information (<tt>CREATE TABLE</tt> statements in the query file) before the actual processing begins.
+</p>
 
-<h4>3.1. Retrieving results</h4><p>
-To retrieve the result, the <span class="code">get<i>RESULTNAME</i>()</span> functions are used. In the example above,
-the <span class="code">get<i>RESULTNAME</i>()</span> method is simple but more complex methods may be generated
-and the return value may be a collection instead of a single value.</p>
+<p>
+   The <tt>EndOfStream</tt> message is sent from the event source when it is exhausted. The query actor replies to this message with the current processing statistics (processing time, number of tuples processed, number of tuples skipped) and one or multiple query results.
+</p>
 
-<h5>3.1.1. Queries computing collections</h5><p>
-Consider the following query:
-<div class="codeblock">CREATE STREAM R(A int, B int) 
-  FROM FILE 'examples/data/tiny/r.dat' LINE DELIMITED
-  CSV (fields := ',');
+<p>
+   The <tt>GetSnapshot</tt> message can be used by an application to access the intermediate result. The query actor replies to this message with the current processing statistics and the results that the message asks for.
+</p>
 
-CREATE STREAM S(B int, C int) 
-  FROM FILE 'examples/data/tiny/s.dat' LINE DELIMITED
-  CSV (fields := ',');
+<p>
+   The whole process is guarded by a timeout. If the timeout is reached, the actor will stop to process tuples.
+</p>
 
-SELECT r.B, SUM(r.A*s.C) as RESULT_1, SUM(r.A+s.C) as RESULT_2 FROM R r, S s WHERE r.B = s.B GROUP BY r.B;
-</div>
-In this case two functions are being generated that can be called to retrieve the result, each of them representing
-one of the result columns:
-<div class="codeblock">def getRESULT_1():K3PersistentCollection[(Long), Long] = ...
-def getRESULT_2():K3PersistentCollection[(Long), Long] = ...
-</div>
-In this case, the functions return a collection containing the result. For further processing, the results can be converted 
-to lists of key-value pairs using the <span class="code">toList()</span> method of the collection class. The key in the pair corresponds 
-to the columns in the <span class="code">GROUP BY</span> clause, in our case <span class="code">r.B</span>. The value corresponds to the aggregated 
-value for the corresponding key.</p>
+<h4>3.3. Partial materialization</h4>
+<p>
+   Some of the work involved in maintaining the results of a query can be saved by performing partial materialization and only materialize the result when requested (i.e. when all tuples have been processed).
+   This behaviour is especially desirable when the rate of querying the results is lower than the rate of updates, and can be enabled through the <tt>-F EXPRESSIVE-TLQS</tt> command line flag.
+</p>
 
-<h5>3.1.2. Partial Materialization</h5><p>
-Some of the work involved in maintaining the results of a query can be saved by performing partial materialization
-and only computing the final results when invoking <span class="code">tlq_t</span>'s <span class="code">get_<i>TLQ_NAME</i></span> functions. This
-behaviour is especially desirable when the rate of querying the results is lower than the rate of updates, and
-can be enabled through the <span class="code">-F EXPRESSIVE-TLQS</span> command line flag.</p>
+<p>
+   Below is an example of a query where partial materialization is indeed beneficial (this query can be found as <tt>examples/queries/simple/r_lif_of_count.sql</tt> in the DBToaster download).
+</p>
 
-<p>Below is an example of a query where partial materialization is indeed beneficial.
-<div class="codeblock">CREATE STREAM R(A int, B int)
+<div class="codeblock">
+CREATE STREAM R(A int, B int)
 FROM FILE 'examples/data/tiny/r.dat' LINE DELIMITED
 csv ();
 
@@ -209,61 +328,106 @@ SELECT r2.C FROM (
   SELECT r1.A, COUNT(*) AS C FROM R r1 GROUP BY r1.A
 ) r2;
 </div>
-When compiling this query with the <span class="code">-F EXPRESSIVE-TLQS</span> command line flag, the function to retrieve
-the results is much more complex, unlike the functions that we have seen before. It uses the partial materialization 
-<span class="code">COUNT_1_E1_1</span> to compute the result:
-<div class="codeblock">$&gt; bin/dbtoaster -l scala -F EXPRESSIVE-TLQS examples/queries/simple/r_lift_of_count.sql 
-    def getCOUNT():K3IntermediateCollection[(Long), Long] = {
-      (COUNT_1_E1_1.map((y:Tuple2[(Long),Long]) => 
-      ...
-      )
-    };
-</div></p>
 
-<h4>3.2. Using queries in Java programs</h4><p>
-Since Scala is compatible with Java, it is possible to use the queries in Java applications. 
-In order to use a query in Java, the Java application has to reference three libraries: 
-<ul>
-	<li>The library containing the generated code for the query</li>
-	<li>The Scala library</li>
-	<li>Scala DBToaster library</li>
-</ul>
-</p>
 <p>
-The following code snippet illustrates how a query can be executed from within a Java application:
-<div class="codeblock">
-import org.dbtoaster.dbtoasterlib.*;
-import org.dbtoaster.*;
+   When compiling this query with <tt>-F EXPRESSIVE-TLQS</tt>, the generated code now has functions representing top-level results:
+</p>
 
-public class MainClass {
-	public static void main(String[] args) {
-		final Query q = new Query();
-		
-		QueryInterface.DBTMessageReceiver rcvr = new QueryInterface.DBTMessageReceiver() {
-			public void onTupleProcessed() {
-				// do nothing
-			}
-			
-			public void onQueryDone() {
-				// print the results
-				q.printResults();
-			}
-		};
-		
-		QueryInterface.QuerySupervisor supervisor = new QueryInterface.QuerySupervisor(q, rcvr);
-		supervisor.start();
-	}
+<div class="codeblock">
+def COUNT() = {
+   val mCOUNT = M3Map.make[Long,Long]()
+   val agg1 = M3Map.temp[Long,Long]()
+   COUNT_1_E1_1.foreach { (r2_a,v1) =>
+      val l1 = COUNT_1_E1_1.get(r2_a);
+      agg1.add(l1,(if (v1 != 0) 1L else 0L));
+   }
+   agg1.foreach { (r2_c,v2) =>
+      mCOUNT.add(r2_c,v2)
+   }
+
+   mCOUNT
 }
 </div>
-This program executes the referenced query and prints the result once there are no more tuples
-to be processed.
+
+<h3>4. Using queries in Java programs</h3><p>
+   <i>Note:</i> The DBToaster library currently does not offer a nice interface for Java applications. We are planning to add a nicer future once the Scala interface is stable.
 </p>
-<h5>3.2.1. Compiling in eclipse</h5>To compile the previously presented program in eclipse (with the official Scala plugin installed), 
-we can create a new Java project with a single <span class="code">.java</span>-file containing 
-the program. In the Java Build Path section of the project's properties the previously listed 
-libraries have to be added. The Scala library can be added by clicking the "Add Library" button,
-while the other libraries can be added as external JARs. After adding the libraries to the project,
-the project should compile and execute the query once run.        <div class="doc_chain_link"> &lt; <span class="doc_chain_link_prev"><a href="docs_cpp.html" >C++ Code Generation</a></span></div>      </div><!-- /content -->
+<p>
+   Since Scala is compatible with Java, it is possible to use the generated queries in Java applications.
+   In order to use a query in Java, the Java application has to reference the libraries present in the <tt>lib/dbt_scala</tt> folder as well as the Scala library.
+</p>
+
+<p>
+   The following Java code is equivalent to the Scala code presented in the example above:
+</p>
+
+<div class="codeblock">
+import ddbt.gen.*;
+import ddbt.lib.Messages.*;
+
+import akka.actor.ActorRef;
+import akka.actor.ActorSystem;
+import akka.actor.Props;
+import akka.actor.Inbox;
+
+import scala.Tuple2;
+import scala.collection.immutable.List;
+import scala.collection.immutable.List$;
+import scala.collection.immutable.$colon$colon;
+import scala.concurrent.duration.Duration;
+import java.util.concurrent.TimeUnit;
+
+class ExampleApp {
+   public static final int TUPLE_DELETE = 0x00;
+   public static final int TUPLE_INSERT = 0x01;
+
+   public static List&lt;Object&gt; tuple(Object ... ts) {
+      List&lt;Object&gt; result = List$.MODULE$.empty();
+      for(int i = ts.length; i > 0; i--) {
+         result = new $colon$colon&lt;Object&gt;(ts[i - 1], result);
+      }
+      return result;
+   }
+
+   public static void main(String[] args) {
+      ActorSystem system = ActorSystem.create("mySystem");
+
+      final ActorRef q = system.actorOf(Props.create(Dbtoaster.class), "Query");
+
+      // Send events
+      q.tell(new TupleEvent(0, TUPLE_INSERT, "R", tuple(5L, 2L)), null);
+      q.tell(new TupleEvent(1, TUPLE_INSERT, "S", tuple(2L, 3L)), null);
+      q.tell(new TupleEvent(2, TUPLE_INSERT, "T", tuple(3L, 4L)), null);
+
+      // Retrieve result
+      final Inbox inbox = Inbox.create(system);
+      inbox.send(q, EndOfStream$.MODULE$);
+      Tuple2 result = (Tuple2) (inbox.receive(Duration.create(1L << 23, TimeUnit.SECONDS)));
+
+      System.out.println("Result: " + result._2().toString());
+      system.shutdown();
+  }
+}
+</div>
+
+<p>
+   If this code has been saved to <tt>ExampleApp.java</tt> and the Scala library has been copied to <tt>lib/dbt_scala</tt>, it can be compiled as follows:
+</p>
+
+<div class="codeblock">
+$> javac -classpath "rst.jar:lib/dbt_scala/*" ExampleApp.java
+$> jar cvf exampleapp.jar ExampleApp.class
+</div>
+
+<p>
+   The resulting <tt>exampleapp.jar</tt> can be launched using the following command:
+</p>
+
+<div class="codeblock">
+$> java -classpath "rst.jar:lib/dbt_scala/*:exampleapp.jar" ExampleApp
+Result: List(20)
+</div>
+        <div class="doc_chain_link"> &lt; <span class="doc_chain_link_prev"><a href="docs_cpp.html" >C++ Code Generation</a></span></div>      </div><!-- /content -->
     </div><!-- /contentwrapper -->
   </div><!-- /pagebody -->
   <hr/>
@@ -271,6 +435,9 @@ the project should compile and execute the query once run.        <div class="do
   <p>Copyright (c) 2009-2012, The DBToaster Consortium. All rights reserved.</p>
   </div>
 </div><!-- /overallpage -->
+
+<script type="text/javascript" src="js/jquery-2.0.3.min.js"> </script>
+<script type="text/javascript" src="js/bootstrap.min.js"> </script>
 
 </body>
 </html>

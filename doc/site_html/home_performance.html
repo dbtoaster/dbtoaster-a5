@@ -1,40 +1,215 @@
 <html><head>
-<title>Performance</title>
-<link rel="stylesheet" type="text/css" href="style.css" />
-<script type="text/javascript" src="dropdowntabs.js"> </script>
+<title>DBToaster - Performance</title>
+<link rel="stylesheet" type="text/css" href="css/style.css" />
+<link rel="stylesheet" type="text/css" href="css/bootstrap.min.css" media="screen" />
+<link rel="stylesheet" type="text/css" href="css/bootstrap-theme.min.css" />
+<link href="//netdna.bootstrapcdn.com/font-awesome/4.0.1/css/font-awesome.css" rel="stylesheet">
 
 
 </head> <body>
 <a name="pagetop"></a>
 <div class="overallpage">
   <div class="pagebody">
-    <div class="headerbar">
-      <div class="logobox">
+    <div class="logobox">
         <a href="index.html" ><img src="dbtoaster-logo.gif" width="214" 
-                      height="100" alt="DBToaster"/></a></div>
-      <div class="topmenu">
-                 <div id="bluemenu" class="bluetabs">
-            <ul>
-               <li><a href="index.html" rel="dropmenu0_b">About</a></li>               <li><a href="download.html" rel="dropmenu1_b">Downloads</a></li>               <li><a href="docs.html" rel="dropmenu2_b">Documentation</a></li>               <li><a href="home_contact.html" rel="dropmenu3_b">Contact</a></li>           </ul>
-         </div>
+                    height="100" alt="DBToaster"/></a>    </div>
+    <div class="navbar navbar-default">
+      <div class="navbar-header">
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
       </div>
-         <div id="dropmenu0_b" class="dropmenudiv_b">
-           <a href="index.html" >About</a>           <a href="home_performance.html" >Performance</a>           <a href="home_features.html" >Features</a>           <a href="home_features.html#roadmap" > - Roadmap</a>           <a href="home_people.html" >The Team</a>           <a href="home_research.html" >For Researchers</a>         </div>
-         <div id="dropmenu1_b" class="dropmenudiv_b">
-           <a href="download.html" >Downloads</a>           <a href="download.html#license" >License</a>         </div>
-         <div id="dropmenu2_b" class="dropmenudiv_b">
-           <a href="docs.html" >Getting Started</a>           <a href="docs_compiler.html" >Command-Line Reference</a>           <a href="docs_compiler.html#options" > - Command-Line Options</a>           <a href="docs_compiler.html#languages" > - Supported Languages</a>           <a href="docs_compiler.html#opt_flags" > - Optimization Flags</a>           <a href="docs_sql.html" >DBT-SQL Reference</a>           <a href="docs_stdlib.html" >DBT StdLib Reference</a>           <a href="docs_adaptors.html" >DBT Adaptors Reference</a>           <a href="docs_cpp.html" >C++ Code Generation</a>           <a href="docs_scala.html" >Scala Code Generation</a>         </div>
-         <div id="dropmenu3_b" class="dropmenudiv_b">
-           <a href="home_contact.html#inquiries" >Inquiries</a>           <a href="home_contact.html#mailing" >Mailing List</a>           <a href="bugs.html" >Bug Reports</a>         </div>
-         <script type="text/javascript">
-            tabdropdown.init("bluemenu")
-         </script>
+      <div class="navbar-collapse collapse">
+        <ul class="nav navbar-nav">
+          <li class="dropdown">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown">About <b class="caret"></b></a>
+            <ul class="dropdown-menu">
+              <li><a href="index.html" >About</a></li>
+              <li><a href="home_performance.html" >Performance</a></li>
+              <li><a href="home_features.html" >Features</a></li>
+              <li><a href="home_features.html#roadmap" ><small><i class="fa fa-caret-square-o-right"></i> Roadmap</small></a></li>
+              <li><a href="home_people.html" >The Team</a></li>
+              <li><a href="home_research.html" >For Researchers</a></li>
+            </ul>
+          </li>
+          <li class="dropdown">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown">Downloads <b class="caret"></b></a>
+            <ul class="dropdown-menu">
+              <li><a href="download.html" >Downloads</a></li>
+              <li><a href="download.html#license" >License</a></li>
+            </ul>
+          </li>
+          <li class="dropdown">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown">Documentation <b class="caret"></b></a>
+            <ul class="dropdown-menu">
+              <li><a href="docs.html" >Getting Started</a></li>
+              <li><a href="docs_compiler.html" >Command-Line Reference</a></li>
+              <li><a href="docs_compiler.html#options" ><small><i class="fa fa-caret-square-o-right"></i> Command-Line Options</small></a></li>
+              <li><a href="docs_compiler.html#languages" ><small><i class="fa fa-caret-square-o-right"></i> Supported Languages</small></a></li>
+              <li><a href="docs_compiler.html#opt_flags" ><small><i class="fa fa-caret-square-o-right"></i> Optimization Flags</small></a></li>
+              <li><a href="docs_sql.html" >DBT-SQL Reference</a></li>
+              <li><a href="docs_stdlib.html" >DBT StdLib Reference</a></li>
+              <li><a href="docs_adaptors.html" >DBT Adaptors Reference</a></li>
+              <li><a href="docs_cpp.html" >C++ Code Generation</a></li>
+              <li><a href="docs_scala.html" >Scala Code Generation</a></li>
+            </ul>
+          </li>
+          <li class="dropdown">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown">Contact <b class="caret"></b></a>
+            <ul class="dropdown-menu">
+              <li><a href="home_contact.html#inquiries" >Inquiries</a></li>
+
+              <li><a href="home_contact.html#mailing" >Mailing List</a></li>
+
+              <li><a href="bugs.html" >Bug Reports</a></li>
+
+            </ul>
+          </li>
+        </ul>
+      </div>
     </div>
-    <hr/>
     <div class="contentwrapper">
       <div class="content">
-                <div class="titlebox">Performance</div><img src="engine_bakeoff0.png" class="inline_image" width="600" height="300"/>
-<img src="engine_bakeoff1.png" class="inline_image" width="600" height="300"/>
+                <div class="titlebox">Performance</div><script src="http://d3js.org/d3.v3.min.js"></script>
+
+<label class="checkbox-inline">
+   <input class="filter_data" id="cb_rep" type="checkbox"> REP
+</label>
+<label class="checkbox-inline">
+   <input class="filter_data" id="cb_dbx" type="checkbox" checked> DBX
+</label>
+<label class="checkbox-inline">
+   <input class="filter_data" id="cb_spy" type="checkbox" checked> SPY
+</label>
+<label class="checkbox-inline" id="lbl_scala">
+   <input class="filter_data" id="cb_scala" type="checkbox"> Scala
+</label>
+<label class="checkbox-inline">
+   <input class="filter_data" id="cb_scalalms" type="checkbox"> Scala + LMS
+</label>
+<label class="checkbox-inline">
+   <input class="filter_data" id="cb_cpp" type="checkbox" checked> C++
+</label>
+<label class="checkbox-inline">
+   <input class="filter_data" id="cb_ivm" type="checkbox"> IVM
+</label>
+
+<div class="bakeoff">
+</div>
+
+<script>
+var tooltip = d3.select("body")
+   .append("div")
+   .attr("class", "datatooltip")
+   .style("position", "absolute")
+   .style("z-index", "10")
+   .style("visibility", "hidden");
+
+var margin = {top: 20, right: 20, bottom: 70, left: 60},
+    width = 700 - margin.left - margin.right,
+    height = 300 - margin.top - margin.bottom;
+
+var bakeoff = d3.select(".bakeoff")
+
+var x = d3.scale.ordinal().rangeRoundBands([0, width], .05);
+var y = d3.scale.log().range([height, 0]);
+
+var svg = bakeoff.append("svg")
+      .attr("height", height + margin.top + margin.bottom)
+      .attr("width", width + margin.left + margin.right)
+   .append("g")
+      .attr("transform",
+         "translate(" + margin.left + "," + margin.top + ")");
+
+function drawBars(rawData, rawGroups) {
+   var groups = rawGroups.filter(function (g) {
+      return d3.select("#cb_" + g).node().checked;
+   });
+   var data = rawData.filter(function (d) {
+      return groups.indexOf(d.group) >= 0;
+   });
+
+   var barwidth = x.rangeBand() / (groups.length + 1);
+   var bars = svg.selectAll("rect").data(data);
+
+   bars.enter().append("rect")
+      .attr("class", function(d) { return "bar" + d.group; })
+      .attr("x", function(d) { return x(d.query) + (0.5 + groups.indexOf(d.group)) * barwidth; })
+      .attr("width", barwidth)
+      .on("mouseover", function(d) { return tooltip.text(d.v + " Tuples/s").style("visibility", "visible"); })
+      .on("mousemove", function(d) { return tooltip.style("top", (event.pageY - 10) + "px").style("left",(event.pageX + 10) + "px"); })
+      .on("mouseout", function(d) { return tooltip.style("visibility", "hidden");})
+      .attr("y", height)
+      .attr("height", 0)
+      .transition()
+      .attr("y", function(d) { return y(d.v); })
+      .attr("height", function(d) { return height - y(d.v); });
+
+   bars.transition()
+      .attr("class", function(d) { return "bar" + d.group; })
+      .attr("x", function(d) { return x(d.query) + (0.5 + groups.indexOf(d.group)) * barwidth; })
+      .attr("width", barwidth)
+      .attr("y", height)
+      .attr("height", 0)
+      .attr("y", function(d) { return y(d.v); })
+      .attr("height", function(d) { return height - y(d.v); });
+
+   bars.exit().transition().attr("y", height).attr("height", 0).remove();
+}
+
+d3.csv("data/bakeoff.csv", function(error, rawInput) {
+   var data = [];
+   var groups = ["rep", "dbx", "spy", "scala", "scalalms", "cpp", "ivm"];
+
+   rawInput.forEach(function (d) {
+      groups.forEach(function (g) {
+         var newData = { query: d.query, group: g, v: d[g] };
+         data.push(newData);
+      });
+   });
+
+   x.domain(data.map(function(d) { return d.query; }));
+   y.domain([1, d3.max(data, function(d) { return Math.max(d.v); })]).nice();
+
+   var xAxis = d3.svg.axis()
+      .scale(x)
+      .orient("bottom");
+
+   var yAxis = d3.svg.axis()
+      .scale(y)
+      .orient("left")
+      .ticks(10);
+
+   drawBars(data, groups);
+
+   svg.append("g")
+      .attr("class", "x axis")
+      .attr("transform", "translate(0," + height + ")")
+      .call(xAxis)
+   .selectAll("text")
+      .style("text-anchor", "end")
+      .attr("dx", "-.8em")
+      .attr("dy", "-.55em")
+      .attr("transform", "rotate(-90)" );
+
+   svg.append("g")
+      .attr("class", "y axis")
+      .call(yAxis)
+   .append("text")
+      .attr("transform", "rotate(-90)")
+      .attr("dy", "-3.5em")
+      .style("text-anchor", "end")
+      .text("Average Refresh Rate (1/s)");
+
+   d3.selectAll(".filter_data").on("change", function() {
+      drawBars(data, groups);
+   });
+});
+
+</script>
+
 
 <p>The above graphs show a performance comparison of DBToaster-generated query engines against a commercial database system (DBX), a commercial stream processor (SPY), and several naive query evaluation strategies implemented in DBToaster that do not involve the Higher-Order incremental view maintenance. (The commercial systems remain anonymous in accordance with the terms of their licensing agreements).</p>
 
@@ -42,7 +217,8 @@
 
 <p>The graphs show the performance of each system on a set of realtime data-warehousing queries based on the TPC-H query benchmark (Q1-Q22,Q11a,Q17a,Q18a,Q22a,SSB4), six algorithmic trading queries (BSV, BSP, AXF, PSP, MST, VWAP), and two scientific queries (MDDB1 and MDDB2).  These queries are all included as examples in the DBToaster distribution.</p>
 
-<p>Depth-0 represents a naive query evaluation strategy where each refresh requires a full re-evaluation of the entire query.  Depth-1 is a well known technique called Incremental View Maintenance.  Naive recursive is a weaker form of the Higher-Order IVM (we discuss the distinctions in depth in our technical report).  Each of these was implemented by a DBToaster-generated engine.</p>              </div><!-- /content -->
+<p>Depth-0 represents a naive query evaluation strategy where each refresh requires a full re-evaluation of the entire query.  Depth-1 is a well known technique called Incremental View Maintenance.  Naive recursive is a weaker form of the Higher-Order IVM (we discuss the distinctions in depth in our technical report).  Each of these was implemented by a DBToaster-generated engine.</p>
+              </div><!-- /content -->
     </div><!-- /contentwrapper -->
   </div><!-- /pagebody -->
   <hr/>
@@ -50,6 +226,9 @@
   <p>Copyright (c) 2009-2012, The DBToaster Consortium. All rights reserved.</p>
   </div>
 </div><!-- /overallpage -->
+
+<script type="text/javascript" src="js/jquery-2.0.3.min.js"> </script>
+<script type="text/javascript" src="js/bootstrap.min.js"> </script>
 
 </body>
 </html>

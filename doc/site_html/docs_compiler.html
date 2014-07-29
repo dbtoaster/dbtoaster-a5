@@ -1,36 +1,75 @@
 <html><head>
-<title>Command-Line Reference</title>
-<link rel="stylesheet" type="text/css" href="style.css" />
-<script type="text/javascript" src="dropdowntabs.js"> </script>
+<title>DBToaster - Command-Line Reference</title>
+<link rel="stylesheet" type="text/css" href="css/style.css" />
+<link rel="stylesheet" type="text/css" href="css/bootstrap.min.css" media="screen" />
+<link rel="stylesheet" type="text/css" href="css/bootstrap-theme.min.css" />
+<link href="//netdna.bootstrapcdn.com/font-awesome/4.0.1/css/font-awesome.css" rel="stylesheet">
 
 
 </head> <body>
 <a name="pagetop"></a>
 <div class="overallpage">
   <div class="pagebody">
-    <div class="headerbar">
-      <div class="logobox">
+    <div class="logobox">
         <a href="index.html" ><img src="dbtoaster-logo.gif" width="214" 
-                      height="100" alt="DBToaster"/></a></div>
-      <div class="topmenu">
-                 <div id="bluemenu" class="bluetabs">
-            <ul>
-               <li><a href="index.html" rel="dropmenu0_b">About</a></li>               <li><a href="download.html" rel="dropmenu1_b">Downloads</a></li>               <li><a href="docs.html" rel="dropmenu2_b">Documentation</a></li>               <li><a href="home_contact.html" rel="dropmenu3_b">Contact</a></li>           </ul>
-         </div>
+                    height="100" alt="DBToaster"/></a>    </div>
+    <div class="navbar navbar-default">
+      <div class="navbar-header">
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
       </div>
-         <div id="dropmenu0_b" class="dropmenudiv_b">
-           <a href="index.html" >About</a>           <a href="home_performance.html" >Performance</a>           <a href="home_features.html" >Features</a>           <a href="home_features.html#roadmap" > - Roadmap</a>           <a href="home_people.html" >The Team</a>           <a href="home_research.html" >For Researchers</a>         </div>
-         <div id="dropmenu1_b" class="dropmenudiv_b">
-           <a href="download.html" >Downloads</a>           <a href="download.html#license" >License</a>         </div>
-         <div id="dropmenu2_b" class="dropmenudiv_b">
-           <a href="docs.html" >Getting Started</a>           <a href="docs_compiler.html" >Command-Line Reference</a>           <a href="docs_compiler.html#options" > - Command-Line Options</a>           <a href="docs_compiler.html#languages" > - Supported Languages</a>           <a href="docs_compiler.html#opt_flags" > - Optimization Flags</a>           <a href="docs_sql.html" >DBT-SQL Reference</a>           <a href="docs_stdlib.html" >DBT StdLib Reference</a>           <a href="docs_adaptors.html" >DBT Adaptors Reference</a>           <a href="docs_cpp.html" >C++ Code Generation</a>           <a href="docs_scala.html" >Scala Code Generation</a>         </div>
-         <div id="dropmenu3_b" class="dropmenudiv_b">
-           <a href="home_contact.html#inquiries" >Inquiries</a>           <a href="home_contact.html#mailing" >Mailing List</a>           <a href="bugs.html" >Bug Reports</a>         </div>
-         <script type="text/javascript">
-            tabdropdown.init("bluemenu")
-         </script>
+      <div class="navbar-collapse collapse">
+        <ul class="nav navbar-nav">
+          <li class="dropdown">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown">About <b class="caret"></b></a>
+            <ul class="dropdown-menu">
+              <li><a href="index.html" >About</a></li>
+              <li><a href="home_performance.html" >Performance</a></li>
+              <li><a href="home_features.html" >Features</a></li>
+              <li><a href="home_features.html#roadmap" ><small><i class="fa fa-caret-square-o-right"></i> Roadmap</small></a></li>
+              <li><a href="home_people.html" >The Team</a></li>
+              <li><a href="home_research.html" >For Researchers</a></li>
+            </ul>
+          </li>
+          <li class="dropdown">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown">Downloads <b class="caret"></b></a>
+            <ul class="dropdown-menu">
+              <li><a href="download.html" >Downloads</a></li>
+              <li><a href="download.html#license" >License</a></li>
+            </ul>
+          </li>
+          <li class="dropdown">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown">Documentation <b class="caret"></b></a>
+            <ul class="dropdown-menu">
+              <li><a href="docs.html" >Getting Started</a></li>
+              <li><a href="docs_compiler.html" >Command-Line Reference</a></li>
+              <li><a href="docs_compiler.html#options" ><small><i class="fa fa-caret-square-o-right"></i> Command-Line Options</small></a></li>
+              <li><a href="docs_compiler.html#languages" ><small><i class="fa fa-caret-square-o-right"></i> Supported Languages</small></a></li>
+              <li><a href="docs_compiler.html#opt_flags" ><small><i class="fa fa-caret-square-o-right"></i> Optimization Flags</small></a></li>
+              <li><a href="docs_sql.html" >DBT-SQL Reference</a></li>
+              <li><a href="docs_stdlib.html" >DBT StdLib Reference</a></li>
+              <li><a href="docs_adaptors.html" >DBT Adaptors Reference</a></li>
+              <li><a href="docs_cpp.html" >C++ Code Generation</a></li>
+              <li><a href="docs_scala.html" >Scala Code Generation</a></li>
+            </ul>
+          </li>
+          <li class="dropdown">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown">Contact <b class="caret"></b></a>
+            <ul class="dropdown-menu">
+              <li><a href="home_contact.html#inquiries" >Inquiries</a></li>
+
+              <li><a href="home_contact.html#mailing" >Mailing List</a></li>
+
+              <li><a href="bugs.html" >Bug Reports</a></li>
+
+            </ul>
+          </li>
+        </ul>
+      </div>
     </div>
-    <hr/>
     <div class="contentwrapper">
       <div class="content">
         <div class="doc_chain_link"> &lt; <span class="doc_chain_link_prev"><a href="docs.html" >Getting Started</a></span> | <span class="doc_chain_link_next"><a href="docs_sql.html" >DBT-SQL Reference</a></span> &gt; </div>        <div class="titlebox">Command-Line Reference</div>
@@ -40,7 +79,7 @@
 <a name="options"></a>
 <h3>1. Command Line Options</h3><dl>
 <dt class="code">-c &lt;target file&gt;</dt>
-<dd>Compile the query into a standalone binary.  By default, the C++ code generator will be used with g++ to generate the binary.  An alternate compiled target language (currently, C++ or Scala) may be selected using the <span class="code">-l</span> flag.</dd>
+<dd>Compile the query into a standalone binary.  By default, the C++ code generator will be used with G++ to generate the binary.  An alternate compiled target language (currently, C++ or Scala) may be selected using the <span class="code">-l</span> flag.</dd>
 
 <dt class="code">-l &lt;language&gt;</dt>
 <dd>Compile the query into the specified target language (see below).  By default, the query will be interpreted.  The use of this flag overrides any previous <span class="code">-l</span> or <span class="code">-r</span>.</dd>
@@ -54,52 +93,51 @@
 <dt class="code">-F &lt;optimization&gt;</dt>
 <dd>Activate the specified optimization flag.  These are documented below.</dd>
 
-<dt class="code">-O1 | -O2 | -O3</dt>
+<dt class="code">-O[123]</dt>
 <dd>Set the optimization level to 1, 2, or 3 respectively.  At optimization level 1, compilation is faster and generated code is (usually) easier to understand and follow.  At optimization level 3, compilation is slower, but more efficient code is produced.  Optimization level 2 is the default.  Overrides any prior <span class="code">-O</span> flags provided on the command line.</dd>
-
-<dt class="code">-d &lt;level&gt;</dt>
+<dt class="code">-d &lt;depth&gt;</dt>
 <dd>Limit the compiler's maximum recursive depth. By default, DBToaster compiles queries with the depth set to infinity. </dd>
 
-<dt class="code">-n &lt;prefix&gt;</dt>
+<dt class="code">-n &lt;name&gt;</dt>
 <dd>Name of the structures (classes, objects) generated by DBToaster (default: Query).</dd>
 
 </dl>
 
 <a name="languages"></a>
-<h3>2. Supported Languages</h3><table border=1>
+<h3>2. Supported Languages</h3><table class="table">
   <tr>
-    <th align="center">Language</th>
-    <th align="center">Commandline Name</th>
-    <th align="center">Output Format</th>
-    <th align="center">Description</th>
+    <th>Language</th>
+    <th>Argument</th>
+    <th>Output Format</th>
+    <th>Description</th>
   </tr>
 
   <tr>
-    <td align="center">DBT Relational Calculus</td>
-    <td align="center" class="code">calc</td>
-    <td align="center">output</td>
-    <td align="left">DBToaster's internal query representation.  This is a direct translation of the input queries.</td>
+    <td>DBT Relational Calculus</td>
+    <td class="code">calc</td>
+    <td>output</td>
+    <td>DBToaster's internal query representation.  This is a direct translation of the input queries.</td>
   </tr>
   
   <tr>
-    <td align="center">M3</td>
-    <td align="center" class="code">m3</td>
-    <td align="center">output</td>
-    <td align="left">A map-mantenance messages program.  This is the set of triggers (written in DBT Relational Calculus) that will incrementally maintain the input queries and all supporting datastructures.</td>
+    <td>M3</td>
+    <td class="code">m3</td>
+    <td>output</td>
+    <td>A map-maintenance messages program.  This is the set of triggers (written in DBT Relational Calculus) that will incrementally maintain the input queries and all supporting datastructures.</td>
   </tr>
 
   <tr>
-    <td align="center">C++</td>
-    <td align="center" class="code">cpp</td>
-    <td align="center">output/compiled</td>
-    <td align="left">A C++ class implementing the queries.</td>
+    <td>C++</td>
+    <td class="code">cpp</td>
+    <td>output/compiled</td>
+    <td>A C++ class implementing the queries.</td>
   </tr>
 
   <tr>
-    <td align="center">Scala</td>
-    <td align="center" class="code">scala</td>
-    <td align="center">output/compiled</td>
-    <td align="left">A Scala class implementing the queries.</td>
+    <td>Scala</td>
+    <td class="code">scala</td>
+    <td>output/compiled</td>
+    <td>A Scala class implementing the queries.</td>
   </tr>
 
 </table>
@@ -109,13 +147,15 @@
 These flags are passed to the dbtoaster compiler with the <span class="code">-F</span> flag.  The <span class="code">-O1</span> and <span class="code">-O3</span> flags each activate a subset of these flags. <span class="code">-O2</span> is used by default (no optimization flags active).
 
 <dl>
-  
+<!--
+   The new backend currently does not handle input variables: https://github.com/TCKnet/DDBToaster/issues/23
+
   <dt class="code">HEURISTICS-ENABLE-INPUTVARS</dt>
   <dd>Enable experimental support for incremental view caches.  Queries with joins (and correlations) on inequality predicates are implemented in a way that corresponds roughly to nested-loop one-way joins in stream processing (a tree-based implementation is in development).  If this flag is on, the compiler will cache and incrementally maintain the results of this one-way join.  This is typically a bad idea, since the cost of maintaining the cached values is often higher than the cost of the nested loop scan.  However, if the domains of the variables appearing in the join predicate are small, this flag can drastically improve performance (e.g., for the VWAP example query).  Future versions of DBToaster will include a cost-based optimizer that automatically applies this flag when appropriate.  This optimization is not activated by default at any optimization level.</dd>  
 
   <dt class="code">HEURISTICS-AGGRESSIVE-INPUTVARS</dt>
   <dd> Enable experimental support for aggresive materialization of maps with input variables (view caches). It requires the HEURISTICS-ENABLE-INPUTVARS flag to be active. If the calculus optimizations are disabled (see CALC-NO-OPTIMIZE), this option might significantly prolong the compilation time. Note: the C++ backend might fail to compile certain classes of queries when this flag is on.</dd>  
-
+-->
   <dt class="code">HEURISTICS-PULL-OUT-VALUES</dt>
   <dd>Prevent value terms (variables and comparisons) from being materialized inside maps. In certain cases (e.g., mddb/query2.sql), this option reduces the number of generated maps and speed-ups the compilation time at the expense of doing more computation at runtime.</dd>  
 
@@ -128,29 +168,17 @@ These flags are passed to the dbtoaster compiler with the <span class="code">-F<
   <dt class="code">HEURISTICS-ALWAYS-UPDATE</dt>
   <dd>In some cases, it is slightly more efficient to re-evaluate expressions from scratch rather than maintaining them with their deltas (for example, certain queries containing nested aggregates).  Normally the compiler's heuristics will make a best-effort guess about whether to re-evaluate or incrementally maintain the expression.  If this flag is on, the compiler will incrementally maintain all expressions and never re-evaluate.</dd>  
   
-  <dt class="code">HASH-STRINGS</dt>
-  <dd>Do not use strings during evalation. All strings are immediately replaced by their integer hashes (using each runtime's native hashing mechanism) as soon as they are parsed.  This makes query evalation faster, but is not guaranteed to produce correct results if a hash collision occurs.  Furthermore, strings that would normally appear in the output are output as their integer hash values instead.  This optimization is not activated by default at any optimization level.</dd>    
-
   <dt class="code">COMPILE-WITH-STATIC</dt>
   <dd>Perform static linking on compiled binaries (e.g., invoke gcc with <span class="code">-static</span>).  The resulting binaries will be faster the first time they are run.  This optimization is not activated by default at any optimization level.</dd>  
 
-  <dt class="code">CALC-DONT-CREATE-ZEROES</dt>
-  <dd>Avoid creating empty relation terms during pre-evaluation.  Empty relation terms are aggressively propagated thoughout expressions in which they occur, and may result in expressions that do not need to be incrementally maintained (because they are guaranteed to be always empty).  Activating this flag is only useful if you want to inspect the generated Calculus/M3 code by hand. This optimization is not activated by default at any optimization level.</dd>  
-  
   <dt class="code">AGGRESSIVE-FACTORIZE</dt>
   <dd>When optimizing expressions in DBToaster relational calculus, perform factorization as aggressively as possible.  For some queries, particularly those with nested subqueries, this can generate much more efficient code.  However, it makes compilation slower on some queries.  This optimization is automatically activated by <span class="code">-O3</span>.</dd>
   
   <dt class="code">AGGRESSIVE-UNIFICATION</dt>
   <dd>When optimizing expressions in DBToaster relational calculus, inline lifted variables wherever possible, even if the lift term can not be eliminated entirely.  This can produce substantially tighter code for queries with lots of constants, but slightly increases compilation time.  This optimization is automatically activated by <span class="code">-O3</span>.</dd>
 
-  <dt class="code">DELETE-ON-ZERO</dt>
-  <dd>In generated code, when a map value becomes 0, remove the value from the map.  Resulting programs are more efficient over long stretches of insertions and deletions.  This optimization is automatically activated by <span class="code">-O3</span>.</dd>
-
   <dt class="code">COMPILE-WITHOUT-OPT</dt>
   <dd>Request that the second-stage compiler disable any unnecessary optimizations (e.g., by default, GCC is invoked with <span class="code">-O3</span>, but not if this flag is active). This optimization is automatically activated by <span class="code">-O1</span>.</dd>
-
-  <dt class="code">WIDE-TUPLE</dt>
-  <dd>Use nested tuples in generated C++ programs. This option is mostly used at lower compilation levels (depth 0 or 1) to overcome the Boost limitation that tuples may contain at most 50 attributes.</dd>
 
   <dt class="code">WEAK-EXPR-EQUIV</dt>
   <dd>When testing for expression equivalence, perform only a naive structural comparison rather than a (at least quadratic, and potentially exponential) matching.  This accelerates compilation, but may result in the creation of duplicate maps.  This optimization is automatically activated by <span class="code">-O1</span>.</dd>
@@ -160,14 +188,12 @@ These flags are passed to the dbtoaster compiler with the <span class="code">-F<
     
   <dt class="code">CALC-NO-DECOMPOSITION</dt>
   <dd>Do not apply query decomposition when computing deltas. This option is not activated by default at any optimization level.</dd>
-        
-  <dt class="code">K3-NO-OPTIMIZE</dt>
-  <dd>Do not apply functional optimizations. This optimization is automatically activated by <span class="code">-O1</span>.</dd>
-  
+
   <dt class="code">DUMB-LIFT-DELTAS</dt>
   <dd>When computing the viewlet transform, use the delta rule for lifts precisely as described in the PODS10 paper.  If this flag is <b>not</b> active, a postprocessing step is applied to lift deltas, that range-restricts the resulting expression to only those tuples that are affected. This optimization is automatically activated by <span class="code">-O1</span>.</dd>
 
-</dl>        <div class="doc_chain_link"> &lt; <span class="doc_chain_link_prev"><a href="docs.html" >Getting Started</a></span> | <span class="doc_chain_link_next"><a href="docs_sql.html" >DBT-SQL Reference</a></span> &gt; </div>      </div><!-- /content -->
+</dl>
+        <div class="doc_chain_link"> &lt; <span class="doc_chain_link_prev"><a href="docs.html" >Getting Started</a></span> | <span class="doc_chain_link_next"><a href="docs_sql.html" >DBT-SQL Reference</a></span> &gt; </div>      </div><!-- /content -->
     </div><!-- /contentwrapper -->
   </div><!-- /pagebody -->
   <hr/>
@@ -175,6 +201,9 @@ These flags are passed to the dbtoaster compiler with the <span class="code">-F<
   <p>Copyright (c) 2009-2012, The DBToaster Consortium. All rights reserved.</p>
   </div>
 </div><!-- /overallpage -->
+
+<script type="text/javascript" src="js/jquery-2.0.3.min.js"> </script>
+<script type="text/javascript" src="js/bootstrap.min.js"> </script>
 
 </body>
 </html>
