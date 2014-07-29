@@ -66,8 +66,12 @@ copy_files(["site/9.jpg",
             "site/bakeoff.png",
             "site/bluetab.gif",
             "site/bluetabactive.gif",
-            "site/dropdowntabs.js",
             "site/dbtoaster-logo.gif"], "site_html");
+copy_files(["site/css/bootstrap-theme.min.css",
+            "site/css/bootstrap.min.css",
+            "site/css/style.css"], "site_html/css");
+copy_files(["site/js/bootstrap.min.js",
+            "site/js/jquery-2.0.3.min.js"], "site_html/js");
             
 build_php("site/index.php", "site_html");
 
