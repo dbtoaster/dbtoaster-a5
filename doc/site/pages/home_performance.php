@@ -9,14 +9,17 @@
 <label class="checkbox-inline">
    <input class="filter_data" id="cb_spy" type="checkbox" checked> SPY
 </label>
+<label class="checkbox-inline">
+   <input class="filter_data" id="cb_prscala" type="checkbox"> C++ (Beta1)
+</label>
+<label class="checkbox-inline">
+   <input class="filter_data" id="cb_prcpp" type="checkbox"> Scala (Beta1)
+</label>
 <label class="checkbox-inline" id="lbl_scala">
-   <input class="filter_data" id="cb_scala" type="checkbox"> Scala
+   <input class="filter_data" id="cb_scala" type="checkbox"> Scala (Beta2)
 </label>
 <label class="checkbox-inline">
-   <input class="filter_data" id="cb_scalalms" type="checkbox"> Scala + LMS
-</label>
-<label class="checkbox-inline">
-   <input class="filter_data" id="cb_cpp" type="checkbox" checked> C++
+   <input class="filter_data" id="cb_cpp" type="checkbox" checked> C++ (Beta2)
 </label>
 <label class="checkbox-inline">
    <input class="filter_data" id="cb_ivm" type="checkbox"> IVM
@@ -87,7 +90,7 @@ function drawBars(rawData, rawGroups) {
 
 d3.csv("data/bakeoff.csv", function(error, rawInput) {
    var data = [];
-   var groups = ["rep", "dbx", "spy", "scala", "scalalms", "cpp", "ivm"];
+   var groups = ["rep", "dbx", "spy", "prcpp", "prscala", "scala", "cpp", "ivm"];
 
    rawInput.forEach(function (d) {
       groups.forEach(function (g) {
