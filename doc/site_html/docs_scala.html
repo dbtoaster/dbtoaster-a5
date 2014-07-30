@@ -113,9 +113,21 @@ ATIMESD:
 </div>
 
 <p>
-   After processing all insertions and deletions, the final result is printed 
+   After processing all insertions and deletions, the final result is printed.
 </p>
 
+<p>
+   As an important side note for MS Windows users, we received some reports regarding problems about running the compiled Scala programs under Cygwin.
+   We can propose several solutions, which among them is executing the command for running the compiled programs under the MS Windows itself (and not via Cygwin).
+   The other solution, as most of the time there are some problems with the classpath under Cygwin, is passing the classpath explicitly, by running a command similar to the one below:
+</p>
+<div class="codeblock">
+$> java -cp ".\test.jar;.\lib\dbt_scala\akka-actor_2.10-2.2.3.jar;.\lib\dbt_scala\dbtoaster_2.10-2.1-lms.jar;.\lib\dbt_scala\scala-library-2.10.2.jar;.\lib\dbt_scala\config-1.0.2.jar" ddbt.gen.Dbtoaster
+Java 1.7.0_65, Scala 2.10.2
+Time: 0.002s (30/0)
+ATIMESD:
+306
+</div>
 <a name="apiguide"/></a>
 <h3>2. Scala API Guide</h3><p>
    In the previous example, we used the standard main function to test the query. 
