@@ -1,8 +1,53 @@
 
-<a name="latest"><h4>DBToaster Public Beta</h4></a>
+<a name="latest"><h4>DBToaster Public Beta 2</h4></a>
 <table class="table">
 <thead>
   <th width="30%" align="right">Binaries</th>
+  <th width="20%" align="left">Revision</th>
+  <th width="20%" align="left">Date</th>
+  <th width="20%" align="left">Download</th>  
+</thead>
+<tr>
+  <td align="left"> &nbsp;&nbsp; Mac OS X 10.8.5 (or above)</td>
+  <td>f3255_b7308ef5</td>
+  <td>2014-Aug-01</td>
+  <td align="left">
+    <a class="btn btn-primary" href="dist/dbtoaster_darwin_f3255_b7308ef5.tgz">Tarball</a></td>
+</tr>
+<tr>
+  <td align="left"> &nbsp;&nbsp; Ubuntu 12.04 (x86-64)</td>
+  <td>f3255_b7308ef5</td>
+  <td>2014-Aug-01</td>
+  <td align="left">
+    <a class="btn btn-primary" href="dist/dbtoaster_ubuntu12.04_x86_64_f3255_b7308ef5.tgz">Tarball</a></td>
+</tr>
+<tr>
+  <td align="left"> &nbsp;&nbsp; RHEL 6.5 (x86-64)</td>
+  <td>f3255_b7308ef5</td>
+  <td>2014-Aug-01</td>
+  <td align="left">
+    <a class="btn btn-primary" href="dist/dbtoaster_ubuntu12.04_x86_64_f3255_b7308ef5.tgz">Tarball</a></td>
+</tr>
+<tr>
+  <td align="left">&nbsp;&nbsp; Windows (Cygwin)</td>
+  <td>f3255_b7308ef5</td>
+  <td>2014-Aug-01</td>
+  <td align="left">
+    <a class="btn btn-primary" href="dist/dbtoaster_cygwin_nt-6.1-wow64_f3255_b7308ef5.tgz">Tarball</a></td>
+</tr>
+<tr>
+  <td align="left"><b>Documentation</b></td>
+  <td>f3255_b7308ef5</td>
+  <td>2014-Aug-01</td>
+  <td align="left">
+    <a class="btn btn-primary" href="dist/dbtoaster_doc_f3255_b7308ef5.pdf">&nbsp;&nbsp;PDF&nbsp;&nbsp;</a></td>
+</tr>
+</table>
+
+<a name="older"><h4>Older releases</h4></a>
+<table class="table">
+<thead>
+  <th width="30%" align="right">Binaries (Public Beta 1)</th>
   <th width="20%" align="left">Revision</th>
   <th width="20%" align="left">Date</th>
   <th width="20%" align="left">Download</th>  
@@ -36,8 +81,6 @@
     <a class="btn btn-primary" href="dist/dbtoaster_doc_2827.pdf">&nbsp;&nbsp;PDF&nbsp;&nbsp;</a></td>
 </tr>
 </table>
-
-<a name="older"><h4>Older releases</h4></a>
 <table class="table">
 <thead>
   <th width="30%" align="right">Binaries</th>
