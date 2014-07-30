@@ -178,6 +178,15 @@ CREATE STREAM T(C int, D int)
   FROM FILE 'examples/data/simple/t.dat' LINE DELIMITED csv;
 
 SELECT sum(A*D) AS AtimesD FROM R,S,T WHERE R.B=S.B AND S.C=T.C;
+
+$&gt; bin/dbtoaster -r examples/queries/simple/rst.sql
+&lt;snap&gt;
+&nbsp;&nbsp;&nbsp;&nbsp;&lt;ATIMESD&gt;306&lt;/ATIMESD&gt;
+&lt;/snap&gt;
+
+real  0m0.019s
+user  0m0.002s
+sys   0m0.002s
 </div>
 
 <h3>3. Generating Standalone Binaries</h3><p>
