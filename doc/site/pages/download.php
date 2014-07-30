@@ -26,7 +26,7 @@
   <td>f3255_b7308ef5</td>
   <td>2014-Aug-01</td>
   <td align="left">
-    <a class="btn btn-primary" href="dist/dbtoaster_ubuntu12.04_x86_64_f3255_b7308ef5.tgz">Tarball</a></td>
+    <a class="btn btn-primary" href="dist/dbtoaster_rhel6.5_x86_64_f3255_b7308ef5.tgz">Tarball</a></td>
 </tr>
 <tr>
   <td align="left">&nbsp;&nbsp; Windows (Cygwin)</td>
