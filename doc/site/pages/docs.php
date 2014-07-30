@@ -14,57 +14,35 @@ Several dependencies are needed to run DBToaster.
 
 <?= section("Windows")?>
 We tested DBToaster successfully on:
-<ol>
-  <li>Windows 8</li>
-  <li>Oracle JRE 7</li>
-  <li><a href="http://cygwin.com/">Cygwin</a></li>
-</ol>
-To launch DBToaster, launch it through the Cygwin shell (no package is required besides the basic ones).
-
-<p>
-   To generate standalone C++ binaries the following package is additionally required:
-</p>
-
 <ul>
-   <li>gcc-g++ 4.8 (or above)</li>
+  <li>Oracle JDK 7 (or above)</li>
+  <li><a href="http://cygwin.com/">Cygwin</a></li>
+  <li>gcc-g++ 4.8 (or above)</li>
+  <li><a href="http://scala-lang.org/download/2.10.2.html">Scala 2.10.2</a></li>
 </ul>
-
-<p>
-   To generate standalone Scala binaries <a href="http://scala-lang.org/download/2.10.2.html">Scala 2.10.2</a> is recommended and needs to be added to the <tt>PATH</tt> variable in <tt>.bash_profile</tt>.
-</p>
-
-<p>
-   <i>Note:</i> Other versions of the tools/packages might work as well but have not been tested.
-</p>
 
 <?= section("OS X")?>
 
-We recommend <a href="http://brew.sh/">Homebrew</a> to install the required dependencies on OS X as well as Java 7.
+<ul>
+  <li>Oracle JDK 7 (or above)</li>
+  <li>gcc-g++ 4.8 (or above)</li>
+  <li><a href="http://scala-lang.org/download/2.10.2.html">Scala 2.10.2</a></li>
+</ul>
 
 <p>
-   Install the <tt>scala</tt> formula to compile Scala standalone binaries.
-</p>
-
-<?= subsection("OS X 10.9 Mavericks") ?>
-<p>
-   DBToaster is completely compatible with libstdc++ and uses some features in C++11.
-   Thus, you need a compiler supporting C++11 features, which gcc-g++ 4.7 and above can be used. We highly recommend to use gcc-g++ 4.8.2-2 and above, if you do not have any constraints on choosing the compiler.
-</p>
-
-<p>
-   For installing gcc, the following commands can be used:
+   For installing gcc (if you are using <a href="http://brew.sh/">Homebrew</a>), the following commands can be used:
 </p>
 
 <div class="codeblock">
 $> brew tap homebrew/versions
-$> brew install gcc49
+$> brew install gcc48
 </div>
 
 <p>
    In order to tell DBToaster to use a custom C++ compiler, create a symlink <tt>gpp</tt> in the DBToaster directory that points to the compiler:
 </p>
 
-<div class="codeblock">$> ln -s /usr/local/bin/g++-4.9 gpp</div>
+<div class="codeblock">$> ln -s /usr/local/bin/g++-4.8 gpp</div>
 
 <p>
    DBToaster detects that this link exists and uses it instead of <tt>g++</tt>.
@@ -76,20 +54,15 @@ $> brew install gcc49
 </p>
 
 <ul>
-   <li>Java 7</li>
+  <li>Oracle JDK 7 (or above)</li>
+  <li>gcc-g++ 4.8 (or above)</li>
+  <li><a href="http://scala-lang.org/download/2.10.2.html">Scala 2.10.2</a></li>
 </ul>
 
 <p>
-   Install the following dependencies to compile C++ standalone binaries:
+   <i>Note:</i> Other versions of the tools/packages might work as well but have not been tested.
 </p>
 
-<ul>
-   <li>g++</li>
-</ul>
-
-<p>
-   To compile Scala standalone binaries Scala 2.10.3 is required.
-</p>
 
 <?= chapter("Evaluating a simple query")?>
 
