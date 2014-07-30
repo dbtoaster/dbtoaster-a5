@@ -13,20 +13,24 @@ The DBToaster compiler is used to generate incremental maintenance (M3) programs
 Several dependencies are needed to run DBToaster.
 
 <?= section("Windows")?>
-We tested DBToaster successfully on Windows 7 with the Oracle JRE 8 and <a href="http://cygwin.com/">Cygwin (32-bit)</a>.
-
-To launch DBToaster, launch it through the Cygwin shell (no package required besides the basic ones).
+We tested DBToaster successfully on:
+<ol>
+  <li>Windows 8</li>
+  <li>Oracle JRE 7</li>
+  <li><a href="http://cygwin.com/">Cygwin</a></li>
+</ol>
+To launch DBToaster, launch it through the Cygwin shell (no package is required besides the basic ones).
 
 <p>
-   To generate standalone C++ binaries the following package is required additionally:
+   To generate standalone C++ binaries the following package is additionally required:
 </p>
 
 <ul>
-   <li>gcc-g++ 4.8.2-2</li>
+   <li>gcc-g++ 4.8 (or above)</li>
 </ul>
 
 <p>
-   To generate standalone Scala binaries <a href="http://scala-lang.org/download/2.10.3.html">Scala 2.10.3</a> is recommended and needs to be added to the <tt>PATH</tt> variable in <tt>.bash_profile</tt>.
+   To generate standalone Scala binaries <a href="http://scala-lang.org/download/2.10.2.html">Scala 2.10.2</a> is recommended and needs to be added to the <tt>PATH</tt> variable in <tt>.bash_profile</tt>.
 </p>
 
 <p>

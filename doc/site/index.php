@@ -211,7 +211,7 @@ function chain_link_docs() {
         <?= chain_link_docs(); ?>
         <?php
           if(isset($pages[$subpage])){ 
-        ?><div class="titlebox"><?=$longtitle?></div><?php
+        ?><div class="titlebox"><?=($longtitle=="About" ? "DBToaster" : $longtitle)?></div><?php
           include($pagepath);
         } else { ?>
           ERROR: The page you have requested does not exist.
