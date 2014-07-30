@@ -32,7 +32,7 @@ $> bin/dbtoaster -c test.jar -l scala examples/queries/simple/rst.sql
 </p>
 
 <div class="codeblock">
-$> java -classpath "rst.jar:lib/dbt_scala/*" ddbt.gen.Dbtoaster
+$> java -classpath "test.jar:lib/dbt_scala/*" ddbt.gen.Dbtoaster
 Java 1.7.0_45, Scala 2.10.3
 Time: 0.008s (30/0)
 ATIMESD:
