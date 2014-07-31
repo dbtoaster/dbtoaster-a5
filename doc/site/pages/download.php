@@ -129,4 +129,137 @@
 
 <p>You are invited to perform and report on benchmark results and experimental comparisons of your system against DBToaster, but we ask you for fairness and to run DBToaster with settings that allow it to perform at its best. Specifically, the DBToaster interpreter is provided for your convenience and is not to be used for timing purposes. For the purpose of comparison with other data management systems, please use the C++ rather than the Scala backend. Please contact us if you have questions about how to optimize the performance of DBToaster.</p>
 
+<?= chapter("DBToaster Changelog", "changelog") ?>
 
+<H4 style="border-bottom:thin double;">Beta 2 (revision 3255) - 2014/08/01</H4>
+<ul>
+<li>Implemented a new back-end from scratch in Scala for compiling M3 programs
+  generated for SQL queries by DBToaster's front-end.
+</li><li>Used state-of-the-art compilation techniques for generating the most efficient
+  view maintenance programs (in both Scala anf C++), in the new back-end.
+</li><li>Extensively used LMS (https://github.com/epfldata/lms/tree/booster-develop-0.3)
+  as a light weight modular generative compiler for easily implementing
+  domain-specific optimizations used in the new back-end.
+</li><li>Removed the deprecated flags in the new back-end.
+</li><li>Extended the definition of a ring base, new ring methods, modified rings of
+  arithmetic and calculus values.
+</li><li>Removed the dependency on Boost for compiling the generated C++ programs. Now,
+  any C++11 compliant compiler (either clang++ or g++-4.7 or above) can be used
+  without needing other dependencies.
+</li><li>Implementing specialized base-types in C++ (PString and KDouble instead of
+  standard string and double, for comparison reasons or a faster execution.)
+</li><li>Implemented more efficient collection types in both C++ and Scala.
+</li><li>Provided the correct scope when descending into AggSum, Lifts, Externals, and
+  Exists.
+</li><li>Implemented a super efficient memory caching strategy in C++ collections to
+  further improve the performance.
+</li><li>Changed unifiation to respect the scope of variables.
+</li><li>Applied more optimizations:
+<ul>
+  <li>Added OPTIMIZE-PATTERNS option (active for O3) which avoids generating
+    useless secondary indices.</li>
+</ul>
+</li><li>Fixed the known bugs from the previous release:
+  <ul>
+  <li>Minor fixes in the SQL parser.
+  </li><li>Fixed issues in generating maps with input variables, when it is not
+    expected.
+  </li><li>Fixed a duplicate group-by vars in AggSum.
+  </li><li>Fixed the wrong order of aggregate targets.
+  </li><li>Fixed an issue where optimizer was removing equality checks.
+  </li><li>Fixed an issue related to generating unit values (Error: "Cannot produce one
+    of type '<int>').
+  </li><li>Fixed mk_domain_restricted_lift.
+  </li><li>Fixed a wrong materialization decision (appeared on TPCH-18).
+  </li><li>Fixed an issue where external functions were formatted differently when
+    appearing in DECLARE QUERY statements.</li>
+  </ul>
+</li>
+</ul>
+
+<H4 style="border-bottom:thin double;">Beta 1 (revision 2827) - 2013/02/11</H4>
+
+<ul>
+<li>Added support for more SQL features:
+<ul>
+  <li>SELECT DISTINCT</li>
+</ul>
+</li>
+<li>Added support for standard functions in SQL queries.
+</li><li>Added support for different levels of view maintanance Depth-0, Depth1, ..., 
+  DepthN.
+</li><li>Added support for calculatiion of the final result upon user request (
+  EXPRESSIVE-TLQS).
+</li><li>Added more examples into the release.
+</li><li>Added bin/dbtoaster as wrapper script that handles the compilation process 
+  for C++ and Scala.
+</li><li>Added support for DELETE operations, as well as INSERTs.
+</li><li>Several changes to improve compatibility with Windows and speed up C++ and 
+  Scala compilation.
+</li><li>Code formatting of Scala and C++ source files.
+</li><li>Improved error reporting for SQL errors. Errors will include contextual 
+  information.
+</li><li>Minor changes to get the compilation of dbtoaster working on the latest CYGWIN.
+</li><li>Added new query interface for both Scala and C++.
+</li><li>Used actors for input processing in Scala.
+</li><li>Added -g flag to pass through an argument to the second-stage compiler.
+</li><li>Added DELETE-ON-ZERO flag for the Scala backend.
+</li><li>Added HEURISTICS-MINIMAL-MAPS debug flag to choose between materializing the
+  whole relation or only the part that is needed.
+</li><li>Added flags CALC-NO-OPTIMIZE and CALC-NO-DECOMPOSITION to disable the
+  calculus optimizations and graph decomposition, respectively.
+</li><li>Added HEURISTICS-ENABLE-INPUTVARS flag, which enables experimental support
+  for incremental view caches.
+</li><li>Minor change in Heuristics to correctly pass the scope to nested
+  subexpressions.
+</li><li>Applied more optimizations:
+<ul>
+  <li>Removed unnecessary ifthenelse blocks where "if(pred) t else t" with. a side
+    effect free predicate.
+  </li><li>Introduced LookupOrElse operator for saving the unnecessary computations,
+    when a tuple does not exist.
+  </li><li>Changed the comparison of two AggSums expressions. This comparison now
+    results in true if there is a mapping between the subexpressions and GB1
+    maps to GB2. This fix prevents generation of duplicate maps
+    (e.g. AggSum([A,B], m[][A,B]) equals
+    AggSum([D,C],m[][C,D]).
+  </li><li>Changed the approach for dealing with nested filters.
+  </li><li>Fixed a problem where a multiplication with a comparison would not result 
+    in using a filter operation, if the comparison was on the left-hand side.
+  </li><li>More elegant handling of filter expressions on non-collections.
+  </li><li>Optimization for instances of Aggregate(Filter(m)) where m is an 
+    inexpensive expression
+  </li><li>Transformed (B^=dA)*R(dA,B) into R(dA,B)*(B=dA), in order to prevent 
+    expressions of the form R(dA,dA).
+  </li><li>Added "HEURISTICS-PULL-OUT-VALUES" flag to prevent ValueRing terms and 
+    comparisons from being pulled inside materialized maps. In certain cases,
+    this option might decrease the number of generated maps
+    (e.g. mddb/query2.sql).
+  </li><li>Expressions of the form "E * 1.0" and "E * 0.0" are being reduced to "E" 
+    and "0", respectively (note the float values), yielding some dead code.
+  </li><li>Used long type for representing dates in generated programs.
+  </li><li>Added Heuristics checks if the optimizer re-introduced AggSums in the
+    expression being materialized.
+  </li><li>Fixed the bug that was materializing the whole relation at depth less than
+    infinity, and not only the needed columns (even when minimal_maps = true).
+  </li><li>Added membership tests around lookups on LHS and RHS maps with input and
+    output variables.</li>
+</ul>
+</li><li>Fixed the known bugs from the previous release:
+<ul>
+  <li>Clarified the unbound variable error.
+  </li><li>Resolved problems with DB parser.
+  </li><li>Extended the SQL parser to support semicolon in strings.
+  </li><li>Fixed inconsistencies in the examples paths presented in the documentation.
+  </li><li>Fixed the problem with creating temporary files.
+  </li><li>Removed "long long" types from C++ generated code.
+  </li><li>Fixed transactional inconsistency bug.
+  </li><li>Added a few variable initializations to prevent reading uninitialized data.
+  </li><li>Fixed warning about floating numbers not having a trailing 0.
+  </li><li>Fixed the name collision problem of raw relations.</li>
+</ul>
+</li>
+</ul>
+
+<H4 style="border-bottom:thin double;">Beta 0 (revision 2525) - 2012/07/19</H4>
+The initial release of DBToaster.

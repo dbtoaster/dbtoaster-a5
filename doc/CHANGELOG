@@ -24,20 +24,6 @@ Beta 2 (revision 3255) - 2014/08/01
 - Implemented a super efficient memory caching strategy in C++ collections to
   further improve the performance.
 - Changed unifiation to respect the scope of variables.
-- Added support for batch updates up to M3 (activated using --batch)
-- Added a new event type BatchUpdate(relation) representing a batch of updates to
-  relation. No event variables, just relation name. An M3 trigger starts with
-  "ON BATCH UPDATE OF R { ... }".
-- Added two new types to the Calculus ring: DeltaRel and DomainDelta
-- For batch updates, the delta of a relation is written as
-  Domain(DeltaRel(...)) * DeltaRel(...). For deltas of lifts/exists, the domain
-  is restricted by pulling DeltaDomain upfront (for tuple updates, we do the
-  same with lifts).
-- Extended the materializer to support batch updates.
-- Added support for more SQL features:
-  + UNION
-  + HAVING
-  + INTERVAL
 - Applied more optimizations:
   + Added OPTIMIZE-PATTERNS option (active for O3) which avoids generating
     useless secondary indices.
@@ -129,6 +115,6 @@ Beta 1 (revision 2827) - 2013/02/11
   + Fixed warning about floating numbers not having a trailing 0.
   + Fixed the name collision problem of raw relations.
 
-Beta 0 (revision 2525) - 2013/02/11
+Beta 0 (revision 2525) - 2012/07/19
 -----------------------------------
-The first release of DBToaster.
+The initial release of DBToaster.

@@ -172,6 +172,7 @@ function chain_link_docs() {
             <ul class="dropdown-menu">
               <li><?= mk_link(null, "download", null); ?></li>
               <li><?= mk_link("License", "download", null, "#license"); ?></li>
+              <li><?= mk_link("Changelog", "download", null, "#changelog"); ?></li>
             </ul>
           </li>
           <li class="dropdown">
