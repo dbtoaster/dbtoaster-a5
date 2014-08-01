@@ -10,16 +10,16 @@ The DBToaster compiler is used to generate incremental maintenance (M3) programs
 
 <?= chapter("Requirements")?>
 
-Several dependencies are needed to run DBToaster.
+DBToaster requires several dependencies to be installed. 
 
 <?= section("Windows")?>
-We tested DBToaster successfully on:
 <ul>
   <li>Oracle JDK 7 (or above)</li>
   <li><a href="http://cygwin.com/">Cygwin</a></li>
   <li>gcc-g++ 4.8 (or above)</li>
   <li><a href="http://scala-lang.org/download/2.10.2.html">Scala 2.10.2</a></li>
 </ul>
+<i>Note:</i> Most of the development and testing has been done on OS X and Linux platforms. 
 
 <?= section("OS X")?>
 

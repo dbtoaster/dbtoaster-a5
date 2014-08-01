@@ -15,7 +15,7 @@
 <dd>Redirect the compiler's output to the specified file.  If used in conjunction with <span class="code">-c</span>, the source code for the compiled binary will be directed to this file.  The special output filename '<span class="code">-</span>' refers to stdout.  By default, output is directed to stdout, or discarded if the <span class="code">-c</span> flag is used.</dd>
 
 <dt class="code">-r</dt>
-<dd>Run the query (queries) after code generation and compilation. If no target language is specified by a <span class="code">-l</span>, C++ code generator would be used by default.</dd>
+<dd>Run the query (queries) after code generation and compilation. If no target language is specified using the <span class="code">-l</span> flag, the C++ code generator would be used by default.</dd>
 
 <dt class="code">-F &lt;optimization&gt;</dt>
 <dd>Activate the specified optimization flag.  These are documented below.</dd>

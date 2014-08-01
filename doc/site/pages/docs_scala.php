@@ -44,9 +44,7 @@ ATIMESD:
 </p>
 
 <p>
-   As an important side note for MS Windows users, we received some reports regarding problems about running the compiled Scala programs under Cygwin.
-   We can propose several solutions, which among them is executing the command for running the compiled programs under the MS Windows itself (and not via Cygwin).
-   The other solution, as most of the time there are some problems with the classpath under Cygwin, is passing the classpath explicitly, by running a command similar to the one below:
+  <i>Note for Windows users:</i> When running compiled Scala programs under Cygwin or Windows directly, one should use Windows-style classpath separators (i.e., semicolons). For instance:
 </p>
 <div class="codeblock">
 $> java -cp ".\test.jar;.\lib\dbt_scala\akka-actor_2.10-2.2.3.jar;.\lib\dbt_scala\dbtoaster_2.10-2.1-lms.jar;.\lib\dbt_scala\scala-library-2.10.2.jar;.\lib\dbt_scala\config-1.0.2.jar" ddbt.gen.Dbtoaster
