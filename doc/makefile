@@ -27,6 +27,8 @@ push_site:
 			$(SITE_USERNAME)_dbtoaster@ssh.phx.nearlyfreespeech.net:js/ ; \
 		scp -r site/pages/*.php \
 			$(SITE_USERNAME)_dbtoaster@ssh.phx.nearlyfreespeech.net:pages/ ; \
+		scp -r site/data/*.csv \
+			$(SITE_USERNAME)_dbtoaster@ssh.phx.nearlyfreespeech.net:data/ ; \
 	else echo "Set the SITE_USERNAME variable in makefile.local"; fi
 
 pull_site:
