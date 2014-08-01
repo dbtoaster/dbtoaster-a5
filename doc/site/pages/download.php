@@ -33,7 +33,7 @@
   <td>3263</td>
   <td>2014-Aug-01</td>
   <td align="left">
-    <a class="btn btn-primary" href="dist/dbtoaster_cygwin_nt-6.1-wow64_3263.tgz">Tarball</a></td>
+    <a class="btn btn-primary" href="dist/dbtoaster_cygwin_3263.tgz">Tarball</a></td>
 </tr>
 </table>
 
