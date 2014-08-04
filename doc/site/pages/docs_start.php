@@ -18,7 +18,9 @@ This is a convenient way to check whether DBToaster and its dependencies have be
    The following command evaluates the <tt>rst</tt> query on the toy dataset that ships with DBToaster:
 </p>
 
-<div class="codeblock">CREATE STREAM R(A int, B int) 
+<div class="codeblock">
+$&gt; cat examples/queries/simple/rst.sql
+CREATE STREAM R(A int, B int) 
   FROM FILE 'examples/data/simple/r.dat' LINE DELIMITED csv;
 
 CREATE STREAM S(B int, C int) 
