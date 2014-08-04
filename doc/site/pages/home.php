@@ -4,7 +4,7 @@ The DBToaster compiler generates code that can be easily incorporated into any C
 
 <p>Since 2009, DBToaster has spearheaded the currently ongoing database compilers revolution.
 If you are looking for the fastest possible execution of continuous analytical queries, DBToaster is the answer.
-DBToaster is
+DBToaster code is
 <?=mk_link("3-6 orders of magnitude", "home", "performance")?> faster
 than all other systems known to us.
 </p>
@@ -27,6 +27,8 @@ restrictions on commercial use).
 <p>
 Get started quickly with <?= mk_link("these instructions", "docs", "start"); ?>
 </p>
+
+<p>Questions? Contact us at dbtoaster@epfl.ch !</p>
 </h4>
 
 
