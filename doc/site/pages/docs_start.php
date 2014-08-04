@@ -3,7 +3,7 @@ The DBToaster compiler can generate incremental view maintenance programs in two
 <ul>
 <li><b>Standalone Binary</b>: The DBToaster compiler can produce a standalone binary that incrementally evaluates a given SQL query. This requires invoking a second stage compiler (g++ or scalac) to generate the final binary.</li>
 
-<li><b>Source Code</b>: The DBToaster compiler can also produce source code that can be embedded into your own application.</li>
+<li><b>Source Code</b>: The DBToaster compiler can also produce source code that can be easily embedded into user applications.</li>
 </ul>
 
 </p>
