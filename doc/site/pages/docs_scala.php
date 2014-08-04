@@ -8,7 +8,7 @@
 
 <?=chapter("Compiling and running a query")?>
 <p>
-   DBToaster generates a JAR file for a query when using the <tt>-l scala</tt> and the <tt>-c &lt;file&gt;</tt> switch:
+   DBToaster generates a JAR file for a query when using the <tt>-l scala</tt> and <tt>-c &lt;file&gt;</tt> switches:
 </p>
 
 <div class="codeblock">
@@ -27,8 +27,7 @@ $> bin/dbtoaster -c test.jar -l scala examples/queries/simple/rst.sql
 </div>
 
 <p>
-   The command above compiles the query to <tt>test.jar</tt>.
-   It can now be run as follows:
+   The command above compiles the query to <tt>test.jar</tt>, which can be run as follows:
 </p>
 
 <div class="codeblock">
