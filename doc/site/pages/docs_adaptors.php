@@ -1,4 +1,9 @@
-<p>DBToaster's runtimes currently support the following adaptors:</p>
+<p>DBToaster allows users to build custom adaptors for processing input streams. The current release provides two adaptors in both the C++ and Scala backends:
+<ul>
+    <li>CSV - for reading in string-delimited input files</li>
+    <li>Order Book - for reading in stock market historical data</li>
+</ul>
+</p>
 
 <?= chapter("CSV") ?>
 A simple string-delimited adaptor.  Fields are separated using the delimiter passed in the <b>delimiter</b> parameter.  If not provided, comma (",") will be used as a default delimiter.<br/>
@@ -46,7 +51,7 @@ LINE DELIMITED orderbook (book := 'bids', brokers := '10', deterministic := 'yes
 <td>If set to "true", use the first field of the input file to distinguish between rows for insertion and rows for deletion.  A 0 in the first column triggers a deletion event.  A 1 in the first column triggers an inertion event.  The first column is stripped off of the record before further parsing is performed.</td>
 </tr>
 
-<tr><td rowspan="3">Orderbook</td>
+<tr><td rowspan="3">Order Book</td>
 <td><div class="code">action_id</div></td>
 <td>no</td>
 <td>The value of this parameter may be 'bids' or 'asks', and determines for which orderbook events will be generated.</td>
