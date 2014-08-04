@@ -1,6 +1,7 @@
 <?php
 $pages = array(
-  "home"             => "About", 
+  "home"             => "Main page", 
+  "home_about"             => "Is DBToaster right for you?", 
     "home_performance" => "Performance",
     "home_features"    => "Features",
     "home_research"    => "For Researchers",
