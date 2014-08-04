@@ -15,15 +15,18 @@ restrictions on commercial use).
 </p>
 
 
-<h3>
-<p>Learn more about DBToaster:
-<?=mk_link("check whether DBToaster is right for you", "home", "about")?>
+<h4>
+<p>
+<?=mk_link("Learn more about DBToaster and check whether it is right for you", "home", "about")?>
 </p>
 
 <p>
-<?= mk_link("Download it here", "download", null); ?>.
-Get started quickly with <?= mk_link("these instructions", "docs", "start"); ?>!
+<?= mk_link("Download DBToaster", "download", null); ?>
 </p>
-</h3>
+
+<p>
+Get started quickly with <?= mk_link("these instructions", "docs", "start"); ?>
+</p>
+</h4>
 
 

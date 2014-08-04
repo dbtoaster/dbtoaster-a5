@@ -227,7 +227,7 @@ function chain_link_docs() {
   </div><!-- /pagebody -->
   <hr/>
   <div class="footer">
-  <p>Copyright (c) 2009-2012, The DBToaster Consortium. All rights reserved.</p>
+  <p>Copyright (c) 2009-2014, The DBToaster Consortium. All rights reserved.</p>
   </div>
 </div><!-- /overallpage -->
 
