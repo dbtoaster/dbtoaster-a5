@@ -75,28 +75,28 @@
       <div class="content">
                 <div class="titlebox">Performance</div><script src="http://d3js.org/d3.v3.min.js"></script>
 
-<label class="checkbox-inline">
+<label class="checkbox-inline" id="lbl_rep">
    <input class="filter_data" id="cb_rep" type="checkbox"> REP
 </label>
-<label class="checkbox-inline">
+<label class="checkbox-inline" id="lbl_dbx">
    <input class="filter_data" id="cb_dbx" type="checkbox" checked> DBX
 </label>
-<label class="checkbox-inline">
+<label class="checkbox-inline" id="lbl_spy">
    <input class="filter_data" id="cb_spy" type="checkbox" checked> SPY
 </label>
-<label class="checkbox-inline">
-   <input class="filter_data" id="cb_prscala" type="checkbox"> C++ (Beta1)
+<label class="checkbox-inline" id="lbl_prcpp">
+   <input class="filter_data" id="cb_prcpp" type="checkbox"> C++ (R1)
 </label>
-<label class="checkbox-inline">
-   <input class="filter_data" id="cb_prcpp" type="checkbox"> Scala (Beta1)
+<label class="checkbox-inline" id="lbl_prscala">
+   <input class="filter_data" id="cb_prscala" type="checkbox"> Scala (R1)
 </label>
 <label class="checkbox-inline" id="lbl_scala">
-   <input class="filter_data" id="cb_scala" type="checkbox"> Scala (Beta2)
+   <input class="filter_data" id="cb_scala" type="checkbox"> Scala (R2)
 </label>
-<label class="checkbox-inline">
-   <input class="filter_data" id="cb_cpp" type="checkbox" checked> C++ (Beta2)
+<label class="checkbox-inline" id="lbl_cpp">
+   <input class="filter_data" id="cb_cpp" type="checkbox" checked> C++ (R2)
 </label>
-<label class="checkbox-inline">
+<label class="checkbox-inline" id="lbl_ivm">
    <input class="filter_data" id="cb_ivm" type="checkbox"> IVM
 </label>
 
@@ -217,7 +217,7 @@ d3.csv("data/bakeoff.csv", function(error, rawInput) {
 
 <p>The above graphs show a performance comparison of DBToaster-generated query engines against a commercial database system (DBX), a commercial stream processor (SPY), and several naive query evaluation strategies implemented in DBToaster that do not involve the Higher-Order incremental view maintenance. (The commercial systems remain anonymous in accordance with the terms of their licensing agreements).</p>
 
-<p>In addition, the performance comparison covers generated C++ and Scala programs from both Beta1 and Beta2 releases, in order to compare the performance improvements gained in the latest release.</p>
+<p>In addition, the performance comparison covers generated C++ and Scala programs from both Release 1 (R1) and Release 2 (the current release - R2) releases, in order to compare the performance improvements gained in the latest release.</p>
 
 <p>Performance is measured in terms of the rate at which each system can produce up-to-date (fresh) views of the query results.  As you can see, DBToaster regularly outperforms the commercial systems by <b>3-6 orders of magnitude.</b></p>
 

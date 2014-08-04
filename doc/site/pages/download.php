@@ -1,5 +1,5 @@
 
-<a name="latest"><h4>DBToaster Public Beta 2</h4></a>
+<a name="latest"><h4>DBToaster Public Release 2</h4></a>
 <table class="table">
 <thead>
   <th width="30%" align="right">Binaries</th>
@@ -12,35 +12,43 @@
   <td>3263</td>
   <td>2014-Aug-01</td>
   <td align="left">
-    <a class="btn btn-primary" href="dist/dbtoaster_darwin_3263.tgz">Tarball</a></td>
+    <a class="btn btn-primary" href="dist/dbtoaster_darwin_3263.tgz">&nbsp;&nbsp;Tarball&nbsp;&nbsp;</a></td>
 </tr>
 <tr>
   <td align="left"> &nbsp;&nbsp; Ubuntu 12.04 (x86-64)</td>
   <td>3263</td>
   <td>2014-Aug-01</td>
   <td align="left">
-    <a class="btn btn-primary" href="dist/dbtoaster_ubuntu12.04_x86_64_3263.tgz">Tarball</a></td>
+    <a class="btn btn-primary" href="dist/dbtoaster_ubuntu12.04_x86_64_3263.tgz">&nbsp;&nbsp;Tarball&nbsp;&nbsp;</a></td>
 </tr>
 <tr>
   <td align="left"> &nbsp;&nbsp; RHEL 6.5 (x86-64)</td>
   <td>3263</td>
   <td>2014-Aug-01</td>
   <td align="left">
-    <a class="btn btn-primary" href="dist/dbtoaster_rhel6.5_x86_64_3263.tgz">Tarball</a></td>
+    <a class="btn btn-primary" href="dist/dbtoaster_rhel6.5_x86_64_3263.tgz">&nbsp;&nbsp;Tarball&nbsp;&nbsp;</a></td>
 </tr>
 <tr>
   <td align="left">&nbsp;&nbsp; Windows (Cygwin)</td>
   <td>3263</td>
   <td>2014-Aug-01</td>
   <td align="left">
-    <a class="btn btn-primary" href="dist/dbtoaster_cygwin_3263.tgz">Tarball</a></td>
+    <a class="btn btn-primary" href="dist/dbtoaster_cygwin_3263.tgz">&nbsp;&nbsp;Tarball&nbsp;&nbsp; </a></td>
+</tr>
+<tr>
+  <td align="left"><b>Documentation</b></td>
+  <td>3263</td>
+  <td>2014-Aug-01</td>
+  <td align="left">
+    <?= mk_link("&nbsp;&nbsp;Online&nbsp;&nbsp;", "docs", null, "", " class=\"btn btn-primary\""); ?>
+  </td>
 </tr>
 </table>
 
 <a name="older"><h4>Older releases</h4></a>
 <table class="table">
 <thead>
-  <th width="30%" align="right">Binaries (Public Beta 1)</th>
+  <th width="30%" align="right">Binaries (Public Release 1)</th>
   <th width="20%" align="left">Revision</th>
   <th width="20%" align="left">Date</th>
   <th width="20%" align="left">Download</th>  
@@ -50,33 +58,33 @@
   <td>2827</td>
   <td>2013-Feb-11</td>
   <td align="left">
-    <a class="btn btn-primary" href="dist/dbtoaster_darwin_2827.tgz">Tarball</a></td>
+    <a class="btn btn-primary" href="dist/dbtoaster_darwin_2827.tgz">&nbsp;&nbsp;Tarball&nbsp;&nbsp;</a></td>
 </tr>
 <tr>
   <td align="left"> &nbsp;&nbsp; Ubuntu 12.04 (x86-64)</td>
   <td>2827</td>
   <td>2013-Feb-11</td>
   <td align="left">
-    <a class="btn btn-primary" href="dist/dbtoaster_ubuntu12.04_x86_64_2827.tgz">Tarball</a></td>
+    <a class="btn btn-primary" href="dist/dbtoaster_ubuntu12.04_x86_64_2827.tgz">&nbsp;&nbsp;Tarball&nbsp;&nbsp;</a></td>
 </tr>
 <tr>
   <td align="left">&nbsp;&nbsp; Windows (Cygwin)</td>
   <td>2827</td>
   <td>2013-Feb-11</td>
   <td align="left">
-    <a class="btn btn-primary" href="dist/dbtoaster_cygwin_nt-6.1-wow64_2827.tgz">Tarball</a></td>
+    <a class="btn btn-primary" href="dist/dbtoaster_cygwin_nt-6.1-wow64_2827.tgz">&nbsp;&nbsp;Tarball&nbsp;&nbsp;</a></td>
 </tr>
 <tr>
   <td align="left"><b>Documentation</b></td>
   <td>2827</td>
   <td>2013-Feb-11</td>
   <td align="left">
-    <a class="btn btn-primary" href="dist/dbtoaster_doc_2827.pdf">&nbsp;&nbsp;PDF&nbsp;&nbsp;</a></td>
+    <a class="btn btn-primary" href="dist/dbtoaster_doc_2827.pdf">&nbsp;&nbsp;&nbsp;&nbsp;PDF&nbsp;&nbsp;&nbsp;&nbsp;</a></td>
 </tr>
 </table>
 <table class="table">
 <thead>
-  <th width="30%" align="right">Binaries (Public Beta 0)</th>
+  <th width="30%" align="right">Binaries (Public Beta for Release 1)</th>
   <th width="20%" align="left">Revision</th>
   <th width="20%" align="left">Date</th>
   <th width="20%" align="left">Download</th>
@@ -86,28 +94,28 @@
   <td>2525</td>
   <td>2012-Jul-09</td>
   <td align="left">
-    <a class="btn btn-primary" href="dist/dbtoaster_darwin_2525.tgz">Tarball</a></td>
+    <a class="btn btn-primary" href="dist/dbtoaster_darwin_2525.tgz">&nbsp;&nbsp;Tarball&nbsp;&nbsp;</a></td>
 </tr>
 <tr>
   <td align="left">&nbsp;&nbsp; Red Hat Fedora 17 (x86-64)</td>
   <td>2525</td>
   <td>2012-Jul-09</td>
   <td align="left">
-    <a class="btn btn-primary" href="dist/dbtoaster_fedora17_x86_64_2525.tgz">Tarball</a></td>
+    <a class="btn btn-primary" href="dist/dbtoaster_fedora17_x86_64_2525.tgz">&nbsp;&nbsp;Tarball&nbsp;&nbsp;</a></td>
 </tr>
 <tr>
   <td align="left">&nbsp;&nbsp; Ubuntu 12.04 (x86-64)</td>
   <td>2525</td>
   <td>2012-Jul-09</td>
   <td align="left">
-    <a class="btn btn-primary" href="dist/dbtoaster_ubuntu12.04_x86_64_2525.tgz">Tarball</a></td>
+    <a class="btn btn-primary" href="dist/dbtoaster_ubuntu12.04_x86_64_2525.tgz">&nbsp;&nbsp;Tarball&nbsp;&nbsp;</a></td>
 </tr>
 <tr>
   <td align="left">&nbsp;&nbsp; Windows (Cygwin)</td>
   <td>2576</td>
   <td>2012-Jul-09</td>
   <td align="left">
-    <a class="btn btn-primary" href="dist/dbtoaster_cygwin_nt-6.1-wow64_2576.tgz">Tarball</a></td>
+    <a class="btn btn-primary" href="dist/dbtoaster_cygwin_nt-6.1-wow64_2576.tgz">&nbsp;&nbsp;Tarball&nbsp;&nbsp;</a></td>
 </tr>
 </table>
 
@@ -131,7 +139,7 @@
 
 <?= chapter("DBToaster Changelog", "changelog") ?>
 
-<H4 style="border-bottom:thin double;">Beta 2 (revision 3255) - 2014/08/01</H4>
+<H4 style="border-bottom:thin double;">Release 2 (revision 3255) - 2014/08/01</H4>
 <ul>
 <li>Implemented a new back-end from scratch in Scala for compiling M3 programs
   generated for SQL queries by DBToaster's front-end.
@@ -177,7 +185,7 @@
 </li>
 </ul>
 
-<H4 style="border-bottom:thin double;">Beta 1 (revision 2827) - 2013/02/11</H4>
+<H4 style="border-bottom:thin double;">Release 1 (revision 2827) - 2013/02/11</H4>
 
 <ul>
 <li>Added support for more SQL features:
@@ -261,5 +269,5 @@
 </li>
 </ul>
 
-<H4 style="border-bottom:thin double;">Beta 0 (revision 2525) - 2012/07/19</H4>
+<H4 style="border-bottom:thin double;">Beta for Release 1 (revision 2525) - 2012/07/19</H4>
 The initial release of DBToaster.

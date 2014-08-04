@@ -1,7 +1,7 @@
 DBToaster Changelog
 ================================================================================
 
-Beta 2 (revision 3255) - 2014/08/01
+Release 2 (revision 3255) - 2014/08/01
 -----------------------------------
 - Implemented a new back-end from scratch in Scala for compiling M3 programs
   generated for SQL queries by DBToaster's front-end.
@@ -41,7 +41,7 @@ Beta 2 (revision 3255) - 2014/08/01
   + Fixed an issue where external functions were formatted differently when
     appearing in DECLARE QUERY statements
 
-Beta 1 (revision 2827) - 2013/02/11
+Release 1 (revision 2827) - 2013/02/11
 -----------------------------------
 - Added support for more SQL features:
   + SELECT DISTINCT
@@ -115,6 +115,6 @@ Beta 1 (revision 2827) - 2013/02/11
   + Fixed warning about floating numbers not having a trailing 0.
   + Fixed the name collision problem of raw relations.
 
-Beta 0 (revision 2525) - 2012/07/19
+Beta for Release 1 (revision 2525) - 2012/07/19
 -----------------------------------
 The initial release of DBToaster.
