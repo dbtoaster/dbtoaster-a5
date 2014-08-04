@@ -1,20 +1,21 @@
 <p>
-The DBToaster compiler can generate incremental view maintenance programs in two different forms:
+The DBToaster compiler can generate C++ or Scala code in two different forms:
 <ul>
-<li><b>Standalone Binary</b>: The DBToaster compiler can produce a standalone binary that incrementally evaluates a given SQL query. This requires invoking a second stage compiler (g++ or scalac) to generate the final binary.</li>
+<li><b>Standalone Binary</b> - Generating a binary that incrementally evaluates a given SQL query requires invoking a second stage compiler (g++ or scalac).</li>
 
-<li><b>Source Code</b>: The DBToaster compiler can also produce source code that can be easily embedded into user applications.</li>
+<li><b>Source Code</b> - Generated code can be easily embedded into user applications.</li>
+
 </ul>
 
 </p>
 
 <?= chapter("Evaluating a simple query")?>
 
-DBToaster provides the <tt>-r</tt> flag which generates, compiles and evaluates a query in one simple step.
-This is a convenient way to check whether DBToaster and its dependencies have successfully been installed.
+DBToaster provides the <tt>-r</tt> flag that generates, compiles, and runs the generated program in one simple step.
+This is a convenient way to check whether DBToaster and its dependencies have been successfully installed.
 
 <p>
-   The following command evaluates the <tt>rst</tt> query that ships with DBToaster:
+   The following command evaluates the <tt>rst</tt> query on the toy dataset that ships with DBToaster:
 </p>
 
 <div class="codeblock">CREATE STREAM R(A int, B int) 
@@ -40,14 +41,14 @@ sys   0m0.002s
 
 <?= chapter("Generating Standalone Binaries")?>
 <p>
-To use DBToaster to create a standalone binary, invoke it with <tt>-c [binary name]</tt>.  The binary can be invoked directly. It will print the results of all queries once all data has been processed.  </p>
+Invoke DBToaster with <tt>-c [binary name]</tt> to create a standalone binary. By default, the compiler uses the C++ backend to produce an executable binary. Once invoked, the program prints out the results of all the queries contained in the input file after processing the whole input data.</p>
 
-<p>The following command line will generate the <tt>rst</tt> executable:
+<p>The following command uses the C++ backend to generate the <tt>rst</tt> executable:
 <div class="codeblock">$&gt; bin/dbtoaster examples/queries/simple/rst.sql -c rst
 </div>
 </p>
 <p>
-Running the <tt>rst</tt> executable will produce the following output:
+Running the <tt>rst</tt> executable produces the following output:
 <div class="codeblock">$&gt; ./rst
 &lt;snap&gt;
 &nbsp;&nbsp;&nbsp;&nbsp;&lt;ATIMESD&gt;306&lt;/ATIMESD&gt;
@@ -56,12 +57,12 @@ Running the <tt>rst</tt> executable will produce the following output:
 </p>
 
 <p>
-To produce a scala jar file, invoke dbtoaster with <tt>-l scala</tt>, and the <tt>-c [binary name]</tt> flag as above.  DBToaster will produce <tt>[binary name].jar</tt>, which can be run as a normal scala program. For more details, please refer to <?= mk_link(null, "docs", "scala"); ?> 
+To produce a Scala jar file, invoke DBToaster with <tt>-l scala</tt> and the <tt>-c [binary name]</tt> flag as above.  DBToaster will produce <tt>[binary name].jar</tt>, which can be run as a normal Scala program. For more details, please refer to <?= mk_link(null, "docs", "scala"); ?>. 
 </p>
 
 <?= chapter("Generating Source Code") ?>
 
-<p>DBToaster's primary role is the construction of code that can be linked in to existing applications.  To generate a source file in C++ or Scala, invoke it with <tt>-l [language]</tt>, replacing <tt>[language]</tt> with <tt>cpp</tt> or <tt>scala</tt>.  If the optional <tt>-o</tt> flag is used to direct the generated code into a particular file, the target language will be auto-detected from the file suffix (".scala" for Scala, and ".h", ".hpp", or ".cpp" for C++).</p>
+<p>DBToaster's primary role is to generate code that can be embedded into user applications.  To produce a source file in C++ or Scala, invoke the compiler with <tt>-l [language]</tt>, replacing <tt>[language]</tt> with <tt>cpp</tt> or <tt>scala</tt>.  If the optional <tt>-o</tt> flag is used to redirect the generated code into a file, the target language will be auto-detected from the file suffix (".scala" for Scala and ".h", ".hpp", or ".cpp" for C++).</p>
 
 <div class="codeblock">$&gt; bin/dbtoaster examples/queries/simple/rst.sql -o rst.cpp
 $&gt; bin/dbtoaster examples/queries/simple/rst.sql -o rst.scala
