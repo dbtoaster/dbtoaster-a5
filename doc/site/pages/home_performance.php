@@ -9,6 +9,9 @@
 <label class="checkbox-inline" id="lbl_spy">
    <input class="filter_data" id="cb_spy" type="checkbox" checked> SPY
 </label>
+<label class="checkbox-inline" id="lbl_ivm">
+   <input class="filter_data" id="cb_ivm" type="checkbox"> IVM
+</label>
 <label class="checkbox-inline" id="lbl_prcpp">
    <input class="filter_data" id="cb_prcpp" type="checkbox"> C++ (R1)
 </label>
@@ -20,9 +23,6 @@
 </label>
 <label class="checkbox-inline" id="lbl_cpp">
    <input class="filter_data" id="cb_cpp" type="checkbox" checked> C++ (R2)
-</label>
-<label class="checkbox-inline" id="lbl_ivm">
-   <input class="filter_data" id="cb_ivm" type="checkbox"> IVM
 </label>
 
 <div class="bakeoff">
@@ -90,7 +90,7 @@ function drawBars(rawData, rawGroups) {
 
 d3.csv("data/bakeoff.csv", function(error, rawInput) {
    var data = [];
-   var groups = ["rep", "dbx", "spy", "prcpp", "prscala", "scala", "cpp", "ivm"];
+   var groups = ["rep", "dbx", "spy", "ivm", "prcpp", "prscala", "scala", "cpp"];
 
    rawInput.forEach(function (d) {
       groups.forEach(function (g) {
