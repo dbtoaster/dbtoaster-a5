@@ -7,7 +7,8 @@ $pages = array(
     "home_contact"     => "Contact",
     "home_people"      => "The Team",
   "download"         => "Downloads",
-  "docs"             => "Getting Started",
+  "docs"             => "Installation",
+    "docs_start"     => "Getting Started",
     "docs_compiler"    => "Command-Line Reference",
     "docs_sql"         => "DBT-SQL Reference",
     "docs_stdlib"      => "DBT StdLib Reference",
@@ -177,8 +178,9 @@ function chain_link_docs() {
           </li>
           <li class="dropdown">
             <a href="#" class="dropdown-toggle" data-toggle="dropdown">Documentation <b class="caret"></b></a>
-            <ul class="dropdown-menu">
-              <li><?= mk_link("Getting Started", "docs"); ?></li>
+            <ul class="dropdown-menu">              
+              <li><?= mk_link("Installation", "docs"); ?></li>
+              <li><?= mk_link(null, "docs", "start"); ?></li>              
               <li><?= mk_link(null, "docs", "compiler"); ?></li>
               <li><?= mk_link('<small><i class="fa fa-caret-square-o-right"></i> Command-Line Options</small>', "docs", "compiler", 
                                                         "#options"); ?></li>
