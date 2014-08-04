@@ -1,7 +1,7 @@
 <div class="warning">Warning: This API is subject to changes in future releases.</div>
 
 <p>
-   <i>Note:</i> To compile and run queries using the Scala backend requires the Scala compiler to be installed. Please refer to <?= mk_link("Installation", "docs"); ?> for details. 
+   <i>Note:</i> To compile and run queries using the Scala backend requires the Scala compiler. Please refer to <?= mk_link("Installation", "docs"); ?> for more details. 
 </p>
 
 <a name="quickstart"></a>

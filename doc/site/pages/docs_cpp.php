@@ -1,7 +1,7 @@
 <div class="warning">Warning: This API is subject to changes in future releases.</div>
 
 <p>
-   <i>Note:</i> Compiling and running queries using the C++ backend requires g++ 4.8 or above. Please refer to <?= mk_link("Installation", "docs"); ?> for more details. 
+   <i>Note:</i> To compile and run queries using the C++ backend requires g++ 4.8 or above. Please refer to <?= mk_link("Installation", "docs"); ?> for more details. 
 </p>
 
 <a name="quickstart"></a>
