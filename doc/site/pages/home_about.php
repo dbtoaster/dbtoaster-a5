@@ -3,10 +3,7 @@ The DBToaster compiler accepts queries written in SQL and generates code that ca
 </p>
 
 
-<p><a href="papers/ecocloud2013-dbtoaster-mn.pdf">The DBToaster at EcoCloud 2013 presentation</a> gives a high-level overview of the DBToaster project.</p>
-
-
-<h3>Is DBToaster right for you?</h3>
+<h3>DBToaster is not a classical database system</h3>
 
 <p>DBToaster-generated engines are optimized for long-lived queries, where query results must be kept up-to-date with rapidly changing input data. Using database terminology, DBToaster engines maintain in-memory materialized views.
 </p>  
@@ -33,6 +30,9 @@ The DBToaster compiler accepts queries written in SQL and generates code that ca
 
 <p>Here is a <a href="papers/whitepaper.pdf">white paper</a> that may help you
 decide whether to try out DBToaster.</p>
+
+<p><a href="papers/ecocloud2013-dbtoaster-mn.pdf">The DBToaster at EcoCloud 2013 presentation</a> gives a high-level overview of the DBToaster project.</p>
+
 
 
 <h3>DBToaster code is fast</h3>

@@ -1,6 +1,6 @@
 <?php
 $pages = array(
-  "home"             => "Main page", 
+  "home"             => "Welcome to dbtoaster.org", 
   "home_about"             => "Is DBToaster right for you?", 
     "home_performance" => "Performance",
     "home_features"    => "Features",
@@ -162,6 +162,7 @@ function chain_link_docs() {
             <a href="#" class="dropdown-toggle" data-toggle="dropdown">About <b class="caret"></b></a>
             <ul class="dropdown-menu">
               <li><?= mk_link(null, "home"); ?></li>
+              <li><?= mk_link(null, "home", "about"); ?></li>
               <li><?= mk_link(null, "home", "performance"); ?></li>
               <li><?= mk_link(null, "home", "features"); ?></li>
               <li><?= mk_link('<small><i class="fa fa-caret-square-o-right"></i> Roadmap</small>', "home", "features", "#roadmap"); ?></li>
