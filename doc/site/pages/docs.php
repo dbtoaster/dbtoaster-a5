@@ -2,7 +2,7 @@
 DBToaster can be installed on Windows, Mac OS X, and Linux platforms. It requires the following dependencies:
 <ul>
   <li>Oracle JDK 7 (or above)</li>
-  <li>gcc-g++ 4.8 (or above)</li>
+  <li>g++ 4.8 (or above)</li>
   <li><a href="http://scala-lang.org/download/2.10.2.html">Scala 2.10.2</a></li>
   <li><a href="http://cygwin.com/">Cygwin</a> (only for Windows)</li>
 </ul>

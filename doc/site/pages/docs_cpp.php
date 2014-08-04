@@ -1,7 +1,7 @@
 <div class="warning">Warning: This BETA API is not final, and subject to change before release.</div>
 
 <p>
-   <i>Note:</i> To compile and run queries using the C++ backend requires g++ 4.7 or above. Please refer to <?= mk_link("Getting Started", "docs"); ?> for details 
+   <i>Note:</i> To compile and run queries using the C++ backend requires g++ 4.8 or above. Please refer to <?= mk_link("Installation", "docs"); ?> for details 
 </p>
 
 <a name="quickstart"></a>

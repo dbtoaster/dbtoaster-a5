@@ -139,7 +139,7 @@
 
 <?= chapter("DBToaster Changelog", "changelog") ?>
 
-<H4 style="border-bottom:thin double;">Release 2 (revision 3255) - 2014/08/01</H4>
+<H4 style="border-bottom:thin double;">Release 2 (revision 3263) - 2014/08/01</H4>
 <ul>
 <li>Implemented a new back-end from scratch in Scala for compiling M3 programs
   generated for SQL queries by DBToaster's front-end.
