@@ -1,9 +1,9 @@
 <p>
-DBToaster can be installed on Windows, Mac OS X, and Linux platforms. It requires the following dependencies:
+The DBToaster compiler can be installed on Windows, Mac OS X, and Linux platforms. The compiler supports generation of C++ and Scala programs. Depending on the chosen backend(s), it requires the following dependencies:
 <ul>
-  <li>Oracle JDK 7 (or above)</li>
-  <li>g++ 4.8 (or above)</li>
-  <li><a href="http://scala-lang.org/download/2.10.2.html">Scala 2.10.2</a></li>
+  <li>Oracle JDK 7 (or above), required</li>
+  <li>g++ 4.8 (or above) - optional, for compiling generated C++ programs</li>
+  <li><a href="http://scala-lang.org/download/2.10.2.html">Scala 2.10.2</a> - optional, for compiling generated Scala programs</li>
   <li><a href="http://cygwin.com/">Cygwin</a> (only for Windows)</li>
 </ul>
 

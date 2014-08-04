@@ -4,7 +4,7 @@
 
 <li><a href="http://www.dbtoaster.org/papers/2013-dbtoaster-report.pdf">DBToaster: Higher-order Delta Processing for Dynamic, Frequently Fresh Views. </a><br/>
 Christoph Koch, Yanif Ahmad, Oliver Kennedy, Milos Nikolic, Andres N&ouml;tzli, Daniel Lupei, and Amir Shaikhha<br/>
-Technical Report, 2013.
+Technical Report, 2013. (an extended version of our <a href="http://dx.doi.org/10.1007/s00778-013-0348-4">VLDBJ 2014 paper</a>)
 </li>
 
 <li><a href="http://www.dbtoaster.org/papers/2013-ring-report.pdf">Incremental Query Evaluation in a Ring of Databases. </a><br/>
