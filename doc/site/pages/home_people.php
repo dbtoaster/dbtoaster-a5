@@ -21,13 +21,12 @@
 <tr><td colspan=2>&nbsp;</td></tr>
 <tr><td colspan=2 align="center"><h3>Alumni</h3></td></tr>
 
-<tr><td class="contact_university">Google Z&uuml;rich</td>
-<td>Thierry Coppey</td></tr>
 <tr><td class="contact_university">Cornell University</td>
 <td>Anton Morozov, Ki Suh Lee</td></tr>
 <tr><td class="contact_university">EPFL</td><td>
-Thom Popovici,
+Thierry Coppey,
 Mohammad Tavakoli Ghinani,
+Thom Popovici,
 Roman Zoller
 </td></tr>
 
