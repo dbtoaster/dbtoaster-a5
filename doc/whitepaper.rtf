@@ -1,10 +1,10 @@
-{\rtf1\ansi\ansicpg1252\cocoartf1038\cocoasubrtf350
+{\rtf1\ansi\ansicpg1252\cocoartf1038\cocoasubrtf360
 {\fonttbl\f0\fmodern\fcharset0 Courier;\f1\froman\fcharset0 TimesNewRomanPSMT;\f2\fmodern\fcharset0 Courier-Bold;
 }
 {\colortbl;\red255\green255\blue255;}
 {\info
 {\author Christoph Koch}
-{\*\company EPFL}}\paperw11900\paperh16840\margl909\margr909\vieww11900\viewh16840\viewkind1
+{\*\company EPFL}}\paperw11900\paperh16840\margl909\margr909\vieww35040\viewh26600\viewkind1\viewscale200
 \deftab720
 \pard\pardeftab720\ri0\qc
 
@@ -52,7 +52,7 @@ DBToaster is the first data management system to support such applications. It a
 \
 \pard\pardeftab720\ri0\ql\qnatural
 
-\f2\b \cf0 How well does it perform?\
+\f2\b \cf0 How well does it perform? (As of 2012)\
 \pard\pardeftab720\ri0\ql\qnatural
 
 \f1\b0 \cf0 \
@@ -64,8 +64,26 @@ DBToaster: Higher-order Delta Processing for Dynamic, Frequently Fresh Views. Ya
 Proc. VLDB 2012, Istanbul, Turkey.\
 http://www.dbtoaster.org/papers/pvldb2012-dbtoaster.pdf\
 \
-The benchmark we used consists of analytical SQL queries on financial (order book) and TPC-H datasets. Our results show that for our benchmark, DBToaster outperforms state-of-the-art relational DBMS and data stream processing engines by 4 orders of magnitude or more. That means, the latency and update rates of views are frequently improved by a factor of 10000 and more over state-of-the-art systems. For details on the benchmark, experimental setup, and results, see the paper.\
+The benchmark we used consists of analytical SQL queries on financial (order book) and TPC-H datasets. The results in that paper show that for our benchmark, DBToaster outperforms state-of-the-art relational DBMS and data stream processing engines by 4 orders of magnitude or more. This means that the latency and update rates of views are frequently improved by a factor of 10000 and more over state-of-the-art systems. For details on the benchmark, experimental setup, and results, see the paper.\
 \
+\
+\
+\pard\pardeftab720\ri0\ql\qnatural
+
+\f2\b \cf0 Current performance
+\f0\b0 \
+\
+Release 2 (made available in August 2014) makes use of a completely rewritten compiler backend. This results in another greater than 10x on average performance improvement of the generated code. See\
+\
+http://www.dbtoaster.org/index.php?page=home&subpage=performance\
+\
+for a performance comparison of the current and previous releases of DBToaster with the two commercial systems of the VLDB 2012 paper.\
+\
+\
+\
+
+\f2\b Who should use DBToaster?
+\f0\b0 \
 \
 We do not claim that DBToaster is the right solution for everyone, but you should check out DBToaster if you need to\
 \
@@ -78,9 +96,8 @@ DBToaster may be also right for you even if you do not care so much about low vi
 \
 \
 \
-\pard\pardeftab720\ri0\ql\qnatural
 
-\f2\b \cf0 How does it work?\
+\f2\b How does it work?\
 \pard\pardeftab720\ri0\ql\qnatural
 
 \f1\b0 \cf0 \
@@ -174,8 +191,6 @@ The views and conclusions contained in the software and documentation are those 
 \f0\b0 \cf0 \
 No. See licensing above. You need to contact us if you want to use DBToaster for anything other than evaluation, research, and learning purposes.\
 \
-Furthermore, while we are excited about the performance of DBToaster, it is still a project in an early stage, and it may not be ready yet for your production purposes.\
-\
 However, the license allows you to find out whether DBToaster is relevant to you. We would love to hear from you what features you would need to make DBToaster useful to you.\
 \
 \
@@ -194,7 +209,7 @@ DBToaster is a research project and not a commercial venture. However:\
 \
 *	Despite its character as a research project, we do have the resources to create high-quality and ultimately production-quality software. We intend to provide support in the form of fixing reported bugs, (within reasonable limits) respond to questions on the use of DBToaster, and implement requested features if they are consistent with our project vision. We are committed to furthering knowledge and making our results publicly available with all the resources currently available to us: this is not in conflict with making our work relevant to as many users as possible.\
 \
-*	The current release, DBToaster Beta1, contains features and APIs that are not considered stable. We do not provide any guarantee of backwards compatibility of applications you build using the current DBToaster APIs. Our APIs will stabilize, and we will make such commitments in the future. Starting with the release of DBToaster1 (expected in the fall of 2012), we plan to provide a matrix of stable vs. experimental features.\
+*	The current release, DBToaster 2 (rev. 3263), contains features and APIs that are not considered stable. We do not provide any guarantee of backwards compatibility of applications you build using the current DBToaster APIs. Our APIs will stabilize, and we will make such commitments in the future. Starting with next release of DBToaster, we plan to provide a matrix of stable vs. experimental features.\
 \
 \
 \
@@ -235,8 +250,6 @@ We are working on providing more complete support of the SQL standard.\
 \
 Parallelization and scalability: The runtime system we currently provide is single-core and maintains data in main memory. Parallelizing and optionally secondary-storage runtimes are under development and will be released soon. Furthermore, a PL-SQL code generator backend for DBToaster is under development that will allow tight integration with relational DBMS such as Oracle or Postgres.\
 \
-Code generators and runtime system: DBToaster excels at producing efficient query evaluation code. Still, there is much left to be done, and when we look at the code we generate, we spot plenty of opportunities, many very obvious, to improve code and data structure generation. Thus, many opportunities of further improvement at left, and we expect to improve the performance of generated C++ code by another 100x on the same hardware within the near future. One particular untapped opportunity is the direct generation of C data structures rather than the current use of Boost. \
-\
 \
 \
 \pard\pardeftab720\ri0\ql\qnatural
@@ -247,18 +260,14 @@ Code generators and runtime system: DBToaster excels at producing efficient quer
 \f1\b0 \cf0 \
 \pard\pardeftab720\ri0\ql\qnatural
 
-\f0 \cf0 Milestone 1: (Sept 2012)\
-*	Implement the remaining missing SQL query features to support TPC-H, minus ORDER-BY, MIN/MAX, and NULL values/outerjoins.\
-*	Further performance improvements.\
-\
-Milestone 2: (Dec 2012?)\
+\f0 \cf0 Milestone 1: (Dec 2014)\
 *	A parallel runtime for DBToaster.\
 \
-Milestone 3: (June 2013?)\
-*	Rewrite the backend optimizer (code fusion, beta-reduction, etc.) and the C++ code generator. Generate custom data structures and maintenance. Phase out Boost. This should lead to considerable efficiency improvements.\
+Milestone 2: (June 2015)\
+*	Frontends for APL-style array processing languages (The R analytics language; Matlab; Q). That is, DBToaster will be able to compile analytical queries expressed in such languages in addition to SQL, with similar performance.\
+*	Implement the remaining missing SQL query features to support TPC-H, minus ORDER-BY, MIN/MAX, and NULL values/outerjoins.\
+\
+Milestone 3: (Dec 2015)\
 *	Synthesize (tree) data structures for efficiently processing and indexing theta-joins.\
 *	Support order. ORDER-BY, MIN, and MAX.\
-\
-Milestone 4: (Sept. 2013?)\
-*	Frontends for APL-style array processing languages (The R analytics language; Matlab; Q). That is, DBToaster will be able to compile analytical queries expressed in such languages in addition to SQL, with similar performance.\
 }
