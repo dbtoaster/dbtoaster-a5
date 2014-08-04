@@ -7,7 +7,7 @@
 <a href="http://people.epfl.ch/cgi-bin/people?id=211297&lang=en">Daniel Lupei</a>,
 <a href="http://people.epfl.ch/cgi-bin/people?id=203355&lang=en&cvlang=en">Milo&#353; Nikoli&#263;</a>,
 <a href="http://people.epfl.ch/cgi-bin/people?id=181017&lang=en">Andres N&ouml;tzli</a>,
-<a href="http://people.epfl.ch/cgi-bin/people?id=211771&lang=en">Amir Shaikha</a>
+<a href="http://people.epfl.ch/cgi-bin/people?id=211771&lang=en">Amir Shaikhha</a>
 </td></tr>
 
 <tr><td class="contact_university">University at Buffalo</td><td>
