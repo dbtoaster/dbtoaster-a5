@@ -6,16 +6,16 @@
 <?= chapter("Command Line Options") ?>
 <dl>
 <dt class="code">-c &lt;target file&gt;</dt>
-<dd>Compile the query into a standalone binary.  By default, the C++ code generator will be used with G++ to generate the binary.  An alternate compiled target language (currently, C++ or Scala) may be selected using the <span class="code">-l</span> flag.</dd>
+<dd>Compile the query into a standalone binary.  By default, the C++ code generator will be used with g++ to generate the binary.  An alternate compiled target language (C++ or Scala) may be selected using the <span class="code">-l</span> flag.</dd>
 
 <dt class="code">-l &lt;language&gt;</dt>
-<dd>Compile the query into the specified target language (see below).  By default, the query will be interpreted.  The use of this flag overrides any previous <span class="code">-l</span> or <span class="code">-r</span>.</dd>
+<dd>Compile the query into the specified target language (see below).  The default language is C++.  The use of this flag overrides any previous <span class="code">-l</span> or <span class="code">-r</span>.</dd>
 
 <dt class="code">-o &lt;output file&gt;</dt>
-<dd>Redirect the compiler's output to the specified file.  If used in conjunction with <span class="code">-c</span>, the source code for the compiled binary will be directed to this file.  The special output filename '<span class="code">-</span>' refers to stdout.  By default, output is directed to stdout, or discarded if the <span class="code">-c</span> flag is used.</dd>
+<dd>Redirect the compiler's output to the specified file.  If used in conjunction with <span class="code">-c</span>, the source code for the compiled binary will be directed to this file.  By default, output is directed to stdout or discarded if <span class="code">-c</span> is used.</dd>
 
 <dt class="code">-r</dt>
-<dd>Run the query (queries) after code generation and compilation. If no target language is specified using the <span class="code">-l</span> flag, the C++ code generator would be used by default.</dd>
+<dd>Run the query (queries) after code generation and compilation. If no target language is specified using the <span class="code">-l</span> flag, the C++ code generator will be used.</dd>
 
 <dt class="code">-F &lt;optimization&gt;</dt>
 <dd>Activate the specified optimization flag.  These are documented below.</dd>
@@ -73,7 +73,7 @@
 <a name="opt_flags"></a>
 <?= chapter("Optimization Flags"); ?>
 
-These flags are passed to the dbtoaster compiler with the <span class="code">-F</span> flag.  The <span class="code">-O1</span> and <span class="code">-O3</span> flags each activate a subset of these flags. <span class="code">-O2</span> is used by default (no optimization flags active).
+These flags are passed to the DBToaster compiler with the <span class="code">-F</span> flag.  The <span class="code">-O1</span> and <span class="code">-O3</span> flags each activate a subset of these flags. <span class="code">-O2</span> is used by default (no optimization flags active).
 
 <dl>
 <!--
@@ -95,19 +95,19 @@ These flags are passed to the dbtoaster compiler with the <span class="code">-F<
   <dd>Do not generate code for deletion triggers.  The resulting programs will be simpler, and sometimes have fewer datastructures, but will not support deletion events.  This optimization is not activated by default at any optimization level.</dd>
   
   <dt class="code">HEURISTICS-ALWAYS-UPDATE</dt>
-  <dd>In some cases, it is slightly more efficient to re-evaluate expressions from scratch rather than maintaining them with their deltas (for example, certain queries containing nested aggregates).  Normally the compiler's heuristics will make a best-effort guess about whether to re-evaluate or incrementally maintain the expression.  If this flag is on, the compiler will incrementally maintain all expressions and never re-evaluate.</dd>  
+  <dd>In some cases, it is more efficient to re-evaluate expressions from scratch than maintaining them with their deltas (for example, certain queries containing nested aggregates).  Normally, the compiler's heuristics will make a best-effort guess on whether to re-evaluate or incrementally maintain the expression.  If this flag is on, the compiler will incrementally maintain all expressions and never re-evaluate.</dd>  
   
   <dt class="code">COMPILE-WITH-STATIC</dt>
-  <dd>Perform static linking on compiled binaries (e.g., invoke gcc with <span class="code">-static</span>).  The resulting binaries will be faster the first time they are run.  This optimization is not activated by default at any optimization level.</dd>  
+  <dd>Perform static linking on compiled binaries (e.g., invoke g++ with <span class="code">-static</span>).  The resulting binaries will be faster the first time they are run.  This optimization is not activated by default at any optimization level.</dd>  
 
   <dt class="code">AGGRESSIVE-FACTORIZE</dt>
   <dd>When optimizing expressions in DBToaster relational calculus, perform factorization as aggressively as possible.  For some queries, particularly those with nested subqueries, this can generate much more efficient code.  However, it makes compilation slower on some queries.  This optimization is automatically activated by <span class="code">-O3</span>.</dd>
   
   <dt class="code">AGGRESSIVE-UNIFICATION</dt>
-  <dd>When optimizing expressions in DBToaster relational calculus, inline lifted variables wherever possible, even if the lift term can not be eliminated entirely.  This can produce substantially tighter code for queries with lots of constants, but slightly increases compilation time.  This optimization is automatically activated by <span class="code">-O3</span>.</dd>
+  <dd>When optimizing expressions in DBToaster relational calculus, inline lifted variables wherever possible, even if the lift term cannot be eliminated entirely.  This can produce substantially tighter code for queries with lots of constants, but slightly increases compilation time.  This optimization is automatically activated by <span class="code">-O3</span>.</dd>
 
   <dt class="code">COMPILE-WITHOUT-OPT</dt>
-  <dd>Request that the second-stage compiler disable any unnecessary optimizations (e.g., by default, GCC is invoked with <span class="code">-O3</span>, but not if this flag is active). This optimization is automatically activated by <span class="code">-O1</span>.</dd>
+  <dd>Request that the second-stage compiler disable any unnecessary optimizations (e.g., by default, g++ is invoked with <span class="code">-O3</span>, but not if this flag is active). This optimization is automatically activated by <span class="code">-O1</span>.</dd>
 
   <dt class="code">WEAK-EXPR-EQUIV</dt>
   <dd>When testing for expression equivalence, perform only a naive structural comparison rather than a (at least quadratic, and potentially exponential) matching.  This accelerates compilation, but may result in the creation of duplicate maps.  This optimization is automatically activated by <span class="code">-O1</span>.</dd>
@@ -119,6 +119,6 @@ These flags are passed to the dbtoaster compiler with the <span class="code">-F<
   <dd>Do not apply query decomposition when computing deltas. This option is not activated by default at any optimization level.</dd>
 
   <dt class="code">DUMB-LIFT-DELTAS</dt>
-  <dd>When computing the viewlet transform, use the delta rule for lifts precisely as described in the PODS10 paper.  If this flag is <b>not</b> active, a postprocessing step is applied to lift deltas, that range-restricts the resulting expression to only those tuples that are affected. This optimization is automatically activated by <span class="code">-O1</span>.</dd>
+  <dd>When computing the viewlet transform, use the delta rule for lifts precisely as described in the <a href="http://www.dbtoaster.org/papers/pods2010-ring.pdf">PODS10 paper</a>.  If this flag is <b>not</b> active, a postprocessing step is applied to lift deltas that range-restricts the resulting expression to only those tuples that are affected, as described in the <a href="http://www.dbtoaster.org/papers/2013-dbtoaster-report.pdf">VLDBJ paper</a>.  This optimization is automatically activated by <span class="code">-O1</span>.</dd>
 
 </dl>
