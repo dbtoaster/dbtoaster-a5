@@ -152,7 +152,7 @@
 </li><li>Extended the definition of a ring base, new ring methods, modified rings of
   arithmetic and calculus values.
 </li><li>Removed the dependency on Boost for compiling the generated C++ programs. Now,
-  any C++11 compliant compiler (either clang++ or g++-4.7 or above) can be used
+  any C++11 compliant compiler (either clang++ or g++-4.8 or above) can be used
   without needing other dependencies.
 </li><li>Implementing specialized base-types in C++ (PString and KDouble instead of
   standard string and double, for comparison reasons or a faster execution.)

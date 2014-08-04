@@ -1,7 +1,7 @@
-<div class="warning">Warning: This BETA API is not final, and subject to change before release.</div>
+<div class="warning">Warning: This API is subject to changes in future releases.</div>
 
 <p>
-   <i>Note:</i> To compile and run queries using the C++ backend requires g++ 4.8 or above. Please refer to <?= mk_link("Installation", "docs"); ?> for details 
+   <i>Note:</i> Compiling and running queries using the C++ backend requires g++ 4.8 or above. Please refer to <?= mk_link("Installation", "docs"); ?> for more details. 
 </p>
 
 <a name="quickstart"></a>
@@ -9,12 +9,12 @@
 
 <p>
 DBToaster generates C++ code for incrementally maintaining the results of a given set of queries 
-if CPP is specified as the output language (<tt>-l cpp</tt> command line option). In this case DBToaster 
-produces a C++ header file containing a set of datastructures (<tt>tlq_t</tt>, <tt>data_t</tt> and
-<tt>Program</tt>) required for executing the sql program. 
+when <tt>cpp</tt> is set as the output language (using the <tt>-l</tt> flag). In this case the compiler 
+produces a C++ header file that contains a set of datastructures (<tt>tlq_t</tt>, <tt>data_t</tt> and
+<tt>Program</tt>) required for linking with the driver program. 
 </p>
 <p>
-Let's consider the following sql query:
+Let's consider the following SQL query:
 <div class="codeblock">$&gt; cat examples/queries/simple/rs_example1.sql
 CREATE TABLE R(A int, B int) 
   FROM FILE 'examples/data/tiny/r.dat' LINE DELIMITED
@@ -34,8 +34,8 @@ The corresponding C++ header file can be obtained by running:
 
 <p>
 Alternatively, DBToaster can build a standalone binary (if the <tt>-c [binary name]</tt> flag is present) by compiling 
-the generated header file against <tt>lib/dbt_c++/main.cpp</tt>, which provides code for executing the 
-sql program and printing the results. 
+the generated header file against the driver program <tt>lib/dbt_c++/main.cpp</tt>, which executes the 
+generated code and prints the results. 
 </p>
 
 <p>
@@ -46,7 +46,7 @@ Running the compiled binary will result in the following output:
 &lt;/snap&gt;
 </div>
 If the generated binary is run with the <tt>--async</tt> flag, it will also print intermediary results as frequently
-as possible while the sql program is running in a separate thread.
+as possible while the generated program is running in a separate thread.
 
 <div class="codeblock">$&gt; ./rs_example1 --async
 Initializing program:
@@ -86,28 +86,30 @@ Printing final result:
 <?= chapter("C++ API Guide") ?>
 
 <p>
-The DBToaster C++ codegenerator produces a header file containing 3 main type definitions in the <tt>dbtoaster</tt> namespace:
+The DBToaster C++ codegenerator produces a header file containing three main type definitions in the <tt>dbtoaster</tt> namespace:
 <tt>tlq_t</tt>, <tt>data_t</tt> and <tt>Program</tt>. Additionally <tt>snapshot_t</tt> is pre-defined as a garbage collected
 pointer to <tt>tlq_t</tt>. What follows is a brief description of these types, while a more detailed presentation can be found
 in the <a href="#codereference">Reference</a> section. 
 </p>
 
-<p>
+<ul>
+<li>
 <b><tt>tlq_t</tt></b> encapsulates the materialized views directly needed for computing the results and offers functions for retrieving 
 them.
-</p>
+</li>
 
-<p>
+<li>
 <b><tt>data_t</tt></b> extends <tt>tlq_t</tt> with auxiliary materialized views needed for maintaining the results and offers trigger 
 functions for incrementally updating them.
-</p>
+</li>
 
-<p>
-<b><tt>Program</tt></b> represents the execution engine of the sql program. It encapsulates a <tt>data_t</tt> object and provides 
+<li>
+<b><tt>Program</tt></b> represents the execution engine of the generated program. It encapsulates a <tt>data_t</tt> object and provides 
 implementations to a set of abstract functions of the <tt>IProgram</tt> class used for running the program. 
 Default implementations for some of these functions are inherited from the <tt>ProgramBase</tt> class while others 
 are generated depending on the previously defined <tt>tlq_t</tt> and <tt>data_t</tt> types.
-</p>
+</li>
+</ul>
 
 <a name="execprogram"></a>
 <?= section("Executing the Program") ?>
@@ -135,7 +137,7 @@ class.
 </dd>
 <dt class="api">virtual void IProgram::process_streams() </dt><dd> Reads stream events from various sources and invokes 
 the <tt>IProgram::process_stream_event()</tt> on each event. Default implementation of this function 
-(<tt>ProgramBase::process_streams()</tt>) reads events from the sources specified in the sql program.
+(<tt>ProgramBase::process_streams()</tt>) reads events from the sources specified in the SQL program.
 </dd>
 <dt class="api">virtual void IProgram::process_stream_event(event_t&amp; ev) </dt><dd> Processes each stream event passing
 through the system. Default implementation of this function (<tt>ProgramBase::process_stream_event()</tt>) does 
@@ -165,7 +167,7 @@ is linear in the size of the results set.
 <?= section("Basic Example") ?>
 
 <p>
-We will use as an example the C++ code generated for the <tt>rs_example1.sql</tt> sql program introduced above. In the interest
+We will use as an example the C++ code generated for the <tt>rs_example1.sql</tt> SQL program introduced above. In the interest
 of clarity some implementation details are omitted.
 <div class="codeblock">$&gt; bin/dbtoaster examples/queries/simple/rs_example1.sql -l cpp -o rs_example1.hpp
 #include &lt;lib/dbt_c++/program_base.hpp&gt;
@@ -177,7 +179,7 @@ namespace dbtoaster {
     ...
     ...
 
-    /* Type definition providing a way to access the results of the sql */
+    /* Type definition providing a way to access the results of the SQL */
     /* program */
     struct tlq_t{
         tlq_t()
@@ -198,7 +200,7 @@ namespace dbtoaster {
     };
     
     /* Type definition providing a way to incrementally maintain the */
-    /* results of the sql program */
+    /* results of the SQL program */
     struct data_t : tlq_t{
         data_t()
         {}
@@ -232,7 +234,7 @@ namespace dbtoaster {
         ...
     };
 
-    /* Type definition providing a way to execute the sql program */
+    /* Type definition providing a way to execute the SQL program */
     class Program : public ProgramBase&lt;tlq_t&gt;
     {
     public:
@@ -267,7 +269,7 @@ namespace dbtoaster {
 </p>
 
 <p>
-Below is an example of how the API can be used to execute the sql program and
+Below is an example of how the API can be used to execute the generated program and
 print its results:
 <div class="codeblock">#include "rs_example1.hpp"
 
@@ -356,7 +358,7 @@ Stream events can be manually read from <b>custom sources</b> and fed into the s
 <?= section("<tt>struct tlq_t</tt>") ?>
 
 <p>
-The <tt>tlq_t</tt> contains all the relevant datastructures for computing the results of the sql program, also called
+The <tt>tlq_t</tt> contains all the relevant datastructures for computing the results of the SQL program, also called
 the top level queries. It provides a set of functions named <tt>get_<i>TLQ_NAME</i></tt> that return the top level query
 result labeled <tt><i>TLQ_NAME</i></tt>. For our example the <tt>tlq_t</tt> produced has a function named <tt>get_RESULT</tt> 
 that returns the query result corresponding to <tt>SELECT SUM(r.A*s.C) as RESULT ...</tt> in <tt>rs_example1.sql</tt>.
@@ -406,7 +408,7 @@ and <tt>RESULT_2_map</tt> objects.
     
     ...
     
-    /* Type definition providing a way to access the results of the sql program */
+    /* Type definition providing a way to access the results of the SQL program */
     struct tlq_t{
         tlq_t()
         {}
@@ -525,10 +527,10 @@ the final query result.
 
 <p>
 The <tt>data_t</tt> contains all the relevant datastructures and trigger functions for incrementally maintaining the results
- of the sql program.
+ of the SQL program.
 </p>
 <p>
-For each stream based relation <tt><i>STREAM_X</i></tt>, present in the sql program, it provides a pair of trigger functions named 
+For each stream based relation <tt><i>STREAM_X</i></tt>, present in the SQL program, it provides a pair of trigger functions named 
 <tt>on_insert_<i>STREAM_X</i>()</tt> and <tt>on_delete_<i>STREAM_X</i>()</tt>  that incrementally maintain the query results in the event of 
 an insertion/deletion of a tuple in <tt><i>STREAM_X</i></tt>. If generating code for the query presented above (<tt>rs_example1.sql</tt>) 
 the <tt>data_t</tt> produced has the trigger functions <tt>void on_insert_S(long S_B, long S_C) / void on_delete_S(long S_B, long S_C)</tt>.
@@ -545,6 +547,6 @@ in the initialization phase of the program.
 
 <p>
 Finally, <tt>Program</tt> is a class that implements the <tt>IProgram</tt> interface and provides the basic functionalities
-for reading static table tuples and stream events from their sources, initializing the relevant datastructures, running the sql 
+for reading static table tuples and stream events from their sources, initializing the relevant datastructures, running the SQL 
 program and retrieving its results. 
 </p>
