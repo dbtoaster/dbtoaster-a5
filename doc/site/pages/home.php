@@ -38,11 +38,11 @@ decide whether to try out DBToaster.</p>
 DBToaster custom-tailors each engine it creates to the needs of a specific application.  This engine supports only query processing functionality that the application requires, avoiding the overhead of supporting unnecessary features.
 </p>
 
-<p>DBToaster also employs an innovative technique that exploits incrementality to efficiently maintain query results in real-time as data changes.  As a consequence, DBToaster-generated engines provide extremely low-latency access to query results, and efficiently support monitoring of result values.
+<p>DBToaster employs an innovative technique that exploits incrementality to efficiently maintain query results in real-time as data changes.  As a consequence, DBToaster-generated engines provide extremely low-latency access to query results, and efficiently support monitoring of result values.
 </p>
 
 <p>
-DBToaster-generated code is typically by a factor of <?=mk_link("3-4 orders of magnitude", "home", "performance")?> faster than existing state of the art data-management systems when we measure the time it takes to refresh a view given an update to the base data.
+DBToaster-generated code is typically by a factor of <?=mk_link("3-6 orders of magnitude", "home", "performance")?> faster than existing state of the art data-management systems when we measure the time it takes to refresh a view given an update to the base data.
 </p>
 
 
