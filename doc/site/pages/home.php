@@ -14,12 +14,16 @@ than all other systems known to us.
 restrictions on commercial use).
 </p>
 
+
+<h3>
 <p>Learn more about DBToaster:
 <?=mk_link("check whether DBToaster is right for you", "home", "about")?>
 </p>
 
-<p><a href="papers/ecocloud2013-dbtoaster-mn.pdf">The DBToaster at EcoCloud 2013 presentation</a> gives a high-level overview of the DBToaster project.</p>
+<p>
+<?= mk_link("Download it here", "download", null); ?>.
+Get started quickly with <?= mk_link("these instructions", "docs", "start"); ?>!
+</p>
+</h3>
 
-<p>Here is a <a href="papers/whitepaper.pdf">white paper</a> that may help you
-decide whether to try out DBToaster.</p>
 
