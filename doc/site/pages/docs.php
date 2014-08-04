@@ -9,7 +9,7 @@ DBToaster can be installed on Windows, Mac OS X, and Linux platforms. It require
 
 <i>Notes:</i>
 <ul>
-  <li>Most of the development and testing has been done on OS X and Linux platforms.</li>
+  <li>Most of the development and testing has been done on Mac OS X and Linux platforms.</li>
   <li>To use a custom C++ compiler, create a symlink <tt>gpp</tt> in the DBToaster directory that points to the compiler (e.g., <span class="code"> "ln -s /usr/local/bin/g++-4.8 gpp"</span>).</li>
   <li>Other versions of the tools/packages might work as well but have not been tested.</li>
 </ul>

@@ -71,19 +71,6 @@ SQL and DBToaster's internal calculus to the backend functional and imperative
 code representations.
 </p>
 
-<?= chapter("Much more to come") ?>
-<p>
-We have big plans for DBToaster, and some key goals are outlined below.
-Purely regarding performance, we expect to be able to speed up our generated
-code by another two orders of magnitude in the typical case judging purely
-from our reverse-engineering of the code we currently produce.
-Also, sometimes our generated C++ code outperforms Scala substantially,
-and in other cases it is exactly the other way around, which suggests that
-we are not even close to being as fast as we can.
-</p>
-
-
-
 <a name="roadmap"></a>
 <?= chapter("Feature Roadmap") ?>
 
