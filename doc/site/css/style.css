@@ -286,3 +286,156 @@ rect:hover {
   background-color: #ddd;
   padding: 2pt;
 }
+
+@import url(http://fonts.googleapis.com/css?family=Open+Sans);
+.transition-ano, .linux-bit li a:hover {
+  -webkit-transition: all 0.5s ease-in-out;
+  -moz-transition: all 0.5s ease-in-out;
+  -o-transition: all 0.5s ease-in-out;
+  transition: all 0.5s ease-in-out;
+}
+
+/************************************\
+Setup
+\************************************/
+* {
+  -webkit-box-sizing: border-box;
+  margin: 0;
+  padding: 0;
+}
+
+body {
+  font-family: 'Open Sans', sans-serif;
+}
+
+.container {
+  width: 850px;
+  margin: 4em auto;
+  padding: 0px 140px 0px 125px!important;
+  position: relative;
+}
+
+a:hover {
+  text-decoration: none;
+  cursor: pointer;
+}
+
+/************************************\
+INTERESTING STYLES
+\************************************/
+.btn-wrapper-shop,
+.btn-wrapper-download {
+  height: 82px;
+  float: left;
+}
+
+.download-btns {
+  min-width: 450px;
+  background-color: #5bb75b;
+  color: #FFFFFF!important;
+  text-align: center;
+  line-height: 82px;
+  font-size: 1.4em;
+  cursor: pointer;
+}
+
+.mac-btn,
+.windows-btn,
+.linux-btn {
+  height: 82px;
+  width: 150px;
+  float: left;
+  font-size: 1.6em;
+  color: #FFFFFF!important;
+}
+
+.mac-btn {
+  background-color: #95a5a6;
+}
+
+.windows-btn {
+  background-color: #3498db;
+}
+
+.linux-btn {
+  background-color: #DD4814;
+}
+
+.linux-btn-wrapper {
+  display: block;
+  width: 150px;
+  height: 82px;
+  float: left;
+}
+
+.store-btn,
+.download-text {
+  height: 82px;
+  display: block;
+}
+.store-btn a,
+.download-text a {
+  float: left;
+  background-color: #555555;
+  color: #FFFFFF!important;
+  padding: 0 1.3em;
+  font-size: 1.5em;
+  text-shadow: 0 -1px 0 rgba(0, 0, 0, 0.25);
+  line-height: 82px;
+  text-decoration: none;
+}
+
+.store-btn {
+  margin-left: 1em;
+  min-width: 2em;
+}
+
+#shop-info,
+#download-info {
+  color: #FFFFFF!important;
+  font-size: 0.8em;
+  text-align: center;
+}
+
+#shop-info {
+  margin-left: 1.2em;
+}
+
+.linux-bit {
+  position: absolute;
+  width: 150px;
+  left: 0px;
+  top: -82px;
+  z-index: 9;
+}
+.linux-bit li {
+  list-style: none;
+  text-align: center;
+  display: inline-block;
+  float: left;
+  display: table;
+  width: 125px;
+}
+.linux-bit li:first-child {
+  border-right: 1px solid #343434;
+}
+.linux-bit li a {
+  background-color: #1a1a1a;
+  color: #b3b3b3;
+  display: block;
+  font-weight: lighter;
+  font-size: 1em;
+  height: 68px;
+  display: table-cell;
+  vertical-align: middle;
+  text-decoration: none;
+  letter-spacing: 1px;
+}
+.linux-bit li a:hover {
+  background-color: #343434;
+  color: #FFFFFF!important;
+}
+
+.fa {
+  line-height: unset!important;
+}
