@@ -1,9 +1,11 @@
-<p>DBToaster allows users to build custom adaptors for processing input streams. The current release provides two adaptors in both the C++ and Scala backends:
+<p>DBToaster adaptors transform events from external sources into an appropriate format and deliver them to the query engine. The current release supports two file adaptors in both the C++ and Scala backends:
 <ul>
     <li>CSV - for reading in string-delimited input files</li>
     <li>Order Book - for reading in stock market historical data</li>
 </ul>
 </p>
+
+DBToaster also allows users to build custom adaptors for processing input streams, which can feed their own events to the query engine by calling the generated triggers. See <?= mk_link(null, "docs", "cpp"); ?> and <?= mk_link(null, "docs", "scala"); ?> for more information.
 
 <?= chapter("CSV") ?>
 A simple string-delimited adaptor.  Fields are separated using the delimiter passed in the <b>delimiter</b> parameter.  If not provided, comma (",") will be used as a default delimiter.<br/>

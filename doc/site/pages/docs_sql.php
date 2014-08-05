@@ -3,7 +3,7 @@
 
 <a name="createfunction"></a>
 <?=chapter("CREATE FUNCTION") ?>
-<center>Declare a forward reference to a user defined function in the target language.</center>
+Declare a forward reference to a user defined function in the target language.
 <div class="codeblock">create_function :=
   CREATE FUNCTION &lt;name&gt; ( &lt;arguments&gt; ) RETURNS &lt;type&gt; AS &lt;definition&gt;
 
@@ -28,7 +28,7 @@ FROM RadialMeasurements r;
 
 <a name="create"></a>
 <?= chapter("CREATE TABLE/STREAM") ?>
-<center>Declare a relation for use in the query.</center>
+Declare a relation for use in the query.
 <div class="codeblock">create_statement := 
   CREATE { TABLE | STREAM } &lt;name&gt; ( &lt;schema&gt; ) 
          [&lt;source_declaration&gt;]
@@ -80,7 +80,7 @@ CSV (fields := '|')
 
 <a name="include"></a>
 <?=chapter("INCLUDE") ?>
-<center>Import a secondary SQL file</center>
+Import a secondary SQL file.
 <div class="codeblock">include_statement := INCLUDE 'file'
 </div>
 
@@ -89,7 +89,7 @@ Import the contents of the selected file into DBToaster.  The file path is inter
 <hr/>
 <a name="select"></a>
 <?=chapter("SELECT") ?>
-<center>Declare a query to monitor</center>
+Declare a query to monitor.
 
 <div class="codeblock">select_statement := 
   SELECT &lt;target_1&gt; [, &lt;target_2&gt; [, ...]] 
@@ -160,8 +160,10 @@ WHERE sumc > 2</div>
 
 <dt><b>Incremental Computation with Floating Point Numbers</b></dt>
 <dd>There are several subtle issues that arise when performing incremental computations with floating point numbers:
-  <p>When using division in conjunction with aggregates, be aware that SUM and AVG return 0 for empty tables.  Once a result value becomes NAN or INFTY, it will no longer be incrementally maintainable.  We are working on a long-term fix.  In the meantime, there are two workarounds for this problem.  For some queries, you can coerce the aggregate value to be nonzero using the LISTMAX standard function (See the example query tpch/query8.sql in the DBToaster distribution for an example of how to do this).  For most queries, the -F EXPRESSIVE-TLQs optimization flag will typically materialize the divisor as a separate map (the division will be evaluated when accessing results).</p>
-  <p>The floating point standards for most target languages (including OCaml, Scala, and C++) do not have well-defined semantics for equality tests over floating point numbers.  Consequently, queries with floating-point group-by variables might produce non-unique groups (since two equivalent floating point numbers are not considered to be equal). We are working on a long-term fix.  In the meantime, the issue can be addressed by using CAST_INT, or CAST_STRING to convert floating point numbers into canonical forms.</p>
+  <ul>
+
+  <li>When using division in conjunction with aggregates, be aware that SUM and AVG return 0 for empty tables.  Once a result value becomes NAN or INFTY, it will no longer be incrementally maintainable.  We are working on a long-term fix.  In the meantime, there are two workarounds for this problem.  For some queries, you can coerce the aggregate value to be nonzero using the LISTMAX standard function (See the example query tpch/query8.sql in the DBToaster distribution for an example of how to do this).  For most queries, the -F EXPRESSIVE-TLQs optimization flag will typically materialize the divisor as a separate map (the division will be evaluated when accessing results).</li>
+  <li>The floating point standards for most target languages (including OCaml, Scala, and C++) do not have well-defined semantics for equality tests over floating point numbers.  Consequently, queries with floating-point group-by variables might produce non-unique groups (since two equivalent floating point numbers are not considered to be equal). We are working on a long-term fix.  In the meantime, the issue can be addressed by using CAST_INT, or CAST_STRING to convert floating point numbers into canonical forms.</li>
   </ul>
 
 <dt><b>Other Notes</b></dt>
@@ -177,7 +179,7 @@ WHERE sumc > 2</div>
 </dl>
 </p>
 
-<p>See the <a href="index.php?page=docs&subpage=stdlib">Standard Functions Documentation</a> for documentation on DBToaster's standard function library.</p>
+<p>See <?= mk_link(null, "docs", "stdlib"); ?> for the documentation on DBToaster's standard function library.</p>
 
 <p>DBToaster maintains query results in the form of either multi-key dictionaries (a.k.a., maps, hashmaps, etc...), or singleton primitive-typed values.  Each query result is assigned a name based on the query (see documentation for your target language's code generator for details on how to access the results).<p>
 <ul>
@@ -188,37 +190,37 @@ WHERE sumc > 2</div>
 
 <p>If multiple SELECT statements occur in the same file, the result names of each query will be prefixed with "QUERY#_", where # is an integer.</p>
 
-<?=section("Examples")?>
+<?=chapter("EXAMPLES")?>
 
 <div class="codeblock">CREATE STREAM R(A int, B int);
 CREATE STREAM S(B int, C int);</div>
 
-<?=subsection("Non-aggregate query")?>
+<?=section("Non-aggregate query")?>
 <div class="codeblock">SELECT * FROM R;</div>
 Generates a single dictionary named COUNT, mapping from the tuple "&lt;R.A, R.B&gt;" to the number of time each tuple occurs in R.
 
-<?=subsection("Aggregate query")?>
+<?=section("Aggregate query")?>
 <div class="codeblock">SELECT SUM(R.A * S.C) AS sum_ac FROM R NATURAL JOIN S;</div>
 Generates a single constant integer named SUM_AC containing the query result.
 
-<?=subsection("Aggregate group-by query (one group-by var)")?>
+<?=section("Aggregate group-by query (one group-by var)")?>
 <div class="codeblock">SELECT S.C, SUM(R.A) AS sum_a 
 FROM R NATURAL JOIN S 
 GROUP BY S.C;</div>
 Generates a dictionary named SUM_A mapping from values of S.C to the sums of R.A.
 
-<?=subsection("Aggregate group-by query (multiple group-by vars)")?>
+<?=section("Aggregate group-by query (multiple group-by vars)")?>
 <div class="codeblock">SELECT R.A, R.B, COUNT(*) AS foo FROM R GROUP BY R.A, R.B;</div>
 Generates a single dictionary named FOO, mapping from the tuple "&lt;R.A, R.B&gt;" to the number of time each tuple occurs in R.
 
-<?=subsection("Query with multiple aggregates")?>
+<?=section("Query with multiple aggregates")?>
 <div class="codeblock">SELECT SUM(R.A) AS sum_a, SUM(S.C) AS sum_c 
 FROM R NATURAL JOIN S 
 GROUP BY S.C;</div>
 Generates two dictionaries named SUM_A and SUM_C, respectively containing the sums of R.A and S.C.
 
 
-<?=subsection("Multiple Queries")?>
+<?=section("Multiple Queries")?>
 <div class="codeblock">SELECT SUM(R.A) AS SUM_A FROM R;
 SELECT SUM(S.C) SUM_C FROM S;</div>
 Generates two dictionaries named QUERY_1_SUM_A and QUERY_2_SUM_C, respectively containing the sums of R.A and S.C.

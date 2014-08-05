@@ -41,7 +41,7 @@
   </tr>
 
   <tr>
-    <td>DBT Relational Calculus</td>
+    <td>DBToaster Relational Calculus</td>
     <td class="code">calc</td>
     <td>output</td>
     <td>DBToaster's internal query representation.  This is a direct translation of the input queries.</td>
@@ -51,7 +51,7 @@
     <td>M3</td>
     <td class="code">m3</td>
     <td>output</td>
-    <td>A map-maintenance messages program.  This is the set of triggers (written in DBT Relational Calculus) that will incrementally maintain the input queries and all supporting datastructures.</td>
+    <td>A map-maintenance messages program.  This is the set of triggers (written in DBToaster Relational Calculus) that will incrementally maintain the input queries and all supporting datastructures.</td>
   </tr>
 
   <tr>

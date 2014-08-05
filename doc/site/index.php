@@ -11,11 +11,12 @@ $pages = array(
   "docs"             => "Installation",
     "docs_start"     => "Getting Started",
     "docs_compiler"    => "Command-Line Reference",
-    "docs_sql"         => "DBT-SQL Reference",
-    "docs_stdlib"      => "DBT StdLib Reference",
-    "docs_adaptors"    => "DBT Adaptors Reference",
+    "docs_sql"         => "DBToaster SQL Reference",
+    "docs_stdlib"      => "DBToaster StdLib Reference",
+    "docs_adaptors"    => "DBToaster Adaptors Reference",
     "docs_cpp"         => "C++ Code Generation",
     "docs_scala"       => "Scala Code Generation",
+    "docs_java"        => "DBToaster in Java Programs",
   "bugs"             => "Bug Reports",
 );
 
@@ -195,6 +196,7 @@ function chain_link_docs() {
               <li><?= mk_link(null, "docs", "adaptors"); ?></li>
               <li><?= mk_link(null, "docs", "cpp"); ?></li>
               <li><?= mk_link(null, "docs", "scala"); ?></li>
+              <li><?= mk_link(null, "docs", "java"); ?></li>
             </ul>
           </li>
           <li class="dropdown">

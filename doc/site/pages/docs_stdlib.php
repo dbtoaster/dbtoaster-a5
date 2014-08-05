@@ -1,6 +1,6 @@
 <p>DBToaster includes a standard library of functions that may used in SQL queries.  Functions are called using a C-like syntax:
 <div class="codeblock">SELECT listmin(A, B) FROM R;</div>
-See the <a href="index.php?page=docs&subpage=sql#select">DBT-SQL Documentation</a> for information about calling functions.</p>
+See <?= mk_link(null, "docs", "sql", "#select"); ?> for information about calling functions.</p>
 
 <hr/>
 <?= chapter("<span class=\"code\">listmin, listmax</span>") ?>
