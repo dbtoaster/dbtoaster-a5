@@ -105,7 +105,7 @@ code representations.
 <?= section("SQL92 Support") ?>
 <p>DBToaster presently only supports the COUNT, COUNT DISTINCT, SUM, and AVG aggregates.  Support for MIN and MAX is slated for Milestone 3.  </p>
 
-<p>DBToaster does not presently suport the DISTINCT, UNION, LIMIT, ORDER BY and HAVING clauses of SELECT statements.  Support for DISTINCT, UNION, and HAVING is slated for Milestone 1.   Support for LIMIT and ORDER BY is slated for Milestone 4.</p>
+<p>DBToaster does not presently suport the DISTINCT, UNION, LIMIT, ORDER BY and HAVING clauses of SELECT statements.  Support for DISTINCT, UNION, and HAVING is slated for Milestone 2.   Support for LIMIT and ORDER BY is slated for Milestone 3.</p>
 
 <p>DBToaster does not presently support SQL's NULL value semantics (including OUTER JOINs).  We are investigating several potential solutions, and will commit to a milestone once more research has been performed.</p>
 
@@ -113,7 +113,7 @@ code representations.
 
 <?= section("Scalability") ?>
 
-<p>DBToaster's internal aggregate calculus has several properties that make it extremely amenable to distribution.  We are in the process of implementing a scalable distributed runtime for DBToaster, slated for release as Milestone 2.</p>
+<p>DBToaster's internal aggregate calculus has several properties that make it extremely amenable to distribution.  We are in the process of implementing a scalable distributed runtime for DBToaster, slated for release as Milestone 1.</p>
 
 <?= section("Dynamic Runtimes") ?>
 
@@ -121,4 +121,4 @@ code representations.
 
 <?= section("On-Demand Template Execution") ?>
 
-<p>A powerful application of DBToaster is for evaluating template-style queries.  When an application is compiled, a DBToaster-generated engine could be produced to efficiently support evaluation of one or more queries with externally-bound variables.  Presently, a fragment of such queries can be implemented by rewriting the query to include externally bound variables as output columns.  We hope to have this feature implemented in an upcoming milestone release</p>
+<p>A powerful application of DBToaster is for evaluating template-style queries.  When an application is compiled, a DBToaster-generated engine could be produced to efficiently support evaluation of one or more queries with externally-bound variables.  Presently, a fragment of such queries can be implemented by rewriting the query to include externally bound variables as output columns.  We hope to have this feature implemented in an upcoming milestone release.</p>
