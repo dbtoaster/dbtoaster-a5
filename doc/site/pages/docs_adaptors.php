@@ -5,7 +5,7 @@
 </ul>
 </p>
 
-DBToaster also allows users to build custom adaptors for processing input streams. Such adaptors can build their own events and feed them to the query engine by calling the generated trigger functions. See <?= mk_link(null, "docs", "cpp"); ?> and <?= mk_link(null, "docs", "scala"); ?> for more information.
+DBToaster also allows users to build custom adaptors for processing input streams, which can feed their own events to the query engine by calling the generated triggers. See <?= mk_link(null, "docs", "cpp"); ?> and <?= mk_link(null, "docs", "scala"); ?> for more information.
 
 <?= chapter("CSV") ?>
 A simple string-delimited adaptor.  Fields are separated using the delimiter passed in the <b>delimiter</b> parameter.  If not provided, comma (",") will be used as a default delimiter.<br/>
