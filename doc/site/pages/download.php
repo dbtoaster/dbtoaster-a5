@@ -1,4 +1,4 @@
-<?php if(!$now_building_distro) { ?>
+<?php if(!isset($now_building_distro)) { ?>
 <a name="latest"><h4>DBToaster Public Release 2</h4></a>
 <table class="table">
 <thead>

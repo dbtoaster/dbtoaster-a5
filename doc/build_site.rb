@@ -73,6 +73,7 @@ copy_files(["site/css/bootstrap-theme.min.css",
             "site/css/style.css"], "site_html/css");
 copy_files(["site/js/bootstrap.min.js",
             "site/js/jquery-2.0.3.min.js"], "site_html/js");
+copy_files(["site/data/bakeoff.csv"], "site_html/data");
             
 build_php("site/index.php", "site_html");
 

@@ -1,6 +1,6 @@
 <img src="schematic.png" style="width:100%">
 
-<?php if(!$now_building_distro) { ?>
+<?php if(!isset($now_building_distro)) { ?>
 <div class="container">
   <section class="btn-wrapper-download">
     <div class="download-btns">

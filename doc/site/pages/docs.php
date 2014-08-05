@@ -17,6 +17,12 @@ The DBToaster compiler can be installed on Windows, Mac OS X, and Linux platform
 Visit <?= mk_link(null, "download", null); ?> to get the latest binaries for different platforms. Each binary comes with a set of example SQL queries and  datasets to get you started. 
 </p>
 
-<p align="center">
-<iframe width="560" height="315" align="center" src="//www.youtube.com/embed/FuyVUei0uK8" frameborder="0" allowfullscreen></iframe>
+<?php if(isset($now_building_distro)) { ?>
+<p>
+Please watch <a href="https://www.youtube.com/watch?v=FuyVUei0uK8">this video</a> for the installation.
 </p>
+<?php } else { ?>
+<p align="center">
+<iframe width="560" height="315" align="center" src="http://www.youtube.com/embed/FuyVUei0uK8" frameborder="0" allowfullscreen></iframe>
+</p>
+<?php } ?>
