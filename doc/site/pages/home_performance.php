@@ -149,3 +149,9 @@ d3.csv("data/bakeoff.csv", function(error, rawInput) {
 <p>The graphs show the performance of each system on a set of realtime data-warehousing queries based on the TPC-H query benchmark.  These queries are all included as examples in the DBToaster distribution.</p>
 
 <p>REP (Depth-0) represents a naive query evaluation strategy where each refresh requires a full re-evaluation of the entire query.  IVM (Depth-1) is a well known technique called Incremental View Maintenance (we discuss the distinctions in depth in our technical report).  Each of these was implemented by a DBToaster-generated engine.</p>
+
+<p>The experiments are performed on a single-socket Intel Xeon E5- 2620 (6 physical cores), 128GB of RAM, RHEL 6, and Open-JDK 1.6.0 28. Hyper-threading, turbo-boost, and frequency scaling are disabled to achieve more stable results.</p>
+
+<p>We used LMS 0.3, running with Scala 2.10 on the Hotspot 64-bit server VM having 14 GB of heap memory, and the generated code was compiled with the -optimise option of the Scala compiler.</p>
+
+<p>A stream synthesized from a scaling factor 0.1 database (100MB) is used for performing the experiments (with an upper limit of 2 hours), while our scaling experiments extend these results up to a scaling factor of 10 (10 GB).</p>
