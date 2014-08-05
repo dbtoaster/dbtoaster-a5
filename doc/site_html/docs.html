@@ -1,5 +1,5 @@
 <html><head>
-<title>DBToaster - Getting Started</title>
+<title>DBToaster - Installation</title>
 <link rel="stylesheet" type="text/css" href="css/style.css" />
 <link rel="stylesheet" type="text/css" href="css/bootstrap.min.css" media="screen" />
 <link rel="stylesheet" type="text/css" href="css/bootstrap-theme.min.css" />
@@ -26,7 +26,8 @@
           <li class="dropdown">
             <a href="#" class="dropdown-toggle" data-toggle="dropdown">About <b class="caret"></b></a>
             <ul class="dropdown-menu">
-              <li><a href="index.html" >About</a></li>
+              <li><a href="index.html" >Welcome to dbtoaster.org</a></li>
+              <li><a href="home_about.html" >Is DBToaster right for you?</a></li>
               <li><a href="home_performance.html" >Performance</a></li>
               <li><a href="home_features.html" >Features</a></li>
               <li><a href="home_features.html#roadmap" ><small><i class="fa fa-caret-square-o-right"></i> Roadmap</small></a></li>
@@ -44,17 +45,19 @@
           </li>
           <li class="dropdown">
             <a href="#" class="dropdown-toggle" data-toggle="dropdown">Documentation <b class="caret"></b></a>
-            <ul class="dropdown-menu">
-              <li><a href="docs.html" >Getting Started</a></li>
+            <ul class="dropdown-menu">              
+              <li><a href="docs.html" >Installation</a></li>
+              <li><a href="docs_start.html" >Getting Started</a></li>              
               <li><a href="docs_compiler.html" >Command-Line Reference</a></li>
               <li><a href="docs_compiler.html#options" ><small><i class="fa fa-caret-square-o-right"></i> Command-Line Options</small></a></li>
               <li><a href="docs_compiler.html#languages" ><small><i class="fa fa-caret-square-o-right"></i> Supported Languages</small></a></li>
               <li><a href="docs_compiler.html#opt_flags" ><small><i class="fa fa-caret-square-o-right"></i> Optimization Flags</small></a></li>
-              <li><a href="docs_sql.html" >DBT-SQL Reference</a></li>
-              <li><a href="docs_stdlib.html" >DBT StdLib Reference</a></li>
-              <li><a href="docs_adaptors.html" >DBT Adaptors Reference</a></li>
+              <li><a href="docs_sql.html" >DBToaster SQL Reference</a></li>
+              <li><a href="docs_stdlib.html" >DBToaster StdLib Reference</a></li>
+              <li><a href="docs_adaptors.html" >DBToaster Adaptors Reference</a></li>
               <li><a href="docs_cpp.html" >C++ Code Generation</a></li>
               <li><a href="docs_scala.html" >Scala Code Generation</a></li>
+              <li><a href="docs_java.html" >DBToaster in Java Programs</a></li>
             </ul>
           </li>
           <li class="dropdown">
@@ -73,136 +76,33 @@
     </div>
     <div class="contentwrapper">
       <div class="content">
-        <div class="doc_chain_link"><span class="doc_chain_link_next"><a href="docs_compiler.html" >Command-Line Reference</a></span> &gt; </div>        <div class="titlebox">Getting Started</div><p>
-The DBToaster compiler is used to generate incremental maintenance (M3) programs.  M3 programs can be executed in the following ways:
+        <div class="doc_chain_link"><span class="doc_chain_link_next"><a href="docs_start.html" >Getting Started</a></span> &gt; </div>        <div class="titlebox">Installation</div><p>
+The DBToaster compiler can be installed on Windows, Mac OS X, and Linux platforms. The compiler supports generation of C++ and Scala programs and,  depending on the chosen backend(s), requires the following dependencies:
 <ul>
-<li><b>Standalone Binaries</b>: The DBToaster compiler can produce standalone binaries that evaluate the M3 program.  This requires invoking a second stage compiler (g++ or scalac) to generate the final binary.</li>
-
-<li><b>Source Code</b>: The DBToaster compiler can also produce source code that can be linked into your own binary.</li>
+  <li>Oracle JDK 7 (or above) - required</li>
+  <li>g++ 4.8 (or above) - optional, for compiling generated C++ programs</li>
+  <li><a href="http://scala-lang.org/download/2.10.2.html">Scala 2.10.2</a> - optional, for compiling generated Scala programs</li>
+  <li><a href="http://cygwin.com/">Cygwin</a> - required only for Windows, see the below video on how to install DBToaster on Windows</li>
 </ul>
 
-</p>
-
-<h3>1. Requirements</h3>
-DBToaster requires several dependencies to be installed. 
-
-<h4>1.1. Windows</h4><ul>
-  <li>Oracle JDK 7 (or above)</li>
-  <li><a href="http://cygwin.com/">Cygwin</a></li>
-  <li>gcc-g++ 4.8 (or above)</li>
-  <li><a href="http://scala-lang.org/download/2.10.2.html">Scala 2.10.2</a></li>
-</ul>
-<i>Note:</i> Most of the development and testing has been done on OS X and Linux platforms. 
-
-<h4>1.2. OS X</h4>
+<i>Notes:</i>
 <ul>
-  <li>Oracle JDK 7 (or above)</li>
-  <li>gcc-g++ 4.8 (or above)</li>
-  <li><a href="http://scala-lang.org/download/2.10.2.html">Scala 2.10.2</a></li>
+  <li>Most of the development and testing has been done on Mac OS X and Linux platforms.</li>
+  <li>Other versions of the tools/packages might work as well but have not been tested.</li>
+  <li>To use a custom C++ compiler, create a symlink <tt>gpp</tt> in the DBToaster directory that points to the compiler (e.g., <span class="code"> "ln -s /usr/local/bin/g++-4.8 gpp"</span>).</li>
 </ul>
 
-<p>
-   For installing gcc (if you are using <a href="http://brew.sh/">Homebrew</a>), the following commands can be used:
+Visit <a href="download.html" >Downloads</a> to get the latest binaries for different platforms. Each binary comes with a set of example SQL queries and  datasets to get you started. 
 </p>
 
-<div class="codeblock">
-$> brew tap homebrew/versions
-$> brew install gcc48
-</div>
-
-<p>
-   In order to tell DBToaster to use a custom C++ compiler, create a symlink <tt>gpp</tt> in the DBToaster directory that points to the compiler:
-</p>
-
-<div class="codeblock">$> ln -s /usr/local/bin/g++-4.8 gpp</div>
-
-<p>
-   DBToaster detects that this link exists and uses it instead of <tt>g++</tt>.
-</p>
-
-<h4>1.3. Linux</h4><p>
-   The easiest way to use DBToaster on Linux is to install the following dependencies with the package manager of your choice:
-</p>
-
-<ul>
-  <li>Oracle JDK 7 (or above)</li>
-  <li>gcc-g++ 4.8 (or above)</li>
-  <li><a href="http://scala-lang.org/download/2.10.2.html">Scala 2.10.2</a></li>
-</ul>
-
-<p>
-   <i>Note:</i> Other versions of the tools/packages might work as well but have not been tested.
-</p>
-
-
-<h3>2. Evaluating a simple query</h3>
-DBToaster provides the <tt>-r</tt> flag which generates, compiles and evaluates a query in one simple step.
-This is a convenient way to check whether DBToaster and its dependencies have successfully been installed.
-
-<p>
-   The following command evaluates the <tt>rst</tt> query that ships with DBToaster:
-</p>
-
-<div class="codeblock">$&gt; cat examples/queries/simple/rst.sql
-
-CREATE STREAM R(A int, B int) 
-  FROM FILE 'examples/data/simple/r.dat' LINE DELIMITED csv;
-
-CREATE STREAM S(B int, C int) 
-  FROM FILE 'examples/data/simple/s.dat' LINE DELIMITED csv;
-
-CREATE STREAM T(C int, D int)
-  FROM FILE 'examples/data/simple/t.dat' LINE DELIMITED csv;
-
-SELECT sum(A*D) AS AtimesD FROM R,S,T WHERE R.B=S.B AND S.C=T.C;
-
-$&gt; bin/dbtoaster -r examples/queries/simple/rst.sql
-&lt;snap&gt;
-&nbsp;&nbsp;&nbsp;&nbsp;&lt;ATIMESD&gt;306&lt;/ATIMESD&gt;
-&lt;/snap&gt;
-
-real  0m0.019s
-user  0m0.002s
-sys   0m0.002s
-</div>
-
-<h3>3. Generating Standalone Binaries</h3><p>
-To use DBToaster to create a standalone binary, invoke it with <tt>-c [binary name]</tt>.  The binary can be invoked directly. It will print the results of all queries once all data has been processed.  </p>
-
-<p>The following command line will generate the <tt>rst</tt> executable:
-<div class="codeblock">$&gt; bin/dbtoaster examples/queries/simple/rst.sql -c rst
-</div>
-</p>
-<p>
-Running the <tt>rst</tt> executable will produce the following output:
-<div class="codeblock">$&gt; ./rst
-&lt;snap&gt;
-&nbsp;&nbsp;&nbsp;&nbsp;&lt;ATIMESD&gt;306&lt;/ATIMESD&gt;
-&lt;/snap&gt;
-</div>
-</p>
-
-<p>
-To produce a scala jar file, invoke dbtoaster with <tt>-l scala</tt>, and the <tt>-c [binary name]</tt> flag as above.  DBToaster will produce <tt>[binary name].jar</tt>, which can be run as a normal scala program. For more details, please refer to <a href="docs_scala.html" >Scala Code Generation</a> 
-</p>
-
-<h3>4. Generating Source Code</h3>
-<p>DBToaster's primary role is the construction of code that can be linked in to existing applications.  To generate a source file in C++ or Scala, invoke it with <tt>-l [language]</tt>, replacing <tt>[language]</tt> with <tt>cpp</tt> or <tt>scala</tt>.  If the optional <tt>-o</tt> flag is used to direct the generated code into a particular file, the target language will be auto-detected from the file suffix (".scala" for Scala, and ".h", ".hpp", or ".cpp" for C++).</p>
-
-<div class="codeblock">$&gt; bin/dbtoaster examples/queries/simple/rst.sql -o rst.cpp
-$&gt; bin/dbtoaster examples/queries/simple/rst.sql -o rst.scala
-$&gt; ls
-rst.hpp      rst.scala
-</div>
-
-See <a href="docs_scala.html" >Scala Code Generation</a> and <a href="docs_cpp.html" >C++ Code Generation</a> for details.
-
-        <div class="doc_chain_link"><span class="doc_chain_link_next"><a href="docs_compiler.html" >Command-Line Reference</a></span> &gt; </div>      </div><!-- /content -->
+<p align="center">
+<iframe width="560" height="315" align="center" src="//www.youtube.com/embed/FuyVUei0uK8" frameborder="0" allowfullscreen></iframe>
+</p>        <div class="doc_chain_link"><span class="doc_chain_link_next"><a href="docs_start.html" >Getting Started</a></span> &gt; </div>      </div><!-- /content -->
     </div><!-- /contentwrapper -->
   </div><!-- /pagebody -->
   <hr/>
   <div class="footer">
-  <p>Copyright (c) 2009-2012, The DBToaster Consortium. All rights reserved.</p>
+  <p>Copyright (c) 2009-2014, The DBToaster Consortium. All rights reserved.</p>
   </div>
 </div><!-- /overallpage -->
 

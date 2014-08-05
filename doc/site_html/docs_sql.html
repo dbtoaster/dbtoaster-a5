@@ -1,5 +1,5 @@
 <html><head>
-<title>DBToaster - DBT-SQL Reference</title>
+<title>DBToaster - DBToaster SQL Reference</title>
 <link rel="stylesheet" type="text/css" href="css/style.css" />
 <link rel="stylesheet" type="text/css" href="css/bootstrap.min.css" media="screen" />
 <link rel="stylesheet" type="text/css" href="css/bootstrap-theme.min.css" />
@@ -26,7 +26,8 @@
           <li class="dropdown">
             <a href="#" class="dropdown-toggle" data-toggle="dropdown">About <b class="caret"></b></a>
             <ul class="dropdown-menu">
-              <li><a href="index.html" >About</a></li>
+              <li><a href="index.html" >Welcome to dbtoaster.org</a></li>
+              <li><a href="home_about.html" >Is DBToaster right for you?</a></li>
               <li><a href="home_performance.html" >Performance</a></li>
               <li><a href="home_features.html" >Features</a></li>
               <li><a href="home_features.html#roadmap" ><small><i class="fa fa-caret-square-o-right"></i> Roadmap</small></a></li>
@@ -44,17 +45,19 @@
           </li>
           <li class="dropdown">
             <a href="#" class="dropdown-toggle" data-toggle="dropdown">Documentation <b class="caret"></b></a>
-            <ul class="dropdown-menu">
-              <li><a href="docs.html" >Getting Started</a></li>
+            <ul class="dropdown-menu">              
+              <li><a href="docs.html" >Installation</a></li>
+              <li><a href="docs_start.html" >Getting Started</a></li>              
               <li><a href="docs_compiler.html" >Command-Line Reference</a></li>
               <li><a href="docs_compiler.html#options" ><small><i class="fa fa-caret-square-o-right"></i> Command-Line Options</small></a></li>
               <li><a href="docs_compiler.html#languages" ><small><i class="fa fa-caret-square-o-right"></i> Supported Languages</small></a></li>
               <li><a href="docs_compiler.html#opt_flags" ><small><i class="fa fa-caret-square-o-right"></i> Optimization Flags</small></a></li>
-              <li><a href="docs_sql.html" >DBT-SQL Reference</a></li>
-              <li><a href="docs_stdlib.html" >DBT StdLib Reference</a></li>
-              <li><a href="docs_adaptors.html" >DBT Adaptors Reference</a></li>
+              <li><a href="docs_sql.html" >DBToaster SQL Reference</a></li>
+              <li><a href="docs_stdlib.html" >DBToaster StdLib Reference</a></li>
+              <li><a href="docs_adaptors.html" >DBToaster Adaptors Reference</a></li>
               <li><a href="docs_cpp.html" >C++ Code Generation</a></li>
               <li><a href="docs_scala.html" >Scala Code Generation</a></li>
+              <li><a href="docs_java.html" >DBToaster in Java Programs</a></li>
             </ul>
           </li>
           <li class="dropdown">
@@ -73,11 +76,11 @@
     </div>
     <div class="contentwrapper">
       <div class="content">
-        <div class="doc_chain_link"> &lt; <span class="doc_chain_link_prev"><a href="docs_compiler.html" >Command-Line Reference</a></span> | <span class="doc_chain_link_next"><a href="docs_stdlib.html" >DBT StdLib Reference</a></span> &gt; </div>        <div class="titlebox">DBT-SQL Reference</div>
+        <div class="doc_chain_link"> &lt; <span class="doc_chain_link_prev"><a href="docs_compiler.html" >Command-Line Reference</a></span> | <span class="doc_chain_link_next"><a href="docs_stdlib.html" >DBToaster StdLib Reference</a></span> &gt; </div>        <div class="titlebox">DBToaster SQL Reference</div>
 
 
 <a name="createfunction"></a>
-<h3>1. CREATE FUNCTION</h3><center>Declare a forward reference to a user defined function in the target language.</center>
+<h3>1. CREATE FUNCTION</h3>Declare a forward reference to a user defined function in the target language.
 <div class="codeblock">create_function :=
   CREATE FUNCTION &lt;name&gt; ( &lt;arguments&gt; ) RETURNS &lt;type&gt; AS &lt;definition&gt;
 
@@ -101,7 +104,7 @@ FROM RadialMeasurements r;
 <hr/>
 
 <a name="create"></a>
-<h3>2. CREATE TABLE/STREAM</h3><center>Declare a relation for use in the query.</center>
+<h3>2. CREATE TABLE/STREAM</h3>Declare a relation for use in the query.
 <div class="codeblock">create_statement := 
   CREATE { TABLE | STREAM } &lt;name&gt; ( &lt;schema&gt; ) 
          [&lt;source_declaration&gt;]
@@ -151,7 +154,7 @@ CSV (fields := '|')
 <hr/>
 
 <a name="include"></a>
-<h3>3. INCLUDE</h3><center>Import a secondary SQL file</center>
+<h3>3. INCLUDE</h3>Import a secondary SQL file.
 <div class="codeblock">include_statement := INCLUDE 'file'
 </div>
 
@@ -159,7 +162,7 @@ Import the contents of the selected file into DBToaster.  The file path is inter
 
 <hr/>
 <a name="select"></a>
-<h3>4. SELECT</h3><center>Declare a query to monitor</center>
+<h3>4. SELECT</h3>Declare a query to monitor.
 
 <div class="codeblock">select_statement := 
   SELECT &lt;target_1&gt; [, &lt;target_2&gt; [, ...]] 
@@ -230,8 +233,10 @@ WHERE sumc > 2</div>
 
 <dt><b>Incremental Computation with Floating Point Numbers</b></dt>
 <dd>There are several subtle issues that arise when performing incremental computations with floating point numbers:
-  <p>When using division in conjunction with aggregates, be aware that SUM and AVG return 0 for empty tables.  Once a result value becomes NAN or INFTY, it will no longer be incrementally maintainable.  We are working on a long-term fix.  In the meantime, there are two workarounds for this problem.  For some queries, you can coerce the aggregate value to be nonzero using the LISTMAX standard function (See the example query tpch/query8.sql in the DBToaster distribution for an example of how to do this).  For most queries, the -F EXPRESSIVE-TLQs optimization flag will typically materialize the divisor as a separate map (the division will be evaluated when accessing results).</p>
-  <p>The floating point standards for most target languages (including OCaml, Scala, and C++) do not have well-defined semantics for equality tests over floating point numbers.  Consequently, queries with floating-point group-by variables might produce non-unique groups (since two equivalent floating point numbers are not considered to be equal). We are working on a long-term fix.  In the meantime, the issue can be addressed by using CAST_INT, or CAST_STRING to convert floating point numbers into canonical forms.</p>
+  <ul>
+
+  <li>When using division in conjunction with aggregates, be aware that SUM and AVG return 0 for empty tables.  Once a result value becomes NAN or INFTY, it will no longer be incrementally maintainable.  We are working on a long-term fix.  In the meantime, there are two workarounds for this problem.  For some queries, you can coerce the aggregate value to be nonzero using the LISTMAX standard function (See the example query tpch/query8.sql in the DBToaster distribution for an example of how to do this).  For most queries, the -F EXPRESSIVE-TLQs optimization flag will typically materialize the divisor as a separate map (the division will be evaluated when accessing results).</li>
+  <li>The floating point standards for most target languages (including OCaml, Scala, and C++) do not have well-defined semantics for equality tests over floating point numbers.  Consequently, queries with floating-point group-by variables might produce non-unique groups (since two equivalent floating point numbers are not considered to be equal). We are working on a long-term fix.  In the meantime, the issue can be addressed by using CAST_INT, or CAST_STRING to convert floating point numbers into canonical forms.</li>
   </ul>
 
 <dt><b>Other Notes</b></dt>
@@ -247,7 +252,7 @@ WHERE sumc > 2</div>
 </dl>
 </p>
 
-<p>See the <a href="index.php?page=docs&subpage=stdlib">Standard Functions Documentation</a> for documentation on DBToaster's standard function library.</p>
+<p>See <a href="docs_stdlib.html" >DBToaster StdLib Reference</a> for the documentation on DBToaster's standard function library.</p>
 
 <p>DBToaster maintains query results in the form of either multi-key dictionaries (a.k.a., maps, hashmaps, etc...), or singleton primitive-typed values.  Each query result is assigned a name based on the query (see documentation for your target language's code generator for details on how to access the results).<p>
 <ul>
@@ -258,41 +263,41 @@ WHERE sumc > 2</div>
 
 <p>If multiple SELECT statements occur in the same file, the result names of each query will be prefixed with "QUERY#_", where # is an integer.</p>
 
-<h4>4.1. Examples</h4>
+<h3>5. EXAMPLES</h3>
 <div class="codeblock">CREATE STREAM R(A int, B int);
 CREATE STREAM S(B int, C int);</div>
 
-<h5>4.1.1. Non-aggregate query</h5><div class="codeblock">SELECT * FROM R;</div>
+<h4>5.1. Non-aggregate query</h4><div class="codeblock">SELECT * FROM R;</div>
 Generates a single dictionary named COUNT, mapping from the tuple "&lt;R.A, R.B&gt;" to the number of time each tuple occurs in R.
 
-<h5>4.1.2. Aggregate query</h5><div class="codeblock">SELECT SUM(R.A * S.C) AS sum_ac FROM R NATURAL JOIN S;</div>
+<h4>5.2. Aggregate query</h4><div class="codeblock">SELECT SUM(R.A * S.C) AS sum_ac FROM R NATURAL JOIN S;</div>
 Generates a single constant integer named SUM_AC containing the query result.
 
-<h5>4.1.3. Aggregate group-by query (one group-by var)</h5><div class="codeblock">SELECT S.C, SUM(R.A) AS sum_a 
+<h4>5.3. Aggregate group-by query (one group-by var)</h4><div class="codeblock">SELECT S.C, SUM(R.A) AS sum_a 
 FROM R NATURAL JOIN S 
 GROUP BY S.C;</div>
 Generates a dictionary named SUM_A mapping from values of S.C to the sums of R.A.
 
-<h5>4.1.4. Aggregate group-by query (multiple group-by vars)</h5><div class="codeblock">SELECT R.A, R.B, COUNT(*) AS foo FROM R GROUP BY R.A, R.B;</div>
+<h4>5.4. Aggregate group-by query (multiple group-by vars)</h4><div class="codeblock">SELECT R.A, R.B, COUNT(*) AS foo FROM R GROUP BY R.A, R.B;</div>
 Generates a single dictionary named FOO, mapping from the tuple "&lt;R.A, R.B&gt;" to the number of time each tuple occurs in R.
 
-<h5>4.1.5. Query with multiple aggregates</h5><div class="codeblock">SELECT SUM(R.A) AS sum_a, SUM(S.C) AS sum_c 
+<h4>5.5. Query with multiple aggregates</h4><div class="codeblock">SELECT SUM(R.A) AS sum_a, SUM(S.C) AS sum_c 
 FROM R NATURAL JOIN S 
 GROUP BY S.C;</div>
 Generates two dictionaries named SUM_A and SUM_C, respectively containing the sums of R.A and S.C.
 
 
-<h5>4.1.6. Multiple Queries</h5><div class="codeblock">SELECT SUM(R.A) AS SUM_A FROM R;
+<h4>5.6. Multiple Queries</h4><div class="codeblock">SELECT SUM(R.A) AS SUM_A FROM R;
 SELECT SUM(S.C) SUM_C FROM S;</div>
 Generates two dictionaries named QUERY_1_SUM_A and QUERY_2_SUM_C, respectively containing the sums of R.A and S.C.
 
 
-        <div class="doc_chain_link"> &lt; <span class="doc_chain_link_prev"><a href="docs_compiler.html" >Command-Line Reference</a></span> | <span class="doc_chain_link_next"><a href="docs_stdlib.html" >DBT StdLib Reference</a></span> &gt; </div>      </div><!-- /content -->
+        <div class="doc_chain_link"> &lt; <span class="doc_chain_link_prev"><a href="docs_compiler.html" >Command-Line Reference</a></span> | <span class="doc_chain_link_next"><a href="docs_stdlib.html" >DBToaster StdLib Reference</a></span> &gt; </div>      </div><!-- /content -->
     </div><!-- /contentwrapper -->
   </div><!-- /pagebody -->
   <hr/>
   <div class="footer">
-  <p>Copyright (c) 2009-2012, The DBToaster Consortium. All rights reserved.</p>
+  <p>Copyright (c) 2009-2014, The DBToaster Consortium. All rights reserved.</p>
   </div>
 </div><!-- /overallpage -->
 

@@ -26,7 +26,8 @@
           <li class="dropdown">
             <a href="#" class="dropdown-toggle" data-toggle="dropdown">About <b class="caret"></b></a>
             <ul class="dropdown-menu">
-              <li><a href="index.html" >About</a></li>
+              <li><a href="index.html" >Welcome to dbtoaster.org</a></li>
+              <li><a href="home_about.html" >Is DBToaster right for you?</a></li>
               <li><a href="home_performance.html" >Performance</a></li>
               <li><a href="home_features.html" >Features</a></li>
               <li><a href="home_features.html#roadmap" ><small><i class="fa fa-caret-square-o-right"></i> Roadmap</small></a></li>
@@ -44,17 +45,19 @@
           </li>
           <li class="dropdown">
             <a href="#" class="dropdown-toggle" data-toggle="dropdown">Documentation <b class="caret"></b></a>
-            <ul class="dropdown-menu">
-              <li><a href="docs.html" >Getting Started</a></li>
+            <ul class="dropdown-menu">              
+              <li><a href="docs.html" >Installation</a></li>
+              <li><a href="docs_start.html" >Getting Started</a></li>              
               <li><a href="docs_compiler.html" >Command-Line Reference</a></li>
               <li><a href="docs_compiler.html#options" ><small><i class="fa fa-caret-square-o-right"></i> Command-Line Options</small></a></li>
               <li><a href="docs_compiler.html#languages" ><small><i class="fa fa-caret-square-o-right"></i> Supported Languages</small></a></li>
               <li><a href="docs_compiler.html#opt_flags" ><small><i class="fa fa-caret-square-o-right"></i> Optimization Flags</small></a></li>
-              <li><a href="docs_sql.html" >DBT-SQL Reference</a></li>
-              <li><a href="docs_stdlib.html" >DBT StdLib Reference</a></li>
-              <li><a href="docs_adaptors.html" >DBT Adaptors Reference</a></li>
+              <li><a href="docs_sql.html" >DBToaster SQL Reference</a></li>
+              <li><a href="docs_stdlib.html" >DBToaster StdLib Reference</a></li>
+              <li><a href="docs_adaptors.html" >DBToaster Adaptors Reference</a></li>
               <li><a href="docs_cpp.html" >C++ Code Generation</a></li>
               <li><a href="docs_scala.html" >Scala Code Generation</a></li>
+              <li><a href="docs_java.html" >DBToaster in Java Programs</a></li>
             </ul>
           </li>
           <li class="dropdown">
@@ -224,12 +227,18 @@ d3.csv("data/bakeoff.csv", function(error, rawInput) {
 <p>The graphs show the performance of each system on a set of realtime data-warehousing queries based on the TPC-H query benchmark.  These queries are all included as examples in the DBToaster distribution.</p>
 
 <p>REP (Depth-0) represents a naive query evaluation strategy where each refresh requires a full re-evaluation of the entire query.  IVM (Depth-1) is a well known technique called Incremental View Maintenance (we discuss the distinctions in depth in our technical report).  Each of these was implemented by a DBToaster-generated engine.</p>
+
+<p>The experiments are performed on a single-socket Intel Xeon E5- 2620 (6 physical cores), 128GB of RAM, RHEL 6, and Open-JDK 1.6.0 28. Hyper-threading, turbo-boost, and frequency scaling are disabled to achieve more stable results.</p>
+
+<p>We used LMS 0.3, running with Scala 2.10 on the Hotspot 64-bit server VM having 14 GB of heap memory, and the generated code was compiled with the -optimise option of the Scala compiler.</p>
+
+<p>A stream synthesized from a scaling factor 0.1 database (100MB) is used for performing the experiments (with an upper limit of 2 hours), while our scaling experiments extend these results up to a scaling factor of 10 (10 GB).</p>
               </div><!-- /content -->
     </div><!-- /contentwrapper -->
   </div><!-- /pagebody -->
   <hr/>
   <div class="footer">
-  <p>Copyright (c) 2009-2012, The DBToaster Consortium. All rights reserved.</p>
+  <p>Copyright (c) 2009-2014, The DBToaster Consortium. All rights reserved.</p>
   </div>
 </div><!-- /overallpage -->
 

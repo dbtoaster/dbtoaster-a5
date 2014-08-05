@@ -26,7 +26,8 @@
           <li class="dropdown">
             <a href="#" class="dropdown-toggle" data-toggle="dropdown">About <b class="caret"></b></a>
             <ul class="dropdown-menu">
-              <li><a href="index.html" >About</a></li>
+              <li><a href="index.html" >Welcome to dbtoaster.org</a></li>
+              <li><a href="home_about.html" >Is DBToaster right for you?</a></li>
               <li><a href="home_performance.html" >Performance</a></li>
               <li><a href="home_features.html" >Features</a></li>
               <li><a href="home_features.html#roadmap" ><small><i class="fa fa-caret-square-o-right"></i> Roadmap</small></a></li>
@@ -44,17 +45,19 @@
           </li>
           <li class="dropdown">
             <a href="#" class="dropdown-toggle" data-toggle="dropdown">Documentation <b class="caret"></b></a>
-            <ul class="dropdown-menu">
-              <li><a href="docs.html" >Getting Started</a></li>
+            <ul class="dropdown-menu">              
+              <li><a href="docs.html" >Installation</a></li>
+              <li><a href="docs_start.html" >Getting Started</a></li>              
               <li><a href="docs_compiler.html" >Command-Line Reference</a></li>
               <li><a href="docs_compiler.html#options" ><small><i class="fa fa-caret-square-o-right"></i> Command-Line Options</small></a></li>
               <li><a href="docs_compiler.html#languages" ><small><i class="fa fa-caret-square-o-right"></i> Supported Languages</small></a></li>
               <li><a href="docs_compiler.html#opt_flags" ><small><i class="fa fa-caret-square-o-right"></i> Optimization Flags</small></a></li>
-              <li><a href="docs_sql.html" >DBT-SQL Reference</a></li>
-              <li><a href="docs_stdlib.html" >DBT StdLib Reference</a></li>
-              <li><a href="docs_adaptors.html" >DBT Adaptors Reference</a></li>
+              <li><a href="docs_sql.html" >DBToaster SQL Reference</a></li>
+              <li><a href="docs_stdlib.html" >DBToaster StdLib Reference</a></li>
+              <li><a href="docs_adaptors.html" >DBToaster Adaptors Reference</a></li>
               <li><a href="docs_cpp.html" >C++ Code Generation</a></li>
               <li><a href="docs_scala.html" >Scala Code Generation</a></li>
+              <li><a href="docs_java.html" >DBToaster in Java Programs</a></li>
             </ul>
           </li>
           <li class="dropdown">
@@ -73,16 +76,16 @@
     </div>
     <div class="contentwrapper">
       <div class="content">
-        <div class="doc_chain_link"> &lt; <span class="doc_chain_link_prev"><a href="docs_cpp.html" >C++ Code Generation</a></span></div>        <div class="titlebox">Scala Code Generation</div><div class="warning">Warning: This BETA API is not final, and subject to change before release.</div>
+        <div class="doc_chain_link"> &lt; <span class="doc_chain_link_prev"><a href="docs_cpp.html" >C++ Code Generation</a></span> | <span class="doc_chain_link_next"><a href="docs_java.html" >DBToaster in Java Programs</a></span> &gt; </div>        <div class="titlebox">Scala Code Generation</div><div class="warning">Warning: This API is subject to changes in future releases.</div>
 
 <p>
-   <i>Note:</i> To compile and run queries using the Scala backend requires the Scala compiler to be installed. Please refer to <a href="docs.html" >Getting Started</a> for details 
+   <i>Note:</i> To compile and run queries using the Scala backend requires the Scala compiler. Please refer to <a href="docs.html" >Installation</a> for more details. 
 </p>
 
 <a name="quickstart"></a>
 
 <h3>1. Compiling and running a query</h3><p>
-   DBToaster generates a JAR file for a query when using the <tt>-l scala</tt> and the <tt>-c &lt;file&gt;</tt> switch:
+   DBToaster generates a JAR file for a query when using the <tt>-l scala</tt> and <tt>-c &lt;file&gt;</tt> switches:
 </p>
 
 <div class="codeblock">
@@ -101,8 +104,7 @@ $> bin/dbtoaster -c test.jar -l scala examples/queries/simple/rst.sql
 </div>
 
 <p>
-   The command above compiles the query to <tt>test.jar</tt>.
-   It can now be run as follows:
+   The command above compiles the query to <tt>test.jar</tt>, which can be run as follows:
 </p>
 
 <div class="codeblock">
@@ -359,91 +361,12 @@ def COUNT() = {
    mCOUNT
 }
 </div>
-
-<h3>4. Using queries in Java programs</h3><p>
-   <i>Note:</i> The DBToaster library currently does not offer a nice interface for Java applications. We are planning to add a nicer future once the Scala interface is stable.
-</p>
-<p>
-   Since Scala is compatible with Java, it is possible to use the generated queries in Java applications.
-   In order to use a query in Java, the Java application has to reference the libraries present in the <tt>lib/dbt_scala</tt> folder as well as the Scala library.
-</p>
-
-<p>
-   The following Java code is equivalent to the Scala code presented in the example above:
-</p>
-
-<div class="codeblock">
-import ddbt.gen.*;
-import ddbt.lib.Messages.*;
-
-import akka.actor.ActorRef;
-import akka.actor.ActorSystem;
-import akka.actor.Props;
-import akka.actor.Inbox;
-
-import scala.Tuple2;
-import scala.collection.immutable.List;
-import scala.collection.immutable.List$;
-import scala.collection.immutable.$colon$colon;
-import scala.concurrent.duration.Duration;
-import java.util.concurrent.TimeUnit;
-
-class ExampleApp {
-   public static final int TUPLE_DELETE = 0x00;
-   public static final int TUPLE_INSERT = 0x01;
-
-   public static List&lt;Object&gt; tuple(Object ... ts) {
-      List&lt;Object&gt; result = List$.MODULE$.empty();
-      for(int i = ts.length; i > 0; i--) {
-         result = new $colon$colon&lt;Object&gt;(ts[i - 1], result);
-      }
-      return result;
-   }
-
-   public static void main(String[] args) {
-      ActorSystem system = ActorSystem.create("mySystem");
-
-      final ActorRef q = system.actorOf(Props.create(Dbtoaster.class), "Query");
-
-      // Send events
-      q.tell(new TupleEvent(0, TUPLE_INSERT, "R", tuple(5L, 2L)), null);
-      q.tell(new TupleEvent(1, TUPLE_INSERT, "S", tuple(2L, 3L)), null);
-      q.tell(new TupleEvent(2, TUPLE_INSERT, "T", tuple(3L, 4L)), null);
-
-      // Retrieve result
-      final Inbox inbox = Inbox.create(system);
-      inbox.send(q, EndOfStream$.MODULE$);
-      Tuple2 result = (Tuple2) (inbox.receive(Duration.create(1L << 23, TimeUnit.SECONDS)));
-
-      System.out.println("Result: " + result._2().toString());
-      system.shutdown();
-  }
-}
-</div>
-
-<p>
-   If this code has been saved to <tt>ExampleApp.java</tt> and the Scala library has been copied to <tt>lib/dbt_scala</tt>, it can be compiled as follows:
-</p>
-
-<div class="codeblock">
-$> javac -classpath "rst.jar:lib/dbt_scala/*" ExampleApp.java
-$> jar cvf exampleapp.jar ExampleApp.class
-</div>
-
-<p>
-   The resulting <tt>exampleapp.jar</tt> can be launched using the following command:
-</p>
-
-<div class="codeblock">
-$> java -classpath "rst.jar:lib/dbt_scala/*:exampleapp.jar" ExampleApp
-Result: List(20)
-</div>
-        <div class="doc_chain_link"> &lt; <span class="doc_chain_link_prev"><a href="docs_cpp.html" >C++ Code Generation</a></span></div>      </div><!-- /content -->
+        <div class="doc_chain_link"> &lt; <span class="doc_chain_link_prev"><a href="docs_cpp.html" >C++ Code Generation</a></span> | <span class="doc_chain_link_next"><a href="docs_java.html" >DBToaster in Java Programs</a></span> &gt; </div>      </div><!-- /content -->
     </div><!-- /contentwrapper -->
   </div><!-- /pagebody -->
   <hr/>
   <div class="footer">
-  <p>Copyright (c) 2009-2012, The DBToaster Consortium. All rights reserved.</p>
+  <p>Copyright (c) 2009-2014, The DBToaster Consortium. All rights reserved.</p>
   </div>
 </div><!-- /overallpage -->
 
