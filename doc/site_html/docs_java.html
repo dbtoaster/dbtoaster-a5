@@ -1,0 +1,170 @@
+<html><head>
+<title>DBToaster - DBToaster in Java Programs</title>
+<link rel="stylesheet" type="text/css" href="css/style.css" />
+<link rel="stylesheet" type="text/css" href="css/bootstrap.min.css" media="screen" />
+<link rel="stylesheet" type="text/css" href="css/bootstrap-theme.min.css" />
+<link href="//netdna.bootstrapcdn.com/font-awesome/4.0.1/css/font-awesome.css" rel="stylesheet">
+
+
+</head> <body>
+<a name="pagetop"></a>
+<div class="overallpage">
+  <div class="pagebody">
+    <div class="logobox">
+        <a href="index.html" ><img src="dbtoaster-logo.gif" width="214" 
+                    height="100" alt="DBToaster"/></a>    </div>
+    <div class="navbar navbar-default">
+      <div class="navbar-header">
+        <button type="button" class="navbar-toggle" data-toggle="collapse" data-target=".navbar-collapse">
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+          <span class="icon-bar"></span>
+        </button>
+      </div>
+      <div class="navbar-collapse collapse">
+        <ul class="nav navbar-nav">
+          <li class="dropdown">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown">About <b class="caret"></b></a>
+            <ul class="dropdown-menu">
+              <li><a href="index.html" >Welcome to dbtoaster.org</a></li>
+              <li><a href="home_about.html" >Is DBToaster right for you?</a></li>
+              <li><a href="home_performance.html" >Performance</a></li>
+              <li><a href="home_features.html" >Features</a></li>
+              <li><a href="home_features.html#roadmap" ><small><i class="fa fa-caret-square-o-right"></i> Roadmap</small></a></li>
+              <li><a href="home_people.html" >The Team</a></li>
+              <li><a href="home_research.html" >For Researchers</a></li>
+            </ul>
+          </li>
+          <li class="dropdown">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown">Downloads <b class="caret"></b></a>
+            <ul class="dropdown-menu">
+              <li><a href="download.html" >Downloads</a></li>
+              <li><a href="download.html#license" >License</a></li>
+              <li><a href="download.html#changelog" >Changelog</a></li>
+            </ul>
+          </li>
+          <li class="dropdown">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown">Documentation <b class="caret"></b></a>
+            <ul class="dropdown-menu">              
+              <li><a href="docs.html" >Installation</a></li>
+              <li><a href="docs_start.html" >Getting Started</a></li>              
+              <li><a href="docs_compiler.html" >Command-Line Reference</a></li>
+              <li><a href="docs_compiler.html#options" ><small><i class="fa fa-caret-square-o-right"></i> Command-Line Options</small></a></li>
+              <li><a href="docs_compiler.html#languages" ><small><i class="fa fa-caret-square-o-right"></i> Supported Languages</small></a></li>
+              <li><a href="docs_compiler.html#opt_flags" ><small><i class="fa fa-caret-square-o-right"></i> Optimization Flags</small></a></li>
+              <li><a href="docs_sql.html" >DBToaster SQL Reference</a></li>
+              <li><a href="docs_stdlib.html" >DBToaster StdLib Reference</a></li>
+              <li><a href="docs_adaptors.html" >DBToaster Adaptors Reference</a></li>
+              <li><a href="docs_cpp.html" >C++ Code Generation</a></li>
+              <li><a href="docs_scala.html" >Scala Code Generation</a></li>
+              <li><a href="docs_java.html" >DBToaster in Java Programs</a></li>
+            </ul>
+          </li>
+          <li class="dropdown">
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown">Contact <b class="caret"></b></a>
+            <ul class="dropdown-menu">
+              <li><a href="home_contact.html#inquiries" >Inquiries</a></li>
+
+              <li><a href="home_contact.html#mailing" >Mailing List</a></li>
+
+              <li><a href="bugs.html" >Bug Reports</a></li>
+
+            </ul>
+          </li>
+        </ul>
+      </div>
+    </div>
+    <div class="contentwrapper">
+      <div class="content">
+        <div class="doc_chain_link"> &lt; <span class="doc_chain_link_prev"><a href="docs_scala.html" >Scala Code Generation</a></span></div>        <div class="titlebox">DBToaster in Java Programs</div><p>
+   <i>Note:</i> To compile and run queries using the Scala backend requires the Scala compiler. Please refer to <a href="docs.html" >Installation</a> for more details. 
+</p>
+
+<p>
+   Since Scala is compatible with Java, it is possible to use generated Scala code in Java applications. Currently, the DBToaster library does not offer a nice interface for Java applications. We plan to resolve this issue in the future once the Scala API becomes stable.
+</p>
+
+<p>
+   The following Java code is equivalent to the example presented in <a href="docs_scala.html#apiguide" >Scala Code Generation</a>:
+</p>
+
+<div class="codeblock">
+import ddbt.gen.*;
+import ddbt.lib.Messages.*;
+
+import akka.actor.ActorRef;
+import akka.actor.ActorSystem;
+import akka.actor.Props;
+import akka.actor.Inbox;
+
+import scala.Tuple2;
+import scala.collection.immutable.List;
+import scala.collection.immutable.List$;
+import scala.collection.immutable.$colon$colon;
+import scala.concurrent.duration.Duration;
+import java.util.concurrent.TimeUnit;
+
+class ExampleApp {
+   public static final int TUPLE_DELETE = 0x00;
+   public static final int TUPLE_INSERT = 0x01;
+
+   public static List&lt;Object&gt; tuple(Object ... ts) {
+      List&lt;Object&gt; result = List$.MODULE$.empty();
+      for(int i = ts.length; i > 0; i--) {
+         result = new $colon$colon&lt;Object&gt;(ts[i - 1], result);
+      }
+      return result;
+   }
+
+   public static void main(String[] args) {
+      ActorSystem system = ActorSystem.create("mySystem");
+
+      final ActorRef q = system.actorOf(Props.create(Dbtoaster.class), "Query");
+
+      // Send events
+      q.tell(new TupleEvent(0, TUPLE_INSERT, "R", tuple(5L, 2L)), null);
+      q.tell(new TupleEvent(1, TUPLE_INSERT, "S", tuple(2L, 3L)), null);
+      q.tell(new TupleEvent(2, TUPLE_INSERT, "T", tuple(3L, 4L)), null);
+
+      // Retrieve result
+      final Inbox inbox = Inbox.create(system);
+      inbox.send(q, EndOfStream$.MODULE$);
+      Tuple2 result = (Tuple2) (inbox.receive(Duration.create(1L << 23, TimeUnit.SECONDS)));
+
+      System.out.println("Result: " + result._2().toString());
+      system.shutdown();
+  }
+}
+</div>
+
+<p>
+   If this code has been saved to <tt>ExampleApp.java</tt> and the Scala library has been copied to <tt>lib/dbt_scala</tt>, the program can be compiled as follows:
+</p>
+
+<div class="codeblock">
+$> javac -classpath "rst.jar:lib/dbt_scala/*" ExampleApp.java
+$> jar cvf exampleapp.jar ExampleApp.class
+</div>
+
+<p>
+   The resulting <tt>exampleapp.jar</tt> can be launched using the following command:
+</p>
+
+<div class="codeblock">
+$> java -classpath "rst.jar:lib/dbt_scala/*:exampleapp.jar" ExampleApp
+Result: List(20)
+</div>
+        <div class="doc_chain_link"> &lt; <span class="doc_chain_link_prev"><a href="docs_scala.html" >Scala Code Generation</a></span></div>      </div><!-- /content -->
+    </div><!-- /contentwrapper -->
+  </div><!-- /pagebody -->
+  <hr/>
+  <div class="footer">
+  <p>Copyright (c) 2009-2014, The DBToaster Consortium. All rights reserved.</p>
+  </div>
+</div><!-- /overallpage -->
+
+<script type="text/javascript" src="js/jquery-2.0.3.min.js"> </script>
+<script type="text/javascript" src="js/bootstrap.min.js"> </script>
+
+</body>
+</html>

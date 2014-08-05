@@ -8,7 +8,7 @@
   <th width="20%" align="left">Download</th>  
 </thead>
 <tr>
-  <td align="left"> &nbsp;&nbsp; Mac OS X 10.8.5 (or above)</td>
+  <td align="left"> &nbsp;&nbsp; Mac OS X 10.6.8 (or above)</td>
   <td>3263</td>
   <td>2014-Aug-01</td>
   <td align="left">
