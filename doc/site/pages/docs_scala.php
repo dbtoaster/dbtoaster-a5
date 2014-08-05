@@ -94,7 +94,7 @@ object ExampleApp {
 
 <p>
    This example first creates an ActorSystem and then launches the query actor.
-   The events are sent to the query using <tt>TupleEvent</tt> messages with the following structure:
+   The events are sent to the query actor using <tt>TupleEvent</tt> messages with the following structure:
 </p>
 
 <table class="table">
@@ -108,7 +108,7 @@ object ExampleApp {
    </tr>
    <tr>
       <td class="code">op:TupleOp</td>
-      <td><tt>TupleInsert</tt> for an insertion, <tt>TupleDelete</tt> for a deletion.</td>
+      <td><tt>TupleInsert</tt> for insertion, <tt>TupleDelete</tt> for deletion.</td>
    </tr>
    <tr>
       <td class="code">stream:String</td>
@@ -116,7 +116,7 @@ object ExampleApp {
    </tr>
    <tr>
       <td class="code">data:List[Any]</td>
-      <td>The values of the tuple that was inserted into/deleted from the stream.</td>
+      <td>The values of the tuple being inserted into/deleted from the stream.</td>
    </tr>
 </table>
 
