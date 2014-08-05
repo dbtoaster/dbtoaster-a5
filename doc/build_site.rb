@@ -66,7 +66,8 @@ copy_files(["site/9.jpg",
             "site/bakeoff.png",
             "site/bluetab.gif",
             "site/bluetabactive.gif",
-            "site/dbtoaster-logo.gif"], "site_html");
+            "site/dbtoaster-logo.gif",
+            "site/schematic.png"], "site_html");
 copy_files(["site/css/bootstrap-theme.min.css",
             "site/css/bootstrap.min.css",
             "site/css/style.css"], "site_html/css");

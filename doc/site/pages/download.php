@@ -1,4 +1,4 @@
-
+<?php if(!$now_building_distro) { ?>
 <a name="latest"><h4>DBToaster Public Release 2</h4></a>
 <table class="table">
 <thead>
@@ -120,6 +120,7 @@
 </table>
 
 <?= chapter("License", "license") ?>
+<?php } ?>
 <p>The DBToaster technology is protected by pending US and international patents.</p>
 
 <p>The DBToaster software is provided free of charge for evaluation, teaching, learning, and research purposes. If you would like to use DBToaster in any other form, contact us at</p>

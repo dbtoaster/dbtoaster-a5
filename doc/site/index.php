@@ -7,7 +7,7 @@ $pages = array(
     "home_research"    => "For Researchers",
     "home_contact"     => "Contact",
     "home_people"      => "The Team",
-  "download"         => "Downloads",
+  "download"         => ($now_building_distro ? "License" : "Downloads"),
   "docs"             => "Installation",
     "docs_start"     => "Getting Started",
     "docs_compiler"    => "Command-Line Reference",
@@ -172,9 +172,15 @@ function chain_link_docs() {
             </ul>
           </li>
           <li class="dropdown">
+            <?php if(!$now_building_distro) { ?>
             <a href="#" class="dropdown-toggle" data-toggle="dropdown">Downloads <b class="caret"></b></a>
+            <?php } else { ?>
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown">License <b class="caret"></b></a>
+            <?php } ?>
             <ul class="dropdown-menu">
+              <?php if(!$now_building_distro) { ?>
               <li><?= mk_link(null, "download", null); ?></li>
+              <?php } ?>
               <li><?= mk_link("License", "download", null, "#license"); ?></li>
               <li><?= mk_link("Changelog", "download", null, "#changelog"); ?></li>
             </ul>
