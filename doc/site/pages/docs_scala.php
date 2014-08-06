@@ -103,19 +103,19 @@ object ExampleApp {
       <th>Comment</th>
    </tr>
    <tr>
-      <td class="code">ord: Int</td>
+      <td class="code">ord : Int</td>
       <td>Order number of the event.</td>
    </tr>
    <tr>
-      <td class="code">op:TupleOp</td>
+      <td class="code">op : TupleOp</td>
       <td><tt>TupleInsert</tt> for insertion, <tt>TupleDelete</tt> for deletion.</td>
    </tr>
    <tr>
-      <td class="code">stream:String</td>
+      <td class="code">stream : String</td>
       <td>Name of the stream as it appears in the SQL file.</td>
    </tr>
    <tr>
-      <td class="code">data:List[Any]</td>
+      <td class="code">data : List[Any]</td>
       <td>The values of the tuple being inserted into/deleted from the stream.</td>
    </tr>
 </table>
@@ -131,7 +131,7 @@ object ExampleApp {
       <th>Comment</th>
    </tr>
    <tr>
-      <td class="code">view:List[Int]</td>
+      <td class="code">view : List[Int]</td>
       <td>List of maps that a snapshot is taken of.</td>
    </tr>
 </table>

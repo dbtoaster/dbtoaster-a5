@@ -89,19 +89,19 @@ class ExampleApp {
       <th>Comment</th>
    </tr>
    <tr>
-      <td class="code">ord: Int</td>
+      <td class="code">ord : int</td>
       <td>Order number of the event.</td>
    </tr>
    <tr>
-      <td class="code">op:Int</td>
+      <td class="code">op : int</td>
       <td><tt>TUPLE_INSERT</tt> for insertion, <tt>TUPLE_DELETE</tt> for deletion.</td>
    </tr>
    <tr>
-      <td class="code">stream:String</td>
+      <td class="code">stream : String</td>
       <td>Name of the stream as it appears in the SQL file.</td>
    </tr>
    <tr>
-      <td class="code">data:List&lt;Object&gt;</td>
+      <td class="code">data : List&lt;Object&gt;</td>
       <td>The values of the tuple being inserted into/deleted from the stream.</td>
    </tr>
 </table>
