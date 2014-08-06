@@ -46,7 +46,8 @@
             <a href="#" class="dropdown-toggle" data-toggle="dropdown">Documentation <b class="caret"></b></a>
             <ul class="dropdown-menu">              
               <li><a href="docs.html" >Installation</a></li>
-              <li><a href="docs_start.html" >Getting Started</a></li>              
+              <li><a href="docs_start.html" >Getting Started</a></li>
+              <li><a href="docs_architecture.html" >Architecture</a></li>
               <li><a href="docs_compiler.html" >Command-Line Reference</a></li>
               <li><a href="docs_compiler.html#options" ><small><i class="fa fa-caret-square-o-right"></i> Command-Line Options</small></a></li>
               <li><a href="docs_compiler.html#languages" ><small><i class="fa fa-caret-square-o-right"></i> Supported Languages</small></a></li>
@@ -57,6 +58,7 @@
               <li><a href="docs_cpp.html" >C++ Code Generation</a></li>
               <li><a href="docs_scala.html" >Scala Code Generation</a></li>
               <li><a href="docs_java.html" >DBToaster in Java Programs</a></li>
+              <li><a href="docs_customadaptors.html" >Custom Adaptors</a></li>
             </ul>
           </li>
           <li class="dropdown">
@@ -75,7 +77,7 @@
     </div>
     <div class="contentwrapper">
       <div class="content">
-        <div class="doc_chain_link"> &lt; <span class="doc_chain_link_prev"><a href="docs_start.html" >Getting Started</a></span> | <span class="doc_chain_link_next"><a href="docs_sql.html" >DBToaster SQL Reference</a></span> &gt; </div>        <div class="titlebox">Command-Line Reference</div>
+        <div class="doc_chain_link"> &lt; <span class="doc_chain_link_prev"><a href="docs_architecture.html" >Architecture</a></span> | <span class="doc_chain_link_next"><a href="docs_sql.html" >DBToaster SQL Reference</a></span> &gt; </div>        <div class="titlebox">Command-Line Reference</div>
 <div class="codeblock">$&gt; dbtoaster [options] &lt;input file 1&gt; [&lt;input file 2&gt; [...]]
 </div>
 
@@ -196,7 +198,7 @@ These flags are passed to the DBToaster compiler with the <span class="code">-F<
   <dd>When computing the viewlet transform, use the delta rule for lifts precisely as described in the <a href="http://www.dbtoaster.org/papers/pods2010-ring.pdf">PODS10 paper</a>.  If this flag is <b>not</b> active, a postprocessing step is applied to lift deltas that range-restricts the resulting expression to only those tuples that are affected, as described in the <a href="http://www.dbtoaster.org/papers/2013-dbtoaster-report.pdf">VLDBJ paper</a>.  This optimization is automatically activated by <span class="code">-O1</span>.</dd>
 
 </dl>
-        <div class="doc_chain_link"> &lt; <span class="doc_chain_link_prev"><a href="docs_start.html" >Getting Started</a></span> | <span class="doc_chain_link_next"><a href="docs_sql.html" >DBToaster SQL Reference</a></span> &gt; </div>      </div><!-- /content -->
+        <div class="doc_chain_link"> &lt; <span class="doc_chain_link_prev"><a href="docs_architecture.html" >Architecture</a></span> | <span class="doc_chain_link_next"><a href="docs_sql.html" >DBToaster SQL Reference</a></span> &gt; </div>      </div><!-- /content -->
     </div><!-- /contentwrapper -->
   </div><!-- /pagebody -->
   <hr/>

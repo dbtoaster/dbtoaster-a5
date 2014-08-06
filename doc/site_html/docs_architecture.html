@@ -1,5 +1,5 @@
 <html><head>
-<title>DBToaster - For Researchers</title>
+<title>DBToaster - Architecture</title>
 <link rel="stylesheet" type="text/css" href="css/style.css" />
 <link rel="stylesheet" type="text/css" href="css/bootstrap.min.css" media="screen" />
 <link rel="stylesheet" type="text/css" href="css/bootstrap-theme.min.css" />
@@ -77,52 +77,24 @@
     </div>
     <div class="contentwrapper">
       <div class="content">
-                <div class="titlebox">For Researchers</div><a name="pubs"></a>
-<h3>Publications</h3>
-<ul>
+        <div class="doc_chain_link"> &lt; <span class="doc_chain_link_prev"><a href="docs_start.html" >Getting Started</a></span> | <span class="doc_chain_link_next"><a href="docs_compiler.html" >Command-Line Reference</a></span> &gt; </div>        <div class="titlebox">Architecture</div><div style="width:100%;text-align:center;"><img src="schematic.png" style="width:80%;"></div>
 
-<li><a href="http://www.dbtoaster.org/papers/2013-dbtoaster-report.pdf">DBToaster: Higher-order Delta Processing for Dynamic, Frequently Fresh Views. </a><br/>
-Christoph Koch, Yanif Ahmad, Oliver Kennedy, Milos Nikolic, Andres N&ouml;tzli, Daniel Lupei, and Amir Shaikhha<br/>
-Technical Report, 2013. (an extended version of our <a href="http://dx.doi.org/10.1007/s00778-013-0348-4">VLDBJ 2014 paper</a>)
-</li>
+<p>DBToaster is a generative compiler and as you see in the above image, whenever you want to incrementally maintain a new SQL view, which is actually a query, you will use DBToaster to generate the incremental view maintenance program (IVM).</p>
 
-<li><a href="http://www.dbtoaster.org/papers/2013-ring-report.pdf">Incremental Query Evaluation in a Ring of Databases. </a><br/>
-Christoph Koch<br/>
-Technical Report, 2013. 
-</li>
+<p>Afterwards, you can plug the generated IVM program into your own application(s). You only need to pass your data stream, which consists of all insert, update and delete operations on your data tables, to these generated programs.</p>
 
-<li><a href="http://www.dbtoaster.org/papers/pvldb2012-dbtoaster.pdf">DBToaster: Higher-order Delta Processing for Dynamic, Frequently Fresh Views. </a><br/>
-Yanif Ahmad, Oliver Kennedy, Christoph Koch, and Milos Nikolic<br/>
-Proc. VLDB 2012, Istanbul, Turkey.
-</li>
+<p>In return, the IVM programs will always maintain the fresh result of your view and on your request, the latest result will be returned to your application.</p>
 
-<li><a href="http://www.dbtoaster.org/papers/cidr2011-dbtoaster.pdf">DBToaster: Agile Views in a Dynamic Data Management System.</a><br/>
-Oliver Kennedy, Yanif Ahmad and Christoph Koch<br/>
-Proc. CIDR 2011, Monterey, California.
-</li>
+<p>The DBToaster is internally divided into two main components: Frontend and Backend.</p>
 
-<li><a href="http://www.dbtoaster.org/papers/pods2010-ring.pdf">Incremental Query Evaluation in a Ring of Databases. </a><br/>
-Christoph Koch<br/>
-Proc. PODS 2010, Indianapolis, Indiana. 
-</li>
+<div style="width:100%;text-align:center;"><img src="internal_arch.png" style="width:100%;"></div>
 
-<li><a href="http://www.dbtoaster.org/papers/vldb2009-dbtoaster-demo.pdf">DBToaster: A SQL Compiler for High-Performance Delta Processing in Main-Memory Databases. </a><br/>
-Yanif Ahmad and Christoph Koch<br/>
-Proc. VLDB 2009, Demo paper. 
-</li>
-</ul>
+<p>As it is presented in the image above, the task of Frontend is to parse the given SQL program and convert it into an internal calculus for IVM and then it is compiled and optimized and finally converted into an intermediate IVM language that is specific to DBToaster.</p>
 
-<a name="presentations"></a>
-<h3>Presentations</h3>
-<ul>
-<li><b>Milos</b> at EcoCloud 2013: <a href="http://www.dbtoaster.org/papers/ecocloud2013-dbtoaster-mn.pdf">DBToaster: Do It Fast, Do It Incrementally.</a></li>
-<li><b>Oliver</b> at VLDB 2012: <a href="http://www.dbtoaster.org/papers/pvldb2012-dbtoaster-oak.pdf">Higher-Order Delta Processing for Dynamic, Frequently Fresh Views.</a></li>
-<li><b>Yanif</b> at CIDR 2011: <a href="http://www.dbtoaster.org/papers/cidr2011-dbtoaster-yna.pptx">Agile Views in a Dynamic Data Management System.</a></li>
-<li><b>Christoph</b> at the EPFL KTN Seminar: <a href="http://slideshot.epfl.ch/play/ktn_koch">Rethinking the Foundations of Databases</a></li>
-<li><b>Christoph</b> at AKBC2010: <a href="http://videolectures.net/akbc2010_koch_fivm/">DBToaster</a></li>
-</ul>
+<p>Then, Backend will accept the output of the Frontend and after parsing it, it would try to optimize it using <a href="https://github.com/epfldata/lms/tree/booster-develop-0.3">Lightweight Modular Staging (LMS)</a> and then will use either C++ or Scala code generator to produce the concrete output program in C++ or Scala, respectively.</p>
 
-              </div><!-- /content -->
+<p>In addition, based on the parameters given by the user, the Backend might apply a second stage compiler to compile the generated program for producing the executable binary or byte-code.</p>
+        <div class="doc_chain_link"> &lt; <span class="doc_chain_link_prev"><a href="docs_start.html" >Getting Started</a></span> | <span class="doc_chain_link_next"><a href="docs_compiler.html" >Command-Line Reference</a></span> &gt; </div>      </div><!-- /content -->
     </div><!-- /contentwrapper -->
   </div><!-- /pagebody -->
   <hr/>

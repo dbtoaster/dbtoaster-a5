@@ -10,6 +10,7 @@ $pages = array(
   "download"         => (isset($now_building_distro) ? "License" : "Downloads"),
   "docs"             => "Installation",
     "docs_start"     => "Getting Started",
+    "docs_architecture"=> "Architecture",
     "docs_compiler"    => "Command-Line Reference",
     "docs_sql"         => "DBToaster SQL Reference",
     "docs_stdlib"      => "DBToaster StdLib Reference",
@@ -17,6 +18,7 @@ $pages = array(
     "docs_cpp"         => "C++ Code Generation",
     "docs_scala"       => "Scala Code Generation",
     "docs_java"        => "DBToaster in Java Programs",
+    "docs_customadaptors"=> "Custom Adaptors",
   "bugs"             => "Bug Reports",
 );
 
@@ -189,7 +191,8 @@ function chain_link_docs() {
             <a href="#" class="dropdown-toggle" data-toggle="dropdown">Documentation <b class="caret"></b></a>
             <ul class="dropdown-menu">              
               <li><?= mk_link("Installation", "docs"); ?></li>
-              <li><?= mk_link(null, "docs", "start"); ?></li>              
+              <li><?= mk_link(null, "docs", "start"); ?></li>
+              <li><?= mk_link(null, "docs", "architecture"); ?></li>
               <li><?= mk_link(null, "docs", "compiler"); ?></li>
               <li><?= mk_link('<small><i class="fa fa-caret-square-o-right"></i> Command-Line Options</small>', "docs", "compiler", 
                                                         "#options"); ?></li>
@@ -203,6 +206,7 @@ function chain_link_docs() {
               <li><?= mk_link(null, "docs", "cpp"); ?></li>
               <li><?= mk_link(null, "docs", "scala"); ?></li>
               <li><?= mk_link(null, "docs", "java"); ?></li>
+              <li><?= mk_link(null, "docs", "customadaptors"); ?></li>
             </ul>
           </li>
           <li class="dropdown">
