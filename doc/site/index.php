@@ -20,6 +20,7 @@ $pages = array(
     "docs_java"        => "DBToaster in Java Programs",
     "docs_customadaptors"=> "Custom Adaptors",
   "bugs"             => "Bug Reports",
+  "samples"          => "Sample Queries",
 );
 
 if(isset($_GET["page"])){

@@ -79,23 +79,23 @@
       <div class="content">
                 <div class="titlebox">Performance</div><script src="http://d3js.org/d3.v3.min.js"></script>
 
-<label class="checkbox-inline" id="lbl_rep">
-   <input class="filter_data" id="cb_rep" type="checkbox"> REP
-</label>
 <label class="checkbox-inline" id="lbl_dbx">
    <input class="filter_data" id="cb_dbx" type="checkbox" checked> DBX
 </label>
 <label class="checkbox-inline" id="lbl_spy">
    <input class="filter_data" id="cb_spy" type="checkbox" checked> SPY
 </label>
+<label class="checkbox-inline" id="lbl_rep">
+   <input class="filter_data" id="cb_rep" type="checkbox"> REP
+</label>
 <label class="checkbox-inline" id="lbl_ivm">
    <input class="filter_data" id="cb_ivm" type="checkbox"> IVM
 </label>
-<label class="checkbox-inline" id="lbl_prcpp">
-   <input class="filter_data" id="cb_prcpp" type="checkbox"> C++ (R1)
-</label>
 <label class="checkbox-inline" id="lbl_prscala">
    <input class="filter_data" id="cb_prscala" type="checkbox"> Scala (R1)
+</label>
+<label class="checkbox-inline" id="lbl_prcpp">
+   <input class="filter_data" id="cb_prcpp" type="checkbox"> C++ (R1)
 </label>
 <label class="checkbox-inline" id="lbl_scala">
    <input class="filter_data" id="cb_scala" type="checkbox"> Scala (R2)
@@ -169,7 +169,7 @@ function drawBars(rawData, rawGroups) {
 
 d3.csv("data/bakeoff.csv", function(error, rawInput) {
    var data = [];
-   var groups = ["rep", "dbx", "spy", "ivm", "prcpp", "prscala", "scala", "cpp"];
+   var groups = ["dbx", "spy", "rep", "ivm", "prscala", "prcpp", "scala", "cpp"];
 
    rawInput.forEach(function (d) {
       groups.forEach(function (g) {
@@ -227,7 +227,7 @@ d3.csv("data/bakeoff.csv", function(error, rawInput) {
 
 <p>The graphs show the performance of each system on a set of realtime data-warehousing queries based on the TPC-H query benchmark.  These queries are all included as examples in the DBToaster distribution.</p>
 
-<p>REP (Depth-0) represents a naive query evaluation strategy where each refresh requires a full re-evaluation of the entire query.  IVM (Depth-1) is a well known technique called Incremental View Maintenance (we discuss the distinctions in depth in our technical report).  Each of these was implemented by a DBToaster-generated engine.</p>
+<p>REP (Depth-0) represents a naive query evaluation strategy where each refresh requires a full re-evaluation of the entire query.  IVM (Depth-1) is a well known technique called Incremental View Maintenance (we discuss the distinctions in depth in our technical report).  Both of these (REP and IVM) were implemented by a DBToaster-generated engine.</p>
 
 <p>The experiments are performed on a single-socket Intel Xeon E5- 2620 (6 physical cores), 128GB of RAM, RHEL 6, and Open-JDK 1.6.0 28. Hyper-threading, turbo-boost, and frequency scaling are disabled to achieve more stable results.</p>
 

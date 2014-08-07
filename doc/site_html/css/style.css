@@ -298,11 +298,6 @@ rect:hover {
 /************************************\
 Setup
 \************************************/
-* {
-  -webkit-box-sizing: border-box;
-  margin: 0;
-  padding: 0;
-}
 
 body {
   font-family: 'Open Sans', sans-serif;
@@ -311,10 +306,14 @@ body {
 .container {
   width: 850px;
   margin: 4em auto;
-  padding: 0px 140px 0px 125px!important;
+  padding: 0px 50px 0px 15px!important;
   position: relative;
 }
 
+.container a:hover {
+  text-decoration: none;
+  cursor: pointer;
+}
 a:hover {
   text-decoration: none;
   cursor: pointer;
@@ -438,4 +437,70 @@ INTERESTING STYLES
 
 .fa {
   line-height: unset!important;
+}
+
+.sbutton {
+  border: 0 none;
+  border-radius: 2px 2px 2px 2px;
+  color: #FFFFFF;
+  cursor: pointer;
+  display: inline-block;
+  font-family: Arial,sans-serif;
+  font-size: 12px;
+  font-weight: bold;
+  line-height: 20px;
+  margin-bottom: 0;
+  margin-top: 10px;
+  padding: 7px 10px;
+  text-transform: none;
+  transition: all 0.3s ease 0s;
+  -moz-transition: all 0.3s ease 0s;
+  -webkit-transition: all 0.3s ease 0s;
+  /*min-width: 16.795%;*/
+  text-align: center; /* DELETE WHEN WIDTH AUTO */
+}
+
+.sbutton.red {
+  background: none repeat scroll 0 0 #E0645C;
+  color: #FFFFFF;
+}
+.sbutton.red:hover {
+  background: none repeat scroll 0 0 #999999;
+  color: #FFFFFF;
+}
+
+.sbutton.dark {
+  background: none repeat scroll 0 0 #444444;
+  color: #FFFFFF;
+}
+.sbutton.dark:hover {
+  background: none repeat scroll 0 0 #2DB6CF;
+  color: #FFFFFF;
+}
+
+.sbutton.light {
+  background: none repeat scroll 0 0 #999999;
+  color: #FFFFFF;
+}
+.sbutton.light:hover {
+  background: none repeat scroll 0 0 #444444;
+  color: #FFFFFF;
+}
+
+.sbutton.green {
+  background: none repeat scroll 0 0 #46b98a;
+  color: #FFFFFF;
+}
+.sbutton.green:hover {
+  background: none repeat scroll 0 0 #444444;
+  color: #FFFFFF;
+}
+
+.sbutton.blue {
+  background: none repeat scroll 0 0 #2DB6CF;
+  color: #FFFFFF;
+}
+.sbutton.blue:hover {
+  background: none repeat scroll 0 0 #444444;
+  color: #FFFFFF;
 }

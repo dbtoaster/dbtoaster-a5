@@ -29,7 +29,7 @@ def build_php(script, target_dir)
   
   Dir.chdir script_dir;
   
-  sources = Dir.glob("pages/*.php").map do |source|
+  sources = Dir.glob("pages/*.php").select { |source| !source.include? "samples" }.map do |source|
       source = File.basename(source, ".php");
       parts = source.split(/_/);
       page = parts.shift;

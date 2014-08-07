@@ -19,12 +19,12 @@
   </section>
   
   <!-- Store Button -->
-  <!--section class="btn-wrapper-shop">
+  <section class="btn-wrapper-shop">
     <div class="store-btn">
-      <a href="javascript:void(0)">Store</a>
+      <?= mk_link("Online Samples", "samples", null); ?>
     </div>
     <span id="shop-info" style="display: none;">Individual license: 49 US$</span> 
-  </section-->
+  </section>
 </div>
 <?php } ?>
 
