@@ -147,7 +147,7 @@ window.onload = function() {
 </table>
 <script type="text/javascript">
 window.onload = function() {
-  $( ".titlebox" ).append(": <?=$query ?>").prepend("<div onclick=\"location.href='index.php?page=samples';\" style=\"margin-bottom:-40px;margin-top:0px;\" class=\"sbutton <?=$query_color ?> center\">Back</div> ")
+  $( ".titlebox" ).append(": <?=$query_code ?>").prepend("<div onclick=\"location.href='index.php?page=samples';\" style=\"margin-bottom:-40px;margin-top:0px;\" class=\"sbutton <?=$query_color ?> center\">Back</div> ")
 };
 </script>
 <?php } ?>
