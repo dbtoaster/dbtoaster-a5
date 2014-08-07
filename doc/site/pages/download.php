@@ -43,6 +43,14 @@
     <?= mk_link("&nbsp;&nbsp;Online&nbsp;&nbsp;", "docs", null, "", " class=\"btn btn-primary\""); ?>
   </td>
 </tr>
+<tr>
+  <td align="left"><b>Samples</b></td>
+  <td>3263</td>
+  <td>2014-Aug-01</td>
+  <td align="left">
+    <?= mk_link("&nbsp;&nbsp;Online&nbsp;&nbsp;", "samples", null, "", " class=\"btn btn-primary\""); ?>
+  </td>
+</tr>
 </table>
 
 <a name="older"><h4>Older releases</h4></a>

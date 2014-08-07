@@ -126,6 +126,8 @@ function chain_link_docs() {
 <link rel="stylesheet" type="text/css" href="css/style.css" />
 <link rel="stylesheet" type="text/css" href="css/bootstrap.min.css" media="screen" />
 <link rel="stylesheet" type="text/css" href="css/bootstrap-theme.min.css" />
+<link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
+<link rel="icon" href="favicon.ico" type="image/x-icon">
 <link href="//netdna.bootstrapcdn.com/font-awesome/4.0.1/css/font-awesome.css" rel="stylesheet">
 
 <?php if(!isset($now_building_distro)) { ?>

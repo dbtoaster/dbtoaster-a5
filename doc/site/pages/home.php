@@ -51,10 +51,6 @@ restrictions on commercial use).
 </p>
 
 <p>
-<?= mk_link("Download DBToaster", "download", null); ?>
-</p>
-
-<p>
 Get started quickly with <?= mk_link("these instructions", "docs", "start"); ?>
 </p>
 

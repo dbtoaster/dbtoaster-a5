@@ -61,7 +61,8 @@ def build_php(script, target_dir)
   end
 end
 
-copy_files(["site/9.jpg",
+copy_files(["site/favicon.ico",
+            "site/9.jpg",
             "site/style.css",
             "site/bakeoff.png",
             "site/bluetab.gif",
