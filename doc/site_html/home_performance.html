@@ -81,30 +81,38 @@
       <div class="content">
                 <div class="titlebox">Performance</div><script src="http://d3js.org/d3.v3.min.js"></script>
 
-<label class="checkbox-inline" id="lbl_dbx">
-   <input class="filter_data" id="cb_dbx" type="checkbox" checked> DBX
-</label>
-<label class="checkbox-inline" id="lbl_spy">
-   <input class="filter_data" id="cb_spy" type="checkbox" checked> SPY
-</label>
-<label class="checkbox-inline" id="lbl_rep">
-   <input class="filter_data" id="cb_rep" type="checkbox"> REP
-</label>
-<label class="checkbox-inline" id="lbl_ivm">
-   <input class="filter_data" id="cb_ivm" type="checkbox"> IVM
-</label>
-<label class="checkbox-inline" id="lbl_prscala">
-   <input class="filter_data" id="cb_prscala" type="checkbox"> R1 (Scala)
-</label>
-<label class="checkbox-inline" id="lbl_prcpp">
-   <input class="filter_data" id="cb_prcpp" type="checkbox"> R1 (C++)
-</label>
-<label class="checkbox-inline" id="lbl_scala">
-   <input class="filter_data" id="cb_scala" type="checkbox"> R2 (Scala)
-</label>
-<label class="checkbox-inline" id="lbl_cpp">
-   <input class="filter_data" id="cb_cpp" type="checkbox" checked> R2 (C++)
-</label>
+<div class="magic_chkbox bardbx">
+   <input type="checkbox" class="filter_data" id="cb_dbx" name="" checked /> 
+   <label class="checkbox-inline" id="lbl_dbx" for="cb_dbx">&nbsp;DBX</label>
+</div>
+<div class="magic_chkbox barspy">
+   <input type="checkbox" class="filter_data" id="cb_spy" name="" checked /> 
+   <label class="checkbox-inline" id="lbl_spy" for="cb_spy">&nbsp;SPY</label>
+</div>
+<div class="magic_chkbox barrep">
+   <input type="checkbox" class="filter_data" id="cb_rep" name="" /> 
+   <label class="checkbox-inline" id="lbl_rep" for="cb_rep">&nbsp;REP</label>
+</div>
+<div class="magic_chkbox barivm">
+   <input type="checkbox" class="filter_data" id="cb_ivm" name="" /> 
+   <label class="checkbox-inline" id="lbl_ivm" for="cb_ivm">&nbsp;IVM</label>
+</div>
+<div class="magic_chkbox barprscala">
+   <input type="checkbox" class="filter_data" id="cb_prscala" name="" /> 
+   <label class="checkbox-inline" id="lbl_prscala" for="cb_prscala">&nbsp;R1(Scala)</label>
+</div>
+<div class="magic_chkbox barprcpp">
+   <input type="checkbox" class="filter_data" id="cb_prcpp" name="" /> 
+   <label class="checkbox-inline" id="lbl_prcpp" for="cb_prcpp">&nbsp;R1(C++)</label>
+</div>
+<div class="magic_chkbox barscala">
+   <input type="checkbox" class="filter_data" id="cb_scala" name="" /> 
+   <label class="checkbox-inline" id="lbl_scala" for="cb_scala">&nbsp;R2(Scala)</label>
+</div>
+<div class="magic_chkbox barcpp">
+   <input type="checkbox" class="filter_data" id="cb_cpp" name="" checked /> 
+   <label class="checkbox-inline" id="lbl_cpp" for="cb_cpp">&nbsp;R2(C++)</label>
+</div>
 
 <div class="bakeoff">
 </div>

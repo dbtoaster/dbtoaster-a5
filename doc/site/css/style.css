@@ -249,36 +249,165 @@ rect:hover {
   stroke-width: 1pt;
 }
 
-.barcpp {
-  fill: #fdc086;
-}
 
 .barrep {
   fill: #a6cee3;
+  margin: 20px 50px 0 0!important;
+}
+.barrep label {
+  background: #a6cee3!important;
 }
 
 .bardbx {
   fill: #1f78b4;
+  margin: 20px 50px 0 0!important;
+}
+.bardbx label {
+  background: #1f78b4!important;
+}
+.bardbx label:after  {
+  content: ''!important;
+  position: absolute!important;
+  width: 9px!important;
+  height: 5px!important;
+  background: transparent!important;
+  top: 5px!important;
+  left: 5px!important;
+  border: 3px solid #fff!important;
+  border-top: none!important;
+  border-right: none!important;
+
+  -webkit-transform: rotate(-45deg)!important;
+  -moz-transform: rotate(-45deg)!important;
+  -o-transform: rotate(-45deg)!important;
+  -ms-transform: rotate(-45deg)!important;
+  transform: rotate(-45deg)!important;
 }
 
 .barspy {
   fill: #b2df8a;
+  margin: 20px 50px 0 0!important;
+}
+.barspy label {
+  background: #b2df8a!important;
 }
 
 .barscala {
   fill: #33a02c;
 }
-
-.barscalalms {
-  fill: #fdbf6f;
+.barscala label {
+  background: #33a02c!important;
 }
 
 .barcpp {
   fill: #ff7f00;
 }
+.barcpp label {
+  background: #ff7f00!important;
+}
 
 .barivm {
   fill: #fb9a99;
+  margin: 20px 50px 0 0!important;
+}
+.barivm label {
+  background: #fb9a99!important;
+}
+
+.barprcpp {
+  fill: #080789;
+}
+.barprcpp label {
+  background: #080789!important;
+}
+.barprcpp label:after  {
+  content: ''!important;
+  position: absolute!important;
+  width: 9px!important;
+  height: 5px!important;
+  background: transparent!important;
+  top: 5px!important;
+  left: 5px!important;
+  border: 3px solid #fff!important;
+  border-top: none!important;
+  border-right: none!important;
+
+  -webkit-transform: rotate(-45deg)!important;
+  -moz-transform: rotate(-45deg)!important;
+  -o-transform: rotate(-45deg)!important;
+  -ms-transform: rotate(-45deg)!important;
+  transform: rotate(-45deg)!important;
+}
+
+.barprscala {
+  fill: #890000;
+}
+.barprscala label {
+  background: #890000!important;
+}
+.barprscala label:after  {
+  content: ''!important;
+  position: absolute!important;
+  width: 9px!important;
+  height: 5px!important;
+  background: transparent!important;
+  top: 5px!important;
+  left: 5px!important;
+  border: 3px solid #fff!important;
+  border-top: none!important;
+  border-right: none!important;
+
+  -webkit-transform: rotate(-45deg)!important;
+  -moz-transform: rotate(-45deg)!important;
+  -o-transform: rotate(-45deg)!important;
+  -ms-transform: rotate(-45deg)!important;
+  transform: rotate(-45deg)!important;
+}
+
+.magic_chkbox {
+  width: 25px;
+  margin: 20px 80px 0 0;
+  position: relative;
+  display: inline;
+}
+
+.magic_chkbox label {
+  cursor: pointer;
+  position: absolute;
+  width: 20px;
+  height: 20px;
+  top: 0;
+    left: 0;
+  background: #eee;
+  border:1px solid #ddd;
+}
+
+.magic_chkbox label:after {
+  opacity: 0;
+  content: '';
+  position: absolute;
+  width: 9px;
+  height: 5px;
+  background: transparent;
+  top: 5px;
+  left: 5px;
+  border: 3px solid #333;
+  border-top: none;
+  border-right: none;
+
+  -webkit-transform: rotate(-45deg);
+  -moz-transform: rotate(-45deg);
+  -o-transform: rotate(-45deg);
+  -ms-transform: rotate(-45deg);
+  transform: rotate(-45deg);
+}
+
+.magic_chkbox label:hover::after {
+  opacity: 0.5;
+}
+
+.magic_chkbox input[type=checkbox]:checked + label:after {
+  opacity: 1;
 }
 
 .datatooltip {
