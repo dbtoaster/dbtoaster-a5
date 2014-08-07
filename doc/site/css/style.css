@@ -333,7 +333,7 @@ INTERESTING STYLES
   background-color: #5bb75b;
   color: #FFFFFF!important;
   text-align: center;
-  line-height: 82px;
+  /*line-height: 82px;*/
   font-size: 1.4em;
   cursor: pointer;
 }
@@ -346,6 +346,18 @@ INTERESTING STYLES
   float: left;
   font-size: 1.6em;
   color: #FFFFFF!important;
+  padding-top: 20px;
+}
+
+.download-text,
+.linux-bit {
+  line-height: 82px;
+}
+
+.mac-btn a,
+.windows-btn a,
+.linux-btn a {
+  line-height: 0;
 }
 
 .mac-btn {
