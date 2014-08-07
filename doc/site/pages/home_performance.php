@@ -13,16 +13,16 @@
    <input class="filter_data" id="cb_ivm" type="checkbox"> IVM
 </label>
 <label class="checkbox-inline" id="lbl_prscala">
-   <input class="filter_data" id="cb_prscala" type="checkbox"> Scala (R1)
+   <input class="filter_data" id="cb_prscala" type="checkbox"> R1 (Scala)
 </label>
 <label class="checkbox-inline" id="lbl_prcpp">
-   <input class="filter_data" id="cb_prcpp" type="checkbox"> C++ (R1)
+   <input class="filter_data" id="cb_prcpp" type="checkbox"> R1 (C++)
 </label>
 <label class="checkbox-inline" id="lbl_scala">
-   <input class="filter_data" id="cb_scala" type="checkbox"> Scala (R2)
+   <input class="filter_data" id="cb_scala" type="checkbox"> R2 (Scala)
 </label>
 <label class="checkbox-inline" id="lbl_cpp">
-   <input class="filter_data" id="cb_cpp" type="checkbox" checked> C++ (R2)
+   <input class="filter_data" id="cb_cpp" type="checkbox" checked> R2 (C++)
 </label>
 
 <div class="bakeoff">
