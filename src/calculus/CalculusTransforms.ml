@@ -1074,9 +1074,17 @@ let rec nesting_rewrites (expr:C.expr_t) =
                            else (unnested, CalcRing.mk_prod [nested; term])
                         ) (CalcRing.one, CalcRing.one) 
                           (CalcRing.prod_list domain_nested) in
+
+                      (* Update group-by variables. Note that the schema can 
+                         expand. For instance:
+                          (A ^= 0) * AggSum([B], (B ^= {A + 5}) * R(A,B,C))
+                         is transformed into:
+                          (A ^= 0) * (B ^= {A + 5}) * AggSum([A,B], R(A,B,C)) *)                      
+                      let unnested_ivars = fst(C.schema_of_expr unnested) in
                       let new_gb_vars = 
-                           ListAsSet.inter gb_vars 
-                                           (snd (C.schema_of_expr nested))
+                        ListAsSet.inter 
+                          (snd (C.schema_of_expr nested))
+                          (ListAsSet.union gb_vars unnested_ivars)
                       in
                         Debug.print "LOG-NESTINGREWRITES-DETAIL" (fun () ->
                             "Nesting rewrites lifting out:\n"^
@@ -1382,11 +1390,11 @@ type term_map_t = {
   Instead, we explicitly replace Negs with * {-1} in the expression.  
 *)
 let erase_negs = 
-  CalcRing.fold 
+    CalcRing.fold 
       CalcRing.mk_sum 
       CalcRing.mk_prod
       (fun x -> CalcRing.mk_prod [ C.mk_value (Arithmetic.mk_int (-1)); x ])
-      CalcRing.mk_val 
+      CalcRing.mk_val
 ;;
 
 (**

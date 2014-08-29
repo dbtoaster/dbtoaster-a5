@@ -295,6 +295,7 @@ in
    test "Aggsum of a lifted value - schema unchanged"
       "AggSum([A], (A ^= B) * R(A,C))"
       "(A ^= B) * AggSum([A], R(A,C))";
+
 ;;
 let test msg scope input output =
    log_test ("Factorize One Polynomial ("^msg^")")
@@ -626,17 +627,17 @@ in
                      TOTAL_VOLUME))) *
                 {[listmax:int](1, __sql_inline_agg_1)}))) *
           {[/:float](__sql_inline_agg_2)})"
-        "((TOTAL_NAME ^= 42) * R(R_A, R_B, R_C) *
+        "((TOTAL_NAME ^= 42) * R(R_A, R_B, R_C) * (TOTAL_NAME ^= R_B) * 
           (__sql_inline_agg_2 ^=
             AggSum([], 
               ((__sql_inline_agg_1 ^=
                  AggSum([R_A], 
                    (AggSum([R_A, TOTAL_NAME, TOTAL_VOLUME], 
-                      (R(R_A, R_B, R_C) * (TOTAL_NAME ^= R_B) *
-                        (TOTAL_VOLUME ^= R_C))) *
+                      (R(R_A, R_B, R_C) * (TOTAL_VOLUME ^= R_C) *
+                        (TOTAL_NAME ^= R_B))) *
                      TOTAL_VOLUME))) *
                 {[listmax:int](1, __sql_inline_agg_1)}))) *
-          (TOTAL_NAME ^= R_B) * R_C * {[/:float](__sql_inline_agg_2)})";
+          R_C * {[/:float](__sql_inline_agg_2)})";
     
     test "LiftAndScope" [] ["A"; "B"]
        "R(A,B) * (X ^= 5) * (Y ^= AggSum([A], R(A,B) * (X ^= B))) * {Y < 0}"
@@ -649,6 +650,7 @@ in
     test "Unify lifts and group-by variables" [] ["A"; "C"]
        "S(C) * (A ^= C) * AggSum([A], R(B) * (A ^= B)) "
        "S(C) * (A ^= C) * AggSum([A], R(B) * (A ^= B)) ";
+
 
     (* test "LiftsAndSchemas" [] ["A"]
       "AggSum([X], (X ^= 42) * R(A, B) * (X ^= B))"

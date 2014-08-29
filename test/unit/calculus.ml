@@ -304,3 +304,21 @@ in
   test_identical "Simple Zeus 48183500 -- comparisons only"
     "({S_B = (20 + (-1 * S_C) + BV0ZRLQKV_A + BV0ZRLQKV_A)})"
     "({S_B = (20 + (-1 * S_C) + BV0ZRLQKV_A + BV0ZRLQKV_A)})";
+
+  ;;
+
+  let test_decomposition msg input output = 
+    let input_calc = parse_calc input in
+    log_list_test ("Decomposition ( "^msg^" )")
+      CalculusPrinter.string_of_expr
+      (List.map snd (CalculusDecomposition.decompose_poly input_calc))
+      (List.map parse_calc output)
+  ;;
+
+  test_decomposition "Polynomial decomposition"
+    "R(A,B) * AggSum([], R(B,C))"
+    ["R(A,B) * R(B_1, C)"];
+
+  test_decomposition "Polynomial decomposition -- unsafe mapping"
+    "R(A,B) * AggSum([], R(B, B_2))"
+    ["R(A,B) * R(B_2, B_2_1)"]; 

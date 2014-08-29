@@ -10,6 +10,8 @@ open Calculus
 module C = Calculus
 (**/**)
 
+let mk_fresh_var = 
+   FreshVariable.declare_class "calculus/CalculusDecomposition" ""
 
 (******************************************************************************)
 (**
@@ -25,17 +27,41 @@ module C = Calculus
 *)
 let decompose_poly (expr:C.expr_t):(var_t list * C.expr_t) list = 
 (* TODO: ensure that different expessions under AggSum have disjunct schemas *)
+   
+   let map_var (vname, vtype) =
+     ((vname, vtype), (mk_fresh_var ~inline:vname (), vtype)) 
+   in
+   let rec erase_aggsums ?(scope = []) e = 
 
-   let rec erase_aggsums e = 
-      C.CalcRing.fold C.CalcRing.mk_sum C.CalcRing.mk_prod C.CalcRing.mk_neg
-         (fun lf -> begin match lf with
-            | AggSum(s, subexp) -> erase_aggsums subexp
-            | _ -> C.CalcRing.mk_val lf
+      C.fold ~scope:scope ~extend_schema_aggresively:true
+        (fun _ sl -> C.CalcRing.mk_sum sl)
+        (fun _ pl -> C.CalcRing.mk_prod pl)
+        (fun _ term -> C.CalcRing.mk_neg term)
+        (fun (scope, _) lf -> begin match lf with
+          | AggSum(gb_vars, subexp) ->           
+            begin
+              (* Removing AggSum might introduce variable name conflicts *)
+              let subexp_ovars = snd(C.schema_of_expr subexp) in
+              let new_ovars = ListAsSet.diff subexp_ovars gb_vars in
+              let conflict_vars = ListAsSet.inter scope new_ovars in
+              let rewritten_subexp = 
+                if (conflict_vars == []) then subexp
+                else begin
+                  let unsafe_mapping = (List.map map_var conflict_vars) in
+                  let safe_mapping = 
+                    find_safe_var_mapping unsafe_mapping subexp 
+                  in
+                    rename_vars safe_mapping subexp             
+                end
+              in
+                erase_aggsums ~scope:scope rewritten_subexp
+            end
+          | _ -> C.CalcRing.mk_val lf
          end) e
    in 
    (* Top-level sum-terms can have different schemas *)
    List.fold_left (fun result term ->
-      let schema = snd (C.schema_of_expr term) in
+      let schema = snd(C.schema_of_expr term) in
       let term_decomposed = List.map (fun x -> (schema, x))
          (C.CalcRing.sum_list 
              (C.CalcRing.polynomial_expr (erase_aggsums term)))
