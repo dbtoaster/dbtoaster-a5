@@ -81,6 +81,10 @@
       <div class="content">
                 <div class="titlebox">Performance</div><script src="http://d3js.org/d3.v3.min.js"></script>
 
+<div id="staticimg">
+   <img src="perf.png" style="width:100%"/>
+</div>
+
 <div class="magic_chkbox bardbx">
    <input type="checkbox" class="filter_data" id="cb_dbx" name="" checked /> 
    <label class="checkbox-inline" id="lbl_dbx" for="cb_dbx">&nbsp;DBX</label>
@@ -224,10 +228,12 @@ d3.csv("data/bakeoff.csv", function(error, rawInput) {
    d3.selectAll(".filter_data").on("change", function() {
       drawBars(data, groups);
    });
+   $("#staticimg").hide();
 });
 
 </script>
 
+<p><i>If you cannot see the above graphs, please <a href="perf.png">click here</a>. The underlying performance measurement data can be downloaded from <a href="data/bakeoff.csv">here</a>.</i></p>
 
 <p>The above graphs show a performance comparison of DBToaster-generated query engines against a commercial database system (DBX), a commercial stream processor (SPY), and several naive query evaluation strategies implemented in DBToaster that do not involve the Higher-Order incremental view maintenance. (The commercial systems remain anonymous in accordance with the terms of their licensing agreements).</p>
 
