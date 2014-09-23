@@ -522,7 +522,8 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
                 lift_v from the schema of subexp; counterexample:
                    S(C) * (A ^= C) * AggSum([A], R(B) * (A ^= B)) 
                 Here, we don't update gb_vars ([A]).             *)
-            if List.mem lift_v subexp_ovars then C.mk_aggsum gb_vars subexp else
+            if List.mem lift_v subexp_ovars then C.mk_aggsum gb_vars subexp 
+            else
  
             (* subexp is rewritten.  We just need to update gb_vars properly.
                This can only change (in this unify function) if the lhs variable
@@ -744,7 +745,6 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
    end in 
       rcr big_scope big_schema big_expr
 
-
 let unify_domains (big_scope:var_t list) (big_schema:var_t list) 
                 (big_expr:C.expr_t): C.expr_t =
    Debug.print "LOG-CALCOPT-DETAIL" (fun () ->
@@ -896,25 +896,28 @@ let advance_lifts scope expr =
          (CalculusPrinter.string_of_expr (CalcRing.mk_prod pl)) ^
          (ListExtras.ocaml_of_list string_of_var scope));
 
-      (* First, push delta domains and delta terms to the front *)
-      let (delta_domains, delta_rels, pl_rest) = 
-        List.fold_right (fun term (domains, deltas, rest) ->
-          begin match term with
-            | CalcRing.Val(DeltaRel _) -> (domains, term :: deltas, rest)
-            | CalcRing.Val(DomainDelta _) -> (term :: domains, deltas, rest)
-            | _ -> (domains, deltas, term :: rest)
-          end
-        ) pl ([], [], [])
-      in
-      CalcRing.mk_prod ( 
-        (List.fold_left (fun curr_ret curr_term ->
+      (* Extract domain terms *)
+      let (domain_terms, pl_rest) = 
+        List.partition (fun term -> match term with
+          | CalcRing.Val(DomainDelta _) -> true
+          | _ -> false
+        ) pl in
+
+      (* Extend scope *)
+      let scope_domain = 
+        ListAsSet.union scope 
+          (snd (C.schema_of_expr (CalcRing.mk_prod domain_terms))) in
+
+      (* Advance lifts in the rest *)
+      let rest_terms = 
+        List.fold_left (fun curr_ret curr_term ->
           begin match curr_term with
-             | CalcRing.Val(Lift(_,_)) -> 
-                begin match ( 
-                  ListExtras.scan_fold (fun ret_term lhs rhs_hd rhs_tl ->
-                    if ret_term <> None then ret_term else
+            | CalcRing.Val(Lift(_,_)) -> 
+              begin match ( 
+                ListExtras.scan_fold (fun ret_term lhs rhs_hd rhs_tl ->
+                  if ret_term <> None then ret_term else
                       let local_scope = 
-                         ListAsSet.union scope
+                         ListAsSet.union scope_domain
                             (snd (C.schema_of_expr (CalcRing.mk_prod lhs)))
                       in
                       let rhs = rhs_hd::rhs_tl in
@@ -927,10 +930,11 @@ let advance_lifts scope expr =
                    |  Some(s) -> s
                    |  None    -> curr_ret @ [curr_term]
                 end
-             | _ -> curr_ret @ [curr_term]
+            | _ -> curr_ret @ [curr_term]
           end
-        ) [] (delta_domains @ delta_rels @ pl_rest) )
-      )
+        ) [] pl_rest 
+      in
+        CalcRing.mk_prod (domain_terms @ rest_terms)
    )
    (fun _ x -> CalcRing.mk_neg x)
    (fun _ x ->
@@ -986,6 +990,11 @@ let advance_lifts scope expr =
     [AggSum([...], Domain(GB1, ...) * B) = Domain(GB2,...) * AggSum([...], B)]
         IF GB2 <> []
 
+    [Exists(A) => A
+        IF A produces only tuples with multiplicity zero or one ]
+
+    [Exists(A * B) => Exists(A) * Exists(B) ]
+
    @param expr    The calculus expression being processed
 *)
 let rec nesting_rewrites (expr:C.expr_t) = 
@@ -1039,29 +1048,59 @@ let rec nesting_rewrites (expr:C.expr_t) =
                      rewritten
                   | CalcRing.Prod(pl) ->
                       (* Extract delta domains out of AggSum *)
-                      let (domain_unnested, domain_nested) =
-                        List.fold_left (fun (lhs, rhs) term ->
-                          match term with 
-                            | CalcRing.Val(DomainDelta(
-                                CalcRing.Val(DeltaRel(rn,rvals)))) 
-                            | CalcRing.Val(DomainDelta(
-                                CalcRing.Val(AggSum(_, 
-                                  CalcRing.Val(DeltaRel(rn,rvals)))))) ->
-                              (* update gb_vars *)
-                              let domain_gb_vars = 
-                                ListAsSet.inter gb_vars 
-                                                (snd (C.schema_of_expr term)) 
-                              in
-                              if domain_gb_vars = [] 
-                              then (lhs, CalcRing.mk_prod [rhs; term]) 
-                              else (CalcRing.mk_prod [ 
-                                      lhs; C.mk_domain 
-                                              (C.mk_aggsum domain_gb_vars 
-                                                  (C.mk_deltarel rn rvals))],
-                                    rhs)
-                            | _ -> (lhs, CalcRing.mk_prod [rhs; term])
-                        ) (CalcRing.one, CalcRing.one) pl in
-                      
+                      let (domain_unnested, rest) = 
+                        ListExtras.scan_fold (
+                          fun (lhs, rhs) _ term rhs_terms ->
+                            match term with 
+                              | CalcRing.Val(DomainDelta(dom_exp)) ->  
+                                
+                                let dom_ovars = snd (C.schema_of_expr term) in
+                                
+                                (* Extend domain with lifts of type (A ^= B)  
+                                   when B is in dom_ovars *)
+                                let (ext_dom_ovars, ext_dom_exp) = 
+                                  List.fold_left (fun (scope, dom_exp) rhs_term ->
+                                    begin match rhs_term with
+                                      | CalcRing.Val(Lift(v1, 
+                                          CalcRing.Val(Value(
+                                            ValueRing.Val(AVar(v2)))))) 
+                                        when (List.mem v2 scope) -> 
+                                          (ListAsSet.union [v1] scope,
+                                           CalcRing.mk_prod 
+                                             [ dom_exp; rhs_term ])
+
+                                      | _ -> (scope, dom_exp)
+                                    end
+                                  ) (dom_ovars, dom_exp) rhs_terms in
+
+                                (* Update gb_vars *)
+                                let dom_gb_vars = 
+                                  ListAsSet.inter gb_vars ext_dom_ovars in
+
+                                (* Pull out if overlaps with gb_vars *)
+                                if (dom_gb_vars <> [])
+                                then 
+                                  (CalcRing.mk_prod [
+                                     lhs; 
+                                     C.mk_domain  
+                                       (C.mk_aggsum dom_gb_vars ext_dom_exp) ], 
+                                   rhs)
+                                else 
+                                
+                                (* Impossible to unnest domain *)
+                                let (rivars, rovars) = 
+                                  schema_of_expr (CalcRing.mk_prod rhs_terms) in
+                                let rvars = ListAsSet.union rivars rovars in
+                                
+                                (* Remove domain term when not relevant *)
+                                if (ListAsSet.inter dom_ovars rvars <> [])
+                                then (lhs, CalcRing.mk_prod [rhs; term])
+                                (* else (lhs, rhs) *)
+                                else (lhs, CalcRing.mk_prod [rhs; term])
+
+                              | _ -> (lhs, CalcRing.mk_prod [rhs; term])
+                        ) (CalcRing.one, CalcRing.one) pl in 
+
                       let scope_domain = 
                         snd (C.schema_of_expr domain_unnested) in
                           
@@ -1073,7 +1112,7 @@ let rec nesting_rewrites (expr:C.expr_t) =
                            then (CalcRing.mk_prod [unnested; term], nested)
                            else (unnested, CalcRing.mk_prod [nested; term])
                         ) (CalcRing.one, CalcRing.one) 
-                          (CalcRing.prod_list domain_nested) in
+                          (CalcRing.prod_list rest) in
 
                       (* Update group-by variables. Note that the schema can 
                          expand. For instance:
@@ -1121,7 +1160,12 @@ let rec nesting_rewrites (expr:C.expr_t) =
                | CalcRing.Val(Value(ValueRing.Val(AConst(_)))) ->
                   C.bail_out (CalcRing.mk_val e) 
                      "Exists with a non-integer value"
-               | subexp -> C.mk_exists subexp
+               | subexp -> 
+                   CalcRing.mk_prod
+                    (List.map (fun term -> 
+                      if (C.expr_has_binary_outcome term) then term
+                      else C.mk_exists term
+                    ) (CalcRing.prod_list subexp))
             end               
             
 (***** END EXISTS HACK *****)
@@ -1157,6 +1201,10 @@ let rec nesting_rewrites (expr:C.expr_t) =
                   end
                else C.mk_lift v nested
             in lift_expr
+
+         | DomainDelta(unprocessed_subterm) -> 
+            C.mk_domain (nesting_rewrites unprocessed_subterm)
+
          | _ -> CalcRing.mk_val e
       end)
       expr
@@ -1390,11 +1438,22 @@ type term_map_t = {
   Instead, we explicitly replace Negs with * {-1} in the expression.  
 *)
 let erase_negs = 
-    CalcRing.fold 
-      CalcRing.mk_sum 
-      CalcRing.mk_prod
-      (fun x -> CalcRing.mk_prod [ C.mk_value (Arithmetic.mk_int (-1)); x ])
-      CalcRing.mk_val
+  Calculus.rewrite 
+    (fun _ e -> CalcRing.mk_sum e)
+    (fun _ e -> CalcRing.mk_prod e)
+    (fun _ e -> CalcRing.mk_prod [ C.mk_value (Arithmetic.mk_int (-1)); e ])
+    (fun _ e -> CalcRing.mk_val e)
+    (fun _ _ -> true)
+;;
+
+(** Removes Domain from the expression. *)
+let erase_domain = 
+  C.rewrite_leaves 
+    (fun _ lf -> begin match lf with
+      | DomainDelta(subexp) -> C.mk_exists subexp
+      | _ -> CalcRing.mk_val lf
+    end) 
+    (fun _ _ -> true) 
 ;;
 
 (**

@@ -46,7 +46,7 @@ let scan_map (f:('a list -> 'a -> 'a list -> 'b)) (l:('a list)): ('b list) =
    in iterate [] l
 
 (** 
-   Fold the elements of a list in the sam manner as scan.  Like ListExtras.scan
+   Fold the elements of a list in the same manner as scan. Like ListExtras.scan
    but based on List.fold_left instead of List.iter  
    
    @param f    The fold function.  On any given invocation of f, l may be 

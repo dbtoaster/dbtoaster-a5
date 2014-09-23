@@ -842,6 +842,34 @@ let sanity_check_variable_names expr =
             )
       ) var_names
 
+(**
+  Check whether the given expression produces only 
+  tuples with multiplicity zero or one.
+*)
+let rec expr_has_binary_outcome ?(scope = []) expr = 
+   fold ~scope:scope
+      (fun _ sl -> match sl with | [x] -> x | _ -> false)
+      (fun _ pl -> List.for_all (fun x -> x) pl) 
+      (fun _ x -> x)
+      (fun (scope, _) lf -> begin match lf with
+         | Value _ -> false
+         | External _ -> false
+         | AggSum(gb_vars, subexp) -> 
+             (* if AggSum is singleton and subexp returns true *)
+             ListAsSet.diff gb_vars scope = [] &&
+             expr_has_binary_outcome ~scope:gb_vars subexp
+         | Rel _ -> false
+         | DeltaRel _ -> false
+         | DomainDelta _ -> true
+         | Cmp _ -> true
+         | Lift _ -> true
+(***** BEGIN EXISTS HACK *****)
+         | Exists _ -> true
+(***** END EXISTS HACK *****)
+      end)
+      expr
+
+
 (* Construction Helpers *)
 
 (** Create a Value expression *)

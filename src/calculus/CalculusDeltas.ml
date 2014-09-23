@@ -17,44 +17,48 @@ let mk_delta_var =
 let error expr msg = raise (CalculusException(expr, msg));;
 (**/**)
 
-
-(** Extract lifts containing Value subexpressions *)
-let extract_lifts scope expr =
+(** Extract domains containing Value subexpressions *)
+let extract_domains ignore_delta_domains scope expr =
+   if Debug.active "DUMB-LIFT-DELTAS" then (CalcRing.one, expr) else
    (* Remove toplevel AggSum *)
    let schema = snd (C.schema_of_expr expr) in
    Debug.print "LOG-DELTA-DETAIL" (fun () ->
-      "Extracting lifts from lift delta: "^
+      "Extracting domains from lift delta: "^
       (ListExtras.ocaml_of_list string_of_var scope)^
       (ListExtras.ocaml_of_list string_of_var schema)^"\n"^
       (CalculusPrinter.string_of_expr expr)
    );
-   (* We need to get all the extractable lifts up into the top-level product.
+   (* We need to get all the extractable domains up into the top-level product.
       This is achieved by a combination of existing CalculusTransforms: 
-         NestingRewrites pulls lifts up and out of AggSums.
-         FactorizePolynomial pulls lifts up and out of Sums
-         AdvanceLifts assists, and moves lifts up as far left as possible.
+         NestingRewrites pulls domains up and out of AggSums.
+         FactorizePolynomial pulls domains up and out of Sums
+         AdvanceLifts assists, and moves domains up as far left as possible.
    *)
    let opt_expr = 
       CalculusTransforms.optimize_expr ~optimizations:[
          CalculusTransforms.OptNestingRewrites; 
-         CalculusTransforms.OptAdvanceLifts; 
+         CalculusTransforms.OptAdvanceLifts;
          CalculusTransforms.OptFactorizePolynomial
-      ] (scope,schema) expr in
+      ] (scope,schema) (CalculusTransforms.erase_negs expr) in
+
    (* Extract lifts containing Value subexpressions *)
    List.fold_left (fun (lhs, rhs) term ->
       match term with
-         | CalcRing.Val(Lift(lift_v, CalcRing.Val(Value(_)))) -> 
-            if (commutes ~scope:scope rhs term)
+          
+         | CalcRing.Val(Lift(lift_v, CalcRing.Val(Value(_)))) 
+           when ignore_delta_domains ->
+            if commutes ~scope:scope rhs term
             then (CalcRing.mk_prod [lhs; term], rhs)
-            else (lhs, CalcRing.mk_prod [rhs; term])
-
-         | CalcRing.Val(DomainDelta _) -> 
+            else (lhs, CalcRing.mk_prod [rhs; term]) 
+ 
+         | CalcRing.Val(DomainDelta _) 
+           when not ignore_delta_domains -> 
             (CalcRing.mk_prod [lhs; term], rhs)
 
          | _ -> (lhs, CalcRing.mk_prod [rhs; term])
    
    ) (CalcRing.one, CalcRing.one) (CalcRing.prod_list opt_expr)
-   
+
 (**
    [delta_of_expr delta_event expr]
    
@@ -63,12 +67,17 @@ let extract_lifts scope expr =
    @param expr          A Calculus expression without Externals
    @return              The delta of [expr] with respect to [delta_event]
 *)
-let rec delta_of_expr (delta_event:Schema.event_t) (expr:C.expr_t): C.expr_t =
+let rec delta_of_expr ?(ignore_delta_domains: bool = 
+                        Debug.active ("IGNORE-DELTA-DOMAINS"))
+                      (delta_event:Schema.event_t) (expr:C.expr_t): C.expr_t =
+
+   let apply_domain expr = 
+     if ignore_delta_domains then expr
+     else CalcRing.mk_prod [ C.mk_domain expr; expr ]
+   in
 
    let template_batch_delta_of_rel delta_reln reln relv = 
-      if delta_reln = reln then
-         let deltarel = C.mk_deltarel reln relv in
-            CalcRing.mk_prod [ C.mk_domain deltarel; deltarel ]
+      if delta_reln = reln then apply_domain (C.mk_deltarel reln relv)
       else CalcRing.zero
    in
    let template_delta_of_rel apply_sign (delta_reln,delta_relv,_) reln relv =
@@ -81,8 +90,9 @@ let rec delta_of_expr (delta_event:Schema.event_t) (expr:C.expr_t): C.expr_t =
          else
          let definition_terms = 
             Calculus.value_singleton 
-               (List.combine relv (List.map Arithmetic.mk_var delta_relv))
-         in apply_sign definition_terms
+               (List.combine relv (List.map Arithmetic.mk_var delta_relv)) 
+         in
+           apply_sign (apply_domain definition_terms)
       else CalcRing.zero
    in
    let empty_delta_of_rel (_:string) (_:var_t list) = CalcRing.zero in
@@ -131,7 +141,8 @@ let rec delta_of_expr (delta_event:Schema.event_t) (expr:C.expr_t): C.expr_t =
          | _ -> error expr "Error: Can not take delta of a non relation event"
       end
    in
-   let rcr = delta_of_expr delta_event in
+   let rcr = 
+     delta_of_expr ~ignore_delta_domains:ignore_delta_domains delta_event in
    Debug.print "LOG-DELTA-DETAIL" (fun () ->
       (Schema.name_of_event delta_event)^" of "^(C.string_of_expr expr) 
    );
@@ -186,21 +197,16 @@ let rec delta_of_expr (delta_event:Schema.event_t) (expr:C.expr_t): C.expr_t =
                      substitute the (now) constant dB in for deltaVar. *)
                   (* Extract lifts containing Value subexpressions *)
                   let scope = Schema.event_vars delta_event in
-                  let (delta_lhs, delta_rhs) =
-                     if Debug.active "DUMB-LIFT-DELTAS" then
-                        (CalcRing.one, delta_term)
-                     else
-                        extract_lifts scope delta_term
-                  in
-                  
-                  CalcRing.mk_prod [
-                     delta_lhs;
-                     CalcRing.mk_sum [
-                        Calculus.mk_lift v 
-                           (CalcRing.mk_sum [sub_t; delta_rhs]);
+                  let (delta_lhs, delta_rhs) = 
+                    extract_domains ignore_delta_domains scope delta_term 
+                  in                  
+                    CalcRing.mk_prod [
+                      delta_lhs;
+                      CalcRing.mk_sum [
+                        Calculus.mk_lift v (CalcRing.mk_sum [sub_t; delta_rhs]);
                         CalcRing.mk_neg (Calculus.mk_lift v sub_t)
-                     ]
-                  ]
+                      ]
+                    ]
                )
          (*****************************************) 
 (***** BEGIN EXISTS HACK *****)
@@ -209,26 +215,36 @@ let rec delta_of_expr (delta_event:Schema.event_t) (expr:C.expr_t): C.expr_t =
                if delta_term = CalcRing.zero then CalcRing.zero else (
                   (* We do the same thing here as for lifts *)
                   let scope = Schema.event_vars delta_event in
-                  let (delta_lhs, delta_rhs) =
-                     if Debug.active "DUMB-LIFT-DELTAS" then
-                        (CalcRing.one, delta_term)
-                     else
-                        extract_lifts scope delta_term
+                  let (delta_lhs, delta_rhs) = 
+                    extract_domains ignore_delta_domains scope delta_term 
                   in
-                  CalcRing.mk_prod [
-                     delta_lhs;
-                     CalcRing.mk_sum [
-                        Calculus.mk_exists 
-                           (CalcRing.mk_sum [sub_t; delta_rhs]);
+                    CalcRing.mk_prod [
+                      delta_lhs;
+                      CalcRing.mk_sum [
+                        Calculus.mk_exists (CalcRing.mk_sum [sub_t; delta_rhs]);
                         CalcRing.mk_neg (Calculus.mk_exists sub_t)
-                     ]
-                  ]
+                      ]
+                    ]
                )
 (***** END EXISTS HACK *****)
          (*****************************************)
       ) expr
 
 ;;
+
+(** Test wherther it is possible to extract lifts *)
+let can_extract_domains ?(ignore_delta_domains: bool = 
+                          Debug.active ("IGNORE-DELTA-DOMAINS"))
+                        (delta_event:Schema.event_t) (expr:C.expr_t) =    
+   let delta_term = 
+     delta_of_expr ~ignore_delta_domains:ignore_delta_domains delta_event expr 
+   in
+     if delta_term = CalcRing.zero then false 
+     else (
+       let scope = Schema.event_vars delta_event in
+       (fst (extract_domains ignore_delta_domains scope delta_term) <> 
+        CalcRing.one)
+     ) 
 
 (**
    [has_no_deltas expr]

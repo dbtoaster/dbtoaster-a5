@@ -1,3 +1,4 @@
+#include <iostream>
 #include <boost/algorithm/string.hpp>
 #include <boost/algorithm/string/find_iterator.hpp>
 #include <boost/functional/hash.hpp>

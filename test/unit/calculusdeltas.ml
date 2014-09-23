@@ -5,28 +5,25 @@ open UnitTest
 ;;
 Debug.activate "PARSE-CALC-WITH-FLOAT-VARS"
 ;;
-let test ?(opt_in=false) ?(opt_out=false) msg event input output = 
+let test ?(opt_in=false) ?(opt_out=false) ?(ignore_delta_domains=true) 
+         msg event input output = 
    let input_calc = parse_calc input in
    let map_schema = (event_vars event, snd (schema_of_expr input_calc)) in
    log_test ("Delta of Expression ( "^msg^" : "^(string_of_event event)^" )")
       CalculusPrinter.string_of_expr
       (( if opt_out 
          then CalculusTransforms.optimize_expr map_schema
-         else (fun x -> x))
-         (CalculusDeltas.delta_of_expr event (
-            if opt_in 
-            then CalculusTransforms.optimize_expr map_schema input_calc
-            else input_calc
-         ))
+         else (fun x -> x)
+       )
+         (CalculusDeltas.delta_of_expr 
+            ~ignore_delta_domains:ignore_delta_domains 
+            event 
+            (if opt_in 
+             then CalculusTransforms.optimize_expr map_schema input_calc
+             else input_calc)
+         )
       )
       (parse_calc output)
-;;
-
-test "TPCH17 simple" (InsertEvent(schema_rel "P" ["dPK"]))
-   "AggSum([], P(PK) * L(PK, QTY) * (nested ^= AggSum([PK], 
-       L(PK, QTY2) * QTY2)))"
-   "AggSum([], (PK ^= dPK) * L(PK, QTY) * (nested ^= AggSum([PK], 
-       L(PK, QTY2) * QTY2)))"
 ;;
 
 test "TPCH17 simple" (InsertEvent(schema_rel "L" ["dPK"; "dQTY"]))
@@ -40,7 +37,7 @@ test "TPCH17 simple" (InsertEvent(schema_rel "L" ["dPK"; "dQTY"]))
                 (AggSum([], (QTY2 ^= dQTY)* QTY2) * 0.5)) - 
             (nested ^= AggSum([PK], L(PK, QTY2) * QTY2)*0.5)
    ))))"
-;;
+;; 
 
 test "TPCH11" (InsertEvent(schema_rel "PARTSUPP" ["dPK"; "dSK"; "dAQ"; "dSC"]))
    "AggSum([P_NATIONKEY, P_PARTKEY], 
@@ -163,9 +160,9 @@ test "TPCH11" (InsertEvent(schema_rel "PARTSUPP" ["dPK"; "dSK"; "dAQ"; "dSC"]))
            ((__sql_inline_agg_1 ^= (0.001 * N_VALUE)) *
             {P_VALUE > __sql_inline_agg_1})) *
             P_VALUE)))"
-;;
+;; 
 
-test "Employee37 dEmployee" 
+ test "Employee37 dEmployee" 
    (InsertEvent("LOCATION", [var "dLID"; "dRG", Type.TString], 
                 Schema.StreamRel))
    "AggSum([COUNT_DID], 
@@ -191,9 +188,9 @@ test "Employee37 dEmployee"
                 LOCATION(D_LOCATION_ID, L_REGIONAL_GROUP:string)))))) *
        DEPARTMENT(COUNT_DID, D_NAME, D_LOCATION_ID) * 
        {__sql_inline_agg_1 > 0}))"
-;;
+;; 
 
-test "SumADivB"
+ test "SumADivB"
    (InsertEvent(schema_rel "R" ["dA"; "dB"]))
    "(AggSum([], (R(R_A, R_B) * R_A)) *
        AggSum([], 
@@ -215,7 +212,7 @@ test "SumADivB"
          ) *
          {[/:float](__sql_inline_agg_2)}
     )))"
-;;
+;; 
 
 test ~opt_out:true "LiftInSchema"
     (InsertEvent(schema_rel "R" ["dA"; "dB"; "dC"]))
@@ -223,15 +220,27 @@ test ~opt_out:true "LiftInSchema"
     "(R_B ^= dB) * (R_A ^= dA) * (R_B ^= 42) * dC"
 ;;
 
+
+test "Lift range restriction" ~ignore_delta_domains:false  
+   (InsertEvent(schema_rel "L" ["dPK"; "dQTY"]))
+   "AggSum([], P(PK) * 
+      (nested ^= AggSum([PK], L(PK, QTY2) * QTY2)))"
+   "AggSum([], P(PK) * 
+      DOMAIN((PK ^= dPK) * AggSum([], (QTY2 ^= dQTY))) * 
+      ((nested ^= (AggSum([PK], L(PK, QTY2) * QTY2) + 
+                  ((PK ^= dPK) * AggSum([], (QTY2 ^= dQTY) * QTY2)))) + 
+       (-1 * (nested ^= (AggSum([PK], L(PK, QTY2) * QTY2))))))"
+;; 
+
 Debug.activate "BATCH-UPDATES";
 Debug.activate "NO-VISUAL-DIFF"; 
 
-test ~opt_out:true "DoubleLift"
+test ~opt_out:true ~ignore_delta_domains:false "DoubleLift"
   (BatchUpdate("R"))
   "AggSum([], (X ^= (AggSum([B], R(A, B) * {A > 10}))) * 
               (Y ^= (AggSum([B], R(A,B)))) * {X = 0} * {Y > 3})"
   "AggSum([], 
-    ((X ^= 0) * DOMAIN( AggSum([B], DELTA(R(A, B)))) * 
+    (DOMAIN( AggSum([B], DELTA(R(A, B)))) * (X ^= 0) *
       (((Y ^= AggSum([B], R(A, B))) *
          (X ^= AggSum([B], (R(A, B) * {A > 10}))) * {-1}) +
         ((X ^=
@@ -241,7 +250,7 @@ test ~opt_out:true "DoubleLift"
       {Y > 3}))"
 ;; 
  
-test ~opt_out:true "Exists and Lift"
+test ~opt_out:true ~ignore_delta_domains:false "Exists and Lift"
   (BatchUpdate("R"))
   "EXISTS(AggSum([A], R(A,B))) *
    AggSum([], (X ^=AggSum([A], R(A,B) * B)) * {X > 100})"
@@ -254,19 +263,17 @@ test ~opt_out:true "Exists and Lift"
           {X > 100})))))"
 ;;  
 
-test ~opt_out:true "Nested Exists"
+test ~opt_out:true ~ignore_delta_domains:false "Nested Exists"
   (BatchUpdate("R"))
   "EXISTS(
      EXISTS(AggSum([A], R(A,B))) *
      AggSum([], (X ^=AggSum([A], R(A,B) * B)) * {X > 100})
   )"
   "(DOMAIN( AggSum([A], DELTA(R(A, B)))) *
-    (EXISTS(
-       (EXISTS( (AggSum([A], R(A, B)) + AggSum([A], DELTA(R(A, B))))) *
-         AggSum([], 
-           ((X ^= (AggSum([A], (R(A, B) * B)) + AggSum([A], (DELTA(R(A, B)) * B)))) *
-             {X > 100})))) +
-      (EXISTS(
-         (EXISTS( AggSum([A], R(A, B))) *
-           AggSum([], ((X ^= AggSum([A], (R(A, B) * B))) * {X > 100})))) *
+    ( (EXISTS( (AggSum([A], R(A, B)) + AggSum([A], DELTA(R(A, B))))) *
+        AggSum([], 
+          ((X ^= (AggSum([A], (R(A, B) * B)) + AggSum([A], (DELTA(R(A, B)) * B)))) *
+           {X > 100}))) +
+      ((EXISTS( AggSum([A], R(A, B))) *
+        AggSum([], ((X ^= AggSum([A], (R(A, B) * B))) * {X > 100}))) *
         {-1})))"; 

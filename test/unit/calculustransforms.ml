@@ -295,6 +295,12 @@ in
    test "Aggsum of a lifted value - schema unchanged"
       "AggSum([A], (A ^= B) * R(A,C))"
       "(A ^= B) * AggSum([A], R(A,C))";
+   test "Exists with binary outcome"
+      "Exists((X ^= A) * (Y ^= B))"
+      "(X ^= A) * (Y ^= B)";
+   test "Exists with binary outcome - keep term"
+      "Exists((X ^= dA) * R(A,B) * (Y ^= B))"
+      "(X ^= dA) * Exists(R(A,B)) * (Y ^= B)";
 
 ;;
 let test msg scope input output =

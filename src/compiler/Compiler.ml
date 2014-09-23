@@ -169,16 +169,18 @@ let compile_map (compute_delta:bool)
             "Unoptimized Delta: "^(Schema.string_of_event delta_event)^
             " DO \n"^(CalculusPrinter.string_of_expr delta_expr_unoptimized)
          );
+
          let delta_expr_unextracted = 
             CalculusTransforms.optimize_expr 
                (todo_ivars @ prefixed_relv,todo_ovars) 
-               delta_expr_unoptimized
+               (CalculusTransforms.erase_domain delta_expr_unoptimized)
          in
          Debug.print "LOG-COMPILE-DETAIL" (fun () ->
             "Optimized, Unextracted Delta: \n" ^ 
             (Schema.string_of_event delta_event) ^ 
             " DO "^(CalculusPrinter.string_of_expr delta_expr_unextracted)
          );
+
          let (delta_renamings, delta_expr) = 
             extract_renamings (prefixed_relv, todo_ovars) delta_expr_unextracted
          in

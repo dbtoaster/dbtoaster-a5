@@ -194,7 +194,7 @@ let partition_expr (heuristic_options:heuristic_options_t) (scope:var_t list)
 
       (* Sanity check - target_expr should have no input variables 
          (it's a product of delta relations/domains or relations)   *)
-      if (target_ivars <> [])
+      if not (covered_by_scope scope target_expr)
       then bail_out target_expr "target_expr has input variables."
       else
      
@@ -415,7 +415,7 @@ type maintaining_option_t =
     If there is an equality constraint between the base relations (category I) 
     and lift subexpressions (category II), i.e. the variables of the lift 
     subexpressions are also output variables of the base relations, then 
-    the expression should be incrementally maintained. The rationale    behind 
+    the expression should be incrementally maintained. The rationale behind 
     this decision is that deltas of the lift subexpressions affect only a subset
     of the tuples, thus bounding the variables used in the outside expression
     and avoiding the need to iterate over the whole domain of values.
@@ -427,7 +427,8 @@ type maintaining_option_t =
     subexpressions, or it does not contain relation subexpressions. In both 
     cases, this method suggests the incremental maintenance.
 *)
-let should_update (event:Schema.event_t) (expr:expr_t)  : bool =
+let should_update ?(scope:var_t list = []) 
+                  (event:Schema.event_t) (expr:expr_t)  : bool =
    
    Debug.print "LOG-HEURISTICS-STRATEGY-DETAIL" (fun () ->
       "[should_update] Asked to decide on:"^
@@ -444,10 +445,7 @@ let should_update (event:Schema.event_t) (expr:expr_t)  : bool =
          | (x, y) when x = y -> x
          | (Unknown, x) | (x, Unknown) -> x
          | (UpdateExpr, ReplaceExpr) 
-         | (ReplaceExpr, UpdateExpr) -> 
-               if Debug.active "HEURISTICS-PREFER-REPLACE"
-               then ReplaceExpr
-               else UpdateExpr
+         | (ReplaceExpr, UpdateExpr) -> ReplaceExpr
          | _ -> failwith "Unable to process next_state."
    in
 
@@ -455,37 +453,39 @@ let should_update (event:Schema.event_t) (expr:expr_t)  : bool =
 
    let final_state = 
       decompose_then_fold 
-            expr_scope Unknown Unknown get_next_state get_next_state
-            (fun _ schema expr -> fst (
-               List.fold_left (fun (local_state, local_scope) term ->
-                  (* We are only interested in Lift/Exists expressions *)
-                  (
-                     (match CalcRing.get_val term with
+        expr_scope Unknown Unknown get_next_state get_next_state
+        (fun _ schema expr -> fst (
+           List.fold_left (fun (local_state, local_scope) term ->
+              (* We are only interested in Lift/Exists expressions *)
+              let next_state = 
+                match CalcRing.get_val term with
 (***** BEGIN EXISTS HACK *****)
-                        | Exists(subexpr)  
+                  | Exists(subexpr)  
 (***** END EXISTS HACK *****)
-                        | Lift(_, subexpr) ->
-                           if not (event_is_relevant (Some(event)) subexpr)
-                           then local_state
-                           else get_next_state
-                                    local_state
-                                    (if ListAsSet.inter local_scope 
-                                          (snd(schema_of_expr subexpr)) = []
-                                     then ReplaceExpr
-                                     else UpdateExpr)
-                     
-                        | _ -> local_state), 
-                     (ListAsSet.union local_scope (snd (schema_of_expr term)))
-                  )
-               ) 
-               (Unknown, expr_scope) (CalcRing.prod_list (reogranize_expr expr))
-            ) )
-            "dummy"
-            (* The materializer assumes expressions without Neg nodes.     
-               When the calculus optimizer is disabled, this assumption    
-               might be violated. We guard against these cases by calling  
-               CalculusTransforms.erase_negs.                              *)
-            (CalculusTransforms.erase_negs expr)
+                  | Lift(_, subexpr) ->
+                     if not (event_is_relevant (Some(event)) subexpr)
+                     then local_state
+                     else 
+                       get_next_state
+                         local_state
+                         (if (CalculusDeltas.can_extract_domains 
+                              event subexpr)
+                          then UpdateExpr
+                          else ReplaceExpr) 
+                  | _ -> local_state
+              in
+              let next_scope = 
+                ListAsSet.union local_scope (snd (schema_of_expr term))
+              in                
+                (next_state, next_scope)
+
+           ) (Unknown, expr_scope) (CalcRing.prod_list (reogranize_expr expr))
+        ) ) "dummy"
+        (* The materializer assumes expressions without Neg nodes.     
+           When the calculus optimizer is disabled, this assumption    
+           might be violated. We guard against these cases by calling  
+           CalculusTransforms.erase_negs.                              *)
+        (CalculusTransforms.erase_negs expr)
    in
    let final_decision = match final_state with
       | Unknown | UpdateExpr -> true
@@ -600,7 +600,7 @@ and materialize_expr (heuristic_options:heuristic_options_t)
    let (rel_expr_ivars, rel_expr_ovars) = schema_of_expr rel_expr in
    
    (* Sanity check - delta_expr should not have input variables *)
-   if (delta_expr_ivars <> [])
+   if not (covered_by_scope scope delta_expr)
    then begin
       print_endline ("Expr: " ^ string_of_expr delta_expr);
       print_endline ("InputVars: " ^ string_of_vars delta_expr_ivars);

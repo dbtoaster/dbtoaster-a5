@@ -9,7 +9,7 @@ MDDB_REWRITER=../../experiments/triggers/repetitive/scripts/mddb_csv_rewriter.py
 DBT_DATA=../../experiments/data
 
 # Dataset sizes: 0 - small, 1 - normal, 2 - large, 3 - custom
-DATASET_SIZE=0
+DATASET_SIZE=3
 
 if [ "$DATASET_SIZE" -eq "0" ]; then 
 
@@ -66,19 +66,10 @@ MDDB_DATASETS="mddb/standard"
 
 elif [ "$DATASET_SIZE" -eq "3" ]; then
 
-FINANCIAL_DATASETS="finance/tiny \
-                    finance/standard \
-                    finance/big \
-                    finance/huge"
-TPCH_DATASETS="tpch/tiny \
-               tpch/standard \
-               tpch/big \
-               tpch/100"
-TPCH_DATASETS_DEL="tpch/tiny_del \
-                   tpch/standard_del \
-                   tpch/big_del \
-                   tpch/100_del"
-MDDB_DATASETS="mddb/standard"
+FINANCIAL_DATASETS=""
+TPCH_DATASETS=""
+TPCH_DATASETS_DEL="tpch/big_del"
+MDDB_DATASETS=""
 
 fi
 
@@ -125,6 +116,7 @@ MDDB_QUERIES="mddb/query1.sql \
               mddb/query2_inner.sql \
               mddb/query3.sql"
 
+TPCH_QUERIES="tpch/query3.sql"
 
 AGENDAS_INPUT_DIR=test/agendas
 AGENDAS_OUTPUT_DIR=../../experiments/data/agendas
