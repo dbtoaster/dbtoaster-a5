@@ -400,28 +400,13 @@ type maintaining_option_t =
     the overall delta expression is not simpler than the original expression.
     In such cases, it might be beneficial to maintain the expression 
     non-incrementally, recomputing it on every update.
-            
-    In general, the subexpressions of the given expression can be divided into 
-    three categories:  
-    {ol
-       {li base relations, irrelevant lift expressions with respect to the 
-           event relation that also contain no input variables, and 
-           subexpressions with no input variables (comparisons, variables 
-           and constants) }  
-       {li lift expressions containing the event relation or input variables }
-       {li subexpressions with input variables and the above lift variables } 
-    }
-    The rule for making the decision is the following:
-    If there is an equality constraint between the base relations (category I) 
-    and lift subexpressions (category II), i.e. the variables of the lift 
-    subexpressions are also output variables of the base relations, then 
-    the expression should be incrementally maintained. The rationale behind 
-    this decision is that deltas of the lift subexpressions affect only a subset
-    of the tuples, thus bounding the variables used in the outside expression
-    and avoiding the need to iterate over the whole domain of values.
-    Otherwise, if there is no overlapping between the set of variables used 
-    inside the lift subexpressions and the rest of the query, the expression 
-    is more efficient to reevalute on each trigger call.
+        
+   The rule is the following: if it is possible to extract a DomainDelta term 
+   when computing the delta of an expression, then we decide to incrementally 
+   maintain; otherwise, we re-evaluate the expression. The rationale behind 
+   this decision is that if there is one term for which we cannot restrict 
+   the domain of iteration when computing its delta, then the delta computation 
+   is at least as expensive as re-evaluation.
     
     Two special cases arise when the given expression does not contain lift
     subexpressions, or it does not contain relation subexpressions. In both 
