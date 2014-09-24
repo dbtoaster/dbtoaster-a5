@@ -128,6 +128,9 @@ in
       "(A ^= AggSum([C],R(B,C)*[B])) * A"
       "AggSum([C],R(B,C)*B)";
    *)
+   test "MILOS" [var "A"; var "C"]
+     "S(A) * (C ^= R(A)) * C"
+     "1";
    test "Empty schema, Full expression into value" []
       "(A ^= AggSum([C],R(B,C)*B)) * {2*A}"
       "(A ^= AggSum([C],R(B,C)*B)) * {2*A}";
@@ -263,7 +266,6 @@ in
    test "Forbidden by scope" [var "B"]
       "(B ^= 4) * R(B) * AggSum([], R(A, B) * B)"
       "(B ^= 4) * R(B) * AggSum([], R(A, B) * B)";
-
 ;;
 let test msg input output =
    log_test ("Nesting Rewrites ("^msg^")")
@@ -326,27 +328,27 @@ in
    test "Delta Domains" []
     ["(DOMAIN(
       AggSum([O_ORDERKEY], 
-        DELTA(LINEITEM(O_ORDERKEY, L2_PARTKEY, L2_SUPPKEY, L2_LINENUMBER,
+        (DELTA LINEITEM)(O_ORDERKEY, L2_PARTKEY, L2_SUPPKEY, L2_LINENUMBER,
                          L2_QUANTITY, L2_EXTENDEDPRICE, L2_DISCOUNT, L2_TAX,
                          L2_RETURNFLAG, L2_LINESTATUS, L2_SHIPDATE,
                          L2_COMMITDATE, L2_RECEIPTDATE, L2_SHIPINSTRUCT,
-                         L2_SHIPMODE, L2_COMMENT)))) *
+                         L2_SHIPMODE, L2_COMMENT))) *
         M1(float)[][O_ORDERKEY])"; 
     "(DOMAIN(
        AggSum([O_ORDERKEY], 
-         DELTA(LINEITEM(O_ORDERKEY, L_PARTKEY, L_SUPPKEY, L_LINENUMBER,
+         (DELTA LINEITEM)(O_ORDERKEY, L_PARTKEY, L_SUPPKEY, L_LINENUMBER,
                           L_QUANTITY, L_EXTENDEDPRICE, L_DISCOUNT, L_TAX,
                           L_RETURNFLAG, L_LINESTATUS, L_SHIPDATE,
                           L_COMMITDATE, L_RECEIPTDATE, L_SHIPINSTRUCT,
-                          L_SHIPMODE, L_COMMENT)))) *
+                          L_SHIPMODE, L_COMMENT))) *
         M2(float)[][O_ORDERKEY])"]
     "DOMAIN(
       AggSum([O_ORDERKEY], 
-        DELTA(LINEITEM(O_ORDERKEY, L2_PARTKEY, L2_SUPPKEY, L2_LINENUMBER,
+        (DELTA LINEITEM)(O_ORDERKEY, L2_PARTKEY, L2_SUPPKEY, L2_LINENUMBER,
                          L2_QUANTITY, L2_EXTENDEDPRICE, L2_DISCOUNT, L2_TAX,
                          L2_RETURNFLAG, L2_LINESTATUS, L2_SHIPDATE,
                          L2_COMMITDATE, L2_RECEIPTDATE, L2_SHIPINSTRUCT,
-                         L2_SHIPMODE, L2_COMMENT)))) *
+                         L2_SHIPMODE, L2_COMMENT))) *
      (M1(float)[][O_ORDERKEY] + M2(float)[][O_ORDERKEY])";
 ;;
 
@@ -655,7 +657,7 @@ in
 
     test "Unify lifts and group-by variables" [] ["A"; "C"]
        "S(C) * (A ^= C) * AggSum([A], R(B) * (A ^= B)) "
-       "S(C) * (A ^= C) * AggSum([A], R(B) * (A ^= B)) ";
+       "S(C) * (A ^= C) * AggSum([A], R(B) * (A ^= B)) ";   
 
 
     (* test "LiftsAndSchemas" [] ["A"]

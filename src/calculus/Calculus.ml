@@ -185,8 +185,8 @@ let rec string_of_leaf (leaf:CalcRing.leaf_t): string =
       | Rel(rname, rvars)       ->
          rname^"("^(ListExtras.string_of_list ~sep:", " string_of_var rvars)^")"
       | DeltaRel(rname, rvars)  -> 
-         "DELTA("^rname^"("^
-         (ListExtras.string_of_list ~sep:", " string_of_var rvars)^"))"
+         "(DELTA "^rname^")("^
+         (ListExtras.string_of_list ~sep:", " string_of_var rvars)^")"
       | DomainDelta(subexp) -> 
          "DOMAIN("^(string_of_expr subexp)^")"
       | Cmp(op,subexp1,subexp2) ->

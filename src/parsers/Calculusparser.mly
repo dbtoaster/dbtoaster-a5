@@ -155,6 +155,8 @@ ivcCalculusExpr:
                                   { Calculus.mk_aggsum $4 $7 }
 | relationDefn                    { let (reln, relv) = $1 in
                                     Calculus.mk_rel reln relv }
+| deltaRelationDefn               { let (reln, relv) = $1 in
+                                    Calculus.mk_deltarel reln relv  }
 | externalDefn                    { let (en, iv, ov, et, em) = $1 in
                                     Calculus.mk_external en iv ov et em }
 | LBRACE valueExpr comparison valueExpr RBRACE
@@ -170,12 +172,14 @@ ivcCalculusExpr:
 | EXISTS LPAREN calculusExpr RPAREN { Calculus.mk_exists $3 }
 //(***** END EXISTS HACK *****)
 | DOMAIN LPAREN calculusExpr RPAREN { Calculus.mk_domain $3 }
-| DELTA LPAREN relationDefn RPAREN { let (reln, relv) = $3 in
-                                     Calculus.mk_deltarel reln relv }
 
 comparison:
 | EQ  { Type.Eq  } | NEQ { Type.Neq } | LT  { Type.Lt  } 
 | LTE { Type.Lte } | GT  { Type.Gt  } | GTE { Type.Gte }
+
+deltaRelationDefn:
+| LPAREN DELTA ID RPAREN LPAREN RPAREN               { ($3, []) }
+| LPAREN DELTA ID RPAREN LPAREN variableList RPAREN  { ($3, $6) }
 
 relationDefn:
 | ID LPAREN RPAREN                                  { ($1, []) }

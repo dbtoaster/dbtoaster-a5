@@ -240,13 +240,13 @@ test ~opt_out:true ~ignore_delta_domains:false "DoubleLift"
   "AggSum([], (X ^= (AggSum([B], R(A, B) * {A > 10}))) * 
               (Y ^= (AggSum([B], R(A,B)))) * {X = 0} * {Y > 3})"
   "AggSum([], 
-    (DOMAIN( AggSum([B], DELTA(R(A, B)))) * (X ^= 0) *
+    (DOMAIN( AggSum([B], (DELTA R)(A, B))) * (X ^= 0) *
       (((Y ^= AggSum([B], R(A, B))) *
          (X ^= AggSum([B], (R(A, B) * {A > 10}))) * {-1}) +
         ((X ^=
            (AggSum([B], (R(A, B) * {A > 10})) +
-             AggSum([B], (DELTA(R(A, B)) * {A > 10})))) *
-          (Y ^= (AggSum([B], R(A, B)) + AggSum([B], DELTA(R(A, B))))))) *
+             AggSum([B], ((DELTA R)(A, B) * {A > 10})))) *
+          (Y ^= (AggSum([B], R(A, B)) + AggSum([B], (DELTA R)(A, B)))))) *
       {Y > 3}))"
 ;; 
  
@@ -254,12 +254,12 @@ test ~opt_out:true ~ignore_delta_domains:false "Exists and Lift"
   (BatchUpdate("R"))
   "EXISTS(AggSum([A], R(A,B))) *
    AggSum([], (X ^=AggSum([A], R(A,B) * B)) * {X > 100})"
-  "(DOMAIN( AggSum([A], DELTA(R(A, B)))) *
+  "(DOMAIN( AggSum([A], (DELTA R)(A, B))) *
   ((EXISTS( AggSum([A], R(A, B))) *
      AggSum([], ((X ^= AggSum([A], (R(A, B) * B))) * {X > 100})) * {-1}) +
-    (EXISTS( (AggSum([A], R(A, B)) + AggSum([A], DELTA(R(A, B))))) *
+    (EXISTS( (AggSum([A], R(A, B)) + AggSum([A], (DELTA R)(A, B)))) *
       AggSum([], 
-        ((X ^= (AggSum([A], (R(A, B) * B)) + AggSum([A], (DELTA(R(A, B)) * B)))) *
+        ((X ^= (AggSum([A], (R(A, B) * B)) + AggSum([A], ((DELTA R)(A, B) * B)))) *
           {X > 100})))))"
 ;;  
 
@@ -269,10 +269,10 @@ test ~opt_out:true ~ignore_delta_domains:false "Nested Exists"
      EXISTS(AggSum([A], R(A,B))) *
      AggSum([], (X ^=AggSum([A], R(A,B) * B)) * {X > 100})
   )"
-  "(DOMAIN( AggSum([A], DELTA(R(A, B)))) *
-    ( (EXISTS( (AggSum([A], R(A, B)) + AggSum([A], DELTA(R(A, B))))) *
+  "(DOMAIN( AggSum([A], (DELTA R)(A, B))) *
+    ( (EXISTS( (AggSum([A], R(A, B)) + AggSum([A], (DELTA R)(A, B)))) *
         AggSum([], 
-          ((X ^= (AggSum([A], (R(A, B) * B)) + AggSum([A], (DELTA(R(A, B)) * B)))) *
+          ((X ^= (AggSum([A], (R(A, B) * B)) + AggSum([A], ((DELTA R)(A, B) * B)))) *
            {X > 100}))) +
       ((EXISTS( AggSum([A], R(A, B))) *
         AggSum([], ((X ^= AggSum([A], (R(A, B) * B))) * {X > 100}))) *

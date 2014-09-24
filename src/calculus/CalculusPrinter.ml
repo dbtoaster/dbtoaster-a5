@@ -158,13 +158,13 @@ let rec format_expr ?(show_type = false) (expr:expr_t) =
          !fmt.string ")"
 
       | CalcRing.Val(DeltaRel(reln, relv)) ->
-         !fmt.string "DELTA(";
+         !fmt.string "(DELTA ";
          !fmt.string reln;
-         !fmt.string "(";
+         !fmt.string ")(";
          !fmt.bopen 0;
          format_list (dump string_of_var) "," relv;
          !fmt.bclose ();
-         !fmt.string "))"
+         !fmt.string ")"
                
       | CalcRing.Val(DomainDelta(subexp)) ->
          !fmt.string "DOMAIN(";

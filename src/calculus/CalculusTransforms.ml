@@ -508,7 +508,9 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
         (fun _ x -> begin match x with
          (* No Arithmetic over lone values means they can take non-float/int
             values. *)
-         | Value(ValueRing.Val(AVar(v))) when v = lift_v -> expr_sub
+         | Value(ValueRing.Val(AVar(v))) 
+            when v = lift_v && 
+              (not force || rels_of_expr expr_sub = []) -> expr_sub
          | Value(v) when List.mem lift_v (Arithmetic.vars_of_value v) -> 
             C.mk_value(
                Arithmetic.eval_partial 
@@ -551,11 +553,11 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
          | DeltaRel(rn, rv) ->           
             let new_rv = map_vars " delta relation var" rv in
             if ListAsSet.has_no_duplicates new_rv
-            then C.mk_rel rn new_rv
+            then C.mk_deltarel rn new_rv
             else 
                (* In order to prevent expressions of the form R(dA,dA), *)
                (* we transform (B^=dA)*R(dA,B) into R(dA,B)*(B=dA).     *)
-               CalcRing.mk_prod [ C.mk_rel rn rv; 
+               CalcRing.mk_prod [ C.mk_deltarel rn rv; 
                                   make_cmp " delta relation var" ]
          | DomainDelta(subexp) -> C.mk_domain subexp
          | External(en, eiv, eov, et, em) ->
