@@ -27,17 +27,124 @@ let mk_temp_var term =
    by -1.
    @param expr The calculus expression to be processed
  *)
-let rec combine_values ?(aggressive=false) (expr:C.expr_t): C.expr_t =
+let rec combine_values ?(aggressive=false) ?(peer_groups=[])
+                       (big_expr:C.expr_t): C.expr_t =
    Debug.print "LOG-CALCOPT-DETAIL" (fun () ->
-      "Combine Values: "^(CalculusPrinter.string_of_expr expr) 
-   );
-   let rcr = combine_values in
-   let merge merge_consts calc_op val_op e =
+      "Combine Values: "^(CalculusPrinter.string_of_expr big_expr) 
+   );  
+   (* Peer group functions *)
+   let pg_eq = fun x y -> ListAsSet.seteq x y in
+   let pg_uniq = ListAsSet.uniq ~eq:pg_eq in
+   let pg_union = ListAsSet.union ~eq:pg_eq in
+   let pg_multiunion = ListAsSet.multiunion ~eq:pg_eq in
+   (* let pg_validate grp = if List.length grp > 1 then [ grp ] else [] in  *)
+   (* let pg_create vars = pg_validate (ListAsSet.uniq vars) in    *)
+   let pg_create vars = [ ListAsSet.uniq vars ] in
+
+   let merge merge_consts calc_op val_op peer_groups elem_list =
+
+      let support_fn = (fun bucket ->
+        let bucket_vars = ListAsSet.multiunion (
+          List.map Arithmetic.vars_of_value 
+                   (List.flatten (List.map snd bucket)))
+        in 
+          (* Filter out bucket if covered by multiple peer groups.
+             Consequently, we won't merge A and B in expression
+             R(A) * S(A,B) * {A} * {B}                            *)
+          List.length 
+            (List.filter (ListAsSet.subset bucket_vars) peer_groups) = 1
+      ) in
+
+      let rec apriori support_fn buckets =
+        let supported_buckets = List.filter support_fn buckets in
+        match supported_buckets with
+          | [] -> []
+          | head::tail -> 
+            let candidates = ListAsSet.uniq 
+              ~eq:(fun al bl ->  ListAsSet.seteq (List.map fst al) 
+                                                 (List.map fst bl))
+              (List.map (fun al -> ListAsSet.uniq (List.flatten al))
+                 (ListExtras.subsets_of_size 2 supported_buckets))
+            in
+
+            Debug.print "LOG-COMBINE-VALUES-DETAIL" (fun () -> 
+              "Candidates: "^ 
+              ListExtras.ocaml_of_list (
+                ListExtras.ocaml_of_list (fun (i, vals) -> 
+                  "("^(string_of_int i)^","^
+                    (ListExtras.ocaml_of_list Arithmetic.string_of_value 
+                                              vals)^")")
+              ) candidates
+            );
+            (* Note: We could additionally filter candidates by checking 
+               for unsupported buckets; for simplicity, we don't do that *)  
+            begin match (apriori support_fn candidates) with
+              | [] -> head
+              | bucket -> bucket
+            end
+      in
+
+      let merge_components components = 
+        let rec rcr tagged_components = 
+          let unary_buckets = List.map (fun x -> [x]) tagged_components in
+          let cmps_to_merge = apriori support_fn unary_buckets in
+          if List.length cmps_to_merge < 2 then tagged_components
+          else 
+            (-1, List.flatten (List.map snd cmps_to_merge)) :: 
+            rcr (ListAsSet.diff tagged_components cmps_to_merge)
+        in
+        let tagged_components = 
+          List.mapi (fun i c -> (i,c)) components
+        in
+          List.map snd (rcr tagged_components)
+      in
+ 
+      Debug.print "LOG-COMBINE-VALUES" (fun () ->
+        "Peer groups: "^(string_of_bool merge_consts)^" "^
+        ListExtras.ocaml_of_list 
+          (ListExtras.ocaml_of_list string_of_var) peer_groups^"\nExpr: "^
+        CalculusPrinter.string_of_expr (calc_op elem_list)
+      );
+
       let (val_list, calc_list) = List.fold_right (fun term (v, c) ->
-         match term with
-            | CalcRing.Val(Value(new_v)) -> (new_v :: v, c)
-            | _                          -> (v, term :: c)
-      ) e ([],[]) in
+        match term with
+          | CalcRing.Val(Value(new_v)) -> (new_v :: v, c)
+
+         (* If merge_consts is true (i.e., we deal with a sum list), we
+            want to pull in constants into value terms of product lists,
+             {const1} * {const2} * ... * {value} -> {const * value}
+            as this would allow us to merge sum terms later on. 
+             R(A) * ({1} + {-1} * {A}) -> 
+             R(A) * ({1} + {-1 * A}) ->
+             R(A) * {1 + (-1 * A)}
+            If such terms are not merged, the constant is pulled out again. 
+          *)
+          | CalcRing.Prod(plist) when merge_consts ->            
+            begin try
+              let (const_terms, value_terms) = 
+                List.fold_left (fun (cterms, vterms) term ->
+                  match term with
+                    | CalcRing.Val(Value(v)) when Arithmetic.value_is_const v -> 
+                      (cterms @ [v], vterms)
+                    | CalcRing.Val(Value(v)) when vterms = [] -> 
+                      (cterms, [v])
+                    | _ -> raise Not_found
+                ) ([], []) plist
+              in
+                (Arithmetic.eval_partial
+                   (ValueRing.mk_prod (const_terms @ value_terms)) :: v, c)
+              with Not_found -> (v, term :: c)
+            end 
+          | _ -> (v, term :: c)
+      ) elem_list ([],[]) in
+
+      Debug.print "LOG-COMBINE-VALUES-DETAIL" (fun () -> 
+        "Value list: "^
+        (ListExtras.ocaml_of_list Arithmetic.string_of_value val_list)^
+        "\nCalc list: "^
+        (ListExtras.ocaml_of_list Calculus.string_of_expr calc_list)
+      );
+
       if val_list = [] then calc_op calc_list
       else let val_term = 
          if aggressive then 
@@ -59,90 +166,174 @@ let rec combine_values ?(aggressive=false) (expr:C.expr_t): C.expr_t =
             Thus, the default is to be nonaggressive, as follows:
             *)
          let (number_values, variable_values) = 
-            List.partition (fun x -> (Arithmetic.vars_of_value x) = [])
-                           val_list
+           List.partition Arithmetic.value_is_const val_list
          in
          let partitioned_variable_values = 
             HyperGraph.connected_components Arithmetic.vars_of_value
                                             variable_values
          in
+
+         Debug.print "LOG-COMBINE-VALUES" (fun () ->
+           "Partitioned values: "^
+           ListExtras.ocaml_of_list 
+             (fun vals -> Arithmetic.string_of_value (val_op vals))
+             partitioned_variable_values 
+         );
+
+         (* Merge connected components if they are entirely covered by exactly 
+            one peer group. The algorithm tries to recursively merge components 
+            using a simplified version of the Apriori algorithm. *)
+         let merged_variable_values =            
+            merge_components partitioned_variable_values
+         in
+
          let final_term_components = 
-            if (List.length partitioned_variable_values > 0) && merge_consts
-            then (number_values @ (List.hd partitioned_variable_values)) ::
-                     (List.tl partitioned_variable_values)
-            else number_values :: partitioned_variable_values
+            if (List.length merged_variable_values > 0) && merge_consts
+            then (number_values @ (List.hd merged_variable_values)) ::
+                     (List.tl merged_variable_values)
+            else number_values :: merged_variable_values
+         in
+
+         (* If merge_consts is true (i.e., we deal with a sum list),
+            undo the effect of combining constants for unmerged terms *)
+         let (fixed_value_list, fixed_calc_list) =         
+           if not merge_consts then (final_term_components, []) else
+
+           List.fold_left (fun (value_list, calc_list) component ->
+             if List.mem component partitioned_variable_values then 
+               begin match component with
+                 | [ ValueRing.Prod(
+                       ValueRing.Val(const_v) :: [ ValueRing.Val(new_v) ] ) ] 
+                   when Arithmetic.value_is_const (ValueRing.mk_val const_v) ->
+                   let new_calc = 
+                     CalcRing.mk_prod [ 
+                       C.mk_value (ValueRing.mk_val const_v);
+                       C.mk_value (ValueRing.mk_val new_v) ]
+                   in 
+                     (value_list, calc_list @ [new_calc]) 
+                 | _ -> (value_list @ [component], calc_list)
+               end 
+             else (value_list @ [component], calc_list)            
+           ) ([], []) final_term_components 
          in
             calc_op (List.map (fun val_list -> C.mk_value (
                Arithmetic.eval_partial (val_op val_list)
-            )) (final_term_components))
+            )) (fixed_value_list) @ fixed_calc_list)
       in      
-      if calc_list = [] then val_term 
+      if calc_list = [] then val_term
       else calc_op (calc_list @ [val_term])
    in
-   CalcRing.fold
-      (merge true  CalcRing.mk_sum  ValueRing.mk_sum)
-      (merge false CalcRing.mk_prod ValueRing.mk_prod)
-      (fun x -> CalcRing.mk_prod [ C.mk_value (Arithmetic.mk_int (-1)); 
-                                   x ])
-      (fun lf -> (match lf with
+
+   let rec rcr ?(peer_groups=[]) expr = begin match expr with
+
+     | CalcRing.Sum(terms) -> 
+       let (pg_bucket_list, new_terms) = 
+         List.split (List.map (rcr ~peer_groups:peer_groups) terms) 
+       in
+       let pg_bucket = 
+         List.map ListAsSet.multiinter (ListExtras.distribute pg_bucket_list)
+       in 
+       (* Enforce the representation invariant *)
+       let sum_terms = (CalcRing.sum_list (CalcRing.mk_sum new_terms)) in       
+         ( (* Compute new peer groups; keep only dominant, remove reduntant *)
+            pg_uniq (List.filter ( fun pg -> match pg with
+              | [] -> false
+              | c -> not (List.exists (ListAsSet.proper_subset c) pg_bucket)
+            ) pg_bucket),
+           (* Compute new expression *)
+           merge true CalcRing.mk_sum ValueRing.mk_sum peer_groups sum_terms
+         )
+
+     | CalcRing.Prod(terms) -> 
+       let (pg_bucket_list, new_terms) = snd (
+         List.fold_left (fun (acc_pg, (pgl, tl)) term -> 
+           let (pg, new_term) = rcr ~peer_groups:acc_pg term in
+           (pg_union acc_pg pg, (pgl @ [ pg ], tl @ [ new_term ]))
+         ) (peer_groups, ([],[])) terms)
+       in
+       (* Enforce the representation invariant *)
+       let prod_terms = (CalcRing.prod_list (CalcRing.mk_prod new_terms)) in
+       let pg_bucket = pg_multiunion pg_bucket_list in
+         ( (* Compute new peer groups *)
+           pg_bucket,
+           (* Compute new expression *)
+           merge false CalcRing.mk_prod ValueRing.mk_prod 
+             (pg_union peer_groups pg_bucket) prod_terms
+         )
+
+     | CalcRing.Neg(term) ->
+       (peer_groups,
+        CalcRing.mk_prod [ C.mk_value (Arithmetic.mk_int (-1)); 
+                           snd (rcr ~peer_groups:peer_groups term) ])
+
+     | CalcRing.Val(lf) -> 
+       begin match lf with
          | Cmp((Neq|Lt|Gt ),x,y) when x = y  -> 
          (* Zero is contageous.  This particular case following case wreaks 
-            havoc on the schema of the expression being optimized.  Fortunately 
-            though, the presence of Exists makes this point moot.  Since lifts
+            havoc on the schema of the expression being optimized. Fortunately 
+            though, the presence of Exists makes this point moot. Since lifts
             can't extend the schema, and since Exists(0) = 0, the zero should
             either only affect subexpressions where the variables in question 
-            are already in-scope, or should be able to propagate further up and
-            kill anything that would have otherwise been able to bind the 
+            are already in-scope, or should be able to propagate further up 
+            and kill anything that would have otherwise been able to bind the 
             variable.
             
             Even so, there's a flag to disable this.
          *)
-            if Debug.active "CALC-DONT-CREATE-ZEROES" 
-            then CalcRing.mk_val lf else CalcRing.zero
+           ([], 
+            if Debug.active "CALC-DONT-CREATE-ZEROES" then expr 
+            else CalcRing.zero)
          
-         | Cmp((Eq|Gte|Lte),x,y) when x = y -> CalcRing.one
+         | Cmp((Eq|Gte|Lte),x,y) when x = y -> ([], CalcRing.one)
          | Cmp(op,x,y) ->
-            (* Pre-Evaluate comparisons wherever and as much as possible *)
+         (* Pre-Evaluate comparisons wherever and as much as possible *)
+           ([], 
             begin match ((Arithmetic.eval_partial x),
                          (Arithmetic.eval_partial y)) with
-               | (ValueRing.Val(AConst(x_const)),
-                  ValueRing.Val(AConst(y_const))) ->
-                     begin match (Constants.Math.cmp op x_const y_const) with
-                        | CBool(true) -> CalcRing.one
-                        | CBool(false) -> 
-                           if Debug.active "CALC-DONT-CREATE-ZEROES" 
-                           then C.mk_cmp op 
-                                   (Arithmetic.mk_const(x_const))
-                                   (Arithmetic.mk_const(y_const))
-                           else CalcRing.zero
-                        | _ -> C.bail_out (CalcRing.mk_val lf)
-                                 "Unexpected return value of comparison op"
-                     end
-               | (x_val, y_val) -> 
-                  let ret = C.mk_cmp op x_val y_val in
-                     Debug.print "LOG-COMBINE-VALUES" (fun () ->
-                        "Combining "^(C.string_of_leaf lf)^" into "^
-                        (C.string_of_expr ret)
-                     ); ret
-            end
+              | (ValueRing.Val(AConst(x_const)), 
+                 ValueRing.Val(AConst(y_const))) ->
+                begin match (Constants.Math.cmp op x_const y_const) with
+                  | CBool(true) -> CalcRing.one
+                  | CBool(false) -> 
+                    if Debug.active "CALC-DONT-CREATE-ZEROES" 
+                    then C.mk_cmp op (Arithmetic.mk_const(x_const))
+                                     (Arithmetic.mk_const(y_const))
+                    else CalcRing.zero
+                  | _ -> C.bail_out expr
+                           "Unexpected return value of comparison op"
+                end
+              | (x_val, y_val) -> 
+                let ret = C.mk_cmp op x_val y_val in
+                  Debug.print "LOG-COMBINE-VALUES" (fun () ->
+                     "Combining "^(C.string_of_leaf lf)^" into "^
+                     (C.string_of_expr ret)
+                  ); ret
+            end)
          
-         | Value(v) -> C.mk_value (Arithmetic.eval_partial v)
-         | Rel(_,_) | DeltaRel(_,_) 
-         | External(_) | DomainDelta(_) -> CalcRing.mk_val lf
+         | Value(v) -> ([], C.mk_value (Arithmetic.eval_partial v))
+         | Rel(_,_) 
+         | DeltaRel(_,_) 
+         | External(_)  -> (pg_create (snd (schema_of_expr expr)), expr)
          | AggSum(gb_vars, subexp) -> 
-            let new_subexp = rcr subexp in
-            if new_subexp = CalcRing.zero then CalcRing.zero else
-               C.mk_aggsum gb_vars new_subexp
+            let new_subexp = snd (rcr subexp) in
+            if new_subexp = CalcRing.zero then ([], CalcRing.zero) 
+            else ([], C.mk_aggsum gb_vars new_subexp)
          | Lift(lift_v, subexp)    -> 
-            C.mk_lift lift_v (rcr subexp)
+            ([], C.mk_lift lift_v (snd (rcr subexp)))
 (***** BEGIN EXISTS HACK *****)
          | Exists(subexp)    -> 
-            let new_subexp = rcr subexp in
-            if new_subexp = CalcRing.zero then CalcRing.zero else
-               C.mk_exists new_subexp
+            let new_subexp = snd (rcr subexp) in
+            if new_subexp = CalcRing.zero then ([], CalcRing.zero)
+            else ([], C.mk_exists new_subexp)
 (***** END EXISTS HACK *****)
-      ))
-      expr
+         | DomainDelta(subexp) -> 
+            let new_subexp = snd (rcr subexp) in
+            if new_subexp = CalcRing.zero then ([], CalcRing.zero) 
+            else ([], C.mk_domain new_subexp)
+       end      
+     end
+   in
+     snd (rcr big_expr)
 ;;
 
 (**/**)
@@ -1539,7 +1730,6 @@ let cancel_terms (expr: C.expr_t): C.expr_t =
 
 type opt_t = 
    | OptCombineValues
-   | OptCombineValuesAggressive
    | OptLiftEqualities
    | OptAdvanceLifts
    | OptUnifyLifts
@@ -1550,7 +1740,6 @@ type opt_t =
 ;;
 let string_of_opt = (function
    | OptCombineValues           -> "OptCombineValues"
-   | OptCombineValuesAggressive -> "OptCombineValuesAggressive"
    | OptLiftEqualities          -> "OptLiftEqualities"
    | OptAdvanceLifts            -> "OptAdvanceLifts"
    | OptUnifyLifts              -> "OptUnifyLifts"
@@ -1616,7 +1805,6 @@ let optimize_expr ?(optimizations = default_optimizations)
       include_opt OptNestingRewrites         (nesting_rewrites);
       include_opt OptFactorizePolynomial     (factorize_polynomial scope);
       include_opt OptCombineValues           (combine_values);
-      include_opt OptCombineValuesAggressive (combine_values ~aggressive:true);
    if Debug.active "LOG-CALCOPT-STEPS" then Fixpoint.build fp_1 
       (fun x -> 
          let (fail,(ivars,ovars)) = 

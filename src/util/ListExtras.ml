@@ -283,6 +283,70 @@ let rec k_tuples k (src: 'a list) : 'a list list =
    else List.flatten (List.map (fun t -> List.map (fun x -> x::t) src)
                                (k_tuples (k-1) src))
 
+(** 
+   Computes all subsets of r that have exactly k elements.
+   does not produce duplicate sets if r does not have duplicates.
+   sorting -- e.g. (List.sort Pervasives.compare l) --
+   improves readability of the result. 
+   @param k  The size of each returned list set
+   @param r  The superset of all of the returned subsets 
+*)
+let subsets_of_size k r =
+   let rec add_k_elements_to_from k l r =
+      (* select_gt: selects those elements of r that are greater than x *)
+      let select_gt x r =
+         let gt y = y > x in
+         List.filter (gt) r in
+      let f x =
+          (add_k_elements_to_from (k-1) (l@[x]) (select_gt x r)) in
+      if k <= 0 then [l]
+      else           List.flatten (List.map f r) in
+   add_k_elements_to_from k [] r
+
+(** Distributes a list of lists.
+
+   e.g., 
+   
+   distribute [[[1;2]; [2;3]]; [[3;4]; [4;5]]; [[5;6]]];;
+   
+   results in
+
+   [[[1; 2]; [3; 4]; [5; 6]]; [[2; 3]; [3; 4]; [5; 6]];
+    [[1; 2]; [4; 5]; [5; 6]]; [[2; 3]; [4; 5]; [5; 6]]]
+    
+   @param l  A list of lists
+   @return   The n-way cross product of all n elements in l
+*)
+let rec distribute (l: 'a list list) =
+   if l = [] then [[]]
+   else
+      let f tail =
+         let g x = [x] @ tail in
+         List.map (g) (List.hd l)
+      in
+      List.flatten (List.map f (distribute (List.tl l)));;
+
+(** Permutes a list of elements.
+
+   e.g., 
+   
+   permute [1;2;3];
+   
+   results in
+
+   [[1;2;3]; [1;3;2]; [2;1;3]; [2;3;1]; [3;1;2]; [3;2;1]]
+    
+   @param l  A list of lists
+   @return   The permutation of all n elements in l
+*)
+let rec permute (l: 'a list) : 'a list list =
+   if l = [] then [[]] else
+   let rec insert elem sublist = match sublist with
+      | [] -> [[elem]]
+      | hd::tl -> (elem::sublist) :: List.map (fun x -> hd::x) (insert elem tl)
+   in
+      List.flatten (List.map (insert (List.hd l)) (permute (List.tl l)));
+
 
 exception CycleFound
 

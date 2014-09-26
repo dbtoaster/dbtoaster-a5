@@ -51,12 +51,99 @@ in
    test "Sums, Constants, and Vars"
       "{A} + {B} + 1"
       "{1 + A} + {B}";
-            
-(* This optimization temporarilly disabled, until we figure out what to do about
-   the change in schema
    test "Self-anticomparison"
       "R(A) * ({A != A} + {A < A})"
-      "0" *)
+      "0";
+
+  test "Variable peer groups - same component"
+      "R(A) * A * A * 3"
+      "R(A) * 3 * {A * A}";
+  test "Variable peer groups - different component"
+      "R(A) * S(B) * A * B * 3"
+      "R(A) * S(B) * 3 * A * B";
+  test "Variable peer groups - non-overlapping peer groups"
+      "R(C) * S(A,B) * {A} * {B}"
+      "R(C) * S(A,B) * {A * B}";
+  test "Variable peer groups - overlapping peer groups"
+      "R(A) * S(B,C) * A * B * T(A,B)"
+      "R(A) * S(B,C) * T(A,B) * A * B";
+  test "Variable peer groups - overlapping peer groups"
+      "R(A,B) * A * B * T(A)"
+      "R(A,B) * T(A) * A * B";
+  test "Variable peer groups - non-overlapping components"
+      "R(A,B) * S(C) * (C + A*B)"      
+      "R(A,B) * S(C) * (C + {A*B})";
+  test "Variable peer groups - overlapping components"
+      "R(A,B) * S(C) * ((C*A) + (A*B))"
+      "R(A,B) * S(C) * ((C*A) + {A*B})";
+  test "Variable peer groups - avoid pulling in constants in products"
+      "-1 * S(B) * (({-1} * B) + ({-32} * B))"
+      "{-1} * S(B) * {((-1) * B) + ((-32) * B)}";
+  test "Variable peer groups - pulling in constants in sums #1"
+      "S(B) * (({-1} * B) + ({-32} * B))"
+      "S(B) * {((-1) * B) + ((-32) * B)}";
+  test "Variable peer groups - pulling in constants in sums #2"
+      "S(A,B) * (({-1} * {A}* {B}) + ({-32} * {B}))"
+      "S(A,B) * {((-1) * A * B) + ((-32) * B)}";
+  test "Variable peer groups - avoid pulling in constants not being merged #1"
+      "R(A) * S(B) * (({-1} * B) + ({-32} * B) + ({3} * A))"
+      "R(A) * S(B) * ({((-1) * B) + ((-32) * B)} + ({3} * A))";
+  test "Variable peer groups - avoid pulling in constants not being merged #2"
+      "R(A) * S(B,C) * (({12} * {B}) + ({32} * {C}) + ({5} * {A}))"
+      "R(A) * S(B,C) * ({(12 * B) + (32 * C)} + ({5} * {A}))";
+  test "Variable peer groups - avoid pulling in constants not being merged #3"
+      "R(A) * S(B,C) * (({12} * {B}) + ({32} * {C}) + ({5} * {A}) + {A})"
+      "R(A) * S(B,C) * ({(12 * B) + (32 * C)} + {(5 * A) + A})";
+  test "Variable peer groups - single term"
+      "R(A) * S(B) * ({-1} * {B})"
+      "R(A) * S(B) * ({-1} * {B})";
+  test "Variable peer groups - constant plus variable"
+      "R(A) * S(B) * (1 + (2*{B}))"
+      "R(A) * S(B) * {1 + (2*B)}";
+  test "Variable peer groups - constant minus variable"
+      "R(A) * S(B) * (1 - {B})"
+      "R(A) * S(B) * {1 + ((-1)*B)}";
+  test "Variable peer groups - variable plus variable"
+      "R(A) * S(B,C) * ({C} + (2*{B}))"
+      "R(A) * S(B,C) * {C + (2*B)}";
+  test "Variable peer groups - variable minus variable"
+      "R(A) * S(B,C) * ({C} - (2*{B}))"
+      "R(A) * S(B,C) * {C + ((-2)*B)}";
+  test "Variable peer groups - covered by peer group"
+      "R(A) * S(B) * ((3 * A) + (4 * A))"
+      "R(A) * S(B) * {(3 * A) + (4 * A)}";
+  test "Variable peer groups - combine only covered"
+      "R(A) * S(B) * ((3 * A) + (4 * A) + (A * B))"
+      "R(A) * S(B) * ((A * B) + {(3 * A) + (4 * A)})";
+  test "Variable peer groups - negation, covered by peer group"
+      "R(A) * S(B,C) * ((2*{C}) - (3*{B}))"
+      "R(A) * S(B,C) * {(2*C) + ((-3)*B)}";
+  test "Variable peer groups - overlapping peer groups, addition"
+      "R(A,B) * S(B,C) * (1 + {B}) * {C}"
+      "R(A,B) * S(B,C) * {1 + B} * {C}";
+   test "Variable peer groups - overlapping peer groups, subtraction"
+      "R(A,B) * S(B,C) * (1 - {B}) * {C}"
+      "R(A,B) * S(B,C) * {(1 + ((-1) * B))} * {C}";
+   test "Variable peer groups - TPCH3"
+      "R(A) * S(A,B,C) * (1 - B) * C"
+      "R(A) * S(A,B,C) * {((1 + ((-1) * B)) * C)}";
+   test "Variable peer groups - sum merge"
+      "((R(A,B) * S(B,C)) + (M(A,B,C) * N(D)) + (T(A) * U(B,C,D))) * 
+       ({A} + {B} + {C})"
+      "((R(A,B) * S(B,C)) + (M(A,B,C) * N(D)) + (T(A) * U(B,C,D))) * 
+      ({B + C} + {A})";    
+   test "Variable peer groups - product merge, overlapping peer groups"
+      "R(A,B) * S(B,C) * (A + B + C)"
+      "R(A,B) * S(B,C) * (A + B + C)";
+   test "Variable peer groups - product merge, non-overlapping peer groups"
+      "R(A,B) * S(C,D) * (A + B + C + D)"
+      "R(A,B) * S(C,D) * ({A+B} + {C+D})";
+   test "Variable peer groups - Apriori"
+      "R(A,B,C) * (1 - B) * C * ({A + 2})"
+      "R(A,B,C) * {(1 + ((-1)*B)) * C * (2 + A)}";
+   test "Variable peer groups - Apriori with neg term"
+      "R(A,B,C) * (1 - B) * C * (-A)"
+      "R(A,B,C) * {-1} * {(1 + ((-1) * B)) * C * A}";
 ;;
 
 let test msg scope input output =
@@ -128,9 +215,6 @@ in
       "(A ^= AggSum([C],R(B,C)*[B])) * A"
       "AggSum([C],R(B,C)*B)";
    *)
-   test "MILOS" [var "A"; var "C"]
-     "S(A) * (C ^= R(A)) * C"
-     "1";
    test "Empty schema, Full expression into value" []
       "(A ^= AggSum([C],R(B,C)*B)) * {2*A}"
       "(A ^= AggSum([C],R(B,C)*B)) * {2*A}";
@@ -658,9 +742,3 @@ in
     test "Unify lifts and group-by variables" [] ["A"; "C"]
        "S(C) * (A ^= C) * AggSum([A], R(B) * (A ^= B)) "
        "S(C) * (A ^= C) * AggSum([A], R(B) * (A ^= B)) ";   
-
-
-    (* test "LiftsAndSchemas" [] ["A"]
-      "AggSum([X], (X ^= 42) * R(A, B) * (X ^= B))"
-      "(X ^= 42) * AggSum([X], R(A, X))"
-      (* "(X ^= 42) * AggSum([X],  R(A, B) * (X ^= B))" *) *)

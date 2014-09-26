@@ -294,6 +294,13 @@ let rec sign_of_value (a_value:value_t): value_t =
         | ValueRing.Neg(x) -> sign_of_value x
         | _                -> ValueRing.Neg(sign_of_a)
 
+(** 
+   Determine whether the indicated value is a constant (i.e., has no variables).
+   @param a_value       A value (Arithmetic ring expression)
+   @return              True if [v] is a constant 
+ *)        
+let value_is_const (v:value_t): bool = vars_of_value v = []
+
 (**** Evaluation ****)
 (**
    Evaluate the specified value to a constant

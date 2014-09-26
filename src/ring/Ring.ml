@@ -412,7 +412,7 @@ struct
                        let (a,b) = List.split ml in
                        let lmult l = List.fold_left (fun x y -> x*y) 1 l in
                        (lmult a, List.flatten b) in
-                    (List.map mono_prod (ListAsSet.distribute
+                    (List.map mono_prod (ListExtras.distribute
                       (List.map polynomial l)))
 
    let monomial_to_expr ((m,l):mono_t) : expr_t =
