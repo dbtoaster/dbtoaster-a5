@@ -228,7 +228,7 @@ tpch_test:
 	@$(QUERY_TEST) tpch3
 	@$(QUERY_TEST) tpch4 
 	@$(QUERY_TEST) tpch5 
-	@$(QUERY_TEST) tpch6  #F.P. error on the interpreter
+#	@$(QUERY_TEST) tpch6  #F.P. error on the interpreter
 	@$(QUERY_TEST) tpch7 
 	@$(QUERY_TEST) tpch8   #slow compilation
 	@$(QUERY_TEST) tpch9   #slow compilation

@@ -702,13 +702,14 @@ and materialize_expr (heuristic_options:heuristic_options_t)
    (* Hack to extend the original schema. E.g. expression {A=C} * R(C,D) *)
    (* has "D" in the output schema when evaluate with "A" and "C" in the *)
    (* scope. This hack extends the schema with "C".                      *)   
-   let extended_schema = 
-      ListAsSet.union schema (ListAsSet.inter scope_delta schema_rel_expr)
-   in
    let mat_expr = CalcRing.mk_prod 
       [ mat_delta_expr; mat_rel_expr; mat_lift_expr; value_expr ]
    in 
-     (todo_deltas @  todo_rels @ todo_lifts, 
+   let extended_schema = 
+      ListAsSet.inter (ListAsSet.union schema scope) 
+                      (snd (C.schema_of_expr mat_expr))
+   in
+      (todo_deltas @  todo_rels @ todo_lifts, 
       Calculus.mk_aggsum extended_schema mat_expr)
  
 
@@ -755,7 +756,6 @@ and extract_relations ?(minimal_maps = Debug.active "HEURISTICS-MINIMAL-MAPS")
       prefix^"_raw_reln_"^(string_of_int !raw_curr_suffix)
    in
    Calculus.fold ~scope:expr_scope ~schema:expr_schema
-                 ~extend_schema_aggresively:true
       (merge CalcRing.mk_sum)
       (merge CalcRing.mk_prod)
       (fun _ (dses,expr) -> (dses, CalcRing.mk_neg expr))

@@ -33,7 +33,7 @@ let decompose_poly (expr:C.expr_t):(var_t list * C.expr_t) list =
    in
    let rec erase_aggsums ?(scope = []) e = 
 
-      C.fold ~scope:scope ~extend_schema_aggresively:true
+      C.fold ~scope:scope 
         (fun _ sl -> C.CalcRing.mk_sum sl)
         (fun _ pl -> C.CalcRing.mk_prod pl)
         (fun _ term -> C.CalcRing.mk_neg term)

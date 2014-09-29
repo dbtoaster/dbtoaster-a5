@@ -381,14 +381,22 @@ in
    test "Aggsum of a lifted value - schema unchanged"
       "AggSum([A], (A ^= B) * R(A,C))"
       "(A ^= B) * AggSum([A], R(A,C))";
-   test "Exists with binary outcome"
+;;
+
+let test msg input output =
+   log_test ("Simplify domains ("^msg^")")
+      string_of_expr
+      (CalculusTransforms.simplify_domains (parse_calc input))
+      (parse_calc output)
+in
+   test "Exists with binary outcome - remove Exists"
       "Exists((X ^= A) * (Y ^= B))"
       "(X ^= A) * (Y ^= B)";
-   test "Exists with binary outcome - keep term"
+   test "Exists with binary outcome - keep everything"
       "Exists((X ^= dA) * R(A,B) * (Y ^= B))"
-      "(X ^= dA) * Exists(R(A,B)) * (Y ^= B)";
-
+      "Exists((X ^= dA) * R(A,B) * (Y ^= B))";
 ;;
+
 let test msg scope input output =
    log_test ("Factorize One Polynomial ("^msg^")")
       string_of_expr
@@ -436,32 +444,32 @@ in
      (M1(float)[][O_ORDERKEY] + M2(float)[][O_ORDERKEY])";
 ;;
 
-let test msg scope input output =
+let test msg input output =
    log_test ("Term cancelation ("^msg^")")
       string_of_expr
       (CalculusTransforms.cancel_terms 
         (CalcRing.mk_sum (List.map parse_calc input)))
       (parse_calc output)
 in
-   test "Basic" []
+   test "Basic"
      ["A"; "-A"]
      "0";
-   test "Multiple terms" []
+   test "Multiple terms"
      ["A"; "-A"; "A"]
      "A";
-   test "Complex terms" []
+   test "Complex terms" 
      ["A*B"; "-A"; "-A*B"]
      "({-1} * A)";
-   test "Complex terms different order" []
+   test "Complex terms different order" 
      ["A*B"; "-A"; "-B*A"]                
      "({-1} * A)";                          
-   test "Multiple expressions" []
+   test "Multiple expressions"
      ["A"; "-B"; "B"; "A"]
      "A + A";
-   test "Multiple expression cancelation" []
+   test "Multiple expression cancelation"
      ["A"; "-B"; "B"; "-A"]
      "0";  
-   test "PriceSpread" []
+   test "PriceSpread" 
      ["(-1 * ( 
          AggSum([],
             (((__sql_inline_agg_2 ^= (PSP_mBIDS1_L1_1(float)[][] * 0.0001)) * 
@@ -600,11 +608,9 @@ in
            (nested ^= AggSum([PK], L(PK, QTY2) * QTY2))
        )))"
     "(P(dPK) *
-  ((L(dPK, QTY) *
-     ((nested ^= (AggSum([dPK], (L(dPK, QTY2) * QTY2)) + dQTY)) +
-       ((nested ^= AggSum([dPK], (L(dPK, QTY2) * QTY2))) * {-1}))) +
-    ((nested ^= (AggSum([dPK], (L(dPK, QTY2) * QTY2)) + dQTY)) * 
-        (QTY ^= dQTY))))";
+      (((nested ^= (AggSum([dPK], (L(dPK, QTY2) * QTY2)) + dQTY)) *
+         (L(dPK, QTY) + (QTY ^= dQTY))) +
+      ((nested ^= AggSum([dPK], (L(dPK, QTY2) * QTY2))) * L(dPK, QTY) * {-1})))";
 
    test "SumNestedInTarget Delta" ["dA"; "dB"] []
       "AggSum([], 
@@ -659,15 +665,14 @@ in
             (GKKEOF ^= (NPZL_7DKV_C * {(NPZL_7DKV_B * NPZL_7DKV_B)})) *
             (C1 ^= NPZL_7DKV_C))) *
         (QKKF7PYI ^= COUNTSS_C))"
-      "(LB71Y ^= (COUNTSS_B * COUNTSS_C)) * (B1 ^= 0) * (GKKEOF ^= 0.) *
-        (QKKF7PYI ^= COUNTSS_C) *
-        AggSum([C1], 
-           (__sql_inline_not_1 ^= 0) * (NPZL_7DKV_B ^= 0) *
-           COUNTS1(int)[][NPZL_7DKV_B, NPZL_7DKV_C] *
-           (__sql_inline_not_1 ^= {NPZL_7DKV_C = 2}) *
-           (C1 ^= NPZL_7DKV_C)
+      "(LB71Y ^= (COUNTSS_B * COUNTSS_C)) * (GKKEOF ^= 0.) * (B1 ^= 0)  *  
+       (QKKF7PYI ^= COUNTSS_C) * 
+       AggSum([C1], 
+          (__sql_inline_not_1 ^= 0) * (NPZL_7DKV_B ^= 0) *
+          COUNTS1(int)[][NPZL_7DKV_B, NPZL_7DKV_C] *
+          (__sql_inline_not_1 ^= {NPZL_7DKV_C = 2}) *
+          (C1 ^= NPZL_7DKV_C))";
 
-         )";
    test "Factorizing deltas of products of lifts" ["dA"; "dB"] 
                                                   ["A"; "B"; "ALPHA"; "BETA"]
       "( (  (A ^= dA) * (B ^= dB) *
@@ -689,10 +694,10 @@ in
             )
          )
       )"
-      "(B ^= dB) * (A ^= dA) * (
-         ((BETA ^= R(dA, dB)) * (ALPHA ^= R(dA,dB)) * {-1})
+      "(A ^= dA) * (B ^= dB) * (
+         ((ALPHA ^= R(dA, dB)) * (BETA ^= R(dA,dB)) * {-1})
             + 
-         ((ALPHA ^= R(dA,dB) + 1) * (BETA ^= R(dA, dB) + 1))
+         ((BETA ^= R(dA,dB) + 1) * (ALPHA ^= R(dA, dB) + 1))
        )";
     test "Consistent handling of output vars in lifts" [] []
         "AggSum([B], (R(B, C) * 
@@ -704,7 +709,7 @@ in
     test "LiftAndSchemas" ["dA"; "dB"; "dC"] ["R_A"; "R_B"]
         "((R_B ^= 42) * 
            AggSum([R_B, R_A], ((R_A ^= dA) * (R_B ^= dB) * (R_C ^= dC) * R_C)))"
-        "(R_B ^= dB) * (R_A ^= dA) * (R_B ^= 42) * dC";
+        "(R_A ^= dA) * (R_B ^= dB) * (R_B ^= 42) * dC";
 
     test "TPCH-8" []["TOTAL_NAME"]
         "((TOTAL_NAME ^= 42) * R(R_A, R_B, R_C) * (TOTAL_VOLUME ^= R_C) *
@@ -724,9 +729,8 @@ in
             AggSum([], 
               ((__sql_inline_agg_1 ^=
                  AggSum([R_A], 
-                   (AggSum([R_A, TOTAL_NAME, TOTAL_VOLUME], 
-                      (R(R_A, R_B, R_C) * (TOTAL_VOLUME ^= R_C) *
-                        (TOTAL_NAME ^= R_B))) *
+                   (AggSum([R_A, TOTAL_VOLUME], 
+                      (R(R_A, R_B, R_C) * (TOTAL_VOLUME ^= R_C))) *
                      TOTAL_VOLUME))) *
                 {[listmax:int](1, __sql_inline_agg_1)}))) *
           R_C * {[/:float](__sql_inline_agg_2)})";

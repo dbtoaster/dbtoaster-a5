@@ -408,7 +408,6 @@ let rec degree_of_expr (expr:expr_t): int =
    @return         The final folded value
 *)
 let rec fold ?(scope = []) ?(schema = [])
-             ?(extend_schema_aggresively = false)
              (sum_fn:   schema_t -> 'a list         -> 'a)
              (prod_fn:  schema_t -> 'a list         -> 'a)
              (neg_fn:   schema_t -> 'a              -> 'a)
@@ -431,9 +430,7 @@ let rec fold ?(scope = []) ?(schema = [])
                ListAsSet.multiunion
                   (schema::(List.map (fun x -> 
                      let (xin,xout) = schema_of_expr x in
-                     if extend_schema_aggresively 
-                     then ListAsSet.union xin xout
-                     else xin) next))
+                     ListAsSet.union xin xout) next))
             ) curr
          ) terms)
       | CalcRing.Neg(term) -> neg_fn (scope,schema) (rcr scope schema term)
@@ -485,24 +482,26 @@ let rec rewrite ?(scope = []) ?(schema = [])
              let (lf_ivars, lf_ovars) = schema_of_expr (CalcRing.mk_val lf) in
              let lf_vars = ListAsSet.union lf_ivars lf_ovars in
              let lf_scope = ListAsSet.inter local_scope lf_vars in 
+             let lf_schema = ListAsSet.inter 
+                (ListAsSet.union local_scope local_schema) lf_ovars in
              begin match lf with
                  | AggSum(gb_vars,sub_t) -> 
-                    if (leaf_descend_fn (lf_scope, local_schema) lf) 
-                    then (AggSum(gb_vars,(rcr lf_scope gb_vars sub_t)))
+                    if (leaf_descend_fn (lf_scope, lf_schema) lf) 
+                    then (AggSum(gb_vars,(rcr lf_scope lf_schema sub_t)))
                     else lf
                  | Lift(v,sub_t) -> 
-                    if (leaf_descend_fn (lf_scope, local_schema) lf) 
-                    then (Lift(v,(rcr lf_scope 
-                                     (ListAsSet.diff local_schema [v])
-                                     sub_t)))
+                    let sub_scope = ListAsSet.diff lf_scope [v] in 
+                    let sub_schema = ListAsSet.diff lf_schema [v] in
+                    if (leaf_descend_fn (lf_scope, lf_schema) lf) 
+                    then (Lift(v,(rcr sub_scope sub_schema sub_t)))
                     else lf
                  | External(en, eiv, eov, et, Some(em)) ->
-                    if (leaf_descend_fn (lf_scope, local_schema) lf) 
+                    if (leaf_descend_fn (lf_scope, lf_schema) lf) 
                     then (External(en, eiv, eov, et, Some(rcr eiv eov em)))
                     else lf
                  | Exists(subexp) -> 
-                    if (leaf_descend_fn (lf_scope, local_schema) lf) 
-                    then (Exists(rcr lf_scope local_schema subexp))
+                    if (leaf_descend_fn (lf_scope, lf_schema) lf) 
+                    then (Exists(rcr lf_scope lf_schema subexp))
                     else lf
                  | _ -> lf
              end)
@@ -852,6 +851,7 @@ let rec expr_has_binary_outcome ?(scope = []) expr =
       (fun _ pl -> List.for_all (fun x -> x) pl) 
       (fun _ x -> x)
       (fun (scope, _) lf -> begin match lf with
+         | Value(ValueRing.Val(AConst(CInt(x)))) when x = 0 || x = 1 -> true
          | Value _ -> false
          | External _ -> false
          | AggSum(gb_vars, subexp) -> 

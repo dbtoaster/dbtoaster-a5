@@ -56,8 +56,7 @@ log_test "Parsing"
 let test_delta (name:string) ins reln relv expr delta =
    log_test ("Deltas ("^name^")")
       Calculus.string_of_expr
-      (CalculusDeltas.delta_of_expr 
-        ~ignore_delta_domains:true (event ins reln relv) (parse_calc expr))
+      (CalculusDeltas.delta_of_expr (event ins reln relv) (parse_calc expr))
       (parse_calc delta)
 ;;
 
