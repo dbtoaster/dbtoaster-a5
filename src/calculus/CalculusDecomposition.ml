@@ -37,13 +37,15 @@ let decompose_poly (expr:C.expr_t):(var_t list * C.expr_t) list =
         (fun _ sl -> C.CalcRing.mk_sum sl)
         (fun _ pl -> C.CalcRing.mk_prod pl)
         (fun _ term -> C.CalcRing.mk_neg term)
-        (fun (scope, _) lf -> begin match lf with
+        (fun (scope, schema) lf -> begin match lf with
           | AggSum(gb_vars, subexp) ->           
             begin
               (* Removing AggSum might introduce variable name conflicts *)
               let subexp_ovars = snd(C.schema_of_expr subexp) in
               let new_ovars = ListAsSet.diff subexp_ovars gb_vars in
-              let conflict_vars = ListAsSet.inter scope new_ovars in
+              let conflict_vars = 
+                ListAsSet.inter new_ovars (ListAsSet.union scope schema) 
+              in
               let rewritten_subexp = 
                 if (conflict_vars == []) then subexp
                 else begin
@@ -62,11 +64,11 @@ let decompose_poly (expr:C.expr_t):(var_t list * C.expr_t) list =
    (* Top-level sum-terms can have different schemas *)
    List.fold_left (fun result term ->
       let schema = snd(C.schema_of_expr term) in
-      let term_decomposed = List.map (fun x -> (schema, x))
-         (C.CalcRing.sum_list 
-             (C.CalcRing.polynomial_expr (erase_aggsums term)))
+      let decomposed_term = 
+         List.map (fun x -> (schema, x)) (C.CalcRing.sum_list 
+            (C.CalcRing.polynomial_expr (erase_aggsums term)))
       in
-         (result @ term_decomposed)
+         (result @ decomposed_term)
    ) [] (C.CalcRing.sum_list (C.CalcRing.polynomial_expr expr))
 
 (******************************************************************************)
