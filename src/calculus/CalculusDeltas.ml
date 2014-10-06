@@ -41,7 +41,7 @@ let extract_domains scope expr =
          CalculusTransforms.OptNestingRewrites; 
          CalculusTransforms.OptAdvanceLifts;
          CalculusTransforms.OptFactorizePolynomial
-      ] (scope,schema) (CalculusTransforms.erase_negs expr) 
+      ] (scope,schema) expr
    in
       (* Extract domain terms *)
       List.fold_left (fun (lhs, rhs) term -> match term with

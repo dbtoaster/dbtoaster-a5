@@ -29,8 +29,8 @@ let mk_temp_var term =
  *)
 let rec combine_values ?(aggressive=false) ?(peer_groups=[])
                        (big_expr:C.expr_t): C.expr_t =
-   Debug.print "LOG-CALCOPT-DETAIL" (fun () ->
-      "Combine Values: "^(CalculusPrinter.string_of_expr big_expr) 
+   Debug.print "LOG-COMBINE-VALUES" (fun () ->
+      "Combine Values (START): "^(CalculusPrinter.string_of_expr big_expr) 
    );  
    (* Peer group functions *)
    let pg_eq = fun x y -> ListAsSet.seteq x y in
@@ -99,7 +99,7 @@ let rec combine_values ?(aggressive=false) ?(peer_groups=[])
           List.map snd (rcr tagged_components)
       in
  
-      Debug.print "LOG-COMBINE-VALUES" (fun () ->
+      Debug.print "LOG-COMBINE-VALUES-DETAIL" (fun () ->
         "Peer groups: "^(string_of_bool merge_consts)^" "^
         ListExtras.ocaml_of_list 
           (ListExtras.ocaml_of_list string_of_var) peer_groups^"\nExpr: "^
@@ -173,7 +173,7 @@ let rec combine_values ?(aggressive=false) ?(peer_groups=[])
                                             variable_values
          in
 
-         Debug.print "LOG-COMBINE-VALUES" (fun () ->
+         Debug.print "LOG-COMBINE-VALUES-DETAIL" (fun () ->
            "Partitioned values: "^
            ListExtras.ocaml_of_list 
              (fun vals -> Arithmetic.string_of_value (val_op vals))
@@ -260,7 +260,6 @@ let rec combine_values ?(aggressive=false) ?(peer_groups=[])
            merge false CalcRing.mk_prod ValueRing.mk_prod 
              (pg_union peer_groups pg_bucket) prod_terms
          )
-
      | CalcRing.Neg(term) ->
        (peer_groups,
         CalcRing.mk_prod [ C.mk_value (Arithmetic.mk_int (-1)); 
@@ -333,7 +332,11 @@ let rec combine_values ?(aggressive=false) ?(peer_groups=[])
        end      
      end
    in
-     snd (rcr big_expr)
+   let rewritten_expr = snd (rcr big_expr) in
+      Debug.print "LOG-COMBINE-VALUES" (fun () ->
+         "Combine Values (END): "^
+         (CalculusPrinter.string_of_expr rewritten_expr) 
+      ); rewritten_expr
 ;;
 
 (**/**)
@@ -362,8 +365,8 @@ type lift_candidate_t =
     @param expr   The calculus expression to be processed
 *)
 let lift_equalities (global_scope:var_t list) (big_expr:C.expr_t): C.expr_t =
-   Debug.print "LOG-CALCOPT-DETAIL" (fun () ->
-      "Lift Equalities: "^(CalculusPrinter.string_of_expr big_expr) 
+   Debug.print "LOG-LIFT-EQUALITIES" (fun () ->
+      "Lift Equalities (START): "^(CalculusPrinter.string_of_expr big_expr) 
    );
    let candidate_term (local_scope:var_t list) (candidate:lift_candidate_t) = 
       match candidate with
@@ -377,7 +380,7 @@ let lift_equalities (global_scope:var_t list) (big_expr:C.expr_t): C.expr_t =
             else if (List.mem y local_scope)
                  then C.mk_lift x
                          (C.mk_value (Arithmetic.mk_var y))
-                 else (Debug.print "LOG-CALCOPT-DETAIL" (fun () ->
+                 else (Debug.print "LOG-LIFT-EQUALITIES" (fun () ->
                         "Scope of error is : " ^
                         (ListExtras.ocaml_of_list string_of_var local_scope)
                       );
@@ -386,7 +389,7 @@ let lift_equalities (global_scope:var_t list) (big_expr:C.expr_t): C.expr_t =
          | UnidirectionalLift(x, y) -> 
             if not (List.for_all (fun y_var -> List.mem y_var local_scope)
                                  (Arithmetic.vars_of_value y))
-            then (Debug.print "LOG-CALCOPT-DETAIL" (fun () ->
+            then (Debug.print "LOG-LIFT-EQUALITIES" (fun () ->
                         "Scope of error is : " ^
                         (ListExtras.ocaml_of_list string_of_var local_scope)
                       );
@@ -404,7 +407,7 @@ let lift_equalities (global_scope:var_t list) (big_expr:C.expr_t): C.expr_t =
    in
    let rec rcr (scope:var_t list) (expr:C.expr_t):
                ((lift_candidate_t) list * C.expr_t) = 
-      Debug.print "LOG-LIFT-EQUALITIES" (fun () ->
+      Debug.print "LOG-LIFT-EQUALITIES-DETAIL" (fun () ->
          "Lift Equalities: "^
          (CalculusPrinter.string_of_expr expr)^
          "\n\t\tWith Scope: "^
@@ -457,7 +460,7 @@ let lift_equalities (global_scope:var_t list) (big_expr:C.expr_t): C.expr_t =
                         (* If y enters scope here, then it's not possible to
                            lift this expression (for now, this is true even if x
                            doesn't enter scope here) *)
-                        Debug.print "LOG-LIFT-EQUALITIES" (fun () ->
+                        Debug.print "LOG-LIFT-EQUALITIES-DETAIL" (fun () ->
                            "Aborting search for unidirectional lift "^
                            (string_of_var x)^" ^= "^
                               (CalculusPrinter.string_of_value y)^
@@ -470,7 +473,7 @@ let lift_equalities (global_scope:var_t list) (big_expr:C.expr_t): C.expr_t =
                      ) else if List.mem x entering_scope then (
                         (* x enters scope here, but y does not.  We can
                            lift this equality *)
-                        Debug.print "LOG-LIFT-EQUALITIES" (fun () ->
+                        Debug.print "LOG-LIFT-EQUALITIES-DETAIL" (fun () ->
                            "Found lift location for unidirectional lift "^
                            (string_of_var x)^" ^= "^
                               (CalculusPrinter.string_of_value y)^" in:\n"^
@@ -488,7 +491,7 @@ let lift_equalities (global_scope:var_t list) (big_expr:C.expr_t): C.expr_t =
                      begin match (List.mem x entering_scope, 
                             List.mem y entering_scope) with
                      | (true, true) -> (* x and y enter scope: abort *)
-                        Debug.print "LOG-LIFT-EQUALITIES" (fun () ->
+                        Debug.print "LOG-LIFT-EQUALITIES-DETAIL" (fun () ->
                            "Aborting search for bidirectional lift "^
                            (string_of_var x)^" ^=^ "^(string_of_var y)^
                            " due to simultaneous scope entrance"
@@ -499,7 +502,7 @@ let lift_equalities (global_scope:var_t list) (big_expr:C.expr_t): C.expr_t =
                                candidate_term rhs_scope candidate])
                      | (false, true) -> (* y enters scope, x does not: 
                                            lift into y *)
-                        Debug.print "LOG-LIFT-EQUALITIES" (fun () ->
+                        Debug.print "LOG-LIFT-EQUALITIES-DETAIL" (fun () ->
                            "Found lift location for bidirectional lift "^
                            (string_of_var y)^" ^= "^(string_of_var x)^
                               " in:\n"^
@@ -512,7 +515,7 @@ let lift_equalities (global_scope:var_t list) (big_expr:C.expr_t): C.expr_t =
                               updated_lhs])
                      | (true, false) -> (* x enters scope, y does not: 
                                            lift into x *)
-                        Debug.print "LOG-LIFT-EQUALITIES" (fun () ->
+                        Debug.print "LOG-LIFT-EQUALITIES-DETAIL" (fun () ->
                            "Found lift location for bidirectional lift "^
                            (string_of_var x)^" ^= "^(string_of_var y)^
                               " in:\n"^
@@ -555,21 +558,21 @@ let lift_equalities (global_scope:var_t list) (big_expr:C.expr_t): C.expr_t =
          | CalcRing.Val(Cmp(Eq, ValueRing.Val(AVar(x)), 
                                 ValueRing.Val(AVar(y))))
                when (snd x) = (snd y) ->
-            Debug.print "LOG-LIFT-EQUALITIES" (fun () -> 
+            Debug.print "LOG-LIFT-EQUALITIES-DETAIL" (fun () -> 
                "Bidirectional lift candidate "^(string_of_var x)^" ^=^ "^
                (string_of_var y)
             );
             ([BidirectionalLift(x, y)], CalcRing.one)
          | CalcRing.Val(Cmp(Eq, ValueRing.Val(AVar(x)), y)) 
                when (Type.can_escalate_type (type_of_value y) (snd x)) ->
-            Debug.print "LOG-LIFT-EQUALITIES" (fun () -> 
+            Debug.print "LOG-LIFT-EQUALITIES-DETAIL" (fun () -> 
                "Unidirectional lift candidate "^(string_of_var x)^" ^= "^
                (CalculusPrinter.string_of_value y)
             );
             ([UnidirectionalLift(x, y)], CalcRing.one)
          | CalcRing.Val(Cmp(Eq, x, ValueRing.Val(AVar(y))))
                when (Type.can_escalate_type (type_of_value x) (snd y)) ->
-            Debug.print "LOG-LIFT-EQUALITIES" (fun () -> 
+            Debug.print "LOG-LIFT-EQUALITIES-DETAIL" (fun () -> 
                "Unidirectional lift candidate "^(string_of_var y)^" ^= "^
                (CalculusPrinter.string_of_value x)
             );
@@ -583,7 +586,13 @@ let lift_equalities (global_scope:var_t list) (big_expr:C.expr_t): C.expr_t =
             ([], expr)
       end
    in
+   let rewritten_expr = 
       merge global_scope (List.split [rcr global_scope big_expr])
+   in
+      Debug.print "LOG-LIFT-EQUALITIES" (fun () ->
+         "Lift Equalities (END): "^
+         (CalculusPrinter.string_of_expr rewritten_expr) 
+      ); rewritten_expr
 ;;
 
 (**/**)
@@ -619,7 +628,7 @@ exception CouldNotUnifyException of string;;
 *)
 let unify_lifts (big_scope:var_t list) (big_schema:var_t list) 
                 (big_expr:C.expr_t): C.expr_t =
-   Debug.print "LOG-CALCOPT-DETAIL" (fun () ->
+   Debug.print "LOG-UNIFY-LIFTS" (fun () ->
       let (in_sch, out_sch) = C.schema_of_expr big_expr in
       "Unify Lifts (START): "^
       (ListExtras.ocaml_of_list string_of_var in_sch)^
@@ -628,7 +637,7 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
    );
    let unify (force:bool) (lift_v:var_t) (expr_sub:C.expr_t) (scope:var_t list) 
              (schema:var_t list) (expr:C.expr_t): C.expr_t =
-      Debug.print "LOG-UNIFY-LIFTS" (fun () ->
+      Debug.print "LOG-UNIFY-LIFTS-DETAIL" (fun () ->
          "Attempting to unify ("^(string_of_var lift_v)^" ^= "^
          (CalculusPrinter.string_of_expr expr_sub)^") with scope/schema "^
          (ListExtras.ocaml_of_list string_of_var scope)^
@@ -808,7 +817,7 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
       end) 
       (fun (local_scope, _) _ -> List.mem lift_v local_scope) expr
       in 
-         Debug.print "LOG-UNIFY-LIFTS" (fun () ->
+         Debug.print "LOG-UNIFY-LIFTS-DETAIL" (fun () ->
             "Successfully unified ("^(string_of_var lift_v)^" ^= "^
             (CalculusPrinter.string_of_expr expr_sub)^") in: "^
             (CalculusPrinter.string_of_expr expr)^"\nto: "^
@@ -817,7 +826,7 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
 
    in
    let rec rcr (scope:var_t list) (schema:var_t list) (expr:C.expr_t):C.expr_t =
-      Debug.print "LOG-UNIFY-LIFTS" (fun () ->
+      Debug.print "LOG-UNIFY-LIFTS-DETAIL" (fun () ->
          "Attempting to unify lifts in: "^
          (ListExtras.ocaml_of_list string_of_var scope)^
          (ListExtras.ocaml_of_list string_of_var schema)^"\n"^
@@ -863,7 +872,7 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
                (ListAsSet.inter gb_vars new_ovars)
                (ListAsSet.inter expr_ivars new_ovars)
          in
-            Debug.print "LOG-UNIFY-LIFTS" (fun () ->
+            Debug.print "LOG-UNIFY-LIFTS-DETAIL" (fun () ->
                "Updating group-by variables from "^
                (ListExtras.ocaml_of_list string_of_var gb_vars)^" to "^
                (ListExtras.ocaml_of_list string_of_var new_gb_vars)^
@@ -883,7 +892,7 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
             try 
                unify false lift_v new_subexp scope schema CalcRing.one;
             with CouldNotUnifyException(msg) ->
-               Debug.print "LOG-UNIFY-LIFTS" (fun () ->
+               Debug.print "LOG-UNIFY-LIFTS-DETAIL" (fun () ->
                   "Could not unify "^(string_of_var lift_v)^" because: "^msg^
                   " in terminal lift"
                );
@@ -921,7 +930,7 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
                   rcr new_rscope new_rschema new_rexpr
 
             with CouldNotUnifyException(msg) -> (
-               Debug.print "LOG-UNIFY-LIFTS" (fun () ->
+               Debug.print "LOG-UNIFY-LIFTS-DETAIL" (fun () ->
                   "Could not unify "^(string_of_var lift_v)^" because: "^msg^
                   " in: \n"^(CalculusPrinter.string_of_expr rest_expr)
                );
@@ -963,7 +972,7 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
    end 
  in
    let rewritten_expr = rcr big_scope big_schema big_expr in
-   Debug.print "LOG-CALCOPT-DETAIL" (fun () ->
+   Debug.print "LOG-UNIFY-LIFTS" (fun () ->
       "Unify Lifts (END): "^
       (CalculusPrinter.string_of_expr rewritten_expr) 
    ); rewritten_expr
@@ -982,13 +991,13 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
    @param expr    The calculus expression being processed
 *)
 let advance_lifts scope expr =
-   Debug.print "LOG-CALCOPT-DETAIL" (fun () -> 
+   Debug.print "LOG-ADVANCE-LIFTS" (fun () -> 
       "Advance Lifts (START): "^(CalculusPrinter.string_of_expr expr)
    );
    let rewritten_expr = C.rewrite ~scope:scope 
       (fun _ x -> CalcRing.mk_sum x)
       (fun (scope, _) pl ->
-          Debug.print "LOG-ADVANCE-LIFTS" (fun () -> 
+          Debug.print "LOG-ADVANCE-LIFTS-DETAIL" (fun () -> 
              "Advance Lifts: processing " ^         
              (CalculusPrinter.string_of_expr (CalcRing.mk_prod pl)) ^
              (ListExtras.ocaml_of_list string_of_var scope)
@@ -1048,11 +1057,93 @@ let advance_lifts scope expr =
       (fun _ _ -> true)
       expr 
    in
-      Debug.print "LOG-CALCOPT-DETAIL" (fun () -> 
+      Debug.print "LOG-ADVANCE-LIFTS" (fun () -> 
          "Advance Lifts (END): "^
          (CalculusPrinter.string_of_expr rewritten_expr)
       ); rewritten_expr
 ;;
+
+
+(**
+  [eliminate_duplicates expr]
+
+    Simplification rules for terms with binary multiplicities (return 0 or 1).
+
+    Recur through the expression tree and remove all expression that 
+    have binary miltiplicities when identical expressions are already defined. 
+*)
+let eliminate_duplicates (big_expr:C.expr_t) =
+   Debug.print "LOG-ELIMINATE-DUPLICATES" (fun () ->
+      "Eliminate duplicates (START): "^
+      (CalculusPrinter.string_of_expr big_expr) 
+   );
+   let rec rcr scope context expr = begin match expr with
+      | CalcRing.Sum(sl) -> 
+         let (new_contexts, new_sl) = 
+            List.split (List.map (rcr scope context) sl)
+         in
+            (ListAsSet.multiinter ~eq:C.exprs_are_identical new_contexts,
+             CalcRing.mk_sum new_sl)
+
+      | CalcRing.Prod(pl) -> snd (
+         List.fold_left (fun (curr_scope, (curr_context, curr_prod)) term ->
+            let (new_ctx, new_term) = rcr curr_scope curr_context term in
+            (
+               ListAsSet.union curr_scope (snd (C.schema_of_expr new_term)),
+               (  ListAsSet.union ~eq:C.exprs_are_identical 
+                     curr_context new_ctx, 
+                  CalcRing.mk_prod [ curr_prod ; new_term]  )
+            )
+         ) (scope, (context, CalcRing.one)) pl)
+         
+      | CalcRing.Neg(subexp) -> 
+           let (new_context, new_subexp) = rcr scope context subexp in
+           (new_context, CalcRing.mk_neg new_subexp)
+      
+      | CalcRing.Val(lf) -> 
+           (* Expressions returning 0 or 1 are candidates for elimination *) 
+           let expr_is_eligible = 
+              C.expr_has_binary_multiplicity ~scope:scope expr 
+           in
+
+           if expr_is_eligible && 
+                 List.exists (C.exprs_are_identical expr) context 
+           then ([], CalcRing.one) 
+           else
+
+           let new_context = if expr_is_eligible then [expr] else [] in
+
+           let (expr_ivars, expr_ovars) = C.schema_of_expr expr in
+           let expr_vars = ListAsSet.union expr_ivars expr_ovars in
+           let filt_scope = ListAsSet.inter scope expr_vars in
+           let filt_context = List.filter (fun ctx_term ->
+              let (cterm_ivars, cterm_ovars) = C.schema_of_expr ctx_term in
+              let cterm_vars = ListAsSet.union cterm_ivars cterm_ovars in
+              ListAsSet.subset cterm_vars expr_vars
+           ) context in 
+              begin match lf with
+                | AggSum(gb_vars,raw_subexp) -> 
+                    let (_, subexp) = rcr filt_scope filt_context raw_subexp in
+                    (new_context, C.mk_aggsum gb_vars subexp)
+                | Lift(v,raw_subexp) -> 
+                    let (_, subexp) = rcr filt_scope filt_context raw_subexp in
+                    (new_context, C.mk_lift v subexp)
+                | Exists(raw_subexp) -> 
+                    let (_, subexp) = rcr filt_scope filt_context raw_subexp in
+                    (new_context, C.mk_exists subexp)
+                | External(en, ei, eo, et, Some(raw_subexp)) ->
+                    let (_, subexp) = rcr ei filt_context raw_subexp in
+                    (new_context, C.mk_external en ei eo et (Some(subexp)))
+                | _ -> (new_context, expr)
+              end            
+      end
+   in
+      let scope = fst (C.schema_of_expr big_expr) in
+      let rewritten_expr = snd (rcr scope [] big_expr) in
+      Debug.print "LOG-ELIMINATE-DUPLICATES" (fun () ->
+         "Eliminate duplicates (END): "^
+         (CalculusPrinter.string_of_expr rewritten_expr) 
+      ); rewritten_expr
 
 (**
   [extract_domains expr]
@@ -1073,7 +1164,51 @@ let extract_domains (big_expr:C.expr_t) =
    let rec rcr expr = 
       let (scope, schema) = C.schema_of_expr expr in
       C.fold ~scope:scope ~schema:schema
-         (fun _ sl -> CalcRing.mk_sum sl)
+         (fun _ sl ->  CalcRing.mk_sum sl
+(*             
+            (* Extact domain subexpressions *)
+            let split = List.fold_left (fun (lhs,rhs) term -> 
+               match term with 
+                  | CalcRing.Val(DomainDelta(subexp)) -> 
+                     (lhs @ CalcRing.prod_list subexp, rhs)
+                  | _ -> (lhs, rhs @ [term])
+               ) ([], [])
+            in
+            let create_domain terms = 
+               if terms = [] then CalcRing.one 
+               else C.mk_domain (CalcRing.mk_prod terms)
+            in
+            let rec extract_common_domain = function
+               | [] -> ([], CalcRing.zero)
+               | [term] -> 
+                  let (lhs, rhs) = split (CalcRing.prod_list term) in
+                     (lhs, CalcRing.mk_prod rhs)
+               | hd::tl -> 
+                  let (hd_lhs, hd_rest) = split (CalcRing.prod_list hd) in
+                  let hd_rhs = CalcRing.mk_prod hd_rest in
+                  let (tl_lhs, tl_rhs) = extract_common_domain tl in
+                  let common_domain = 
+                     ListAsSet.inter ~eq:C.exprs_are_identical hd_lhs tl_lhs
+                  in
+                  let new_hd_lhs = ListAsSet.diff hd_lhs common_domain in
+                  let new_tl_lhs = ListAsSet.diff tl_lhs common_domain in
+                     (
+                        common_domain,
+                        CalcRing.mk_sum [
+                           CalcRing.mk_prod [create_domain new_hd_lhs; hd_rhs];
+                           CalcRing.mk_prod [create_domain new_tl_lhs; tl_rhs]  
+                        ]
+                     )
+            in 
+            let (lhs, rhs) = extract_common_domain sl in 
+               Debug.print "LOG-EXTRACT-DOMAINS-DETAIL" (fun () ->
+                  "Candidates: "^
+                  (ListExtras.ocaml_of_list string_of_expr sl)^
+                  "\nExtracted common domain: "^
+                  (C.string_of_expr (create_domain lhs))
+               );
+               CalcRing.mk_prod [ create_domain lhs; rhs ]   *)
+         )
          (fun (_, schema) pl -> 
             let prod_term = CalcRing.mk_prod pl in
             let (prod_term_ivars, _) = C.schema_of_expr prod_term in
@@ -1104,10 +1239,10 @@ let extract_domains (big_expr:C.expr_t) =
                   2) (A ^= B) where B is value covered by dom_vars; *)
             let extended_domain_terms = snd (
                List.fold_left (fun (scope, dl) term -> match term with
-                (* 
-                  | CalcRing.Val(Cmp _) 
+
+                  | CalcRing.Val(Cmp _)
                     when ListAsSet.subset (fst (C.schema_of_expr term)) scope ->
-                       (scope, dl @ [term])     *)
+                       (scope, dl @ [term])     
                   | CalcRing.Val(Lift(v1,CalcRing.Val(Value(v2)))) 
                     when ListAsSet.subset (Arithmetic.vars_of_value v2) scope ->
                        (ListAsSet.union scope [v1], dl @ [term]) 
@@ -1195,105 +1330,29 @@ let extract_domains (big_expr:C.expr_t) =
          end) 
          expr
    in
-   let rewritten_expr = rcr big_expr in
+   let rewritten_expr = eliminate_duplicates (rcr big_expr) in
    Debug.print "LOG-EXTRACT-DOMAINS" (fun () ->
       "Extract domains (END): "^
       (CalculusPrinter.string_of_expr rewritten_expr) 
    ); rewritten_expr
 ;;
 
-(**
-  [eliminate_duplicates expr]
-
-    Simplification rules for terms with binary outcomes (return 0 or 1).
-
-    Recur through the expression tree and remove all expression that 
-    have binary outcomes and identical expressions already defined. 
-*)
-let eliminate_duplicates (big_expr:C.expr_t) =
-   Debug.print "LOG-ELIMINATE-DUPLICATES" (fun () ->
-      "Eliminate duplicates (START): "^
-      (CalculusPrinter.string_of_expr big_expr) 
-   );
-   let rec rcr scope context expr = begin match expr with
-      | CalcRing.Sum(sl) -> 
-         let (new_contexts, new_sl) = 
-            List.split (List.map (rcr scope context) sl)
-         in
-            (ListAsSet.multiinter ~eq:exprs_are_identical new_contexts,
-             CalcRing.mk_sum new_sl)
-
-      | CalcRing.Prod(pl) -> snd (
-         List.fold_left (fun (curr_scope, (curr_context, curr_prod)) term ->
-            let (new_ctx, new_term) = rcr curr_scope curr_context term in
-            (
-               ListAsSet.union curr_scope (snd (C.schema_of_expr new_term)),
-               (  ListAsSet.union ~eq:C.exprs_are_identical 
-                     curr_context new_ctx, 
-                  CalcRing.mk_prod [ curr_prod ; new_term]  )
-            )
-         ) (scope, (context, CalcRing.one)) pl)
-         
-      | CalcRing.Neg(subexp) -> 
-           let (new_context, new_subexp) = rcr scope context subexp in
-           (new_context, CalcRing.mk_neg new_subexp)
-      
-      | CalcRing.Val(lf) -> 
-           (* Expressions returning 0 or 1 are candidates for elimination *) 
-           let suitable_expr = C.expr_has_binary_outcome ~scope:scope expr in
-
-           if suitable_expr && List.exists (C.exprs_are_identical expr) context 
-           then ([], CalcRing.one) else
-
-           let new_context = if suitable_expr then [expr] else [] in
-
-           let (expr_ivars, expr_ovars) = C.schema_of_expr expr in
-           let expr_vars = ListAsSet.union expr_ivars expr_ovars in
-           let filt_scope = ListAsSet.inter scope expr_vars in
-           let filt_context = List.filter (fun ctx_term ->
-              let (cterm_ivars, cterm_ovars) = C.schema_of_expr ctx_term in
-              let cterm_vars = ListAsSet.union cterm_ivars cterm_ovars in
-              ListAsSet.subset cterm_vars expr_vars
-           ) context in 
-              begin match lf with
-                | AggSum(gb_vars,raw_subexp) -> 
-                    let (_, subexp) = rcr filt_scope filt_context raw_subexp in
-                    (new_context, C.mk_aggsum gb_vars subexp)
-                | Lift(v,raw_subexp) -> 
-                    let (_, subexp) = rcr filt_scope filt_context raw_subexp in
-                    (new_context, C.mk_lift v subexp)
-                | Exists(raw_subexp) -> 
-                    let (_, subexp) = rcr filt_scope filt_context raw_subexp in
-                    (new_context, C.mk_exists subexp)
-                | External(en, ei, eo, et, Some(raw_subexp)) ->
-                    let (_, subexp) = rcr ei filt_context raw_subexp in
-                    (new_context, C.mk_external en ei eo et (Some(subexp)))
-                | _ -> (new_context, expr)
-              end            
-      end
-   in
-      let scope = fst (C.schema_of_expr big_expr) in
-      let rewritten_expr = snd (rcr scope [] big_expr) in
-      Debug.print "LOG-ELIMINATE-DUPLICATES" (fun () ->
-         "Eliminate duplicates (END): "^
-         (CalculusPrinter.string_of_expr rewritten_expr) 
-      ); rewritten_expr
 
 (**
   [simplify_domains expr]
 
     Simple rewrite rules focused on DomainDelta and Exists terms.
+  
+    [DomainDelta(E) * R * E => E * R ] or
+    [DomainDelta(E1 * E2) * R1 * E2 * R2 * E1 => E1 * E2 * R1 * R2 ]
+
+    [Exists(E) * R * E => E * R ]
 
     [DomainDelta(A) => A
         IF A produces only tuples with multiplicity zero or one ]
   
     [Exists(A) => A
         IF A produces only tuples with multiplicity zero or one ]
-  
-    [DomainDelta(E) * R * E => E * R ] or
-    [DomainDelta(E1 * E2) * R1 * E2 * R2 * E1 => E1 * E2 * R1 * R2 ]
-
-    [Exists(E) * R * E => E * R ]
 
     DISABLED!!!
     [DomainDelta(E1 * E2) -> DomainDelta(E1) * DomainDelta(E2)  ]
@@ -1306,6 +1365,91 @@ let simplify_domains (big_expr:C.expr_t) =
    Debug.print "LOG-SIMPLIFY-DOMAINS" (fun () ->
       "Simplify domains (START): "^(CalculusPrinter.string_of_expr big_expr) 
    );
+   let unique_domains expr =
+      Debug.print "LOG-SIMPLIFY-DOMAINS-DETAIL" (fun () ->
+         "Unique domains (START): "^ (CalculusPrinter.string_of_expr expr) 
+      );
+      let eligible_term = function
+         | CalcRing.Val(Rel _) | CalcRing.Val(DeltaRel _)
+         | CalcRing.Val(External _) -> true
+         | _ -> false
+      in
+      let merge_mappings mapping1 mapping2 = 
+         match (ListAsFunction.merge mapping1 mapping2) with
+            | Some(mapping) -> mapping
+            | None -> failwith "Incompatible mappings"
+      in
+      let rec map_relations schema term_list = match term_list with 
+         | [] -> []
+         | [x] -> [x]
+         | head::tail -> 
+            let mapped_tail = map_relations schema tail in
+
+            if not (eligible_term head) then head :: mapped_tail else
+
+            let mapping = 
+               List.fold_left (fun curr_mapping tail_term ->
+                  if not (eligible_term tail_term) then curr_mapping else
+
+                   match C.cmp_exprs head tail_term with 
+                     | Some(mapping) ->
+                        (* Map head onto tail_term *)
+                        let (schema_mapping, rest_mapping) = 
+                           List.partition (fun (a,b) -> List.mem a schema) 
+                                          mapping
+                        in
+                        if ListAsFunction.is_identity schema_mapping then
+                           merge_mappings curr_mapping rest_mapping
+                        else
+
+                        (* Map tail_term onto head *)
+                        let (schema_mapping2, rest_mapping2) = 
+                           List.partition (fun (a,b) -> List.mem a schema)
+                              (List.map (fun (a,b) -> (b,a)) mapping)
+                        in
+                        if ListAsFunction.is_identity schema_mapping2 then
+                           merge_mappings curr_mapping rest_mapping2
+                        else curr_mapping
+
+                     | None -> curr_mapping
+               ) [] mapped_tail
+            in
+               CalcRing.prod_list (rename_vars mapping 
+                  (CalcRing.mk_prod (head::mapped_tail)))
+      in   
+
+      (* When aggressive elimination is set, redundant relations, delta 
+         relations, and externals are removed. For instance, 
+            R(A,B) * R(A,B) -> R(A,B)
+         This is safe to do only when the domain expression is a monomial
+         since we don't care about the multiplicity. *)
+      let remove_duplicates aggressive term_list = 
+         List.fold_left (fun acc_terms term ->
+            if List.mem term acc_terms &&
+                  ((aggressive && eligible_term term) ||
+                   C.expr_has_binary_multiplicity term)
+            then acc_terms 
+            else acc_terms @ [term]            
+         ) [] term_list
+      in
+      let rewritten_expr = CalcRing.mk_sum (
+         let decomposed_expr = CalculusDecomposition.decompose_poly expr in
+         let expr_is_monomial = (List.length decomposed_expr = 1) in
+         List.map (fun (schema,expr) ->
+            let mapped_terms = map_relations schema (CalcRing.prod_list expr) in
+            (* Remove duplicates *)
+            let unique_terms = 
+               remove_duplicates expr_is_monomial mapped_terms 
+            in
+               C.mk_aggsum schema (CalcRing.mk_prod unique_terms)
+         ) decomposed_expr
+      ) in
+         Debug.print "LOG-SIMPLIFY-DOMAINS-DETAIL" (fun () ->
+            "Unique domains (END): "^
+            (CalculusPrinter.string_of_expr rewritten_expr) 
+         ); rewritten_expr
+   in
+ 
    (* Try to eliminate redundant domains, for example:
       DomainDelta(E1 * E2) * R1 * E2 * R2 * E1 -> E1 * E2 * R1 * R2 *)
    let rec eliminate_domains term_list = 
@@ -1326,11 +1470,15 @@ let simplify_domains (big_expr:C.expr_t) =
          begin match term_list with
             | [] -> []
             | CalcRing.Val(DomainDelta(subexp))::tail ->
-               let (lhs, rhs) = replace_domain C.mk_domain subexp tail in
-                 lhs @ (eliminate_domains rhs)
+               let (lhs, rhs) = 
+                  replace_domain C.mk_domain subexp tail 
+               in
+                  lhs @ (eliminate_domains rhs)
             | CalcRing.Val(Exists(subexp))::tail ->
-               let (lhs, rhs) = replace_domain C.mk_exists subexp tail in
-                 lhs @ (eliminate_domains rhs)
+               let (lhs, rhs) = 
+                  replace_domain C.mk_exists subexp tail 
+               in
+                  lhs @ (eliminate_domains rhs)
             | head::tail -> head :: (eliminate_domains tail)
          end
    in
@@ -1344,23 +1492,25 @@ let simplify_domains (big_expr:C.expr_t) =
          | AggSum(gb_vars,raw_subexp) -> C.mk_aggsum gb_vars (rcr raw_subexp)
          | Lift(v,raw_subexp) -> C.mk_lift v (rcr raw_subexp)
    (***** BEGIN EXISTS HACK *****)         
-         | Exists(raw_subexp) -> 
-            let subexp = rcr raw_subexp in
-            if C.expr_has_binary_outcome subexp then subexp
-            else C.mk_exists subexp
+         | Exists(raw_subexp) ->
+            if C.expr_has_binary_multiplicity raw_subexp 
+            then (unique_domains (rcr raw_subexp))
+            else C.mk_exists (unique_domains (rcr raw_subexp))
+
          (* CalcRing.mk_prod
                (List.map (fun term -> 
-                  if (C.expr_has_binary_outcome term) then term
+                  if (C.expr_has_binary_multiplicity term) then term
                   else C.mk_exists term) (CalcRing.prod_list subexp)) *)
 
    (***** END EXISTS HACK *****)
          | DomainDelta(raw_subexp) ->
-            let subexp = rcr raw_subexp in
-            if C.expr_has_binary_outcome subexp then subexp
-            else C.mk_domain subexp
+            if C.expr_has_binary_multiplicity raw_subexp 
+            then (unique_domains (rcr raw_subexp))
+            else C.mk_domain (unique_domains (rcr raw_subexp))
+            
         (*  CalcRing.mk_prod
                (List.map (fun term -> 
-                  if (C.expr_has_binary_outcome term) then term
+                  if (C.expr_has_binary_multiplicity term) then term
                   else C.mk_domain term) (CalcRing.prod_list subexp)) *)
             
          | _ -> CalcRing.mk_val lf      
@@ -1412,19 +1562,14 @@ let simplify_domains (big_expr:C.expr_t) =
    @param expr    The calculus expression being processed
 *)
 let rec nesting_rewrites (big_expr:C.expr_t) = 
-   Debug.print "LOG-CALCOPT-DETAIL" (fun () ->
+   Debug.print "LOG-NESTING-REWRITES" (fun () ->
       "Nesting Rewrites (START): "^(CalculusPrinter.string_of_expr big_expr) 
    );
    let rec rcr expr = CalcRing.fold 
       (CalcRing.mk_sum) 
       (CalcRing.mk_prod) 
       (CalcRing.mk_neg)
-      (fun e -> 
-      Debug.print "LOG-NESTING-REWRITES" (fun () ->
-         "Nesting Rewrites on Leaf: "^
-         (CalculusPrinter.string_of_expr (CalcRing.mk_val e))
-      );
-      begin match e with
+      (fun e -> begin match e with
          | AggSum(gb_vars, x) when x = CalcRing.zero -> CalcRing.zero
          | AggSum(gb_vars, unprocessed_subterm) ->
             let subterm = rcr unprocessed_subterm in
@@ -1465,7 +1610,8 @@ let rec nesting_rewrites (big_expr:C.expr_t) =
                   | CalcRing.Prod(pl) ->
                      let (unnested, nested) = 
                        List.fold_left (fun (unnested, nested) term->
-                         if (C.commutes nested term) && 
+                          if (C.commutes nested term) && 
+                             (C.deltarels_of_expr nested = []) &&
                              (ListAsSet.subset (snd (C.schema_of_expr term))
                                                 gb_vars)
                           then (CalcRing.mk_prod [unnested; term], nested)
@@ -1516,7 +1662,7 @@ let rec nesting_rewrites (big_expr:C.expr_t) =
                | CalcRing.Val(Value(ValueRing.Val(AConst(_)))) ->
                   C.bail_out (CalcRing.mk_val e) 
                      "Exists with a non-integer value"
-               | subexp -> C.mk_exists subexp                   
+               | subexp -> C.mk_exists subexp   
             end               
 
          | DomainDelta(unprocessed_subexp) -> 
@@ -1528,7 +1674,7 @@ let rec nesting_rewrites (big_expr:C.expr_t) =
                | CalcRing.Val(Value(ValueRing.Val(AConst(_)))) ->
                   C.bail_out (CalcRing.mk_val e) 
                      "Domain with a non-integer value"
-               | subexp -> C.mk_domain subexp                   
+               | subexp -> C.mk_domain subexp
             end             
             
 (***** END EXISTS HACK *****)
@@ -1570,7 +1716,7 @@ let rec nesting_rewrites (big_expr:C.expr_t) =
       expr
     in
     let rewritten_expr = rcr big_expr in
-       Debug.print "LOG-CALCOPT-DETAIL" (fun () ->
+       Debug.print "LOG-NESTING-REWRITES" (fun () ->
           "Nesting Rewrites (END): "^
           (CalculusPrinter.string_of_expr rewritten_expr) 
       ); rewritten_expr
@@ -1597,7 +1743,7 @@ type selected_candidate_t =
 *)
 let default_factorize_heuristic (lhs_candidates,rhs_candidates)
                                 scope term_list: (selected_candidate_t) =
-   Debug.print "LOG-FACTORIZE" (fun () ->
+   Debug.print "LOG-FACTORIZE-DETAIL" (fun () ->
       "Candidates for factorization: \n"^
       ListExtras.string_of_list ~sep:"\n" string_of_expr 
                                 (lhs_candidates @ rhs_candidates)
@@ -1671,7 +1817,7 @@ let default_factorize_heuristic (lhs_candidates,rhs_candidates)
 *)
 let rec factorize_one_polynomial ?(heuristic = default_factorize_heuristic)
                                  (scope:var_t list) (term_list:C.expr_t list) =
-   Debug.print "LOG-FACTORIZE" (fun () ->
+   Debug.print "LOG-FACTORIZE-DETAIL" (fun () ->
       "Factorizing Expression: ("^
       (ListExtras.string_of_list ~sep:" + " 
           CalculusPrinter.string_of_expr term_list)^
@@ -1705,7 +1851,7 @@ let rec factorize_one_polynomial ?(heuristic = default_factorize_heuristic)
             let (lhs_of_selected,rhs_of_selected) =
                ListExtras.split_at_pivot ~cmp_fn:C.exprs_are_identical  
                                          selected (CalcRing.prod_list term) in
-            Debug.print "LOG-FACTORIZE" (fun () ->
+            Debug.print "LOG-FACTORIZE-DETAIL" (fun () ->
                "Split "^(CalculusPrinter.string_of_expr term)^" into "^
                (CalculusPrinter.string_of_expr 
                   (CalcRing.mk_prod lhs_of_selected))^
@@ -1723,7 +1869,7 @@ let rec factorize_one_polynomial ?(heuristic = default_factorize_heuristic)
       ) ([],[]) term_list
    in
    let rcr ((factorized, unfactorized), merge_fn) =
-      Debug.print "LOG-FACTORIZE" (fun () ->
+      Debug.print "LOG-FACTORIZE-DETAIL" (fun () ->
          "Factorized: "^
             (ListExtras.string_of_list 
                 CalculusPrinter.string_of_expr factorized)^"\n"^
@@ -1739,14 +1885,14 @@ let rec factorize_one_polynomial ?(heuristic = default_factorize_heuristic)
             (merge_fn (factorize_one_polynomial scope factorized));
             (factorize_one_polynomial scope unfactorized)
          ]
-      in Debug.print "LOG-FACTORIZE" (fun () ->
+      in Debug.print "LOG-FACTORIZE-DETAIL" (fun () ->
          "Final expression: \n"^(CalculusPrinter.string_of_expr ret)
       ); ret
    in
       match heuristic (lhs_candidates, rhs_candidates) scope term_list with
          | DoNotFactorize -> CalcRing.mk_sum term_list
          | FactorizeRHS(selected) ->
-            Debug.print "LOG-FACTORIZE" (fun () ->
+            Debug.print "LOG-FACTORIZE-DETAIL" (fun () ->
                "Factorizing "^
                (CalculusPrinter.string_of_expr selected)^
                " from the RHS"
@@ -1756,7 +1902,7 @@ let rec factorize_one_polynomial ?(heuristic = default_factorize_heuristic)
                  (fun factorized -> CalcRing.mk_prod [factorized; selected])
                 )
          | FactorizeLHS(selected) ->
-            Debug.print "LOG-FACTORIZE" (fun () ->
+            Debug.print "LOG-FACTORIZE-DETAIL" (fun () ->
                "Factorizing "^
                (CalculusPrinter.string_of_expr selected)^
                " from the LHS"
@@ -1779,21 +1925,31 @@ let rec factorize_one_polynomial ?(heuristic = default_factorize_heuristic)
    @param expr    The calculus expression being processed
 *)
 let factorize_polynomial (scope:var_t list) (expr:C.expr_t): C.expr_t =
-
-   C.rewrite ~scope:scope 
-      (fun (scope,_) sum_terms -> factorize_one_polynomial scope sum_terms)
-      (fun _ -> CalcRing.mk_prod)
-      (fun _ -> CalcRing.mk_neg)
-      (fun _ -> CalcRing.mk_val)
-      (fun _ _ -> true)      
-      (if Debug.active "AGGRESSIVE-FACTORIZE" 
-       then combine_values expr
-       else expr)
+   Debug.print "LOG-FACTORIZE" (fun () ->
+      "Factorize polynomial (START): \n"^
+      CalculusPrinter.string_of_expr expr
+   );
+   let rewritten_expr = 
+      C.rewrite ~scope:scope 
+         (fun (scope,_) sum_terms -> factorize_one_polynomial scope sum_terms)
+         (fun _ -> CalcRing.mk_prod)
+         (fun _ -> CalcRing.mk_neg)
+         (fun _ -> CalcRing.mk_val)
+         (fun _ _ -> true)      
+         (if Debug.active "AGGRESSIVE-FACTORIZE" 
+          then combine_values expr
+          else expr)
+   in
+      Debug.print "LOG-FACTORIZE" (fun () ->
+         "Factorize polynomial (END): \n"^
+         CalculusPrinter.string_of_expr rewritten_expr
+      ); rewritten_expr
 ;;
  
 
 type term_map_t = {
    definition     : C.expr_t;
+   pos_definition : C.expr_t;
    neg_definition : C.expr_t;
    valid          : bool ref
 }
@@ -1813,13 +1969,12 @@ let erase_negs =
     (fun _ _ -> true)
 ;;
  
-(** Removes Domain from the expression. *)
+(** Removes Domains from the expression. *)
 let erase_domain = 
   C.rewrite_leaves 
-    (fun _ lf -> begin match lf with
-      | DomainDelta(subexp) -> C.mk_exists subexp
-      | _ -> CalcRing.mk_val lf
-    end) 
+    (fun _ lf -> match lf with
+      | DomainDelta _ -> CalcRing.one
+      | _ -> CalcRing.mk_val lf)
     (fun _ _ -> true) 
 ;;
 
@@ -1830,75 +1985,92 @@ let erase_domain =
    
    @param expr The processing expression
 *)
-let cancel_terms (expr: C.expr_t): C.expr_t =
+let cancel_terms (big_expr: C.expr_t): C.expr_t =
+   Debug.print "LOG-CANCEL-TERMS" (fun () ->
+      "Cancel terms (START): "^(CalculusPrinter.string_of_expr big_expr) 
+   );
+   (* Remove Negs from expr, evaluate all constants in the product list. *)
+   let create_pos_neg expr = 
+      let rec partition e = 
+         List.fold_left (fun (const, rest) term -> match term with
+            | CalcRing.Val(Value(v)) 
+               when Arithmetic.value_is_const v -> (const @ [v], rest)
+            | CalcRing.Neg(subexp) -> 
+               let (neg_const, neg_rest) = partition subexp in
+                  (const @ (Arithmetic.mk_int (-1) :: neg_const),
+                   rest @ neg_rest)
+            | _  -> (const, rest @ [term])
+         ) ([],[]) (CalcRing.prod_list e) 
+      in
+      let (const, rest) = partition expr in
+         (
+            let const_eval = Arithmetic.eval_partial 
+               (ValueRing.mk_prod const) in
+            CalcRing.mk_prod (C.mk_value const_eval :: rest),
 
-  (* Replace Negs with with * {-1} in the expression and
-     gather and evaluate all number values in a product list. *)
-  let neg_term (term: C.expr_t) = 
-    let (number_values, rest) = List.fold_right (fun term (v, c) ->
-      match term with
-        | CalcRing.Val(Value(new_v)) when 
-            Arithmetic.vars_of_value new_v = [] -> (new_v :: v, c)
-        | _  -> (v, term :: c)
-    ) (CalcRing.prod_list term) ([],[]) in
-    let new_number_values = 
-      Arithmetic.eval_partial (
-        ValueRing.mk_prod (Arithmetic.mk_int (-1) :: number_values))
-    in 
-      CalcRing.mk_prod (C.mk_value new_number_values :: rest)
-  in 
-  let cancel (expr:C.expr_t) =
-    let poly_list = CalculusDecomposition.decompose_poly (erase_negs expr) in
-    let term_map = 
-      List.map (fun (term_schema, term) -> 
-        { definition     = C.mk_aggsum term_schema term;
-          neg_definition = C.mk_aggsum term_schema (neg_term term);
-          valid          = ref true }
-      ) poly_list 
-    in
-    Debug.print "LOG-CANCEL" (fun () ->
-      "Attempting to cancel "^
-      (ListExtras.ocaml_of_list (fun term -> 
-        CalculusPrinter.string_of_expr term.definition) term_map)
-    );    
-    let (new_terms, changed) =
-      ListExtras.scan_fold (fun (ret_terms, changed) lhs term rhs ->
-        if not !(term.valid) then (ret_terms, changed) else
-        try
-          (* Try to find the matching term *)
-          let cancel_term = List.find (fun cand_term -> 
-            Debug.print "LOG-CANCEL-DETAIL" (fun () ->
-              "Comparing \n  "^
-               (C.string_of_expr term.neg_definition)^
-               " with \n  "^
-               (C.string_of_expr cand_term.definition)
-            );
-            !(cand_term.valid) && 
-            (exprs_are_identical term.neg_definition cand_term.definition)
-          ) rhs in
-          term.valid := false;
-          cancel_term.valid := false;
-          
-          Debug.print "LOG-CANCEL" (fun () ->
-            "Canceling "^
-            (CalculusPrinter.string_of_expr term.definition)^
-            " with " ^
-            (CalculusPrinter.string_of_expr cancel_term.definition)
-          );
-          (ret_terms, true)
-        with Not_found -> (ret_terms @ [ term.definition ], changed)
-      ) ([], false) term_map
-    in
-    if changed then CalcRing.mk_sum new_terms else expr 
-  in
-
-  C.rewrite 
-    (fun _ sum_terms -> cancel (CalcRing.mk_sum sum_terms))
-    (fun _ -> CalcRing.mk_prod)
-    (fun _ -> CalcRing.mk_neg)
-    (fun _ -> CalcRing.mk_val)
-    (fun _ _ -> true)      
-    expr
+            let const_eval = Arithmetic.eval_partial 
+               (ValueRing.mk_prod (Arithmetic.mk_int (-1) :: const)) in
+            CalcRing.mk_prod (C.mk_value const_eval :: rest)
+         )
+   in 
+   let cancel sum_list =
+      let term_map = List.map (fun (schema, term) -> 
+         let (pos_term, neg_term) = create_pos_neg term in
+         { 
+            definition     = C.mk_aggsum schema term;
+            pos_definition = C.mk_aggsum schema pos_term;
+            neg_definition = C.mk_aggsum schema neg_term;
+            valid          = ref true 
+         }
+      ) (CalculusDecomposition.decompose_poly (CalcRing.mk_sum sum_list)) in 
+      Debug.print "LOG-CANCEL-TERMS-DETAIL" (fun () ->
+         "Attempting to cancel "^
+         (ListExtras.ocaml_of_list (fun term -> 
+             CalculusPrinter.string_of_expr term.definition) term_map)
+      );    
+      let (new_sum_list, changed) =
+         ListExtras.scan_fold (fun (ret_terms, changed) lhs term rhs ->
+            if not !(term.valid) then (ret_terms, changed) else
+            try
+               (* Try to find the matching term *)
+               let cancel_term = List.find (fun cand_term -> 
+                  Debug.print "LOG-CANCEL-TERMS-DEBUG" (fun () ->
+                     "Comparing \n  "^
+                     (CalculusPrinter.string_of_expr term.neg_definition)^
+                     " with \n  "^
+                     (CalculusPrinter.string_of_expr cand_term.pos_definition)
+                  );
+                  !(cand_term.valid) && 
+                  (exprs_are_identical term.neg_definition 
+                                       cand_term.pos_definition)
+               ) rhs in
+               term.valid := false;
+               cancel_term.valid := false;
+             
+               Debug.print "LOG-CANCEL-TERMS-DETAIL" (fun () ->
+                  "Canceling "^
+                  (CalculusPrinter.string_of_expr term.definition)^
+                  " with " ^
+                  (CalculusPrinter.string_of_expr cancel_term.definition)
+               );
+               (ret_terms, true)
+            with Not_found -> (ret_terms @ [ term.definition ], changed)
+         ) ([], false) term_map
+      in
+      if not changed then sum_list else  new_sum_list 
+   in
+   let rewritten_expr = 
+      C.rewrite 
+         (fun _ sl -> CalcRing.mk_sum (cancel sl))
+         (fun _ -> CalcRing.mk_prod)
+         (fun _ -> CalcRing.mk_neg)
+         (fun _ -> CalcRing.mk_val)
+         (fun _ _ -> true)      
+         big_expr
+   in
+      Debug.print "LOG-CANCEL-TERMS" (fun () ->
+         "Cancel terms (END): "^(CalculusPrinter.string_of_expr rewritten_expr) 
+      ); rewritten_expr
 ;;
 
 
@@ -1958,6 +2130,18 @@ let optimize_expr ?(optimizations = default_optimizations)
       (ListExtras.ocaml_of_list string_of_var schema)^"\n"^
       (CalculusPrinter.string_of_expr expr)
    );
+   if Debug.active "LOG-CALCOPT-DETAIL" then 
+   begin
+      Debug.activate "LOG-COMBINE-VALUES";
+      Debug.activate "LOG-FACTORIZE";      
+      Debug.activate "LOG-CANCEL-TERMS";
+      Debug.activate "LOG-EXTRACT-DOMAINS";
+      Debug.activate "LOG-SIMPLIFY-DOMAINS";
+      Debug.activate "LOG-NESTING-REWRITES";
+      Debug.activate "LOG-LIFT-EQUALITIES";
+      Debug.activate "LOG-UNIFY-LIFTS";
+      Debug.activate "LOG-ADVANCE-LIFTS";
+   end;
    if Debug.active "CALC-NO-OPTIMIZE" then expr else
       
    let fp_1 = ref (fun x -> sanity_check_variable_names x; x) in
@@ -1979,6 +2163,7 @@ let optimize_expr ?(optimizations = default_optimizations)
                result
          in include_opt_base o timed_fn
    in      
+      include_opt OptFactorizePolynomial      (factorize_polynomial scope);   
       include_opt OptAdvanceLifts             (advance_lifts scope);
       include_opt OptUnifyLifts               (unify_lifts scope schema);
       include_opt OptLiftEqualities           (lift_equalities scope);
@@ -1986,7 +2171,6 @@ let optimize_expr ?(optimizations = default_optimizations)
       include_opt OptSimplifyDomains          (simplify_domains);
       include_opt OptExtractDomains           (extract_domains);
       include_opt OptCancelTerms              (cancel_terms);
-      include_opt OptFactorizePolynomial      (factorize_polynomial scope);
       include_opt OptCombineValues            (combine_values);
    if Debug.active "LOG-CALCOPT-STEPS" then Fixpoint.build fp_1 
       (fun x -> 

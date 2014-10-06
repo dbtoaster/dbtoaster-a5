@@ -318,6 +318,10 @@ in
     "R(A,B) * AggSum([], R(B,C))"
     ["R(A,B) * R(B_1, C)"];
 
-  test_decomposition "Polynomial decomposition -- unsafe mapping"
+  test_decomposition "Polynomial decomposition -- unsafe mapping from scope"
     "R(A,B) * AggSum([], R(B, B_2))"
     ["R(A,B) * R(B_2, B_2_1)"]; 
+
+  test_decomposition "Polynomial decomposition -- unsafe mapping from schema"
+    "(AggSum([A],((R(A, B) * {B < 20}))) * R(A, B) * {B > 10})"
+    ["(R(A, B_3) * {B_3 < 20} * R(A, B) * {B > 10})"]; 

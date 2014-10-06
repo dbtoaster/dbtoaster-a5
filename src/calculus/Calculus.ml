@@ -321,10 +321,38 @@ let rec rels_of_expr (expr:expr_t): string list =
          (fun lf -> begin match lf with
             | Value(_)            -> []
             | External(_,_,_,_,None) -> []
-            | External(_,_,_,_,Some(em)) -> rels_of_expr em
+            | External(_,_,_,_,Some(em)) -> rcr em
             | AggSum(_, subexp)   -> rcr subexp
             | Rel(rn,_)           -> [rn]
             | DeltaRel(rn,_)      -> []
+            | DomainDelta(subexp) -> rcr subexp
+            | Cmp(_,_,_)          -> []
+            | Lift(_,subexp)      -> rcr subexp
+(***** BEGIN EXISTS HACK *****)
+            | Exists(subexp)      -> rcr subexp
+(***** END EXISTS HACK *****)
+         end)
+         expr
+
+(**
+   Obtain the set of all delta relations appearing in the specified Calculus 
+   expression
+   @param expr  A Calculus expression
+   @return      The set of all delta relation names that appear in [expr]
+*)
+let rec deltarels_of_expr (expr:expr_t): string list =
+   let rcr a = deltarels_of_expr a in
+      CalcRing.fold
+         ListAsSet.multiunion
+         ListAsSet.multiunion
+         (fun x -> x)
+         (fun lf -> begin match lf with
+            | Value(_)            -> []
+            | External(_,_,_,_,None) -> []
+            | External(_,_,_,_,Some(em)) -> rcr em
+            | AggSum(_, subexp)   -> rcr subexp
+            | Rel(rn,_)           -> []
+            | DeltaRel(rn,_)      -> [rn]
             | DomainDelta(subexp) -> rcr subexp
             | Cmp(_,_,_)          -> []
             | Lift(_,subexp)      -> rcr subexp
@@ -845,7 +873,7 @@ let sanity_check_variable_names expr =
   Check whether the given expression produces only 
   tuples with multiplicity zero or one.
 *)
-let rec expr_has_binary_outcome ?(scope = []) expr = 
+let rec expr_has_binary_multiplicity ?(scope = []) expr = 
    fold ~scope:scope
       (fun _ sl -> match sl with | [x] -> x | _ -> false)
       (fun _ pl -> List.for_all (fun x -> x) pl) 
@@ -857,7 +885,7 @@ let rec expr_has_binary_outcome ?(scope = []) expr =
          | AggSum(gb_vars, subexp) -> 
              (* if AggSum is singleton and subexp returns true *)
              ListAsSet.diff gb_vars scope = [] &&
-             expr_has_binary_outcome ~scope:gb_vars subexp
+             expr_has_binary_multiplicity ~scope:gb_vars subexp
          | Rel _ -> false
          | DeltaRel _ -> false
          | DomainDelta _ -> true

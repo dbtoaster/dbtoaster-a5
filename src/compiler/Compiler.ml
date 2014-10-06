@@ -172,10 +172,7 @@ let compile_map (compute_delta:bool)
 
          let delta_expr_unextracted = 
             CalculusTransforms.optimize_expr 
-               (todo_ivars @ prefixed_relv,todo_ovars) 
-               (CalculusTransforms.erase_domain delta_expr_unoptimized)
-               (* TODO: Removing domains is temporary, this should be done 
-                  in the materializer *)
+               (todo_ivars @ prefixed_relv,todo_ovars) delta_expr_unoptimized
          in
          Debug.print "LOG-COMPILE-DETAIL" (fun () ->
             "Optimized, Unextracted Delta: \n" ^ 

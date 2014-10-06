@@ -234,6 +234,52 @@ test "Lift range restriction"
        (-1 * (nested ^= (AggSum([PK], L(PK, QTY2) * QTY2))))))"
 ;; 
 
+
+(* Debug.activate "LOG-CANCEL-TERMS"; *)
+(* Needs smart cancel_terms *)
+(* test ~opt_out:true "Q17"
+    (InsertEvent(schema_rel "LINEITEM" ["dPK"; "dQTY"; "dEP"; "dDUMMY"]))
+   "AggSum([], 
+    (LINEITEM(L_PARTKEY, L_QUANTITY, L_EXTENDEDPRICE, L_DUMMY) *
+     PART(L_PARTKEY) *
+    AggSum([], 
+      ((__sql_inline_agg_1 ^=
+         (AggSum([L_PARTKEY], 
+            (LINEITEM(L_PARTKEY, L2_QUANTITY, L2_EXTENDEDPRICE, L2_DUMMY) *
+              L2_QUANTITY)) *
+           0.005)) *
+        {L_QUANTITY < __sql_inline_agg_1})) *
+    L_EXTENDEDPRICE))"
+   "(PART(dPK) *
+  AggSum([], 
+    (((LINEITEM(dPK, L_QUANTITY, L_EXTENDEDPRICE, L_DUMMY) *
+        (AggSum([], 
+           ((__sql_inline_agg_1 ^=
+              ((AggSum([dPK], 
+                  (LINEITEM(dPK, L2_QUANTITY, L2_EXTENDEDPRICE, L2_DUMMY) *
+                    L2_QUANTITY)) +
+                 dQTY) *
+                0.005)) *
+             {L_QUANTITY < __sql_inline_agg_1})) +
+          (AggSum([], 
+             ((__sql_inline_agg_1 ^=
+                (AggSum([dPK], 
+                   (LINEITEM(dPK, L2_QUANTITY, L2_EXTENDEDPRICE, L2_DUMMY) *
+                     L2_QUANTITY)) *
+                  0.005)) *
+               {L_QUANTITY < __sql_inline_agg_1})) *
+            {-1}))) +
+       ((L_DUMMY ^= dDUMMY) * (L_EXTENDEDPRICE ^= dEP) * (L_QUANTITY ^= dQTY) *
+         AggSum([], 
+           ((__sql_inline_agg_1 ^=
+              ((AggSum([dPK], 
+                  (LINEITEM(dPK, L2_QUANTITY, L2_EXTENDEDPRICE, L2_DUMMY) *
+                    L2_QUANTITY)) +
+                 dQTY) *
+                0.005)) *
+             {L_QUANTITY < __sql_inline_agg_1})))) *
+      L_EXTENDEDPRICE)))"; *)
+
 Debug.activate "BATCH-UPDATES";
 Debug.activate "NO-VISUAL-DIFF"; 
 
@@ -247,13 +293,14 @@ test ~opt_out:true "SingleExists, no values" (BatchUpdate("R"))
 test ~opt_out:true "SingleExists" (BatchUpdate("R"))
   "AggSum([], EXISTS(AggSum([B], R(A,B) * {A > 10})))"
   "AggSum([], 
-   (DOMAIN( AggSum([B], ((DELTA R)(A, B)))) *
+   (DOMAIN( AggSum([B], ((DELTA R)(A, B) * {A > 10}))) *
       (EXISTS(
          (AggSum([B], (R(A, B) * {A > 10})) +
           AggSum([B], ((DELTA R)(A, B) * {A > 10})))) +
       (EXISTS( AggSum([B], (R(A, B) * {A > 10}))) * {-1}))))"
-;; 
+;;
 
+(* (* Needs smart cancel_terms *)
 test ~opt_out:true "DoubleExists" (BatchUpdate("R"))
   "AggSum([], EXISTS(AggSum([B], R(A,B) * {A > 10})) * 
               EXISTS(AggSum([B], R(A,B))))"
@@ -265,8 +312,14 @@ test ~opt_out:true "DoubleExists" (BatchUpdate("R"))
          (AggSum([B], (R(A, B) * {A > 10})) +
            AggSum([B], ((DELTA R)(A, B) * {A > 10})))) *
         EXISTS( (AggSum([B], R(A, B)) + AggSum([B], (DELTA R)(A, B))))))))"
-;; 
+(* THIS IS WRONG, it should be:
+    D1 * Xnew * Yold 
+  - D1 * Xold * Yold
+  + D2 * Xnew * Ynew
+  - D2 * Xnew * Yold  *)
+;;  *)
  
+(* (* Needs smart cancel_terms *)
 test ~opt_out:true "DoubleLift" (BatchUpdate("R"))
   "AggSum([], (X ^= (AggSum([B], R(A,B) * {A > 10}))) * 
               (Y ^= (AggSum([B], R(A,B)))) * {X = 0} * {Y > 3})"
@@ -279,8 +332,13 @@ test ~opt_out:true "DoubleLift" (BatchUpdate("R"))
            (AggSum([B], (R(A,B) * {A > 10})) +
              AggSum([B], ((DELTA R)(A,B) * {A > 10})))))) *
       {Y > 3}))"
+(* THIS IS WRONG, it should be:
+    D1 * Xnew * Yold 
+  - D1 * Xold * Yold
+  + D2 * Xnew * Ynew
+  - D2 * Xnew * Yold  *)      
 ;; 
-
+ *)
 test ~opt_out:true "Exists and Lift" (BatchUpdate("R"))
   "EXISTS(AggSum([A], R(A,B))) *
    AggSum([], (X ^=AggSum([A], R(A,B) * B)) * {X > 100})"
@@ -292,6 +350,10 @@ test ~opt_out:true "Exists and Lift" (BatchUpdate("R"))
         ((X ^= (AggSum([A], (R(A, B) * B)) + AggSum([A], ((DELTA R)(A, B) * B)))) *
           {X > 100})))))"
 ;;  
+
+(* Debug.activate "LOG-CALCOPT-DETAIL"; *)
+(* Debug.activate "LOG-SIMPLIFY-DOMAINS"; *)
+(* Debug.activate "LOG-CALCOPT-STEPS"; *)
 
 test ~opt_out:true "Nested Exists" (BatchUpdate("R"))
   "EXISTS(
@@ -305,4 +367,5 @@ test ~opt_out:true "Nested Exists" (BatchUpdate("R"))
            {X > 100}))) +
       ((EXISTS( AggSum([A], R(A, B))) *
         AggSum([], ((X ^= AggSum([A], (R(A, B) * B))) * {X > 100}))) *
-        {-1})))"; 
+        {-1})))"
+ ;;

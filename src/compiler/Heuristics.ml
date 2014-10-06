@@ -73,32 +73,34 @@ type decision_options_t =
    | MaterializeUnknown
 
 
-(* Group the expression terms by type: 1) delta and delta domain 
-   terms (exist only for batch updates); 2) relations; 3) lift/exists; 
+(* Group the expression terms by type: 1) delta domain terms 2) delta terms 
+   (exist only for batch updates); 2) relations; 3) lift/exists; 
    4) comparisons and values. The partial order inside each group 
    (deltas, relations, lifts, and values) is preserved.               *)
-let group_terms_by_type (expr:expr_t) : (term_list * term_list * 
+let group_terms_by_type (expr:expr_t) : (term_list * term_list * term_list * 
                                          term_list * term_list) =
-   List.fold_right (fun term (deltas, rels, lifts, vals) ->
+   List.fold_right (fun term (domains, deltas, rels, lifts, vals) ->
       match CalcRing.get_val term with
-         | DeltaRel _ | DomainDelta _ -> (term :: deltas, rels, lifts, vals)
-         | Rel _ | External _ -> (deltas, term :: rels, lifts, vals)            
+         | DomainDelta _ -> (term :: domains, deltas, rels, lifts, vals)
+         | DeltaRel _ -> (domains, term :: deltas, rels, lifts, vals)
+         | Rel _ | External _ -> (domains, deltas, term :: rels, lifts, vals)            
 (***** BEGIN EXISTS HACK *****)
          | Exists _
 (***** END EXISTS HACK *****) 
-         | Lift _ -> (deltas, rels, term :: lifts, vals)
-         | Value _ | Cmp _ -> (deltas, rels, lifts, term :: vals)
+         | Lift _ -> (domains, deltas, rels, term :: lifts, vals)
+         | Value _ | Cmp _ -> (domains, deltas, rels, lifts, term :: vals)
          | AggSum _ -> bail_out expr 
             ("[group_terms_by_type] AggSums are supposed to be removed.")
-   ) (CalcRing.prod_list expr) ([], [], [], []) 
+   ) (CalcRing.prod_list expr) ([], [], [], [], []) 
 
 let reogranize_expr (expr:expr_t): expr_t =
-   let (d, r, l, v) = group_terms_by_type expr in 
-   CalcRing.mk_prod (d @ r @ l @ v)
+   let (domains, deltas, rels, lifts, vals) = group_terms_by_type expr in 
+   CalcRing.mk_prod (List.flatten [ domains; deltas; rels; lifts; vals ])
 
 (** Split an expression into five parts: 
     {ol
-      {li delta and domain delta terms (only for batch updates)}
+      {li domain delta terms }
+      {li delta terms (only for batch updates)}
       {li value terms covered by the trigger variables or the delta terms }
       {li base relations, irrelevant lift expressions with respect to the 
           event relation that also contain no input variables, and 
@@ -112,7 +114,7 @@ let reogranize_expr (expr:expr_t): expr_t =
     materialized separately. *)
 let partition_expr (heuristic_options:heuristic_options_t) (scope:var_t list) 
                    (event:Schema.event_t option) (expr:expr_t) : 
-                   (expr_t * expr_t * expr_t * expr_t) =
+                   (expr_t * expr_t * expr_t * expr_t * expr_t) =
 
    (* Sanity check - expr should be covered by the scope *)
    if not (covered_by_scope scope expr)
@@ -144,15 +146,15 @@ let partition_expr (heuristic_options:heuristic_options_t) (scope:var_t list)
             | Exists(subexpr) 
    (***** END EXISTS HACK *****)
             | Lift(_, subexpr) ->
-               (* If there is no root relations, materialize  
-                  subexpr in order to avoid the need for IVC  *)
-               if option_no_ivc && not has_root_relation
-               then (term, MaterializeAsNewMap)
-               else
-
                if rels_of_expr subexpr == [] 
                then (term, MaterializeUnknown)
-               else
+               else            
+                  (* If there is no root relations, materialize  
+                     subexpr in order to avoid the need for IVC  *)
+                  if option_no_ivc && not has_root_relation
+                  then (term, MaterializeAsNewMap)
+                  else
+
                   (* subexpr containing the event relation 
                      is always materialized separately       *)
                   if event_is_relevant event subexpr
@@ -201,7 +203,8 @@ let partition_expr (heuristic_options:heuristic_options_t) (scope:var_t list)
       (* Tag each term *)
       let tagged_terms = tag ~option_no_ivc:option_no_ivc
                              ~option_pull_in_lifts:option_pull_in_lifts
-                             (rels_of_expr target_expr <> []) 
+                             (rels_of_expr target_expr <> [] ||
+                              deltarels_of_expr target_expr <> []) 
                              terms in
 
       (* Graph decomposition over the tagged terms *)      
@@ -220,11 +223,11 @@ let partition_expr (heuristic_options:heuristic_options_t) (scope:var_t list)
 
       (* Partition terms *)
       List.fold_left (fun (lhs_terms, rhs_lifts, rhs_vals) (term, tag) ->
-         match CalcRing.get_val term with
+         match term with
 (***** BEGIN EXISTS HACK *****)
-            | Exists _  
+            | CalcRing.Val(Exists _)  
 (***** END EXISTS HACK *****)
-            | Lift _ -> 
+            | CalcRing.Val(Lift _) -> 
                begin
                   try         
                      (* Skip the term if materialized separately *)
@@ -246,9 +249,17 @@ let partition_expr (heuristic_options:heuristic_options_t) (scope:var_t list)
                      (* Each conn_component has tag = MaterializeUnknown *)
                      let component_expr = 
                         CalcRing.mk_prod (List.map fst conn_components) in
+                     let (comp_ivars, comp_ovars) = 
+                        schema_of_expr component_expr in
+                     let comp_vars = ListAsSet.union comp_ivars comp_ovars in
 
                      let lhs_expr = (CalcRing.mk_prod lhs_terms) in
                      let (_, lhs_ovars) = schema_of_expr lhs_expr in
+
+                     (* Check if component_expr is relevant for lhs_expr *)
+                     if ListAsSet.inter lhs_ovars comp_vars = [] 
+                     then (lhs_terms, rhs_lifts @ [term], rhs_vals)
+                     else
 
                      (* Add term to lhs_terms only if that does not 
                         introduce new input variables to target_expr  *)
@@ -265,16 +276,22 @@ let partition_expr (heuristic_options:heuristic_options_t) (scope:var_t list)
                                           component_expr)
                      then (lhs_terms @ [term], rhs_lifts, rhs_vals)
                      else (lhs_terms, rhs_lifts @ [term], rhs_vals)
-                     
+
                   with Not_found -> failwith "The lift term cannot be found."
                end
-            | Value _ | Cmp _ ->
+            | CalcRing.Val(Value _) 
+            | CalcRing.Val(Cmp _) ->
                if option_pull_out_values 
                then (lhs_terms, rhs_lifts, rhs_vals @ [term]) 
                else
                                  
                let lhs_expr = CalcRing.mk_prod lhs_terms in
                let (_, lhs_ovars) = schema_of_expr lhs_expr in
+
+               (* Check if term is relevant for lhs_expr *)               
+               if ListAsSet.inter lhs_ovars (fst (schema_of_expr term)) = [] 
+               then (lhs_terms, rhs_lifts, rhs_vals @ [term])
+               else
 
                (* Add term to lhs_terms only if that does not 
                   introduce new input variables to lhs_expr  *)
@@ -294,25 +311,32 @@ let partition_expr (heuristic_options:heuristic_options_t) (scope:var_t list)
       ) (CalcRing.prod_list target_expr, [], []) tagged_terms
    in  
 
-   let (deltas, rels, lifts, vals) = group_terms_by_type expr in
+   let (domains, deltas, rels, lifts, vals) = group_terms_by_type expr in 
+
+   let domain_expr = CalcRing.mk_prod domains in
+   let scope_delta = 
+      ListAsSet.union scope (snd (schema_of_expr domain_expr)) 
+   in
 
    (* Partition lift_terms and value_terms w.r.t. deltas *)
    let (delta_terms, rest_lifts, rest_vals) = 
-      let target_expr = CalcRing.mk_prod deltas in
       partition_terms ~option_no_ivc:true
                       ~option_inputvar:false 
                       ~option_pull_in_lifts:false
                       ~option_pull_out_values:false
-                      scope target_expr (lifts @ vals) 
+                      scope_delta (CalcRing.mk_prod deltas) 
+                      (lifts @ vals) 
    in
    let delta_expr = CalcRing.mk_prod delta_terms in
-   let scope_delta = ListAsSet.union scope (snd(schema_of_expr delta_expr)) in
+   let scope_rel = 
+      ListAsSet.union scope_delta (snd(schema_of_expr delta_expr))
+   in
 
    (* Partition lift_terms and value_terms w.r.t. rels *)
    let (rel_terms, lift_terms, val_terms) =
-      let target_expr = CalcRing.mk_prod rels in
-      partition_terms scope_delta target_expr (rest_lifts @ rest_vals)  
-   in
+      partition_terms scope_rel (CalcRing.mk_prod rels) 
+                      (rest_lifts @ rest_vals)  
+   in   
 
    let rel_expr = CalcRing.mk_prod rel_terms in
    let lift_expr = CalcRing.mk_prod lift_terms in
@@ -320,43 +344,43 @@ let partition_expr (heuristic_options:heuristic_options_t) (scope:var_t list)
 
    Debug.print "LOG-HEURISTICS-PARTITIONING" (fun () -> 
      "[Heuristics]  Partitioning - done: " ^ 
+      "\n\t Domain: "   ^ (string_of_expr domain_expr) ^
       "\n\t Delta: "    ^ (string_of_expr delta_expr) ^
       "\n\t Relation: " ^ (string_of_expr rel_expr  ) ^
       "\n\t Lift: "     ^ (string_of_expr lift_expr ) ^
       "\n\t Value:  "   ^ (string_of_expr value_expr) 
    ); 
-   (delta_expr, rel_expr, lift_expr, value_expr)
+   (domain_expr, delta_expr, rel_expr, lift_expr, value_expr)
 
 
 (******************************************************************************)
 
-let rec decompose_then_fold (scope:var_t list) 
+let rec decompose_and_fold (scope:var_t list) 
                            (zero_value: 'a) (one_value: 'a) 
                            (sum_values_fn: ('a -> 'a -> 'a)) 
                            (prod_values_fn: ('a -> 'a -> 'a)) 
                            (monomial_fn: (string -> var_t list -> expr_t -> 'a))
                            (prefix: string) (expr:expr_t): 'a =
 
-   let rcr = decompose_then_fold scope zero_value one_value sum_values_fn 
+   let rcr = decompose_and_fold scope zero_value one_value sum_values_fn 
                                 prod_values_fn monomial_fn in
-   let contains_aggsum expr = 
+   let contains_aggsum = 
       CalcRing.fold (List.fold_left (||) false) 
                     (List.fold_left (||) false) 
                     (fun x -> x)
                     (function AggSum _ -> true | _ -> false)
-                    expr
    in
 
    (* Polynomial decomposition *)
-   fst (List.fold_left (fun (ret_value, i) (term_schema, term) ->
+   fst (List.fold_left (fun (ret_value, i) (schema, term) ->
 
-      let term_opt = optimize_expr (scope, term_schema) term in
+      let term_opt = optimize_expr (scope, schema) term in
          
       if not (CalcRing.try_cast_to_monomial term_opt)
       then begin
          let term_name = (prefix ^ (string_of_int i)) in
          let new_value = 
-            rcr term_name (Calculus.mk_aggsum term_schema term_opt) 
+            rcr term_name (Calculus.mk_aggsum schema term_opt) 
          in
          (sum_values_fn ret_value new_value, i + 1)
       end
@@ -364,9 +388,9 @@ let rec decompose_then_fold (scope:var_t list)
 
       (* Graph decomposition *)
       let (new_value, k) =  
-         List.fold_left (fun (ret_value, j) (term_schema, term) ->
+         List.fold_left (fun (ret_value, j) (schema, term) ->
 
-            let term_opt = optimize_expr (scope, term_schema) term in
+            let term_opt = optimize_expr (scope, schema) term in
             let term_name = (prefix ^ (string_of_int j)) in
             
             let new_value = 
@@ -374,12 +398,12 @@ let rec decompose_then_fold (scope:var_t list)
                   (* A sanity check that the optimizer has not broken    *)
                   (* the assumption of having an aggsum-free expression. *)
                   (contains_aggsum term_opt)                  
-               then rcr term_name (Calculus.mk_aggsum term_schema term_opt)
-               else monomial_fn term_name term_schema term_opt
+               then rcr term_name (Calculus.mk_aggsum schema term_opt)
+               else monomial_fn term_name schema term_opt
             in
                (prod_values_fn ret_value new_value, j + 1)
          ) 
-         (one_value, i) (snd (decompose_graph scope (term_schema, term_opt)))
+         (one_value, i) (snd (decompose_graph scope (schema, term_opt)))
       in
          (sum_values_fn ret_value new_value, k)           
    ) 
@@ -437,7 +461,7 @@ let should_update ?(scope:var_t list = [])
    let expr_scope = Schema.event_vars event in
 
    let final_state = 
-      decompose_then_fold 
+      decompose_and_fold 
         expr_scope Unknown Unknown get_next_state get_next_state
         (fun _ schema expr -> fst (
            List.fold_left (fun (local_state, local_scope) term ->
@@ -470,7 +494,7 @@ let should_update ?(scope:var_t list = [])
            When the calculus optimizer is disabled, this assumption    
            might be violated. We guard against these cases by calling  
            CalculusTransforms.erase_negs.                              *)
-        (CalculusTransforms.erase_negs expr)
+        ((* CalculusTransforms.erase_negs *) expr)
    in
    let final_decision = match final_state with
       | Unknown | UpdateExpr -> true
@@ -530,7 +554,7 @@ let rec materialize ?(scope:var_t list = [])
    in
 
    let (todos, mat_expr) = 
-      decompose_then_fold 
+      decompose_and_fold 
             expr_scope 
             ([], CalcRing.zero) 
             ([], CalcRing.one)
@@ -549,7 +573,8 @@ let rec materialize ?(scope:var_t list = [])
                When the calculus optimizer is disabled, this assumption    
                might be violated. We guard against these cases by calling  
                CalculusTransforms.erase_negs.                              *)
-            (CalculusTransforms.erase_negs expr)
+            (if not (Debug.active "CALC-NO-OPTIMIZE") then expr
+             else CalculusTransforms.erase_negs expr)
    in
    begin
       Debug.print "LOG-HEURISTICS-DETAIL" (fun () ->
@@ -573,27 +598,38 @@ and materialize_expr (heuristic_options:heuristic_options_t)
       "[Heuristics] Entering materialize_expr" ^
       "\n\t Map: "^prefix^
       "\n\t Expr: "^(string_of_expr expr)^
-      "\n\t Scope: ["^(string_of_vars scope)^"]"
+      "\n\t Scope: ["^(string_of_vars scope)^"]"^
+      "\n\t Schema: ["^(string_of_vars schema)^"]"
    );
 
    (* Divide the expression into four parts *)
-   let (delta_expr, rel_expr, lift_expr, value_expr) = 
+   let (domain_expr, delta_expr, rel_expr, lift_expr, value_expr) = 
       partition_expr heuristic_options scope event expr
    in        
 
-   let (delta_expr_ivars, delta_expr_ovars) = schema_of_expr delta_expr in
-   let (rel_expr_ivars, rel_expr_ovars) = schema_of_expr rel_expr in
-   
-   (* Sanity check - delta_expr should not have input variables *)
-   if not (covered_by_scope scope delta_expr)
+   let (domain_expr_ivars, domain_expr_ovars) = schema_of_expr domain_expr in
+   (* Sanity check - domain_expr should not have uncovered input variables *)
+   if not (covered_by_scope scope domain_expr)
    then begin
-      print_endline ("Expr: " ^ string_of_expr delta_expr);
-      print_endline ("InputVars: " ^ string_of_vars delta_expr_ivars);
-      failwith ("delta_expr has input variables.")
+      print_endline ("Expr: " ^ string_of_expr domain_expr);
+      print_endline ("InputVars: " ^ string_of_vars domain_expr_ivars);
+      failwith ("domain_expr has uncovered input variables.")
    end 
    else
 
-   (* Sanity check - rel_exprs should not contain any input variables *) 
+   let (delta_expr_ivars, delta_expr_ovars) = schema_of_expr delta_expr in
+   (* Sanity check - delta_expr should not have input variables *)
+   if delta_expr_ivars <> []
+   then begin
+      print_endline ("Expr: " ^ string_of_expr delta_expr);
+      print_endline ("InputVars: " ^ string_of_vars delta_expr_ivars);
+      failwith ("delta_expr has uncovered input variables.")
+   end 
+   else
+
+   let (rel_expr_ivars, rel_expr_ovars) = schema_of_expr rel_expr in
+   (* Sanity check - rel_exprs should not contain any input variables,
+      unless NoInputVariables = false *) 
    if (rel_expr_ivars <> [] && List.mem NoInputVariables heuristic_options)
    then begin  
       print_endline ("Expr: " ^ string_of_expr rel_expr);
@@ -602,114 +638,151 @@ and materialize_expr (heuristic_options:heuristic_options_t)
    end
    else
 
+   (**** MATERIALIZE DOMAIN_EXPR ****)
+   let (todo_domains, mat_domain_expr) = 
+      if domain_expr = CalcRing.one then ([], domain_expr) else
+
+      fst (List.fold_left (fun ((todos, mats), (j, acc_scope)) term ->
+         match term with
+            | CalcRing.Val(DomainDelta(subexp)) ->
+               let (todo, mat_subexp) =
+                  if rels_of_expr subexp = [] && deltarels_of_expr subexp = []
+                  then ([], subexp)   
+                  else
+
+                  let (sub_ivars, sub_ovars) = schema_of_expr subexp in
+                  let scope_domain = ListAsSet.inter acc_scope
+                     (ListAsSet.union sub_ivars sub_ovars)
+                  in
+                     materialize ~scope:scope_domain
+                                 heuristic_options db_schema history 
+                                 (prefix^"_DOMAIN"^(string_of_int j)^"_")  
+                                 event subexp
+               in
+               let mat_exists = Calculus.mk_exists mat_subexp in
+               (
+                  (todos @ todo, CalcRing.mk_prod [ mats; mat_exists ]), 
+                  (j + 1, ListAsSet.union acc_scope 
+                                          (snd (schema_of_expr mat_exists)))
+               ) 
+            | _ -> bail_out term "Not a domain expression"
+         ) 
+         (([], CalcRing.one), (1, scope)) 
+         (CalcRing.prod_list domain_expr)
+      )
+   in
+   (* We don't extend the scope to be able to keep deltas and values together *)
+   let scope_delta = scope in
+
    (**** MATERIALIZE DELTA_EXPR ****)
-
-   (* Extend the schema with the input variables of other expressions *) 
-   let schema_delta_expr = 
-      let rest_expr = CalcRing.mk_prod [ rel_expr; lift_expr; value_expr ] in
-      let (rest_ivars, rest_ovars) = schema_of_expr rest_expr in
-      ListAsSet.inter delta_expr_ovars
-         (ListAsSet.multiunion [ schema; scope; rest_ivars; rest_ovars ])
-   in   
-   (* Materialization of delta_expr *)
    let (todo_deltas, mat_delta_expr) = 
-      materialize_as_external ~local_map:true 
-                              heuristic_options db_schema 
-                              history (prefix^"_DELTA") event
-                              scope schema_delta_expr delta_expr
+      (* Extend the schema with the input variables of other expressions *) 
+      let schema_delta = 
+         let rest_expr = CalcRing.mk_prod [ 
+            rel_expr; lift_expr; value_expr ] in
+         let (rest_ivars, rest_ovars) = schema_of_expr rest_expr in
+         ListAsSet.inter 
+            delta_expr_ovars
+            (ListAsSet.multiunion [ schema; scope_delta; 
+                                    rest_ivars; rest_ovars ])
+      in      
+         materialize_as_external ~local_map:true 
+                                 heuristic_options db_schema 
+                                 history (prefix^"_DELTA") event
+                                 scope_delta schema_delta delta_expr
    in
-
-   let scope_delta = ListAsSet.union scope delta_expr_ovars in
-
+   let scope_rel = 
+      ListAsSet.union scope_delta (snd (schema_of_expr mat_delta_expr))
+   in
+   
    (**** MATERIALIZE REL_EXPR ****)
-
-   (* Extend the schema with the input variables of other expressions *) 
-   let schema_rel_expr = 
-      let rest_expr = CalcRing.mk_prod [ lift_expr; value_expr ] in
-      let (rest_ivars, rest_ovars) = schema_of_expr rest_expr in
-      ListAsSet.inter rel_expr_ovars
-         (ListAsSet.multiunion [ schema; scope_delta; rest_ivars; rest_ovars ])
-   in
-   (* Materialization of rel_expr *)
    let (todo_rels, mat_rel_expr) = 
-      materialize_as_external heuristic_options db_schema 
-                              history prefix event 
-                              scope_delta schema_rel_expr rel_expr
+      (* Extend the schema with the input variables of other expressions *) 
+      let schema_rel = 
+         let rest_expr = CalcRing.mk_prod [ lift_expr; value_expr ] in
+         let (rest_ivars, rest_ovars) = schema_of_expr rest_expr in
+         ListAsSet.inter 
+            rel_expr_ovars
+            (ListAsSet.multiunion [ schema; scope_rel; 
+                                    rest_ivars; rest_ovars ])
+      in   
+         materialize_as_external heuristic_options db_schema 
+                                 history prefix event 
+                                 scope_rel schema_rel rel_expr
+   in
+   let scope_lift = 
+      ListAsSet.union scope_rel (snd (schema_of_expr mat_rel_expr))
    in
 
    (**** MATERIALIZE LIFT_EXPR ****)
-
-   (* Extracted lifts are always materialized separately *)   
    let (todo_lifts, mat_lift_expr) = 
+      (* Extracted lifts are always materialized separately *)   
       if lift_expr = CalcRing.one then ([], lift_expr) else    
-      fst (
-          List.fold_left (fun ((todos, mats), (j, acc_expr)) term ->
 
-            let materialize_lift prefix subexpr =
-               if (rels_of_expr subexpr = []) then ([], subexpr) else  
-                        
-               let (sub_ivars, sub_ovars) = schema_of_expr subexpr in
-               let acc_expr_ovars = snd(schema_of_expr acc_expr) in
-               let scope_lift = 
-                  ListAsSet.inter (ListAsSet.union sub_ivars sub_ovars)
-                                  (ListAsSet.union scope acc_expr_ovars)                                         
-               in
-                  materialize ~scope:scope_lift 
-                              heuristic_options db_schema history 
-                              prefix event subexpr
-            in
-            match (CalcRing.get_val term) with
+      let materialize_lift prefix scope subexpr =
+         if (rels_of_expr subexpr = []) then ([], subexpr) else  
+         let (sub_ivars, sub_ovars) = schema_of_expr subexpr in         
+         let scope_lift = 
+            ListAsSet.inter (ListAsSet.union sub_ivars sub_ovars) scope
+         in
+            materialize ~scope:scope_lift 
+                        heuristic_options db_schema history 
+                        prefix event subexpr
+      in
+      fst (List.fold_left (fun ((todos, mats), (j, acc_scope)) term ->
+
+         match term with
 (***** BEGIN EXISTS HACK *****)
-               | Exists(subexpr) ->
-                  let (todo, mat_subexpr) = 
-                     materialize_lift (prefix^"_E"^(string_of_int j)^"_") 
-                                      subexpr 
-                  in
-                  let mat_exists = Calculus.mk_exists mat_subexpr in
-                  (
-                     (todos @ todo, CalcRing.mk_prod [ mats; mat_exists ]), 
-                     (j + 1, CalcRing.mk_prod [ acc_expr; mat_exists ])
-                  ) 
+            | CalcRing.Val(Exists(subexpr)) ->
+               let (todo, mat_subexpr) = 
+                  materialize_lift (prefix^"_E"^(string_of_int j)^"_") 
+                                   acc_scope subexpr 
+               in
+               let mat_exists = Calculus.mk_exists mat_subexpr in               
+               (
+                  (todos @ todo, CalcRing.mk_prod [ mats; mat_exists ]), 
+                  (j + 1, ListAsSet.union acc_scope 
+                                          (snd (schema_of_expr mat_exists)))
+               ) 
 (***** END EXISTS HACK *****)
                 
-               | Lift(v, subexpr) ->
-                  let (todo, mat_subexpr) = 
-                     materialize_lift (prefix^"_L"^(string_of_int j)^"_") 
-                                      subexpr 
-                  in                
-                  let mat_lift = Calculus.mk_lift v mat_subexpr in
-                  (
-                     (todos @ todo, CalcRing.mk_prod [ mats; mat_lift ]),
-                     (j + 1, CalcRing.mk_prod [ acc_expr; mat_lift ])
-                  )
+            | CalcRing.Val(Lift(v, subexpr)) ->
+               let (todo, mat_subexpr) = 
+                  materialize_lift (prefix^"_L"^(string_of_int j)^"_") 
+                                   acc_scope subexpr 
+               in                
+               let mat_lift = Calculus.mk_lift v mat_subexpr in
+               (
+                  (todos @ todo, CalcRing.mk_prod [ mats; mat_lift ]),
+                  (j + 1, ListAsSet.union acc_scope
+                                          (snd (schema_of_expr mat_lift)))
+               )
 
-               | _  -> bail_out term "Not a lift/exists expression"
-          )( 
-             ([], CalcRing.one), 
-             (1, CalcRing.mk_prod [ mat_delta_expr; mat_rel_expr ]) 
-           ) 
-           (CalcRing.prod_list lift_expr) 
+            | _  -> bail_out term "Not a lift/exists expression"
+       )(([], CalcRing.one), (1, scope_lift)) (CalcRing.prod_list lift_expr)
       ) 
    in    
 
    Debug.print "LOG-HEURISTICS-DETAIL" (fun () -> 
-      "[Heuristics]  Materialized deltas: " ^ (string_of_expr mat_delta_expr) ^
-      "\nMaterialized relations: " ^ (string_of_expr mat_rel_expr) ^
-      "\nMaterialized lifts: " ^ (string_of_expr mat_lift_expr)
+      "[Heuristics]  Materialized domains: "^(string_of_expr mat_domain_expr)^
+      "\nMaterialized deltas: "^(string_of_expr mat_delta_expr)^
+      "\nMaterialized relations: "^(string_of_expr mat_rel_expr)^
+      "\nMaterialized lifts: "^(string_of_expr mat_lift_expr)
    );     
     
    (* If necessary, add aggregation to the whole materialized expression *)
    (* Hack to extend the original schema. E.g. expression {A=C} * R(C,D) *)
    (* has "D" in the output schema when evaluate with "A" and "C" in the *)
    (* scope. This hack extends the schema with "C".                      *)   
-   let mat_expr = CalcRing.mk_prod 
-      [ mat_delta_expr; mat_rel_expr; mat_lift_expr; value_expr ]
+   let mat_expr = 
+      CalcRing.mk_prod [ mat_domain_expr; mat_delta_expr; 
+                         mat_rel_expr; mat_lift_expr; value_expr ]
    in 
    let extended_schema = 
       ListAsSet.inter (ListAsSet.union schema scope) 
                       (snd (C.schema_of_expr mat_expr))
    in
-      (todo_deltas @  todo_rels @ todo_lifts, 
+      (todo_domains @ todo_deltas @  todo_rels @ todo_lifts, 
       Calculus.mk_aggsum extended_schema mat_expr)
  
 
@@ -794,7 +867,8 @@ and materialize_as_external ?(local_map:bool = false)
                             (scope:var_t list) (schema: var_t list)
                             (expr:expr_t) : (ds_t list * expr_t) =
    
-   if rels_of_expr expr = [] then ([], expr) else
+   if (rels_of_expr      expr = [] && 
+       deltarels_of_expr expr = []) then ([], expr) else
 
    let agg_expr = Calculus.mk_aggsum schema expr in
    

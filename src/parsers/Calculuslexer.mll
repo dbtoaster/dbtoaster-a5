@@ -63,6 +63,7 @@ let keywords =
 (***** END EXISTS HACK *****)
       "DOMAIN",     DOMAIN;
       "DELTA",      DELTA;
+      "NEG",        NEG;
     ]
 let _ = hashtbl_of_pair_list keyword_table keywords
 

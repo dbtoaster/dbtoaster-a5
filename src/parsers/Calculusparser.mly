@@ -37,7 +37,7 @@ type map_metadata =
 %token FILE SOCKET FIXEDWIDTH LINE DELIMITED
 %token AGGSUM
 %token LIFT SETVALUE INCREMENT EXISTS DOMAIN DELTA
-%token CORRECT WITH FOR
+%token CORRECT WITH FOR NEG
 
 // start
 %start statementList calculusExpr mapProgram mapTriggerStmt
@@ -141,6 +141,7 @@ calculusExpr:
 | ivcCalculusExpr             { (* Calculus.strip_calc_metadata *) $1 }
 
 ivcCalculusExpr:
+| NEG TIMES ivcCalculusExpr       { CalcRing.mk_neg $3 }
 | LPAREN ivcCalculusExpr RPAREN   { $2 }
 | ivcCalculusExpr TIMES ivcCalculusExpr 
                                   { CalcRing.mk_prod [$1; $3] }
