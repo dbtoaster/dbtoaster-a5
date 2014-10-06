@@ -54,7 +54,6 @@ in
    test "Self-anticomparison"
       "R(A) * ({A != A} + {A < A})"
       "0";
-
   test "Variable peer groups - same component"
       "R(A) * A * A * 3"
       "R(A) * 3 * {A * A}";
@@ -389,13 +388,13 @@ let test msg input output =
       (CalculusTransforms.simplify_domains (parse_calc input))
       (parse_calc output)
 in
-   test "Exists with binary outcome - remove Exists"
+(*    test "Exists with binary outcome - remove Exists"
       "Exists((X ^= A) * (Y ^= B))"
       "(X ^= A) * (Y ^= B)";
    test "Exists with binary outcome - keep everything"
       "Exists((X ^= dA) * R(A,B) * (Y ^= B))"
       "Exists((X ^= dA) * R(A,B) * (Y ^= B))";      
-   test "Repeated condition"
+ *)(*    test "Repeated condition"
       "R(A,B) * {A > B} * {A > B}" 
       "R(A,B) * {A > B}"; 
    test "Repeated domain terms"
@@ -423,7 +422,7 @@ in
       "DOMAIN((DELTA R)(A,B) * {B > 10} * 
               AggSum([A], (DELTA R)(A,B) * {B > 10} * {A < 10}))"
       "DOMAIN((DELTA R)(A,B) * {B > 10} * {A < 10}))";
-
+ *)
 
 let test msg scope input output =
    log_test ("Factorize One Polynomial ("^msg^")")
@@ -552,6 +551,25 @@ let test ?(opts = CalculusTransforms.default_optimizations)
       )
       (parse_calc output)
 in
+
+
+ Debug.activate "NO-VISUAL-DIFF";
+    test "Domain and delta" [] ["A"]   
+       "AggSum([A], (DELTA R)(A,B) * {B > 10})"
+       "AggSum([A], (DELTA R)(A,B) * {B > 10})";
+
+    test "Domain and delta" [] ["A"]   
+       "DOMAIN((DELTA R)(A,B)) * (DELTA R)(A,B) * B"
+       "(DELTA R)(A,B) * B";
+
+    test "AggSum" [] ["A"]
+       "(DOMAIN( AggSum([A], (DELTA R)(A, B))) * AggSum([A], ((DELTA R)(A, B) * B)))"
+       "AggSum([A], ((DELTA R)(A, B) * B))";
+       
+    test "Domain and delta" [] ["A"]   
+       "AggSum([A], (DELTA R)(A,B) * B)"
+       "AggSum([A], (DELTA R)(A,B) * B)";
+
    test "TPCH17 simple raw" [] []
       "AggSum([], (
           P(PPK) * LI(LPK, LQTY) * 
@@ -783,7 +801,7 @@ in
        "S(C) * (A ^= C) * AggSum([A], R(B) * (A ^= B)) "
        "S(C) * (A ^= C) * AggSum([A], R(B) * (A ^= B)) ";   
 
-(* Debug.activate "NO-VISUAL-DIFF";  *)
+
 (* Debug.activate "LOG-CALCOPT-DETAIL"; *)
 (* Debug.activate "LOG-COMBINE-VALUES";
 Debug.activate "PRINT-RINGS";

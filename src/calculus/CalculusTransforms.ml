@@ -1418,16 +1418,15 @@ let simplify_domains (big_expr:C.expr_t) =
                   (CalcRing.mk_prod (head::mapped_tail)))
       in   
 
-      (* When aggressive elimination is set, redundant relations, delta 
-         relations, and externals are removed. For instance, 
+      (* When aggressive elimination is set, redundant terms are removed. 
+         For instance, 
             R(A,B) * R(A,B) -> R(A,B)
          This is safe to do only when the domain expression is a monomial
          since we don't care about the multiplicity. *)
       let remove_duplicates aggressive term_list = 
          List.fold_left (fun acc_terms term ->
             if List.mem term acc_terms &&
-                  ((aggressive && eligible_term term) ||
-                   C.expr_has_binary_multiplicity term)
+                  (aggressive || C.expr_has_binary_multiplicity term)
             then acc_terms 
             else acc_terms @ [term]            
          ) [] term_list
@@ -1450,70 +1449,104 @@ let simplify_domains (big_expr:C.expr_t) =
          ); rewritten_expr
    in
  
+
+
+
+   
    (* Try to eliminate redundant domains, for example:
-      DomainDelta(E1 * E2) * R1 * E2 * R2 * E1 -> E1 * E2 * R1 * R2 *)
-   let rec eliminate_domains term_list = 
-      (* Remove the first match from a given list or raise Not_found *)
-      let rec diff term_list term = match term_list with
-         | [] -> raise Not_found
-         | head::tail -> if C.exprs_are_identical term head then tail 
-                         else head::(diff tail term)
+      DomainDelta(E1 * E2) * R1 * E4 * R2 * E3 -> E3 * E4 * R1 * R2 when 
+      E1 is less restrictive than E3 and E2 is less restrictive than E4 *)
+   let rec eliminate_domains term_list =
+
+      let rec split_at_pivot cmp_fn term term_list = match term_list with 
+         | [] -> raise (CouldNotUnifyException "Not possible to unify domain")
+         | head::tail -> 
+            if cmp_fn term head then ([], head, tail) 
+            else 
+               let (tail_lhs, pivot, tail_rhs) = 
+                  split_at_pivot cmp_fn term tail 
+               in
+                 (head::tail_lhs, pivot, tail_rhs)
       in
-      (* Try to substitute all terms in dom_exp with existing terms *)
-      let replace_domain dom_op dom_exp term_list = 
-         try
-            List.fold_left (fun (lhs, rhs) term ->
-               (lhs @ [term], diff rhs term)
-            ) ([], term_list) (CalcRing.prod_list dom_exp)
-         with Not_found -> ([dom_op dom_exp], term_list)
+
+      let unify_domain dom_subexp target_list = 
+
+         let rec less_restrictive term1 term2 = 
+            match (term1, term2) with
+               | (CalcRing.Val(AggSum(gb_vars1, subexp1)), 
+                  CalcRing.Val(AggSum(gb_vars2, subexp2))) 
+                     when ListAsSet.seteq gb_vars1 gb_vars2 ->
+                  begin
+                     try 
+                        (* Check if one list is less restrictive than other *)
+                        let _ = 
+                           List.fold_left (fun (lhs, rest) dom_term ->
+                              let (rest_lhs, pivot, rest_rhs) =
+                                 split_at_pivot less_restrictive dom_term rest
+                              in
+                                 (lhs @ [pivot], rest_lhs @ rest_rhs)
+                           ) ([], (CalcRing.prod_list subexp2)) 
+                             (CalcRing.prod_list subexp1)
+                        in
+                           true
+                     with CouldNotUnifyException _ -> false
+                  end
+               | _ -> C.exprs_are_identical term1 term2
+         in
+         let (lhs, rhs) =
+            List.fold_left (fun (lhs, rest) dom_term ->
+               let (rest_lhs, pivot, rest_rhs) =
+                  split_at_pivot less_restrictive dom_term rest
+               in
+                  (lhs @ [pivot], rest_lhs @ rest_rhs)
+            ) ([], target_list) (CalcRing.prod_list dom_subexp)
+         in
+            lhs @ rhs
       in
-         begin match term_list with
+         match term_list with
             | [] -> []
             | CalcRing.Val(DomainDelta(subexp))::tail ->
-               let (lhs, rhs) = 
-                  replace_domain C.mk_domain subexp tail 
-               in
-                  lhs @ (eliminate_domains rhs)
+               begin
+                  try 
+                     eliminate_domains (unify_domain subexp tail)                     
+                  with CouldNotUnifyException _ -> 
+                     C.mk_domain subexp::(eliminate_domains tail)
+               end
             | CalcRing.Val(Exists(subexp))::tail ->
-               let (lhs, rhs) = 
-                  replace_domain C.mk_exists subexp tail 
-               in
-                  lhs @ (eliminate_domains rhs)
-            | head::tail -> head :: (eliminate_domains tail)
-         end
+               begin
+                  try
+                     eliminate_domains (unify_domain subexp tail)
+                  with CouldNotUnifyException _ -> 
+                     C.mk_exists subexp::(eliminate_domains tail)
+               end
+            | head::tail -> head::(eliminate_domains tail)
    in
-         
    let rec rcr expr = begin match expr with
-      | CalcRing.Sum(sl) -> CalcRing.mk_sum (List.map rcr sl)
+      | CalcRing.Sum(sl) -> 
+         CalcRing.mk_sum (List.map rcr sl)
       | CalcRing.Prod(pl) -> 
          CalcRing.mk_prod (List.map rcr (eliminate_domains pl))
-      | CalcRing.Neg(e) -> CalcRing.mk_neg (rcr e)
-      | CalcRing.Val(lf) -> begin match lf with
-         | AggSum(gb_vars,raw_subexp) -> C.mk_aggsum gb_vars (rcr raw_subexp)
-         | Lift(v,raw_subexp) -> C.mk_lift v (rcr raw_subexp)
-   (***** BEGIN EXISTS HACK *****)         
-         | Exists(raw_subexp) ->
-            if C.expr_has_binary_multiplicity raw_subexp 
-            then (unique_domains (rcr raw_subexp))
-            else C.mk_exists (unique_domains (rcr raw_subexp))
-
-         (* CalcRing.mk_prod
-               (List.map (fun term -> 
-                  if (C.expr_has_binary_multiplicity term) then term
-                  else C.mk_exists term) (CalcRing.prod_list subexp)) *)
-
-   (***** END EXISTS HACK *****)
-         | DomainDelta(raw_subexp) ->
-            if C.expr_has_binary_multiplicity raw_subexp 
-            then (unique_domains (rcr raw_subexp))
-            else C.mk_domain (unique_domains (rcr raw_subexp))
-            
-        (*  CalcRing.mk_prod
-               (List.map (fun term -> 
-                  if (C.expr_has_binary_multiplicity term) then term
-                  else C.mk_domain term) (CalcRing.prod_list subexp)) *)
-            
-         | _ -> CalcRing.mk_val lf      
+      | CalcRing.Neg(e) -> 
+         CalcRing.mk_neg (rcr e)
+      | CalcRing.Val(lf) -> 
+         begin match lf with
+            | AggSum(gb_vars,raw_subexp) -> 
+               C.mk_aggsum gb_vars (rcr raw_subexp)
+            | Lift(v,raw_subexp) -> 
+               C.mk_lift v (rcr raw_subexp)
+(***** BEGIN EXISTS HACK *****)         
+            | Exists(raw_subexp) ->
+               (* TODO: fix unique_domains *)
+               let subexp = rcr (unique_domains raw_subexp) in
+                  if C.expr_has_binary_multiplicity raw_subexp then subexp
+                  else C.mk_exists subexp
+(***** END EXISTS HACK *****)
+            | DomainDelta(raw_subexp) ->
+               (* TODO: fix unique_domains *)
+               let subexp = rcr (unique_domains raw_subexp) in
+                  if C.expr_has_binary_multiplicity raw_subexp then subexp
+                  else C.mk_domain subexp
+            | _ -> CalcRing.mk_val lf
          end
       end
    in
@@ -1662,7 +1695,7 @@ let rec nesting_rewrites (big_expr:C.expr_t) =
                | CalcRing.Val(Value(ValueRing.Val(AConst(_)))) ->
                   C.bail_out (CalcRing.mk_val e) 
                      "Exists with a non-integer value"
-               | subexp -> C.mk_exists subexp   
+               | subexp -> C.mk_exists subexp
             end               
 
          | DomainDelta(unprocessed_subexp) -> 

@@ -871,6 +871,10 @@ and materialize_as_external ?(local_map:bool = false)
        deltarels_of_expr expr = []) then ([], expr) else
 
    let agg_expr = Calculus.mk_aggsum schema expr in
+
+   Debug.print "LOG-HEURISTICS-DETAIL" (fun () -> 
+      "Materialize as external: "^(string_of_expr agg_expr)
+   );     
    
    (* Check if expr can be further decomposed     *)
    (* e.g. R(A) * S(C) * (E ^= (R(C) * S(A)))     *)   
