@@ -992,7 +992,8 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
 *)
 let advance_lifts scope expr =
    Debug.print "LOG-ADVANCE-LIFTS" (fun () -> 
-      "Advance Lifts (START): "^(CalculusPrinter.string_of_expr expr)
+      "Advance Lifts (START): "^CalculusPrinter.string_of_expr expr^
+      "\nScope: "^ListExtras.ocaml_of_list string_of_var scope
    );
    let rewritten_expr = C.rewrite ~scope:scope 
       (fun _ x -> CalcRing.mk_sum x)
@@ -1343,8 +1344,8 @@ let extract_domains (big_expr:C.expr_t) =
 
     Simple rewrite rules focused on DomainDelta and Exists terms.
   
-    [DomainDelta(E) * R * E => E * R ] or
-    [DomainDelta(E1 * E2) * R1 * E2 * R2 * E1 => E1 * E2 * R1 * R2 ]
+    [DomainDelta(E) * R * E => R * E ] or
+    [DomainDelta(E1 * E2) * R1 * E2 * R2 * E1 => R1 * E2 * R2 * E1 ]
 
     [Exists(E) * R * E => E * R ]
 
@@ -1448,77 +1449,40 @@ let simplify_domains (big_expr:C.expr_t) =
             (CalculusPrinter.string_of_expr rewritten_expr) 
          ); rewritten_expr
    in
- 
-
-
-
-   
+    
    (* Try to eliminate redundant domains, for example:
       DomainDelta(E1 * E2) * R1 * E4 * R2 * E3 -> E3 * E4 * R1 * R2 when 
       E1 is less restrictive than E3 and E2 is less restrictive than E4 *)
    let rec eliminate_domains term_list =
 
-      let rec split_at_pivot cmp_fn term term_list = match term_list with 
-         | [] -> raise (CouldNotUnifyException "Not possible to unify domain")
-         | head::tail -> 
-            if cmp_fn term head then ([], head, tail) 
-            else 
-               let (tail_lhs, pivot, tail_rhs) = 
-                  split_at_pivot cmp_fn term tail 
-               in
-                 (head::tail_lhs, pivot, tail_rhs)
+      let rec find cmp_fn term term_list = match term_list with
+         | [] -> false
+         | head::tail -> if cmp_fn term head then true
+                         else find cmp_fn term tail
       in
-
+      let rec less_restrictive_list term_list1 term_list2 = 
+         let less_restrictive term1 term2 = match (term1, term2) with
+            | (CalcRing.Val(AggSum(gb_vars1, subexp1)), 
+               CalcRing.Val(AggSum(gb_vars2, subexp2))) 
+               when ListAsSet.subset gb_vars1 gb_vars2 ->
+                  less_restrictive_list (CalcRing.prod_list subexp1) 
+                                        (CalcRing.prod_list subexp2)
+            | _ -> C.exprs_are_identical term1 term2
+         in
+            List.for_all (fun term1 -> 
+               find less_restrictive term1 term_list2) term_list1
+      in
       let unify_domain dom_subexp target_list = 
-
-         let rec less_restrictive term1 term2 = 
-            match (term1, term2) with
-               | (CalcRing.Val(AggSum(gb_vars1, subexp1)), 
-                  CalcRing.Val(AggSum(gb_vars2, subexp2))) 
-                     when ListAsSet.seteq gb_vars1 gb_vars2 ->
-                  begin
-                     try 
-                        (* Check if one list is less restrictive than other *)
-                        let _ = 
-                           List.fold_left (fun (lhs, rest) dom_term ->
-                              let (rest_lhs, pivot, rest_rhs) =
-                                 split_at_pivot less_restrictive dom_term rest
-                              in
-                                 (lhs @ [pivot], rest_lhs @ rest_rhs)
-                           ) ([], (CalcRing.prod_list subexp2)) 
-                             (CalcRing.prod_list subexp1)
-                        in
-                           true
-                     with CouldNotUnifyException _ -> false
-                  end
-               | _ -> C.exprs_are_identical term1 term2
-         in
-         let (lhs, rhs) =
-            List.fold_left (fun (lhs, rest) dom_term ->
-               let (rest_lhs, pivot, rest_rhs) =
-                  split_at_pivot less_restrictive dom_term rest
-               in
-                  (lhs @ [pivot], rest_lhs @ rest_rhs)
-            ) ([], target_list) (CalcRing.prod_list dom_subexp)
-         in
-            lhs @ rhs
+         less_restrictive_list (CalcRing.prod_list dom_subexp) target_list
       in
          match term_list with
             | [] -> []
             | CalcRing.Val(DomainDelta(subexp))::tail ->
-               begin
-                  try 
-                     eliminate_domains (unify_domain subexp tail)                     
-                  with CouldNotUnifyException _ -> 
-                     C.mk_domain subexp::(eliminate_domains tail)
-               end
+               if unify_domain subexp tail then eliminate_domains tail
+               else C.mk_domain subexp::(eliminate_domains tail)
             | CalcRing.Val(Exists(subexp))::tail ->
-               begin
-                  try
-                     eliminate_domains (unify_domain subexp tail)
-                  with CouldNotUnifyException _ -> 
-                     C.mk_exists subexp::(eliminate_domains tail)
-               end
+               if unify_domain subexp tail then eliminate_domains tail
+               else C.mk_exists subexp::(eliminate_domains tail)
             | head::tail -> head::(eliminate_domains tail)
    in
    let rec rcr expr = begin match expr with
@@ -1644,7 +1608,6 @@ let rec nesting_rewrites (big_expr:C.expr_t) =
                      let (unnested, nested) = 
                        List.fold_left (fun (unnested, nested) term->
                           if (C.commutes nested term) && 
-                             (C.deltarels_of_expr nested = []) &&
                              (ListAsSet.subset (snd (C.schema_of_expr term))
                                                 gb_vars)
                           then (CalcRing.mk_prod [unnested; term], nested)

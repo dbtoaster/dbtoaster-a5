@@ -176,6 +176,7 @@ let derive_initializer ?(scope = [])
             "[Initializer] Deriving Initializer for : "^(string_of_leaf lf)
          );
          match lf with
+         | DeltaRel _ -> CalcRing.zero
          | Rel(rn, rv) ->
             if List.mem rn table_names
             then Calculus.mk_rel rn rv

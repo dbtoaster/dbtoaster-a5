@@ -25,7 +25,7 @@ type ds_t = {
                                {b mk_ds_name} and {b expand_ds_name} are 
                                utility methods for interacting with ds_names *)
    
-   ds_definition : expr_t  (** The definition of the datastructure.  This is the
+   ds_definition : expr_t; (** The definition of the datastructure.  This is the
                                query that the map will be maintaining the result
                                of *)
 }
@@ -57,7 +57,7 @@ type stmt_type_t = UpdateStmt | ReplaceStmt
 type stmt_t = {
    target_map  : expr_t;      (** The datastructure to be modified *)
    update_type : stmt_type_t; (** The type of alteration to be performed *)
-   update_expr   : expr_t     (** The calculus expression defining the new 
+   update_expr : expr_t       (** The calculus expression defining the new 
                                   value or update *)
 }
 

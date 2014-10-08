@@ -388,13 +388,13 @@ let test msg input output =
       (CalculusTransforms.simplify_domains (parse_calc input))
       (parse_calc output)
 in
-(*    test "Exists with binary outcome - remove Exists"
+   test "Exists with binary outcome - remove Exists"
       "Exists((X ^= A) * (Y ^= B))"
       "(X ^= A) * (Y ^= B)";
    test "Exists with binary outcome - keep everything"
       "Exists((X ^= dA) * R(A,B) * (Y ^= B))"
       "Exists((X ^= dA) * R(A,B) * (Y ^= B))";      
- *)(*    test "Repeated condition"
+   test "Repeated condition"
       "R(A,B) * {A > B} * {A > B}" 
       "R(A,B) * {A > B}"; 
    test "Repeated domain terms"
@@ -422,8 +422,7 @@ in
       "DOMAIN((DELTA R)(A,B) * {B > 10} * 
               AggSum([A], (DELTA R)(A,B) * {B > 10} * {A < 10}))"
       "DOMAIN((DELTA R)(A,B) * {B > 10} * {A < 10}))";
- *)
-
+ 
 let test msg scope input output =
    log_test ("Factorize One Polynomial ("^msg^")")
       string_of_expr
@@ -565,7 +564,7 @@ in
     test "AggSum" [] ["A"]
        "(DOMAIN( AggSum([A], (DELTA R)(A, B))) * AggSum([A], ((DELTA R)(A, B) * B)))"
        "AggSum([A], ((DELTA R)(A, B) * B))";
-       
+
     test "Domain and delta" [] ["A"]   
        "AggSum([A], (DELTA R)(A,B) * B)"
        "AggSum([A], (DELTA R)(A,B) * B)";
@@ -719,8 +718,8 @@ in
             (GKKEOF ^= (NPZL_7DKV_C * {(NPZL_7DKV_B * NPZL_7DKV_B)})) *
             (C1 ^= NPZL_7DKV_C))) *
         (QKKF7PYI ^= COUNTSS_C))"
-      "(LB71Y ^= (COUNTSS_B * COUNTSS_C)) * (GKKEOF ^= 0.) * (B1 ^= 0)  *  
-       (QKKF7PYI ^= COUNTSS_C) * 
+      "(LB71Y ^= (COUNTSS_B * COUNTSS_C)) * (QKKF7PYI ^= COUNTSS_C) * 
+       (B1 ^= 0) * (GKKEOF ^= 0.) * 
        AggSum([C1], 
           (__sql_inline_not_1 ^= 0) * (NPZL_7DKV_B ^= 0) *
           COUNTS1(int)[][NPZL_7DKV_B, NPZL_7DKV_C] *

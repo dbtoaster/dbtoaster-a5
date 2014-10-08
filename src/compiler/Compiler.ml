@@ -225,19 +225,30 @@ let compile_map (compute_delta:bool)
                        in (ivc_todos, Some(todo_ivc))
                  else ([], None)
             else ([], None)
-         in
-             
+         in   
          Debug.print "LOG-COMPILE-DETAIL" (fun () ->
             begin match todo_ivc with
                | None -> "===> NO IVC <==="
                | Some(s) -> "IVC: \n"^(CalculusPrinter.string_of_expr s)
             end
          );
-             
+         let merged_todos = ivc_todos @ new_todos in
+
+         (* Inject local statements *)
+         List.iter (fun todo -> 
+            if deltarels_of_expr todo.ds_definition <> [] then 
+               triggers      :=  
+                  (delta_event, {
+                     Plan.target_map  = todo.ds_name;
+                     Plan.update_type = Plan.ReplaceStmt;
+                     Plan.update_expr = todo.ds_definition
+                  }) :: !triggers
+         ) merged_todos; 
+          
          trigger_todos := 
             (** The materializer (presently) produces maps guaranteed not to
                 need IVC *)
-            (List.map (fun x -> (depth+1, x, true)) (ivc_todos @ new_todos)) 
+            (List.map (fun x -> (depth+1, x, true)) merged_todos) 
                @ !trigger_todos;
          triggers      := 
             (delta_event, {
@@ -266,6 +277,18 @@ let compile_map (compute_delta:bool)
                                    (Some(delta_event)) 
                                    optimized_defn
          in
+
+         (* Inject local statements *)
+         List.iter (fun todo -> 
+            if deltarels_of_expr todo.ds_definition <> [] then 
+               triggers      :=  
+                  (delta_event, {
+                     Plan.target_map  = todo.ds_name;
+                     Plan.update_type = Plan.ReplaceStmt;
+                     Plan.update_expr = todo.ds_definition
+                  }) :: !triggers
+         ) new_todos; 
+
          Debug.print "LOG-COMPILE-DETAIL" (fun () ->
             "Materialized expr: \n"^
             (CalculusPrinter.string_of_expr materialized_expr)

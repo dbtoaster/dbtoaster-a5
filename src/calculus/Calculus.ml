@@ -669,6 +669,37 @@ let rename_vars (mapping:(var_t,var_t)ListAsFunction.table_fn_t)
 (***** END EXISTS HACK *****)
       end)) (fun _ _ -> true)
       expr
+
+(* BEGIN LOW CARDINALITY HACK *)
+let contains s1 s2 =
+  try
+    let len = String.length s2 in
+    for i = 0 to String.length s1 - len do
+      if String.sub s1 i len = s2 then raise Exit
+    done;
+    false
+  with Exit -> true
+
+let rec expr_has_deltarels expr = 
+   let rcr = expr_has_deltarels in
+   match expr with
+      | CalcRing.Prod(pl) -> List.exists (fun x -> x) (List.map rcr pl)
+      | CalcRing.Sum(sl) -> List.for_all (fun x -> x) (List.map rcr sl)
+      | CalcRing.Neg(e) -> rcr e
+      | CalcRing.Val(lf) -> 
+         begin match lf with
+            | Value _ | Cmp _ | Rel _ -> false
+            | DeltaRel _ -> true
+            | External(ename,_,_,_,_) -> (contains ename "DELTA" || 
+                                          contains ename "DOMAIN")
+            | AggSum(gb_vars, subexp) -> rcr subexp 
+            | DomainDelta(subexp) -> rcr subexp
+            | Lift(v, subexp) -> rcr subexp
+   (***** BEGIN EXISTS HACK *****)
+            | Exists(subexp) -> rcr subexp
+   (***** END EXISTS HACK *****)
+         end
+(* END LOW CARDINALITY HACK *)
    
 (**
    Determine whether two expressions safely commute (in a product).
@@ -687,7 +718,10 @@ let commutes ?(scope = []) (e1:expr_t) (e2:expr_t): bool =
          side.  A variable enters scope in an expression if it is an output 
          variable, and not already present in the scope (which we're given as  
          a parameter).  *)
-   (ListAsSet.inter (ListAsSet.diff ovar1 scope) ivar2) = []
+   (ListAsSet.inter (ListAsSet.diff ovar1 scope) ivar2) = [] 
+(* START LOW CARDINALITY HACK *)   
+   && not (expr_has_deltarels e1)
+(* END LOW CARDINALITY HACK *)
 
 (**
    Generate a singleton term from a list of column/expression pairs

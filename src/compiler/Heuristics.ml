@@ -494,7 +494,7 @@ let should_update ?(scope:var_t list = [])
            When the calculus optimizer is disabled, this assumption    
            might be violated. We guard against these cases by calling  
            CalculusTransforms.erase_negs.                              *)
-        ((* CalculusTransforms.erase_negs *) expr)
+        (CalculusTransforms.erase_negs expr)
    in
    let final_decision = match final_state with
       | Unknown | UpdateExpr -> true
@@ -686,10 +686,11 @@ and materialize_expr (heuristic_options:heuristic_options_t)
             (ListAsSet.multiunion [ schema; scope_delta; 
                                     rest_ivars; rest_ovars ])
       in      
-         materialize_as_external ~local_map:true 
-                                 heuristic_options db_schema 
-                                 history (prefix^"_DELTA") event
-                                 scope_delta schema_delta delta_expr
+         if Debug.active "HEURISTICS-NO-DELTA-MAPS" 
+         then ([], C.mk_aggsum schema_delta delta_expr)
+         else materialize_as_external heuristic_options db_schema 
+                                      history (prefix^"_DELTA") event
+                                      scope_delta schema_delta delta_expr
    in
    let scope_rel = 
       ListAsSet.union scope_delta (snd (schema_of_expr mat_delta_expr))
@@ -860,8 +861,7 @@ and extract_relations ?(minimal_maps = Debug.active "HEURISTICS-MINIMAL-MAPS")
    into an external map. This step also looks for the expression in 
    the history of previously materialized expressions. If not found,
    a new map is created. *)
-and materialize_as_external ?(local_map:bool = false) 
-                            (heuristic_options:heuristic_options_t)
+and materialize_as_external (heuristic_options:heuristic_options_t)
                             (db_schema:Schema.t) (history:ds_history_t) 
                             (prefix:string) (event:Schema.event_t option)
                             (scope:var_t list) (schema: var_t list)
@@ -932,7 +932,7 @@ and materialize_as_external ?(local_map:bool = false)
             let new_ds = {
                ds_name = Calculus.mk_external prefix expr_ivars schema
                                               (type_of_expr agg_expr) ivc_expr;
-               ds_definition = agg_expr;
+               ds_definition = agg_expr
             } in
                history := new_ds :: !history;
                (new_ds :: todo_ivc, new_ds.ds_name)
