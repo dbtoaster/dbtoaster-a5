@@ -1,0 +1,13 @@
+{
+  :path => "test/queries/simple/r_multiors.sql",
+  :datasets => {
+    "standard" => {
+      :toplevels => {
+        "AGG" => {
+          :type => :singleton,
+          :expected => 14
+        }
+      }
+    }
+  }
+}

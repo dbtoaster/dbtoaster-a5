@@ -97,7 +97,6 @@ let optimizations_by_level =
       (** -O2 **) [
       ];
       (** -O3 **) [
-         "UNIFY-EXPRESSIONS";
          "AGGRESSIVE-FACTORIZE";
          "AGGRESSIVE-UNIFICATION";
          "DELETE-ON-ZERO";

@@ -693,7 +693,9 @@ and materialize_expr (heuristic_options:heuristic_options_t)
                                       scope_delta schema_delta delta_expr
    in
    let scope_rel = 
-      ListAsSet.union scope_delta (snd (schema_of_expr mat_delta_expr))
+      ListAsSet.multiunion [ scope; 
+                             snd (schema_of_expr mat_domain_expr);
+                             snd (schema_of_expr mat_delta_expr)   ]
    in
    
    (**** MATERIALIZE REL_EXPR ****)

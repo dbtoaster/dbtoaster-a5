@@ -670,17 +670,17 @@ let rename_vars (mapping:(var_t,var_t)ListAsFunction.table_fn_t)
       end)) (fun _ _ -> true)
       expr
 
-(* BEGIN LOW CARDINALITY HACK *)
-let contains s1 s2 =
-  try
-    let len = String.length s2 in
-    for i = 0 to String.length s1 - len do
-      if String.sub s1 i len = s2 then raise Exit
-    done;
-    false
-  with Exit -> true
-
+(* BEGIN CARDINALITY HACK *)
 let rec expr_has_deltarels expr = 
+   let contains s1 s2 =
+      try
+         let len = String.length s2 in
+         for i = 0 to String.length s1 - len do
+            if String.sub s1 i len = s2 then raise Exit
+         done;
+         false
+      with Exit -> true   
+   in
    let rcr = expr_has_deltarels in
    match expr with
       | CalcRing.Prod(pl) -> List.exists (fun x -> x) (List.map rcr pl)
@@ -699,7 +699,15 @@ let rec expr_has_deltarels expr =
             | Exists(subexp) -> rcr subexp
    (***** END EXISTS HACK *****)
          end
-(* END LOW CARDINALITY HACK *)
+
+let expr_has_low_cardinality scope expr = 
+   expr_has_deltarels expr 
+
+let expr_has_high_cardinality scope expr = 
+   not (expr_has_low_cardinality scope expr) && 
+   (rels_of_expr expr <> [] || externals_of_expr expr <> [])
+
+(* END CARDINALITY HACK *)
    
 (**
    Determine whether two expressions safely commute (in a product).
@@ -719,9 +727,10 @@ let commutes ?(scope = []) (e1:expr_t) (e2:expr_t): bool =
          variable, and not already present in the scope (which we're given as  
          a parameter).  *)
    (ListAsSet.inter (ListAsSet.diff ovar1 scope) ivar2) = [] 
-(* START LOW CARDINALITY HACK *)   
-   && not (expr_has_deltarels e1)
-(* END LOW CARDINALITY HACK *)
+(* START CARDINALITY HACK *)   
+   && not (expr_has_low_cardinality scope e1 && 
+           expr_has_high_cardinality scope e2) 
+(* END CARDINALITY HACK *)
 
 (**
    Generate a singleton term from a list of column/expression pairs

@@ -568,7 +568,7 @@ and calc_of_condition (tables:Sql.table_t list)
          | Sql.Or(c1,c2)  -> 
             let rec extract_ors = (function
                | Sql.Or(inner_c1, inner_c2) -> 
-                  (extract_ors inner_c1)@(extract_ors inner_c1)
+                  (extract_ors inner_c1)@(extract_ors inner_c2)
                | c -> [c]
             ) in
             let (or_val,or_calc) = lift_if_necessary ~t:"or" (

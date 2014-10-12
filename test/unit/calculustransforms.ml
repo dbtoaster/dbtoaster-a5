@@ -287,8 +287,7 @@ in
    test "Duplicate lifts (not terminal)" []
       "(A ^= 0) * (A ^= AggSum([], S(B))) * 2"
       "(A ^= 0) * (A ^= AggSum([], S(B))) * 2";
-   test "Query18 funny business" [var "query18_mLINEITEMLINEITEM_ORDERKEY"; 
-                                  var "query18_mLINEITEMLINEITEM_QUANTITY"]
+   test "Query18 funny business" []
       "(O_OK ^= dOK) * AggSum([O_OK],(
           (AggSum([O_OK],(LINEITEM(O_OK, L3_Q)))) +
           ( (O_OK ^= dOK) * AggSum([O_OK],(LINEITEM(O_OK, L3_Q)))
@@ -305,7 +304,7 @@ in
    test "Lift into a lifted aggsum of a lift" [var "C"]
       "(A ^= B) * (C ^= (AggSum([A], R(D) * (A ^= D))))"
       "(C ^= (AggSum([], R(D) * {D = B})))";
-   test "TPCH11 nested query" [var "P_NATIONKEY"; var "N_VALUE"]
+   test "TPCH11 nested query" [var "N_VALUE"]
       "(N_NATIONKEY ^= P_NATIONKEY) * 
        (N_VALUE ^= AggSum([N_NATIONKEY],(
            PARTSUPP(PS_PARTKEY, PS_SUPPKEY, PS_AVAILQTY, PS_SUPPLYCOST, 
@@ -349,6 +348,15 @@ in
    test "Forbidden by scope" [var "B"]
       "(B ^= 4) * R(B) * AggSum([], R(A, B) * B)"
       "(B ^= 4) * R(B) * AggSum([], R(A, B) * B)";
+   test "TPCH Q8 simple subexpression" [var "X"]
+      "(X ^= B) * AggSum([X], R(A,B) * (X ^= B))"
+      "(X ^= B) * AggSum([B], R(A,B))";
+   test "TPCH Q8 complex subexpression" [var "X"]
+      "(X ^= {B + 1}) * AggSum([X], R(A,B) * (X ^= {B + 1}))"
+      "(X ^= {B + 1}) * AggSum([X], R(A,B) * (X ^= {B + 1}))";
+  test "TPCH Q8 constant subexpression" [var "X"]  
+      "(X ^= 42) * AggSum([X], R(A,B) * (X ^= 42))"
+      "(X ^= 42) * AggSum([X], R(A,B) * (X ^= 42))";      
 ;;
 let test msg input output =
    log_test ("Nesting Rewrites ("^msg^")")
@@ -422,7 +430,41 @@ in
       "DOMAIN((DELTA R)(A,B) * {B > 10} * 
               AggSum([A], (DELTA R)(A,B) * {B > 10} * {A < 10}))"
       "DOMAIN((DELTA R)(A,B) * {B > 10} * {A < 10}))";
- 
+
+   test "Eliminate and push to front"
+      "DOMAIN((A ^= 0)) * (X ^= A) * (A ^= 0)"
+      "(A ^= 0) * (X ^= A)";
+
+   test "Eliminate, re-order and push to front"
+      "DOMAIN((A ^= 0) * (B ^= A)) * (X ^= A) * (B ^= A) * (A ^= 0)"
+      "(A ^= 0) * (B ^= A) * (X ^= A)";  
+
+   test "Eliminate but keep at back"
+      "DOMAIN(AggSum([B], (A ^= 0) * (B ^= A))) * (X ^= 42) *
+       AggSum([B,C], (A ^= 0) * (B ^= A) * (C ^= {X + B})))"
+      "(X ^= 42) * AggSum([B,C], (A ^= 0) * (B ^= A) * (C ^= {X + B})))"; 
+
+   test "Subordinate with entangled dependencies"
+      "DOMAIN(AggSum([B], (A ^= 4) * (B ^= A))) * 
+         (X ^= B) * AggSum([B,C], (A ^= 4) * (B ^= A) * (C ^= {X + B}))"
+      "DOMAIN(AggSum([B], (A ^= 4) * (B ^= A))) * 
+         (X ^= B) * AggSum([B,C], (A ^= 4) * (B ^= A) * (C ^= {X + B}))";
+
+(*    (* TODO: Implement the following cases *)
+   test "Less restrictive: AggSum vs. AggSum"
+      "DOMAIN(AggSum([X], (DELTA R)(X,Y,Z))) * AggSum([X,Y], (DELTA R)(X,Y,Z1))"
+      "AggSum([X,Y], (DELTA R)(X,Y,Z1))";
+
+   test "Less restrictive: AggSum vs. product list"
+      "DOMAIN(AggSum([X,Y], (X ^= 42) * (Y ^= X))) * 
+         (X ^= 42) * (Y ^= X) * (Z ^= Y))"
+      "(X ^= 42) * (Y ^= X) * (Z ^= Y))";
+
+   test "Less restrictive: product list vs. AggSum"
+      "DOMAIN((X ^= 42) * (Y ^= X)) * 
+         AggSum([X,Y,Z], (X ^= 42) * (Y ^= X) * (Z ^= Y))"
+      "AggSum([X,Y,Z], (X ^= 42) * (Y ^= X) * (Z ^= Y))"; *)
+
 let test msg scope input output =
    log_test ("Factorize One Polynomial ("^msg^")")
       string_of_expr
@@ -799,306 +841,3 @@ in
     test "Unify lifts and group-by variables" [] ["A"; "C"]
        "S(C) * (A ^= C) * AggSum([A], R(B) * (A ^= B)) "
        "S(C) * (A ^= C) * AggSum([A], R(B) * (A ^= B)) ";   
-
-
-(* Debug.activate "LOG-CALCOPT-DETAIL"; *)
-(* Debug.activate "LOG-COMBINE-VALUES";
-Debug.activate "PRINT-RINGS";
-Debug.activate "DUMB-LIFT-DELTAS";
- *)
-(* Debug.activate "LOG-CANCEL-TERMS";
-Debug.activate "LOG-CANCEL-TERMS-DETAIL";
-Debug.activate "LOG-CANCEL-TERMS-DEBUG"; *)
-
-(* test "Q17" [] [  "QUERY17LINEITEMLINEITEM_ORDERKEY";
-                    "QUERY17LINEITEMLINEITEM_PARTKEY";
-                    "QUERY17LINEITEMLINEITEM_SUPPKEY";
-                    "QUERY17LINEITEMLINEITEM_LINENUMBER";
-                    "QUERY17LINEITEMLINEITEM_QUANTITY";
-                    "QUERY17LINEITEMLINEITEM_EXTENDEDPRICE";
-                    "QUERY17LINEITEMLINEITEM_DISCOUNT"; 
-                    "QUERY17LINEITEMLINEITEM_TAX";
-                    "QUERY17LINEITEMLINEITEM_RETURNFLAG";
-                    "QUERY17LINEITEMLINEITEM_LINESTATUS"; 
-                    "QUERY17LINEITEMLINEITEM_SHIPDATE";
-                    "QUERY17LINEITEMLINEITEM_COMMITDATE";
-                    "QUERY17LINEITEMLINEITEM_RECEIPTDATE";
-                    "QUERY17LINEITEMLINEITEM_SHIPINSTRUCT";
-                    "QUERY17LINEITEMLINEITEM_SHIPMODE";
-                    "QUERY17LINEITEMLINEITEM_COMMENT" ]
-    "AggSum([], 
-  (((L_ORDERKEY ^= QUERY17LINEITEMLINEITEM_ORDERKEY) *
-     (L_PARTKEY ^= QUERY17LINEITEMLINEITEM_PARTKEY) *
-     (L_SUPPKEY ^= QUERY17LINEITEMLINEITEM_SUPPKEY) *
-     (L_LINENUMBER ^= QUERY17LINEITEMLINEITEM_LINENUMBER) *
-     (L_QUANTITY ^= QUERY17LINEITEMLINEITEM_QUANTITY) *
-     (L_EXTENDEDPRICE ^= QUERY17LINEITEMLINEITEM_EXTENDEDPRICE) *
-     (L_DISCOUNT ^= QUERY17LINEITEMLINEITEM_DISCOUNT) *
-     (L_TAX ^= QUERY17LINEITEMLINEITEM_TAX) *
-     (L_RETURNFLAG ^= QUERY17LINEITEMLINEITEM_RETURNFLAG) *
-     (L_LINESTATUS ^= QUERY17LINEITEMLINEITEM_LINESTATUS) *
-     (L_SHIPDATE ^= QUERY17LINEITEMLINEITEM_SHIPDATE) *
-     (L_COMMITDATE ^= QUERY17LINEITEMLINEITEM_COMMITDATE) *
-     (L_RECEIPTDATE ^= QUERY17LINEITEMLINEITEM_RECEIPTDATE) *
-     (L_SHIPINSTRUCT ^= QUERY17LINEITEMLINEITEM_SHIPINSTRUCT) *
-     (L_SHIPMODE ^= QUERY17LINEITEMLINEITEM_SHIPMODE) *
-     (L_COMMENT ^= QUERY17LINEITEMLINEITEM_COMMENT) *
-     PART(L_PARTKEY, P_NAME, P_MFGR, P_BRAND, P_TYPE, P_SIZE, P_CONTAINER,
-            P_RETAILPRICE, P_COMMENT) *
-     AggSum([], 
-       ((__sql_inline_agg_1 ^=
-          (AggSum([L_PARTKEY], 
-             (LINEITEM(L2_ORDERKEY, L_PARTKEY, L2_SUPPKEY, L2_LINENUMBER,
-                         L2_QUANTITY, L2_EXTENDEDPRICE, L2_DISCOUNT, L2_TAX,
-                         L2_RETURNFLAG, L2_LINESTATUS, L2_SHIPDATE,
-                         L2_COMMITDATE, L2_RECEIPTDATE, L2_SHIPINSTRUCT,
-                         L2_SHIPMODE, L2_COMMENT) *
-               L2_QUANTITY)) *
-            0.005)) *
-         {L_QUANTITY < __sql_inline_agg_1})) *
-     L_EXTENDEDPRICE) +
-    ((LINEITEM(L_ORDERKEY, L_PARTKEY, L_SUPPKEY, L_LINENUMBER, L_QUANTITY,
-                 L_EXTENDEDPRICE, L_DISCOUNT, L_TAX, L_RETURNFLAG,
-                 L_LINESTATUS, L_SHIPDATE, L_COMMITDATE, L_RECEIPTDATE,
-                 L_SHIPINSTRUCT, L_SHIPMODE, L_COMMENT) +
-       ((L_ORDERKEY ^= QUERY17LINEITEMLINEITEM_ORDERKEY) *
-         (L_PARTKEY ^= QUERY17LINEITEMLINEITEM_PARTKEY) *
-         (L_SUPPKEY ^= QUERY17LINEITEMLINEITEM_SUPPKEY) *
-         (L_LINENUMBER ^= QUERY17LINEITEMLINEITEM_LINENUMBER) *
-         (L_QUANTITY ^= QUERY17LINEITEMLINEITEM_QUANTITY) *
-         (L_EXTENDEDPRICE ^= QUERY17LINEITEMLINEITEM_EXTENDEDPRICE) *
-         (L_DISCOUNT ^= QUERY17LINEITEMLINEITEM_DISCOUNT) *
-         (L_TAX ^= QUERY17LINEITEMLINEITEM_TAX) *
-         (L_RETURNFLAG ^= QUERY17LINEITEMLINEITEM_RETURNFLAG) *
-         (L_LINESTATUS ^= QUERY17LINEITEMLINEITEM_LINESTATUS) *
-         (L_SHIPDATE ^= QUERY17LINEITEMLINEITEM_SHIPDATE) *
-         (L_COMMITDATE ^= QUERY17LINEITEMLINEITEM_COMMITDATE) *
-         (L_RECEIPTDATE ^= QUERY17LINEITEMLINEITEM_RECEIPTDATE) *
-         (L_SHIPINSTRUCT ^= QUERY17LINEITEMLINEITEM_SHIPINSTRUCT) *
-         (L_SHIPMODE ^= QUERY17LINEITEMLINEITEM_SHIPMODE) *
-         (L_COMMENT ^= QUERY17LINEITEMLINEITEM_COMMENT))) *
-      PART(L_PARTKEY, P_NAME, P_MFGR, P_BRAND, P_TYPE, P_SIZE, P_CONTAINER,
-             P_RETAILPRICE, P_COMMENT) *
-      AggSum([L_PARTKEY], 
-        (DOMAIN( (L_PARTKEY ^= QUERY17LINEITEMLINEITEM_PARTKEY)) *
-          ((__sql_inline_agg_1 ^=
-             ((AggSum([L_PARTKEY], 
-                 (LINEITEM(L2_ORDERKEY, L_PARTKEY, L2_SUPPKEY, L2_LINENUMBER,
-                             L2_QUANTITY, L2_EXTENDEDPRICE, L2_DISCOUNT,
-                             L2_TAX, L2_RETURNFLAG, L2_LINESTATUS,
-                             L2_SHIPDATE, L2_COMMITDATE, L2_RECEIPTDATE,
-                             L2_SHIPINSTRUCT, L2_SHIPMODE, L2_COMMENT) *
-                   L2_QUANTITY)) *
-                0.005) +
-               ((L_PARTKEY ^= QUERY17LINEITEMLINEITEM_PARTKEY) *
-                 AggSum([], 
-                   ((L2_COMMENT ^= QUERY17LINEITEMLINEITEM_COMMENT) *
-                     (L2_SHIPMODE ^= QUERY17LINEITEMLINEITEM_SHIPMODE) *
-                     (L2_SHIPINSTRUCT ^=
-                       QUERY17LINEITEMLINEITEM_SHIPINSTRUCT) *
-                     (L2_RECEIPTDATE ^= QUERY17LINEITEMLINEITEM_RECEIPTDATE) *
-                     (L2_COMMITDATE ^= QUERY17LINEITEMLINEITEM_COMMITDATE) *
-                     (L2_SHIPDATE ^= QUERY17LINEITEMLINEITEM_SHIPDATE) *
-                     (L2_LINESTATUS ^= QUERY17LINEITEMLINEITEM_LINESTATUS) *
-                     (L2_RETURNFLAG ^= QUERY17LINEITEMLINEITEM_RETURNFLAG) *
-                     (L2_TAX ^= QUERY17LINEITEMLINEITEM_TAX) *
-                     (L2_DISCOUNT ^= QUERY17LINEITEMLINEITEM_DISCOUNT) *
-                     (L2_EXTENDEDPRICE ^=
-                       QUERY17LINEITEMLINEITEM_EXTENDEDPRICE) *
-                     (L2_QUANTITY ^= QUERY17LINEITEMLINEITEM_QUANTITY) *
-                     (L2_LINENUMBER ^= QUERY17LINEITEMLINEITEM_LINENUMBER) *
-                     (L2_SUPPKEY ^= QUERY17LINEITEMLINEITEM_SUPPKEY) *
-                     (L2_ORDERKEY ^= QUERY17LINEITEMLINEITEM_ORDERKEY) *
-                     DOMAIN(
-                       (L2_ORDERKEY ^= QUERY17LINEITEMLINEITEM_ORDERKEY)) *
-                     DOMAIN( (L2_SUPPKEY ^= QUERY17LINEITEMLINEITEM_SUPPKEY)) *
-                     DOMAIN(
-                       (L2_LINENUMBER ^= QUERY17LINEITEMLINEITEM_LINENUMBER)) *
-                     DOMAIN(
-                       (L2_QUANTITY ^= QUERY17LINEITEMLINEITEM_QUANTITY)) *
-                     DOMAIN(
-                       (L2_EXTENDEDPRICE ^=
-                         QUERY17LINEITEMLINEITEM_EXTENDEDPRICE)) *
-                     DOMAIN(
-                       (L2_DISCOUNT ^= QUERY17LINEITEMLINEITEM_DISCOUNT)) *
-                     DOMAIN( (L2_TAX ^= QUERY17LINEITEMLINEITEM_TAX)) *
-                     DOMAIN(
-                       (L2_RETURNFLAG ^= QUERY17LINEITEMLINEITEM_RETURNFLAG)) *
-                     DOMAIN(
-                       (L2_LINESTATUS ^= QUERY17LINEITEMLINEITEM_LINESTATUS)) *
-                     DOMAIN(
-                       (L2_SHIPDATE ^= QUERY17LINEITEMLINEITEM_SHIPDATE)) *
-                     DOMAIN(
-                       (L2_COMMITDATE ^= QUERY17LINEITEMLINEITEM_COMMITDATE)) *
-                     DOMAIN(
-                       (L2_RECEIPTDATE ^=
-                         QUERY17LINEITEMLINEITEM_RECEIPTDATE)) *
-                     DOMAIN(
-                       (L2_SHIPINSTRUCT ^=
-                         QUERY17LINEITEMLINEITEM_SHIPINSTRUCT)) *
-                     DOMAIN(
-                       (L2_SHIPMODE ^= QUERY17LINEITEMLINEITEM_SHIPMODE)) *
-                     DOMAIN( (L2_COMMENT ^= QUERY17LINEITEMLINEITEM_COMMENT)) *
-                     L2_QUANTITY)) *
-                 0.005))) +
-            (NEG * (__sql_inline_agg_1 ^=
-                     (AggSum([L_PARTKEY], 
-                        (LINEITEM(L2_ORDERKEY, L_PARTKEY, L2_SUPPKEY,
-                                    L2_LINENUMBER, L2_QUANTITY,
-                                    L2_EXTENDEDPRICE, L2_DISCOUNT, L2_TAX,
-                                    L2_RETURNFLAG, L2_LINESTATUS,
-                                    L2_SHIPDATE, L2_COMMITDATE,
-                                    L2_RECEIPTDATE, L2_SHIPINSTRUCT,
-                                    L2_SHIPMODE, L2_COMMENT) *
-                          L2_QUANTITY)) *
-                       0.005)))) *
-          {L_QUANTITY < __sql_inline_agg_1})) *
-      L_EXTENDEDPRICE)))"
-    "1"; *)
-
-(*
-   test "Q17" [ "QUERY17LINEITEMLINEITEM_ORDERKEY";
-                "QUERY17LINEITEMLINEITEM_PARTKEY";
-                "QUERY17LINEITEMLINEITEM_SUPPKEY";
-                "QUERY17LINEITEMLINEITEM_LINENUMBER";
-                "QUERY17LINEITEMLINEITEM_QUANTITY";
-                "QUERY17LINEITEMLINEITEM_EXTENDEDPRICE";
-                "QUERY17LINEITEMLINEITEM_DISCOUNT"; 
-                "QUERY17LINEITEMLINEITEM_TAX";
-                "QUERY17LINEITEMLINEITEM_RETURNFLAG";
-                "QUERY17LINEITEMLINEITEM_LINESTATUS"; 
-                "QUERY17LINEITEMLINEITEM_SHIPDATE";
-                "QUERY17LINEITEMLINEITEM_COMMITDATE";
-                "QUERY17LINEITEMLINEITEM_RECEIPTDATE";
-                "QUERY17LINEITEMLINEITEM_SHIPINSTRUCT";
-                "QUERY17LINEITEMLINEITEM_SHIPMODE";
-                "QUERY17LINEITEMLINEITEM_COMMENT" ] []
-       "AggSum([], 
-  (((L_ORDERKEY ^= QUERY17LINEITEMLINEITEM_ORDERKEY) *
-     (L_PARTKEY ^= QUERY17LINEITEMLINEITEM_PARTKEY) *
-     (L_SUPPKEY ^= QUERY17LINEITEMLINEITEM_SUPPKEY) *
-     (L_LINENUMBER ^= QUERY17LINEITEMLINEITEM_LINENUMBER) *
-     (L_QUANTITY ^= QUERY17LINEITEMLINEITEM_QUANTITY) *
-     (L_EXTENDEDPRICE ^= QUERY17LINEITEMLINEITEM_EXTENDEDPRICE) *
-     (L_DISCOUNT ^= QUERY17LINEITEMLINEITEM_DISCOUNT) *
-     (L_TAX ^= QUERY17LINEITEMLINEITEM_TAX) *
-     (L_RETURNFLAG ^= QUERY17LINEITEMLINEITEM_RETURNFLAG) *
-     (L_LINESTATUS ^= QUERY17LINEITEMLINEITEM_LINESTATUS) *
-     (L_SHIPDATE ^= QUERY17LINEITEMLINEITEM_SHIPDATE) *
-     (L_COMMITDATE ^= QUERY17LINEITEMLINEITEM_COMMITDATE) *
-     (L_RECEIPTDATE ^= QUERY17LINEITEMLINEITEM_RECEIPTDATE) *
-     (L_SHIPINSTRUCT ^= QUERY17LINEITEMLINEITEM_SHIPINSTRUCT) *
-     (L_SHIPMODE ^= QUERY17LINEITEMLINEITEM_SHIPMODE) *
-     (L_COMMENT ^= QUERY17LINEITEMLINEITEM_COMMENT) *
-     PART(L_PARTKEY, P_NAME, P_MFGR, P_BRAND, P_TYPE, P_SIZE, P_CONTAINER,
-            P_RETAILPRICE, P_COMMENT) *
-     AggSum([], 
-       ((__sql_inline_agg_1 ^=
-          (AggSum([L_PARTKEY], 
-             (LINEITEM(L2_ORDERKEY, L_PARTKEY, L2_SUPPKEY, L2_LINENUMBER,
-                         L2_QUANTITY, L2_EXTENDEDPRICE, L2_DISCOUNT, L2_TAX,
-                         L2_RETURNFLAG, L2_LINESTATUS, L2_SHIPDATE,
-                         L2_COMMITDATE, L2_RECEIPTDATE, L2_SHIPINSTRUCT,
-                         L2_SHIPMODE, L2_COMMENT) *
-               L2_QUANTITY)) *
-            0.005)) *
-         {L_QUANTITY < __sql_inline_agg_1})) *
-     L_EXTENDEDPRICE) +
-    ((LINEITEM(L_ORDERKEY, L_PARTKEY, L_SUPPKEY, L_LINENUMBER, L_QUANTITY,
-                 L_EXTENDEDPRICE, L_DISCOUNT, L_TAX, L_RETURNFLAG,
-                 L_LINESTATUS, L_SHIPDATE, L_COMMITDATE, L_RECEIPTDATE,
-                 L_SHIPINSTRUCT, L_SHIPMODE, L_COMMENT) +
-       ((L_ORDERKEY ^= QUERY17LINEITEMLINEITEM_ORDERKEY) *
-         (L_PARTKEY ^= QUERY17LINEITEMLINEITEM_PARTKEY) *
-         (L_SUPPKEY ^= QUERY17LINEITEMLINEITEM_SUPPKEY) *
-         (L_LINENUMBER ^= QUERY17LINEITEMLINEITEM_LINENUMBER) *
-         (L_QUANTITY ^= QUERY17LINEITEMLINEITEM_QUANTITY) *
-         (L_EXTENDEDPRICE ^= QUERY17LINEITEMLINEITEM_EXTENDEDPRICE) *
-         (L_DISCOUNT ^= QUERY17LINEITEMLINEITEM_DISCOUNT) *
-         (L_TAX ^= QUERY17LINEITEMLINEITEM_TAX) *
-         (L_RETURNFLAG ^= QUERY17LINEITEMLINEITEM_RETURNFLAG) *
-         (L_LINESTATUS ^= QUERY17LINEITEMLINEITEM_LINESTATUS) *
-         (L_SHIPDATE ^= QUERY17LINEITEMLINEITEM_SHIPDATE) *
-         (L_COMMITDATE ^= QUERY17LINEITEMLINEITEM_COMMITDATE) *
-         (L_RECEIPTDATE ^= QUERY17LINEITEMLINEITEM_RECEIPTDATE) *
-         (L_SHIPINSTRUCT ^= QUERY17LINEITEMLINEITEM_SHIPINSTRUCT) *
-         (L_SHIPMODE ^= QUERY17LINEITEMLINEITEM_SHIPMODE) *
-         (L_COMMENT ^= QUERY17LINEITEMLINEITEM_COMMENT))) *
-      PART(L_PARTKEY, P_NAME, P_MFGR, P_BRAND, P_TYPE, P_SIZE, P_CONTAINER,
-             P_RETAILPRICE, P_COMMENT) *
-      AggSum([L_PARTKEY], 
-        (DOMAIN( (L_PARTKEY ^= QUERY17LINEITEMLINEITEM_PARTKEY)) *
-          ((__sql_inline_agg_1 ^=
-             ((AggSum([L_PARTKEY], 
-                 (LINEITEM(L2_ORDERKEY, L_PARTKEY, L2_SUPPKEY, L2_LINENUMBER,
-                             L2_QUANTITY, L2_EXTENDEDPRICE, L2_DISCOUNT,
-                             L2_TAX, L2_RETURNFLAG, L2_LINESTATUS,
-                             L2_SHIPDATE, L2_COMMITDATE, L2_RECEIPTDATE,
-                             L2_SHIPINSTRUCT, L2_SHIPMODE, L2_COMMENT) *
-                   L2_QUANTITY)) *
-                0.005) +
-               ((L_PARTKEY ^= QUERY17LINEITEMLINEITEM_PARTKEY) *
-                 AggSum([], 
-                   ((L2_COMMENT ^= QUERY17LINEITEMLINEITEM_COMMENT) *
-                     (L2_SHIPMODE ^= QUERY17LINEITEMLINEITEM_SHIPMODE) *
-                     (L2_SHIPINSTRUCT ^=
-                       QUERY17LINEITEMLINEITEM_SHIPINSTRUCT) *
-                     (L2_RECEIPTDATE ^= QUERY17LINEITEMLINEITEM_RECEIPTDATE) *
-                     (L2_COMMITDATE ^= QUERY17LINEITEMLINEITEM_COMMITDATE) *
-                     (L2_SHIPDATE ^= QUERY17LINEITEMLINEITEM_SHIPDATE) *
-                     (L2_LINESTATUS ^= QUERY17LINEITEMLINEITEM_LINESTATUS) *
-                     (L2_RETURNFLAG ^= QUERY17LINEITEMLINEITEM_RETURNFLAG) *
-                     (L2_TAX ^= QUERY17LINEITEMLINEITEM_TAX) *
-                     (L2_DISCOUNT ^= QUERY17LINEITEMLINEITEM_DISCOUNT) *
-                     (L2_EXTENDEDPRICE ^=
-                       QUERY17LINEITEMLINEITEM_EXTENDEDPRICE) *
-                     (L2_QUANTITY ^= QUERY17LINEITEMLINEITEM_QUANTITY) *
-                     (L2_LINENUMBER ^= QUERY17LINEITEMLINEITEM_LINENUMBER) *
-                     (L2_SUPPKEY ^= QUERY17LINEITEMLINEITEM_SUPPKEY) *
-                     (L2_ORDERKEY ^= QUERY17LINEITEMLINEITEM_ORDERKEY) *
-                     DOMAIN(
-                       (L2_ORDERKEY ^= QUERY17LINEITEMLINEITEM_ORDERKEY)) *
-                     DOMAIN( (L2_SUPPKEY ^= QUERY17LINEITEMLINEITEM_SUPPKEY)) *
-                     DOMAIN(
-                       (L2_LINENUMBER ^= QUERY17LINEITEMLINEITEM_LINENUMBER)) *
-                     DOMAIN(
-                       (L2_QUANTITY ^= QUERY17LINEITEMLINEITEM_QUANTITY)) *
-                     DOMAIN(
-                       (L2_EXTENDEDPRICE ^=
-                         QUERY17LINEITEMLINEITEM_EXTENDEDPRICE)) *
-                     DOMAIN(
-                       (L2_DISCOUNT ^= QUERY17LINEITEMLINEITEM_DISCOUNT)) *
-                     DOMAIN( (L2_TAX ^= QUERY17LINEITEMLINEITEM_TAX)) *
-                     DOMAIN(
-                       (L2_RETURNFLAG ^= QUERY17LINEITEMLINEITEM_RETURNFLAG)) *
-                     DOMAIN(
-                       (L2_LINESTATUS ^= QUERY17LINEITEMLINEITEM_LINESTATUS)) *
-                     DOMAIN(
-                       (L2_SHIPDATE ^= QUERY17LINEITEMLINEITEM_SHIPDATE)) *
-                     DOMAIN(
-                       (L2_COMMITDATE ^= QUERY17LINEITEMLINEITEM_COMMITDATE)) *
-                     DOMAIN(
-                       (L2_RECEIPTDATE ^=
-                         QUERY17LINEITEMLINEITEM_RECEIPTDATE)) *
-                     DOMAIN(
-                       (L2_SHIPINSTRUCT ^=
-                         QUERY17LINEITEMLINEITEM_SHIPINSTRUCT)) *
-                     DOMAIN(
-                       (L2_SHIPMODE ^= QUERY17LINEITEMLINEITEM_SHIPMODE)) *
-                     DOMAIN( (L2_COMMENT ^= QUERY17LINEITEMLINEITEM_COMMENT)) *
-                     L2_QUANTITY)) *
-                 0.005))) +
-            (NEG * (__sql_inline_agg_1 ^=
-                     (AggSum([L_PARTKEY], 
-                        (LINEITEM(L2_ORDERKEY, L_PARTKEY, L2_SUPPKEY,
-                                    L2_LINENUMBER, L2_QUANTITY,
-                                    L2_EXTENDEDPRICE, L2_DISCOUNT, L2_TAX,
-                                    L2_RETURNFLAG, L2_LINESTATUS,
-                                    L2_SHIPDATE, L2_COMMITDATE,
-                                    L2_RECEIPTDATE, L2_SHIPINSTRUCT,
-                                    L2_SHIPMODE, L2_COMMENT) *
-                          L2_QUANTITY)) *
-                       0.005)))) *
-          {L_QUANTITY < __sql_inline_agg_1})) *
-      L_EXTENDEDPRICE)))"
-        "1";  *)

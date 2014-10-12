@@ -160,6 +160,7 @@ query_simple:
 	@$(QUERY_TEST) simple/rs_column_mapping_1
 	@$(QUERY_TEST) simple/rs_column_mapping_2
 	@$(QUERY_TEST) simple/rs_column_mapping_3
+	@$(QUERY_TEST) simple/r_multiors
 
 query_zeus:
 	@$(QUERY_TEST) zeus/11564068
