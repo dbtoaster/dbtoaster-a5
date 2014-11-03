@@ -252,7 +252,7 @@ rect:hover {
 
 .barrep {
   fill: #a6cee3;
-  margin: 20px 70px 0 0!important;
+  margin: 20px 50px 0 0!important;
 }
 .barrep label {
   background: #a6cee3!important;
@@ -260,7 +260,7 @@ rect:hover {
 
 .bardbx {
   fill: #1f78b4;
-  margin: 20px 70px 0 0!important;
+  margin: 20px 50px 0 0!important;
 }
 .bardbx label {
   background: #1f78b4!important;
@@ -286,7 +286,7 @@ rect:hover {
 
 .barspy {
   fill: #b2df8a;
-  margin: 20px 70px 0 0!important;
+  margin: 20px 50px 0 0!important;
 }
 .barspy label {
   background: #b2df8a!important;
@@ -308,7 +308,7 @@ rect:hover {
 
 .barivm {
   fill: #fb9a99;
-  margin: 20px 70px 0 0!important;
+  margin: 20px 50px 0 0!important;
 }
 .barivm label {
   background: #fb9a99!important;
@@ -366,7 +366,7 @@ rect:hover {
 
 .magic_chkbox {
   width: 25px;
-  margin: 20px 100px 0 0;
+  margin: 20px 80px 0 0;
   position: relative;
   display: inline;
 }
@@ -376,11 +376,11 @@ rect:hover {
 }
 .magic_chkbox label {
   cursor: pointer;
-  position: absolute;
+  position: relative;
+  top: 0;
+  left: 0;
   width: 20px;
   height: 20px;
-  top: 0;
-    left: 0;
   background: #eee;
   border:1px solid #ddd;
 }
