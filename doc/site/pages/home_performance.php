@@ -3,7 +3,6 @@
 <div id="staticimg">
    <img src="perf.png" style="width:100%"/>
 </div>
-<div style="">
 <div class="magic_chkbox bardbx">
    <input type="checkbox" class="filter_data" id="cb_dbx" name="" checked /> 
    <label class="checkbox-inline" id="lbl_dbx" for="cb_dbx">&nbsp;DBX</label>
@@ -39,7 +38,7 @@
 
 <div class="bakeoff">
 </div>
-</div>
+
 <script>
 var tooltip = d3.select("body")
    .append("div")
