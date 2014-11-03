@@ -1,0 +1,16 @@
+<!-- HTML generated using hilite.me --><div style="background: #ffffff; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;"><table><tr><td><pre style="margin: 0; line-height: 125%">1
+2
+3
+4
+5
+6
+7
+8</pre></td><td><pre style="margin: 0; line-height: 125%">INCLUDE <span style="background-color: #fff0f0">&#39;examples/queries/tpch/schemas.sql&#39;</span>;
+
+<span style="color: #008800; font-weight: bold">SELECT</span> c1.nationkey, <span style="color: #008800; font-weight: bold">sum</span>(c1.acctbal) <span style="color: #008800; font-weight: bold">AS</span> query22
+<span style="color: #008800; font-weight: bold">FROM</span> customer c1
+<span style="color: #008800; font-weight: bold">WHERE</span> c1.acctbal <span style="color: #333333">&lt;</span>
+    (<span style="color: #008800; font-weight: bold">SELECT</span> <span style="color: #008800; font-weight: bold">sum</span>(c2.acctbal) <span style="color: #008800; font-weight: bold">FROM</span> customer c2 <span style="color: #008800; font-weight: bold">WHERE</span> c2.acctbal <span style="color: #333333">&gt;</span> <span style="color: #0000DD; font-weight: bold">0</span>)
+<span style="color: #008800; font-weight: bold">AND</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">=</span> (<span style="color: #008800; font-weight: bold">SELECT</span> <span style="color: #008800; font-weight: bold">sum</span>(<span style="color: #0000DD; font-weight: bold">1</span>) <span style="color: #008800; font-weight: bold">FROM</span> orders o <span style="color: #008800; font-weight: bold">WHERE</span> o.custkey <span style="color: #333333">=</span> c1.custkey)
+<span style="color: #008800; font-weight: bold">GROUP</span> <span style="color: #008800; font-weight: bold">BY</span> c1.nationkey
+</pre></td></tr></table></div>

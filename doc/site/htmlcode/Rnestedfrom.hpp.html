@@ -1,0 +1,794 @@
+<!-- HTML generated using hilite.me --><div style="background: #ffffff; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;"><table><tr><td><pre style="margin: 0; line-height: 125%">  1
+  2
+  3
+  4
+  5
+  6
+  7
+  8
+  9
+ 10
+ 11
+ 12
+ 13
+ 14
+ 15
+ 16
+ 17
+ 18
+ 19
+ 20
+ 21
+ 22
+ 23
+ 24
+ 25
+ 26
+ 27
+ 28
+ 29
+ 30
+ 31
+ 32
+ 33
+ 34
+ 35
+ 36
+ 37
+ 38
+ 39
+ 40
+ 41
+ 42
+ 43
+ 44
+ 45
+ 46
+ 47
+ 48
+ 49
+ 50
+ 51
+ 52
+ 53
+ 54
+ 55
+ 56
+ 57
+ 58
+ 59
+ 60
+ 61
+ 62
+ 63
+ 64
+ 65
+ 66
+ 67
+ 68
+ 69
+ 70
+ 71
+ 72
+ 73
+ 74
+ 75
+ 76
+ 77
+ 78
+ 79
+ 80
+ 81
+ 82
+ 83
+ 84
+ 85
+ 86
+ 87
+ 88
+ 89
+ 90
+ 91
+ 92
+ 93
+ 94
+ 95
+ 96
+ 97
+ 98
+ 99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+369
+370
+371
+372
+373
+374
+375
+376
+377
+378
+379
+380
+381
+382
+383
+384
+385
+386
+387
+388
+389
+390
+391
+392
+393
+394
+395
+396
+397</pre></td><td><pre style="margin: 0; line-height: 125%"><span style="color: #557799">#include &quot;program_base.hpp&quot;</span>
+<span style="color: #557799">#include &quot;hpds/KDouble.hpp&quot;</span>
+<span style="color: #557799">#include &quot;hash.hpp&quot;</span>
+<span style="color: #557799">#include &quot;mmap/mmap.hpp&quot;</span>
+<span style="color: #557799">#include &quot;hpds/pstring.hpp&quot;</span>
+<span style="color: #557799">#include &quot;hpds/pstringops.hpp&quot;</span>
+<span style="color: #557799">#define ELEM_SEPARATOR &quot;\n\t\t\t&quot;</span>
+
+<span style="color: #008800; font-weight: bold">namespace</span> dbtoaster {
+  
+  <span style="color: #888888">/* Definitions of auxiliary maps for storing materialized views. */</span>
+  <span style="color: #008800; font-weight: bold">struct</span> Q_entry {
+    <span style="color: #333399; font-weight: bold">long</span> P_A; <span style="color: #333399; font-weight: bold">long</span> __av;  Q_entry<span style="color: #333333">*</span> nxt; Q_entry<span style="color: #333333">*</span> prv;
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">Q_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*P_A = 0L; __av = 0L; */</span> }
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">Q_entry</span>(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1) { P_A <span style="color: #333333">=</span> c0; __av <span style="color: #333333">=</span> c1; }
+    Q_entry(<span style="color: #008800; font-weight: bold">const</span> Q_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> P_A( other.P_A ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
+    FORCE_INLINE Q_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0) { P_A <span style="color: #333333">=</span> c0;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
+    <span style="color: #008800; font-weight: bold">template</span><span style="color: #333333">&lt;</span><span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Archive</span><span style="color: #333333">&gt;</span>
+    <span style="color: #333399; font-weight: bold">void</span> serialize(Archive<span style="color: #333333">&amp;</span> ar, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">unsigned</span> <span style="color: #333399; font-weight: bold">int</span> version) <span style="color: #008800; font-weight: bold">const</span> 
+    {
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, P_A);
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, __av);
+    }
+  };
+  <span style="color: #008800; font-weight: bold">struct</span> Q_mapkey0_idxfn {
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> Q_entry<span style="color: #333333">&amp;</span> e) {
+      <span style="color: #333399; font-weight: bold">size_t</span> h <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>;
+      hash_combine(h, e.P_A);
+      <span style="color: #008800; font-weight: bold">return</span> h;
+    }
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> Q_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> Q_entry<span style="color: #333333">&amp;</span> y) {
+      <span style="color: #008800; font-weight: bold">return</span> x.P_A <span style="color: #333333">==</span> y.P_A;
+    }
+  };
+  
+  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>Q_entry,<span style="color: #333399; font-weight: bold">long</span>,
+    HashIndex<span style="color: #333333">&lt;</span>Q_entry,<span style="color: #333399; font-weight: bold">long</span>,Q_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>
+  <span style="color: #333333">&gt;</span> Q_map;
+  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>Q_entry,<span style="color: #333399; font-weight: bold">long</span>,Q_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_Q_map_0;
+  
+  <span style="color: #008800; font-weight: bold">struct</span> Q_mR1_E1_1_entry {
+    <span style="color: #333399; font-weight: bold">long</span> P_A; <span style="color: #333399; font-weight: bold">long</span> __av;  Q_mR1_E1_1_entry<span style="color: #333333">*</span> nxt; Q_mR1_E1_1_entry<span style="color: #333333">*</span> prv;
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">Q_mR1_E1_1_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*P_A = 0L; __av = 0L; */</span> }
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">Q_mR1_E1_1_entry</span>(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1) { P_A <span style="color: #333333">=</span> c0; __av <span style="color: #333333">=</span> c1; }
+    Q_mR1_E1_1_entry(<span style="color: #008800; font-weight: bold">const</span> Q_mR1_E1_1_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> P_A( other.P_A ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
+    FORCE_INLINE Q_mR1_E1_1_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0) { P_A <span style="color: #333333">=</span> c0;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
+    <span style="color: #008800; font-weight: bold">template</span><span style="color: #333333">&lt;</span><span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Archive</span><span style="color: #333333">&gt;</span>
+    <span style="color: #333399; font-weight: bold">void</span> serialize(Archive<span style="color: #333333">&amp;</span> ar, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">unsigned</span> <span style="color: #333399; font-weight: bold">int</span> version) <span style="color: #008800; font-weight: bold">const</span> 
+    {
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, P_A);
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, __av);
+    }
+  };
+  <span style="color: #008800; font-weight: bold">struct</span> Q_mR1_E1_1_mapkey0_idxfn {
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> Q_mR1_E1_1_entry<span style="color: #333333">&amp;</span> e) {
+      <span style="color: #333399; font-weight: bold">size_t</span> h <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>;
+      hash_combine(h, e.P_A);
+      <span style="color: #008800; font-weight: bold">return</span> h;
+    }
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> Q_mR1_E1_1_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> Q_mR1_E1_1_entry<span style="color: #333333">&amp;</span> y) {
+      <span style="color: #008800; font-weight: bold">return</span> x.P_A <span style="color: #333333">==</span> y.P_A;
+    }
+  };
+  
+  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>Q_mR1_E1_1_entry,<span style="color: #333399; font-weight: bold">long</span>,
+    HashIndex<span style="color: #333333">&lt;</span>Q_mR1_E1_1_entry,<span style="color: #333399; font-weight: bold">long</span>,Q_mR1_E1_1_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>
+  <span style="color: #333333">&gt;</span> Q_mR1_E1_1_map;
+  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>Q_mR1_E1_1_entry,<span style="color: #333399; font-weight: bold">long</span>,Q_mR1_E1_1_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_Q_mR1_E1_1_map_0;
+  
+  <span style="color: #008800; font-weight: bold">struct</span> Q_mR1_L2_1_entry {
+    <span style="color: #333399; font-weight: bold">long</span> P_A; <span style="color: #333399; font-weight: bold">long</span> __av;  Q_mR1_L2_1_entry<span style="color: #333333">*</span> nxt; Q_mR1_L2_1_entry<span style="color: #333333">*</span> prv;
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">Q_mR1_L2_1_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*P_A = 0L; __av = 0L; */</span> }
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">Q_mR1_L2_1_entry</span>(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1) { P_A <span style="color: #333333">=</span> c0; __av <span style="color: #333333">=</span> c1; }
+    Q_mR1_L2_1_entry(<span style="color: #008800; font-weight: bold">const</span> Q_mR1_L2_1_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> P_A( other.P_A ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
+    FORCE_INLINE Q_mR1_L2_1_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0) { P_A <span style="color: #333333">=</span> c0;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
+    <span style="color: #008800; font-weight: bold">template</span><span style="color: #333333">&lt;</span><span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Archive</span><span style="color: #333333">&gt;</span>
+    <span style="color: #333399; font-weight: bold">void</span> serialize(Archive<span style="color: #333333">&amp;</span> ar, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">unsigned</span> <span style="color: #333399; font-weight: bold">int</span> version) <span style="color: #008800; font-weight: bold">const</span> 
+    {
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, P_A);
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, __av);
+    }
+  };
+  <span style="color: #008800; font-weight: bold">struct</span> Q_mR1_L2_1_mapkey0_idxfn {
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> Q_mR1_L2_1_entry<span style="color: #333333">&amp;</span> e) {
+      <span style="color: #333399; font-weight: bold">size_t</span> h <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>;
+      hash_combine(h, e.P_A);
+      <span style="color: #008800; font-weight: bold">return</span> h;
+    }
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> Q_mR1_L2_1_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> Q_mR1_L2_1_entry<span style="color: #333333">&amp;</span> y) {
+      <span style="color: #008800; font-weight: bold">return</span> x.P_A <span style="color: #333333">==</span> y.P_A;
+    }
+  };
+  
+  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>Q_mR1_L2_1_entry,<span style="color: #333399; font-weight: bold">long</span>,
+    HashIndex<span style="color: #333333">&lt;</span>Q_mR1_L2_1_entry,<span style="color: #333399; font-weight: bold">long</span>,Q_mR1_L2_1_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>
+  <span style="color: #333333">&gt;</span> Q_mR1_L2_1_map;
+  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>Q_mR1_L2_1_entry,<span style="color: #333399; font-weight: bold">long</span>,Q_mR1_L2_1_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_Q_mR1_L2_1_map_0;
+  
+  <span style="color: #008800; font-weight: bold">struct</span> tuple2_L_L {
+    <span style="color: #333399; font-weight: bold">long</span> _1; <span style="color: #333399; font-weight: bold">long</span> __av; tuple2_L_L<span style="color: #333333">*</span> nxt; tuple2_L_L<span style="color: #333333">*</span> prv;
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">tuple2_L_L</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { }
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">tuple2_L_L</span>(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1, <span style="color: #333399; font-weight: bold">long</span> c__av<span style="color: #333333">=</span><span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { _1 <span style="color: #333333">=</span> c1; __av <span style="color: #333333">=</span> c__av;}
+    <span style="color: #333399; font-weight: bold">int</span> <span style="color: #008800; font-weight: bold">operator</span><span style="color: #333333">&lt;</span>(<span style="color: #008800; font-weight: bold">const</span> tuple2_L_L <span style="color: #333333">&amp;</span>rhs) <span style="color: #008800; font-weight: bold">const</span> { 
+      <span style="color: #008800; font-weight: bold">if</span>(<span style="color: #008800; font-weight: bold">this</span><span style="color: #333333">-&gt;</span>_1<span style="color: #333333">!=</span>rhs._1) <span style="color: #008800; font-weight: bold">return</span> (<span style="color: #008800; font-weight: bold">this</span><span style="color: #333333">-&gt;</span>_1<span style="color: #333333">&lt;</span>rhs._1);
+      <span style="color: #008800; font-weight: bold">return</span> <span style="color: #0000DD; font-weight: bold">0</span>;
+    }
+    <span style="color: #333399; font-weight: bold">int</span> <span style="color: #008800; font-weight: bold">operator</span><span style="color: #333333">==</span>(<span style="color: #008800; font-weight: bold">const</span> tuple2_L_L <span style="color: #333333">&amp;</span>rhs) <span style="color: #008800; font-weight: bold">const</span> { <span style="color: #008800; font-weight: bold">return</span> ((<span style="color: #008800; font-weight: bold">this</span><span style="color: #333333">-&gt;</span>_1<span style="color: #333333">==</span>rhs._1)); }
+    FORCE_INLINE tuple2_L_L<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #333399; font-weight: bold">long</span> c__av) { _1 <span style="color: #333333">=</span> c0; __av <span style="color: #333333">=</span> c__av; <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
+    <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> tuple2_L_L <span style="color: #333333">&amp;</span>x, <span style="color: #008800; font-weight: bold">const</span> tuple2_L_L <span style="color: #333333">&amp;</span>y) { <span style="color: #008800; font-weight: bold">return</span> ((x._1<span style="color: #333333">==</span>y._1)); }
+    <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">long</span> hash(<span style="color: #008800; font-weight: bold">const</span> tuple2_L_L <span style="color: #333333">&amp;</span>e) {
+      <span style="color: #333399; font-weight: bold">size_t</span> h <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>;
+      hash_combine(h, e._1);
+      <span style="color: #008800; font-weight: bold">return</span> h;
+    }
+  };
+  
+  <span style="color: #888888">/* Type definition providing a way to access the results of the sql program */</span>
+  <span style="color: #008800; font-weight: bold">struct</span> <span style="color: #333399; font-weight: bold">tlq_t</span>{
+    <span style="color: #008800; font-weight: bold">struct</span> timeval t0,t; <span style="color: #333399; font-weight: bold">long</span> tT,tN,tS;
+    <span style="color: #333399; font-weight: bold">tlq_t</span>()<span style="color: #333333">:</span> tN(<span style="color: #0000DD; font-weight: bold">0</span>), tS(<span style="color: #0000DD; font-weight: bold">0</span>) { gettimeofday(<span style="color: #333333">&amp;</span>t0,<span style="color: #007020">NULL</span>); }
+  
+  <span style="color: #888888">/* Serialization Code */</span>
+    <span style="color: #008800; font-weight: bold">template</span><span style="color: #333333">&lt;</span><span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Archive</span><span style="color: #333333">&gt;</span>
+    <span style="color: #333399; font-weight: bold">void</span> serialize(Archive<span style="color: #333333">&amp;</span> ar, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">unsigned</span> <span style="color: #333399; font-weight: bold">int</span> version) <span style="color: #008800; font-weight: bold">const</span> {
+  
+      ar <span style="color: #333333">&lt;&lt;</span> <span style="background-color: #fff0f0">&quot;</span><span style="color: #666666; font-weight: bold; background-color: #fff0f0">\n</span><span style="background-color: #fff0f0">&quot;</span>;
+      <span style="color: #008800; font-weight: bold">const</span> Q_map<span style="color: #333333">&amp;</span> _Q <span style="color: #333333">=</span> get_Q();
+      dbtoaster<span style="color: #333333">::</span>serialize_nvp_tabbed(ar, STRING(Q), _Q, <span style="background-color: #fff0f0">&quot;</span><span style="color: #666666; font-weight: bold; background-color: #fff0f0">\t</span><span style="background-color: #fff0f0">&quot;</span>);
+  
+    }
+  
+    <span style="color: #888888">/* Functions returning / computing the results of top level queries */</span>
+    <span style="color: #008800; font-weight: bold">const</span> Q_map<span style="color: #333333">&amp;</span> get_Q() <span style="color: #008800; font-weight: bold">const</span> {
+      <span style="color: #008800; font-weight: bold">return</span> Q;
+    
+    }
+  
+  <span style="color: #997700; font-weight: bold">protected:</span>
+  
+    <span style="color: #888888">/* Data structures used for storing / computing top level queries */</span>
+    Q_map Q;
+  
+  };
+  
+  <span style="color: #888888">/* Type definition providing a way to incrementally maintain the results of the sql program */</span>
+  <span style="color: #008800; font-weight: bold">struct</span> <span style="color: #333399; font-weight: bold">data_t</span> <span style="color: #333333">:</span> <span style="color: #333399; font-weight: bold">tlq_t</span>{
+    <span style="color: #333399; font-weight: bold">data_t</span>()<span style="color: #333333">:</span> <span style="color: #333399; font-weight: bold">tlq_t</span>(), add2(<span style="color: #0000DD; font-weight: bold">16U</span>), add1(<span style="color: #0000DD; font-weight: bold">16U</span>) {
+      
+    }
+  
+    <span style="color: #FF0000; background-color: #FFAAAA">#</span>ifdef DBT_PROFILE
+    std<span style="color: #333333">::</span>shared_ptr<span style="color: #333333">&lt;</span>dbtoaster<span style="color: #333333">::</span>statistics<span style="color: #333333">::</span>trigger_exec_stats<span style="color: #333333">&gt;</span> exec_stats;
+    std<span style="color: #333333">::</span>shared_ptr<span style="color: #333333">&lt;</span>dbtoaster<span style="color: #333333">::</span>statistics<span style="color: #333333">::</span>trigger_exec_stats<span style="color: #333333">&gt;</span> ivc_stats;
+    <span style="color: #FF0000; background-color: #FFAAAA">#</span>endif
+  
+    <span style="color: #888888">/* Registering relations and trigger functions */</span>
+    <span style="color: #333399; font-weight: bold">void</span> register_data(ProgramBase<span style="color: #333333">&amp;</span> pb) {
+  
+      pb.add_map<span style="color: #333333">&lt;</span>Q_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;Q&quot;</span>, Q );
+      pb.add_map<span style="color: #333333">&lt;</span>Q_mR1_E1_1_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;Q_mR1_E1_1&quot;</span>, Q_mR1_E1_1 );
+      pb.add_map<span style="color: #333333">&lt;</span>Q_mR1_L2_1_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;Q_mR1_L2_1&quot;</span>, Q_mR1_L2_1 );
+  
+      pb.add_relation(<span style="background-color: #fff0f0">&quot;R&quot;</span>);
+  
+      
+  
+      pb.add_trigger(<span style="background-color: #fff0f0">&quot;R&quot;</span>, insert_tuple, std<span style="color: #333333">::</span>bind(<span style="color: #333333">&amp;</span><span style="color: #333399; font-weight: bold">data_t</span><span style="color: #333333">::</span>unwrap_insert_R, <span style="color: #008800; font-weight: bold">this</span>, std<span style="color: #333333">::</span>placeholders<span style="color: #333333">::</span>_1));
+      pb.add_trigger(<span style="background-color: #fff0f0">&quot;R&quot;</span>, delete_tuple, std<span style="color: #333333">::</span>bind(<span style="color: #333333">&amp;</span><span style="color: #333399; font-weight: bold">data_t</span><span style="color: #333333">::</span>unwrap_delete_R, <span style="color: #008800; font-weight: bold">this</span>, std<span style="color: #333333">::</span>placeholders<span style="color: #333333">::</span>_1));
+  
+      <span style="color: #FF0000; background-color: #FFAAAA">#</span>ifdef DBT_PROFILE
+      exec_stats <span style="color: #333333">=</span> pb.exec_stats;
+      ivc_stats <span style="color: #333333">=</span> pb.ivc_stats;
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">0</span>, <span style="background-color: #fff0f0">&quot;insert_R_s0&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">1</span>, <span style="background-color: #fff0f0">&quot;insert_R_s1&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">2</span>, <span style="background-color: #fff0f0">&quot;insert_R_s2&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">3</span>, <span style="background-color: #fff0f0">&quot;delete_R_s0&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">4</span>, <span style="background-color: #fff0f0">&quot;delete_R_s1&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">5</span>, <span style="background-color: #fff0f0">&quot;delete_R_s2&quot;</span>);
+      <span style="color: #FF0000; background-color: #FFAAAA">#</span>endif <span style="color: #888888">// DBT_PROFILE</span>
+  
+    }
+  
+    <span style="color: #888888">/* Trigger functions for table relations */</span>
+    
+    
+    <span style="color: #888888">/* Trigger functions for stream relations */</span>
+    <span style="color: #333399; font-weight: bold">void</span> on_insert_R(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> r_a, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> r_b) {
+      BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_R&quot;</span>)
+      BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_R&quot;</span>)
+      {  <span style="color: #888888">//++tN;</span>
+        { <span style="color: #888888">//foreach</span>
+          Q_mR1_E1_1_entry<span style="color: #333333">*</span> e1 <span style="color: #333333">=</span> Q_mR1_E1_1.head;
+          <span style="color: #008800; font-weight: bold">while</span>(e1){
+            <span style="color: #333399; font-weight: bold">long</span> p_a <span style="color: #333333">=</span> e1<span style="color: #333333">-&gt;</span>P_A;
+            <span style="color: #333399; font-weight: bold">long</span> v1 <span style="color: #333333">=</span> e1<span style="color: #333333">-&gt;</span>__av;
+            <span style="color: #333399; font-weight: bold">long</span> agg1 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
+            <span style="color: #333399; font-weight: bold">long</span> l1 <span style="color: #333333">=</span> Q_mR1_L2_1.getValueOrDefault(se2.modify(p_a));
+            agg1 <span style="color: #333333">+=</span> ((l1 <span style="color: #333333">&gt;</span> <span style="color: #0000DD; font-weight: bold">5L</span>) <span style="color: #333333">*</span> l1);
+            <span style="color: #008800; font-weight: bold">if</span> (Q.getValueOrDefault(se1.modify(p_a))<span style="color: #333333">==</span><span style="color: #0000DD; font-weight: bold">0</span>) Q.setOrDelOnZero(se1, ((v1 <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> agg1));
+            e1 <span style="color: #333333">=</span> e1<span style="color: #333333">-&gt;</span>nxt;
+          }
+        }
+        { <span style="color: #888888">//foreach</span>
+          Q_mR1_E1_1_entry<span style="color: #333333">*</span> e2 <span style="color: #333333">=</span> Q_mR1_E1_1.head;
+          <span style="color: #008800; font-weight: bold">while</span>(e2){
+            <span style="color: #333399; font-weight: bold">long</span> p_a <span style="color: #333333">=</span> e2<span style="color: #333333">-&gt;</span>P_A;
+            <span style="color: #333399; font-weight: bold">long</span> v2 <span style="color: #333333">=</span> e2<span style="color: #333333">-&gt;</span>__av;
+            <span style="color: #333399; font-weight: bold">long</span> agg2 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
+            <span style="color: #333399; font-weight: bold">long</span> l2 <span style="color: #333333">=</span> Q_mR1_L2_1.getValueOrDefault(se3.modify(p_a));
+            agg2 <span style="color: #333333">+=</span> ((l2 <span style="color: #333333">&gt;</span> <span style="color: #0000DD; font-weight: bold">5L</span>) <span style="color: #333333">*</span> l2);
+            Q.addOrDelOnZero(se1.modify(p_a),((v2 <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> (agg2 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)));
+            e2 <span style="color: #333333">=</span> e2<span style="color: #333333">-&gt;</span>nxt;
+          }
+        }
+        add1.clear();
+        { <span style="color: #888888">//foreach</span>
+          Q_mR1_E1_1_entry<span style="color: #333333">*</span> e3 <span style="color: #333333">=</span> Q_mR1_E1_1.head;
+          <span style="color: #008800; font-weight: bold">while</span>(e3){
+            <span style="color: #333399; font-weight: bold">long</span> p_a <span style="color: #333333">=</span> e3<span style="color: #333333">-&gt;</span>P_A;
+            <span style="color: #333399; font-weight: bold">long</span> v4 <span style="color: #333333">=</span> e3<span style="color: #333333">-&gt;</span>__av;
+            add_to_temp_map(add1, st1.modify(p_a,v4));
+            e3 <span style="color: #333333">=</span> e3<span style="color: #333333">-&gt;</span>nxt;
+          }
+        }
+        add_to_temp_map(add1, st2.modify(r_a,<span style="color: #0000DD; font-weight: bold">1L</span>));
+        { <span style="color: #888888">//temp foreach</span>
+          tuple2_L_L<span style="color: #333333">*</span> e4 <span style="color: #333333">=</span> add1.head;
+          <span style="color: #008800; font-weight: bold">while</span>(e4){
+            <span style="color: #333399; font-weight: bold">long</span> p_a <span style="color: #333333">=</span> e4<span style="color: #333333">-&gt;</span>_1;
+            <span style="color: #333399; font-weight: bold">long</span> v5 <span style="color: #333333">=</span> e4<span style="color: #333333">-&gt;</span>__av;
+            <span style="color: #333399; font-weight: bold">long</span> agg3 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
+            <span style="color: #333399; font-weight: bold">long</span> l3 <span style="color: #333333">=</span> (Q_mR1_L2_1.getValueOrDefault(se4.modify(p_a)) <span style="color: #333333">+</span> ((p_a <span style="color: #333333">==</span> r_a) <span style="color: #333333">*</span> r_b));
+            agg3 <span style="color: #333333">+=</span> ((l3 <span style="color: #333333">&gt;</span> <span style="color: #0000DD; font-weight: bold">5L</span>) <span style="color: #333333">*</span> l3);
+            Q.addOrDelOnZero(se1.modify(p_a),((v5 <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> agg3));
+            e4 <span style="color: #333333">=</span> e4<span style="color: #333333">-&gt;</span>nxt;
+          }
+        }
+        Q_mR1_E1_1.addOrDelOnZero(se5.modify(r_a),<span style="color: #0000DD; font-weight: bold">1L</span>);
+        Q_mR1_L2_1.addOrDelOnZero(se6.modify(r_a),r_b);
+      }
+      END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_R&quot;</span>)
+      END_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_R&quot;</span>)
+    }
+    <span style="color: #333399; font-weight: bold">void</span> unwrap_insert_R(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">event_args_t</span><span style="color: #333333">&amp;</span> ea) {
+      on_insert_R(<span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span><span style="color: #333399; font-weight: bold">long</span><span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">0</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span><span style="color: #333399; font-weight: bold">long</span><span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">1</span>])));
+    }
+    
+    <span style="color: #333399; font-weight: bold">void</span> on_delete_R(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> r_a, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> r_b) {
+      BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_R&quot;</span>)
+      BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_R&quot;</span>)
+      {  <span style="color: #888888">//++tN;</span>
+        { <span style="color: #888888">//foreach</span>
+          Q_mR1_E1_1_entry<span style="color: #333333">*</span> e5 <span style="color: #333333">=</span> Q_mR1_E1_1.head;
+          <span style="color: #008800; font-weight: bold">while</span>(e5){
+            <span style="color: #333399; font-weight: bold">long</span> p_a <span style="color: #333333">=</span> e5<span style="color: #333333">-&gt;</span>P_A;
+            <span style="color: #333399; font-weight: bold">long</span> v6 <span style="color: #333333">=</span> e5<span style="color: #333333">-&gt;</span>__av;
+            <span style="color: #333399; font-weight: bold">long</span> agg4 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
+            <span style="color: #333399; font-weight: bold">long</span> l4 <span style="color: #333333">=</span> Q_mR1_L2_1.getValueOrDefault(se8.modify(p_a));
+            agg4 <span style="color: #333333">+=</span> ((l4 <span style="color: #333333">&gt;</span> <span style="color: #0000DD; font-weight: bold">5L</span>) <span style="color: #333333">*</span> l4);
+            <span style="color: #008800; font-weight: bold">if</span> (Q.getValueOrDefault(se7.modify(p_a))<span style="color: #333333">==</span><span style="color: #0000DD; font-weight: bold">0</span>) Q.setOrDelOnZero(se7, ((v6 <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> agg4));
+            e5 <span style="color: #333333">=</span> e5<span style="color: #333333">-&gt;</span>nxt;
+          }
+        }
+        { <span style="color: #888888">//foreach</span>
+          Q_mR1_E1_1_entry<span style="color: #333333">*</span> e6 <span style="color: #333333">=</span> Q_mR1_E1_1.head;
+          <span style="color: #008800; font-weight: bold">while</span>(e6){
+            <span style="color: #333399; font-weight: bold">long</span> p_a <span style="color: #333333">=</span> e6<span style="color: #333333">-&gt;</span>P_A;
+            <span style="color: #333399; font-weight: bold">long</span> v7 <span style="color: #333333">=</span> e6<span style="color: #333333">-&gt;</span>__av;
+            <span style="color: #333399; font-weight: bold">long</span> agg5 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
+            <span style="color: #333399; font-weight: bold">long</span> l5 <span style="color: #333333">=</span> Q_mR1_L2_1.getValueOrDefault(se9.modify(p_a));
+            agg5 <span style="color: #333333">+=</span> ((l5 <span style="color: #333333">&gt;</span> <span style="color: #0000DD; font-weight: bold">5L</span>) <span style="color: #333333">*</span> l5);
+            Q.addOrDelOnZero(se7.modify(p_a),((v7 <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> (agg5 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)));
+            e6 <span style="color: #333333">=</span> e6<span style="color: #333333">-&gt;</span>nxt;
+          }
+        }
+        add2.clear();
+        { <span style="color: #888888">//foreach</span>
+          Q_mR1_E1_1_entry<span style="color: #333333">*</span> e7 <span style="color: #333333">=</span> Q_mR1_E1_1.head;
+          <span style="color: #008800; font-weight: bold">while</span>(e7){
+            <span style="color: #333399; font-weight: bold">long</span> p_a <span style="color: #333333">=</span> e7<span style="color: #333333">-&gt;</span>P_A;
+            <span style="color: #333399; font-weight: bold">long</span> v9 <span style="color: #333333">=</span> e7<span style="color: #333333">-&gt;</span>__av;
+            add_to_temp_map(add2, st3.modify(p_a,v9));
+            e7 <span style="color: #333333">=</span> e7<span style="color: #333333">-&gt;</span>nxt;
+          }
+        }
+        add_to_temp_map(add2, st4.modify(r_a,<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
+        { <span style="color: #888888">//temp foreach</span>
+          tuple2_L_L<span style="color: #333333">*</span> e8 <span style="color: #333333">=</span> add2.head;
+          <span style="color: #008800; font-weight: bold">while</span>(e8){
+            <span style="color: #333399; font-weight: bold">long</span> p_a <span style="color: #333333">=</span> e8<span style="color: #333333">-&gt;</span>_1;
+            <span style="color: #333399; font-weight: bold">long</span> v10 <span style="color: #333333">=</span> e8<span style="color: #333333">-&gt;</span>__av;
+            <span style="color: #333399; font-weight: bold">long</span> agg6 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
+            <span style="color: #333399; font-weight: bold">long</span> l6 <span style="color: #333333">=</span> (Q_mR1_L2_1.getValueOrDefault(se10.modify(p_a)) <span style="color: #333333">+</span> ((p_a <span style="color: #333333">==</span> r_a) <span style="color: #333333">*</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> r_b)));
+            agg6 <span style="color: #333333">+=</span> ((l6 <span style="color: #333333">&gt;</span> <span style="color: #0000DD; font-weight: bold">5L</span>) <span style="color: #333333">*</span> l6);
+            Q.addOrDelOnZero(se7.modify(p_a),((v10 <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> agg6));
+            e8 <span style="color: #333333">=</span> e8<span style="color: #333333">-&gt;</span>nxt;
+          }
+        }
+        Q_mR1_E1_1.addOrDelOnZero(se11.modify(r_a),<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>);
+        Q_mR1_L2_1.addOrDelOnZero(se12.modify(r_a),(<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> r_b));
+      }
+      END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_R&quot;</span>)
+      END_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_R&quot;</span>)
+    }
+    <span style="color: #333399; font-weight: bold">void</span> unwrap_delete_R(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">event_args_t</span><span style="color: #333333">&amp;</span> ea) {
+      on_delete_R(<span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span><span style="color: #333399; font-weight: bold">long</span><span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">0</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span><span style="color: #333399; font-weight: bold">long</span><span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">1</span>])));
+    }
+    
+    <span style="color: #333399; font-weight: bold">void</span> on_system_ready_event() {
+      BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
+      BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
+      {  <span style="color: #888888">//</span>
+        
+      }
+      END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
+      END_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
+    }
+  
+  <span style="color: #997700; font-weight: bold">private:</span>
+  
+    <span style="color: #888888">/* Sample entries for avoiding recreation of temporary objects */</span>
+    Q_entry se1;
+    Q_mR1_L2_1_entry se2;
+    Q_mR1_L2_1_entry se3;
+    tuple2_L_L st1;
+    tuple2_L_L st2;
+    Q_mR1_L2_1_entry se4;
+    Q_mR1_E1_1_entry se5;
+    Q_mR1_L2_1_entry se6;
+    Q_entry se7;
+    Q_mR1_L2_1_entry se8;
+    Q_mR1_L2_1_entry se9;
+    tuple2_L_L st3;
+    tuple2_L_L st4;
+    Q_mR1_L2_1_entry se10;
+    Q_mR1_E1_1_entry se11;
+    Q_mR1_L2_1_entry se12;
+  
+    <span style="color: #888888">/* Data structures used for storing materialized views */</span>
+    Q_mR1_E1_1_map Q_mR1_E1_1;
+    Q_mR1_L2_1_map Q_mR1_L2_1;
+    MultiHashMap<span style="color: #333333">&lt;</span>tuple2_L_L,<span style="color: #333399; font-weight: bold">long</span>,HashIndex<span style="color: #333333">&lt;</span>tuple2_L_L,<span style="color: #333399; font-weight: bold">long</span><span style="color: #333333">&gt;</span> <span style="color: #333333">&gt;</span> add2;
+    MultiHashMap<span style="color: #333333">&lt;</span>tuple2_L_L,<span style="color: #333399; font-weight: bold">long</span>,HashIndex<span style="color: #333333">&lt;</span>tuple2_L_L,<span style="color: #333399; font-weight: bold">long</span><span style="color: #333333">&gt;</span> <span style="color: #333333">&gt;</span> add1;
+    
+  
+  };
+  
+  <span style="color: #888888">/* Type definition providing a way to execute the sql program */</span>
+  <span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Program</span> <span style="color: #333333">:</span> <span style="color: #008800; font-weight: bold">public</span> ProgramBase
+  {
+    <span style="color: #997700; font-weight: bold">public:</span>
+      Program(<span style="color: #333399; font-weight: bold">int</span> argc <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>, <span style="color: #333399; font-weight: bold">char</span><span style="color: #333333">*</span> argv[] <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>) <span style="color: #333333">:</span> ProgramBase(argc,argv) {
+        data.register_data(<span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>);
+        
+        <span style="color: #888888">/* Specifying data sources */</span>
+        
+        
+        pair<span style="color: #333333">&lt;</span>string,string<span style="color: #333333">&gt;</span> source1_adaptor_params[] <span style="color: #333333">=</span> { make_pair(<span style="background-color: #fff0f0">&quot;schema&quot;</span>,<span style="background-color: #fff0f0">&quot;long,long&quot;</span>) };
+        std<span style="color: #333333">::</span>shared_ptr<span style="color: #333333">&lt;</span>csv_adaptor<span style="color: #333333">&gt;</span> source1_adaptor(<span style="color: #008800; font-weight: bold">new</span> csv_adaptor(get_relation_id(<span style="background-color: #fff0f0">&quot;R&quot;</span>),<span style="color: #0000DD; font-weight: bold">1</span>,source1_adaptor_params));
+        frame_descriptor <span style="color: #0066BB; font-weight: bold">source1_fd</span>(<span style="background-color: #fff0f0">&quot;</span><span style="color: #666666; font-weight: bold; background-color: #fff0f0">\n</span><span style="background-color: #fff0f0">&quot;</span>);
+        std<span style="color: #333333">::</span>shared_ptr<span style="color: #333333">&lt;</span>dbt_file_source<span style="color: #333333">&gt;</span> source1_file(<span style="color: #008800; font-weight: bold">new</span> dbt_file_source(<span style="background-color: #fff0f0">&quot;/Users/dashti/Documents/MyWorkspaces/DATASRC/dbtoaster/experiments/data/simple/tiny/r.dat&quot;</span>,source1_fd,source1_adaptor));
+        add_source(source1_file);
+  
+      }
+  
+      <span style="color: #888888">/* Imports data for static tables and performs view initialization based on it. */</span>
+      <span style="color: #333399; font-weight: bold">void</span> init() {
+          <span style="color: #888888">//P0_PLACE_HOLDER</span>
+          table_multiplexer.init_source();
+          stream_multiplexer.init_source();
+          process_tables();
+          data.on_system_ready_event();
+          <span style="color: #888888">//P2_PLACE_HOLDER</span>
+      }
+  
+      <span style="color: #888888">/* Saves a snapshot of the data required to obtain the results of top level queries. */</span>
+      <span style="color: #333399; font-weight: bold">snapshot_t</span> take_snapshot(){ <span style="color: #888888">//tlq_t d=(tlq_t&amp;)data; if (d.tS==0) { gettimeofday(&amp;(d.t),NULL); d.tT=((d.t).tv_sec-(d.t0).tv_sec)*1000000L+((d.t).tv_usec-(d.t0).tv_usec); } printf(&quot;SAMPLE=standard,%ld,%ld,%ld\n&quot;,d.tT,d.tN,d.tS);</span>
+          <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333399; font-weight: bold">snapshot_t</span>( <span style="color: #008800; font-weight: bold">new</span> <span style="color: #333399; font-weight: bold">tlq_t</span>((<span style="color: #333399; font-weight: bold">tlq_t</span><span style="color: #333333">&amp;</span>)data) );
+      }
+  
+    <span style="color: #997700; font-weight: bold">protected:</span>
+      <span style="color: #333399; font-weight: bold">data_t</span> data;
+  };
+  <span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Rnestedfrom</span> <span style="color: #333333">:</span> <span style="color: #008800; font-weight: bold">public</span> Program
+  {
+    <span style="color: #997700; font-weight: bold">public:</span>
+      Rnestedfrom(<span style="color: #333399; font-weight: bold">int</span> argc <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>, <span style="color: #333399; font-weight: bold">char</span><span style="color: #333333">*</span> argv[] <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>) <span style="color: #333333">:</span> Program(argc,argv) {
+      }
+  };
+
+}
+</pre></td></tr></table></div>

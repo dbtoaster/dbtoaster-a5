@@ -1,0 +1,38 @@
+<!-- HTML generated using hilite.me --><div style="background: #ffffff; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;"><table><tr><td><pre style="margin: 0; line-height: 125%"> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19</pre></td><td><pre style="margin: 0; line-height: 125%"><span style="color: #888888">-- Unsupported features for this query</span>
+<span style="color: #888888">--   ORDER BY (ignored)</span>
+<span style="color: #888888">--   LIMIT    (ignored)</span>
+<span style="color: #888888">--   INTERVAL (inlined into constant)</span>
+
+INCLUDE <span style="background-color: #fff0f0">&#39;examples/queries/tpch/schemas.sql&#39;</span>;
+
+<span style="color: #008800; font-weight: bold">SELECT</span> n.name, <span style="color: #008800; font-weight: bold">SUM</span>(l.extendedprice <span style="color: #333333">*</span> (<span style="color: #0000DD; font-weight: bold">1</span> <span style="color: #333333">-</span> l.discount)) <span style="color: #008800; font-weight: bold">AS</span> revenue 
+<span style="color: #008800; font-weight: bold">FROM</span>   customer <span style="color: #008800; font-weight: bold">c</span>, orders o, lineitem l, supplier s, nation n, region r
+<span style="color: #008800; font-weight: bold">WHERE</span>  <span style="color: #008800; font-weight: bold">c</span>.custkey <span style="color: #333333">=</span> o.custkey
+  <span style="color: #008800; font-weight: bold">AND</span>  l.orderkey <span style="color: #333333">=</span> o.orderkey 
+  <span style="color: #008800; font-weight: bold">AND</span>  l.suppkey <span style="color: #333333">=</span> s.suppkey
+  <span style="color: #008800; font-weight: bold">AND</span>  <span style="color: #008800; font-weight: bold">c</span>.nationkey <span style="color: #333333">=</span> s.nationkey 
+  <span style="color: #008800; font-weight: bold">AND</span>  s.nationkey <span style="color: #333333">=</span> n.nationkey 
+  <span style="color: #008800; font-weight: bold">AND</span>  n.regionkey <span style="color: #333333">=</span> r.regionkey 
+  <span style="color: #008800; font-weight: bold">AND</span>  r.name <span style="color: #333333">=</span> <span style="background-color: #fff0f0">&#39;ASIA&#39;</span>
+  <span style="color: #008800; font-weight: bold">AND</span>  o.orderdate <span style="color: #333333">&gt;=</span> <span style="color: #007020">DATE</span>(<span style="background-color: #fff0f0">&#39;1994-01-01&#39;</span>)
+  <span style="color: #008800; font-weight: bold">AND</span>  o.orderdate <span style="color: #333333">&lt;</span>  <span style="color: #007020">DATE</span>(<span style="background-color: #fff0f0">&#39;1994-01-01&#39;</span>) <span style="color: #333333">+</span> <span style="color: #007020">interval</span> <span style="background-color: #fff0f0">&#39;1&#39;</span> <span style="color: #008800; font-weight: bold">year</span> 
+<span style="color: #008800; font-weight: bold">GROUP</span> <span style="color: #008800; font-weight: bold">BY</span> n.name
+</pre></td></tr></table></div>

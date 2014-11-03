@@ -1,0 +1,24 @@
+<!-- HTML generated using hilite.me --><div style="background: #ffffff; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;"><table><tr><td><pre style="margin: 0; line-height: 125%"> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12</pre></td><td><pre style="margin: 0; line-height: 125%"><span style="color: #888888">-- Expected results</span>
+<span style="color: #888888">-- 1 -&gt; 1</span>
+<span style="color: #888888">-- 2 -&gt; 3</span>
+<span style="color: #888888">-- 3 -&gt; 1</span>
+<span style="color: #888888">-- 4 -&gt; 3</span>
+<span style="color: #888888">-- 5 -&gt; 2</span>
+
+<span style="color: #008800; font-weight: bold">CREATE</span> STREAM R(A <span style="color: #007020">int</span>, B <span style="color: #007020">int</span>) 
+  <span style="color: #008800; font-weight: bold">FROM</span> FILE <span style="background-color: #fff0f0">&#39;examples/data/simple/tiny/r.dat&#39;</span> LINE DELIMITED
+  CSV ();
+
+<span style="color: #008800; font-weight: bold">SELECT</span> A <span style="color: #008800; font-weight: bold">FROM</span> R;
+</pre></td></tr></table></div>

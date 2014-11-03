@@ -1,0 +1,34 @@
+<!-- HTML generated using hilite.me --><div style="background: #ffffff; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;"><table><tr><td><pre style="margin: 0; line-height: 125%"> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16
+17</pre></td><td><pre style="margin: 0; line-height: 125%"><span style="color: #008800; font-weight: bold">CREATE</span> STREAM R(A <span style="color: #007020">int</span>, B <span style="color: #007020">int</span>) <span style="color: #008800; font-weight: bold">FROM</span> FILE <span style="background-color: #fff0f0">&#39;examples/data/simple/tiny/r.dat&#39;</span> LINE DELIMITED CSV();
+
+<span style="color: #008800; font-weight: bold">CREATE</span> STREAM S(B <span style="color: #007020">int</span>, <span style="color: #008800; font-weight: bold">C</span> <span style="color: #007020">int</span>) <span style="color: #008800; font-weight: bold">FROM</span> FILE <span style="background-color: #fff0f0">&#39;examples/data/simple/tiny/s.dat&#39;</span> LINE DELIMITED CSV();
+
+<span style="color: #008800; font-weight: bold">CREATE</span> STREAM T(<span style="color: #008800; font-weight: bold">C</span> <span style="color: #007020">int</span>, D <span style="color: #007020">int</span>) <span style="color: #008800; font-weight: bold">FROM</span> FILE <span style="background-color: #fff0f0">&#39;examples/data/simple/tiny/t.dat&#39;</span> LINE DELIMITED CSV();
+
+<span style="color: #008800; font-weight: bold">SELECT</span> 
+  nPzL_7DkV.B <span style="color: #008800; font-weight: bold">AS</span> B1, 
+  nPzL_7DkV.<span style="color: #008800; font-weight: bold">C</span> <span style="color: #008800; font-weight: bold">AS</span> C1, 
+  (nPzL_7DkV.B<span style="color: #333333">+</span>(s1.B<span style="color: #333333">*</span>s1.<span style="color: #008800; font-weight: bold">C</span>)) <span style="color: #008800; font-weight: bold">AS</span> LB71Y, 
+  (nPzL_7DkV.<span style="color: #008800; font-weight: bold">C</span><span style="color: #333333">*</span>nPzL_7DkV.B<span style="color: #333333">*</span>(<span style="color: #0000DD; font-weight: bold">1</span><span style="color: #333333">*</span>nPzL_7DkV.B)) <span style="color: #008800; font-weight: bold">AS</span> gkkEoF, 
+  S1.<span style="color: #008800; font-weight: bold">C</span> <span style="color: #008800; font-weight: bold">AS</span> qKKF7PYi 
+<span style="color: #008800; font-weight: bold">FROM</span> S s1, S nPzL_7DkV 
+<span style="color: #008800; font-weight: bold">WHERE</span> 
+  (<span style="color: #008800; font-weight: bold">NOT</span> <span style="color: #0000DD; font-weight: bold">2</span> <span style="color: #333333">=</span> nPzL_7DkV.<span style="color: #008800; font-weight: bold">C</span>) 
+  <span style="color: #008800; font-weight: bold">AND</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">=</span> nPzL_7DkV.B
+<span style="color: #888888">--  AND (S.C = S.B AND nPzL_7DkV.C &lt; nPzL_7DkV.B));</span>
+</pre></td></tr></table></div>

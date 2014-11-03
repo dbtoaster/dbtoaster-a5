@@ -1,0 +1,10 @@
+<!-- HTML generated using hilite.me --><div style="background: #ffffff; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;"><table><tr><td><pre style="margin: 0; line-height: 125%">1
+2
+3
+4
+5</pre></td><td><pre style="margin: 0; line-height: 125%"><span style="color: #008800; font-weight: bold">CREATE</span> STREAM R(A <span style="color: #007020">int</span>, B <span style="color: #007020">int</span>)
+<span style="color: #008800; font-weight: bold">FROM</span> FILE <span style="background-color: #fff0f0">&#39;examples/data/simple/tiny/r.dat&#39;</span> LINE DELIMITED
+CSV ();
+
+<span style="color: #008800; font-weight: bold">SELECT</span> r1.A <span style="color: #008800; font-weight: bold">FROM</span> R r1, R r2 <span style="color: #008800; font-weight: bold">WHERE</span> (r1.A <span style="color: #333333">=</span> r2.A <span style="color: #008800; font-weight: bold">or</span> r1.A <span style="color: #333333">=</span> r2.A) <span style="color: #008800; font-weight: bold">and</span> r1.B <span style="color: #333333">=</span> r2.B;
+</pre></td></tr></table></div>

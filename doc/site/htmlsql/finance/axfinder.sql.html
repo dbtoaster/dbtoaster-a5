@@ -1,0 +1,32 @@
+<!-- HTML generated using hilite.me --><div style="background: #ffffff; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;"><table><tr><td><pre style="margin: 0; line-height: 125%"> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16</pre></td><td><pre style="margin: 0; line-height: 125%"><span style="color: #008800; font-weight: bold">CREATE</span> STREAM bids(t <span style="color: #007020">FLOAT</span>, id <span style="color: #007020">INT</span>, broker_id <span style="color: #007020">INT</span>, volume <span style="color: #007020">FLOAT</span>, price <span style="color: #007020">FLOAT</span>)
+  <span style="color: #008800; font-weight: bold">FROM</span> FILE <span style="background-color: #fff0f0">&#39;examples/data/finance/standard/finance.csv&#39;</span>
+  LINE DELIMITED orderbook (book :<span style="color: #333333">=</span> <span style="background-color: #fff0f0">&#39;bids&#39;</span>, brokers :<span style="color: #333333">=</span> <span style="background-color: #fff0f0">&#39;10&#39;</span>, 
+                            <span style="color: #008800; font-weight: bold">deterministic</span> :<span style="color: #333333">=</span> <span style="background-color: #fff0f0">&#39;yes&#39;</span>);
+
+<span style="color: #008800; font-weight: bold">CREATE</span> STREAM asks(t <span style="color: #007020">FLOAT</span>, id <span style="color: #007020">INT</span>, broker_id <span style="color: #007020">INT</span>, volume <span style="color: #007020">FLOAT</span>, price <span style="color: #007020">FLOAT</span>)
+  <span style="color: #008800; font-weight: bold">FROM</span> FILE <span style="background-color: #fff0f0">&#39;examples/data/finance/standard/finance.csv&#39;</span>
+  LINE DELIMITED orderbook (book :<span style="color: #333333">=</span> <span style="background-color: #fff0f0">&#39;asks&#39;</span>, brokers :<span style="color: #333333">=</span> <span style="background-color: #fff0f0">&#39;10&#39;</span>, 
+                            <span style="color: #008800; font-weight: bold">deterministic</span> :<span style="color: #333333">=</span> <span style="background-color: #fff0f0">&#39;yes&#39;</span>);
+
+<span style="color: #008800; font-weight: bold">SELECT</span> b.broker_id, <span style="color: #008800; font-weight: bold">SUM</span>(a.volume <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1</span> <span style="color: #333333">*</span> b.volume)) <span style="color: #008800; font-weight: bold">AS</span> axfinder
+<span style="color: #008800; font-weight: bold">FROM</span>   bids b, asks a
+<span style="color: #008800; font-weight: bold">WHERE</span>  b.broker_id <span style="color: #333333">=</span> a.broker_id
+  <span style="color: #008800; font-weight: bold">AND</span>  ( (a.price <span style="color: #333333">+</span> ((<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1</span>) <span style="color: #333333">*</span> b.price) <span style="color: #333333">&gt;</span> <span style="color: #0000DD; font-weight: bold">1000</span>) <span style="color: #008800; font-weight: bold">OR</span>
+         (b.price <span style="color: #333333">+</span> ((<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1</span>) <span style="color: #333333">*</span> a.price) <span style="color: #333333">&gt;</span> <span style="color: #0000DD; font-weight: bold">1000</span>) )
+<span style="color: #008800; font-weight: bold">GROUP</span> <span style="color: #008800; font-weight: bold">BY</span> b.broker_id;
+</pre></td></tr></table></div>
