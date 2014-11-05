@@ -147,7 +147,12 @@
 <p>You are invited to perform and report on benchmark results and experimental comparisons of your system against DBToaster, but we ask you for fairness and to run DBToaster with settings that allow it to perform at its best. Specifically, the DBToaster interpreter is provided for your convenience and is not to be used for timing purposes. For the purpose of comparison with other data management systems, please use the C++ rather than the Scala backend. Please contact us if you have questions about how to optimize the performance of DBToaster.</p>
 
 <?= chapter("DBToaster Changelog", "changelog") ?>
-
+<H4 style="border-bottom:thin double;">Release 2.1 (revision 3346) - 2014/11/06</H4>
+<ul>
+<li>Added an optimization for eliminating some temporary maps that were formerly used in IVM triggers.
+</li><li>Fixed a bug in generating IVM triggers for queries contaning OR operator in the WHERE clause.
+</li>
+</ul>
 <H4 style="border-bottom:thin double;">Release 2 (revision 3263) - 2014/08/01</H4>
 <ul>
 <li>Implemented a new back-end from scratch in Scala for compiling M3 programs
