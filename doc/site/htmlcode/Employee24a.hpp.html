@@ -392,22 +392,7 @@
 392
 393
 394
-395
-396
-397
-398
-399
-400
-401
-402
-403
-404
-405
-406
-407
-408
-409
-410</pre></td><td><pre style="margin: 0; line-height: 125%"><span style="color: #557799">#include &quot;program_base.hpp&quot;</span>
+395</pre></td><td><pre style="margin: 0; line-height: 125%"><span style="color: #557799">#include &quot;program_base.hpp&quot;</span>
 <span style="color: #557799">#include &quot;hpds/KDouble.hpp&quot;</span>
 <span style="color: #557799">#include &quot;hash.hpp&quot;</span>
 <span style="color: #557799">#include &quot;mmap/mmap.hpp&quot;</span>
@@ -511,67 +496,67 @@
   <span style="color: #333333">&gt;</span> AVG_SALARY_map;
   <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>AVG_SALARY_entry,DOUBLE_TYPE,AVG_SALARY_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_AVG_SALARY_map_0;
   
-  <span style="color: #008800; font-weight: bold">struct</span> AVG_SALARY_mEMPLOYEE1_L2_1_entry {
-    <span style="color: #333399; font-weight: bold">long</span> EMPLOYEE_JOB_ID; <span style="color: #333399; font-weight: bold">long</span> __av;  AVG_SALARY_mEMPLOYEE1_L2_1_entry<span style="color: #333333">*</span> nxt; AVG_SALARY_mEMPLOYEE1_L2_1_entry<span style="color: #333333">*</span> prv;
-    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">AVG_SALARY_mEMPLOYEE1_L2_1_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*EMPLOYEE_JOB_ID = 0L; __av = 0L; */</span> }
-    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">AVG_SALARY_mEMPLOYEE1_L2_1_entry</span>(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1) { EMPLOYEE_JOB_ID <span style="color: #333333">=</span> c0; __av <span style="color: #333333">=</span> c1; }
-    AVG_SALARY_mEMPLOYEE1_L2_1_entry(<span style="color: #008800; font-weight: bold">const</span> AVG_SALARY_mEMPLOYEE1_L2_1_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> EMPLOYEE_JOB_ID( other.EMPLOYEE_JOB_ID ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
-    FORCE_INLINE AVG_SALARY_mEMPLOYEE1_L2_1_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0) { EMPLOYEE_JOB_ID <span style="color: #333333">=</span> c0;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
+  <span style="color: #008800; font-weight: bold">struct</span> AVG_SALARY_mEMPLOYEE1_L1_1_entry {
+    <span style="color: #333399; font-weight: bold">long</span> AVG_SALARY_mEMPLOYEEEMPLOYEE_JOB_ID; <span style="color: #333399; font-weight: bold">long</span> __av;  AVG_SALARY_mEMPLOYEE1_L1_1_entry<span style="color: #333333">*</span> nxt; AVG_SALARY_mEMPLOYEE1_L1_1_entry<span style="color: #333333">*</span> prv;
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">AVG_SALARY_mEMPLOYEE1_L1_1_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*AVG_SALARY_mEMPLOYEEEMPLOYEE_JOB_ID = 0L; __av = 0L; */</span> }
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">AVG_SALARY_mEMPLOYEE1_L1_1_entry</span>(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1) { AVG_SALARY_mEMPLOYEEEMPLOYEE_JOB_ID <span style="color: #333333">=</span> c0; __av <span style="color: #333333">=</span> c1; }
+    AVG_SALARY_mEMPLOYEE1_L1_1_entry(<span style="color: #008800; font-weight: bold">const</span> AVG_SALARY_mEMPLOYEE1_L1_1_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> AVG_SALARY_mEMPLOYEEEMPLOYEE_JOB_ID( other.AVG_SALARY_mEMPLOYEEEMPLOYEE_JOB_ID ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
+    FORCE_INLINE AVG_SALARY_mEMPLOYEE1_L1_1_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0) { AVG_SALARY_mEMPLOYEEEMPLOYEE_JOB_ID <span style="color: #333333">=</span> c0;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
     <span style="color: #008800; font-weight: bold">template</span><span style="color: #333333">&lt;</span><span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Archive</span><span style="color: #333333">&gt;</span>
     <span style="color: #333399; font-weight: bold">void</span> serialize(Archive<span style="color: #333333">&amp;</span> ar, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">unsigned</span> <span style="color: #333399; font-weight: bold">int</span> version) <span style="color: #008800; font-weight: bold">const</span> 
     {
       ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
-      DBT_SERIALIZATION_NVP(ar, EMPLOYEE_JOB_ID);
+      DBT_SERIALIZATION_NVP(ar, AVG_SALARY_mEMPLOYEEEMPLOYEE_JOB_ID);
       ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
       DBT_SERIALIZATION_NVP(ar, __av);
     }
   };
-  <span style="color: #008800; font-weight: bold">struct</span> AVG_SALARY_mEMPLOYEE1_L2_1_mapkey0_idxfn {
-    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> AVG_SALARY_mEMPLOYEE1_L2_1_entry<span style="color: #333333">&amp;</span> e) {
+  <span style="color: #008800; font-weight: bold">struct</span> AVG_SALARY_mEMPLOYEE1_L1_1_mapkey0_idxfn {
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> AVG_SALARY_mEMPLOYEE1_L1_1_entry<span style="color: #333333">&amp;</span> e) {
       <span style="color: #333399; font-weight: bold">size_t</span> h <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>;
-      hash_combine(h, e.EMPLOYEE_JOB_ID);
+      hash_combine(h, e.AVG_SALARY_mEMPLOYEEEMPLOYEE_JOB_ID);
       <span style="color: #008800; font-weight: bold">return</span> h;
     }
-    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> AVG_SALARY_mEMPLOYEE1_L2_1_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> AVG_SALARY_mEMPLOYEE1_L2_1_entry<span style="color: #333333">&amp;</span> y) {
-      <span style="color: #008800; font-weight: bold">return</span> x.EMPLOYEE_JOB_ID <span style="color: #333333">==</span> y.EMPLOYEE_JOB_ID;
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> AVG_SALARY_mEMPLOYEE1_L1_1_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> AVG_SALARY_mEMPLOYEE1_L1_1_entry<span style="color: #333333">&amp;</span> y) {
+      <span style="color: #008800; font-weight: bold">return</span> x.AVG_SALARY_mEMPLOYEEEMPLOYEE_JOB_ID <span style="color: #333333">==</span> y.AVG_SALARY_mEMPLOYEEEMPLOYEE_JOB_ID;
     }
   };
   
-  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>AVG_SALARY_mEMPLOYEE1_L2_1_entry,<span style="color: #333399; font-weight: bold">long</span>,
-    HashIndex<span style="color: #333333">&lt;</span>AVG_SALARY_mEMPLOYEE1_L2_1_entry,<span style="color: #333399; font-weight: bold">long</span>,AVG_SALARY_mEMPLOYEE1_L2_1_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>
-  <span style="color: #333333">&gt;</span> AVG_SALARY_mEMPLOYEE1_L2_1_map;
-  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>AVG_SALARY_mEMPLOYEE1_L2_1_entry,<span style="color: #333399; font-weight: bold">long</span>,AVG_SALARY_mEMPLOYEE1_L2_1_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_AVG_SALARY_mEMPLOYEE1_L2_1_map_0;
+  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>AVG_SALARY_mEMPLOYEE1_L1_1_entry,<span style="color: #333399; font-weight: bold">long</span>,
+    HashIndex<span style="color: #333333">&lt;</span>AVG_SALARY_mEMPLOYEE1_L1_1_entry,<span style="color: #333399; font-weight: bold">long</span>,AVG_SALARY_mEMPLOYEE1_L1_1_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>
+  <span style="color: #333333">&gt;</span> AVG_SALARY_mEMPLOYEE1_L1_1_map;
+  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>AVG_SALARY_mEMPLOYEE1_L1_1_entry,<span style="color: #333399; font-weight: bold">long</span>,AVG_SALARY_mEMPLOYEE1_L1_1_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_AVG_SALARY_mEMPLOYEE1_L1_1_map_0;
   
-  <span style="color: #008800; font-weight: bold">struct</span> AVG_SALARY_mEMPLOYEE4_entry {
-    <span style="color: #333399; font-weight: bold">long</span> EMPLOYEE_JOB_ID; DOUBLE_TYPE __av;  AVG_SALARY_mEMPLOYEE4_entry<span style="color: #333333">*</span> nxt; AVG_SALARY_mEMPLOYEE4_entry<span style="color: #333333">*</span> prv;
-    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">AVG_SALARY_mEMPLOYEE4_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*EMPLOYEE_JOB_ID = 0L; __av = 0.0; */</span> }
-    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">AVG_SALARY_mEMPLOYEE4_entry</span>(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c1) { EMPLOYEE_JOB_ID <span style="color: #333333">=</span> c0; __av <span style="color: #333333">=</span> c1; }
-    AVG_SALARY_mEMPLOYEE4_entry(<span style="color: #008800; font-weight: bold">const</span> AVG_SALARY_mEMPLOYEE4_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> EMPLOYEE_JOB_ID( other.EMPLOYEE_JOB_ID ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
-    FORCE_INLINE AVG_SALARY_mEMPLOYEE4_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0) { EMPLOYEE_JOB_ID <span style="color: #333333">=</span> c0;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
+  <span style="color: #008800; font-weight: bold">struct</span> AVG_SALARY_mEMPLOYEE2_entry {
+    <span style="color: #333399; font-weight: bold">long</span> AVG_SALARY_mEMPLOYEEEMPLOYEE_JOB_ID; DOUBLE_TYPE __av;  AVG_SALARY_mEMPLOYEE2_entry<span style="color: #333333">*</span> nxt; AVG_SALARY_mEMPLOYEE2_entry<span style="color: #333333">*</span> prv;
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">AVG_SALARY_mEMPLOYEE2_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*AVG_SALARY_mEMPLOYEEEMPLOYEE_JOB_ID = 0L; __av = 0.0; */</span> }
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">AVG_SALARY_mEMPLOYEE2_entry</span>(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c1) { AVG_SALARY_mEMPLOYEEEMPLOYEE_JOB_ID <span style="color: #333333">=</span> c0; __av <span style="color: #333333">=</span> c1; }
+    AVG_SALARY_mEMPLOYEE2_entry(<span style="color: #008800; font-weight: bold">const</span> AVG_SALARY_mEMPLOYEE2_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> AVG_SALARY_mEMPLOYEEEMPLOYEE_JOB_ID( other.AVG_SALARY_mEMPLOYEEEMPLOYEE_JOB_ID ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
+    FORCE_INLINE AVG_SALARY_mEMPLOYEE2_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0) { AVG_SALARY_mEMPLOYEEEMPLOYEE_JOB_ID <span style="color: #333333">=</span> c0;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
     <span style="color: #008800; font-weight: bold">template</span><span style="color: #333333">&lt;</span><span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Archive</span><span style="color: #333333">&gt;</span>
     <span style="color: #333399; font-weight: bold">void</span> serialize(Archive<span style="color: #333333">&amp;</span> ar, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">unsigned</span> <span style="color: #333399; font-weight: bold">int</span> version) <span style="color: #008800; font-weight: bold">const</span> 
     {
       ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
-      DBT_SERIALIZATION_NVP(ar, EMPLOYEE_JOB_ID);
+      DBT_SERIALIZATION_NVP(ar, AVG_SALARY_mEMPLOYEEEMPLOYEE_JOB_ID);
       ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
       DBT_SERIALIZATION_NVP(ar, __av);
     }
   };
-  <span style="color: #008800; font-weight: bold">struct</span> AVG_SALARY_mEMPLOYEE4_mapkey0_idxfn {
-    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> AVG_SALARY_mEMPLOYEE4_entry<span style="color: #333333">&amp;</span> e) {
+  <span style="color: #008800; font-weight: bold">struct</span> AVG_SALARY_mEMPLOYEE2_mapkey0_idxfn {
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> AVG_SALARY_mEMPLOYEE2_entry<span style="color: #333333">&amp;</span> e) {
       <span style="color: #333399; font-weight: bold">size_t</span> h <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>;
-      hash_combine(h, e.EMPLOYEE_JOB_ID);
+      hash_combine(h, e.AVG_SALARY_mEMPLOYEEEMPLOYEE_JOB_ID);
       <span style="color: #008800; font-weight: bold">return</span> h;
     }
-    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> AVG_SALARY_mEMPLOYEE4_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> AVG_SALARY_mEMPLOYEE4_entry<span style="color: #333333">&amp;</span> y) {
-      <span style="color: #008800; font-weight: bold">return</span> x.EMPLOYEE_JOB_ID <span style="color: #333333">==</span> y.EMPLOYEE_JOB_ID;
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> AVG_SALARY_mEMPLOYEE2_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> AVG_SALARY_mEMPLOYEE2_entry<span style="color: #333333">&amp;</span> y) {
+      <span style="color: #008800; font-weight: bold">return</span> x.AVG_SALARY_mEMPLOYEEEMPLOYEE_JOB_ID <span style="color: #333333">==</span> y.AVG_SALARY_mEMPLOYEEEMPLOYEE_JOB_ID;
     }
   };
   
-  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>AVG_SALARY_mEMPLOYEE4_entry,DOUBLE_TYPE,
-    HashIndex<span style="color: #333333">&lt;</span>AVG_SALARY_mEMPLOYEE4_entry,DOUBLE_TYPE,AVG_SALARY_mEMPLOYEE4_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>
-  <span style="color: #333333">&gt;</span> AVG_SALARY_mEMPLOYEE4_map;
-  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>AVG_SALARY_mEMPLOYEE4_entry,DOUBLE_TYPE,AVG_SALARY_mEMPLOYEE4_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_AVG_SALARY_mEMPLOYEE4_map_0;
+  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>AVG_SALARY_mEMPLOYEE2_entry,DOUBLE_TYPE,
+    HashIndex<span style="color: #333333">&lt;</span>AVG_SALARY_mEMPLOYEE2_entry,DOUBLE_TYPE,AVG_SALARY_mEMPLOYEE2_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>
+  <span style="color: #333333">&gt;</span> AVG_SALARY_mEMPLOYEE2_map;
+  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>AVG_SALARY_mEMPLOYEE2_entry,DOUBLE_TYPE,AVG_SALARY_mEMPLOYEE2_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_AVG_SALARY_mEMPLOYEE2_map_0;
   
   
   
@@ -636,8 +621,8 @@
       pb.add_map<span style="color: #333333">&lt;</span>JOB_COUNT_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;JOB_COUNT&quot;</span>, JOB_COUNT );
       pb.add_map<span style="color: #333333">&lt;</span>TOTAL_SALARY_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;TOTAL_SALARY&quot;</span>, TOTAL_SALARY );
       pb.add_map<span style="color: #333333">&lt;</span>AVG_SALARY_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;AVG_SALARY&quot;</span>, AVG_SALARY );
-      pb.add_map<span style="color: #333333">&lt;</span>AVG_SALARY_mEMPLOYEE1_L2_1_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;AVG_SALARY_mEMPLOYEE1_L2_1&quot;</span>, AVG_SALARY_mEMPLOYEE1_L2_1 );
-      pb.add_map<span style="color: #333333">&lt;</span>AVG_SALARY_mEMPLOYEE4_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;AVG_SALARY_mEMPLOYEE4&quot;</span>, AVG_SALARY_mEMPLOYEE4 );
+      pb.add_map<span style="color: #333333">&lt;</span>AVG_SALARY_mEMPLOYEE1_L1_1_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;AVG_SALARY_mEMPLOYEE1_L1_1&quot;</span>, AVG_SALARY_mEMPLOYEE1_L1_1 );
+      pb.add_map<span style="color: #333333">&lt;</span>AVG_SALARY_mEMPLOYEE2_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;AVG_SALARY_mEMPLOYEE2&quot;</span>, AVG_SALARY_mEMPLOYEE2 );
   
       pb.add_relation(<span style="background-color: #fff0f0">&quot;EMPLOYEE&quot;</span>);
   
@@ -670,18 +655,18 @@
     <span style="color: #333399; font-weight: bold">void</span> on_insert_EMPLOYEE(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> employee_employee_id, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> employee_last_name, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> employee_first_name, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> employee_middle_name, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> employee_job_id, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> employee_manager_id, <span style="color: #008800; font-weight: bold">const</span> date employee_hire_date, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE employee_salary, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE employee_commission, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> employee_department_id) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_EMPLOYEE&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_EMPLOYEE&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
+      {  <span style="color: #333333">++</span>tN;
         JOB_COUNT.addOrDelOnZero(se1.modify(employee_job_id),<span style="color: #0000DD; font-weight: bold">1L</span>);
         TOTAL_SALARY.addOrDelOnZero(se2.modify(employee_job_id),employee_salary);
         DOUBLE_TYPE agg1 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
-        <span style="color: #333399; font-weight: bold">long</span> l1 <span style="color: #333333">=</span> AVG_SALARY_mEMPLOYEE1_L2_1.getValueOrDefault(se4.modify(employee_job_id));
+        <span style="color: #333399; font-weight: bold">long</span> l1 <span style="color: #333333">=</span> (AVG_SALARY_mEMPLOYEE1_L1_1.getValueOrDefault(se4.modify(employee_job_id)) <span style="color: #333333">+</span> <span style="color: #0000DD; font-weight: bold">1L</span>);
         agg1 <span style="color: #333333">+=</span> Udiv(l1);
         DOUBLE_TYPE agg2 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
-        <span style="color: #333399; font-weight: bold">long</span> l2 <span style="color: #333333">=</span> (AVG_SALARY_mEMPLOYEE1_L2_1.getValueOrDefault(se6.modify(employee_job_id)) <span style="color: #333333">+</span> <span style="color: #0000DD; font-weight: bold">1L</span>);
+        <span style="color: #333399; font-weight: bold">long</span> l2 <span style="color: #333333">=</span> AVG_SALARY_mEMPLOYEE1_L1_1.getValueOrDefault(se6.modify(employee_job_id));
         agg2 <span style="color: #333333">+=</span> Udiv(l2);
-        AVG_SALARY.addOrDelOnZero(se3.modify(employee_job_id),((agg1 <span style="color: #333333">*</span> (AVG_SALARY_mEMPLOYEE4.getValueOrDefault(se5.modify(employee_job_id)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)) <span style="color: #333333">+</span> (agg2 <span style="color: #333333">*</span> (AVG_SALARY_mEMPLOYEE4.getValueOrDefault(se7.modify(employee_job_id)) <span style="color: #333333">+</span> employee_salary))));
-        AVG_SALARY_mEMPLOYEE1_L2_1.addOrDelOnZero(se8.modify(employee_job_id),<span style="color: #0000DD; font-weight: bold">1L</span>);
-        AVG_SALARY_mEMPLOYEE4.addOrDelOnZero(se9.modify(employee_job_id),employee_salary);
+        AVG_SALARY.addOrDelOnZero(se3.modify(employee_job_id),((agg1 <span style="color: #333333">*</span> (AVG_SALARY_mEMPLOYEE2.getValueOrDefault(se5.modify(employee_job_id)) <span style="color: #333333">+</span> employee_salary)) <span style="color: #333333">+</span> (agg2 <span style="color: #333333">*</span> (AVG_SALARY_mEMPLOYEE2.getValueOrDefault(se7.modify(employee_job_id)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>))));
+        AVG_SALARY_mEMPLOYEE1_L1_1.addOrDelOnZero(se8.modify(employee_job_id),<span style="color: #0000DD; font-weight: bold">1L</span>);
+        AVG_SALARY_mEMPLOYEE2.addOrDelOnZero(se9.modify(employee_job_id),employee_salary);
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_EMPLOYEE&quot;</span>)
       END_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_EMPLOYEE&quot;</span>)
@@ -693,39 +678,21 @@
     <span style="color: #333399; font-weight: bold">void</span> on_delete_EMPLOYEE(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> employee_employee_id, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> employee_last_name, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> employee_first_name, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> employee_middle_name, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> employee_job_id, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> employee_manager_id, <span style="color: #008800; font-weight: bold">const</span> date employee_hire_date, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE employee_salary, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE employee_commission, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> employee_department_id) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_EMPLOYEE&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_EMPLOYEE&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
+      {  <span style="color: #333333">++</span>tN;
         JOB_COUNT.addOrDelOnZero(se10.modify(employee_job_id),<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>);
         TOTAL_SALARY.addOrDelOnZero(se11.modify(employee_job_id),(<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> employee_salary));
         DOUBLE_TYPE agg3 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
-        <span style="color: #333399; font-weight: bold">long</span> l3 <span style="color: #333333">=</span> (AVG_SALARY_mEMPLOYEE1_L2_1.getValueOrDefault(se13.modify(employee_job_id)) <span style="color: #333333">+</span> ((employee_job_id <span style="color: #333333">==</span> employee_job_id) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
+        <span style="color: #333399; font-weight: bold">long</span> l3 <span style="color: #333333">=</span> AVG_SALARY_mEMPLOYEE1_L1_1.getValueOrDefault(se14.modify(employee_job_id));
         agg3 <span style="color: #333333">+=</span> Udiv(l3);
-        AVG_SALARY.addOrDelOnZero(se12.modify(employee_job_id),((agg3 <span style="color: #333333">*</span> employee_salary) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
-        { <span style="color: #888888">//foreach</span>
-          AVG_SALARY_mEMPLOYEE4_entry<span style="color: #333333">*</span> e1 <span style="color: #333333">=</span> AVG_SALARY_mEMPLOYEE4.head;
-          <span style="color: #008800; font-weight: bold">while</span>(e1){
-            <span style="color: #333399; font-weight: bold">long</span> employee_job_id_1 <span style="color: #333333">=</span> e1<span style="color: #333333">-&gt;</span>EMPLOYEE_JOB_ID;
-            DOUBLE_TYPE v1 <span style="color: #333333">=</span> e1<span style="color: #333333">-&gt;</span>__av;
-            DOUBLE_TYPE agg4 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
-            <span style="color: #333399; font-weight: bold">long</span> l4 <span style="color: #333333">=</span> AVG_SALARY_mEMPLOYEE1_L2_1.getValueOrDefault(se14.modify(employee_job_id_1));
-            agg4 <span style="color: #333333">+=</span> Udiv(l4);
-            AVG_SALARY.addOrDelOnZero(se12.modify(employee_job_id_1),((v1 <span style="color: #333333">*</span> agg4) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
-            e1 <span style="color: #333333">=</span> e1<span style="color: #333333">-&gt;</span>nxt;
-          }
-        }
-        { <span style="color: #888888">//foreach</span>
-          AVG_SALARY_mEMPLOYEE4_entry<span style="color: #333333">*</span> e2 <span style="color: #333333">=</span> AVG_SALARY_mEMPLOYEE4.head;
-          <span style="color: #008800; font-weight: bold">while</span>(e2){
-            <span style="color: #333399; font-weight: bold">long</span> employee_job_id_1 <span style="color: #333333">=</span> e2<span style="color: #333333">-&gt;</span>EMPLOYEE_JOB_ID;
-            DOUBLE_TYPE v2 <span style="color: #333333">=</span> e2<span style="color: #333333">-&gt;</span>__av;
-            DOUBLE_TYPE agg5 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
-            <span style="color: #333399; font-weight: bold">long</span> l5 <span style="color: #333333">=</span> (AVG_SALARY_mEMPLOYEE1_L2_1.getValueOrDefault(se15.modify(employee_job_id_1)) <span style="color: #333333">+</span> ((employee_job_id_1 <span style="color: #333333">==</span> employee_job_id) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
-            agg5 <span style="color: #333333">+=</span> Udiv(l5);
-            AVG_SALARY.addOrDelOnZero(se12.modify(employee_job_id_1),(v2 <span style="color: #333333">*</span> agg5));
-            e2 <span style="color: #333333">=</span> e2<span style="color: #333333">-&gt;</span>nxt;
-          }
-        }
-        AVG_SALARY_mEMPLOYEE1_L2_1.addOrDelOnZero(se16.modify(employee_job_id),<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>);
-        AVG_SALARY_mEMPLOYEE4.addOrDelOnZero(se17.modify(employee_job_id),(<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> employee_salary));
+        DOUBLE_TYPE agg4 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
+        <span style="color: #333399; font-weight: bold">long</span> l4 <span style="color: #333333">=</span> (AVG_SALARY_mEMPLOYEE1_L1_1.getValueOrDefault(se15.modify(employee_job_id)) <span style="color: #333333">+</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>);
+        agg4 <span style="color: #333333">+=</span> Udiv(l4);
+        DOUBLE_TYPE agg5 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
+        <span style="color: #333399; font-weight: bold">long</span> l5 <span style="color: #333333">=</span> (AVG_SALARY_mEMPLOYEE1_L1_1.getValueOrDefault(se16.modify(employee_job_id)) <span style="color: #333333">+</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>);
+        agg5 <span style="color: #333333">+=</span> Udiv(l5);
+        AVG_SALARY.addOrDelOnZero(se12.modify(employee_job_id),((AVG_SALARY_mEMPLOYEE2.getValueOrDefault(se13.modify(employee_job_id)) <span style="color: #333333">*</span> ((agg3 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>) <span style="color: #333333">+</span> agg4)) <span style="color: #333333">+</span> (agg5 <span style="color: #333333">*</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> employee_salary))));
+        AVG_SALARY_mEMPLOYEE1_L1_1.addOrDelOnZero(se17.modify(employee_job_id),<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>);
+        AVG_SALARY_mEMPLOYEE2.addOrDelOnZero(se18.modify(employee_job_id),(<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> employee_salary));
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_EMPLOYEE&quot;</span>)
       END_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_EMPLOYEE&quot;</span>)
@@ -737,7 +704,7 @@
     <span style="color: #333399; font-weight: bold">void</span> on_system_ready_event() {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
-      {  <span style="color: #888888">//</span>
+      {  
         
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
@@ -750,24 +717,25 @@
     JOB_COUNT_entry se1;
     TOTAL_SALARY_entry se2;
     AVG_SALARY_entry se3;
-    AVG_SALARY_mEMPLOYEE1_L2_1_entry se4;
-    AVG_SALARY_mEMPLOYEE4_entry se5;
-    AVG_SALARY_mEMPLOYEE1_L2_1_entry se6;
-    AVG_SALARY_mEMPLOYEE4_entry se7;
-    AVG_SALARY_mEMPLOYEE1_L2_1_entry se8;
-    AVG_SALARY_mEMPLOYEE4_entry se9;
+    AVG_SALARY_mEMPLOYEE1_L1_1_entry se4;
+    AVG_SALARY_mEMPLOYEE2_entry se5;
+    AVG_SALARY_mEMPLOYEE1_L1_1_entry se6;
+    AVG_SALARY_mEMPLOYEE2_entry se7;
+    AVG_SALARY_mEMPLOYEE1_L1_1_entry se8;
+    AVG_SALARY_mEMPLOYEE2_entry se9;
     JOB_COUNT_entry se10;
     TOTAL_SALARY_entry se11;
     AVG_SALARY_entry se12;
-    AVG_SALARY_mEMPLOYEE1_L2_1_entry se13;
-    AVG_SALARY_mEMPLOYEE1_L2_1_entry se14;
-    AVG_SALARY_mEMPLOYEE1_L2_1_entry se15;
-    AVG_SALARY_mEMPLOYEE1_L2_1_entry se16;
-    AVG_SALARY_mEMPLOYEE4_entry se17;
+    AVG_SALARY_mEMPLOYEE2_entry se13;
+    AVG_SALARY_mEMPLOYEE1_L1_1_entry se14;
+    AVG_SALARY_mEMPLOYEE1_L1_1_entry se15;
+    AVG_SALARY_mEMPLOYEE1_L1_1_entry se16;
+    AVG_SALARY_mEMPLOYEE1_L1_1_entry se17;
+    AVG_SALARY_mEMPLOYEE2_entry se18;
   
     <span style="color: #888888">/* Data structures used for storing materialized views */</span>
-    AVG_SALARY_mEMPLOYEE1_L2_1_map AVG_SALARY_mEMPLOYEE1_L2_1;
-    AVG_SALARY_mEMPLOYEE4_map AVG_SALARY_mEMPLOYEE4;
+    AVG_SALARY_mEMPLOYEE1_L1_1_map AVG_SALARY_mEMPLOYEE1_L1_1;
+    AVG_SALARY_mEMPLOYEE2_map AVG_SALARY_mEMPLOYEE2;
     
     
   
@@ -794,16 +762,18 @@
       <span style="color: #888888">/* Imports data for static tables and performs view initialization based on it. */</span>
       <span style="color: #333399; font-weight: bold">void</span> init() {
           <span style="color: #888888">//P0_PLACE_HOLDER</span>
-          table_multiplexer.init_source();
-          stream_multiplexer.init_source();
+          table_multiplexer.init_source(run_opts<span style="color: #333333">-&gt;</span>batch_size, run_opts<span style="color: #333333">-&gt;</span>parallel, <span style="color: #007020">true</span>);
+          stream_multiplexer.init_source(run_opts<span style="color: #333333">-&gt;</span>batch_size, run_opts<span style="color: #333333">-&gt;</span>parallel, <span style="color: #007020">false</span>);
           process_tables();
           data.on_system_ready_event();
           <span style="color: #888888">//P2_PLACE_HOLDER</span>
       }
   
       <span style="color: #888888">/* Saves a snapshot of the data required to obtain the results of top level queries. */</span>
-      <span style="color: #333399; font-weight: bold">snapshot_t</span> take_snapshot(){ <span style="color: #888888">//tlq_t d=(tlq_t&amp;)data; if (d.tS==0) { gettimeofday(&amp;(d.t),NULL); d.tT=((d.t).tv_sec-(d.t0).tv_sec)*1000000L+((d.t).tv_usec-(d.t0).tv_usec); } printf(&quot;SAMPLE=standard,%ld,%ld,%ld\n&quot;,d.tT,d.tN,d.tS);</span>
-          <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333399; font-weight: bold">snapshot_t</span>( <span style="color: #008800; font-weight: bold">new</span> <span style="color: #333399; font-weight: bold">tlq_t</span>((<span style="color: #333399; font-weight: bold">tlq_t</span><span style="color: #333333">&amp;</span>)data) );
+      <span style="color: #333399; font-weight: bold">snapshot_t</span> take_snapshot(){
+          <span style="color: #333399; font-weight: bold">tlq_t</span><span style="color: #333333">*</span> d <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">new</span> <span style="color: #333399; font-weight: bold">tlq_t</span>((<span style="color: #333399; font-weight: bold">tlq_t</span><span style="color: #333333">&amp;</span>)data);
+          <span style="color: #008800; font-weight: bold">if</span> (d<span style="color: #333333">-&gt;</span>tS<span style="color: #333333">==</span><span style="color: #0000DD; font-weight: bold">0</span>) { gettimeofday(<span style="color: #333333">&amp;</span>(d<span style="color: #333333">-&gt;</span>t),<span style="color: #007020">NULL</span>); d<span style="color: #333333">-&gt;</span>tT<span style="color: #333333">=</span>((d<span style="color: #333333">-&gt;</span>t).tv_sec<span style="color: #333333">-</span>(d<span style="color: #333333">-&gt;</span>t0).tv_sec)<span style="color: #333333">*</span><span style="color: #0000DD; font-weight: bold">1000000L</span><span style="color: #333333">+</span>((d<span style="color: #333333">-&gt;</span>t).tv_usec<span style="color: #333333">-</span>(d<span style="color: #333333">-&gt;</span>t0).tv_usec); } printf(<span style="background-color: #fff0f0">&quot;SAMPLE=standard,%ld,%ld,%ld</span><span style="color: #666666; font-weight: bold; background-color: #fff0f0">\n</span><span style="background-color: #fff0f0">&quot;</span>,d<span style="color: #333333">-&gt;</span>tT,d<span style="color: #333333">-&gt;</span>tN,d<span style="color: #333333">-&gt;</span>tS);
+          <span style="color: #008800; font-weight: bold">return</span> <span style="color: #0066BB; font-weight: bold">snapshot_t</span>( d );
       }
   
     <span style="color: #997700; font-weight: bold">protected:</span>

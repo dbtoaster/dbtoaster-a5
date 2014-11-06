@@ -360,7 +360,9 @@
 360
 361
 362
-363</pre></td><td><pre style="margin: 0; line-height: 125%"><span style="color: #557799">#include &quot;program_base.hpp&quot;</span>
+363
+364
+365</pre></td><td><pre style="margin: 0; line-height: 125%"><span style="color: #557799">#include &quot;program_base.hpp&quot;</span>
 <span style="color: #557799">#include &quot;hpds/KDouble.hpp&quot;</span>
 <span style="color: #557799">#include &quot;hash.hpp&quot;</span>
 <span style="color: #557799">#include &quot;mmap/mmap.hpp&quot;</span>
@@ -550,7 +552,7 @@
     <span style="color: #333399; font-weight: bold">void</span> on_insert_EMPLOYEE(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> employee_employee_id, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> employee_last_name, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> employee_first_name, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> employee_middle_name, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> employee_job_id, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> employee_manager_id, <span style="color: #008800; font-weight: bold">const</span> date employee_hire_date, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE employee_salary, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE employee_commission, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> employee_department_id) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_EMPLOYEE&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_EMPLOYEE&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
+      {  <span style="color: #333333">++</span>tN;
         { <span style="color: #888888">//foreach</span>
           __SQL_COUNT_AGGREGATE_1_mEMPLOYEE1_entry<span style="color: #333333">*</span> e1 <span style="color: #333333">=</span> __SQL_COUNT_AGGREGATE_1_mEMPLOYEE1.head;
           <span style="color: #008800; font-weight: bold">while</span>(e1){
@@ -558,7 +560,7 @@
             DOUBLE_TYPE s_lower_bound <span style="color: #333333">=</span> e1<span style="color: #333333">-&gt;</span>S_LOWER_BOUND;
             DOUBLE_TYPE s_upper_bound <span style="color: #333333">=</span> e1<span style="color: #333333">-&gt;</span>S_UPPER_BOUND;
             <span style="color: #333399; font-weight: bold">long</span> v1 <span style="color: #333333">=</span> e1<span style="color: #333333">-&gt;</span>__av;
-            __SQL_COUNT_AGGREGATE_1.addOrDelOnZero(se1.modify(s_grade_id),(v1 <span style="color: #333333">*</span> ((employee_salary <span style="color: #333333">&gt;=</span> s_lower_bound) <span style="color: #333333">*</span> (s_upper_bound <span style="color: #333333">&gt;=</span> employee_salary))));
+            (<span style="color: #888888">/*if */</span>(employee_salary <span style="color: #333333">&gt;=</span> s_lower_bound <span style="color: #333333">&amp;&amp;</span> s_upper_bound <span style="color: #333333">&gt;=</span> employee_salary) <span style="color: #333333">?</span> __SQL_COUNT_AGGREGATE_1.addOrDelOnZero(se1.modify(s_grade_id),v1) <span style="color: #333333">:</span> voidFunc());
             e1 <span style="color: #333333">=</span> e1<span style="color: #333333">-&gt;</span>nxt;
           }
         }
@@ -574,7 +576,7 @@
     <span style="color: #333399; font-weight: bold">void</span> on_delete_EMPLOYEE(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> employee_employee_id, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> employee_last_name, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> employee_first_name, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> employee_middle_name, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> employee_job_id, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> employee_manager_id, <span style="color: #008800; font-weight: bold">const</span> date employee_hire_date, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE employee_salary, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE employee_commission, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> employee_department_id) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_EMPLOYEE&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_EMPLOYEE&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
+      {  <span style="color: #333333">++</span>tN;
         { <span style="color: #888888">//foreach</span>
           __SQL_COUNT_AGGREGATE_1_mEMPLOYEE1_entry<span style="color: #333333">*</span> e2 <span style="color: #333333">=</span> __SQL_COUNT_AGGREGATE_1_mEMPLOYEE1.head;
           <span style="color: #008800; font-weight: bold">while</span>(e2){
@@ -582,7 +584,7 @@
             DOUBLE_TYPE s_lower_bound <span style="color: #333333">=</span> e2<span style="color: #333333">-&gt;</span>S_LOWER_BOUND;
             DOUBLE_TYPE s_upper_bound <span style="color: #333333">=</span> e2<span style="color: #333333">-&gt;</span>S_UPPER_BOUND;
             <span style="color: #333399; font-weight: bold">long</span> v2 <span style="color: #333333">=</span> e2<span style="color: #333333">-&gt;</span>__av;
-            __SQL_COUNT_AGGREGATE_1.addOrDelOnZero(se3.modify(s_grade_id),((v2 <span style="color: #333333">*</span> ((employee_salary <span style="color: #333333">&gt;=</span> s_lower_bound) <span style="color: #333333">*</span> (s_upper_bound <span style="color: #333333">&gt;=</span> employee_salary))) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
+            (<span style="color: #888888">/*if */</span>(employee_salary <span style="color: #333333">&gt;=</span> s_lower_bound <span style="color: #333333">&amp;&amp;</span> s_upper_bound <span style="color: #333333">&gt;=</span> employee_salary) <span style="color: #333333">?</span> __SQL_COUNT_AGGREGATE_1.addOrDelOnZero(se3.modify(s_grade_id),(v2 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)) <span style="color: #333333">:</span> voidFunc());
             e2 <span style="color: #333333">=</span> e2<span style="color: #333333">-&gt;</span>nxt;
           }
         }
@@ -598,14 +600,14 @@
     <span style="color: #333399; font-weight: bold">void</span> on_insert_SALARY_GRADE(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> salary_grade_grade_id, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE salary_grade_lower_bound, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE salary_grade_upper_bound) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_SALARY_GRADE&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_SALARY_GRADE&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
+      {  <span style="color: #333333">++</span>tN;
         <span style="color: #333399; font-weight: bold">long</span> agg1 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
         { <span style="color: #888888">//foreach</span>
           __SQL_COUNT_AGGREGATE_1_mSALARY_GRADE1_entry<span style="color: #333333">*</span> e3 <span style="color: #333333">=</span> __SQL_COUNT_AGGREGATE_1_mSALARY_GRADE1.head;
           <span style="color: #008800; font-weight: bold">while</span>(e3){
             DOUBLE_TYPE e_salary <span style="color: #333333">=</span> e3<span style="color: #333333">-&gt;</span>E_SALARY;
             <span style="color: #333399; font-weight: bold">long</span> v3 <span style="color: #333333">=</span> e3<span style="color: #333333">-&gt;</span>__av;
-            agg1 <span style="color: #333333">+=</span> (v3 <span style="color: #333333">*</span> ((e_salary <span style="color: #333333">&gt;=</span> salary_grade_lower_bound) <span style="color: #333333">*</span> (salary_grade_upper_bound <span style="color: #333333">&gt;=</span> e_salary)));
+            (<span style="color: #888888">/*if */</span>(e_salary <span style="color: #333333">&gt;=</span> salary_grade_lower_bound <span style="color: #333333">&amp;&amp;</span> salary_grade_upper_bound <span style="color: #333333">&gt;=</span> e_salary) <span style="color: #333333">?</span> agg1 <span style="color: #333333">+=</span> v3 <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
             e3 <span style="color: #333333">=</span> e3<span style="color: #333333">-&gt;</span>nxt;
           }
         }
@@ -622,14 +624,14 @@
     <span style="color: #333399; font-weight: bold">void</span> on_delete_SALARY_GRADE(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> salary_grade_grade_id, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE salary_grade_lower_bound, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE salary_grade_upper_bound) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_SALARY_GRADE&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_SALARY_GRADE&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
+      {  <span style="color: #333333">++</span>tN;
         <span style="color: #333399; font-weight: bold">long</span> agg2 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
         { <span style="color: #888888">//foreach</span>
           __SQL_COUNT_AGGREGATE_1_mSALARY_GRADE1_entry<span style="color: #333333">*</span> e4 <span style="color: #333333">=</span> __SQL_COUNT_AGGREGATE_1_mSALARY_GRADE1.head;
           <span style="color: #008800; font-weight: bold">while</span>(e4){
             DOUBLE_TYPE e_salary <span style="color: #333333">=</span> e4<span style="color: #333333">-&gt;</span>E_SALARY;
             <span style="color: #333399; font-weight: bold">long</span> v4 <span style="color: #333333">=</span> e4<span style="color: #333333">-&gt;</span>__av;
-            agg2 <span style="color: #333333">+=</span> (v4 <span style="color: #333333">*</span> ((e_salary <span style="color: #333333">&gt;=</span> salary_grade_lower_bound) <span style="color: #333333">*</span> (salary_grade_upper_bound <span style="color: #333333">&gt;=</span> e_salary)));
+            (<span style="color: #888888">/*if */</span>(e_salary <span style="color: #333333">&gt;=</span> salary_grade_lower_bound <span style="color: #333333">&amp;&amp;</span> salary_grade_upper_bound <span style="color: #333333">&gt;=</span> e_salary) <span style="color: #333333">?</span> agg2 <span style="color: #333333">+=</span> v4 <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
             e4 <span style="color: #333333">=</span> e4<span style="color: #333333">-&gt;</span>nxt;
           }
         }
@@ -646,7 +648,7 @@
     <span style="color: #333399; font-weight: bold">void</span> on_system_ready_event() {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
-      {  <span style="color: #888888">//</span>
+      {  
         
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
@@ -700,16 +702,18 @@
       <span style="color: #888888">/* Imports data for static tables and performs view initialization based on it. */</span>
       <span style="color: #333399; font-weight: bold">void</span> init() {
           <span style="color: #888888">//P0_PLACE_HOLDER</span>
-          table_multiplexer.init_source();
-          stream_multiplexer.init_source();
+          table_multiplexer.init_source(run_opts<span style="color: #333333">-&gt;</span>batch_size, run_opts<span style="color: #333333">-&gt;</span>parallel, <span style="color: #007020">true</span>);
+          stream_multiplexer.init_source(run_opts<span style="color: #333333">-&gt;</span>batch_size, run_opts<span style="color: #333333">-&gt;</span>parallel, <span style="color: #007020">false</span>);
           process_tables();
           data.on_system_ready_event();
           <span style="color: #888888">//P2_PLACE_HOLDER</span>
       }
   
       <span style="color: #888888">/* Saves a snapshot of the data required to obtain the results of top level queries. */</span>
-      <span style="color: #333399; font-weight: bold">snapshot_t</span> take_snapshot(){ <span style="color: #888888">//tlq_t d=(tlq_t&amp;)data; if (d.tS==0) { gettimeofday(&amp;(d.t),NULL); d.tT=((d.t).tv_sec-(d.t0).tv_sec)*1000000L+((d.t).tv_usec-(d.t0).tv_usec); } printf(&quot;SAMPLE=standard,%ld,%ld,%ld\n&quot;,d.tT,d.tN,d.tS);</span>
-          <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333399; font-weight: bold">snapshot_t</span>( <span style="color: #008800; font-weight: bold">new</span> <span style="color: #333399; font-weight: bold">tlq_t</span>((<span style="color: #333399; font-weight: bold">tlq_t</span><span style="color: #333333">&amp;</span>)data) );
+      <span style="color: #333399; font-weight: bold">snapshot_t</span> take_snapshot(){
+          <span style="color: #333399; font-weight: bold">tlq_t</span><span style="color: #333333">*</span> d <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">new</span> <span style="color: #333399; font-weight: bold">tlq_t</span>((<span style="color: #333399; font-weight: bold">tlq_t</span><span style="color: #333333">&amp;</span>)data);
+          <span style="color: #008800; font-weight: bold">if</span> (d<span style="color: #333333">-&gt;</span>tS<span style="color: #333333">==</span><span style="color: #0000DD; font-weight: bold">0</span>) { gettimeofday(<span style="color: #333333">&amp;</span>(d<span style="color: #333333">-&gt;</span>t),<span style="color: #007020">NULL</span>); d<span style="color: #333333">-&gt;</span>tT<span style="color: #333333">=</span>((d<span style="color: #333333">-&gt;</span>t).tv_sec<span style="color: #333333">-</span>(d<span style="color: #333333">-&gt;</span>t0).tv_sec)<span style="color: #333333">*</span><span style="color: #0000DD; font-weight: bold">1000000L</span><span style="color: #333333">+</span>((d<span style="color: #333333">-&gt;</span>t).tv_usec<span style="color: #333333">-</span>(d<span style="color: #333333">-&gt;</span>t0).tv_usec); } printf(<span style="background-color: #fff0f0">&quot;SAMPLE=standard,%ld,%ld,%ld</span><span style="color: #666666; font-weight: bold; background-color: #fff0f0">\n</span><span style="background-color: #fff0f0">&quot;</span>,d<span style="color: #333333">-&gt;</span>tT,d<span style="color: #333333">-&gt;</span>tN,d<span style="color: #333333">-&gt;</span>tS);
+          <span style="color: #008800; font-weight: bold">return</span> <span style="color: #0066BB; font-weight: bold">snapshot_t</span>( d );
       }
   
     <span style="color: #997700; font-weight: bold">protected:</span>

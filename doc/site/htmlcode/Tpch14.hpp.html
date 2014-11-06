@@ -388,76 +388,7 @@
 388
 389
 390
-391
-392
-393
-394
-395
-396
-397
-398
-399
-400
-401
-402
-403
-404
-405
-406
-407
-408
-409
-410
-411
-412
-413
-414
-415
-416
-417
-418
-419
-420
-421
-422
-423
-424
-425
-426
-427
-428
-429
-430
-431
-432
-433
-434
-435
-436
-437
-438
-439
-440
-441
-442
-443
-444
-445
-446
-447
-448
-449
-450
-451
-452
-453
-454
-455
-456
-457
-458
-459
-460</pre></td><td><pre style="margin: 0; line-height: 125%"><span style="color: #557799">#include &quot;program_base.hpp&quot;</span>
+391</pre></td><td><pre style="margin: 0; line-height: 125%"><span style="color: #557799">#include &quot;program_base.hpp&quot;</span>
 <span style="color: #557799">#include &quot;hpds/KDouble.hpp&quot;</span>
 <span style="color: #557799">#include &quot;hash.hpp&quot;</span>
 <span style="color: #557799">#include &quot;mmap/mmap.hpp&quot;</span>
@@ -530,37 +461,6 @@
   <span style="color: #333333">&gt;</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3_map;
   <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3_entry,<span style="color: #333399; font-weight: bold">long</span>,PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3_map_0;
   
-  <span style="color: #008800; font-weight: bold">struct</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_3_mPART1_entry {
-    <span style="color: #333399; font-weight: bold">long</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_3_mPARTPART_PARTKEY; DOUBLE_TYPE __av;  PROMO_REVENUE_mLINEITEM1_L1_1_L1_3_mPART1_entry<span style="color: #333333">*</span> nxt; PROMO_REVENUE_mLINEITEM1_L1_1_L1_3_mPART1_entry<span style="color: #333333">*</span> prv;
-    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">PROMO_REVENUE_mLINEITEM1_L1_1_L1_3_mPART1_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*PROMO_REVENUE_mLINEITEM1_L1_1_L1_3_mPARTPART_PARTKEY = 0L; __av = 0.0; */</span> }
-    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">PROMO_REVENUE_mLINEITEM1_L1_1_L1_3_mPART1_entry</span>(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c1) { PROMO_REVENUE_mLINEITEM1_L1_1_L1_3_mPARTPART_PARTKEY <span style="color: #333333">=</span> c0; __av <span style="color: #333333">=</span> c1; }
-    PROMO_REVENUE_mLINEITEM1_L1_1_L1_3_mPART1_entry(<span style="color: #008800; font-weight: bold">const</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_3_mPART1_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_3_mPARTPART_PARTKEY( other.PROMO_REVENUE_mLINEITEM1_L1_1_L1_3_mPARTPART_PARTKEY ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
-    FORCE_INLINE PROMO_REVENUE_mLINEITEM1_L1_1_L1_3_mPART1_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0) { PROMO_REVENUE_mLINEITEM1_L1_1_L1_3_mPARTPART_PARTKEY <span style="color: #333333">=</span> c0;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
-    <span style="color: #008800; font-weight: bold">template</span><span style="color: #333333">&lt;</span><span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Archive</span><span style="color: #333333">&gt;</span>
-    <span style="color: #333399; font-weight: bold">void</span> serialize(Archive<span style="color: #333333">&amp;</span> ar, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">unsigned</span> <span style="color: #333399; font-weight: bold">int</span> version) <span style="color: #008800; font-weight: bold">const</span> 
-    {
-      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
-      DBT_SERIALIZATION_NVP(ar, PROMO_REVENUE_mLINEITEM1_L1_1_L1_3_mPARTPART_PARTKEY);
-      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
-      DBT_SERIALIZATION_NVP(ar, __av);
-    }
-  };
-  <span style="color: #008800; font-weight: bold">struct</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_3_mPART1_mapkey0_idxfn {
-    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_3_mPART1_entry<span style="color: #333333">&amp;</span> e) {
-      <span style="color: #333399; font-weight: bold">size_t</span> h <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>;
-      hash_combine(h, e.PROMO_REVENUE_mLINEITEM1_L1_1_L1_3_mPARTPART_PARTKEY);
-      <span style="color: #008800; font-weight: bold">return</span> h;
-    }
-    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_3_mPART1_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_3_mPART1_entry<span style="color: #333333">&amp;</span> y) {
-      <span style="color: #008800; font-weight: bold">return</span> x.PROMO_REVENUE_mLINEITEM1_L1_1_L1_3_mPARTPART_PARTKEY <span style="color: #333333">==</span> y.PROMO_REVENUE_mLINEITEM1_L1_1_L1_3_mPARTPART_PARTKEY;
-    }
-  };
-  
-  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>PROMO_REVENUE_mLINEITEM1_L1_1_L1_3_mPART1_entry,DOUBLE_TYPE,
-    HashIndex<span style="color: #333333">&lt;</span>PROMO_REVENUE_mLINEITEM1_L1_1_L1_3_mPART1_entry,DOUBLE_TYPE,PROMO_REVENUE_mLINEITEM1_L1_1_L1_3_mPART1_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>
-  <span style="color: #333333">&gt;</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_3_mPART1_map;
-  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>PROMO_REVENUE_mLINEITEM1_L1_1_L1_3_mPART1_entry,DOUBLE_TYPE,PROMO_REVENUE_mLINEITEM1_L1_1_L1_3_mPART1_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_PROMO_REVENUE_mLINEITEM1_L1_1_L1_3_mPART1_map_0;
-  
   <span style="color: #008800; font-weight: bold">struct</span> PROMO_REVENUE_mLINEITEM2_mLINEITEM3_entry {
     <span style="color: #333399; font-weight: bold">long</span> PROMO_REVENUE_mLINEITEM2_mLINEITEMLINEITEM_PARTKEY; <span style="color: #333399; font-weight: bold">long</span> __av;  PROMO_REVENUE_mLINEITEM2_mLINEITEM3_entry<span style="color: #333333">*</span> nxt; PROMO_REVENUE_mLINEITEM2_mLINEITEM3_entry<span style="color: #333333">*</span> prv;
     <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">PROMO_REVENUE_mLINEITEM2_mLINEITEM3_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*PROMO_REVENUE_mLINEITEM2_mLINEITEMLINEITEM_PARTKEY = 0L; __av = 0L; */</span> }
@@ -624,7 +524,7 @@
   
   <span style="color: #888888">/* Type definition providing a way to incrementally maintain the results of the sql program */</span>
   <span style="color: #008800; font-weight: bold">struct</span> <span style="color: #333399; font-weight: bold">data_t</span> <span style="color: #333333">:</span> <span style="color: #333399; font-weight: bold">tlq_t</span>{
-    <span style="color: #333399; font-weight: bold">data_t</span>()<span style="color: #333333">:</span> <span style="color: #333399; font-weight: bold">tlq_t</span>(), PROMO_REVENUE_mLINEITEM1_L1_1_L1_1(<span style="color: #6600EE; font-weight: bold">0.0</span>), PROMO_REVENUE_mLINEITEM1_L1_1_L1_3(<span style="color: #6600EE; font-weight: bold">0.0</span>), PROMO_REVENUE_mLINEITEM2(<span style="color: #6600EE; font-weight: bold">0.0</span>), PROMO_REVENUE_mLINEITEM5(<span style="color: #6600EE; font-weight: bold">0.0</span>) {
+    <span style="color: #333399; font-weight: bold">data_t</span>()<span style="color: #333333">:</span> <span style="color: #333399; font-weight: bold">tlq_t</span>(), PROMO_REVENUE_mLINEITEM1_L1_1_L1_1(<span style="color: #6600EE; font-weight: bold">0.0</span>), PROMO_REVENUE_mLINEITEM2(<span style="color: #6600EE; font-weight: bold">0.0</span>) {
       c1 <span style="color: #333333">=</span> Udate(STRING_TYPE(<span style="background-color: #fff0f0">&quot;1995-9-1&quot;</span>));
       c2 <span style="color: #333333">=</span> Udate(STRING_TYPE(<span style="background-color: #fff0f0">&quot;1995-10-1&quot;</span>));
       <span style="color: #888888">/* regex_t init */</span>
@@ -646,11 +546,8 @@
       pb.add_map<span style="color: #333333">&lt;</span>DOUBLE_TYPE<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;PROMO_REVENUE_mLINEITEM1_L1_1_L1_1&quot;</span>, PROMO_REVENUE_mLINEITEM1_L1_1_L1_1 );
       pb.add_map<span style="color: #333333">&lt;</span>PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1&quot;</span>, PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1 );
       pb.add_map<span style="color: #333333">&lt;</span>PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3&quot;</span>, PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3 );
-      pb.add_map<span style="color: #333333">&lt;</span>DOUBLE_TYPE<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;PROMO_REVENUE_mLINEITEM1_L1_1_L1_3&quot;</span>, PROMO_REVENUE_mLINEITEM1_L1_1_L1_3 );
-      pb.add_map<span style="color: #333333">&lt;</span>PROMO_REVENUE_mLINEITEM1_L1_1_L1_3_mPART1_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;PROMO_REVENUE_mLINEITEM1_L1_1_L1_3_mPART1&quot;</span>, PROMO_REVENUE_mLINEITEM1_L1_1_L1_3_mPART1 );
       pb.add_map<span style="color: #333333">&lt;</span>DOUBLE_TYPE<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;PROMO_REVENUE_mLINEITEM2&quot;</span>, PROMO_REVENUE_mLINEITEM2 );
       pb.add_map<span style="color: #333333">&lt;</span>PROMO_REVENUE_mLINEITEM2_mLINEITEM3_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;PROMO_REVENUE_mLINEITEM2_mLINEITEM3&quot;</span>, PROMO_REVENUE_mLINEITEM2_mLINEITEM3 );
-      pb.add_map<span style="color: #333333">&lt;</span>DOUBLE_TYPE<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;PROMO_REVENUE_mLINEITEM5&quot;</span>, PROMO_REVENUE_mLINEITEM5 );
   
       pb.add_relation(<span style="background-color: #fff0f0">&quot;LINEITEM&quot;</span>);
       pb.add_relation(<span style="background-color: #fff0f0">&quot;PART&quot;</span>);
@@ -669,35 +566,23 @@
       exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">1</span>, <span style="background-color: #fff0f0">&quot;insert_LINEITEM_s1&quot;</span>);
       exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">2</span>, <span style="background-color: #fff0f0">&quot;insert_LINEITEM_s2&quot;</span>);
       exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">3</span>, <span style="background-color: #fff0f0">&quot;insert_LINEITEM_s3&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">4</span>, <span style="background-color: #fff0f0">&quot;insert_LINEITEM_s4&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">5</span>, <span style="background-color: #fff0f0">&quot;insert_LINEITEM_s5&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">6</span>, <span style="background-color: #fff0f0">&quot;insert_LINEITEM_s6&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">7</span>, <span style="background-color: #fff0f0">&quot;delete_LINEITEM_s0&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">8</span>, <span style="background-color: #fff0f0">&quot;delete_LINEITEM_s1&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">9</span>, <span style="background-color: #fff0f0">&quot;delete_LINEITEM_s2&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">10</span>, <span style="background-color: #fff0f0">&quot;delete_LINEITEM_s3&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">11</span>, <span style="background-color: #fff0f0">&quot;delete_LINEITEM_s4&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">12</span>, <span style="background-color: #fff0f0">&quot;delete_LINEITEM_s5&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">13</span>, <span style="background-color: #fff0f0">&quot;delete_LINEITEM_s6&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">14</span>, <span style="background-color: #fff0f0">&quot;insert_PART_s0&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">15</span>, <span style="background-color: #fff0f0">&quot;insert_PART_s1&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">16</span>, <span style="background-color: #fff0f0">&quot;insert_PART_s2&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">17</span>, <span style="background-color: #fff0f0">&quot;insert_PART_s3&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">18</span>, <span style="background-color: #fff0f0">&quot;insert_PART_s4&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">19</span>, <span style="background-color: #fff0f0">&quot;insert_PART_s5&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">20</span>, <span style="background-color: #fff0f0">&quot;insert_PART_s6&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">21</span>, <span style="background-color: #fff0f0">&quot;delete_PART_s0&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">22</span>, <span style="background-color: #fff0f0">&quot;delete_PART_s1&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">23</span>, <span style="background-color: #fff0f0">&quot;delete_PART_s2&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">24</span>, <span style="background-color: #fff0f0">&quot;delete_PART_s3&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">25</span>, <span style="background-color: #fff0f0">&quot;delete_PART_s4&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">26</span>, <span style="background-color: #fff0f0">&quot;delete_PART_s5&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">27</span>, <span style="background-color: #fff0f0">&quot;delete_PART_s6&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">28</span>, <span style="background-color: #fff0f0">&quot;system_ready_s0&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">29</span>, <span style="background-color: #fff0f0">&quot;system_ready_s1&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">30</span>, <span style="background-color: #fff0f0">&quot;system_ready_s2&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">31</span>, <span style="background-color: #fff0f0">&quot;system_ready_s3&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">32</span>, <span style="background-color: #fff0f0">&quot;system_ready_s4&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">4</span>, <span style="background-color: #fff0f0">&quot;delete_LINEITEM_s0&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">5</span>, <span style="background-color: #fff0f0">&quot;delete_LINEITEM_s1&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">6</span>, <span style="background-color: #fff0f0">&quot;delete_LINEITEM_s2&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">7</span>, <span style="background-color: #fff0f0">&quot;delete_LINEITEM_s3&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">8</span>, <span style="background-color: #fff0f0">&quot;insert_PART_s0&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">9</span>, <span style="background-color: #fff0f0">&quot;insert_PART_s1&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">10</span>, <span style="background-color: #fff0f0">&quot;insert_PART_s2&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">11</span>, <span style="background-color: #fff0f0">&quot;insert_PART_s3&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">12</span>, <span style="background-color: #fff0f0">&quot;insert_PART_s4&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">13</span>, <span style="background-color: #fff0f0">&quot;delete_PART_s0&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">14</span>, <span style="background-color: #fff0f0">&quot;delete_PART_s1&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">15</span>, <span style="background-color: #fff0f0">&quot;delete_PART_s2&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">16</span>, <span style="background-color: #fff0f0">&quot;delete_PART_s3&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">17</span>, <span style="background-color: #fff0f0">&quot;delete_PART_s4&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">18</span>, <span style="background-color: #fff0f0">&quot;system_ready_s0&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">19</span>, <span style="background-color: #fff0f0">&quot;system_ready_s1&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">20</span>, <span style="background-color: #fff0f0">&quot;system_ready_s2&quot;</span>);
       <span style="color: #FF0000; background-color: #FFAAAA">#</span>endif <span style="color: #888888">// DBT_PROFILE</span>
   
     }
@@ -709,20 +594,17 @@
     <span style="color: #333399; font-weight: bold">void</span> on_insert_LINEITEM(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> lineitem_orderkey, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> lineitem_partkey, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> lineitem_suppkey, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> lineitem_linenumber, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE lineitem_quantity, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE lineitem_extendedprice, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE lineitem_discount, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE lineitem_tax, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_returnflag, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_linestatus, <span style="color: #008800; font-weight: bold">const</span> date lineitem_shipdate, <span style="color: #008800; font-weight: bold">const</span> date lineitem_commitdate, <span style="color: #008800; font-weight: bold">const</span> date lineitem_receiptdate, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_shipinstruct, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_shipmode, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_comment) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_LINEITEM&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_LINEITEM&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
-        PROMO_REVENUE_mLINEITEM1_L1_1_L1_1 <span style="color: #333333">+=</span> ((lineitem_shipdate <span style="color: #333333">&gt;=</span> c1) <span style="color: #333333">*</span> ((c2 <span style="color: #333333">&gt;</span> lineitem_shipdate) <span style="color: #333333">*</span> (PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3.getValueOrDefault(se2.modify(lineitem_partkey)) <span style="color: #333333">*</span> (lineitem_discount <span style="color: #333333">*</span> lineitem_extendedprice))));
-        PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1.addOrDelOnZero(se3.modify(lineitem_partkey),((lineitem_shipdate <span style="color: #333333">&gt;=</span> c1) <span style="color: #333333">*</span> ((c2 <span style="color: #333333">&gt;</span> lineitem_shipdate) <span style="color: #333333">*</span> (lineitem_discount <span style="color: #333333">*</span> lineitem_extendedprice))));
-        PROMO_REVENUE_mLINEITEM1_L1_1_L1_3 <span style="color: #333333">+=</span> ((lineitem_shipdate <span style="color: #333333">&gt;=</span> c1) <span style="color: #333333">*</span> ((c2 <span style="color: #333333">&gt;</span> lineitem_shipdate) <span style="color: #333333">*</span> (PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3.getValueOrDefault(se5.modify(lineitem_partkey)) <span style="color: #333333">*</span> lineitem_extendedprice)));
-        PROMO_REVENUE_mLINEITEM1_L1_1_L1_3_mPART1.addOrDelOnZero(se6.modify(lineitem_partkey),((lineitem_shipdate <span style="color: #333333">&gt;=</span> c1) <span style="color: #333333">*</span> ((c2 <span style="color: #333333">&gt;</span> lineitem_shipdate) <span style="color: #333333">*</span> lineitem_extendedprice)));
-        PROMO_REVENUE_mLINEITEM2 <span style="color: #333333">+=</span> ((lineitem_shipdate <span style="color: #333333">&gt;=</span> c1) <span style="color: #333333">*</span> ((c2 <span style="color: #333333">&gt;</span> lineitem_shipdate) <span style="color: #333333">*</span> (PROMO_REVENUE_mLINEITEM2_mLINEITEM3.getValueOrDefault(se8.modify(lineitem_partkey)) <span style="color: #333333">*</span> (lineitem_discount <span style="color: #333333">*</span> lineitem_extendedprice))));
-        PROMO_REVENUE_mLINEITEM5 <span style="color: #333333">+=</span> ((lineitem_shipdate <span style="color: #333333">&gt;=</span> c1) <span style="color: #333333">*</span> ((c2 <span style="color: #333333">&gt;</span> lineitem_shipdate) <span style="color: #333333">*</span> (PROMO_REVENUE_mLINEITEM2_mLINEITEM3.getValueOrDefault(se10.modify(lineitem_partkey)) <span style="color: #333333">*</span> lineitem_extendedprice)));
+      {  <span style="color: #333333">++</span>tN;
+        (<span style="color: #888888">/*if */</span>(lineitem_shipdate <span style="color: #333333">&gt;=</span> c1 <span style="color: #333333">&amp;&amp;</span> c2 <span style="color: #333333">&gt;</span> lineitem_shipdate) <span style="color: #333333">?</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_1 <span style="color: #333333">+=</span> (PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3.getValueOrDefault(se2.modify(lineitem_partkey)) <span style="color: #333333">*</span> (lineitem_extendedprice <span style="color: #333333">*</span> (<span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> lineitem_discount)))) <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
+        (<span style="color: #888888">/*if */</span>(lineitem_shipdate <span style="color: #333333">&gt;=</span> c1 <span style="color: #333333">&amp;&amp;</span> c2 <span style="color: #333333">&gt;</span> lineitem_shipdate) <span style="color: #333333">?</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1.addOrDelOnZero(se3.modify(lineitem_partkey),(lineitem_extendedprice <span style="color: #333333">*</span> (<span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> lineitem_discount)))) <span style="color: #333333">:</span> voidFunc());
+        (<span style="color: #888888">/*if */</span>(lineitem_shipdate <span style="color: #333333">&gt;=</span> c1 <span style="color: #333333">&amp;&amp;</span> c2 <span style="color: #333333">&gt;</span> lineitem_shipdate) <span style="color: #333333">?</span> PROMO_REVENUE_mLINEITEM2 <span style="color: #333333">+=</span> (PROMO_REVENUE_mLINEITEM2_mLINEITEM3.getValueOrDefault(se5.modify(lineitem_partkey)) <span style="color: #333333">*</span> (lineitem_extendedprice <span style="color: #333333">*</span> (<span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> lineitem_discount)))) <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
         DOUBLE_TYPE agg1 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
         DOUBLE_TYPE agg2 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
-        DOUBLE_TYPE l2 <span style="color: #333333">=</span> ((PROMO_REVENUE_mLINEITEM1_L1_1_L1_1 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>) <span style="color: #333333">+</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_3);
+        DOUBLE_TYPE l2 <span style="color: #333333">=</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_1;
         agg2 <span style="color: #333333">+=</span> Ulistmax(<span style="color: #0000DD; font-weight: bold">1L</span>,l2);
         DOUBLE_TYPE l1 <span style="color: #333333">=</span> agg2;
         agg1 <span style="color: #333333">+=</span> Udiv(l1);
-        PROMO_REVENUE <span style="color: #333333">=</span> (agg1 <span style="color: #333333">*</span> ((PROMO_REVENUE_mLINEITEM2 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #6600EE; font-weight: bold">100.0</span>) <span style="color: #333333">+</span> (PROMO_REVENUE_mLINEITEM5 <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">100.0</span>)));
+        PROMO_REVENUE <span style="color: #333333">=</span> (agg1 <span style="color: #333333">*</span> (PROMO_REVENUE_mLINEITEM2 <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">100.0</span>));
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_LINEITEM&quot;</span>)
       END_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_LINEITEM&quot;</span>)
@@ -734,20 +616,17 @@
     <span style="color: #333399; font-weight: bold">void</span> on_delete_LINEITEM(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> lineitem_orderkey, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> lineitem_partkey, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> lineitem_suppkey, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> lineitem_linenumber, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE lineitem_quantity, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE lineitem_extendedprice, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE lineitem_discount, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE lineitem_tax, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_returnflag, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_linestatus, <span style="color: #008800; font-weight: bold">const</span> date lineitem_shipdate, <span style="color: #008800; font-weight: bold">const</span> date lineitem_commitdate, <span style="color: #008800; font-weight: bold">const</span> date lineitem_receiptdate, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_shipinstruct, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_shipmode, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_comment) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_LINEITEM&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_LINEITEM&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
-        PROMO_REVENUE_mLINEITEM1_L1_1_L1_1 <span style="color: #333333">+=</span> ((lineitem_shipdate <span style="color: #333333">&gt;=</span> c1) <span style="color: #333333">*</span> ((c2 <span style="color: #333333">&gt;</span> lineitem_shipdate) <span style="color: #333333">*</span> (PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3.getValueOrDefault(se17.modify(lineitem_partkey)) <span style="color: #333333">*</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> (lineitem_discount <span style="color: #333333">*</span> lineitem_extendedprice)))));
-        PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1.addOrDelOnZero(se18.modify(lineitem_partkey),((lineitem_shipdate <span style="color: #333333">&gt;=</span> c1) <span style="color: #333333">*</span> ((c2 <span style="color: #333333">&gt;</span> lineitem_shipdate) <span style="color: #333333">*</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> (lineitem_discount <span style="color: #333333">*</span> lineitem_extendedprice)))));
-        PROMO_REVENUE_mLINEITEM1_L1_1_L1_3 <span style="color: #333333">+=</span> ((lineitem_shipdate <span style="color: #333333">&gt;=</span> c1) <span style="color: #333333">*</span> ((c2 <span style="color: #333333">&gt;</span> lineitem_shipdate) <span style="color: #333333">*</span> (PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3.getValueOrDefault(se20.modify(lineitem_partkey)) <span style="color: #333333">*</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> lineitem_extendedprice))));
-        PROMO_REVENUE_mLINEITEM1_L1_1_L1_3_mPART1.addOrDelOnZero(se21.modify(lineitem_partkey),((lineitem_shipdate <span style="color: #333333">&gt;=</span> c1) <span style="color: #333333">*</span> ((c2 <span style="color: #333333">&gt;</span> lineitem_shipdate) <span style="color: #333333">*</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> lineitem_extendedprice))));
-        PROMO_REVENUE_mLINEITEM2 <span style="color: #333333">+=</span> ((lineitem_shipdate <span style="color: #333333">&gt;=</span> c1) <span style="color: #333333">*</span> ((c2 <span style="color: #333333">&gt;</span> lineitem_shipdate) <span style="color: #333333">*</span> (PROMO_REVENUE_mLINEITEM2_mLINEITEM3.getValueOrDefault(se23.modify(lineitem_partkey)) <span style="color: #333333">*</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> (lineitem_discount <span style="color: #333333">*</span> lineitem_extendedprice)))));
-        PROMO_REVENUE_mLINEITEM5 <span style="color: #333333">+=</span> ((lineitem_shipdate <span style="color: #333333">&gt;=</span> c1) <span style="color: #333333">*</span> ((c2 <span style="color: #333333">&gt;</span> lineitem_shipdate) <span style="color: #333333">*</span> (PROMO_REVENUE_mLINEITEM2_mLINEITEM3.getValueOrDefault(se25.modify(lineitem_partkey)) <span style="color: #333333">*</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> lineitem_extendedprice))));
+      {  <span style="color: #333333">++</span>tN;
+        (<span style="color: #888888">/*if */</span>(lineitem_shipdate <span style="color: #333333">&gt;=</span> c1 <span style="color: #333333">&amp;&amp;</span> c2 <span style="color: #333333">&gt;</span> lineitem_shipdate) <span style="color: #333333">?</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_1 <span style="color: #333333">+=</span> (PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3.getValueOrDefault(se8.modify(lineitem_partkey)) <span style="color: #333333">*</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> (lineitem_extendedprice <span style="color: #333333">*</span> (<span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> lineitem_discount))))) <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
+        (<span style="color: #888888">/*if */</span>(lineitem_shipdate <span style="color: #333333">&gt;=</span> c1 <span style="color: #333333">&amp;&amp;</span> c2 <span style="color: #333333">&gt;</span> lineitem_shipdate) <span style="color: #333333">?</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1.addOrDelOnZero(se9.modify(lineitem_partkey),(<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> (lineitem_extendedprice <span style="color: #333333">*</span> (<span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> lineitem_discount))))) <span style="color: #333333">:</span> voidFunc());
+        (<span style="color: #888888">/*if */</span>(lineitem_shipdate <span style="color: #333333">&gt;=</span> c1 <span style="color: #333333">&amp;&amp;</span> c2 <span style="color: #333333">&gt;</span> lineitem_shipdate) <span style="color: #333333">?</span> PROMO_REVENUE_mLINEITEM2 <span style="color: #333333">+=</span> (PROMO_REVENUE_mLINEITEM2_mLINEITEM3.getValueOrDefault(se11.modify(lineitem_partkey)) <span style="color: #333333">*</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> (lineitem_extendedprice <span style="color: #333333">*</span> (<span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> lineitem_discount))))) <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
         DOUBLE_TYPE agg3 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
         DOUBLE_TYPE agg4 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
-        DOUBLE_TYPE l4 <span style="color: #333333">=</span> ((PROMO_REVENUE_mLINEITEM1_L1_1_L1_1 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>) <span style="color: #333333">+</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_3);
+        DOUBLE_TYPE l4 <span style="color: #333333">=</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_1;
         agg4 <span style="color: #333333">+=</span> Ulistmax(<span style="color: #0000DD; font-weight: bold">1L</span>,l4);
         DOUBLE_TYPE l3 <span style="color: #333333">=</span> agg4;
         agg3 <span style="color: #333333">+=</span> Udiv(l3);
-        PROMO_REVENUE <span style="color: #333333">=</span> (agg3 <span style="color: #333333">*</span> ((PROMO_REVENUE_mLINEITEM2 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #6600EE; font-weight: bold">100.0</span>) <span style="color: #333333">+</span> (PROMO_REVENUE_mLINEITEM5 <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">100.0</span>)));
+        PROMO_REVENUE <span style="color: #333333">=</span> (agg3 <span style="color: #333333">*</span> (PROMO_REVENUE_mLINEITEM2 <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">100.0</span>));
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_LINEITEM&quot;</span>)
       END_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_LINEITEM&quot;</span>)
@@ -759,20 +638,18 @@
     <span style="color: #333399; font-weight: bold">void</span> on_insert_PART(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> part_partkey, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_name, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_mfgr, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_brand, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_type, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> part_size, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_container, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE part_retailprice, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_comment) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_PART&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_PART&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
-        PROMO_REVENUE_mLINEITEM1_L1_1_L1_1 <span style="color: #333333">+=</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1.getValueOrDefault(se32.modify(part_partkey));
-        PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3.addOrDelOnZero(se33.modify(part_partkey),<span style="color: #0000DD; font-weight: bold">1L</span>);
-        PROMO_REVENUE_mLINEITEM1_L1_1_L1_3 <span style="color: #333333">+=</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_3_mPART1.getValueOrDefault(se35.modify(part_partkey));
-        PROMO_REVENUE_mLINEITEM2 <span style="color: #333333">+=</span> ((<span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">!=</span> Upreg_match(preg1,part_type)) <span style="color: #333333">*</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1.getValueOrDefault(se37.modify(part_partkey)));
-        PROMO_REVENUE_mLINEITEM2_mLINEITEM3.addOrDelOnZero(se38.modify(part_partkey),(<span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">!=</span> Upreg_match(preg1,part_type)));
-        PROMO_REVENUE_mLINEITEM5 <span style="color: #333333">+=</span> ((<span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">!=</span> Upreg_match(preg1,part_type)) <span style="color: #333333">*</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_3_mPART1.getValueOrDefault(se40.modify(part_partkey)));
+      {  <span style="color: #333333">++</span>tN;
+        PROMO_REVENUE_mLINEITEM1_L1_1_L1_1 <span style="color: #333333">+=</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1.getValueOrDefault(se14.modify(part_partkey));
+        PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3.addOrDelOnZero(se15.modify(part_partkey),<span style="color: #0000DD; font-weight: bold">1L</span>);
+        (<span style="color: #888888">/*if */</span>(<span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">!=</span> Upreg_match(preg1,part_type)) <span style="color: #333333">?</span> PROMO_REVENUE_mLINEITEM2 <span style="color: #333333">+=</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1.getValueOrDefault(se17.modify(part_partkey)) <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
+        (<span style="color: #888888">/*if */</span>(<span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">!=</span> Upreg_match(preg1,part_type)) <span style="color: #333333">?</span> PROMO_REVENUE_mLINEITEM2_mLINEITEM3.addOrDelOnZero(se18.modify(part_partkey),<span style="color: #0000DD; font-weight: bold">1L</span>) <span style="color: #333333">:</span> voidFunc());
         DOUBLE_TYPE agg5 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
         DOUBLE_TYPE agg6 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
-        DOUBLE_TYPE l6 <span style="color: #333333">=</span> ((PROMO_REVENUE_mLINEITEM1_L1_1_L1_1 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>) <span style="color: #333333">+</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_3);
+        DOUBLE_TYPE l6 <span style="color: #333333">=</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_1;
         agg6 <span style="color: #333333">+=</span> Ulistmax(<span style="color: #0000DD; font-weight: bold">1L</span>,l6);
         DOUBLE_TYPE l5 <span style="color: #333333">=</span> agg6;
         agg5 <span style="color: #333333">+=</span> Udiv(l5);
-        PROMO_REVENUE <span style="color: #333333">=</span> (agg5 <span style="color: #333333">*</span> ((PROMO_REVENUE_mLINEITEM2 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #6600EE; font-weight: bold">100.0</span>) <span style="color: #333333">+</span> (PROMO_REVENUE_mLINEITEM5 <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">100.0</span>)));
+        PROMO_REVENUE <span style="color: #333333">=</span> (agg5 <span style="color: #333333">*</span> (PROMO_REVENUE_mLINEITEM2 <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">100.0</span>));
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_PART&quot;</span>)
       END_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_PART&quot;</span>)
@@ -784,20 +661,18 @@
     <span style="color: #333399; font-weight: bold">void</span> on_delete_PART(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> part_partkey, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_name, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_mfgr, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_brand, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_type, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> part_size, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_container, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE part_retailprice, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_comment) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_PART&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_PART&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
-        PROMO_REVENUE_mLINEITEM1_L1_1_L1_1 <span style="color: #333333">+=</span> (PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1.getValueOrDefault(se47.modify(part_partkey)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>);
-        PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3.addOrDelOnZero(se48.modify(part_partkey),<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>);
-        PROMO_REVENUE_mLINEITEM1_L1_1_L1_3 <span style="color: #333333">+=</span> (PROMO_REVENUE_mLINEITEM1_L1_1_L1_3_mPART1.getValueOrDefault(se50.modify(part_partkey)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>);
-        PROMO_REVENUE_mLINEITEM2 <span style="color: #333333">+=</span> ((<span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">!=</span> Upreg_match(preg1,part_type)) <span style="color: #333333">*</span> (PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1.getValueOrDefault(se52.modify(part_partkey)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
-        PROMO_REVENUE_mLINEITEM2_mLINEITEM3.addOrDelOnZero(se53.modify(part_partkey),((<span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">!=</span> Upreg_match(preg1,part_type)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
-        PROMO_REVENUE_mLINEITEM5 <span style="color: #333333">+=</span> ((<span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">!=</span> Upreg_match(preg1,part_type)) <span style="color: #333333">*</span> (PROMO_REVENUE_mLINEITEM1_L1_1_L1_3_mPART1.getValueOrDefault(se55.modify(part_partkey)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
+      {  <span style="color: #333333">++</span>tN;
+        PROMO_REVENUE_mLINEITEM1_L1_1_L1_1 <span style="color: #333333">+=</span> (PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1.getValueOrDefault(se21.modify(part_partkey)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>);
+        PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3.addOrDelOnZero(se22.modify(part_partkey),<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>);
+        (<span style="color: #888888">/*if */</span>(<span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">!=</span> Upreg_match(preg1,part_type)) <span style="color: #333333">?</span> PROMO_REVENUE_mLINEITEM2 <span style="color: #333333">+=</span> (PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1.getValueOrDefault(se24.modify(part_partkey)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>) <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
+        (<span style="color: #888888">/*if */</span>(<span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">!=</span> Upreg_match(preg1,part_type)) <span style="color: #333333">?</span> PROMO_REVENUE_mLINEITEM2_mLINEITEM3.addOrDelOnZero(se25.modify(part_partkey),<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>) <span style="color: #333333">:</span> voidFunc());
         DOUBLE_TYPE agg7 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
         DOUBLE_TYPE agg8 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
-        DOUBLE_TYPE l8 <span style="color: #333333">=</span> ((PROMO_REVENUE_mLINEITEM1_L1_1_L1_1 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>) <span style="color: #333333">+</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_3);
+        DOUBLE_TYPE l8 <span style="color: #333333">=</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_1;
         agg8 <span style="color: #333333">+=</span> Ulistmax(<span style="color: #0000DD; font-weight: bold">1L</span>,l8);
         DOUBLE_TYPE l7 <span style="color: #333333">=</span> agg8;
         agg7 <span style="color: #333333">+=</span> Udiv(l7);
-        PROMO_REVENUE <span style="color: #333333">=</span> (agg7 <span style="color: #333333">*</span> ((PROMO_REVENUE_mLINEITEM2 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #6600EE; font-weight: bold">100.0</span>) <span style="color: #333333">+</span> (PROMO_REVENUE_mLINEITEM5 <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">100.0</span>)));
+        PROMO_REVENUE <span style="color: #333333">=</span> (agg7 <span style="color: #333333">*</span> (PROMO_REVENUE_mLINEITEM2 <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">100.0</span>));
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_PART&quot;</span>)
       END_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_PART&quot;</span>)
@@ -809,12 +684,10 @@
     <span style="color: #333399; font-weight: bold">void</span> on_system_ready_event() {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
-      {  <span style="color: #888888">//</span>
+      {  
         PROMO_REVENUE <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
         PROMO_REVENUE_mLINEITEM1_L1_1_L1_1 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
-        PROMO_REVENUE_mLINEITEM1_L1_1_L1_3 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
         PROMO_REVENUE_mLINEITEM2 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
-        PROMO_REVENUE_mLINEITEM5 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
       END_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
@@ -825,28 +698,18 @@
     <span style="color: #888888">/* Sample entries for avoiding recreation of temporary objects */</span>
     PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3_entry se2;
     PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1_entry se3;
-    PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3_entry se5;
-    PROMO_REVENUE_mLINEITEM1_L1_1_L1_3_mPART1_entry se6;
-    PROMO_REVENUE_mLINEITEM2_mLINEITEM3_entry se8;
-    PROMO_REVENUE_mLINEITEM2_mLINEITEM3_entry se10;
-    PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3_entry se17;
-    PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1_entry se18;
-    PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3_entry se20;
-    PROMO_REVENUE_mLINEITEM1_L1_1_L1_3_mPART1_entry se21;
-    PROMO_REVENUE_mLINEITEM2_mLINEITEM3_entry se23;
+    PROMO_REVENUE_mLINEITEM2_mLINEITEM3_entry se5;
+    PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3_entry se8;
+    PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1_entry se9;
+    PROMO_REVENUE_mLINEITEM2_mLINEITEM3_entry se11;
+    PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1_entry se14;
+    PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3_entry se15;
+    PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1_entry se17;
+    PROMO_REVENUE_mLINEITEM2_mLINEITEM3_entry se18;
+    PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1_entry se21;
+    PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3_entry se22;
+    PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1_entry se24;
     PROMO_REVENUE_mLINEITEM2_mLINEITEM3_entry se25;
-    PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1_entry se32;
-    PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3_entry se33;
-    PROMO_REVENUE_mLINEITEM1_L1_1_L1_3_mPART1_entry se35;
-    PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1_entry se37;
-    PROMO_REVENUE_mLINEITEM2_mLINEITEM3_entry se38;
-    PROMO_REVENUE_mLINEITEM1_L1_1_L1_3_mPART1_entry se40;
-    PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1_entry se47;
-    PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3_entry se48;
-    PROMO_REVENUE_mLINEITEM1_L1_1_L1_3_mPART1_entry se50;
-    PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1_entry se52;
-    PROMO_REVENUE_mLINEITEM2_mLINEITEM3_entry se53;
-    PROMO_REVENUE_mLINEITEM1_L1_1_L1_3_mPART1_entry se55;
     <span style="color: #888888">/* regex_t temporary objects */</span>
     <span style="color: #333399; font-weight: bold">regex_t</span> preg1;
   
@@ -854,11 +717,8 @@
     DOUBLE_TYPE PROMO_REVENUE_mLINEITEM1_L1_1_L1_1;
     PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1_map PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1;
     PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3_map PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3;
-    DOUBLE_TYPE PROMO_REVENUE_mLINEITEM1_L1_1_L1_3;
-    PROMO_REVENUE_mLINEITEM1_L1_1_L1_3_mPART1_map PROMO_REVENUE_mLINEITEM1_L1_1_L1_3_mPART1;
     DOUBLE_TYPE PROMO_REVENUE_mLINEITEM2;
     PROMO_REVENUE_mLINEITEM2_mLINEITEM3_map PROMO_REVENUE_mLINEITEM2_mLINEITEM3;
-    DOUBLE_TYPE PROMO_REVENUE_mLINEITEM5;
     
     <span style="color: #888888">/*const static*/</span> date c1;
     <span style="color: #888888">/*const static*/</span> date c2;
@@ -894,16 +754,18 @@
       <span style="color: #888888">/* Imports data for static tables and performs view initialization based on it. */</span>
       <span style="color: #333399; font-weight: bold">void</span> init() {
           <span style="color: #888888">//P0_PLACE_HOLDER</span>
-          table_multiplexer.init_source();
-          stream_multiplexer.init_source();
+          table_multiplexer.init_source(run_opts<span style="color: #333333">-&gt;</span>batch_size, run_opts<span style="color: #333333">-&gt;</span>parallel, <span style="color: #007020">true</span>);
+          stream_multiplexer.init_source(run_opts<span style="color: #333333">-&gt;</span>batch_size, run_opts<span style="color: #333333">-&gt;</span>parallel, <span style="color: #007020">false</span>);
           process_tables();
           data.on_system_ready_event();
           <span style="color: #888888">//P2_PLACE_HOLDER</span>
       }
   
       <span style="color: #888888">/* Saves a snapshot of the data required to obtain the results of top level queries. */</span>
-      <span style="color: #333399; font-weight: bold">snapshot_t</span> take_snapshot(){ <span style="color: #888888">//tlq_t d=(tlq_t&amp;)data; if (d.tS==0) { gettimeofday(&amp;(d.t),NULL); d.tT=((d.t).tv_sec-(d.t0).tv_sec)*1000000L+((d.t).tv_usec-(d.t0).tv_usec); } printf(&quot;SAMPLE=standard,%ld,%ld,%ld\n&quot;,d.tT,d.tN,d.tS);</span>
-          <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333399; font-weight: bold">snapshot_t</span>( <span style="color: #008800; font-weight: bold">new</span> <span style="color: #333399; font-weight: bold">tlq_t</span>((<span style="color: #333399; font-weight: bold">tlq_t</span><span style="color: #333333">&amp;</span>)data) );
+      <span style="color: #333399; font-weight: bold">snapshot_t</span> take_snapshot(){
+          <span style="color: #333399; font-weight: bold">tlq_t</span><span style="color: #333333">*</span> d <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">new</span> <span style="color: #333399; font-weight: bold">tlq_t</span>((<span style="color: #333399; font-weight: bold">tlq_t</span><span style="color: #333333">&amp;</span>)data);
+          <span style="color: #008800; font-weight: bold">if</span> (d<span style="color: #333333">-&gt;</span>tS<span style="color: #333333">==</span><span style="color: #0000DD; font-weight: bold">0</span>) { gettimeofday(<span style="color: #333333">&amp;</span>(d<span style="color: #333333">-&gt;</span>t),<span style="color: #007020">NULL</span>); d<span style="color: #333333">-&gt;</span>tT<span style="color: #333333">=</span>((d<span style="color: #333333">-&gt;</span>t).tv_sec<span style="color: #333333">-</span>(d<span style="color: #333333">-&gt;</span>t0).tv_sec)<span style="color: #333333">*</span><span style="color: #0000DD; font-weight: bold">1000000L</span><span style="color: #333333">+</span>((d<span style="color: #333333">-&gt;</span>t).tv_usec<span style="color: #333333">-</span>(d<span style="color: #333333">-&gt;</span>t0).tv_usec); } printf(<span style="background-color: #fff0f0">&quot;SAMPLE=standard,%ld,%ld,%ld</span><span style="color: #666666; font-weight: bold; background-color: #fff0f0">\n</span><span style="background-color: #fff0f0">&quot;</span>,d<span style="color: #333333">-&gt;</span>tT,d<span style="color: #333333">-&gt;</span>tN,d<span style="color: #333333">-&gt;</span>tS);
+          <span style="color: #008800; font-weight: bold">return</span> <span style="color: #0066BB; font-weight: bold">snapshot_t</span>( d );
       }
   
     <span style="color: #997700; font-weight: bold">protected:</span>

@@ -840,158 +840,7 @@
 840
 841
 842
-843
-844
-845
-846
-847
-848
-849
-850
-851
-852
-853
-854
-855
-856
-857
-858
-859
-860
-861
-862
-863
-864
-865
-866
-867
-868
-869
-870
-871
-872
-873
-874
-875
-876
-877
-878
-879
-880
-881
-882
-883
-884
-885
-886
-887
-888
-889
-890
-891
-892
-893
-894
-895
-896
-897
-898
-899
-900
-901
-902
-903
-904
-905
-906
-907
-908
-909
-910
-911
-912
-913
-914
-915
-916
-917
-918
-919
-920
-921
-922
-923
-924
-925
-926
-927
-928
-929
-930
-931
-932
-933
-934
-935
-936
-937
-938
-939
-940
-941
-942
-943
-944
-945
-946
-947
-948
-949
-950
-951
-952
-953
-954
-955
-956
-957
-958
-959
-960
-961
-962
-963
-964
-965
-966
-967
-968
-969
-970
-971
-972
-973
-974
-975
-976
-977
-978
-979
-980
-981
-982
-983
-984
-985
-986
-987
-988
-989
-990
-991
-992
-993
-994</pre></td><td><pre style="margin: 0; line-height: 125%"><span style="color: #557799">#include &quot;program_base.hpp&quot;</span>
+843</pre></td><td><pre style="margin: 0; line-height: 125%"><span style="color: #557799">#include &quot;program_base.hpp&quot;</span>
 <span style="color: #557799">#include &quot;hpds/KDouble.hpp&quot;</span>
 <span style="color: #557799">#include &quot;hash.hpp&quot;</span>
 <span style="color: #557799">#include &quot;mmap/mmap.hpp&quot;</span>
@@ -1045,13 +894,13 @@
   <span style="color: #333333">&gt;</span> QUERY18_map;
   <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>QUERY18_entry,DOUBLE_TYPE,QUERY18_mapkey01234_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_QUERY18_map_01234;
   
-  <span style="color: #008800; font-weight: bold">struct</span> QUERY18_mORDERS2_entry {
-    <span style="color: #333399; font-weight: bold">long</span> QUERY18_mORDERSORDERS_CUSTKEY; STRING_TYPE C_NAME; <span style="color: #333399; font-weight: bold">long</span> __av;  QUERY18_mORDERS2_entry<span style="color: #333333">*</span> nxt; QUERY18_mORDERS2_entry<span style="color: #333333">*</span> prv;
-    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">QUERY18_mORDERS2_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*QUERY18_mORDERSORDERS_CUSTKEY = 0L; C_NAME = &quot;&quot;; __av = 0L; */</span> }
-    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">QUERY18_mORDERS2_entry</span>(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> c1, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c2) { QUERY18_mORDERSORDERS_CUSTKEY <span style="color: #333333">=</span> c0; C_NAME <span style="color: #333333">=</span> c1; __av <span style="color: #333333">=</span> c2; }
-    QUERY18_mORDERS2_entry(<span style="color: #008800; font-weight: bold">const</span> QUERY18_mORDERS2_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> QUERY18_mORDERSORDERS_CUSTKEY( other.QUERY18_mORDERSORDERS_CUSTKEY ), C_NAME( other.C_NAME ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
-    FORCE_INLINE QUERY18_mORDERS2_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> c1) { QUERY18_mORDERSORDERS_CUSTKEY <span style="color: #333333">=</span> c0; C_NAME <span style="color: #333333">=</span> c1;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
-    FORCE_INLINE QUERY18_mORDERS2_entry<span style="color: #333333">&amp;</span> modify0(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0) { QUERY18_mORDERSORDERS_CUSTKEY <span style="color: #333333">=</span> c0;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
+  <span style="color: #008800; font-weight: bold">struct</span> QUERY18_mORDERS3_entry {
+    <span style="color: #333399; font-weight: bold">long</span> QUERY18_mORDERSORDERS_CUSTKEY; STRING_TYPE C_NAME; <span style="color: #333399; font-weight: bold">long</span> __av;  QUERY18_mORDERS3_entry<span style="color: #333333">*</span> nxt; QUERY18_mORDERS3_entry<span style="color: #333333">*</span> prv;
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">QUERY18_mORDERS3_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*QUERY18_mORDERSORDERS_CUSTKEY = 0L; C_NAME = &quot;&quot;; __av = 0L; */</span> }
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">QUERY18_mORDERS3_entry</span>(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> c1, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c2) { QUERY18_mORDERSORDERS_CUSTKEY <span style="color: #333333">=</span> c0; C_NAME <span style="color: #333333">=</span> c1; __av <span style="color: #333333">=</span> c2; }
+    QUERY18_mORDERS3_entry(<span style="color: #008800; font-weight: bold">const</span> QUERY18_mORDERS3_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> QUERY18_mORDERSORDERS_CUSTKEY( other.QUERY18_mORDERSORDERS_CUSTKEY ), C_NAME( other.C_NAME ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
+    FORCE_INLINE QUERY18_mORDERS3_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> c1) { QUERY18_mORDERSORDERS_CUSTKEY <span style="color: #333333">=</span> c0; C_NAME <span style="color: #333333">=</span> c1;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
+    FORCE_INLINE QUERY18_mORDERS3_entry<span style="color: #333333">&amp;</span> modify0(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0) { QUERY18_mORDERSORDERS_CUSTKEY <span style="color: #333333">=</span> c0;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
     <span style="color: #008800; font-weight: bold">template</span><span style="color: #333333">&lt;</span><span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Archive</span><span style="color: #333333">&gt;</span>
     <span style="color: #333399; font-weight: bold">void</span> serialize(Archive<span style="color: #333333">&amp;</span> ar, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">unsigned</span> <span style="color: #333399; font-weight: bold">int</span> version) <span style="color: #008800; font-weight: bold">const</span> 
     {
@@ -1063,35 +912,35 @@
       DBT_SERIALIZATION_NVP(ar, __av);
     }
   };
-  <span style="color: #008800; font-weight: bold">struct</span> QUERY18_mORDERS2_mapkey01_idxfn {
-    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> QUERY18_mORDERS2_entry<span style="color: #333333">&amp;</span> e) {
+  <span style="color: #008800; font-weight: bold">struct</span> QUERY18_mORDERS3_mapkey01_idxfn {
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> QUERY18_mORDERS3_entry<span style="color: #333333">&amp;</span> e) {
       <span style="color: #333399; font-weight: bold">size_t</span> h <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>;
       hash_combine(h, e.QUERY18_mORDERSORDERS_CUSTKEY);
       hash_combine(h, e.C_NAME);
       <span style="color: #008800; font-weight: bold">return</span> h;
     }
-    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> QUERY18_mORDERS2_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> QUERY18_mORDERS2_entry<span style="color: #333333">&amp;</span> y) {
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> QUERY18_mORDERS3_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> QUERY18_mORDERS3_entry<span style="color: #333333">&amp;</span> y) {
       <span style="color: #008800; font-weight: bold">return</span> x.QUERY18_mORDERSORDERS_CUSTKEY <span style="color: #333333">==</span> y.QUERY18_mORDERSORDERS_CUSTKEY <span style="color: #333333">&amp;&amp;</span> x.C_NAME <span style="color: #333333">==</span> y.C_NAME;
     }
   };
   
-  <span style="color: #008800; font-weight: bold">struct</span> QUERY18_mORDERS2_mapkey0_idxfn {
-    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> QUERY18_mORDERS2_entry<span style="color: #333333">&amp;</span> e) {
+  <span style="color: #008800; font-weight: bold">struct</span> QUERY18_mORDERS3_mapkey0_idxfn {
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> QUERY18_mORDERS3_entry<span style="color: #333333">&amp;</span> e) {
       <span style="color: #333399; font-weight: bold">size_t</span> h <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>;
       hash_combine(h, e.QUERY18_mORDERSORDERS_CUSTKEY);
       <span style="color: #008800; font-weight: bold">return</span> h;
     }
-    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> QUERY18_mORDERS2_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> QUERY18_mORDERS2_entry<span style="color: #333333">&amp;</span> y) {
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> QUERY18_mORDERS3_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> QUERY18_mORDERS3_entry<span style="color: #333333">&amp;</span> y) {
       <span style="color: #008800; font-weight: bold">return</span> x.QUERY18_mORDERSORDERS_CUSTKEY <span style="color: #333333">==</span> y.QUERY18_mORDERSORDERS_CUSTKEY;
     }
   };
   
-  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>QUERY18_mORDERS2_entry,<span style="color: #333399; font-weight: bold">long</span>,
-    HashIndex<span style="color: #333333">&lt;</span>QUERY18_mORDERS2_entry,<span style="color: #333399; font-weight: bold">long</span>,QUERY18_mORDERS2_mapkey01_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>,
-    HashIndex<span style="color: #333333">&lt;</span>QUERY18_mORDERS2_entry,<span style="color: #333399; font-weight: bold">long</span>,QUERY18_mORDERS2_mapkey0_idxfn,<span style="color: #007020">false</span><span style="color: #333333">&gt;</span>
-  <span style="color: #333333">&gt;</span> QUERY18_mORDERS2_map;
-  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>QUERY18_mORDERS2_entry,<span style="color: #333399; font-weight: bold">long</span>,QUERY18_mORDERS2_mapkey01_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_QUERY18_mORDERS2_map_01;
-  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>QUERY18_mORDERS2_entry,<span style="color: #333399; font-weight: bold">long</span>,QUERY18_mORDERS2_mapkey0_idxfn,<span style="color: #007020">false</span><span style="color: #333333">&gt;</span> HashIndex_QUERY18_mORDERS2_map_0;
+  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>QUERY18_mORDERS3_entry,<span style="color: #333399; font-weight: bold">long</span>,
+    HashIndex<span style="color: #333333">&lt;</span>QUERY18_mORDERS3_entry,<span style="color: #333399; font-weight: bold">long</span>,QUERY18_mORDERS3_mapkey01_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>,
+    HashIndex<span style="color: #333333">&lt;</span>QUERY18_mORDERS3_entry,<span style="color: #333399; font-weight: bold">long</span>,QUERY18_mORDERS3_mapkey0_idxfn,<span style="color: #007020">false</span><span style="color: #333333">&gt;</span>
+  <span style="color: #333333">&gt;</span> QUERY18_mORDERS3_map;
+  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>QUERY18_mORDERS3_entry,<span style="color: #333399; font-weight: bold">long</span>,QUERY18_mORDERS3_mapkey01_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_QUERY18_mORDERS3_map_01;
+  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>QUERY18_mORDERS3_entry,<span style="color: #333399; font-weight: bold">long</span>,QUERY18_mORDERS3_mapkey0_idxfn,<span style="color: #007020">false</span><span style="color: #333333">&gt;</span> HashIndex_QUERY18_mORDERS3_map_0;
   
   <span style="color: #008800; font-weight: bold">struct</span> QUERY18_mCUSTOMER1_entry {
     <span style="color: #333399; font-weight: bold">long</span> O_ORDERKEY; <span style="color: #333399; font-weight: bold">long</span> QUERY18_mCUSTOMERCUSTOMER_CUSTKEY; DOUBLE_TYPE O_TOTALPRICE; date O_ORDERDATE; DOUBLE_TYPE __av;  QUERY18_mCUSTOMER1_entry<span style="color: #333333">*</span> nxt; QUERY18_mCUSTOMER1_entry<span style="color: #333333">*</span> prv;
@@ -1215,12 +1064,75 @@
   <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>QUERY18_mCUSTOMER1_mLINEITEM1_entry,<span style="color: #333399; font-weight: bold">long</span>,QUERY18_mCUSTOMER1_mLINEITEM1_mapkey0_idxfn,<span style="color: #007020">false</span><span style="color: #333333">&gt;</span> HashIndex_QUERY18_mCUSTOMER1_mLINEITEM1_map_0;
   <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>QUERY18_mCUSTOMER1_mLINEITEM1_entry,<span style="color: #333399; font-weight: bold">long</span>,QUERY18_mCUSTOMER1_mLINEITEM1_mapkey1_idxfn,<span style="color: #007020">false</span><span style="color: #333333">&gt;</span> HashIndex_QUERY18_mCUSTOMER1_mLINEITEM1_map_1;
   
-  <span style="color: #008800; font-weight: bold">struct</span> QUERY18_mLINEITEM1_entry {
-    <span style="color: #333399; font-weight: bold">long</span> C_CUSTKEY; STRING_TYPE C_NAME; <span style="color: #333399; font-weight: bold">long</span> O_ORDERKEY; DOUBLE_TYPE O_TOTALPRICE; date O_ORDERDATE; DOUBLE_TYPE __av;  QUERY18_mLINEITEM1_entry<span style="color: #333333">*</span> nxt; QUERY18_mLINEITEM1_entry<span style="color: #333333">*</span> prv;
-    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">QUERY18_mLINEITEM1_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*C_CUSTKEY = 0L; C_NAME = &quot;&quot;; O_ORDERKEY = 0L; O_TOTALPRICE = 0.0; O_ORDERDATE = 00000000; __av = 0.0; */</span> }
-    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">QUERY18_mLINEITEM1_entry</span>(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> c1, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c2, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c3, <span style="color: #008800; font-weight: bold">const</span> date c4, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c5) { C_CUSTKEY <span style="color: #333333">=</span> c0; C_NAME <span style="color: #333333">=</span> c1; O_ORDERKEY <span style="color: #333333">=</span> c2; O_TOTALPRICE <span style="color: #333333">=</span> c3; O_ORDERDATE <span style="color: #333333">=</span> c4; __av <span style="color: #333333">=</span> c5; }
-    QUERY18_mLINEITEM1_entry(<span style="color: #008800; font-weight: bold">const</span> QUERY18_mLINEITEM1_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> C_CUSTKEY( other.C_CUSTKEY ), C_NAME( other.C_NAME ), O_ORDERKEY( other.O_ORDERKEY ), O_TOTALPRICE( other.O_TOTALPRICE ), O_ORDERDATE( other.O_ORDERDATE ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
-    FORCE_INLINE QUERY18_mLINEITEM1_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> c1, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c2, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c3, <span style="color: #008800; font-weight: bold">const</span> date c4) { C_CUSTKEY <span style="color: #333333">=</span> c0; C_NAME <span style="color: #333333">=</span> c1; O_ORDERKEY <span style="color: #333333">=</span> c2; O_TOTALPRICE <span style="color: #333333">=</span> c3; O_ORDERDATE <span style="color: #333333">=</span> c4;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
+  <span style="color: #008800; font-weight: bold">struct</span> QUERY18_mLINEITEM1_L1_1_entry {
+    <span style="color: #333399; font-weight: bold">long</span> QUERY18_mLINEITEMLINEITEM_ORDERKEY; DOUBLE_TYPE __av;  QUERY18_mLINEITEM1_L1_1_entry<span style="color: #333333">*</span> nxt; QUERY18_mLINEITEM1_L1_1_entry<span style="color: #333333">*</span> prv;
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">QUERY18_mLINEITEM1_L1_1_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*QUERY18_mLINEITEMLINEITEM_ORDERKEY = 0L; __av = 0.0; */</span> }
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">QUERY18_mLINEITEM1_L1_1_entry</span>(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c1) { QUERY18_mLINEITEMLINEITEM_ORDERKEY <span style="color: #333333">=</span> c0; __av <span style="color: #333333">=</span> c1; }
+    QUERY18_mLINEITEM1_L1_1_entry(<span style="color: #008800; font-weight: bold">const</span> QUERY18_mLINEITEM1_L1_1_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> QUERY18_mLINEITEMLINEITEM_ORDERKEY( other.QUERY18_mLINEITEMLINEITEM_ORDERKEY ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
+    FORCE_INLINE QUERY18_mLINEITEM1_L1_1_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0) { QUERY18_mLINEITEMLINEITEM_ORDERKEY <span style="color: #333333">=</span> c0;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
+    <span style="color: #008800; font-weight: bold">template</span><span style="color: #333333">&lt;</span><span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Archive</span><span style="color: #333333">&gt;</span>
+    <span style="color: #333399; font-weight: bold">void</span> serialize(Archive<span style="color: #333333">&amp;</span> ar, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">unsigned</span> <span style="color: #333399; font-weight: bold">int</span> version) <span style="color: #008800; font-weight: bold">const</span> 
+    {
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, QUERY18_mLINEITEMLINEITEM_ORDERKEY);
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, __av);
+    }
+  };
+  <span style="color: #008800; font-weight: bold">struct</span> QUERY18_mLINEITEM1_L1_1_mapkey0_idxfn {
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> QUERY18_mLINEITEM1_L1_1_entry<span style="color: #333333">&amp;</span> e) {
+      <span style="color: #333399; font-weight: bold">size_t</span> h <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>;
+      hash_combine(h, e.QUERY18_mLINEITEMLINEITEM_ORDERKEY);
+      <span style="color: #008800; font-weight: bold">return</span> h;
+    }
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> QUERY18_mLINEITEM1_L1_1_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> QUERY18_mLINEITEM1_L1_1_entry<span style="color: #333333">&amp;</span> y) {
+      <span style="color: #008800; font-weight: bold">return</span> x.QUERY18_mLINEITEMLINEITEM_ORDERKEY <span style="color: #333333">==</span> y.QUERY18_mLINEITEMLINEITEM_ORDERKEY;
+    }
+  };
+  
+  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>QUERY18_mLINEITEM1_L1_1_entry,DOUBLE_TYPE,
+    HashIndex<span style="color: #333333">&lt;</span>QUERY18_mLINEITEM1_L1_1_entry,DOUBLE_TYPE,QUERY18_mLINEITEM1_L1_1_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>
+  <span style="color: #333333">&gt;</span> QUERY18_mLINEITEM1_L1_1_map;
+  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>QUERY18_mLINEITEM1_L1_1_entry,DOUBLE_TYPE,QUERY18_mLINEITEM1_L1_1_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_QUERY18_mLINEITEM1_L1_1_map_0;
+  
+  <span style="color: #008800; font-weight: bold">struct</span> QUERY18_mLINEITEM2_E1_1_entry {
+    <span style="color: #333399; font-weight: bold">long</span> QUERY18_mLINEITEMLINEITEM_ORDERKEY; <span style="color: #333399; font-weight: bold">long</span> __av;  QUERY18_mLINEITEM2_E1_1_entry<span style="color: #333333">*</span> nxt; QUERY18_mLINEITEM2_E1_1_entry<span style="color: #333333">*</span> prv;
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">QUERY18_mLINEITEM2_E1_1_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*QUERY18_mLINEITEMLINEITEM_ORDERKEY = 0L; __av = 0L; */</span> }
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">QUERY18_mLINEITEM2_E1_1_entry</span>(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1) { QUERY18_mLINEITEMLINEITEM_ORDERKEY <span style="color: #333333">=</span> c0; __av <span style="color: #333333">=</span> c1; }
+    QUERY18_mLINEITEM2_E1_1_entry(<span style="color: #008800; font-weight: bold">const</span> QUERY18_mLINEITEM2_E1_1_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> QUERY18_mLINEITEMLINEITEM_ORDERKEY( other.QUERY18_mLINEITEMLINEITEM_ORDERKEY ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
+    FORCE_INLINE QUERY18_mLINEITEM2_E1_1_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0) { QUERY18_mLINEITEMLINEITEM_ORDERKEY <span style="color: #333333">=</span> c0;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
+    <span style="color: #008800; font-weight: bold">template</span><span style="color: #333333">&lt;</span><span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Archive</span><span style="color: #333333">&gt;</span>
+    <span style="color: #333399; font-weight: bold">void</span> serialize(Archive<span style="color: #333333">&amp;</span> ar, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">unsigned</span> <span style="color: #333399; font-weight: bold">int</span> version) <span style="color: #008800; font-weight: bold">const</span> 
+    {
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, QUERY18_mLINEITEMLINEITEM_ORDERKEY);
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, __av);
+    }
+  };
+  <span style="color: #008800; font-weight: bold">struct</span> QUERY18_mLINEITEM2_E1_1_mapkey0_idxfn {
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> QUERY18_mLINEITEM2_E1_1_entry<span style="color: #333333">&amp;</span> e) {
+      <span style="color: #333399; font-weight: bold">size_t</span> h <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>;
+      hash_combine(h, e.QUERY18_mLINEITEMLINEITEM_ORDERKEY);
+      <span style="color: #008800; font-weight: bold">return</span> h;
+    }
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> QUERY18_mLINEITEM2_E1_1_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> QUERY18_mLINEITEM2_E1_1_entry<span style="color: #333333">&amp;</span> y) {
+      <span style="color: #008800; font-weight: bold">return</span> x.QUERY18_mLINEITEMLINEITEM_ORDERKEY <span style="color: #333333">==</span> y.QUERY18_mLINEITEMLINEITEM_ORDERKEY;
+    }
+  };
+  
+  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>QUERY18_mLINEITEM2_E1_1_entry,<span style="color: #333399; font-weight: bold">long</span>,
+    HashIndex<span style="color: #333333">&lt;</span>QUERY18_mLINEITEM2_E1_1_entry,<span style="color: #333399; font-weight: bold">long</span>,QUERY18_mLINEITEM2_E1_1_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>
+  <span style="color: #333333">&gt;</span> QUERY18_mLINEITEM2_E1_1_map;
+  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>QUERY18_mLINEITEM2_E1_1_entry,<span style="color: #333399; font-weight: bold">long</span>,QUERY18_mLINEITEM2_E1_1_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_QUERY18_mLINEITEM2_E1_1_map_0;
+  
+  <span style="color: #008800; font-weight: bold">struct</span> QUERY18_mLINEITEM3_entry {
+    <span style="color: #333399; font-weight: bold">long</span> C_CUSTKEY; STRING_TYPE C_NAME; <span style="color: #333399; font-weight: bold">long</span> QUERY18_mLINEITEMLINEITEM_ORDERKEY; DOUBLE_TYPE O_TOTALPRICE; date O_ORDERDATE; <span style="color: #333399; font-weight: bold">long</span> __av;  QUERY18_mLINEITEM3_entry<span style="color: #333333">*</span> nxt; QUERY18_mLINEITEM3_entry<span style="color: #333333">*</span> prv;
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">QUERY18_mLINEITEM3_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*C_CUSTKEY = 0L; C_NAME = &quot;&quot;; QUERY18_mLINEITEMLINEITEM_ORDERKEY = 0L; O_TOTALPRICE = 0.0; O_ORDERDATE = 00000000; __av = 0L; */</span> }
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">QUERY18_mLINEITEM3_entry</span>(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> c1, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c2, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c3, <span style="color: #008800; font-weight: bold">const</span> date c4, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c5) { C_CUSTKEY <span style="color: #333333">=</span> c0; C_NAME <span style="color: #333333">=</span> c1; QUERY18_mLINEITEMLINEITEM_ORDERKEY <span style="color: #333333">=</span> c2; O_TOTALPRICE <span style="color: #333333">=</span> c3; O_ORDERDATE <span style="color: #333333">=</span> c4; __av <span style="color: #333333">=</span> c5; }
+    QUERY18_mLINEITEM3_entry(<span style="color: #008800; font-weight: bold">const</span> QUERY18_mLINEITEM3_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> C_CUSTKEY( other.C_CUSTKEY ), C_NAME( other.C_NAME ), QUERY18_mLINEITEMLINEITEM_ORDERKEY( other.QUERY18_mLINEITEMLINEITEM_ORDERKEY ), O_TOTALPRICE( other.O_TOTALPRICE ), O_ORDERDATE( other.O_ORDERDATE ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
+    FORCE_INLINE QUERY18_mLINEITEM3_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> c1, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c2, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c3, <span style="color: #008800; font-weight: bold">const</span> date c4) { C_CUSTKEY <span style="color: #333333">=</span> c0; C_NAME <span style="color: #333333">=</span> c1; QUERY18_mLINEITEMLINEITEM_ORDERKEY <span style="color: #333333">=</span> c2; O_TOTALPRICE <span style="color: #333333">=</span> c3; O_ORDERDATE <span style="color: #333333">=</span> c4;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
+    FORCE_INLINE QUERY18_mLINEITEM3_entry<span style="color: #333333">&amp;</span> modify2(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c2) { QUERY18_mLINEITEMLINEITEM_ORDERKEY <span style="color: #333333">=</span> c2;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
     <span style="color: #008800; font-weight: bold">template</span><span style="color: #333333">&lt;</span><span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Archive</span><span style="color: #333333">&gt;</span>
     <span style="color: #333399; font-weight: bold">void</span> serialize(Archive<span style="color: #333333">&amp;</span> ar, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">unsigned</span> <span style="color: #333399; font-weight: bold">int</span> version) <span style="color: #008800; font-weight: bold">const</span> 
     {
@@ -1229,7 +1141,7 @@
       ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
       DBT_SERIALIZATION_NVP(ar, C_NAME);
       ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
-      DBT_SERIALIZATION_NVP(ar, O_ORDERKEY);
+      DBT_SERIALIZATION_NVP(ar, QUERY18_mLINEITEMLINEITEM_ORDERKEY);
       ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
       DBT_SERIALIZATION_NVP(ar, O_TOTALPRICE);
       ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
@@ -1238,144 +1150,38 @@
       DBT_SERIALIZATION_NVP(ar, __av);
     }
   };
-  <span style="color: #008800; font-weight: bold">struct</span> QUERY18_mLINEITEM1_mapkey01234_idxfn {
-    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> QUERY18_mLINEITEM1_entry<span style="color: #333333">&amp;</span> e) {
+  <span style="color: #008800; font-weight: bold">struct</span> QUERY18_mLINEITEM3_mapkey01234_idxfn {
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> QUERY18_mLINEITEM3_entry<span style="color: #333333">&amp;</span> e) {
       <span style="color: #333399; font-weight: bold">size_t</span> h <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>;
       hash_combine(h, e.C_CUSTKEY);
       hash_combine(h, e.C_NAME);
-      hash_combine(h, e.O_ORDERKEY);
+      hash_combine(h, e.QUERY18_mLINEITEMLINEITEM_ORDERKEY);
       hash_combine(h, e.O_TOTALPRICE);
       hash_combine(h, e.O_ORDERDATE);
       <span style="color: #008800; font-weight: bold">return</span> h;
     }
-    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> QUERY18_mLINEITEM1_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> QUERY18_mLINEITEM1_entry<span style="color: #333333">&amp;</span> y) {
-      <span style="color: #008800; font-weight: bold">return</span> x.C_CUSTKEY <span style="color: #333333">==</span> y.C_CUSTKEY <span style="color: #333333">&amp;&amp;</span> x.C_NAME <span style="color: #333333">==</span> y.C_NAME <span style="color: #333333">&amp;&amp;</span> x.O_ORDERKEY <span style="color: #333333">==</span> y.O_ORDERKEY <span style="color: #333333">&amp;&amp;</span> x.O_TOTALPRICE <span style="color: #333333">==</span> y.O_TOTALPRICE <span style="color: #333333">&amp;&amp;</span> x.O_ORDERDATE <span style="color: #333333">==</span> y.O_ORDERDATE;
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> QUERY18_mLINEITEM3_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> QUERY18_mLINEITEM3_entry<span style="color: #333333">&amp;</span> y) {
+      <span style="color: #008800; font-weight: bold">return</span> x.C_CUSTKEY <span style="color: #333333">==</span> y.C_CUSTKEY <span style="color: #333333">&amp;&amp;</span> x.C_NAME <span style="color: #333333">==</span> y.C_NAME <span style="color: #333333">&amp;&amp;</span> x.QUERY18_mLINEITEMLINEITEM_ORDERKEY <span style="color: #333333">==</span> y.QUERY18_mLINEITEMLINEITEM_ORDERKEY <span style="color: #333333">&amp;&amp;</span> x.O_TOTALPRICE <span style="color: #333333">==</span> y.O_TOTALPRICE <span style="color: #333333">&amp;&amp;</span> x.O_ORDERDATE <span style="color: #333333">==</span> y.O_ORDERDATE;
     }
   };
   
-  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>QUERY18_mLINEITEM1_entry,DOUBLE_TYPE,
-    HashIndex<span style="color: #333333">&lt;</span>QUERY18_mLINEITEM1_entry,DOUBLE_TYPE,QUERY18_mLINEITEM1_mapkey01234_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>
-  <span style="color: #333333">&gt;</span> QUERY18_mLINEITEM1_map;
-  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>QUERY18_mLINEITEM1_entry,DOUBLE_TYPE,QUERY18_mLINEITEM1_mapkey01234_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_QUERY18_mLINEITEM1_map_01234;
-  
-  <span style="color: #008800; font-weight: bold">struct</span> QUERY18_mLINEITEM1_E1_1_L1_1_entry {
-    <span style="color: #333399; font-weight: bold">long</span> O_ORDERKEY; DOUBLE_TYPE __av;  QUERY18_mLINEITEM1_E1_1_L1_1_entry<span style="color: #333333">*</span> nxt; QUERY18_mLINEITEM1_E1_1_L1_1_entry<span style="color: #333333">*</span> prv;
-    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">QUERY18_mLINEITEM1_E1_1_L1_1_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*O_ORDERKEY = 0L; __av = 0.0; */</span> }
-    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">QUERY18_mLINEITEM1_E1_1_L1_1_entry</span>(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c1) { O_ORDERKEY <span style="color: #333333">=</span> c0; __av <span style="color: #333333">=</span> c1; }
-    QUERY18_mLINEITEM1_E1_1_L1_1_entry(<span style="color: #008800; font-weight: bold">const</span> QUERY18_mLINEITEM1_E1_1_L1_1_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> O_ORDERKEY( other.O_ORDERKEY ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
-    FORCE_INLINE QUERY18_mLINEITEM1_E1_1_L1_1_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0) { O_ORDERKEY <span style="color: #333333">=</span> c0;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
-    <span style="color: #008800; font-weight: bold">template</span><span style="color: #333333">&lt;</span><span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Archive</span><span style="color: #333333">&gt;</span>
-    <span style="color: #333399; font-weight: bold">void</span> serialize(Archive<span style="color: #333333">&amp;</span> ar, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">unsigned</span> <span style="color: #333399; font-weight: bold">int</span> version) <span style="color: #008800; font-weight: bold">const</span> 
-    {
-      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
-      DBT_SERIALIZATION_NVP(ar, O_ORDERKEY);
-      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
-      DBT_SERIALIZATION_NVP(ar, __av);
-    }
-  };
-  <span style="color: #008800; font-weight: bold">struct</span> QUERY18_mLINEITEM1_E1_1_L1_1_mapkey0_idxfn {
-    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> QUERY18_mLINEITEM1_E1_1_L1_1_entry<span style="color: #333333">&amp;</span> e) {
+  <span style="color: #008800; font-weight: bold">struct</span> QUERY18_mLINEITEM3_mapkey2_idxfn {
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> QUERY18_mLINEITEM3_entry<span style="color: #333333">&amp;</span> e) {
       <span style="color: #333399; font-weight: bold">size_t</span> h <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>;
-      hash_combine(h, e.O_ORDERKEY);
+      hash_combine(h, e.QUERY18_mLINEITEMLINEITEM_ORDERKEY);
       <span style="color: #008800; font-weight: bold">return</span> h;
     }
-    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> QUERY18_mLINEITEM1_E1_1_L1_1_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> QUERY18_mLINEITEM1_E1_1_L1_1_entry<span style="color: #333333">&amp;</span> y) {
-      <span style="color: #008800; font-weight: bold">return</span> x.O_ORDERKEY <span style="color: #333333">==</span> y.O_ORDERKEY;
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> QUERY18_mLINEITEM3_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> QUERY18_mLINEITEM3_entry<span style="color: #333333">&amp;</span> y) {
+      <span style="color: #008800; font-weight: bold">return</span> x.QUERY18_mLINEITEMLINEITEM_ORDERKEY <span style="color: #333333">==</span> y.QUERY18_mLINEITEMLINEITEM_ORDERKEY;
     }
   };
   
-  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>QUERY18_mLINEITEM1_E1_1_L1_1_entry,DOUBLE_TYPE,
-    HashIndex<span style="color: #333333">&lt;</span>QUERY18_mLINEITEM1_E1_1_L1_1_entry,DOUBLE_TYPE,QUERY18_mLINEITEM1_E1_1_L1_1_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>
-  <span style="color: #333333">&gt;</span> QUERY18_mLINEITEM1_E1_1_L1_1_map;
-  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>QUERY18_mLINEITEM1_E1_1_L1_1_entry,DOUBLE_TYPE,QUERY18_mLINEITEM1_E1_1_L1_1_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_QUERY18_mLINEITEM1_E1_1_L1_1_map_0;
-  
-  <span style="color: #008800; font-weight: bold">struct</span> QUERY18_mLINEITEM1_E1_2_E1_1_entry {
-    <span style="color: #333399; font-weight: bold">long</span> O_ORDERKEY; <span style="color: #333399; font-weight: bold">long</span> __av;  QUERY18_mLINEITEM1_E1_2_E1_1_entry<span style="color: #333333">*</span> nxt; QUERY18_mLINEITEM1_E1_2_E1_1_entry<span style="color: #333333">*</span> prv;
-    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">QUERY18_mLINEITEM1_E1_2_E1_1_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*O_ORDERKEY = 0L; __av = 0L; */</span> }
-    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">QUERY18_mLINEITEM1_E1_2_E1_1_entry</span>(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1) { O_ORDERKEY <span style="color: #333333">=</span> c0; __av <span style="color: #333333">=</span> c1; }
-    QUERY18_mLINEITEM1_E1_2_E1_1_entry(<span style="color: #008800; font-weight: bold">const</span> QUERY18_mLINEITEM1_E1_2_E1_1_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> O_ORDERKEY( other.O_ORDERKEY ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
-    FORCE_INLINE QUERY18_mLINEITEM1_E1_2_E1_1_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0) { O_ORDERKEY <span style="color: #333333">=</span> c0;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
-    <span style="color: #008800; font-weight: bold">template</span><span style="color: #333333">&lt;</span><span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Archive</span><span style="color: #333333">&gt;</span>
-    <span style="color: #333399; font-weight: bold">void</span> serialize(Archive<span style="color: #333333">&amp;</span> ar, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">unsigned</span> <span style="color: #333399; font-weight: bold">int</span> version) <span style="color: #008800; font-weight: bold">const</span> 
-    {
-      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
-      DBT_SERIALIZATION_NVP(ar, O_ORDERKEY);
-      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
-      DBT_SERIALIZATION_NVP(ar, __av);
-    }
-  };
-  <span style="color: #008800; font-weight: bold">struct</span> QUERY18_mLINEITEM1_E1_2_E1_1_mapkey0_idxfn {
-    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> QUERY18_mLINEITEM1_E1_2_E1_1_entry<span style="color: #333333">&amp;</span> e) {
-      <span style="color: #333399; font-weight: bold">size_t</span> h <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>;
-      hash_combine(h, e.O_ORDERKEY);
-      <span style="color: #008800; font-weight: bold">return</span> h;
-    }
-    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> QUERY18_mLINEITEM1_E1_2_E1_1_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> QUERY18_mLINEITEM1_E1_2_E1_1_entry<span style="color: #333333">&amp;</span> y) {
-      <span style="color: #008800; font-weight: bold">return</span> x.O_ORDERKEY <span style="color: #333333">==</span> y.O_ORDERKEY;
-    }
-  };
-  
-  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>QUERY18_mLINEITEM1_E1_2_E1_1_entry,<span style="color: #333399; font-weight: bold">long</span>,
-    HashIndex<span style="color: #333333">&lt;</span>QUERY18_mLINEITEM1_E1_2_E1_1_entry,<span style="color: #333399; font-weight: bold">long</span>,QUERY18_mLINEITEM1_E1_2_E1_1_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>
-  <span style="color: #333333">&gt;</span> QUERY18_mLINEITEM1_E1_2_E1_1_map;
-  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>QUERY18_mLINEITEM1_E1_2_E1_1_entry,<span style="color: #333399; font-weight: bold">long</span>,QUERY18_mLINEITEM1_E1_2_E1_1_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_QUERY18_mLINEITEM1_E1_2_E1_1_map_0;
-  
-  <span style="color: #008800; font-weight: bold">struct</span> QUERY18_mLINEITEM4_entry {
-    <span style="color: #333399; font-weight: bold">long</span> C_CUSTKEY; STRING_TYPE C_NAME; <span style="color: #333399; font-weight: bold">long</span> O_ORDERKEY; DOUBLE_TYPE O_TOTALPRICE; date O_ORDERDATE; <span style="color: #333399; font-weight: bold">long</span> __av;  QUERY18_mLINEITEM4_entry<span style="color: #333333">*</span> nxt; QUERY18_mLINEITEM4_entry<span style="color: #333333">*</span> prv;
-    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">QUERY18_mLINEITEM4_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*C_CUSTKEY = 0L; C_NAME = &quot;&quot;; O_ORDERKEY = 0L; O_TOTALPRICE = 0.0; O_ORDERDATE = 00000000; __av = 0L; */</span> }
-    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">QUERY18_mLINEITEM4_entry</span>(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> c1, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c2, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c3, <span style="color: #008800; font-weight: bold">const</span> date c4, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c5) { C_CUSTKEY <span style="color: #333333">=</span> c0; C_NAME <span style="color: #333333">=</span> c1; O_ORDERKEY <span style="color: #333333">=</span> c2; O_TOTALPRICE <span style="color: #333333">=</span> c3; O_ORDERDATE <span style="color: #333333">=</span> c4; __av <span style="color: #333333">=</span> c5; }
-    QUERY18_mLINEITEM4_entry(<span style="color: #008800; font-weight: bold">const</span> QUERY18_mLINEITEM4_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> C_CUSTKEY( other.C_CUSTKEY ), C_NAME( other.C_NAME ), O_ORDERKEY( other.O_ORDERKEY ), O_TOTALPRICE( other.O_TOTALPRICE ), O_ORDERDATE( other.O_ORDERDATE ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
-    FORCE_INLINE QUERY18_mLINEITEM4_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> c1, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c2, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c3, <span style="color: #008800; font-weight: bold">const</span> date c4) { C_CUSTKEY <span style="color: #333333">=</span> c0; C_NAME <span style="color: #333333">=</span> c1; O_ORDERKEY <span style="color: #333333">=</span> c2; O_TOTALPRICE <span style="color: #333333">=</span> c3; O_ORDERDATE <span style="color: #333333">=</span> c4;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
-    FORCE_INLINE QUERY18_mLINEITEM4_entry<span style="color: #333333">&amp;</span> modify2(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c2) { O_ORDERKEY <span style="color: #333333">=</span> c2;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
-    <span style="color: #008800; font-weight: bold">template</span><span style="color: #333333">&lt;</span><span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Archive</span><span style="color: #333333">&gt;</span>
-    <span style="color: #333399; font-weight: bold">void</span> serialize(Archive<span style="color: #333333">&amp;</span> ar, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">unsigned</span> <span style="color: #333399; font-weight: bold">int</span> version) <span style="color: #008800; font-weight: bold">const</span> 
-    {
-      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
-      DBT_SERIALIZATION_NVP(ar, C_CUSTKEY);
-      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
-      DBT_SERIALIZATION_NVP(ar, C_NAME);
-      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
-      DBT_SERIALIZATION_NVP(ar, O_ORDERKEY);
-      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
-      DBT_SERIALIZATION_NVP(ar, O_TOTALPRICE);
-      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
-      DBT_SERIALIZATION_NVP(ar, O_ORDERDATE);
-      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
-      DBT_SERIALIZATION_NVP(ar, __av);
-    }
-  };
-  <span style="color: #008800; font-weight: bold">struct</span> QUERY18_mLINEITEM4_mapkey01234_idxfn {
-    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> QUERY18_mLINEITEM4_entry<span style="color: #333333">&amp;</span> e) {
-      <span style="color: #333399; font-weight: bold">size_t</span> h <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>;
-      hash_combine(h, e.C_CUSTKEY);
-      hash_combine(h, e.C_NAME);
-      hash_combine(h, e.O_ORDERKEY);
-      hash_combine(h, e.O_TOTALPRICE);
-      hash_combine(h, e.O_ORDERDATE);
-      <span style="color: #008800; font-weight: bold">return</span> h;
-    }
-    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> QUERY18_mLINEITEM4_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> QUERY18_mLINEITEM4_entry<span style="color: #333333">&amp;</span> y) {
-      <span style="color: #008800; font-weight: bold">return</span> x.C_CUSTKEY <span style="color: #333333">==</span> y.C_CUSTKEY <span style="color: #333333">&amp;&amp;</span> x.C_NAME <span style="color: #333333">==</span> y.C_NAME <span style="color: #333333">&amp;&amp;</span> x.O_ORDERKEY <span style="color: #333333">==</span> y.O_ORDERKEY <span style="color: #333333">&amp;&amp;</span> x.O_TOTALPRICE <span style="color: #333333">==</span> y.O_TOTALPRICE <span style="color: #333333">&amp;&amp;</span> x.O_ORDERDATE <span style="color: #333333">==</span> y.O_ORDERDATE;
-    }
-  };
-  
-  <span style="color: #008800; font-weight: bold">struct</span> QUERY18_mLINEITEM4_mapkey2_idxfn {
-    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> QUERY18_mLINEITEM4_entry<span style="color: #333333">&amp;</span> e) {
-      <span style="color: #333399; font-weight: bold">size_t</span> h <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>;
-      hash_combine(h, e.O_ORDERKEY);
-      <span style="color: #008800; font-weight: bold">return</span> h;
-    }
-    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> QUERY18_mLINEITEM4_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> QUERY18_mLINEITEM4_entry<span style="color: #333333">&amp;</span> y) {
-      <span style="color: #008800; font-weight: bold">return</span> x.O_ORDERKEY <span style="color: #333333">==</span> y.O_ORDERKEY;
-    }
-  };
-  
-  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>QUERY18_mLINEITEM4_entry,<span style="color: #333399; font-weight: bold">long</span>,
-    HashIndex<span style="color: #333333">&lt;</span>QUERY18_mLINEITEM4_entry,<span style="color: #333399; font-weight: bold">long</span>,QUERY18_mLINEITEM4_mapkey01234_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>,
-    HashIndex<span style="color: #333333">&lt;</span>QUERY18_mLINEITEM4_entry,<span style="color: #333399; font-weight: bold">long</span>,QUERY18_mLINEITEM4_mapkey2_idxfn,<span style="color: #007020">false</span><span style="color: #333333">&gt;</span>
-  <span style="color: #333333">&gt;</span> QUERY18_mLINEITEM4_map;
-  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>QUERY18_mLINEITEM4_entry,<span style="color: #333399; font-weight: bold">long</span>,QUERY18_mLINEITEM4_mapkey01234_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_QUERY18_mLINEITEM4_map_01234;
-  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>QUERY18_mLINEITEM4_entry,<span style="color: #333399; font-weight: bold">long</span>,QUERY18_mLINEITEM4_mapkey2_idxfn,<span style="color: #007020">false</span><span style="color: #333333">&gt;</span> HashIndex_QUERY18_mLINEITEM4_map_2;
+  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>QUERY18_mLINEITEM3_entry,<span style="color: #333399; font-weight: bold">long</span>,
+    HashIndex<span style="color: #333333">&lt;</span>QUERY18_mLINEITEM3_entry,<span style="color: #333399; font-weight: bold">long</span>,QUERY18_mLINEITEM3_mapkey01234_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>,
+    HashIndex<span style="color: #333333">&lt;</span>QUERY18_mLINEITEM3_entry,<span style="color: #333399; font-weight: bold">long</span>,QUERY18_mLINEITEM3_mapkey2_idxfn,<span style="color: #007020">false</span><span style="color: #333333">&gt;</span>
+  <span style="color: #333333">&gt;</span> QUERY18_mLINEITEM3_map;
+  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>QUERY18_mLINEITEM3_entry,<span style="color: #333399; font-weight: bold">long</span>,QUERY18_mLINEITEM3_mapkey01234_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_QUERY18_mLINEITEM3_map_01234;
+  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>QUERY18_mLINEITEM3_entry,<span style="color: #333399; font-weight: bold">long</span>,QUERY18_mLINEITEM3_mapkey2_idxfn,<span style="color: #007020">false</span><span style="color: #333333">&gt;</span> HashIndex_QUERY18_mLINEITEM3_map_2;
   
   
   
@@ -1422,13 +1228,12 @@
     <span style="color: #333399; font-weight: bold">void</span> register_data(ProgramBase<span style="color: #333333">&amp;</span> pb) {
   
       pb.add_map<span style="color: #333333">&lt;</span>QUERY18_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;QUERY18&quot;</span>, QUERY18 );
-      pb.add_map<span style="color: #333333">&lt;</span>QUERY18_mORDERS2_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;QUERY18_mORDERS2&quot;</span>, QUERY18_mORDERS2 );
+      pb.add_map<span style="color: #333333">&lt;</span>QUERY18_mORDERS3_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;QUERY18_mORDERS3&quot;</span>, QUERY18_mORDERS3 );
       pb.add_map<span style="color: #333333">&lt;</span>QUERY18_mCUSTOMER1_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;QUERY18_mCUSTOMER1&quot;</span>, QUERY18_mCUSTOMER1 );
       pb.add_map<span style="color: #333333">&lt;</span>QUERY18_mCUSTOMER1_mLINEITEM1_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;QUERY18_mCUSTOMER1_mLINEITEM1&quot;</span>, QUERY18_mCUSTOMER1_mLINEITEM1 );
-      pb.add_map<span style="color: #333333">&lt;</span>QUERY18_mLINEITEM1_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;QUERY18_mLINEITEM1&quot;</span>, QUERY18_mLINEITEM1 );
-      pb.add_map<span style="color: #333333">&lt;</span>QUERY18_mLINEITEM1_E1_1_L1_1_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;QUERY18_mLINEITEM1_E1_1_L1_1&quot;</span>, QUERY18_mLINEITEM1_E1_1_L1_1 );
-      pb.add_map<span style="color: #333333">&lt;</span>QUERY18_mLINEITEM1_E1_2_E1_1_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;QUERY18_mLINEITEM1_E1_2_E1_1&quot;</span>, QUERY18_mLINEITEM1_E1_2_E1_1 );
-      pb.add_map<span style="color: #333333">&lt;</span>QUERY18_mLINEITEM4_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;QUERY18_mLINEITEM4&quot;</span>, QUERY18_mLINEITEM4 );
+      pb.add_map<span style="color: #333333">&lt;</span>QUERY18_mLINEITEM1_L1_1_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;QUERY18_mLINEITEM1_L1_1&quot;</span>, QUERY18_mLINEITEM1_L1_1 );
+      pb.add_map<span style="color: #333333">&lt;</span>QUERY18_mLINEITEM2_E1_1_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;QUERY18_mLINEITEM2_E1_1&quot;</span>, QUERY18_mLINEITEM2_E1_1 );
+      pb.add_map<span style="color: #333333">&lt;</span>QUERY18_mLINEITEM3_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;QUERY18_mLINEITEM3&quot;</span>, QUERY18_mLINEITEM3 );
   
       pb.add_relation(<span style="background-color: #fff0f0">&quot;LINEITEM&quot;</span>);
       pb.add_relation(<span style="background-color: #fff0f0">&quot;ORDERS&quot;</span>);
@@ -1450,30 +1255,24 @@
       exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">1</span>, <span style="background-color: #fff0f0">&quot;insert_LINEITEM_s1&quot;</span>);
       exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">2</span>, <span style="background-color: #fff0f0">&quot;insert_LINEITEM_s2&quot;</span>);
       exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">3</span>, <span style="background-color: #fff0f0">&quot;insert_LINEITEM_s3&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">4</span>, <span style="background-color: #fff0f0">&quot;insert_LINEITEM_s4&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">5</span>, <span style="background-color: #fff0f0">&quot;delete_LINEITEM_s0&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">6</span>, <span style="background-color: #fff0f0">&quot;delete_LINEITEM_s1&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">7</span>, <span style="background-color: #fff0f0">&quot;delete_LINEITEM_s2&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">8</span>, <span style="background-color: #fff0f0">&quot;delete_LINEITEM_s3&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">9</span>, <span style="background-color: #fff0f0">&quot;delete_LINEITEM_s4&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">10</span>, <span style="background-color: #fff0f0">&quot;insert_ORDERS_s0&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">11</span>, <span style="background-color: #fff0f0">&quot;insert_ORDERS_s1&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">12</span>, <span style="background-color: #fff0f0">&quot;insert_ORDERS_s2&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">13</span>, <span style="background-color: #fff0f0">&quot;insert_ORDERS_s3&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">14</span>, <span style="background-color: #fff0f0">&quot;insert_ORDERS_s4&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">15</span>, <span style="background-color: #fff0f0">&quot;delete_ORDERS_s0&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">16</span>, <span style="background-color: #fff0f0">&quot;delete_ORDERS_s1&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">17</span>, <span style="background-color: #fff0f0">&quot;delete_ORDERS_s2&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">18</span>, <span style="background-color: #fff0f0">&quot;delete_ORDERS_s3&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">19</span>, <span style="background-color: #fff0f0">&quot;delete_ORDERS_s4&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">20</span>, <span style="background-color: #fff0f0">&quot;insert_CUSTOMER_s0&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">21</span>, <span style="background-color: #fff0f0">&quot;insert_CUSTOMER_s1&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">22</span>, <span style="background-color: #fff0f0">&quot;insert_CUSTOMER_s2&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">23</span>, <span style="background-color: #fff0f0">&quot;insert_CUSTOMER_s3&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">24</span>, <span style="background-color: #fff0f0">&quot;delete_CUSTOMER_s0&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">25</span>, <span style="background-color: #fff0f0">&quot;delete_CUSTOMER_s1&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">26</span>, <span style="background-color: #fff0f0">&quot;delete_CUSTOMER_s2&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">27</span>, <span style="background-color: #fff0f0">&quot;delete_CUSTOMER_s3&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">4</span>, <span style="background-color: #fff0f0">&quot;delete_LINEITEM_s0&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">5</span>, <span style="background-color: #fff0f0">&quot;delete_LINEITEM_s1&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">6</span>, <span style="background-color: #fff0f0">&quot;delete_LINEITEM_s2&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">7</span>, <span style="background-color: #fff0f0">&quot;delete_LINEITEM_s3&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">8</span>, <span style="background-color: #fff0f0">&quot;insert_ORDERS_s0&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">9</span>, <span style="background-color: #fff0f0">&quot;insert_ORDERS_s1&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">10</span>, <span style="background-color: #fff0f0">&quot;insert_ORDERS_s2&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">11</span>, <span style="background-color: #fff0f0">&quot;insert_ORDERS_s3&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">12</span>, <span style="background-color: #fff0f0">&quot;delete_ORDERS_s0&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">13</span>, <span style="background-color: #fff0f0">&quot;delete_ORDERS_s1&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">14</span>, <span style="background-color: #fff0f0">&quot;delete_ORDERS_s2&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">15</span>, <span style="background-color: #fff0f0">&quot;delete_ORDERS_s3&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">16</span>, <span style="background-color: #fff0f0">&quot;insert_CUSTOMER_s0&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">17</span>, <span style="background-color: #fff0f0">&quot;insert_CUSTOMER_s1&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">18</span>, <span style="background-color: #fff0f0">&quot;insert_CUSTOMER_s2&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">19</span>, <span style="background-color: #fff0f0">&quot;delete_CUSTOMER_s0&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">20</span>, <span style="background-color: #fff0f0">&quot;delete_CUSTOMER_s1&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">21</span>, <span style="background-color: #fff0f0">&quot;delete_CUSTOMER_s2&quot;</span>);
       <span style="color: #FF0000; background-color: #FFAAAA">#</span>endif <span style="color: #888888">// DBT_PROFILE</span>
   
     }
@@ -1485,26 +1284,26 @@
     <span style="color: #333399; font-weight: bold">void</span> on_insert_LINEITEM(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> lineitem_orderkey, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> lineitem_partkey, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> lineitem_suppkey, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> lineitem_linenumber, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE lineitem_quantity, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE lineitem_extendedprice, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE lineitem_discount, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE lineitem_tax, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_returnflag, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_linestatus, <span style="color: #008800; font-weight: bold">const</span> date lineitem_shipdate, <span style="color: #008800; font-weight: bold">const</span> date lineitem_commitdate, <span style="color: #008800; font-weight: bold">const</span> date lineitem_receiptdate, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_shipinstruct, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_shipmode, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_comment) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_LINEITEM&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_LINEITEM&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
+      {  <span style="color: #333333">++</span>tN;
         { <span style="color: #888888">//slice</span>
-          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h1 <span style="color: #333333">=</span> QUERY18_mLINEITEM4_mapkey2_idxfn<span style="color: #333333">::</span>hash(se8.modify2(lineitem_orderkey));
-          <span style="color: #008800; font-weight: bold">const</span> HashIndex_QUERY18_mLINEITEM4_map_2<span style="color: #333333">*</span> i1 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_QUERY18_mLINEITEM4_map_2<span style="color: #333333">*&gt;</span>(QUERY18_mLINEITEM4.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
-          HashIndex_QUERY18_mLINEITEM4_map_2<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n1 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i1<span style="color: #333333">-&gt;</span>buckets_[h1 <span style="color: #333333">%</span> i1<span style="color: #333333">-&gt;</span>size_]);
-          QUERY18_mLINEITEM4_entry<span style="color: #333333">*</span> e1;
-          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e1<span style="color: #333333">=</span>n1<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h1 <span style="color: #333333">==</span> n1<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> QUERY18_mLINEITEM4_mapkey2_idxfn<span style="color: #333333">::</span>equals(se8, <span style="color: #333333">*</span>e1)) {
+          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h1 <span style="color: #333333">=</span> QUERY18_mLINEITEM3_mapkey2_idxfn<span style="color: #333333">::</span>hash(se8.modify2(lineitem_orderkey));
+          <span style="color: #008800; font-weight: bold">const</span> HashIndex_QUERY18_mLINEITEM3_map_2<span style="color: #333333">*</span> i1 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_QUERY18_mLINEITEM3_map_2<span style="color: #333333">*&gt;</span>(QUERY18_mLINEITEM3.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
+          HashIndex_QUERY18_mLINEITEM3_map_2<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n1 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i1<span style="color: #333333">-&gt;</span>buckets_[h1 <span style="color: #333333">%</span> i1<span style="color: #333333">-&gt;</span>size_]);
+          QUERY18_mLINEITEM3_entry<span style="color: #333333">*</span> e1;
+          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e1<span style="color: #333333">=</span>n1<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h1 <span style="color: #333333">==</span> n1<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> QUERY18_mLINEITEM3_mapkey2_idxfn<span style="color: #333333">::</span>equals(se8, <span style="color: #333333">*</span>e1)) {
             <span style="color: #333399; font-weight: bold">long</span> c_custkey <span style="color: #333333">=</span> e1<span style="color: #333333">-&gt;</span>C_CUSTKEY;
             STRING_TYPE c_name <span style="color: #333333">=</span> e1<span style="color: #333333">-&gt;</span>C_NAME;
             DOUBLE_TYPE o_totalprice <span style="color: #333333">=</span> e1<span style="color: #333333">-&gt;</span>O_TOTALPRICE;
             date o_orderdate <span style="color: #333333">=</span> e1<span style="color: #333333">-&gt;</span>O_ORDERDATE;
             <span style="color: #333399; font-weight: bold">long</span> v1 <span style="color: #333333">=</span> e1<span style="color: #333333">-&gt;</span>__av;
             <span style="color: #333399; font-weight: bold">long</span> agg1 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
-            DOUBLE_TYPE l1 <span style="color: #333333">=</span> QUERY18_mLINEITEM1_E1_1_L1_1.getValueOrDefault(se2.modify(lineitem_orderkey));
-            agg1 <span style="color: #333333">+=</span> (l1 <span style="color: #333333">&gt;</span> <span style="color: #0000DD; font-weight: bold">100L</span>);
+            DOUBLE_TYPE l1 <span style="color: #333333">=</span> (QUERY18_mLINEITEM1_L1_1.getValueOrDefault(se2.modify(lineitem_orderkey)) <span style="color: #333333">+</span> lineitem_quantity);
+            (<span style="color: #888888">/*if */</span>(l1 <span style="color: #333333">&gt;</span> <span style="color: #0000DD; font-weight: bold">100L</span>) <span style="color: #333333">?</span> agg1 <span style="color: #333333">+=</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
             <span style="color: #333399; font-weight: bold">long</span> agg2 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
-            DOUBLE_TYPE l2 <span style="color: #333333">=</span> (QUERY18_mLINEITEM1_E1_1_L1_1.getValueOrDefault(se5.modify(lineitem_orderkey)) <span style="color: #333333">+</span> lineitem_quantity);
-            agg2 <span style="color: #333333">+=</span> (l2 <span style="color: #333333">&gt;</span> <span style="color: #0000DD; font-weight: bold">100L</span>);
-            QUERY18.addOrDelOnZero(se1.modify(c_name,c_custkey,lineitem_orderkey,o_orderdate,o_totalprice),(v1 <span style="color: #333333">*</span> ((((agg1 <span style="color: #333333">*</span> (QUERY18_mLINEITEM1_E1_2_E1_1.getValueOrDefault(se3.modify(lineitem_orderkey)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> (QUERY18_mLINEITEM1_E1_1_L1_1.getValueOrDefault(se4.modify(lineitem_orderkey)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)) <span style="color: #333333">+</span> (((agg2 <span style="color: #333333">*</span> ((QUERY18_mLINEITEM1_E1_2_E1_1.getValueOrDefault(se6.modify(lineitem_orderkey)) <span style="color: #333333">+</span> <span style="color: #0000DD; font-weight: bold">1L</span>) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> (QUERY18_mLINEITEM1_E1_1_L1_1.getValueOrDefault(se7.modify(lineitem_orderkey)) <span style="color: #333333">+</span> lineitem_quantity)))));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n1<span style="color: #333333">=</span>n1<span style="color: #333333">-&gt;</span>next));
+            DOUBLE_TYPE l2 <span style="color: #333333">=</span> QUERY18_mLINEITEM1_L1_1.getValueOrDefault(se5.modify(lineitem_orderkey));
+            (<span style="color: #888888">/*if */</span>(l2 <span style="color: #333333">&gt;</span> <span style="color: #0000DD; font-weight: bold">100L</span>) <span style="color: #333333">?</span> agg2 <span style="color: #333333">+=</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
+            QUERY18.addOrDelOnZero(se1.modify(c_name,c_custkey,lineitem_orderkey,o_orderdate,o_totalprice),(v1 <span style="color: #333333">*</span> ((agg1 <span style="color: #333333">*</span> (((QUERY18_mLINEITEM2_E1_1.getValueOrDefault(se3.modify(lineitem_orderkey)) <span style="color: #333333">+</span> <span style="color: #0000DD; font-weight: bold">1L</span>) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> (QUERY18_mLINEITEM1_L1_1.getValueOrDefault(se4.modify(lineitem_orderkey)) <span style="color: #333333">+</span> lineitem_quantity))) <span style="color: #333333">+</span> (agg2 <span style="color: #333333">*</span> ((QUERY18_mLINEITEM2_E1_1.getValueOrDefault(se6.modify(lineitem_orderkey)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> (QUERY18_mLINEITEM1_L1_1.getValueOrDefault(se7.modify(lineitem_orderkey)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>))))));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n1<span style="color: #333333">=</span>n1<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h2 <span style="color: #333333">=</span> QUERY18_mCUSTOMER1_mLINEITEM1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se10.modify0(lineitem_orderkey));
@@ -1517,24 +1316,10 @@
             date o_orderdate <span style="color: #333333">=</span> e2<span style="color: #333333">-&gt;</span>O_ORDERDATE;
             <span style="color: #333399; font-weight: bold">long</span> v2 <span style="color: #333333">=</span> e2<span style="color: #333333">-&gt;</span>__av;
             QUERY18_mCUSTOMER1.addOrDelOnZero(se9.modify(lineitem_orderkey,query18_mcustomercustomer_custkey,o_totalprice,o_orderdate),(v2 <span style="color: #333333">*</span> lineitem_quantity));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n2<span style="color: #333333">=</span>n2<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n2<span style="color: #333333">=</span>n2<span style="color: #333333">-&gt;</span>nxt));
         }
-        { <span style="color: #888888">//slice</span>
-          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h3 <span style="color: #333333">=</span> QUERY18_mLINEITEM4_mapkey2_idxfn<span style="color: #333333">::</span>hash(se12.modify2(lineitem_orderkey));
-          <span style="color: #008800; font-weight: bold">const</span> HashIndex_QUERY18_mLINEITEM4_map_2<span style="color: #333333">*</span> i3 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_QUERY18_mLINEITEM4_map_2<span style="color: #333333">*&gt;</span>(QUERY18_mLINEITEM4.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
-          HashIndex_QUERY18_mLINEITEM4_map_2<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n3 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i3<span style="color: #333333">-&gt;</span>buckets_[h3 <span style="color: #333333">%</span> i3<span style="color: #333333">-&gt;</span>size_]);
-          QUERY18_mLINEITEM4_entry<span style="color: #333333">*</span> e3;
-          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e3<span style="color: #333333">=</span>n3<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h3 <span style="color: #333333">==</span> n3<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> QUERY18_mLINEITEM4_mapkey2_idxfn<span style="color: #333333">::</span>equals(se12, <span style="color: #333333">*</span>e3)) {
-            <span style="color: #333399; font-weight: bold">long</span> c_custkey <span style="color: #333333">=</span> e3<span style="color: #333333">-&gt;</span>C_CUSTKEY;
-            STRING_TYPE c_name <span style="color: #333333">=</span> e3<span style="color: #333333">-&gt;</span>C_NAME;
-            DOUBLE_TYPE o_totalprice <span style="color: #333333">=</span> e3<span style="color: #333333">-&gt;</span>O_TOTALPRICE;
-            date o_orderdate <span style="color: #333333">=</span> e3<span style="color: #333333">-&gt;</span>O_ORDERDATE;
-            <span style="color: #333399; font-weight: bold">long</span> v3 <span style="color: #333333">=</span> e3<span style="color: #333333">-&gt;</span>__av;
-            QUERY18_mLINEITEM1.addOrDelOnZero(se11.modify(c_custkey,c_name,lineitem_orderkey,o_totalprice,o_orderdate),(v3 <span style="color: #333333">*</span> lineitem_quantity));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n3<span style="color: #333333">=</span>n3<span style="color: #333333">-&gt;</span>next));
-        }
-        QUERY18_mLINEITEM1_E1_1_L1_1.addOrDelOnZero(se13.modify(lineitem_orderkey),lineitem_quantity);
-        QUERY18_mLINEITEM1_E1_2_E1_1.addOrDelOnZero(se14.modify(lineitem_orderkey),<span style="color: #0000DD; font-weight: bold">1L</span>);
+        QUERY18_mLINEITEM1_L1_1.addOrDelOnZero(se11.modify(lineitem_orderkey),lineitem_quantity);
+        QUERY18_mLINEITEM2_E1_1.addOrDelOnZero(se12.modify(lineitem_orderkey),<span style="color: #0000DD; font-weight: bold">1L</span>);
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_LINEITEM&quot;</span>)
       END_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_LINEITEM&quot;</span>)
@@ -1546,72 +1331,45 @@
     <span style="color: #333399; font-weight: bold">void</span> on_delete_LINEITEM(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> lineitem_orderkey, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> lineitem_partkey, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> lineitem_suppkey, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> lineitem_linenumber, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE lineitem_quantity, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE lineitem_extendedprice, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE lineitem_discount, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE lineitem_tax, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_returnflag, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_linestatus, <span style="color: #008800; font-weight: bold">const</span> date lineitem_shipdate, <span style="color: #008800; font-weight: bold">const</span> date lineitem_commitdate, <span style="color: #008800; font-weight: bold">const</span> date lineitem_receiptdate, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_shipinstruct, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_shipmode, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_comment) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_LINEITEM&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_LINEITEM&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
-        { <span style="color: #888888">//foreach</span>
-          QUERY18_mLINEITEM1_entry<span style="color: #333333">*</span> e4 <span style="color: #333333">=</span> QUERY18_mLINEITEM1.head;
-          <span style="color: #008800; font-weight: bold">while</span>(e4){
-            <span style="color: #333399; font-weight: bold">long</span> c_custkey <span style="color: #333333">=</span> e4<span style="color: #333333">-&gt;</span>C_CUSTKEY;
-            STRING_TYPE c_name <span style="color: #333333">=</span> e4<span style="color: #333333">-&gt;</span>C_NAME;
-            <span style="color: #333399; font-weight: bold">long</span> o_orderkey <span style="color: #333333">=</span> e4<span style="color: #333333">-&gt;</span>O_ORDERKEY;
+      {  <span style="color: #333333">++</span>tN;
+        { <span style="color: #888888">//slice</span>
+          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h3 <span style="color: #333333">=</span> QUERY18_mLINEITEM3_mapkey2_idxfn<span style="color: #333333">::</span>hash(se21.modify2(lineitem_orderkey));
+          <span style="color: #008800; font-weight: bold">const</span> HashIndex_QUERY18_mLINEITEM3_map_2<span style="color: #333333">*</span> i3 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_QUERY18_mLINEITEM3_map_2<span style="color: #333333">*&gt;</span>(QUERY18_mLINEITEM3.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
+          HashIndex_QUERY18_mLINEITEM3_map_2<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n3 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i3<span style="color: #333333">-&gt;</span>buckets_[h3 <span style="color: #333333">%</span> i3<span style="color: #333333">-&gt;</span>size_]);
+          QUERY18_mLINEITEM3_entry<span style="color: #333333">*</span> e3;
+          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e3<span style="color: #333333">=</span>n3<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h3 <span style="color: #333333">==</span> n3<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> QUERY18_mLINEITEM3_mapkey2_idxfn<span style="color: #333333">::</span>equals(se21, <span style="color: #333333">*</span>e3)) {
+            <span style="color: #333399; font-weight: bold">long</span> c_custkey <span style="color: #333333">=</span> e3<span style="color: #333333">-&gt;</span>C_CUSTKEY;
+            STRING_TYPE c_name <span style="color: #333333">=</span> e3<span style="color: #333333">-&gt;</span>C_NAME;
+            DOUBLE_TYPE o_totalprice <span style="color: #333333">=</span> e3<span style="color: #333333">-&gt;</span>O_TOTALPRICE;
+            date o_orderdate <span style="color: #333333">=</span> e3<span style="color: #333333">-&gt;</span>O_ORDERDATE;
+            <span style="color: #333399; font-weight: bold">long</span> v3 <span style="color: #333333">=</span> e3<span style="color: #333333">-&gt;</span>__av;
+            <span style="color: #333399; font-weight: bold">long</span> agg3 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
+            DOUBLE_TYPE l3 <span style="color: #333333">=</span> QUERY18_mLINEITEM1_L1_1.getValueOrDefault(se15.modify(lineitem_orderkey));
+            (<span style="color: #888888">/*if */</span>(l3 <span style="color: #333333">&gt;</span> <span style="color: #0000DD; font-weight: bold">100L</span>) <span style="color: #333333">?</span> agg3 <span style="color: #333333">+=</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
+            <span style="color: #333399; font-weight: bold">long</span> agg4 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
+            DOUBLE_TYPE l4 <span style="color: #333333">=</span> (QUERY18_mLINEITEM1_L1_1.getValueOrDefault(se17.modify(lineitem_orderkey)) <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> lineitem_quantity));
+            (<span style="color: #888888">/*if */</span>(l4 <span style="color: #333333">&gt;</span> <span style="color: #0000DD; font-weight: bold">100L</span>) <span style="color: #333333">?</span> agg4 <span style="color: #333333">+=</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
+            <span style="color: #333399; font-weight: bold">long</span> agg5 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
+            DOUBLE_TYPE l5 <span style="color: #333333">=</span> (QUERY18_mLINEITEM1_L1_1.getValueOrDefault(se19.modify(lineitem_orderkey)) <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> lineitem_quantity));
+            (<span style="color: #888888">/*if */</span>(l5 <span style="color: #333333">&gt;</span> <span style="color: #0000DD; font-weight: bold">100L</span>) <span style="color: #333333">?</span> agg5 <span style="color: #333333">+=</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
+            QUERY18.addOrDelOnZero(se13.modify(c_name,c_custkey,lineitem_orderkey,o_orderdate,o_totalprice),(v3 <span style="color: #333333">*</span> ((QUERY18_mLINEITEM1_L1_1.getValueOrDefault(se14.modify(lineitem_orderkey)) <span style="color: #333333">*</span> ((agg3 <span style="color: #333333">*</span> ((QUERY18_mLINEITEM2_E1_1.getValueOrDefault(se16.modify(lineitem_orderkey)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)) <span style="color: #333333">+</span> (agg4 <span style="color: #333333">*</span> ((QUERY18_mLINEITEM2_E1_1.getValueOrDefault(se18.modify(lineitem_orderkey)) <span style="color: #333333">+</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>)))) <span style="color: #333333">+</span> (agg5 <span style="color: #333333">*</span> (((QUERY18_mLINEITEM2_E1_1.getValueOrDefault(se20.modify(lineitem_orderkey)) <span style="color: #333333">+</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> lineitem_quantity))))));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n3<span style="color: #333333">=</span>n3<span style="color: #333333">-&gt;</span>nxt));
+        }
+        { <span style="color: #888888">//slice</span>
+          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h4 <span style="color: #333333">=</span> QUERY18_mCUSTOMER1_mLINEITEM1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se23.modify0(lineitem_orderkey));
+          <span style="color: #008800; font-weight: bold">const</span> HashIndex_QUERY18_mCUSTOMER1_mLINEITEM1_map_0<span style="color: #333333">*</span> i4 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_QUERY18_mCUSTOMER1_mLINEITEM1_map_0<span style="color: #333333">*&gt;</span>(QUERY18_mCUSTOMER1_mLINEITEM1.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
+          HashIndex_QUERY18_mCUSTOMER1_mLINEITEM1_map_0<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n4 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i4<span style="color: #333333">-&gt;</span>buckets_[h4 <span style="color: #333333">%</span> i4<span style="color: #333333">-&gt;</span>size_]);
+          QUERY18_mCUSTOMER1_mLINEITEM1_entry<span style="color: #333333">*</span> e4;
+          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e4<span style="color: #333333">=</span>n4<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h4 <span style="color: #333333">==</span> n4<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> QUERY18_mCUSTOMER1_mLINEITEM1_mapkey0_idxfn<span style="color: #333333">::</span>equals(se23, <span style="color: #333333">*</span>e4)) {
+            <span style="color: #333399; font-weight: bold">long</span> query18_mcustomercustomer_custkey <span style="color: #333333">=</span> e4<span style="color: #333333">-&gt;</span>QUERY18_mCUSTOMERCUSTOMER_CUSTKEY;
             DOUBLE_TYPE o_totalprice <span style="color: #333333">=</span> e4<span style="color: #333333">-&gt;</span>O_TOTALPRICE;
             date o_orderdate <span style="color: #333333">=</span> e4<span style="color: #333333">-&gt;</span>O_ORDERDATE;
-            DOUBLE_TYPE v4 <span style="color: #333333">=</span> e4<span style="color: #333333">-&gt;</span>__av;
-            <span style="color: #333399; font-weight: bold">long</span> agg3 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
-            DOUBLE_TYPE l3 <span style="color: #333333">=</span> (QUERY18_mLINEITEM1_E1_1_L1_1.getValueOrDefault(se16.modify(o_orderkey)) <span style="color: #333333">+</span> ((o_orderkey <span style="color: #333333">==</span> lineitem_orderkey) <span style="color: #333333">*</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> lineitem_quantity)));
-            agg3 <span style="color: #333333">+=</span> (l3 <span style="color: #333333">&gt;</span> <span style="color: #0000DD; font-weight: bold">100L</span>);
-            <span style="color: #333399; font-weight: bold">long</span> agg4 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
-            DOUBLE_TYPE l4 <span style="color: #333333">=</span> QUERY18_mLINEITEM1_E1_1_L1_1.getValueOrDefault(se18.modify(o_orderkey));
-            agg4 <span style="color: #333333">+=</span> (l4 <span style="color: #333333">&gt;</span> <span style="color: #0000DD; font-weight: bold">100L</span>);
-            QUERY18.addOrDelOnZero(se15.modify(c_name,c_custkey,o_orderkey,o_orderdate,o_totalprice),(v4 <span style="color: #333333">*</span> (((agg3 <span style="color: #333333">*</span> ((QUERY18_mLINEITEM1_E1_2_E1_1.getValueOrDefault(se17.modify(o_orderkey)) <span style="color: #333333">+</span> ((o_orderkey <span style="color: #333333">==</span> lineitem_orderkey) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">+</span> (((agg4 <span style="color: #333333">*</span> (QUERY18_mLINEITEM1_E1_2_E1_1.getValueOrDefault(se19.modify(o_orderkey)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>))));
-            e4 <span style="color: #333333">=</span> e4<span style="color: #333333">-&gt;</span>nxt;
-          }
+            <span style="color: #333399; font-weight: bold">long</span> v4 <span style="color: #333333">=</span> e4<span style="color: #333333">-&gt;</span>__av;
+            QUERY18_mCUSTOMER1.addOrDelOnZero(se22.modify(lineitem_orderkey,query18_mcustomercustomer_custkey,o_totalprice,o_orderdate),(v4 <span style="color: #333333">*</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> lineitem_quantity)));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n4<span style="color: #333333">=</span>n4<span style="color: #333333">-&gt;</span>nxt));
         }
-        { <span style="color: #888888">//slice</span>
-          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h4 <span style="color: #333333">=</span> QUERY18_mLINEITEM4_mapkey2_idxfn<span style="color: #333333">::</span>hash(se22.modify2(lineitem_orderkey));
-          <span style="color: #008800; font-weight: bold">const</span> HashIndex_QUERY18_mLINEITEM4_map_2<span style="color: #333333">*</span> i5 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_QUERY18_mLINEITEM4_map_2<span style="color: #333333">*&gt;</span>(QUERY18_mLINEITEM4.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
-          HashIndex_QUERY18_mLINEITEM4_map_2<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n5 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i5<span style="color: #333333">-&gt;</span>buckets_[h4 <span style="color: #333333">%</span> i5<span style="color: #333333">-&gt;</span>size_]);
-          QUERY18_mLINEITEM4_entry<span style="color: #333333">*</span> e5;
-          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e5<span style="color: #333333">=</span>n5<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h4 <span style="color: #333333">==</span> n5<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> QUERY18_mLINEITEM4_mapkey2_idxfn<span style="color: #333333">::</span>equals(se22, <span style="color: #333333">*</span>e5)) {
-            <span style="color: #333399; font-weight: bold">long</span> c_custkey <span style="color: #333333">=</span> e5<span style="color: #333333">-&gt;</span>C_CUSTKEY;
-            STRING_TYPE c_name <span style="color: #333333">=</span> e5<span style="color: #333333">-&gt;</span>C_NAME;
-            DOUBLE_TYPE o_totalprice <span style="color: #333333">=</span> e5<span style="color: #333333">-&gt;</span>O_TOTALPRICE;
-            date o_orderdate <span style="color: #333333">=</span> e5<span style="color: #333333">-&gt;</span>O_ORDERDATE;
-            <span style="color: #333399; font-weight: bold">long</span> v5 <span style="color: #333333">=</span> e5<span style="color: #333333">-&gt;</span>__av;
-            <span style="color: #333399; font-weight: bold">long</span> agg5 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
-            DOUBLE_TYPE l5 <span style="color: #333333">=</span> (QUERY18_mLINEITEM1_E1_1_L1_1.getValueOrDefault(se20.modify(lineitem_orderkey)) <span style="color: #333333">+</span> ((lineitem_orderkey <span style="color: #333333">==</span> lineitem_orderkey) <span style="color: #333333">*</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> lineitem_quantity)));
-            agg5 <span style="color: #333333">+=</span> (l5 <span style="color: #333333">&gt;</span> <span style="color: #0000DD; font-weight: bold">100L</span>);
-            QUERY18.addOrDelOnZero(se15.modify(c_name,c_custkey,lineitem_orderkey,o_orderdate,o_totalprice),(v5 <span style="color: #333333">*</span> (((agg5 <span style="color: #333333">*</span> ((QUERY18_mLINEITEM1_E1_2_E1_1.getValueOrDefault(se21.modify(lineitem_orderkey)) <span style="color: #333333">+</span> ((lineitem_orderkey <span style="color: #333333">==</span> lineitem_orderkey) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> lineitem_quantity))));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n5<span style="color: #333333">=</span>n5<span style="color: #333333">-&gt;</span>next));
-        }
-        { <span style="color: #888888">//slice</span>
-          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h5 <span style="color: #333333">=</span> QUERY18_mCUSTOMER1_mLINEITEM1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se24.modify0(lineitem_orderkey));
-          <span style="color: #008800; font-weight: bold">const</span> HashIndex_QUERY18_mCUSTOMER1_mLINEITEM1_map_0<span style="color: #333333">*</span> i6 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_QUERY18_mCUSTOMER1_mLINEITEM1_map_0<span style="color: #333333">*&gt;</span>(QUERY18_mCUSTOMER1_mLINEITEM1.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
-          HashIndex_QUERY18_mCUSTOMER1_mLINEITEM1_map_0<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n6 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i6<span style="color: #333333">-&gt;</span>buckets_[h5 <span style="color: #333333">%</span> i6<span style="color: #333333">-&gt;</span>size_]);
-          QUERY18_mCUSTOMER1_mLINEITEM1_entry<span style="color: #333333">*</span> e6;
-          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e6<span style="color: #333333">=</span>n6<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h5 <span style="color: #333333">==</span> n6<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> QUERY18_mCUSTOMER1_mLINEITEM1_mapkey0_idxfn<span style="color: #333333">::</span>equals(se24, <span style="color: #333333">*</span>e6)) {
-            <span style="color: #333399; font-weight: bold">long</span> query18_mcustomercustomer_custkey <span style="color: #333333">=</span> e6<span style="color: #333333">-&gt;</span>QUERY18_mCUSTOMERCUSTOMER_CUSTKEY;
-            DOUBLE_TYPE o_totalprice <span style="color: #333333">=</span> e6<span style="color: #333333">-&gt;</span>O_TOTALPRICE;
-            date o_orderdate <span style="color: #333333">=</span> e6<span style="color: #333333">-&gt;</span>O_ORDERDATE;
-            <span style="color: #333399; font-weight: bold">long</span> v6 <span style="color: #333333">=</span> e6<span style="color: #333333">-&gt;</span>__av;
-            QUERY18_mCUSTOMER1.addOrDelOnZero(se23.modify(lineitem_orderkey,query18_mcustomercustomer_custkey,o_totalprice,o_orderdate),(v6 <span style="color: #333333">*</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> lineitem_quantity)));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n6<span style="color: #333333">=</span>n6<span style="color: #333333">-&gt;</span>next));
-        }
-        { <span style="color: #888888">//slice</span>
-          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h6 <span style="color: #333333">=</span> QUERY18_mLINEITEM4_mapkey2_idxfn<span style="color: #333333">::</span>hash(se26.modify2(lineitem_orderkey));
-          <span style="color: #008800; font-weight: bold">const</span> HashIndex_QUERY18_mLINEITEM4_map_2<span style="color: #333333">*</span> i7 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_QUERY18_mLINEITEM4_map_2<span style="color: #333333">*&gt;</span>(QUERY18_mLINEITEM4.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
-          HashIndex_QUERY18_mLINEITEM4_map_2<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n7 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i7<span style="color: #333333">-&gt;</span>buckets_[h6 <span style="color: #333333">%</span> i7<span style="color: #333333">-&gt;</span>size_]);
-          QUERY18_mLINEITEM4_entry<span style="color: #333333">*</span> e7;
-          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e7<span style="color: #333333">=</span>n7<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h6 <span style="color: #333333">==</span> n7<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> QUERY18_mLINEITEM4_mapkey2_idxfn<span style="color: #333333">::</span>equals(se26, <span style="color: #333333">*</span>e7)) {
-            <span style="color: #333399; font-weight: bold">long</span> c_custkey <span style="color: #333333">=</span> e7<span style="color: #333333">-&gt;</span>C_CUSTKEY;
-            STRING_TYPE c_name <span style="color: #333333">=</span> e7<span style="color: #333333">-&gt;</span>C_NAME;
-            DOUBLE_TYPE o_totalprice <span style="color: #333333">=</span> e7<span style="color: #333333">-&gt;</span>O_TOTALPRICE;
-            date o_orderdate <span style="color: #333333">=</span> e7<span style="color: #333333">-&gt;</span>O_ORDERDATE;
-            <span style="color: #333399; font-weight: bold">long</span> v7 <span style="color: #333333">=</span> e7<span style="color: #333333">-&gt;</span>__av;
-            QUERY18_mLINEITEM1.addOrDelOnZero(se25.modify(c_custkey,c_name,lineitem_orderkey,o_totalprice,o_orderdate),(v7 <span style="color: #333333">*</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> lineitem_quantity)));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n7<span style="color: #333333">=</span>n7<span style="color: #333333">-&gt;</span>next));
-        }
-        QUERY18_mLINEITEM1_E1_1_L1_1.addOrDelOnZero(se27.modify(lineitem_orderkey),(<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> lineitem_quantity));
-        QUERY18_mLINEITEM1_E1_2_E1_1.addOrDelOnZero(se28.modify(lineitem_orderkey),<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>);
+        QUERY18_mLINEITEM1_L1_1.addOrDelOnZero(se24.modify(lineitem_orderkey),(<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> lineitem_quantity));
+        QUERY18_mLINEITEM2_E1_1.addOrDelOnZero(se25.modify(lineitem_orderkey),<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>);
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_LINEITEM&quot;</span>)
       END_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_LINEITEM&quot;</span>)
@@ -1623,44 +1381,33 @@
     <span style="color: #333399; font-weight: bold">void</span> on_insert_ORDERS(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> orders_orderkey, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> orders_custkey, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> orders_orderstatus, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE orders_totalprice, <span style="color: #008800; font-weight: bold">const</span> date orders_orderdate, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> orders_orderpriority, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> orders_clerk, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> orders_shippriority, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> orders_comment) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_ORDERS&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_ORDERS&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
+      {  <span style="color: #333333">++</span>tN;
         <span style="color: #333399; font-weight: bold">long</span> agg6 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
-        DOUBLE_TYPE l6 <span style="color: #333333">=</span> QUERY18_mLINEITEM1_E1_1_L1_1.getValueOrDefault(se30.modify(orders_orderkey));
-        agg6 <span style="color: #333333">+=</span> (l6 <span style="color: #333333">&gt;</span> <span style="color: #0000DD; font-weight: bold">100L</span>);
+        DOUBLE_TYPE l6 <span style="color: #333333">=</span> QUERY18_mLINEITEM1_L1_1.getValueOrDefault(se27.modify(orders_orderkey));
+        (<span style="color: #888888">/*if */</span>(l6 <span style="color: #333333">&gt;</span> <span style="color: #0000DD; font-weight: bold">100L</span>) <span style="color: #333333">?</span> agg6 <span style="color: #333333">+=</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
         { <span style="color: #888888">//slice</span>
-          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h7 <span style="color: #333333">=</span> QUERY18_mORDERS2_mapkey0_idxfn<span style="color: #333333">::</span>hash(se33.modify0(orders_custkey));
-          <span style="color: #008800; font-weight: bold">const</span> HashIndex_QUERY18_mORDERS2_map_0<span style="color: #333333">*</span> i8 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_QUERY18_mORDERS2_map_0<span style="color: #333333">*&gt;</span>(QUERY18_mORDERS2.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
-          HashIndex_QUERY18_mORDERS2_map_0<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n8 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i8<span style="color: #333333">-&gt;</span>buckets_[h7 <span style="color: #333333">%</span> i8<span style="color: #333333">-&gt;</span>size_]);
-          QUERY18_mORDERS2_entry<span style="color: #333333">*</span> e8;
-          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e8<span style="color: #333333">=</span>n8<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h7 <span style="color: #333333">==</span> n8<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> QUERY18_mORDERS2_mapkey0_idxfn<span style="color: #333333">::</span>equals(se33, <span style="color: #333333">*</span>e8)) {
-            STRING_TYPE c_name <span style="color: #333333">=</span> e8<span style="color: #333333">-&gt;</span>C_NAME;
-            <span style="color: #333399; font-weight: bold">long</span> v8 <span style="color: #333333">=</span> e8<span style="color: #333333">-&gt;</span>__av;
-            QUERY18.addOrDelOnZero(se29.modify(c_name,orders_custkey,orders_orderkey,orders_orderdate,orders_totalprice),(((agg6 <span style="color: #333333">*</span> (QUERY18_mLINEITEM1_E1_2_E1_1.getValueOrDefault(se31.modify(orders_orderkey)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> (v8 <span style="color: #333333">*</span> QUERY18_mLINEITEM1_E1_1_L1_1.getValueOrDefault(se32.modify(orders_orderkey)))));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n8<span style="color: #333333">=</span>n8<span style="color: #333333">-&gt;</span>next));
+          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h5 <span style="color: #333333">=</span> QUERY18_mORDERS3_mapkey0_idxfn<span style="color: #333333">::</span>hash(se30.modify0(orders_custkey));
+          <span style="color: #008800; font-weight: bold">const</span> HashIndex_QUERY18_mORDERS3_map_0<span style="color: #333333">*</span> i5 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_QUERY18_mORDERS3_map_0<span style="color: #333333">*&gt;</span>(QUERY18_mORDERS3.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
+          HashIndex_QUERY18_mORDERS3_map_0<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n5 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i5<span style="color: #333333">-&gt;</span>buckets_[h5 <span style="color: #333333">%</span> i5<span style="color: #333333">-&gt;</span>size_]);
+          QUERY18_mORDERS3_entry<span style="color: #333333">*</span> e5;
+          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e5<span style="color: #333333">=</span>n5<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h5 <span style="color: #333333">==</span> n5<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> QUERY18_mORDERS3_mapkey0_idxfn<span style="color: #333333">::</span>equals(se30, <span style="color: #333333">*</span>e5)) {
+            STRING_TYPE c_name <span style="color: #333333">=</span> e5<span style="color: #333333">-&gt;</span>C_NAME;
+            <span style="color: #333399; font-weight: bold">long</span> v5 <span style="color: #333333">=</span> e5<span style="color: #333333">-&gt;</span>__av;
+            QUERY18.addOrDelOnZero(se26.modify(c_name,orders_custkey,orders_orderkey,orders_orderdate,orders_totalprice),(agg6 <span style="color: #333333">*</span> ((QUERY18_mLINEITEM2_E1_1.getValueOrDefault(se28.modify(orders_orderkey)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> (v5 <span style="color: #333333">*</span> QUERY18_mLINEITEM1_L1_1.getValueOrDefault(se29.modify(orders_orderkey))))));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n5<span style="color: #333333">=</span>n5<span style="color: #333333">-&gt;</span>nxt));
         }
-        QUERY18_mCUSTOMER1.addOrDelOnZero(se34.modify(orders_orderkey,orders_custkey,orders_totalprice,orders_orderdate),QUERY18_mLINEITEM1_E1_1_L1_1.getValueOrDefault(se35.modify(orders_orderkey)));
-        QUERY18_mCUSTOMER1_mLINEITEM1.addOrDelOnZero(se36.modify(orders_orderkey,orders_custkey,orders_totalprice,orders_orderdate),<span style="color: #0000DD; font-weight: bold">1L</span>);
+        QUERY18_mCUSTOMER1.addOrDelOnZero(se31.modify(orders_orderkey,orders_custkey,orders_totalprice,orders_orderdate),QUERY18_mLINEITEM1_L1_1.getValueOrDefault(se32.modify(orders_orderkey)));
+        QUERY18_mCUSTOMER1_mLINEITEM1.addOrDelOnZero(se33.modify(orders_orderkey,orders_custkey,orders_totalprice,orders_orderdate),<span style="color: #0000DD; font-weight: bold">1L</span>);
         { <span style="color: #888888">//slice</span>
-          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h8 <span style="color: #333333">=</span> QUERY18_mORDERS2_mapkey0_idxfn<span style="color: #333333">::</span>hash(se39.modify0(orders_custkey));
-          <span style="color: #008800; font-weight: bold">const</span> HashIndex_QUERY18_mORDERS2_map_0<span style="color: #333333">*</span> i9 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_QUERY18_mORDERS2_map_0<span style="color: #333333">*&gt;</span>(QUERY18_mORDERS2.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
-          HashIndex_QUERY18_mORDERS2_map_0<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n9 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i9<span style="color: #333333">-&gt;</span>buckets_[h8 <span style="color: #333333">%</span> i9<span style="color: #333333">-&gt;</span>size_]);
-          QUERY18_mORDERS2_entry<span style="color: #333333">*</span> e9;
-          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e9<span style="color: #333333">=</span>n9<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h8 <span style="color: #333333">==</span> n9<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> QUERY18_mORDERS2_mapkey0_idxfn<span style="color: #333333">::</span>equals(se39, <span style="color: #333333">*</span>e9)) {
-            STRING_TYPE c_name <span style="color: #333333">=</span> e9<span style="color: #333333">-&gt;</span>C_NAME;
-            <span style="color: #333399; font-weight: bold">long</span> v9 <span style="color: #333333">=</span> e9<span style="color: #333333">-&gt;</span>__av;
-            QUERY18_mLINEITEM1.addOrDelOnZero(se37.modify(orders_custkey,c_name,orders_orderkey,orders_totalprice,orders_orderdate),(v9 <span style="color: #333333">*</span> QUERY18_mLINEITEM1_E1_1_L1_1.getValueOrDefault(se38.modify(orders_orderkey))));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n9<span style="color: #333333">=</span>n9<span style="color: #333333">-&gt;</span>next));
-        }
-        { <span style="color: #888888">//slice</span>
-          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h9 <span style="color: #333333">=</span> QUERY18_mORDERS2_mapkey0_idxfn<span style="color: #333333">::</span>hash(se41.modify0(orders_custkey));
-          <span style="color: #008800; font-weight: bold">const</span> HashIndex_QUERY18_mORDERS2_map_0<span style="color: #333333">*</span> i10 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_QUERY18_mORDERS2_map_0<span style="color: #333333">*&gt;</span>(QUERY18_mORDERS2.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
-          HashIndex_QUERY18_mORDERS2_map_0<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n10 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i10<span style="color: #333333">-&gt;</span>buckets_[h9 <span style="color: #333333">%</span> i10<span style="color: #333333">-&gt;</span>size_]);
-          QUERY18_mORDERS2_entry<span style="color: #333333">*</span> e10;
-          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e10<span style="color: #333333">=</span>n10<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h9 <span style="color: #333333">==</span> n10<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> QUERY18_mORDERS2_mapkey0_idxfn<span style="color: #333333">::</span>equals(se41, <span style="color: #333333">*</span>e10)) {
-            STRING_TYPE c_name <span style="color: #333333">=</span> e10<span style="color: #333333">-&gt;</span>C_NAME;
-            <span style="color: #333399; font-weight: bold">long</span> v10 <span style="color: #333333">=</span> e10<span style="color: #333333">-&gt;</span>__av;
-            QUERY18_mLINEITEM4.addOrDelOnZero(se40.modify(orders_custkey,c_name,orders_orderkey,orders_totalprice,orders_orderdate),v10);
-          } <span style="color: #008800; font-weight: bold">while</span> ((n10<span style="color: #333333">=</span>n10<span style="color: #333333">-&gt;</span>next));
+          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h6 <span style="color: #333333">=</span> QUERY18_mORDERS3_mapkey0_idxfn<span style="color: #333333">::</span>hash(se35.modify0(orders_custkey));
+          <span style="color: #008800; font-weight: bold">const</span> HashIndex_QUERY18_mORDERS3_map_0<span style="color: #333333">*</span> i6 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_QUERY18_mORDERS3_map_0<span style="color: #333333">*&gt;</span>(QUERY18_mORDERS3.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
+          HashIndex_QUERY18_mORDERS3_map_0<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n6 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i6<span style="color: #333333">-&gt;</span>buckets_[h6 <span style="color: #333333">%</span> i6<span style="color: #333333">-&gt;</span>size_]);
+          QUERY18_mORDERS3_entry<span style="color: #333333">*</span> e6;
+          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e6<span style="color: #333333">=</span>n6<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h6 <span style="color: #333333">==</span> n6<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> QUERY18_mORDERS3_mapkey0_idxfn<span style="color: #333333">::</span>equals(se35, <span style="color: #333333">*</span>e6)) {
+            STRING_TYPE c_name <span style="color: #333333">=</span> e6<span style="color: #333333">-&gt;</span>C_NAME;
+            <span style="color: #333399; font-weight: bold">long</span> v6 <span style="color: #333333">=</span> e6<span style="color: #333333">-&gt;</span>__av;
+            QUERY18_mLINEITEM3.addOrDelOnZero(se34.modify(orders_custkey,c_name,orders_orderkey,orders_totalprice,orders_orderdate),v6);
+          } <span style="color: #008800; font-weight: bold">while</span> ((n6<span style="color: #333333">=</span>n6<span style="color: #333333">-&gt;</span>nxt));
         }
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_ORDERS&quot;</span>)
@@ -1673,44 +1420,33 @@
     <span style="color: #333399; font-weight: bold">void</span> on_delete_ORDERS(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> orders_orderkey, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> orders_custkey, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> orders_orderstatus, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE orders_totalprice, <span style="color: #008800; font-weight: bold">const</span> date orders_orderdate, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> orders_orderpriority, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> orders_clerk, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> orders_shippriority, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> orders_comment) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_ORDERS&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_ORDERS&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
+      {  <span style="color: #333333">++</span>tN;
         <span style="color: #333399; font-weight: bold">long</span> agg7 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
-        DOUBLE_TYPE l7 <span style="color: #333333">=</span> QUERY18_mLINEITEM1_E1_1_L1_1.getValueOrDefault(se43.modify(orders_orderkey));
-        agg7 <span style="color: #333333">+=</span> (l7 <span style="color: #333333">&gt;</span> <span style="color: #0000DD; font-weight: bold">100L</span>);
+        DOUBLE_TYPE l7 <span style="color: #333333">=</span> QUERY18_mLINEITEM1_L1_1.getValueOrDefault(se37.modify(orders_orderkey));
+        (<span style="color: #888888">/*if */</span>(l7 <span style="color: #333333">&gt;</span> <span style="color: #0000DD; font-weight: bold">100L</span>) <span style="color: #333333">?</span> agg7 <span style="color: #333333">+=</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
         { <span style="color: #888888">//slice</span>
-          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h10 <span style="color: #333333">=</span> QUERY18_mORDERS2_mapkey0_idxfn<span style="color: #333333">::</span>hash(se46.modify0(orders_custkey));
-          <span style="color: #008800; font-weight: bold">const</span> HashIndex_QUERY18_mORDERS2_map_0<span style="color: #333333">*</span> i11 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_QUERY18_mORDERS2_map_0<span style="color: #333333">*&gt;</span>(QUERY18_mORDERS2.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
-          HashIndex_QUERY18_mORDERS2_map_0<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n11 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i11<span style="color: #333333">-&gt;</span>buckets_[h10 <span style="color: #333333">%</span> i11<span style="color: #333333">-&gt;</span>size_]);
-          QUERY18_mORDERS2_entry<span style="color: #333333">*</span> e11;
-          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e11<span style="color: #333333">=</span>n11<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h10 <span style="color: #333333">==</span> n11<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> QUERY18_mORDERS2_mapkey0_idxfn<span style="color: #333333">::</span>equals(se46, <span style="color: #333333">*</span>e11)) {
-            STRING_TYPE c_name <span style="color: #333333">=</span> e11<span style="color: #333333">-&gt;</span>C_NAME;
-            <span style="color: #333399; font-weight: bold">long</span> v11 <span style="color: #333333">=</span> e11<span style="color: #333333">-&gt;</span>__av;
-            QUERY18.addOrDelOnZero(se42.modify(c_name,orders_custkey,orders_orderkey,orders_orderdate,orders_totalprice),(((agg7 <span style="color: #333333">*</span> (QUERY18_mLINEITEM1_E1_2_E1_1.getValueOrDefault(se44.modify(orders_orderkey)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> (v11 <span style="color: #333333">*</span> (QUERY18_mLINEITEM1_E1_1_L1_1.getValueOrDefault(se45.modify(orders_orderkey)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>))));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n11<span style="color: #333333">=</span>n11<span style="color: #333333">-&gt;</span>next));
+          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h7 <span style="color: #333333">=</span> QUERY18_mORDERS3_mapkey0_idxfn<span style="color: #333333">::</span>hash(se40.modify0(orders_custkey));
+          <span style="color: #008800; font-weight: bold">const</span> HashIndex_QUERY18_mORDERS3_map_0<span style="color: #333333">*</span> i7 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_QUERY18_mORDERS3_map_0<span style="color: #333333">*&gt;</span>(QUERY18_mORDERS3.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
+          HashIndex_QUERY18_mORDERS3_map_0<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n7 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i7<span style="color: #333333">-&gt;</span>buckets_[h7 <span style="color: #333333">%</span> i7<span style="color: #333333">-&gt;</span>size_]);
+          QUERY18_mORDERS3_entry<span style="color: #333333">*</span> e7;
+          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e7<span style="color: #333333">=</span>n7<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h7 <span style="color: #333333">==</span> n7<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> QUERY18_mORDERS3_mapkey0_idxfn<span style="color: #333333">::</span>equals(se40, <span style="color: #333333">*</span>e7)) {
+            STRING_TYPE c_name <span style="color: #333333">=</span> e7<span style="color: #333333">-&gt;</span>C_NAME;
+            <span style="color: #333399; font-weight: bold">long</span> v7 <span style="color: #333333">=</span> e7<span style="color: #333333">-&gt;</span>__av;
+            QUERY18.addOrDelOnZero(se36.modify(c_name,orders_custkey,orders_orderkey,orders_orderdate,orders_totalprice),(agg7 <span style="color: #333333">*</span> ((QUERY18_mLINEITEM2_E1_1.getValueOrDefault(se38.modify(orders_orderkey)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> (v7 <span style="color: #333333">*</span> (QUERY18_mLINEITEM1_L1_1.getValueOrDefault(se39.modify(orders_orderkey)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)))));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n7<span style="color: #333333">=</span>n7<span style="color: #333333">-&gt;</span>nxt));
         }
-        QUERY18_mCUSTOMER1.addOrDelOnZero(se47.modify(orders_orderkey,orders_custkey,orders_totalprice,orders_orderdate),(QUERY18_mLINEITEM1_E1_1_L1_1.getValueOrDefault(se48.modify(orders_orderkey)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
-        QUERY18_mCUSTOMER1_mLINEITEM1.addOrDelOnZero(se49.modify(orders_orderkey,orders_custkey,orders_totalprice,orders_orderdate),<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>);
+        QUERY18_mCUSTOMER1.addOrDelOnZero(se41.modify(orders_orderkey,orders_custkey,orders_totalprice,orders_orderdate),(QUERY18_mLINEITEM1_L1_1.getValueOrDefault(se42.modify(orders_orderkey)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
+        QUERY18_mCUSTOMER1_mLINEITEM1.addOrDelOnZero(se43.modify(orders_orderkey,orders_custkey,orders_totalprice,orders_orderdate),<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>);
         { <span style="color: #888888">//slice</span>
-          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h11 <span style="color: #333333">=</span> QUERY18_mORDERS2_mapkey0_idxfn<span style="color: #333333">::</span>hash(se52.modify0(orders_custkey));
-          <span style="color: #008800; font-weight: bold">const</span> HashIndex_QUERY18_mORDERS2_map_0<span style="color: #333333">*</span> i12 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_QUERY18_mORDERS2_map_0<span style="color: #333333">*&gt;</span>(QUERY18_mORDERS2.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
-          HashIndex_QUERY18_mORDERS2_map_0<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n12 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i12<span style="color: #333333">-&gt;</span>buckets_[h11 <span style="color: #333333">%</span> i12<span style="color: #333333">-&gt;</span>size_]);
-          QUERY18_mORDERS2_entry<span style="color: #333333">*</span> e12;
-          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e12<span style="color: #333333">=</span>n12<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h11 <span style="color: #333333">==</span> n12<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> QUERY18_mORDERS2_mapkey0_idxfn<span style="color: #333333">::</span>equals(se52, <span style="color: #333333">*</span>e12)) {
-            STRING_TYPE c_name <span style="color: #333333">=</span> e12<span style="color: #333333">-&gt;</span>C_NAME;
-            <span style="color: #333399; font-weight: bold">long</span> v12 <span style="color: #333333">=</span> e12<span style="color: #333333">-&gt;</span>__av;
-            QUERY18_mLINEITEM1.addOrDelOnZero(se50.modify(orders_custkey,c_name,orders_orderkey,orders_totalprice,orders_orderdate),(v12 <span style="color: #333333">*</span> (QUERY18_mLINEITEM1_E1_1_L1_1.getValueOrDefault(se51.modify(orders_orderkey)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n12<span style="color: #333333">=</span>n12<span style="color: #333333">-&gt;</span>next));
-        }
-        { <span style="color: #888888">//slice</span>
-          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h12 <span style="color: #333333">=</span> QUERY18_mORDERS2_mapkey0_idxfn<span style="color: #333333">::</span>hash(se54.modify0(orders_custkey));
-          <span style="color: #008800; font-weight: bold">const</span> HashIndex_QUERY18_mORDERS2_map_0<span style="color: #333333">*</span> i13 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_QUERY18_mORDERS2_map_0<span style="color: #333333">*&gt;</span>(QUERY18_mORDERS2.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
-          HashIndex_QUERY18_mORDERS2_map_0<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n13 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i13<span style="color: #333333">-&gt;</span>buckets_[h12 <span style="color: #333333">%</span> i13<span style="color: #333333">-&gt;</span>size_]);
-          QUERY18_mORDERS2_entry<span style="color: #333333">*</span> e13;
-          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e13<span style="color: #333333">=</span>n13<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h12 <span style="color: #333333">==</span> n13<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> QUERY18_mORDERS2_mapkey0_idxfn<span style="color: #333333">::</span>equals(se54, <span style="color: #333333">*</span>e13)) {
-            STRING_TYPE c_name <span style="color: #333333">=</span> e13<span style="color: #333333">-&gt;</span>C_NAME;
-            <span style="color: #333399; font-weight: bold">long</span> v13 <span style="color: #333333">=</span> e13<span style="color: #333333">-&gt;</span>__av;
-            QUERY18_mLINEITEM4.addOrDelOnZero(se53.modify(orders_custkey,c_name,orders_orderkey,orders_totalprice,orders_orderdate),(v13 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n13<span style="color: #333333">=</span>n13<span style="color: #333333">-&gt;</span>next));
+          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h8 <span style="color: #333333">=</span> QUERY18_mORDERS3_mapkey0_idxfn<span style="color: #333333">::</span>hash(se45.modify0(orders_custkey));
+          <span style="color: #008800; font-weight: bold">const</span> HashIndex_QUERY18_mORDERS3_map_0<span style="color: #333333">*</span> i8 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_QUERY18_mORDERS3_map_0<span style="color: #333333">*&gt;</span>(QUERY18_mORDERS3.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
+          HashIndex_QUERY18_mORDERS3_map_0<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n8 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i8<span style="color: #333333">-&gt;</span>buckets_[h8 <span style="color: #333333">%</span> i8<span style="color: #333333">-&gt;</span>size_]);
+          QUERY18_mORDERS3_entry<span style="color: #333333">*</span> e8;
+          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e8<span style="color: #333333">=</span>n8<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h8 <span style="color: #333333">==</span> n8<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> QUERY18_mORDERS3_mapkey0_idxfn<span style="color: #333333">::</span>equals(se45, <span style="color: #333333">*</span>e8)) {
+            STRING_TYPE c_name <span style="color: #333333">=</span> e8<span style="color: #333333">-&gt;</span>C_NAME;
+            <span style="color: #333399; font-weight: bold">long</span> v8 <span style="color: #333333">=</span> e8<span style="color: #333333">-&gt;</span>__av;
+            QUERY18_mLINEITEM3.addOrDelOnZero(se44.modify(orders_custkey,c_name,orders_orderkey,orders_totalprice,orders_orderdate),(v8 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n8<span style="color: #333333">=</span>n8<span style="color: #333333">-&gt;</span>nxt));
         }
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_ORDERS&quot;</span>)
@@ -1723,49 +1459,36 @@
     <span style="color: #333399; font-weight: bold">void</span> on_insert_CUSTOMER(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> customer_custkey, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> customer_name, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> customer_address, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> customer_nationkey, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> customer_phone, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE customer_acctbal, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> customer_mktsegment, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> customer_comment) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_CUSTOMER&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_CUSTOMER&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
+      {  <span style="color: #333333">++</span>tN;
         { <span style="color: #888888">//slice</span>
-          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h13 <span style="color: #333333">=</span> QUERY18_mCUSTOMER1_mapkey1_idxfn<span style="color: #333333">::</span>hash(se58.modify1(customer_custkey));
-          <span style="color: #008800; font-weight: bold">const</span> HashIndex_QUERY18_mCUSTOMER1_map_1<span style="color: #333333">*</span> i14 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_QUERY18_mCUSTOMER1_map_1<span style="color: #333333">*&gt;</span>(QUERY18_mCUSTOMER1.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
-          HashIndex_QUERY18_mCUSTOMER1_map_1<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n14 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i14<span style="color: #333333">-&gt;</span>buckets_[h13 <span style="color: #333333">%</span> i14<span style="color: #333333">-&gt;</span>size_]);
-          QUERY18_mCUSTOMER1_entry<span style="color: #333333">*</span> e14;
-          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e14<span style="color: #333333">=</span>n14<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h13 <span style="color: #333333">==</span> n14<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> QUERY18_mCUSTOMER1_mapkey1_idxfn<span style="color: #333333">::</span>equals(se58, <span style="color: #333333">*</span>e14)) {
-            <span style="color: #333399; font-weight: bold">long</span> o_orderkey <span style="color: #333333">=</span> e14<span style="color: #333333">-&gt;</span>O_ORDERKEY;
-            DOUBLE_TYPE o_totalprice <span style="color: #333333">=</span> e14<span style="color: #333333">-&gt;</span>O_TOTALPRICE;
-            date o_orderdate <span style="color: #333333">=</span> e14<span style="color: #333333">-&gt;</span>O_ORDERDATE;
-            DOUBLE_TYPE v14 <span style="color: #333333">=</span> e14<span style="color: #333333">-&gt;</span>__av;
+          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h9 <span style="color: #333333">=</span> QUERY18_mCUSTOMER1_mapkey1_idxfn<span style="color: #333333">::</span>hash(se49.modify1(customer_custkey));
+          <span style="color: #008800; font-weight: bold">const</span> HashIndex_QUERY18_mCUSTOMER1_map_1<span style="color: #333333">*</span> i9 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_QUERY18_mCUSTOMER1_map_1<span style="color: #333333">*&gt;</span>(QUERY18_mCUSTOMER1.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
+          HashIndex_QUERY18_mCUSTOMER1_map_1<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n9 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i9<span style="color: #333333">-&gt;</span>buckets_[h9 <span style="color: #333333">%</span> i9<span style="color: #333333">-&gt;</span>size_]);
+          QUERY18_mCUSTOMER1_entry<span style="color: #333333">*</span> e9;
+          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e9<span style="color: #333333">=</span>n9<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h9 <span style="color: #333333">==</span> n9<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> QUERY18_mCUSTOMER1_mapkey1_idxfn<span style="color: #333333">::</span>equals(se49, <span style="color: #333333">*</span>e9)) {
+            <span style="color: #333399; font-weight: bold">long</span> o_orderkey <span style="color: #333333">=</span> e9<span style="color: #333333">-&gt;</span>O_ORDERKEY;
+            DOUBLE_TYPE o_totalprice <span style="color: #333333">=</span> e9<span style="color: #333333">-&gt;</span>O_TOTALPRICE;
+            date o_orderdate <span style="color: #333333">=</span> e9<span style="color: #333333">-&gt;</span>O_ORDERDATE;
+            DOUBLE_TYPE v9 <span style="color: #333333">=</span> e9<span style="color: #333333">-&gt;</span>__av;
             <span style="color: #333399; font-weight: bold">long</span> agg8 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
-            DOUBLE_TYPE l8 <span style="color: #333333">=</span> QUERY18_mLINEITEM1_E1_1_L1_1.getValueOrDefault(se56.modify(o_orderkey));
-            agg8 <span style="color: #333333">+=</span> (l8 <span style="color: #333333">&gt;</span> <span style="color: #0000DD; font-weight: bold">100L</span>);
-            QUERY18.addOrDelOnZero(se55.modify(customer_name,customer_custkey,o_orderkey,o_orderdate,o_totalprice),(v14 <span style="color: #333333">*</span> ((agg8 <span style="color: #333333">*</span> (QUERY18_mLINEITEM1_E1_2_E1_1.getValueOrDefault(se57.modify(o_orderkey)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>)));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n14<span style="color: #333333">=</span>n14<span style="color: #333333">-&gt;</span>next));
+            DOUBLE_TYPE l8 <span style="color: #333333">=</span> QUERY18_mLINEITEM1_L1_1.getValueOrDefault(se48.modify(o_orderkey));
+            (<span style="color: #888888">/*if */</span>(l8 <span style="color: #333333">&gt;</span> <span style="color: #0000DD; font-weight: bold">100L</span>) <span style="color: #333333">?</span> agg8 <span style="color: #333333">+=</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
+            QUERY18.addOrDelOnZero(se46.modify(customer_name,customer_custkey,o_orderkey,o_orderdate,o_totalprice),(v9 <span style="color: #333333">*</span> ((QUERY18_mLINEITEM2_E1_1.getValueOrDefault(se47.modify(o_orderkey)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> agg8)));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n9<span style="color: #333333">=</span>n9<span style="color: #333333">-&gt;</span>nxt));
         }
-        QUERY18_mORDERS2.addOrDelOnZero(se59.modify(customer_custkey,customer_name),<span style="color: #0000DD; font-weight: bold">1L</span>);
+        QUERY18_mORDERS3.addOrDelOnZero(se50.modify(customer_custkey,customer_name),<span style="color: #0000DD; font-weight: bold">1L</span>);
         { <span style="color: #888888">//slice</span>
-          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h14 <span style="color: #333333">=</span> QUERY18_mCUSTOMER1_mapkey1_idxfn<span style="color: #333333">::</span>hash(se61.modify1(customer_custkey));
-          <span style="color: #008800; font-weight: bold">const</span> HashIndex_QUERY18_mCUSTOMER1_map_1<span style="color: #333333">*</span> i15 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_QUERY18_mCUSTOMER1_map_1<span style="color: #333333">*&gt;</span>(QUERY18_mCUSTOMER1.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
-          HashIndex_QUERY18_mCUSTOMER1_map_1<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n15 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i15<span style="color: #333333">-&gt;</span>buckets_[h14 <span style="color: #333333">%</span> i15<span style="color: #333333">-&gt;</span>size_]);
-          QUERY18_mCUSTOMER1_entry<span style="color: #333333">*</span> e15;
-          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e15<span style="color: #333333">=</span>n15<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h14 <span style="color: #333333">==</span> n15<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> QUERY18_mCUSTOMER1_mapkey1_idxfn<span style="color: #333333">::</span>equals(se61, <span style="color: #333333">*</span>e15)) {
-            <span style="color: #333399; font-weight: bold">long</span> o_orderkey <span style="color: #333333">=</span> e15<span style="color: #333333">-&gt;</span>O_ORDERKEY;
-            DOUBLE_TYPE o_totalprice <span style="color: #333333">=</span> e15<span style="color: #333333">-&gt;</span>O_TOTALPRICE;
-            date o_orderdate <span style="color: #333333">=</span> e15<span style="color: #333333">-&gt;</span>O_ORDERDATE;
-            DOUBLE_TYPE v15 <span style="color: #333333">=</span> e15<span style="color: #333333">-&gt;</span>__av;
-            QUERY18_mLINEITEM1.addOrDelOnZero(se60.modify(customer_custkey,customer_name,o_orderkey,o_totalprice,o_orderdate),v15);
-          } <span style="color: #008800; font-weight: bold">while</span> ((n15<span style="color: #333333">=</span>n15<span style="color: #333333">-&gt;</span>next));
-        }
-        { <span style="color: #888888">//slice</span>
-          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h15 <span style="color: #333333">=</span> QUERY18_mCUSTOMER1_mLINEITEM1_mapkey1_idxfn<span style="color: #333333">::</span>hash(se63.modify1(customer_custkey));
-          <span style="color: #008800; font-weight: bold">const</span> HashIndex_QUERY18_mCUSTOMER1_mLINEITEM1_map_1<span style="color: #333333">*</span> i16 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_QUERY18_mCUSTOMER1_mLINEITEM1_map_1<span style="color: #333333">*&gt;</span>(QUERY18_mCUSTOMER1_mLINEITEM1.index[<span style="color: #0000DD; font-weight: bold">2</span>]);
-          HashIndex_QUERY18_mCUSTOMER1_mLINEITEM1_map_1<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n16 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i16<span style="color: #333333">-&gt;</span>buckets_[h15 <span style="color: #333333">%</span> i16<span style="color: #333333">-&gt;</span>size_]);
-          QUERY18_mCUSTOMER1_mLINEITEM1_entry<span style="color: #333333">*</span> e16;
-          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e16<span style="color: #333333">=</span>n16<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h15 <span style="color: #333333">==</span> n16<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> QUERY18_mCUSTOMER1_mLINEITEM1_mapkey1_idxfn<span style="color: #333333">::</span>equals(se63, <span style="color: #333333">*</span>e16)) {
-            <span style="color: #333399; font-weight: bold">long</span> o_orderkey <span style="color: #333333">=</span> e16<span style="color: #333333">-&gt;</span>QUERY18_mCUSTOMER1_mLINEITEMLINEITEM_ORDERKEY;
-            DOUBLE_TYPE o_totalprice <span style="color: #333333">=</span> e16<span style="color: #333333">-&gt;</span>O_TOTALPRICE;
-            date o_orderdate <span style="color: #333333">=</span> e16<span style="color: #333333">-&gt;</span>O_ORDERDATE;
-            <span style="color: #333399; font-weight: bold">long</span> v16 <span style="color: #333333">=</span> e16<span style="color: #333333">-&gt;</span>__av;
-            QUERY18_mLINEITEM4.addOrDelOnZero(se62.modify(customer_custkey,customer_name,o_orderkey,o_totalprice,o_orderdate),v16);
-          } <span style="color: #008800; font-weight: bold">while</span> ((n16<span style="color: #333333">=</span>n16<span style="color: #333333">-&gt;</span>next));
+          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h10 <span style="color: #333333">=</span> QUERY18_mCUSTOMER1_mLINEITEM1_mapkey1_idxfn<span style="color: #333333">::</span>hash(se52.modify1(customer_custkey));
+          <span style="color: #008800; font-weight: bold">const</span> HashIndex_QUERY18_mCUSTOMER1_mLINEITEM1_map_1<span style="color: #333333">*</span> i10 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_QUERY18_mCUSTOMER1_mLINEITEM1_map_1<span style="color: #333333">*&gt;</span>(QUERY18_mCUSTOMER1_mLINEITEM1.index[<span style="color: #0000DD; font-weight: bold">2</span>]);
+          HashIndex_QUERY18_mCUSTOMER1_mLINEITEM1_map_1<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n10 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i10<span style="color: #333333">-&gt;</span>buckets_[h10 <span style="color: #333333">%</span> i10<span style="color: #333333">-&gt;</span>size_]);
+          QUERY18_mCUSTOMER1_mLINEITEM1_entry<span style="color: #333333">*</span> e10;
+          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e10<span style="color: #333333">=</span>n10<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h10 <span style="color: #333333">==</span> n10<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> QUERY18_mCUSTOMER1_mLINEITEM1_mapkey1_idxfn<span style="color: #333333">::</span>equals(se52, <span style="color: #333333">*</span>e10)) {
+            <span style="color: #333399; font-weight: bold">long</span> query18_mlineitemlineitem_orderkey <span style="color: #333333">=</span> e10<span style="color: #333333">-&gt;</span>QUERY18_mCUSTOMER1_mLINEITEMLINEITEM_ORDERKEY;
+            DOUBLE_TYPE o_totalprice <span style="color: #333333">=</span> e10<span style="color: #333333">-&gt;</span>O_TOTALPRICE;
+            date o_orderdate <span style="color: #333333">=</span> e10<span style="color: #333333">-&gt;</span>O_ORDERDATE;
+            <span style="color: #333399; font-weight: bold">long</span> v10 <span style="color: #333333">=</span> e10<span style="color: #333333">-&gt;</span>__av;
+            QUERY18_mLINEITEM3.addOrDelOnZero(se51.modify(customer_custkey,customer_name,query18_mlineitemlineitem_orderkey,o_totalprice,o_orderdate),v10);
+          } <span style="color: #008800; font-weight: bold">while</span> ((n10<span style="color: #333333">=</span>n10<span style="color: #333333">-&gt;</span>nxt));
         }
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_CUSTOMER&quot;</span>)
@@ -1778,49 +1501,36 @@
     <span style="color: #333399; font-weight: bold">void</span> on_delete_CUSTOMER(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> customer_custkey, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> customer_name, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> customer_address, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> customer_nationkey, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> customer_phone, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE customer_acctbal, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> customer_mktsegment, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> customer_comment) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_CUSTOMER&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_CUSTOMER&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
+      {  <span style="color: #333333">++</span>tN;
         { <span style="color: #888888">//slice</span>
-          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h16 <span style="color: #333333">=</span> QUERY18_mCUSTOMER1_mapkey1_idxfn<span style="color: #333333">::</span>hash(se67.modify1(customer_custkey));
-          <span style="color: #008800; font-weight: bold">const</span> HashIndex_QUERY18_mCUSTOMER1_map_1<span style="color: #333333">*</span> i17 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_QUERY18_mCUSTOMER1_map_1<span style="color: #333333">*&gt;</span>(QUERY18_mCUSTOMER1.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
-          HashIndex_QUERY18_mCUSTOMER1_map_1<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n17 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i17<span style="color: #333333">-&gt;</span>buckets_[h16 <span style="color: #333333">%</span> i17<span style="color: #333333">-&gt;</span>size_]);
-          QUERY18_mCUSTOMER1_entry<span style="color: #333333">*</span> e17;
-          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e17<span style="color: #333333">=</span>n17<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h16 <span style="color: #333333">==</span> n17<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> QUERY18_mCUSTOMER1_mapkey1_idxfn<span style="color: #333333">::</span>equals(se67, <span style="color: #333333">*</span>e17)) {
-            <span style="color: #333399; font-weight: bold">long</span> o_orderkey <span style="color: #333333">=</span> e17<span style="color: #333333">-&gt;</span>O_ORDERKEY;
-            DOUBLE_TYPE o_totalprice <span style="color: #333333">=</span> e17<span style="color: #333333">-&gt;</span>O_TOTALPRICE;
-            date o_orderdate <span style="color: #333333">=</span> e17<span style="color: #333333">-&gt;</span>O_ORDERDATE;
-            DOUBLE_TYPE v17 <span style="color: #333333">=</span> e17<span style="color: #333333">-&gt;</span>__av;
+          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h11 <span style="color: #333333">=</span> QUERY18_mCUSTOMER1_mapkey1_idxfn<span style="color: #333333">::</span>hash(se56.modify1(customer_custkey));
+          <span style="color: #008800; font-weight: bold">const</span> HashIndex_QUERY18_mCUSTOMER1_map_1<span style="color: #333333">*</span> i11 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_QUERY18_mCUSTOMER1_map_1<span style="color: #333333">*&gt;</span>(QUERY18_mCUSTOMER1.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
+          HashIndex_QUERY18_mCUSTOMER1_map_1<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n11 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i11<span style="color: #333333">-&gt;</span>buckets_[h11 <span style="color: #333333">%</span> i11<span style="color: #333333">-&gt;</span>size_]);
+          QUERY18_mCUSTOMER1_entry<span style="color: #333333">*</span> e11;
+          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e11<span style="color: #333333">=</span>n11<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h11 <span style="color: #333333">==</span> n11<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> QUERY18_mCUSTOMER1_mapkey1_idxfn<span style="color: #333333">::</span>equals(se56, <span style="color: #333333">*</span>e11)) {
+            <span style="color: #333399; font-weight: bold">long</span> o_orderkey <span style="color: #333333">=</span> e11<span style="color: #333333">-&gt;</span>O_ORDERKEY;
+            DOUBLE_TYPE o_totalprice <span style="color: #333333">=</span> e11<span style="color: #333333">-&gt;</span>O_TOTALPRICE;
+            date o_orderdate <span style="color: #333333">=</span> e11<span style="color: #333333">-&gt;</span>O_ORDERDATE;
+            DOUBLE_TYPE v11 <span style="color: #333333">=</span> e11<span style="color: #333333">-&gt;</span>__av;
             <span style="color: #333399; font-weight: bold">long</span> agg9 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
-            DOUBLE_TYPE l9 <span style="color: #333333">=</span> QUERY18_mLINEITEM1_E1_1_L1_1.getValueOrDefault(se65.modify(o_orderkey));
-            agg9 <span style="color: #333333">+=</span> (l9 <span style="color: #333333">&gt;</span> <span style="color: #0000DD; font-weight: bold">100L</span>);
-            QUERY18.addOrDelOnZero(se64.modify(customer_name,customer_custkey,o_orderkey,o_orderdate,o_totalprice),(v17 <span style="color: #333333">*</span> (((agg9 <span style="color: #333333">*</span> (QUERY18_mLINEITEM1_E1_2_E1_1.getValueOrDefault(se66.modify(o_orderkey)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n17<span style="color: #333333">=</span>n17<span style="color: #333333">-&gt;</span>next));
+            DOUBLE_TYPE l9 <span style="color: #333333">=</span> QUERY18_mLINEITEM1_L1_1.getValueOrDefault(se55.modify(o_orderkey));
+            (<span style="color: #888888">/*if */</span>(l9 <span style="color: #333333">&gt;</span> <span style="color: #0000DD; font-weight: bold">100L</span>) <span style="color: #333333">?</span> agg9 <span style="color: #333333">+=</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
+            QUERY18.addOrDelOnZero(se53.modify(customer_name,customer_custkey,o_orderkey,o_orderdate,o_totalprice),(v11 <span style="color: #333333">*</span> ((QUERY18_mLINEITEM2_E1_1.getValueOrDefault(se54.modify(o_orderkey)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> (agg9 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>))));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n11<span style="color: #333333">=</span>n11<span style="color: #333333">-&gt;</span>nxt));
         }
-        QUERY18_mORDERS2.addOrDelOnZero(se68.modify(customer_custkey,customer_name),<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>);
+        QUERY18_mORDERS3.addOrDelOnZero(se57.modify(customer_custkey,customer_name),<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>);
         { <span style="color: #888888">//slice</span>
-          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h17 <span style="color: #333333">=</span> QUERY18_mCUSTOMER1_mapkey1_idxfn<span style="color: #333333">::</span>hash(se70.modify1(customer_custkey));
-          <span style="color: #008800; font-weight: bold">const</span> HashIndex_QUERY18_mCUSTOMER1_map_1<span style="color: #333333">*</span> i18 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_QUERY18_mCUSTOMER1_map_1<span style="color: #333333">*&gt;</span>(QUERY18_mCUSTOMER1.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
-          HashIndex_QUERY18_mCUSTOMER1_map_1<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n18 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i18<span style="color: #333333">-&gt;</span>buckets_[h17 <span style="color: #333333">%</span> i18<span style="color: #333333">-&gt;</span>size_]);
-          QUERY18_mCUSTOMER1_entry<span style="color: #333333">*</span> e18;
-          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e18<span style="color: #333333">=</span>n18<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h17 <span style="color: #333333">==</span> n18<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> QUERY18_mCUSTOMER1_mapkey1_idxfn<span style="color: #333333">::</span>equals(se70, <span style="color: #333333">*</span>e18)) {
-            <span style="color: #333399; font-weight: bold">long</span> o_orderkey <span style="color: #333333">=</span> e18<span style="color: #333333">-&gt;</span>O_ORDERKEY;
-            DOUBLE_TYPE o_totalprice <span style="color: #333333">=</span> e18<span style="color: #333333">-&gt;</span>O_TOTALPRICE;
-            date o_orderdate <span style="color: #333333">=</span> e18<span style="color: #333333">-&gt;</span>O_ORDERDATE;
-            DOUBLE_TYPE v18 <span style="color: #333333">=</span> e18<span style="color: #333333">-&gt;</span>__av;
-            QUERY18_mLINEITEM1.addOrDelOnZero(se69.modify(customer_custkey,customer_name,o_orderkey,o_totalprice,o_orderdate),(v18 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n18<span style="color: #333333">=</span>n18<span style="color: #333333">-&gt;</span>next));
-        }
-        { <span style="color: #888888">//slice</span>
-          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h18 <span style="color: #333333">=</span> QUERY18_mCUSTOMER1_mLINEITEM1_mapkey1_idxfn<span style="color: #333333">::</span>hash(se72.modify1(customer_custkey));
-          <span style="color: #008800; font-weight: bold">const</span> HashIndex_QUERY18_mCUSTOMER1_mLINEITEM1_map_1<span style="color: #333333">*</span> i19 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_QUERY18_mCUSTOMER1_mLINEITEM1_map_1<span style="color: #333333">*&gt;</span>(QUERY18_mCUSTOMER1_mLINEITEM1.index[<span style="color: #0000DD; font-weight: bold">2</span>]);
-          HashIndex_QUERY18_mCUSTOMER1_mLINEITEM1_map_1<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n19 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i19<span style="color: #333333">-&gt;</span>buckets_[h18 <span style="color: #333333">%</span> i19<span style="color: #333333">-&gt;</span>size_]);
-          QUERY18_mCUSTOMER1_mLINEITEM1_entry<span style="color: #333333">*</span> e19;
-          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e19<span style="color: #333333">=</span>n19<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h18 <span style="color: #333333">==</span> n19<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> QUERY18_mCUSTOMER1_mLINEITEM1_mapkey1_idxfn<span style="color: #333333">::</span>equals(se72, <span style="color: #333333">*</span>e19)) {
-            <span style="color: #333399; font-weight: bold">long</span> o_orderkey <span style="color: #333333">=</span> e19<span style="color: #333333">-&gt;</span>QUERY18_mCUSTOMER1_mLINEITEMLINEITEM_ORDERKEY;
-            DOUBLE_TYPE o_totalprice <span style="color: #333333">=</span> e19<span style="color: #333333">-&gt;</span>O_TOTALPRICE;
-            date o_orderdate <span style="color: #333333">=</span> e19<span style="color: #333333">-&gt;</span>O_ORDERDATE;
-            <span style="color: #333399; font-weight: bold">long</span> v19 <span style="color: #333333">=</span> e19<span style="color: #333333">-&gt;</span>__av;
-            QUERY18_mLINEITEM4.addOrDelOnZero(se71.modify(customer_custkey,customer_name,o_orderkey,o_totalprice,o_orderdate),(v19 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n19<span style="color: #333333">=</span>n19<span style="color: #333333">-&gt;</span>next));
+          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h12 <span style="color: #333333">=</span> QUERY18_mCUSTOMER1_mLINEITEM1_mapkey1_idxfn<span style="color: #333333">::</span>hash(se59.modify1(customer_custkey));
+          <span style="color: #008800; font-weight: bold">const</span> HashIndex_QUERY18_mCUSTOMER1_mLINEITEM1_map_1<span style="color: #333333">*</span> i12 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_QUERY18_mCUSTOMER1_mLINEITEM1_map_1<span style="color: #333333">*&gt;</span>(QUERY18_mCUSTOMER1_mLINEITEM1.index[<span style="color: #0000DD; font-weight: bold">2</span>]);
+          HashIndex_QUERY18_mCUSTOMER1_mLINEITEM1_map_1<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n12 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i12<span style="color: #333333">-&gt;</span>buckets_[h12 <span style="color: #333333">%</span> i12<span style="color: #333333">-&gt;</span>size_]);
+          QUERY18_mCUSTOMER1_mLINEITEM1_entry<span style="color: #333333">*</span> e12;
+          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e12<span style="color: #333333">=</span>n12<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h12 <span style="color: #333333">==</span> n12<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> QUERY18_mCUSTOMER1_mLINEITEM1_mapkey1_idxfn<span style="color: #333333">::</span>equals(se59, <span style="color: #333333">*</span>e12)) {
+            <span style="color: #333399; font-weight: bold">long</span> query18_mlineitemlineitem_orderkey <span style="color: #333333">=</span> e12<span style="color: #333333">-&gt;</span>QUERY18_mCUSTOMER1_mLINEITEMLINEITEM_ORDERKEY;
+            DOUBLE_TYPE o_totalprice <span style="color: #333333">=</span> e12<span style="color: #333333">-&gt;</span>O_TOTALPRICE;
+            date o_orderdate <span style="color: #333333">=</span> e12<span style="color: #333333">-&gt;</span>O_ORDERDATE;
+            <span style="color: #333399; font-weight: bold">long</span> v12 <span style="color: #333333">=</span> e12<span style="color: #333333">-&gt;</span>__av;
+            QUERY18_mLINEITEM3.addOrDelOnZero(se58.modify(customer_custkey,customer_name,query18_mlineitemlineitem_orderkey,o_totalprice,o_orderdate),(v12 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n12<span style="color: #333333">=</span>n12<span style="color: #333333">-&gt;</span>nxt));
         }
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_CUSTOMER&quot;</span>)
@@ -1833,7 +1543,7 @@
     <span style="color: #333399; font-weight: bold">void</span> on_system_ready_event() {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
-      {  <span style="color: #888888">//</span>
+      {  
         
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
@@ -1844,86 +1554,72 @@
   
     <span style="color: #888888">/* Sample entries for avoiding recreation of temporary objects */</span>
     QUERY18_entry se1;
-    QUERY18_mLINEITEM1_E1_1_L1_1_entry se2;
-    QUERY18_mLINEITEM1_E1_2_E1_1_entry se3;
-    QUERY18_mLINEITEM1_E1_1_L1_1_entry se4;
-    QUERY18_mLINEITEM1_E1_1_L1_1_entry se5;
-    QUERY18_mLINEITEM1_E1_2_E1_1_entry se6;
-    QUERY18_mLINEITEM1_E1_1_L1_1_entry se7;
-    QUERY18_mLINEITEM4_entry se8;
+    QUERY18_mLINEITEM1_L1_1_entry se2;
+    QUERY18_mLINEITEM2_E1_1_entry se3;
+    QUERY18_mLINEITEM1_L1_1_entry se4;
+    QUERY18_mLINEITEM1_L1_1_entry se5;
+    QUERY18_mLINEITEM2_E1_1_entry se6;
+    QUERY18_mLINEITEM1_L1_1_entry se7;
+    QUERY18_mLINEITEM3_entry se8;
     QUERY18_mCUSTOMER1_entry se9;
     QUERY18_mCUSTOMER1_mLINEITEM1_entry se10;
-    QUERY18_mLINEITEM1_entry se11;
-    QUERY18_mLINEITEM4_entry se12;
-    QUERY18_mLINEITEM1_E1_1_L1_1_entry se13;
-    QUERY18_mLINEITEM1_E1_2_E1_1_entry se14;
-    QUERY18_entry se15;
-    QUERY18_mLINEITEM1_E1_1_L1_1_entry se16;
-    QUERY18_mLINEITEM1_E1_2_E1_1_entry se17;
-    QUERY18_mLINEITEM1_E1_1_L1_1_entry se18;
-    QUERY18_mLINEITEM1_E1_2_E1_1_entry se19;
-    QUERY18_mLINEITEM1_E1_1_L1_1_entry se20;
-    QUERY18_mLINEITEM1_E1_2_E1_1_entry se21;
-    QUERY18_mLINEITEM4_entry se22;
-    QUERY18_mCUSTOMER1_entry se23;
-    QUERY18_mCUSTOMER1_mLINEITEM1_entry se24;
-    QUERY18_mLINEITEM1_entry se25;
-    QUERY18_mLINEITEM4_entry se26;
-    QUERY18_mLINEITEM1_E1_1_L1_1_entry se27;
-    QUERY18_mLINEITEM1_E1_2_E1_1_entry se28;
-    QUERY18_entry se29;
-    QUERY18_mLINEITEM1_E1_1_L1_1_entry se30;
-    QUERY18_mLINEITEM1_E1_2_E1_1_entry se31;
-    QUERY18_mLINEITEM1_E1_1_L1_1_entry se32;
-    QUERY18_mORDERS2_entry se33;
-    QUERY18_mCUSTOMER1_entry se34;
-    QUERY18_mLINEITEM1_E1_1_L1_1_entry se35;
-    QUERY18_mCUSTOMER1_mLINEITEM1_entry se36;
-    QUERY18_mLINEITEM1_entry se37;
-    QUERY18_mLINEITEM1_E1_1_L1_1_entry se38;
-    QUERY18_mORDERS2_entry se39;
-    QUERY18_mLINEITEM4_entry se40;
-    QUERY18_mORDERS2_entry se41;
-    QUERY18_entry se42;
-    QUERY18_mLINEITEM1_E1_1_L1_1_entry se43;
-    QUERY18_mLINEITEM1_E1_2_E1_1_entry se44;
-    QUERY18_mLINEITEM1_E1_1_L1_1_entry se45;
-    QUERY18_mORDERS2_entry se46;
-    QUERY18_mCUSTOMER1_entry se47;
-    QUERY18_mLINEITEM1_E1_1_L1_1_entry se48;
-    QUERY18_mCUSTOMER1_mLINEITEM1_entry se49;
-    QUERY18_mLINEITEM1_entry se50;
-    QUERY18_mLINEITEM1_E1_1_L1_1_entry se51;
-    QUERY18_mORDERS2_entry se52;
-    QUERY18_mLINEITEM4_entry se53;
-    QUERY18_mORDERS2_entry se54;
-    QUERY18_entry se55;
-    QUERY18_mLINEITEM1_E1_1_L1_1_entry se56;
-    QUERY18_mLINEITEM1_E1_2_E1_1_entry se57;
-    QUERY18_mCUSTOMER1_entry se58;
-    QUERY18_mORDERS2_entry se59;
-    QUERY18_mLINEITEM1_entry se60;
-    QUERY18_mCUSTOMER1_entry se61;
-    QUERY18_mLINEITEM4_entry se62;
-    QUERY18_mCUSTOMER1_mLINEITEM1_entry se63;
-    QUERY18_entry se64;
-    QUERY18_mLINEITEM1_E1_1_L1_1_entry se65;
-    QUERY18_mLINEITEM1_E1_2_E1_1_entry se66;
-    QUERY18_mCUSTOMER1_entry se67;
-    QUERY18_mORDERS2_entry se68;
-    QUERY18_mLINEITEM1_entry se69;
-    QUERY18_mCUSTOMER1_entry se70;
-    QUERY18_mLINEITEM4_entry se71;
-    QUERY18_mCUSTOMER1_mLINEITEM1_entry se72;
+    QUERY18_mLINEITEM1_L1_1_entry se11;
+    QUERY18_mLINEITEM2_E1_1_entry se12;
+    QUERY18_entry se13;
+    QUERY18_mLINEITEM1_L1_1_entry se14;
+    QUERY18_mLINEITEM1_L1_1_entry se15;
+    QUERY18_mLINEITEM2_E1_1_entry se16;
+    QUERY18_mLINEITEM1_L1_1_entry se17;
+    QUERY18_mLINEITEM2_E1_1_entry se18;
+    QUERY18_mLINEITEM1_L1_1_entry se19;
+    QUERY18_mLINEITEM2_E1_1_entry se20;
+    QUERY18_mLINEITEM3_entry se21;
+    QUERY18_mCUSTOMER1_entry se22;
+    QUERY18_mCUSTOMER1_mLINEITEM1_entry se23;
+    QUERY18_mLINEITEM1_L1_1_entry se24;
+    QUERY18_mLINEITEM2_E1_1_entry se25;
+    QUERY18_entry se26;
+    QUERY18_mLINEITEM1_L1_1_entry se27;
+    QUERY18_mLINEITEM2_E1_1_entry se28;
+    QUERY18_mLINEITEM1_L1_1_entry se29;
+    QUERY18_mORDERS3_entry se30;
+    QUERY18_mCUSTOMER1_entry se31;
+    QUERY18_mLINEITEM1_L1_1_entry se32;
+    QUERY18_mCUSTOMER1_mLINEITEM1_entry se33;
+    QUERY18_mLINEITEM3_entry se34;
+    QUERY18_mORDERS3_entry se35;
+    QUERY18_entry se36;
+    QUERY18_mLINEITEM1_L1_1_entry se37;
+    QUERY18_mLINEITEM2_E1_1_entry se38;
+    QUERY18_mLINEITEM1_L1_1_entry se39;
+    QUERY18_mORDERS3_entry se40;
+    QUERY18_mCUSTOMER1_entry se41;
+    QUERY18_mLINEITEM1_L1_1_entry se42;
+    QUERY18_mCUSTOMER1_mLINEITEM1_entry se43;
+    QUERY18_mLINEITEM3_entry se44;
+    QUERY18_mORDERS3_entry se45;
+    QUERY18_entry se46;
+    QUERY18_mLINEITEM2_E1_1_entry se47;
+    QUERY18_mLINEITEM1_L1_1_entry se48;
+    QUERY18_mCUSTOMER1_entry se49;
+    QUERY18_mORDERS3_entry se50;
+    QUERY18_mLINEITEM3_entry se51;
+    QUERY18_mCUSTOMER1_mLINEITEM1_entry se52;
+    QUERY18_entry se53;
+    QUERY18_mLINEITEM2_E1_1_entry se54;
+    QUERY18_mLINEITEM1_L1_1_entry se55;
+    QUERY18_mCUSTOMER1_entry se56;
+    QUERY18_mORDERS3_entry se57;
+    QUERY18_mLINEITEM3_entry se58;
+    QUERY18_mCUSTOMER1_mLINEITEM1_entry se59;
   
     <span style="color: #888888">/* Data structures used for storing materialized views */</span>
-    QUERY18_mORDERS2_map QUERY18_mORDERS2;
+    QUERY18_mORDERS3_map QUERY18_mORDERS3;
     QUERY18_mCUSTOMER1_map QUERY18_mCUSTOMER1;
     QUERY18_mCUSTOMER1_mLINEITEM1_map QUERY18_mCUSTOMER1_mLINEITEM1;
-    QUERY18_mLINEITEM1_map QUERY18_mLINEITEM1;
-    QUERY18_mLINEITEM1_E1_1_L1_1_map QUERY18_mLINEITEM1_E1_1_L1_1;
-    QUERY18_mLINEITEM1_E1_2_E1_1_map QUERY18_mLINEITEM1_E1_2_E1_1;
-    QUERY18_mLINEITEM4_map QUERY18_mLINEITEM4;
+    QUERY18_mLINEITEM1_L1_1_map QUERY18_mLINEITEM1_L1_1;
+    QUERY18_mLINEITEM2_E1_1_map QUERY18_mLINEITEM2_E1_1;
+    QUERY18_mLINEITEM3_map QUERY18_mLINEITEM3;
     
     
   
@@ -1962,16 +1658,18 @@
       <span style="color: #888888">/* Imports data for static tables and performs view initialization based on it. */</span>
       <span style="color: #333399; font-weight: bold">void</span> init() {
           <span style="color: #888888">//P0_PLACE_HOLDER</span>
-          table_multiplexer.init_source();
-          stream_multiplexer.init_source();
+          table_multiplexer.init_source(run_opts<span style="color: #333333">-&gt;</span>batch_size, run_opts<span style="color: #333333">-&gt;</span>parallel, <span style="color: #007020">true</span>);
+          stream_multiplexer.init_source(run_opts<span style="color: #333333">-&gt;</span>batch_size, run_opts<span style="color: #333333">-&gt;</span>parallel, <span style="color: #007020">false</span>);
           process_tables();
           data.on_system_ready_event();
           <span style="color: #888888">//P2_PLACE_HOLDER</span>
       }
   
       <span style="color: #888888">/* Saves a snapshot of the data required to obtain the results of top level queries. */</span>
-      <span style="color: #333399; font-weight: bold">snapshot_t</span> take_snapshot(){ <span style="color: #888888">//tlq_t d=(tlq_t&amp;)data; if (d.tS==0) { gettimeofday(&amp;(d.t),NULL); d.tT=((d.t).tv_sec-(d.t0).tv_sec)*1000000L+((d.t).tv_usec-(d.t0).tv_usec); } printf(&quot;SAMPLE=standard,%ld,%ld,%ld\n&quot;,d.tT,d.tN,d.tS);</span>
-          <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333399; font-weight: bold">snapshot_t</span>( <span style="color: #008800; font-weight: bold">new</span> <span style="color: #333399; font-weight: bold">tlq_t</span>((<span style="color: #333399; font-weight: bold">tlq_t</span><span style="color: #333333">&amp;</span>)data) );
+      <span style="color: #333399; font-weight: bold">snapshot_t</span> take_snapshot(){
+          <span style="color: #333399; font-weight: bold">tlq_t</span><span style="color: #333333">*</span> d <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">new</span> <span style="color: #333399; font-weight: bold">tlq_t</span>((<span style="color: #333399; font-weight: bold">tlq_t</span><span style="color: #333333">&amp;</span>)data);
+          <span style="color: #008800; font-weight: bold">if</span> (d<span style="color: #333333">-&gt;</span>tS<span style="color: #333333">==</span><span style="color: #0000DD; font-weight: bold">0</span>) { gettimeofday(<span style="color: #333333">&amp;</span>(d<span style="color: #333333">-&gt;</span>t),<span style="color: #007020">NULL</span>); d<span style="color: #333333">-&gt;</span>tT<span style="color: #333333">=</span>((d<span style="color: #333333">-&gt;</span>t).tv_sec<span style="color: #333333">-</span>(d<span style="color: #333333">-&gt;</span>t0).tv_sec)<span style="color: #333333">*</span><span style="color: #0000DD; font-weight: bold">1000000L</span><span style="color: #333333">+</span>((d<span style="color: #333333">-&gt;</span>t).tv_usec<span style="color: #333333">-</span>(d<span style="color: #333333">-&gt;</span>t0).tv_usec); } printf(<span style="background-color: #fff0f0">&quot;SAMPLE=standard,%ld,%ld,%ld</span><span style="color: #666666; font-weight: bold; background-color: #fff0f0">\n</span><span style="background-color: #fff0f0">&quot;</span>,d<span style="color: #333333">-&gt;</span>tT,d<span style="color: #333333">-&gt;</span>tN,d<span style="color: #333333">-&gt;</span>tS);
+          <span style="color: #008800; font-weight: bold">return</span> <span style="color: #0066BB; font-weight: bold">snapshot_t</span>( d );
       }
   
     <span style="color: #997700; font-weight: bold">protected:</span>

@@ -755,7 +755,9 @@
 755
 756
 757
-758</pre></td><td><pre style="margin: 0; line-height: 125%"><span style="color: #557799">#include &quot;program_base.hpp&quot;</span>
+758
+759
+760</pre></td><td><pre style="margin: 0; line-height: 125%"><span style="color: #557799">#include &quot;program_base.hpp&quot;</span>
 <span style="color: #557799">#include &quot;hpds/KDouble.hpp&quot;</span>
 <span style="color: #557799">#include &quot;hash.hpp&quot;</span>
 <span style="color: #557799">#include &quot;mmap/mmap.hpp&quot;</span>
@@ -879,12 +881,12 @@
   <span style="color: #333333">&gt;</span> COUNT_mS2_map;
   <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>COUNT_mS2_entry,<span style="color: #333399; font-weight: bold">long</span>,COUNT_mS2_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_COUNT_mS2_map_0;
   
-  <span style="color: #008800; font-weight: bold">struct</span> COUNT_mR2_entry {
-    <span style="color: #333399; font-weight: bold">long</span> R1_A; <span style="color: #333399; font-weight: bold">long</span> __av;  COUNT_mR2_entry<span style="color: #333333">*</span> nxt; COUNT_mR2_entry<span style="color: #333333">*</span> prv;
-    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">COUNT_mR2_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*R1_A = 0L; __av = 0L; */</span> }
-    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">COUNT_mR2_entry</span>(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1) { R1_A <span style="color: #333333">=</span> c0; __av <span style="color: #333333">=</span> c1; }
-    COUNT_mR2_entry(<span style="color: #008800; font-weight: bold">const</span> COUNT_mR2_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> R1_A( other.R1_A ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
-    FORCE_INLINE COUNT_mR2_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0) { R1_A <span style="color: #333333">=</span> c0;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
+  <span style="color: #008800; font-weight: bold">struct</span> COUNT_mR1_entry {
+    <span style="color: #333399; font-weight: bold">long</span> R1_A; <span style="color: #333399; font-weight: bold">long</span> __av;  COUNT_mR1_entry<span style="color: #333333">*</span> nxt; COUNT_mR1_entry<span style="color: #333333">*</span> prv;
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">COUNT_mR1_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*R1_A = 0L; __av = 0L; */</span> }
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">COUNT_mR1_entry</span>(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1) { R1_A <span style="color: #333333">=</span> c0; __av <span style="color: #333333">=</span> c1; }
+    COUNT_mR1_entry(<span style="color: #008800; font-weight: bold">const</span> COUNT_mR1_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> R1_A( other.R1_A ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
+    FORCE_INLINE COUNT_mR1_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0) { R1_A <span style="color: #333333">=</span> c0;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
     <span style="color: #008800; font-weight: bold">template</span><span style="color: #333333">&lt;</span><span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Archive</span><span style="color: #333333">&gt;</span>
     <span style="color: #333399; font-weight: bold">void</span> serialize(Archive<span style="color: #333333">&amp;</span> ar, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">unsigned</span> <span style="color: #333399; font-weight: bold">int</span> version) <span style="color: #008800; font-weight: bold">const</span> 
     {
@@ -894,83 +896,83 @@
       DBT_SERIALIZATION_NVP(ar, __av);
     }
   };
-  <span style="color: #008800; font-weight: bold">struct</span> COUNT_mR2_mapkey0_idxfn {
-    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> COUNT_mR2_entry<span style="color: #333333">&amp;</span> e) {
+  <span style="color: #008800; font-weight: bold">struct</span> COUNT_mR1_mapkey0_idxfn {
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> COUNT_mR1_entry<span style="color: #333333">&amp;</span> e) {
       <span style="color: #333399; font-weight: bold">size_t</span> h <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>;
       hash_combine(h, e.R1_A);
       <span style="color: #008800; font-weight: bold">return</span> h;
     }
-    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> COUNT_mR2_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> COUNT_mR2_entry<span style="color: #333333">&amp;</span> y) {
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> COUNT_mR1_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> COUNT_mR1_entry<span style="color: #333333">&amp;</span> y) {
       <span style="color: #008800; font-weight: bold">return</span> x.R1_A <span style="color: #333333">==</span> y.R1_A;
     }
   };
   
-  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>COUNT_mR2_entry,<span style="color: #333399; font-weight: bold">long</span>,
-    HashIndex<span style="color: #333333">&lt;</span>COUNT_mR2_entry,<span style="color: #333399; font-weight: bold">long</span>,COUNT_mR2_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>
-  <span style="color: #333333">&gt;</span> COUNT_mR2_map;
-  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>COUNT_mR2_entry,<span style="color: #333399; font-weight: bold">long</span>,COUNT_mR2_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_COUNT_mR2_map_0;
+  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>COUNT_mR1_entry,<span style="color: #333399; font-weight: bold">long</span>,
+    HashIndex<span style="color: #333333">&lt;</span>COUNT_mR1_entry,<span style="color: #333399; font-weight: bold">long</span>,COUNT_mR1_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>
+  <span style="color: #333333">&gt;</span> COUNT_mR1_map;
+  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>COUNT_mR1_entry,<span style="color: #333399; font-weight: bold">long</span>,COUNT_mR1_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_COUNT_mR1_map_0;
   
-  <span style="color: #008800; font-weight: bold">struct</span> COUNT_mR2_mR1_entry {
-    <span style="color: #333399; font-weight: bold">long</span> R1_A; <span style="color: #333399; font-weight: bold">long</span> COUNT_mR2_mRR_A; <span style="color: #333399; font-weight: bold">long</span> __av;  COUNT_mR2_mR1_entry<span style="color: #333333">*</span> nxt; COUNT_mR2_mR1_entry<span style="color: #333333">*</span> prv;
-    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">COUNT_mR2_mR1_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*R1_A = 0L; COUNT_mR2_mRR_A = 0L; __av = 0L; */</span> }
-    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">COUNT_mR2_mR1_entry</span>(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c2) { R1_A <span style="color: #333333">=</span> c0; COUNT_mR2_mRR_A <span style="color: #333333">=</span> c1; __av <span style="color: #333333">=</span> c2; }
-    COUNT_mR2_mR1_entry(<span style="color: #008800; font-weight: bold">const</span> COUNT_mR2_mR1_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> R1_A( other.R1_A ), COUNT_mR2_mRR_A( other.COUNT_mR2_mRR_A ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
-    FORCE_INLINE COUNT_mR2_mR1_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1) { R1_A <span style="color: #333333">=</span> c0; COUNT_mR2_mRR_A <span style="color: #333333">=</span> c1;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
-    FORCE_INLINE COUNT_mR2_mR1_entry<span style="color: #333333">&amp;</span> modify1(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1) { COUNT_mR2_mRR_A <span style="color: #333333">=</span> c1;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
-    FORCE_INLINE COUNT_mR2_mR1_entry<span style="color: #333333">&amp;</span> modify0(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0) { R1_A <span style="color: #333333">=</span> c0;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
+  <span style="color: #008800; font-weight: bold">struct</span> COUNT_mR1_mR1_entry {
+    <span style="color: #333399; font-weight: bold">long</span> R1_A; <span style="color: #333399; font-weight: bold">long</span> COUNT_mR1_mRR_A; <span style="color: #333399; font-weight: bold">long</span> __av;  COUNT_mR1_mR1_entry<span style="color: #333333">*</span> nxt; COUNT_mR1_mR1_entry<span style="color: #333333">*</span> prv;
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">COUNT_mR1_mR1_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*R1_A = 0L; COUNT_mR1_mRR_A = 0L; __av = 0L; */</span> }
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">COUNT_mR1_mR1_entry</span>(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c2) { R1_A <span style="color: #333333">=</span> c0; COUNT_mR1_mRR_A <span style="color: #333333">=</span> c1; __av <span style="color: #333333">=</span> c2; }
+    COUNT_mR1_mR1_entry(<span style="color: #008800; font-weight: bold">const</span> COUNT_mR1_mR1_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> R1_A( other.R1_A ), COUNT_mR1_mRR_A( other.COUNT_mR1_mRR_A ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
+    FORCE_INLINE COUNT_mR1_mR1_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1) { R1_A <span style="color: #333333">=</span> c0; COUNT_mR1_mRR_A <span style="color: #333333">=</span> c1;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
+    FORCE_INLINE COUNT_mR1_mR1_entry<span style="color: #333333">&amp;</span> modify1(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1) { COUNT_mR1_mRR_A <span style="color: #333333">=</span> c1;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
+    FORCE_INLINE COUNT_mR1_mR1_entry<span style="color: #333333">&amp;</span> modify0(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0) { R1_A <span style="color: #333333">=</span> c0;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
     <span style="color: #008800; font-weight: bold">template</span><span style="color: #333333">&lt;</span><span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Archive</span><span style="color: #333333">&gt;</span>
     <span style="color: #333399; font-weight: bold">void</span> serialize(Archive<span style="color: #333333">&amp;</span> ar, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">unsigned</span> <span style="color: #333399; font-weight: bold">int</span> version) <span style="color: #008800; font-weight: bold">const</span> 
     {
       ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
       DBT_SERIALIZATION_NVP(ar, R1_A);
       ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
-      DBT_SERIALIZATION_NVP(ar, COUNT_mR2_mRR_A);
+      DBT_SERIALIZATION_NVP(ar, COUNT_mR1_mRR_A);
       ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
       DBT_SERIALIZATION_NVP(ar, __av);
     }
   };
-  <span style="color: #008800; font-weight: bold">struct</span> COUNT_mR2_mR1_mapkey01_idxfn {
-    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> COUNT_mR2_mR1_entry<span style="color: #333333">&amp;</span> e) {
+  <span style="color: #008800; font-weight: bold">struct</span> COUNT_mR1_mR1_mapkey01_idxfn {
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> COUNT_mR1_mR1_entry<span style="color: #333333">&amp;</span> e) {
       <span style="color: #333399; font-weight: bold">size_t</span> h <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>;
       hash_combine(h, e.R1_A);
-      hash_combine(h, e.COUNT_mR2_mRR_A);
+      hash_combine(h, e.COUNT_mR1_mRR_A);
       <span style="color: #008800; font-weight: bold">return</span> h;
     }
-    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> COUNT_mR2_mR1_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> COUNT_mR2_mR1_entry<span style="color: #333333">&amp;</span> y) {
-      <span style="color: #008800; font-weight: bold">return</span> x.R1_A <span style="color: #333333">==</span> y.R1_A <span style="color: #333333">&amp;&amp;</span> x.COUNT_mR2_mRR_A <span style="color: #333333">==</span> y.COUNT_mR2_mRR_A;
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> COUNT_mR1_mR1_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> COUNT_mR1_mR1_entry<span style="color: #333333">&amp;</span> y) {
+      <span style="color: #008800; font-weight: bold">return</span> x.R1_A <span style="color: #333333">==</span> y.R1_A <span style="color: #333333">&amp;&amp;</span> x.COUNT_mR1_mRR_A <span style="color: #333333">==</span> y.COUNT_mR1_mRR_A;
     }
   };
   
-  <span style="color: #008800; font-weight: bold">struct</span> COUNT_mR2_mR1_mapkey1_idxfn {
-    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> COUNT_mR2_mR1_entry<span style="color: #333333">&amp;</span> e) {
+  <span style="color: #008800; font-weight: bold">struct</span> COUNT_mR1_mR1_mapkey1_idxfn {
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> COUNT_mR1_mR1_entry<span style="color: #333333">&amp;</span> e) {
       <span style="color: #333399; font-weight: bold">size_t</span> h <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>;
-      hash_combine(h, e.COUNT_mR2_mRR_A);
+      hash_combine(h, e.COUNT_mR1_mRR_A);
       <span style="color: #008800; font-weight: bold">return</span> h;
     }
-    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> COUNT_mR2_mR1_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> COUNT_mR2_mR1_entry<span style="color: #333333">&amp;</span> y) {
-      <span style="color: #008800; font-weight: bold">return</span> x.COUNT_mR2_mRR_A <span style="color: #333333">==</span> y.COUNT_mR2_mRR_A;
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> COUNT_mR1_mR1_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> COUNT_mR1_mR1_entry<span style="color: #333333">&amp;</span> y) {
+      <span style="color: #008800; font-weight: bold">return</span> x.COUNT_mR1_mRR_A <span style="color: #333333">==</span> y.COUNT_mR1_mRR_A;
     }
   };
   
-  <span style="color: #008800; font-weight: bold">struct</span> COUNT_mR2_mR1_mapkey0_idxfn {
-    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> COUNT_mR2_mR1_entry<span style="color: #333333">&amp;</span> e) {
+  <span style="color: #008800; font-weight: bold">struct</span> COUNT_mR1_mR1_mapkey0_idxfn {
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> COUNT_mR1_mR1_entry<span style="color: #333333">&amp;</span> e) {
       <span style="color: #333399; font-weight: bold">size_t</span> h <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>;
       hash_combine(h, e.R1_A);
       <span style="color: #008800; font-weight: bold">return</span> h;
     }
-    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> COUNT_mR2_mR1_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> COUNT_mR2_mR1_entry<span style="color: #333333">&amp;</span> y) {
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> COUNT_mR1_mR1_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> COUNT_mR1_mR1_entry<span style="color: #333333">&amp;</span> y) {
       <span style="color: #008800; font-weight: bold">return</span> x.R1_A <span style="color: #333333">==</span> y.R1_A;
     }
   };
   
-  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>COUNT_mR2_mR1_entry,<span style="color: #333399; font-weight: bold">long</span>,
-    HashIndex<span style="color: #333333">&lt;</span>COUNT_mR2_mR1_entry,<span style="color: #333399; font-weight: bold">long</span>,COUNT_mR2_mR1_mapkey01_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>,
-    HashIndex<span style="color: #333333">&lt;</span>COUNT_mR2_mR1_entry,<span style="color: #333399; font-weight: bold">long</span>,COUNT_mR2_mR1_mapkey1_idxfn,<span style="color: #007020">false</span><span style="color: #333333">&gt;</span>,
-    HashIndex<span style="color: #333333">&lt;</span>COUNT_mR2_mR1_entry,<span style="color: #333399; font-weight: bold">long</span>,COUNT_mR2_mR1_mapkey0_idxfn,<span style="color: #007020">false</span><span style="color: #333333">&gt;</span>
-  <span style="color: #333333">&gt;</span> COUNT_mR2_mR1_map;
-  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>COUNT_mR2_mR1_entry,<span style="color: #333399; font-weight: bold">long</span>,COUNT_mR2_mR1_mapkey01_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_COUNT_mR2_mR1_map_01;
-  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>COUNT_mR2_mR1_entry,<span style="color: #333399; font-weight: bold">long</span>,COUNT_mR2_mR1_mapkey1_idxfn,<span style="color: #007020">false</span><span style="color: #333333">&gt;</span> HashIndex_COUNT_mR2_mR1_map_1;
-  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>COUNT_mR2_mR1_entry,<span style="color: #333399; font-weight: bold">long</span>,COUNT_mR2_mR1_mapkey0_idxfn,<span style="color: #007020">false</span><span style="color: #333333">&gt;</span> HashIndex_COUNT_mR2_mR1_map_0;
+  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>COUNT_mR1_mR1_entry,<span style="color: #333399; font-weight: bold">long</span>,
+    HashIndex<span style="color: #333333">&lt;</span>COUNT_mR1_mR1_entry,<span style="color: #333399; font-weight: bold">long</span>,COUNT_mR1_mR1_mapkey01_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>,
+    HashIndex<span style="color: #333333">&lt;</span>COUNT_mR1_mR1_entry,<span style="color: #333399; font-weight: bold">long</span>,COUNT_mR1_mR1_mapkey1_idxfn,<span style="color: #007020">false</span><span style="color: #333333">&gt;</span>,
+    HashIndex<span style="color: #333333">&lt;</span>COUNT_mR1_mR1_entry,<span style="color: #333399; font-weight: bold">long</span>,COUNT_mR1_mR1_mapkey0_idxfn,<span style="color: #007020">false</span><span style="color: #333333">&gt;</span>
+  <span style="color: #333333">&gt;</span> COUNT_mR1_mR1_map;
+  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>COUNT_mR1_mR1_entry,<span style="color: #333399; font-weight: bold">long</span>,COUNT_mR1_mR1_mapkey01_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_COUNT_mR1_mR1_map_01;
+  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>COUNT_mR1_mR1_entry,<span style="color: #333399; font-weight: bold">long</span>,COUNT_mR1_mR1_mapkey1_idxfn,<span style="color: #007020">false</span><span style="color: #333333">&gt;</span> HashIndex_COUNT_mR1_mR1_map_1;
+  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>COUNT_mR1_mR1_entry,<span style="color: #333399; font-weight: bold">long</span>,COUNT_mR1_mR1_mapkey0_idxfn,<span style="color: #007020">false</span><span style="color: #333333">&gt;</span> HashIndex_COUNT_mR1_mR1_map_0;
   
   <span style="color: #008800; font-weight: bold">struct</span> COUNT_mR4_entry {
     <span style="color: #333399; font-weight: bold">long</span> R1_A; <span style="color: #333399; font-weight: bold">long</span> R1_B; <span style="color: #333399; font-weight: bold">long</span> COUNT_mRR_A; <span style="color: #333399; font-weight: bold">long</span> __av;  COUNT_mR4_entry<span style="color: #333333">*</span> nxt; COUNT_mR4_entry<span style="color: #333333">*</span> prv;
@@ -1023,13 +1025,13 @@
   <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>COUNT_mR4_entry,<span style="color: #333399; font-weight: bold">long</span>,COUNT_mR4_mapkey012_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_COUNT_mR4_map_012;
   <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>COUNT_mR4_entry,<span style="color: #333399; font-weight: bold">long</span>,COUNT_mR4_mapkey2_idxfn,<span style="color: #007020">false</span><span style="color: #333333">&gt;</span> HashIndex_COUNT_mR4_map_2;
   
-  <span style="color: #008800; font-weight: bold">struct</span> COUNT_mR6_entry {
-    <span style="color: #333399; font-weight: bold">long</span> R1_A; <span style="color: #333399; font-weight: bold">long</span> COUNT_mRR_A; <span style="color: #333399; font-weight: bold">long</span> __av;  COUNT_mR6_entry<span style="color: #333333">*</span> nxt; COUNT_mR6_entry<span style="color: #333333">*</span> prv;
-    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">COUNT_mR6_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*R1_A = 0L; COUNT_mRR_A = 0L; __av = 0L; */</span> }
-    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">COUNT_mR6_entry</span>(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c2) { R1_A <span style="color: #333333">=</span> c0; COUNT_mRR_A <span style="color: #333333">=</span> c1; __av <span style="color: #333333">=</span> c2; }
-    COUNT_mR6_entry(<span style="color: #008800; font-weight: bold">const</span> COUNT_mR6_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> R1_A( other.R1_A ), COUNT_mRR_A( other.COUNT_mRR_A ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
-    FORCE_INLINE COUNT_mR6_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1) { R1_A <span style="color: #333333">=</span> c0; COUNT_mRR_A <span style="color: #333333">=</span> c1;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
-    FORCE_INLINE COUNT_mR6_entry<span style="color: #333333">&amp;</span> modify1(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1) { COUNT_mRR_A <span style="color: #333333">=</span> c1;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
+  <span style="color: #008800; font-weight: bold">struct</span> COUNT_mR7_entry {
+    <span style="color: #333399; font-weight: bold">long</span> R1_A; <span style="color: #333399; font-weight: bold">long</span> COUNT_mRR_A; <span style="color: #333399; font-weight: bold">long</span> __av;  COUNT_mR7_entry<span style="color: #333333">*</span> nxt; COUNT_mR7_entry<span style="color: #333333">*</span> prv;
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">COUNT_mR7_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*R1_A = 0L; COUNT_mRR_A = 0L; __av = 0L; */</span> }
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">COUNT_mR7_entry</span>(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c2) { R1_A <span style="color: #333333">=</span> c0; COUNT_mRR_A <span style="color: #333333">=</span> c1; __av <span style="color: #333333">=</span> c2; }
+    COUNT_mR7_entry(<span style="color: #008800; font-weight: bold">const</span> COUNT_mR7_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> R1_A( other.R1_A ), COUNT_mRR_A( other.COUNT_mRR_A ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
+    FORCE_INLINE COUNT_mR7_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1) { R1_A <span style="color: #333333">=</span> c0; COUNT_mRR_A <span style="color: #333333">=</span> c1;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
+    FORCE_INLINE COUNT_mR7_entry<span style="color: #333333">&amp;</span> modify1(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1) { COUNT_mRR_A <span style="color: #333333">=</span> c1;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
     <span style="color: #008800; font-weight: bold">template</span><span style="color: #333333">&lt;</span><span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Archive</span><span style="color: #333333">&gt;</span>
     <span style="color: #333399; font-weight: bold">void</span> serialize(Archive<span style="color: #333333">&amp;</span> ar, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">unsigned</span> <span style="color: #333399; font-weight: bold">int</span> version) <span style="color: #008800; font-weight: bold">const</span> 
     {
@@ -1041,35 +1043,35 @@
       DBT_SERIALIZATION_NVP(ar, __av);
     }
   };
-  <span style="color: #008800; font-weight: bold">struct</span> COUNT_mR6_mapkey01_idxfn {
-    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> COUNT_mR6_entry<span style="color: #333333">&amp;</span> e) {
+  <span style="color: #008800; font-weight: bold">struct</span> COUNT_mR7_mapkey01_idxfn {
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> COUNT_mR7_entry<span style="color: #333333">&amp;</span> e) {
       <span style="color: #333399; font-weight: bold">size_t</span> h <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>;
       hash_combine(h, e.R1_A);
       hash_combine(h, e.COUNT_mRR_A);
       <span style="color: #008800; font-weight: bold">return</span> h;
     }
-    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> COUNT_mR6_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> COUNT_mR6_entry<span style="color: #333333">&amp;</span> y) {
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> COUNT_mR7_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> COUNT_mR7_entry<span style="color: #333333">&amp;</span> y) {
       <span style="color: #008800; font-weight: bold">return</span> x.R1_A <span style="color: #333333">==</span> y.R1_A <span style="color: #333333">&amp;&amp;</span> x.COUNT_mRR_A <span style="color: #333333">==</span> y.COUNT_mRR_A;
     }
   };
   
-  <span style="color: #008800; font-weight: bold">struct</span> COUNT_mR6_mapkey1_idxfn {
-    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> COUNT_mR6_entry<span style="color: #333333">&amp;</span> e) {
+  <span style="color: #008800; font-weight: bold">struct</span> COUNT_mR7_mapkey1_idxfn {
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> COUNT_mR7_entry<span style="color: #333333">&amp;</span> e) {
       <span style="color: #333399; font-weight: bold">size_t</span> h <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>;
       hash_combine(h, e.COUNT_mRR_A);
       <span style="color: #008800; font-weight: bold">return</span> h;
     }
-    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> COUNT_mR6_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> COUNT_mR6_entry<span style="color: #333333">&amp;</span> y) {
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> COUNT_mR7_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> COUNT_mR7_entry<span style="color: #333333">&amp;</span> y) {
       <span style="color: #008800; font-weight: bold">return</span> x.COUNT_mRR_A <span style="color: #333333">==</span> y.COUNT_mRR_A;
     }
   };
   
-  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>COUNT_mR6_entry,<span style="color: #333399; font-weight: bold">long</span>,
-    HashIndex<span style="color: #333333">&lt;</span>COUNT_mR6_entry,<span style="color: #333399; font-weight: bold">long</span>,COUNT_mR6_mapkey01_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>,
-    HashIndex<span style="color: #333333">&lt;</span>COUNT_mR6_entry,<span style="color: #333399; font-weight: bold">long</span>,COUNT_mR6_mapkey1_idxfn,<span style="color: #007020">false</span><span style="color: #333333">&gt;</span>
-  <span style="color: #333333">&gt;</span> COUNT_mR6_map;
-  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>COUNT_mR6_entry,<span style="color: #333399; font-weight: bold">long</span>,COUNT_mR6_mapkey01_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_COUNT_mR6_map_01;
-  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>COUNT_mR6_entry,<span style="color: #333399; font-weight: bold">long</span>,COUNT_mR6_mapkey1_idxfn,<span style="color: #007020">false</span><span style="color: #333333">&gt;</span> HashIndex_COUNT_mR6_map_1;
+  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>COUNT_mR7_entry,<span style="color: #333399; font-weight: bold">long</span>,
+    HashIndex<span style="color: #333333">&lt;</span>COUNT_mR7_entry,<span style="color: #333399; font-weight: bold">long</span>,COUNT_mR7_mapkey01_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>,
+    HashIndex<span style="color: #333333">&lt;</span>COUNT_mR7_entry,<span style="color: #333399; font-weight: bold">long</span>,COUNT_mR7_mapkey1_idxfn,<span style="color: #007020">false</span><span style="color: #333333">&gt;</span>
+  <span style="color: #333333">&gt;</span> COUNT_mR7_map;
+  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>COUNT_mR7_entry,<span style="color: #333399; font-weight: bold">long</span>,COUNT_mR7_mapkey01_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_COUNT_mR7_map_01;
+  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>COUNT_mR7_entry,<span style="color: #333399; font-weight: bold">long</span>,COUNT_mR7_mapkey1_idxfn,<span style="color: #007020">false</span><span style="color: #333333">&gt;</span> HashIndex_COUNT_mR7_map_1;
   
   <span style="color: #008800; font-weight: bold">struct</span> tuple2_L_L {
     <span style="color: #333399; font-weight: bold">long</span> _1; <span style="color: #333399; font-weight: bold">long</span> __av; tuple2_L_L<span style="color: #333333">*</span> nxt; tuple2_L_L<span style="color: #333333">*</span> prv;
@@ -1119,7 +1121,7 @@
   
   <span style="color: #888888">/* Type definition providing a way to incrementally maintain the results of the sql program */</span>
   <span style="color: #008800; font-weight: bold">struct</span> <span style="color: #333399; font-weight: bold">data_t</span> <span style="color: #333333">:</span> <span style="color: #333399; font-weight: bold">tlq_t</span>{
-    <span style="color: #333399; font-weight: bold">data_t</span>()<span style="color: #333333">:</span> <span style="color: #333399; font-weight: bold">tlq_t</span>(), add2(<span style="color: #0000DD; font-weight: bold">16U</span>), add1(<span style="color: #0000DD; font-weight: bold">16U</span>) {
+    <span style="color: #333399; font-weight: bold">data_t</span>()<span style="color: #333333">:</span> <span style="color: #333399; font-weight: bold">tlq_t</span>(), _c1(<span style="color: #0000DD; font-weight: bold">16U</span>), _c2(<span style="color: #0000DD; font-weight: bold">16U</span>) {
       
     }
   
@@ -1134,10 +1136,10 @@
       pb.add_map<span style="color: #333333">&lt;</span>COUNT_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;COUNT&quot;</span>, COUNT );
       pb.add_map<span style="color: #333333">&lt;</span>COUNT_mS1_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;COUNT_mS1&quot;</span>, COUNT_mS1 );
       pb.add_map<span style="color: #333333">&lt;</span>COUNT_mS2_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;COUNT_mS2&quot;</span>, COUNT_mS2 );
-      pb.add_map<span style="color: #333333">&lt;</span>COUNT_mR2_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;COUNT_mR2&quot;</span>, COUNT_mR2 );
-      pb.add_map<span style="color: #333333">&lt;</span>COUNT_mR2_mR1_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;COUNT_mR2_mR1&quot;</span>, COUNT_mR2_mR1 );
+      pb.add_map<span style="color: #333333">&lt;</span>COUNT_mR1_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;COUNT_mR1&quot;</span>, COUNT_mR1 );
+      pb.add_map<span style="color: #333333">&lt;</span>COUNT_mR1_mR1_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;COUNT_mR1_mR1&quot;</span>, COUNT_mR1_mR1 );
       pb.add_map<span style="color: #333333">&lt;</span>COUNT_mR4_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;COUNT_mR4&quot;</span>, COUNT_mR4 );
-      pb.add_map<span style="color: #333333">&lt;</span>COUNT_mR6_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;COUNT_mR6&quot;</span>, COUNT_mR6 );
+      pb.add_map<span style="color: #333333">&lt;</span>COUNT_mR7_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;COUNT_mR7&quot;</span>, COUNT_mR7 );
   
       pb.add_relation(<span style="background-color: #fff0f0">&quot;R&quot;</span>);
       pb.add_relation(<span style="background-color: #fff0f0">&quot;S&quot;</span>);
@@ -1183,22 +1185,22 @@
     <span style="color: #333399; font-weight: bold">void</span> on_insert_R(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> r_a, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> r_b) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_R&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_R&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
-        add1.clear();
-        add_to_temp_map(add1, st1.modify(r_a,COUNT_mR2.getValueOrDefault(se2.modify(r_a))));
+      {  <span style="color: #333333">++</span>tN;
+        _c1.clear();
+        add_to_temp_map(_c1, st1.modify(r_a,COUNT_mR1.getValueOrDefault(se2.modify(r_a))));
         { <span style="color: #888888">//slice</span>
-          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h1 <span style="color: #333333">=</span> COUNT_mR6_mapkey1_idxfn<span style="color: #333333">::</span>hash(se3.modify1(r_a));
-          <span style="color: #008800; font-weight: bold">const</span> HashIndex_COUNT_mR6_map_1<span style="color: #333333">*</span> i1 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_COUNT_mR6_map_1<span style="color: #333333">*&gt;</span>(COUNT_mR6.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
-          HashIndex_COUNT_mR6_map_1<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n1 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i1<span style="color: #333333">-&gt;</span>buckets_[h1 <span style="color: #333333">%</span> i1<span style="color: #333333">-&gt;</span>size_]);
-          COUNT_mR6_entry<span style="color: #333333">*</span> e1;
-          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e1<span style="color: #333333">=</span>n1<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h1 <span style="color: #333333">==</span> n1<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> COUNT_mR6_mapkey1_idxfn<span style="color: #333333">::</span>equals(se3, <span style="color: #333333">*</span>e1)) {
+          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h1 <span style="color: #333333">=</span> COUNT_mR7_mapkey1_idxfn<span style="color: #333333">::</span>hash(se3.modify1(r_a));
+          <span style="color: #008800; font-weight: bold">const</span> HashIndex_COUNT_mR7_map_1<span style="color: #333333">*</span> i1 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_COUNT_mR7_map_1<span style="color: #333333">*&gt;</span>(COUNT_mR7.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
+          HashIndex_COUNT_mR7_map_1<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n1 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i1<span style="color: #333333">-&gt;</span>buckets_[h1 <span style="color: #333333">%</span> i1<span style="color: #333333">-&gt;</span>size_]);
+          COUNT_mR7_entry<span style="color: #333333">*</span> e1;
+          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e1<span style="color: #333333">=</span>n1<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h1 <span style="color: #333333">==</span> n1<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> COUNT_mR7_mapkey1_idxfn<span style="color: #333333">::</span>equals(se3, <span style="color: #333333">*</span>e1)) {
             <span style="color: #333399; font-weight: bold">long</span> r1_a <span style="color: #333333">=</span> e1<span style="color: #333333">-&gt;</span>R1_A;
             <span style="color: #333399; font-weight: bold">long</span> v2 <span style="color: #333333">=</span> e1<span style="color: #333333">-&gt;</span>__av;
-            add_to_temp_map(add1, st2.modify(r1_a,v2));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n1<span style="color: #333333">=</span>n1<span style="color: #333333">-&gt;</span>next));
+            add_to_temp_map(_c1, st2.modify(r1_a,v2));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n1<span style="color: #333333">=</span>n1<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//temp foreach</span>
-          tuple2_L_L<span style="color: #333333">*</span> e2 <span style="color: #333333">=</span> add1.head;
+          tuple2_L_L<span style="color: #333333">*</span> e2 <span style="color: #333333">=</span> _c1.head;
           <span style="color: #008800; font-weight: bold">while</span>(e2){
             <span style="color: #333399; font-weight: bold">long</span> r1_a <span style="color: #333333">=</span> e2<span style="color: #333333">-&gt;</span>_1;
             <span style="color: #333399; font-weight: bold">long</span> v3 <span style="color: #333333">=</span> e2<span style="color: #333333">-&gt;</span>__av;
@@ -1216,31 +1218,31 @@
             <span style="color: #333399; font-weight: bold">long</span> r1_b <span style="color: #333333">=</span> e3<span style="color: #333333">-&gt;</span>R1_B;
             <span style="color: #333399; font-weight: bold">long</span> v4 <span style="color: #333333">=</span> e3<span style="color: #333333">-&gt;</span>__av;
             COUNT.addOrDelOnZero(se1.modify(r1_a,r1_b),v4);
-          } <span style="color: #008800; font-weight: bold">while</span> ((n2<span style="color: #333333">=</span>n2<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n2<span style="color: #333333">=</span>n2<span style="color: #333333">-&gt;</span>nxt));
         }
         COUNT_mS1.addOrDelOnZero(se5.modify(r_a,r_b),<span style="color: #0000DD; font-weight: bold">1L</span>);
         COUNT_mS2.addOrDelOnZero(se6.modify(r_a),<span style="color: #0000DD; font-weight: bold">1L</span>);
         { <span style="color: #888888">//slice</span>
-          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h3 <span style="color: #333333">=</span> COUNT_mR2_mR1_mapkey1_idxfn<span style="color: #333333">::</span>hash(se8.modify1(r_a));
-          <span style="color: #008800; font-weight: bold">const</span> HashIndex_COUNT_mR2_mR1_map_1<span style="color: #333333">*</span> i3 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_COUNT_mR2_mR1_map_1<span style="color: #333333">*&gt;</span>(COUNT_mR2_mR1.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
-          HashIndex_COUNT_mR2_mR1_map_1<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n3 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i3<span style="color: #333333">-&gt;</span>buckets_[h3 <span style="color: #333333">%</span> i3<span style="color: #333333">-&gt;</span>size_]);
-          COUNT_mR2_mR1_entry<span style="color: #333333">*</span> e4;
-          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e4<span style="color: #333333">=</span>n3<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h3 <span style="color: #333333">==</span> n3<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> COUNT_mR2_mR1_mapkey1_idxfn<span style="color: #333333">::</span>equals(se8, <span style="color: #333333">*</span>e4)) {
+          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h3 <span style="color: #333333">=</span> COUNT_mR1_mR1_mapkey1_idxfn<span style="color: #333333">::</span>hash(se8.modify1(r_a));
+          <span style="color: #008800; font-weight: bold">const</span> HashIndex_COUNT_mR1_mR1_map_1<span style="color: #333333">*</span> i3 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_COUNT_mR1_mR1_map_1<span style="color: #333333">*&gt;</span>(COUNT_mR1_mR1.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
+          HashIndex_COUNT_mR1_mR1_map_1<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n3 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i3<span style="color: #333333">-&gt;</span>buckets_[h3 <span style="color: #333333">%</span> i3<span style="color: #333333">-&gt;</span>size_]);
+          COUNT_mR1_mR1_entry<span style="color: #333333">*</span> e4;
+          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e4<span style="color: #333333">=</span>n3<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h3 <span style="color: #333333">==</span> n3<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> COUNT_mR1_mR1_mapkey1_idxfn<span style="color: #333333">::</span>equals(se8, <span style="color: #333333">*</span>e4)) {
             <span style="color: #333399; font-weight: bold">long</span> r1_a <span style="color: #333333">=</span> e4<span style="color: #333333">-&gt;</span>R1_A;
             <span style="color: #333399; font-weight: bold">long</span> v5 <span style="color: #333333">=</span> e4<span style="color: #333333">-&gt;</span>__av;
-            COUNT_mR2.addOrDelOnZero(se7.modify(r1_a),v5);
-          } <span style="color: #008800; font-weight: bold">while</span> ((n3<span style="color: #333333">=</span>n3<span style="color: #333333">-&gt;</span>next));
+            COUNT_mR1.addOrDelOnZero(se7.modify(r1_a),v5);
+          } <span style="color: #008800; font-weight: bold">while</span> ((n3<span style="color: #333333">=</span>n3<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
-          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h4 <span style="color: #333333">=</span> COUNT_mR2_mR1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se10.modify0(r_a));
-          <span style="color: #008800; font-weight: bold">const</span> HashIndex_COUNT_mR2_mR1_map_0<span style="color: #333333">*</span> i4 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_COUNT_mR2_mR1_map_0<span style="color: #333333">*&gt;</span>(COUNT_mR2_mR1.index[<span style="color: #0000DD; font-weight: bold">2</span>]);
-          HashIndex_COUNT_mR2_mR1_map_0<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n4 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i4<span style="color: #333333">-&gt;</span>buckets_[h4 <span style="color: #333333">%</span> i4<span style="color: #333333">-&gt;</span>size_]);
-          COUNT_mR2_mR1_entry<span style="color: #333333">*</span> e5;
-          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e5<span style="color: #333333">=</span>n4<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h4 <span style="color: #333333">==</span> n4<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> COUNT_mR2_mR1_mapkey0_idxfn<span style="color: #333333">::</span>equals(se10, <span style="color: #333333">*</span>e5)) {
-            <span style="color: #333399; font-weight: bold">long</span> count_mrr_a <span style="color: #333333">=</span> e5<span style="color: #333333">-&gt;</span>COUNT_mR2_mRR_A;
+          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h4 <span style="color: #333333">=</span> COUNT_mR1_mR1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se10.modify0(r_a));
+          <span style="color: #008800; font-weight: bold">const</span> HashIndex_COUNT_mR1_mR1_map_0<span style="color: #333333">*</span> i4 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_COUNT_mR1_mR1_map_0<span style="color: #333333">*&gt;</span>(COUNT_mR1_mR1.index[<span style="color: #0000DD; font-weight: bold">2</span>]);
+          HashIndex_COUNT_mR1_mR1_map_0<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n4 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i4<span style="color: #333333">-&gt;</span>buckets_[h4 <span style="color: #333333">%</span> i4<span style="color: #333333">-&gt;</span>size_]);
+          COUNT_mR1_mR1_entry<span style="color: #333333">*</span> e5;
+          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e5<span style="color: #333333">=</span>n4<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h4 <span style="color: #333333">==</span> n4<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> COUNT_mR1_mR1_mapkey0_idxfn<span style="color: #333333">::</span>equals(se10, <span style="color: #333333">*</span>e5)) {
+            <span style="color: #333399; font-weight: bold">long</span> count_mrr_a <span style="color: #333333">=</span> e5<span style="color: #333333">-&gt;</span>COUNT_mR1_mRR_A;
             <span style="color: #333399; font-weight: bold">long</span> v6 <span style="color: #333333">=</span> e5<span style="color: #333333">-&gt;</span>__av;
             COUNT_mR4.addOrDelOnZero(se9.modify(r_a,r_b,count_mrr_a),v6);
-          } <span style="color: #008800; font-weight: bold">while</span> ((n4<span style="color: #333333">=</span>n4<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n4<span style="color: #333333">=</span>n4<span style="color: #333333">-&gt;</span>nxt));
         }
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_R&quot;</span>)
@@ -1253,22 +1255,22 @@
     <span style="color: #333399; font-weight: bold">void</span> on_delete_R(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> r_a, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> r_b) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_R&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_R&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
-        add2.clear();
-        add_to_temp_map(add2, st3.modify(r_a,(COUNT_mR2.getValueOrDefault(se12.modify(r_a)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)));
+      {  <span style="color: #333333">++</span>tN;
+        _c2.clear();
+        add_to_temp_map(_c2, st3.modify(r_a,(COUNT_mR1.getValueOrDefault(se12.modify(r_a)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)));
         { <span style="color: #888888">//slice</span>
-          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h5 <span style="color: #333333">=</span> COUNT_mR6_mapkey1_idxfn<span style="color: #333333">::</span>hash(se13.modify1(r_a));
-          <span style="color: #008800; font-weight: bold">const</span> HashIndex_COUNT_mR6_map_1<span style="color: #333333">*</span> i5 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_COUNT_mR6_map_1<span style="color: #333333">*&gt;</span>(COUNT_mR6.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
-          HashIndex_COUNT_mR6_map_1<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n5 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i5<span style="color: #333333">-&gt;</span>buckets_[h5 <span style="color: #333333">%</span> i5<span style="color: #333333">-&gt;</span>size_]);
-          COUNT_mR6_entry<span style="color: #333333">*</span> e6;
-          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e6<span style="color: #333333">=</span>n5<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h5 <span style="color: #333333">==</span> n5<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> COUNT_mR6_mapkey1_idxfn<span style="color: #333333">::</span>equals(se13, <span style="color: #333333">*</span>e6)) {
+          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h5 <span style="color: #333333">=</span> COUNT_mR7_mapkey1_idxfn<span style="color: #333333">::</span>hash(se13.modify1(r_a));
+          <span style="color: #008800; font-weight: bold">const</span> HashIndex_COUNT_mR7_map_1<span style="color: #333333">*</span> i5 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_COUNT_mR7_map_1<span style="color: #333333">*&gt;</span>(COUNT_mR7.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
+          HashIndex_COUNT_mR7_map_1<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n5 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i5<span style="color: #333333">-&gt;</span>buckets_[h5 <span style="color: #333333">%</span> i5<span style="color: #333333">-&gt;</span>size_]);
+          COUNT_mR7_entry<span style="color: #333333">*</span> e6;
+          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e6<span style="color: #333333">=</span>n5<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h5 <span style="color: #333333">==</span> n5<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> COUNT_mR7_mapkey1_idxfn<span style="color: #333333">::</span>equals(se13, <span style="color: #333333">*</span>e6)) {
             <span style="color: #333399; font-weight: bold">long</span> r1_a <span style="color: #333333">=</span> e6<span style="color: #333333">-&gt;</span>R1_A;
             <span style="color: #333399; font-weight: bold">long</span> v8 <span style="color: #333333">=</span> e6<span style="color: #333333">-&gt;</span>__av;
-            add_to_temp_map(add2, st4.modify(r1_a,v8));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n5<span style="color: #333333">=</span>n5<span style="color: #333333">-&gt;</span>next));
+            add_to_temp_map(_c2, st4.modify(r1_a,v8));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n5<span style="color: #333333">=</span>n5<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//temp foreach</span>
-          tuple2_L_L<span style="color: #333333">*</span> e7 <span style="color: #333333">=</span> add2.head;
+          tuple2_L_L<span style="color: #333333">*</span> e7 <span style="color: #333333">=</span> _c2.head;
           <span style="color: #008800; font-weight: bold">while</span>(e7){
             <span style="color: #333399; font-weight: bold">long</span> r1_a <span style="color: #333333">=</span> e7<span style="color: #333333">-&gt;</span>_1;
             <span style="color: #333399; font-weight: bold">long</span> v9 <span style="color: #333333">=</span> e7<span style="color: #333333">-&gt;</span>__av;
@@ -1286,31 +1288,31 @@
             <span style="color: #333399; font-weight: bold">long</span> r1_b <span style="color: #333333">=</span> e8<span style="color: #333333">-&gt;</span>R1_B;
             <span style="color: #333399; font-weight: bold">long</span> v10 <span style="color: #333333">=</span> e8<span style="color: #333333">-&gt;</span>__av;
             COUNT.addOrDelOnZero(se11.modify(r1_a,r1_b),(v10 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n6<span style="color: #333333">=</span>n6<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n6<span style="color: #333333">=</span>n6<span style="color: #333333">-&gt;</span>nxt));
         }
         COUNT_mS1.addOrDelOnZero(se15.modify(r_a,r_b),<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>);
         COUNT_mS2.addOrDelOnZero(se16.modify(r_a),<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>);
         { <span style="color: #888888">//slice</span>
-          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h7 <span style="color: #333333">=</span> COUNT_mR2_mR1_mapkey1_idxfn<span style="color: #333333">::</span>hash(se18.modify1(r_a));
-          <span style="color: #008800; font-weight: bold">const</span> HashIndex_COUNT_mR2_mR1_map_1<span style="color: #333333">*</span> i7 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_COUNT_mR2_mR1_map_1<span style="color: #333333">*&gt;</span>(COUNT_mR2_mR1.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
-          HashIndex_COUNT_mR2_mR1_map_1<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n7 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i7<span style="color: #333333">-&gt;</span>buckets_[h7 <span style="color: #333333">%</span> i7<span style="color: #333333">-&gt;</span>size_]);
-          COUNT_mR2_mR1_entry<span style="color: #333333">*</span> e9;
-          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e9<span style="color: #333333">=</span>n7<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h7 <span style="color: #333333">==</span> n7<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> COUNT_mR2_mR1_mapkey1_idxfn<span style="color: #333333">::</span>equals(se18, <span style="color: #333333">*</span>e9)) {
+          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h7 <span style="color: #333333">=</span> COUNT_mR1_mR1_mapkey1_idxfn<span style="color: #333333">::</span>hash(se18.modify1(r_a));
+          <span style="color: #008800; font-weight: bold">const</span> HashIndex_COUNT_mR1_mR1_map_1<span style="color: #333333">*</span> i7 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_COUNT_mR1_mR1_map_1<span style="color: #333333">*&gt;</span>(COUNT_mR1_mR1.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
+          HashIndex_COUNT_mR1_mR1_map_1<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n7 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i7<span style="color: #333333">-&gt;</span>buckets_[h7 <span style="color: #333333">%</span> i7<span style="color: #333333">-&gt;</span>size_]);
+          COUNT_mR1_mR1_entry<span style="color: #333333">*</span> e9;
+          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e9<span style="color: #333333">=</span>n7<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h7 <span style="color: #333333">==</span> n7<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> COUNT_mR1_mR1_mapkey1_idxfn<span style="color: #333333">::</span>equals(se18, <span style="color: #333333">*</span>e9)) {
             <span style="color: #333399; font-weight: bold">long</span> r1_a <span style="color: #333333">=</span> e9<span style="color: #333333">-&gt;</span>R1_A;
             <span style="color: #333399; font-weight: bold">long</span> v11 <span style="color: #333333">=</span> e9<span style="color: #333333">-&gt;</span>__av;
-            COUNT_mR2.addOrDelOnZero(se17.modify(r1_a),(v11 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n7<span style="color: #333333">=</span>n7<span style="color: #333333">-&gt;</span>next));
+            COUNT_mR1.addOrDelOnZero(se17.modify(r1_a),(v11 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n7<span style="color: #333333">=</span>n7<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
-          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h8 <span style="color: #333333">=</span> COUNT_mR2_mR1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se20.modify0(r_a));
-          <span style="color: #008800; font-weight: bold">const</span> HashIndex_COUNT_mR2_mR1_map_0<span style="color: #333333">*</span> i8 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_COUNT_mR2_mR1_map_0<span style="color: #333333">*&gt;</span>(COUNT_mR2_mR1.index[<span style="color: #0000DD; font-weight: bold">2</span>]);
-          HashIndex_COUNT_mR2_mR1_map_0<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n8 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i8<span style="color: #333333">-&gt;</span>buckets_[h8 <span style="color: #333333">%</span> i8<span style="color: #333333">-&gt;</span>size_]);
-          COUNT_mR2_mR1_entry<span style="color: #333333">*</span> e10;
-          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e10<span style="color: #333333">=</span>n8<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h8 <span style="color: #333333">==</span> n8<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> COUNT_mR2_mR1_mapkey0_idxfn<span style="color: #333333">::</span>equals(se20, <span style="color: #333333">*</span>e10)) {
-            <span style="color: #333399; font-weight: bold">long</span> count_mrr_a <span style="color: #333333">=</span> e10<span style="color: #333333">-&gt;</span>COUNT_mR2_mRR_A;
+          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h8 <span style="color: #333333">=</span> COUNT_mR1_mR1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se20.modify0(r_a));
+          <span style="color: #008800; font-weight: bold">const</span> HashIndex_COUNT_mR1_mR1_map_0<span style="color: #333333">*</span> i8 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_COUNT_mR1_mR1_map_0<span style="color: #333333">*&gt;</span>(COUNT_mR1_mR1.index[<span style="color: #0000DD; font-weight: bold">2</span>]);
+          HashIndex_COUNT_mR1_mR1_map_0<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n8 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i8<span style="color: #333333">-&gt;</span>buckets_[h8 <span style="color: #333333">%</span> i8<span style="color: #333333">-&gt;</span>size_]);
+          COUNT_mR1_mR1_entry<span style="color: #333333">*</span> e10;
+          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e10<span style="color: #333333">=</span>n8<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h8 <span style="color: #333333">==</span> n8<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> COUNT_mR1_mR1_mapkey0_idxfn<span style="color: #333333">::</span>equals(se20, <span style="color: #333333">*</span>e10)) {
+            <span style="color: #333399; font-weight: bold">long</span> count_mrr_a <span style="color: #333333">=</span> e10<span style="color: #333333">-&gt;</span>COUNT_mR1_mRR_A;
             <span style="color: #333399; font-weight: bold">long</span> v12 <span style="color: #333333">=</span> e10<span style="color: #333333">-&gt;</span>__av;
             COUNT_mR4.addOrDelOnZero(se19.modify(r_a,r_b,count_mrr_a),(v12 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n8<span style="color: #333333">=</span>n8<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n8<span style="color: #333333">=</span>n8<span style="color: #333333">-&gt;</span>nxt));
         }
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_R&quot;</span>)
@@ -1323,7 +1325,7 @@
     <span style="color: #333399; font-weight: bold">void</span> on_insert_S(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> s_c, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> s_d) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_S&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_S&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
+      {  <span style="color: #333333">++</span>tN;
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h9 <span style="color: #333333">=</span> COUNT_mS1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se23.modify0(s_c));
           <span style="color: #008800; font-weight: bold">const</span> HashIndex_COUNT_mS1_map_0<span style="color: #333333">*</span> i9 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_COUNT_mS1_map_0<span style="color: #333333">*&gt;</span>(COUNT_mS1.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
@@ -1333,10 +1335,10 @@
             <span style="color: #333399; font-weight: bold">long</span> r1_b <span style="color: #333333">=</span> e11<span style="color: #333333">-&gt;</span>R1_B;
             <span style="color: #333399; font-weight: bold">long</span> v13 <span style="color: #333333">=</span> e11<span style="color: #333333">-&gt;</span>__av;
             COUNT.addOrDelOnZero(se21.modify(s_c,r1_b),(v13 <span style="color: #333333">*</span> COUNT_mS2.getValueOrDefault(se22.modify(s_d))));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n9<span style="color: #333333">=</span>n9<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n9<span style="color: #333333">=</span>n9<span style="color: #333333">-&gt;</span>nxt));
         }
-        COUNT_mR2.addOrDelOnZero(se24.modify(s_c),COUNT_mS2.getValueOrDefault(se25.modify(s_d)));
-        COUNT_mR2_mR1.addOrDelOnZero(se26.modify(s_c,s_d),<span style="color: #0000DD; font-weight: bold">1L</span>);
+        COUNT_mR1.addOrDelOnZero(se24.modify(s_c),COUNT_mS2.getValueOrDefault(se25.modify(s_d)));
+        COUNT_mR1_mR1.addOrDelOnZero(se26.modify(s_c,s_d),<span style="color: #0000DD; font-weight: bold">1L</span>);
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h10 <span style="color: #333333">=</span> COUNT_mS1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se28.modify0(s_c));
           <span style="color: #008800; font-weight: bold">const</span> HashIndex_COUNT_mS1_map_0<span style="color: #333333">*</span> i10 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_COUNT_mS1_map_0<span style="color: #333333">*&gt;</span>(COUNT_mS1.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
@@ -1346,9 +1348,9 @@
             <span style="color: #333399; font-weight: bold">long</span> r1_b <span style="color: #333333">=</span> e12<span style="color: #333333">-&gt;</span>R1_B;
             <span style="color: #333399; font-weight: bold">long</span> v14 <span style="color: #333333">=</span> e12<span style="color: #333333">-&gt;</span>__av;
             COUNT_mR4.addOrDelOnZero(se27.modify(s_c,r1_b,s_d),v14);
-          } <span style="color: #008800; font-weight: bold">while</span> ((n10<span style="color: #333333">=</span>n10<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n10<span style="color: #333333">=</span>n10<span style="color: #333333">-&gt;</span>nxt));
         }
-        COUNT_mR6.addOrDelOnZero(se29.modify(s_c,s_d),(s_c <span style="color: #333333">==</span> s_d));
+        (<span style="color: #888888">/*if */</span>(s_c <span style="color: #333333">==</span> s_d) <span style="color: #333333">?</span> COUNT_mR7.addOrDelOnZero(se29.modify(s_c,s_d),<span style="color: #0000DD; font-weight: bold">1L</span>) <span style="color: #333333">:</span> voidFunc());
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_S&quot;</span>)
       END_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_S&quot;</span>)
@@ -1360,7 +1362,7 @@
     <span style="color: #333399; font-weight: bold">void</span> on_delete_S(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> s_c, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> s_d) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_S&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_S&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
+      {  <span style="color: #333333">++</span>tN;
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h11 <span style="color: #333333">=</span> COUNT_mS1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se32.modify0(s_c));
           <span style="color: #008800; font-weight: bold">const</span> HashIndex_COUNT_mS1_map_0<span style="color: #333333">*</span> i11 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_COUNT_mS1_map_0<span style="color: #333333">*&gt;</span>(COUNT_mS1.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
@@ -1370,10 +1372,10 @@
             <span style="color: #333399; font-weight: bold">long</span> r1_b <span style="color: #333333">=</span> e13<span style="color: #333333">-&gt;</span>R1_B;
             <span style="color: #333399; font-weight: bold">long</span> v15 <span style="color: #333333">=</span> e13<span style="color: #333333">-&gt;</span>__av;
             COUNT.addOrDelOnZero(se30.modify(s_c,r1_b),(v15 <span style="color: #333333">*</span> (COUNT_mS2.getValueOrDefault(se31.modify(s_d)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n11<span style="color: #333333">=</span>n11<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n11<span style="color: #333333">=</span>n11<span style="color: #333333">-&gt;</span>nxt));
         }
-        COUNT_mR2.addOrDelOnZero(se33.modify(s_c),(COUNT_mS2.getValueOrDefault(se34.modify(s_d)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
-        COUNT_mR2_mR1.addOrDelOnZero(se35.modify(s_c,s_d),<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>);
+        COUNT_mR1.addOrDelOnZero(se33.modify(s_c),(COUNT_mS2.getValueOrDefault(se34.modify(s_d)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
+        COUNT_mR1_mR1.addOrDelOnZero(se35.modify(s_c,s_d),<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>);
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h12 <span style="color: #333333">=</span> COUNT_mS1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se37.modify0(s_c));
           <span style="color: #008800; font-weight: bold">const</span> HashIndex_COUNT_mS1_map_0<span style="color: #333333">*</span> i12 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_COUNT_mS1_map_0<span style="color: #333333">*&gt;</span>(COUNT_mS1.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
@@ -1383,9 +1385,9 @@
             <span style="color: #333399; font-weight: bold">long</span> r1_b <span style="color: #333333">=</span> e14<span style="color: #333333">-&gt;</span>R1_B;
             <span style="color: #333399; font-weight: bold">long</span> v16 <span style="color: #333333">=</span> e14<span style="color: #333333">-&gt;</span>__av;
             COUNT_mR4.addOrDelOnZero(se36.modify(s_c,r1_b,s_d),(v16 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n12<span style="color: #333333">=</span>n12<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n12<span style="color: #333333">=</span>n12<span style="color: #333333">-&gt;</span>nxt));
         }
-        COUNT_mR6.addOrDelOnZero(se38.modify(s_c,s_d),((s_c <span style="color: #333333">==</span> s_d) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
+        (<span style="color: #888888">/*if */</span>(s_c <span style="color: #333333">==</span> s_d) <span style="color: #333333">?</span> COUNT_mR7.addOrDelOnZero(se38.modify(s_c,s_d),<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>) <span style="color: #333333">:</span> voidFunc());
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_S&quot;</span>)
       END_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_S&quot;</span>)
@@ -1397,7 +1399,7 @@
     <span style="color: #333399; font-weight: bold">void</span> on_system_ready_event() {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
-      {  <span style="color: #888888">//</span>
+      {  
         
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
@@ -1408,57 +1410,57 @@
   
     <span style="color: #888888">/* Sample entries for avoiding recreation of temporary objects */</span>
     COUNT_entry se1;
-    COUNT_mR2_entry se2;
+    COUNT_mR1_entry se2;
     tuple2_L_L st1;
     tuple2_L_L st2;
-    COUNT_mR6_entry se3;
+    COUNT_mR7_entry se3;
     COUNT_mR4_entry se4;
     COUNT_mS1_entry se5;
     COUNT_mS2_entry se6;
-    COUNT_mR2_entry se7;
-    COUNT_mR2_mR1_entry se8;
+    COUNT_mR1_entry se7;
+    COUNT_mR1_mR1_entry se8;
     COUNT_mR4_entry se9;
-    COUNT_mR2_mR1_entry se10;
+    COUNT_mR1_mR1_entry se10;
     COUNT_entry se11;
-    COUNT_mR2_entry se12;
+    COUNT_mR1_entry se12;
     tuple2_L_L st3;
     tuple2_L_L st4;
-    COUNT_mR6_entry se13;
+    COUNT_mR7_entry se13;
     COUNT_mR4_entry se14;
     COUNT_mS1_entry se15;
     COUNT_mS2_entry se16;
-    COUNT_mR2_entry se17;
-    COUNT_mR2_mR1_entry se18;
+    COUNT_mR1_entry se17;
+    COUNT_mR1_mR1_entry se18;
     COUNT_mR4_entry se19;
-    COUNT_mR2_mR1_entry se20;
+    COUNT_mR1_mR1_entry se20;
     COUNT_entry se21;
     COUNT_mS2_entry se22;
     COUNT_mS1_entry se23;
-    COUNT_mR2_entry se24;
+    COUNT_mR1_entry se24;
     COUNT_mS2_entry se25;
-    COUNT_mR2_mR1_entry se26;
+    COUNT_mR1_mR1_entry se26;
     COUNT_mR4_entry se27;
     COUNT_mS1_entry se28;
-    COUNT_mR6_entry se29;
+    COUNT_mR7_entry se29;
     COUNT_entry se30;
     COUNT_mS2_entry se31;
     COUNT_mS1_entry se32;
-    COUNT_mR2_entry se33;
+    COUNT_mR1_entry se33;
     COUNT_mS2_entry se34;
-    COUNT_mR2_mR1_entry se35;
+    COUNT_mR1_mR1_entry se35;
     COUNT_mR4_entry se36;
     COUNT_mS1_entry se37;
-    COUNT_mR6_entry se38;
+    COUNT_mR7_entry se38;
   
     <span style="color: #888888">/* Data structures used for storing materialized views */</span>
     COUNT_mS1_map COUNT_mS1;
     COUNT_mS2_map COUNT_mS2;
-    COUNT_mR2_map COUNT_mR2;
-    COUNT_mR2_mR1_map COUNT_mR2_mR1;
+    COUNT_mR1_map COUNT_mR1;
+    COUNT_mR1_mR1_map COUNT_mR1_mR1;
     COUNT_mR4_map COUNT_mR4;
-    COUNT_mR6_map COUNT_mR6;
-    MultiHashMap<span style="color: #333333">&lt;</span>tuple2_L_L,<span style="color: #333399; font-weight: bold">long</span>,HashIndex<span style="color: #333333">&lt;</span>tuple2_L_L,<span style="color: #333399; font-weight: bold">long</span><span style="color: #333333">&gt;</span> <span style="color: #333333">&gt;</span> add2;
-    MultiHashMap<span style="color: #333333">&lt;</span>tuple2_L_L,<span style="color: #333399; font-weight: bold">long</span>,HashIndex<span style="color: #333333">&lt;</span>tuple2_L_L,<span style="color: #333399; font-weight: bold">long</span><span style="color: #333333">&gt;</span> <span style="color: #333333">&gt;</span> add1;
+    COUNT_mR7_map COUNT_mR7;
+    MultiHashMap<span style="color: #333333">&lt;</span>tuple2_L_L,<span style="color: #333399; font-weight: bold">long</span>,HashIndex<span style="color: #333333">&lt;</span>tuple2_L_L,<span style="color: #333399; font-weight: bold">long</span><span style="color: #333333">&gt;</span> <span style="color: #333333">&gt;</span> _c1;
+    MultiHashMap<span style="color: #333333">&lt;</span>tuple2_L_L,<span style="color: #333399; font-weight: bold">long</span>,HashIndex<span style="color: #333333">&lt;</span>tuple2_L_L,<span style="color: #333399; font-weight: bold">long</span><span style="color: #333333">&gt;</span> <span style="color: #333333">&gt;</span> _c2;
     
   
   };
@@ -1490,16 +1492,18 @@
       <span style="color: #888888">/* Imports data for static tables and performs view initialization based on it. */</span>
       <span style="color: #333399; font-weight: bold">void</span> init() {
           <span style="color: #888888">//P0_PLACE_HOLDER</span>
-          table_multiplexer.init_source();
-          stream_multiplexer.init_source();
+          table_multiplexer.init_source(run_opts<span style="color: #333333">-&gt;</span>batch_size, run_opts<span style="color: #333333">-&gt;</span>parallel, <span style="color: #007020">true</span>);
+          stream_multiplexer.init_source(run_opts<span style="color: #333333">-&gt;</span>batch_size, run_opts<span style="color: #333333">-&gt;</span>parallel, <span style="color: #007020">false</span>);
           process_tables();
           data.on_system_ready_event();
           <span style="color: #888888">//P2_PLACE_HOLDER</span>
       }
   
       <span style="color: #888888">/* Saves a snapshot of the data required to obtain the results of top level queries. */</span>
-      <span style="color: #333399; font-weight: bold">snapshot_t</span> take_snapshot(){ <span style="color: #888888">//tlq_t d=(tlq_t&amp;)data; if (d.tS==0) { gettimeofday(&amp;(d.t),NULL); d.tT=((d.t).tv_sec-(d.t0).tv_sec)*1000000L+((d.t).tv_usec-(d.t0).tv_usec); } printf(&quot;SAMPLE=standard,%ld,%ld,%ld\n&quot;,d.tT,d.tN,d.tS);</span>
-          <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333399; font-weight: bold">snapshot_t</span>( <span style="color: #008800; font-weight: bold">new</span> <span style="color: #333399; font-weight: bold">tlq_t</span>((<span style="color: #333399; font-weight: bold">tlq_t</span><span style="color: #333333">&amp;</span>)data) );
+      <span style="color: #333399; font-weight: bold">snapshot_t</span> take_snapshot(){
+          <span style="color: #333399; font-weight: bold">tlq_t</span><span style="color: #333333">*</span> d <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">new</span> <span style="color: #333399; font-weight: bold">tlq_t</span>((<span style="color: #333399; font-weight: bold">tlq_t</span><span style="color: #333333">&amp;</span>)data);
+          <span style="color: #008800; font-weight: bold">if</span> (d<span style="color: #333333">-&gt;</span>tS<span style="color: #333333">==</span><span style="color: #0000DD; font-weight: bold">0</span>) { gettimeofday(<span style="color: #333333">&amp;</span>(d<span style="color: #333333">-&gt;</span>t),<span style="color: #007020">NULL</span>); d<span style="color: #333333">-&gt;</span>tT<span style="color: #333333">=</span>((d<span style="color: #333333">-&gt;</span>t).tv_sec<span style="color: #333333">-</span>(d<span style="color: #333333">-&gt;</span>t0).tv_sec)<span style="color: #333333">*</span><span style="color: #0000DD; font-weight: bold">1000000L</span><span style="color: #333333">+</span>((d<span style="color: #333333">-&gt;</span>t).tv_usec<span style="color: #333333">-</span>(d<span style="color: #333333">-&gt;</span>t0).tv_usec); } printf(<span style="background-color: #fff0f0">&quot;SAMPLE=standard,%ld,%ld,%ld</span><span style="color: #666666; font-weight: bold; background-color: #fff0f0">\n</span><span style="background-color: #fff0f0">&quot;</span>,d<span style="color: #333333">-&gt;</span>tT,d<span style="color: #333333">-&gt;</span>tN,d<span style="color: #333333">-&gt;</span>tS);
+          <span style="color: #008800; font-weight: bold">return</span> <span style="color: #0066BB; font-weight: bold">snapshot_t</span>( d );
       }
   
     <span style="color: #997700; font-weight: bold">protected:</span>

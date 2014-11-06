@@ -1015,62 +1015,7 @@
 1015
 1016
 1017
-1018
-1019
-1020
-1021
-1022
-1023
-1024
-1025
-1026
-1027
-1028
-1029
-1030
-1031
-1032
-1033
-1034
-1035
-1036
-1037
-1038
-1039
-1040
-1041
-1042
-1043
-1044
-1045
-1046
-1047
-1048
-1049
-1050
-1051
-1052
-1053
-1054
-1055
-1056
-1057
-1058
-1059
-1060
-1061
-1062
-1063
-1064
-1065
-1066
-1067
-1068
-1069
-1070
-1071
-1072
-1073</pre></td><td><pre style="margin: 0; line-height: 125%"><span style="color: #557799">#include &quot;program_base.hpp&quot;</span>
+1018</pre></td><td><pre style="margin: 0; line-height: 125%"><span style="color: #557799">#include &quot;program_base.hpp&quot;</span>
 <span style="color: #557799">#include &quot;hpds/KDouble.hpp&quot;</span>
 <span style="color: #557799">#include &quot;hash.hpp&quot;</span>
 <span style="color: #557799">#include &quot;mmap/mmap.hpp&quot;</span>
@@ -1170,17 +1115,17 @@
   <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>COUNT_entry,<span style="color: #333399; font-weight: bold">long</span>,COUNT_mapkey01_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_COUNT_map_01;
   
   <span style="color: #008800; font-weight: bold">struct</span> COUNT_mPARTSUPP1_entry {
-    <span style="color: #333399; font-weight: bold">long</span> S_SUPPKEY; STRING_TYPE S_NAME; STRING_TYPE S_ADDRESS; <span style="color: #333399; font-weight: bold">long</span> __av;  COUNT_mPARTSUPP1_entry<span style="color: #333333">*</span> nxt; COUNT_mPARTSUPP1_entry<span style="color: #333333">*</span> prv;
-    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">COUNT_mPARTSUPP1_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*S_SUPPKEY = 0L; S_NAME = &quot;&quot;; S_ADDRESS = &quot;&quot;; __av = 0L; */</span> }
-    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">COUNT_mPARTSUPP1_entry</span>(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> c1, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> c2, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c3) { S_SUPPKEY <span style="color: #333333">=</span> c0; S_NAME <span style="color: #333333">=</span> c1; S_ADDRESS <span style="color: #333333">=</span> c2; __av <span style="color: #333333">=</span> c3; }
-    COUNT_mPARTSUPP1_entry(<span style="color: #008800; font-weight: bold">const</span> COUNT_mPARTSUPP1_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> S_SUPPKEY( other.S_SUPPKEY ), S_NAME( other.S_NAME ), S_ADDRESS( other.S_ADDRESS ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
-    FORCE_INLINE COUNT_mPARTSUPP1_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> c1, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> c2) { S_SUPPKEY <span style="color: #333333">=</span> c0; S_NAME <span style="color: #333333">=</span> c1; S_ADDRESS <span style="color: #333333">=</span> c2;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
-    FORCE_INLINE COUNT_mPARTSUPP1_entry<span style="color: #333333">&amp;</span> modify0(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0) { S_SUPPKEY <span style="color: #333333">=</span> c0;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
+    <span style="color: #333399; font-weight: bold">long</span> COUNT_mPARTSUPPPARTSUPP_SUPPKEY; STRING_TYPE S_NAME; STRING_TYPE S_ADDRESS; <span style="color: #333399; font-weight: bold">long</span> __av;  COUNT_mPARTSUPP1_entry<span style="color: #333333">*</span> nxt; COUNT_mPARTSUPP1_entry<span style="color: #333333">*</span> prv;
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">COUNT_mPARTSUPP1_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*COUNT_mPARTSUPPPARTSUPP_SUPPKEY = 0L; S_NAME = &quot;&quot;; S_ADDRESS = &quot;&quot;; __av = 0L; */</span> }
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">COUNT_mPARTSUPP1_entry</span>(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> c1, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> c2, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c3) { COUNT_mPARTSUPPPARTSUPP_SUPPKEY <span style="color: #333333">=</span> c0; S_NAME <span style="color: #333333">=</span> c1; S_ADDRESS <span style="color: #333333">=</span> c2; __av <span style="color: #333333">=</span> c3; }
+    COUNT_mPARTSUPP1_entry(<span style="color: #008800; font-weight: bold">const</span> COUNT_mPARTSUPP1_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> COUNT_mPARTSUPPPARTSUPP_SUPPKEY( other.COUNT_mPARTSUPPPARTSUPP_SUPPKEY ), S_NAME( other.S_NAME ), S_ADDRESS( other.S_ADDRESS ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
+    FORCE_INLINE COUNT_mPARTSUPP1_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> c1, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> c2) { COUNT_mPARTSUPPPARTSUPP_SUPPKEY <span style="color: #333333">=</span> c0; S_NAME <span style="color: #333333">=</span> c1; S_ADDRESS <span style="color: #333333">=</span> c2;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
+    FORCE_INLINE COUNT_mPARTSUPP1_entry<span style="color: #333333">&amp;</span> modify0(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0) { COUNT_mPARTSUPPPARTSUPP_SUPPKEY <span style="color: #333333">=</span> c0;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
     <span style="color: #008800; font-weight: bold">template</span><span style="color: #333333">&lt;</span><span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Archive</span><span style="color: #333333">&gt;</span>
     <span style="color: #333399; font-weight: bold">void</span> serialize(Archive<span style="color: #333333">&amp;</span> ar, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">unsigned</span> <span style="color: #333399; font-weight: bold">int</span> version) <span style="color: #008800; font-weight: bold">const</span> 
     {
       ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
-      DBT_SERIALIZATION_NVP(ar, S_SUPPKEY);
+      DBT_SERIALIZATION_NVP(ar, COUNT_mPARTSUPPPARTSUPP_SUPPKEY);
       ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
       DBT_SERIALIZATION_NVP(ar, S_NAME);
       ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
@@ -1192,24 +1137,24 @@
   <span style="color: #008800; font-weight: bold">struct</span> COUNT_mPARTSUPP1_mapkey012_idxfn {
     FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> COUNT_mPARTSUPP1_entry<span style="color: #333333">&amp;</span> e) {
       <span style="color: #333399; font-weight: bold">size_t</span> h <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>;
-      hash_combine(h, e.S_SUPPKEY);
+      hash_combine(h, e.COUNT_mPARTSUPPPARTSUPP_SUPPKEY);
       hash_combine(h, e.S_NAME);
       hash_combine(h, e.S_ADDRESS);
       <span style="color: #008800; font-weight: bold">return</span> h;
     }
     FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> COUNT_mPARTSUPP1_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> COUNT_mPARTSUPP1_entry<span style="color: #333333">&amp;</span> y) {
-      <span style="color: #008800; font-weight: bold">return</span> x.S_SUPPKEY <span style="color: #333333">==</span> y.S_SUPPKEY <span style="color: #333333">&amp;&amp;</span> x.S_NAME <span style="color: #333333">==</span> y.S_NAME <span style="color: #333333">&amp;&amp;</span> x.S_ADDRESS <span style="color: #333333">==</span> y.S_ADDRESS;
+      <span style="color: #008800; font-weight: bold">return</span> x.COUNT_mPARTSUPPPARTSUPP_SUPPKEY <span style="color: #333333">==</span> y.COUNT_mPARTSUPPPARTSUPP_SUPPKEY <span style="color: #333333">&amp;&amp;</span> x.S_NAME <span style="color: #333333">==</span> y.S_NAME <span style="color: #333333">&amp;&amp;</span> x.S_ADDRESS <span style="color: #333333">==</span> y.S_ADDRESS;
     }
   };
   
   <span style="color: #008800; font-weight: bold">struct</span> COUNT_mPARTSUPP1_mapkey0_idxfn {
     FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> COUNT_mPARTSUPP1_entry<span style="color: #333333">&amp;</span> e) {
       <span style="color: #333399; font-weight: bold">size_t</span> h <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>;
-      hash_combine(h, e.S_SUPPKEY);
+      hash_combine(h, e.COUNT_mPARTSUPPPARTSUPP_SUPPKEY);
       <span style="color: #008800; font-weight: bold">return</span> h;
     }
     FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> COUNT_mPARTSUPP1_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> COUNT_mPARTSUPP1_entry<span style="color: #333333">&amp;</span> y) {
-      <span style="color: #008800; font-weight: bold">return</span> x.S_SUPPKEY <span style="color: #333333">==</span> y.S_SUPPKEY;
+      <span style="color: #008800; font-weight: bold">return</span> x.COUNT_mPARTSUPPPARTSUPP_SUPPKEY <span style="color: #333333">==</span> y.COUNT_mPARTSUPPPARTSUPP_SUPPKEY;
     }
   };
   
@@ -1484,9 +1429,10 @@
   
     <span style="color: #888888">/* Trigger functions for table relations */</span>
     <span style="color: #333399; font-weight: bold">void</span> on_insert_NATION(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> nation_nationkey, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE nation_name, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> nation_regionkey, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE nation_comment) {
-      NATION_entry e(nation_nationkey, nation_name, nation_regionkey, nation_comment, <span style="color: #0000DD; font-weight: bold">1</span>);
+      NATION_entry e(nation_nationkey, nation_name, nation_regionkey, nation_comment, <span style="color: #0000DD; font-weight: bold">1L</span>);
       NATION.addOrDelOnZero(e,<span style="color: #0000DD; font-weight: bold">1L</span>);
     }
+    
     <span style="color: #333399; font-weight: bold">void</span> unwrap_insert_NATION(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">event_args_t</span><span style="color: #333333">&amp;</span> ea) {
       on_insert_NATION(<span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span><span style="color: #333399; font-weight: bold">long</span><span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">0</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span>STRING_TYPE<span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">1</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span><span style="color: #333399; font-weight: bold">long</span><span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">2</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span>STRING_TYPE<span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">3</span>])));
     }
@@ -1497,7 +1443,7 @@
     <span style="color: #333399; font-weight: bold">void</span> on_insert_LINEITEM(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> lineitem_orderkey, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> lineitem_partkey, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> lineitem_suppkey, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> lineitem_linenumber, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE lineitem_quantity, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE lineitem_extendedprice, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE lineitem_discount, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE lineitem_tax, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_returnflag, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_linestatus, <span style="color: #008800; font-weight: bold">const</span> date lineitem_shipdate, <span style="color: #008800; font-weight: bold">const</span> date lineitem_commitdate, <span style="color: #008800; font-weight: bold">const</span> date lineitem_receiptdate, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_shipinstruct, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_shipmode, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_comment) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_LINEITEM&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_LINEITEM&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
+      {  <span style="color: #333333">++</span>tN;
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h5 <span style="color: #333333">=</span> COUNT_mPARTSUPP1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se13.modify0(lineitem_suppkey));
           <span style="color: #008800; font-weight: bold">const</span> HashIndex_COUNT_mPARTSUPP1_map_0<span style="color: #333333">*</span> i1 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_COUNT_mPARTSUPP1_map_0<span style="color: #333333">*&gt;</span>(COUNT_mPARTSUPP1.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
@@ -1508,7 +1454,7 @@
             STRING_TYPE s_address <span style="color: #333333">=</span> e1<span style="color: #333333">-&gt;</span>S_ADDRESS;
             <span style="color: #333399; font-weight: bold">long</span> v1 <span style="color: #333333">=</span> e1<span style="color: #333333">-&gt;</span>__av;
             <span style="color: #333399; font-weight: bold">long</span> agg1 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
-            DOUBLE_TYPE l1 <span style="color: #333333">=</span> ((COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se3.modify(lineitem_partkey,lineitem_suppkey)) <span style="color: #333333">+</span> ((lineitem_shipdate <span style="color: #333333">&gt;=</span> c1) <span style="color: #333333">*</span> ((c2 <span style="color: #333333">&gt;</span> lineitem_shipdate) <span style="color: #333333">*</span> lineitem_quantity))) <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.5</span>);
+            DOUBLE_TYPE l1 <span style="color: #333333">=</span> ((COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se3.modify(lineitem_partkey,lineitem_suppkey)) <span style="color: #333333">+</span> (<span style="color: #888888">/*if */</span>(lineitem_shipdate <span style="color: #333333">&gt;=</span> c1 <span style="color: #333333">&amp;&amp;</span> c2 <span style="color: #333333">&gt;</span> lineitem_shipdate) <span style="color: #333333">?</span> lineitem_quantity <span style="color: #333333">:</span> <span style="color: #6600EE; font-weight: bold">0.0</span>)) <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.5</span>);
             { <span style="color: #888888">//slice</span>
               <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h1 <span style="color: #333333">=</span> COUNT_mSUPPLIER2_E1_1_mapkey01_idxfn<span style="color: #333333">::</span>hash(se4.modify01(lineitem_partkey, lineitem_suppkey));
               <span style="color: #008800; font-weight: bold">const</span> HashIndex_COUNT_mSUPPLIER2_E1_1_map_01<span style="color: #333333">*</span> i2 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_COUNT_mSUPPLIER2_E1_1_map_01<span style="color: #333333">*&gt;</span>(COUNT_mSUPPLIER2_E1_1.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
@@ -1517,8 +1463,8 @@
               <span style="color: #008800; font-weight: bold">do</span> <span style="color: #008800; font-weight: bold">if</span> ((e2<span style="color: #333333">=</span>n2<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h1 <span style="color: #333333">==</span> n2<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> COUNT_mSUPPLIER2_E1_1_mapkey01_idxfn<span style="color: #333333">::</span>equals(se4, <span style="color: #333333">*</span>e2)) {
                 <span style="color: #333399; font-weight: bold">long</span> ps_availqty <span style="color: #333333">=</span> e2<span style="color: #333333">-&gt;</span>PS_AVAILQTY;
                 <span style="color: #333399; font-weight: bold">long</span> v2 <span style="color: #333333">=</span> e2<span style="color: #333333">-&gt;</span>__av;
-                agg1 <span style="color: #333333">+=</span> (v2 <span style="color: #333333">*</span> (ps_availqty <span style="color: #333333">&gt;</span> l1));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n2<span style="color: #333333">=</span>n2<span style="color: #333333">-&gt;</span>next));
+                (<span style="color: #888888">/*if */</span>(ps_availqty <span style="color: #333333">&gt;</span> l1) <span style="color: #333333">?</span> agg1 <span style="color: #333333">+=</span> v2 <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
+              } <span style="color: #008800; font-weight: bold">while</span> ((n2<span style="color: #333333">=</span>n2<span style="color: #333333">-&gt;</span>nxt));
             }
             <span style="color: #333399; font-weight: bold">long</span> agg2 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
             DOUBLE_TYPE l2 <span style="color: #333333">=</span> (COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se5.modify(lineitem_partkey,lineitem_suppkey)) <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.5</span>);
@@ -1530,8 +1476,8 @@
               <span style="color: #008800; font-weight: bold">do</span> <span style="color: #008800; font-weight: bold">if</span> ((e3<span style="color: #333333">=</span>n3<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h2 <span style="color: #333333">==</span> n3<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> COUNT_mSUPPLIER2_E1_1_mapkey01_idxfn<span style="color: #333333">::</span>equals(se6, <span style="color: #333333">*</span>e3)) {
                 <span style="color: #333399; font-weight: bold">long</span> ps_availqty <span style="color: #333333">=</span> e3<span style="color: #333333">-&gt;</span>PS_AVAILQTY;
                 <span style="color: #333399; font-weight: bold">long</span> v3 <span style="color: #333333">=</span> e3<span style="color: #333333">-&gt;</span>__av;
-                agg2 <span style="color: #333333">+=</span> (v3 <span style="color: #333333">*</span> (ps_availqty <span style="color: #333333">&gt;</span> l2));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n3<span style="color: #333333">=</span>n3<span style="color: #333333">-&gt;</span>next));
+                (<span style="color: #888888">/*if */</span>(ps_availqty <span style="color: #333333">&gt;</span> l2) <span style="color: #333333">?</span> agg2 <span style="color: #333333">+=</span> v3 <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
+              } <span style="color: #008800; font-weight: bold">while</span> ((n3<span style="color: #333333">=</span>n3<span style="color: #333333">-&gt;</span>nxt));
             }
             <span style="color: #333399; font-weight: bold">long</span> agg3 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
             { <span style="color: #888888">//slice</span>
@@ -1544,8 +1490,8 @@
                 <span style="color: #333399; font-weight: bold">long</span> ps_availqty <span style="color: #333333">=</span> e4<span style="color: #333333">-&gt;</span>PS_AVAILQTY;
                 <span style="color: #333399; font-weight: bold">long</span> v4 <span style="color: #333333">=</span> e4<span style="color: #333333">-&gt;</span>__av;
                 DOUBLE_TYPE l3 <span style="color: #333333">=</span> (COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se7.modify(ps_partkey,lineitem_suppkey)) <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.5</span>);
-                agg3 <span style="color: #333333">+=</span> (v4 <span style="color: #333333">*</span> ((COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se8.modify(ps_partkey)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> (ps_availqty <span style="color: #333333">&gt;</span> l3)));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n4<span style="color: #333333">=</span>n4<span style="color: #333333">-&gt;</span>next));
+                (<span style="color: #888888">/*if */</span>(ps_availqty <span style="color: #333333">&gt;</span> l3) <span style="color: #333333">?</span> agg3 <span style="color: #333333">+=</span> (v4 <span style="color: #333333">*</span> (COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se8.modify(ps_partkey)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>)) <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
+              } <span style="color: #008800; font-weight: bold">while</span> ((n4<span style="color: #333333">=</span>n4<span style="color: #333333">-&gt;</span>nxt));
             }
             <span style="color: #333399; font-weight: bold">long</span> agg4 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
             { <span style="color: #888888">//slice</span>
@@ -1558,13 +1504,13 @@
                 <span style="color: #333399; font-weight: bold">long</span> ps_availqty <span style="color: #333333">=</span> e5<span style="color: #333333">-&gt;</span>PS_AVAILQTY;
                 <span style="color: #333399; font-weight: bold">long</span> v5 <span style="color: #333333">=</span> e5<span style="color: #333333">-&gt;</span>__av;
                 DOUBLE_TYPE l4 <span style="color: #333333">=</span> (COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se10.modify(ps_partkey,lineitem_suppkey)) <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.5</span>);
-                agg4 <span style="color: #333333">+=</span> (v5 <span style="color: #333333">*</span> ((COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se11.modify(ps_partkey)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> (ps_availqty <span style="color: #333333">&gt;</span> l4)));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n5<span style="color: #333333">=</span>n5<span style="color: #333333">-&gt;</span>next));
+                (<span style="color: #888888">/*if */</span>(ps_availqty <span style="color: #333333">&gt;</span> l4) <span style="color: #333333">?</span> agg4 <span style="color: #333333">+=</span> (v5 <span style="color: #333333">*</span> (COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se11.modify(ps_partkey)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>)) <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
+              } <span style="color: #008800; font-weight: bold">while</span> ((n5<span style="color: #333333">=</span>n5<span style="color: #333333">-&gt;</span>nxt));
             }
-            COUNT.addOrDelOnZero(se1.modify(s_name,s_address),(v1 <span style="color: #333333">*</span> (((((COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se2.modify(lineitem_partkey)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> (agg1 <span style="color: #333333">+</span> (agg2 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>))) <span style="color: #333333">+</span> agg3) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">+</span> ((agg4 <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>))));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n1<span style="color: #333333">=</span>n1<span style="color: #333333">-&gt;</span>next));
+            COUNT.addOrDelOnZero(se1.modify(s_name,s_address),(v1 <span style="color: #333333">*</span> (((((COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se2.modify(lineitem_partkey)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> (agg1 <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> agg2))) <span style="color: #333333">+</span> agg3) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">+</span> ((agg4 <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>))));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n1<span style="color: #333333">=</span>n1<span style="color: #333333">-&gt;</span>nxt));
         }
-        COUNT_mSUPPLIER2_E1_1_L1_1.addOrDelOnZero(se14.modify(lineitem_partkey,lineitem_suppkey),((lineitem_shipdate <span style="color: #333333">&gt;=</span> c1) <span style="color: #333333">*</span> ((c2 <span style="color: #333333">&gt;</span> lineitem_shipdate) <span style="color: #333333">*</span> lineitem_quantity)));
+        (<span style="color: #888888">/*if */</span>(lineitem_shipdate <span style="color: #333333">&gt;=</span> c1 <span style="color: #333333">&amp;&amp;</span> c2 <span style="color: #333333">&gt;</span> lineitem_shipdate) <span style="color: #333333">?</span> COUNT_mSUPPLIER2_E1_1_L1_1.addOrDelOnZero(se14.modify(lineitem_partkey,lineitem_suppkey),lineitem_quantity) <span style="color: #333333">:</span> voidFunc());
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_LINEITEM&quot;</span>)
       END_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_LINEITEM&quot;</span>)
@@ -1576,58 +1522,74 @@
     <span style="color: #333399; font-weight: bold">void</span> on_delete_LINEITEM(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> lineitem_orderkey, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> lineitem_partkey, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> lineitem_suppkey, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> lineitem_linenumber, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE lineitem_quantity, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE lineitem_extendedprice, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE lineitem_discount, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE lineitem_tax, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_returnflag, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_linestatus, <span style="color: #008800; font-weight: bold">const</span> date lineitem_shipdate, <span style="color: #008800; font-weight: bold">const</span> date lineitem_commitdate, <span style="color: #008800; font-weight: bold">const</span> date lineitem_receiptdate, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_shipinstruct, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_shipmode, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_comment) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_LINEITEM&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_LINEITEM&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
-        { <span style="color: #888888">//foreach</span>
-          COUNT_mPARTSUPP1_entry<span style="color: #333333">*</span> e6 <span style="color: #333333">=</span> COUNT_mPARTSUPP1.head;
-          <span style="color: #008800; font-weight: bold">while</span>(e6){
-            <span style="color: #333399; font-weight: bold">long</span> s_suppkey <span style="color: #333333">=</span> e6<span style="color: #333333">-&gt;</span>S_SUPPKEY;
+      {  <span style="color: #333333">++</span>tN;
+        { <span style="color: #888888">//slice</span>
+          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h10 <span style="color: #333333">=</span> COUNT_mPARTSUPP1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se27.modify0(lineitem_suppkey));
+          <span style="color: #008800; font-weight: bold">const</span> HashIndex_COUNT_mPARTSUPP1_map_0<span style="color: #333333">*</span> i6 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_COUNT_mPARTSUPP1_map_0<span style="color: #333333">*&gt;</span>(COUNT_mPARTSUPP1.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
+          HashIndex_COUNT_mPARTSUPP1_map_0<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n6 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i6<span style="color: #333333">-&gt;</span>buckets_[h10 <span style="color: #333333">%</span> i6<span style="color: #333333">-&gt;</span>size_]);
+          COUNT_mPARTSUPP1_entry<span style="color: #333333">*</span> e6;
+          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e6<span style="color: #333333">=</span>n6<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h10 <span style="color: #333333">==</span> n6<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> COUNT_mPARTSUPP1_mapkey0_idxfn<span style="color: #333333">::</span>equals(se27, <span style="color: #333333">*</span>e6)) {
             STRING_TYPE s_name <span style="color: #333333">=</span> e6<span style="color: #333333">-&gt;</span>S_NAME;
             STRING_TYPE s_address <span style="color: #333333">=</span> e6<span style="color: #333333">-&gt;</span>S_ADDRESS;
             <span style="color: #333399; font-weight: bold">long</span> v6 <span style="color: #333333">=</span> e6<span style="color: #333333">-&gt;</span>__av;
             <span style="color: #333399; font-weight: bold">long</span> agg5 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
+            DOUBLE_TYPE l5 <span style="color: #333333">=</span> ((COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se17.modify(lineitem_partkey,lineitem_suppkey)) <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.5</span>) <span style="color: #333333">+</span> (<span style="color: #888888">/*if */</span>(lineitem_shipdate <span style="color: #333333">&gt;=</span> c1 <span style="color: #333333">&amp;&amp;</span> c2 <span style="color: #333333">&gt;</span> lineitem_shipdate) <span style="color: #333333">?</span> (<span style="color: #333333">-</span><span style="color: #6600EE; font-weight: bold">0.5</span> <span style="color: #333333">*</span> lineitem_quantity) <span style="color: #333333">:</span> <span style="color: #6600EE; font-weight: bold">0.0</span>));
             { <span style="color: #888888">//slice</span>
-              <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h6 <span style="color: #333333">=</span> COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn<span style="color: #333333">::</span>hash(se18.modify1(s_suppkey));
-              <span style="color: #008800; font-weight: bold">const</span> HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">*</span> i7 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">*&gt;</span>(COUNT_mSUPPLIER2_E1_1.index[<span style="color: #0000DD; font-weight: bold">2</span>]);
-              HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n7 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i7<span style="color: #333333">-&gt;</span>buckets_[h6 <span style="color: #333333">%</span> i7<span style="color: #333333">-&gt;</span>size_]);
+              <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h6 <span style="color: #333333">=</span> COUNT_mSUPPLIER2_E1_1_mapkey01_idxfn<span style="color: #333333">::</span>hash(se18.modify01(lineitem_partkey, lineitem_suppkey));
+              <span style="color: #008800; font-weight: bold">const</span> HashIndex_COUNT_mSUPPLIER2_E1_1_map_01<span style="color: #333333">*</span> i7 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_COUNT_mSUPPLIER2_E1_1_map_01<span style="color: #333333">*&gt;</span>(COUNT_mSUPPLIER2_E1_1.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
+              HashIndex_COUNT_mSUPPLIER2_E1_1_map_01<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n7 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i7<span style="color: #333333">-&gt;</span>buckets_[h6 <span style="color: #333333">%</span> i7<span style="color: #333333">-&gt;</span>size_]);
               COUNT_mSUPPLIER2_E1_1_entry<span style="color: #333333">*</span> e7;
-              <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e7<span style="color: #333333">=</span>n7<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h6 <span style="color: #333333">==</span> n7<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn<span style="color: #333333">::</span>equals(se18, <span style="color: #333333">*</span>e7)) {
-                <span style="color: #333399; font-weight: bold">long</span> ps_partkey <span style="color: #333333">=</span> e7<span style="color: #333333">-&gt;</span>PS_PARTKEY;
+              <span style="color: #008800; font-weight: bold">do</span> <span style="color: #008800; font-weight: bold">if</span> ((e7<span style="color: #333333">=</span>n7<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h6 <span style="color: #333333">==</span> n7<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> COUNT_mSUPPLIER2_E1_1_mapkey01_idxfn<span style="color: #333333">::</span>equals(se18, <span style="color: #333333">*</span>e7)) {
                 <span style="color: #333399; font-weight: bold">long</span> ps_availqty <span style="color: #333333">=</span> e7<span style="color: #333333">-&gt;</span>PS_AVAILQTY;
                 <span style="color: #333399; font-weight: bold">long</span> v7 <span style="color: #333333">=</span> e7<span style="color: #333333">-&gt;</span>__av;
-                DOUBLE_TYPE l5 <span style="color: #333333">=</span> ((COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se16.modify(ps_partkey,s_suppkey)) <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.5</span>) <span style="color: #333333">+</span> ((ps_partkey <span style="color: #333333">==</span> lineitem_partkey) <span style="color: #333333">*</span> ((s_suppkey <span style="color: #333333">==</span> lineitem_suppkey) <span style="color: #333333">*</span> ((lineitem_shipdate <span style="color: #333333">&gt;=</span> c1) <span style="color: #333333">*</span> ((c2 <span style="color: #333333">&gt;</span> lineitem_shipdate) <span style="color: #333333">*</span> (<span style="color: #333333">-</span><span style="color: #6600EE; font-weight: bold">0.5</span> <span style="color: #333333">*</span> lineitem_quantity))))));
-                agg5 <span style="color: #333333">+=</span> (v7 <span style="color: #333333">*</span> ((COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se17.modify(ps_partkey)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> (ps_availqty <span style="color: #333333">&gt;</span> l5)));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n7<span style="color: #333333">=</span>n7<span style="color: #333333">-&gt;</span>next));
+                (<span style="color: #888888">/*if */</span>(ps_availqty <span style="color: #333333">&gt;</span> l5) <span style="color: #333333">?</span> agg5 <span style="color: #333333">+=</span> v7 <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
+              } <span style="color: #008800; font-weight: bold">while</span> ((n7<span style="color: #333333">=</span>n7<span style="color: #333333">-&gt;</span>nxt));
             }
-            COUNT.addOrDelOnZero(se15.modify(s_name,s_address),(v6 <span style="color: #333333">*</span> (agg5 <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>)));
-            e6 <span style="color: #333333">=</span> e6<span style="color: #333333">-&gt;</span>nxt;
-          }
-        }
-        { <span style="color: #888888">//foreach</span>
-          COUNT_mPARTSUPP1_entry<span style="color: #333333">*</span> e8 <span style="color: #333333">=</span> COUNT_mPARTSUPP1.head;
-          <span style="color: #008800; font-weight: bold">while</span>(e8){
-            <span style="color: #333399; font-weight: bold">long</span> s_suppkey <span style="color: #333333">=</span> e8<span style="color: #333333">-&gt;</span>S_SUPPKEY;
-            STRING_TYPE s_name <span style="color: #333333">=</span> e8<span style="color: #333333">-&gt;</span>S_NAME;
-            STRING_TYPE s_address <span style="color: #333333">=</span> e8<span style="color: #333333">-&gt;</span>S_ADDRESS;
-            <span style="color: #333399; font-weight: bold">long</span> v8 <span style="color: #333333">=</span> e8<span style="color: #333333">-&gt;</span>__av;
             <span style="color: #333399; font-weight: bold">long</span> agg6 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
+            DOUBLE_TYPE l6 <span style="color: #333333">=</span> (COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se19.modify(lineitem_partkey,lineitem_suppkey)) <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.5</span>);
             { <span style="color: #888888">//slice</span>
-              <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h7 <span style="color: #333333">=</span> COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn<span style="color: #333333">::</span>hash(se21.modify1(s_suppkey));
+              <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h7 <span style="color: #333333">=</span> COUNT_mSUPPLIER2_E1_1_mapkey01_idxfn<span style="color: #333333">::</span>hash(se20.modify01(lineitem_partkey, lineitem_suppkey));
+              <span style="color: #008800; font-weight: bold">const</span> HashIndex_COUNT_mSUPPLIER2_E1_1_map_01<span style="color: #333333">*</span> i8 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_COUNT_mSUPPLIER2_E1_1_map_01<span style="color: #333333">*&gt;</span>(COUNT_mSUPPLIER2_E1_1.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
+              HashIndex_COUNT_mSUPPLIER2_E1_1_map_01<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n8 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i8<span style="color: #333333">-&gt;</span>buckets_[h7 <span style="color: #333333">%</span> i8<span style="color: #333333">-&gt;</span>size_]);
+              COUNT_mSUPPLIER2_E1_1_entry<span style="color: #333333">*</span> e8;
+              <span style="color: #008800; font-weight: bold">do</span> <span style="color: #008800; font-weight: bold">if</span> ((e8<span style="color: #333333">=</span>n8<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h7 <span style="color: #333333">==</span> n8<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> COUNT_mSUPPLIER2_E1_1_mapkey01_idxfn<span style="color: #333333">::</span>equals(se20, <span style="color: #333333">*</span>e8)) {
+                <span style="color: #333399; font-weight: bold">long</span> ps_availqty <span style="color: #333333">=</span> e8<span style="color: #333333">-&gt;</span>PS_AVAILQTY;
+                <span style="color: #333399; font-weight: bold">long</span> v8 <span style="color: #333333">=</span> e8<span style="color: #333333">-&gt;</span>__av;
+                (<span style="color: #888888">/*if */</span>(ps_availqty <span style="color: #333333">&gt;</span> l6) <span style="color: #333333">?</span> agg6 <span style="color: #333333">+=</span> v8 <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
+              } <span style="color: #008800; font-weight: bold">while</span> ((n8<span style="color: #333333">=</span>n8<span style="color: #333333">-&gt;</span>nxt));
+            }
+            <span style="color: #333399; font-weight: bold">long</span> agg7 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
+            { <span style="color: #888888">//slice</span>
+              <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h8 <span style="color: #333333">=</span> COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn<span style="color: #333333">::</span>hash(se23.modify1(lineitem_suppkey));
               <span style="color: #008800; font-weight: bold">const</span> HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">*</span> i9 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">*&gt;</span>(COUNT_mSUPPLIER2_E1_1.index[<span style="color: #0000DD; font-weight: bold">2</span>]);
-              HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n9 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i9<span style="color: #333333">-&gt;</span>buckets_[h7 <span style="color: #333333">%</span> i9<span style="color: #333333">-&gt;</span>size_]);
+              HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n9 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i9<span style="color: #333333">-&gt;</span>buckets_[h8 <span style="color: #333333">%</span> i9<span style="color: #333333">-&gt;</span>size_]);
               COUNT_mSUPPLIER2_E1_1_entry<span style="color: #333333">*</span> e9;
-              <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e9<span style="color: #333333">=</span>n9<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h7 <span style="color: #333333">==</span> n9<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn<span style="color: #333333">::</span>equals(se21, <span style="color: #333333">*</span>e9)) {
+              <span style="color: #008800; font-weight: bold">do</span> <span style="color: #008800; font-weight: bold">if</span> ((e9<span style="color: #333333">=</span>n9<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h8 <span style="color: #333333">==</span> n9<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn<span style="color: #333333">::</span>equals(se23, <span style="color: #333333">*</span>e9)) {
                 <span style="color: #333399; font-weight: bold">long</span> ps_partkey <span style="color: #333333">=</span> e9<span style="color: #333333">-&gt;</span>PS_PARTKEY;
                 <span style="color: #333399; font-weight: bold">long</span> ps_availqty <span style="color: #333333">=</span> e9<span style="color: #333333">-&gt;</span>PS_AVAILQTY;
                 <span style="color: #333399; font-weight: bold">long</span> v9 <span style="color: #333333">=</span> e9<span style="color: #333333">-&gt;</span>__av;
-                DOUBLE_TYPE l6 <span style="color: #333333">=</span> (COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se19.modify(ps_partkey,s_suppkey)) <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.5</span>);
-                agg6 <span style="color: #333333">+=</span> (v9 <span style="color: #333333">*</span> ((COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se20.modify(ps_partkey)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> (ps_availqty <span style="color: #333333">&gt;</span> l6)));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n9<span style="color: #333333">=</span>n9<span style="color: #333333">-&gt;</span>next));
+                DOUBLE_TYPE l7 <span style="color: #333333">=</span> (COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se21.modify(ps_partkey,lineitem_suppkey)) <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.5</span>);
+                (<span style="color: #888888">/*if */</span>(ps_availqty <span style="color: #333333">&gt;</span> l7) <span style="color: #333333">?</span> agg7 <span style="color: #333333">+=</span> (v9 <span style="color: #333333">*</span> (COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se22.modify(ps_partkey)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>)) <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
+              } <span style="color: #008800; font-weight: bold">while</span> ((n9<span style="color: #333333">=</span>n9<span style="color: #333333">-&gt;</span>nxt));
             }
-            COUNT.addOrDelOnZero(se15.modify(s_name,s_address),((v8 <span style="color: #333333">*</span> (agg6 <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
-            e8 <span style="color: #333333">=</span> e8<span style="color: #333333">-&gt;</span>nxt;
-          }
+            <span style="color: #333399; font-weight: bold">long</span> agg8 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
+            { <span style="color: #888888">//slice</span>
+              <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h9 <span style="color: #333333">=</span> COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn<span style="color: #333333">::</span>hash(se26.modify1(lineitem_suppkey));
+              <span style="color: #008800; font-weight: bold">const</span> HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">*</span> i10 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">*&gt;</span>(COUNT_mSUPPLIER2_E1_1.index[<span style="color: #0000DD; font-weight: bold">2</span>]);
+              HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n10 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i10<span style="color: #333333">-&gt;</span>buckets_[h9 <span style="color: #333333">%</span> i10<span style="color: #333333">-&gt;</span>size_]);
+              COUNT_mSUPPLIER2_E1_1_entry<span style="color: #333333">*</span> e10;
+              <span style="color: #008800; font-weight: bold">do</span> <span style="color: #008800; font-weight: bold">if</span> ((e10<span style="color: #333333">=</span>n10<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h9 <span style="color: #333333">==</span> n10<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn<span style="color: #333333">::</span>equals(se26, <span style="color: #333333">*</span>e10)) {
+                <span style="color: #333399; font-weight: bold">long</span> ps_partkey <span style="color: #333333">=</span> e10<span style="color: #333333">-&gt;</span>PS_PARTKEY;
+                <span style="color: #333399; font-weight: bold">long</span> ps_availqty <span style="color: #333333">=</span> e10<span style="color: #333333">-&gt;</span>PS_AVAILQTY;
+                <span style="color: #333399; font-weight: bold">long</span> v10 <span style="color: #333333">=</span> e10<span style="color: #333333">-&gt;</span>__av;
+                DOUBLE_TYPE l8 <span style="color: #333333">=</span> (COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se24.modify(ps_partkey,lineitem_suppkey)) <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.5</span>);
+                (<span style="color: #888888">/*if */</span>(ps_availqty <span style="color: #333333">&gt;</span> l8) <span style="color: #333333">?</span> agg8 <span style="color: #333333">+=</span> (v10 <span style="color: #333333">*</span> (COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se25.modify(ps_partkey)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>)) <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
+              } <span style="color: #008800; font-weight: bold">while</span> ((n10<span style="color: #333333">=</span>n10<span style="color: #333333">-&gt;</span>nxt));
+            }
+            COUNT.addOrDelOnZero(se15.modify(s_name,s_address),(v6 <span style="color: #333333">*</span> (((((COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se16.modify(lineitem_partkey)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> (agg5 <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> agg6))) <span style="color: #333333">+</span> agg7) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">+</span> ((agg8 <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>))));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n6<span style="color: #333333">=</span>n6<span style="color: #333333">-&gt;</span>nxt));
         }
-        COUNT_mSUPPLIER2_E1_1_L1_1.addOrDelOnZero(se22.modify(lineitem_partkey,lineitem_suppkey),((lineitem_shipdate <span style="color: #333333">&gt;=</span> c1) <span style="color: #333333">*</span> ((c2 <span style="color: #333333">&gt;</span> lineitem_shipdate) <span style="color: #333333">*</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> lineitem_quantity))));
+        (<span style="color: #888888">/*if */</span>(lineitem_shipdate <span style="color: #333333">&gt;=</span> c1 <span style="color: #333333">&amp;&amp;</span> c2 <span style="color: #333333">&gt;</span> lineitem_shipdate) <span style="color: #333333">?</span> COUNT_mSUPPLIER2_E1_1_L1_1.addOrDelOnZero(se28.modify(lineitem_partkey,lineitem_suppkey),(<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> lineitem_quantity)) <span style="color: #333333">:</span> voidFunc());
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_LINEITEM&quot;</span>)
       END_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_LINEITEM&quot;</span>)
@@ -1639,71 +1601,34 @@
     <span style="color: #333399; font-weight: bold">void</span> on_insert_PART(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> part_partkey, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_name, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_mfgr, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_brand, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_type, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> part_size, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_container, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE part_retailprice, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_comment) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_PART&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_PART&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
+      {  <span style="color: #333333">++</span>tN;
+        (<span style="color: #888888">/*if */</span>(<span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">!=</span> Upreg_match(preg1,part_name)) <span style="color: #333333">?</span> COUNT_mSUPPLIER2_E1_1_E2_1.addOrDelOnZero(se29.modify(part_partkey),<span style="color: #0000DD; font-weight: bold">1L</span>) <span style="color: #333333">:</span> voidFunc());
+        COUNT.clear();
         { <span style="color: #888888">//foreach</span>
-          COUNT_mPARTSUPP1_entry<span style="color: #333333">*</span> e10 <span style="color: #333333">=</span> COUNT_mPARTSUPP1.head;
-          <span style="color: #008800; font-weight: bold">while</span>(e10){
-            <span style="color: #333399; font-weight: bold">long</span> s_suppkey <span style="color: #333333">=</span> e10<span style="color: #333333">-&gt;</span>S_SUPPKEY;
-            STRING_TYPE s_name <span style="color: #333333">=</span> e10<span style="color: #333333">-&gt;</span>S_NAME;
-            STRING_TYPE s_address <span style="color: #333333">=</span> e10<span style="color: #333333">-&gt;</span>S_ADDRESS;
-            <span style="color: #333399; font-weight: bold">long</span> v10 <span style="color: #333333">=</span> e10<span style="color: #333333">-&gt;</span>__av;
-            <span style="color: #333399; font-weight: bold">long</span> agg7 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
-            DOUBLE_TYPE l7 <span style="color: #333333">=</span> (COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se24.modify(part_partkey,s_suppkey)) <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.5</span>);
+          COUNT_mPARTSUPP1_entry<span style="color: #333333">*</span> e11 <span style="color: #333333">=</span> COUNT_mPARTSUPP1.head;
+          <span style="color: #008800; font-weight: bold">while</span>(e11){
+            <span style="color: #333399; font-weight: bold">long</span> s_suppkey <span style="color: #333333">=</span> e11<span style="color: #333333">-&gt;</span>COUNT_mPARTSUPPPARTSUPP_SUPPKEY;
+            STRING_TYPE s_name <span style="color: #333333">=</span> e11<span style="color: #333333">-&gt;</span>S_NAME;
+            STRING_TYPE s_address <span style="color: #333333">=</span> e11<span style="color: #333333">-&gt;</span>S_ADDRESS;
+            <span style="color: #333399; font-weight: bold">long</span> v11 <span style="color: #333333">=</span> e11<span style="color: #333333">-&gt;</span>__av;
+            <span style="color: #333399; font-weight: bold">long</span> agg9 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
             { <span style="color: #888888">//slice</span>
-              <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h8 <span style="color: #333333">=</span> COUNT_mSUPPLIER2_E1_1_mapkey01_idxfn<span style="color: #333333">::</span>hash(se25.modify01(part_partkey, s_suppkey));
-              <span style="color: #008800; font-weight: bold">const</span> HashIndex_COUNT_mSUPPLIER2_E1_1_map_01<span style="color: #333333">*</span> i11 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_COUNT_mSUPPLIER2_E1_1_map_01<span style="color: #333333">*&gt;</span>(COUNT_mSUPPLIER2_E1_1.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
-              HashIndex_COUNT_mSUPPLIER2_E1_1_map_01<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n11 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i11<span style="color: #333333">-&gt;</span>buckets_[h8 <span style="color: #333333">%</span> i11<span style="color: #333333">-&gt;</span>size_]);
-              COUNT_mSUPPLIER2_E1_1_entry<span style="color: #333333">*</span> e11;
-              <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e11<span style="color: #333333">=</span>n11<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h8 <span style="color: #333333">==</span> n11<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> COUNT_mSUPPLIER2_E1_1_mapkey01_idxfn<span style="color: #333333">::</span>equals(se25, <span style="color: #333333">*</span>e11)) {
-                <span style="color: #333399; font-weight: bold">long</span> ps_availqty <span style="color: #333333">=</span> e11<span style="color: #333333">-&gt;</span>PS_AVAILQTY;
-                <span style="color: #333399; font-weight: bold">long</span> v11 <span style="color: #333333">=</span> e11<span style="color: #333333">-&gt;</span>__av;
-                agg7 <span style="color: #333333">+=</span> (v11 <span style="color: #333333">*</span> (ps_availqty <span style="color: #333333">&gt;</span> l7));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n11<span style="color: #333333">=</span>n11<span style="color: #333333">-&gt;</span>next));
-            }
-            <span style="color: #333399; font-weight: bold">long</span> agg8 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
-            { <span style="color: #888888">//slice</span>
-              <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h9 <span style="color: #333333">=</span> COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn<span style="color: #333333">::</span>hash(se30.modify1(s_suppkey));
+              <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h11 <span style="color: #333333">=</span> COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn<span style="color: #333333">::</span>hash(se33.modify1(s_suppkey));
               <span style="color: #008800; font-weight: bold">const</span> HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">*</span> i12 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">*&gt;</span>(COUNT_mSUPPLIER2_E1_1.index[<span style="color: #0000DD; font-weight: bold">2</span>]);
-              HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n12 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i12<span style="color: #333333">-&gt;</span>buckets_[h9 <span style="color: #333333">%</span> i12<span style="color: #333333">-&gt;</span>size_]);
+              HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n12 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i12<span style="color: #333333">-&gt;</span>buckets_[h11 <span style="color: #333333">%</span> i12<span style="color: #333333">-&gt;</span>size_]);
               COUNT_mSUPPLIER2_E1_1_entry<span style="color: #333333">*</span> e12;
-              <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e12<span style="color: #333333">=</span>n12<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h9 <span style="color: #333333">==</span> n12<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn<span style="color: #333333">::</span>equals(se30, <span style="color: #333333">*</span>e12)) {
+              <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e12<span style="color: #333333">=</span>n12<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h11 <span style="color: #333333">==</span> n12<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn<span style="color: #333333">::</span>equals(se33, <span style="color: #333333">*</span>e12)) {
                 <span style="color: #333399; font-weight: bold">long</span> ps_partkey <span style="color: #333333">=</span> e12<span style="color: #333333">-&gt;</span>PS_PARTKEY;
                 <span style="color: #333399; font-weight: bold">long</span> ps_availqty <span style="color: #333333">=</span> e12<span style="color: #333333">-&gt;</span>PS_AVAILQTY;
                 <span style="color: #333399; font-weight: bold">long</span> v12 <span style="color: #333333">=</span> e12<span style="color: #333333">-&gt;</span>__av;
-                DOUBLE_TYPE l8 <span style="color: #333333">=</span> (COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se28.modify(ps_partkey,s_suppkey)) <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.5</span>);
-                agg8 <span style="color: #333333">+=</span> (v12 <span style="color: #333333">*</span> ((COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se29.modify(ps_partkey)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> (ps_availqty <span style="color: #333333">&gt;</span> l8)));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n12<span style="color: #333333">=</span>n12<span style="color: #333333">-&gt;</span>next));
-            }
-            COUNT.addOrDelOnZero(se23.modify(s_name,s_address),(v10 <span style="color: #333333">*</span> (((agg7 <span style="color: #333333">*</span> (((COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se26.modify(part_partkey)) <span style="color: #333333">+</span> (<span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">!=</span> Upreg_match(preg1,part_name))) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">+</span> ((COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se27.modify(part_partkey)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>))) <span style="color: #333333">+</span> agg8) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>)));
-            e10 <span style="color: #333333">=</span> e10<span style="color: #333333">-&gt;</span>nxt;
-          }
-        }
-        { <span style="color: #888888">//foreach</span>
-          COUNT_mPARTSUPP1_entry<span style="color: #333333">*</span> e13 <span style="color: #333333">=</span> COUNT_mPARTSUPP1.head;
-          <span style="color: #008800; font-weight: bold">while</span>(e13){
-            <span style="color: #333399; font-weight: bold">long</span> s_suppkey <span style="color: #333333">=</span> e13<span style="color: #333333">-&gt;</span>S_SUPPKEY;
-            STRING_TYPE s_name <span style="color: #333333">=</span> e13<span style="color: #333333">-&gt;</span>S_NAME;
-            STRING_TYPE s_address <span style="color: #333333">=</span> e13<span style="color: #333333">-&gt;</span>S_ADDRESS;
-            <span style="color: #333399; font-weight: bold">long</span> v13 <span style="color: #333333">=</span> e13<span style="color: #333333">-&gt;</span>__av;
-            <span style="color: #333399; font-weight: bold">long</span> agg9 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
-            { <span style="color: #888888">//slice</span>
-              <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h10 <span style="color: #333333">=</span> COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn<span style="color: #333333">::</span>hash(se33.modify1(s_suppkey));
-              <span style="color: #008800; font-weight: bold">const</span> HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">*</span> i14 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">*&gt;</span>(COUNT_mSUPPLIER2_E1_1.index[<span style="color: #0000DD; font-weight: bold">2</span>]);
-              HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n14 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i14<span style="color: #333333">-&gt;</span>buckets_[h10 <span style="color: #333333">%</span> i14<span style="color: #333333">-&gt;</span>size_]);
-              COUNT_mSUPPLIER2_E1_1_entry<span style="color: #333333">*</span> e14;
-              <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e14<span style="color: #333333">=</span>n14<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h10 <span style="color: #333333">==</span> n14<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn<span style="color: #333333">::</span>equals(se33, <span style="color: #333333">*</span>e14)) {
-                <span style="color: #333399; font-weight: bold">long</span> ps_partkey <span style="color: #333333">=</span> e14<span style="color: #333333">-&gt;</span>PS_PARTKEY;
-                <span style="color: #333399; font-weight: bold">long</span> ps_availqty <span style="color: #333333">=</span> e14<span style="color: #333333">-&gt;</span>PS_AVAILQTY;
-                <span style="color: #333399; font-weight: bold">long</span> v14 <span style="color: #333333">=</span> e14<span style="color: #333333">-&gt;</span>__av;
                 DOUBLE_TYPE l9 <span style="color: #333333">=</span> (COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se31.modify(ps_partkey,s_suppkey)) <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.5</span>);
-                agg9 <span style="color: #333333">+=</span> (v14 <span style="color: #333333">*</span> ((COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se32.modify(ps_partkey)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> (ps_availqty <span style="color: #333333">&gt;</span> l9)));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n14<span style="color: #333333">=</span>n14<span style="color: #333333">-&gt;</span>next));
+                (<span style="color: #888888">/*if */</span>(ps_availqty <span style="color: #333333">&gt;</span> l9) <span style="color: #333333">?</span> agg9 <span style="color: #333333">+=</span> (v12 <span style="color: #333333">*</span> (COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se32.modify(ps_partkey)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>)) <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
+              } <span style="color: #008800; font-weight: bold">while</span> ((n12<span style="color: #333333">=</span>n12<span style="color: #333333">-&gt;</span>nxt));
             }
-            COUNT.addOrDelOnZero(se23.modify(s_name,s_address),((v13 <span style="color: #333333">*</span> (agg9 <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
-            e13 <span style="color: #333333">=</span> e13<span style="color: #333333">-&gt;</span>nxt;
+            COUNT.addOrDelOnZero(se30.modify(s_name,s_address),(v11 <span style="color: #333333">*</span> (agg9 <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>)));
+            e11 <span style="color: #333333">=</span> e11<span style="color: #333333">-&gt;</span>nxt;
           }
         }
-        COUNT_mSUPPLIER2_E1_1_E2_1.addOrDelOnZero(se34.modify(part_partkey),(<span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">!=</span> Upreg_match(preg1,part_name)));
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_PART&quot;</span>)
       END_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_PART&quot;</span>)
@@ -1715,58 +1640,34 @@
     <span style="color: #333399; font-weight: bold">void</span> on_delete_PART(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> part_partkey, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_name, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_mfgr, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_brand, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_type, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> part_size, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_container, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE part_retailprice, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_comment) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_PART&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_PART&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
+      {  <span style="color: #333333">++</span>tN;
+        (<span style="color: #888888">/*if */</span>(<span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">!=</span> Upreg_match(preg1,part_name)) <span style="color: #333333">?</span> COUNT_mSUPPLIER2_E1_1_E2_1.addOrDelOnZero(se34.modify(part_partkey),<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>) <span style="color: #333333">:</span> voidFunc());
+        COUNT.clear();
         { <span style="color: #888888">//foreach</span>
-          COUNT_mPARTSUPP1_entry<span style="color: #333333">*</span> e15 <span style="color: #333333">=</span> COUNT_mPARTSUPP1.head;
-          <span style="color: #008800; font-weight: bold">while</span>(e15){
-            <span style="color: #333399; font-weight: bold">long</span> s_suppkey <span style="color: #333333">=</span> e15<span style="color: #333333">-&gt;</span>S_SUPPKEY;
-            STRING_TYPE s_name <span style="color: #333333">=</span> e15<span style="color: #333333">-&gt;</span>S_NAME;
-            STRING_TYPE s_address <span style="color: #333333">=</span> e15<span style="color: #333333">-&gt;</span>S_ADDRESS;
-            <span style="color: #333399; font-weight: bold">long</span> v15 <span style="color: #333333">=</span> e15<span style="color: #333333">-&gt;</span>__av;
+          COUNT_mPARTSUPP1_entry<span style="color: #333333">*</span> e13 <span style="color: #333333">=</span> COUNT_mPARTSUPP1.head;
+          <span style="color: #008800; font-weight: bold">while</span>(e13){
+            <span style="color: #333399; font-weight: bold">long</span> s_suppkey <span style="color: #333333">=</span> e13<span style="color: #333333">-&gt;</span>COUNT_mPARTSUPPPARTSUPP_SUPPKEY;
+            STRING_TYPE s_name <span style="color: #333333">=</span> e13<span style="color: #333333">-&gt;</span>S_NAME;
+            STRING_TYPE s_address <span style="color: #333333">=</span> e13<span style="color: #333333">-&gt;</span>S_ADDRESS;
+            <span style="color: #333399; font-weight: bold">long</span> v13 <span style="color: #333333">=</span> e13<span style="color: #333333">-&gt;</span>__av;
             <span style="color: #333399; font-weight: bold">long</span> agg10 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
             { <span style="color: #888888">//slice</span>
-              <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h11 <span style="color: #333333">=</span> COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn<span style="color: #333333">::</span>hash(se38.modify1(s_suppkey));
-              <span style="color: #008800; font-weight: bold">const</span> HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">*</span> i16 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">*&gt;</span>(COUNT_mSUPPLIER2_E1_1.index[<span style="color: #0000DD; font-weight: bold">2</span>]);
-              HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n16 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i16<span style="color: #333333">-&gt;</span>buckets_[h11 <span style="color: #333333">%</span> i16<span style="color: #333333">-&gt;</span>size_]);
-              COUNT_mSUPPLIER2_E1_1_entry<span style="color: #333333">*</span> e16;
-              <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e16<span style="color: #333333">=</span>n16<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h11 <span style="color: #333333">==</span> n16<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn<span style="color: #333333">::</span>equals(se38, <span style="color: #333333">*</span>e16)) {
-                <span style="color: #333399; font-weight: bold">long</span> ps_partkey <span style="color: #333333">=</span> e16<span style="color: #333333">-&gt;</span>PS_PARTKEY;
-                <span style="color: #333399; font-weight: bold">long</span> ps_availqty <span style="color: #333333">=</span> e16<span style="color: #333333">-&gt;</span>PS_AVAILQTY;
-                <span style="color: #333399; font-weight: bold">long</span> v16 <span style="color: #333333">=</span> e16<span style="color: #333333">-&gt;</span>__av;
+              <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h12 <span style="color: #333333">=</span> COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn<span style="color: #333333">::</span>hash(se38.modify1(s_suppkey));
+              <span style="color: #008800; font-weight: bold">const</span> HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">*</span> i14 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">*&gt;</span>(COUNT_mSUPPLIER2_E1_1.index[<span style="color: #0000DD; font-weight: bold">2</span>]);
+              HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n14 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i14<span style="color: #333333">-&gt;</span>buckets_[h12 <span style="color: #333333">%</span> i14<span style="color: #333333">-&gt;</span>size_]);
+              COUNT_mSUPPLIER2_E1_1_entry<span style="color: #333333">*</span> e14;
+              <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e14<span style="color: #333333">=</span>n14<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h12 <span style="color: #333333">==</span> n14<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn<span style="color: #333333">::</span>equals(se38, <span style="color: #333333">*</span>e14)) {
+                <span style="color: #333399; font-weight: bold">long</span> ps_partkey <span style="color: #333333">=</span> e14<span style="color: #333333">-&gt;</span>PS_PARTKEY;
+                <span style="color: #333399; font-weight: bold">long</span> ps_availqty <span style="color: #333333">=</span> e14<span style="color: #333333">-&gt;</span>PS_AVAILQTY;
+                <span style="color: #333399; font-weight: bold">long</span> v14 <span style="color: #333333">=</span> e14<span style="color: #333333">-&gt;</span>__av;
                 DOUBLE_TYPE l10 <span style="color: #333333">=</span> (COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se36.modify(ps_partkey,s_suppkey)) <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.5</span>);
-                agg10 <span style="color: #333333">+=</span> (v16 <span style="color: #333333">*</span> (((COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se37.modify(ps_partkey)) <span style="color: #333333">+</span> ((ps_partkey <span style="color: #333333">==</span> part_partkey) <span style="color: #333333">*</span> ((<span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">!=</span> Upreg_match(preg1,part_name)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>))) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> (ps_availqty <span style="color: #333333">&gt;</span> l10)));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n16<span style="color: #333333">=</span>n16<span style="color: #333333">-&gt;</span>next));
+                (<span style="color: #888888">/*if */</span>(ps_availqty <span style="color: #333333">&gt;</span> l10) <span style="color: #333333">?</span> agg10 <span style="color: #333333">+=</span> (v14 <span style="color: #333333">*</span> (COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se37.modify(ps_partkey)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>)) <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
+              } <span style="color: #008800; font-weight: bold">while</span> ((n14<span style="color: #333333">=</span>n14<span style="color: #333333">-&gt;</span>nxt));
             }
-            COUNT.addOrDelOnZero(se35.modify(s_name,s_address),(v15 <span style="color: #333333">*</span> (agg10 <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>)));
-            e15 <span style="color: #333333">=</span> e15<span style="color: #333333">-&gt;</span>nxt;
+            COUNT.addOrDelOnZero(se35.modify(s_name,s_address),(v13 <span style="color: #333333">*</span> (agg10 <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>)));
+            e13 <span style="color: #333333">=</span> e13<span style="color: #333333">-&gt;</span>nxt;
           }
         }
-        { <span style="color: #888888">//foreach</span>
-          COUNT_mPARTSUPP1_entry<span style="color: #333333">*</span> e17 <span style="color: #333333">=</span> COUNT_mPARTSUPP1.head;
-          <span style="color: #008800; font-weight: bold">while</span>(e17){
-            <span style="color: #333399; font-weight: bold">long</span> s_suppkey <span style="color: #333333">=</span> e17<span style="color: #333333">-&gt;</span>S_SUPPKEY;
-            STRING_TYPE s_name <span style="color: #333333">=</span> e17<span style="color: #333333">-&gt;</span>S_NAME;
-            STRING_TYPE s_address <span style="color: #333333">=</span> e17<span style="color: #333333">-&gt;</span>S_ADDRESS;
-            <span style="color: #333399; font-weight: bold">long</span> v17 <span style="color: #333333">=</span> e17<span style="color: #333333">-&gt;</span>__av;
-            <span style="color: #333399; font-weight: bold">long</span> agg11 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
-            { <span style="color: #888888">//slice</span>
-              <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h12 <span style="color: #333333">=</span> COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn<span style="color: #333333">::</span>hash(se41.modify1(s_suppkey));
-              <span style="color: #008800; font-weight: bold">const</span> HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">*</span> i18 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">*&gt;</span>(COUNT_mSUPPLIER2_E1_1.index[<span style="color: #0000DD; font-weight: bold">2</span>]);
-              HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n18 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i18<span style="color: #333333">-&gt;</span>buckets_[h12 <span style="color: #333333">%</span> i18<span style="color: #333333">-&gt;</span>size_]);
-              COUNT_mSUPPLIER2_E1_1_entry<span style="color: #333333">*</span> e18;
-              <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e18<span style="color: #333333">=</span>n18<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h12 <span style="color: #333333">==</span> n18<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn<span style="color: #333333">::</span>equals(se41, <span style="color: #333333">*</span>e18)) {
-                <span style="color: #333399; font-weight: bold">long</span> ps_partkey <span style="color: #333333">=</span> e18<span style="color: #333333">-&gt;</span>PS_PARTKEY;
-                <span style="color: #333399; font-weight: bold">long</span> ps_availqty <span style="color: #333333">=</span> e18<span style="color: #333333">-&gt;</span>PS_AVAILQTY;
-                <span style="color: #333399; font-weight: bold">long</span> v18 <span style="color: #333333">=</span> e18<span style="color: #333333">-&gt;</span>__av;
-                DOUBLE_TYPE l11 <span style="color: #333333">=</span> (COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se39.modify(ps_partkey,s_suppkey)) <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.5</span>);
-                agg11 <span style="color: #333333">+=</span> (v18 <span style="color: #333333">*</span> ((COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se40.modify(ps_partkey)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> (ps_availqty <span style="color: #333333">&gt;</span> l11)));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n18<span style="color: #333333">=</span>n18<span style="color: #333333">-&gt;</span>next));
-            }
-            COUNT.addOrDelOnZero(se35.modify(s_name,s_address),((v17 <span style="color: #333333">*</span> (agg11 <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
-            e17 <span style="color: #333333">=</span> e17<span style="color: #333333">-&gt;</span>nxt;
-          }
-        }
-        COUNT_mSUPPLIER2_E1_1_E2_1.addOrDelOnZero(se42.modify(part_partkey),((<span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">!=</span> Upreg_match(preg1,part_name)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_PART&quot;</span>)
       END_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_PART&quot;</span>)
@@ -1778,23 +1679,23 @@
     <span style="color: #333399; font-weight: bold">void</span> on_insert_SUPPLIER(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> supplier_suppkey, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> supplier_name, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> supplier_address, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> supplier_nationkey, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> supplier_phone, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE supplier_acctbal, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> supplier_comment) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_SUPPLIER&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_SUPPLIER&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
-        <span style="color: #333399; font-weight: bold">long</span> agg12 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
+      {  <span style="color: #333333">++</span>tN;
+        <span style="color: #333399; font-weight: bold">long</span> agg11 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
         { <span style="color: #888888">//slice</span>
-          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h13 <span style="color: #333333">=</span> COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn<span style="color: #333333">::</span>hash(se47.modify1(supplier_suppkey));
-          <span style="color: #008800; font-weight: bold">const</span> HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">*</span> i19 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">*&gt;</span>(COUNT_mSUPPLIER2_E1_1.index[<span style="color: #0000DD; font-weight: bold">2</span>]);
-          HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n19 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i19<span style="color: #333333">-&gt;</span>buckets_[h13 <span style="color: #333333">%</span> i19<span style="color: #333333">-&gt;</span>size_]);
-          COUNT_mSUPPLIER2_E1_1_entry<span style="color: #333333">*</span> e19;
-          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e19<span style="color: #333333">=</span>n19<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h13 <span style="color: #333333">==</span> n19<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn<span style="color: #333333">::</span>equals(se47, <span style="color: #333333">*</span>e19)) {
-            <span style="color: #333399; font-weight: bold">long</span> ps_partkey <span style="color: #333333">=</span> e19<span style="color: #333333">-&gt;</span>PS_PARTKEY;
-            <span style="color: #333399; font-weight: bold">long</span> ps_availqty <span style="color: #333333">=</span> e19<span style="color: #333333">-&gt;</span>PS_AVAILQTY;
-            <span style="color: #333399; font-weight: bold">long</span> v19 <span style="color: #333333">=</span> e19<span style="color: #333333">-&gt;</span>__av;
-            DOUBLE_TYPE l12 <span style="color: #333333">=</span> (COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se45.modify(ps_partkey,supplier_suppkey)) <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.5</span>);
-            agg12 <span style="color: #333333">+=</span> (v19 <span style="color: #333333">*</span> ((COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se46.modify(ps_partkey)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> (ps_availqty <span style="color: #333333">&gt;</span> l12)));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n19<span style="color: #333333">=</span>n19<span style="color: #333333">-&gt;</span>next));
+          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h13 <span style="color: #333333">=</span> COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn<span style="color: #333333">::</span>hash(se43.modify1(supplier_suppkey));
+          <span style="color: #008800; font-weight: bold">const</span> HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">*</span> i15 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">*&gt;</span>(COUNT_mSUPPLIER2_E1_1.index[<span style="color: #0000DD; font-weight: bold">2</span>]);
+          HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n15 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i15<span style="color: #333333">-&gt;</span>buckets_[h13 <span style="color: #333333">%</span> i15<span style="color: #333333">-&gt;</span>size_]);
+          COUNT_mSUPPLIER2_E1_1_entry<span style="color: #333333">*</span> e15;
+          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e15<span style="color: #333333">=</span>n15<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h13 <span style="color: #333333">==</span> n15<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn<span style="color: #333333">::</span>equals(se43, <span style="color: #333333">*</span>e15)) {
+            <span style="color: #333399; font-weight: bold">long</span> ps_partkey <span style="color: #333333">=</span> e15<span style="color: #333333">-&gt;</span>PS_PARTKEY;
+            <span style="color: #333399; font-weight: bold">long</span> ps_availqty <span style="color: #333333">=</span> e15<span style="color: #333333">-&gt;</span>PS_AVAILQTY;
+            <span style="color: #333399; font-weight: bold">long</span> v15 <span style="color: #333333">=</span> e15<span style="color: #333333">-&gt;</span>__av;
+            DOUBLE_TYPE l11 <span style="color: #333333">=</span> (COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se41.modify(ps_partkey,supplier_suppkey)) <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.5</span>);
+            (<span style="color: #888888">/*if */</span>(ps_availqty <span style="color: #333333">&gt;</span> l11) <span style="color: #333333">?</span> agg11 <span style="color: #333333">+=</span> (v15 <span style="color: #333333">*</span> (COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se42.modify(ps_partkey)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>)) <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
+          } <span style="color: #008800; font-weight: bold">while</span> ((n15<span style="color: #333333">=</span>n15<span style="color: #333333">-&gt;</span>nxt));
         }
-        COUNT.addOrDelOnZero(se43.modify(supplier_name,supplier_address),(COUNT_mSUPPLIER1.getValueOrDefault(se44.modify(supplier_nationkey)) <span style="color: #333333">*</span> (agg12 <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>)));
-        COUNT_mPARTSUPP1.addOrDelOnZero(se48.modify(supplier_suppkey,supplier_name,supplier_address),COUNT_mSUPPLIER1.getValueOrDefault(se49.modify(supplier_nationkey)));
+        COUNT.addOrDelOnZero(se39.modify(supplier_name,supplier_address),(COUNT_mSUPPLIER1.getValueOrDefault(se40.modify(supplier_nationkey)) <span style="color: #333333">*</span> (agg11 <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>)));
+        COUNT_mPARTSUPP1.addOrDelOnZero(se44.modify(supplier_suppkey,supplier_name,supplier_address),COUNT_mSUPPLIER1.getValueOrDefault(se45.modify(supplier_nationkey)));
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_SUPPLIER&quot;</span>)
       END_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_SUPPLIER&quot;</span>)
@@ -1806,23 +1707,23 @@
     <span style="color: #333399; font-weight: bold">void</span> on_delete_SUPPLIER(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> supplier_suppkey, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> supplier_name, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> supplier_address, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> supplier_nationkey, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> supplier_phone, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE supplier_acctbal, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> supplier_comment) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_SUPPLIER&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_SUPPLIER&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
-        <span style="color: #333399; font-weight: bold">long</span> agg13 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
+      {  <span style="color: #333333">++</span>tN;
+        <span style="color: #333399; font-weight: bold">long</span> agg12 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
         { <span style="color: #888888">//slice</span>
-          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h14 <span style="color: #333333">=</span> COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn<span style="color: #333333">::</span>hash(se54.modify1(supplier_suppkey));
-          <span style="color: #008800; font-weight: bold">const</span> HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">*</span> i20 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">*&gt;</span>(COUNT_mSUPPLIER2_E1_1.index[<span style="color: #0000DD; font-weight: bold">2</span>]);
-          HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n20 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i20<span style="color: #333333">-&gt;</span>buckets_[h14 <span style="color: #333333">%</span> i20<span style="color: #333333">-&gt;</span>size_]);
-          COUNT_mSUPPLIER2_E1_1_entry<span style="color: #333333">*</span> e20;
-          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e20<span style="color: #333333">=</span>n20<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h14 <span style="color: #333333">==</span> n20<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn<span style="color: #333333">::</span>equals(se54, <span style="color: #333333">*</span>e20)) {
-            <span style="color: #333399; font-weight: bold">long</span> ps_partkey <span style="color: #333333">=</span> e20<span style="color: #333333">-&gt;</span>PS_PARTKEY;
-            <span style="color: #333399; font-weight: bold">long</span> ps_availqty <span style="color: #333333">=</span> e20<span style="color: #333333">-&gt;</span>PS_AVAILQTY;
-            <span style="color: #333399; font-weight: bold">long</span> v20 <span style="color: #333333">=</span> e20<span style="color: #333333">-&gt;</span>__av;
-            DOUBLE_TYPE l13 <span style="color: #333333">=</span> (COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se52.modify(ps_partkey,supplier_suppkey)) <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.5</span>);
-            agg13 <span style="color: #333333">+=</span> (v20 <span style="color: #333333">*</span> ((COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se53.modify(ps_partkey)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> (ps_availqty <span style="color: #333333">&gt;</span> l13)));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n20<span style="color: #333333">=</span>n20<span style="color: #333333">-&gt;</span>next));
+          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h14 <span style="color: #333333">=</span> COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn<span style="color: #333333">::</span>hash(se50.modify1(supplier_suppkey));
+          <span style="color: #008800; font-weight: bold">const</span> HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">*</span> i16 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">*&gt;</span>(COUNT_mSUPPLIER2_E1_1.index[<span style="color: #0000DD; font-weight: bold">2</span>]);
+          HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n16 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i16<span style="color: #333333">-&gt;</span>buckets_[h14 <span style="color: #333333">%</span> i16<span style="color: #333333">-&gt;</span>size_]);
+          COUNT_mSUPPLIER2_E1_1_entry<span style="color: #333333">*</span> e16;
+          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e16<span style="color: #333333">=</span>n16<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h14 <span style="color: #333333">==</span> n16<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn<span style="color: #333333">::</span>equals(se50, <span style="color: #333333">*</span>e16)) {
+            <span style="color: #333399; font-weight: bold">long</span> ps_partkey <span style="color: #333333">=</span> e16<span style="color: #333333">-&gt;</span>PS_PARTKEY;
+            <span style="color: #333399; font-weight: bold">long</span> ps_availqty <span style="color: #333333">=</span> e16<span style="color: #333333">-&gt;</span>PS_AVAILQTY;
+            <span style="color: #333399; font-weight: bold">long</span> v16 <span style="color: #333333">=</span> e16<span style="color: #333333">-&gt;</span>__av;
+            DOUBLE_TYPE l12 <span style="color: #333333">=</span> (COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se48.modify(ps_partkey,supplier_suppkey)) <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.5</span>);
+            (<span style="color: #888888">/*if */</span>(ps_availqty <span style="color: #333333">&gt;</span> l12) <span style="color: #333333">?</span> agg12 <span style="color: #333333">+=</span> (v16 <span style="color: #333333">*</span> (COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se49.modify(ps_partkey)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>)) <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
+          } <span style="color: #008800; font-weight: bold">while</span> ((n16<span style="color: #333333">=</span>n16<span style="color: #333333">-&gt;</span>nxt));
         }
-        COUNT.addOrDelOnZero(se50.modify(supplier_name,supplier_address),(COUNT_mSUPPLIER1.getValueOrDefault(se51.modify(supplier_nationkey)) <span style="color: #333333">*</span> ((agg13 <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)));
-        COUNT_mPARTSUPP1.addOrDelOnZero(se55.modify(supplier_suppkey,supplier_name,supplier_address),(COUNT_mSUPPLIER1.getValueOrDefault(se56.modify(supplier_nationkey)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
+        COUNT.addOrDelOnZero(se46.modify(supplier_name,supplier_address),(COUNT_mSUPPLIER1.getValueOrDefault(se47.modify(supplier_nationkey)) <span style="color: #333333">*</span> ((agg12 <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)));
+        COUNT_mPARTSUPP1.addOrDelOnZero(se51.modify(supplier_suppkey,supplier_name,supplier_address),(COUNT_mSUPPLIER1.getValueOrDefault(se52.modify(supplier_nationkey)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_SUPPLIER&quot;</span>)
       END_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_SUPPLIER&quot;</span>)
@@ -1834,51 +1735,51 @@
     <span style="color: #333399; font-weight: bold">void</span> on_insert_PARTSUPP(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> partsupp_partkey, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> partsupp_suppkey, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> partsupp_availqty, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE partsupp_supplycost, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> partsupp_comment) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_PARTSUPP&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_PARTSUPP&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
+      {  <span style="color: #333333">++</span>tN;
         { <span style="color: #888888">//slice</span>
-          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h17 <span style="color: #333333">=</span> COUNT_mPARTSUPP1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se66.modify0(partsupp_suppkey));
-          <span style="color: #008800; font-weight: bold">const</span> HashIndex_COUNT_mPARTSUPP1_map_0<span style="color: #333333">*</span> i21 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_COUNT_mPARTSUPP1_map_0<span style="color: #333333">*&gt;</span>(COUNT_mPARTSUPP1.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
-          HashIndex_COUNT_mPARTSUPP1_map_0<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n21 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i21<span style="color: #333333">-&gt;</span>buckets_[h17 <span style="color: #333333">%</span> i21<span style="color: #333333">-&gt;</span>size_]);
-          COUNT_mPARTSUPP1_entry<span style="color: #333333">*</span> e21;
-          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e21<span style="color: #333333">=</span>n21<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h17 <span style="color: #333333">==</span> n21<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> COUNT_mPARTSUPP1_mapkey0_idxfn<span style="color: #333333">::</span>equals(se66, <span style="color: #333333">*</span>e21)) {
-            STRING_TYPE s_name <span style="color: #333333">=</span> e21<span style="color: #333333">-&gt;</span>S_NAME;
-            STRING_TYPE s_address <span style="color: #333333">=</span> e21<span style="color: #333333">-&gt;</span>S_ADDRESS;
-            <span style="color: #333399; font-weight: bold">long</span> v21 <span style="color: #333333">=</span> e21<span style="color: #333333">-&gt;</span>__av;
+          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h17 <span style="color: #333333">=</span> COUNT_mPARTSUPP1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se62.modify0(partsupp_suppkey));
+          <span style="color: #008800; font-weight: bold">const</span> HashIndex_COUNT_mPARTSUPP1_map_0<span style="color: #333333">*</span> i17 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_COUNT_mPARTSUPP1_map_0<span style="color: #333333">*&gt;</span>(COUNT_mPARTSUPP1.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
+          HashIndex_COUNT_mPARTSUPP1_map_0<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n17 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i17<span style="color: #333333">-&gt;</span>buckets_[h17 <span style="color: #333333">%</span> i17<span style="color: #333333">-&gt;</span>size_]);
+          COUNT_mPARTSUPP1_entry<span style="color: #333333">*</span> e17;
+          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e17<span style="color: #333333">=</span>n17<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h17 <span style="color: #333333">==</span> n17<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> COUNT_mPARTSUPP1_mapkey0_idxfn<span style="color: #333333">::</span>equals(se62, <span style="color: #333333">*</span>e17)) {
+            STRING_TYPE s_name <span style="color: #333333">=</span> e17<span style="color: #333333">-&gt;</span>S_NAME;
+            STRING_TYPE s_address <span style="color: #333333">=</span> e17<span style="color: #333333">-&gt;</span>S_ADDRESS;
+            <span style="color: #333399; font-weight: bold">long</span> v17 <span style="color: #333333">=</span> e17<span style="color: #333333">-&gt;</span>__av;
+            <span style="color: #333399; font-weight: bold">long</span> agg13 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
+            { <span style="color: #888888">//slice</span>
+              <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h15 <span style="color: #333333">=</span> COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn<span style="color: #333333">::</span>hash(se56.modify1(partsupp_suppkey));
+              <span style="color: #008800; font-weight: bold">const</span> HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">*</span> i18 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">*&gt;</span>(COUNT_mSUPPLIER2_E1_1.index[<span style="color: #0000DD; font-weight: bold">2</span>]);
+              HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n18 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i18<span style="color: #333333">-&gt;</span>buckets_[h15 <span style="color: #333333">%</span> i18<span style="color: #333333">-&gt;</span>size_]);
+              COUNT_mSUPPLIER2_E1_1_entry<span style="color: #333333">*</span> e18;
+              <span style="color: #008800; font-weight: bold">do</span> <span style="color: #008800; font-weight: bold">if</span> ((e18<span style="color: #333333">=</span>n18<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h15 <span style="color: #333333">==</span> n18<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn<span style="color: #333333">::</span>equals(se56, <span style="color: #333333">*</span>e18)) {
+                <span style="color: #333399; font-weight: bold">long</span> ps_partkey <span style="color: #333333">=</span> e18<span style="color: #333333">-&gt;</span>PS_PARTKEY;
+                <span style="color: #333399; font-weight: bold">long</span> ps_availqty <span style="color: #333333">=</span> e18<span style="color: #333333">-&gt;</span>PS_AVAILQTY;
+                <span style="color: #333399; font-weight: bold">long</span> v18 <span style="color: #333333">=</span> e18<span style="color: #333333">-&gt;</span>__av;
+                DOUBLE_TYPE l13 <span style="color: #333333">=</span> (COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se54.modify(ps_partkey,partsupp_suppkey)) <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.5</span>);
+                (<span style="color: #888888">/*if */</span>(ps_availqty <span style="color: #333333">&gt;</span> l13) <span style="color: #333333">?</span> agg13 <span style="color: #333333">+=</span> (v18 <span style="color: #333333">*</span> (COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se55.modify(ps_partkey)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>)) <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
+              } <span style="color: #008800; font-weight: bold">while</span> ((n18<span style="color: #333333">=</span>n18<span style="color: #333333">-&gt;</span>nxt));
+            }
             <span style="color: #333399; font-weight: bold">long</span> agg14 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
-            { <span style="color: #888888">//slice</span>
-              <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h15 <span style="color: #333333">=</span> COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn<span style="color: #333333">::</span>hash(se60.modify1(partsupp_suppkey));
-              <span style="color: #008800; font-weight: bold">const</span> HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">*</span> i22 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">*&gt;</span>(COUNT_mSUPPLIER2_E1_1.index[<span style="color: #0000DD; font-weight: bold">2</span>]);
-              HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n22 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i22<span style="color: #333333">-&gt;</span>buckets_[h15 <span style="color: #333333">%</span> i22<span style="color: #333333">-&gt;</span>size_]);
-              COUNT_mSUPPLIER2_E1_1_entry<span style="color: #333333">*</span> e22;
-              <span style="color: #008800; font-weight: bold">do</span> <span style="color: #008800; font-weight: bold">if</span> ((e22<span style="color: #333333">=</span>n22<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h15 <span style="color: #333333">==</span> n22<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn<span style="color: #333333">::</span>equals(se60, <span style="color: #333333">*</span>e22)) {
-                <span style="color: #333399; font-weight: bold">long</span> ps_partkey <span style="color: #333333">=</span> e22<span style="color: #333333">-&gt;</span>PS_PARTKEY;
-                <span style="color: #333399; font-weight: bold">long</span> ps_availqty <span style="color: #333333">=</span> e22<span style="color: #333333">-&gt;</span>PS_AVAILQTY;
-                <span style="color: #333399; font-weight: bold">long</span> v22 <span style="color: #333333">=</span> e22<span style="color: #333333">-&gt;</span>__av;
-                DOUBLE_TYPE l14 <span style="color: #333333">=</span> (COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se58.modify(ps_partkey,partsupp_suppkey)) <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.5</span>);
-                agg14 <span style="color: #333333">+=</span> (v22 <span style="color: #333333">*</span> ((COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se59.modify(ps_partkey)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> (ps_availqty <span style="color: #333333">&gt;</span> l14)));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n22<span style="color: #333333">=</span>n22<span style="color: #333333">-&gt;</span>next));
-            }
+            DOUBLE_TYPE l14 <span style="color: #333333">=</span> (COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se57.modify(partsupp_partkey,partsupp_suppkey)) <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.5</span>);
+            (<span style="color: #888888">/*if */</span>(partsupp_availqty <span style="color: #333333">&gt;</span> l14) <span style="color: #333333">?</span> agg14 <span style="color: #333333">+=</span> (COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se58.modify(partsupp_partkey)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
             <span style="color: #333399; font-weight: bold">long</span> agg15 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
-            DOUBLE_TYPE l15 <span style="color: #333333">=</span> (COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se61.modify(partsupp_partkey,partsupp_suppkey)) <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.5</span>);
-            agg15 <span style="color: #333333">+=</span> (partsupp_availqty <span style="color: #333333">&gt;</span> l15);
-            <span style="color: #333399; font-weight: bold">long</span> agg16 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
             { <span style="color: #888888">//slice</span>
-              <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h16 <span style="color: #333333">=</span> COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn<span style="color: #333333">::</span>hash(se65.modify1(partsupp_suppkey));
-              <span style="color: #008800; font-weight: bold">const</span> HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">*</span> i23 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">*&gt;</span>(COUNT_mSUPPLIER2_E1_1.index[<span style="color: #0000DD; font-weight: bold">2</span>]);
-              HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n23 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i23<span style="color: #333333">-&gt;</span>buckets_[h16 <span style="color: #333333">%</span> i23<span style="color: #333333">-&gt;</span>size_]);
-              COUNT_mSUPPLIER2_E1_1_entry<span style="color: #333333">*</span> e23;
-              <span style="color: #008800; font-weight: bold">do</span> <span style="color: #008800; font-weight: bold">if</span> ((e23<span style="color: #333333">=</span>n23<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h16 <span style="color: #333333">==</span> n23<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn<span style="color: #333333">::</span>equals(se65, <span style="color: #333333">*</span>e23)) {
-                <span style="color: #333399; font-weight: bold">long</span> ps_partkey <span style="color: #333333">=</span> e23<span style="color: #333333">-&gt;</span>PS_PARTKEY;
-                <span style="color: #333399; font-weight: bold">long</span> ps_availqty <span style="color: #333333">=</span> e23<span style="color: #333333">-&gt;</span>PS_AVAILQTY;
-                <span style="color: #333399; font-weight: bold">long</span> v23 <span style="color: #333333">=</span> e23<span style="color: #333333">-&gt;</span>__av;
-                DOUBLE_TYPE l16 <span style="color: #333333">=</span> (COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se63.modify(ps_partkey,partsupp_suppkey)) <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.5</span>);
-                agg16 <span style="color: #333333">+=</span> (v23 <span style="color: #333333">*</span> ((COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se64.modify(ps_partkey)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> (ps_availqty <span style="color: #333333">&gt;</span> l16)));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n23<span style="color: #333333">=</span>n23<span style="color: #333333">-&gt;</span>next));
+              <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h16 <span style="color: #333333">=</span> COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn<span style="color: #333333">::</span>hash(se61.modify1(partsupp_suppkey));
+              <span style="color: #008800; font-weight: bold">const</span> HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">*</span> i19 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">*&gt;</span>(COUNT_mSUPPLIER2_E1_1.index[<span style="color: #0000DD; font-weight: bold">2</span>]);
+              HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n19 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i19<span style="color: #333333">-&gt;</span>buckets_[h16 <span style="color: #333333">%</span> i19<span style="color: #333333">-&gt;</span>size_]);
+              COUNT_mSUPPLIER2_E1_1_entry<span style="color: #333333">*</span> e19;
+              <span style="color: #008800; font-weight: bold">do</span> <span style="color: #008800; font-weight: bold">if</span> ((e19<span style="color: #333333">=</span>n19<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h16 <span style="color: #333333">==</span> n19<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn<span style="color: #333333">::</span>equals(se61, <span style="color: #333333">*</span>e19)) {
+                <span style="color: #333399; font-weight: bold">long</span> ps_partkey <span style="color: #333333">=</span> e19<span style="color: #333333">-&gt;</span>PS_PARTKEY;
+                <span style="color: #333399; font-weight: bold">long</span> ps_availqty <span style="color: #333333">=</span> e19<span style="color: #333333">-&gt;</span>PS_AVAILQTY;
+                <span style="color: #333399; font-weight: bold">long</span> v19 <span style="color: #333333">=</span> e19<span style="color: #333333">-&gt;</span>__av;
+                DOUBLE_TYPE l15 <span style="color: #333333">=</span> (COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se59.modify(ps_partkey,partsupp_suppkey)) <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.5</span>);
+                (<span style="color: #888888">/*if */</span>(ps_availqty <span style="color: #333333">&gt;</span> l15) <span style="color: #333333">?</span> agg15 <span style="color: #333333">+=</span> (v19 <span style="color: #333333">*</span> (COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se60.modify(ps_partkey)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>)) <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
+              } <span style="color: #008800; font-weight: bold">while</span> ((n19<span style="color: #333333">=</span>n19<span style="color: #333333">-&gt;</span>nxt));
             }
-            COUNT.addOrDelOnZero(se57.modify(s_name,s_address),(v21 <span style="color: #333333">*</span> (((agg14 <span style="color: #333333">+</span> (agg15 <span style="color: #333333">*</span> (COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se62.modify(partsupp_partkey)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>))) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">+</span> ((agg16 <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>))));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n21<span style="color: #333333">=</span>n21<span style="color: #333333">-&gt;</span>next));
+            COUNT.addOrDelOnZero(se53.modify(s_name,s_address),(v17 <span style="color: #333333">*</span> (((agg13 <span style="color: #333333">+</span> agg14) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">+</span> ((agg15 <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>))));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n17<span style="color: #333333">=</span>n17<span style="color: #333333">-&gt;</span>nxt));
         }
-        COUNT_mSUPPLIER2_E1_1.addOrDelOnZero(se67.modify(partsupp_partkey,partsupp_suppkey,partsupp_availqty),<span style="color: #0000DD; font-weight: bold">1L</span>);
+        COUNT_mSUPPLIER2_E1_1.addOrDelOnZero(se63.modify(partsupp_partkey,partsupp_suppkey,partsupp_availqty),<span style="color: #0000DD; font-weight: bold">1L</span>);
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_PARTSUPP&quot;</span>)
       END_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_PARTSUPP&quot;</span>)
@@ -1890,61 +1791,51 @@
     <span style="color: #333399; font-weight: bold">void</span> on_delete_PARTSUPP(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> partsupp_partkey, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> partsupp_suppkey, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> partsupp_availqty, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE partsupp_supplycost, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> partsupp_comment) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_PARTSUPP&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_PARTSUPP&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
-        { <span style="color: #888888">//foreach</span>
-          COUNT_mPARTSUPP1_entry<span style="color: #333333">*</span> e24 <span style="color: #333333">=</span> COUNT_mPARTSUPP1.head;
-          <span style="color: #008800; font-weight: bold">while</span>(e24){
-            <span style="color: #333399; font-weight: bold">long</span> s_suppkey <span style="color: #333333">=</span> e24<span style="color: #333333">-&gt;</span>S_SUPPKEY;
-            STRING_TYPE s_name <span style="color: #333333">=</span> e24<span style="color: #333333">-&gt;</span>S_NAME;
-            STRING_TYPE s_address <span style="color: #333333">=</span> e24<span style="color: #333333">-&gt;</span>S_ADDRESS;
-            <span style="color: #333399; font-weight: bold">long</span> v24 <span style="color: #333333">=</span> e24<span style="color: #333333">-&gt;</span>__av;
+      {  <span style="color: #333333">++</span>tN;
+        { <span style="color: #888888">//slice</span>
+          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h20 <span style="color: #333333">=</span> COUNT_mPARTSUPP1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se73.modify0(partsupp_suppkey));
+          <span style="color: #008800; font-weight: bold">const</span> HashIndex_COUNT_mPARTSUPP1_map_0<span style="color: #333333">*</span> i20 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_COUNT_mPARTSUPP1_map_0<span style="color: #333333">*&gt;</span>(COUNT_mPARTSUPP1.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
+          HashIndex_COUNT_mPARTSUPP1_map_0<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n20 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i20<span style="color: #333333">-&gt;</span>buckets_[h20 <span style="color: #333333">%</span> i20<span style="color: #333333">-&gt;</span>size_]);
+          COUNT_mPARTSUPP1_entry<span style="color: #333333">*</span> e20;
+          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e20<span style="color: #333333">=</span>n20<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h20 <span style="color: #333333">==</span> n20<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> COUNT_mPARTSUPP1_mapkey0_idxfn<span style="color: #333333">::</span>equals(se73, <span style="color: #333333">*</span>e20)) {
+            STRING_TYPE s_name <span style="color: #333333">=</span> e20<span style="color: #333333">-&gt;</span>S_NAME;
+            STRING_TYPE s_address <span style="color: #333333">=</span> e20<span style="color: #333333">-&gt;</span>S_ADDRESS;
+            <span style="color: #333399; font-weight: bold">long</span> v20 <span style="color: #333333">=</span> e20<span style="color: #333333">-&gt;</span>__av;
+            <span style="color: #333399; font-weight: bold">long</span> agg16 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
+            { <span style="color: #888888">//slice</span>
+              <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h18 <span style="color: #333333">=</span> COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn<span style="color: #333333">::</span>hash(se67.modify1(partsupp_suppkey));
+              <span style="color: #008800; font-weight: bold">const</span> HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">*</span> i21 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">*&gt;</span>(COUNT_mSUPPLIER2_E1_1.index[<span style="color: #0000DD; font-weight: bold">2</span>]);
+              HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n21 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i21<span style="color: #333333">-&gt;</span>buckets_[h18 <span style="color: #333333">%</span> i21<span style="color: #333333">-&gt;</span>size_]);
+              COUNT_mSUPPLIER2_E1_1_entry<span style="color: #333333">*</span> e21;
+              <span style="color: #008800; font-weight: bold">do</span> <span style="color: #008800; font-weight: bold">if</span> ((e21<span style="color: #333333">=</span>n21<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h18 <span style="color: #333333">==</span> n21<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn<span style="color: #333333">::</span>equals(se67, <span style="color: #333333">*</span>e21)) {
+                <span style="color: #333399; font-weight: bold">long</span> ps_partkey <span style="color: #333333">=</span> e21<span style="color: #333333">-&gt;</span>PS_PARTKEY;
+                <span style="color: #333399; font-weight: bold">long</span> ps_availqty <span style="color: #333333">=</span> e21<span style="color: #333333">-&gt;</span>PS_AVAILQTY;
+                <span style="color: #333399; font-weight: bold">long</span> v21 <span style="color: #333333">=</span> e21<span style="color: #333333">-&gt;</span>__av;
+                DOUBLE_TYPE l16 <span style="color: #333333">=</span> (COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se65.modify(ps_partkey,partsupp_suppkey)) <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.5</span>);
+                (<span style="color: #888888">/*if */</span>(ps_availqty <span style="color: #333333">&gt;</span> l16) <span style="color: #333333">?</span> agg16 <span style="color: #333333">+=</span> (v21 <span style="color: #333333">*</span> (COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se66.modify(ps_partkey)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>)) <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
+              } <span style="color: #008800; font-weight: bold">while</span> ((n21<span style="color: #333333">=</span>n21<span style="color: #333333">-&gt;</span>nxt));
+            }
             <span style="color: #333399; font-weight: bold">long</span> agg17 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
-            { <span style="color: #888888">//slice</span>
-              <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h18 <span style="color: #333333">=</span> COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn<span style="color: #333333">::</span>hash(se71.modify1(s_suppkey));
-              <span style="color: #008800; font-weight: bold">const</span> HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">*</span> i25 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">*&gt;</span>(COUNT_mSUPPLIER2_E1_1.index[<span style="color: #0000DD; font-weight: bold">2</span>]);
-              HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n25 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i25<span style="color: #333333">-&gt;</span>buckets_[h18 <span style="color: #333333">%</span> i25<span style="color: #333333">-&gt;</span>size_]);
-              COUNT_mSUPPLIER2_E1_1_entry<span style="color: #333333">*</span> e25;
-              <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e25<span style="color: #333333">=</span>n25<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h18 <span style="color: #333333">==</span> n25<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn<span style="color: #333333">::</span>equals(se71, <span style="color: #333333">*</span>e25)) {
-                <span style="color: #333399; font-weight: bold">long</span> ps_partkey <span style="color: #333333">=</span> e25<span style="color: #333333">-&gt;</span>PS_PARTKEY;
-                <span style="color: #333399; font-weight: bold">long</span> ps_availqty <span style="color: #333333">=</span> e25<span style="color: #333333">-&gt;</span>PS_AVAILQTY;
-                <span style="color: #333399; font-weight: bold">long</span> v25 <span style="color: #333333">=</span> e25<span style="color: #333333">-&gt;</span>__av;
-                DOUBLE_TYPE l17 <span style="color: #333333">=</span> (COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se69.modify(ps_partkey,s_suppkey)) <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.5</span>);
-                agg17 <span style="color: #333333">+=</span> (v25 <span style="color: #333333">*</span> ((COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se70.modify(ps_partkey)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> (ps_availqty <span style="color: #333333">&gt;</span> l17)));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n25<span style="color: #333333">=</span>n25<span style="color: #333333">-&gt;</span>next));
-            }
+            DOUBLE_TYPE l17 <span style="color: #333333">=</span> (COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se68.modify(partsupp_partkey,partsupp_suppkey)) <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.5</span>);
+            (<span style="color: #888888">/*if */</span>(partsupp_availqty <span style="color: #333333">&gt;</span> l17) <span style="color: #333333">?</span> agg17 <span style="color: #333333">+=</span> (COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se69.modify(partsupp_partkey)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
             <span style="color: #333399; font-weight: bold">long</span> agg18 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
-            DOUBLE_TYPE l18 <span style="color: #333333">=</span> (COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se72.modify(partsupp_partkey,s_suppkey)) <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.5</span>);
-            agg18 <span style="color: #333333">+=</span> (partsupp_availqty <span style="color: #333333">&gt;</span> l18);
-            COUNT.addOrDelOnZero(se68.modify(s_name,s_address),(v24 <span style="color: #333333">*</span> ((agg17 <span style="color: #333333">+</span> ((s_suppkey <span style="color: #333333">==</span> partsupp_suppkey) <span style="color: #333333">*</span> (agg18 <span style="color: #333333">*</span> ((COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se73.modify(partsupp_partkey)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)))) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>)));
-            e24 <span style="color: #333333">=</span> e24<span style="color: #333333">-&gt;</span>nxt;
-          }
-        }
-        { <span style="color: #888888">//foreach</span>
-          COUNT_mPARTSUPP1_entry<span style="color: #333333">*</span> e26 <span style="color: #333333">=</span> COUNT_mPARTSUPP1.head;
-          <span style="color: #008800; font-weight: bold">while</span>(e26){
-            <span style="color: #333399; font-weight: bold">long</span> s_suppkey <span style="color: #333333">=</span> e26<span style="color: #333333">-&gt;</span>S_SUPPKEY;
-            STRING_TYPE s_name <span style="color: #333333">=</span> e26<span style="color: #333333">-&gt;</span>S_NAME;
-            STRING_TYPE s_address <span style="color: #333333">=</span> e26<span style="color: #333333">-&gt;</span>S_ADDRESS;
-            <span style="color: #333399; font-weight: bold">long</span> v26 <span style="color: #333333">=</span> e26<span style="color: #333333">-&gt;</span>__av;
-            <span style="color: #333399; font-weight: bold">long</span> agg19 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
             { <span style="color: #888888">//slice</span>
-              <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h19 <span style="color: #333333">=</span> COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn<span style="color: #333333">::</span>hash(se76.modify1(s_suppkey));
-              <span style="color: #008800; font-weight: bold">const</span> HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">*</span> i27 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">*&gt;</span>(COUNT_mSUPPLIER2_E1_1.index[<span style="color: #0000DD; font-weight: bold">2</span>]);
-              HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n27 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i27<span style="color: #333333">-&gt;</span>buckets_[h19 <span style="color: #333333">%</span> i27<span style="color: #333333">-&gt;</span>size_]);
-              COUNT_mSUPPLIER2_E1_1_entry<span style="color: #333333">*</span> e27;
-              <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e27<span style="color: #333333">=</span>n27<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h19 <span style="color: #333333">==</span> n27<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn<span style="color: #333333">::</span>equals(se76, <span style="color: #333333">*</span>e27)) {
-                <span style="color: #333399; font-weight: bold">long</span> ps_partkey <span style="color: #333333">=</span> e27<span style="color: #333333">-&gt;</span>PS_PARTKEY;
-                <span style="color: #333399; font-weight: bold">long</span> ps_availqty <span style="color: #333333">=</span> e27<span style="color: #333333">-&gt;</span>PS_AVAILQTY;
-                <span style="color: #333399; font-weight: bold">long</span> v27 <span style="color: #333333">=</span> e27<span style="color: #333333">-&gt;</span>__av;
-                DOUBLE_TYPE l19 <span style="color: #333333">=</span> (COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se74.modify(ps_partkey,s_suppkey)) <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.5</span>);
-                agg19 <span style="color: #333333">+=</span> (v27 <span style="color: #333333">*</span> ((COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se75.modify(ps_partkey)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> (ps_availqty <span style="color: #333333">&gt;</span> l19)));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n27<span style="color: #333333">=</span>n27<span style="color: #333333">-&gt;</span>next));
+              <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h19 <span style="color: #333333">=</span> COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn<span style="color: #333333">::</span>hash(se72.modify1(partsupp_suppkey));
+              <span style="color: #008800; font-weight: bold">const</span> HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">*</span> i22 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">*&gt;</span>(COUNT_mSUPPLIER2_E1_1.index[<span style="color: #0000DD; font-weight: bold">2</span>]);
+              HashIndex_COUNT_mSUPPLIER2_E1_1_map_1<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n22 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i22<span style="color: #333333">-&gt;</span>buckets_[h19 <span style="color: #333333">%</span> i22<span style="color: #333333">-&gt;</span>size_]);
+              COUNT_mSUPPLIER2_E1_1_entry<span style="color: #333333">*</span> e22;
+              <span style="color: #008800; font-weight: bold">do</span> <span style="color: #008800; font-weight: bold">if</span> ((e22<span style="color: #333333">=</span>n22<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h19 <span style="color: #333333">==</span> n22<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> COUNT_mSUPPLIER2_E1_1_mapkey1_idxfn<span style="color: #333333">::</span>equals(se72, <span style="color: #333333">*</span>e22)) {
+                <span style="color: #333399; font-weight: bold">long</span> ps_partkey <span style="color: #333333">=</span> e22<span style="color: #333333">-&gt;</span>PS_PARTKEY;
+                <span style="color: #333399; font-weight: bold">long</span> ps_availqty <span style="color: #333333">=</span> e22<span style="color: #333333">-&gt;</span>PS_AVAILQTY;
+                <span style="color: #333399; font-weight: bold">long</span> v22 <span style="color: #333333">=</span> e22<span style="color: #333333">-&gt;</span>__av;
+                DOUBLE_TYPE l18 <span style="color: #333333">=</span> (COUNT_mSUPPLIER2_E1_1_L1_1.getValueOrDefault(se70.modify(ps_partkey,partsupp_suppkey)) <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.5</span>);
+                (<span style="color: #888888">/*if */</span>(ps_availqty <span style="color: #333333">&gt;</span> l18) <span style="color: #333333">?</span> agg18 <span style="color: #333333">+=</span> (v22 <span style="color: #333333">*</span> (COUNT_mSUPPLIER2_E1_1_E2_1.getValueOrDefault(se71.modify(ps_partkey)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>)) <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
+              } <span style="color: #008800; font-weight: bold">while</span> ((n22<span style="color: #333333">=</span>n22<span style="color: #333333">-&gt;</span>nxt));
             }
-            COUNT.addOrDelOnZero(se68.modify(s_name,s_address),((v26 <span style="color: #333333">*</span> (agg19 <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
-            e26 <span style="color: #333333">=</span> e26<span style="color: #333333">-&gt;</span>nxt;
-          }
+            COUNT.addOrDelOnZero(se64.modify(s_name,s_address),(v20 <span style="color: #333333">*</span> (((agg16 <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> agg17)) <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">+</span> ((agg18 <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>))));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n20<span style="color: #333333">=</span>n20<span style="color: #333333">-&gt;</span>nxt));
         }
-        COUNT_mSUPPLIER2_E1_1.addOrDelOnZero(se77.modify(partsupp_partkey,partsupp_suppkey,partsupp_availqty),<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>);
+        COUNT_mSUPPLIER2_E1_1.addOrDelOnZero(se74.modify(partsupp_partkey,partsupp_suppkey,partsupp_availqty),<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>);
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_PARTSUPP&quot;</span>)
       END_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_PARTSUPP&quot;</span>)
@@ -1956,21 +1847,21 @@
     <span style="color: #333399; font-weight: bold">void</span> on_system_ready_event() {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
-      {  <span style="color: #888888">//</span>
+      {  
         COUNT_mSUPPLIER1.clear();
-        STRING_TYPE l20 <span style="color: #333333">=</span> c3;
+        STRING_TYPE l19 <span style="color: #333333">=</span> c3;
         { <span style="color: #888888">//slice</span>
-          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h20 <span style="color: #333333">=</span> NATION_mapkey1_idxfn<span style="color: #333333">::</span>hash(se79.modify1(l20));
-          <span style="color: #008800; font-weight: bold">const</span> HashIndex_NATION_map_1<span style="color: #333333">*</span> i28 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_NATION_map_1<span style="color: #333333">*&gt;</span>(NATION.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
-          HashIndex_NATION_map_1<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n28 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i28<span style="color: #333333">-&gt;</span>buckets_[h20 <span style="color: #333333">%</span> i28<span style="color: #333333">-&gt;</span>size_]);
-          NATION_entry<span style="color: #333333">*</span> e28;
-          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e28<span style="color: #333333">=</span>n28<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h20 <span style="color: #333333">==</span> n28<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> NATION_mapkey1_idxfn<span style="color: #333333">::</span>equals(se79, <span style="color: #333333">*</span>e28)) {
-            <span style="color: #333399; font-weight: bold">long</span> count_msuppliersupplier_nationkey <span style="color: #333333">=</span> e28<span style="color: #333333">-&gt;</span>NATION_NATIONKEY;
-            <span style="color: #333399; font-weight: bold">long</span> n_regionkey <span style="color: #333333">=</span> e28<span style="color: #333333">-&gt;</span>NATION_REGIONKEY;
-            STRING_TYPE n_comment <span style="color: #333333">=</span> e28<span style="color: #333333">-&gt;</span>NATION_COMMENT;
-            <span style="color: #333399; font-weight: bold">long</span> v28 <span style="color: #333333">=</span> e28<span style="color: #333333">-&gt;</span>__av;
-            COUNT_mSUPPLIER1.addOrDelOnZero(se78.modify(count_msuppliersupplier_nationkey),v28);
-          } <span style="color: #008800; font-weight: bold">while</span> ((n28<span style="color: #333333">=</span>n28<span style="color: #333333">-&gt;</span>next));
+          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h21 <span style="color: #333333">=</span> NATION_mapkey1_idxfn<span style="color: #333333">::</span>hash(se76.modify1(l19));
+          <span style="color: #008800; font-weight: bold">const</span> HashIndex_NATION_map_1<span style="color: #333333">*</span> i23 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_NATION_map_1<span style="color: #333333">*&gt;</span>(NATION.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
+          HashIndex_NATION_map_1<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n23 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i23<span style="color: #333333">-&gt;</span>buckets_[h21 <span style="color: #333333">%</span> i23<span style="color: #333333">-&gt;</span>size_]);
+          NATION_entry<span style="color: #333333">*</span> e23;
+          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e23<span style="color: #333333">=</span>n23<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h21 <span style="color: #333333">==</span> n23<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> NATION_mapkey1_idxfn<span style="color: #333333">::</span>equals(se76, <span style="color: #333333">*</span>e23)) {
+            <span style="color: #333399; font-weight: bold">long</span> count_msuppliersupplier_nationkey <span style="color: #333333">=</span> e23<span style="color: #333333">-&gt;</span>NATION_NATIONKEY;
+            <span style="color: #333399; font-weight: bold">long</span> n_regionkey <span style="color: #333333">=</span> e23<span style="color: #333333">-&gt;</span>NATION_REGIONKEY;
+            STRING_TYPE n_comment <span style="color: #333333">=</span> e23<span style="color: #333333">-&gt;</span>NATION_COMMENT;
+            <span style="color: #333399; font-weight: bold">long</span> v23 <span style="color: #333333">=</span> e23<span style="color: #333333">-&gt;</span>__av;
+            COUNT_mSUPPLIER1.addOrDelOnZero(se75.modify(count_msuppliersupplier_nationkey),v23);
+          } <span style="color: #008800; font-weight: bold">while</span> ((n23<span style="color: #333333">=</span>n23<span style="color: #333333">-&gt;</span>nxt));
         }
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
@@ -1995,21 +1886,21 @@
     COUNT_mPARTSUPP1_entry se13;
     COUNT_mSUPPLIER2_E1_1_L1_1_entry se14;
     COUNT_entry se15;
-    COUNT_mSUPPLIER2_E1_1_L1_1_entry se16;
-    COUNT_mSUPPLIER2_E1_1_E2_1_entry se17;
+    COUNT_mSUPPLIER2_E1_1_E2_1_entry se16;
+    COUNT_mSUPPLIER2_E1_1_L1_1_entry se17;
     COUNT_mSUPPLIER2_E1_1_entry se18;
     COUNT_mSUPPLIER2_E1_1_L1_1_entry se19;
-    COUNT_mSUPPLIER2_E1_1_E2_1_entry se20;
-    COUNT_mSUPPLIER2_E1_1_entry se21;
-    COUNT_mSUPPLIER2_E1_1_L1_1_entry se22;
-    COUNT_entry se23;
+    COUNT_mSUPPLIER2_E1_1_entry se20;
+    COUNT_mSUPPLIER2_E1_1_L1_1_entry se21;
+    COUNT_mSUPPLIER2_E1_1_E2_1_entry se22;
+    COUNT_mSUPPLIER2_E1_1_entry se23;
     COUNT_mSUPPLIER2_E1_1_L1_1_entry se24;
-    COUNT_mSUPPLIER2_E1_1_entry se25;
-    COUNT_mSUPPLIER2_E1_1_E2_1_entry se26;
-    COUNT_mSUPPLIER2_E1_1_E2_1_entry se27;
+    COUNT_mSUPPLIER2_E1_1_E2_1_entry se25;
+    COUNT_mSUPPLIER2_E1_1_entry se26;
+    COUNT_mPARTSUPP1_entry se27;
     COUNT_mSUPPLIER2_E1_1_L1_1_entry se28;
     COUNT_mSUPPLIER2_E1_1_E2_1_entry se29;
-    COUNT_mSUPPLIER2_E1_1_entry se30;
+    COUNT_entry se30;
     COUNT_mSUPPLIER2_E1_1_L1_1_entry se31;
     COUNT_mSUPPLIER2_E1_1_E2_1_entry se32;
     COUNT_mSUPPLIER2_E1_1_entry se33;
@@ -2018,47 +1909,44 @@
     COUNT_mSUPPLIER2_E1_1_L1_1_entry se36;
     COUNT_mSUPPLIER2_E1_1_E2_1_entry se37;
     COUNT_mSUPPLIER2_E1_1_entry se38;
-    COUNT_mSUPPLIER2_E1_1_L1_1_entry se39;
-    COUNT_mSUPPLIER2_E1_1_E2_1_entry se40;
-    COUNT_mSUPPLIER2_E1_1_entry se41;
+    COUNT_entry se39;
+    COUNT_mSUPPLIER1_entry se40;
+    COUNT_mSUPPLIER2_E1_1_L1_1_entry se41;
     COUNT_mSUPPLIER2_E1_1_E2_1_entry se42;
-    COUNT_entry se43;
-    COUNT_mSUPPLIER1_entry se44;
-    COUNT_mSUPPLIER2_E1_1_L1_1_entry se45;
-    COUNT_mSUPPLIER2_E1_1_E2_1_entry se46;
-    COUNT_mSUPPLIER2_E1_1_entry se47;
-    COUNT_mPARTSUPP1_entry se48;
-    COUNT_mSUPPLIER1_entry se49;
-    COUNT_entry se50;
-    COUNT_mSUPPLIER1_entry se51;
-    COUNT_mSUPPLIER2_E1_1_L1_1_entry se52;
-    COUNT_mSUPPLIER2_E1_1_E2_1_entry se53;
-    COUNT_mSUPPLIER2_E1_1_entry se54;
-    COUNT_mPARTSUPP1_entry se55;
-    COUNT_mSUPPLIER1_entry se56;
-    COUNT_entry se57;
-    COUNT_mSUPPLIER2_E1_1_L1_1_entry se58;
-    COUNT_mSUPPLIER2_E1_1_E2_1_entry se59;
-    COUNT_mSUPPLIER2_E1_1_entry se60;
-    COUNT_mSUPPLIER2_E1_1_L1_1_entry se61;
-    COUNT_mSUPPLIER2_E1_1_E2_1_entry se62;
-    COUNT_mSUPPLIER2_E1_1_L1_1_entry se63;
-    COUNT_mSUPPLIER2_E1_1_E2_1_entry se64;
-    COUNT_mSUPPLIER2_E1_1_entry se65;
-    COUNT_mPARTSUPP1_entry se66;
+    COUNT_mSUPPLIER2_E1_1_entry se43;
+    COUNT_mPARTSUPP1_entry se44;
+    COUNT_mSUPPLIER1_entry se45;
+    COUNT_entry se46;
+    COUNT_mSUPPLIER1_entry se47;
+    COUNT_mSUPPLIER2_E1_1_L1_1_entry se48;
+    COUNT_mSUPPLIER2_E1_1_E2_1_entry se49;
+    COUNT_mSUPPLIER2_E1_1_entry se50;
+    COUNT_mPARTSUPP1_entry se51;
+    COUNT_mSUPPLIER1_entry se52;
+    COUNT_entry se53;
+    COUNT_mSUPPLIER2_E1_1_L1_1_entry se54;
+    COUNT_mSUPPLIER2_E1_1_E2_1_entry se55;
+    COUNT_mSUPPLIER2_E1_1_entry se56;
+    COUNT_mSUPPLIER2_E1_1_L1_1_entry se57;
+    COUNT_mSUPPLIER2_E1_1_E2_1_entry se58;
+    COUNT_mSUPPLIER2_E1_1_L1_1_entry se59;
+    COUNT_mSUPPLIER2_E1_1_E2_1_entry se60;
+    COUNT_mSUPPLIER2_E1_1_entry se61;
+    COUNT_mPARTSUPP1_entry se62;
+    COUNT_mSUPPLIER2_E1_1_entry se63;
+    COUNT_entry se64;
+    COUNT_mSUPPLIER2_E1_1_L1_1_entry se65;
+    COUNT_mSUPPLIER2_E1_1_E2_1_entry se66;
     COUNT_mSUPPLIER2_E1_1_entry se67;
-    COUNT_entry se68;
-    COUNT_mSUPPLIER2_E1_1_L1_1_entry se69;
-    COUNT_mSUPPLIER2_E1_1_E2_1_entry se70;
-    COUNT_mSUPPLIER2_E1_1_entry se71;
-    COUNT_mSUPPLIER2_E1_1_L1_1_entry se72;
-    COUNT_mSUPPLIER2_E1_1_E2_1_entry se73;
-    COUNT_mSUPPLIER2_E1_1_L1_1_entry se74;
-    COUNT_mSUPPLIER2_E1_1_E2_1_entry se75;
-    COUNT_mSUPPLIER2_E1_1_entry se76;
-    COUNT_mSUPPLIER2_E1_1_entry se77;
-    COUNT_mSUPPLIER1_entry se78;
-    NATION_entry se79;
+    COUNT_mSUPPLIER2_E1_1_L1_1_entry se68;
+    COUNT_mSUPPLIER2_E1_1_E2_1_entry se69;
+    COUNT_mSUPPLIER2_E1_1_L1_1_entry se70;
+    COUNT_mSUPPLIER2_E1_1_E2_1_entry se71;
+    COUNT_mSUPPLIER2_E1_1_entry se72;
+    COUNT_mPARTSUPP1_entry se73;
+    COUNT_mSUPPLIER2_E1_1_entry se74;
+    COUNT_mSUPPLIER1_entry se75;
+    NATION_entry se76;
     <span style="color: #888888">/* regex_t temporary objects */</span>
     <span style="color: #333399; font-weight: bold">regex_t</span> preg1;
   
@@ -2120,16 +2008,18 @@
       <span style="color: #888888">/* Imports data for static tables and performs view initialization based on it. */</span>
       <span style="color: #333399; font-weight: bold">void</span> init() {
           <span style="color: #888888">//P0_PLACE_HOLDER</span>
-          table_multiplexer.init_source();
-          stream_multiplexer.init_source();
+          table_multiplexer.init_source(run_opts<span style="color: #333333">-&gt;</span>batch_size, run_opts<span style="color: #333333">-&gt;</span>parallel, <span style="color: #007020">true</span>);
+          stream_multiplexer.init_source(run_opts<span style="color: #333333">-&gt;</span>batch_size, run_opts<span style="color: #333333">-&gt;</span>parallel, <span style="color: #007020">false</span>);
           process_tables();
           data.on_system_ready_event();
           <span style="color: #888888">//P2_PLACE_HOLDER</span>
       }
   
       <span style="color: #888888">/* Saves a snapshot of the data required to obtain the results of top level queries. */</span>
-      <span style="color: #333399; font-weight: bold">snapshot_t</span> take_snapshot(){ <span style="color: #888888">//tlq_t d=(tlq_t&amp;)data; if (d.tS==0) { gettimeofday(&amp;(d.t),NULL); d.tT=((d.t).tv_sec-(d.t0).tv_sec)*1000000L+((d.t).tv_usec-(d.t0).tv_usec); } printf(&quot;SAMPLE=standard,%ld,%ld,%ld\n&quot;,d.tT,d.tN,d.tS);</span>
-          <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333399; font-weight: bold">snapshot_t</span>( <span style="color: #008800; font-weight: bold">new</span> <span style="color: #333399; font-weight: bold">tlq_t</span>((<span style="color: #333399; font-weight: bold">tlq_t</span><span style="color: #333333">&amp;</span>)data) );
+      <span style="color: #333399; font-weight: bold">snapshot_t</span> take_snapshot(){
+          <span style="color: #333399; font-weight: bold">tlq_t</span><span style="color: #333333">*</span> d <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">new</span> <span style="color: #333399; font-weight: bold">tlq_t</span>((<span style="color: #333399; font-weight: bold">tlq_t</span><span style="color: #333333">&amp;</span>)data);
+          <span style="color: #008800; font-weight: bold">if</span> (d<span style="color: #333333">-&gt;</span>tS<span style="color: #333333">==</span><span style="color: #0000DD; font-weight: bold">0</span>) { gettimeofday(<span style="color: #333333">&amp;</span>(d<span style="color: #333333">-&gt;</span>t),<span style="color: #007020">NULL</span>); d<span style="color: #333333">-&gt;</span>tT<span style="color: #333333">=</span>((d<span style="color: #333333">-&gt;</span>t).tv_sec<span style="color: #333333">-</span>(d<span style="color: #333333">-&gt;</span>t0).tv_sec)<span style="color: #333333">*</span><span style="color: #0000DD; font-weight: bold">1000000L</span><span style="color: #333333">+</span>((d<span style="color: #333333">-&gt;</span>t).tv_usec<span style="color: #333333">-</span>(d<span style="color: #333333">-&gt;</span>t0).tv_usec); } printf(<span style="background-color: #fff0f0">&quot;SAMPLE=standard,%ld,%ld,%ld</span><span style="color: #666666; font-weight: bold; background-color: #fff0f0">\n</span><span style="background-color: #fff0f0">&quot;</span>,d<span style="color: #333333">-&gt;</span>tT,d<span style="color: #333333">-&gt;</span>tN,d<span style="color: #333333">-&gt;</span>tS);
+          <span style="color: #008800; font-weight: bold">return</span> <span style="color: #0066BB; font-weight: bold">snapshot_t</span>( d );
       }
   
     <span style="color: #997700; font-weight: bold">protected:</span>

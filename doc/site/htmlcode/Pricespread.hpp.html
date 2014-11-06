@@ -544,7 +544,9 @@
 544
 545
 546
-547</pre></td><td><pre style="margin: 0; line-height: 125%"><span style="color: #557799">#include &quot;program_base.hpp&quot;</span>
+547
+548
+549</pre></td><td><pre style="margin: 0; line-height: 125%"><span style="color: #557799">#include &quot;program_base.hpp&quot;</span>
 <span style="color: #557799">#include &quot;hpds/KDouble.hpp&quot;</span>
 <span style="color: #557799">#include &quot;hash.hpp&quot;</span>
 <span style="color: #557799">#include &quot;mmap/mmap.hpp&quot;</span>
@@ -556,9 +558,9 @@
   
   <span style="color: #888888">/* Definitions of auxiliary maps for storing materialized views. */</span>
   <span style="color: #008800; font-weight: bold">struct</span> PSP_mBIDS1_entry {
-    DOUBLE_TYPE A_VOLUME; <span style="color: #333399; font-weight: bold">long</span> __av;  PSP_mBIDS1_entry<span style="color: #333333">*</span> nxt; PSP_mBIDS1_entry<span style="color: #333333">*</span> prv;
-    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">PSP_mBIDS1_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*A_VOLUME = 0.0; __av = 0L; */</span> }
-    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">PSP_mBIDS1_entry</span>(<span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c0, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1) { A_VOLUME <span style="color: #333333">=</span> c0; __av <span style="color: #333333">=</span> c1; }
+    DOUBLE_TYPE A_VOLUME; DOUBLE_TYPE __av;  PSP_mBIDS1_entry<span style="color: #333333">*</span> nxt; PSP_mBIDS1_entry<span style="color: #333333">*</span> prv;
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">PSP_mBIDS1_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*A_VOLUME = 0.0; __av = 0.0; */</span> }
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">PSP_mBIDS1_entry</span>(<span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c0, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c1) { A_VOLUME <span style="color: #333333">=</span> c0; __av <span style="color: #333333">=</span> c1; }
     PSP_mBIDS1_entry(<span style="color: #008800; font-weight: bold">const</span> PSP_mBIDS1_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> A_VOLUME( other.A_VOLUME ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
     FORCE_INLINE PSP_mBIDS1_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c0) { A_VOLUME <span style="color: #333333">=</span> c0;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
     <span style="color: #008800; font-weight: bold">template</span><span style="color: #333333">&lt;</span><span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Archive</span><span style="color: #333333">&gt;</span>
@@ -581,15 +583,15 @@
     }
   };
   
-  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>PSP_mBIDS1_entry,<span style="color: #333399; font-weight: bold">long</span>,
-    HashIndex<span style="color: #333333">&lt;</span>PSP_mBIDS1_entry,<span style="color: #333399; font-weight: bold">long</span>,PSP_mBIDS1_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>
+  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>PSP_mBIDS1_entry,DOUBLE_TYPE,
+    HashIndex<span style="color: #333333">&lt;</span>PSP_mBIDS1_entry,DOUBLE_TYPE,PSP_mBIDS1_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>
   <span style="color: #333333">&gt;</span> PSP_mBIDS1_map;
-  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>PSP_mBIDS1_entry,<span style="color: #333399; font-weight: bold">long</span>,PSP_mBIDS1_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_PSP_mBIDS1_map_0;
+  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>PSP_mBIDS1_entry,DOUBLE_TYPE,PSP_mBIDS1_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_PSP_mBIDS1_map_0;
   
   <span style="color: #008800; font-weight: bold">struct</span> PSP_mBIDS2_entry {
-    DOUBLE_TYPE B_VOLUME; DOUBLE_TYPE __av;  PSP_mBIDS2_entry<span style="color: #333333">*</span> nxt; PSP_mBIDS2_entry<span style="color: #333333">*</span> prv;
-    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">PSP_mBIDS2_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*B_VOLUME = 0.0; __av = 0.0; */</span> }
-    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">PSP_mBIDS2_entry</span>(<span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c0, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c1) { B_VOLUME <span style="color: #333333">=</span> c0; __av <span style="color: #333333">=</span> c1; }
+    DOUBLE_TYPE B_VOLUME; <span style="color: #333399; font-weight: bold">long</span> __av;  PSP_mBIDS2_entry<span style="color: #333333">*</span> nxt; PSP_mBIDS2_entry<span style="color: #333333">*</span> prv;
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">PSP_mBIDS2_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*B_VOLUME = 0.0; __av = 0L; */</span> }
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">PSP_mBIDS2_entry</span>(<span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c0, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1) { B_VOLUME <span style="color: #333333">=</span> c0; __av <span style="color: #333333">=</span> c1; }
     PSP_mBIDS2_entry(<span style="color: #008800; font-weight: bold">const</span> PSP_mBIDS2_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> B_VOLUME( other.B_VOLUME ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
     FORCE_INLINE PSP_mBIDS2_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c0) { B_VOLUME <span style="color: #333333">=</span> c0;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
     <span style="color: #008800; font-weight: bold">template</span><span style="color: #333333">&lt;</span><span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Archive</span><span style="color: #333333">&gt;</span>
@@ -612,17 +614,17 @@
     }
   };
   
-  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>PSP_mBIDS2_entry,DOUBLE_TYPE,
-    HashIndex<span style="color: #333333">&lt;</span>PSP_mBIDS2_entry,DOUBLE_TYPE,PSP_mBIDS2_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>
+  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>PSP_mBIDS2_entry,<span style="color: #333399; font-weight: bold">long</span>,
+    HashIndex<span style="color: #333333">&lt;</span>PSP_mBIDS2_entry,<span style="color: #333399; font-weight: bold">long</span>,PSP_mBIDS2_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>
   <span style="color: #333333">&gt;</span> PSP_mBIDS2_map;
-  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>PSP_mBIDS2_entry,DOUBLE_TYPE,PSP_mBIDS2_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_PSP_mBIDS2_map_0;
+  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>PSP_mBIDS2_entry,<span style="color: #333399; font-weight: bold">long</span>,PSP_mBIDS2_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_PSP_mBIDS2_map_0;
   
-  <span style="color: #008800; font-weight: bold">struct</span> PSP_mBIDS4_entry {
-    DOUBLE_TYPE A_VOLUME; DOUBLE_TYPE __av;  PSP_mBIDS4_entry<span style="color: #333333">*</span> nxt; PSP_mBIDS4_entry<span style="color: #333333">*</span> prv;
-    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">PSP_mBIDS4_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*A_VOLUME = 0.0; __av = 0.0; */</span> }
-    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">PSP_mBIDS4_entry</span>(<span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c0, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c1) { A_VOLUME <span style="color: #333333">=</span> c0; __av <span style="color: #333333">=</span> c1; }
-    PSP_mBIDS4_entry(<span style="color: #008800; font-weight: bold">const</span> PSP_mBIDS4_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> A_VOLUME( other.A_VOLUME ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
-    FORCE_INLINE PSP_mBIDS4_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c0) { A_VOLUME <span style="color: #333333">=</span> c0;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
+  <span style="color: #008800; font-weight: bold">struct</span> PSP_mBIDS3_entry {
+    DOUBLE_TYPE A_VOLUME; <span style="color: #333399; font-weight: bold">long</span> __av;  PSP_mBIDS3_entry<span style="color: #333333">*</span> nxt; PSP_mBIDS3_entry<span style="color: #333333">*</span> prv;
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">PSP_mBIDS3_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*A_VOLUME = 0.0; __av = 0L; */</span> }
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">PSP_mBIDS3_entry</span>(<span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c0, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1) { A_VOLUME <span style="color: #333333">=</span> c0; __av <span style="color: #333333">=</span> c1; }
+    PSP_mBIDS3_entry(<span style="color: #008800; font-weight: bold">const</span> PSP_mBIDS3_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> A_VOLUME( other.A_VOLUME ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
+    FORCE_INLINE PSP_mBIDS3_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c0) { A_VOLUME <span style="color: #333333">=</span> c0;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
     <span style="color: #008800; font-weight: bold">template</span><span style="color: #333333">&lt;</span><span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Archive</span><span style="color: #333333">&gt;</span>
     <span style="color: #333399; font-weight: bold">void</span> serialize(Archive<span style="color: #333333">&amp;</span> ar, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">unsigned</span> <span style="color: #333399; font-weight: bold">int</span> version) <span style="color: #008800; font-weight: bold">const</span> 
     {
@@ -632,28 +634,28 @@
       DBT_SERIALIZATION_NVP(ar, __av);
     }
   };
-  <span style="color: #008800; font-weight: bold">struct</span> PSP_mBIDS4_mapkey0_idxfn {
-    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> PSP_mBIDS4_entry<span style="color: #333333">&amp;</span> e) {
+  <span style="color: #008800; font-weight: bold">struct</span> PSP_mBIDS3_mapkey0_idxfn {
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> PSP_mBIDS3_entry<span style="color: #333333">&amp;</span> e) {
       <span style="color: #333399; font-weight: bold">size_t</span> h <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>;
       hash_combine(h, e.A_VOLUME);
       <span style="color: #008800; font-weight: bold">return</span> h;
     }
-    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> PSP_mBIDS4_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> PSP_mBIDS4_entry<span style="color: #333333">&amp;</span> y) {
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> PSP_mBIDS3_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> PSP_mBIDS3_entry<span style="color: #333333">&amp;</span> y) {
       <span style="color: #008800; font-weight: bold">return</span> x.A_VOLUME <span style="color: #333333">==</span> y.A_VOLUME;
     }
   };
   
-  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>PSP_mBIDS4_entry,DOUBLE_TYPE,
-    HashIndex<span style="color: #333333">&lt;</span>PSP_mBIDS4_entry,DOUBLE_TYPE,PSP_mBIDS4_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>
-  <span style="color: #333333">&gt;</span> PSP_mBIDS4_map;
-  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>PSP_mBIDS4_entry,DOUBLE_TYPE,PSP_mBIDS4_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_PSP_mBIDS4_map_0;
+  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>PSP_mBIDS3_entry,<span style="color: #333399; font-weight: bold">long</span>,
+    HashIndex<span style="color: #333333">&lt;</span>PSP_mBIDS3_entry,<span style="color: #333399; font-weight: bold">long</span>,PSP_mBIDS3_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>
+  <span style="color: #333333">&gt;</span> PSP_mBIDS3_map;
+  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>PSP_mBIDS3_entry,<span style="color: #333399; font-weight: bold">long</span>,PSP_mBIDS3_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_PSP_mBIDS3_map_0;
   
-  <span style="color: #008800; font-weight: bold">struct</span> PSP_mBIDS5_entry {
-    DOUBLE_TYPE B_VOLUME; <span style="color: #333399; font-weight: bold">long</span> __av;  PSP_mBIDS5_entry<span style="color: #333333">*</span> nxt; PSP_mBIDS5_entry<span style="color: #333333">*</span> prv;
-    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">PSP_mBIDS5_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*B_VOLUME = 0.0; __av = 0L; */</span> }
-    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">PSP_mBIDS5_entry</span>(<span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c0, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1) { B_VOLUME <span style="color: #333333">=</span> c0; __av <span style="color: #333333">=</span> c1; }
-    PSP_mBIDS5_entry(<span style="color: #008800; font-weight: bold">const</span> PSP_mBIDS5_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> B_VOLUME( other.B_VOLUME ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
-    FORCE_INLINE PSP_mBIDS5_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c0) { B_VOLUME <span style="color: #333333">=</span> c0;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
+  <span style="color: #008800; font-weight: bold">struct</span> PSP_mBIDS4_entry {
+    DOUBLE_TYPE B_VOLUME; DOUBLE_TYPE __av;  PSP_mBIDS4_entry<span style="color: #333333">*</span> nxt; PSP_mBIDS4_entry<span style="color: #333333">*</span> prv;
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">PSP_mBIDS4_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*B_VOLUME = 0.0; __av = 0.0; */</span> }
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">PSP_mBIDS4_entry</span>(<span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c0, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c1) { B_VOLUME <span style="color: #333333">=</span> c0; __av <span style="color: #333333">=</span> c1; }
+    PSP_mBIDS4_entry(<span style="color: #008800; font-weight: bold">const</span> PSP_mBIDS4_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> B_VOLUME( other.B_VOLUME ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
+    FORCE_INLINE PSP_mBIDS4_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c0) { B_VOLUME <span style="color: #333333">=</span> c0;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
     <span style="color: #008800; font-weight: bold">template</span><span style="color: #333333">&lt;</span><span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Archive</span><span style="color: #333333">&gt;</span>
     <span style="color: #333399; font-weight: bold">void</span> serialize(Archive<span style="color: #333333">&amp;</span> ar, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">unsigned</span> <span style="color: #333399; font-weight: bold">int</span> version) <span style="color: #008800; font-weight: bold">const</span> 
     {
@@ -663,21 +665,21 @@
       DBT_SERIALIZATION_NVP(ar, __av);
     }
   };
-  <span style="color: #008800; font-weight: bold">struct</span> PSP_mBIDS5_mapkey0_idxfn {
-    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> PSP_mBIDS5_entry<span style="color: #333333">&amp;</span> e) {
+  <span style="color: #008800; font-weight: bold">struct</span> PSP_mBIDS4_mapkey0_idxfn {
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> PSP_mBIDS4_entry<span style="color: #333333">&amp;</span> e) {
       <span style="color: #333399; font-weight: bold">size_t</span> h <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>;
       hash_combine(h, e.B_VOLUME);
       <span style="color: #008800; font-weight: bold">return</span> h;
     }
-    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> PSP_mBIDS5_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> PSP_mBIDS5_entry<span style="color: #333333">&amp;</span> y) {
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> PSP_mBIDS4_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> PSP_mBIDS4_entry<span style="color: #333333">&amp;</span> y) {
       <span style="color: #008800; font-weight: bold">return</span> x.B_VOLUME <span style="color: #333333">==</span> y.B_VOLUME;
     }
   };
   
-  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>PSP_mBIDS5_entry,<span style="color: #333399; font-weight: bold">long</span>,
-    HashIndex<span style="color: #333333">&lt;</span>PSP_mBIDS5_entry,<span style="color: #333399; font-weight: bold">long</span>,PSP_mBIDS5_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>
-  <span style="color: #333333">&gt;</span> PSP_mBIDS5_map;
-  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>PSP_mBIDS5_entry,<span style="color: #333399; font-weight: bold">long</span>,PSP_mBIDS5_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_PSP_mBIDS5_map_0;
+  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>PSP_mBIDS4_entry,DOUBLE_TYPE,
+    HashIndex<span style="color: #333333">&lt;</span>PSP_mBIDS4_entry,DOUBLE_TYPE,PSP_mBIDS4_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>
+  <span style="color: #333333">&gt;</span> PSP_mBIDS4_map;
+  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>PSP_mBIDS4_entry,DOUBLE_TYPE,PSP_mBIDS4_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_PSP_mBIDS4_map_0;
   
   
   
@@ -728,8 +730,8 @@
       pb.add_map<span style="color: #333333">&lt;</span>DOUBLE_TYPE<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;PSP_mBIDS1_L1_1&quot;</span>, PSP_mBIDS1_L1_1 );
       pb.add_map<span style="color: #333333">&lt;</span>PSP_mBIDS2_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;PSP_mBIDS2&quot;</span>, PSP_mBIDS2 );
       pb.add_map<span style="color: #333333">&lt;</span>DOUBLE_TYPE<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;PSP_mBIDS2_L1_1&quot;</span>, PSP_mBIDS2_L1_1 );
+      pb.add_map<span style="color: #333333">&lt;</span>PSP_mBIDS3_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;PSP_mBIDS3&quot;</span>, PSP_mBIDS3 );
       pb.add_map<span style="color: #333333">&lt;</span>PSP_mBIDS4_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;PSP_mBIDS4&quot;</span>, PSP_mBIDS4 );
-      pb.add_map<span style="color: #333333">&lt;</span>PSP_mBIDS5_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;PSP_mBIDS5&quot;</span>, PSP_mBIDS5 );
   
       pb.add_relation(<span style="background-color: #fff0f0">&quot;BIDS&quot;</span>);
       pb.add_relation(<span style="background-color: #fff0f0">&quot;ASKS&quot;</span>);
@@ -774,55 +776,55 @@
     <span style="color: #333399; font-weight: bold">void</span> on_insert_BIDS(<span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE <span style="color: #333399; font-weight: bold">bids_t</span>, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> bids_id, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> bids_broker_id, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE bids_volume, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE bids_price) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_BIDS&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_BIDS&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
-        PSP_mBIDS2.addOrDelOnZero(se1.modify(bids_volume),bids_price);
+      {  <span style="color: #333333">++</span>tN;
+        PSP_mBIDS2.addOrDelOnZero(se1.modify(bids_volume),<span style="color: #0000DD; font-weight: bold">1L</span>);
         PSP_mBIDS2_L1_1 <span style="color: #333333">+=</span> bids_volume;
-        PSP_mBIDS5.addOrDelOnZero(se3.modify(bids_volume),<span style="color: #0000DD; font-weight: bold">1L</span>);
-        <span style="color: #333399; font-weight: bold">long</span> agg1 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
+        PSP_mBIDS4.addOrDelOnZero(se3.modify(bids_volume),bids_price);
+        DOUBLE_TYPE agg1 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
         DOUBLE_TYPE l1 <span style="color: #333333">=</span> (PSP_mBIDS1_L1_1 <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.0001</span>);
         { <span style="color: #888888">//foreach</span>
           PSP_mBIDS1_entry<span style="color: #333333">*</span> e1 <span style="color: #333333">=</span> PSP_mBIDS1.head;
           <span style="color: #008800; font-weight: bold">while</span>(e1){
             DOUBLE_TYPE a_volume <span style="color: #333333">=</span> e1<span style="color: #333333">-&gt;</span>A_VOLUME;
-            <span style="color: #333399; font-weight: bold">long</span> v1 <span style="color: #333333">=</span> e1<span style="color: #333333">-&gt;</span>__av;
-            agg1 <span style="color: #333333">+=</span> (v1 <span style="color: #333333">*</span> (a_volume <span style="color: #333333">&gt;</span> l1));
+            DOUBLE_TYPE v1 <span style="color: #333333">=</span> e1<span style="color: #333333">-&gt;</span>__av;
+            (<span style="color: #888888">/*if */</span>(a_volume <span style="color: #333333">&gt;</span> l1) <span style="color: #333333">?</span> agg1 <span style="color: #333333">+=</span> v1 <span style="color: #333333">:</span> <span style="color: #6600EE; font-weight: bold">0.0</span>);
             e1 <span style="color: #333333">=</span> e1<span style="color: #333333">-&gt;</span>nxt;
           }
         }
-        DOUBLE_TYPE agg2 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
+        <span style="color: #333399; font-weight: bold">long</span> agg2 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
         DOUBLE_TYPE l2 <span style="color: #333333">=</span> (PSP_mBIDS2_L1_1 <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.0001</span>);
         { <span style="color: #888888">//foreach</span>
           PSP_mBIDS2_entry<span style="color: #333333">*</span> e2 <span style="color: #333333">=</span> PSP_mBIDS2.head;
           <span style="color: #008800; font-weight: bold">while</span>(e2){
             DOUBLE_TYPE b_volume <span style="color: #333333">=</span> e2<span style="color: #333333">-&gt;</span>B_VOLUME;
-            DOUBLE_TYPE v2 <span style="color: #333333">=</span> e2<span style="color: #333333">-&gt;</span>__av;
-            agg2 <span style="color: #333333">+=</span> (v2 <span style="color: #333333">*</span> (b_volume <span style="color: #333333">&gt;</span> l2));
+            <span style="color: #333399; font-weight: bold">long</span> v2 <span style="color: #333333">=</span> e2<span style="color: #333333">-&gt;</span>__av;
+            (<span style="color: #888888">/*if */</span>(b_volume <span style="color: #333333">&gt;</span> l2) <span style="color: #333333">?</span> agg2 <span style="color: #333333">+=</span> v2 <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
             e2 <span style="color: #333333">=</span> e2<span style="color: #333333">-&gt;</span>nxt;
           }
         }
-        DOUBLE_TYPE agg3 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
+        <span style="color: #333399; font-weight: bold">long</span> agg3 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
         DOUBLE_TYPE l3 <span style="color: #333333">=</span> (PSP_mBIDS1_L1_1 <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.0001</span>);
         { <span style="color: #888888">//foreach</span>
-          PSP_mBIDS4_entry<span style="color: #333333">*</span> e3 <span style="color: #333333">=</span> PSP_mBIDS4.head;
+          PSP_mBIDS3_entry<span style="color: #333333">*</span> e3 <span style="color: #333333">=</span> PSP_mBIDS3.head;
           <span style="color: #008800; font-weight: bold">while</span>(e3){
             DOUBLE_TYPE a_volume <span style="color: #333333">=</span> e3<span style="color: #333333">-&gt;</span>A_VOLUME;
-            DOUBLE_TYPE v3 <span style="color: #333333">=</span> e3<span style="color: #333333">-&gt;</span>__av;
-            agg3 <span style="color: #333333">+=</span> (v3 <span style="color: #333333">*</span> (a_volume <span style="color: #333333">&gt;</span> l3));
+            <span style="color: #333399; font-weight: bold">long</span> v3 <span style="color: #333333">=</span> e3<span style="color: #333333">-&gt;</span>__av;
+            (<span style="color: #888888">/*if */</span>(a_volume <span style="color: #333333">&gt;</span> l3) <span style="color: #333333">?</span> agg3 <span style="color: #333333">+=</span> v3 <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
             e3 <span style="color: #333333">=</span> e3<span style="color: #333333">-&gt;</span>nxt;
           }
         }
-        <span style="color: #333399; font-weight: bold">long</span> agg4 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
+        DOUBLE_TYPE agg4 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
         DOUBLE_TYPE l4 <span style="color: #333333">=</span> (PSP_mBIDS2_L1_1 <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.0001</span>);
         { <span style="color: #888888">//foreach</span>
-          PSP_mBIDS5_entry<span style="color: #333333">*</span> e4 <span style="color: #333333">=</span> PSP_mBIDS5.head;
+          PSP_mBIDS4_entry<span style="color: #333333">*</span> e4 <span style="color: #333333">=</span> PSP_mBIDS4.head;
           <span style="color: #008800; font-weight: bold">while</span>(e4){
             DOUBLE_TYPE b_volume <span style="color: #333333">=</span> e4<span style="color: #333333">-&gt;</span>B_VOLUME;
-            <span style="color: #333399; font-weight: bold">long</span> v4 <span style="color: #333333">=</span> e4<span style="color: #333333">-&gt;</span>__av;
-            agg4 <span style="color: #333333">+=</span> (v4 <span style="color: #333333">*</span> (b_volume <span style="color: #333333">&gt;</span> l4));
+            DOUBLE_TYPE v4 <span style="color: #333333">=</span> e4<span style="color: #333333">-&gt;</span>__av;
+            (<span style="color: #888888">/*if */</span>(b_volume <span style="color: #333333">&gt;</span> l4) <span style="color: #333333">?</span> agg4 <span style="color: #333333">+=</span> v4 <span style="color: #333333">:</span> <span style="color: #6600EE; font-weight: bold">0.0</span>);
             e4 <span style="color: #333333">=</span> e4<span style="color: #333333">-&gt;</span>nxt;
           }
         }
-        PSP <span style="color: #333333">=</span> ((agg1 <span style="color: #333333">*</span> (agg2 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)) <span style="color: #333333">+</span> (agg3 <span style="color: #333333">*</span> agg4));
+        PSP <span style="color: #333333">=</span> ((agg1 <span style="color: #333333">*</span> agg2) <span style="color: #333333">+</span> (agg3 <span style="color: #333333">*</span> (agg4 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)));
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_BIDS&quot;</span>)
       END_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_BIDS&quot;</span>)
@@ -834,55 +836,55 @@
     <span style="color: #333399; font-weight: bold">void</span> on_delete_BIDS(<span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE <span style="color: #333399; font-weight: bold">bids_t</span>, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> bids_id, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> bids_broker_id, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE bids_volume, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE bids_price) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_BIDS&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_BIDS&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
-        PSP_mBIDS2.addOrDelOnZero(se9.modify(bids_volume),(<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> bids_price));
+      {  <span style="color: #333333">++</span>tN;
+        PSP_mBIDS2.addOrDelOnZero(se5.modify(bids_volume),<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>);
         PSP_mBIDS2_L1_1 <span style="color: #333333">+=</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> bids_volume);
-        PSP_mBIDS5.addOrDelOnZero(se11.modify(bids_volume),<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>);
-        <span style="color: #333399; font-weight: bold">long</span> agg5 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
+        PSP_mBIDS4.addOrDelOnZero(se7.modify(bids_volume),(<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> bids_price));
+        DOUBLE_TYPE agg5 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
         DOUBLE_TYPE l5 <span style="color: #333333">=</span> (PSP_mBIDS1_L1_1 <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.0001</span>);
         { <span style="color: #888888">//foreach</span>
           PSP_mBIDS1_entry<span style="color: #333333">*</span> e5 <span style="color: #333333">=</span> PSP_mBIDS1.head;
           <span style="color: #008800; font-weight: bold">while</span>(e5){
             DOUBLE_TYPE a_volume <span style="color: #333333">=</span> e5<span style="color: #333333">-&gt;</span>A_VOLUME;
-            <span style="color: #333399; font-weight: bold">long</span> v5 <span style="color: #333333">=</span> e5<span style="color: #333333">-&gt;</span>__av;
-            agg5 <span style="color: #333333">+=</span> (v5 <span style="color: #333333">*</span> (a_volume <span style="color: #333333">&gt;</span> l5));
+            DOUBLE_TYPE v5 <span style="color: #333333">=</span> e5<span style="color: #333333">-&gt;</span>__av;
+            (<span style="color: #888888">/*if */</span>(a_volume <span style="color: #333333">&gt;</span> l5) <span style="color: #333333">?</span> agg5 <span style="color: #333333">+=</span> v5 <span style="color: #333333">:</span> <span style="color: #6600EE; font-weight: bold">0.0</span>);
             e5 <span style="color: #333333">=</span> e5<span style="color: #333333">-&gt;</span>nxt;
           }
         }
-        DOUBLE_TYPE agg6 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
+        <span style="color: #333399; font-weight: bold">long</span> agg6 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
         DOUBLE_TYPE l6 <span style="color: #333333">=</span> (PSP_mBIDS2_L1_1 <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.0001</span>);
         { <span style="color: #888888">//foreach</span>
           PSP_mBIDS2_entry<span style="color: #333333">*</span> e6 <span style="color: #333333">=</span> PSP_mBIDS2.head;
           <span style="color: #008800; font-weight: bold">while</span>(e6){
             DOUBLE_TYPE b_volume <span style="color: #333333">=</span> e6<span style="color: #333333">-&gt;</span>B_VOLUME;
-            DOUBLE_TYPE v6 <span style="color: #333333">=</span> e6<span style="color: #333333">-&gt;</span>__av;
-            agg6 <span style="color: #333333">+=</span> (v6 <span style="color: #333333">*</span> (b_volume <span style="color: #333333">&gt;</span> l6));
+            <span style="color: #333399; font-weight: bold">long</span> v6 <span style="color: #333333">=</span> e6<span style="color: #333333">-&gt;</span>__av;
+            (<span style="color: #888888">/*if */</span>(b_volume <span style="color: #333333">&gt;</span> l6) <span style="color: #333333">?</span> agg6 <span style="color: #333333">+=</span> v6 <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
             e6 <span style="color: #333333">=</span> e6<span style="color: #333333">-&gt;</span>nxt;
           }
         }
-        DOUBLE_TYPE agg7 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
+        <span style="color: #333399; font-weight: bold">long</span> agg7 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
         DOUBLE_TYPE l7 <span style="color: #333333">=</span> (PSP_mBIDS1_L1_1 <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.0001</span>);
         { <span style="color: #888888">//foreach</span>
-          PSP_mBIDS4_entry<span style="color: #333333">*</span> e7 <span style="color: #333333">=</span> PSP_mBIDS4.head;
+          PSP_mBIDS3_entry<span style="color: #333333">*</span> e7 <span style="color: #333333">=</span> PSP_mBIDS3.head;
           <span style="color: #008800; font-weight: bold">while</span>(e7){
             DOUBLE_TYPE a_volume <span style="color: #333333">=</span> e7<span style="color: #333333">-&gt;</span>A_VOLUME;
-            DOUBLE_TYPE v7 <span style="color: #333333">=</span> e7<span style="color: #333333">-&gt;</span>__av;
-            agg7 <span style="color: #333333">+=</span> (v7 <span style="color: #333333">*</span> (a_volume <span style="color: #333333">&gt;</span> l7));
+            <span style="color: #333399; font-weight: bold">long</span> v7 <span style="color: #333333">=</span> e7<span style="color: #333333">-&gt;</span>__av;
+            (<span style="color: #888888">/*if */</span>(a_volume <span style="color: #333333">&gt;</span> l7) <span style="color: #333333">?</span> agg7 <span style="color: #333333">+=</span> v7 <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
             e7 <span style="color: #333333">=</span> e7<span style="color: #333333">-&gt;</span>nxt;
           }
         }
-        <span style="color: #333399; font-weight: bold">long</span> agg8 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
+        DOUBLE_TYPE agg8 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
         DOUBLE_TYPE l8 <span style="color: #333333">=</span> (PSP_mBIDS2_L1_1 <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.0001</span>);
         { <span style="color: #888888">//foreach</span>
-          PSP_mBIDS5_entry<span style="color: #333333">*</span> e8 <span style="color: #333333">=</span> PSP_mBIDS5.head;
+          PSP_mBIDS4_entry<span style="color: #333333">*</span> e8 <span style="color: #333333">=</span> PSP_mBIDS4.head;
           <span style="color: #008800; font-weight: bold">while</span>(e8){
             DOUBLE_TYPE b_volume <span style="color: #333333">=</span> e8<span style="color: #333333">-&gt;</span>B_VOLUME;
-            <span style="color: #333399; font-weight: bold">long</span> v8 <span style="color: #333333">=</span> e8<span style="color: #333333">-&gt;</span>__av;
-            agg8 <span style="color: #333333">+=</span> (v8 <span style="color: #333333">*</span> (b_volume <span style="color: #333333">&gt;</span> l8));
+            DOUBLE_TYPE v8 <span style="color: #333333">=</span> e8<span style="color: #333333">-&gt;</span>__av;
+            (<span style="color: #888888">/*if */</span>(b_volume <span style="color: #333333">&gt;</span> l8) <span style="color: #333333">?</span> agg8 <span style="color: #333333">+=</span> v8 <span style="color: #333333">:</span> <span style="color: #6600EE; font-weight: bold">0.0</span>);
             e8 <span style="color: #333333">=</span> e8<span style="color: #333333">-&gt;</span>nxt;
           }
         }
-        PSP <span style="color: #333333">=</span> ((agg5 <span style="color: #333333">*</span> (agg6 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)) <span style="color: #333333">+</span> (agg7 <span style="color: #333333">*</span> agg8));
+        PSP <span style="color: #333333">=</span> ((agg5 <span style="color: #333333">*</span> agg6) <span style="color: #333333">+</span> (agg7 <span style="color: #333333">*</span> (agg8 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)));
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_BIDS&quot;</span>)
       END_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_BIDS&quot;</span>)
@@ -894,55 +896,55 @@
     <span style="color: #333399; font-weight: bold">void</span> on_insert_ASKS(<span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE <span style="color: #333399; font-weight: bold">asks_t</span>, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> asks_id, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> asks_broker_id, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE asks_volume, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE asks_price) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_ASKS&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_ASKS&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
-        PSP_mBIDS1.addOrDelOnZero(se17.modify(asks_volume),<span style="color: #0000DD; font-weight: bold">1L</span>);
+      {  <span style="color: #333333">++</span>tN;
+        PSP_mBIDS1.addOrDelOnZero(se9.modify(asks_volume),asks_price);
         PSP_mBIDS1_L1_1 <span style="color: #333333">+=</span> asks_volume;
-        PSP_mBIDS4.addOrDelOnZero(se19.modify(asks_volume),asks_price);
-        <span style="color: #333399; font-weight: bold">long</span> agg9 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
+        PSP_mBIDS3.addOrDelOnZero(se11.modify(asks_volume),<span style="color: #0000DD; font-weight: bold">1L</span>);
+        DOUBLE_TYPE agg9 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
         DOUBLE_TYPE l9 <span style="color: #333333">=</span> (PSP_mBIDS1_L1_1 <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.0001</span>);
         { <span style="color: #888888">//foreach</span>
           PSP_mBIDS1_entry<span style="color: #333333">*</span> e9 <span style="color: #333333">=</span> PSP_mBIDS1.head;
           <span style="color: #008800; font-weight: bold">while</span>(e9){
             DOUBLE_TYPE a_volume <span style="color: #333333">=</span> e9<span style="color: #333333">-&gt;</span>A_VOLUME;
-            <span style="color: #333399; font-weight: bold">long</span> v9 <span style="color: #333333">=</span> e9<span style="color: #333333">-&gt;</span>__av;
-            agg9 <span style="color: #333333">+=</span> (v9 <span style="color: #333333">*</span> (a_volume <span style="color: #333333">&gt;</span> l9));
+            DOUBLE_TYPE v9 <span style="color: #333333">=</span> e9<span style="color: #333333">-&gt;</span>__av;
+            (<span style="color: #888888">/*if */</span>(a_volume <span style="color: #333333">&gt;</span> l9) <span style="color: #333333">?</span> agg9 <span style="color: #333333">+=</span> v9 <span style="color: #333333">:</span> <span style="color: #6600EE; font-weight: bold">0.0</span>);
             e9 <span style="color: #333333">=</span> e9<span style="color: #333333">-&gt;</span>nxt;
           }
         }
-        DOUBLE_TYPE agg10 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
+        <span style="color: #333399; font-weight: bold">long</span> agg10 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
         DOUBLE_TYPE l10 <span style="color: #333333">=</span> (PSP_mBIDS2_L1_1 <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.0001</span>);
         { <span style="color: #888888">//foreach</span>
           PSP_mBIDS2_entry<span style="color: #333333">*</span> e10 <span style="color: #333333">=</span> PSP_mBIDS2.head;
           <span style="color: #008800; font-weight: bold">while</span>(e10){
             DOUBLE_TYPE b_volume <span style="color: #333333">=</span> e10<span style="color: #333333">-&gt;</span>B_VOLUME;
-            DOUBLE_TYPE v10 <span style="color: #333333">=</span> e10<span style="color: #333333">-&gt;</span>__av;
-            agg10 <span style="color: #333333">+=</span> (v10 <span style="color: #333333">*</span> (b_volume <span style="color: #333333">&gt;</span> l10));
+            <span style="color: #333399; font-weight: bold">long</span> v10 <span style="color: #333333">=</span> e10<span style="color: #333333">-&gt;</span>__av;
+            (<span style="color: #888888">/*if */</span>(b_volume <span style="color: #333333">&gt;</span> l10) <span style="color: #333333">?</span> agg10 <span style="color: #333333">+=</span> v10 <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
             e10 <span style="color: #333333">=</span> e10<span style="color: #333333">-&gt;</span>nxt;
           }
         }
-        DOUBLE_TYPE agg11 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
+        <span style="color: #333399; font-weight: bold">long</span> agg11 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
         DOUBLE_TYPE l11 <span style="color: #333333">=</span> (PSP_mBIDS1_L1_1 <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.0001</span>);
         { <span style="color: #888888">//foreach</span>
-          PSP_mBIDS4_entry<span style="color: #333333">*</span> e11 <span style="color: #333333">=</span> PSP_mBIDS4.head;
+          PSP_mBIDS3_entry<span style="color: #333333">*</span> e11 <span style="color: #333333">=</span> PSP_mBIDS3.head;
           <span style="color: #008800; font-weight: bold">while</span>(e11){
             DOUBLE_TYPE a_volume <span style="color: #333333">=</span> e11<span style="color: #333333">-&gt;</span>A_VOLUME;
-            DOUBLE_TYPE v11 <span style="color: #333333">=</span> e11<span style="color: #333333">-&gt;</span>__av;
-            agg11 <span style="color: #333333">+=</span> (v11 <span style="color: #333333">*</span> (a_volume <span style="color: #333333">&gt;</span> l11));
+            <span style="color: #333399; font-weight: bold">long</span> v11 <span style="color: #333333">=</span> e11<span style="color: #333333">-&gt;</span>__av;
+            (<span style="color: #888888">/*if */</span>(a_volume <span style="color: #333333">&gt;</span> l11) <span style="color: #333333">?</span> agg11 <span style="color: #333333">+=</span> v11 <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
             e11 <span style="color: #333333">=</span> e11<span style="color: #333333">-&gt;</span>nxt;
           }
         }
-        <span style="color: #333399; font-weight: bold">long</span> agg12 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
+        DOUBLE_TYPE agg12 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
         DOUBLE_TYPE l12 <span style="color: #333333">=</span> (PSP_mBIDS2_L1_1 <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.0001</span>);
         { <span style="color: #888888">//foreach</span>
-          PSP_mBIDS5_entry<span style="color: #333333">*</span> e12 <span style="color: #333333">=</span> PSP_mBIDS5.head;
+          PSP_mBIDS4_entry<span style="color: #333333">*</span> e12 <span style="color: #333333">=</span> PSP_mBIDS4.head;
           <span style="color: #008800; font-weight: bold">while</span>(e12){
             DOUBLE_TYPE b_volume <span style="color: #333333">=</span> e12<span style="color: #333333">-&gt;</span>B_VOLUME;
-            <span style="color: #333399; font-weight: bold">long</span> v12 <span style="color: #333333">=</span> e12<span style="color: #333333">-&gt;</span>__av;
-            agg12 <span style="color: #333333">+=</span> (v12 <span style="color: #333333">*</span> (b_volume <span style="color: #333333">&gt;</span> l12));
+            DOUBLE_TYPE v12 <span style="color: #333333">=</span> e12<span style="color: #333333">-&gt;</span>__av;
+            (<span style="color: #888888">/*if */</span>(b_volume <span style="color: #333333">&gt;</span> l12) <span style="color: #333333">?</span> agg12 <span style="color: #333333">+=</span> v12 <span style="color: #333333">:</span> <span style="color: #6600EE; font-weight: bold">0.0</span>);
             e12 <span style="color: #333333">=</span> e12<span style="color: #333333">-&gt;</span>nxt;
           }
         }
-        PSP <span style="color: #333333">=</span> ((agg9 <span style="color: #333333">*</span> (agg10 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)) <span style="color: #333333">+</span> (agg11 <span style="color: #333333">*</span> agg12));
+        PSP <span style="color: #333333">=</span> ((agg9 <span style="color: #333333">*</span> agg10) <span style="color: #333333">+</span> (agg11 <span style="color: #333333">*</span> (agg12 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)));
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_ASKS&quot;</span>)
       END_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_ASKS&quot;</span>)
@@ -954,55 +956,55 @@
     <span style="color: #333399; font-weight: bold">void</span> on_delete_ASKS(<span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE <span style="color: #333399; font-weight: bold">asks_t</span>, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> asks_id, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> asks_broker_id, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE asks_volume, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE asks_price) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_ASKS&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_ASKS&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
-        PSP_mBIDS1.addOrDelOnZero(se25.modify(asks_volume),<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>);
+      {  <span style="color: #333333">++</span>tN;
+        PSP_mBIDS1.addOrDelOnZero(se13.modify(asks_volume),(<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> asks_price));
         PSP_mBIDS1_L1_1 <span style="color: #333333">+=</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> asks_volume);
-        PSP_mBIDS4.addOrDelOnZero(se27.modify(asks_volume),(<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> asks_price));
-        <span style="color: #333399; font-weight: bold">long</span> agg13 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
+        PSP_mBIDS3.addOrDelOnZero(se15.modify(asks_volume),<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>);
+        DOUBLE_TYPE agg13 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
         DOUBLE_TYPE l13 <span style="color: #333333">=</span> (PSP_mBIDS1_L1_1 <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.0001</span>);
         { <span style="color: #888888">//foreach</span>
           PSP_mBIDS1_entry<span style="color: #333333">*</span> e13 <span style="color: #333333">=</span> PSP_mBIDS1.head;
           <span style="color: #008800; font-weight: bold">while</span>(e13){
             DOUBLE_TYPE a_volume <span style="color: #333333">=</span> e13<span style="color: #333333">-&gt;</span>A_VOLUME;
-            <span style="color: #333399; font-weight: bold">long</span> v13 <span style="color: #333333">=</span> e13<span style="color: #333333">-&gt;</span>__av;
-            agg13 <span style="color: #333333">+=</span> (v13 <span style="color: #333333">*</span> (a_volume <span style="color: #333333">&gt;</span> l13));
+            DOUBLE_TYPE v13 <span style="color: #333333">=</span> e13<span style="color: #333333">-&gt;</span>__av;
+            (<span style="color: #888888">/*if */</span>(a_volume <span style="color: #333333">&gt;</span> l13) <span style="color: #333333">?</span> agg13 <span style="color: #333333">+=</span> v13 <span style="color: #333333">:</span> <span style="color: #6600EE; font-weight: bold">0.0</span>);
             e13 <span style="color: #333333">=</span> e13<span style="color: #333333">-&gt;</span>nxt;
           }
         }
-        DOUBLE_TYPE agg14 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
+        <span style="color: #333399; font-weight: bold">long</span> agg14 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
         DOUBLE_TYPE l14 <span style="color: #333333">=</span> (PSP_mBIDS2_L1_1 <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.0001</span>);
         { <span style="color: #888888">//foreach</span>
           PSP_mBIDS2_entry<span style="color: #333333">*</span> e14 <span style="color: #333333">=</span> PSP_mBIDS2.head;
           <span style="color: #008800; font-weight: bold">while</span>(e14){
             DOUBLE_TYPE b_volume <span style="color: #333333">=</span> e14<span style="color: #333333">-&gt;</span>B_VOLUME;
-            DOUBLE_TYPE v14 <span style="color: #333333">=</span> e14<span style="color: #333333">-&gt;</span>__av;
-            agg14 <span style="color: #333333">+=</span> (v14 <span style="color: #333333">*</span> (b_volume <span style="color: #333333">&gt;</span> l14));
+            <span style="color: #333399; font-weight: bold">long</span> v14 <span style="color: #333333">=</span> e14<span style="color: #333333">-&gt;</span>__av;
+            (<span style="color: #888888">/*if */</span>(b_volume <span style="color: #333333">&gt;</span> l14) <span style="color: #333333">?</span> agg14 <span style="color: #333333">+=</span> v14 <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
             e14 <span style="color: #333333">=</span> e14<span style="color: #333333">-&gt;</span>nxt;
           }
         }
-        DOUBLE_TYPE agg15 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
+        <span style="color: #333399; font-weight: bold">long</span> agg15 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
         DOUBLE_TYPE l15 <span style="color: #333333">=</span> (PSP_mBIDS1_L1_1 <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.0001</span>);
         { <span style="color: #888888">//foreach</span>
-          PSP_mBIDS4_entry<span style="color: #333333">*</span> e15 <span style="color: #333333">=</span> PSP_mBIDS4.head;
+          PSP_mBIDS3_entry<span style="color: #333333">*</span> e15 <span style="color: #333333">=</span> PSP_mBIDS3.head;
           <span style="color: #008800; font-weight: bold">while</span>(e15){
             DOUBLE_TYPE a_volume <span style="color: #333333">=</span> e15<span style="color: #333333">-&gt;</span>A_VOLUME;
-            DOUBLE_TYPE v15 <span style="color: #333333">=</span> e15<span style="color: #333333">-&gt;</span>__av;
-            agg15 <span style="color: #333333">+=</span> (v15 <span style="color: #333333">*</span> (a_volume <span style="color: #333333">&gt;</span> l15));
+            <span style="color: #333399; font-weight: bold">long</span> v15 <span style="color: #333333">=</span> e15<span style="color: #333333">-&gt;</span>__av;
+            (<span style="color: #888888">/*if */</span>(a_volume <span style="color: #333333">&gt;</span> l15) <span style="color: #333333">?</span> agg15 <span style="color: #333333">+=</span> v15 <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
             e15 <span style="color: #333333">=</span> e15<span style="color: #333333">-&gt;</span>nxt;
           }
         }
-        <span style="color: #333399; font-weight: bold">long</span> agg16 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
+        DOUBLE_TYPE agg16 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
         DOUBLE_TYPE l16 <span style="color: #333333">=</span> (PSP_mBIDS2_L1_1 <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.0001</span>);
         { <span style="color: #888888">//foreach</span>
-          PSP_mBIDS5_entry<span style="color: #333333">*</span> e16 <span style="color: #333333">=</span> PSP_mBIDS5.head;
+          PSP_mBIDS4_entry<span style="color: #333333">*</span> e16 <span style="color: #333333">=</span> PSP_mBIDS4.head;
           <span style="color: #008800; font-weight: bold">while</span>(e16){
             DOUBLE_TYPE b_volume <span style="color: #333333">=</span> e16<span style="color: #333333">-&gt;</span>B_VOLUME;
-            <span style="color: #333399; font-weight: bold">long</span> v16 <span style="color: #333333">=</span> e16<span style="color: #333333">-&gt;</span>__av;
-            agg16 <span style="color: #333333">+=</span> (v16 <span style="color: #333333">*</span> (b_volume <span style="color: #333333">&gt;</span> l16));
+            DOUBLE_TYPE v16 <span style="color: #333333">=</span> e16<span style="color: #333333">-&gt;</span>__av;
+            (<span style="color: #888888">/*if */</span>(b_volume <span style="color: #333333">&gt;</span> l16) <span style="color: #333333">?</span> agg16 <span style="color: #333333">+=</span> v16 <span style="color: #333333">:</span> <span style="color: #6600EE; font-weight: bold">0.0</span>);
             e16 <span style="color: #333333">=</span> e16<span style="color: #333333">-&gt;</span>nxt;
           }
         }
-        PSP <span style="color: #333333">=</span> ((agg13 <span style="color: #333333">*</span> (agg14 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)) <span style="color: #333333">+</span> (agg15 <span style="color: #333333">*</span> agg16));
+        PSP <span style="color: #333333">=</span> ((agg13 <span style="color: #333333">*</span> agg14) <span style="color: #333333">+</span> (agg15 <span style="color: #333333">*</span> (agg16 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)));
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_ASKS&quot;</span>)
       END_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_ASKS&quot;</span>)
@@ -1014,7 +1016,7 @@
     <span style="color: #333399; font-weight: bold">void</span> on_system_ready_event() {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
-      {  <span style="color: #888888">//</span>
+      {  
         PSP <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
         PSP_mBIDS1_L1_1 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
         PSP_mBIDS2_L1_1 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
@@ -1027,21 +1029,21 @@
   
     <span style="color: #888888">/* Sample entries for avoiding recreation of temporary objects */</span>
     PSP_mBIDS2_entry se1;
-    PSP_mBIDS5_entry se3;
-    PSP_mBIDS2_entry se9;
-    PSP_mBIDS5_entry se11;
-    PSP_mBIDS1_entry se17;
-    PSP_mBIDS4_entry se19;
-    PSP_mBIDS1_entry se25;
-    PSP_mBIDS4_entry se27;
+    PSP_mBIDS4_entry se3;
+    PSP_mBIDS2_entry se5;
+    PSP_mBIDS4_entry se7;
+    PSP_mBIDS1_entry se9;
+    PSP_mBIDS3_entry se11;
+    PSP_mBIDS1_entry se13;
+    PSP_mBIDS3_entry se15;
   
     <span style="color: #888888">/* Data structures used for storing materialized views */</span>
     PSP_mBIDS1_map PSP_mBIDS1;
     DOUBLE_TYPE PSP_mBIDS1_L1_1;
     PSP_mBIDS2_map PSP_mBIDS2;
     DOUBLE_TYPE PSP_mBIDS2_L1_1;
+    PSP_mBIDS3_map PSP_mBIDS3;
     PSP_mBIDS4_map PSP_mBIDS4;
-    PSP_mBIDS5_map PSP_mBIDS5;
     
     
   
@@ -1068,16 +1070,18 @@
       <span style="color: #888888">/* Imports data for static tables and performs view initialization based on it. */</span>
       <span style="color: #333399; font-weight: bold">void</span> init() {
           <span style="color: #888888">//P0_PLACE_HOLDER</span>
-          table_multiplexer.init_source();
-          stream_multiplexer.init_source();
+          table_multiplexer.init_source(run_opts<span style="color: #333333">-&gt;</span>batch_size, run_opts<span style="color: #333333">-&gt;</span>parallel, <span style="color: #007020">true</span>);
+          stream_multiplexer.init_source(run_opts<span style="color: #333333">-&gt;</span>batch_size, run_opts<span style="color: #333333">-&gt;</span>parallel, <span style="color: #007020">false</span>);
           process_tables();
           data.on_system_ready_event();
           <span style="color: #888888">//P2_PLACE_HOLDER</span>
       }
   
       <span style="color: #888888">/* Saves a snapshot of the data required to obtain the results of top level queries. */</span>
-      <span style="color: #333399; font-weight: bold">snapshot_t</span> take_snapshot(){ <span style="color: #888888">//tlq_t d=(tlq_t&amp;)data; if (d.tS==0) { gettimeofday(&amp;(d.t),NULL); d.tT=((d.t).tv_sec-(d.t0).tv_sec)*1000000L+((d.t).tv_usec-(d.t0).tv_usec); } printf(&quot;SAMPLE=standard,%ld,%ld,%ld\n&quot;,d.tT,d.tN,d.tS);</span>
-          <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333399; font-weight: bold">snapshot_t</span>( <span style="color: #008800; font-weight: bold">new</span> <span style="color: #333399; font-weight: bold">tlq_t</span>((<span style="color: #333399; font-weight: bold">tlq_t</span><span style="color: #333333">&amp;</span>)data) );
+      <span style="color: #333399; font-weight: bold">snapshot_t</span> take_snapshot(){
+          <span style="color: #333399; font-weight: bold">tlq_t</span><span style="color: #333333">*</span> d <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">new</span> <span style="color: #333399; font-weight: bold">tlq_t</span>((<span style="color: #333399; font-weight: bold">tlq_t</span><span style="color: #333333">&amp;</span>)data);
+          <span style="color: #008800; font-weight: bold">if</span> (d<span style="color: #333333">-&gt;</span>tS<span style="color: #333333">==</span><span style="color: #0000DD; font-weight: bold">0</span>) { gettimeofday(<span style="color: #333333">&amp;</span>(d<span style="color: #333333">-&gt;</span>t),<span style="color: #007020">NULL</span>); d<span style="color: #333333">-&gt;</span>tT<span style="color: #333333">=</span>((d<span style="color: #333333">-&gt;</span>t).tv_sec<span style="color: #333333">-</span>(d<span style="color: #333333">-&gt;</span>t0).tv_sec)<span style="color: #333333">*</span><span style="color: #0000DD; font-weight: bold">1000000L</span><span style="color: #333333">+</span>((d<span style="color: #333333">-&gt;</span>t).tv_usec<span style="color: #333333">-</span>(d<span style="color: #333333">-&gt;</span>t0).tv_usec); } printf(<span style="background-color: #fff0f0">&quot;SAMPLE=standard,%ld,%ld,%ld</span><span style="color: #666666; font-weight: bold; background-color: #fff0f0">\n</span><span style="background-color: #fff0f0">&quot;</span>,d<span style="color: #333333">-&gt;</span>tT,d<span style="color: #333333">-&gt;</span>tN,d<span style="color: #333333">-&gt;</span>tS);
+          <span style="color: #008800; font-weight: bold">return</span> <span style="color: #0066BB; font-weight: bold">snapshot_t</span>( d );
       }
   
     <span style="color: #997700; font-weight: bold">protected:</span>

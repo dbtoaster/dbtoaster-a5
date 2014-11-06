@@ -663,7 +663,9 @@
 663
 664
 665
-666</pre></td><td><pre style="margin: 0; line-height: 125%"><span style="color: #557799">#include &quot;program_base.hpp&quot;</span>
+666
+667
+668</pre></td><td><pre style="margin: 0; line-height: 125%"><span style="color: #557799">#include &quot;program_base.hpp&quot;</span>
 <span style="color: #557799">#include &quot;hpds/KDouble.hpp&quot;</span>
 <span style="color: #557799">#include &quot;hash.hpp&quot;</span>
 <span style="color: #557799">#include &quot;mmap/mmap.hpp&quot;</span>
@@ -1023,7 +1025,7 @@
     <span style="color: #333399; font-weight: bold">void</span> on_insert_EMPLOYEE(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> employee_employee_id, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> employee_last_name, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> employee_first_name, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> employee_middle_name, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> employee_job_id, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> employee_manager_id, <span style="color: #008800; font-weight: bold">const</span> date employee_hire_date, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE employee_salary, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE employee_commission, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> employee_department_id) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_EMPLOYEE&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_EMPLOYEE&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
+      {  <span style="color: #333333">++</span>tN;
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h1 <span style="color: #333333">=</span> __SQL_COUNT_AGGREGATE_1_mEMPLOYEE1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se2.modify0(employee_department_id));
           <span style="color: #008800; font-weight: bold">const</span> HashIndex___SQL_COUNT_AGGREGATE_1_mEMPLOYEE1_map_0<span style="color: #333333">*</span> i1 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex___SQL_COUNT_AGGREGATE_1_mEMPLOYEE1_map_0<span style="color: #333333">*&gt;</span>(__SQL_COUNT_AGGREGATE_1_mEMPLOYEE1.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
@@ -1033,7 +1035,7 @@
             STRING_TYPE l_regional_group <span style="color: #333333">=</span> e1<span style="color: #333333">-&gt;</span>L_REGIONAL_GROUP;
             <span style="color: #333399; font-weight: bold">long</span> v1 <span style="color: #333333">=</span> e1<span style="color: #333333">-&gt;</span>__av;
             __SQL_COUNT_AGGREGATE_1.addOrDelOnZero(se1.modify(l_regional_group),v1);
-          } <span style="color: #008800; font-weight: bold">while</span> ((n1<span style="color: #333333">=</span>n1<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n1<span style="color: #333333">=</span>n1<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h2 <span style="color: #333333">=</span> __SQL_COUNT_AGGREGATE_1_mLOCATION2_mEMPLOYEE1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se4.modify0(employee_department_id));
@@ -1044,7 +1046,7 @@
             <span style="color: #333399; font-weight: bold">long</span> __sql_count_aggregate_1_mlocationlocation_location_id <span style="color: #333333">=</span> e2<span style="color: #333333">-&gt;</span>__SQL_COUNT_AGGREGATE_1_mLOCATIONLOCATION_LOCATION_ID;
             <span style="color: #333399; font-weight: bold">long</span> v2 <span style="color: #333333">=</span> e2<span style="color: #333333">-&gt;</span>__av;
             __SQL_COUNT_AGGREGATE_1_mLOCATION2.addOrDelOnZero(se3.modify(__sql_count_aggregate_1_mlocationlocation_location_id),v2);
-          } <span style="color: #008800; font-weight: bold">while</span> ((n2<span style="color: #333333">=</span>n2<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n2<span style="color: #333333">=</span>n2<span style="color: #333333">-&gt;</span>nxt));
         }
         __SQL_COUNT_AGGREGATE_1_mDEPARTMENT2.addOrDelOnZero(se5.modify(employee_department_id),<span style="color: #0000DD; font-weight: bold">1L</span>);
       }
@@ -1058,7 +1060,7 @@
     <span style="color: #333399; font-weight: bold">void</span> on_delete_EMPLOYEE(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> employee_employee_id, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> employee_last_name, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> employee_first_name, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> employee_middle_name, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> employee_job_id, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> employee_manager_id, <span style="color: #008800; font-weight: bold">const</span> date employee_hire_date, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE employee_salary, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE employee_commission, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> employee_department_id) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_EMPLOYEE&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_EMPLOYEE&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
+      {  <span style="color: #333333">++</span>tN;
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h3 <span style="color: #333333">=</span> __SQL_COUNT_AGGREGATE_1_mEMPLOYEE1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se7.modify0(employee_department_id));
           <span style="color: #008800; font-weight: bold">const</span> HashIndex___SQL_COUNT_AGGREGATE_1_mEMPLOYEE1_map_0<span style="color: #333333">*</span> i3 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex___SQL_COUNT_AGGREGATE_1_mEMPLOYEE1_map_0<span style="color: #333333">*&gt;</span>(__SQL_COUNT_AGGREGATE_1_mEMPLOYEE1.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
@@ -1068,7 +1070,7 @@
             STRING_TYPE l_regional_group <span style="color: #333333">=</span> e3<span style="color: #333333">-&gt;</span>L_REGIONAL_GROUP;
             <span style="color: #333399; font-weight: bold">long</span> v3 <span style="color: #333333">=</span> e3<span style="color: #333333">-&gt;</span>__av;
             __SQL_COUNT_AGGREGATE_1.addOrDelOnZero(se6.modify(l_regional_group),(v3 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n3<span style="color: #333333">=</span>n3<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n3<span style="color: #333333">=</span>n3<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h4 <span style="color: #333333">=</span> __SQL_COUNT_AGGREGATE_1_mLOCATION2_mEMPLOYEE1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se9.modify0(employee_department_id));
@@ -1079,7 +1081,7 @@
             <span style="color: #333399; font-weight: bold">long</span> __sql_count_aggregate_1_mlocationlocation_location_id <span style="color: #333333">=</span> e4<span style="color: #333333">-&gt;</span>__SQL_COUNT_AGGREGATE_1_mLOCATIONLOCATION_LOCATION_ID;
             <span style="color: #333399; font-weight: bold">long</span> v4 <span style="color: #333333">=</span> e4<span style="color: #333333">-&gt;</span>__av;
             __SQL_COUNT_AGGREGATE_1_mLOCATION2.addOrDelOnZero(se8.modify(__sql_count_aggregate_1_mlocationlocation_location_id),(v4 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n4<span style="color: #333333">=</span>n4<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n4<span style="color: #333333">=</span>n4<span style="color: #333333">-&gt;</span>nxt));
         }
         __SQL_COUNT_AGGREGATE_1_mDEPARTMENT2.addOrDelOnZero(se10.modify(employee_department_id),<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>);
       }
@@ -1093,7 +1095,7 @@
     <span style="color: #333399; font-weight: bold">void</span> on_insert_DEPARTMENT(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> department_department_id, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> department_name, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> department_location_id) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_DEPARTMENT&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_DEPARTMENT&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
+      {  <span style="color: #333333">++</span>tN;
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h5 <span style="color: #333333">=</span> __SQL_COUNT_AGGREGATE_1_mDEPARTMENT1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se13.modify0(department_location_id));
           <span style="color: #008800; font-weight: bold">const</span> HashIndex___SQL_COUNT_AGGREGATE_1_mDEPARTMENT1_map_0<span style="color: #333333">*</span> i5 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex___SQL_COUNT_AGGREGATE_1_mDEPARTMENT1_map_0<span style="color: #333333">*&gt;</span>(__SQL_COUNT_AGGREGATE_1_mDEPARTMENT1.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
@@ -1103,7 +1105,7 @@
             STRING_TYPE l_regional_group <span style="color: #333333">=</span> e5<span style="color: #333333">-&gt;</span>L_REGIONAL_GROUP;
             <span style="color: #333399; font-weight: bold">long</span> v5 <span style="color: #333333">=</span> e5<span style="color: #333333">-&gt;</span>__av;
             __SQL_COUNT_AGGREGATE_1.addOrDelOnZero(se11.modify(l_regional_group),(v5 <span style="color: #333333">*</span> __SQL_COUNT_AGGREGATE_1_mDEPARTMENT2.getValueOrDefault(se12.modify(department_department_id))));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n5<span style="color: #333333">=</span>n5<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n5<span style="color: #333333">=</span>n5<span style="color: #333333">-&gt;</span>nxt));
         }
         __SQL_COUNT_AGGREGATE_1_mLOCATION2.addOrDelOnZero(se14.modify(department_location_id),__SQL_COUNT_AGGREGATE_1_mDEPARTMENT2.getValueOrDefault(se15.modify(department_department_id)));
         __SQL_COUNT_AGGREGATE_1_mLOCATION2_mEMPLOYEE1.addOrDelOnZero(se16.modify(department_department_id,department_location_id),<span style="color: #0000DD; font-weight: bold">1L</span>);
@@ -1116,7 +1118,7 @@
             STRING_TYPE l_regional_group <span style="color: #333333">=</span> e6<span style="color: #333333">-&gt;</span>L_REGIONAL_GROUP;
             <span style="color: #333399; font-weight: bold">long</span> v6 <span style="color: #333333">=</span> e6<span style="color: #333333">-&gt;</span>__av;
             __SQL_COUNT_AGGREGATE_1_mEMPLOYEE1.addOrDelOnZero(se17.modify(department_department_id,l_regional_group),v6);
-          } <span style="color: #008800; font-weight: bold">while</span> ((n6<span style="color: #333333">=</span>n6<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n6<span style="color: #333333">=</span>n6<span style="color: #333333">-&gt;</span>nxt));
         }
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_DEPARTMENT&quot;</span>)
@@ -1129,7 +1131,7 @@
     <span style="color: #333399; font-weight: bold">void</span> on_delete_DEPARTMENT(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> department_department_id, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> department_name, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> department_location_id) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_DEPARTMENT&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_DEPARTMENT&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
+      {  <span style="color: #333333">++</span>tN;
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h7 <span style="color: #333333">=</span> __SQL_COUNT_AGGREGATE_1_mDEPARTMENT1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se21.modify0(department_location_id));
           <span style="color: #008800; font-weight: bold">const</span> HashIndex___SQL_COUNT_AGGREGATE_1_mDEPARTMENT1_map_0<span style="color: #333333">*</span> i7 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex___SQL_COUNT_AGGREGATE_1_mDEPARTMENT1_map_0<span style="color: #333333">*&gt;</span>(__SQL_COUNT_AGGREGATE_1_mDEPARTMENT1.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
@@ -1139,7 +1141,7 @@
             STRING_TYPE l_regional_group <span style="color: #333333">=</span> e7<span style="color: #333333">-&gt;</span>L_REGIONAL_GROUP;
             <span style="color: #333399; font-weight: bold">long</span> v7 <span style="color: #333333">=</span> e7<span style="color: #333333">-&gt;</span>__av;
             __SQL_COUNT_AGGREGATE_1.addOrDelOnZero(se19.modify(l_regional_group),(v7 <span style="color: #333333">*</span> (__SQL_COUNT_AGGREGATE_1_mDEPARTMENT2.getValueOrDefault(se20.modify(department_department_id)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n7<span style="color: #333333">=</span>n7<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n7<span style="color: #333333">=</span>n7<span style="color: #333333">-&gt;</span>nxt));
         }
         __SQL_COUNT_AGGREGATE_1_mLOCATION2.addOrDelOnZero(se22.modify(department_location_id),(__SQL_COUNT_AGGREGATE_1_mDEPARTMENT2.getValueOrDefault(se23.modify(department_department_id)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
         __SQL_COUNT_AGGREGATE_1_mLOCATION2_mEMPLOYEE1.addOrDelOnZero(se24.modify(department_department_id,department_location_id),<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>);
@@ -1152,7 +1154,7 @@
             STRING_TYPE l_regional_group <span style="color: #333333">=</span> e8<span style="color: #333333">-&gt;</span>L_REGIONAL_GROUP;
             <span style="color: #333399; font-weight: bold">long</span> v8 <span style="color: #333333">=</span> e8<span style="color: #333333">-&gt;</span>__av;
             __SQL_COUNT_AGGREGATE_1_mEMPLOYEE1.addOrDelOnZero(se25.modify(department_department_id,l_regional_group),(v8 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n8<span style="color: #333333">=</span>n8<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n8<span style="color: #333333">=</span>n8<span style="color: #333333">-&gt;</span>nxt));
         }
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_DEPARTMENT&quot;</span>)
@@ -1165,9 +1167,9 @@
     <span style="color: #333399; font-weight: bold">void</span> on_insert_LOCATION(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> location_location_id, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> location_regional_group) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_LOCATION&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_LOCATION&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
-        __SQL_COUNT_AGGREGATE_1.addOrDelOnZero(se27.modify(location_regional_group),((location_regional_group <span style="color: #333333">==</span> c1) <span style="color: #333333">*</span> __SQL_COUNT_AGGREGATE_1_mLOCATION2.getValueOrDefault(se28.modify(location_location_id))));
-        __SQL_COUNT_AGGREGATE_1_mDEPARTMENT1.addOrDelOnZero(se29.modify(location_location_id,location_regional_group),(location_regional_group <span style="color: #333333">==</span> c1));
+      {  <span style="color: #333333">++</span>tN;
+        (<span style="color: #888888">/*if */</span>(location_regional_group <span style="color: #333333">==</span> c1) <span style="color: #333333">?</span> __SQL_COUNT_AGGREGATE_1.addOrDelOnZero(se27.modify(location_regional_group),__SQL_COUNT_AGGREGATE_1_mLOCATION2.getValueOrDefault(se28.modify(location_location_id))) <span style="color: #333333">:</span> voidFunc());
+        (<span style="color: #888888">/*if */</span>(location_regional_group <span style="color: #333333">==</span> c1) <span style="color: #333333">?</span> __SQL_COUNT_AGGREGATE_1_mDEPARTMENT1.addOrDelOnZero(se29.modify(location_location_id,location_regional_group),<span style="color: #0000DD; font-weight: bold">1L</span>) <span style="color: #333333">:</span> voidFunc());
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h9 <span style="color: #333333">=</span> __SQL_COUNT_AGGREGATE_1_mLOCATION2_mEMPLOYEE1_mapkey1_idxfn<span style="color: #333333">::</span>hash(se31.modify1(location_location_id));
           <span style="color: #008800; font-weight: bold">const</span> HashIndex___SQL_COUNT_AGGREGATE_1_mLOCATION2_mEMPLOYEE1_map_1<span style="color: #333333">*</span> i9 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex___SQL_COUNT_AGGREGATE_1_mLOCATION2_mEMPLOYEE1_map_1<span style="color: #333333">*&gt;</span>(__SQL_COUNT_AGGREGATE_1_mLOCATION2_mEMPLOYEE1.index[<span style="color: #0000DD; font-weight: bold">2</span>]);
@@ -1176,8 +1178,8 @@
           <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e9<span style="color: #333333">=</span>n9<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h9 <span style="color: #333333">==</span> n9<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> __SQL_COUNT_AGGREGATE_1_mLOCATION2_mEMPLOYEE1_mapkey1_idxfn<span style="color: #333333">::</span>equals(se31, <span style="color: #333333">*</span>e9)) {
             <span style="color: #333399; font-weight: bold">long</span> __sql_count_aggregate_1_memployeeemployee_department_id <span style="color: #333333">=</span> e9<span style="color: #333333">-&gt;</span>__SQL_COUNT_AGGREGATE_1_mLOCATION2_mEMPLOYEEEMPLOYEE_DEPARTMENT_ID;
             <span style="color: #333399; font-weight: bold">long</span> v9 <span style="color: #333333">=</span> e9<span style="color: #333333">-&gt;</span>__av;
-            __SQL_COUNT_AGGREGATE_1_mEMPLOYEE1.addOrDelOnZero(se30.modify(__sql_count_aggregate_1_memployeeemployee_department_id,location_regional_group),((location_regional_group <span style="color: #333333">==</span> c1) <span style="color: #333333">*</span> v9));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n9<span style="color: #333333">=</span>n9<span style="color: #333333">-&gt;</span>next));
+            (<span style="color: #888888">/*if */</span>(location_regional_group <span style="color: #333333">==</span> c1) <span style="color: #333333">?</span> __SQL_COUNT_AGGREGATE_1_mEMPLOYEE1.addOrDelOnZero(se30.modify(__sql_count_aggregate_1_memployeeemployee_department_id,location_regional_group),v9) <span style="color: #333333">:</span> voidFunc());
+          } <span style="color: #008800; font-weight: bold">while</span> ((n9<span style="color: #333333">=</span>n9<span style="color: #333333">-&gt;</span>nxt));
         }
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_LOCATION&quot;</span>)
@@ -1190,9 +1192,9 @@
     <span style="color: #333399; font-weight: bold">void</span> on_delete_LOCATION(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> location_location_id, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> location_regional_group) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_LOCATION&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_LOCATION&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
-        __SQL_COUNT_AGGREGATE_1.addOrDelOnZero(se32.modify(location_regional_group),((location_regional_group <span style="color: #333333">==</span> c1) <span style="color: #333333">*</span> (__SQL_COUNT_AGGREGATE_1_mLOCATION2.getValueOrDefault(se33.modify(location_location_id)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)));
-        __SQL_COUNT_AGGREGATE_1_mDEPARTMENT1.addOrDelOnZero(se34.modify(location_location_id,location_regional_group),((location_regional_group <span style="color: #333333">==</span> c1) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
+      {  <span style="color: #333333">++</span>tN;
+        (<span style="color: #888888">/*if */</span>(location_regional_group <span style="color: #333333">==</span> c1) <span style="color: #333333">?</span> __SQL_COUNT_AGGREGATE_1.addOrDelOnZero(se32.modify(location_regional_group),(__SQL_COUNT_AGGREGATE_1_mLOCATION2.getValueOrDefault(se33.modify(location_location_id)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)) <span style="color: #333333">:</span> voidFunc());
+        (<span style="color: #888888">/*if */</span>(location_regional_group <span style="color: #333333">==</span> c1) <span style="color: #333333">?</span> __SQL_COUNT_AGGREGATE_1_mDEPARTMENT1.addOrDelOnZero(se34.modify(location_location_id,location_regional_group),<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>) <span style="color: #333333">:</span> voidFunc());
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h10 <span style="color: #333333">=</span> __SQL_COUNT_AGGREGATE_1_mLOCATION2_mEMPLOYEE1_mapkey1_idxfn<span style="color: #333333">::</span>hash(se36.modify1(location_location_id));
           <span style="color: #008800; font-weight: bold">const</span> HashIndex___SQL_COUNT_AGGREGATE_1_mLOCATION2_mEMPLOYEE1_map_1<span style="color: #333333">*</span> i10 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex___SQL_COUNT_AGGREGATE_1_mLOCATION2_mEMPLOYEE1_map_1<span style="color: #333333">*&gt;</span>(__SQL_COUNT_AGGREGATE_1_mLOCATION2_mEMPLOYEE1.index[<span style="color: #0000DD; font-weight: bold">2</span>]);
@@ -1201,8 +1203,8 @@
           <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e10<span style="color: #333333">=</span>n10<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h10 <span style="color: #333333">==</span> n10<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> __SQL_COUNT_AGGREGATE_1_mLOCATION2_mEMPLOYEE1_mapkey1_idxfn<span style="color: #333333">::</span>equals(se36, <span style="color: #333333">*</span>e10)) {
             <span style="color: #333399; font-weight: bold">long</span> __sql_count_aggregate_1_memployeeemployee_department_id <span style="color: #333333">=</span> e10<span style="color: #333333">-&gt;</span>__SQL_COUNT_AGGREGATE_1_mLOCATION2_mEMPLOYEEEMPLOYEE_DEPARTMENT_ID;
             <span style="color: #333399; font-weight: bold">long</span> v10 <span style="color: #333333">=</span> e10<span style="color: #333333">-&gt;</span>__av;
-            __SQL_COUNT_AGGREGATE_1_mEMPLOYEE1.addOrDelOnZero(se35.modify(__sql_count_aggregate_1_memployeeemployee_department_id,location_regional_group),((location_regional_group <span style="color: #333333">==</span> c1) <span style="color: #333333">*</span> (v10 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n10<span style="color: #333333">=</span>n10<span style="color: #333333">-&gt;</span>next));
+            (<span style="color: #888888">/*if */</span>(location_regional_group <span style="color: #333333">==</span> c1) <span style="color: #333333">?</span> __SQL_COUNT_AGGREGATE_1_mEMPLOYEE1.addOrDelOnZero(se35.modify(__sql_count_aggregate_1_memployeeemployee_department_id,location_regional_group),(v10 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)) <span style="color: #333333">:</span> voidFunc());
+          } <span style="color: #008800; font-weight: bold">while</span> ((n10<span style="color: #333333">=</span>n10<span style="color: #333333">-&gt;</span>nxt));
         }
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_LOCATION&quot;</span>)
@@ -1215,7 +1217,7 @@
     <span style="color: #333399; font-weight: bold">void</span> on_system_ready_event() {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
-      {  <span style="color: #888888">//</span>
+      {  
         
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
@@ -1306,16 +1308,18 @@
       <span style="color: #888888">/* Imports data for static tables and performs view initialization based on it. */</span>
       <span style="color: #333399; font-weight: bold">void</span> init() {
           <span style="color: #888888">//P0_PLACE_HOLDER</span>
-          table_multiplexer.init_source();
-          stream_multiplexer.init_source();
+          table_multiplexer.init_source(run_opts<span style="color: #333333">-&gt;</span>batch_size, run_opts<span style="color: #333333">-&gt;</span>parallel, <span style="color: #007020">true</span>);
+          stream_multiplexer.init_source(run_opts<span style="color: #333333">-&gt;</span>batch_size, run_opts<span style="color: #333333">-&gt;</span>parallel, <span style="color: #007020">false</span>);
           process_tables();
           data.on_system_ready_event();
           <span style="color: #888888">//P2_PLACE_HOLDER</span>
       }
   
       <span style="color: #888888">/* Saves a snapshot of the data required to obtain the results of top level queries. */</span>
-      <span style="color: #333399; font-weight: bold">snapshot_t</span> take_snapshot(){ <span style="color: #888888">//tlq_t d=(tlq_t&amp;)data; if (d.tS==0) { gettimeofday(&amp;(d.t),NULL); d.tT=((d.t).tv_sec-(d.t0).tv_sec)*1000000L+((d.t).tv_usec-(d.t0).tv_usec); } printf(&quot;SAMPLE=standard,%ld,%ld,%ld\n&quot;,d.tT,d.tN,d.tS);</span>
-          <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333399; font-weight: bold">snapshot_t</span>( <span style="color: #008800; font-weight: bold">new</span> <span style="color: #333399; font-weight: bold">tlq_t</span>((<span style="color: #333399; font-weight: bold">tlq_t</span><span style="color: #333333">&amp;</span>)data) );
+      <span style="color: #333399; font-weight: bold">snapshot_t</span> take_snapshot(){
+          <span style="color: #333399; font-weight: bold">tlq_t</span><span style="color: #333333">*</span> d <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">new</span> <span style="color: #333399; font-weight: bold">tlq_t</span>((<span style="color: #333399; font-weight: bold">tlq_t</span><span style="color: #333333">&amp;</span>)data);
+          <span style="color: #008800; font-weight: bold">if</span> (d<span style="color: #333333">-&gt;</span>tS<span style="color: #333333">==</span><span style="color: #0000DD; font-weight: bold">0</span>) { gettimeofday(<span style="color: #333333">&amp;</span>(d<span style="color: #333333">-&gt;</span>t),<span style="color: #007020">NULL</span>); d<span style="color: #333333">-&gt;</span>tT<span style="color: #333333">=</span>((d<span style="color: #333333">-&gt;</span>t).tv_sec<span style="color: #333333">-</span>(d<span style="color: #333333">-&gt;</span>t0).tv_sec)<span style="color: #333333">*</span><span style="color: #0000DD; font-weight: bold">1000000L</span><span style="color: #333333">+</span>((d<span style="color: #333333">-&gt;</span>t).tv_usec<span style="color: #333333">-</span>(d<span style="color: #333333">-&gt;</span>t0).tv_usec); } printf(<span style="background-color: #fff0f0">&quot;SAMPLE=standard,%ld,%ld,%ld</span><span style="color: #666666; font-weight: bold; background-color: #fff0f0">\n</span><span style="background-color: #fff0f0">&quot;</span>,d<span style="color: #333333">-&gt;</span>tT,d<span style="color: #333333">-&gt;</span>tN,d<span style="color: #333333">-&gt;</span>tS);
+          <span style="color: #008800; font-weight: bold">return</span> <span style="color: #0066BB; font-weight: bold">snapshot_t</span>( d );
       }
   
     <span style="color: #997700; font-weight: bold">protected:</span>

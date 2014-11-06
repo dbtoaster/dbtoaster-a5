@@ -412,7 +412,9 @@
 412
 413
 414
-415</pre></td><td><pre style="margin: 0; line-height: 125%"><span style="color: #557799">#include &quot;program_base.hpp&quot;</span>
+415
+416
+417</pre></td><td><pre style="margin: 0; line-height: 125%"><span style="color: #557799">#include &quot;program_base.hpp&quot;</span>
 <span style="color: #557799">#include &quot;hpds/KDouble.hpp&quot;</span>
 <span style="color: #557799">#include &quot;hash.hpp&quot;</span>
 <span style="color: #557799">#include &quot;mmap/mmap.hpp&quot;</span>
@@ -594,7 +596,7 @@
   
   <span style="color: #888888">/* Type definition providing a way to incrementally maintain the results of the sql program */</span>
   <span style="color: #008800; font-weight: bold">struct</span> <span style="color: #333399; font-weight: bold">data_t</span> <span style="color: #333333">:</span> <span style="color: #333399; font-weight: bold">tlq_t</span>{
-    <span style="color: #333399; font-weight: bold">data_t</span>()<span style="color: #333333">:</span> <span style="color: #333399; font-weight: bold">tlq_t</span>(), add2(<span style="color: #0000DD; font-weight: bold">16U</span>), add1(<span style="color: #0000DD; font-weight: bold">16U</span>) {
+    <span style="color: #333399; font-weight: bold">data_t</span>()<span style="color: #333333">:</span> <span style="color: #333399; font-weight: bold">tlq_t</span>(), _c1(<span style="color: #0000DD; font-weight: bold">16U</span>), _c2(<span style="color: #0000DD; font-weight: bold">16U</span>) {
       
     }
   
@@ -637,8 +639,8 @@
     <span style="color: #333399; font-weight: bold">void</span> on_insert_S(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> s_b, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> s_c) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_S&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_S&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
-        add1.clear();
+      {  <span style="color: #333333">++</span>tN;
+        _c1.clear();
         { <span style="color: #888888">//foreach</span>
           COUNT_mS2_entry<span style="color: #333333">*</span> e1 <span style="color: #333333">=</span> COUNT_mS2.head;
           <span style="color: #008800; font-weight: bold">while</span>(e1){
@@ -648,16 +650,16 @@
             <span style="color: #333399; font-weight: bold">long</span> c1 <span style="color: #333333">=</span> e1<span style="color: #333333">-&gt;</span>C1;
             <span style="color: #333399; font-weight: bold">long</span> v2 <span style="color: #333333">=</span> e1<span style="color: #333333">-&gt;</span>__av;
             <span style="color: #333399; font-weight: bold">long</span> l1 <span style="color: #333333">=</span> ((s_b <span style="color: #333333">*</span> s_c) <span style="color: #333333">+</span> npzl_7dkv_b);
-            add_to_temp_map(add1, st1.modify(gkkeof,b1,c1,l1,v2));
+            add_to_temp_map(_c1, st1.modify(gkkeof,b1,c1,l1,v2));
             e1 <span style="color: #333333">=</span> e1<span style="color: #333333">-&gt;</span>nxt;
           }
         }
-        <span style="color: #333399; font-weight: bold">long</span> l2 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
-        <span style="color: #333399; font-weight: bold">long</span> l3 <span style="color: #333333">=</span> (s_b <span style="color: #333333">*</span> s_c);
+        <span style="color: #333399; font-weight: bold">long</span> l2 <span style="color: #333333">=</span> (s_b <span style="color: #333333">*</span> s_c);
+        <span style="color: #333399; font-weight: bold">long</span> l3 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
         <span style="color: #333399; font-weight: bold">long</span> l4 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
-        add_to_temp_map(add1, st2.modify(l4,l2,s_c,l3,((s_b <span style="color: #333333">==</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> (<span style="color: #0000DD; font-weight: bold">2L</span> <span style="color: #333333">!=</span> s_c))));
+        (<span style="color: #888888">/*if */</span>(s_b <span style="color: #333333">==</span> <span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">&amp;&amp;</span> <span style="color: #0000DD; font-weight: bold">2L</span> <span style="color: #333333">!=</span> s_c) <span style="color: #333333">?</span> add_to_temp_map(_c1, st2.modify(l3,l4,s_c,l2,<span style="color: #0000DD; font-weight: bold">1L</span>)) <span style="color: #333333">:</span> voidFunc());
         { <span style="color: #888888">//temp foreach</span>
-          tuple5_LLLL_L<span style="color: #333333">*</span> e2 <span style="color: #333333">=</span> add1.head;
+          tuple5_LLLL_L<span style="color: #333333">*</span> e2 <span style="color: #333333">=</span> _c1.head;
           <span style="color: #008800; font-weight: bold">while</span>(e2){
             <span style="color: #333399; font-weight: bold">long</span> gkkeof <span style="color: #333333">=</span> e2<span style="color: #333333">-&gt;</span>_1;
             <span style="color: #333399; font-weight: bold">long</span> b1 <span style="color: #333333">=</span> e2<span style="color: #333333">-&gt;</span>_2;
@@ -676,12 +678,12 @@
             <span style="color: #333399; font-weight: bold">long</span> qkkf7pyi <span style="color: #333333">=</span> e3<span style="color: #333333">-&gt;</span>QKKF7PYI;
             <span style="color: #333399; font-weight: bold">long</span> lb71y <span style="color: #333333">=</span> e3<span style="color: #333333">-&gt;</span>LB71Y;
             <span style="color: #333399; font-weight: bold">long</span> v4 <span style="color: #333333">=</span> e3<span style="color: #333333">-&gt;</span>__av;
-            COUNT.addOrDelOnZero(se1.modify(l5,s_c,lb71y,l6,qkkf7pyi),((s_b <span style="color: #333333">==</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> (v4 <span style="color: #333333">*</span> (<span style="color: #0000DD; font-weight: bold">2L</span> <span style="color: #333333">!=</span> s_c))));
+            (<span style="color: #888888">/*if */</span>(s_b <span style="color: #333333">==</span> <span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">&amp;&amp;</span> <span style="color: #0000DD; font-weight: bold">2L</span> <span style="color: #333333">!=</span> s_c) <span style="color: #333333">?</span> COUNT.addOrDelOnZero(se1.modify(l5,s_c,lb71y,l6,qkkf7pyi),v4) <span style="color: #333333">:</span> voidFunc());
             e3 <span style="color: #333333">=</span> e3<span style="color: #333333">-&gt;</span>nxt;
           }
         }
         <span style="color: #333399; font-weight: bold">long</span> l7 <span style="color: #333333">=</span> (s_c <span style="color: #333333">*</span> (s_b <span style="color: #333333">*</span> s_b));
-        COUNT_mS2.addOrDelOnZero(se2.modify(s_b,s_b,l7,s_c),((s_b <span style="color: #333333">==</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> (<span style="color: #0000DD; font-weight: bold">2L</span> <span style="color: #333333">!=</span> s_c)));
+        (<span style="color: #888888">/*if */</span>(s_b <span style="color: #333333">==</span> <span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">&amp;&amp;</span> <span style="color: #0000DD; font-weight: bold">2L</span> <span style="color: #333333">!=</span> s_c) <span style="color: #333333">?</span> COUNT_mS2.addOrDelOnZero(se2.modify(s_b,s_b,l7,s_c),<span style="color: #0000DD; font-weight: bold">1L</span>) <span style="color: #333333">:</span> voidFunc());
         <span style="color: #333399; font-weight: bold">long</span> l8 <span style="color: #333333">=</span> (s_b <span style="color: #333333">*</span> s_c);
         COUNT_mS8.addOrDelOnZero(se3.modify(s_c,l8),<span style="color: #0000DD; font-weight: bold">1L</span>);
       }
@@ -695,8 +697,8 @@
     <span style="color: #333399; font-weight: bold">void</span> on_delete_S(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> s_b, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> s_c) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_S&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_S&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
-        add2.clear();
+      {  <span style="color: #333333">++</span>tN;
+        _c2.clear();
         { <span style="color: #888888">//foreach</span>
           COUNT_mS2_entry<span style="color: #333333">*</span> e4 <span style="color: #333333">=</span> COUNT_mS2.head;
           <span style="color: #008800; font-weight: bold">while</span>(e4){
@@ -706,16 +708,16 @@
             <span style="color: #333399; font-weight: bold">long</span> c1 <span style="color: #333333">=</span> e4<span style="color: #333333">-&gt;</span>C1;
             <span style="color: #333399; font-weight: bold">long</span> v6 <span style="color: #333333">=</span> e4<span style="color: #333333">-&gt;</span>__av;
             <span style="color: #333399; font-weight: bold">long</span> l9 <span style="color: #333333">=</span> ((s_b <span style="color: #333333">*</span> s_c) <span style="color: #333333">+</span> npzl_7dkv_b);
-            add_to_temp_map(add2, st3.modify(gkkeof,b1,c1,l9,(v6 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)));
+            add_to_temp_map(_c2, st3.modify(gkkeof,b1,c1,l9,(v6 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)));
             e4 <span style="color: #333333">=</span> e4<span style="color: #333333">-&gt;</span>nxt;
           }
         }
-        <span style="color: #333399; font-weight: bold">long</span> l10 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
+        <span style="color: #333399; font-weight: bold">long</span> l10 <span style="color: #333333">=</span> (s_b <span style="color: #333333">*</span> s_c);
         <span style="color: #333399; font-weight: bold">long</span> l11 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
-        <span style="color: #333399; font-weight: bold">long</span> l12 <span style="color: #333333">=</span> (s_b <span style="color: #333333">*</span> s_c);
-        add_to_temp_map(add2, st4.modify(l11,l10,s_c,l12,((s_b <span style="color: #333333">==</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> (<span style="color: #0000DD; font-weight: bold">2L</span> <span style="color: #333333">!=</span> s_c))));
+        <span style="color: #333399; font-weight: bold">long</span> l12 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
+        (<span style="color: #888888">/*if */</span>(s_b <span style="color: #333333">==</span> <span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">&amp;&amp;</span> <span style="color: #0000DD; font-weight: bold">2L</span> <span style="color: #333333">!=</span> s_c) <span style="color: #333333">?</span> add_to_temp_map(_c2, st4.modify(l11,l12,s_c,l10,<span style="color: #0000DD; font-weight: bold">1L</span>)) <span style="color: #333333">:</span> voidFunc());
         { <span style="color: #888888">//temp foreach</span>
-          tuple5_LLLL_L<span style="color: #333333">*</span> e5 <span style="color: #333333">=</span> add2.head;
+          tuple5_LLLL_L<span style="color: #333333">*</span> e5 <span style="color: #333333">=</span> _c2.head;
           <span style="color: #008800; font-weight: bold">while</span>(e5){
             <span style="color: #333399; font-weight: bold">long</span> gkkeof <span style="color: #333333">=</span> e5<span style="color: #333333">-&gt;</span>_1;
             <span style="color: #333399; font-weight: bold">long</span> b1 <span style="color: #333333">=</span> e5<span style="color: #333333">-&gt;</span>_2;
@@ -734,12 +736,12 @@
             <span style="color: #333399; font-weight: bold">long</span> qkkf7pyi <span style="color: #333333">=</span> e6<span style="color: #333333">-&gt;</span>QKKF7PYI;
             <span style="color: #333399; font-weight: bold">long</span> lb71y <span style="color: #333333">=</span> e6<span style="color: #333333">-&gt;</span>LB71Y;
             <span style="color: #333399; font-weight: bold">long</span> v8 <span style="color: #333333">=</span> e6<span style="color: #333333">-&gt;</span>__av;
-            COUNT.addOrDelOnZero(se4.modify(l13,s_c,lb71y,l14,qkkf7pyi),((s_b <span style="color: #333333">==</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> (v8 <span style="color: #333333">*</span> ((<span style="color: #0000DD; font-weight: bold">2L</span> <span style="color: #333333">!=</span> s_c) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>))));
+            (<span style="color: #888888">/*if */</span>(s_b <span style="color: #333333">==</span> <span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">&amp;&amp;</span> <span style="color: #0000DD; font-weight: bold">2L</span> <span style="color: #333333">!=</span> s_c) <span style="color: #333333">?</span> COUNT.addOrDelOnZero(se4.modify(l13,s_c,lb71y,l14,qkkf7pyi),(v8 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)) <span style="color: #333333">:</span> voidFunc());
             e6 <span style="color: #333333">=</span> e6<span style="color: #333333">-&gt;</span>nxt;
           }
         }
         <span style="color: #333399; font-weight: bold">long</span> l15 <span style="color: #333333">=</span> (s_c <span style="color: #333333">*</span> (s_b <span style="color: #333333">*</span> s_b));
-        COUNT_mS2.addOrDelOnZero(se5.modify(s_b,s_b,l15,s_c),((s_b <span style="color: #333333">==</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">*</span> ((<span style="color: #0000DD; font-weight: bold">2L</span> <span style="color: #333333">!=</span> s_c) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)));
+        (<span style="color: #888888">/*if */</span>(s_b <span style="color: #333333">==</span> <span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">&amp;&amp;</span> <span style="color: #0000DD; font-weight: bold">2L</span> <span style="color: #333333">!=</span> s_c) <span style="color: #333333">?</span> COUNT_mS2.addOrDelOnZero(se5.modify(s_b,s_b,l15,s_c),<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>) <span style="color: #333333">:</span> voidFunc());
         <span style="color: #333399; font-weight: bold">long</span> l16 <span style="color: #333333">=</span> (s_b <span style="color: #333333">*</span> s_c);
         COUNT_mS8.addOrDelOnZero(se6.modify(s_c,l16),<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>);
       }
@@ -753,7 +755,7 @@
     <span style="color: #333399; font-weight: bold">void</span> on_system_ready_event() {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
-      {  <span style="color: #888888">//</span>
+      {  
         
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
@@ -777,8 +779,8 @@
     <span style="color: #888888">/* Data structures used for storing materialized views */</span>
     COUNT_mS2_map COUNT_mS2;
     COUNT_mS8_map COUNT_mS8;
-    MultiHashMap<span style="color: #333333">&lt;</span>tuple5_LLLL_L,<span style="color: #333399; font-weight: bold">long</span>,HashIndex<span style="color: #333333">&lt;</span>tuple5_LLLL_L,<span style="color: #333399; font-weight: bold">long</span><span style="color: #333333">&gt;</span> <span style="color: #333333">&gt;</span> add2;
-    MultiHashMap<span style="color: #333333">&lt;</span>tuple5_LLLL_L,<span style="color: #333399; font-weight: bold">long</span>,HashIndex<span style="color: #333333">&lt;</span>tuple5_LLLL_L,<span style="color: #333399; font-weight: bold">long</span><span style="color: #333333">&gt;</span> <span style="color: #333333">&gt;</span> add1;
+    MultiHashMap<span style="color: #333333">&lt;</span>tuple5_LLLL_L,<span style="color: #333399; font-weight: bold">long</span>,HashIndex<span style="color: #333333">&lt;</span>tuple5_LLLL_L,<span style="color: #333399; font-weight: bold">long</span><span style="color: #333333">&gt;</span> <span style="color: #333333">&gt;</span> _c1;
+    MultiHashMap<span style="color: #333333">&lt;</span>tuple5_LLLL_L,<span style="color: #333399; font-weight: bold">long</span>,HashIndex<span style="color: #333333">&lt;</span>tuple5_LLLL_L,<span style="color: #333399; font-weight: bold">long</span><span style="color: #333333">&gt;</span> <span style="color: #333333">&gt;</span> _c2;
     
   
   };
@@ -804,16 +806,18 @@
       <span style="color: #888888">/* Imports data for static tables and performs view initialization based on it. */</span>
       <span style="color: #333399; font-weight: bold">void</span> init() {
           <span style="color: #888888">//P0_PLACE_HOLDER</span>
-          table_multiplexer.init_source();
-          stream_multiplexer.init_source();
+          table_multiplexer.init_source(run_opts<span style="color: #333333">-&gt;</span>batch_size, run_opts<span style="color: #333333">-&gt;</span>parallel, <span style="color: #007020">true</span>);
+          stream_multiplexer.init_source(run_opts<span style="color: #333333">-&gt;</span>batch_size, run_opts<span style="color: #333333">-&gt;</span>parallel, <span style="color: #007020">false</span>);
           process_tables();
           data.on_system_ready_event();
           <span style="color: #888888">//P2_PLACE_HOLDER</span>
       }
   
       <span style="color: #888888">/* Saves a snapshot of the data required to obtain the results of top level queries. */</span>
-      <span style="color: #333399; font-weight: bold">snapshot_t</span> take_snapshot(){ <span style="color: #888888">//tlq_t d=(tlq_t&amp;)data; if (d.tS==0) { gettimeofday(&amp;(d.t),NULL); d.tT=((d.t).tv_sec-(d.t0).tv_sec)*1000000L+((d.t).tv_usec-(d.t0).tv_usec); } printf(&quot;SAMPLE=standard,%ld,%ld,%ld\n&quot;,d.tT,d.tN,d.tS);</span>
-          <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333399; font-weight: bold">snapshot_t</span>( <span style="color: #008800; font-weight: bold">new</span> <span style="color: #333399; font-weight: bold">tlq_t</span>((<span style="color: #333399; font-weight: bold">tlq_t</span><span style="color: #333333">&amp;</span>)data) );
+      <span style="color: #333399; font-weight: bold">snapshot_t</span> take_snapshot(){
+          <span style="color: #333399; font-weight: bold">tlq_t</span><span style="color: #333333">*</span> d <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">new</span> <span style="color: #333399; font-weight: bold">tlq_t</span>((<span style="color: #333399; font-weight: bold">tlq_t</span><span style="color: #333333">&amp;</span>)data);
+          <span style="color: #008800; font-weight: bold">if</span> (d<span style="color: #333333">-&gt;</span>tS<span style="color: #333333">==</span><span style="color: #0000DD; font-weight: bold">0</span>) { gettimeofday(<span style="color: #333333">&amp;</span>(d<span style="color: #333333">-&gt;</span>t),<span style="color: #007020">NULL</span>); d<span style="color: #333333">-&gt;</span>tT<span style="color: #333333">=</span>((d<span style="color: #333333">-&gt;</span>t).tv_sec<span style="color: #333333">-</span>(d<span style="color: #333333">-&gt;</span>t0).tv_sec)<span style="color: #333333">*</span><span style="color: #0000DD; font-weight: bold">1000000L</span><span style="color: #333333">+</span>((d<span style="color: #333333">-&gt;</span>t).tv_usec<span style="color: #333333">-</span>(d<span style="color: #333333">-&gt;</span>t0).tv_usec); } printf(<span style="background-color: #fff0f0">&quot;SAMPLE=standard,%ld,%ld,%ld</span><span style="color: #666666; font-weight: bold; background-color: #fff0f0">\n</span><span style="background-color: #fff0f0">&quot;</span>,d<span style="color: #333333">-&gt;</span>tT,d<span style="color: #333333">-&gt;</span>tN,d<span style="color: #333333">-&gt;</span>tS);
+          <span style="color: #008800; font-weight: bold">return</span> <span style="color: #0066BB; font-weight: bold">snapshot_t</span>( d );
       }
   
     <span style="color: #997700; font-weight: bold">protected:</span>

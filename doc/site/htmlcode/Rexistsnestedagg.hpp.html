@@ -306,7 +306,59 @@
 306
 307
 308
-309</pre></td><td><pre style="margin: 0; line-height: 125%"><span style="color: #557799">#include &quot;program_base.hpp&quot;</span>
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361</pre></td><td><pre style="margin: 0; line-height: 125%"><span style="color: #557799">#include &quot;program_base.hpp&quot;</span>
 <span style="color: #557799">#include &quot;hpds/KDouble.hpp&quot;</span>
 <span style="color: #557799">#include &quot;hash.hpp&quot;</span>
 <span style="color: #557799">#include &quot;mmap/mmap.hpp&quot;</span>
@@ -348,70 +400,84 @@
   <span style="color: #333333">&gt;</span> __SQL_SUM_AGGREGATE_1_map;
   <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>__SQL_SUM_AGGREGATE_1_entry,<span style="color: #333399; font-weight: bold">long</span>,__SQL_SUM_AGGREGATE_1_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex___SQL_SUM_AGGREGATE_1_map_0;
   
-  <span style="color: #008800; font-weight: bold">struct</span> __SQL_SUM_AGGREGATE_1_mR1_entry {
-    <span style="color: #333399; font-weight: bold">long</span> R1_A; <span style="color: #333399; font-weight: bold">long</span> R1_B; <span style="color: #333399; font-weight: bold">long</span> __av;  __SQL_SUM_AGGREGATE_1_mR1_entry<span style="color: #333333">*</span> nxt; __SQL_SUM_AGGREGATE_1_mR1_entry<span style="color: #333333">*</span> prv;
-    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">__SQL_SUM_AGGREGATE_1_mR1_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*R1_A = 0L; R1_B = 0L; __av = 0L; */</span> }
-    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">__SQL_SUM_AGGREGATE_1_mR1_entry</span>(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c2) { R1_A <span style="color: #333333">=</span> c0; R1_B <span style="color: #333333">=</span> c1; __av <span style="color: #333333">=</span> c2; }
-    __SQL_SUM_AGGREGATE_1_mR1_entry(<span style="color: #008800; font-weight: bold">const</span> __SQL_SUM_AGGREGATE_1_mR1_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> R1_A( other.R1_A ), R1_B( other.R1_B ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
-    FORCE_INLINE __SQL_SUM_AGGREGATE_1_mR1_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1) { R1_A <span style="color: #333333">=</span> c0; R1_B <span style="color: #333333">=</span> c1;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
+  <span style="color: #008800; font-weight: bold">struct</span> __SQL_SUM_AGGREGATE_1_mR1_L1_1_entry {
+    <span style="color: #333399; font-weight: bold">long</span> __SQL_SUM_AGGREGATE_1_mRR_B; <span style="color: #333399; font-weight: bold">long</span> __av;  __SQL_SUM_AGGREGATE_1_mR1_L1_1_entry<span style="color: #333333">*</span> nxt; __SQL_SUM_AGGREGATE_1_mR1_L1_1_entry<span style="color: #333333">*</span> prv;
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">__SQL_SUM_AGGREGATE_1_mR1_L1_1_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*__SQL_SUM_AGGREGATE_1_mRR_B = 0L; __av = 0L; */</span> }
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">__SQL_SUM_AGGREGATE_1_mR1_L1_1_entry</span>(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1) { __SQL_SUM_AGGREGATE_1_mRR_B <span style="color: #333333">=</span> c0; __av <span style="color: #333333">=</span> c1; }
+    __SQL_SUM_AGGREGATE_1_mR1_L1_1_entry(<span style="color: #008800; font-weight: bold">const</span> __SQL_SUM_AGGREGATE_1_mR1_L1_1_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> __SQL_SUM_AGGREGATE_1_mRR_B( other.__SQL_SUM_AGGREGATE_1_mRR_B ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
+    FORCE_INLINE __SQL_SUM_AGGREGATE_1_mR1_L1_1_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0) { __SQL_SUM_AGGREGATE_1_mRR_B <span style="color: #333333">=</span> c0;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
+    <span style="color: #008800; font-weight: bold">template</span><span style="color: #333333">&lt;</span><span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Archive</span><span style="color: #333333">&gt;</span>
+    <span style="color: #333399; font-weight: bold">void</span> serialize(Archive<span style="color: #333333">&amp;</span> ar, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">unsigned</span> <span style="color: #333399; font-weight: bold">int</span> version) <span style="color: #008800; font-weight: bold">const</span> 
+    {
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, __SQL_SUM_AGGREGATE_1_mRR_B);
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, __av);
+    }
+  };
+  <span style="color: #008800; font-weight: bold">struct</span> __SQL_SUM_AGGREGATE_1_mR1_L1_1_mapkey0_idxfn {
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> __SQL_SUM_AGGREGATE_1_mR1_L1_1_entry<span style="color: #333333">&amp;</span> e) {
+      <span style="color: #333399; font-weight: bold">size_t</span> h <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>;
+      hash_combine(h, e.__SQL_SUM_AGGREGATE_1_mRR_B);
+      <span style="color: #008800; font-weight: bold">return</span> h;
+    }
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> __SQL_SUM_AGGREGATE_1_mR1_L1_1_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> __SQL_SUM_AGGREGATE_1_mR1_L1_1_entry<span style="color: #333333">&amp;</span> y) {
+      <span style="color: #008800; font-weight: bold">return</span> x.__SQL_SUM_AGGREGATE_1_mRR_B <span style="color: #333333">==</span> y.__SQL_SUM_AGGREGATE_1_mRR_B;
+    }
+  };
+  
+  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>__SQL_SUM_AGGREGATE_1_mR1_L1_1_entry,<span style="color: #333399; font-weight: bold">long</span>,
+    HashIndex<span style="color: #333333">&lt;</span>__SQL_SUM_AGGREGATE_1_mR1_L1_1_entry,<span style="color: #333399; font-weight: bold">long</span>,__SQL_SUM_AGGREGATE_1_mR1_L1_1_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>
+  <span style="color: #333333">&gt;</span> __SQL_SUM_AGGREGATE_1_mR1_L1_1_map;
+  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>__SQL_SUM_AGGREGATE_1_mR1_L1_1_entry,<span style="color: #333399; font-weight: bold">long</span>,__SQL_SUM_AGGREGATE_1_mR1_L1_1_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex___SQL_SUM_AGGREGATE_1_mR1_L1_1_map_0;
+  
+  <span style="color: #008800; font-weight: bold">struct</span> __SQL_SUM_AGGREGATE_1_mR3_entry {
+    <span style="color: #333399; font-weight: bold">long</span> R1_A; <span style="color: #333399; font-weight: bold">long</span> __SQL_SUM_AGGREGATE_1_mRR_A; <span style="color: #333399; font-weight: bold">long</span> __av;  __SQL_SUM_AGGREGATE_1_mR3_entry<span style="color: #333333">*</span> nxt; __SQL_SUM_AGGREGATE_1_mR3_entry<span style="color: #333333">*</span> prv;
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">__SQL_SUM_AGGREGATE_1_mR3_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*R1_A = 0L; __SQL_SUM_AGGREGATE_1_mRR_A = 0L; __av = 0L; */</span> }
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">__SQL_SUM_AGGREGATE_1_mR3_entry</span>(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c2) { R1_A <span style="color: #333333">=</span> c0; __SQL_SUM_AGGREGATE_1_mRR_A <span style="color: #333333">=</span> c1; __av <span style="color: #333333">=</span> c2; }
+    __SQL_SUM_AGGREGATE_1_mR3_entry(<span style="color: #008800; font-weight: bold">const</span> __SQL_SUM_AGGREGATE_1_mR3_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> R1_A( other.R1_A ), __SQL_SUM_AGGREGATE_1_mRR_A( other.__SQL_SUM_AGGREGATE_1_mRR_A ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
+    FORCE_INLINE __SQL_SUM_AGGREGATE_1_mR3_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1) { R1_A <span style="color: #333333">=</span> c0; __SQL_SUM_AGGREGATE_1_mRR_A <span style="color: #333333">=</span> c1;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
+    FORCE_INLINE __SQL_SUM_AGGREGATE_1_mR3_entry<span style="color: #333333">&amp;</span> modify1(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1) { __SQL_SUM_AGGREGATE_1_mRR_A <span style="color: #333333">=</span> c1;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
     <span style="color: #008800; font-weight: bold">template</span><span style="color: #333333">&lt;</span><span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Archive</span><span style="color: #333333">&gt;</span>
     <span style="color: #333399; font-weight: bold">void</span> serialize(Archive<span style="color: #333333">&amp;</span> ar, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">unsigned</span> <span style="color: #333399; font-weight: bold">int</span> version) <span style="color: #008800; font-weight: bold">const</span> 
     {
       ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
       DBT_SERIALIZATION_NVP(ar, R1_A);
       ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
-      DBT_SERIALIZATION_NVP(ar, R1_B);
+      DBT_SERIALIZATION_NVP(ar, __SQL_SUM_AGGREGATE_1_mRR_A);
       ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
       DBT_SERIALIZATION_NVP(ar, __av);
     }
   };
-  <span style="color: #008800; font-weight: bold">struct</span> __SQL_SUM_AGGREGATE_1_mR1_mapkey01_idxfn {
-    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> __SQL_SUM_AGGREGATE_1_mR1_entry<span style="color: #333333">&amp;</span> e) {
+  <span style="color: #008800; font-weight: bold">struct</span> __SQL_SUM_AGGREGATE_1_mR3_mapkey01_idxfn {
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> __SQL_SUM_AGGREGATE_1_mR3_entry<span style="color: #333333">&amp;</span> e) {
       <span style="color: #333399; font-weight: bold">size_t</span> h <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>;
       hash_combine(h, e.R1_A);
-      hash_combine(h, e.R1_B);
+      hash_combine(h, e.__SQL_SUM_AGGREGATE_1_mRR_A);
       <span style="color: #008800; font-weight: bold">return</span> h;
     }
-    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> __SQL_SUM_AGGREGATE_1_mR1_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> __SQL_SUM_AGGREGATE_1_mR1_entry<span style="color: #333333">&amp;</span> y) {
-      <span style="color: #008800; font-weight: bold">return</span> x.R1_A <span style="color: #333333">==</span> y.R1_A <span style="color: #333333">&amp;&amp;</span> x.R1_B <span style="color: #333333">==</span> y.R1_B;
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> __SQL_SUM_AGGREGATE_1_mR3_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> __SQL_SUM_AGGREGATE_1_mR3_entry<span style="color: #333333">&amp;</span> y) {
+      <span style="color: #008800; font-weight: bold">return</span> x.R1_A <span style="color: #333333">==</span> y.R1_A <span style="color: #333333">&amp;&amp;</span> x.__SQL_SUM_AGGREGATE_1_mRR_A <span style="color: #333333">==</span> y.__SQL_SUM_AGGREGATE_1_mRR_A;
     }
   };
   
-  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>__SQL_SUM_AGGREGATE_1_mR1_entry,<span style="color: #333399; font-weight: bold">long</span>,
-    HashIndex<span style="color: #333333">&lt;</span>__SQL_SUM_AGGREGATE_1_mR1_entry,<span style="color: #333399; font-weight: bold">long</span>,__SQL_SUM_AGGREGATE_1_mR1_mapkey01_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>
-  <span style="color: #333333">&gt;</span> __SQL_SUM_AGGREGATE_1_mR1_map;
-  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>__SQL_SUM_AGGREGATE_1_mR1_entry,<span style="color: #333399; font-weight: bold">long</span>,__SQL_SUM_AGGREGATE_1_mR1_mapkey01_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex___SQL_SUM_AGGREGATE_1_mR1_map_01;
-  
-  <span style="color: #008800; font-weight: bold">struct</span> __SQL_SUM_AGGREGATE_1_mR1_E1_1_L1_1_entry {
-    <span style="color: #333399; font-weight: bold">long</span> R1_B; <span style="color: #333399; font-weight: bold">long</span> __av;  __SQL_SUM_AGGREGATE_1_mR1_E1_1_L1_1_entry<span style="color: #333333">*</span> nxt; __SQL_SUM_AGGREGATE_1_mR1_E1_1_L1_1_entry<span style="color: #333333">*</span> prv;
-    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">__SQL_SUM_AGGREGATE_1_mR1_E1_1_L1_1_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*R1_B = 0L; __av = 0L; */</span> }
-    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">__SQL_SUM_AGGREGATE_1_mR1_E1_1_L1_1_entry</span>(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1) { R1_B <span style="color: #333333">=</span> c0; __av <span style="color: #333333">=</span> c1; }
-    __SQL_SUM_AGGREGATE_1_mR1_E1_1_L1_1_entry(<span style="color: #008800; font-weight: bold">const</span> __SQL_SUM_AGGREGATE_1_mR1_E1_1_L1_1_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> R1_B( other.R1_B ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
-    FORCE_INLINE __SQL_SUM_AGGREGATE_1_mR1_E1_1_L1_1_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0) { R1_B <span style="color: #333333">=</span> c0;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
-    <span style="color: #008800; font-weight: bold">template</span><span style="color: #333333">&lt;</span><span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Archive</span><span style="color: #333333">&gt;</span>
-    <span style="color: #333399; font-weight: bold">void</span> serialize(Archive<span style="color: #333333">&amp;</span> ar, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">unsigned</span> <span style="color: #333399; font-weight: bold">int</span> version) <span style="color: #008800; font-weight: bold">const</span> 
-    {
-      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
-      DBT_SERIALIZATION_NVP(ar, R1_B);
-      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
-      DBT_SERIALIZATION_NVP(ar, __av);
-    }
-  };
-  <span style="color: #008800; font-weight: bold">struct</span> __SQL_SUM_AGGREGATE_1_mR1_E1_1_L1_1_mapkey0_idxfn {
-    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> __SQL_SUM_AGGREGATE_1_mR1_E1_1_L1_1_entry<span style="color: #333333">&amp;</span> e) {
+  <span style="color: #008800; font-weight: bold">struct</span> __SQL_SUM_AGGREGATE_1_mR3_mapkey1_idxfn {
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> __SQL_SUM_AGGREGATE_1_mR3_entry<span style="color: #333333">&amp;</span> e) {
       <span style="color: #333399; font-weight: bold">size_t</span> h <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>;
-      hash_combine(h, e.R1_B);
+      hash_combine(h, e.__SQL_SUM_AGGREGATE_1_mRR_A);
       <span style="color: #008800; font-weight: bold">return</span> h;
     }
-    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> __SQL_SUM_AGGREGATE_1_mR1_E1_1_L1_1_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> __SQL_SUM_AGGREGATE_1_mR1_E1_1_L1_1_entry<span style="color: #333333">&amp;</span> y) {
-      <span style="color: #008800; font-weight: bold">return</span> x.R1_B <span style="color: #333333">==</span> y.R1_B;
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> __SQL_SUM_AGGREGATE_1_mR3_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> __SQL_SUM_AGGREGATE_1_mR3_entry<span style="color: #333333">&amp;</span> y) {
+      <span style="color: #008800; font-weight: bold">return</span> x.__SQL_SUM_AGGREGATE_1_mRR_A <span style="color: #333333">==</span> y.__SQL_SUM_AGGREGATE_1_mRR_A;
     }
   };
   
-  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>__SQL_SUM_AGGREGATE_1_mR1_E1_1_L1_1_entry,<span style="color: #333399; font-weight: bold">long</span>,
-    HashIndex<span style="color: #333333">&lt;</span>__SQL_SUM_AGGREGATE_1_mR1_E1_1_L1_1_entry,<span style="color: #333399; font-weight: bold">long</span>,__SQL_SUM_AGGREGATE_1_mR1_E1_1_L1_1_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>
-  <span style="color: #333333">&gt;</span> __SQL_SUM_AGGREGATE_1_mR1_E1_1_L1_1_map;
-  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>__SQL_SUM_AGGREGATE_1_mR1_E1_1_L1_1_entry,<span style="color: #333399; font-weight: bold">long</span>,__SQL_SUM_AGGREGATE_1_mR1_E1_1_L1_1_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex___SQL_SUM_AGGREGATE_1_mR1_E1_1_L1_1_map_0;
+  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>__SQL_SUM_AGGREGATE_1_mR3_entry,<span style="color: #333399; font-weight: bold">long</span>,
+    HashIndex<span style="color: #333333">&lt;</span>__SQL_SUM_AGGREGATE_1_mR3_entry,<span style="color: #333399; font-weight: bold">long</span>,__SQL_SUM_AGGREGATE_1_mR3_mapkey01_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>,
+    HashIndex<span style="color: #333333">&lt;</span>__SQL_SUM_AGGREGATE_1_mR3_entry,<span style="color: #333399; font-weight: bold">long</span>,__SQL_SUM_AGGREGATE_1_mR3_mapkey1_idxfn,<span style="color: #007020">false</span><span style="color: #333333">&gt;</span>
+  <span style="color: #333333">&gt;</span> __SQL_SUM_AGGREGATE_1_mR3_map;
+  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>__SQL_SUM_AGGREGATE_1_mR3_entry,<span style="color: #333399; font-weight: bold">long</span>,__SQL_SUM_AGGREGATE_1_mR3_mapkey01_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex___SQL_SUM_AGGREGATE_1_mR3_map_01;
+  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>__SQL_SUM_AGGREGATE_1_mR3_entry,<span style="color: #333399; font-weight: bold">long</span>,__SQL_SUM_AGGREGATE_1_mR3_mapkey1_idxfn,<span style="color: #007020">false</span><span style="color: #333333">&gt;</span> HashIndex___SQL_SUM_AGGREGATE_1_mR3_map_1;
   
   
   
@@ -458,8 +524,8 @@
     <span style="color: #333399; font-weight: bold">void</span> register_data(ProgramBase<span style="color: #333333">&amp;</span> pb) {
   
       pb.add_map<span style="color: #333333">&lt;</span>__SQL_SUM_AGGREGATE_1_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;__SQL_SUM_AGGREGATE_1&quot;</span>, __SQL_SUM_AGGREGATE_1 );
-      pb.add_map<span style="color: #333333">&lt;</span>__SQL_SUM_AGGREGATE_1_mR1_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;__SQL_SUM_AGGREGATE_1_mR1&quot;</span>, __SQL_SUM_AGGREGATE_1_mR1 );
-      pb.add_map<span style="color: #333333">&lt;</span>__SQL_SUM_AGGREGATE_1_mR1_E1_1_L1_1_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;__SQL_SUM_AGGREGATE_1_mR1_E1_1_L1_1&quot;</span>, __SQL_SUM_AGGREGATE_1_mR1_E1_1_L1_1 );
+      pb.add_map<span style="color: #333333">&lt;</span>__SQL_SUM_AGGREGATE_1_mR1_L1_1_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;__SQL_SUM_AGGREGATE_1_mR1_L1_1&quot;</span>, __SQL_SUM_AGGREGATE_1_mR1_L1_1 );
+      pb.add_map<span style="color: #333333">&lt;</span>__SQL_SUM_AGGREGATE_1_mR3_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;__SQL_SUM_AGGREGATE_1_mR3&quot;</span>, __SQL_SUM_AGGREGATE_1_mR3 );
   
       pb.add_relation(<span style="background-color: #fff0f0">&quot;R&quot;</span>);
   
@@ -488,23 +554,36 @@
     <span style="color: #333399; font-weight: bold">void</span> on_insert_R(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> r_a, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> r_b) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_R&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_R&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
-        __SQL_SUM_AGGREGATE_1_mR1.addOrDelOnZero(se1.modify(r_a,r_b),<span style="color: #0000DD; font-weight: bold">1L</span>);
-        __SQL_SUM_AGGREGATE_1_mR1_E1_1_L1_1.addOrDelOnZero(se2.modify(r_a),r_b);
-        __SQL_SUM_AGGREGATE_1.clear();
-        { <span style="color: #888888">//foreach</span>
-          __SQL_SUM_AGGREGATE_1_mR1_entry<span style="color: #333333">*</span> e1 <span style="color: #333333">=</span> __SQL_SUM_AGGREGATE_1_mR1.head;
-          <span style="color: #008800; font-weight: bold">while</span>(e1){
+      {  <span style="color: #333333">++</span>tN;
+        <span style="color: #333399; font-weight: bold">long</span> agg1 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
+        <span style="color: #333399; font-weight: bold">long</span> l1 <span style="color: #333333">=</span> (__SQL_SUM_AGGREGATE_1_mR1_L1_1.getValueOrDefault(se2.modify(r_a)) <span style="color: #333333">+</span> r_b);
+        (<span style="color: #888888">/*if */</span>(l1 <span style="color: #333333">&gt;</span> (<span style="color: #0000DD; font-weight: bold">3L</span> <span style="color: #333333">*</span> r_a)) <span style="color: #333333">?</span> agg1 <span style="color: #333333">+=</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
+        <span style="color: #333399; font-weight: bold">long</span> agg2 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
+        <span style="color: #333399; font-weight: bold">long</span> l2 <span style="color: #333333">=</span> __SQL_SUM_AGGREGATE_1_mR1_L1_1.getValueOrDefault(se3.modify(r_a));
+        (<span style="color: #888888">/*if */</span>(l2 <span style="color: #333333">&gt;</span> (<span style="color: #0000DD; font-weight: bold">3L</span> <span style="color: #333333">*</span> r_a)) <span style="color: #333333">?</span> agg2 <span style="color: #333333">+=</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
+        <span style="color: #333399; font-weight: bold">long</span> agg3 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
+        <span style="color: #333399; font-weight: bold">long</span> l3 <span style="color: #333333">=</span> __SQL_SUM_AGGREGATE_1_mR1_L1_1.getValueOrDefault(se4.modify(r_b));
+        (<span style="color: #888888">/*if */</span>(l3 <span style="color: #333333">&gt;</span> (<span style="color: #0000DD; font-weight: bold">3L</span> <span style="color: #333333">*</span> r_a)) <span style="color: #333333">?</span> agg3 <span style="color: #333333">+=</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
+        __SQL_SUM_AGGREGATE_1.addOrDelOnZero(se1.modify(r_a),((<span style="color: #888888">/*if */</span>(r_b <span style="color: #333333">==</span> r_a) <span style="color: #333333">?</span> (agg1 <span style="color: #333333">+</span> (agg2 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)) <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>) <span style="color: #333333">+</span> agg3));
+        { <span style="color: #888888">//slice</span>
+          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h1 <span style="color: #333333">=</span> __SQL_SUM_AGGREGATE_1_mR3_mapkey1_idxfn<span style="color: #333333">::</span>hash(se7.modify1(r_a));
+          <span style="color: #008800; font-weight: bold">const</span> HashIndex___SQL_SUM_AGGREGATE_1_mR3_map_1<span style="color: #333333">*</span> i1 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex___SQL_SUM_AGGREGATE_1_mR3_map_1<span style="color: #333333">*&gt;</span>(__SQL_SUM_AGGREGATE_1_mR3.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
+          HashIndex___SQL_SUM_AGGREGATE_1_mR3_map_1<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n1 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i1<span style="color: #333333">-&gt;</span>buckets_[h1 <span style="color: #333333">%</span> i1<span style="color: #333333">-&gt;</span>size_]);
+          __SQL_SUM_AGGREGATE_1_mR3_entry<span style="color: #333333">*</span> e1;
+          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e1<span style="color: #333333">=</span>n1<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h1 <span style="color: #333333">==</span> n1<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> __SQL_SUM_AGGREGATE_1_mR3_mapkey1_idxfn<span style="color: #333333">::</span>equals(se7, <span style="color: #333333">*</span>e1)) {
             <span style="color: #333399; font-weight: bold">long</span> r1_a <span style="color: #333333">=</span> e1<span style="color: #333333">-&gt;</span>R1_A;
-            <span style="color: #333399; font-weight: bold">long</span> r1_b <span style="color: #333333">=</span> e1<span style="color: #333333">-&gt;</span>R1_B;
             <span style="color: #333399; font-weight: bold">long</span> v1 <span style="color: #333333">=</span> e1<span style="color: #333333">-&gt;</span>__av;
-            <span style="color: #333399; font-weight: bold">long</span> agg1 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
-            <span style="color: #333399; font-weight: bold">long</span> l1 <span style="color: #333333">=</span> __SQL_SUM_AGGREGATE_1_mR1_E1_1_L1_1.getValueOrDefault(se4.modify(r1_b));
-            agg1 <span style="color: #333333">+=</span> (l1 <span style="color: #333333">&gt;</span> (<span style="color: #0000DD; font-weight: bold">3L</span> <span style="color: #333333">*</span> r1_a));
-            __SQL_SUM_AGGREGATE_1.addOrDelOnZero(se3.modify(r1_a),(v1 <span style="color: #333333">*</span> (agg1 <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>)));
-            e1 <span style="color: #333333">=</span> e1<span style="color: #333333">-&gt;</span>nxt;
-          }
+            <span style="color: #333399; font-weight: bold">long</span> agg4 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
+            <span style="color: #333399; font-weight: bold">long</span> l4 <span style="color: #333333">=</span> (__SQL_SUM_AGGREGATE_1_mR1_L1_1.getValueOrDefault(se5.modify(r_a)) <span style="color: #333333">+</span> r_b);
+            (<span style="color: #888888">/*if */</span>(l4 <span style="color: #333333">&gt;</span> (<span style="color: #0000DD; font-weight: bold">3L</span> <span style="color: #333333">*</span> r1_a)) <span style="color: #333333">?</span> agg4 <span style="color: #333333">+=</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
+            <span style="color: #333399; font-weight: bold">long</span> agg5 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
+            <span style="color: #333399; font-weight: bold">long</span> l5 <span style="color: #333333">=</span> __SQL_SUM_AGGREGATE_1_mR1_L1_1.getValueOrDefault(se6.modify(r_a));
+            (<span style="color: #888888">/*if */</span>(l5 <span style="color: #333333">&gt;</span> (<span style="color: #0000DD; font-weight: bold">3L</span> <span style="color: #333333">*</span> r1_a)) <span style="color: #333333">?</span> agg5 <span style="color: #333333">+=</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
+            __SQL_SUM_AGGREGATE_1.addOrDelOnZero(se1.modify(r1_a),(v1 <span style="color: #333333">*</span> (agg4 <span style="color: #333333">+</span> (agg5 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>))));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n1<span style="color: #333333">=</span>n1<span style="color: #333333">-&gt;</span>nxt));
         }
+        __SQL_SUM_AGGREGATE_1_mR1_L1_1.addOrDelOnZero(se8.modify(r_a),r_b);
+        __SQL_SUM_AGGREGATE_1_mR3.addOrDelOnZero(se9.modify(r_a,r_b),<span style="color: #0000DD; font-weight: bold">1L</span>);
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_R&quot;</span>)
       END_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_R&quot;</span>)
@@ -516,23 +595,36 @@
     <span style="color: #333399; font-weight: bold">void</span> on_delete_R(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> r_a, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> r_b) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_R&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_R&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
-        __SQL_SUM_AGGREGATE_1_mR1.addOrDelOnZero(se5.modify(r_a,r_b),<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>);
-        __SQL_SUM_AGGREGATE_1_mR1_E1_1_L1_1.addOrDelOnZero(se6.modify(r_a),(<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> r_b));
-        __SQL_SUM_AGGREGATE_1.clear();
-        { <span style="color: #888888">//foreach</span>
-          __SQL_SUM_AGGREGATE_1_mR1_entry<span style="color: #333333">*</span> e2 <span style="color: #333333">=</span> __SQL_SUM_AGGREGATE_1_mR1.head;
-          <span style="color: #008800; font-weight: bold">while</span>(e2){
+      {  <span style="color: #333333">++</span>tN;
+        <span style="color: #333399; font-weight: bold">long</span> agg6 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
+        <span style="color: #333399; font-weight: bold">long</span> l6 <span style="color: #333333">=</span> __SQL_SUM_AGGREGATE_1_mR1_L1_1.getValueOrDefault(se11.modify(r_b));
+        (<span style="color: #888888">/*if */</span>(l6 <span style="color: #333333">&gt;</span> (<span style="color: #0000DD; font-weight: bold">3L</span> <span style="color: #333333">*</span> r_a)) <span style="color: #333333">?</span> agg6 <span style="color: #333333">+=</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
+        <span style="color: #333399; font-weight: bold">long</span> agg7 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
+        <span style="color: #333399; font-weight: bold">long</span> l7 <span style="color: #333333">=</span> (__SQL_SUM_AGGREGATE_1_mR1_L1_1.getValueOrDefault(se12.modify(r_a)) <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> r_b));
+        (<span style="color: #888888">/*if */</span>(l7 <span style="color: #333333">&gt;</span> (<span style="color: #0000DD; font-weight: bold">3L</span> <span style="color: #333333">*</span> r_a)) <span style="color: #333333">?</span> agg7 <span style="color: #333333">+=</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
+        <span style="color: #333399; font-weight: bold">long</span> agg8 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
+        <span style="color: #333399; font-weight: bold">long</span> l8 <span style="color: #333333">=</span> __SQL_SUM_AGGREGATE_1_mR1_L1_1.getValueOrDefault(se13.modify(r_a));
+        (<span style="color: #888888">/*if */</span>(l8 <span style="color: #333333">&gt;</span> (<span style="color: #0000DD; font-weight: bold">3L</span> <span style="color: #333333">*</span> r_a)) <span style="color: #333333">?</span> agg8 <span style="color: #333333">+=</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
+        __SQL_SUM_AGGREGATE_1.addOrDelOnZero(se10.modify(r_a),(((agg6 <span style="color: #333333">+</span> (<span style="color: #888888">/*if */</span>(r_b <span style="color: #333333">==</span> r_a) <span style="color: #333333">?</span> agg7 <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>) <span style="color: #333333">+</span> (<span style="color: #888888">/*if */</span>(r_b <span style="color: #333333">==</span> r_a) <span style="color: #333333">?</span> agg8 <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>)));
+        { <span style="color: #888888">//slice</span>
+          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h2 <span style="color: #333333">=</span> __SQL_SUM_AGGREGATE_1_mR3_mapkey1_idxfn<span style="color: #333333">::</span>hash(se16.modify1(r_a));
+          <span style="color: #008800; font-weight: bold">const</span> HashIndex___SQL_SUM_AGGREGATE_1_mR3_map_1<span style="color: #333333">*</span> i2 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex___SQL_SUM_AGGREGATE_1_mR3_map_1<span style="color: #333333">*&gt;</span>(__SQL_SUM_AGGREGATE_1_mR3.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
+          HashIndex___SQL_SUM_AGGREGATE_1_mR3_map_1<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n2 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i2<span style="color: #333333">-&gt;</span>buckets_[h2 <span style="color: #333333">%</span> i2<span style="color: #333333">-&gt;</span>size_]);
+          __SQL_SUM_AGGREGATE_1_mR3_entry<span style="color: #333333">*</span> e2;
+          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e2<span style="color: #333333">=</span>n2<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h2 <span style="color: #333333">==</span> n2<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> __SQL_SUM_AGGREGATE_1_mR3_mapkey1_idxfn<span style="color: #333333">::</span>equals(se16, <span style="color: #333333">*</span>e2)) {
             <span style="color: #333399; font-weight: bold">long</span> r1_a <span style="color: #333333">=</span> e2<span style="color: #333333">-&gt;</span>R1_A;
-            <span style="color: #333399; font-weight: bold">long</span> r1_b <span style="color: #333333">=</span> e2<span style="color: #333333">-&gt;</span>R1_B;
             <span style="color: #333399; font-weight: bold">long</span> v2 <span style="color: #333333">=</span> e2<span style="color: #333333">-&gt;</span>__av;
-            <span style="color: #333399; font-weight: bold">long</span> agg2 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
-            <span style="color: #333399; font-weight: bold">long</span> l2 <span style="color: #333333">=</span> __SQL_SUM_AGGREGATE_1_mR1_E1_1_L1_1.getValueOrDefault(se8.modify(r1_b));
-            agg2 <span style="color: #333333">+=</span> (l2 <span style="color: #333333">&gt;</span> (<span style="color: #0000DD; font-weight: bold">3L</span> <span style="color: #333333">*</span> r1_a));
-            __SQL_SUM_AGGREGATE_1.addOrDelOnZero(se7.modify(r1_a),(v2 <span style="color: #333333">*</span> (agg2 <span style="color: #333333">!=</span> <span style="color: #0000DD; font-weight: bold">0</span> <span style="color: #333333">?</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>)));
-            e2 <span style="color: #333333">=</span> e2<span style="color: #333333">-&gt;</span>nxt;
-          }
+            <span style="color: #333399; font-weight: bold">long</span> agg9 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
+            <span style="color: #333399; font-weight: bold">long</span> l9 <span style="color: #333333">=</span> (__SQL_SUM_AGGREGATE_1_mR1_L1_1.getValueOrDefault(se14.modify(r_a)) <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> r_b));
+            (<span style="color: #888888">/*if */</span>(l9 <span style="color: #333333">&gt;</span> (<span style="color: #0000DD; font-weight: bold">3L</span> <span style="color: #333333">*</span> r1_a)) <span style="color: #333333">?</span> agg9 <span style="color: #333333">+=</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
+            <span style="color: #333399; font-weight: bold">long</span> agg10 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
+            <span style="color: #333399; font-weight: bold">long</span> l10 <span style="color: #333333">=</span> __SQL_SUM_AGGREGATE_1_mR1_L1_1.getValueOrDefault(se15.modify(r_a));
+            (<span style="color: #888888">/*if */</span>(l10 <span style="color: #333333">&gt;</span> (<span style="color: #0000DD; font-weight: bold">3L</span> <span style="color: #333333">*</span> r1_a)) <span style="color: #333333">?</span> agg10 <span style="color: #333333">+=</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
+            __SQL_SUM_AGGREGATE_1.addOrDelOnZero(se10.modify(r1_a),(v2 <span style="color: #333333">*</span> (agg9 <span style="color: #333333">+</span> (agg10 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>))));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n2<span style="color: #333333">=</span>n2<span style="color: #333333">-&gt;</span>nxt));
         }
+        __SQL_SUM_AGGREGATE_1_mR1_L1_1.addOrDelOnZero(se17.modify(r_a),(<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> r_b));
+        __SQL_SUM_AGGREGATE_1_mR3.addOrDelOnZero(se18.modify(r_a,r_b),<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>);
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_R&quot;</span>)
       END_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_R&quot;</span>)
@@ -544,7 +636,7 @@
     <span style="color: #333399; font-weight: bold">void</span> on_system_ready_event() {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
-      {  <span style="color: #888888">//</span>
+      {  
         
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
@@ -554,18 +646,28 @@
   <span style="color: #997700; font-weight: bold">private:</span>
   
     <span style="color: #888888">/* Sample entries for avoiding recreation of temporary objects */</span>
-    __SQL_SUM_AGGREGATE_1_mR1_entry se1;
-    __SQL_SUM_AGGREGATE_1_mR1_E1_1_L1_1_entry se2;
-    __SQL_SUM_AGGREGATE_1_entry se3;
-    __SQL_SUM_AGGREGATE_1_mR1_E1_1_L1_1_entry se4;
-    __SQL_SUM_AGGREGATE_1_mR1_entry se5;
-    __SQL_SUM_AGGREGATE_1_mR1_E1_1_L1_1_entry se6;
-    __SQL_SUM_AGGREGATE_1_entry se7;
-    __SQL_SUM_AGGREGATE_1_mR1_E1_1_L1_1_entry se8;
+    __SQL_SUM_AGGREGATE_1_entry se1;
+    __SQL_SUM_AGGREGATE_1_mR1_L1_1_entry se2;
+    __SQL_SUM_AGGREGATE_1_mR1_L1_1_entry se3;
+    __SQL_SUM_AGGREGATE_1_mR1_L1_1_entry se4;
+    __SQL_SUM_AGGREGATE_1_mR1_L1_1_entry se5;
+    __SQL_SUM_AGGREGATE_1_mR1_L1_1_entry se6;
+    __SQL_SUM_AGGREGATE_1_mR3_entry se7;
+    __SQL_SUM_AGGREGATE_1_mR1_L1_1_entry se8;
+    __SQL_SUM_AGGREGATE_1_mR3_entry se9;
+    __SQL_SUM_AGGREGATE_1_entry se10;
+    __SQL_SUM_AGGREGATE_1_mR1_L1_1_entry se11;
+    __SQL_SUM_AGGREGATE_1_mR1_L1_1_entry se12;
+    __SQL_SUM_AGGREGATE_1_mR1_L1_1_entry se13;
+    __SQL_SUM_AGGREGATE_1_mR1_L1_1_entry se14;
+    __SQL_SUM_AGGREGATE_1_mR1_L1_1_entry se15;
+    __SQL_SUM_AGGREGATE_1_mR3_entry se16;
+    __SQL_SUM_AGGREGATE_1_mR1_L1_1_entry se17;
+    __SQL_SUM_AGGREGATE_1_mR3_entry se18;
   
     <span style="color: #888888">/* Data structures used for storing materialized views */</span>
-    __SQL_SUM_AGGREGATE_1_mR1_map __SQL_SUM_AGGREGATE_1_mR1;
-    __SQL_SUM_AGGREGATE_1_mR1_E1_1_L1_1_map __SQL_SUM_AGGREGATE_1_mR1_E1_1_L1_1;
+    __SQL_SUM_AGGREGATE_1_mR1_L1_1_map __SQL_SUM_AGGREGATE_1_mR1_L1_1;
+    __SQL_SUM_AGGREGATE_1_mR3_map __SQL_SUM_AGGREGATE_1_mR3;
     
     
   
@@ -592,16 +694,18 @@
       <span style="color: #888888">/* Imports data for static tables and performs view initialization based on it. */</span>
       <span style="color: #333399; font-weight: bold">void</span> init() {
           <span style="color: #888888">//P0_PLACE_HOLDER</span>
-          table_multiplexer.init_source();
-          stream_multiplexer.init_source();
+          table_multiplexer.init_source(run_opts<span style="color: #333333">-&gt;</span>batch_size, run_opts<span style="color: #333333">-&gt;</span>parallel, <span style="color: #007020">true</span>);
+          stream_multiplexer.init_source(run_opts<span style="color: #333333">-&gt;</span>batch_size, run_opts<span style="color: #333333">-&gt;</span>parallel, <span style="color: #007020">false</span>);
           process_tables();
           data.on_system_ready_event();
           <span style="color: #888888">//P2_PLACE_HOLDER</span>
       }
   
       <span style="color: #888888">/* Saves a snapshot of the data required to obtain the results of top level queries. */</span>
-      <span style="color: #333399; font-weight: bold">snapshot_t</span> take_snapshot(){ <span style="color: #888888">//tlq_t d=(tlq_t&amp;)data; if (d.tS==0) { gettimeofday(&amp;(d.t),NULL); d.tT=((d.t).tv_sec-(d.t0).tv_sec)*1000000L+((d.t).tv_usec-(d.t0).tv_usec); } printf(&quot;SAMPLE=standard,%ld,%ld,%ld\n&quot;,d.tT,d.tN,d.tS);</span>
-          <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333399; font-weight: bold">snapshot_t</span>( <span style="color: #008800; font-weight: bold">new</span> <span style="color: #333399; font-weight: bold">tlq_t</span>((<span style="color: #333399; font-weight: bold">tlq_t</span><span style="color: #333333">&amp;</span>)data) );
+      <span style="color: #333399; font-weight: bold">snapshot_t</span> take_snapshot(){
+          <span style="color: #333399; font-weight: bold">tlq_t</span><span style="color: #333333">*</span> d <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">new</span> <span style="color: #333399; font-weight: bold">tlq_t</span>((<span style="color: #333399; font-weight: bold">tlq_t</span><span style="color: #333333">&amp;</span>)data);
+          <span style="color: #008800; font-weight: bold">if</span> (d<span style="color: #333333">-&gt;</span>tS<span style="color: #333333">==</span><span style="color: #0000DD; font-weight: bold">0</span>) { gettimeofday(<span style="color: #333333">&amp;</span>(d<span style="color: #333333">-&gt;</span>t),<span style="color: #007020">NULL</span>); d<span style="color: #333333">-&gt;</span>tT<span style="color: #333333">=</span>((d<span style="color: #333333">-&gt;</span>t).tv_sec<span style="color: #333333">-</span>(d<span style="color: #333333">-&gt;</span>t0).tv_sec)<span style="color: #333333">*</span><span style="color: #0000DD; font-weight: bold">1000000L</span><span style="color: #333333">+</span>((d<span style="color: #333333">-&gt;</span>t).tv_usec<span style="color: #333333">-</span>(d<span style="color: #333333">-&gt;</span>t0).tv_usec); } printf(<span style="background-color: #fff0f0">&quot;SAMPLE=standard,%ld,%ld,%ld</span><span style="color: #666666; font-weight: bold; background-color: #fff0f0">\n</span><span style="background-color: #fff0f0">&quot;</span>,d<span style="color: #333333">-&gt;</span>tT,d<span style="color: #333333">-&gt;</span>tN,d<span style="color: #333333">-&gt;</span>tS);
+          <span style="color: #008800; font-weight: bold">return</span> <span style="color: #0066BB; font-weight: bold">snapshot_t</span>( d );
       }
   
     <span style="color: #997700; font-weight: bold">protected:</span>

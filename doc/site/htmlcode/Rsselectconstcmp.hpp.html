@@ -297,7 +297,9 @@
 297
 298
 299
-300</pre></td><td><pre style="margin: 0; line-height: 125%"><span style="color: #557799">#include &quot;program_base.hpp&quot;</span>
+300
+301
+302</pre></td><td><pre style="margin: 0; line-height: 125%"><span style="color: #557799">#include &quot;program_base.hpp&quot;</span>
 <span style="color: #557799">#include &quot;hpds/KDouble.hpp&quot;</span>
 <span style="color: #557799">#include &quot;hash.hpp&quot;</span>
 <span style="color: #557799">#include &quot;mmap/mmap.hpp&quot;</span>
@@ -450,9 +452,9 @@
     <span style="color: #333399; font-weight: bold">void</span> on_insert_R(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> r_a, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> r_b) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_R&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_R&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
-        COUNT.addOrDelOnZero(se1.modify(r_a),((r_a <span style="color: #333333">==</span> <span style="color: #0000DD; font-weight: bold">1L</span>) <span style="color: #333333">*</span> COUNT_mR2));
-        COUNT_mS1.addOrDelOnZero(se3.modify(r_a),(r_a <span style="color: #333333">==</span> <span style="color: #0000DD; font-weight: bold">1L</span>));
+      {  <span style="color: #333333">++</span>tN;
+        (<span style="color: #888888">/*if */</span>(r_a <span style="color: #333333">==</span> <span style="color: #0000DD; font-weight: bold">1L</span>) <span style="color: #333333">?</span> COUNT.addOrDelOnZero(se1.modify(r_a),COUNT_mR2) <span style="color: #333333">:</span> voidFunc());
+        (<span style="color: #888888">/*if */</span>(r_a <span style="color: #333333">==</span> <span style="color: #0000DD; font-weight: bold">1L</span>) <span style="color: #333333">?</span> COUNT_mS1.addOrDelOnZero(se2.modify(r_a),<span style="color: #0000DD; font-weight: bold">1L</span>) <span style="color: #333333">:</span> voidFunc());
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_R&quot;</span>)
       END_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_R&quot;</span>)
@@ -464,9 +466,9 @@
     <span style="color: #333399; font-weight: bold">void</span> on_delete_R(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> r_a, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> r_b) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_R&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_R&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
-        COUNT.addOrDelOnZero(se4.modify(r_a),((r_a <span style="color: #333333">==</span> <span style="color: #0000DD; font-weight: bold">1L</span>) <span style="color: #333333">*</span> (COUNT_mR2 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)));
-        COUNT_mS1.addOrDelOnZero(se6.modify(r_a),((r_a <span style="color: #333333">==</span> <span style="color: #0000DD; font-weight: bold">1L</span>) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
+      {  <span style="color: #333333">++</span>tN;
+        (<span style="color: #888888">/*if */</span>(r_a <span style="color: #333333">==</span> <span style="color: #0000DD; font-weight: bold">1L</span>) <span style="color: #333333">?</span> COUNT.addOrDelOnZero(se3.modify(r_a),(COUNT_mR2 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)) <span style="color: #333333">:</span> voidFunc());
+        (<span style="color: #888888">/*if */</span>(r_a <span style="color: #333333">==</span> <span style="color: #0000DD; font-weight: bold">1L</span>) <span style="color: #333333">?</span> COUNT_mS1.addOrDelOnZero(se4.modify(r_a),<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>) <span style="color: #333333">:</span> voidFunc());
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_R&quot;</span>)
       END_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_R&quot;</span>)
@@ -478,13 +480,13 @@
     <span style="color: #333399; font-weight: bold">void</span> on_insert_S(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> s_b, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> s_c) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_S&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_S&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
+      {  <span style="color: #333333">++</span>tN;
         { <span style="color: #888888">//foreach</span>
           COUNT_mS1_entry<span style="color: #333333">*</span> e1 <span style="color: #333333">=</span> COUNT_mS1.head;
           <span style="color: #008800; font-weight: bold">while</span>(e1){
             <span style="color: #333399; font-weight: bold">long</span> r_a <span style="color: #333333">=</span> e1<span style="color: #333333">-&gt;</span>R_A;
             <span style="color: #333399; font-weight: bold">long</span> v1 <span style="color: #333333">=</span> e1<span style="color: #333333">-&gt;</span>__av;
-            COUNT.addOrDelOnZero(se7.modify(r_a),v1);
+            COUNT.addOrDelOnZero(se5.modify(r_a),v1);
             e1 <span style="color: #333333">=</span> e1<span style="color: #333333">-&gt;</span>nxt;
           }
         }
@@ -500,13 +502,13 @@
     <span style="color: #333399; font-weight: bold">void</span> on_delete_S(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> s_b, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> s_c) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_S&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_S&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
+      {  <span style="color: #333333">++</span>tN;
         { <span style="color: #888888">//foreach</span>
           COUNT_mS1_entry<span style="color: #333333">*</span> e2 <span style="color: #333333">=</span> COUNT_mS1.head;
           <span style="color: #008800; font-weight: bold">while</span>(e2){
             <span style="color: #333399; font-weight: bold">long</span> r_a <span style="color: #333333">=</span> e2<span style="color: #333333">-&gt;</span>R_A;
             <span style="color: #333399; font-weight: bold">long</span> v2 <span style="color: #333333">=</span> e2<span style="color: #333333">-&gt;</span>__av;
-            COUNT.addOrDelOnZero(se9.modify(r_a),(v2 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
+            COUNT.addOrDelOnZero(se7.modify(r_a),(v2 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
             e2 <span style="color: #333333">=</span> e2<span style="color: #333333">-&gt;</span>nxt;
           }
         }
@@ -522,7 +524,7 @@
     <span style="color: #333399; font-weight: bold">void</span> on_system_ready_event() {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
-      {  <span style="color: #888888">//</span>
+      {  
         
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
@@ -533,11 +535,11 @@
   
     <span style="color: #888888">/* Sample entries for avoiding recreation of temporary objects */</span>
     COUNT_entry se1;
-    COUNT_mS1_entry se3;
-    COUNT_entry se4;
-    COUNT_mS1_entry se6;
+    COUNT_mS1_entry se2;
+    COUNT_entry se3;
+    COUNT_mS1_entry se4;
+    COUNT_entry se5;
     COUNT_entry se7;
-    COUNT_entry se9;
   
     <span style="color: #888888">/* Data structures used for storing materialized views */</span>
     COUNT_mS1_map COUNT_mS1;
@@ -574,16 +576,18 @@
       <span style="color: #888888">/* Imports data for static tables and performs view initialization based on it. */</span>
       <span style="color: #333399; font-weight: bold">void</span> init() {
           <span style="color: #888888">//P0_PLACE_HOLDER</span>
-          table_multiplexer.init_source();
-          stream_multiplexer.init_source();
+          table_multiplexer.init_source(run_opts<span style="color: #333333">-&gt;</span>batch_size, run_opts<span style="color: #333333">-&gt;</span>parallel, <span style="color: #007020">true</span>);
+          stream_multiplexer.init_source(run_opts<span style="color: #333333">-&gt;</span>batch_size, run_opts<span style="color: #333333">-&gt;</span>parallel, <span style="color: #007020">false</span>);
           process_tables();
           data.on_system_ready_event();
           <span style="color: #888888">//P2_PLACE_HOLDER</span>
       }
   
       <span style="color: #888888">/* Saves a snapshot of the data required to obtain the results of top level queries. */</span>
-      <span style="color: #333399; font-weight: bold">snapshot_t</span> take_snapshot(){ <span style="color: #888888">//tlq_t d=(tlq_t&amp;)data; if (d.tS==0) { gettimeofday(&amp;(d.t),NULL); d.tT=((d.t).tv_sec-(d.t0).tv_sec)*1000000L+((d.t).tv_usec-(d.t0).tv_usec); } printf(&quot;SAMPLE=standard,%ld,%ld,%ld\n&quot;,d.tT,d.tN,d.tS);</span>
-          <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333399; font-weight: bold">snapshot_t</span>( <span style="color: #008800; font-weight: bold">new</span> <span style="color: #333399; font-weight: bold">tlq_t</span>((<span style="color: #333399; font-weight: bold">tlq_t</span><span style="color: #333333">&amp;</span>)data) );
+      <span style="color: #333399; font-weight: bold">snapshot_t</span> take_snapshot(){
+          <span style="color: #333399; font-weight: bold">tlq_t</span><span style="color: #333333">*</span> d <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">new</span> <span style="color: #333399; font-weight: bold">tlq_t</span>((<span style="color: #333399; font-weight: bold">tlq_t</span><span style="color: #333333">&amp;</span>)data);
+          <span style="color: #008800; font-weight: bold">if</span> (d<span style="color: #333333">-&gt;</span>tS<span style="color: #333333">==</span><span style="color: #0000DD; font-weight: bold">0</span>) { gettimeofday(<span style="color: #333333">&amp;</span>(d<span style="color: #333333">-&gt;</span>t),<span style="color: #007020">NULL</span>); d<span style="color: #333333">-&gt;</span>tT<span style="color: #333333">=</span>((d<span style="color: #333333">-&gt;</span>t).tv_sec<span style="color: #333333">-</span>(d<span style="color: #333333">-&gt;</span>t0).tv_sec)<span style="color: #333333">*</span><span style="color: #0000DD; font-weight: bold">1000000L</span><span style="color: #333333">+</span>((d<span style="color: #333333">-&gt;</span>t).tv_usec<span style="color: #333333">-</span>(d<span style="color: #333333">-&gt;</span>t0).tv_usec); } printf(<span style="background-color: #fff0f0">&quot;SAMPLE=standard,%ld,%ld,%ld</span><span style="color: #666666; font-weight: bold; background-color: #fff0f0">\n</span><span style="background-color: #fff0f0">&quot;</span>,d<span style="color: #333333">-&gt;</span>tT,d<span style="color: #333333">-&gt;</span>tN,d<span style="color: #333333">-&gt;</span>tS);
+          <span style="color: #008800; font-weight: bold">return</span> <span style="color: #0066BB; font-weight: bold">snapshot_t</span>( d );
       }
   
     <span style="color: #997700; font-weight: bold">protected:</span>

@@ -99,7 +99,32 @@
  99
 100
 101
-102</pre></td><td><pre style="margin: 0; line-height: 125%"><span style="color: #008800; font-weight: bold">package</span> <span style="color: #0e84b5; font-weight: bold">ddbt.test.gen</span>
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127</pre></td><td><pre style="margin: 0; line-height: 125%"><span style="color: #008800; font-weight: bold">package</span> <span style="color: #0e84b5; font-weight: bold">ddbt.test.gen</span>
 <span style="color: #008800; font-weight: bold">import</span> <span style="color: #0e84b5; font-weight: bold">ddbt.lib._</span>
 <span style="color: #008800; font-weight: bold">import</span> <span style="color: #0e84b5; font-weight: bold">ddbt.lib.store._</span>
 
@@ -111,9 +136,9 @@
   <span style="color: #008800; font-weight: bold">val</span> precision <span style="color: #008800; font-weight: bold">=</span> <span style="color: #0000DD; font-weight: bold">7</span><span style="color: #333333">;</span> <span style="color: #888888">// significative numbers (7 to pass r_sumdivgrp, 10 otherwise)</span>
   <span style="color: #008800; font-weight: bold">val</span> diff_p <span style="color: #008800; font-weight: bold">=</span> <span style="color: #BB0066; font-weight: bold">Math</span><span style="color: #333333">.</span>pow<span style="color: #333333">(</span><span style="color: #6600EE; font-weight: bold">0.1</span><span style="color: #333333">,</span>precision<span style="color: #333333">)</span>
   
-  <span style="color: #008800; font-weight: bold">def</span> execute<span style="color: #333333">(</span>args<span style="color: #008800; font-weight: bold">:</span><span style="color: #333399; font-weight: bold">Array</span><span style="color: #333333">[</span><span style="color: #333399; font-weight: bold">String</span><span style="color: #333333">],</span>f<span style="color: #008800; font-weight: bold">:</span><span style="color: #333399; font-weight: bold">List</span><span style="color: #333333">[</span><span style="color: #333399; font-weight: bold">Any</span><span style="color: #333333">]</span><span style="color: #008800; font-weight: bold">=&gt;</span><span style="color: #BB0066; font-weight: bold">Unit</span><span style="color: #333333">)</span> <span style="color: #008800; font-weight: bold">=</span> bench<span style="color: #333333">(</span>args<span style="color: #333333">,(</span>d<span style="color: #008800; font-weight: bold">:</span><span style="color: #333399; font-weight: bold">String</span><span style="color: #333333">,</span>p<span style="color: #008800; font-weight: bold">:</span><span style="color: #333399; font-weight: bold">Int</span><span style="color: #333333">,</span>t<span style="color: #008800; font-weight: bold">:</span><span style="color: #333399; font-weight: bold">Long</span><span style="color: #333333">)</span><span style="color: #008800; font-weight: bold">=&gt;</span>run<span style="color: #333333">[</span><span style="color: #333399; font-weight: bold">Ravg</span><span style="color: #333333">](</span><span style="color: #BB0066; font-weight: bold">Seq</span><span style="color: #333333">(</span>
+  <span style="color: #008800; font-weight: bold">def</span> execute<span style="color: #333333">(</span>args<span style="color: #008800; font-weight: bold">:</span><span style="color: #333399; font-weight: bold">Array</span><span style="color: #333333">[</span><span style="color: #333399; font-weight: bold">String</span><span style="color: #333333">],</span>f<span style="color: #008800; font-weight: bold">:</span><span style="color: #333399; font-weight: bold">List</span><span style="color: #333333">[</span><span style="color: #333399; font-weight: bold">Any</span><span style="color: #333333">]</span><span style="color: #008800; font-weight: bold">=&gt;</span><span style="color: #BB0066; font-weight: bold">Unit</span><span style="color: #333333">)</span> <span style="color: #008800; font-weight: bold">=</span> bench<span style="color: #333333">(</span>args<span style="color: #333333">,(</span>d<span style="color: #008800; font-weight: bold">:</span><span style="color: #333399; font-weight: bold">String</span><span style="color: #333333">,</span>p<span style="color: #008800; font-weight: bold">:</span><span style="color: #333399; font-weight: bold">Int</span><span style="color: #333333">,</span>t<span style="color: #008800; font-weight: bold">:</span><span style="color: #333399; font-weight: bold">Long</span><span style="color: #333333">,</span>b<span style="color: #008800; font-weight: bold">:</span><span style="color: #333399; font-weight: bold">Int</span><span style="color: #333333">)</span><span style="color: #008800; font-weight: bold">=&gt;</span>run<span style="color: #333333">[</span><span style="color: #333399; font-weight: bold">Ravg</span><span style="color: #333333">](</span><span style="color: #BB0066; font-weight: bold">Seq</span><span style="color: #333333">(</span>
     <span style="color: #333333">(</span><span style="color: #008800; font-weight: bold">new</span> java<span style="color: #333333">.</span>io<span style="color: #333333">.</span><span style="color: #BB0066; font-weight: bold">FileInputStream</span><span style="color: #333333">(</span><span style="background-color: #fff0f0">&quot;/Users/dashti/Documents/MyWorkspaces/DATASRC/dbtoaster/experiments/data/simple/tiny/r.dat&quot;</span><span style="color: #333333">),</span><span style="color: #008800; font-weight: bold">new</span> <span style="color: #BB0066; font-weight: bold">Adaptor</span><span style="color: #333333">.</span><span style="color: #BB0066; font-weight: bold">CSV</span><span style="color: #333333">(</span><span style="background-color: #fff0f0">&quot;R&quot;</span><span style="color: #333333">,</span><span style="background-color: #fff0f0">&quot;long,long&quot;</span><span style="color: #333333">,</span><span style="background-color: #fff0f0">&quot;\\Q,\\E&quot;</span><span style="color: #333333">,</span><span style="color: #008800; font-weight: bold">if</span><span style="color: #333333">(</span>d<span style="color: #333333">.</span>endsWith<span style="color: #333333">(</span><span style="background-color: #fff0f0">&quot;_del&quot;</span><span style="color: #333333">))</span> <span style="background-color: #fff0f0">&quot;ins+del&quot;</span> <span style="color: #008800; font-weight: bold">else</span> <span style="background-color: #fff0f0">&quot;insert&quot;</span><span style="color: #333333">),</span><span style="color: #BB0066; font-weight: bold">Split</span><span style="color: #333333">())</span>
-  <span style="color: #333333">),</span>p<span style="color: #333333">,</span>t<span style="color: #333333">),</span>f<span style="color: #333333">)</span>
+  <span style="color: #333333">),</span>p<span style="color: #333333">,</span>t<span style="color: #333333">,</span>b<span style="color: #333333">),</span>f<span style="color: #333333">)</span>
   
   <span style="color: #008800; font-weight: bold">def</span> main<span style="color: #333333">(</span>args<span style="color: #008800; font-weight: bold">:</span><span style="color: #333399; font-weight: bold">Array</span><span style="color: #333333">[</span><span style="color: #333399; font-weight: bold">String</span><span style="color: #333333">])</span> <span style="color: #333333">{</span>
     execute<span style="color: #333333">(</span>args<span style="color: #333333">,(</span>res<span style="color: #008800; font-weight: bold">:</span><span style="color: #333399; font-weight: bold">List</span><span style="color: #333333">[</span><span style="color: #333399; font-weight: bold">Any</span><span style="color: #333333">])=&gt;{</span>
@@ -142,31 +167,39 @@
     <span style="color: #333333">}</span> <span style="color: #008800; font-weight: bold">else</span> <span style="color: #333333">{</span>
       <span style="color: #BB0066; font-weight: bold">__SQL_AVG_AGGREGATE_1_mR1_L1_1</span>
     <span style="color: #333333">}</span>
-    <span style="color: #008800; font-weight: bold">val</span> x16 <span style="color: #008800; font-weight: bold">=</span> <span style="color: #333333">(</span><span style="color: #008800; font-weight: bold">if</span> <span style="color: #333333">((</span><span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">==</span> <span style="color: #BB0066; font-weight: bold">__SQL_AVG_AGGREGATE_1_mR1_L1_1</span><span style="color: #333333">))</span> <span style="color: #333333">{</span>
-      <span style="color: #0000DD; font-weight: bold">0L</span>
-    <span style="color: #333333">}</span> <span style="color: #008800; font-weight: bold">else</span> <span style="color: #333333">{</span>
-      <span style="color: #0000DD; font-weight: bold">1L</span>
-    <span style="color: #333333">})</span> <span style="color: #333333">*</span> <span style="color: #333333">(</span><span style="color: #008800; font-weight: bold">if</span> <span style="color: #333333">((</span>x12 <span style="color: #333333">==</span> <span style="color: #6600EE; font-weight: bold">0.0</span><span style="color: #333333">))</span> <span style="color: #333333">{</span>
+    <span style="color: #008800; font-weight: bold">val</span> x13 <span style="color: #008800; font-weight: bold">=</span> x12 <span style="color: #333333">==</span> <span style="color: #6600EE; font-weight: bold">0.0</span>
+    x7 <span style="color: #008800; font-weight: bold">=</span> <span style="color: #333333">(</span><span style="color: #008800; font-weight: bold">if</span> <span style="color: #333333">(</span>x13<span style="color: #333333">)</span> <span style="color: #333333">{</span>
       <span style="color: #6600EE; font-weight: bold">0.0</span>
     <span style="color: #333333">}</span> <span style="color: #008800; font-weight: bold">else</span> <span style="color: #333333">{</span>
-      <span style="color: #008800; font-weight: bold">val</span> x14 <span style="color: #008800; font-weight: bold">=</span> <span style="color: #6600EE; font-weight: bold">1.0</span> <span style="color: #333333">/</span> x12
-      x14
+      <span style="color: #008800; font-weight: bold">val</span> x9 <span style="color: #008800; font-weight: bold">=</span> <span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">==</span> <span style="color: #BB0066; font-weight: bold">__SQL_AVG_AGGREGATE_1_mR1_L1_1</span>
+      <span style="color: #008800; font-weight: bold">val</span> x16 <span style="color: #008800; font-weight: bold">=</span> <span style="color: #008800; font-weight: bold">if</span> <span style="color: #333333">(</span>x9<span style="color: #333333">)</span> <span style="color: #333333">{</span>
+        <span style="color: #0000DD; font-weight: bold">0L</span>
+      <span style="color: #333333">}</span> <span style="color: #008800; font-weight: bold">else</span> <span style="color: #333333">{</span>
+        <span style="color: #008800; font-weight: bold">val</span> x14 <span style="color: #008800; font-weight: bold">=</span> <span style="color: #6600EE; font-weight: bold">1.0</span> <span style="color: #333333">/</span> x12
+        x14
+      <span style="color: #333333">}</span>
+      x16
     <span style="color: #333333">})</span>
-    x7 <span style="color: #008800; font-weight: bold">=</span> x16
-    <span style="color: #BB0066; font-weight: bold">__SQL_AVG_AGGREGATE_1</span> <span style="color: #008800; font-weight: bold">=</span> <span style="color: #333333">(</span>x16 <span style="color: #333333">*</span> <span style="color: #BB0066; font-weight: bold">__SQL_AVG_AGGREGATE_1_mR2</span><span style="color: #333333">)</span>
+    <span style="color: #BB0066; font-weight: bold">__SQL_AVG_AGGREGATE_1</span> <span style="color: #008800; font-weight: bold">=</span> <span style="color: #333333">(</span><span style="color: #008800; font-weight: bold">if</span> <span style="color: #333333">(</span>x13<span style="color: #333333">)</span> <span style="color: #333333">{</span>
+      <span style="color: #6600EE; font-weight: bold">0.0</span>
+    <span style="color: #333333">}</span> <span style="color: #008800; font-weight: bold">else</span> <span style="color: #333333">{</span>
+      <span style="color: #008800; font-weight: bold">val</span> x9 <span style="color: #008800; font-weight: bold">=</span> <span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">==</span> <span style="color: #BB0066; font-weight: bold">__SQL_AVG_AGGREGATE_1_mR1_L1_1</span>
+      <span style="color: #008800; font-weight: bold">val</span> x20 <span style="color: #008800; font-weight: bold">=</span> <span style="color: #008800; font-weight: bold">if</span> <span style="color: #333333">(</span>x9<span style="color: #333333">)</span> <span style="color: #333333">{</span>
+        <span style="color: #0000DD; font-weight: bold">0L</span>
+      <span style="color: #333333">}</span> <span style="color: #008800; font-weight: bold">else</span> <span style="color: #333333">{</span>
+        <span style="color: #008800; font-weight: bold">val</span> x14 <span style="color: #008800; font-weight: bold">=</span> <span style="color: #6600EE; font-weight: bold">1.0</span> <span style="color: #333333">/</span> x12
+        <span style="color: #008800; font-weight: bold">val</span> x19 <span style="color: #008800; font-weight: bold">=</span> x14 <span style="color: #333333">*</span> <span style="color: #BB0066; font-weight: bold">__SQL_AVG_AGGREGATE_1_mR2</span>
+        x19
+      <span style="color: #333333">}</span>
+      x20
+    <span style="color: #333333">})</span>
   <span style="color: #333333">}</span>
   
   
   <span style="color: #008800; font-weight: bold">def</span> onDelR<span style="color: #333333">(</span>r_a<span style="color: #008800; font-weight: bold">:</span><span style="color: #333399; font-weight: bold">Long</span><span style="color: #333333">,</span> r_b<span style="color: #008800; font-weight: bold">:</span><span style="color: #333399; font-weight: bold">Long</span><span style="color: #333333">)</span> <span style="color: #333333">{</span>
     <span style="color: #BB0066; font-weight: bold">__SQL_AVG_AGGREGATE_1_mR1_L1_1</span> <span style="color: #333333">+=</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>
-    <span style="color: #BB0066; font-weight: bold">__SQL_AVG_AGGREGATE_1_mR2</span> <span style="color: #333333">+=</span> <span style="color: #333333">(-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> r_a<span style="color: #333333">)</span>
-    <span style="color: #008800; font-weight: bold">var</span> x24<span style="color: #008800; font-weight: bold">:</span> <span style="color: #333399; font-weight: bold">Double</span> <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>
-    <span style="color: #008800; font-weight: bold">val</span> x9 <span style="color: #008800; font-weight: bold">=</span> <span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">==</span> <span style="color: #BB0066; font-weight: bold">__SQL_AVG_AGGREGATE_1_mR1_L1_1</span>
-    <span style="color: #008800; font-weight: bold">val</span> x10 <span style="color: #008800; font-weight: bold">=</span> <span style="color: #008800; font-weight: bold">if</span> <span style="color: #333333">(</span>x9<span style="color: #333333">)</span> <span style="color: #333333">{</span>
-      <span style="color: #0000DD; font-weight: bold">0L</span>
-    <span style="color: #333333">}</span> <span style="color: #008800; font-weight: bold">else</span> <span style="color: #333333">{</span>
-      <span style="color: #0000DD; font-weight: bold">1L</span>
-    <span style="color: #333333">}</span>
+    <span style="color: #BB0066; font-weight: bold">__SQL_AVG_AGGREGATE_1_mR2</span> <span style="color: #333333">+=</span> <span style="color: #333333">(-</span>r_a<span style="color: #333333">)</span>
+    <span style="color: #008800; font-weight: bold">var</span> x27<span style="color: #008800; font-weight: bold">:</span> <span style="color: #333399; font-weight: bold">Double</span> <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>
     <span style="color: #008800; font-weight: bold">val</span> x11 <span style="color: #008800; font-weight: bold">=</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">&gt;</span> <span style="color: #BB0066; font-weight: bold">__SQL_AVG_AGGREGATE_1_mR1_L1_1</span>
     <span style="color: #008800; font-weight: bold">val</span> x12 <span style="color: #008800; font-weight: bold">=</span> <span style="color: #008800; font-weight: bold">if</span> <span style="color: #333333">(</span>x11<span style="color: #333333">)</span> <span style="color: #333333">{</span>
       <span style="color: #0000DD; font-weight: bold">1L</span>
@@ -174,16 +207,33 @@
       <span style="color: #BB0066; font-weight: bold">__SQL_AVG_AGGREGATE_1_mR1_L1_1</span>
     <span style="color: #333333">}</span>
     <span style="color: #008800; font-weight: bold">val</span> x13 <span style="color: #008800; font-weight: bold">=</span> x12 <span style="color: #333333">==</span> <span style="color: #6600EE; font-weight: bold">0.0</span>
-    <span style="color: #008800; font-weight: bold">val</span> x15 <span style="color: #008800; font-weight: bold">=</span> <span style="color: #008800; font-weight: bold">if</span> <span style="color: #333333">(</span>x13<span style="color: #333333">)</span> <span style="color: #333333">{</span>
+    <span style="color: #008800; font-weight: bold">val</span> x17 <span style="color: #008800; font-weight: bold">=</span> <span style="color: #008800; font-weight: bold">if</span> <span style="color: #333333">(</span>x13<span style="color: #333333">)</span> <span style="color: #333333">{</span>
       <span style="color: #6600EE; font-weight: bold">0.0</span>
     <span style="color: #333333">}</span> <span style="color: #008800; font-weight: bold">else</span> <span style="color: #333333">{</span>
-      <span style="color: #008800; font-weight: bold">val</span> x14 <span style="color: #008800; font-weight: bold">=</span> <span style="color: #6600EE; font-weight: bold">1.0</span> <span style="color: #333333">/</span> x12
-      x14
+      <span style="color: #008800; font-weight: bold">val</span> x9 <span style="color: #008800; font-weight: bold">=</span> <span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">==</span> <span style="color: #BB0066; font-weight: bold">__SQL_AVG_AGGREGATE_1_mR1_L1_1</span>
+      <span style="color: #008800; font-weight: bold">val</span> x16 <span style="color: #008800; font-weight: bold">=</span> <span style="color: #008800; font-weight: bold">if</span> <span style="color: #333333">(</span>x9<span style="color: #333333">)</span> <span style="color: #333333">{</span>
+        <span style="color: #0000DD; font-weight: bold">0L</span>
+      <span style="color: #333333">}</span> <span style="color: #008800; font-weight: bold">else</span> <span style="color: #333333">{</span>
+        <span style="color: #008800; font-weight: bold">val</span> x14 <span style="color: #008800; font-weight: bold">=</span> <span style="color: #6600EE; font-weight: bold">1.0</span> <span style="color: #333333">/</span> x12
+        x14
+      <span style="color: #333333">}</span>
+      x16
     <span style="color: #333333">}</span>
-    <span style="color: #008800; font-weight: bold">val</span> x16 <span style="color: #008800; font-weight: bold">=</span> x10 <span style="color: #333333">*</span> x15
-    x24 <span style="color: #008800; font-weight: bold">=</span> x16
-    <span style="color: #008800; font-weight: bold">val</span> x18 <span style="color: #008800; font-weight: bold">=</span> x16 <span style="color: #333333">*</span> <span style="color: #BB0066; font-weight: bold">__SQL_AVG_AGGREGATE_1_mR2</span>
-    <span style="color: #BB0066; font-weight: bold">__SQL_AVG_AGGREGATE_1</span> <span style="color: #008800; font-weight: bold">=</span> x18
+    x27 <span style="color: #008800; font-weight: bold">=</span> x17
+    <span style="color: #008800; font-weight: bold">val</span> x21 <span style="color: #008800; font-weight: bold">=</span> <span style="color: #008800; font-weight: bold">if</span> <span style="color: #333333">(</span>x13<span style="color: #333333">)</span> <span style="color: #333333">{</span>
+      <span style="color: #6600EE; font-weight: bold">0.0</span>
+    <span style="color: #333333">}</span> <span style="color: #008800; font-weight: bold">else</span> <span style="color: #333333">{</span>
+      <span style="color: #008800; font-weight: bold">val</span> x9 <span style="color: #008800; font-weight: bold">=</span> <span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">==</span> <span style="color: #BB0066; font-weight: bold">__SQL_AVG_AGGREGATE_1_mR1_L1_1</span>
+      <span style="color: #008800; font-weight: bold">val</span> x20 <span style="color: #008800; font-weight: bold">=</span> <span style="color: #008800; font-weight: bold">if</span> <span style="color: #333333">(</span>x9<span style="color: #333333">)</span> <span style="color: #333333">{</span>
+        <span style="color: #0000DD; font-weight: bold">0L</span>
+      <span style="color: #333333">}</span> <span style="color: #008800; font-weight: bold">else</span> <span style="color: #333333">{</span>
+        <span style="color: #008800; font-weight: bold">val</span> x14 <span style="color: #008800; font-weight: bold">=</span> <span style="color: #6600EE; font-weight: bold">1.0</span> <span style="color: #333333">/</span> x12
+        <span style="color: #008800; font-weight: bold">val</span> x19 <span style="color: #008800; font-weight: bold">=</span> x14 <span style="color: #333333">*</span> <span style="color: #BB0066; font-weight: bold">__SQL_AVG_AGGREGATE_1_mR2</span>
+        x19
+      <span style="color: #333333">}</span>
+      x20
+    <span style="color: #333333">}</span>
+    <span style="color: #BB0066; font-weight: bold">__SQL_AVG_AGGREGATE_1</span> <span style="color: #008800; font-weight: bold">=</span> x21
   <span style="color: #333333">}</span>
   
   

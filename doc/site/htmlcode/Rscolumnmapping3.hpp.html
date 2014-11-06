@@ -417,7 +417,9 @@
 417
 418
 419
-420</pre></td><td><pre style="margin: 0; line-height: 125%"><span style="color: #557799">#include &quot;program_base.hpp&quot;</span>
+420
+421
+422</pre></td><td><pre style="margin: 0; line-height: 125%"><span style="color: #557799">#include &quot;program_base.hpp&quot;</span>
 <span style="color: #557799">#include &quot;hpds/KDouble.hpp&quot;</span>
 <span style="color: #557799">#include &quot;hash.hpp&quot;</span>
 <span style="color: #557799">#include &quot;mmap/mmap.hpp&quot;</span>
@@ -646,21 +648,21 @@
     <span style="color: #333399; font-weight: bold">void</span> on_insert_R(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> r_a, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> r_b) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_R&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_R&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
-        COUNT.addOrDelOnZero(se1.modify(r_a,r_b),(COUNT_mR3 <span style="color: #333333">+</span> COUNT_mR6.getValueOrDefault(se3.modify(r_a))));
+      {  <span style="color: #333333">++</span>tN;
+        COUNT.addOrDelOnZero(se1.modify(r_a,r_b),(COUNT_mR3 <span style="color: #333333">+</span> COUNT_mR6.getValueOrDefault(se2.modify(r_a))));
         { <span style="color: #888888">//foreach</span>
           COUNT_mR5_entry<span style="color: #333333">*</span> e1 <span style="color: #333333">=</span> COUNT_mR5.head;
           <span style="color: #008800; font-weight: bold">while</span>(e1){
             <span style="color: #333399; font-weight: bold">long</span> r1_a <span style="color: #333333">=</span> e1<span style="color: #333333">-&gt;</span>R1_A;
             <span style="color: #333399; font-weight: bold">long</span> r1_b <span style="color: #333333">=</span> e1<span style="color: #333333">-&gt;</span>R1_B;
             <span style="color: #333399; font-weight: bold">long</span> v1 <span style="color: #333333">=</span> e1<span style="color: #333333">-&gt;</span>__av;
-            COUNT.addOrDelOnZero(se1.modify(r1_a,r1_b),(v1 <span style="color: #333333">*</span> COUNT_mR6.getValueOrDefault(se4.modify(r_a))));
+            COUNT.addOrDelOnZero(se1.modify(r1_a,r1_b),(v1 <span style="color: #333333">*</span> COUNT_mR6.getValueOrDefault(se3.modify(r_a))));
             e1 <span style="color: #333333">=</span> e1<span style="color: #333333">-&gt;</span>nxt;
           }
         }
-        COUNT_mS3.addOrDelOnZero(se5.modify(r_a),<span style="color: #0000DD; font-weight: bold">1L</span>);
-        COUNT_mR3 <span style="color: #333333">+=</span> COUNT_mR6.getValueOrDefault(se7.modify(r_a));
-        COUNT_mR5.addOrDelOnZero(se8.modify(r_a,r_b),<span style="color: #0000DD; font-weight: bold">1L</span>);
+        COUNT_mS3.addOrDelOnZero(se4.modify(r_a),<span style="color: #0000DD; font-weight: bold">1L</span>);
+        COUNT_mR3 <span style="color: #333333">+=</span> COUNT_mR6.getValueOrDefault(se6.modify(r_a));
+        COUNT_mR5.addOrDelOnZero(se7.modify(r_a,r_b),<span style="color: #0000DD; font-weight: bold">1L</span>);
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_R&quot;</span>)
       END_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_R&quot;</span>)
@@ -672,21 +674,21 @@
     <span style="color: #333399; font-weight: bold">void</span> on_delete_R(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> r_a, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> r_b) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_R&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_R&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
-        COUNT.addOrDelOnZero(se9.modify(r_a,r_b),((COUNT_mR3 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>) <span style="color: #333333">+</span> COUNT_mR6.getValueOrDefault(se11.modify(r_a))));
+      {  <span style="color: #333333">++</span>tN;
+        COUNT.addOrDelOnZero(se8.modify(r_a,r_b),((COUNT_mR3 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>) <span style="color: #333333">+</span> COUNT_mR6.getValueOrDefault(se9.modify(r_a))));
         { <span style="color: #888888">//foreach</span>
           COUNT_mR5_entry<span style="color: #333333">*</span> e2 <span style="color: #333333">=</span> COUNT_mR5.head;
           <span style="color: #008800; font-weight: bold">while</span>(e2){
             <span style="color: #333399; font-weight: bold">long</span> r1_a <span style="color: #333333">=</span> e2<span style="color: #333333">-&gt;</span>R1_A;
             <span style="color: #333399; font-weight: bold">long</span> r1_b <span style="color: #333333">=</span> e2<span style="color: #333333">-&gt;</span>R1_B;
             <span style="color: #333399; font-weight: bold">long</span> v2 <span style="color: #333333">=</span> e2<span style="color: #333333">-&gt;</span>__av;
-            COUNT.addOrDelOnZero(se9.modify(r1_a,r1_b),(v2 <span style="color: #333333">*</span> (COUNT_mR6.getValueOrDefault(se12.modify(r_a)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)));
+            COUNT.addOrDelOnZero(se8.modify(r1_a,r1_b),(v2 <span style="color: #333333">*</span> (COUNT_mR6.getValueOrDefault(se10.modify(r_a)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)));
             e2 <span style="color: #333333">=</span> e2<span style="color: #333333">-&gt;</span>nxt;
           }
         }
-        COUNT_mS3.addOrDelOnZero(se13.modify(r_a),<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>);
-        COUNT_mR3 <span style="color: #333333">+=</span> (COUNT_mR6.getValueOrDefault(se15.modify(r_a)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>);
-        COUNT_mR5.addOrDelOnZero(se16.modify(r_a,r_b),<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>);
+        COUNT_mS3.addOrDelOnZero(se11.modify(r_a),<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>);
+        COUNT_mR3 <span style="color: #333333">+=</span> (COUNT_mR6.getValueOrDefault(se13.modify(r_a)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>);
+        COUNT_mR5.addOrDelOnZero(se14.modify(r_a,r_b),<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>);
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_R&quot;</span>)
       END_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_R&quot;</span>)
@@ -698,19 +700,19 @@
     <span style="color: #333399; font-weight: bold">void</span> on_insert_S(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> s_c, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> s_d) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_S&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_S&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
+      {  <span style="color: #333333">++</span>tN;
         { <span style="color: #888888">//foreach</span>
           COUNT_mR5_entry<span style="color: #333333">*</span> e3 <span style="color: #333333">=</span> COUNT_mR5.head;
           <span style="color: #008800; font-weight: bold">while</span>(e3){
             <span style="color: #333399; font-weight: bold">long</span> r1_a <span style="color: #333333">=</span> e3<span style="color: #333333">-&gt;</span>R1_A;
             <span style="color: #333399; font-weight: bold">long</span> r1_b <span style="color: #333333">=</span> e3<span style="color: #333333">-&gt;</span>R1_B;
             <span style="color: #333399; font-weight: bold">long</span> v3 <span style="color: #333333">=</span> e3<span style="color: #333333">-&gt;</span>__av;
-            COUNT.addOrDelOnZero(se17.modify(r1_a,r1_b),((s_d <span style="color: #333333">==</span> s_c) <span style="color: #333333">*</span> (v3 <span style="color: #333333">*</span> COUNT_mS3.getValueOrDefault(se18.modify(s_c)))));
+            (<span style="color: #888888">/*if */</span>(s_d <span style="color: #333333">==</span> s_c) <span style="color: #333333">?</span> COUNT.addOrDelOnZero(se15.modify(r1_a,r1_b),(v3 <span style="color: #333333">*</span> COUNT_mS3.getValueOrDefault(se16.modify(s_c)))) <span style="color: #333333">:</span> voidFunc());
             e3 <span style="color: #333333">=</span> e3<span style="color: #333333">-&gt;</span>nxt;
           }
         }
-        COUNT_mR3 <span style="color: #333333">+=</span> ((s_d <span style="color: #333333">==</span> s_c) <span style="color: #333333">*</span> COUNT_mS3.getValueOrDefault(se20.modify(s_c)));
-        COUNT_mR6.addOrDelOnZero(se21.modify(s_c),(s_c <span style="color: #333333">==</span> s_d));
+        (<span style="color: #888888">/*if */</span>(s_d <span style="color: #333333">==</span> s_c) <span style="color: #333333">?</span> COUNT_mR3 <span style="color: #333333">+=</span> COUNT_mS3.getValueOrDefault(se18.modify(s_c)) <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
+        (<span style="color: #888888">/*if */</span>(s_c <span style="color: #333333">==</span> s_d) <span style="color: #333333">?</span> COUNT_mR6.addOrDelOnZero(se19.modify(s_c),<span style="color: #0000DD; font-weight: bold">1L</span>) <span style="color: #333333">:</span> voidFunc());
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_S&quot;</span>)
       END_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_S&quot;</span>)
@@ -722,19 +724,19 @@
     <span style="color: #333399; font-weight: bold">void</span> on_delete_S(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> s_c, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> s_d) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_S&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_S&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
+      {  <span style="color: #333333">++</span>tN;
         { <span style="color: #888888">//foreach</span>
           COUNT_mR5_entry<span style="color: #333333">*</span> e4 <span style="color: #333333">=</span> COUNT_mR5.head;
           <span style="color: #008800; font-weight: bold">while</span>(e4){
             <span style="color: #333399; font-weight: bold">long</span> r1_a <span style="color: #333333">=</span> e4<span style="color: #333333">-&gt;</span>R1_A;
             <span style="color: #333399; font-weight: bold">long</span> r1_b <span style="color: #333333">=</span> e4<span style="color: #333333">-&gt;</span>R1_B;
             <span style="color: #333399; font-weight: bold">long</span> v4 <span style="color: #333333">=</span> e4<span style="color: #333333">-&gt;</span>__av;
-            COUNT.addOrDelOnZero(se22.modify(r1_a,r1_b),((s_d <span style="color: #333333">==</span> s_c) <span style="color: #333333">*</span> (v4 <span style="color: #333333">*</span> (COUNT_mS3.getValueOrDefault(se23.modify(s_c)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>))));
+            (<span style="color: #888888">/*if */</span>(s_d <span style="color: #333333">==</span> s_c) <span style="color: #333333">?</span> COUNT.addOrDelOnZero(se20.modify(r1_a,r1_b),(v4 <span style="color: #333333">*</span> (COUNT_mS3.getValueOrDefault(se21.modify(s_c)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>))) <span style="color: #333333">:</span> voidFunc());
             e4 <span style="color: #333333">=</span> e4<span style="color: #333333">-&gt;</span>nxt;
           }
         }
-        COUNT_mR3 <span style="color: #333333">+=</span> ((s_d <span style="color: #333333">==</span> s_c) <span style="color: #333333">*</span> (COUNT_mS3.getValueOrDefault(se25.modify(s_c)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
-        COUNT_mR6.addOrDelOnZero(se26.modify(s_c),((s_c <span style="color: #333333">==</span> s_d) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
+        (<span style="color: #888888">/*if */</span>(s_d <span style="color: #333333">==</span> s_c) <span style="color: #333333">?</span> COUNT_mR3 <span style="color: #333333">+=</span> (COUNT_mS3.getValueOrDefault(se23.modify(s_c)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>) <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
+        (<span style="color: #888888">/*if */</span>(s_c <span style="color: #333333">==</span> s_d) <span style="color: #333333">?</span> COUNT_mR6.addOrDelOnZero(se24.modify(s_c),<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>) <span style="color: #333333">:</span> voidFunc());
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_S&quot;</span>)
       END_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_S&quot;</span>)
@@ -746,7 +748,7 @@
     <span style="color: #333399; font-weight: bold">void</span> on_system_ready_event() {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
-      {  <span style="color: #888888">//</span>
+      {  
         
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
@@ -757,25 +759,25 @@
   
     <span style="color: #888888">/* Sample entries for avoiding recreation of temporary objects */</span>
     COUNT_entry se1;
+    COUNT_mR6_entry se2;
     COUNT_mR6_entry se3;
-    COUNT_mR6_entry se4;
-    COUNT_mS3_entry se5;
-    COUNT_mR6_entry se7;
-    COUNT_mR5_entry se8;
-    COUNT_entry se9;
-    COUNT_mR6_entry se11;
-    COUNT_mR6_entry se12;
-    COUNT_mS3_entry se13;
-    COUNT_mR6_entry se15;
-    COUNT_mR5_entry se16;
-    COUNT_entry se17;
+    COUNT_mS3_entry se4;
+    COUNT_mR6_entry se6;
+    COUNT_mR5_entry se7;
+    COUNT_entry se8;
+    COUNT_mR6_entry se9;
+    COUNT_mR6_entry se10;
+    COUNT_mS3_entry se11;
+    COUNT_mR6_entry se13;
+    COUNT_mR5_entry se14;
+    COUNT_entry se15;
+    COUNT_mS3_entry se16;
     COUNT_mS3_entry se18;
-    COUNT_mS3_entry se20;
-    COUNT_mR6_entry se21;
-    COUNT_entry se22;
+    COUNT_mR6_entry se19;
+    COUNT_entry se20;
+    COUNT_mS3_entry se21;
     COUNT_mS3_entry se23;
-    COUNT_mS3_entry se25;
-    COUNT_mR6_entry se26;
+    COUNT_mR6_entry se24;
   
     <span style="color: #888888">/* Data structures used for storing materialized views */</span>
     COUNT_mS3_map COUNT_mS3;
@@ -814,16 +816,18 @@
       <span style="color: #888888">/* Imports data for static tables and performs view initialization based on it. */</span>
       <span style="color: #333399; font-weight: bold">void</span> init() {
           <span style="color: #888888">//P0_PLACE_HOLDER</span>
-          table_multiplexer.init_source();
-          stream_multiplexer.init_source();
+          table_multiplexer.init_source(run_opts<span style="color: #333333">-&gt;</span>batch_size, run_opts<span style="color: #333333">-&gt;</span>parallel, <span style="color: #007020">true</span>);
+          stream_multiplexer.init_source(run_opts<span style="color: #333333">-&gt;</span>batch_size, run_opts<span style="color: #333333">-&gt;</span>parallel, <span style="color: #007020">false</span>);
           process_tables();
           data.on_system_ready_event();
           <span style="color: #888888">//P2_PLACE_HOLDER</span>
       }
   
       <span style="color: #888888">/* Saves a snapshot of the data required to obtain the results of top level queries. */</span>
-      <span style="color: #333399; font-weight: bold">snapshot_t</span> take_snapshot(){ <span style="color: #888888">//tlq_t d=(tlq_t&amp;)data; if (d.tS==0) { gettimeofday(&amp;(d.t),NULL); d.tT=((d.t).tv_sec-(d.t0).tv_sec)*1000000L+((d.t).tv_usec-(d.t0).tv_usec); } printf(&quot;SAMPLE=standard,%ld,%ld,%ld\n&quot;,d.tT,d.tN,d.tS);</span>
-          <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333399; font-weight: bold">snapshot_t</span>( <span style="color: #008800; font-weight: bold">new</span> <span style="color: #333399; font-weight: bold">tlq_t</span>((<span style="color: #333399; font-weight: bold">tlq_t</span><span style="color: #333333">&amp;</span>)data) );
+      <span style="color: #333399; font-weight: bold">snapshot_t</span> take_snapshot(){
+          <span style="color: #333399; font-weight: bold">tlq_t</span><span style="color: #333333">*</span> d <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">new</span> <span style="color: #333399; font-weight: bold">tlq_t</span>((<span style="color: #333399; font-weight: bold">tlq_t</span><span style="color: #333333">&amp;</span>)data);
+          <span style="color: #008800; font-weight: bold">if</span> (d<span style="color: #333333">-&gt;</span>tS<span style="color: #333333">==</span><span style="color: #0000DD; font-weight: bold">0</span>) { gettimeofday(<span style="color: #333333">&amp;</span>(d<span style="color: #333333">-&gt;</span>t),<span style="color: #007020">NULL</span>); d<span style="color: #333333">-&gt;</span>tT<span style="color: #333333">=</span>((d<span style="color: #333333">-&gt;</span>t).tv_sec<span style="color: #333333">-</span>(d<span style="color: #333333">-&gt;</span>t0).tv_sec)<span style="color: #333333">*</span><span style="color: #0000DD; font-weight: bold">1000000L</span><span style="color: #333333">+</span>((d<span style="color: #333333">-&gt;</span>t).tv_usec<span style="color: #333333">-</span>(d<span style="color: #333333">-&gt;</span>t0).tv_usec); } printf(<span style="background-color: #fff0f0">&quot;SAMPLE=standard,%ld,%ld,%ld</span><span style="color: #666666; font-weight: bold; background-color: #fff0f0">\n</span><span style="background-color: #fff0f0">&quot;</span>,d<span style="color: #333333">-&gt;</span>tT,d<span style="color: #333333">-&gt;</span>tN,d<span style="color: #333333">-&gt;</span>tS);
+          <span style="color: #008800; font-weight: bold">return</span> <span style="color: #0066BB; font-weight: bold">snapshot_t</span>( d );
       }
   
     <span style="color: #997700; font-weight: bold">protected:</span>

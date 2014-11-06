@@ -3111,7 +3111,10 @@
 3111
 3112
 3113
-3114</pre></td><td><pre style="margin: 0; line-height: 125%"><span style="color: #557799">#include &quot;program_base.hpp&quot;</span>
+3114
+3115
+3116
+3117</pre></td><td><pre style="margin: 0; line-height: 125%"><span style="color: #557799">#include &quot;program_base.hpp&quot;</span>
 <span style="color: #557799">#include &quot;hpds/KDouble.hpp&quot;</span>
 <span style="color: #557799">#include &quot;hash.hpp&quot;</span>
 <span style="color: #557799">#include &quot;mmap/mmap.hpp&quot;</span>
@@ -4367,9 +4370,10 @@
   
     <span style="color: #888888">/* Trigger functions for table relations */</span>
     <span style="color: #333399; font-weight: bold">void</span> on_insert_NATION(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> nation_nationkey, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE nation_name, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> nation_regionkey, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE nation_comment) {
-      NATION_entry e(nation_nationkey, nation_name, nation_regionkey, nation_comment, <span style="color: #0000DD; font-weight: bold">1</span>);
+      NATION_entry e(nation_nationkey, nation_name, nation_regionkey, nation_comment, <span style="color: #0000DD; font-weight: bold">1L</span>);
       NATION.addOrDelOnZero(e,<span style="color: #0000DD; font-weight: bold">1L</span>);
     }
+    
     <span style="color: #333399; font-weight: bold">void</span> unwrap_insert_NATION(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">event_args_t</span><span style="color: #333333">&amp;</span> ea) {
       on_insert_NATION(<span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span><span style="color: #333399; font-weight: bold">long</span><span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">0</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span>STRING_TYPE<span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">1</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span><span style="color: #333399; font-weight: bold">long</span><span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">2</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span>STRING_TYPE<span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">3</span>])));
     }
@@ -4380,7 +4384,7 @@
     <span style="color: #333399; font-weight: bold">void</span> on_insert_LINEITEM(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> lineitem_orderkey, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> lineitem_partkey, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> lineitem_suppkey, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> lineitem_linenumber, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE lineitem_quantity, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE lineitem_extendedprice, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE lineitem_discount, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE lineitem_tax, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_returnflag, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_linestatus, <span style="color: #008800; font-weight: bold">const</span> date lineitem_shipdate, <span style="color: #008800; font-weight: bold">const</span> date lineitem_commitdate, <span style="color: #008800; font-weight: bold">const</span> date lineitem_receiptdate, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_shipinstruct, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_shipmode, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_comment) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_LINEITEM&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_LINEITEM&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
+      {  <span style="color: #333333">++</span>tN;
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h3 <span style="color: #333333">=</span> SSB4_mLINEITEM1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se4.modify0(lineitem_orderkey));
           <span style="color: #008800; font-weight: bold">const</span> HashIndex_SSB4_mLINEITEM1_map_0<span style="color: #333333">*</span> i1 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_SSB4_mLINEITEM1_map_0<span style="color: #333333">*&gt;</span>(SSB4_mLINEITEM1.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
@@ -4406,11 +4410,11 @@
                     <span style="color: #333399; font-weight: bold">long</span> sn_regionkey <span style="color: #333333">=</span> e3<span style="color: #333333">-&gt;</span>SN_REGIONKEY;
                     <span style="color: #333399; font-weight: bold">long</span> v3 <span style="color: #333333">=</span> e3<span style="color: #333333">-&gt;</span>__av;
                     SSB4.addOrDelOnZero(se1.modify(sn_regionkey,cn_regionkey,part_type),(v1 <span style="color: #333333">*</span> (v2 <span style="color: #333333">*</span> (v3 <span style="color: #333333">*</span> lineitem_quantity))));
-                  } <span style="color: #008800; font-weight: bold">while</span> ((n3<span style="color: #333333">=</span>n3<span style="color: #333333">-&gt;</span>next));
+                  } <span style="color: #008800; font-weight: bold">while</span> ((n3<span style="color: #333333">=</span>n3<span style="color: #333333">-&gt;</span>nxt));
                 }
-              } <span style="color: #008800; font-weight: bold">while</span> ((n2<span style="color: #333333">=</span>n2<span style="color: #333333">-&gt;</span>next));
+              } <span style="color: #008800; font-weight: bold">while</span> ((n2<span style="color: #333333">=</span>n2<span style="color: #333333">-&gt;</span>nxt));
             }
-          } <span style="color: #008800; font-weight: bold">while</span> ((n1<span style="color: #333333">=</span>n1<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n1<span style="color: #333333">=</span>n1<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h5 <span style="color: #333333">=</span> SSB4_mLINEITEM1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se7.modify0(lineitem_orderkey));
@@ -4429,9 +4433,9 @@
                 STRING_TYPE part_type <span style="color: #333333">=</span> e5<span style="color: #333333">-&gt;</span>PART_TYPE;
                 <span style="color: #333399; font-weight: bold">long</span> v5 <span style="color: #333333">=</span> e5<span style="color: #333333">-&gt;</span>__av;
                 SSB4_mSUPPLIER1.addOrDelOnZero(se5.modify(lineitem_suppkey,part_type,cn_regionkey),(v4 <span style="color: #333333">*</span> (v5 <span style="color: #333333">*</span> lineitem_quantity)));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n5<span style="color: #333333">=</span>n5<span style="color: #333333">-&gt;</span>next));
+              } <span style="color: #008800; font-weight: bold">while</span> ((n5<span style="color: #333333">=</span>n5<span style="color: #333333">-&gt;</span>nxt));
             }
-          } <span style="color: #008800; font-weight: bold">while</span> ((n4<span style="color: #333333">=</span>n4<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n4<span style="color: #333333">=</span>n4<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h6 <span style="color: #333333">=</span> SSB4_mLINEITEM1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se9.modify0(lineitem_orderkey));
@@ -4442,7 +4446,7 @@
             <span style="color: #333399; font-weight: bold">long</span> cn_regionkey <span style="color: #333333">=</span> e6<span style="color: #333333">-&gt;</span>CN_REGIONKEY;
             <span style="color: #333399; font-weight: bold">long</span> v6 <span style="color: #333333">=</span> e6<span style="color: #333333">-&gt;</span>__av;
             SSB4_mSUPPLIER1_mPART1.addOrDelOnZero(se8.modify(lineitem_partkey,lineitem_suppkey,cn_regionkey),(v6 <span style="color: #333333">*</span> lineitem_quantity));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n6<span style="color: #333333">=</span>n6<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n6<span style="color: #333333">=</span>n6<span style="color: #333333">-&gt;</span>nxt));
         }
         SSB4_mSUPPLIER1_mPART1_mORDERS4.addOrDelOnZero(se10.modify(lineitem_orderkey,lineitem_partkey,lineitem_suppkey),lineitem_quantity);
         { <span style="color: #888888">//slice</span>
@@ -4454,7 +4458,7 @@
             <span style="color: #333399; font-weight: bold">long</span> ssb4_msupplier1_mpart1_mcustomercustomer_custkey <span style="color: #333333">=</span> e7<span style="color: #333333">-&gt;</span>SSB4_mSUPPLIER1_mPART1_mCUSTOMERCUSTOMER_CUSTKEY;
             <span style="color: #333399; font-weight: bold">long</span> v7 <span style="color: #333333">=</span> e7<span style="color: #333333">-&gt;</span>__av;
             SSB4_mSUPPLIER1_mPART1_mCUSTOMER1.addOrDelOnZero(se11.modify(ssb4_msupplier1_mpart1_mcustomercustomer_custkey,lineitem_partkey,lineitem_suppkey),(v7 <span style="color: #333333">*</span> lineitem_quantity));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n7<span style="color: #333333">=</span>n7<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n7<span style="color: #333333">=</span>n7<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h8 <span style="color: #333333">=</span> SSB4_mLINEITEM2_mapkey0_idxfn<span style="color: #333333">::</span>hash(se14.modify0(lineitem_partkey));
@@ -4465,7 +4469,7 @@
             STRING_TYPE part_type <span style="color: #333333">=</span> e8<span style="color: #333333">-&gt;</span>PART_TYPE;
             <span style="color: #333399; font-weight: bold">long</span> v8 <span style="color: #333333">=</span> e8<span style="color: #333333">-&gt;</span>__av;
             SSB4_mSUPPLIER1_mORDERS4.addOrDelOnZero(se13.modify(lineitem_orderkey,lineitem_suppkey,part_type),(v8 <span style="color: #333333">*</span> lineitem_quantity));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n8<span style="color: #333333">=</span>n8<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n8<span style="color: #333333">=</span>n8<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h10 <span style="color: #333333">=</span> SSB4_mSUPPLIER1_mPART1_mCUSTOMER1_mLINEITEM1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se17.modify0(lineitem_orderkey));
@@ -4484,9 +4488,9 @@
                 STRING_TYPE part_type <span style="color: #333333">=</span> e10<span style="color: #333333">-&gt;</span>PART_TYPE;
                 <span style="color: #333399; font-weight: bold">long</span> v10 <span style="color: #333333">=</span> e10<span style="color: #333333">-&gt;</span>__av;
                 SSB4_mSUPPLIER1_mCUSTOMER1.addOrDelOnZero(se15.modify(ssb4_msupplier1_mcustomercustomer_custkey,lineitem_suppkey,part_type),(v9 <span style="color: #333333">*</span> (v10 <span style="color: #333333">*</span> lineitem_quantity)));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n10<span style="color: #333333">=</span>n10<span style="color: #333333">-&gt;</span>next));
+              } <span style="color: #008800; font-weight: bold">while</span> ((n10<span style="color: #333333">=</span>n10<span style="color: #333333">-&gt;</span>nxt));
             }
-          } <span style="color: #008800; font-weight: bold">while</span> ((n9<span style="color: #333333">=</span>n9<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n9<span style="color: #333333">=</span>n9<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h12 <span style="color: #333333">=</span> SSB4_mLINEITEM1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se20.modify0(lineitem_orderkey));
@@ -4505,9 +4509,9 @@
                 <span style="color: #333399; font-weight: bold">long</span> sn_regionkey <span style="color: #333333">=</span> e12<span style="color: #333333">-&gt;</span>SN_REGIONKEY;
                 <span style="color: #333399; font-weight: bold">long</span> v12 <span style="color: #333333">=</span> e12<span style="color: #333333">-&gt;</span>__av;
                 SSB4_mPART1.addOrDelOnZero(se18.modify(lineitem_partkey,cn_regionkey,sn_regionkey),(v11 <span style="color: #333333">*</span> (v12 <span style="color: #333333">*</span> lineitem_quantity)));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n12<span style="color: #333333">=</span>n12<span style="color: #333333">-&gt;</span>next));
+              } <span style="color: #008800; font-weight: bold">while</span> ((n12<span style="color: #333333">=</span>n12<span style="color: #333333">-&gt;</span>nxt));
             }
-          } <span style="color: #008800; font-weight: bold">while</span> ((n11<span style="color: #333333">=</span>n11<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n11<span style="color: #333333">=</span>n11<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h13 <span style="color: #333333">=</span> SSB4_mLINEITEM3_mapkey0_idxfn<span style="color: #333333">::</span>hash(se22.modify0(lineitem_suppkey));
@@ -4518,7 +4522,7 @@
             <span style="color: #333399; font-weight: bold">long</span> sn_regionkey <span style="color: #333333">=</span> e13<span style="color: #333333">-&gt;</span>SN_REGIONKEY;
             <span style="color: #333399; font-weight: bold">long</span> v13 <span style="color: #333333">=</span> e13<span style="color: #333333">-&gt;</span>__av;
             SSB4_mPART1_mORDERS4.addOrDelOnZero(se21.modify(lineitem_orderkey,lineitem_partkey,sn_regionkey),(v13 <span style="color: #333333">*</span> lineitem_quantity));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n13<span style="color: #333333">=</span>n13<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n13<span style="color: #333333">=</span>n13<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h15 <span style="color: #333333">=</span> SSB4_mSUPPLIER1_mPART1_mCUSTOMER1_mLINEITEM1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se25.modify0(lineitem_orderkey));
@@ -4537,9 +4541,9 @@
                 <span style="color: #333399; font-weight: bold">long</span> sn_regionkey <span style="color: #333333">=</span> e15<span style="color: #333333">-&gt;</span>SN_REGIONKEY;
                 <span style="color: #333399; font-weight: bold">long</span> v15 <span style="color: #333333">=</span> e15<span style="color: #333333">-&gt;</span>__av;
                 SSB4_mPART1_mCUSTOMER1.addOrDelOnZero(se23.modify(ssb4_mpart1_mcustomercustomer_custkey,lineitem_partkey,sn_regionkey),(v14 <span style="color: #333333">*</span> (v15 <span style="color: #333333">*</span> lineitem_quantity)));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n15<span style="color: #333333">=</span>n15<span style="color: #333333">-&gt;</span>next));
+              } <span style="color: #008800; font-weight: bold">while</span> ((n15<span style="color: #333333">=</span>n15<span style="color: #333333">-&gt;</span>nxt));
             }
-          } <span style="color: #008800; font-weight: bold">while</span> ((n14<span style="color: #333333">=</span>n14<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n14<span style="color: #333333">=</span>n14<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h17 <span style="color: #333333">=</span> SSB4_mLINEITEM2_mapkey0_idxfn<span style="color: #333333">::</span>hash(se28.modify0(lineitem_partkey));
@@ -4558,9 +4562,9 @@
                 <span style="color: #333399; font-weight: bold">long</span> sn_regionkey <span style="color: #333333">=</span> e17<span style="color: #333333">-&gt;</span>SN_REGIONKEY;
                 <span style="color: #333399; font-weight: bold">long</span> v17 <span style="color: #333333">=</span> e17<span style="color: #333333">-&gt;</span>__av;
                 SSB4_mORDERS4.addOrDelOnZero(se26.modify(lineitem_orderkey,part_type,sn_regionkey),(v16 <span style="color: #333333">*</span> (v17 <span style="color: #333333">*</span> lineitem_quantity)));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n17<span style="color: #333333">=</span>n17<span style="color: #333333">-&gt;</span>next));
+              } <span style="color: #008800; font-weight: bold">while</span> ((n17<span style="color: #333333">=</span>n17<span style="color: #333333">-&gt;</span>nxt));
             }
-          } <span style="color: #008800; font-weight: bold">while</span> ((n16<span style="color: #333333">=</span>n16<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n16<span style="color: #333333">=</span>n16<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h20 <span style="color: #333333">=</span> SSB4_mSUPPLIER1_mPART1_mCUSTOMER1_mLINEITEM1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se32.modify0(lineitem_orderkey));
@@ -4587,11 +4591,11 @@
                     <span style="color: #333399; font-weight: bold">long</span> sn_regionkey <span style="color: #333333">=</span> e20<span style="color: #333333">-&gt;</span>SN_REGIONKEY;
                     <span style="color: #333399; font-weight: bold">long</span> v20 <span style="color: #333333">=</span> e20<span style="color: #333333">-&gt;</span>__av;
                     SSB4_mCUSTOMER1.addOrDelOnZero(se29.modify(ssb4_mcustomercustomer_custkey,part_type,sn_regionkey),(v18 <span style="color: #333333">*</span> (v19 <span style="color: #333333">*</span> (v20 <span style="color: #333333">*</span> lineitem_quantity))));
-                  } <span style="color: #008800; font-weight: bold">while</span> ((n20<span style="color: #333333">=</span>n20<span style="color: #333333">-&gt;</span>next));
+                  } <span style="color: #008800; font-weight: bold">while</span> ((n20<span style="color: #333333">=</span>n20<span style="color: #333333">-&gt;</span>nxt));
                 }
-              } <span style="color: #008800; font-weight: bold">while</span> ((n19<span style="color: #333333">=</span>n19<span style="color: #333333">-&gt;</span>next));
+              } <span style="color: #008800; font-weight: bold">while</span> ((n19<span style="color: #333333">=</span>n19<span style="color: #333333">-&gt;</span>nxt));
             }
-          } <span style="color: #008800; font-weight: bold">while</span> ((n18<span style="color: #333333">=</span>n18<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n18<span style="color: #333333">=</span>n18<span style="color: #333333">-&gt;</span>nxt));
         }
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_LINEITEM&quot;</span>)
@@ -4604,7 +4608,7 @@
     <span style="color: #333399; font-weight: bold">void</span> on_delete_LINEITEM(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> lineitem_orderkey, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> lineitem_partkey, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> lineitem_suppkey, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> lineitem_linenumber, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE lineitem_quantity, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE lineitem_extendedprice, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE lineitem_discount, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE lineitem_tax, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_returnflag, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_linestatus, <span style="color: #008800; font-weight: bold">const</span> date lineitem_shipdate, <span style="color: #008800; font-weight: bold">const</span> date lineitem_commitdate, <span style="color: #008800; font-weight: bold">const</span> date lineitem_receiptdate, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_shipinstruct, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_shipmode, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_comment) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_LINEITEM&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_LINEITEM&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
+      {  <span style="color: #333333">++</span>tN;
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h23 <span style="color: #333333">=</span> SSB4_mLINEITEM1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se36.modify0(lineitem_orderkey));
           <span style="color: #008800; font-weight: bold">const</span> HashIndex_SSB4_mLINEITEM1_map_0<span style="color: #333333">*</span> i21 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_SSB4_mLINEITEM1_map_0<span style="color: #333333">*&gt;</span>(SSB4_mLINEITEM1.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
@@ -4630,11 +4634,11 @@
                     <span style="color: #333399; font-weight: bold">long</span> sn_regionkey <span style="color: #333333">=</span> e23<span style="color: #333333">-&gt;</span>SN_REGIONKEY;
                     <span style="color: #333399; font-weight: bold">long</span> v23 <span style="color: #333333">=</span> e23<span style="color: #333333">-&gt;</span>__av;
                     SSB4.addOrDelOnZero(se33.modify(sn_regionkey,cn_regionkey,part_type),(v21 <span style="color: #333333">*</span> (v22 <span style="color: #333333">*</span> (v23 <span style="color: #333333">*</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> lineitem_quantity)))));
-                  } <span style="color: #008800; font-weight: bold">while</span> ((n23<span style="color: #333333">=</span>n23<span style="color: #333333">-&gt;</span>next));
+                  } <span style="color: #008800; font-weight: bold">while</span> ((n23<span style="color: #333333">=</span>n23<span style="color: #333333">-&gt;</span>nxt));
                 }
-              } <span style="color: #008800; font-weight: bold">while</span> ((n22<span style="color: #333333">=</span>n22<span style="color: #333333">-&gt;</span>next));
+              } <span style="color: #008800; font-weight: bold">while</span> ((n22<span style="color: #333333">=</span>n22<span style="color: #333333">-&gt;</span>nxt));
             }
-          } <span style="color: #008800; font-weight: bold">while</span> ((n21<span style="color: #333333">=</span>n21<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n21<span style="color: #333333">=</span>n21<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h25 <span style="color: #333333">=</span> SSB4_mLINEITEM1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se39.modify0(lineitem_orderkey));
@@ -4653,9 +4657,9 @@
                 STRING_TYPE part_type <span style="color: #333333">=</span> e25<span style="color: #333333">-&gt;</span>PART_TYPE;
                 <span style="color: #333399; font-weight: bold">long</span> v25 <span style="color: #333333">=</span> e25<span style="color: #333333">-&gt;</span>__av;
                 SSB4_mSUPPLIER1.addOrDelOnZero(se37.modify(lineitem_suppkey,part_type,cn_regionkey),(v24 <span style="color: #333333">*</span> (v25 <span style="color: #333333">*</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> lineitem_quantity))));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n25<span style="color: #333333">=</span>n25<span style="color: #333333">-&gt;</span>next));
+              } <span style="color: #008800; font-weight: bold">while</span> ((n25<span style="color: #333333">=</span>n25<span style="color: #333333">-&gt;</span>nxt));
             }
-          } <span style="color: #008800; font-weight: bold">while</span> ((n24<span style="color: #333333">=</span>n24<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n24<span style="color: #333333">=</span>n24<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h26 <span style="color: #333333">=</span> SSB4_mLINEITEM1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se41.modify0(lineitem_orderkey));
@@ -4666,7 +4670,7 @@
             <span style="color: #333399; font-weight: bold">long</span> cn_regionkey <span style="color: #333333">=</span> e26<span style="color: #333333">-&gt;</span>CN_REGIONKEY;
             <span style="color: #333399; font-weight: bold">long</span> v26 <span style="color: #333333">=</span> e26<span style="color: #333333">-&gt;</span>__av;
             SSB4_mSUPPLIER1_mPART1.addOrDelOnZero(se40.modify(lineitem_partkey,lineitem_suppkey,cn_regionkey),(v26 <span style="color: #333333">*</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> lineitem_quantity)));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n26<span style="color: #333333">=</span>n26<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n26<span style="color: #333333">=</span>n26<span style="color: #333333">-&gt;</span>nxt));
         }
         SSB4_mSUPPLIER1_mPART1_mORDERS4.addOrDelOnZero(se42.modify(lineitem_orderkey,lineitem_partkey,lineitem_suppkey),(<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> lineitem_quantity));
         { <span style="color: #888888">//slice</span>
@@ -4678,7 +4682,7 @@
             <span style="color: #333399; font-weight: bold">long</span> ssb4_msupplier1_mpart1_mcustomercustomer_custkey <span style="color: #333333">=</span> e27<span style="color: #333333">-&gt;</span>SSB4_mSUPPLIER1_mPART1_mCUSTOMERCUSTOMER_CUSTKEY;
             <span style="color: #333399; font-weight: bold">long</span> v27 <span style="color: #333333">=</span> e27<span style="color: #333333">-&gt;</span>__av;
             SSB4_mSUPPLIER1_mPART1_mCUSTOMER1.addOrDelOnZero(se43.modify(ssb4_msupplier1_mpart1_mcustomercustomer_custkey,lineitem_partkey,lineitem_suppkey),(v27 <span style="color: #333333">*</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> lineitem_quantity)));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n27<span style="color: #333333">=</span>n27<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n27<span style="color: #333333">=</span>n27<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h28 <span style="color: #333333">=</span> SSB4_mLINEITEM2_mapkey0_idxfn<span style="color: #333333">::</span>hash(se46.modify0(lineitem_partkey));
@@ -4689,7 +4693,7 @@
             STRING_TYPE part_type <span style="color: #333333">=</span> e28<span style="color: #333333">-&gt;</span>PART_TYPE;
             <span style="color: #333399; font-weight: bold">long</span> v28 <span style="color: #333333">=</span> e28<span style="color: #333333">-&gt;</span>__av;
             SSB4_mSUPPLIER1_mORDERS4.addOrDelOnZero(se45.modify(lineitem_orderkey,lineitem_suppkey,part_type),(v28 <span style="color: #333333">*</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> lineitem_quantity)));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n28<span style="color: #333333">=</span>n28<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n28<span style="color: #333333">=</span>n28<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h30 <span style="color: #333333">=</span> SSB4_mSUPPLIER1_mPART1_mCUSTOMER1_mLINEITEM1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se49.modify0(lineitem_orderkey));
@@ -4708,9 +4712,9 @@
                 STRING_TYPE part_type <span style="color: #333333">=</span> e30<span style="color: #333333">-&gt;</span>PART_TYPE;
                 <span style="color: #333399; font-weight: bold">long</span> v30 <span style="color: #333333">=</span> e30<span style="color: #333333">-&gt;</span>__av;
                 SSB4_mSUPPLIER1_mCUSTOMER1.addOrDelOnZero(se47.modify(ssb4_msupplier1_mcustomercustomer_custkey,lineitem_suppkey,part_type),(v29 <span style="color: #333333">*</span> (v30 <span style="color: #333333">*</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> lineitem_quantity))));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n30<span style="color: #333333">=</span>n30<span style="color: #333333">-&gt;</span>next));
+              } <span style="color: #008800; font-weight: bold">while</span> ((n30<span style="color: #333333">=</span>n30<span style="color: #333333">-&gt;</span>nxt));
             }
-          } <span style="color: #008800; font-weight: bold">while</span> ((n29<span style="color: #333333">=</span>n29<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n29<span style="color: #333333">=</span>n29<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h32 <span style="color: #333333">=</span> SSB4_mLINEITEM1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se52.modify0(lineitem_orderkey));
@@ -4729,9 +4733,9 @@
                 <span style="color: #333399; font-weight: bold">long</span> sn_regionkey <span style="color: #333333">=</span> e32<span style="color: #333333">-&gt;</span>SN_REGIONKEY;
                 <span style="color: #333399; font-weight: bold">long</span> v32 <span style="color: #333333">=</span> e32<span style="color: #333333">-&gt;</span>__av;
                 SSB4_mPART1.addOrDelOnZero(se50.modify(lineitem_partkey,cn_regionkey,sn_regionkey),(v31 <span style="color: #333333">*</span> (v32 <span style="color: #333333">*</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> lineitem_quantity))));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n32<span style="color: #333333">=</span>n32<span style="color: #333333">-&gt;</span>next));
+              } <span style="color: #008800; font-weight: bold">while</span> ((n32<span style="color: #333333">=</span>n32<span style="color: #333333">-&gt;</span>nxt));
             }
-          } <span style="color: #008800; font-weight: bold">while</span> ((n31<span style="color: #333333">=</span>n31<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n31<span style="color: #333333">=</span>n31<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h33 <span style="color: #333333">=</span> SSB4_mLINEITEM3_mapkey0_idxfn<span style="color: #333333">::</span>hash(se54.modify0(lineitem_suppkey));
@@ -4742,7 +4746,7 @@
             <span style="color: #333399; font-weight: bold">long</span> sn_regionkey <span style="color: #333333">=</span> e33<span style="color: #333333">-&gt;</span>SN_REGIONKEY;
             <span style="color: #333399; font-weight: bold">long</span> v33 <span style="color: #333333">=</span> e33<span style="color: #333333">-&gt;</span>__av;
             SSB4_mPART1_mORDERS4.addOrDelOnZero(se53.modify(lineitem_orderkey,lineitem_partkey,sn_regionkey),(v33 <span style="color: #333333">*</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> lineitem_quantity)));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n33<span style="color: #333333">=</span>n33<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n33<span style="color: #333333">=</span>n33<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h35 <span style="color: #333333">=</span> SSB4_mSUPPLIER1_mPART1_mCUSTOMER1_mLINEITEM1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se57.modify0(lineitem_orderkey));
@@ -4761,9 +4765,9 @@
                 <span style="color: #333399; font-weight: bold">long</span> sn_regionkey <span style="color: #333333">=</span> e35<span style="color: #333333">-&gt;</span>SN_REGIONKEY;
                 <span style="color: #333399; font-weight: bold">long</span> v35 <span style="color: #333333">=</span> e35<span style="color: #333333">-&gt;</span>__av;
                 SSB4_mPART1_mCUSTOMER1.addOrDelOnZero(se55.modify(ssb4_mpart1_mcustomercustomer_custkey,lineitem_partkey,sn_regionkey),(v34 <span style="color: #333333">*</span> (v35 <span style="color: #333333">*</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> lineitem_quantity))));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n35<span style="color: #333333">=</span>n35<span style="color: #333333">-&gt;</span>next));
+              } <span style="color: #008800; font-weight: bold">while</span> ((n35<span style="color: #333333">=</span>n35<span style="color: #333333">-&gt;</span>nxt));
             }
-          } <span style="color: #008800; font-weight: bold">while</span> ((n34<span style="color: #333333">=</span>n34<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n34<span style="color: #333333">=</span>n34<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h37 <span style="color: #333333">=</span> SSB4_mLINEITEM2_mapkey0_idxfn<span style="color: #333333">::</span>hash(se60.modify0(lineitem_partkey));
@@ -4782,9 +4786,9 @@
                 <span style="color: #333399; font-weight: bold">long</span> sn_regionkey <span style="color: #333333">=</span> e37<span style="color: #333333">-&gt;</span>SN_REGIONKEY;
                 <span style="color: #333399; font-weight: bold">long</span> v37 <span style="color: #333333">=</span> e37<span style="color: #333333">-&gt;</span>__av;
                 SSB4_mORDERS4.addOrDelOnZero(se58.modify(lineitem_orderkey,part_type,sn_regionkey),(v36 <span style="color: #333333">*</span> (v37 <span style="color: #333333">*</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> lineitem_quantity))));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n37<span style="color: #333333">=</span>n37<span style="color: #333333">-&gt;</span>next));
+              } <span style="color: #008800; font-weight: bold">while</span> ((n37<span style="color: #333333">=</span>n37<span style="color: #333333">-&gt;</span>nxt));
             }
-          } <span style="color: #008800; font-weight: bold">while</span> ((n36<span style="color: #333333">=</span>n36<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n36<span style="color: #333333">=</span>n36<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h40 <span style="color: #333333">=</span> SSB4_mSUPPLIER1_mPART1_mCUSTOMER1_mLINEITEM1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se64.modify0(lineitem_orderkey));
@@ -4811,11 +4815,11 @@
                     <span style="color: #333399; font-weight: bold">long</span> sn_regionkey <span style="color: #333333">=</span> e40<span style="color: #333333">-&gt;</span>SN_REGIONKEY;
                     <span style="color: #333399; font-weight: bold">long</span> v40 <span style="color: #333333">=</span> e40<span style="color: #333333">-&gt;</span>__av;
                     SSB4_mCUSTOMER1.addOrDelOnZero(se61.modify(ssb4_mcustomercustomer_custkey,part_type,sn_regionkey),(v38 <span style="color: #333333">*</span> (v39 <span style="color: #333333">*</span> (v40 <span style="color: #333333">*</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> lineitem_quantity)))));
-                  } <span style="color: #008800; font-weight: bold">while</span> ((n40<span style="color: #333333">=</span>n40<span style="color: #333333">-&gt;</span>next));
+                  } <span style="color: #008800; font-weight: bold">while</span> ((n40<span style="color: #333333">=</span>n40<span style="color: #333333">-&gt;</span>nxt));
                 }
-              } <span style="color: #008800; font-weight: bold">while</span> ((n39<span style="color: #333333">=</span>n39<span style="color: #333333">-&gt;</span>next));
+              } <span style="color: #008800; font-weight: bold">while</span> ((n39<span style="color: #333333">=</span>n39<span style="color: #333333">-&gt;</span>nxt));
             }
-          } <span style="color: #008800; font-weight: bold">while</span> ((n38<span style="color: #333333">=</span>n38<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n38<span style="color: #333333">=</span>n38<span style="color: #333333">-&gt;</span>nxt));
         }
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_LINEITEM&quot;</span>)
@@ -4828,7 +4832,7 @@
     <span style="color: #333399; font-weight: bold">void</span> on_insert_ORDERS(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> orders_orderkey, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> orders_custkey, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> orders_orderstatus, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE orders_totalprice, <span style="color: #008800; font-weight: bold">const</span> date orders_orderdate, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> orders_orderpriority, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> orders_clerk, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> orders_shippriority, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> orders_comment) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_ORDERS&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_ORDERS&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
+      {  <span style="color: #333333">++</span>tN;
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h42 <span style="color: #333333">=</span> SSB4_mORDERS3_mapkey0_idxfn<span style="color: #333333">::</span>hash(se67.modify0(orders_custkey));
           <span style="color: #008800; font-weight: bold">const</span> HashIndex_SSB4_mORDERS3_map_0<span style="color: #333333">*</span> i41 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_SSB4_mORDERS3_map_0<span style="color: #333333">*&gt;</span>(SSB4_mORDERS3.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
@@ -4846,10 +4850,10 @@
                 STRING_TYPE part_type <span style="color: #333333">=</span> e42<span style="color: #333333">-&gt;</span>PART_TYPE;
                 <span style="color: #333399; font-weight: bold">long</span> sn_regionkey <span style="color: #333333">=</span> e42<span style="color: #333333">-&gt;</span>SN_REGIONKEY;
                 DOUBLE_TYPE v42 <span style="color: #333333">=</span> e42<span style="color: #333333">-&gt;</span>__av;
-                SSB4.addOrDelOnZero(se65.modify(sn_regionkey,cn_regionkey,part_type),((orders_orderdate <span style="color: #333333">&gt;=</span> c1) <span style="color: #333333">*</span> ((c2 <span style="color: #333333">&gt;</span> orders_orderdate) <span style="color: #333333">*</span> (v41 <span style="color: #333333">*</span> v42))));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n42<span style="color: #333333">=</span>n42<span style="color: #333333">-&gt;</span>next));
+                (<span style="color: #888888">/*if */</span>(orders_orderdate <span style="color: #333333">&gt;=</span> c1 <span style="color: #333333">&amp;&amp;</span> c2 <span style="color: #333333">&gt;</span> orders_orderdate) <span style="color: #333333">?</span> SSB4.addOrDelOnZero(se65.modify(sn_regionkey,cn_regionkey,part_type),(v41 <span style="color: #333333">*</span> v42)) <span style="color: #333333">:</span> voidFunc());
+              } <span style="color: #008800; font-weight: bold">while</span> ((n42<span style="color: #333333">=</span>n42<span style="color: #333333">-&gt;</span>nxt));
             }
-          } <span style="color: #008800; font-weight: bold">while</span> ((n41<span style="color: #333333">=</span>n41<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n41<span style="color: #333333">=</span>n41<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h44 <span style="color: #333333">=</span> SSB4_mORDERS3_mapkey0_idxfn<span style="color: #333333">::</span>hash(se70.modify0(orders_custkey));
@@ -4868,10 +4872,10 @@
                 <span style="color: #333399; font-weight: bold">long</span> ssb4_msuppliersupplier_suppkey <span style="color: #333333">=</span> e44<span style="color: #333333">-&gt;</span>SSB4_mSUPPLIERSUPPLIER_SUPPKEY;
                 STRING_TYPE part_type <span style="color: #333333">=</span> e44<span style="color: #333333">-&gt;</span>PART_TYPE;
                 DOUBLE_TYPE v44 <span style="color: #333333">=</span> e44<span style="color: #333333">-&gt;</span>__av;
-                SSB4_mSUPPLIER1.addOrDelOnZero(se68.modify(ssb4_msuppliersupplier_suppkey,part_type,cn_regionkey),((orders_orderdate <span style="color: #333333">&gt;=</span> c1) <span style="color: #333333">*</span> ((c2 <span style="color: #333333">&gt;</span> orders_orderdate) <span style="color: #333333">*</span> (v43 <span style="color: #333333">*</span> v44))));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n44<span style="color: #333333">=</span>n44<span style="color: #333333">-&gt;</span>next));
+                (<span style="color: #888888">/*if */</span>(orders_orderdate <span style="color: #333333">&gt;=</span> c1 <span style="color: #333333">&amp;&amp;</span> c2 <span style="color: #333333">&gt;</span> orders_orderdate) <span style="color: #333333">?</span> SSB4_mSUPPLIER1.addOrDelOnZero(se68.modify(ssb4_msuppliersupplier_suppkey,part_type,cn_regionkey),(v43 <span style="color: #333333">*</span> v44)) <span style="color: #333333">:</span> voidFunc());
+              } <span style="color: #008800; font-weight: bold">while</span> ((n44<span style="color: #333333">=</span>n44<span style="color: #333333">-&gt;</span>nxt));
             }
-          } <span style="color: #008800; font-weight: bold">while</span> ((n43<span style="color: #333333">=</span>n43<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n43<span style="color: #333333">=</span>n43<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h46 <span style="color: #333333">=</span> SSB4_mORDERS3_mapkey0_idxfn<span style="color: #333333">::</span>hash(se73.modify0(orders_custkey));
@@ -4890,10 +4894,10 @@
                 <span style="color: #333399; font-weight: bold">long</span> ssb4_msupplier1_mpartpart_partkey <span style="color: #333333">=</span> e46<span style="color: #333333">-&gt;</span>SSB4_mSUPPLIER1_mPARTPART_PARTKEY;
                 <span style="color: #333399; font-weight: bold">long</span> ssb4_msuppliersupplier_suppkey <span style="color: #333333">=</span> e46<span style="color: #333333">-&gt;</span>SSB4_mSUPPLIERSUPPLIER_SUPPKEY;
                 DOUBLE_TYPE v46 <span style="color: #333333">=</span> e46<span style="color: #333333">-&gt;</span>__av;
-                SSB4_mSUPPLIER1_mPART1.addOrDelOnZero(se71.modify(ssb4_msupplier1_mpartpart_partkey,ssb4_msuppliersupplier_suppkey,cn_regionkey),((orders_orderdate <span style="color: #333333">&gt;=</span> c1) <span style="color: #333333">*</span> ((c2 <span style="color: #333333">&gt;</span> orders_orderdate) <span style="color: #333333">*</span> (v45 <span style="color: #333333">*</span> v46))));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n46<span style="color: #333333">=</span>n46<span style="color: #333333">-&gt;</span>next));
+                (<span style="color: #888888">/*if */</span>(orders_orderdate <span style="color: #333333">&gt;=</span> c1 <span style="color: #333333">&amp;&amp;</span> c2 <span style="color: #333333">&gt;</span> orders_orderdate) <span style="color: #333333">?</span> SSB4_mSUPPLIER1_mPART1.addOrDelOnZero(se71.modify(ssb4_msupplier1_mpartpart_partkey,ssb4_msuppliersupplier_suppkey,cn_regionkey),(v45 <span style="color: #333333">*</span> v46)) <span style="color: #333333">:</span> voidFunc());
+              } <span style="color: #008800; font-weight: bold">while</span> ((n46<span style="color: #333333">=</span>n46<span style="color: #333333">-&gt;</span>nxt));
             }
-          } <span style="color: #008800; font-weight: bold">while</span> ((n45<span style="color: #333333">=</span>n45<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n45<span style="color: #333333">=</span>n45<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h47 <span style="color: #333333">=</span> SSB4_mSUPPLIER1_mPART1_mORDERS4_mapkey0_idxfn<span style="color: #333333">::</span>hash(se75.modify0(orders_orderkey));
@@ -4904,10 +4908,10 @@
             <span style="color: #333399; font-weight: bold">long</span> ssb4_msupplier1_mpartpart_partkey <span style="color: #333333">=</span> e47<span style="color: #333333">-&gt;</span>SSB4_mSUPPLIER1_mPARTPART_PARTKEY;
             <span style="color: #333399; font-weight: bold">long</span> ssb4_msuppliersupplier_suppkey <span style="color: #333333">=</span> e47<span style="color: #333333">-&gt;</span>SSB4_mSUPPLIERSUPPLIER_SUPPKEY;
             DOUBLE_TYPE v47 <span style="color: #333333">=</span> e47<span style="color: #333333">-&gt;</span>__av;
-            SSB4_mSUPPLIER1_mPART1_mCUSTOMER1.addOrDelOnZero(se74.modify(orders_custkey,ssb4_msupplier1_mpartpart_partkey,ssb4_msuppliersupplier_suppkey),((orders_orderdate <span style="color: #333333">&gt;=</span> c1) <span style="color: #333333">*</span> ((c2 <span style="color: #333333">&gt;</span> orders_orderdate) <span style="color: #333333">*</span> v47)));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n47<span style="color: #333333">=</span>n47<span style="color: #333333">-&gt;</span>next));
+            (<span style="color: #888888">/*if */</span>(orders_orderdate <span style="color: #333333">&gt;=</span> c1 <span style="color: #333333">&amp;&amp;</span> c2 <span style="color: #333333">&gt;</span> orders_orderdate) <span style="color: #333333">?</span> SSB4_mSUPPLIER1_mPART1_mCUSTOMER1.addOrDelOnZero(se74.modify(orders_custkey,ssb4_msupplier1_mpartpart_partkey,ssb4_msuppliersupplier_suppkey),v47) <span style="color: #333333">:</span> voidFunc());
+          } <span style="color: #008800; font-weight: bold">while</span> ((n47<span style="color: #333333">=</span>n47<span style="color: #333333">-&gt;</span>nxt));
         }
-        SSB4_mSUPPLIER1_mPART1_mCUSTOMER1_mLINEITEM1.addOrDelOnZero(se76.modify(orders_orderkey,orders_custkey),((orders_orderdate <span style="color: #333333">&gt;=</span> c1) <span style="color: #333333">*</span> (c2 <span style="color: #333333">&gt;</span> orders_orderdate)));
+        (<span style="color: #888888">/*if */</span>(orders_orderdate <span style="color: #333333">&gt;=</span> c1 <span style="color: #333333">&amp;&amp;</span> c2 <span style="color: #333333">&gt;</span> orders_orderdate) <span style="color: #333333">?</span> SSB4_mSUPPLIER1_mPART1_mCUSTOMER1_mLINEITEM1.addOrDelOnZero(se76.modify(orders_orderkey,orders_custkey),<span style="color: #0000DD; font-weight: bold">1L</span>) <span style="color: #333333">:</span> voidFunc());
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h48 <span style="color: #333333">=</span> SSB4_mSUPPLIER1_mORDERS4_mapkey0_idxfn<span style="color: #333333">::</span>hash(se78.modify0(orders_orderkey));
           <span style="color: #008800; font-weight: bold">const</span> HashIndex_SSB4_mSUPPLIER1_mORDERS4_map_0<span style="color: #333333">*</span> i48 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_SSB4_mSUPPLIER1_mORDERS4_map_0<span style="color: #333333">*&gt;</span>(SSB4_mSUPPLIER1_mORDERS4.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
@@ -4917,8 +4921,8 @@
             <span style="color: #333399; font-weight: bold">long</span> ssb4_msuppliersupplier_suppkey <span style="color: #333333">=</span> e48<span style="color: #333333">-&gt;</span>SSB4_mSUPPLIERSUPPLIER_SUPPKEY;
             STRING_TYPE part_type <span style="color: #333333">=</span> e48<span style="color: #333333">-&gt;</span>PART_TYPE;
             DOUBLE_TYPE v48 <span style="color: #333333">=</span> e48<span style="color: #333333">-&gt;</span>__av;
-            SSB4_mSUPPLIER1_mCUSTOMER1.addOrDelOnZero(se77.modify(orders_custkey,ssb4_msuppliersupplier_suppkey,part_type),((orders_orderdate <span style="color: #333333">&gt;=</span> c1) <span style="color: #333333">*</span> ((c2 <span style="color: #333333">&gt;</span> orders_orderdate) <span style="color: #333333">*</span> v48)));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n48<span style="color: #333333">=</span>n48<span style="color: #333333">-&gt;</span>next));
+            (<span style="color: #888888">/*if */</span>(orders_orderdate <span style="color: #333333">&gt;=</span> c1 <span style="color: #333333">&amp;&amp;</span> c2 <span style="color: #333333">&gt;</span> orders_orderdate) <span style="color: #333333">?</span> SSB4_mSUPPLIER1_mCUSTOMER1.addOrDelOnZero(se77.modify(orders_custkey,ssb4_msuppliersupplier_suppkey,part_type),v48) <span style="color: #333333">:</span> voidFunc());
+          } <span style="color: #008800; font-weight: bold">while</span> ((n48<span style="color: #333333">=</span>n48<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h50 <span style="color: #333333">=</span> SSB4_mORDERS3_mapkey0_idxfn<span style="color: #333333">::</span>hash(se81.modify0(orders_custkey));
@@ -4937,10 +4941,10 @@
                 <span style="color: #333399; font-weight: bold">long</span> ssb4_mpartpart_partkey <span style="color: #333333">=</span> e50<span style="color: #333333">-&gt;</span>SSB4_mPARTPART_PARTKEY;
                 <span style="color: #333399; font-weight: bold">long</span> sn_regionkey <span style="color: #333333">=</span> e50<span style="color: #333333">-&gt;</span>SN_REGIONKEY;
                 DOUBLE_TYPE v50 <span style="color: #333333">=</span> e50<span style="color: #333333">-&gt;</span>__av;
-                SSB4_mPART1.addOrDelOnZero(se79.modify(ssb4_mpartpart_partkey,cn_regionkey,sn_regionkey),((orders_orderdate <span style="color: #333333">&gt;=</span> c1) <span style="color: #333333">*</span> ((c2 <span style="color: #333333">&gt;</span> orders_orderdate) <span style="color: #333333">*</span> (v49 <span style="color: #333333">*</span> v50))));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n50<span style="color: #333333">=</span>n50<span style="color: #333333">-&gt;</span>next));
+                (<span style="color: #888888">/*if */</span>(orders_orderdate <span style="color: #333333">&gt;=</span> c1 <span style="color: #333333">&amp;&amp;</span> c2 <span style="color: #333333">&gt;</span> orders_orderdate) <span style="color: #333333">?</span> SSB4_mPART1.addOrDelOnZero(se79.modify(ssb4_mpartpart_partkey,cn_regionkey,sn_regionkey),(v49 <span style="color: #333333">*</span> v50)) <span style="color: #333333">:</span> voidFunc());
+              } <span style="color: #008800; font-weight: bold">while</span> ((n50<span style="color: #333333">=</span>n50<span style="color: #333333">-&gt;</span>nxt));
             }
-          } <span style="color: #008800; font-weight: bold">while</span> ((n49<span style="color: #333333">=</span>n49<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n49<span style="color: #333333">=</span>n49<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h51 <span style="color: #333333">=</span> SSB4_mPART1_mORDERS4_mapkey0_idxfn<span style="color: #333333">::</span>hash(se83.modify0(orders_orderkey));
@@ -4951,8 +4955,8 @@
             <span style="color: #333399; font-weight: bold">long</span> ssb4_mpartpart_partkey <span style="color: #333333">=</span> e51<span style="color: #333333">-&gt;</span>SSB4_mPARTPART_PARTKEY;
             <span style="color: #333399; font-weight: bold">long</span> sn_regionkey <span style="color: #333333">=</span> e51<span style="color: #333333">-&gt;</span>SN_REGIONKEY;
             DOUBLE_TYPE v51 <span style="color: #333333">=</span> e51<span style="color: #333333">-&gt;</span>__av;
-            SSB4_mPART1_mCUSTOMER1.addOrDelOnZero(se82.modify(orders_custkey,ssb4_mpartpart_partkey,sn_regionkey),((orders_orderdate <span style="color: #333333">&gt;=</span> c1) <span style="color: #333333">*</span> ((c2 <span style="color: #333333">&gt;</span> orders_orderdate) <span style="color: #333333">*</span> v51)));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n51<span style="color: #333333">=</span>n51<span style="color: #333333">-&gt;</span>next));
+            (<span style="color: #888888">/*if */</span>(orders_orderdate <span style="color: #333333">&gt;=</span> c1 <span style="color: #333333">&amp;&amp;</span> c2 <span style="color: #333333">&gt;</span> orders_orderdate) <span style="color: #333333">?</span> SSB4_mPART1_mCUSTOMER1.addOrDelOnZero(se82.modify(orders_custkey,ssb4_mpartpart_partkey,sn_regionkey),v51) <span style="color: #333333">:</span> voidFunc());
+          } <span style="color: #008800; font-weight: bold">while</span> ((n51<span style="color: #333333">=</span>n51<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h52 <span style="color: #333333">=</span> SSB4_mORDERS3_mapkey0_idxfn<span style="color: #333333">::</span>hash(se85.modify0(orders_custkey));
@@ -4962,8 +4966,8 @@
           <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e52<span style="color: #333333">=</span>n52<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h52 <span style="color: #333333">==</span> n52<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> SSB4_mORDERS3_mapkey0_idxfn<span style="color: #333333">::</span>equals(se85, <span style="color: #333333">*</span>e52)) {
             <span style="color: #333399; font-weight: bold">long</span> cn_regionkey <span style="color: #333333">=</span> e52<span style="color: #333333">-&gt;</span>CN_REGIONKEY;
             <span style="color: #333399; font-weight: bold">long</span> v52 <span style="color: #333333">=</span> e52<span style="color: #333333">-&gt;</span>__av;
-            SSB4_mLINEITEM1.addOrDelOnZero(se84.modify(orders_orderkey,cn_regionkey),((orders_orderdate <span style="color: #333333">&gt;=</span> c1) <span style="color: #333333">*</span> ((c2 <span style="color: #333333">&gt;</span> orders_orderdate) <span style="color: #333333">*</span> v52)));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n52<span style="color: #333333">=</span>n52<span style="color: #333333">-&gt;</span>next));
+            (<span style="color: #888888">/*if */</span>(orders_orderdate <span style="color: #333333">&gt;=</span> c1 <span style="color: #333333">&amp;&amp;</span> c2 <span style="color: #333333">&gt;</span> orders_orderdate) <span style="color: #333333">?</span> SSB4_mLINEITEM1.addOrDelOnZero(se84.modify(orders_orderkey,cn_regionkey),v52) <span style="color: #333333">:</span> voidFunc());
+          } <span style="color: #008800; font-weight: bold">while</span> ((n52<span style="color: #333333">=</span>n52<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h53 <span style="color: #333333">=</span> SSB4_mORDERS4_mapkey0_idxfn<span style="color: #333333">::</span>hash(se87.modify0(orders_orderkey));
@@ -4974,8 +4978,8 @@
             STRING_TYPE part_type <span style="color: #333333">=</span> e53<span style="color: #333333">-&gt;</span>PART_TYPE;
             <span style="color: #333399; font-weight: bold">long</span> sn_regionkey <span style="color: #333333">=</span> e53<span style="color: #333333">-&gt;</span>SN_REGIONKEY;
             DOUBLE_TYPE v53 <span style="color: #333333">=</span> e53<span style="color: #333333">-&gt;</span>__av;
-            SSB4_mCUSTOMER1.addOrDelOnZero(se86.modify(orders_custkey,part_type,sn_regionkey),((orders_orderdate <span style="color: #333333">&gt;=</span> c1) <span style="color: #333333">*</span> ((c2 <span style="color: #333333">&gt;</span> orders_orderdate) <span style="color: #333333">*</span> v53)));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n53<span style="color: #333333">=</span>n53<span style="color: #333333">-&gt;</span>next));
+            (<span style="color: #888888">/*if */</span>(orders_orderdate <span style="color: #333333">&gt;=</span> c1 <span style="color: #333333">&amp;&amp;</span> c2 <span style="color: #333333">&gt;</span> orders_orderdate) <span style="color: #333333">?</span> SSB4_mCUSTOMER1.addOrDelOnZero(se86.modify(orders_custkey,part_type,sn_regionkey),v53) <span style="color: #333333">:</span> voidFunc());
+          } <span style="color: #008800; font-weight: bold">while</span> ((n53<span style="color: #333333">=</span>n53<span style="color: #333333">-&gt;</span>nxt));
         }
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_ORDERS&quot;</span>)
@@ -4988,7 +4992,7 @@
     <span style="color: #333399; font-weight: bold">void</span> on_delete_ORDERS(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> orders_orderkey, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> orders_custkey, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> orders_orderstatus, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE orders_totalprice, <span style="color: #008800; font-weight: bold">const</span> date orders_orderdate, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> orders_orderpriority, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> orders_clerk, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> orders_shippriority, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> orders_comment) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_ORDERS&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_ORDERS&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
+      {  <span style="color: #333333">++</span>tN;
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h55 <span style="color: #333333">=</span> SSB4_mORDERS3_mapkey0_idxfn<span style="color: #333333">::</span>hash(se90.modify0(orders_custkey));
           <span style="color: #008800; font-weight: bold">const</span> HashIndex_SSB4_mORDERS3_map_0<span style="color: #333333">*</span> i54 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_SSB4_mORDERS3_map_0<span style="color: #333333">*&gt;</span>(SSB4_mORDERS3.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
@@ -5006,10 +5010,10 @@
                 STRING_TYPE part_type <span style="color: #333333">=</span> e55<span style="color: #333333">-&gt;</span>PART_TYPE;
                 <span style="color: #333399; font-weight: bold">long</span> sn_regionkey <span style="color: #333333">=</span> e55<span style="color: #333333">-&gt;</span>SN_REGIONKEY;
                 DOUBLE_TYPE v55 <span style="color: #333333">=</span> e55<span style="color: #333333">-&gt;</span>__av;
-                SSB4.addOrDelOnZero(se88.modify(sn_regionkey,cn_regionkey,part_type),((orders_orderdate <span style="color: #333333">&gt;=</span> c1) <span style="color: #333333">*</span> ((c2 <span style="color: #333333">&gt;</span> orders_orderdate) <span style="color: #333333">*</span> (v54 <span style="color: #333333">*</span> (v55 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)))));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n55<span style="color: #333333">=</span>n55<span style="color: #333333">-&gt;</span>next));
+                (<span style="color: #888888">/*if */</span>(orders_orderdate <span style="color: #333333">&gt;=</span> c1 <span style="color: #333333">&amp;&amp;</span> c2 <span style="color: #333333">&gt;</span> orders_orderdate) <span style="color: #333333">?</span> SSB4.addOrDelOnZero(se88.modify(sn_regionkey,cn_regionkey,part_type),(v54 <span style="color: #333333">*</span> (v55 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>))) <span style="color: #333333">:</span> voidFunc());
+              } <span style="color: #008800; font-weight: bold">while</span> ((n55<span style="color: #333333">=</span>n55<span style="color: #333333">-&gt;</span>nxt));
             }
-          } <span style="color: #008800; font-weight: bold">while</span> ((n54<span style="color: #333333">=</span>n54<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n54<span style="color: #333333">=</span>n54<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h57 <span style="color: #333333">=</span> SSB4_mORDERS3_mapkey0_idxfn<span style="color: #333333">::</span>hash(se93.modify0(orders_custkey));
@@ -5028,10 +5032,10 @@
                 <span style="color: #333399; font-weight: bold">long</span> ssb4_msuppliersupplier_suppkey <span style="color: #333333">=</span> e57<span style="color: #333333">-&gt;</span>SSB4_mSUPPLIERSUPPLIER_SUPPKEY;
                 STRING_TYPE part_type <span style="color: #333333">=</span> e57<span style="color: #333333">-&gt;</span>PART_TYPE;
                 DOUBLE_TYPE v57 <span style="color: #333333">=</span> e57<span style="color: #333333">-&gt;</span>__av;
-                SSB4_mSUPPLIER1.addOrDelOnZero(se91.modify(ssb4_msuppliersupplier_suppkey,part_type,cn_regionkey),((orders_orderdate <span style="color: #333333">&gt;=</span> c1) <span style="color: #333333">*</span> ((c2 <span style="color: #333333">&gt;</span> orders_orderdate) <span style="color: #333333">*</span> (v56 <span style="color: #333333">*</span> (v57 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)))));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n57<span style="color: #333333">=</span>n57<span style="color: #333333">-&gt;</span>next));
+                (<span style="color: #888888">/*if */</span>(orders_orderdate <span style="color: #333333">&gt;=</span> c1 <span style="color: #333333">&amp;&amp;</span> c2 <span style="color: #333333">&gt;</span> orders_orderdate) <span style="color: #333333">?</span> SSB4_mSUPPLIER1.addOrDelOnZero(se91.modify(ssb4_msuppliersupplier_suppkey,part_type,cn_regionkey),(v56 <span style="color: #333333">*</span> (v57 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>))) <span style="color: #333333">:</span> voidFunc());
+              } <span style="color: #008800; font-weight: bold">while</span> ((n57<span style="color: #333333">=</span>n57<span style="color: #333333">-&gt;</span>nxt));
             }
-          } <span style="color: #008800; font-weight: bold">while</span> ((n56<span style="color: #333333">=</span>n56<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n56<span style="color: #333333">=</span>n56<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h59 <span style="color: #333333">=</span> SSB4_mORDERS3_mapkey0_idxfn<span style="color: #333333">::</span>hash(se96.modify0(orders_custkey));
@@ -5050,10 +5054,10 @@
                 <span style="color: #333399; font-weight: bold">long</span> ssb4_msupplier1_mpartpart_partkey <span style="color: #333333">=</span> e59<span style="color: #333333">-&gt;</span>SSB4_mSUPPLIER1_mPARTPART_PARTKEY;
                 <span style="color: #333399; font-weight: bold">long</span> ssb4_msuppliersupplier_suppkey <span style="color: #333333">=</span> e59<span style="color: #333333">-&gt;</span>SSB4_mSUPPLIERSUPPLIER_SUPPKEY;
                 DOUBLE_TYPE v59 <span style="color: #333333">=</span> e59<span style="color: #333333">-&gt;</span>__av;
-                SSB4_mSUPPLIER1_mPART1.addOrDelOnZero(se94.modify(ssb4_msupplier1_mpartpart_partkey,ssb4_msuppliersupplier_suppkey,cn_regionkey),((orders_orderdate <span style="color: #333333">&gt;=</span> c1) <span style="color: #333333">*</span> ((c2 <span style="color: #333333">&gt;</span> orders_orderdate) <span style="color: #333333">*</span> (v58 <span style="color: #333333">*</span> (v59 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)))));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n59<span style="color: #333333">=</span>n59<span style="color: #333333">-&gt;</span>next));
+                (<span style="color: #888888">/*if */</span>(orders_orderdate <span style="color: #333333">&gt;=</span> c1 <span style="color: #333333">&amp;&amp;</span> c2 <span style="color: #333333">&gt;</span> orders_orderdate) <span style="color: #333333">?</span> SSB4_mSUPPLIER1_mPART1.addOrDelOnZero(se94.modify(ssb4_msupplier1_mpartpart_partkey,ssb4_msuppliersupplier_suppkey,cn_regionkey),(v58 <span style="color: #333333">*</span> (v59 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>))) <span style="color: #333333">:</span> voidFunc());
+              } <span style="color: #008800; font-weight: bold">while</span> ((n59<span style="color: #333333">=</span>n59<span style="color: #333333">-&gt;</span>nxt));
             }
-          } <span style="color: #008800; font-weight: bold">while</span> ((n58<span style="color: #333333">=</span>n58<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n58<span style="color: #333333">=</span>n58<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h60 <span style="color: #333333">=</span> SSB4_mSUPPLIER1_mPART1_mORDERS4_mapkey0_idxfn<span style="color: #333333">::</span>hash(se98.modify0(orders_orderkey));
@@ -5064,10 +5068,10 @@
             <span style="color: #333399; font-weight: bold">long</span> ssb4_msupplier1_mpartpart_partkey <span style="color: #333333">=</span> e60<span style="color: #333333">-&gt;</span>SSB4_mSUPPLIER1_mPARTPART_PARTKEY;
             <span style="color: #333399; font-weight: bold">long</span> ssb4_msuppliersupplier_suppkey <span style="color: #333333">=</span> e60<span style="color: #333333">-&gt;</span>SSB4_mSUPPLIERSUPPLIER_SUPPKEY;
             DOUBLE_TYPE v60 <span style="color: #333333">=</span> e60<span style="color: #333333">-&gt;</span>__av;
-            SSB4_mSUPPLIER1_mPART1_mCUSTOMER1.addOrDelOnZero(se97.modify(orders_custkey,ssb4_msupplier1_mpartpart_partkey,ssb4_msuppliersupplier_suppkey),((orders_orderdate <span style="color: #333333">&gt;=</span> c1) <span style="color: #333333">*</span> ((c2 <span style="color: #333333">&gt;</span> orders_orderdate) <span style="color: #333333">*</span> (v60 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>))));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n60<span style="color: #333333">=</span>n60<span style="color: #333333">-&gt;</span>next));
+            (<span style="color: #888888">/*if */</span>(orders_orderdate <span style="color: #333333">&gt;=</span> c1 <span style="color: #333333">&amp;&amp;</span> c2 <span style="color: #333333">&gt;</span> orders_orderdate) <span style="color: #333333">?</span> SSB4_mSUPPLIER1_mPART1_mCUSTOMER1.addOrDelOnZero(se97.modify(orders_custkey,ssb4_msupplier1_mpartpart_partkey,ssb4_msuppliersupplier_suppkey),(v60 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)) <span style="color: #333333">:</span> voidFunc());
+          } <span style="color: #008800; font-weight: bold">while</span> ((n60<span style="color: #333333">=</span>n60<span style="color: #333333">-&gt;</span>nxt));
         }
-        SSB4_mSUPPLIER1_mPART1_mCUSTOMER1_mLINEITEM1.addOrDelOnZero(se99.modify(orders_orderkey,orders_custkey),((orders_orderdate <span style="color: #333333">&gt;=</span> c1) <span style="color: #333333">*</span> ((c2 <span style="color: #333333">&gt;</span> orders_orderdate) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)));
+        (<span style="color: #888888">/*if */</span>(orders_orderdate <span style="color: #333333">&gt;=</span> c1 <span style="color: #333333">&amp;&amp;</span> c2 <span style="color: #333333">&gt;</span> orders_orderdate) <span style="color: #333333">?</span> SSB4_mSUPPLIER1_mPART1_mCUSTOMER1_mLINEITEM1.addOrDelOnZero(se99.modify(orders_orderkey,orders_custkey),<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>) <span style="color: #333333">:</span> voidFunc());
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h61 <span style="color: #333333">=</span> SSB4_mSUPPLIER1_mORDERS4_mapkey0_idxfn<span style="color: #333333">::</span>hash(se101.modify0(orders_orderkey));
           <span style="color: #008800; font-weight: bold">const</span> HashIndex_SSB4_mSUPPLIER1_mORDERS4_map_0<span style="color: #333333">*</span> i61 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_SSB4_mSUPPLIER1_mORDERS4_map_0<span style="color: #333333">*&gt;</span>(SSB4_mSUPPLIER1_mORDERS4.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
@@ -5077,8 +5081,8 @@
             <span style="color: #333399; font-weight: bold">long</span> ssb4_msuppliersupplier_suppkey <span style="color: #333333">=</span> e61<span style="color: #333333">-&gt;</span>SSB4_mSUPPLIERSUPPLIER_SUPPKEY;
             STRING_TYPE part_type <span style="color: #333333">=</span> e61<span style="color: #333333">-&gt;</span>PART_TYPE;
             DOUBLE_TYPE v61 <span style="color: #333333">=</span> e61<span style="color: #333333">-&gt;</span>__av;
-            SSB4_mSUPPLIER1_mCUSTOMER1.addOrDelOnZero(se100.modify(orders_custkey,ssb4_msuppliersupplier_suppkey,part_type),((orders_orderdate <span style="color: #333333">&gt;=</span> c1) <span style="color: #333333">*</span> ((c2 <span style="color: #333333">&gt;</span> orders_orderdate) <span style="color: #333333">*</span> (v61 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>))));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n61<span style="color: #333333">=</span>n61<span style="color: #333333">-&gt;</span>next));
+            (<span style="color: #888888">/*if */</span>(orders_orderdate <span style="color: #333333">&gt;=</span> c1 <span style="color: #333333">&amp;&amp;</span> c2 <span style="color: #333333">&gt;</span> orders_orderdate) <span style="color: #333333">?</span> SSB4_mSUPPLIER1_mCUSTOMER1.addOrDelOnZero(se100.modify(orders_custkey,ssb4_msuppliersupplier_suppkey,part_type),(v61 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)) <span style="color: #333333">:</span> voidFunc());
+          } <span style="color: #008800; font-weight: bold">while</span> ((n61<span style="color: #333333">=</span>n61<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h63 <span style="color: #333333">=</span> SSB4_mORDERS3_mapkey0_idxfn<span style="color: #333333">::</span>hash(se104.modify0(orders_custkey));
@@ -5097,10 +5101,10 @@
                 <span style="color: #333399; font-weight: bold">long</span> ssb4_mpartpart_partkey <span style="color: #333333">=</span> e63<span style="color: #333333">-&gt;</span>SSB4_mPARTPART_PARTKEY;
                 <span style="color: #333399; font-weight: bold">long</span> sn_regionkey <span style="color: #333333">=</span> e63<span style="color: #333333">-&gt;</span>SN_REGIONKEY;
                 DOUBLE_TYPE v63 <span style="color: #333333">=</span> e63<span style="color: #333333">-&gt;</span>__av;
-                SSB4_mPART1.addOrDelOnZero(se102.modify(ssb4_mpartpart_partkey,cn_regionkey,sn_regionkey),((orders_orderdate <span style="color: #333333">&gt;=</span> c1) <span style="color: #333333">*</span> ((c2 <span style="color: #333333">&gt;</span> orders_orderdate) <span style="color: #333333">*</span> (v62 <span style="color: #333333">*</span> (v63 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)))));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n63<span style="color: #333333">=</span>n63<span style="color: #333333">-&gt;</span>next));
+                (<span style="color: #888888">/*if */</span>(orders_orderdate <span style="color: #333333">&gt;=</span> c1 <span style="color: #333333">&amp;&amp;</span> c2 <span style="color: #333333">&gt;</span> orders_orderdate) <span style="color: #333333">?</span> SSB4_mPART1.addOrDelOnZero(se102.modify(ssb4_mpartpart_partkey,cn_regionkey,sn_regionkey),(v62 <span style="color: #333333">*</span> (v63 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>))) <span style="color: #333333">:</span> voidFunc());
+              } <span style="color: #008800; font-weight: bold">while</span> ((n63<span style="color: #333333">=</span>n63<span style="color: #333333">-&gt;</span>nxt));
             }
-          } <span style="color: #008800; font-weight: bold">while</span> ((n62<span style="color: #333333">=</span>n62<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n62<span style="color: #333333">=</span>n62<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h64 <span style="color: #333333">=</span> SSB4_mPART1_mORDERS4_mapkey0_idxfn<span style="color: #333333">::</span>hash(se106.modify0(orders_orderkey));
@@ -5111,8 +5115,8 @@
             <span style="color: #333399; font-weight: bold">long</span> ssb4_mpartpart_partkey <span style="color: #333333">=</span> e64<span style="color: #333333">-&gt;</span>SSB4_mPARTPART_PARTKEY;
             <span style="color: #333399; font-weight: bold">long</span> sn_regionkey <span style="color: #333333">=</span> e64<span style="color: #333333">-&gt;</span>SN_REGIONKEY;
             DOUBLE_TYPE v64 <span style="color: #333333">=</span> e64<span style="color: #333333">-&gt;</span>__av;
-            SSB4_mPART1_mCUSTOMER1.addOrDelOnZero(se105.modify(orders_custkey,ssb4_mpartpart_partkey,sn_regionkey),((orders_orderdate <span style="color: #333333">&gt;=</span> c1) <span style="color: #333333">*</span> ((c2 <span style="color: #333333">&gt;</span> orders_orderdate) <span style="color: #333333">*</span> (v64 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>))));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n64<span style="color: #333333">=</span>n64<span style="color: #333333">-&gt;</span>next));
+            (<span style="color: #888888">/*if */</span>(orders_orderdate <span style="color: #333333">&gt;=</span> c1 <span style="color: #333333">&amp;&amp;</span> c2 <span style="color: #333333">&gt;</span> orders_orderdate) <span style="color: #333333">?</span> SSB4_mPART1_mCUSTOMER1.addOrDelOnZero(se105.modify(orders_custkey,ssb4_mpartpart_partkey,sn_regionkey),(v64 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)) <span style="color: #333333">:</span> voidFunc());
+          } <span style="color: #008800; font-weight: bold">while</span> ((n64<span style="color: #333333">=</span>n64<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h65 <span style="color: #333333">=</span> SSB4_mORDERS3_mapkey0_idxfn<span style="color: #333333">::</span>hash(se108.modify0(orders_custkey));
@@ -5122,8 +5126,8 @@
           <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e65<span style="color: #333333">=</span>n65<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h65 <span style="color: #333333">==</span> n65<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> SSB4_mORDERS3_mapkey0_idxfn<span style="color: #333333">::</span>equals(se108, <span style="color: #333333">*</span>e65)) {
             <span style="color: #333399; font-weight: bold">long</span> cn_regionkey <span style="color: #333333">=</span> e65<span style="color: #333333">-&gt;</span>CN_REGIONKEY;
             <span style="color: #333399; font-weight: bold">long</span> v65 <span style="color: #333333">=</span> e65<span style="color: #333333">-&gt;</span>__av;
-            SSB4_mLINEITEM1.addOrDelOnZero(se107.modify(orders_orderkey,cn_regionkey),((orders_orderdate <span style="color: #333333">&gt;=</span> c1) <span style="color: #333333">*</span> ((c2 <span style="color: #333333">&gt;</span> orders_orderdate) <span style="color: #333333">*</span> (v65 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>))));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n65<span style="color: #333333">=</span>n65<span style="color: #333333">-&gt;</span>next));
+            (<span style="color: #888888">/*if */</span>(orders_orderdate <span style="color: #333333">&gt;=</span> c1 <span style="color: #333333">&amp;&amp;</span> c2 <span style="color: #333333">&gt;</span> orders_orderdate) <span style="color: #333333">?</span> SSB4_mLINEITEM1.addOrDelOnZero(se107.modify(orders_orderkey,cn_regionkey),(v65 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)) <span style="color: #333333">:</span> voidFunc());
+          } <span style="color: #008800; font-weight: bold">while</span> ((n65<span style="color: #333333">=</span>n65<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h66 <span style="color: #333333">=</span> SSB4_mORDERS4_mapkey0_idxfn<span style="color: #333333">::</span>hash(se110.modify0(orders_orderkey));
@@ -5134,8 +5138,8 @@
             STRING_TYPE part_type <span style="color: #333333">=</span> e66<span style="color: #333333">-&gt;</span>PART_TYPE;
             <span style="color: #333399; font-weight: bold">long</span> sn_regionkey <span style="color: #333333">=</span> e66<span style="color: #333333">-&gt;</span>SN_REGIONKEY;
             DOUBLE_TYPE v66 <span style="color: #333333">=</span> e66<span style="color: #333333">-&gt;</span>__av;
-            SSB4_mCUSTOMER1.addOrDelOnZero(se109.modify(orders_custkey,part_type,sn_regionkey),((orders_orderdate <span style="color: #333333">&gt;=</span> c1) <span style="color: #333333">*</span> ((c2 <span style="color: #333333">&gt;</span> orders_orderdate) <span style="color: #333333">*</span> (v66 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>))));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n66<span style="color: #333333">=</span>n66<span style="color: #333333">-&gt;</span>next));
+            (<span style="color: #888888">/*if */</span>(orders_orderdate <span style="color: #333333">&gt;=</span> c1 <span style="color: #333333">&amp;&amp;</span> c2 <span style="color: #333333">&gt;</span> orders_orderdate) <span style="color: #333333">?</span> SSB4_mCUSTOMER1.addOrDelOnZero(se109.modify(orders_custkey,part_type,sn_regionkey),(v66 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)) <span style="color: #333333">:</span> voidFunc());
+          } <span style="color: #008800; font-weight: bold">while</span> ((n66<span style="color: #333333">=</span>n66<span style="color: #333333">-&gt;</span>nxt));
         }
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_ORDERS&quot;</span>)
@@ -5148,7 +5152,7 @@
     <span style="color: #333399; font-weight: bold">void</span> on_insert_PART(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> part_partkey, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_name, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_mfgr, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_brand, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_type, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> part_size, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_container, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE part_retailprice, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_comment) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_PART&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_PART&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
+      {  <span style="color: #333333">++</span>tN;
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h67 <span style="color: #333333">=</span> SSB4_mPART1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se112.modify0(part_partkey));
           <span style="color: #008800; font-weight: bold">const</span> HashIndex_SSB4_mPART1_map_0<span style="color: #333333">*</span> i67 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_SSB4_mPART1_map_0<span style="color: #333333">*&gt;</span>(SSB4_mPART1.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
@@ -5159,7 +5163,7 @@
             <span style="color: #333399; font-weight: bold">long</span> sn_regionkey <span style="color: #333333">=</span> e67<span style="color: #333333">-&gt;</span>SN_REGIONKEY;
             DOUBLE_TYPE v67 <span style="color: #333333">=</span> e67<span style="color: #333333">-&gt;</span>__av;
             SSB4.addOrDelOnZero(se111.modify(sn_regionkey,cn_regionkey,part_type),v67);
-          } <span style="color: #008800; font-weight: bold">while</span> ((n67<span style="color: #333333">=</span>n67<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n67<span style="color: #333333">=</span>n67<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h68 <span style="color: #333333">=</span> SSB4_mSUPPLIER1_mPART1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se114.modify0(part_partkey));
@@ -5171,7 +5175,7 @@
             <span style="color: #333399; font-weight: bold">long</span> cn_regionkey <span style="color: #333333">=</span> e68<span style="color: #333333">-&gt;</span>CN_REGIONKEY;
             DOUBLE_TYPE v68 <span style="color: #333333">=</span> e68<span style="color: #333333">-&gt;</span>__av;
             SSB4_mSUPPLIER1.addOrDelOnZero(se113.modify(ssb4_msuppliersupplier_suppkey,part_type,cn_regionkey),v68);
-          } <span style="color: #008800; font-weight: bold">while</span> ((n68<span style="color: #333333">=</span>n68<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n68<span style="color: #333333">=</span>n68<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h69 <span style="color: #333333">=</span> SSB4_mSUPPLIER1_mPART1_mORDERS4_mapkey1_idxfn<span style="color: #333333">::</span>hash(se116.modify1(part_partkey));
@@ -5183,7 +5187,7 @@
             <span style="color: #333399; font-weight: bold">long</span> ssb4_msuppliersupplier_suppkey <span style="color: #333333">=</span> e69<span style="color: #333333">-&gt;</span>SSB4_mSUPPLIERSUPPLIER_SUPPKEY;
             DOUBLE_TYPE v69 <span style="color: #333333">=</span> e69<span style="color: #333333">-&gt;</span>__av;
             SSB4_mSUPPLIER1_mORDERS4.addOrDelOnZero(se115.modify(ssb4_msupplier1_mordersorders_orderkey,ssb4_msuppliersupplier_suppkey,part_type),v69);
-          } <span style="color: #008800; font-weight: bold">while</span> ((n69<span style="color: #333333">=</span>n69<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n69<span style="color: #333333">=</span>n69<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h70 <span style="color: #333333">=</span> SSB4_mSUPPLIER1_mPART1_mCUSTOMER1_mapkey1_idxfn<span style="color: #333333">::</span>hash(se118.modify1(part_partkey));
@@ -5195,7 +5199,7 @@
             <span style="color: #333399; font-weight: bold">long</span> ssb4_msuppliersupplier_suppkey <span style="color: #333333">=</span> e70<span style="color: #333333">-&gt;</span>SSB4_mSUPPLIERSUPPLIER_SUPPKEY;
             DOUBLE_TYPE v70 <span style="color: #333333">=</span> e70<span style="color: #333333">-&gt;</span>__av;
             SSB4_mSUPPLIER1_mCUSTOMER1.addOrDelOnZero(se117.modify(ssb4_msupplier1_mcustomercustomer_custkey,ssb4_msuppliersupplier_suppkey,part_type),v70);
-          } <span style="color: #008800; font-weight: bold">while</span> ((n70<span style="color: #333333">=</span>n70<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n70<span style="color: #333333">=</span>n70<span style="color: #333333">-&gt;</span>nxt));
         }
         SSB4_mLINEITEM2.addOrDelOnZero(se119.modify(part_partkey,part_type),<span style="color: #0000DD; font-weight: bold">1L</span>);
         { <span style="color: #888888">//slice</span>
@@ -5208,7 +5212,7 @@
             <span style="color: #333399; font-weight: bold">long</span> sn_regionkey <span style="color: #333333">=</span> e71<span style="color: #333333">-&gt;</span>SN_REGIONKEY;
             DOUBLE_TYPE v71 <span style="color: #333333">=</span> e71<span style="color: #333333">-&gt;</span>__av;
             SSB4_mORDERS4.addOrDelOnZero(se120.modify(ssb4_mordersorders_orderkey,part_type,sn_regionkey),v71);
-          } <span style="color: #008800; font-weight: bold">while</span> ((n71<span style="color: #333333">=</span>n71<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n71<span style="color: #333333">=</span>n71<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h72 <span style="color: #333333">=</span> SSB4_mPART1_mCUSTOMER1_mapkey1_idxfn<span style="color: #333333">::</span>hash(se123.modify1(part_partkey));
@@ -5220,7 +5224,7 @@
             <span style="color: #333399; font-weight: bold">long</span> sn_regionkey <span style="color: #333333">=</span> e72<span style="color: #333333">-&gt;</span>SN_REGIONKEY;
             DOUBLE_TYPE v72 <span style="color: #333333">=</span> e72<span style="color: #333333">-&gt;</span>__av;
             SSB4_mCUSTOMER1.addOrDelOnZero(se122.modify(ssb4_mcustomercustomer_custkey,part_type,sn_regionkey),v72);
-          } <span style="color: #008800; font-weight: bold">while</span> ((n72<span style="color: #333333">=</span>n72<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n72<span style="color: #333333">=</span>n72<span style="color: #333333">-&gt;</span>nxt));
         }
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_PART&quot;</span>)
@@ -5233,7 +5237,7 @@
     <span style="color: #333399; font-weight: bold">void</span> on_delete_PART(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> part_partkey, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_name, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_mfgr, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_brand, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_type, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> part_size, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_container, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE part_retailprice, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_comment) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_PART&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_PART&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
+      {  <span style="color: #333333">++</span>tN;
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h73 <span style="color: #333333">=</span> SSB4_mPART1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se125.modify0(part_partkey));
           <span style="color: #008800; font-weight: bold">const</span> HashIndex_SSB4_mPART1_map_0<span style="color: #333333">*</span> i73 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_SSB4_mPART1_map_0<span style="color: #333333">*&gt;</span>(SSB4_mPART1.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
@@ -5244,7 +5248,7 @@
             <span style="color: #333399; font-weight: bold">long</span> sn_regionkey <span style="color: #333333">=</span> e73<span style="color: #333333">-&gt;</span>SN_REGIONKEY;
             DOUBLE_TYPE v73 <span style="color: #333333">=</span> e73<span style="color: #333333">-&gt;</span>__av;
             SSB4.addOrDelOnZero(se124.modify(sn_regionkey,cn_regionkey,part_type),(v73 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n73<span style="color: #333333">=</span>n73<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n73<span style="color: #333333">=</span>n73<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h74 <span style="color: #333333">=</span> SSB4_mSUPPLIER1_mPART1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se127.modify0(part_partkey));
@@ -5256,7 +5260,7 @@
             <span style="color: #333399; font-weight: bold">long</span> cn_regionkey <span style="color: #333333">=</span> e74<span style="color: #333333">-&gt;</span>CN_REGIONKEY;
             DOUBLE_TYPE v74 <span style="color: #333333">=</span> e74<span style="color: #333333">-&gt;</span>__av;
             SSB4_mSUPPLIER1.addOrDelOnZero(se126.modify(ssb4_msuppliersupplier_suppkey,part_type,cn_regionkey),(v74 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n74<span style="color: #333333">=</span>n74<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n74<span style="color: #333333">=</span>n74<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h75 <span style="color: #333333">=</span> SSB4_mSUPPLIER1_mPART1_mORDERS4_mapkey1_idxfn<span style="color: #333333">::</span>hash(se129.modify1(part_partkey));
@@ -5268,7 +5272,7 @@
             <span style="color: #333399; font-weight: bold">long</span> ssb4_msuppliersupplier_suppkey <span style="color: #333333">=</span> e75<span style="color: #333333">-&gt;</span>SSB4_mSUPPLIERSUPPLIER_SUPPKEY;
             DOUBLE_TYPE v75 <span style="color: #333333">=</span> e75<span style="color: #333333">-&gt;</span>__av;
             SSB4_mSUPPLIER1_mORDERS4.addOrDelOnZero(se128.modify(ssb4_msupplier1_mordersorders_orderkey,ssb4_msuppliersupplier_suppkey,part_type),(v75 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n75<span style="color: #333333">=</span>n75<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n75<span style="color: #333333">=</span>n75<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h76 <span style="color: #333333">=</span> SSB4_mSUPPLIER1_mPART1_mCUSTOMER1_mapkey1_idxfn<span style="color: #333333">::</span>hash(se131.modify1(part_partkey));
@@ -5280,7 +5284,7 @@
             <span style="color: #333399; font-weight: bold">long</span> ssb4_msuppliersupplier_suppkey <span style="color: #333333">=</span> e76<span style="color: #333333">-&gt;</span>SSB4_mSUPPLIERSUPPLIER_SUPPKEY;
             DOUBLE_TYPE v76 <span style="color: #333333">=</span> e76<span style="color: #333333">-&gt;</span>__av;
             SSB4_mSUPPLIER1_mCUSTOMER1.addOrDelOnZero(se130.modify(ssb4_msupplier1_mcustomercustomer_custkey,ssb4_msuppliersupplier_suppkey,part_type),(v76 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n76<span style="color: #333333">=</span>n76<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n76<span style="color: #333333">=</span>n76<span style="color: #333333">-&gt;</span>nxt));
         }
         SSB4_mLINEITEM2.addOrDelOnZero(se132.modify(part_partkey,part_type),<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>);
         { <span style="color: #888888">//slice</span>
@@ -5293,7 +5297,7 @@
             <span style="color: #333399; font-weight: bold">long</span> sn_regionkey <span style="color: #333333">=</span> e77<span style="color: #333333">-&gt;</span>SN_REGIONKEY;
             DOUBLE_TYPE v77 <span style="color: #333333">=</span> e77<span style="color: #333333">-&gt;</span>__av;
             SSB4_mORDERS4.addOrDelOnZero(se133.modify(ssb4_mordersorders_orderkey,part_type,sn_regionkey),(v77 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n77<span style="color: #333333">=</span>n77<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n77<span style="color: #333333">=</span>n77<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h78 <span style="color: #333333">=</span> SSB4_mPART1_mCUSTOMER1_mapkey1_idxfn<span style="color: #333333">::</span>hash(se136.modify1(part_partkey));
@@ -5305,7 +5309,7 @@
             <span style="color: #333399; font-weight: bold">long</span> sn_regionkey <span style="color: #333333">=</span> e78<span style="color: #333333">-&gt;</span>SN_REGIONKEY;
             DOUBLE_TYPE v78 <span style="color: #333333">=</span> e78<span style="color: #333333">-&gt;</span>__av;
             SSB4_mCUSTOMER1.addOrDelOnZero(se135.modify(ssb4_mcustomercustomer_custkey,part_type,sn_regionkey),(v78 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n78<span style="color: #333333">=</span>n78<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n78<span style="color: #333333">=</span>n78<span style="color: #333333">-&gt;</span>nxt));
         }
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_PART&quot;</span>)
@@ -5318,7 +5322,7 @@
     <span style="color: #333399; font-weight: bold">void</span> on_insert_CUSTOMER(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> customer_custkey, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> customer_name, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> customer_address, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> customer_nationkey, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> customer_phone, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE customer_acctbal, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> customer_mktsegment, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> customer_comment) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_CUSTOMER&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_CUSTOMER&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
+      {  <span style="color: #333333">++</span>tN;
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h80 <span style="color: #333333">=</span> SSB4_mCUSTOMER1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se139.modify0(customer_custkey));
           <span style="color: #008800; font-weight: bold">const</span> HashIndex_SSB4_mCUSTOMER1_map_0<span style="color: #333333">*</span> i79 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_SSB4_mCUSTOMER1_map_0<span style="color: #333333">*&gt;</span>(SSB4_mCUSTOMER1.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
@@ -5337,9 +5341,9 @@
                 <span style="color: #333399; font-weight: bold">long</span> cn_regionkey <span style="color: #333333">=</span> e80<span style="color: #333333">-&gt;</span>CN_REGIONKEY;
                 <span style="color: #333399; font-weight: bold">long</span> v80 <span style="color: #333333">=</span> e80<span style="color: #333333">-&gt;</span>__av;
                 SSB4.addOrDelOnZero(se137.modify(sn_regionkey,cn_regionkey,part_type),(v79 <span style="color: #333333">*</span> v80));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n80<span style="color: #333333">=</span>n80<span style="color: #333333">-&gt;</span>next));
+              } <span style="color: #008800; font-weight: bold">while</span> ((n80<span style="color: #333333">=</span>n80<span style="color: #333333">-&gt;</span>nxt));
             }
-          } <span style="color: #008800; font-weight: bold">while</span> ((n79<span style="color: #333333">=</span>n79<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n79<span style="color: #333333">=</span>n79<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h82 <span style="color: #333333">=</span> SSB4_mSUPPLIER1_mCUSTOMER1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se142.modify0(customer_custkey));
@@ -5359,9 +5363,9 @@
                 <span style="color: #333399; font-weight: bold">long</span> cn_regionkey <span style="color: #333333">=</span> e82<span style="color: #333333">-&gt;</span>CN_REGIONKEY;
                 <span style="color: #333399; font-weight: bold">long</span> v82 <span style="color: #333333">=</span> e82<span style="color: #333333">-&gt;</span>__av;
                 SSB4_mSUPPLIER1.addOrDelOnZero(se140.modify(ssb4_msuppliersupplier_suppkey,part_type,cn_regionkey),(v81 <span style="color: #333333">*</span> v82));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n82<span style="color: #333333">=</span>n82<span style="color: #333333">-&gt;</span>next));
+              } <span style="color: #008800; font-weight: bold">while</span> ((n82<span style="color: #333333">=</span>n82<span style="color: #333333">-&gt;</span>nxt));
             }
-          } <span style="color: #008800; font-weight: bold">while</span> ((n81<span style="color: #333333">=</span>n81<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n81<span style="color: #333333">=</span>n81<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h84 <span style="color: #333333">=</span> SSB4_mSUPPLIER1_mPART1_mCUSTOMER1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se145.modify0(customer_custkey));
@@ -5381,9 +5385,9 @@
                 <span style="color: #333399; font-weight: bold">long</span> cn_regionkey <span style="color: #333333">=</span> e84<span style="color: #333333">-&gt;</span>CN_REGIONKEY;
                 <span style="color: #333399; font-weight: bold">long</span> v84 <span style="color: #333333">=</span> e84<span style="color: #333333">-&gt;</span>__av;
                 SSB4_mSUPPLIER1_mPART1.addOrDelOnZero(se143.modify(ssb4_msupplier1_mpartpart_partkey,ssb4_msuppliersupplier_suppkey,cn_regionkey),(v83 <span style="color: #333333">*</span> v84));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n84<span style="color: #333333">=</span>n84<span style="color: #333333">-&gt;</span>next));
+              } <span style="color: #008800; font-weight: bold">while</span> ((n84<span style="color: #333333">=</span>n84<span style="color: #333333">-&gt;</span>nxt));
             }
-          } <span style="color: #008800; font-weight: bold">while</span> ((n83<span style="color: #333333">=</span>n83<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n83<span style="color: #333333">=</span>n83<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h86 <span style="color: #333333">=</span> SSB4_mPART1_mCUSTOMER1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se148.modify0(customer_custkey));
@@ -5403,9 +5407,9 @@
                 <span style="color: #333399; font-weight: bold">long</span> cn_regionkey <span style="color: #333333">=</span> e86<span style="color: #333333">-&gt;</span>CN_REGIONKEY;
                 <span style="color: #333399; font-weight: bold">long</span> v86 <span style="color: #333333">=</span> e86<span style="color: #333333">-&gt;</span>__av;
                 SSB4_mPART1.addOrDelOnZero(se146.modify(ssb4_mpartpart_partkey,cn_regionkey,sn_regionkey),(v85 <span style="color: #333333">*</span> v86));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n86<span style="color: #333333">=</span>n86<span style="color: #333333">-&gt;</span>next));
+              } <span style="color: #008800; font-weight: bold">while</span> ((n86<span style="color: #333333">=</span>n86<span style="color: #333333">-&gt;</span>nxt));
             }
-          } <span style="color: #008800; font-weight: bold">while</span> ((n85<span style="color: #333333">=</span>n85<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n85<span style="color: #333333">=</span>n85<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h88 <span style="color: #333333">=</span> SSB4_mSUPPLIER1_mPART1_mCUSTOMER1_mLINEITEM1_mapkey1_idxfn<span style="color: #333333">::</span>hash(se151.modify1(customer_custkey));
@@ -5424,9 +5428,9 @@
                 <span style="color: #333399; font-weight: bold">long</span> cn_regionkey <span style="color: #333333">=</span> e88<span style="color: #333333">-&gt;</span>CN_REGIONKEY;
                 <span style="color: #333399; font-weight: bold">long</span> v88 <span style="color: #333333">=</span> e88<span style="color: #333333">-&gt;</span>__av;
                 SSB4_mLINEITEM1.addOrDelOnZero(se149.modify(ssb4_mlineitemlineitem_orderkey,cn_regionkey),(v87 <span style="color: #333333">*</span> v88));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n88<span style="color: #333333">=</span>n88<span style="color: #333333">-&gt;</span>next));
+              } <span style="color: #008800; font-weight: bold">while</span> ((n88<span style="color: #333333">=</span>n88<span style="color: #333333">-&gt;</span>nxt));
             }
-          } <span style="color: #008800; font-weight: bold">while</span> ((n87<span style="color: #333333">=</span>n87<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n87<span style="color: #333333">=</span>n87<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h89 <span style="color: #333333">=</span> SSB4_mCUSTOMER2_mapkey0_idxfn<span style="color: #333333">::</span>hash(se153.modify0(customer_nationkey));
@@ -5437,7 +5441,7 @@
             <span style="color: #333399; font-weight: bold">long</span> cn_regionkey <span style="color: #333333">=</span> e89<span style="color: #333333">-&gt;</span>CN_REGIONKEY;
             <span style="color: #333399; font-weight: bold">long</span> v89 <span style="color: #333333">=</span> e89<span style="color: #333333">-&gt;</span>__av;
             SSB4_mORDERS3.addOrDelOnZero(se152.modify(customer_custkey,cn_regionkey),v89);
-          } <span style="color: #008800; font-weight: bold">while</span> ((n89<span style="color: #333333">=</span>n89<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n89<span style="color: #333333">=</span>n89<span style="color: #333333">-&gt;</span>nxt));
         }
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_CUSTOMER&quot;</span>)
@@ -5450,7 +5454,7 @@
     <span style="color: #333399; font-weight: bold">void</span> on_delete_CUSTOMER(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> customer_custkey, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> customer_name, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> customer_address, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> customer_nationkey, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> customer_phone, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE customer_acctbal, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> customer_mktsegment, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> customer_comment) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_CUSTOMER&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_CUSTOMER&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
+      {  <span style="color: #333333">++</span>tN;
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h91 <span style="color: #333333">=</span> SSB4_mCUSTOMER1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se156.modify0(customer_custkey));
           <span style="color: #008800; font-weight: bold">const</span> HashIndex_SSB4_mCUSTOMER1_map_0<span style="color: #333333">*</span> i90 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_SSB4_mCUSTOMER1_map_0<span style="color: #333333">*&gt;</span>(SSB4_mCUSTOMER1.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
@@ -5469,9 +5473,9 @@
                 <span style="color: #333399; font-weight: bold">long</span> cn_regionkey <span style="color: #333333">=</span> e91<span style="color: #333333">-&gt;</span>CN_REGIONKEY;
                 <span style="color: #333399; font-weight: bold">long</span> v91 <span style="color: #333333">=</span> e91<span style="color: #333333">-&gt;</span>__av;
                 SSB4.addOrDelOnZero(se154.modify(sn_regionkey,cn_regionkey,part_type),(v90 <span style="color: #333333">*</span> (v91 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n91<span style="color: #333333">=</span>n91<span style="color: #333333">-&gt;</span>next));
+              } <span style="color: #008800; font-weight: bold">while</span> ((n91<span style="color: #333333">=</span>n91<span style="color: #333333">-&gt;</span>nxt));
             }
-          } <span style="color: #008800; font-weight: bold">while</span> ((n90<span style="color: #333333">=</span>n90<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n90<span style="color: #333333">=</span>n90<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h93 <span style="color: #333333">=</span> SSB4_mSUPPLIER1_mCUSTOMER1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se159.modify0(customer_custkey));
@@ -5491,9 +5495,9 @@
                 <span style="color: #333399; font-weight: bold">long</span> cn_regionkey <span style="color: #333333">=</span> e93<span style="color: #333333">-&gt;</span>CN_REGIONKEY;
                 <span style="color: #333399; font-weight: bold">long</span> v93 <span style="color: #333333">=</span> e93<span style="color: #333333">-&gt;</span>__av;
                 SSB4_mSUPPLIER1.addOrDelOnZero(se157.modify(ssb4_msuppliersupplier_suppkey,part_type,cn_regionkey),(v92 <span style="color: #333333">*</span> (v93 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n93<span style="color: #333333">=</span>n93<span style="color: #333333">-&gt;</span>next));
+              } <span style="color: #008800; font-weight: bold">while</span> ((n93<span style="color: #333333">=</span>n93<span style="color: #333333">-&gt;</span>nxt));
             }
-          } <span style="color: #008800; font-weight: bold">while</span> ((n92<span style="color: #333333">=</span>n92<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n92<span style="color: #333333">=</span>n92<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h95 <span style="color: #333333">=</span> SSB4_mSUPPLIER1_mPART1_mCUSTOMER1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se162.modify0(customer_custkey));
@@ -5513,9 +5517,9 @@
                 <span style="color: #333399; font-weight: bold">long</span> cn_regionkey <span style="color: #333333">=</span> e95<span style="color: #333333">-&gt;</span>CN_REGIONKEY;
                 <span style="color: #333399; font-weight: bold">long</span> v95 <span style="color: #333333">=</span> e95<span style="color: #333333">-&gt;</span>__av;
                 SSB4_mSUPPLIER1_mPART1.addOrDelOnZero(se160.modify(ssb4_msupplier1_mpartpart_partkey,ssb4_msuppliersupplier_suppkey,cn_regionkey),(v94 <span style="color: #333333">*</span> (v95 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n95<span style="color: #333333">=</span>n95<span style="color: #333333">-&gt;</span>next));
+              } <span style="color: #008800; font-weight: bold">while</span> ((n95<span style="color: #333333">=</span>n95<span style="color: #333333">-&gt;</span>nxt));
             }
-          } <span style="color: #008800; font-weight: bold">while</span> ((n94<span style="color: #333333">=</span>n94<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n94<span style="color: #333333">=</span>n94<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h97 <span style="color: #333333">=</span> SSB4_mPART1_mCUSTOMER1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se165.modify0(customer_custkey));
@@ -5535,9 +5539,9 @@
                 <span style="color: #333399; font-weight: bold">long</span> cn_regionkey <span style="color: #333333">=</span> e97<span style="color: #333333">-&gt;</span>CN_REGIONKEY;
                 <span style="color: #333399; font-weight: bold">long</span> v97 <span style="color: #333333">=</span> e97<span style="color: #333333">-&gt;</span>__av;
                 SSB4_mPART1.addOrDelOnZero(se163.modify(ssb4_mpartpart_partkey,cn_regionkey,sn_regionkey),(v96 <span style="color: #333333">*</span> (v97 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n97<span style="color: #333333">=</span>n97<span style="color: #333333">-&gt;</span>next));
+              } <span style="color: #008800; font-weight: bold">while</span> ((n97<span style="color: #333333">=</span>n97<span style="color: #333333">-&gt;</span>nxt));
             }
-          } <span style="color: #008800; font-weight: bold">while</span> ((n96<span style="color: #333333">=</span>n96<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n96<span style="color: #333333">=</span>n96<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h99 <span style="color: #333333">=</span> SSB4_mSUPPLIER1_mPART1_mCUSTOMER1_mLINEITEM1_mapkey1_idxfn<span style="color: #333333">::</span>hash(se168.modify1(customer_custkey));
@@ -5556,9 +5560,9 @@
                 <span style="color: #333399; font-weight: bold">long</span> cn_regionkey <span style="color: #333333">=</span> e99<span style="color: #333333">-&gt;</span>CN_REGIONKEY;
                 <span style="color: #333399; font-weight: bold">long</span> v99 <span style="color: #333333">=</span> e99<span style="color: #333333">-&gt;</span>__av;
                 SSB4_mLINEITEM1.addOrDelOnZero(se166.modify(ssb4_mlineitemlineitem_orderkey,cn_regionkey),(v98 <span style="color: #333333">*</span> (v99 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n99<span style="color: #333333">=</span>n99<span style="color: #333333">-&gt;</span>next));
+              } <span style="color: #008800; font-weight: bold">while</span> ((n99<span style="color: #333333">=</span>n99<span style="color: #333333">-&gt;</span>nxt));
             }
-          } <span style="color: #008800; font-weight: bold">while</span> ((n98<span style="color: #333333">=</span>n98<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n98<span style="color: #333333">=</span>n98<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h100 <span style="color: #333333">=</span> SSB4_mCUSTOMER2_mapkey0_idxfn<span style="color: #333333">::</span>hash(se170.modify0(customer_nationkey));
@@ -5569,7 +5573,7 @@
             <span style="color: #333399; font-weight: bold">long</span> cn_regionkey <span style="color: #333333">=</span> e100<span style="color: #333333">-&gt;</span>CN_REGIONKEY;
             <span style="color: #333399; font-weight: bold">long</span> v100 <span style="color: #333333">=</span> e100<span style="color: #333333">-&gt;</span>__av;
             SSB4_mORDERS3.addOrDelOnZero(se169.modify(customer_custkey,cn_regionkey),(v100 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n100<span style="color: #333333">=</span>n100<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n100<span style="color: #333333">=</span>n100<span style="color: #333333">-&gt;</span>nxt));
         }
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_CUSTOMER&quot;</span>)
@@ -5582,7 +5586,7 @@
     <span style="color: #333399; font-weight: bold">void</span> on_insert_SUPPLIER(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> supplier_suppkey, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> supplier_name, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> supplier_address, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> supplier_nationkey, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> supplier_phone, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE supplier_acctbal, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> supplier_comment) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_SUPPLIER&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_SUPPLIER&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
+      {  <span style="color: #333333">++</span>tN;
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h102 <span style="color: #333333">=</span> SSB4_mSUPPLIER1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se173.modify0(supplier_suppkey));
           <span style="color: #008800; font-weight: bold">const</span> HashIndex_SSB4_mSUPPLIER1_map_0<span style="color: #333333">*</span> i101 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_SSB4_mSUPPLIER1_map_0<span style="color: #333333">*&gt;</span>(SSB4_mSUPPLIER1.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
@@ -5601,9 +5605,9 @@
                 <span style="color: #333399; font-weight: bold">long</span> sn_regionkey <span style="color: #333333">=</span> e102<span style="color: #333333">-&gt;</span>CN_REGIONKEY;
                 <span style="color: #333399; font-weight: bold">long</span> v102 <span style="color: #333333">=</span> e102<span style="color: #333333">-&gt;</span>__av;
                 SSB4.addOrDelOnZero(se171.modify(sn_regionkey,cn_regionkey,part_type),(v101 <span style="color: #333333">*</span> v102));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n102<span style="color: #333333">=</span>n102<span style="color: #333333">-&gt;</span>next));
+              } <span style="color: #008800; font-weight: bold">while</span> ((n102<span style="color: #333333">=</span>n102<span style="color: #333333">-&gt;</span>nxt));
             }
-          } <span style="color: #008800; font-weight: bold">while</span> ((n101<span style="color: #333333">=</span>n101<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n101<span style="color: #333333">=</span>n101<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h104 <span style="color: #333333">=</span> SSB4_mSUPPLIER1_mPART1_mapkey1_idxfn<span style="color: #333333">::</span>hash(se176.modify1(supplier_suppkey));
@@ -5623,9 +5627,9 @@
                 <span style="color: #333399; font-weight: bold">long</span> sn_regionkey <span style="color: #333333">=</span> e104<span style="color: #333333">-&gt;</span>CN_REGIONKEY;
                 <span style="color: #333399; font-weight: bold">long</span> v104 <span style="color: #333333">=</span> e104<span style="color: #333333">-&gt;</span>__av;
                 SSB4_mPART1.addOrDelOnZero(se174.modify(ssb4_mpartpart_partkey,cn_regionkey,sn_regionkey),(v103 <span style="color: #333333">*</span> v104));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n104<span style="color: #333333">=</span>n104<span style="color: #333333">-&gt;</span>next));
+              } <span style="color: #008800; font-weight: bold">while</span> ((n104<span style="color: #333333">=</span>n104<span style="color: #333333">-&gt;</span>nxt));
             }
-          } <span style="color: #008800; font-weight: bold">while</span> ((n103<span style="color: #333333">=</span>n103<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n103<span style="color: #333333">=</span>n103<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h106 <span style="color: #333333">=</span> SSB4_mSUPPLIER1_mPART1_mORDERS4_mapkey2_idxfn<span style="color: #333333">::</span>hash(se179.modify2(supplier_suppkey));
@@ -5645,9 +5649,9 @@
                 <span style="color: #333399; font-weight: bold">long</span> sn_regionkey <span style="color: #333333">=</span> e106<span style="color: #333333">-&gt;</span>CN_REGIONKEY;
                 <span style="color: #333399; font-weight: bold">long</span> v106 <span style="color: #333333">=</span> e106<span style="color: #333333">-&gt;</span>__av;
                 SSB4_mPART1_mORDERS4.addOrDelOnZero(se177.modify(ssb4_mpart1_mordersorders_orderkey,ssb4_mpartpart_partkey,sn_regionkey),(v105 <span style="color: #333333">*</span> v106));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n106<span style="color: #333333">=</span>n106<span style="color: #333333">-&gt;</span>next));
+              } <span style="color: #008800; font-weight: bold">while</span> ((n106<span style="color: #333333">=</span>n106<span style="color: #333333">-&gt;</span>nxt));
             }
-          } <span style="color: #008800; font-weight: bold">while</span> ((n105<span style="color: #333333">=</span>n105<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n105<span style="color: #333333">=</span>n105<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h108 <span style="color: #333333">=</span> SSB4_mSUPPLIER1_mPART1_mCUSTOMER1_mapkey2_idxfn<span style="color: #333333">::</span>hash(se182.modify2(supplier_suppkey));
@@ -5667,9 +5671,9 @@
                 <span style="color: #333399; font-weight: bold">long</span> sn_regionkey <span style="color: #333333">=</span> e108<span style="color: #333333">-&gt;</span>CN_REGIONKEY;
                 <span style="color: #333399; font-weight: bold">long</span> v108 <span style="color: #333333">=</span> e108<span style="color: #333333">-&gt;</span>__av;
                 SSB4_mPART1_mCUSTOMER1.addOrDelOnZero(se180.modify(ssb4_mpart1_mcustomercustomer_custkey,ssb4_mpartpart_partkey,sn_regionkey),(v107 <span style="color: #333333">*</span> v108));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n108<span style="color: #333333">=</span>n108<span style="color: #333333">-&gt;</span>next));
+              } <span style="color: #008800; font-weight: bold">while</span> ((n108<span style="color: #333333">=</span>n108<span style="color: #333333">-&gt;</span>nxt));
             }
-          } <span style="color: #008800; font-weight: bold">while</span> ((n107<span style="color: #333333">=</span>n107<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n107<span style="color: #333333">=</span>n107<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h109 <span style="color: #333333">=</span> SSB4_mCUSTOMER2_mapkey0_idxfn<span style="color: #333333">::</span>hash(se184.modify0(supplier_nationkey));
@@ -5680,7 +5684,7 @@
             <span style="color: #333399; font-weight: bold">long</span> sn_regionkey <span style="color: #333333">=</span> e109<span style="color: #333333">-&gt;</span>CN_REGIONKEY;
             <span style="color: #333399; font-weight: bold">long</span> v109 <span style="color: #333333">=</span> e109<span style="color: #333333">-&gt;</span>__av;
             SSB4_mLINEITEM3.addOrDelOnZero(se183.modify(supplier_suppkey,sn_regionkey),v109);
-          } <span style="color: #008800; font-weight: bold">while</span> ((n109<span style="color: #333333">=</span>n109<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n109<span style="color: #333333">=</span>n109<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h111 <span style="color: #333333">=</span> SSB4_mSUPPLIER1_mORDERS4_mapkey1_idxfn<span style="color: #333333">::</span>hash(se187.modify1(supplier_suppkey));
@@ -5700,9 +5704,9 @@
                 <span style="color: #333399; font-weight: bold">long</span> sn_regionkey <span style="color: #333333">=</span> e111<span style="color: #333333">-&gt;</span>CN_REGIONKEY;
                 <span style="color: #333399; font-weight: bold">long</span> v111 <span style="color: #333333">=</span> e111<span style="color: #333333">-&gt;</span>__av;
                 SSB4_mORDERS4.addOrDelOnZero(se185.modify(ssb4_mordersorders_orderkey,part_type,sn_regionkey),(v110 <span style="color: #333333">*</span> v111));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n111<span style="color: #333333">=</span>n111<span style="color: #333333">-&gt;</span>next));
+              } <span style="color: #008800; font-weight: bold">while</span> ((n111<span style="color: #333333">=</span>n111<span style="color: #333333">-&gt;</span>nxt));
             }
-          } <span style="color: #008800; font-weight: bold">while</span> ((n110<span style="color: #333333">=</span>n110<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n110<span style="color: #333333">=</span>n110<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h113 <span style="color: #333333">=</span> SSB4_mSUPPLIER1_mCUSTOMER1_mapkey1_idxfn<span style="color: #333333">::</span>hash(se190.modify1(supplier_suppkey));
@@ -5722,9 +5726,9 @@
                 <span style="color: #333399; font-weight: bold">long</span> sn_regionkey <span style="color: #333333">=</span> e113<span style="color: #333333">-&gt;</span>CN_REGIONKEY;
                 <span style="color: #333399; font-weight: bold">long</span> v113 <span style="color: #333333">=</span> e113<span style="color: #333333">-&gt;</span>__av;
                 SSB4_mCUSTOMER1.addOrDelOnZero(se188.modify(ssb4_mcustomercustomer_custkey,part_type,sn_regionkey),(v112 <span style="color: #333333">*</span> v113));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n113<span style="color: #333333">=</span>n113<span style="color: #333333">-&gt;</span>next));
+              } <span style="color: #008800; font-weight: bold">while</span> ((n113<span style="color: #333333">=</span>n113<span style="color: #333333">-&gt;</span>nxt));
             }
-          } <span style="color: #008800; font-weight: bold">while</span> ((n112<span style="color: #333333">=</span>n112<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n112<span style="color: #333333">=</span>n112<span style="color: #333333">-&gt;</span>nxt));
         }
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_SUPPLIER&quot;</span>)
@@ -5737,7 +5741,7 @@
     <span style="color: #333399; font-weight: bold">void</span> on_delete_SUPPLIER(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> supplier_suppkey, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> supplier_name, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> supplier_address, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> supplier_nationkey, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> supplier_phone, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE supplier_acctbal, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> supplier_comment) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_SUPPLIER&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_SUPPLIER&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
+      {  <span style="color: #333333">++</span>tN;
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h115 <span style="color: #333333">=</span> SSB4_mSUPPLIER1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se193.modify0(supplier_suppkey));
           <span style="color: #008800; font-weight: bold">const</span> HashIndex_SSB4_mSUPPLIER1_map_0<span style="color: #333333">*</span> i114 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_SSB4_mSUPPLIER1_map_0<span style="color: #333333">*&gt;</span>(SSB4_mSUPPLIER1.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
@@ -5756,9 +5760,9 @@
                 <span style="color: #333399; font-weight: bold">long</span> sn_regionkey <span style="color: #333333">=</span> e115<span style="color: #333333">-&gt;</span>CN_REGIONKEY;
                 <span style="color: #333399; font-weight: bold">long</span> v115 <span style="color: #333333">=</span> e115<span style="color: #333333">-&gt;</span>__av;
                 SSB4.addOrDelOnZero(se191.modify(sn_regionkey,cn_regionkey,part_type),(v114 <span style="color: #333333">*</span> (v115 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n115<span style="color: #333333">=</span>n115<span style="color: #333333">-&gt;</span>next));
+              } <span style="color: #008800; font-weight: bold">while</span> ((n115<span style="color: #333333">=</span>n115<span style="color: #333333">-&gt;</span>nxt));
             }
-          } <span style="color: #008800; font-weight: bold">while</span> ((n114<span style="color: #333333">=</span>n114<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n114<span style="color: #333333">=</span>n114<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h117 <span style="color: #333333">=</span> SSB4_mSUPPLIER1_mPART1_mapkey1_idxfn<span style="color: #333333">::</span>hash(se196.modify1(supplier_suppkey));
@@ -5778,9 +5782,9 @@
                 <span style="color: #333399; font-weight: bold">long</span> sn_regionkey <span style="color: #333333">=</span> e117<span style="color: #333333">-&gt;</span>CN_REGIONKEY;
                 <span style="color: #333399; font-weight: bold">long</span> v117 <span style="color: #333333">=</span> e117<span style="color: #333333">-&gt;</span>__av;
                 SSB4_mPART1.addOrDelOnZero(se194.modify(ssb4_mpartpart_partkey,cn_regionkey,sn_regionkey),(v116 <span style="color: #333333">*</span> (v117 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n117<span style="color: #333333">=</span>n117<span style="color: #333333">-&gt;</span>next));
+              } <span style="color: #008800; font-weight: bold">while</span> ((n117<span style="color: #333333">=</span>n117<span style="color: #333333">-&gt;</span>nxt));
             }
-          } <span style="color: #008800; font-weight: bold">while</span> ((n116<span style="color: #333333">=</span>n116<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n116<span style="color: #333333">=</span>n116<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h119 <span style="color: #333333">=</span> SSB4_mSUPPLIER1_mPART1_mORDERS4_mapkey2_idxfn<span style="color: #333333">::</span>hash(se199.modify2(supplier_suppkey));
@@ -5800,9 +5804,9 @@
                 <span style="color: #333399; font-weight: bold">long</span> sn_regionkey <span style="color: #333333">=</span> e119<span style="color: #333333">-&gt;</span>CN_REGIONKEY;
                 <span style="color: #333399; font-weight: bold">long</span> v119 <span style="color: #333333">=</span> e119<span style="color: #333333">-&gt;</span>__av;
                 SSB4_mPART1_mORDERS4.addOrDelOnZero(se197.modify(ssb4_mpart1_mordersorders_orderkey,ssb4_mpartpart_partkey,sn_regionkey),(v118 <span style="color: #333333">*</span> (v119 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n119<span style="color: #333333">=</span>n119<span style="color: #333333">-&gt;</span>next));
+              } <span style="color: #008800; font-weight: bold">while</span> ((n119<span style="color: #333333">=</span>n119<span style="color: #333333">-&gt;</span>nxt));
             }
-          } <span style="color: #008800; font-weight: bold">while</span> ((n118<span style="color: #333333">=</span>n118<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n118<span style="color: #333333">=</span>n118<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h121 <span style="color: #333333">=</span> SSB4_mSUPPLIER1_mPART1_mCUSTOMER1_mapkey2_idxfn<span style="color: #333333">::</span>hash(se202.modify2(supplier_suppkey));
@@ -5822,9 +5826,9 @@
                 <span style="color: #333399; font-weight: bold">long</span> sn_regionkey <span style="color: #333333">=</span> e121<span style="color: #333333">-&gt;</span>CN_REGIONKEY;
                 <span style="color: #333399; font-weight: bold">long</span> v121 <span style="color: #333333">=</span> e121<span style="color: #333333">-&gt;</span>__av;
                 SSB4_mPART1_mCUSTOMER1.addOrDelOnZero(se200.modify(ssb4_mpart1_mcustomercustomer_custkey,ssb4_mpartpart_partkey,sn_regionkey),(v120 <span style="color: #333333">*</span> (v121 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n121<span style="color: #333333">=</span>n121<span style="color: #333333">-&gt;</span>next));
+              } <span style="color: #008800; font-weight: bold">while</span> ((n121<span style="color: #333333">=</span>n121<span style="color: #333333">-&gt;</span>nxt));
             }
-          } <span style="color: #008800; font-weight: bold">while</span> ((n120<span style="color: #333333">=</span>n120<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n120<span style="color: #333333">=</span>n120<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h122 <span style="color: #333333">=</span> SSB4_mCUSTOMER2_mapkey0_idxfn<span style="color: #333333">::</span>hash(se204.modify0(supplier_nationkey));
@@ -5835,7 +5839,7 @@
             <span style="color: #333399; font-weight: bold">long</span> sn_regionkey <span style="color: #333333">=</span> e122<span style="color: #333333">-&gt;</span>CN_REGIONKEY;
             <span style="color: #333399; font-weight: bold">long</span> v122 <span style="color: #333333">=</span> e122<span style="color: #333333">-&gt;</span>__av;
             SSB4_mLINEITEM3.addOrDelOnZero(se203.modify(supplier_suppkey,sn_regionkey),(v122 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n122<span style="color: #333333">=</span>n122<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n122<span style="color: #333333">=</span>n122<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h124 <span style="color: #333333">=</span> SSB4_mSUPPLIER1_mORDERS4_mapkey1_idxfn<span style="color: #333333">::</span>hash(se207.modify1(supplier_suppkey));
@@ -5855,9 +5859,9 @@
                 <span style="color: #333399; font-weight: bold">long</span> sn_regionkey <span style="color: #333333">=</span> e124<span style="color: #333333">-&gt;</span>CN_REGIONKEY;
                 <span style="color: #333399; font-weight: bold">long</span> v124 <span style="color: #333333">=</span> e124<span style="color: #333333">-&gt;</span>__av;
                 SSB4_mORDERS4.addOrDelOnZero(se205.modify(ssb4_mordersorders_orderkey,part_type,sn_regionkey),(v123 <span style="color: #333333">*</span> (v124 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n124<span style="color: #333333">=</span>n124<span style="color: #333333">-&gt;</span>next));
+              } <span style="color: #008800; font-weight: bold">while</span> ((n124<span style="color: #333333">=</span>n124<span style="color: #333333">-&gt;</span>nxt));
             }
-          } <span style="color: #008800; font-weight: bold">while</span> ((n123<span style="color: #333333">=</span>n123<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n123<span style="color: #333333">=</span>n123<span style="color: #333333">-&gt;</span>nxt));
         }
         { <span style="color: #888888">//slice</span>
           <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h126 <span style="color: #333333">=</span> SSB4_mSUPPLIER1_mCUSTOMER1_mapkey1_idxfn<span style="color: #333333">::</span>hash(se210.modify1(supplier_suppkey));
@@ -5877,9 +5881,9 @@
                 <span style="color: #333399; font-weight: bold">long</span> sn_regionkey <span style="color: #333333">=</span> e126<span style="color: #333333">-&gt;</span>CN_REGIONKEY;
                 <span style="color: #333399; font-weight: bold">long</span> v126 <span style="color: #333333">=</span> e126<span style="color: #333333">-&gt;</span>__av;
                 SSB4_mCUSTOMER1.addOrDelOnZero(se208.modify(ssb4_mcustomercustomer_custkey,part_type,sn_regionkey),(v125 <span style="color: #333333">*</span> (v126 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)));
-              } <span style="color: #008800; font-weight: bold">while</span> ((n126<span style="color: #333333">=</span>n126<span style="color: #333333">-&gt;</span>next));
+              } <span style="color: #008800; font-weight: bold">while</span> ((n126<span style="color: #333333">=</span>n126<span style="color: #333333">-&gt;</span>nxt));
             }
-          } <span style="color: #008800; font-weight: bold">while</span> ((n125<span style="color: #333333">=</span>n125<span style="color: #333333">-&gt;</span>next));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n125<span style="color: #333333">=</span>n125<span style="color: #333333">-&gt;</span>nxt));
         }
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_SUPPLIER&quot;</span>)
@@ -5892,7 +5896,7 @@
     <span style="color: #333399; font-weight: bold">void</span> on_system_ready_event() {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
-      {  <span style="color: #888888">//</span>
+      {  
         SSB4_mCUSTOMER2.clear();
         { <span style="color: #888888">//foreach</span>
           NATION_entry<span style="color: #333333">*</span> e127 <span style="color: #333333">=</span> NATION.head;
@@ -6202,16 +6206,18 @@
       <span style="color: #888888">/* Imports data for static tables and performs view initialization based on it. */</span>
       <span style="color: #333399; font-weight: bold">void</span> init() {
           <span style="color: #888888">//P0_PLACE_HOLDER</span>
-          table_multiplexer.init_source();
-          stream_multiplexer.init_source();
+          table_multiplexer.init_source(run_opts<span style="color: #333333">-&gt;</span>batch_size, run_opts<span style="color: #333333">-&gt;</span>parallel, <span style="color: #007020">true</span>);
+          stream_multiplexer.init_source(run_opts<span style="color: #333333">-&gt;</span>batch_size, run_opts<span style="color: #333333">-&gt;</span>parallel, <span style="color: #007020">false</span>);
           process_tables();
           data.on_system_ready_event();
           <span style="color: #888888">//P2_PLACE_HOLDER</span>
       }
   
       <span style="color: #888888">/* Saves a snapshot of the data required to obtain the results of top level queries. */</span>
-      <span style="color: #333399; font-weight: bold">snapshot_t</span> take_snapshot(){ <span style="color: #888888">//tlq_t d=(tlq_t&amp;)data; if (d.tS==0) { gettimeofday(&amp;(d.t),NULL); d.tT=((d.t).tv_sec-(d.t0).tv_sec)*1000000L+((d.t).tv_usec-(d.t0).tv_usec); } printf(&quot;SAMPLE=standard,%ld,%ld,%ld\n&quot;,d.tT,d.tN,d.tS);</span>
-          <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333399; font-weight: bold">snapshot_t</span>( <span style="color: #008800; font-weight: bold">new</span> <span style="color: #333399; font-weight: bold">tlq_t</span>((<span style="color: #333399; font-weight: bold">tlq_t</span><span style="color: #333333">&amp;</span>)data) );
+      <span style="color: #333399; font-weight: bold">snapshot_t</span> take_snapshot(){
+          <span style="color: #333399; font-weight: bold">tlq_t</span><span style="color: #333333">*</span> d <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">new</span> <span style="color: #333399; font-weight: bold">tlq_t</span>((<span style="color: #333399; font-weight: bold">tlq_t</span><span style="color: #333333">&amp;</span>)data);
+          <span style="color: #008800; font-weight: bold">if</span> (d<span style="color: #333333">-&gt;</span>tS<span style="color: #333333">==</span><span style="color: #0000DD; font-weight: bold">0</span>) { gettimeofday(<span style="color: #333333">&amp;</span>(d<span style="color: #333333">-&gt;</span>t),<span style="color: #007020">NULL</span>); d<span style="color: #333333">-&gt;</span>tT<span style="color: #333333">=</span>((d<span style="color: #333333">-&gt;</span>t).tv_sec<span style="color: #333333">-</span>(d<span style="color: #333333">-&gt;</span>t0).tv_sec)<span style="color: #333333">*</span><span style="color: #0000DD; font-weight: bold">1000000L</span><span style="color: #333333">+</span>((d<span style="color: #333333">-&gt;</span>t).tv_usec<span style="color: #333333">-</span>(d<span style="color: #333333">-&gt;</span>t0).tv_usec); } printf(<span style="background-color: #fff0f0">&quot;SAMPLE=standard,%ld,%ld,%ld</span><span style="color: #666666; font-weight: bold; background-color: #fff0f0">\n</span><span style="background-color: #fff0f0">&quot;</span>,d<span style="color: #333333">-&gt;</span>tT,d<span style="color: #333333">-&gt;</span>tN,d<span style="color: #333333">-&gt;</span>tS);
+          <span style="color: #008800; font-weight: bold">return</span> <span style="color: #0066BB; font-weight: bold">snapshot_t</span>( d );
       }
   
     <span style="color: #997700; font-weight: bold">protected:</span>

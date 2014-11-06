@@ -511,73 +511,7 @@
 511
 512
 513
-514
-515
-516
-517
-518
-519
-520
-521
-522
-523
-524
-525
-526
-527
-528
-529
-530
-531
-532
-533
-534
-535
-536
-537
-538
-539
-540
-541
-542
-543
-544
-545
-546
-547
-548
-549
-550
-551
-552
-553
-554
-555
-556
-557
-558
-559
-560
-561
-562
-563
-564
-565
-566
-567
-568
-569
-570
-571
-572
-573
-574
-575
-576
-577
-578
-579
-580</pre></td><td><pre style="margin: 0; line-height: 125%"><span style="color: #557799">#include &quot;program_base.hpp&quot;</span>
+514</pre></td><td><pre style="margin: 0; line-height: 125%"><span style="color: #557799">#include &quot;program_base.hpp&quot;</span>
 <span style="color: #557799">#include &quot;hpds/KDouble.hpp&quot;</span>
 <span style="color: #557799">#include &quot;hash.hpp&quot;</span>
 <span style="color: #557799">#include &quot;mmap/mmap.hpp&quot;</span>
@@ -588,69 +522,36 @@
 <span style="color: #008800; font-weight: bold">namespace</span> dbtoaster {
   
   <span style="color: #888888">/* Definitions of auxiliary maps for storing materialized views. */</span>
-  <span style="color: #008800; font-weight: bold">struct</span> AVG_YEARLY_pLINEITEM1_entry {
-    <span style="color: #333399; font-weight: bold">long</span> AVG_YEARLY_pLINEITEMLINEITEM_PARTKEY; DOUBLE_TYPE L_QUANTITY; DOUBLE_TYPE __av;  AVG_YEARLY_pLINEITEM1_entry<span style="color: #333333">*</span> nxt; AVG_YEARLY_pLINEITEM1_entry<span style="color: #333333">*</span> prv;
-    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">AVG_YEARLY_pLINEITEM1_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*AVG_YEARLY_pLINEITEMLINEITEM_PARTKEY = 0L; L_QUANTITY = 0.0; __av = 0.0; */</span> }
-    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">AVG_YEARLY_pLINEITEM1_entry</span>(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c1, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c2) { AVG_YEARLY_pLINEITEMLINEITEM_PARTKEY <span style="color: #333333">=</span> c0; L_QUANTITY <span style="color: #333333">=</span> c1; __av <span style="color: #333333">=</span> c2; }
-    AVG_YEARLY_pLINEITEM1_entry(<span style="color: #008800; font-weight: bold">const</span> AVG_YEARLY_pLINEITEM1_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> AVG_YEARLY_pLINEITEMLINEITEM_PARTKEY( other.AVG_YEARLY_pLINEITEMLINEITEM_PARTKEY ), L_QUANTITY( other.L_QUANTITY ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
-    FORCE_INLINE AVG_YEARLY_pLINEITEM1_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c1) { AVG_YEARLY_pLINEITEMLINEITEM_PARTKEY <span style="color: #333333">=</span> c0; L_QUANTITY <span style="color: #333333">=</span> c1;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
-    FORCE_INLINE AVG_YEARLY_pLINEITEM1_entry<span style="color: #333333">&amp;</span> modify0(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0) { AVG_YEARLY_pLINEITEMLINEITEM_PARTKEY <span style="color: #333333">=</span> c0;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
-    <span style="color: #008800; font-weight: bold">template</span><span style="color: #333333">&lt;</span><span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Archive</span><span style="color: #333333">&gt;</span>
-    <span style="color: #333399; font-weight: bold">void</span> serialize(Archive<span style="color: #333333">&amp;</span> ar, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">unsigned</span> <span style="color: #333399; font-weight: bold">int</span> version) <span style="color: #008800; font-weight: bold">const</span> 
-    {
-      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
-      DBT_SERIALIZATION_NVP(ar, AVG_YEARLY_pLINEITEMLINEITEM_PARTKEY);
-      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
-      DBT_SERIALIZATION_NVP(ar, L_QUANTITY);
-      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
-      DBT_SERIALIZATION_NVP(ar, __av);
-    }
-  };
-  <span style="color: #008800; font-weight: bold">struct</span> AVG_YEARLY_pLINEITEM1_mapkey01_idxfn {
-    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> AVG_YEARLY_pLINEITEM1_entry<span style="color: #333333">&amp;</span> e) {
-      <span style="color: #333399; font-weight: bold">size_t</span> h <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>;
-      hash_combine(h, e.AVG_YEARLY_pLINEITEMLINEITEM_PARTKEY);
-      hash_combine(h, e.L_QUANTITY);
-      <span style="color: #008800; font-weight: bold">return</span> h;
-    }
-    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> AVG_YEARLY_pLINEITEM1_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> AVG_YEARLY_pLINEITEM1_entry<span style="color: #333333">&amp;</span> y) {
-      <span style="color: #008800; font-weight: bold">return</span> x.AVG_YEARLY_pLINEITEMLINEITEM_PARTKEY <span style="color: #333333">==</span> y.AVG_YEARLY_pLINEITEMLINEITEM_PARTKEY <span style="color: #333333">&amp;&amp;</span> x.L_QUANTITY <span style="color: #333333">==</span> y.L_QUANTITY;
-    }
-  };
-  
-  <span style="color: #008800; font-weight: bold">struct</span> AVG_YEARLY_pLINEITEM1_mapkey0_idxfn {
-    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> AVG_YEARLY_pLINEITEM1_entry<span style="color: #333333">&amp;</span> e) {
-      <span style="color: #333399; font-weight: bold">size_t</span> h <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>;
-      hash_combine(h, e.AVG_YEARLY_pLINEITEMLINEITEM_PARTKEY);
-      <span style="color: #008800; font-weight: bold">return</span> h;
-    }
-    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> AVG_YEARLY_pLINEITEM1_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> AVG_YEARLY_pLINEITEM1_entry<span style="color: #333333">&amp;</span> y) {
-      <span style="color: #008800; font-weight: bold">return</span> x.AVG_YEARLY_pLINEITEMLINEITEM_PARTKEY <span style="color: #333333">==</span> y.AVG_YEARLY_pLINEITEMLINEITEM_PARTKEY;
-    }
-  };
-  
-  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>AVG_YEARLY_pLINEITEM1_entry,DOUBLE_TYPE,
-    HashIndex<span style="color: #333333">&lt;</span>AVG_YEARLY_pLINEITEM1_entry,DOUBLE_TYPE,AVG_YEARLY_pLINEITEM1_mapkey01_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>,
-    HashIndex<span style="color: #333333">&lt;</span>AVG_YEARLY_pLINEITEM1_entry,DOUBLE_TYPE,AVG_YEARLY_pLINEITEM1_mapkey0_idxfn,<span style="color: #007020">false</span><span style="color: #333333">&gt;</span>
-  <span style="color: #333333">&gt;</span> AVG_YEARLY_pLINEITEM1_map;
-  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>AVG_YEARLY_pLINEITEM1_entry,DOUBLE_TYPE,AVG_YEARLY_pLINEITEM1_mapkey01_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_AVG_YEARLY_pLINEITEM1_map_01;
-  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>AVG_YEARLY_pLINEITEM1_entry,DOUBLE_TYPE,AVG_YEARLY_pLINEITEM1_mapkey0_idxfn,<span style="color: #007020">false</span><span style="color: #333333">&gt;</span> HashIndex_AVG_YEARLY_pLINEITEM1_map_0;
-  
   <span style="color: #008800; font-weight: bold">struct</span> AVG_YEARLY_mLINEITEM1_entry {
-    <span style="color: #333399; font-weight: bold">long</span> AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY; <span style="color: #333399; font-weight: bold">long</span> __av;  AVG_YEARLY_mLINEITEM1_entry<span style="color: #333333">*</span> nxt; AVG_YEARLY_mLINEITEM1_entry<span style="color: #333333">*</span> prv;
-    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">AVG_YEARLY_mLINEITEM1_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY = 0L; __av = 0L; */</span> }
-    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">AVG_YEARLY_mLINEITEM1_entry</span>(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1) { AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY <span style="color: #333333">=</span> c0; __av <span style="color: #333333">=</span> c1; }
-    AVG_YEARLY_mLINEITEM1_entry(<span style="color: #008800; font-weight: bold">const</span> AVG_YEARLY_mLINEITEM1_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY( other.AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
-    FORCE_INLINE AVG_YEARLY_mLINEITEM1_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0) { AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY <span style="color: #333333">=</span> c0;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
+    <span style="color: #333399; font-weight: bold">long</span> AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY; DOUBLE_TYPE L_QUANTITY; DOUBLE_TYPE __av;  AVG_YEARLY_mLINEITEM1_entry<span style="color: #333333">*</span> nxt; AVG_YEARLY_mLINEITEM1_entry<span style="color: #333333">*</span> prv;
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">AVG_YEARLY_mLINEITEM1_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY = 0L; L_QUANTITY = 0.0; __av = 0.0; */</span> }
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">AVG_YEARLY_mLINEITEM1_entry</span>(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c1, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c2) { AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY <span style="color: #333333">=</span> c0; L_QUANTITY <span style="color: #333333">=</span> c1; __av <span style="color: #333333">=</span> c2; }
+    AVG_YEARLY_mLINEITEM1_entry(<span style="color: #008800; font-weight: bold">const</span> AVG_YEARLY_mLINEITEM1_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY( other.AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY ), L_QUANTITY( other.L_QUANTITY ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
+    FORCE_INLINE AVG_YEARLY_mLINEITEM1_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c1) { AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY <span style="color: #333333">=</span> c0; L_QUANTITY <span style="color: #333333">=</span> c1;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
+    FORCE_INLINE AVG_YEARLY_mLINEITEM1_entry<span style="color: #333333">&amp;</span> modify0(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0) { AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY <span style="color: #333333">=</span> c0;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
     <span style="color: #008800; font-weight: bold">template</span><span style="color: #333333">&lt;</span><span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Archive</span><span style="color: #333333">&gt;</span>
     <span style="color: #333399; font-weight: bold">void</span> serialize(Archive<span style="color: #333333">&amp;</span> ar, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">unsigned</span> <span style="color: #333399; font-weight: bold">int</span> version) <span style="color: #008800; font-weight: bold">const</span> 
     {
       ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
       DBT_SERIALIZATION_NVP(ar, AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY);
       ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, L_QUANTITY);
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
       DBT_SERIALIZATION_NVP(ar, __av);
     }
   };
+  <span style="color: #008800; font-weight: bold">struct</span> AVG_YEARLY_mLINEITEM1_mapkey01_idxfn {
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> AVG_YEARLY_mLINEITEM1_entry<span style="color: #333333">&amp;</span> e) {
+      <span style="color: #333399; font-weight: bold">size_t</span> h <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>;
+      hash_combine(h, e.AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY);
+      hash_combine(h, e.L_QUANTITY);
+      <span style="color: #008800; font-weight: bold">return</span> h;
+    }
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> AVG_YEARLY_mLINEITEM1_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> AVG_YEARLY_mLINEITEM1_entry<span style="color: #333333">&amp;</span> y) {
+      <span style="color: #008800; font-weight: bold">return</span> x.AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY <span style="color: #333333">==</span> y.AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY <span style="color: #333333">&amp;&amp;</span> x.L_QUANTITY <span style="color: #333333">==</span> y.L_QUANTITY;
+    }
+  };
+  
   <span style="color: #008800; font-weight: bold">struct</span> AVG_YEARLY_mLINEITEM1_mapkey0_idxfn {
     FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> AVG_YEARLY_mLINEITEM1_entry<span style="color: #333333">&amp;</span> e) {
       <span style="color: #333399; font-weight: bold">size_t</span> h <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>;
@@ -662,17 +563,19 @@
     }
   };
   
-  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>AVG_YEARLY_mLINEITEM1_entry,<span style="color: #333399; font-weight: bold">long</span>,
-    HashIndex<span style="color: #333333">&lt;</span>AVG_YEARLY_mLINEITEM1_entry,<span style="color: #333399; font-weight: bold">long</span>,AVG_YEARLY_mLINEITEM1_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>
+  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>AVG_YEARLY_mLINEITEM1_entry,DOUBLE_TYPE,
+    HashIndex<span style="color: #333333">&lt;</span>AVG_YEARLY_mLINEITEM1_entry,DOUBLE_TYPE,AVG_YEARLY_mLINEITEM1_mapkey01_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>,
+    HashIndex<span style="color: #333333">&lt;</span>AVG_YEARLY_mLINEITEM1_entry,DOUBLE_TYPE,AVG_YEARLY_mLINEITEM1_mapkey0_idxfn,<span style="color: #007020">false</span><span style="color: #333333">&gt;</span>
   <span style="color: #333333">&gt;</span> AVG_YEARLY_mLINEITEM1_map;
-  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>AVG_YEARLY_mLINEITEM1_entry,<span style="color: #333399; font-weight: bold">long</span>,AVG_YEARLY_mLINEITEM1_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_AVG_YEARLY_mLINEITEM1_map_0;
+  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>AVG_YEARLY_mLINEITEM1_entry,DOUBLE_TYPE,AVG_YEARLY_mLINEITEM1_mapkey01_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_AVG_YEARLY_mLINEITEM1_map_01;
+  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>AVG_YEARLY_mLINEITEM1_entry,DOUBLE_TYPE,AVG_YEARLY_mLINEITEM1_mapkey0_idxfn,<span style="color: #007020">false</span><span style="color: #333333">&gt;</span> HashIndex_AVG_YEARLY_mLINEITEM1_map_0;
   
-  <span style="color: #008800; font-weight: bold">struct</span> AVG_YEARLY_mLINEITEM2_L1_1_L1_1_entry {
-    <span style="color: #333399; font-weight: bold">long</span> AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY; <span style="color: #333399; font-weight: bold">long</span> __av;  AVG_YEARLY_mLINEITEM2_L1_1_L1_1_entry<span style="color: #333333">*</span> nxt; AVG_YEARLY_mLINEITEM2_L1_1_L1_1_entry<span style="color: #333333">*</span> prv;
-    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">AVG_YEARLY_mLINEITEM2_L1_1_L1_1_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY = 0L; __av = 0L; */</span> }
-    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">AVG_YEARLY_mLINEITEM2_L1_1_L1_1_entry</span>(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1) { AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY <span style="color: #333333">=</span> c0; __av <span style="color: #333333">=</span> c1; }
-    AVG_YEARLY_mLINEITEM2_L1_1_L1_1_entry(<span style="color: #008800; font-weight: bold">const</span> AVG_YEARLY_mLINEITEM2_L1_1_L1_1_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY( other.AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
-    FORCE_INLINE AVG_YEARLY_mLINEITEM2_L1_1_L1_1_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0) { AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY <span style="color: #333333">=</span> c0;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
+  <span style="color: #008800; font-weight: bold">struct</span> AVG_YEARLY_mLINEITEM1_L1_1_L1_1_entry {
+    <span style="color: #333399; font-weight: bold">long</span> AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY; <span style="color: #333399; font-weight: bold">long</span> __av;  AVG_YEARLY_mLINEITEM1_L1_1_L1_1_entry<span style="color: #333333">*</span> nxt; AVG_YEARLY_mLINEITEM1_L1_1_L1_1_entry<span style="color: #333333">*</span> prv;
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">AVG_YEARLY_mLINEITEM1_L1_1_L1_1_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY = 0L; __av = 0L; */</span> }
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">AVG_YEARLY_mLINEITEM1_L1_1_L1_1_entry</span>(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1) { AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY <span style="color: #333333">=</span> c0; __av <span style="color: #333333">=</span> c1; }
+    AVG_YEARLY_mLINEITEM1_L1_1_L1_1_entry(<span style="color: #008800; font-weight: bold">const</span> AVG_YEARLY_mLINEITEM1_L1_1_L1_1_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY( other.AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
+    FORCE_INLINE AVG_YEARLY_mLINEITEM1_L1_1_L1_1_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0) { AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY <span style="color: #333333">=</span> c0;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
     <span style="color: #008800; font-weight: bold">template</span><span style="color: #333333">&lt;</span><span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Archive</span><span style="color: #333333">&gt;</span>
     <span style="color: #333399; font-weight: bold">void</span> serialize(Archive<span style="color: #333333">&amp;</span> ar, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">unsigned</span> <span style="color: #333399; font-weight: bold">int</span> version) <span style="color: #008800; font-weight: bold">const</span> 
     {
@@ -682,28 +585,28 @@
       DBT_SERIALIZATION_NVP(ar, __av);
     }
   };
-  <span style="color: #008800; font-weight: bold">struct</span> AVG_YEARLY_mLINEITEM2_L1_1_L1_1_mapkey0_idxfn {
-    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> AVG_YEARLY_mLINEITEM2_L1_1_L1_1_entry<span style="color: #333333">&amp;</span> e) {
+  <span style="color: #008800; font-weight: bold">struct</span> AVG_YEARLY_mLINEITEM1_L1_1_L1_1_mapkey0_idxfn {
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> AVG_YEARLY_mLINEITEM1_L1_1_L1_1_entry<span style="color: #333333">&amp;</span> e) {
       <span style="color: #333399; font-weight: bold">size_t</span> h <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>;
       hash_combine(h, e.AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY);
       <span style="color: #008800; font-weight: bold">return</span> h;
     }
-    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> AVG_YEARLY_mLINEITEM2_L1_1_L1_1_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> AVG_YEARLY_mLINEITEM2_L1_1_L1_1_entry<span style="color: #333333">&amp;</span> y) {
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> AVG_YEARLY_mLINEITEM1_L1_1_L1_1_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> AVG_YEARLY_mLINEITEM1_L1_1_L1_1_entry<span style="color: #333333">&amp;</span> y) {
       <span style="color: #008800; font-weight: bold">return</span> x.AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY <span style="color: #333333">==</span> y.AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY;
     }
   };
   
-  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>AVG_YEARLY_mLINEITEM2_L1_1_L1_1_entry,<span style="color: #333399; font-weight: bold">long</span>,
-    HashIndex<span style="color: #333333">&lt;</span>AVG_YEARLY_mLINEITEM2_L1_1_L1_1_entry,<span style="color: #333399; font-weight: bold">long</span>,AVG_YEARLY_mLINEITEM2_L1_1_L1_1_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>
-  <span style="color: #333333">&gt;</span> AVG_YEARLY_mLINEITEM2_L1_1_L1_1_map;
-  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>AVG_YEARLY_mLINEITEM2_L1_1_L1_1_entry,<span style="color: #333399; font-weight: bold">long</span>,AVG_YEARLY_mLINEITEM2_L1_1_L1_1_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_AVG_YEARLY_mLINEITEM2_L1_1_L1_1_map_0;
+  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>AVG_YEARLY_mLINEITEM1_L1_1_L1_1_entry,<span style="color: #333399; font-weight: bold">long</span>,
+    HashIndex<span style="color: #333333">&lt;</span>AVG_YEARLY_mLINEITEM1_L1_1_L1_1_entry,<span style="color: #333399; font-weight: bold">long</span>,AVG_YEARLY_mLINEITEM1_L1_1_L1_1_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>
+  <span style="color: #333333">&gt;</span> AVG_YEARLY_mLINEITEM1_L1_1_L1_1_map;
+  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>AVG_YEARLY_mLINEITEM1_L1_1_L1_1_entry,<span style="color: #333399; font-weight: bold">long</span>,AVG_YEARLY_mLINEITEM1_L1_1_L1_1_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_AVG_YEARLY_mLINEITEM1_L1_1_L1_1_map_0;
   
-  <span style="color: #008800; font-weight: bold">struct</span> AVG_YEARLY_mLINEITEM2_L1_2_entry {
-    <span style="color: #333399; font-weight: bold">long</span> AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY; DOUBLE_TYPE __av;  AVG_YEARLY_mLINEITEM2_L1_2_entry<span style="color: #333333">*</span> nxt; AVG_YEARLY_mLINEITEM2_L1_2_entry<span style="color: #333333">*</span> prv;
-    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">AVG_YEARLY_mLINEITEM2_L1_2_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY = 0L; __av = 0.0; */</span> }
-    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">AVG_YEARLY_mLINEITEM2_L1_2_entry</span>(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c1) { AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY <span style="color: #333333">=</span> c0; __av <span style="color: #333333">=</span> c1; }
-    AVG_YEARLY_mLINEITEM2_L1_2_entry(<span style="color: #008800; font-weight: bold">const</span> AVG_YEARLY_mLINEITEM2_L1_2_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY( other.AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
-    FORCE_INLINE AVG_YEARLY_mLINEITEM2_L1_2_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0) { AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY <span style="color: #333333">=</span> c0;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
+  <span style="color: #008800; font-weight: bold">struct</span> AVG_YEARLY_mLINEITEM1_L1_2_entry {
+    <span style="color: #333399; font-weight: bold">long</span> AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY; DOUBLE_TYPE __av;  AVG_YEARLY_mLINEITEM1_L1_2_entry<span style="color: #333333">*</span> nxt; AVG_YEARLY_mLINEITEM1_L1_2_entry<span style="color: #333333">*</span> prv;
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">AVG_YEARLY_mLINEITEM1_L1_2_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY = 0L; __av = 0.0; */</span> }
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">AVG_YEARLY_mLINEITEM1_L1_2_entry</span>(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c1) { AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY <span style="color: #333333">=</span> c0; __av <span style="color: #333333">=</span> c1; }
+    AVG_YEARLY_mLINEITEM1_L1_2_entry(<span style="color: #008800; font-weight: bold">const</span> AVG_YEARLY_mLINEITEM1_L1_2_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY( other.AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
+    FORCE_INLINE AVG_YEARLY_mLINEITEM1_L1_2_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0) { AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY <span style="color: #333333">=</span> c0;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
     <span style="color: #008800; font-weight: bold">template</span><span style="color: #333333">&lt;</span><span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Archive</span><span style="color: #333333">&gt;</span>
     <span style="color: #333399; font-weight: bold">void</span> serialize(Archive<span style="color: #333333">&amp;</span> ar, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">unsigned</span> <span style="color: #333399; font-weight: bold">int</span> version) <span style="color: #008800; font-weight: bold">const</span> 
     {
@@ -713,55 +616,52 @@
       DBT_SERIALIZATION_NVP(ar, __av);
     }
   };
-  <span style="color: #008800; font-weight: bold">struct</span> AVG_YEARLY_mLINEITEM2_L1_2_mapkey0_idxfn {
-    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> AVG_YEARLY_mLINEITEM2_L1_2_entry<span style="color: #333333">&amp;</span> e) {
+  <span style="color: #008800; font-weight: bold">struct</span> AVG_YEARLY_mLINEITEM1_L1_2_mapkey0_idxfn {
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> AVG_YEARLY_mLINEITEM1_L1_2_entry<span style="color: #333333">&amp;</span> e) {
       <span style="color: #333399; font-weight: bold">size_t</span> h <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>;
       hash_combine(h, e.AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY);
       <span style="color: #008800; font-weight: bold">return</span> h;
     }
-    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> AVG_YEARLY_mLINEITEM2_L1_2_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> AVG_YEARLY_mLINEITEM2_L1_2_entry<span style="color: #333333">&amp;</span> y) {
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> AVG_YEARLY_mLINEITEM1_L1_2_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> AVG_YEARLY_mLINEITEM1_L1_2_entry<span style="color: #333333">&amp;</span> y) {
       <span style="color: #008800; font-weight: bold">return</span> x.AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY <span style="color: #333333">==</span> y.AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY;
     }
   };
   
-  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>AVG_YEARLY_mLINEITEM2_L1_2_entry,DOUBLE_TYPE,
-    HashIndex<span style="color: #333333">&lt;</span>AVG_YEARLY_mLINEITEM2_L1_2_entry,DOUBLE_TYPE,AVG_YEARLY_mLINEITEM2_L1_2_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>
-  <span style="color: #333333">&gt;</span> AVG_YEARLY_mLINEITEM2_L1_2_map;
-  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>AVG_YEARLY_mLINEITEM2_L1_2_entry,DOUBLE_TYPE,AVG_YEARLY_mLINEITEM2_L1_2_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_AVG_YEARLY_mLINEITEM2_L1_2_map_0;
+  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>AVG_YEARLY_mLINEITEM1_L1_2_entry,DOUBLE_TYPE,
+    HashIndex<span style="color: #333333">&lt;</span>AVG_YEARLY_mLINEITEM1_L1_2_entry,DOUBLE_TYPE,AVG_YEARLY_mLINEITEM1_L1_2_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>
+  <span style="color: #333333">&gt;</span> AVG_YEARLY_mLINEITEM1_L1_2_map;
+  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>AVG_YEARLY_mLINEITEM1_L1_2_entry,DOUBLE_TYPE,AVG_YEARLY_mLINEITEM1_L1_2_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_AVG_YEARLY_mLINEITEM1_L1_2_map_0;
   
-  <span style="color: #008800; font-weight: bold">struct</span> AVG_YEARLY_mLINEITEM5_entry {
-    <span style="color: #333399; font-weight: bold">long</span> L_PARTKEY; DOUBLE_TYPE L_QUANTITY; DOUBLE_TYPE __av;  AVG_YEARLY_mLINEITEM5_entry<span style="color: #333333">*</span> nxt; AVG_YEARLY_mLINEITEM5_entry<span style="color: #333333">*</span> prv;
-    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">AVG_YEARLY_mLINEITEM5_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*L_PARTKEY = 0L; L_QUANTITY = 0.0; __av = 0.0; */</span> }
-    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">AVG_YEARLY_mLINEITEM5_entry</span>(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c1, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c2) { L_PARTKEY <span style="color: #333333">=</span> c0; L_QUANTITY <span style="color: #333333">=</span> c1; __av <span style="color: #333333">=</span> c2; }
-    AVG_YEARLY_mLINEITEM5_entry(<span style="color: #008800; font-weight: bold">const</span> AVG_YEARLY_mLINEITEM5_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> L_PARTKEY( other.L_PARTKEY ), L_QUANTITY( other.L_QUANTITY ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
-    FORCE_INLINE AVG_YEARLY_mLINEITEM5_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c1) { L_PARTKEY <span style="color: #333333">=</span> c0; L_QUANTITY <span style="color: #333333">=</span> c1;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
+  <span style="color: #008800; font-weight: bold">struct</span> AVG_YEARLY_mLINEITEM2_entry {
+    <span style="color: #333399; font-weight: bold">long</span> AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY; <span style="color: #333399; font-weight: bold">long</span> __av;  AVG_YEARLY_mLINEITEM2_entry<span style="color: #333333">*</span> nxt; AVG_YEARLY_mLINEITEM2_entry<span style="color: #333333">*</span> prv;
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">AVG_YEARLY_mLINEITEM2_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY = 0L; __av = 0L; */</span> }
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">AVG_YEARLY_mLINEITEM2_entry</span>(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1) { AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY <span style="color: #333333">=</span> c0; __av <span style="color: #333333">=</span> c1; }
+    AVG_YEARLY_mLINEITEM2_entry(<span style="color: #008800; font-weight: bold">const</span> AVG_YEARLY_mLINEITEM2_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY( other.AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
+    FORCE_INLINE AVG_YEARLY_mLINEITEM2_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0) { AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY <span style="color: #333333">=</span> c0;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
     <span style="color: #008800; font-weight: bold">template</span><span style="color: #333333">&lt;</span><span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Archive</span><span style="color: #333333">&gt;</span>
     <span style="color: #333399; font-weight: bold">void</span> serialize(Archive<span style="color: #333333">&amp;</span> ar, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">unsigned</span> <span style="color: #333399; font-weight: bold">int</span> version) <span style="color: #008800; font-weight: bold">const</span> 
     {
       ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
-      DBT_SERIALIZATION_NVP(ar, L_PARTKEY);
-      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
-      DBT_SERIALIZATION_NVP(ar, L_QUANTITY);
+      DBT_SERIALIZATION_NVP(ar, AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY);
       ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
       DBT_SERIALIZATION_NVP(ar, __av);
     }
   };
-  <span style="color: #008800; font-weight: bold">struct</span> AVG_YEARLY_mLINEITEM5_mapkey01_idxfn {
-    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> AVG_YEARLY_mLINEITEM5_entry<span style="color: #333333">&amp;</span> e) {
+  <span style="color: #008800; font-weight: bold">struct</span> AVG_YEARLY_mLINEITEM2_mapkey0_idxfn {
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> AVG_YEARLY_mLINEITEM2_entry<span style="color: #333333">&amp;</span> e) {
       <span style="color: #333399; font-weight: bold">size_t</span> h <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>;
-      hash_combine(h, e.L_PARTKEY);
-      hash_combine(h, e.L_QUANTITY);
+      hash_combine(h, e.AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY);
       <span style="color: #008800; font-weight: bold">return</span> h;
     }
-    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> AVG_YEARLY_mLINEITEM5_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> AVG_YEARLY_mLINEITEM5_entry<span style="color: #333333">&amp;</span> y) {
-      <span style="color: #008800; font-weight: bold">return</span> x.L_PARTKEY <span style="color: #333333">==</span> y.L_PARTKEY <span style="color: #333333">&amp;&amp;</span> x.L_QUANTITY <span style="color: #333333">==</span> y.L_QUANTITY;
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> AVG_YEARLY_mLINEITEM2_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> AVG_YEARLY_mLINEITEM2_entry<span style="color: #333333">&amp;</span> y) {
+      <span style="color: #008800; font-weight: bold">return</span> x.AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY <span style="color: #333333">==</span> y.AVG_YEARLY_mLINEITEMLINEITEM_PARTKEY;
     }
   };
   
-  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>AVG_YEARLY_mLINEITEM5_entry,DOUBLE_TYPE,
-    HashIndex<span style="color: #333333">&lt;</span>AVG_YEARLY_mLINEITEM5_entry,DOUBLE_TYPE,AVG_YEARLY_mLINEITEM5_mapkey01_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>
-  <span style="color: #333333">&gt;</span> AVG_YEARLY_mLINEITEM5_map;
-  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>AVG_YEARLY_mLINEITEM5_entry,DOUBLE_TYPE,AVG_YEARLY_mLINEITEM5_mapkey01_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_AVG_YEARLY_mLINEITEM5_map_01;
+  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>AVG_YEARLY_mLINEITEM2_entry,<span style="color: #333399; font-weight: bold">long</span>,
+    HashIndex<span style="color: #333333">&lt;</span>AVG_YEARLY_mLINEITEM2_entry,<span style="color: #333399; font-weight: bold">long</span>,AVG_YEARLY_mLINEITEM2_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>
+  <span style="color: #333333">&gt;</span> AVG_YEARLY_mLINEITEM2_map;
+  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>AVG_YEARLY_mLINEITEM2_entry,<span style="color: #333399; font-weight: bold">long</span>,AVG_YEARLY_mLINEITEM2_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_AVG_YEARLY_mLINEITEM2_map_0;
   
   
   
@@ -809,11 +709,10 @@
     <span style="color: #333399; font-weight: bold">void</span> register_data(ProgramBase<span style="color: #333333">&amp;</span> pb) {
   
       pb.add_map<span style="color: #333333">&lt;</span>DOUBLE_TYPE<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;AVG_YEARLY&quot;</span>, AVG_YEARLY );
-      pb.add_map<span style="color: #333333">&lt;</span>AVG_YEARLY_pLINEITEM1_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;AVG_YEARLY_pLINEITEM1&quot;</span>, AVG_YEARLY_pLINEITEM1 );
       pb.add_map<span style="color: #333333">&lt;</span>AVG_YEARLY_mLINEITEM1_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;AVG_YEARLY_mLINEITEM1&quot;</span>, AVG_YEARLY_mLINEITEM1 );
-      pb.add_map<span style="color: #333333">&lt;</span>AVG_YEARLY_mLINEITEM2_L1_1_L1_1_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;AVG_YEARLY_mLINEITEM2_L1_1_L1_1&quot;</span>, AVG_YEARLY_mLINEITEM2_L1_1_L1_1 );
-      pb.add_map<span style="color: #333333">&lt;</span>AVG_YEARLY_mLINEITEM2_L1_2_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;AVG_YEARLY_mLINEITEM2_L1_2&quot;</span>, AVG_YEARLY_mLINEITEM2_L1_2 );
-      pb.add_map<span style="color: #333333">&lt;</span>AVG_YEARLY_mLINEITEM5_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;AVG_YEARLY_mLINEITEM5&quot;</span>, AVG_YEARLY_mLINEITEM5 );
+      pb.add_map<span style="color: #333333">&lt;</span>AVG_YEARLY_mLINEITEM1_L1_1_L1_1_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;AVG_YEARLY_mLINEITEM1_L1_1_L1_1&quot;</span>, AVG_YEARLY_mLINEITEM1_L1_1_L1_1 );
+      pb.add_map<span style="color: #333333">&lt;</span>AVG_YEARLY_mLINEITEM1_L1_2_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;AVG_YEARLY_mLINEITEM1_L1_2&quot;</span>, AVG_YEARLY_mLINEITEM1_L1_2 );
+      pb.add_map<span style="color: #333333">&lt;</span>AVG_YEARLY_mLINEITEM2_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;AVG_YEARLY_mLINEITEM2&quot;</span>, AVG_YEARLY_mLINEITEM2 );
   
       pb.add_relation(<span style="background-color: #fff0f0">&quot;LINEITEM&quot;</span>);
       pb.add_relation(<span style="background-color: #fff0f0">&quot;PART&quot;</span>);
@@ -832,19 +731,15 @@
       exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">1</span>, <span style="background-color: #fff0f0">&quot;insert_LINEITEM_s1&quot;</span>);
       exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">2</span>, <span style="background-color: #fff0f0">&quot;insert_LINEITEM_s2&quot;</span>);
       exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">3</span>, <span style="background-color: #fff0f0">&quot;insert_LINEITEM_s3&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">4</span>, <span style="background-color: #fff0f0">&quot;insert_LINEITEM_s4&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">5</span>, <span style="background-color: #fff0f0">&quot;delete_LINEITEM_s0&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">6</span>, <span style="background-color: #fff0f0">&quot;delete_LINEITEM_s1&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">7</span>, <span style="background-color: #fff0f0">&quot;delete_LINEITEM_s2&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">8</span>, <span style="background-color: #fff0f0">&quot;delete_LINEITEM_s3&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">9</span>, <span style="background-color: #fff0f0">&quot;delete_LINEITEM_s4&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">10</span>, <span style="background-color: #fff0f0">&quot;insert_PART_s0&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">11</span>, <span style="background-color: #fff0f0">&quot;insert_PART_s1&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">12</span>, <span style="background-color: #fff0f0">&quot;insert_PART_s2&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">13</span>, <span style="background-color: #fff0f0">&quot;delete_PART_s0&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">14</span>, <span style="background-color: #fff0f0">&quot;delete_PART_s1&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">15</span>, <span style="background-color: #fff0f0">&quot;delete_PART_s2&quot;</span>);
-      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">16</span>, <span style="background-color: #fff0f0">&quot;system_ready_s0&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">4</span>, <span style="background-color: #fff0f0">&quot;delete_LINEITEM_s0&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">5</span>, <span style="background-color: #fff0f0">&quot;delete_LINEITEM_s1&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">6</span>, <span style="background-color: #fff0f0">&quot;delete_LINEITEM_s2&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">7</span>, <span style="background-color: #fff0f0">&quot;delete_LINEITEM_s3&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">8</span>, <span style="background-color: #fff0f0">&quot;insert_PART_s0&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">9</span>, <span style="background-color: #fff0f0">&quot;insert_PART_s1&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">10</span>, <span style="background-color: #fff0f0">&quot;delete_PART_s0&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">11</span>, <span style="background-color: #fff0f0">&quot;delete_PART_s1&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">12</span>, <span style="background-color: #fff0f0">&quot;system_ready_s0&quot;</span>);
       <span style="color: #FF0000; background-color: #FFAAAA">#</span>endif <span style="color: #888888">// DBT_PROFILE</span>
   
     }
@@ -856,50 +751,49 @@
     <span style="color: #333399; font-weight: bold">void</span> on_insert_LINEITEM(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> lineitem_orderkey, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> lineitem_partkey, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> lineitem_suppkey, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> lineitem_linenumber, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE lineitem_quantity, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE lineitem_extendedprice, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE lineitem_discount, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE lineitem_tax, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_returnflag, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_linestatus, <span style="color: #008800; font-weight: bold">const</span> date lineitem_shipdate, <span style="color: #008800; font-weight: bold">const</span> date lineitem_commitdate, <span style="color: #008800; font-weight: bold">const</span> date lineitem_receiptdate, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_shipinstruct, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_shipmode, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_comment) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_LINEITEM&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_LINEITEM&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
+      {  <span style="color: #333333">++</span>tN;
         DOUBLE_TYPE agg1 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
         DOUBLE_TYPE agg2 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
-        <span style="color: #333399; font-weight: bold">long</span> l2 <span style="color: #333333">=</span> (AVG_YEARLY_mLINEITEM2_L1_1_L1_1.getValueOrDefault(se3.modify(lineitem_partkey)) <span style="color: #333333">+</span> <span style="color: #0000DD; font-weight: bold">1L</span>);
-        agg2 <span style="color: #333333">+=</span> ((<span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">!=</span> l2) <span style="color: #333333">*</span> Udiv(Ulistmax(<span style="color: #0000DD; font-weight: bold">1L</span>,l2)));
-        DOUBLE_TYPE l1 <span style="color: #333333">=</span> (agg2 <span style="color: #333333">*</span> ((AVG_YEARLY_mLINEITEM2_L1_2.getValueOrDefault(se4.modify(lineitem_partkey)) <span style="color: #333333">+</span> lineitem_quantity) <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.2</span>));
+        <span style="color: #333399; font-weight: bold">long</span> l2 <span style="color: #333333">=</span> (AVG_YEARLY_mLINEITEM1_L1_1_L1_1.getValueOrDefault(se3.modify(lineitem_partkey)) <span style="color: #333333">+</span> <span style="color: #0000DD; font-weight: bold">1L</span>);
+        (<span style="color: #888888">/*if */</span>(<span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">!=</span> l2) <span style="color: #333333">?</span> agg2 <span style="color: #333333">+=</span> Udiv(Ulistmax(<span style="color: #0000DD; font-weight: bold">1L</span>,l2)) <span style="color: #333333">:</span> <span style="color: #6600EE; font-weight: bold">0.0</span>);
+        DOUBLE_TYPE l1 <span style="color: #333333">=</span> (agg2 <span style="color: #333333">*</span> ((AVG_YEARLY_mLINEITEM1_L1_2.getValueOrDefault(se4.modify(lineitem_partkey)) <span style="color: #333333">+</span> lineitem_quantity) <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.2</span>));
         { <span style="color: #888888">//slice</span>
-          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h1 <span style="color: #333333">=</span> AVG_YEARLY_pLINEITEM1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se5.modify0(lineitem_partkey));
-          <span style="color: #008800; font-weight: bold">const</span> HashIndex_AVG_YEARLY_pLINEITEM1_map_0<span style="color: #333333">*</span> i1 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_AVG_YEARLY_pLINEITEM1_map_0<span style="color: #333333">*&gt;</span>(AVG_YEARLY_pLINEITEM1.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
-          HashIndex_AVG_YEARLY_pLINEITEM1_map_0<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n1 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i1<span style="color: #333333">-&gt;</span>buckets_[h1 <span style="color: #333333">%</span> i1<span style="color: #333333">-&gt;</span>size_]);
-          AVG_YEARLY_pLINEITEM1_entry<span style="color: #333333">*</span> e1;
-          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e1<span style="color: #333333">=</span>n1<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h1 <span style="color: #333333">==</span> n1<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> AVG_YEARLY_pLINEITEM1_mapkey0_idxfn<span style="color: #333333">::</span>equals(se5, <span style="color: #333333">*</span>e1)) {
+          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h1 <span style="color: #333333">=</span> AVG_YEARLY_mLINEITEM1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se5.modify0(lineitem_partkey));
+          <span style="color: #008800; font-weight: bold">const</span> HashIndex_AVG_YEARLY_mLINEITEM1_map_0<span style="color: #333333">*</span> i1 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_AVG_YEARLY_mLINEITEM1_map_0<span style="color: #333333">*&gt;</span>(AVG_YEARLY_mLINEITEM1.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
+          HashIndex_AVG_YEARLY_mLINEITEM1_map_0<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n1 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i1<span style="color: #333333">-&gt;</span>buckets_[h1 <span style="color: #333333">%</span> i1<span style="color: #333333">-&gt;</span>size_]);
+          AVG_YEARLY_mLINEITEM1_entry<span style="color: #333333">*</span> e1;
+          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e1<span style="color: #333333">=</span>n1<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h1 <span style="color: #333333">==</span> n1<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> AVG_YEARLY_mLINEITEM1_mapkey0_idxfn<span style="color: #333333">::</span>equals(se5, <span style="color: #333333">*</span>e1)) {
             DOUBLE_TYPE l_quantity <span style="color: #333333">=</span> e1<span style="color: #333333">-&gt;</span>L_QUANTITY;
             DOUBLE_TYPE v1 <span style="color: #333333">=</span> e1<span style="color: #333333">-&gt;</span>__av;
-            agg1 <span style="color: #333333">+=</span> (v1 <span style="color: #333333">*</span> (l1 <span style="color: #333333">&gt;</span> l_quantity));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n1<span style="color: #333333">=</span>n1<span style="color: #333333">-&gt;</span>next));
+            (<span style="color: #888888">/*if */</span>(l1 <span style="color: #333333">&gt;</span> l_quantity) <span style="color: #333333">?</span> agg1 <span style="color: #333333">+=</span> v1 <span style="color: #333333">:</span> <span style="color: #6600EE; font-weight: bold">0.0</span>);
+          } <span style="color: #008800; font-weight: bold">while</span> ((n1<span style="color: #333333">=</span>n1<span style="color: #333333">-&gt;</span>nxt));
         }
         <span style="color: #333399; font-weight: bold">long</span> agg3 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
         DOUBLE_TYPE agg4 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
-        <span style="color: #333399; font-weight: bold">long</span> l4 <span style="color: #333333">=</span> (AVG_YEARLY_mLINEITEM2_L1_1_L1_1.getValueOrDefault(se6.modify(lineitem_partkey)) <span style="color: #333333">+</span> <span style="color: #0000DD; font-weight: bold">1L</span>);
-        agg4 <span style="color: #333333">+=</span> ((<span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">!=</span> l4) <span style="color: #333333">*</span> Udiv(Ulistmax(<span style="color: #0000DD; font-weight: bold">1L</span>,l4)));
-        DOUBLE_TYPE l3 <span style="color: #333333">=</span> (agg4 <span style="color: #333333">*</span> ((AVG_YEARLY_mLINEITEM2_L1_2.getValueOrDefault(se7.modify(lineitem_partkey)) <span style="color: #333333">+</span> lineitem_quantity) <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.2</span>));
-        agg3 <span style="color: #333333">+=</span> (l3 <span style="color: #333333">&gt;</span> lineitem_quantity);
+        <span style="color: #333399; font-weight: bold">long</span> l4 <span style="color: #333333">=</span> (AVG_YEARLY_mLINEITEM1_L1_1_L1_1.getValueOrDefault(se6.modify(lineitem_partkey)) <span style="color: #333333">+</span> <span style="color: #0000DD; font-weight: bold">1L</span>);
+        (<span style="color: #888888">/*if */</span>(<span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">!=</span> l4) <span style="color: #333333">?</span> agg4 <span style="color: #333333">+=</span> Udiv(Ulistmax(<span style="color: #0000DD; font-weight: bold">1L</span>,l4)) <span style="color: #333333">:</span> <span style="color: #6600EE; font-weight: bold">0.0</span>);
+        DOUBLE_TYPE l3 <span style="color: #333333">=</span> (agg4 <span style="color: #333333">*</span> ((AVG_YEARLY_mLINEITEM1_L1_2.getValueOrDefault(se7.modify(lineitem_partkey)) <span style="color: #333333">+</span> lineitem_quantity) <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.2</span>));
+        (<span style="color: #888888">/*if */</span>(l3 <span style="color: #333333">&gt;</span> lineitem_quantity) <span style="color: #333333">?</span> agg3 <span style="color: #333333">+=</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
         DOUBLE_TYPE agg5 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
         DOUBLE_TYPE agg6 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
-        <span style="color: #333399; font-weight: bold">long</span> l6 <span style="color: #333333">=</span> AVG_YEARLY_mLINEITEM2_L1_1_L1_1.getValueOrDefault(se8.modify(lineitem_partkey));
-        agg6 <span style="color: #333333">+=</span> ((<span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">!=</span> l6) <span style="color: #333333">*</span> Udiv(Ulistmax(<span style="color: #0000DD; font-weight: bold">1L</span>,l6)));
-        DOUBLE_TYPE l5 <span style="color: #333333">=</span> (agg6 <span style="color: #333333">*</span> (AVG_YEARLY_mLINEITEM2_L1_2.getValueOrDefault(se9.modify(lineitem_partkey)) <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.2</span>));
+        <span style="color: #333399; font-weight: bold">long</span> l6 <span style="color: #333333">=</span> AVG_YEARLY_mLINEITEM1_L1_1_L1_1.getValueOrDefault(se8.modify(lineitem_partkey));
+        (<span style="color: #888888">/*if */</span>(<span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">!=</span> l6) <span style="color: #333333">?</span> agg6 <span style="color: #333333">+=</span> Udiv(Ulistmax(<span style="color: #0000DD; font-weight: bold">1L</span>,l6)) <span style="color: #333333">:</span> <span style="color: #6600EE; font-weight: bold">0.0</span>);
+        DOUBLE_TYPE l5 <span style="color: #333333">=</span> (agg6 <span style="color: #333333">*</span> (AVG_YEARLY_mLINEITEM1_L1_2.getValueOrDefault(se9.modify(lineitem_partkey)) <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.2</span>));
         { <span style="color: #888888">//slice</span>
-          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h2 <span style="color: #333333">=</span> AVG_YEARLY_pLINEITEM1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se10.modify0(lineitem_partkey));
-          <span style="color: #008800; font-weight: bold">const</span> HashIndex_AVG_YEARLY_pLINEITEM1_map_0<span style="color: #333333">*</span> i2 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_AVG_YEARLY_pLINEITEM1_map_0<span style="color: #333333">*&gt;</span>(AVG_YEARLY_pLINEITEM1.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
-          HashIndex_AVG_YEARLY_pLINEITEM1_map_0<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n2 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i2<span style="color: #333333">-&gt;</span>buckets_[h2 <span style="color: #333333">%</span> i2<span style="color: #333333">-&gt;</span>size_]);
-          AVG_YEARLY_pLINEITEM1_entry<span style="color: #333333">*</span> e2;
-          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e2<span style="color: #333333">=</span>n2<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h2 <span style="color: #333333">==</span> n2<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> AVG_YEARLY_pLINEITEM1_mapkey0_idxfn<span style="color: #333333">::</span>equals(se10, <span style="color: #333333">*</span>e2)) {
+          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h2 <span style="color: #333333">=</span> AVG_YEARLY_mLINEITEM1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se10.modify0(lineitem_partkey));
+          <span style="color: #008800; font-weight: bold">const</span> HashIndex_AVG_YEARLY_mLINEITEM1_map_0<span style="color: #333333">*</span> i2 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_AVG_YEARLY_mLINEITEM1_map_0<span style="color: #333333">*&gt;</span>(AVG_YEARLY_mLINEITEM1.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
+          HashIndex_AVG_YEARLY_mLINEITEM1_map_0<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n2 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i2<span style="color: #333333">-&gt;</span>buckets_[h2 <span style="color: #333333">%</span> i2<span style="color: #333333">-&gt;</span>size_]);
+          AVG_YEARLY_mLINEITEM1_entry<span style="color: #333333">*</span> e2;
+          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e2<span style="color: #333333">=</span>n2<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h2 <span style="color: #333333">==</span> n2<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> AVG_YEARLY_mLINEITEM1_mapkey0_idxfn<span style="color: #333333">::</span>equals(se10, <span style="color: #333333">*</span>e2)) {
             DOUBLE_TYPE l_quantity <span style="color: #333333">=</span> e2<span style="color: #333333">-&gt;</span>L_QUANTITY;
             DOUBLE_TYPE v2 <span style="color: #333333">=</span> e2<span style="color: #333333">-&gt;</span>__av;
-            agg5 <span style="color: #333333">+=</span> (v2 <span style="color: #333333">*</span> (l5 <span style="color: #333333">&gt;</span> l_quantity));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n2<span style="color: #333333">=</span>n2<span style="color: #333333">-&gt;</span>next));
+            (<span style="color: #888888">/*if */</span>(l5 <span style="color: #333333">&gt;</span> l_quantity) <span style="color: #333333">?</span> agg5 <span style="color: #333333">+=</span> v2 <span style="color: #333333">:</span> <span style="color: #6600EE; font-weight: bold">0.0</span>);
+          } <span style="color: #008800; font-weight: bold">while</span> ((n2<span style="color: #333333">=</span>n2<span style="color: #333333">-&gt;</span>nxt));
         }
-        AVG_YEARLY <span style="color: #333333">+=</span> (AVG_YEARLY_mLINEITEM1.getValueOrDefault(se2.modify(lineitem_partkey)) <span style="color: #333333">*</span> (((agg1 <span style="color: #333333">+</span> (agg3 <span style="color: #333333">*</span> lineitem_extendedprice)) <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.142857142857</span>) <span style="color: #333333">+</span> (agg5 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #6600EE; font-weight: bold">0.142857142857</span>)));
-        AVG_YEARLY_pLINEITEM1.addOrDelOnZero(se11.modify(lineitem_partkey,lineitem_quantity),lineitem_extendedprice);
-        AVG_YEARLY_mLINEITEM2_L1_1_L1_1.addOrDelOnZero(se12.modify(lineitem_partkey),<span style="color: #0000DD; font-weight: bold">1L</span>);
-        AVG_YEARLY_mLINEITEM2_L1_2.addOrDelOnZero(se13.modify(lineitem_partkey),lineitem_quantity);
-        AVG_YEARLY_mLINEITEM5.addOrDelOnZero(se14.modify(lineitem_partkey,lineitem_quantity),(AVG_YEARLY_mLINEITEM1.getValueOrDefault(se15.modify(lineitem_partkey)) <span style="color: #333333">*</span> lineitem_extendedprice));
+        AVG_YEARLY <span style="color: #333333">+=</span> (AVG_YEARLY_mLINEITEM2.getValueOrDefault(se2.modify(lineitem_partkey)) <span style="color: #333333">*</span> (((agg1 <span style="color: #333333">+</span> (agg3 <span style="color: #333333">*</span> lineitem_extendedprice)) <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.142857142857</span>) <span style="color: #333333">+</span> (agg5 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #6600EE; font-weight: bold">0.142857142857</span>)));
+        AVG_YEARLY_mLINEITEM1.addOrDelOnZero(se11.modify(lineitem_partkey,lineitem_quantity),lineitem_extendedprice);
+        AVG_YEARLY_mLINEITEM1_L1_1_L1_1.addOrDelOnZero(se12.modify(lineitem_partkey),<span style="color: #0000DD; font-weight: bold">1L</span>);
+        AVG_YEARLY_mLINEITEM1_L1_2.addOrDelOnZero(se13.modify(lineitem_partkey),lineitem_quantity);
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_LINEITEM&quot;</span>)
       END_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_LINEITEM&quot;</span>)
@@ -911,48 +805,49 @@
     <span style="color: #333399; font-weight: bold">void</span> on_delete_LINEITEM(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> lineitem_orderkey, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> lineitem_partkey, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> lineitem_suppkey, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> lineitem_linenumber, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE lineitem_quantity, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE lineitem_extendedprice, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE lineitem_discount, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE lineitem_tax, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_returnflag, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_linestatus, <span style="color: #008800; font-weight: bold">const</span> date lineitem_shipdate, <span style="color: #008800; font-weight: bold">const</span> date lineitem_commitdate, <span style="color: #008800; font-weight: bold">const</span> date lineitem_receiptdate, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_shipinstruct, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_shipmode, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_comment) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_LINEITEM&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_LINEITEM&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
-        <span style="color: #333399; font-weight: bold">long</span> agg7 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
+      {  <span style="color: #333333">++</span>tN;
+        DOUBLE_TYPE agg7 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
         DOUBLE_TYPE agg8 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
-        <span style="color: #333399; font-weight: bold">long</span> l8 <span style="color: #333333">=</span> (AVG_YEARLY_mLINEITEM2_L1_1_L1_1.getValueOrDefault(se18.modify(lineitem_partkey)) <span style="color: #333333">+</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>);
-        agg8 <span style="color: #333333">+=</span> ((<span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">!=</span> l8) <span style="color: #333333">*</span> Udiv(Ulistmax(<span style="color: #0000DD; font-weight: bold">1L</span>,l8)));
-        DOUBLE_TYPE l7 <span style="color: #333333">=</span> (agg8 <span style="color: #333333">*</span> ((AVG_YEARLY_mLINEITEM2_L1_2.getValueOrDefault(se19.modify(lineitem_partkey)) <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.2</span>) <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #6600EE; font-weight: bold">0.2</span> <span style="color: #333333">*</span> lineitem_quantity)));
-        agg7 <span style="color: #333333">+=</span> (l7 <span style="color: #333333">&gt;</span> lineitem_quantity);
-        DOUBLE_TYPE agg9 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
-        { <span style="color: #888888">//foreach</span>
-          AVG_YEARLY_mLINEITEM5_entry<span style="color: #333333">*</span> e3 <span style="color: #333333">=</span> AVG_YEARLY_mLINEITEM5.head;
-          <span style="color: #008800; font-weight: bold">while</span>(e3){
-            <span style="color: #333399; font-weight: bold">long</span> l_partkey <span style="color: #333333">=</span> e3<span style="color: #333333">-&gt;</span>L_PARTKEY;
+        <span style="color: #333399; font-weight: bold">long</span> l8 <span style="color: #333333">=</span> AVG_YEARLY_mLINEITEM1_L1_1_L1_1.getValueOrDefault(se16.modify(lineitem_partkey));
+        (<span style="color: #888888">/*if */</span>(<span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">!=</span> l8) <span style="color: #333333">?</span> agg8 <span style="color: #333333">+=</span> Udiv(Ulistmax(<span style="color: #0000DD; font-weight: bold">1L</span>,l8)) <span style="color: #333333">:</span> <span style="color: #6600EE; font-weight: bold">0.0</span>);
+        DOUBLE_TYPE l7 <span style="color: #333333">=</span> (agg8 <span style="color: #333333">*</span> (AVG_YEARLY_mLINEITEM1_L1_2.getValueOrDefault(se17.modify(lineitem_partkey)) <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.2</span>));
+        { <span style="color: #888888">//slice</span>
+          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h3 <span style="color: #333333">=</span> AVG_YEARLY_mLINEITEM1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se18.modify0(lineitem_partkey));
+          <span style="color: #008800; font-weight: bold">const</span> HashIndex_AVG_YEARLY_mLINEITEM1_map_0<span style="color: #333333">*</span> i3 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_AVG_YEARLY_mLINEITEM1_map_0<span style="color: #333333">*&gt;</span>(AVG_YEARLY_mLINEITEM1.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
+          HashIndex_AVG_YEARLY_mLINEITEM1_map_0<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n3 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i3<span style="color: #333333">-&gt;</span>buckets_[h3 <span style="color: #333333">%</span> i3<span style="color: #333333">-&gt;</span>size_]);
+          AVG_YEARLY_mLINEITEM1_entry<span style="color: #333333">*</span> e3;
+          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e3<span style="color: #333333">=</span>n3<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h3 <span style="color: #333333">==</span> n3<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> AVG_YEARLY_mLINEITEM1_mapkey0_idxfn<span style="color: #333333">::</span>equals(se18, <span style="color: #333333">*</span>e3)) {
             DOUBLE_TYPE l_quantity <span style="color: #333333">=</span> e3<span style="color: #333333">-&gt;</span>L_QUANTITY;
             DOUBLE_TYPE v3 <span style="color: #333333">=</span> e3<span style="color: #333333">-&gt;</span>__av;
-            DOUBLE_TYPE agg10 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
-            <span style="color: #333399; font-weight: bold">long</span> l10 <span style="color: #333333">=</span> AVG_YEARLY_mLINEITEM2_L1_1_L1_1.getValueOrDefault(se20.modify(l_partkey));
-            agg10 <span style="color: #333333">+=</span> ((<span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">!=</span> l10) <span style="color: #333333">*</span> Udiv(Ulistmax(<span style="color: #0000DD; font-weight: bold">1L</span>,l10)));
-            DOUBLE_TYPE l9 <span style="color: #333333">=</span> (agg10 <span style="color: #333333">*</span> (AVG_YEARLY_mLINEITEM2_L1_2.getValueOrDefault(se21.modify(l_partkey)) <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.2</span>));
-            agg9 <span style="color: #333333">+=</span> (v3 <span style="color: #333333">*</span> (l9 <span style="color: #333333">&gt;</span> l_quantity));
-            e3 <span style="color: #333333">=</span> e3<span style="color: #333333">-&gt;</span>nxt;
-          }
+            (<span style="color: #888888">/*if */</span>(l7 <span style="color: #333333">&gt;</span> l_quantity) <span style="color: #333333">?</span> agg7 <span style="color: #333333">+=</span> v3 <span style="color: #333333">:</span> <span style="color: #6600EE; font-weight: bold">0.0</span>);
+          } <span style="color: #008800; font-weight: bold">while</span> ((n3<span style="color: #333333">=</span>n3<span style="color: #333333">-&gt;</span>nxt));
         }
+        <span style="color: #333399; font-weight: bold">long</span> agg9 <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0L</span>;
+        DOUBLE_TYPE agg10 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
+        <span style="color: #333399; font-weight: bold">long</span> l10 <span style="color: #333333">=</span> (AVG_YEARLY_mLINEITEM1_L1_1_L1_1.getValueOrDefault(se19.modify(lineitem_partkey)) <span style="color: #333333">+</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>);
+        (<span style="color: #888888">/*if */</span>(<span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">!=</span> l10) <span style="color: #333333">?</span> agg10 <span style="color: #333333">+=</span> Udiv(Ulistmax(<span style="color: #0000DD; font-weight: bold">1L</span>,l10)) <span style="color: #333333">:</span> <span style="color: #6600EE; font-weight: bold">0.0</span>);
+        DOUBLE_TYPE l9 <span style="color: #333333">=</span> (agg10 <span style="color: #333333">*</span> ((AVG_YEARLY_mLINEITEM1_L1_2.getValueOrDefault(se20.modify(lineitem_partkey)) <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.2</span>) <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #6600EE; font-weight: bold">0.2</span> <span style="color: #333333">*</span> lineitem_quantity)));
+        (<span style="color: #888888">/*if */</span>(l9 <span style="color: #333333">&gt;</span> lineitem_quantity) <span style="color: #333333">?</span> agg9 <span style="color: #333333">+=</span> <span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
         DOUBLE_TYPE agg11 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
-        { <span style="color: #888888">//foreach</span>
-          AVG_YEARLY_mLINEITEM5_entry<span style="color: #333333">*</span> e4 <span style="color: #333333">=</span> AVG_YEARLY_mLINEITEM5.head;
-          <span style="color: #008800; font-weight: bold">while</span>(e4){
-            <span style="color: #333399; font-weight: bold">long</span> l_partkey <span style="color: #333333">=</span> e4<span style="color: #333333">-&gt;</span>L_PARTKEY;
+        DOUBLE_TYPE agg12 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
+        <span style="color: #333399; font-weight: bold">long</span> l12 <span style="color: #333333">=</span> (AVG_YEARLY_mLINEITEM1_L1_1_L1_1.getValueOrDefault(se21.modify(lineitem_partkey)) <span style="color: #333333">+</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>);
+        (<span style="color: #888888">/*if */</span>(<span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">!=</span> l12) <span style="color: #333333">?</span> agg12 <span style="color: #333333">+=</span> Udiv(Ulistmax(<span style="color: #0000DD; font-weight: bold">1L</span>,l12)) <span style="color: #333333">:</span> <span style="color: #6600EE; font-weight: bold">0.0</span>);
+        DOUBLE_TYPE l11 <span style="color: #333333">=</span> (agg12 <span style="color: #333333">*</span> ((AVG_YEARLY_mLINEITEM1_L1_2.getValueOrDefault(se22.modify(lineitem_partkey)) <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.2</span>) <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #6600EE; font-weight: bold">0.2</span> <span style="color: #333333">*</span> lineitem_quantity)));
+        { <span style="color: #888888">//slice</span>
+          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h4 <span style="color: #333333">=</span> AVG_YEARLY_mLINEITEM1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se23.modify0(lineitem_partkey));
+          <span style="color: #008800; font-weight: bold">const</span> HashIndex_AVG_YEARLY_mLINEITEM1_map_0<span style="color: #333333">*</span> i4 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_AVG_YEARLY_mLINEITEM1_map_0<span style="color: #333333">*&gt;</span>(AVG_YEARLY_mLINEITEM1.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
+          HashIndex_AVG_YEARLY_mLINEITEM1_map_0<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n4 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i4<span style="color: #333333">-&gt;</span>buckets_[h4 <span style="color: #333333">%</span> i4<span style="color: #333333">-&gt;</span>size_]);
+          AVG_YEARLY_mLINEITEM1_entry<span style="color: #333333">*</span> e4;
+          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e4<span style="color: #333333">=</span>n4<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h4 <span style="color: #333333">==</span> n4<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> AVG_YEARLY_mLINEITEM1_mapkey0_idxfn<span style="color: #333333">::</span>equals(se23, <span style="color: #333333">*</span>e4)) {
             DOUBLE_TYPE l_quantity <span style="color: #333333">=</span> e4<span style="color: #333333">-&gt;</span>L_QUANTITY;
             DOUBLE_TYPE v4 <span style="color: #333333">=</span> e4<span style="color: #333333">-&gt;</span>__av;
-            DOUBLE_TYPE agg12 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
-            <span style="color: #333399; font-weight: bold">long</span> l12 <span style="color: #333333">=</span> (AVG_YEARLY_mLINEITEM2_L1_1_L1_1.getValueOrDefault(se22.modify(l_partkey)) <span style="color: #333333">+</span> ((l_partkey <span style="color: #333333">==</span> lineitem_partkey) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
-            agg12 <span style="color: #333333">+=</span> ((<span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">!=</span> l12) <span style="color: #333333">*</span> Udiv(Ulistmax(<span style="color: #0000DD; font-weight: bold">1L</span>,l12)));
-            DOUBLE_TYPE l11 <span style="color: #333333">=</span> (agg12 <span style="color: #333333">*</span> ((AVG_YEARLY_mLINEITEM2_L1_2.getValueOrDefault(se23.modify(l_partkey)) <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.2</span>) <span style="color: #333333">+</span> ((l_partkey <span style="color: #333333">==</span> lineitem_partkey) <span style="color: #333333">*</span> (<span style="color: #333333">-</span><span style="color: #6600EE; font-weight: bold">0.2</span> <span style="color: #333333">*</span> lineitem_quantity))));
-            agg11 <span style="color: #333333">+=</span> (v4 <span style="color: #333333">*</span> (l11 <span style="color: #333333">&gt;</span> l_quantity));
-            e4 <span style="color: #333333">=</span> e4<span style="color: #333333">-&gt;</span>nxt;
-          }
+            (<span style="color: #888888">/*if */</span>(l11 <span style="color: #333333">&gt;</span> l_quantity) <span style="color: #333333">?</span> agg11 <span style="color: #333333">+=</span> v4 <span style="color: #333333">:</span> <span style="color: #6600EE; font-weight: bold">0.0</span>);
+          } <span style="color: #008800; font-weight: bold">while</span> ((n4<span style="color: #333333">=</span>n4<span style="color: #333333">-&gt;</span>nxt));
         }
-        AVG_YEARLY <span style="color: #333333">+=</span> ((((AVG_YEARLY_mLINEITEM1.getValueOrDefault(se17.modify(lineitem_partkey)) <span style="color: #333333">*</span> (agg7 <span style="color: #333333">*</span> lineitem_extendedprice)) <span style="color: #333333">+</span> agg9) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #6600EE; font-weight: bold">0.142857142857</span>) <span style="color: #333333">+</span> (agg11 <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.142857142857</span>));
-        AVG_YEARLY_pLINEITEM1.addOrDelOnZero(se24.modify(lineitem_partkey,lineitem_quantity),(<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> lineitem_extendedprice));
-        AVG_YEARLY_mLINEITEM2_L1_1_L1_1.addOrDelOnZero(se25.modify(lineitem_partkey),<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>);
-        AVG_YEARLY_mLINEITEM2_L1_2.addOrDelOnZero(se26.modify(lineitem_partkey),(<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> lineitem_quantity));
-        AVG_YEARLY_mLINEITEM5.addOrDelOnZero(se27.modify(lineitem_partkey,lineitem_quantity),(AVG_YEARLY_mLINEITEM1.getValueOrDefault(se28.modify(lineitem_partkey)) <span style="color: #333333">*</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> lineitem_extendedprice)));
+        AVG_YEARLY <span style="color: #333333">+=</span> (AVG_YEARLY_mLINEITEM2.getValueOrDefault(se15.modify(lineitem_partkey)) <span style="color: #333333">*</span> (((agg7 <span style="color: #333333">+</span> (agg9 <span style="color: #333333">*</span> lineitem_extendedprice)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #6600EE; font-weight: bold">0.142857142857</span>) <span style="color: #333333">+</span> (agg11 <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.142857142857</span>)));
+        AVG_YEARLY_mLINEITEM1.addOrDelOnZero(se24.modify(lineitem_partkey,lineitem_quantity),(<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> lineitem_extendedprice));
+        AVG_YEARLY_mLINEITEM1_L1_1_L1_1.addOrDelOnZero(se25.modify(lineitem_partkey),<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>);
+        AVG_YEARLY_mLINEITEM1_L1_2.addOrDelOnZero(se26.modify(lineitem_partkey),(<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> lineitem_quantity));
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_LINEITEM&quot;</span>)
       END_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_LINEITEM&quot;</span>)
@@ -964,36 +859,25 @@
     <span style="color: #333399; font-weight: bold">void</span> on_insert_PART(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> part_partkey, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_name, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_mfgr, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_brand, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_type, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> part_size, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_container, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE part_retailprice, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_comment) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_PART&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_PART&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
+      {  <span style="color: #333333">++</span>tN;
         DOUBLE_TYPE agg13 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
         DOUBLE_TYPE agg14 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
-        <span style="color: #333399; font-weight: bold">long</span> l14 <span style="color: #333333">=</span> AVG_YEARLY_mLINEITEM2_L1_1_L1_1.getValueOrDefault(se30.modify(part_partkey));
-        agg14 <span style="color: #333333">+=</span> ((<span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">!=</span> l14) <span style="color: #333333">*</span> Udiv(Ulistmax(<span style="color: #0000DD; font-weight: bold">1L</span>,l14)));
-        DOUBLE_TYPE l13 <span style="color: #333333">=</span> (agg14 <span style="color: #333333">*</span> (AVG_YEARLY_mLINEITEM2_L1_2.getValueOrDefault(se31.modify(part_partkey)) <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.2</span>));
+        <span style="color: #333399; font-weight: bold">long</span> l14 <span style="color: #333333">=</span> AVG_YEARLY_mLINEITEM1_L1_1_L1_1.getValueOrDefault(se28.modify(part_partkey));
+        (<span style="color: #888888">/*if */</span>(<span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">!=</span> l14) <span style="color: #333333">?</span> agg14 <span style="color: #333333">+=</span> Udiv(Ulistmax(<span style="color: #0000DD; font-weight: bold">1L</span>,l14)) <span style="color: #333333">:</span> <span style="color: #6600EE; font-weight: bold">0.0</span>);
+        DOUBLE_TYPE l13 <span style="color: #333333">=</span> (agg14 <span style="color: #333333">*</span> (AVG_YEARLY_mLINEITEM1_L1_2.getValueOrDefault(se29.modify(part_partkey)) <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.2</span>));
         { <span style="color: #888888">//slice</span>
-          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h3 <span style="color: #333333">=</span> AVG_YEARLY_pLINEITEM1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se32.modify0(part_partkey));
-          <span style="color: #008800; font-weight: bold">const</span> HashIndex_AVG_YEARLY_pLINEITEM1_map_0<span style="color: #333333">*</span> i5 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_AVG_YEARLY_pLINEITEM1_map_0<span style="color: #333333">*&gt;</span>(AVG_YEARLY_pLINEITEM1.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
-          HashIndex_AVG_YEARLY_pLINEITEM1_map_0<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n5 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i5<span style="color: #333333">-&gt;</span>buckets_[h3 <span style="color: #333333">%</span> i5<span style="color: #333333">-&gt;</span>size_]);
-          AVG_YEARLY_pLINEITEM1_entry<span style="color: #333333">*</span> e5;
-          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e5<span style="color: #333333">=</span>n5<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h3 <span style="color: #333333">==</span> n5<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> AVG_YEARLY_pLINEITEM1_mapkey0_idxfn<span style="color: #333333">::</span>equals(se32, <span style="color: #333333">*</span>e5)) {
+          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h5 <span style="color: #333333">=</span> AVG_YEARLY_mLINEITEM1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se30.modify0(part_partkey));
+          <span style="color: #008800; font-weight: bold">const</span> HashIndex_AVG_YEARLY_mLINEITEM1_map_0<span style="color: #333333">*</span> i5 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_AVG_YEARLY_mLINEITEM1_map_0<span style="color: #333333">*&gt;</span>(AVG_YEARLY_mLINEITEM1.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
+          HashIndex_AVG_YEARLY_mLINEITEM1_map_0<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n5 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i5<span style="color: #333333">-&gt;</span>buckets_[h5 <span style="color: #333333">%</span> i5<span style="color: #333333">-&gt;</span>size_]);
+          AVG_YEARLY_mLINEITEM1_entry<span style="color: #333333">*</span> e5;
+          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e5<span style="color: #333333">=</span>n5<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h5 <span style="color: #333333">==</span> n5<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> AVG_YEARLY_mLINEITEM1_mapkey0_idxfn<span style="color: #333333">::</span>equals(se30, <span style="color: #333333">*</span>e5)) {
             DOUBLE_TYPE l_quantity <span style="color: #333333">=</span> e5<span style="color: #333333">-&gt;</span>L_QUANTITY;
             DOUBLE_TYPE v5 <span style="color: #333333">=</span> e5<span style="color: #333333">-&gt;</span>__av;
-            agg13 <span style="color: #333333">+=</span> (v5 <span style="color: #333333">*</span> (l13 <span style="color: #333333">&gt;</span> l_quantity));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n5<span style="color: #333333">=</span>n5<span style="color: #333333">-&gt;</span>next));
+            (<span style="color: #888888">/*if */</span>(l13 <span style="color: #333333">&gt;</span> l_quantity) <span style="color: #333333">?</span> agg13 <span style="color: #333333">+=</span> v5 <span style="color: #333333">:</span> <span style="color: #6600EE; font-weight: bold">0.0</span>);
+          } <span style="color: #008800; font-weight: bold">while</span> ((n5<span style="color: #333333">=</span>n5<span style="color: #333333">-&gt;</span>nxt));
         }
-        AVG_YEARLY <span style="color: #333333">+=</span> ((part_brand <span style="color: #333333">==</span> c1) <span style="color: #333333">*</span> ((part_container <span style="color: #333333">==</span> c2) <span style="color: #333333">*</span> (agg13 <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.142857142857</span>)));
-        AVG_YEARLY_mLINEITEM1.addOrDelOnZero(se33.modify(part_partkey),((part_brand <span style="color: #333333">==</span> c1) <span style="color: #333333">*</span> (part_container <span style="color: #333333">==</span> c2)));
-        { <span style="color: #888888">//slice</span>
-          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h4 <span style="color: #333333">=</span> AVG_YEARLY_pLINEITEM1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se35.modify0(part_partkey));
-          <span style="color: #008800; font-weight: bold">const</span> HashIndex_AVG_YEARLY_pLINEITEM1_map_0<span style="color: #333333">*</span> i6 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_AVG_YEARLY_pLINEITEM1_map_0<span style="color: #333333">*&gt;</span>(AVG_YEARLY_pLINEITEM1.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
-          HashIndex_AVG_YEARLY_pLINEITEM1_map_0<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n6 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i6<span style="color: #333333">-&gt;</span>buckets_[h4 <span style="color: #333333">%</span> i6<span style="color: #333333">-&gt;</span>size_]);
-          AVG_YEARLY_pLINEITEM1_entry<span style="color: #333333">*</span> e6;
-          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e6<span style="color: #333333">=</span>n6<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h4 <span style="color: #333333">==</span> n6<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> AVG_YEARLY_pLINEITEM1_mapkey0_idxfn<span style="color: #333333">::</span>equals(se35, <span style="color: #333333">*</span>e6)) {
-            DOUBLE_TYPE l_quantity <span style="color: #333333">=</span> e6<span style="color: #333333">-&gt;</span>L_QUANTITY;
-            DOUBLE_TYPE v6 <span style="color: #333333">=</span> e6<span style="color: #333333">-&gt;</span>__av;
-            AVG_YEARLY_mLINEITEM5.addOrDelOnZero(se34.modify(part_partkey,l_quantity),((part_brand <span style="color: #333333">==</span> c1) <span style="color: #333333">*</span> ((part_container <span style="color: #333333">==</span> c2) <span style="color: #333333">*</span> v6)));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n6<span style="color: #333333">=</span>n6<span style="color: #333333">-&gt;</span>next));
-        }
+        (<span style="color: #888888">/*if */</span>(part_brand <span style="color: #333333">==</span> c1 <span style="color: #333333">&amp;&amp;</span> part_container <span style="color: #333333">==</span> c2) <span style="color: #333333">?</span> AVG_YEARLY <span style="color: #333333">+=</span> (agg13 <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.142857142857</span>) <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
+        (<span style="color: #888888">/*if */</span>(part_container <span style="color: #333333">==</span> c2 <span style="color: #333333">&amp;&amp;</span> part_brand <span style="color: #333333">==</span> c1) <span style="color: #333333">?</span> AVG_YEARLY_mLINEITEM2.addOrDelOnZero(se31.modify(part_partkey),<span style="color: #0000DD; font-weight: bold">1L</span>) <span style="color: #333333">:</span> voidFunc());
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_PART&quot;</span>)
       END_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_PART&quot;</span>)
@@ -1005,36 +889,25 @@
     <span style="color: #333399; font-weight: bold">void</span> on_delete_PART(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> part_partkey, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_name, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_mfgr, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_brand, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_type, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> part_size, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_container, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE part_retailprice, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_comment) {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_PART&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_PART&quot;</span>)
-      {  <span style="color: #888888">//++tN;</span>
+      {  <span style="color: #333333">++</span>tN;
         DOUBLE_TYPE agg15 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
         DOUBLE_TYPE agg16 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
-        <span style="color: #333399; font-weight: bold">long</span> l16 <span style="color: #333333">=</span> AVG_YEARLY_mLINEITEM2_L1_1_L1_1.getValueOrDefault(se37.modify(part_partkey));
-        agg16 <span style="color: #333333">+=</span> ((<span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">!=</span> l16) <span style="color: #333333">*</span> Udiv(Ulistmax(<span style="color: #0000DD; font-weight: bold">1L</span>,l16)));
-        DOUBLE_TYPE l15 <span style="color: #333333">=</span> (agg16 <span style="color: #333333">*</span> (AVG_YEARLY_mLINEITEM2_L1_2.getValueOrDefault(se38.modify(part_partkey)) <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.2</span>));
+        <span style="color: #333399; font-weight: bold">long</span> l16 <span style="color: #333333">=</span> AVG_YEARLY_mLINEITEM1_L1_1_L1_1.getValueOrDefault(se33.modify(part_partkey));
+        (<span style="color: #888888">/*if */</span>(<span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">!=</span> l16) <span style="color: #333333">?</span> agg16 <span style="color: #333333">+=</span> Udiv(Ulistmax(<span style="color: #0000DD; font-weight: bold">1L</span>,l16)) <span style="color: #333333">:</span> <span style="color: #6600EE; font-weight: bold">0.0</span>);
+        DOUBLE_TYPE l15 <span style="color: #333333">=</span> (agg16 <span style="color: #333333">*</span> (AVG_YEARLY_mLINEITEM1_L1_2.getValueOrDefault(se34.modify(part_partkey)) <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">0.2</span>));
         { <span style="color: #888888">//slice</span>
-          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h5 <span style="color: #333333">=</span> AVG_YEARLY_pLINEITEM1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se39.modify0(part_partkey));
-          <span style="color: #008800; font-weight: bold">const</span> HashIndex_AVG_YEARLY_pLINEITEM1_map_0<span style="color: #333333">*</span> i7 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_AVG_YEARLY_pLINEITEM1_map_0<span style="color: #333333">*&gt;</span>(AVG_YEARLY_pLINEITEM1.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
-          HashIndex_AVG_YEARLY_pLINEITEM1_map_0<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n7 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i7<span style="color: #333333">-&gt;</span>buckets_[h5 <span style="color: #333333">%</span> i7<span style="color: #333333">-&gt;</span>size_]);
-          AVG_YEARLY_pLINEITEM1_entry<span style="color: #333333">*</span> e7;
-          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e7<span style="color: #333333">=</span>n7<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h5 <span style="color: #333333">==</span> n7<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> AVG_YEARLY_pLINEITEM1_mapkey0_idxfn<span style="color: #333333">::</span>equals(se39, <span style="color: #333333">*</span>e7)) {
-            DOUBLE_TYPE l_quantity <span style="color: #333333">=</span> e7<span style="color: #333333">-&gt;</span>L_QUANTITY;
-            DOUBLE_TYPE v7 <span style="color: #333333">=</span> e7<span style="color: #333333">-&gt;</span>__av;
-            agg15 <span style="color: #333333">+=</span> (v7 <span style="color: #333333">*</span> (l15 <span style="color: #333333">&gt;</span> l_quantity));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n7<span style="color: #333333">=</span>n7<span style="color: #333333">-&gt;</span>next));
+          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h6 <span style="color: #333333">=</span> AVG_YEARLY_mLINEITEM1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se35.modify0(part_partkey));
+          <span style="color: #008800; font-weight: bold">const</span> HashIndex_AVG_YEARLY_mLINEITEM1_map_0<span style="color: #333333">*</span> i6 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_AVG_YEARLY_mLINEITEM1_map_0<span style="color: #333333">*&gt;</span>(AVG_YEARLY_mLINEITEM1.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
+          HashIndex_AVG_YEARLY_mLINEITEM1_map_0<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n6 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i6<span style="color: #333333">-&gt;</span>buckets_[h6 <span style="color: #333333">%</span> i6<span style="color: #333333">-&gt;</span>size_]);
+          AVG_YEARLY_mLINEITEM1_entry<span style="color: #333333">*</span> e6;
+          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e6<span style="color: #333333">=</span>n6<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h6 <span style="color: #333333">==</span> n6<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> AVG_YEARLY_mLINEITEM1_mapkey0_idxfn<span style="color: #333333">::</span>equals(se35, <span style="color: #333333">*</span>e6)) {
+            DOUBLE_TYPE l_quantity <span style="color: #333333">=</span> e6<span style="color: #333333">-&gt;</span>L_QUANTITY;
+            DOUBLE_TYPE v6 <span style="color: #333333">=</span> e6<span style="color: #333333">-&gt;</span>__av;
+            (<span style="color: #888888">/*if */</span>(l15 <span style="color: #333333">&gt;</span> l_quantity) <span style="color: #333333">?</span> agg15 <span style="color: #333333">+=</span> v6 <span style="color: #333333">:</span> <span style="color: #6600EE; font-weight: bold">0.0</span>);
+          } <span style="color: #008800; font-weight: bold">while</span> ((n6<span style="color: #333333">=</span>n6<span style="color: #333333">-&gt;</span>nxt));
         }
-        AVG_YEARLY <span style="color: #333333">+=</span> ((part_brand <span style="color: #333333">==</span> c1) <span style="color: #333333">*</span> ((part_container <span style="color: #333333">==</span> c2) <span style="color: #333333">*</span> (agg15 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #6600EE; font-weight: bold">0.142857142857</span>)));
-        AVG_YEARLY_mLINEITEM1.addOrDelOnZero(se40.modify(part_partkey),((part_brand <span style="color: #333333">==</span> c1) <span style="color: #333333">*</span> ((part_container <span style="color: #333333">==</span> c2) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>)));
-        { <span style="color: #888888">//slice</span>
-          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h6 <span style="color: #333333">=</span> AVG_YEARLY_pLINEITEM1_mapkey0_idxfn<span style="color: #333333">::</span>hash(se42.modify0(part_partkey));
-          <span style="color: #008800; font-weight: bold">const</span> HashIndex_AVG_YEARLY_pLINEITEM1_map_0<span style="color: #333333">*</span> i8 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_AVG_YEARLY_pLINEITEM1_map_0<span style="color: #333333">*&gt;</span>(AVG_YEARLY_pLINEITEM1.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
-          HashIndex_AVG_YEARLY_pLINEITEM1_map_0<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n8 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i8<span style="color: #333333">-&gt;</span>buckets_[h6 <span style="color: #333333">%</span> i8<span style="color: #333333">-&gt;</span>size_]);
-          AVG_YEARLY_pLINEITEM1_entry<span style="color: #333333">*</span> e8;
-          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e8<span style="color: #333333">=</span>n8<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h6 <span style="color: #333333">==</span> n8<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> AVG_YEARLY_pLINEITEM1_mapkey0_idxfn<span style="color: #333333">::</span>equals(se42, <span style="color: #333333">*</span>e8)) {
-            DOUBLE_TYPE l_quantity <span style="color: #333333">=</span> e8<span style="color: #333333">-&gt;</span>L_QUANTITY;
-            DOUBLE_TYPE v8 <span style="color: #333333">=</span> e8<span style="color: #333333">-&gt;</span>__av;
-            AVG_YEARLY_mLINEITEM5.addOrDelOnZero(se41.modify(part_partkey,l_quantity),((part_brand <span style="color: #333333">==</span> c1) <span style="color: #333333">*</span> ((part_container <span style="color: #333333">==</span> c2) <span style="color: #333333">*</span> (v8 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>))));
-          } <span style="color: #008800; font-weight: bold">while</span> ((n8<span style="color: #333333">=</span>n8<span style="color: #333333">-&gt;</span>next));
-        }
+        (<span style="color: #888888">/*if */</span>(part_brand <span style="color: #333333">==</span> c1 <span style="color: #333333">&amp;&amp;</span> part_container <span style="color: #333333">==</span> c2) <span style="color: #333333">?</span> AVG_YEARLY <span style="color: #333333">+=</span> (agg15 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #6600EE; font-weight: bold">0.142857142857</span>) <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
+        (<span style="color: #888888">/*if */</span>(part_container <span style="color: #333333">==</span> c2 <span style="color: #333333">&amp;&amp;</span> part_brand <span style="color: #333333">==</span> c1) <span style="color: #333333">?</span> AVG_YEARLY_mLINEITEM2.addOrDelOnZero(se36.modify(part_partkey),<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>) <span style="color: #333333">:</span> voidFunc());
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_PART&quot;</span>)
       END_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_PART&quot;</span>)
@@ -1046,7 +919,7 @@
     <span style="color: #333399; font-weight: bold">void</span> on_system_ready_event() {
       BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
       BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
-      {  <span style="color: #888888">//</span>
+      {  
         AVG_YEARLY <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
       }
       END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
@@ -1056,51 +929,44 @@
   <span style="color: #997700; font-weight: bold">private:</span>
   
     <span style="color: #888888">/* Sample entries for avoiding recreation of temporary objects */</span>
-    AVG_YEARLY_mLINEITEM1_entry se2;
-    AVG_YEARLY_mLINEITEM2_L1_1_L1_1_entry se3;
-    AVG_YEARLY_mLINEITEM2_L1_2_entry se4;
-    AVG_YEARLY_pLINEITEM1_entry se5;
-    AVG_YEARLY_mLINEITEM2_L1_1_L1_1_entry se6;
-    AVG_YEARLY_mLINEITEM2_L1_2_entry se7;
-    AVG_YEARLY_mLINEITEM2_L1_1_L1_1_entry se8;
-    AVG_YEARLY_mLINEITEM2_L1_2_entry se9;
-    AVG_YEARLY_pLINEITEM1_entry se10;
-    AVG_YEARLY_pLINEITEM1_entry se11;
-    AVG_YEARLY_mLINEITEM2_L1_1_L1_1_entry se12;
-    AVG_YEARLY_mLINEITEM2_L1_2_entry se13;
-    AVG_YEARLY_mLINEITEM5_entry se14;
-    AVG_YEARLY_mLINEITEM1_entry se15;
-    AVG_YEARLY_mLINEITEM1_entry se17;
-    AVG_YEARLY_mLINEITEM2_L1_1_L1_1_entry se18;
-    AVG_YEARLY_mLINEITEM2_L1_2_entry se19;
-    AVG_YEARLY_mLINEITEM2_L1_1_L1_1_entry se20;
-    AVG_YEARLY_mLINEITEM2_L1_2_entry se21;
-    AVG_YEARLY_mLINEITEM2_L1_1_L1_1_entry se22;
-    AVG_YEARLY_mLINEITEM2_L1_2_entry se23;
-    AVG_YEARLY_pLINEITEM1_entry se24;
-    AVG_YEARLY_mLINEITEM2_L1_1_L1_1_entry se25;
-    AVG_YEARLY_mLINEITEM2_L1_2_entry se26;
-    AVG_YEARLY_mLINEITEM5_entry se27;
-    AVG_YEARLY_mLINEITEM1_entry se28;
-    AVG_YEARLY_mLINEITEM2_L1_1_L1_1_entry se30;
-    AVG_YEARLY_mLINEITEM2_L1_2_entry se31;
-    AVG_YEARLY_pLINEITEM1_entry se32;
-    AVG_YEARLY_mLINEITEM1_entry se33;
-    AVG_YEARLY_mLINEITEM5_entry se34;
-    AVG_YEARLY_pLINEITEM1_entry se35;
-    AVG_YEARLY_mLINEITEM2_L1_1_L1_1_entry se37;
-    AVG_YEARLY_mLINEITEM2_L1_2_entry se38;
-    AVG_YEARLY_pLINEITEM1_entry se39;
-    AVG_YEARLY_mLINEITEM1_entry se40;
-    AVG_YEARLY_mLINEITEM5_entry se41;
-    AVG_YEARLY_pLINEITEM1_entry se42;
+    AVG_YEARLY_mLINEITEM2_entry se2;
+    AVG_YEARLY_mLINEITEM1_L1_1_L1_1_entry se3;
+    AVG_YEARLY_mLINEITEM1_L1_2_entry se4;
+    AVG_YEARLY_mLINEITEM1_entry se5;
+    AVG_YEARLY_mLINEITEM1_L1_1_L1_1_entry se6;
+    AVG_YEARLY_mLINEITEM1_L1_2_entry se7;
+    AVG_YEARLY_mLINEITEM1_L1_1_L1_1_entry se8;
+    AVG_YEARLY_mLINEITEM1_L1_2_entry se9;
+    AVG_YEARLY_mLINEITEM1_entry se10;
+    AVG_YEARLY_mLINEITEM1_entry se11;
+    AVG_YEARLY_mLINEITEM1_L1_1_L1_1_entry se12;
+    AVG_YEARLY_mLINEITEM1_L1_2_entry se13;
+    AVG_YEARLY_mLINEITEM2_entry se15;
+    AVG_YEARLY_mLINEITEM1_L1_1_L1_1_entry se16;
+    AVG_YEARLY_mLINEITEM1_L1_2_entry se17;
+    AVG_YEARLY_mLINEITEM1_entry se18;
+    AVG_YEARLY_mLINEITEM1_L1_1_L1_1_entry se19;
+    AVG_YEARLY_mLINEITEM1_L1_2_entry se20;
+    AVG_YEARLY_mLINEITEM1_L1_1_L1_1_entry se21;
+    AVG_YEARLY_mLINEITEM1_L1_2_entry se22;
+    AVG_YEARLY_mLINEITEM1_entry se23;
+    AVG_YEARLY_mLINEITEM1_entry se24;
+    AVG_YEARLY_mLINEITEM1_L1_1_L1_1_entry se25;
+    AVG_YEARLY_mLINEITEM1_L1_2_entry se26;
+    AVG_YEARLY_mLINEITEM1_L1_1_L1_1_entry se28;
+    AVG_YEARLY_mLINEITEM1_L1_2_entry se29;
+    AVG_YEARLY_mLINEITEM1_entry se30;
+    AVG_YEARLY_mLINEITEM2_entry se31;
+    AVG_YEARLY_mLINEITEM1_L1_1_L1_1_entry se33;
+    AVG_YEARLY_mLINEITEM1_L1_2_entry se34;
+    AVG_YEARLY_mLINEITEM1_entry se35;
+    AVG_YEARLY_mLINEITEM2_entry se36;
   
     <span style="color: #888888">/* Data structures used for storing materialized views */</span>
-    AVG_YEARLY_pLINEITEM1_map AVG_YEARLY_pLINEITEM1;
     AVG_YEARLY_mLINEITEM1_map AVG_YEARLY_mLINEITEM1;
-    AVG_YEARLY_mLINEITEM2_L1_1_L1_1_map AVG_YEARLY_mLINEITEM2_L1_1_L1_1;
-    AVG_YEARLY_mLINEITEM2_L1_2_map AVG_YEARLY_mLINEITEM2_L1_2;
-    AVG_YEARLY_mLINEITEM5_map AVG_YEARLY_mLINEITEM5;
+    AVG_YEARLY_mLINEITEM1_L1_1_L1_1_map AVG_YEARLY_mLINEITEM1_L1_1_L1_1;
+    AVG_YEARLY_mLINEITEM1_L1_2_map AVG_YEARLY_mLINEITEM1_L1_2;
+    AVG_YEARLY_mLINEITEM2_map AVG_YEARLY_mLINEITEM2;
     
     <span style="color: #888888">/*const static*/</span> STRING_TYPE c2;
     <span style="color: #888888">/*const static*/</span> STRING_TYPE c1;
@@ -1134,16 +1000,18 @@
       <span style="color: #888888">/* Imports data for static tables and performs view initialization based on it. */</span>
       <span style="color: #333399; font-weight: bold">void</span> init() {
           <span style="color: #888888">//P0_PLACE_HOLDER</span>
-          table_multiplexer.init_source();
-          stream_multiplexer.init_source();
+          table_multiplexer.init_source(run_opts<span style="color: #333333">-&gt;</span>batch_size, run_opts<span style="color: #333333">-&gt;</span>parallel, <span style="color: #007020">true</span>);
+          stream_multiplexer.init_source(run_opts<span style="color: #333333">-&gt;</span>batch_size, run_opts<span style="color: #333333">-&gt;</span>parallel, <span style="color: #007020">false</span>);
           process_tables();
           data.on_system_ready_event();
           <span style="color: #888888">//P2_PLACE_HOLDER</span>
       }
   
       <span style="color: #888888">/* Saves a snapshot of the data required to obtain the results of top level queries. */</span>
-      <span style="color: #333399; font-weight: bold">snapshot_t</span> take_snapshot(){ <span style="color: #888888">//tlq_t d=(tlq_t&amp;)data; if (d.tS==0) { gettimeofday(&amp;(d.t),NULL); d.tT=((d.t).tv_sec-(d.t0).tv_sec)*1000000L+((d.t).tv_usec-(d.t0).tv_usec); } printf(&quot;SAMPLE=standard,%ld,%ld,%ld\n&quot;,d.tT,d.tN,d.tS);</span>
-          <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333399; font-weight: bold">snapshot_t</span>( <span style="color: #008800; font-weight: bold">new</span> <span style="color: #333399; font-weight: bold">tlq_t</span>((<span style="color: #333399; font-weight: bold">tlq_t</span><span style="color: #333333">&amp;</span>)data) );
+      <span style="color: #333399; font-weight: bold">snapshot_t</span> take_snapshot(){
+          <span style="color: #333399; font-weight: bold">tlq_t</span><span style="color: #333333">*</span> d <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">new</span> <span style="color: #333399; font-weight: bold">tlq_t</span>((<span style="color: #333399; font-weight: bold">tlq_t</span><span style="color: #333333">&amp;</span>)data);
+          <span style="color: #008800; font-weight: bold">if</span> (d<span style="color: #333333">-&gt;</span>tS<span style="color: #333333">==</span><span style="color: #0000DD; font-weight: bold">0</span>) { gettimeofday(<span style="color: #333333">&amp;</span>(d<span style="color: #333333">-&gt;</span>t),<span style="color: #007020">NULL</span>); d<span style="color: #333333">-&gt;</span>tT<span style="color: #333333">=</span>((d<span style="color: #333333">-&gt;</span>t).tv_sec<span style="color: #333333">-</span>(d<span style="color: #333333">-&gt;</span>t0).tv_sec)<span style="color: #333333">*</span><span style="color: #0000DD; font-weight: bold">1000000L</span><span style="color: #333333">+</span>((d<span style="color: #333333">-&gt;</span>t).tv_usec<span style="color: #333333">-</span>(d<span style="color: #333333">-&gt;</span>t0).tv_usec); } printf(<span style="background-color: #fff0f0">&quot;SAMPLE=standard,%ld,%ld,%ld</span><span style="color: #666666; font-weight: bold; background-color: #fff0f0">\n</span><span style="background-color: #fff0f0">&quot;</span>,d<span style="color: #333333">-&gt;</span>tT,d<span style="color: #333333">-&gt;</span>tN,d<span style="color: #333333">-&gt;</span>tS);
+          <span style="color: #008800; font-weight: bold">return</span> <span style="color: #0066BB; font-weight: bold">snapshot_t</span>( d );
       }
   
     <span style="color: #997700; font-weight: bold">protected:</span>
