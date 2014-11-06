@@ -1,5 +1,5 @@
 <?php if(!isset($now_building_distro)) { ?>
-<a name="latest"><h4>DBToaster Public Release 2.1</h4></a>
+<a name="latest"><h4>DBToaster Release 2.1</h4></a>
 <table class="table">
 <thead>
   <th width="30%" align="right">Binaries</th>
@@ -56,7 +56,7 @@
 <a name="older"><h4>Older releases</h4></a>
 <table class="table">
 <thead>
-  <th width="30%" align="right">Binaries (Public Release 2.0)</th>
+  <th width="30%" align="right">Binaries (Release 2.0)</th>
   <th width="20%" align="left">Revision</th>
   <th width="20%" align="left">Date</th>
   <th width="20%" align="left">Download</th>  
@@ -100,7 +100,7 @@
 </table>
 <table class="table">
 <thead>
-  <th width="30%" align="right">Binaries (Public Release 1)</th>
+  <th width="30%" align="right">Binaries (Release 1)</th>
   <th width="20%" align="left">Revision</th>
   <th width="20%" align="left">Date</th>
   <th width="20%" align="left">Download</th>  

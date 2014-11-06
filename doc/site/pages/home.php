@@ -21,7 +21,7 @@
   <!-- Store Button -->
   <section class="btn-wrapper-shop">
     <div class="store-btn">
-      <?= mk_link("Online Samples", "samples", null); ?>
+      <?= mk_link("Examples", "samples", null); ?>
     </div>
     <span id="shop-info" style="display: none;">Individual license: 49 US$</span> 
   </section>
