@@ -1,8 +1,62 @@
 <?php if(!isset($now_building_distro)) { ?>
-<a name="latest"><h4>DBToaster Public Release 2</h4></a>
+<a name="latest"><h4>DBToaster Public Release 2.1</h4></a>
 <table class="table">
 <thead>
   <th width="30%" align="right">Binaries</th>
+  <th width="20%" align="left">Revision</th>
+  <th width="20%" align="left">Date</th>
+  <th width="20%" align="left">Download</th>  
+</thead>
+<tr>
+  <td align="left"> &nbsp;&nbsp; Mac OS X 10.6.8 (or above)</td>
+  <td>3346</td>
+  <td>2014-Nov-06</td>
+  <td align="left">
+    <a class="btn btn-primary" href="dist/dbtoaster_darwin_3346.tgz">&nbsp;&nbsp;Tarball&nbsp;&nbsp;</a></td>
+</tr>
+<tr>
+  <td align="left"> &nbsp;&nbsp; Ubuntu 12.04 (x86-64)</td>
+  <td>3346</td>
+  <td>2014-Nov-06</td>
+  <td align="left">
+    <a class="btn btn-primary" href="dist/dbtoaster_ubuntu12.04_x86_64_3346.tgz">&nbsp;&nbsp;Tarball&nbsp;&nbsp;</a></td>
+</tr>
+<tr>
+  <td align="left"> &nbsp;&nbsp; RHEL 6.5 (x86-64)</td>
+  <td>3346</td>
+  <td>2014-Nov-06</td>
+  <td align="left">
+    <a class="btn btn-primary" href="dist/dbtoaster_rhel6.5_x86_64_3346.tgz">&nbsp;&nbsp;Tarball&nbsp;&nbsp;</a></td>
+</tr>
+<tr>
+  <td align="left">&nbsp;&nbsp; Windows (Cygwin)</td>
+  <td>3346</td>
+  <td>2014-Nov-06</td>
+  <td align="left">
+    <a class="btn btn-primary" href="dist/dbtoaster_cygwin_3346.tgz">&nbsp;&nbsp;Tarball&nbsp;&nbsp; </a></td>
+</tr>
+<tr>
+  <td align="left"><b>Documentation</b></td>
+  <td>3346</td>
+  <td>2014-Nov-06</td>
+  <td align="left">
+    <?= mk_link("&nbsp;&nbsp;Online&nbsp;&nbsp;", "docs", null, "", " class=\"btn btn-primary\""); ?>
+  </td>
+</tr>
+<tr>
+  <td align="left"><b>Samples</b></td>
+  <td>3346</td>
+  <td>2014-Nov-06</td>
+  <td align="left">
+    <?= mk_link("&nbsp;&nbsp;Online&nbsp;&nbsp;", "samples", null, "", " class=\"btn btn-primary\""); ?>
+  </td>
+</tr>
+</table>
+
+<a name="older"><h4>Older releases</h4></a>
+<table class="table">
+<thead>
+  <th width="30%" align="right">Binaries (Public Release 2.0)</th>
   <th width="20%" align="left">Revision</th>
   <th width="20%" align="left">Date</th>
   <th width="20%" align="left">Download</th>  
@@ -43,17 +97,7 @@
     <?= mk_link("&nbsp;&nbsp;Online&nbsp;&nbsp;", "docs", null, "", " class=\"btn btn-primary\""); ?>
   </td>
 </tr>
-<tr>
-  <td align="left"><b>Samples</b></td>
-  <td>3263</td>
-  <td>2014-Aug-01</td>
-  <td align="left">
-    <?= mk_link("&nbsp;&nbsp;Online&nbsp;&nbsp;", "samples", null, "", " class=\"btn btn-primary\""); ?>
-  </td>
-</tr>
 </table>
-
-<a name="older"><h4>Older releases</h4></a>
 <table class="table">
 <thead>
   <th width="30%" align="right">Binaries (Public Release 1)</th>
@@ -168,7 +212,7 @@
 </li><li>Added optimization for eliminating temporary maps that were formerly used in IVM triggers.
 </li>
 </ul>
-<H4 style="border-bottom:thin double;">Release 2 (revision 3263) - 2014/08/01</H4>
+<H4 style="border-bottom:thin double;">Release 2.0 (revision 3263) - 2014/08/01</H4>
 <ul>
 <li>Implemented a new back-end from scratch in Scala for compiling M3 programs
   generated for SQL queries by DBToaster's front-end.

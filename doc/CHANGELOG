@@ -24,7 +24,7 @@ Release 2.1 (revision 3346) - 2014/11/06
 - Added optimization for eliminating temporary maps that were formerly used in IVM triggers.
 
 
-Release 2 (revision 3255) - 2014/08/01
+Release 2.0 (revision 3255) - 2014/08/01
 -----------------------------------
 - Implemented a new back-end from scratch in Scala for compiling M3 programs
   generated for SQL queries by DBToaster's front-end.
