@@ -1,5 +1,28 @@
 DBToaster Changelog
-================================================================================
+===============================================================================
+
+
+Release 2.1 (revision 3346) - 2014/11/06
+----------------------------------------
+
+- Fixed the clear function in the object pool used in the C++ libraries.
+- Fixed a bug in translating SQL queries with OR operators in the WHERE clause.
+- Fixed a bug in transforming calculus expressions that was causing wrong results in TPCH-8.
+- Fixed the take_snapshot function to only copy the result map once.
+- Avoided unnecessary copying of maps in the add_map function for C++.
+- More verbose compilation errors in Scala, if any exists.
+- Type-checker considers lifts as filter conditions, whenever the lifted -variable name is bound.
+- Fixed an issue in the Scala code generation, due to the lack of a new line character.
+- Fixed name collision happening for global constants.
+- Solved the problem with preserving the order of generated maps, specially to avoid warnings in C++ initialization.
+- bin/dbtoaster handles spaces in paths.
+- Reduced the default chunk size to 32 (instead of 1024).
+- Used reinterpret_cast instead of C-style cast in the object pool implementation for C++.
+- Added support for mixed parallel input processing mode in C++ (p=2).
+- Added optimization for pooling boolean expressions out of multiplications, agg-sums, and statement result assignments (for both C++ and Scala).
+- Added optimization for early prevention of adding tuples with zero values into the maps (for both C++ and Scala).
+- Added optimization for eliminating temporary maps that were formerly used in IVM triggers.
+
 
 Release 2 (revision 3255) - 2014/08/01
 -----------------------------------
@@ -23,7 +46,7 @@ Release 2 (revision 3255) - 2014/08/01
   Exists.
 - Implemented a super efficient memory caching strategy in C++ collections to
   further improve the performance.
-- Changed unifiation to respect the scope of variables.
+- Changed unification to respect the scope of variables.
 - Applied more optimizations:
   + Added OPTIMIZE-PATTERNS option (active for O3) which avoids generating
     useless secondary indices.
@@ -46,9 +69,9 @@ Release 1 (revision 2827) - 2013/02/11
 - Added support for more SQL features:
   + SELECT DISTINCT
 - Added support for standard functions in SQL queries.
-- Added support for different levels of view maintanance Depth-0, Depth1, ..., 
+- Added support for different levels of view maintenance Depth-0, Depth1, ..., 
   DepthN.
-- Added support for calculatiion of the final result upon user request (
+- Added support for calculation of the final result upon user request (
   EXPRESSIVE-TLQS).
 - Added more examples into the release.
 - Added bin/dbtoaster as wrapper script that handles the compilation process 
@@ -73,7 +96,7 @@ Release 1 (revision 2827) - 2013/02/11
 - Minor change in Heuristics to correctly pass the scope to nested
   subexpressions.
 - Applied more optimizations:
-  + Removed unnecessary ifthenelse blocks where "if(pred) t else t" with. a side
+  + Removed unnecessary if-then-else blocks where "if(pred) t else t" with. a side
     effect free predicate.
   + Introduced LookupOrElse operator for saving the unnecessary computations,
     when a tuple does not exist.

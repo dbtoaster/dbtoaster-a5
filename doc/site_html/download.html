@@ -107,7 +107,7 @@
 </li><li>Fixed an issue in the Scala code generation, due to the lack of a new line character.
 </li><li>Fixed name collision happening for global constants.
 </li><li>Solved the problem with preserving the order of generated maps, specially to avoid warnings in C++ initialization.
-</li><li>The dbtoaster script handles spaces in paths.
+</li><li><tt>bin/dbtoaster</tt> handles spaces in paths.
 </li><li>Reduced the default chunk size to 32 (instead of 1024).
 </li><li>Used reinterpret_cast instead of C-style cast in the object pool implementation for C++.
 </li><li>Added support for mixed parallel input processing mode in C++ (p=2).
@@ -138,7 +138,7 @@
   Exists.
 </li><li>Implemented a super efficient memory caching strategy in C++ collections to
   further improve the performance.
-</li><li>Changed unifiation to respect the scope of variables.
+</li><li>Changed unification to respect the scope of variables.
 </li><li>Applied more optimizations:
 <ul>
   <li>Added OPTIMIZE-PATTERNS option (active for O3) which avoids generating
@@ -171,12 +171,12 @@
 </ul>
 </li>
 <li>Added support for standard functions in SQL queries.
-</li><li>Added support for different levels of view maintanance Depth-0, Depth1, ..., 
+</li><li>Added support for different levels of view maintenance Depth-0, Depth1, ..., 
   DepthN.
-</li><li>Added support for calculatiion of the final result upon user request (
+</li><li>Added support for calculation of the final result upon user request (
   EXPRESSIVE-TLQS).
 </li><li>Added more examples into the release.
-</li><li>Added bin/dbtoaster as wrapper script that handles the compilation process 
+</li><li>Added <tt>bin/dbtoaster</tt> as wrapper script that handles the compilation process 
   for C++ and Scala.
 </li><li>Added support for DELETE operations, as well as INSERTs.
 </li><li>Several changes to improve compatibility with Windows and speed up C++ and 
@@ -199,8 +199,7 @@
   subexpressions.
 </li><li>Applied more optimizations:
 <ul>
-  <li>Removed unnecessary ifthenelse blocks where "if(pred) t else t" with. a side
-    effect free predicate.
+  <li>Removed unnecessary if-then-else blocks where "if(pred) t else t" with. a side effect free predicate.
   </li><li>Introduced LookupOrElse operator for saving the unnecessary computations,
     when a tuple does not exist.
   </li><li>Changed the comparison of two AggSums expressions. This comparison now
