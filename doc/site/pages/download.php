@@ -44,7 +44,7 @@
   </td>
 </tr>
 <tr>
-  <td align="left"><b>Samples</b></td>
+  <td align="left"><b>Examples</b></td>
   <td>3346</td>
   <td>2014-Nov-06</td>
   <td align="left">
