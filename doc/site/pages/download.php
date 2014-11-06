@@ -149,22 +149,23 @@
 <?= chapter("DBToaster Changelog", "changelog") ?>
 <H4 style="border-bottom:thin double;">Release 2.1 (revision 3346) - 2014/11/06</H4>
 <ul>
-<li>Fixed the behaviour of clear function in object pool used in C++ libraries.
-</li><li>Fixed a bug in generating IVM triggers for queries contaning OR operator in the WHERE clause.
-</li><li>Fixed the implementation of take_snapshot to only copy the result map once.
-</li><li>Fixed the unnecessary copying of maps in add_map function for C++.
-</li><li>Fixed the bug that prevented showing the compilation errors in Scala, if any exists.
-</li><li>Fixed type-checker to consider lifts as filter conditions, whenever the lifted variable name is bound.
-</li><li>Fixed an issue in Scala code generation, due to the lack of a new line character.
+<li>Fixed the clear function in the object pool used in the C++ libraries.
+</li><li>Fixed a bug in translating SQL queries with OR operators in the WHERE clause.
+</li><li>Fixed a bug in transforming calculus expressions that was causing wrong results in TPCH-8.
+</li><li>Fixed the take_snapshot function to only copy the result map once.
+</li><li>Avoided unnecessary copying of maps in the add_map function for C++.
+</li><li>More verbose compilation errors in Scala, if any exists.
+</li><li>Type-checker considers lifts as filter conditions, whenever the lifted variable name is bound.
+</li><li>Fixed an issue in the Scala code generation, due to the lack of a new line character.
 </li><li>Fixed name collision happening for global constants.
-</li><li>Fixed the problem in preserving the order of the generated maps, specially to avoid warnings in C++ initialization.
-</li><li>Fixed the bug in handling the case where there is a space in the path (for dbtoaster script).
+</li><li>Solved the problem with preserving the order of generated maps, specially to avoid warnings in C++ initialization.
+</li><li>The dbtoaster script handles spaces in paths.
 </li><li>Reduced the default chunk size to 32 (instead of 1024).
-</li><li>Used reinterpret_cast instead of C-style cast in object pool implementation for C++.
-</li><li>Added the support for mixed parallel input processing mode in C++ (p=2).
-</li><li>Added optimization for pooling boolean expressions out of multiplications, agg-sums and statement result assignments (for both C++ and Scala).
-</li><li>Added an optimization for early prevention of adding tuples with zero values into the maps (for both C++ and Scala).
-</li><li>Added an optimization for eliminating some temporary maps that were formerly used in IVM triggers.
+</li><li>Used reinterpret_cast instead of C-style cast in the object pool implementation for C++.
+</li><li>Added support for mixed parallel input processing mode in C++ (p=2).
+</li><li>Added optimization for pooling boolean expressions out of multiplications, agg-sums, and statement result assignments (for both C++ and Scala).
+</li><li>Added optimization for early prevention of adding tuples with zero values into the maps (for both C++ and Scala).
+</li><li>Added optimization for eliminating temporary maps that were formerly used in IVM triggers.
 </li>
 </ul>
 <H4 style="border-bottom:thin double;">Release 2 (revision 3263) - 2014/08/01</H4>
