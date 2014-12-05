@@ -118,7 +118,7 @@ window.onload = function() {
 
 <?php } else { ?>
 
-<table style="border:0;width:100%;height:100%;">
+<table id="samplesTbl" style="border:0;width:100%;height:78%;margin-bottom:20px;">
   <tr style="height: 5%;">
 <?php if($query_group == "tpch" || $query_group == "mddb") { ?>
     <td>
@@ -135,11 +135,11 @@ window.onload = function() {
     </td>
   </tr>
   <tr style="height: 100%;">
-    <td style="padding-top:4%;">
+    <td style="padding-top:2%;">
       <a href="htmlcode/<?=$query_code ?>.hpp.html">C++ IVM Program:</a>
       <iframe src="htmlcode/<?=$query_code ?>.hpp.html" style="border:0;width:100%;height:100%;"></iframe>
     </td>
-    <td style="padding-top:4%;">
+    <td style="padding-top:2%;">
       <a href="htmlcode/<?=$query_code ?>.scala.html">Scala IVM Program:</a>
       <iframe src="htmlcode/<?=$query_code ?>.scala.html" style="border:0;width:100%;height:100%;"></iframe>
     </td>
@@ -148,6 +148,10 @@ window.onload = function() {
 <script type="text/javascript">
 window.onload = function() {
   $( ".titlebox" ).append(": <?=$query_code ?>").prepend("<div onclick=\"location.href='index.php?page=samples';\" style=\"margin-bottom:-40px;margin-top:0px;\" class=\"sbutton <?=$query_color ?> center\">Back</div> ")
+  $( ".pagebody" ).css("margin-bottom","0")
+  var footer = $( ".footer" ).detach();
+  $( "#samplesTbl" ).detach().appendTo("#pageEndElem");
+  footer.appendTo("#pageEndElem");
 };
 </script>
 <?php } ?>
