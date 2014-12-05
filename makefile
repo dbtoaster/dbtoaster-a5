@@ -82,7 +82,7 @@ DIRS=\
 	src/functional\
 	src/imperative\
 	src/codegen\
-	src/lib\
+	src/lib
 
 INCLUDE_OBJ=\
 	str.cma\

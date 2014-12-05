@@ -1,6 +1,8 @@
 include ../../makefile.inc
 include ../../makefile.local
 
+CPP_HDR_PATH := /opt/local/include/boost/
+
 HDR_FILES := event.hpp \
 	iprogram.hpp \
 	program_base.hpp \
@@ -23,7 +25,7 @@ SRC_FILES := event.cpp \
 FILES := $(HDR_FILES) $(SRC_FILES)
 OBJ_FILES := $(patsubst %.cpp,%.o,$(SRC_FILES))
 
-G++ := g++
+G++ := g++ -I'/opt/local/include/boost/'
 LIB_OBJ := libdbtoaster.a
 TARGET:=$(shell which $(G++) &>/dev/null && echo $(LIB_OBJ) || echo warn)
 
