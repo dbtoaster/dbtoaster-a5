@@ -355,12 +355,19 @@ let partition_expr (heuristic_options:heuristic_options_t) (scope:var_t list)
 
 (******************************************************************************)
 
+let materializer_opts =
+   ListAsSet.diff 
+      CalculusTransforms.default_optimizations
+      [ CalculusTransforms.OptExtractDomains; 
+        CalculusTransforms.OptSimplifyDomains ]
+
 let rec decompose_and_fold (scope:var_t list) 
-                           (zero_value: 'a) (one_value: 'a) 
-                           (sum_values_fn: ('a -> 'a -> 'a)) 
-                           (prod_values_fn: ('a -> 'a -> 'a)) 
-                           (monomial_fn: (string -> var_t list -> expr_t -> 'a))
-                           (prefix: string) (expr:expr_t): 'a =
+                           (zero_value:'a) (one_value: 'a) 
+                           (sum_values_fn:('a -> 'a -> 'a)) 
+                           (prod_values_fn:('a -> 'a -> 'a)) 
+                           (monomial_fn:(string -> var_t list -> expr_t -> 'a))
+                           (prefix:string) 
+                           (expr:expr_t): 'a =
 
    let rcr = decompose_and_fold scope zero_value one_value sum_values_fn 
                                 prod_values_fn monomial_fn in
@@ -374,7 +381,8 @@ let rec decompose_and_fold (scope:var_t list)
    (* Polynomial decomposition *)
    fst (List.fold_left (fun (ret_value, i) (schema, term) ->
 
-      let term_opt = optimize_expr (scope, schema) term in
+      let term_opt = optimize_expr ~optimizations:materializer_opts
+                                   (scope, schema) term in
          
       if not (CalcRing.try_cast_to_monomial term_opt)
       then begin
@@ -390,7 +398,8 @@ let rec decompose_and_fold (scope:var_t list)
       let (new_value, k) =  
          List.fold_left (fun (ret_value, j) (schema, term) ->
 
-            let term_opt = optimize_expr (scope, schema) term in
+            let term_opt = optimize_expr ~optimizations:materializer_opts
+                                         (scope, schema) term in
             let term_name = (prefix ^ (string_of_int j)) in
             
             let new_value = 
@@ -489,12 +498,13 @@ let should_update ?(scope:var_t list = [])
                 (next_state, next_scope)
 
            ) (Unknown, expr_scope) (CalcRing.prod_list (reogranize_expr expr))
-        ) ) "dummy"
+        ) ) 
+        "dummy"
         (* The materializer assumes expressions without Neg nodes.     
            When the calculus optimizer is disabled, this assumption    
            might be violated. We guard against these cases by calling  
-           CalculusTransforms.erase_negs.                              *)
-        (CalculusTransforms.erase_negs expr)
+           CalculusTransforms.normalize.                              *)
+        (CalculusTransforms.normalize expr)
    in
    let final_decision = match final_state with
       | Unknown | UpdateExpr -> true
@@ -567,14 +577,14 @@ let rec materialize ?(scope:var_t list = [])
                                  db_schema history
                                  prefix event
                                  expr_scope schema
-                                 expr)
+                                 expr)          
             prefix
             (* The materializer assumes expressions without Neg nodes.     
                When the calculus optimizer is disabled, this assumption    
                might be violated. We guard against these cases by calling  
-               CalculusTransforms.erase_negs.                              *)
+               CalculusTransforms.normalize.                              *)
             (if not (Debug.active "CALC-NO-OPTIMIZE") then expr
-             else CalculusTransforms.erase_negs expr)
+             else CalculusTransforms.normalize expr)
    in
    begin
       Debug.print "LOG-HEURISTICS-DETAIL" (fun () ->

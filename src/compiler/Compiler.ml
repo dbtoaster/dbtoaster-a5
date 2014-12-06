@@ -123,7 +123,7 @@ let compile_map (compute_delta:bool)
    );
    let optimized_defn = 
       CalculusTransforms.optimize_expr (todo_ivars, todo_ovars) 
-                                      todo.ds_definition
+                                       todo.ds_definition
    in
    Debug.print "LOG-COMPILE-DETAIL" (fun () ->
       "Optimized: \n"^(CalculusPrinter.string_of_expr optimized_defn)

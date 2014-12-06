@@ -40,7 +40,6 @@ FILES=\
 	src/functional/M3ToK3\
 	src/functional/DMToK3\
 	src/functional/K3Optimizer\
-	src/functional/K3Codegen\
 	src/functional/K3Compiler\
 	src/imperative/Imperative\
 	src/imperative/K3ToImperative\
@@ -53,6 +52,7 @@ FILES=\
 	src/lib/Database\
 	src/lib/DBChecker\
 	src/lib/Runtime\
+	src/functional/K3Codegen\
 	src/codegen/K3Interpreter\
 	src/codegen/K3Scalagen\
 

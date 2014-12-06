@@ -339,6 +339,40 @@ let rec combine_values ?(aggressive=false) ?(peer_groups=[])
       ); rewritten_expr
 ;;
 
+(* A helper method for partially evaluating constant terms *) 
+let eval_partial pl = 
+   (* Extract constants *)
+   let (consts, nonconsts) = 
+      List.fold_left (fun (c, n) term -> match term with
+         | CalcRing.Val(Value(v)) when Arithmetic.value_is_const v -> 
+            (c @ [v], n)
+         | _ -> (c, n @ [term])
+      ) ([], []) pl 
+   in
+   let const_eval = 
+      C.mk_value (Arithmetic.eval_partial (ValueRing.mk_prod consts))
+   in
+      CalcRing.mk_prod (const_eval :: nonconsts)
+;;
+
+(* Negate a given expression *)
+let neg expr = eval_partial (C.mk_value (Arithmetic.mk_int (-1)) :: 
+                             CalcRing.prod_list expr)
+;;
+
+(* Normalize a given expression by replacing all Negs with {-1} and 
+   evaluating all constants in the product list. *)
+let rec normalize expr = 
+   C.rewrite 
+      (fun _ -> CalcRing.mk_sum)
+      (fun _ -> eval_partial)
+      (fun _ -> neg)
+      (fun _ -> CalcRing.mk_val)
+      (fun _ _ -> true)
+      expr
+;;
+
+
 (**/**)
 (** Type used internally by lift_equalities to describe liftable equalities. *)
 type lift_candidate_t = 
@@ -1156,6 +1190,158 @@ let eliminate_duplicates (big_expr:C.expr_t) =
          (CalculusPrinter.string_of_expr rewritten_expr) 
       ); rewritten_expr
 
+
+type domain_cmp_t =
+   | NotComparable
+   | Identical
+   | LessRestrictive    (* binds fewer variables *)
+   | MoreRestrictive    (* binds more variables *)
+   
+
+let cmp_domain_exprs expr1 expr2 = 
+   if C.exprs_are_identical expr1 expr2 then Identical else
+
+   (* Check if term_list1 is a substring of term_list2 *)
+   let rec term_list_subset term_list1 term_list2 =    
+      match (term_list1, term_list2) with
+         | ([], _) -> Some([])
+         | (_, []) -> None
+         | (hd1::tl1, hd2::tl2) ->
+            begin match C.cmp_exprs hd1 hd2 with
+               | Some(hd_mapping) -> 
+                  begin match term_list_subset tl1 tl2 with
+                     | Some(tl_mapping) -> 
+                        ListAsFunction.merge hd_mapping tl_mapping
+                     | None -> None
+                  end
+               | None -> term_list_subset term_list1 tl2
+            end
+   in
+   let extract_list expr = match expr with
+      | CalcRing.Val(AggSum(_, subexp)) -> CalcRing.prod_list subexp
+      | _ -> CalcRing.prod_list expr
+   in   
+   let (ivars1,ovars1) = C.schema_of_expr expr1 in   
+   let (ivars2,ovars2) = C.schema_of_expr expr2 in
+
+   if ListAsSet.subset ovars1 ovars2 then 
+      (* Check if expr1 is less restrictive than expr2 *)
+      match term_list_subset (extract_list expr1) (extract_list expr2) with
+         | Some(mapping) -> 
+            let vars1 = ListAsSet.union ivars1 ovars1 in
+            let relevant_mapping = 
+               List.filter (fun (a,b) -> List.mem a vars1) mapping
+            in
+               if ListAsFunction.is_identity relevant_mapping 
+               then LessRestrictive
+               else NotComparable
+         | None -> NotComparable
+
+   else if ListAsSet.subset ovars2 ovars1 then 
+      (* Check if expr1 is more restrictive than expr2 *)
+      match term_list_subset (extract_list expr2) (extract_list expr1) with
+         | Some(mapping) -> 
+            let vars2 = ListAsSet.union ivars2 ovars2 in
+            let relevant_mapping = 
+               List.filter (fun (a,b) -> List.mem a vars2) mapping
+            in
+               if ListAsFunction.is_identity relevant_mapping 
+               then MoreRestrictive
+               else NotComparable
+         | None -> NotComparable
+   
+   else NotComparable
+
+(** For a given domain/exists subexpression eliminate duplicate terms 
+    (relations, delta relations, and externals) while considering only 
+    relevant variables appearing in the schema. For example, given a schema 
+    [A], expression R(A,B) * R(A,C) * C is transformed into R(A,B) * B. *)
+let unique_domains expr = 
+   Debug.print "LOG-UNIQUE-DOMAINS" (fun () ->
+      "Unique domains (START): "^ (CalculusPrinter.string_of_expr expr) 
+   );
+   let eligible_term = function
+      | CalcRing.Val(Rel _) 
+      | CalcRing.Val(DeltaRel _)
+      | CalcRing.Val(External _) -> true
+      | _ -> false
+   in
+   let merge_mappings mapping1 mapping2 = 
+      match (ListAsFunction.merge mapping1 mapping2) with
+         | Some(mapping) -> mapping
+         | None -> failwith "Incompatible mappings"
+   in
+   let rec map_relations schema term_list = match term_list with 
+      | [] -> []
+      | [x] -> [x]
+      | head::tail -> 
+         let mapped_tail = map_relations schema tail in
+
+         if not (eligible_term head) then head :: mapped_tail else
+
+         let mapping = 
+            List.fold_left (fun curr_mapping tail_term ->
+               if not (eligible_term tail_term) then curr_mapping else
+
+                match C.cmp_exprs head tail_term with 
+                  | Some(mapping) ->
+                     (* Map head onto tail_term *)
+                     let (schema_mapping, rest_mapping) = 
+                        List.partition (fun (a,b) -> List.mem a schema) 
+                                       mapping
+                     in
+                     if ListAsFunction.is_identity schema_mapping then
+                        merge_mappings curr_mapping rest_mapping
+                     else
+
+                     (* Map tail_term onto head *)
+                     let (schema_mapping2, rest_mapping2) = 
+                        List.partition (fun (a,b) -> List.mem a schema)
+                           (List.map (fun (a,b) -> (b,a)) mapping)
+                     in
+                     if ListAsFunction.is_identity schema_mapping2 then
+                        merge_mappings curr_mapping rest_mapping2
+                     else curr_mapping
+
+                  | None -> curr_mapping
+            ) [] mapped_tail
+         in
+            CalcRing.prod_list (rename_vars mapping 
+               (CalcRing.mk_prod (head::mapped_tail)))
+   in   
+   (* Remove redundant terms, for instance R(A,B) * R(A,B) -> R(A,B).
+      This is safe to do only when the domain expression is a monomial
+      since we don't care about the multiplicity. *)
+   let remove_duplicates ?(is_monomial=true) term_list = 
+      List.fold_left (fun acc_terms term ->
+         if List.mem term acc_terms &&
+               (is_monomial || C.expr_has_binary_multiplicity term)
+         then acc_terms 
+         else acc_terms @ [term]            
+      ) [] term_list
+   in
+   let rewritten_expr = 
+      let sum_terms = CalcRing.sum_list expr in
+      if (List.length sum_terms > 1) then expr else
+
+      let expr_noaggs = C.erase_aggsums expr in 
+      let sum_terms_noaggs = CalcRing.sum_list expr_noaggs in
+      if (List.length sum_terms_noaggs > 1) then expr else
+
+      let schema = snd (C.schema_of_expr expr) in
+      C.mk_aggsum schema (
+         let mapped_terms = 
+            map_relations schema (CalcRing.prod_list expr_noaggs)
+         in
+            (* Remove duplicates *)
+            CalcRing.mk_prod (remove_duplicates mapped_terms)
+      )
+   in
+      Debug.print "LOG-UNIQUE-DOMAINS" (fun () ->
+         "Unique domains (END): "^
+         (CalculusPrinter.string_of_expr rewritten_expr) 
+      ); rewritten_expr
+
 (**
   [extract_domains expr]
 
@@ -1169,55 +1355,89 @@ let eliminate_duplicates (big_expr:C.expr_t) =
 *)
 let extract_domains (big_scope:var_t list) (big_expr:C.expr_t) = 
    Debug.print "LOG-EXTRACT-DOMAINS" (fun () ->
-      "Extract domains (START): "^(CalculusPrinter.string_of_expr big_expr) 
+      "Extract domains (START): "^(CalculusPrinter.string_of_expr big_expr) ^
+      "\nEvent scope: "^(ListExtras.ocaml_of_list string_of_var big_scope)
    );
    let rec rcr expr = 
       let (scope, schema) = C.schema_of_expr expr in
       C.fold ~scope:scope ~schema:schema
-         (fun _ sl ->  CalcRing.mk_sum sl
-(*             
-            (* Extact domain subexpressions *)
-            let split = List.fold_left (fun (lhs,rhs) term -> 
-               match term with 
-                  | CalcRing.Val(DomainDelta(subexp)) -> 
-                     (lhs @ CalcRing.prod_list subexp, rhs)
-                  | _ -> (lhs, rhs @ [term])
-               ) ([], [])
+         (fun _ sl ->  
+            (* CalcRing.mk_sum sl *)
+
+            (* Extract domain subexpressions *)
+            let partition_domain term_list = 
+               List.fold_left (fun (lhs,rhs) term -> match term with 
+                  | CalcRing.Val(DomainDelta(subexp)) -> (lhs@[subexp], rhs)
+                  | _ -> (lhs, rhs@[term])
+               ) ([], []) term_list
+            in           
+
+            let rec common_domains dom_list1 dom_list2 = 
+               if dom_list1 = [] || dom_list2 = [] then [] else
+
+               let dom_term1 = List.hd dom_list1 in
+               let domains_hd1 = 
+                  List.fold_left (fun domains dom_term2 ->
+                     match cmp_domain_exprs dom_term1 dom_term2 with
+                        | Identical | LessRestrictive -> domains @ [dom_term1]
+                        | MoreRestrictive -> domains @ [dom_term2]
+                        | NotComparable -> domains
+                  ) [] dom_list2
+               in
+               if domains_hd1 = [] then
+                  common_domains (List.tl dom_list1) dom_list2
+               else
+                  let new_dom_list1 = 
+                     ListAsSet.diff ~eq:C.exprs_are_identical 
+                                    dom_list1 domains_hd1
+                  in
+                  let new_dom_list2 =
+                     ListAsSet.diff ~eq:C.exprs_are_identical 
+                                    dom_list2 domains_hd1 
+                  in
+                    domains_hd1 @ 
+                    common_domains new_dom_list1 new_dom_list2
             in
-            let create_domain terms = 
-               if terms = [] then CalcRing.one 
-               else C.mk_domain (CalcRing.mk_prod terms)
-            in
-            let rec extract_common_domain = function
+            let rec extract_common_domain sum_terms = match sum_terms with 
                | [] -> ([], CalcRing.zero)
                | [term] -> 
-                  let (lhs, rhs) = split (CalcRing.prod_list term) in
-                     (lhs, CalcRing.mk_prod rhs)
-               | hd::tl -> 
-                  let (hd_lhs, hd_rest) = split (CalcRing.prod_list hd) in
-                  let hd_rhs = CalcRing.mk_prod hd_rest in
-                  let (tl_lhs, tl_rhs) = extract_common_domain tl in
-                  let common_domain = 
-                     ListAsSet.inter ~eq:C.exprs_are_identical hd_lhs tl_lhs
+                  let (domains, rest) = 
+                     partition_domain (CalcRing.prod_list term) 
                   in
-                  let new_hd_lhs = ListAsSet.diff hd_lhs common_domain in
-                  let new_tl_lhs = ListAsSet.diff tl_lhs common_domain in
+                     (domains, CalcRing.mk_prod rest)
+               | hd::tl -> 
+                  let (hd_domains, hd_rest) = 
+                     partition_domain (CalcRing.prod_list hd) in
+                  let hd_rhs = CalcRing.mk_prod hd_rest in
+                  let (tl_domains, tl_rhs) = extract_common_domain tl in
+
+                  (* Find common domains between hd_domains and tl_domains *)
+                  let common_doms = common_domains hd_domains tl_domains in
+                  let new_hd_lhs = ListAsSet.diff ~eq:C.exprs_are_identical 
+                                                  hd_domains common_doms 
+                  in
+                  let new_tl_lhs = ListAsSet.diff ~eq:C.exprs_are_identical 
+                                                  tl_domains common_doms 
+                  in
                      (
-                        common_domain,
+                        common_doms,
                         CalcRing.mk_sum [
-                           CalcRing.mk_prod [create_domain new_hd_lhs; hd_rhs];
-                           CalcRing.mk_prod [create_domain new_tl_lhs; tl_rhs]  
+                           CalcRing.mk_prod (
+                              List.map C.mk_domain new_hd_lhs @ [hd_rhs]);
+                           CalcRing.mk_prod (
+                              List.map C.mk_domain new_tl_lhs @ [tl_rhs])
                         ]
                      )
             in 
             let (lhs, rhs) = extract_common_domain sl in 
                Debug.print "LOG-EXTRACT-DOMAINS-DETAIL" (fun () ->
                   "Candidates: "^
-                  (ListExtras.ocaml_of_list string_of_expr sl)^
+                  (ListExtras.ocaml_of_list CalculusPrinter.string_of_expr sl)^
                   "\nExtracted common domain: "^
-                  (C.string_of_expr (create_domain lhs))
+                  (C.string_of_expr (
+                     CalcRing.mk_prod (List.map C.mk_domain lhs)))
                );
-               CalcRing.mk_prod [ create_domain lhs; rhs ]   *)
+               CalcRing.mk_prod (List.map C.mk_domain lhs @ [rhs])
          )
          (fun (_, schema) pl -> 
             (* Create DomainDelta terms that can be pulled out of AggSums.*)
@@ -1239,7 +1459,7 @@ let extract_domains (big_scope:var_t list) (big_expr:C.expr_t) =
             (* Sanity check - DeltaDomain terms might have input variables 
                that are bound only from the outside, not by any term in pl *)
             if not (ListAsSet.subset dom_ivars big_scope) then (
-               print_endline ("Scope: " ^ 
+               print_endline ("Event scope: " ^ 
                   ListExtras.ocaml_of_list string_of_var big_scope);
                bail_out (CalcRing.mk_prod pl) "Domain with unexpected inputvars"
             )
@@ -1263,14 +1483,14 @@ let extract_domains (big_scope:var_t list) (big_expr:C.expr_t) =
             ) in
 
             (* 3. Remove duplicate terms *)
-            let unique_domain_terms = 
-               ListAsSet.uniq ~eq:C.exprs_are_identical extended_domain_terms
+            let unique_domain_expr = 
+               unique_domains (CalcRing.mk_prod extended_domain_terms)
             in
 
             (* 4. Graph decomposition of unique_domain_terms *)
             let domain_components = snd (
                CalculusDecomposition.decompose_graph 
-                  dom_ivars (schema, CalcRing.mk_prod unique_domain_terms))
+                  dom_ivars (schema, unique_domain_expr))
             in
 
             (* 5. Eliminate domains that do not intersect with schema 
@@ -1279,13 +1499,13 @@ let extract_domains (big_scope:var_t list) (big_expr:C.expr_t) =
             let filtered_domain_components = 
                List.filter (fun (local_schema, _) -> 
                   ListAsSet.inter local_schema 
-                     (ListAsSet.union schema big_scope) <> [] ||
+                                  (ListAsSet.union schema big_scope) <> [] ||
                   ListAsSet.inter local_schema rest_vars <> []
                ) domain_components
             in            
                Debug.print "LOG-EXTRACT-DOMAINS-DETAIL" (fun () ->
                   "Unique extended domains: "^
-                  (C.string_of_expr (CalcRing.mk_prod unique_domain_terms))^
+                  (C.string_of_expr unique_domain_expr)^
                   "\nPartitioned domains: "^
                   (ListExtras.ocaml_of_list (fun (s, t) ->
                      "(" ^ ListExtras.ocaml_of_list string_of_var s ^
@@ -1336,7 +1556,8 @@ let extract_domains (big_scope:var_t list) (big_expr:C.expr_t) =
                let delta_term = CalcRing.mk_val lf in
                CalcRing.mk_prod [ C.mk_domain delta_term; delta_term ]
             | Lift(v1,CalcRing.Val(Value(v2)))
-              when ListAsSet.subset (Arithmetic.vars_of_value v2) big_scope -> 
+              when ListAsSet.subset (Arithmetic.vars_of_value v2) 
+                                    big_scope -> 
                  let delta_term = CalcRing.mk_val lf in
                  CalcRing.mk_prod [ C.mk_domain delta_term; delta_term ]
             | Lift(v,raw_subexp) -> C.mk_lift v (rcr raw_subexp)
@@ -1347,7 +1568,7 @@ let extract_domains (big_scope:var_t list) (big_expr:C.expr_t) =
          end) 
          expr
    in
-   let rewritten_expr = eliminate_duplicates (rcr big_expr) in
+   let rewritten_expr = (* eliminate_duplicates *) (rcr big_expr) in
    Debug.print "LOG-EXTRACT-DOMAINS" (fun () ->
       "Extract domains (END): "^
       (CalculusPrinter.string_of_expr rewritten_expr) 
@@ -1383,89 +1604,6 @@ let simplify_domains (big_expr:C.expr_t) =
    Debug.print "LOG-SIMPLIFY-DOMAINS" (fun () ->
       "Simplify domains (START): "^(CalculusPrinter.string_of_expr big_expr) 
    );
-   let unique_domains expr =
-      Debug.print "LOG-SIMPLIFY-DOMAINS-DETAIL" (fun () ->
-         "Unique domains (START): "^ (CalculusPrinter.string_of_expr expr) 
-      );
-      let eligible_term = function
-         | CalcRing.Val(Rel _) | CalcRing.Val(DeltaRel _)
-         | CalcRing.Val(External _) -> true
-         | _ -> false
-      in
-      let merge_mappings mapping1 mapping2 = 
-         match (ListAsFunction.merge mapping1 mapping2) with
-            | Some(mapping) -> mapping
-            | None -> failwith "Incompatible mappings"
-      in
-      let rec map_relations schema term_list = match term_list with 
-         | [] -> []
-         | [x] -> [x]
-         | head::tail -> 
-            let mapped_tail = map_relations schema tail in
-
-            if not (eligible_term head) then head :: mapped_tail else
-
-            let mapping = 
-               List.fold_left (fun curr_mapping tail_term ->
-                  if not (eligible_term tail_term) then curr_mapping else
-
-                   match C.cmp_exprs head tail_term with 
-                     | Some(mapping) ->
-                        (* Map head onto tail_term *)
-                        let (schema_mapping, rest_mapping) = 
-                           List.partition (fun (a,b) -> List.mem a schema) 
-                                          mapping
-                        in
-                        if ListAsFunction.is_identity schema_mapping then
-                           merge_mappings curr_mapping rest_mapping
-                        else
-
-                        (* Map tail_term onto head *)
-                        let (schema_mapping2, rest_mapping2) = 
-                           List.partition (fun (a,b) -> List.mem a schema)
-                              (List.map (fun (a,b) -> (b,a)) mapping)
-                        in
-                        if ListAsFunction.is_identity schema_mapping2 then
-                           merge_mappings curr_mapping rest_mapping2
-                        else curr_mapping
-
-                     | None -> curr_mapping
-               ) [] mapped_tail
-            in
-               CalcRing.prod_list (rename_vars mapping 
-                  (CalcRing.mk_prod (head::mapped_tail)))
-      in   
-
-      (* When aggressive elimination is set, redundant terms are removed. 
-         For instance, R(A,B) * R(A,B) -> R(A,B)
-         This is safe to do only when the domain expression is a monomial
-         since we don't care about the multiplicity. *)
-      let remove_duplicates aggressive term_list = 
-         List.fold_left (fun acc_terms term ->
-            if List.mem term acc_terms &&
-                  (aggressive || C.expr_has_binary_multiplicity term)
-            then acc_terms 
-            else acc_terms @ [term]            
-         ) [] term_list
-      in
-      let rewritten_expr = CalcRing.mk_sum (
-         let decomposed_expr = CalculusDecomposition.decompose_poly expr in
-         let expr_is_monomial = (List.length decomposed_expr = 1) in
-         List.map (fun (schema,expr) ->
-            let mapped_terms = map_relations schema (CalcRing.prod_list expr) in
-            (* Remove duplicates *)
-            let unique_terms = 
-               remove_duplicates expr_is_monomial mapped_terms 
-            in
-               C.mk_aggsum schema (CalcRing.mk_prod unique_terms)
-         ) decomposed_expr
-      ) in
-         Debug.print "LOG-SIMPLIFY-DOMAINS-DETAIL" (fun () ->
-            "Unique domains (END): "^
-            (CalculusPrinter.string_of_expr rewritten_expr) 
-         ); rewritten_expr
-   in
-    
    (* Try to eliminate redundant domains, for example:
       DomainDelta(E1 * E2) * R1 * E4 * R2 * E3 -> E3 * E4 * R1 * R2 when 
       E1 is less restrictive than E3 and E2 is less restrictive than E4 *)
@@ -1480,36 +1618,16 @@ let simplify_domains (big_expr:C.expr_t) =
             in
                (head::tail_lhs, pivot, tail_rhs)
       in
-      let rec less_restrictive term1 term2 = match (term1, term2) with
-         | (CalcRing.Val(AggSum(gb_vars1, subexp1)), 
-            CalcRing.Val(AggSum(gb_vars2, subexp2))) 
-            when ListAsSet.subset gb_vars1 gb_vars2 ->
-               begin
-                  try
-                     (* Check if one list is less restrictive than other 
-                        with some basic re-ordering checks *)
-                     let _ =
-                        List.fold_left (fun rest dom_term ->
-                           let (lhs, pivot, rhs) =
-                              split_at_pivot less_restrictive dom_term rest
-                           in
-                              if C.commutes (CalcRing.mk_prod lhs) pivot 
-                              then (lhs @ rhs)
-                              else rhs
-                        ) (CalcRing.prod_list subexp2) 
-                          (CalcRing.prod_list subexp1)
-                     in
-                        true
-                  with Not_found -> false
-               end
-         | _ -> C.exprs_are_identical term1 term2
-      in      
       (* Return new target list or throw Not_found *)
       let rec unify_domain dom_term_list target_list = 
 
+         let less_restrictive_fn = (fun expr1 expr2 -> 
+            match cmp_domain_exprs expr1 expr2 with
+               | Identical | LessRestrictive -> true | _ -> false) 
+         in
          let rec unify dom_term target_list =
             let (lhs, pivot, rhs) = 
-               split_at_pivot less_restrictive dom_term target_list 
+               split_at_pivot less_restrictive_fn dom_term target_list 
             in
             let lhs_expr = CalcRing.mk_prod lhs 
             in
@@ -1537,7 +1655,7 @@ let simplify_domains (big_expr:C.expr_t) =
                   try
                      eliminate_domains (
                         unify_domain (CalcRing.prod_list subexp) tail
-                     )     
+                     ) 
                   with Not_found -> 
                      C.mk_exists subexp :: (eliminate_domains tail)
                end
@@ -1558,14 +1676,12 @@ let simplify_domains (big_expr:C.expr_t) =
                C.mk_lift v (rcr raw_subexp)
 (***** BEGIN EXISTS HACK *****)         
             | Exists(raw_subexp) ->
-               (* TODO: fix unique_domains *)
-               let subexp = rcr (unique_domains raw_subexp) in
+               let subexp = unique_domains (rcr raw_subexp) in
                   if C.expr_has_binary_multiplicity raw_subexp then subexp
                   else C.mk_exists subexp
 (***** END EXISTS HACK *****)
             | DomainDelta(raw_subexp) ->
-               (* TODO: fix unique_domains *)
-               let subexp = rcr (unique_domains raw_subexp) in
+               let subexp = unique_domains (rcr raw_subexp) in
                   if C.expr_has_binary_multiplicity raw_subexp then subexp
                   else C.mk_domain subexp
             | _ -> CalcRing.mk_val lf
@@ -1805,8 +1921,10 @@ let default_factorize_heuristic (lhs_candidates,rhs_candidates)
       ListExtras.string_of_list ~sep:"\n" string_of_expr rhs_candidates
    );
    let increment_count term list = 
+      let (pos_term, neg_term) = (term, neg term) in
       List.map (fun (cterm, count) -> 
-        (cterm, if C.exprs_are_identical term cterm 
+        (cterm, if C.exprs_are_identical pos_term cterm ||
+                   C.exprs_are_identical neg_term cterm  
                 then count + 1 else count)
       ) list
    in
@@ -1890,10 +2008,12 @@ let rec factorize_one_polynomial ?(heuristic = default_factorize_heuristic)
    );
    if List.length term_list < 2 then CalcRing.mk_sum term_list
    else
+
+   let (one, minus_one) = (CalcRing.one, neg CalcRing.one) in
    let (lhs_candidates,rhs_candidates) = 
       List.fold_left (fun (lhs_candidates, rhs_candidates) term -> 
          let (new_lhs, new_rhs) = List.split (ListExtras.scan_map (fun p t n ->
-            if (t = CalcRing.one) then ([],[])
+            if (t = one || t = minus_one) then ([],[])
             else
                (  (if C.commutes ~scope:scope (CalcRing.mk_prod p) t
                    then [t] else []),
@@ -1911,24 +2031,35 @@ let rec factorize_one_polynomial ?(heuristic = default_factorize_heuristic)
       CalcRing.mk_sum term_list
    else 
    let factorize_and_split selected validate_fn =
+      let (pos_selected, neg_selected) = (selected, neg selected) in
       List.fold_left (fun (factorized,unfactorized) term ->
          try 
-            let (lhs_of_selected,rhs_of_selected) =
-               ListExtras.split_at_pivot ~cmp_fn:C.exprs_are_identical  
-                                         selected (CalcRing.prod_list term) in
+            let ((lhs_of_selected,rhs_of_selected), correction) =
+               try 
+                  (* Try to find pos_selected *)
+                  (ListExtras.split_at_pivot ~cmp_fn:C.exprs_are_identical  
+                     pos_selected (CalcRing.prod_list term), one) 
+               with Not_found ->
+                  (* Try to find neg_selected *)
+                  (ListExtras.split_at_pivot ~cmp_fn:C.exprs_are_identical  
+                     neg_selected (CalcRing.prod_list term), minus_one)
+            in
+
+            let corr_lhs_of_selected = correction :: lhs_of_selected in
             Debug.print "LOG-FACTORIZE-DETAIL" (fun () ->
                "Split "^(CalculusPrinter.string_of_expr term)^" into "^
                (CalculusPrinter.string_of_expr 
-                  (CalcRing.mk_prod lhs_of_selected))^
+                  (CalcRing.mk_prod corr_lhs_of_selected))^
                " * [...] * "^
                (CalculusPrinter.string_of_expr 
                   (CalcRing.mk_prod rhs_of_selected))         
             );
-            if validate_fn lhs_of_selected rhs_of_selected 
-            then (   factorized@
-                        [CalcRing.mk_prod (lhs_of_selected@rhs_of_selected)],
-                     unfactorized   )
-            else (factorized, unfactorized@[term])
+            if validate_fn corr_lhs_of_selected rhs_of_selected 
+            then ( factorized@
+                      [CalcRing.mk_prod 
+                         (corr_lhs_of_selected@rhs_of_selected)],
+                   unfactorized )
+            else ( factorized, unfactorized@[term] )
          with Not_found ->
             (factorized, unfactorized@[term])
       ) ([],[]) term_list
@@ -2025,7 +2156,7 @@ type term_map_t = {
   To be on the safe side, we don't rely on combine_values here.
   Instead, we explicitly replace Negs with * {-1} in the expression.  
 *)
-let erase_negs = 
+(* let erase_negs = 
   Calculus.rewrite 
     (fun _ e -> CalcRing.mk_sum e)
     (fun _ e -> CalcRing.mk_prod e)
@@ -2033,8 +2164,8 @@ let erase_negs =
     (fun _ e -> CalcRing.mk_val e)
     (fun _ _ -> true)
 ;;
- 
-(** Removes Domains from the expression. *)
+ *) 
+(* (** Removes Domains from the expression. *)
 let erase_domain = 
   C.rewrite_leaves 
     (fun _ lf -> match lf with
@@ -2042,6 +2173,7 @@ let erase_domain =
       | _ -> CalcRing.mk_val lf)
     (fun _ _ -> true) 
 ;;
+ *)
 
 (**
    [cancel_terms expr]
@@ -2054,33 +2186,10 @@ let cancel_terms (big_expr: C.expr_t): C.expr_t =
    Debug.print "LOG-CANCEL-TERMS" (fun () ->
       "Cancel terms (START): "^(CalculusPrinter.string_of_expr big_expr) 
    );
-   (* Remove Negs from expr, evaluate all constants in the product list. *)
-   let create_pos_neg expr = 
-      let rec partition e = 
-         List.fold_left (fun (const, rest) term -> match term with
-            | CalcRing.Val(Value(v)) 
-               when Arithmetic.value_is_const v -> (const @ [v], rest)
-            | CalcRing.Neg(subexp) -> 
-               let (neg_const, neg_rest) = partition subexp in
-                  (const @ (Arithmetic.mk_int (-1) :: neg_const),
-                   rest @ neg_rest)
-            | _  -> (const, rest @ [term])
-         ) ([],[]) (CalcRing.prod_list e) 
-      in
-      let (const, rest) = partition expr in
-         (
-            let const_eval = Arithmetic.eval_partial 
-               (ValueRing.mk_prod const) in
-            CalcRing.mk_prod (C.mk_value const_eval :: rest),
-
-            let const_eval = Arithmetic.eval_partial 
-               (ValueRing.mk_prod (Arithmetic.mk_int (-1) :: const)) in
-            CalcRing.mk_prod (C.mk_value const_eval :: rest)
-         )
-   in 
    let cancel sum_list =
       let term_map = List.map (fun (schema, term) -> 
-         let (pos_term, neg_term) = create_pos_neg term in
+         let pos_term = normalize term in
+         let neg_term = neg pos_term in
          { 
             definition     = C.mk_aggsum schema term;
             pos_definition = C.mk_aggsum schema pos_term;
@@ -2140,6 +2249,7 @@ let cancel_terms (big_expr: C.expr_t): C.expr_t =
 
 
 type opt_t = 
+   | OptNormalize
    | OptCombineValues
    | OptLiftEqualities
    | OptAdvanceLifts
@@ -2151,6 +2261,7 @@ type opt_t =
    | OptExtractDomains
 ;;
 let string_of_opt = (function
+   | OptNormalize                -> "OptNormalize"
    | OptCombineValues            -> "OptCombineValues"
    | OptLiftEqualities           -> "OptLiftEqualities"
    | OptAdvanceLifts             -> "OptAdvanceLifts"
@@ -2163,7 +2274,8 @@ let string_of_opt = (function
 )
 ;;
 let default_optimizations = 
-   [  OptLiftEqualities; 
+   [  OptNormalize;
+      OptLiftEqualities; 
       OptAdvanceLifts; 
       OptUnifyLifts; 
       OptNestingRewrites; 
@@ -2186,7 +2298,7 @@ let dump_timings () =
     Given an expression apply the above optimizations to it until a fixed point
     is reached.
 *)
-let optimize_expr ?(optimizations = default_optimizations)
+let optimize_expr ?(optimizations = default_optimizations)                  
                   ((scope,schema):C.schema_t) (expr:C.expr_t): C.expr_t =
 
    Debug.print "LOG-CALCOPT-STEPS" (fun () ->
@@ -2208,7 +2320,7 @@ let optimize_expr ?(optimizations = default_optimizations)
       Debug.activate "LOG-ADVANCE-LIFTS";
    end;
    if Debug.active "CALC-NO-OPTIMIZE" then expr else
-      
+ 
    let fp_1 = ref (fun x -> sanity_check_variable_names x; x) in
    let include_opt_base o new_fn = 
      Fixpoint.build_if optimizations fp_1 o new_fn 
@@ -2228,15 +2340,17 @@ let optimize_expr ?(optimizations = default_optimizations)
                result
          in include_opt_base o timed_fn
    in      
-      include_opt OptFactorizePolynomial      (factorize_polynomial scope);   
-      include_opt OptAdvanceLifts             (advance_lifts scope);
-      include_opt OptUnifyLifts               (unify_lifts scope schema);
-      include_opt OptLiftEqualities           (lift_equalities scope);
-      include_opt OptNestingRewrites          (nesting_rewrites);
-      include_opt OptSimplifyDomains          (simplify_domains);
-      include_opt OptExtractDomains           (extract_domains scope);
-      include_opt OptCancelTerms              (cancel_terms);
-      include_opt OptCombineValues            (combine_values);
+      include_opt OptFactorizePolynomial     (factorize_polynomial scope);
+      include_opt OptAdvanceLifts            (advance_lifts scope);
+      include_opt OptUnifyLifts              (unify_lifts scope schema);
+      include_opt OptLiftEqualities          (lift_equalities scope);
+      include_opt OptSimplifyDomains         (simplify_domains);
+      include_opt OptExtractDomains          (extract_domains scope);
+      include_opt OptCancelTerms             (cancel_terms);
+      include_opt OptNestingRewrites         (nesting_rewrites);
+      include_opt OptCombineValues           (combine_values);
+      include_opt OptNormalize               (normalize);
+      
    if Debug.active "LOG-CALCOPT-STEPS" then Fixpoint.build fp_1 
       (fun x -> 
          let (fail,(ivars,ovars)) = 

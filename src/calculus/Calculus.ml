@@ -941,6 +941,44 @@ let rec expr_has_binary_multiplicity ?(scope = []) expr =
       expr
 
 
+let mk_fresh_var = FreshVariable.declare_class "calculus/Calculus" ""
+
+(** Erase AggSums from the given expression, while renaming 
+    any new variables that might get introduced. The method 
+    descends only into AggSums. *)
+let rec erase_aggsums ?(scope = []) (expr: expr_t) : expr_t = 
+   let map_var (vname, vtype) =
+      ((vname, vtype), (mk_fresh_var ~inline:vname (), vtype)) 
+   in
+   fold ~scope:scope 
+      (fun _ sl -> CalcRing.mk_sum sl)
+      (fun _ pl -> CalcRing.mk_prod pl)
+      (fun _ term -> CalcRing.mk_neg term)
+      (fun (scope, schema) lf -> begin match lf with
+         | AggSum(gb_vars, subexp) ->           
+         begin
+           (* Removing AggSum might introduce variable name conflicts *)
+           let subexp_ovars = snd (schema_of_expr subexp) in
+           let new_ovars = ListAsSet.diff subexp_ovars gb_vars in
+           let conflict_vars = 
+             ListAsSet.inter new_ovars (ListAsSet.union scope schema) 
+           in
+           let rewritten_subexp = 
+             if (conflict_vars == []) then subexp
+             else begin
+               let unsafe_mapping = (List.map map_var conflict_vars) in
+               let safe_mapping = 
+                 find_safe_var_mapping unsafe_mapping subexp 
+               in
+                 rename_vars safe_mapping subexp             
+             end
+           in
+             erase_aggsums ~scope:scope rewritten_subexp
+         end
+        | _ -> CalcRing.mk_val lf
+      end) expr
+
+
 (* Construction Helpers *)
 
 (** Create a Value expression *)

@@ -159,11 +159,11 @@ let merge (theta1:('a,'b) table_fn_t) (theta2:('a,'b) table_fn_t):
    if onto merged then Some(merged) else None
 
 (**
-   Attempt to murge multiple functional mappings.  Identical to folding 
+   Attempt to merge multiple functional mappings.  Identical to folding 
    Function.merge over a list of mapping tables.
    @param thetas  The list of functional mapping tables.
    @return        A Some() wrapped mapping if the functional mapping tables
-                  can be successfullly merged (as in merge), or None if not.
+                  can be successfully merged (as in merge), or None if not.
 *)
 let multimerge (thetas:('a,'b) table_fn_t list): ('a,'b) table_fn_t option =
    List.fold_left (fun a b -> match a with Some(sa) -> merge sa b | None->None)

@@ -450,7 +450,48 @@ in
       "DOMAIN(AggSum([B], (A ^= 4) * (B ^= A))) * 
          (X ^= B) * AggSum([B,C], (A ^= 4) * (B ^= A) * (C ^= {X + B}))";
 
-(*    (* TODO: Implement the following cases *)
+   test "Exist with delta relations"      
+      "EXISTS((DOMAIN(
+         AggSum([LINEITEM_RETURNFLAG, LINEITEM_LINESTATUS], 
+           ((DELTA LINEITEM)(LINEITEM_ORDERKEY, LINEITEM_PARTKEY,
+                               LINEITEM_SUPPKEY, LINEITEM_LINENUMBER,
+                               LINEITEM_QUANTITY, LINEITEM_EXTENDEDPRICE,
+                               LINEITEM_DISCOUNT, LINEITEM_TAX,
+                               LINEITEM_RETURNFLAG, LINEITEM_LINESTATUS,
+                               LINEITEM_SHIPDATE, LINEITEM_COMMITDATE,
+                               LINEITEM_RECEIPTDATE, LINEITEM_SHIPINSTRUCT,
+                               LINEITEM_SHIPMODE, LINEITEM_COMMENT) *
+             {LINEITEM_SHIPDATE <= DATE('1997-9-1')}))) *
+        AggSum([LINEITEM_RETURNFLAG, LINEITEM_LINESTATUS], 
+          ((DELTA LINEITEM)(LINEITEM_ORDERKEY, LINEITEM_PARTKEY,
+                              LINEITEM_SUPPKEY, LINEITEM_LINENUMBER,
+                              LINEITEM_QUANTITY, LINEITEM_EXTENDEDPRICE,
+                              LINEITEM_DISCOUNT, LINEITEM_TAX,
+                              LINEITEM_RETURNFLAG, LINEITEM_LINESTATUS,
+                              LINEITEM_SHIPDATE, LINEITEM_COMMITDATE,
+                              LINEITEM_RECEIPTDATE, LINEITEM_SHIPINSTRUCT,
+                              LINEITEM_SHIPMODE, LINEITEM_COMMENT) *
+            {LINEITEM_SHIPDATE <= DATE('1997-9-1')}))))"
+      "EXISTS(
+      (AggSum([LINEITEM_RETURNFLAG, LINEITEM_LINESTATUS], 
+          ((DELTA LINEITEM)(LINEITEM_ORDERKEY, LINEITEM_PARTKEY,
+                              LINEITEM_SUPPKEY, LINEITEM_LINENUMBER,
+                              LINEITEM_QUANTITY, LINEITEM_EXTENDEDPRICE,
+                              LINEITEM_DISCOUNT, LINEITEM_TAX,
+                              LINEITEM_RETURNFLAG, LINEITEM_LINESTATUS,
+                              LINEITEM_SHIPDATE, LINEITEM_COMMITDATE,
+                              LINEITEM_RECEIPTDATE, LINEITEM_SHIPINSTRUCT,
+                              LINEITEM_SHIPMODE, LINEITEM_COMMENT) *
+            {LINEITEM_SHIPDATE <= DATE('1997-9-1')}))))";
+
+   test "Less restrictive: AggSum vs. Delta"
+      "EXISTS((AggSum([X], (DELTA R)(X,Y,Z))) * (DELTA R)(X,Y1,Z1))"
+      "EXISTS((DELTA R)(X,Y1,Z1))";
+
+   test "Less restrictive: DOMAIN(AggSum) vs. Delta"
+      "EXISTS(DOMAIN(AggSum([X], (DELTA R)(X,Y,Z))) * (DELTA R)(X,Y1,Z1))"
+      "EXISTS((DELTA R)(X,Y1,Z1))";
+
    test "Less restrictive: AggSum vs. AggSum"
       "DOMAIN(AggSum([X], (DELTA R)(X,Y,Z))) * AggSum([X,Y], (DELTA R)(X,Y,Z1))"
       "AggSum([X,Y], (DELTA R)(X,Y,Z1))";
@@ -463,7 +504,45 @@ in
    test "Less restrictive: product list vs. AggSum"
       "DOMAIN((X ^= 42) * (Y ^= X)) * 
          AggSum([X,Y,Z], (X ^= 42) * (Y ^= X) * (Z ^= Y))"
-      "AggSum([X,Y,Z], (X ^= 42) * (Y ^= X) * (Z ^= Y))"; *)
+      "AggSum([X,Y,Z], (X ^= 42) * (Y ^= X) * (Z ^= Y))";
+
+
+let test msg input1 input2 expected = 
+   log_test ("Domain comparison ("^msg^")")
+      (function 
+         | CalculusTransforms.NotComparable -> "NotComparable"
+         | CalculusTransforms.Identical     -> "Identical"
+         | CalculusTransforms.LessRestrictive -> "LessRestrictive"
+         | CalculusTransforms.MoreRestrictive -> "MoreRestrictive")
+      (CalculusTransforms.cmp_domain_exprs 
+         (parse_calc input1) (parse_calc input2))
+      (expected)
+in
+   test "Identical"
+      "AggSum([X], (DELTA R)(X,Y,Z))"
+      "AggSum([X], (DELTA R)(X,Y,Z))"
+      CalculusTransforms.Identical;
+   test "Identical with different mapping"
+      "AggSum([X], (DELTA R)(X,Y,Z))"
+      "AggSum([X], (DELTA R)(X,Y,Z1))"
+      CalculusTransforms.Identical;
+   test "Less restrictive: AggSum vs. AggSum"
+      "AggSum([X], (DELTA R)(X,Y,Z))"
+      "AggSum([X,Y], (DELTA R)(X,Y,Z1))"
+      CalculusTransforms.LessRestrictive;
+   test "Less restrictive: AggSum vs. product list"
+      "AggSum([X,Y], (X ^= 42) * (Y ^= X))" 
+      "(X ^= 42) * (Y ^= X) * (Z ^= Y)"
+      CalculusTransforms.LessRestrictive;
+   test "More restrictive: AggSum vs. product list"
+      "AggSum([X,Y,Z], (X ^= 42) * (Y ^= X) * (Z ^= Y))"
+      "(X ^= 42) * (Y ^= X)"
+      CalculusTransforms.MoreRestrictive;
+   test "Not comparable"
+      "AggSum([X,Z], (X ^= 42) * (Y ^= X) * (Z ^= Y))"
+      "(X ^= 42) * (Y ^= X)"
+      CalculusTransforms.NotComparable; 
+      
 
 let test msg scope input output =
    log_test ("Factorize One Polynomial ("^msg^")")
@@ -510,10 +589,43 @@ in
                          L2_COMMITDATE, L2_RECEIPTDATE, L2_SHIPINSTRUCT,
                          L2_SHIPMODE, L2_COMMENT))) *
      (M1(float)[][O_ORDERKEY] + M2(float)[][O_ORDERKEY])";
+
+(* Debug.activate "LOG-FACTORIZE-DETAIL";
+
+  test "RHS extraction breaks the schema" [var "dA"]
+    ["((A ^= dA) * S(B) * (B ^= A))";
+     "(R(A) * (B ^= A))"]
+    "((A ^= dA) * S(B) * (B ^= A)) + (R(A) * (B ^= A))";
+
+  test "RHS extraction keeps the schema" [var "dA"]
+    ["((A ^= dA) * S(B) * (B ^= A))";
+     "(R(A,B) * (B ^= A))"]
+    "(((A ^= dA) * S(B)) + (R(A,B))) * (B ^= A))";  
+ *)
+
+  test "Factorization with positive term" [var "dPK"; var "dQTY"]
+    ["mLI(float)[][dPK] * 0.005"; "0.005 * dQTY"]  
+    "0.005 * (mLI(float)[][dPK] + dQTY)";
+
+  test "Factorization with negative term" [var "dPK"; var "dQTY"]
+    ["mLI(float)[][dPK] * 0.005"; "{-0.005} * dQTY"]  
+    "0.005 * (mLI(float)[][dPK] + ({-1} * dQTY))"; 
+
+  test "Factorization with opposite terms" []
+    ["R(A)"; "{-1} * R(A)"]  
+    "R(A) * (1 + {-1})";
+
+  test "Pulling out negative one" []
+    ["{-1} * R(A)"; "S(A) * {-1}"]  
+    "({-1} * R(A)) + (S(A) * {-1}))";
+
+  test "Pulling out negative constants" []
+    ["{-5}"; "{5}"]  
+    "{-5} * (1 + {-1})";
 ;;
 
 let test msg input output =
-   log_test ("Term cancelation ("^msg^")")
+   log_test ("Term cancellation ("^msg^")")
       string_of_expr
       (CalculusTransforms.cancel_terms 
         (CalcRing.mk_sum (List.map parse_calc input)))
@@ -534,7 +646,7 @@ in
    test "Multiple expressions"
      ["A"; "-B"; "B"; "A"]
      "A + A";
-   test "Multiple expression cancelation"
+   test "Multiple expression cancellation"
      ["A"; "-B"; "B"; "-A"]
      "0";  
    test "PriceSpread" 
@@ -576,7 +688,6 @@ in
       "(R(A) * ((A * (2 + D)) + C)) + (S(A) * A)";
    test "Multiple Decreasing With Negs" []
       "(R(A) * A * 2) + (R(A) * C) - ((R(A) * A * D) + (S(A) * A))"
-      (* "(R(A) * (A * (2+({-1}*D)))+C)+({-1} * S(A) * A)" *)
       "((R(A) * ((2 * A) + C)) + ({-1} * ((R(A) * D) + S(A)) * A))";  
 ;;
 
@@ -595,6 +706,7 @@ in
 
 
  Debug.activate "NO-VISUAL-DIFF";
+
     test "Domain and delta" [] ["A"]   
        "AggSum([A], (DELTA R)(A,B) * {B > 10})"
        "AggSum([A], (DELTA R)(A,B) * {B > 10})";
@@ -748,7 +860,7 @@ in
                      {-1})) *
             {__sql_inline_agg_1 > 0} *
             AggSum([dLID], DEPARTMENT(COUNT_DID, D_NAME, dLID)))))"; 
-
+ 
     test "Zeus Query 96434723 dS" ["COUNT_mSSB"; "COUNT_mSSC"] 
                                  ["B1"; "C1"; "LB71Y"; "GKKEOF"; "QKKF7PYI"]
       "(AggSum([B1, C1, LB71Y, GKKEOF], 
@@ -761,13 +873,12 @@ in
             (C1 ^= NPZL_7DKV_C))) *
         (QKKF7PYI ^= COUNTSS_C))"
       "(LB71Y ^= (COUNTSS_B * COUNTSS_C)) * (QKKF7PYI ^= COUNTSS_C) * 
-       (B1 ^= 0) * (GKKEOF ^= 0.) * 
+       (GKKEOF ^= 0.) * (B1 ^= 0) * 
        AggSum([C1], 
-          (__sql_inline_not_1 ^= 0) * (NPZL_7DKV_B ^= 0) *
-          COUNTS1(int)[][NPZL_7DKV_B, NPZL_7DKV_C] *
-          (__sql_inline_not_1 ^= {NPZL_7DKV_C = 2}) *
-          (C1 ^= NPZL_7DKV_C))";
-
+          (__sql_inline_not_1 ^= 0) * (NPZL_7DKV_B ^= 0) * 
+          COUNTS1(int)[][NPZL_7DKV_B, NPZL_7DKV_C] * 
+          (__sql_inline_not_1 ^= {NPZL_7DKV_C = 2}) * (C1 ^= NPZL_7DKV_C))";
+ 
    test "Factorizing deltas of products of lifts" ["dA"; "dB"] 
                                                   ["A"; "B"; "ALPHA"; "BETA"]
       "( (  (A ^= dA) * (B ^= dB) *
