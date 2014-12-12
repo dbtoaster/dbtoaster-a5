@@ -64,6 +64,32 @@
           }
         }
       }
+    },
+
+    "custom" => {
+      :subs => [ [/schemas\.sql/, "schemas_custom.sql"] ],
+      :toplevels => {
+        "MKT_SHARE" => {
+          :type => :onelevel,
+          :expected => {
+            [1995] => 0.0,
+            [1996] => 0.0
+          }
+        }
+      }
+    },
+
+    "custom_huge" => {
+      :subs => [ [/schemas\.sql/, "schemas_custom_huge.sql"] ],
+      :toplevels => {
+        "MKT_SHARE" => {
+          :type => :onelevel,
+          :expected => {
+            [1995] => 0.02822107799120700321,
+            [1996] => 0.06991979507197485894
+          }
+        }
+      }
     }
     
   }

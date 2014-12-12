@@ -58,6 +58,27 @@
           :expected => 4905.0542857142857143
         }
       }
+    },
+
+    "custom" => {
+      :subs => [ [/schemas\.sql/, "schemas_custom.sql"] ],
+      :toplevels => {
+        "AVG_YEARLY" => {
+          :type => :singleton,
+          :expected => 2107.0771428571428571
+        }
+      }
+    },
+
+    "custom_huge" => {
+      :subs => [ [/schemas\.sql/, "schemas_custom_huge.sql"] ],
+      :toplevels => {
+        "AVG_YEARLY" => {
+          :type => :singleton,
+          :expected => 1010.6885714285714286
+        }
+      }
     }
+
   }
 }

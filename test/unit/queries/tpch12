@@ -113,6 +113,48 @@
           }
         }
       }      
+    },
+
+    "custom" => {
+      :subs => [ [/schemas\.sql/, "schemas_custom.sql"] ],
+      :toplevels => {
+        "HIGH_LINE_COUNT" => {
+          :type => :onelevel,
+          :expected => {
+            ['SHIP'] => 12,
+            ['MAIL'] => 14
+          }
+        },
+
+        "LOW_LINE_COUNT" => {
+          :type => :onelevel,
+          :expected => {
+            ['SHIP'] => 28,
+            ['MAIL'] => 23
+          }
+        }
+      }      
+    },
+
+    "custom_huge" => {
+      :subs => [ [/schemas\.sql/, "schemas_custom_huge.sql"] ],
+      :toplevels => {
+        "HIGH_LINE_COUNT" => {
+          :type => :onelevel,
+          :expected => {
+            ['SHIP'] => 159,
+            ['MAIL'] => 191
+          }
+        },
+
+        "LOW_LINE_COUNT" => {
+          :type => :onelevel,
+          :expected => {
+            ['SHIP'] => 236,
+            ['MAIL'] => 217
+          }
+        }
+      }      
     }
     
   }

@@ -70,6 +70,30 @@
           }
         }
       }
+    },
+
+    "custom" => {
+      :subs => [ [/schemas\.sql/, "schemas_custom.sql"] ],
+      :toplevels => {
+        "COUNT" => {
+          :type => :onelevel,
+          :expected => {
+            [243,'Supplier#000000243','8aQ3HGeOXxgYeMAXZQe B5y2RKEF5jdmN3Qb','16-554-376-5494', 197058.5034] => 1
+          }
+        }
+      }
+    },
+
+    "custom_huge" => {
+      :subs => [ [/schemas\.sql/, "schemas_custom_huge.sql"] ],
+      :toplevels => {
+        "COUNT" => {
+          :type => :onelevel,
+          :expected => {
+            [5998,'Supplier#000005998','qEAze72pOz8,QNcx','30-145-908-9029', 340990.7938] => 1
+          }
+        }
+      }
     }
     
   }

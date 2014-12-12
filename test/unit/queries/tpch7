@@ -68,8 +68,38 @@
           }
         }
       }
-    }
+    },
+
+    "custom" => {
+      :subs => [ [/schemas\.sql/, "schemas_custom.sql"] ],
+      :toplevels => {
+        "REVENUE" => {
+          :type => :onelevel,
+          :expected => {
+            ['FRANCE',  'GERMANY', 1996] => 131032.6116,
+            ['FRANCE',  'GERMANY', 1995] => 9515.3568,
+            ['GERMANY', 'FRANCE',  1995] => 202647.6892,
+            ['GERMANY', 'FRANCE',  1996] => 102422.883          
+          }
+        }
+      }
+    },    
     
+    "custom_huge" => {
+      :subs => [ [/schemas\.sql/, "schemas_custom_huge.sql"] ],
+      :toplevels => {
+        "REVENUE" => {
+          :type => :onelevel,
+          :expected => {
+            ['FRANCE',  'GERMANY', 1996] => 1549476.3698,
+            ['FRANCE',  'GERMANY', 1995] => 1132768.4538,
+            ['GERMANY', 'FRANCE',  1995] => 1078328.177,
+            ['GERMANY', 'FRANCE',  1996] => 1141231.08          
+          }
+        }
+      }
+    }
+
   }
 }
 

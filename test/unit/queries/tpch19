@@ -58,7 +58,27 @@
           :expected => 64097.6082
         }
       }
-    }
+    },
+
+    "custom" => {
+      :subs => [ [/schemas\.sql/, "schemas_custom.sql"] ],
+      :toplevels => {
+        "REVENUE" => {
+          :type => :singleton,
+          :expected => 0
+        }
+      }
+    },
+
+    "custom_huge" => {
+      :subs => [ [/schemas\.sql/, "schemas_custom_huge.sql"] ],
+      :toplevels => {
+        "REVENUE" => {
+          :type => :singleton,
+          :expected => 179600.157600000000
+        }
+      }
+    }    
     
   }
 }

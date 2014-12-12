@@ -86,6 +86,38 @@
           }
         }
       }
+    },
+
+    "custom" => {
+      :subs => [ [/schemas\.sql/, "schemas_custom.sql"] ],
+      :toplevels => {
+        "ORDER_COUNT" => {
+          :type => :onelevel,
+          :expected => {
+            ['1-URGENT'] => 42,          
+            ['2-HIGH'] => 30,
+            ['3-MEDIUM'] => 47,
+            ['4-NOT SPECIFIED'] => 52,
+            ['5-LOW'] => 35                        
+          }
+        }
+      }
+    },
+
+    "custom_huge" => {
+      :subs => [ [/schemas\.sql/, "schemas_custom_huge.sql"] ],
+      :toplevels => {
+        "ORDER_COUNT" => {
+          :type => :onelevel,
+          :expected => {
+            ['1-URGENT'] => 417,          
+            ['2-HIGH'] => 423,
+            ['3-MEDIUM'] => 393,
+            ['4-NOT SPECIFIED'] => 445,
+            ['5-LOW'] => 424                        
+          }
+        }
+      }
     }
     
   }

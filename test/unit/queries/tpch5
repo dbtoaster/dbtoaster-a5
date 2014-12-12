@@ -70,6 +70,38 @@
           }
         }
       }
+    },
+
+    "custom" => {
+      :subs => [ [/schemas\.sql/, "schemas_custom.sql"] ],
+      :toplevels => {
+        "REVENUE" => {
+          :type => :onelevel,
+          :expected => {             
+            ['VIETNAM'] => 115884.1376,          
+            ['INDONESIA'] => 251470.6695,
+            ['CHINA'] => 66731.9056,
+            ['INDIA'] => 176732.5838,
+            ['JAPAN'] => 253968.343                        
+          }
+        }
+      }
+    },
+
+    "custom_huge" => {
+      :subs => [ [/schemas\.sql/, "schemas_custom_huge.sql"] ],
+      :toplevels => {
+        "REVENUE" => {
+          :type => :onelevel,
+          :expected => {             
+            ['VIETNAM'] => 1536520.2504,          
+            ['INDONESIA'] => 963376.9053,
+            ['CHINA'] => 1456432.4663,
+            ['INDIA'] => 1224081.8215,
+            ['JAPAN'] => 1416966.3474                        
+          }
+        }
+      }
     }
     
   }

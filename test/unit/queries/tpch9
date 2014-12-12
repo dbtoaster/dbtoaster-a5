@@ -59,6 +59,28 @@
           /\|/)
         }
       }
+    },
+
+    "custom" => {
+      :subs => [ [/schemas\.sql/, "schemas_custom.sql"] ],
+      :toplevels => {
+        "SUM_PROFIT" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query9_custom.csv", 
+          /\|/)
+        }
+      }
+    },
+
+    "custom_huge" => {
+      :subs => [ [/schemas\.sql/, "schemas_custom_huge.sql"] ],
+      :toplevels => {
+        "SUM_PROFIT" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query9_custom_huge.csv", 
+          /\|/)
+        }
+      }
     }
     
   }

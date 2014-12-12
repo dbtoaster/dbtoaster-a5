@@ -42,7 +42,7 @@ else
     echo "Running $QUERY on $DATASET"
 
     sed -e "s:@@DATASET@@:$DATASET:g" $SCRIPT_DIR/queries/$QUERY.sql > _query.sql
-    psql -AqtF $DELIMITER -f _query.sql -o $OUTPUT_FILE
+    psql -d dbtoaster -AqtF $DELIMITER -f _query.sql -o $OUTPUT_FILE
     rm -f _query.sql
 
     echo "Done. The result is in $OUTPUT_FILE."

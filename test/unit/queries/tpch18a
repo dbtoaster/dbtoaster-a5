@@ -59,6 +59,27 @@
           :expected => results_file("test/results/tpch/query18a_big_del.csv", /\|/)
         }
       }
+    },
+
+    "custom" => {
+      :subs => [ [/schemas\.sql/, "schemas_custom.sql"] ],
+      :toplevels => {
+        "QUERY18" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query18a_custom.csv", /\|/)
+        }
+      }
+    },
+
+    "custom_huge" => {
+      :subs => [ [/schemas\.sql/, "schemas_custom_huge.sql"] ],
+      :toplevels => {
+        "QUERY18" => {
+          :type => :onelevel,
+          :expected => results_file("test/results/tpch/query18a_custom_huge.csv", /\|/)
+        }
+      }
     }
+
   }
 }

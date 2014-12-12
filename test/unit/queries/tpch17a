@@ -58,6 +58,26 @@
           :expected => 848632.43
         }
       }
-    }
+    },
+
+    "custom" => {
+      :subs => [ [/schemas\.sql/, "schemas_custom.sql"] ],
+      :toplevels => {
+        "QUERY17" => {
+          :type => :singleton,
+          :expected => 0
+        }
+      }
+    },
+
+    "custom_huge" => {
+      :subs => [ [/schemas\.sql/, "schemas_custom_huge.sql"] ],
+      :toplevels => {
+        "QUERY17" => {
+          :type => :singleton,
+          :expected => 1447.47
+        }
+      }
+    }    
   }
 }
