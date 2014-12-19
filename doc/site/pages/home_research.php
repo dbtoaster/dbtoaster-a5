@@ -2,6 +2,12 @@
 <h3>Publications</h3>
 <ul>
 
+<li><a href="http://arxiv.org/pdf/1412.4320v1">
+Incremental View Maintenance for Nested-Relational Databases. </a><br/>
+Daniel Lupei, Christoph Koch, and Val Tannen<br/>
+Under submission, 2014. 
+</li>
+
 <li><a href="http://www.dbtoaster.org/papers/2013-dbtoaster-report.pdf">DBToaster: Higher-order Delta Processing for Dynamic, Frequently Fresh Views. </a><br/>
 Christoph Koch, Yanif Ahmad, Oliver Kennedy, Milos Nikolic, Andres N&ouml;tzli, Daniel Lupei, and Amir Shaikhha<br/>
 Technical Report, 2013. (an extended version of our <a href="http://dx.doi.org/10.1007/s00778-013-0348-4">VLDBJ 2014 paper</a>)
