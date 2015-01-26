@@ -103,7 +103,7 @@ CREATE STREAM T(C int, D int)
   FROM FILE 'examples/data/simple/t.dat' LINE DELIMITED csv;
 
 SELECT sum(A*D) AS AtimesD FROM R,S,T WHERE R.B=S.B AND S.C=T.C;
-$> bin/dbtoaster -c test.jar -l scala examples/queries/simple/rst.sql
+$> bin/dbtoaster -c rst.jar -l scala examples/queries/simple/rst.sql
 </div>
 
 <p>
@@ -124,14 +124,16 @@ import scala.collection.immutable.List;
 import scala.collection.immutable.List$;
 import scala.collection.immutable.$colon$colon;
 import scala.concurrent.duration.Duration;
+import scala.concurrent.duration.FiniteDuration;
 import java.util.concurrent.TimeUnit;
 
 class ExampleApp {
    public static final int TUPLE_DELETE = 0x00;
    public static final int TUPLE_INSERT = 0x01;
-
+   private static final FiniteDuration DEFAULT_TIMEOUT = Duration.create(1L << 23, TimeUnit.SECONDS);
+   private static final List EMPTY_LIST = List$.MODULE$.empty();
    public static List&lt;Object&gt; tuple(Object ... ts) {
-      List&lt;Object&gt; result = List$.MODULE$.empty();
+      List&lt;Object&gt; result = EMPTY_LIST;
       for(int i = ts.length; i > 0; i--) {
          result = new $colon$colon&lt;Object&gt;(ts[i - 1], result);
       }
@@ -140,20 +142,33 @@ class ExampleApp {
 
    public static void main(String[] args) {
       ActorSystem system = ActorSystem.create("mySystem");
+      final Inbox inbox = Inbox.create(system);
 
       final ActorRef q = system.actorOf(Props.create(Dbtoaster.class), "Query");
 
       // Send events
+      Tuple2 result;
+      System.out.println("Insert a tuple to R.");
       q.tell(new TupleEvent(0, TUPLE_INSERT, "R", tuple(5L, 2L)), null);
+
+      System.out.println("Insert a tuple to S.");
       q.tell(new TupleEvent(1, TUPLE_INSERT, "S", tuple(2L, 3L)), null);
+
+      System.out.println("Insert a tuple to T.");
       q.tell(new TupleEvent(2, TUPLE_INSERT, "T", tuple(3L, 4L)), null);
 
-      // Retrieve result
-      final Inbox inbox = Inbox.create(system);
-      inbox.send(q, EndOfStream$.MODULE$);
-      Tuple2 result = (Tuple2) (inbox.receive(Duration.create(1L << 23, TimeUnit.SECONDS)));
+      inbox.send(q, new GetSnapshot(new $colon$colon(1, EMPTY_LIST)));
+      result = (Tuple2) (inbox.receive(DEFAULT_TIMEOUT));
+      System.out.println("Result after this step: " + result._2().toString());
 
-      System.out.println("Result: " + result._2().toString());
+      System.out.println("Insert another tuple to T.");
+      q.tell(new TupleEvent(3, TUPLE_INSERT, "T", tuple(3L, 5L)), null);
+
+      // Retrieve result
+      inbox.send(q, EndOfStream$.MODULE$);
+      result = (Tuple2) (inbox.receive(DEFAULT_TIMEOUT));
+      System.out.println("Final Result: " + result._2().toString());
+      
       system.shutdown();
   }
 }
@@ -189,6 +204,19 @@ class ExampleApp {
 
 <p>
    To retrieve the final result, an <tt>EndOfStream</tt> message is sent to the query actor.
+   Alternatively the intermediate result of a query can be retrieved using a <tt>GetSnapshot</tt> message with the following structure:
+</p>
+
+<table class="table">
+   <tr>
+      <th>Argument</th>
+      <th>Comment</th>
+   </tr>
+   <tr>
+      <td class="code">view : List[Int]</td>
+      <td>List of maps that a snapshot is taken of.</td>
+   </tr>
+</table>
 
 <p>
    <i>Note:</i> Currently, the DBToaster library does not offer a specialized interface for Java applications. We plan to resolve this issue in the future once the Scala API becomes stable.
@@ -208,7 +236,12 @@ $> jar cvf exampleapp.jar ExampleApp.class
 
 <div class="codeblock">
 $> java -classpath "rst.jar:lib/dbt_scala/*:exampleapp.jar" ExampleApp
-Result: List(20)
+Insert a tuple to R.
+Insert a tuple to S.
+Insert a tuple to T.
+Result after this step: List(20)
+Insert another tuple to T.
+Final Result: List(45)
 </div>
         <div class="doc_chain_link"> &lt; <span class="doc_chain_link_prev"><a href="docs_scala.html" >Scala Code Generation</a></span> | <span class="doc_chain_link_next"><a href="docs_customadaptors.html" >Custom Adaptors</a></span> &gt; </div>      </div><!-- /content -->
     </div><!-- /contentwrapper -->
