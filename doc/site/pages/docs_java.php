@@ -132,7 +132,7 @@ class ExampleApp {
       <th>Comment</th>
    </tr>
    <tr>
-      <td class="code">view : List[Int]</td>
+      <td class="code">view : List&lt;Integer&gt;</td>
       <td>List of maps that a snapshot is taken of.</td>
    </tr>
 </table>

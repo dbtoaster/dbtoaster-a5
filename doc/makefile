@@ -19,14 +19,14 @@ clean:
 
 push_site:
 	@if [ "$(SITE_USERNAME)" ] ; then\
+		scp -r site/pages/*.php \
+			$(SITE_USERNAME)_dbtoaster@ssh.phx.nearlyfreespeech.net:pages/ ; \
 		scp -r site/index.php \
 			$(SITE_USERNAME)_dbtoaster@ssh.phx.nearlyfreespeech.net:index.php ; \
 		scp -r site/css/*.css \
 			$(SITE_USERNAME)_dbtoaster@ssh.phx.nearlyfreespeech.net:css/ ; \
 		scp -r site/js/*.js \
 			$(SITE_USERNAME)_dbtoaster@ssh.phx.nearlyfreespeech.net:js/ ; \
-		scp -r site/pages/*.php \
-			$(SITE_USERNAME)_dbtoaster@ssh.phx.nearlyfreespeech.net:pages/ ; \
 		scp -r site/data/*.csv \
 			$(SITE_USERNAME)_dbtoaster@ssh.phx.nearlyfreespeech.net:data/ ; \
 		scp -r site/*.png \
