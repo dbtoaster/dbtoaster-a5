@@ -151,24 +151,37 @@ import ddbt.lib.Messages._
 import akka.actor._
 
 object ExampleApp {
+  val DEFAULT_TIMEOUT = akka.util.Timeout(1L << 42)
+
   def main(args: Array[String]) {
     val system = ActorSystem("mySystem")
     val q = system.actorOf(Props[Dbtoaster], "Query")
+    var result:(StreamStat,List[Any]) = null
 
     // Send events
+    println("Insert a tuple into R.")
     q ! TupleEvent(0, TupleInsert, "R", List(5L, 2L))
+
+    println("Insert a tuple into S.")
     q ! TupleEvent(1, TupleInsert, "S", List(2L, 3L))
+
+    println("Insert a tuple into T.")
     q ! TupleEvent(2, TupleInsert, "T", List(3L, 4L))
 
-    // Retrieve result
-    val to=akka.util.Timeout(1L << 42)
-    val result = scala.concurrent.Await.result(akka.pattern.ask(q, EndOfStream)(to), to.duration).asInstanceOf[(StreamStat,List[Any])]
+    result = scala.concurrent.Await.result(akka.pattern.ask(q, GetSnapshot(List(1)))(DEFAULT_TIMEOUT), DEFAULT_TIMEOUT.duration).asInstanceOf[(StreamStat,List[Any])]
+    println("Result after this step: " + result._2(0))
 
-    println("Result: " + result._2(0))
+    println("Insert another tuple into T.");
+    q ! TupleEvent(3, TupleInsert, "T", List(3L, 5L))
+
+    // Retrieve result
+    result = scala.concurrent.Await.result(akka.pattern.ask(q, EndOfStream)(DEFAULT_TIMEOUT), DEFAULT_TIMEOUT.duration).asInstanceOf[(StreamStat,List[Any])]
+    println("Final Result: " + result._2(0))
 
     system.shutdown
   }
 }
+
 </div>
 
 <p>
@@ -229,7 +242,12 @@ $> scalac -classpath "rst.jar:lib/dbt_scala/*" -d example.jar example.scala
 
 <div class="codeblock">
 $> java -classpath "rst.jar:lib/dbt_scala/*:example.jar" org.dbtoaster.ExampleApp
-Result: 20
+Insert a tuple into R.
+Insert a tuple into S.
+Insert a tuple into T.
+Result after this step: 20
+Insert another tuple into T.
+Final Result: 45
 </div>
 
 <a name="generatedcode"/></a>
