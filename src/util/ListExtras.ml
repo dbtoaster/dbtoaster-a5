@@ -46,6 +46,25 @@ let scan_map (f:('a list -> 'a -> 'a list -> 'b)) (l:('a list)): ('b list) =
    in iterate [] l
 
 (** 
+   Map the elements of a list in the same manner as scan.  Like 
+   ListExtras.scan, but based on List.map instead of List.iter. 
+   Note that the PREV list contains mapped elements.
+   
+   @param f    The map function.  On any given invocation of f, l may be 
+               reconstructed by concatenating f's three inputs in order.
+   @param l    The list to map over
+   @return     The re-mapped list
+*)
+let scan_map2 (f:('b list -> 'a -> 'a list -> 'b)) (l:('a list)): ('b list) = 
+   let rec iterate prev curr_next =
+      match curr_next with 
+         | []         -> []
+         | curr::next -> 
+            let mapped_curr = (f prev curr next) in
+              mapped_curr :: (iterate (prev@[mapped_curr]) next)
+   in iterate [] l
+
+(** 
    Fold the elements of a list in the same manner as scan. Like ListExtras.scan
    but based on List.fold_left instead of List.iter  
    

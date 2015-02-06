@@ -325,3 +325,7 @@ in
   test_decomposition "Polynomial decomposition -- unsafe mapping from schema"
     "(AggSum([A],((R(A, B) * {B < 20}))) * R(A, B) * {B > 10})"
     ["(R(A, B_3) * {B_3 < 20} * R(A, B) * {B > 10})"]; 
+
+  test_decomposition "Erasing AggSums -- changing scope"
+     "(AggSum([], (DELTA R)(R1_A, R1_B)) * AggSum([], (DELTA R)(R1_A, R1_B)))"
+     ["((DELTA R)(R1_A, R1_B) * (DELTA R)(R1_A_4, R1_B_5))"];

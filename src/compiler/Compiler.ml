@@ -352,7 +352,7 @@ let compile_map (compute_delta:bool)
                                            todo_type init_expr;
             ds_definition = optimized_defn
          };
-         ds_triggers = !triggers
+         triggers = !triggers
       })
 
 (******************************************************************************)
@@ -362,7 +362,7 @@ let compile_table ((reln, relv, relut):Schema.rel_t): compiled_ds_t =
          Plan.ds_name       = map_name ;
          Plan.ds_definition = Calculus.mk_rel reln relv
       };
-      Plan.ds_triggers = (List.map (fun (event, update_expr) ->
+      Plan.triggers = (List.map (fun (event, update_expr) ->
          (event, {
             Plan.target_map  = map_name;
             Plan.update_type = UpdateStmt;
@@ -471,14 +471,3 @@ let compile ?(max_depth = None) (db_schema:Schema.t) (calc_queries:tlq_list_t):
    ) done; (!plan, !toplevel_queries)
 
 (******************************************************************************)
-
-let string_of_ds ds = 
-   "DECLARE "^(string_of_ds ds.description)^"\n"^(String.concat "\n" 
-      (List.map (fun x -> "   "^x) (
-         (List.map (fun (evt, stmt) ->
-            (Schema.string_of_event evt)^" DO "^(string_of_statement stmt))
-            ds.ds_triggers)
-      )))
-
-let string_of_plan (plan:plan_t): string =
-   ListExtras.string_of_list ~sep:"\n\n" string_of_ds plan

@@ -33,6 +33,7 @@ FILES=\
 	src/compiler/Compiler\
 	src/maps/M3\
 	src/maps/DistributedM3\
+	src/maps/AnnotatedM3\
 	src/maps/M3DM\
 	src/maps/Patterns\
 	src/functional/K3\

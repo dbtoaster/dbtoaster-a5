@@ -414,14 +414,14 @@ in
    test "Dominant aggsum term with delta relation"
       "DOMAIN(AggSum([A], (DELTA R)(A,B,C) * {B > 10}) * 
               AggSum([A,C], (DELTA R)(A,B,C)) * {C < 30})"
-      "DOMAIN(AggSum([A,C], (DELTA R)(A,B,C) * {B > 10} * {C < 30}))";
+      "DOMAIN(AggSum([A,C], (DELTA R)(A,B_3,C) * {B_3 > 10} * {C < 30}))";
    test "Dominant delta term, mapping prevents elimination"
       "DOMAIN(AggSum([A], (DELTA R)(A,B)) * (DELTA R)(C,A))"
       "DOMAIN(AggSum([A,C], (DELTA R)(A,B) * (DELTA R)(C,A)))";   
 
    test "Relation prevents elimination of subordinate delta term"
       "DOMAIN(AggSum([A], (DELTA R)(A,B)) * R(A,B))"
-      "DOMAIN(AggSum([A,B], (DELTA R)(A,B_3) * R(A,B)))";   
+      "DOMAIN(AggSum([A,B], (DELTA R)(A,B_4) * R(A,B)))";   
    test "Eliminate subordinate delta term with same condition"
       "DOMAIN(AggSum([A], (DELTA R)(A,B) * {B > 10}) * 
               (DELTA R)(A,B) * {B > 10})"
@@ -952,3 +952,33 @@ in
     test "Unify lifts and group-by variables" [] ["A"; "C"]
        "S(C) * (A ^= C) * AggSum([A], R(B) * (A ^= B)) "
        "S(C) * (A ^= C) * AggSum([A], R(B) * (A ^= B)) ";   
+
+    test "Eliminate redundant domains" []["L_SHIPMODE"; "O_ORDERKEY"]
+       "((L_SHIPMODE ^= 'SHIP') *
+  DOMAIN(
+    AggSum([L_SHIPMODE, O_ORDERKEY], 
+      ((L_SHIPMODE ^= 'SHIP') *
+        (DELTA LINEITEM)(O_ORDERKEY, L_PARTKEY, L_SUPPKEY, L_LINENUMBER,
+                           L_QUANTITY, L_EXTENDEDPRICE, L_DISCOUNT, L_TAX,
+                           L_RETURNFLAG, L_LINESTATUS, L_SHIPDATE,
+                           L_COMMITDATE, L_RECEIPTDATE, L_SHIPINSTRUCT,
+                           L_SHIPMODE, L_COMMENT) *
+        {L_COMMITDATE < L_RECEIPTDATE} *
+        {L_RECEIPTDATE >= DATE('1994-1-1')} *
+        {L_RECEIPTDATE < DATE('1995-1-1')}))) *
+  AggSum([O_ORDERKEY, L_SHIPMODE], 
+    ((DELTA LINEITEM)(O_ORDERKEY, L_PARTKEY, L_SUPPKEY, L_LINENUMBER,
+                        L_QUANTITY, L_EXTENDEDPRICE, L_DISCOUNT, L_TAX,
+                        L_RETURNFLAG, L_LINESTATUS, L_SHIPDATE, L_COMMITDATE,
+                        L_RECEIPTDATE, L_SHIPINSTRUCT, L_SHIPMODE, L_COMMENT) *
+      {L_COMMITDATE < L_RECEIPTDATE} * {L_RECEIPTDATE >= DATE('1994-1-1')} *
+      {L_RECEIPTDATE < DATE('1995-1-1')})))"
+       "((L_SHIPMODE ^= 'SHIP') *
+  AggSum([O_ORDERKEY, L_SHIPMODE], 
+    ((DELTA LINEITEM)(O_ORDERKEY, L_PARTKEY, L_SUPPKEY, L_LINENUMBER,
+                        L_QUANTITY, L_EXTENDEDPRICE, L_DISCOUNT, L_TAX,
+                        L_RETURNFLAG, L_LINESTATUS, L_SHIPDATE, L_COMMITDATE,
+                        L_RECEIPTDATE, L_SHIPINSTRUCT, L_SHIPMODE, L_COMMENT) *
+      {L_COMMITDATE < L_RECEIPTDATE} * {L_RECEIPTDATE >= DATE('1994-1-1')} *
+      {L_RECEIPTDATE < DATE('1995-1-1')})))";
+

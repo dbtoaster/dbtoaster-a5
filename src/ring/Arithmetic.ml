@@ -8,7 +8,7 @@
    a mutual recursion between ValueRing and CalcRing (which in turn saves 
    Oliver's sanity), and ensures that the delta of a value is always 0.
    
-   Note that the functions that appear here and operate over values are assumed 
+   Note that the functions that appear here and operate over values are assumed
    to be deterministic and to have no side effects.
 *)
 
@@ -36,15 +36,8 @@ ValueBase : sig
       let zero = AConst(CInt(0))
       let one  = AConst(CInt(1))
 
-      let is_zero (v: t) =
-         match v with
-         | AConst(c) -> is_zero c
-         | _         -> false
-
-      let is_one (v: t) =
-         match v with
-         | AConst(c) -> is_one c
-         | _         -> false   
+      let is_zero (v: t) = match v with AConst(c) -> is_zero c | _ -> false
+      let is_one  (v: t) = match v with AConst(c) -> is_one c  | _ -> false
    end and
 
 (**
@@ -94,29 +87,26 @@ module ValueRing = struct
 
    let mk_sum  l =
       let t = type_of_value (Sum(List.flatten (List.map sum_list l))) in
-      let z = 
-         begin match zero_of_type_opt t with
-         | Some(z) -> Some(Val(AConst(z)))
-         | None    -> None
-         end
+      let z = begin match zero_of_type_opt t with
+                 | Some(z) -> Some(Val(AConst(z)))
+                 | None    -> None
+              end
       in
-      ValueRingBase.mk_sum_with_elem z l
+         ValueRingBase.mk_sum_defs z l
 
    let mk_prod l =
       let t = type_of_value (Prod(List.flatten (List.map prod_list l))) in
-      let z = 
-         begin match zero_of_type_opt t with
-         | Some(z) -> Some(Val(AConst(z)))
-         | None    -> None
-         end
+      let z = begin match zero_of_type_opt t with
+                 | Some(z) -> Some(Val(AConst(z)))
+                 | None    -> None
+              end
       in
-      let o = 
-         begin match one_of_type_opt t with
-         | Some(o) -> Some(Val(AConst(o)))
-         | None    -> None
-         end
+      let o = begin match one_of_type_opt t with
+                 | Some(o) -> Some(Val(AConst(o)))
+                 | None    -> None
+              end
       in
-      ValueRingBase.mk_prod_with_elem z o l
+         ValueRingBase.mk_prod_defs z o l
 end
 
 (**** Constructors ****)

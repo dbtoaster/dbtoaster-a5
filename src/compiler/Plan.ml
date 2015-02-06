@@ -48,27 +48,27 @@ let string_of_ds (ds:ds_t): string =
 
 (******************* Statements *******************)
 
-(** A statement can either update (increment) the existing value of the key that
-    it is writing to, or replace the value of the key that it is writing to 
-    entirely *)
+(** A statement can either update (increment) the existing value of 
+    the key that it is writing to, or replace the value of the key 
+    that it is writing to entirely *)
 type stmt_type_t = UpdateStmt | ReplaceStmt
 
 (** A statement which alters the contents of a datastructure when executed *)
-type stmt_t = {
-   target_map  : expr_t;      (** The datastructure to be modified *)
-   update_type : stmt_type_t; (** The type of alteration to be performed *)
-   update_expr : expr_t       (** The calculus expression defining the new 
-                                  value or update *)
+type 'expr stmt_base_t = {
+   target_map  : 'expr;          (** The datastructure to be modified *)
+   update_type : stmt_type_t;    (** The type of alteration to be performed *)
+   update_expr : 'expr           (** The calculus expression defining the new 
+                                     value or update *)
 }
+
+type stmt_t = expr_t stmt_base_t
 
 (** Stringify a statement.  This string conforms to the grammar of 
     Calculusparser *)
 let string_of_statement (stmt:stmt_t): string = 
    let expr_string = (CalculusPrinter.string_of_expr (stmt.update_expr)) in
-   (string_of_expr (stmt.target_map))^
-   (if stmt.update_type = UpdateStmt
-      then " += "
-      else " := ")^
+   (CalculusPrinter.string_of_expr (stmt.target_map))^
+   (if stmt.update_type = UpdateStmt then " += " else " := ")^
    (if String.contains expr_string '\n' then "\n  " else "")^
    expr_string
    
@@ -77,9 +77,19 @@ let string_of_statement (stmt:stmt_t): string =
 (** A compiled datastructure *)
 type compiled_ds_t = {
    description : ds_t;
-   ds_triggers : (Schema.event_t * stmt_t) list
+   triggers : (Schema.event_t * stmt_t) list
 }
 
 (** An incremental view maintenance plan (produced by Compiler) *)
 type plan_t = compiled_ds_t list
 
+let string_of_compiled_ds (ds: compiled_ds_t): string = 
+   "DECLARE "^(string_of_ds ds.description)^"\n"^(String.concat "\n" 
+      (List.map (fun x -> "   "^x) (
+         (List.map (fun (evt, stmt) ->
+            (Schema.string_of_event evt)^" DO "^(string_of_statement stmt))
+            ds.triggers)
+      )))
+
+let string_of_plan (plan:plan_t): string =
+   ListExtras.string_of_list ~sep:"\n\n" string_of_compiled_ds plan

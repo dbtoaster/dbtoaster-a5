@@ -19,7 +19,7 @@ type eventType =
                            (eventType * stmt_type_t * string * string list * string list * string) 
                            list) list) =
    log_list_test ("Compiling "^name)
-      Compiler.string_of_ds
+      Plan.string_of_compiled_ds
       (fst (compile test_db name expr))
       (List.map (fun (ds_name, ds_ovars, ds_defn, ds_type, ds_triggers) -> 
          let ds = {
@@ -28,7 +28,7 @@ type eventType =
             Plan.ds_definition = parse_calc ~opt:true ds_defn
          } in {  
             Plan.description = ds;
-            Plan.ds_triggers = 
+            Plan.triggers = 
                List.map (fun (evt_type, stmt_type, reln, relv, update_ov, delta) -> 
                (  (match evt_type with
                     | InsertEvent -> event true reln relv
@@ -40,7 +40,7 @@ type eventType =
                      Plan.update_type = stmt_type;
                      Plan.update_expr = parse_calc ~opt:true delta
                   })
-            ) ds_triggers
+               ) ds_triggers
          }
       ) datastructures)
 ;;

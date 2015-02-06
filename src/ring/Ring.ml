@@ -56,25 +56,13 @@ sig
       constant ring element. *)
    type mono_t = int * (leaf_t list)
 
-   (** Comparison options to allow for order-independance in Sum/Prod terms *) 
-   type cmp_opt_t = 
-      | OptSumOrderIndependent
-      | OptProdOrderIndependent
-      | OptMultipleMappings
-
    (** the zero- and one-elements of the ring *)
    val zero: expr_t
-   val one:  expr_t
+   val one:  expr_t 
 
    val is_zero: expr_t -> bool
    val is_one: expr_t -> bool
-    
-   (** Default comparison options. See cmp_opt_t *)
-   val default_cmp_opts : cmp_opt_t list
-
-   (** Full comparison options. See cmp_opt_t *)
-   val full_cmp_opts : cmp_opt_t list
-
+   
    (** constructing a (nested) expression using base values,
       sums, and products of expressions *)
 
@@ -83,11 +71,11 @@ sig
    val mk_val: leaf_t -> expr_t
 
    (** turns a list l of expressions into \bigsum l and \bigprod l, resp. *)
-   val mk_sum_with_elem:  expr_t option -> (expr_t list) -> expr_t
-   val mk_prod_with_elem: 
-      expr_t option -> expr_t option -> (expr_t list) -> expr_t
-   val mk_sum:  (expr_t list) -> expr_t
-   val mk_prod: (expr_t list) -> expr_t
+   val mk_sum_defs:  expr_t option -> expr_t list -> expr_t
+   val mk_prod_defs: expr_t option -> expr_t option -> expr_t list -> expr_t
+
+   val mk_sum:  expr_t list -> expr_t
+   val mk_prod: expr_t list -> expr_t
 
    val mk_neg:  expr_t -> expr_t
 
@@ -101,8 +89,8 @@ sig
       Applied to a polynomial, sum_list returns the list of monomials.
       Applied to a monomial, prod_list returns the list of the constituent
       base values. But both functions can be applied to any expression. *)
-   val  sum_list: expr_t -> (expr_t list)
-   val prod_list: expr_t -> (expr_t list)
+   val  sum_list: expr_t -> expr_t list
+   val prod_list: expr_t -> expr_t list
 
 
    (** some functions for constructing modified expressions *)
@@ -205,8 +193,27 @@ sig
       distributivity. Thus, while polynomial may create exponential-factor
       blow-up in the worst case, simplify is always polynomial-time.
    *)
-   val simplify: expr_t -> expr_t
-   
+   val simplify: expr_t -> expr_t  
+
+   (** multiply_out lhs sum rhs 
+      
+      Shorthand operation that multiplies every sum term in sum by lhs and rhs
+      and returns the resultant list of expressions
+   *)
+   val multiply_out: expr_t list -> expr_t -> expr_t list -> expr_t list
+
+   (** Comparison options to allow for order-independence in Sum/Prod terms *) 
+   type cmp_opt_t = 
+      | OptSumOrderIndependent
+      | OptProdOrderIndependent
+      | OptMultipleMappings
+
+   (** Default comparison options. See cmp_opt_t *)
+   val default_cmp_opts : cmp_opt_t list
+
+   (** Full comparison options. See cmp_opt_t *)
+   val full_cmp_opts : cmp_opt_t list
+
    (** cmp_exprs sum_f prod_f leaf_f a b -> 
       
       Helper function for comparing expressions.  
@@ -234,13 +241,6 @@ sig
                   ('a list -> 'a option) ->
                   (leaf_t -> leaf_t  -> 'a option) ->
                   expr_t -> expr_t -> 'a option
-   
-   (** multiply_out lhs sum rhs 
-      
-      Shorthand operation that multiplies every sum term in sum by lhs and rhs
-      and returns the resultant list of expressions
-   *)
-   val multiply_out: expr_t list -> expr_t -> expr_t list -> expr_t list
 end
 
 
@@ -263,40 +263,22 @@ end
 *)
 
 
-
-
-module Make = functor (T : Base) ->
+module Make = functor (T: Base) ->
 struct
    type leaf_t = T.t
 
-   type expr_t = Val of leaf_t
+   type expr_t = Val  of leaf_t
                | Sum  of expr_t list
                | Prod of expr_t list
                | Neg  of expr_t
 
    type mono_t = int * (leaf_t list)
 
-   type cmp_opt_t = 
-      | OptSumOrderIndependent
-      | OptProdOrderIndependent
-      | OptMultipleMappings
-
    let zero = Val(T.zero)  (** Sum [] *)
    let one  = Val(T.one)   (** Prod [] *)
 
-   let is_zero (e: expr_t): bool =
-      match e with
-      | Val(c) -> T.is_zero c
-      | _      -> false
-
-   let is_one (e: expr_t): bool =
-      match e with
-      | Val(c) -> T.is_one c
-      | _      -> false
-         
-   let default_cmp_opts = [OptSumOrderIndependent; OptProdOrderIndependent];;
-   let full_cmp_opts = [OptSumOrderIndependent; OptProdOrderIndependent; 
-                        OptMultipleMappings];;
+   let is_zero (e: expr_t) = match e with Val(c) -> T.is_zero c | _ -> false
+   let is_one  (e: expr_t) = match e with Val(c) -> T.is_one c  | _ -> false
 
    let  sum_list e = match e with  Sum(l) -> l | _ -> [e]
    let prod_list e = match e with Prod(l) -> l | _ -> [e]
@@ -306,72 +288,61 @@ struct
    (** any construction of complex expressions is done with mk_sum and mk_prod,
       which enforce the representation invariant.
    *)
-   let mk_sum_with_elem  zero l =
-      let l2 = (List.filter (fun x -> not (is_zero x)) l) in
-      if(l2 = []) then
-         begin match zero with
-         | Some(z) -> z
-         | None    -> failwith ("No zero element defined")
-         end
-      else if (List.tl l2) = [] then (List.hd l2)
-      else Sum(List.flatten (List.map sum_list l2))
+   let mk_sum_defs zero l =
+      match (List.filter (fun x -> not (is_zero x)) l) with
+         | [] ->  begin match zero with
+                     | Some(z) -> z
+                     | None    -> failwith ("No zero element defined")
+                  end
+         | [x] -> x
+         | l2  -> Sum(List.flatten (List.map sum_list l2))
 
-   let mk_prod_with_elem zero one l =
-      let zeroes = (List.filter is_zero l) in
-      if (zeroes <> []) then 
+   let mk_prod_defs zero one l =
+      if (List.exists is_zero l) then 
          begin match zero with
-         | Some(z) -> z
-         | None    -> failwith ("No zero element defined")
+            | Some(z) -> z
+            | None    -> failwith ("No zero element defined")
          end
       else
-         let l2 = (List.filter (fun x -> not (is_one x)) l) in
-         if (l2 = []) then
-            begin match one with
-            | Some(o) -> o
-            | None    -> failwith ("No one element defined")
-            end
-         else if ((List.tl l2) = []) then List.hd l2
-         else Prod(List.flatten (List.map prod_list l2))
+         match (List.filter (fun x -> not (is_one x)) l) with
+            | []  -> begin match one with
+                        | Some(o) -> o
+                        | None    -> failwith ("No one element defined")
+                     end
+            | [x] -> x
+            | l2 -> Prod(List.flatten (List.map prod_list l2))
 
-   let mk_sum l = mk_sum_with_elem (Some(zero)) l
-   let mk_prod l = mk_prod_with_elem (Some(zero)) (Some(one)) l
-
-   let mk_neg e = match e with Neg(e1) -> e1 | _ -> Neg(e)
+   let mk_sum  l = mk_sum_defs  (Some(zero)) l
+   let mk_prod l = mk_prod_defs (Some(zero)) (Some(one)) l
+   let mk_neg  e = match e with Neg(e1) -> e1 | _ -> Neg(e)
 
    exception NotAValException of expr_t
-   let get_val e =
-      match e with
-         Val(x) -> x
-       | _ -> raise (NotAValException(e))
+   let get_val e = match e with Val(x) -> x | _ -> raise (NotAValException(e))
 
-   let rec fold ( sum_f: 'b list -> 'b)
-                (prod_f: 'b list -> 'b)
-                ( neg_f: 'b -> 'b)
-                (leaf_f: leaf_t -> 'b)
-                (e: expr_t) =
+   let rec fold (sum_f: 'b list -> 'b) (prod_f: 'b list -> 'b)
+                (neg_f: 'b -> 'b) (leaf_f: leaf_t -> 'b) (e: expr_t) =
       match e with
-         Sum(l)  ->  sum_f(List.map (fold sum_f prod_f neg_f leaf_f) l)
-       | Prod(l) -> prod_f(List.map (fold sum_f prod_f neg_f leaf_f) l)
-       | Neg(x)  -> neg_f(           fold sum_f prod_f neg_f leaf_f x)
-       | Val(x)  -> leaf_f x
+         | Sum(l)  ->  sum_f (List.map (fold sum_f prod_f neg_f leaf_f) l)
+         | Prod(l) -> prod_f (List.map (fold sum_f prod_f neg_f leaf_f) l)
+         | Neg(x)  ->  neg_f (          fold sum_f prod_f neg_f leaf_f  x)
+         | Val(x)  -> leaf_f x
 
    let rec apply_to_leaves (f: leaf_t -> expr_t) (e: expr_t) =
-      fold (fun x -> mk_sum x) (fun x -> mk_prod x) (fun x -> mk_neg x)
-           (fun x -> (f x)) e
+      fold mk_sum mk_prod mk_neg f e
 
    let leaves (e: expr_t): (leaf_t list) =
       fold List.flatten List.flatten (fun x -> x) (fun x -> [x]) e
 
    let rec substitute replace_this by_that in_expr =
       match in_expr with
-         x when (x = replace_this) -> by_that
-       | Sum(l)  -> mk_sum (List.map (substitute replace_this by_that) l)
-       | Prod(l) -> mk_prod(List.map (substitute replace_this by_that) l)
-       | Neg(e)  -> mk_neg(substitute replace_this by_that e)
-       | Val(x)  -> Val(x)
+         | x when (x = replace_this) -> by_that
+         | Sum(l)  ->  mk_sum (List.map (substitute replace_this by_that) l)
+         | Prod(l) -> mk_prod (List.map (substitute replace_this by_that) l)
+         | Neg(e)  ->  mk_neg (substitute replace_this by_that e)
+         | Val(x)  -> Val(x)
 
    let substitute_many l in_expr =
-       List.fold_right (fun (x,y) -> (substitute x y)) l in_expr
+      List.fold_right (fun (x,y) -> (substitute x y)) l in_expr
 
    let extract (sum_combinator:  'a list -> 'a)
                (prod_combinator: 'a list -> 'a)
@@ -388,36 +359,35 @@ struct
 
    let rec delta (lf_delta: leaf_t -> expr_t) (e: expr_t) =
       match e with
-         Sum(l)     -> mk_sum(List.map (fun x -> delta lf_delta x) l)
-       | Prod([])   -> zero
-       | Prod(x::l) ->
-         mk_sum([
-            mk_prod((delta lf_delta x)::l);
-            mk_prod([mk_sum[x; (delta lf_delta x)];
-                     (delta lf_delta (mk_prod(l)))])
+         | Sum(l)     -> mk_sum(List.map (fun x -> delta lf_delta x) l)
+         | Prod([])   -> zero
+         | Prod(x::l) ->
+            mk_sum([ mk_prod((delta lf_delta x)::l);
+                     mk_prod([ mk_sum [x; (delta lf_delta x)];
+                               (delta lf_delta (mk_prod(l)))   ])
             (** this nesting makes sense because it renders the delta
                computation cheaper: delta for l is only computed once here;
                we can still distribute later if we need it. *)
-         ])
-       | Neg(x) -> Neg(delta lf_delta x)
-       | Val(x) -> lf_delta x
+            ])
+         | Neg(x) -> mk_neg (delta lf_delta x)
+         | Val(x) -> lf_delta x
 
    let rec polynomial (e: expr_t): mono_t list =
       match e with
-         Val(x)  -> [(1,[x])]
-       | Neg(x)  -> let l = (polynomial x) in
-                    List.map (fun (c, v) -> (-c, v)) l
-       | Sum(l)  -> List.flatten (List.map polynomial l)
-       | Prod(l) -> let mono_prod ml =
-                       let (a,b) = List.split ml in
-                       let lmult l = List.fold_left (fun x y -> x*y) 1 l in
-                       (lmult a, List.flatten b) in
-                    (List.map mono_prod (ListExtras.distribute
-                      (List.map polynomial l)))
+         | Val(x)  -> [(1,[x])]
+         | Neg(x)  -> let l = (polynomial x) in
+                      List.map (fun (c, v) -> (-c, v)) l
+         | Sum(l)  -> List.flatten (List.map polynomial l)
+         | Prod(l) -> let mono_prod ml =
+                         let (a,b) = List.split ml in
+                         let lmult l = List.fold_left (fun x y -> x*y) 1 l in
+                         (lmult a, List.flatten b) 
+                      in
+                      (List.map mono_prod 
+                          (ListExtras.distribute (List.map polynomial l)))
 
-   let monomial_to_expr ((m,l):mono_t) : expr_t =
-      let list_to_prod l = mk_prod (List.map mk_val l)
-      in
+   let monomial_to_expr ((m,l): mono_t) : expr_t =
+      let list_to_prod l = mk_prod (List.map mk_val l) in
       if m = 1 then (list_to_prod l)
       else if m = -1 then mk_neg (list_to_prod l)
       else failwith
@@ -429,83 +399,87 @@ struct
    exception CannotCastToMonomialException of expr_t
 
    let cast_to_monomial (e: expr_t): (leaf_t list) =
-      let ms = polynomial e in
-      match ms with
-         ( 1, m)::[] -> m
-       | (-1, m)::[] -> failwith "Ring.cast_to_monomial TODO"
-       | _ -> raise (CannotCastToMonomialException e)
+      match (polynomial e) with
+         | ( 1, m)::[] -> m
+         | (-1, m)::[] -> failwith "Ring.cast_to_monomial TODO"
+         | _ -> raise (CannotCastToMonomialException e)
 
    let try_cast_to_monomial (e: expr_t): bool =
       try let _ = cast_to_monomial e in true
       with CannotCastToMonomialException _ -> false
 
-   let simplify (e: expr_t) =
-      apply_to_leaves (fun x -> mk_val x) e
-    
+   let simplify (e: expr_t) = apply_to_leaves mk_val e
+
+   let multiply_out (lhs:expr_t list) (sum:expr_t) 
+                    (rhs:expr_t list): expr_t list =
+      List.map (fun x -> mk_prod (lhs @ [x] @ rhs)) (sum_list sum)
+
+   type cmp_opt_t = 
+      | OptSumOrderIndependent
+      | OptProdOrderIndependent
+      | OptMultipleMappings
+        
+   let default_cmp_opts = [ OptSumOrderIndependent; OptProdOrderIndependent ];;
+   let full_cmp_opts    = [ OptSumOrderIndependent; OptProdOrderIndependent; 
+                            OptMultipleMappings ];;
+
    let rec cmp_exprs ?(cmp_opts:cmp_opt_t list = default_cmp_opts)
                      (sum_f: 'a list -> 'a option)
                      (prod_f: 'a list -> 'a option)
                      (leaf_f: leaf_t -> leaf_t -> 'a option)     
                      (a: expr_t) (b: expr_t): 'a option = 
-      let sum_order_indep  = List.mem OptSumOrderIndependent  cmp_opts in
-      let prod_order_indep = List.mem OptProdOrderIndependent cmp_opts in
-      let multiple_mappings = List.mem OptMultipleMappings cmp_opts in
+
+      let sum_order_indep   = List.mem OptSumOrderIndependent  cmp_opts in
+      let prod_order_indep  = List.mem OptProdOrderIndependent cmp_opts in
+      let multiple_mappings = List.mem OptMultipleMappings     cmp_opts in
+      
       let rcr a b = cmp_exprs ~cmp_opts:cmp_opts sum_f prod_f leaf_f a b in
       let rec rcr_all order_indep merge_fn al bl = 
-        let rcr_all_fn al bl =  rcr_all order_indep merge_fn al bl in
-        if List.length al <> List.length bl then None 
-        else if List.length al = 0 then (merge_fn [])
-        else if order_indep then
-                    
-          let a_term = List.hd al in
+         let rcr_all_fn = rcr_all order_indep merge_fn in
+         if List.length al <> List.length bl then None 
+         else if List.length al = 0 then (merge_fn [])
+         else if order_indep then
+            (* Order independent search *)               
+            let a_term = List.hd al in
 
-          (* Find all matching terms for a_term *)
-          let b_candidates = List.flatten (
-            ListExtras.scan_map (fun b_lhs b_term b_rhs ->
-              match rcr a_term b_term with
-                | Some(local_mapping) -> [ (local_mapping, b_lhs @ b_rhs) ]
-                | None -> []
-            ) bl
-          ) in
+            (* Find all matching terms for a_term *)
+            let b_candidates = List.flatten (
+               ListExtras.scan_map (fun b_lhs b_term b_rhs ->
+                  match rcr a_term b_term with
+                     | Some(local_mapping) -> [(local_mapping, b_lhs @ b_rhs)]
+                     | None -> []
+               ) bl
+            ) in
           
-          if List.length b_candidates = 0 then None else
+            if List.length b_candidates = 0 then None else
 
-          let a_rest = List.tl al in
+            let a_rest = List.tl al in
 
-          (* Try each candidate until we find a possible mapping *)
-          List.fold_left (fun mappings (local_mappings, b_rest) ->
-            if mappings <> None then mappings else
-
-            match rcr_all_fn a_rest b_rest with
-              | Some(rest_mappings) -> 
-                begin
-                  try
-                    merge_fn [local_mappings; rest_mappings]
-                  with Not_found -> None                  
-                end
-              | None -> None
-          ) None (if multiple_mappings then b_candidates 
-                                       else [ List.hd b_candidates ])
-        else
-          try
-            merge_fn (List.map2 (fun a b ->
-              match rcr a b with
-                | Some(s) -> s               
-                | None -> raise Not_found
-            ) al bl)
-          with Not_found -> None
+            (* Try each candidate until we find a possible mapping *)
+             List.fold_left (fun mappings (local_mappings, b_rest) ->
+               if mappings <> None then mappings else
+               match rcr_all_fn a_rest b_rest with
+                  | Some(rest_mappings) -> 
+                     begin 
+                        try merge_fn [local_mappings; rest_mappings]
+                        with Not_found -> None                  
+                     end
+                  | None -> None
+            ) None (if multiple_mappings then b_candidates 
+                                         else [ List.hd b_candidates ])
+         else
+            try
+               merge_fn (
+                  List.map2 (fun a b ->
+                     match rcr a b with Some(s) -> s | None -> raise Not_found
+                  ) al bl)
+            with Not_found -> None
       in
       match (a,b) with
-        (Val  xa, Val  xb) -> leaf_f  xa xb
-      | (Neg  ae, Neg  be) -> rcr     ae be 
-      | (Sum  ae, Sum  be) -> rcr_all sum_order_indep  sum_f  ae be 
-      | (Prod ae, Prod be) -> rcr_all prod_order_indep prod_f ae be 
-      | _ -> None
+         | (Val  xa, Val  xb) -> leaf_f  xa xb
+         | (Neg  ae, Neg  be) -> rcr     ae be 
+         | (Sum  ae, Sum  be) -> rcr_all sum_order_indep  sum_f  ae be 
+         | (Prod ae, Prod be) -> rcr_all prod_order_indep prod_f ae be 
+         | _ -> None
 
-   let multiply_out (lhs:expr_t list) (sum:expr_t) (rhs:expr_t list):
-                    expr_t list =
-      List.map (fun x -> mk_prod (lhs@[x]@rhs)) (sum_list sum)
 end
-
-
-

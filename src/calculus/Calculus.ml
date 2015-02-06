@@ -71,13 +71,11 @@ CalcBase : sig
       let zero = Value(Arithmetic.mk_int 0)
       let one  = Value(Arithmetic.mk_int 1)
 
-      let is_zero (v: t) =
-         match v with
-         | Value(c) -> ValueRing.is_zero c
+      let is_zero (v: t) = match v with 
+         | Value(c) -> ValueRing.is_zero c 
          | _        -> false
 
-      let is_one (v: t) =
-         match v with
+      let is_one  (v: t) = match v with
          | Value(c) -> ValueRing.is_one c
          | _        -> false   
    end and
@@ -134,7 +132,7 @@ module CalcRing = struct
          | None    -> None
          end
       in
-      CalcRingBase.mk_sum_with_elem z l
+      CalcRingBase.mk_sum_defs z l
 
    let mk_prod l =
       let t = type_of_expr (Prod(List.flatten (List.map prod_list l))) in
@@ -150,7 +148,7 @@ module CalcRing = struct
          | None    -> None
          end
       in
-      CalcRingBase.mk_prod_with_elem z o l
+      CalcRingBase.mk_prod_defs z o l
 end
 
 (** The scope and schema of an expression, the available input variables when
@@ -457,7 +455,7 @@ let rec fold ?(scope = []) ?(schema = [])
                (* extend the schema with variables required by the next *)
                ListAsSet.multiunion
                   (schema::(List.map (fun x -> 
-                     let (xin,xout) = schema_of_expr x in
+                     let (xin, xout) = schema_of_expr x in
                      ListAsSet.union xin xout) next))
             ) curr
          ) terms)
@@ -503,38 +501,53 @@ let rec rewrite ?(scope = []) ?(schema = [])
    let rcr e_scope e_schema = 
       rewrite ~scope:e_scope ~schema:e_schema 
         sum_fn prod_fn neg_fn leaf_fn leaf_descend_fn
-   in
-   fold ~scope:scope ~schema:schema sum_fn prod_fn neg_fn 
-        (fun (local_scope, local_schema) lf ->
-           leaf_fn (local_scope, local_schema) (
-             let (lf_ivars, lf_ovars) = schema_of_expr (CalcRing.mk_val lf) in
-             let lf_vars = ListAsSet.union lf_ivars lf_ovars in
-             let lf_scope = ListAsSet.inter local_scope lf_vars in 
-             let lf_schema = ListAsSet.inter 
-                (ListAsSet.union local_scope local_schema) lf_ovars in
-             begin match lf with
-                 | AggSum(gb_vars,sub_t) -> 
-                    if (leaf_descend_fn (lf_scope, lf_schema) lf) 
-                    then (AggSum(gb_vars,(rcr lf_scope lf_schema sub_t)))
-                    else lf
-                 | Lift(v,sub_t) -> 
-                    let sub_scope = ListAsSet.diff lf_scope [v] in 
-                    let sub_schema = ListAsSet.diff lf_schema [v] in
-                    if (leaf_descend_fn (lf_scope, lf_schema) lf) 
-                    then (Lift(v,(rcr sub_scope sub_schema sub_t)))
-                    else lf
-                 | External(en, eiv, eov, et, Some(em)) ->
-                    if (leaf_descend_fn (lf_scope, lf_schema) lf) 
-                    then (External(en, eiv, eov, et, Some(rcr eiv eov em)))
-                    else lf
-                 | Exists(subexp) -> 
-                    if (leaf_descend_fn (lf_scope, lf_schema) lf) 
-                    then (Exists(rcr lf_scope lf_schema subexp))
-                    else lf
-                 | _ -> lf
-             end)
-   ) e
-
+   in   
+   begin match e with
+      | CalcRing.Sum(terms) -> 
+         sum_fn (scope,schema) (List.map (rcr scope schema) terms)
+      | CalcRing.Prod(terms) -> 
+         prod_fn (scope,schema) (ListExtras.scan_map2 (fun prev curr next ->
+            rcr ( 
+               (* extend the scope with variables defined by the prev *)
+               ListAsSet.multiunion 
+                  (scope::(List.map (fun x -> snd (schema_of_expr x)) prev))
+            ) (
+               (* extend the schema with variables required by the next *)
+               ListAsSet.multiunion
+                  (schema::(List.map (fun x -> 
+                     let (xin, xout) = schema_of_expr x in
+                     ListAsSet.union xin xout) next))
+            ) curr
+         ) terms)
+      | CalcRing.Neg(term) -> neg_fn (scope,schema) (rcr scope schema term)
+      | CalcRing.Val(lf) -> leaf_fn (scope,schema) (
+          let (lf_ivars, lf_ovars) = schema_of_expr (CalcRing.mk_val lf) in
+          let lf_vars = ListAsSet.union lf_ivars lf_ovars in
+          let lf_scope = ListAsSet.inter scope lf_vars in 
+          let lf_schema = ListAsSet.inter (ListAsSet.union scope schema) 
+                                          lf_ovars in
+          begin match lf with
+              | AggSum(gb_vars,sub_t) -> 
+                 if (leaf_descend_fn (lf_scope, lf_schema) lf) 
+                 then (AggSum(gb_vars,(rcr lf_scope lf_schema sub_t)))
+                 else lf
+              | Lift(v,sub_t) -> 
+                 let sub_scope = ListAsSet.diff lf_scope [v] in 
+                 let sub_schema = ListAsSet.diff lf_schema [v] in
+                 if (leaf_descend_fn (lf_scope, lf_schema) lf) 
+                 then (Lift(v,(rcr sub_scope sub_schema sub_t)))
+                 else lf
+              | External(en, eiv, eov, et, Some(em)) ->
+                 if (leaf_descend_fn (lf_scope, lf_schema) lf) 
+                 then (External(en, eiv, eov, et, Some(rcr eiv eov em)))
+                 else lf
+              | Exists(subexp) -> 
+                 if (leaf_descend_fn (lf_scope, lf_schema) lf) 
+                 then (Exists(rcr lf_scope lf_schema subexp))
+                 else lf
+              | _ -> lf
+          end)
+   end
 
 (**
    Recursively rewrite the leaf elements of a Calculus ring expression.  This is
@@ -938,7 +951,7 @@ let rec expr_has_binary_multiplicity ?(scope = []) expr =
          | Exists _ -> true
 (***** END EXISTS HACK *****)
       end)
-      expr
+      expr 
 
 
 let mk_fresh_var = FreshVariable.declare_class "calculus/Calculus" ""
@@ -950,10 +963,7 @@ let rec erase_aggsums ?(scope = []) (expr: expr_t) : expr_t =
    let map_var (vname, vtype) =
       ((vname, vtype), (mk_fresh_var ~inline:vname (), vtype)) 
    in
-   fold ~scope:scope 
-      (fun _ sl -> CalcRing.mk_sum sl)
-      (fun _ pl -> CalcRing.mk_prod pl)
-      (fun _ term -> CalcRing.mk_neg term)
+   rewrite_leaves
       (fun (scope, schema) lf -> begin match lf with
          | AggSum(gb_vars, subexp) ->           
          begin
@@ -976,7 +986,9 @@ let rec erase_aggsums ?(scope = []) (expr: expr_t) : expr_t =
              erase_aggsums ~scope:scope rewritten_subexp
          end
         | _ -> CalcRing.mk_val lf
-      end) expr
+      end)
+      (fun _ _ -> false)
+      expr
 
 
 (* Construction Helpers *)

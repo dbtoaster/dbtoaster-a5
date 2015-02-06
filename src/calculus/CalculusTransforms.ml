@@ -200,15 +200,14 @@ let rec combine_values ?(aggressive=false) ?(peer_groups=[])
            if not merge_consts then (final_term_components, []) else
 
            List.fold_left (fun (value_list, calc_list) component ->
-             if List.mem component partitioned_variable_values then 
+             if List.mem component partitioned_variable_values then
                begin match component with
-                 | [ ValueRing.Prod(
-                       ValueRing.Val(const_v) :: [ ValueRing.Val(new_v) ] ) ] 
+                 | [ ValueRing.Prod(ValueRing.Val(const_v) :: rest_v) ] 
                    when Arithmetic.value_is_const (ValueRing.mk_val const_v) ->
                    let new_calc = 
                      CalcRing.mk_prod [ 
                        C.mk_value (ValueRing.mk_val const_v);
-                       C.mk_value (ValueRing.mk_val new_v) ]
+                       C.mk_value (ValueRing.mk_prod rest_v) ]
                    in 
                      (value_list, calc_list @ [new_calc]) 
                  | _ -> (value_list @ [component], calc_list)
@@ -1115,7 +1114,7 @@ let advance_lifts scope expr =
     Simplification rules for terms with binary multiplicities (return 0 or 1).
 
     Recur through the expression tree and remove all expression that 
-    have binary miltiplicities when identical expressions are already defined. 
+    have binary multiplicities when identical expressions are already defined. 
 *)
 let eliminate_duplicates (big_expr:C.expr_t) =
    Debug.print "LOG-ELIMINATE-DUPLICATES" (fun () ->
@@ -1312,29 +1311,46 @@ let unique_domains expr =
    (* Remove redundant terms, for instance R(A,B) * R(A,B) -> R(A,B).
       This is safe to do only when the domain expression is a monomial
       since we don't care about the multiplicity. *)
-   let remove_duplicates ?(is_monomial=true) term_list = 
-      List.fold_left (fun acc_terms term ->
-         if List.mem term acc_terms &&
-               (is_monomial || C.expr_has_binary_multiplicity term)
-         then acc_terms 
-         else acc_terms @ [term]            
-      ) [] term_list
-   in
+  let remove_duplicates ivars ovars term_list =   
+    ListAsSet.uniq ~eq:(fun e1 e2 -> 
+      begin match C.cmp_exprs e1 e2 with
+         | Some(mappings) -> 
+            let vars = ListAsSet.union ivars ovars in
+            let relevant_mappings = 
+               List.filter (fun (a, b) -> List.mem a vars) mappings
+            in
+               ListAsFunction.is_identity relevant_mappings
+         | None -> false
+      end
+    ) term_list  
+   in 
+
    let rewritten_expr = 
       let sum_terms = CalcRing.sum_list expr in
       if (List.length sum_terms > 1) then expr else
 
-      let expr_noaggs = C.erase_aggsums expr in 
-      let sum_terms_noaggs = CalcRing.sum_list expr_noaggs in
-      if (List.length sum_terms_noaggs > 1) then expr else
+      (* Removing AggSums can introduce new fresh variables,
+         which might cause infinite optimization loops. E.g.:
+           AggSum([A],(A^=5)*R(A,B)) * AggSum([A],(A^=5)*R(A,B))
+           => AggSum([A],(A^=5)*R(A,B_XXX)), where XXX increases *)
+      let unique_expr = CalcRing.mk_prod (
+         ListAsSet.uniq ~eq:C.exprs_are_identical 
+            (CalcRing.prod_list expr))
+      in
+      if (List.length (CalcRing.prod_list unique_expr) = 1) then unique_expr
+      else
 
-      let schema = snd (C.schema_of_expr expr) in
-      C.mk_aggsum schema (
+      let expr_noaggs = C.erase_aggsums unique_expr in 
+      let sum_terms_noaggs = CalcRing.sum_list expr_noaggs in
+      if (List.length sum_terms_noaggs > 1) then unique_expr else
+
+      let (ivars, ovars) = C.schema_of_expr unique_expr in
+      C.mk_aggsum ovars (
          let mapped_terms = 
-            map_relations schema (CalcRing.prod_list expr_noaggs)
+            map_relations ovars (CalcRing.prod_list expr_noaggs)
          in
             (* Remove duplicates *)
-            CalcRing.mk_prod (remove_duplicates mapped_terms)
+            CalcRing.mk_prod (remove_duplicates ivars ovars mapped_terms)
       )
    in
       Debug.print "LOG-UNIQUE-DOMAINS" (fun () ->
@@ -2345,6 +2361,7 @@ let optimize_expr ?(optimizations = default_optimizations)
       include_opt OptUnifyLifts              (unify_lifts scope schema);
       include_opt OptLiftEqualities          (lift_equalities scope);
       include_opt OptSimplifyDomains         (simplify_domains);
+      include_opt OptNestingRewrites         (nesting_rewrites);
       include_opt OptExtractDomains          (extract_domains scope);
       include_opt OptCancelTerms             (cancel_terms);
       include_opt OptNestingRewrites         (nesting_rewrites);

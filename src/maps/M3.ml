@@ -22,10 +22,14 @@ open Plan
    An M3 trigger: A (referenced) set of statements that are executed when a
    spefied event occurs.
 *)
-type trigger_t = {
-   event      : Schema.event_t;      (** The triggering event *)
-   statements : Plan.stmt_t list ref (** The set of statements to execute *)
+type 'expr trigger_base_t = {
+   (** The triggering event *)
+   event      : Schema.event_t;        
+   (** The set of statements to execute *) 
+   statements : ('expr Plan.stmt_base_t) list ref 
 }
+
+type trigger_t = expr_t trigger_base_t
 
 (**
    One of the datastructures that appears in an M3 program.
@@ -80,6 +84,7 @@ type prog_t = {
       a corresponding DSTable() in maps. 
    *)
 }
+
 
 (************************* Stringifiers *************************)
 
@@ -242,7 +247,7 @@ let add_view (prog:prog_t) (view:Plan.ds_t): unit =
    @raise Not_found If [event] has not been defined in [prog]
 *)
 let add_stmt (prog:prog_t) (event:Schema.event_t)
-                           (stmt:stmt_t): unit =
+                           (stmt: stmt_t): unit =
    let (relv) = Schema.event_vars event in
    try
       let trigger = get_trigger prog event in
@@ -311,11 +316,10 @@ let finalize (prog: prog_t): prog_t =
    let non_empty_triggers = 
       List.filter (fun trigger -> 
          match trigger.event with 
-         | Schema.InsertEvent(_, _, _) 
-         | Schema.DeleteEvent(_, _, _)
-         | Schema.BatchUpdate(_) ->
-            !(trigger.statements) <> []
-         | _ -> true
+            | Schema.InsertEvent(_, _, _) 
+            | Schema.DeleteEvent(_, _, _)
+            | Schema.BatchUpdate(_) -> !(trigger.statements) <> []
+            | _ -> true
       ) (get_triggers prog)
    in 
    let non_empty_db = 
@@ -359,7 +363,7 @@ let empty_prog (): prog_t =
    order of statements.    
  *)
 let sort_prog (prog:prog_t):prog_t =
-   List.iter (fun (trigger:trigger_t) ->
+   List.iter (fun (trigger: trigger_t) ->
       (* Filter out local trigger statements, these should always come first *)
       let (local_stmts, trigger_stmts) =
          List.partition (fun stmt -> deltarels_of_expr stmt.update_expr <> []) 
@@ -433,7 +437,7 @@ let plan_to_m3 (db:Schema.t) (plan:Plan.plan_t):prog_t =
       add_view prog ds.description;
       List.iter (fun (event, stmt) ->
          add_stmt prog event stmt
-      ) (ds.ds_triggers)
+      ) (ds.triggers)
    ) plan;
    finalize (sort_prog prog)
 ;;

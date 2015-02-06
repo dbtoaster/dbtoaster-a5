@@ -8,8 +8,8 @@ let (inform, warn, error, bug) = Debug.Logger.functions_for_module ""
 
 (************ Language Names ************)
 type language_t =
-   | Auto | SQL | Calc | MPlan | DistM3 | M3 | M3DM | K3 | IMP | CPP | Scala
-   | LMS  | Ocaml | Interpreter
+   | Auto | SQL | Calc  | MPlan | DistM3 | M3 | AnnotM3 | M3DM | K3 
+   | IMP  | CPP | Scala | LMS   | Ocaml  | Interpreter
 
 let languages =
    (* string     token         human-readable string         show in help?  *)
@@ -19,6 +19,7 @@ let languages =
       "PLAN"         , (MPlan      , "Materialization Plan"           , false);
       "M3"           , (M3         , "M3 Program"                     , true);
       "DISTM3"       , (DistM3     , "Distributable M3 Program"       , false);
+      "ANNOTM3"      , (AnnotM3    , "Annotated M3 Program"           , false);
       "M3DM"         , (M3DM       , "M3 Domain Maintenance Program"  , false);
       "K3"           , (K3         , "K3 Program"                     , false);
       "IMP"          , (IMP        , "Abstract Imperative Program"    , false);
@@ -289,6 +290,7 @@ type stage_t =
  | M3Marker
    | StageM3DomainMaintenance
    | StageM3ToDistM3
+   | StageM3ToAnnotM3
    | StagePrintM3
    | StagePrintM3DomainMaintenance
    | StageM3ToK3
@@ -314,7 +316,8 @@ let output_stages =
 let input_stages = 
    [  StageParseSQL; StageParseCalc; StageParseM3; StageParseK3  ]
 let optional_stages =
-   [  StageM3ToDistM3; StageRunInterpreter; StageCompileSource  ]
+   [  StageM3ToDistM3; StageM3ToAnnotM3; StageRunInterpreter; 
+      StageCompileSource  ]
 
 (* The following list (core_stages) MUST be kept in order of desired execution.
 
@@ -361,6 +364,7 @@ let active_stages = ref (ListAsSet.inter
       | MPlan    -> StagePrintPlan::(stages_to PlanMarker)
       | M3       -> StagePrintM3::(stages_to M3Marker)
       | DistM3   -> StagePrintM3::StageM3ToDistM3::(stages_to M3Marker)
+      | AnnotM3  -> StageM3ToAnnotM3::(stages_to M3Marker)
       | M3DM     -> StagePrintM3DomainMaintenance::
                      (stages_to StageM3DomainMaintenance)
       | K3       -> StagePrintK3::StageOptimizeK3::(stages_to K3Marker)
@@ -654,7 +658,7 @@ if Debug.active "TIME-CALCOPT" then (
 ;;
 if stage_is_active StagePrintPlan then (
    Debug.print "LOG-DRIVER" (fun () -> "Running Stage: PrintPlan");
-   output_endline (Compiler.string_of_plan !materialization_plan)
+   output_endline (Plan.string_of_plan !materialization_plan)
 )
 ;;
 
@@ -689,6 +693,129 @@ if stage_is_active StageM3ToDistM3 then (
    Debug.print "LOG-DRIVER" (fun () -> "Running Stage: M3ToDistM3");
    
    m3_program := DistributedM3.distributed_m3_of_m3 !m3_program
+)
+;;
+if stage_is_active StageM3ToAnnotM3 then (
+   Debug.print "LOG-DRIVER" (fun () -> "Running Stage: M3ToAnnotM3");
+   
+   let create_hashtbl pairs =
+      let hashtbl = Hashtbl.create (List.length pairs) in
+      List.iter (fun (k, v) -> Hashtbl.add hashtbl k v) pairs;
+      hashtbl
+   in
+
+   let tpch1_part_table = 
+      create_hashtbl [
+         (* ("SUM_QTY", None);
+         ("SUM_QTYLINEITEM1_DELTA", None);
+         ("SUM_BASE_PRICE", None);
+         ("SUM_BASE_PRICELINEITEM1_DELTA", None);
+         ("SUM_DISC_PRICE", None);
+         ("SUM_DISC_PRICELINEITEM1_DELTA", None);
+         ("SUM_CHARGE", None);
+         ("SUM_CHARGELINEITEM1_DELTA", None);
+         ("AVG_QTY", None);
+         ("AVG_QTYLINEITEM1_DOMAIN1_1_DELTA", None);
+         ("AVG_QTYLINEITEM1", None);
+         ("AVG_QTYLINEITEM1_L1_1", None);
+         ("AVG_PRICE", None);
+         ("AVG_PRICELINEITEM1", None);
+         ("AVG_DISC", None);
+         ("AVG_DISCLINEITEM1", None);
+         ("AVG_DISCLINEITEM4_DELTA", None);
+         ("COUNT_ORDER", None) *)
+      ]
+   in
+   let tpch2_part_table = 
+      create_hashtbl [ 
+         (* ("COUNT",                              Some([3]));  (* PK *)
+         ("COUNTPARTSUPP1_DOMAIN1_1_DELTA",     Some([0]));  (* PK *)
+         ("COUNTPARTSUPP1_P_2",                 Some([0]));  (* PK *)
+         ("COUNTPARTSUPP1_L2_2_DELTA",          Some([0]));  (* PK *)
+         ("COUNTPARTSUPP1_L2_2",                Some([0]));  (* SK *)
+         ("COUNTPARTSUPP1_L2_2SUPPLIER1_DELTA", Some([0]));  (* SK *) 
+         ("COUNTPARTSUPP1_L2_2SUPPLIER1",       Some([]));   (* N,R *)
+         ("COUNTPARTSUPP4_P_1",                 Some([0]));  (* SK *)
+         ("COUNTPARTSUPP4_P_1SUPPLIER1_DELTA",  Some([0]));  (* SK *)
+         ("COUNTPARTSUPP4_P_1SUPPLIER1",        Some([]));   (* N,R *)
+         ("COUNTSUPPLIER1",                     Some([0]));  (* PK *)
+         ("COUNTSUPPLIER1SUPPLIER1_P_1",        Some([0]));  (* PK *)
+         ("COUNTSUPPLIER1SUPPLIER1_P_1PART1",   Some([0]));  (* PK *)
+         ("COUNTPART1_DELTA",                   Some([0]));  (* PK *)
+         ("COUNTPART1",                         Some([5]));  (* PK *)
+         ("COUNTPART1_L2_1",                    Some([0]));  (* PK *)
+         ("NATION",                             None);
+         ("REGION",                             None); *)
+      ]
+   in 
+   let tpch3_part_table = 
+      create_hashtbl [ 
+(*          ("QUERY3",                   None); (* Some([0])); *)
+         ("QUERY3LINEITEM1_DELTA",    Some([0]));
+         ("QUERY3LINEITEM1",          Some([0]));
+         ("QUERY3LINEITEM1CUSTOMER1", Some([0]));
+         ("QUERY3ORDERS1_DELTA",      Some([0]));
+         ("QUERY3ORDERS1_P_1",        Some([0]));    (* CK *)
+         ("QUERY3ORDERS1_P_2",        Some([0]));
+         ("QUERY3CUSTOMER1_DELTA",    Some([0]));
+         ("QUERY3CUSTOMER1",          Some([0]))     (* CK *) *)
+      ]
+   in
+   let tpch4_part_table = 
+      create_hashtbl [
+         (* ("ORDER_COUNT", None);
+         ("ORDER_COUNTLINEITEM1_DOMAIN1_1_DELTA", Some([0]));  (* OK *)
+         ("ORDER_COUNTLINEITEM1",                 Some([0]));  (* OK *)
+         ("ORDER_COUNTORDERS1_DELTA",             Some([0]));  (* OK *)
+         ("ORDER_COUNTORDERS1_E1_1",              Some([0]));  (* OK *) *)
+      ]
+   in
+   let tpch6_part_table = 
+      create_hashtbl [ 
+         (* ("REVENUE", None); 
+         ("REVENUELINEITEM1_DELTA", None) *)
+      ]
+   in
+   let tpch12_part_table = 
+      create_hashtbl [ 
+         (* ("HIGH_LINE_COUNT", None); 
+         ("HIGH_LINE_COUNTLINEITEM1_DELTA", Some([0]));     (* OK *)
+         ("HIGH_LINE_COUNTLINEITEM1",       Some([0]));     (* OK *)
+         ("HIGH_LINE_COUNTLINEITEM2_DELTA", Some([0]));     (* OK *)
+         ("HIGH_LINE_COUNTLINEITEM3",       Some([0]));     (* OK *)
+         ("HIGH_LINE_COUNTORDERS1_DELTA",   Some([0]));     (* OK *)
+         ("HIGH_LINE_COUNTORDERS1",         Some([0]));     (* OK *)
+         ("HIGH_LINE_COUNTORDERS2",         Some([0]));     (* OK *)
+         ("HIGH_LINE_COUNTORDERS3_DELTA",   Some([0]));     (* OK *)
+         ("LOW_LINE_COUNT", None);
+         ("LOW_LINE_COUNTLINEITEM1",        Some([0]));     (* OK *)
+         ("LOW_LINE_COUNTORDERS1_DELTA",    Some([0]));     (* OK *) *)
+      ]
+   in
+
+   let part_table_context =
+      create_hashtbl [
+         (* ("test/queries/tpch/query1.sql", tpch1_part_table);
+         ("test/queries/tpch/query2.sql", tpch2_part_table);
+         ("test/queries/tpch/query3.sql", tpch3_part_table);
+         ("test/queries/tpch/query4.sql", tpch4_part_table);
+         ("test/queries/tpch/query6.sql", tpch6_part_table);
+         ("test/queries/tpch/query12.sql", tpch12_part_table); *)
+      ]
+   in
+                                 
+   let part_table = 
+      try Hashtbl.find part_table_context (List.hd !files) 
+      with Not_found -> create_hashtbl []
+   in
+
+   Debug.activate("PRINT-ANNOTATED-M3");
+
+   let annotated_m3_program = 
+      AnnotatedM3.lift_prog part_table (!m3_program) 
+   in
+      output_endline (
+         AnnotatedM3.string_of_prog part_table annotated_m3_program)
 )
 ;;
 if stage_is_active StagePrintM3 then (
