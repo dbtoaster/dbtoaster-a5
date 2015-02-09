@@ -427,7 +427,10 @@ let rec lift (part_table: part_table_t) (expr: C.expr_t): dist_expr_t =
                      Some(Distributed(pkeys))
                   | None -> Some(Local)
                end
-            with Not_found -> Some(Local)
+            with Not_found -> 
+               if (Hashtbl.length part_table > 0) 
+               then failwith ("Missing partitioning information for " ^ ename)
+               else Some(Local)
          in
          let meta_info = { 
             part_info = part_info;
