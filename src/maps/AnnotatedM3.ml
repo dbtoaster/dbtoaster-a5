@@ -456,6 +456,8 @@ let rec lift (part_table: part_table_t) (expr: C.expr_t): dist_expr_t =
                (* The case when we have partial sums, but not 
                   partitioning information -->  gather results. *)
                mk_gather new_dexpr
+               (* if gb_vars = [] then mk_gather new_dexpr
+               else mk_repartition [] new_dexpr *)
             | _ -> new_dexpr
          end
 
@@ -584,9 +586,11 @@ let rec cost_of_expr (dexpr: dist_expr_t): int =
       | Repartition(_, subexp, _) -> cost_of_expr subexp + 1
 
 
-let rec optimize_expr (dexpr: dist_expr_t): dist_expr_t = 
-   let rcr = optimize_expr in   
-   begin match dexpr with 
+let optimize_expr (dexpr: dist_expr_t): dist_expr_t = 
+   Debug.print "LOG-ANNOTM3-OPT" (fun () ->
+      "Optimizing expr (START): "^(string_of_expr dexpr) 
+   ); 
+   let rec rcr dexpr = begin match dexpr with 
       | Sum(meta, sum_list) -> 
          let rec group sl = match sl with
             | [] -> []
@@ -670,7 +674,7 @@ let rec optimize_expr (dexpr: dist_expr_t): dist_expr_t =
                | Exists(meta, subexp) -> 
                   Exists(new_meta, rcr (mk_rep subexp))
                | Gather(meta, subexp) -> 
-                  Gather(new_meta, rcr (mk_rep subexp))
+                  rcr (mk_rep subexp)
                | Repartition(meta, subexp, pkeys) -> 
                   rcr (mk_rep subexp)
             end
@@ -680,7 +684,15 @@ let rec optimize_expr (dexpr: dist_expr_t): dist_expr_t =
             let new_cost = cost_of_expr new_dexpr in
             if (new_cost < old_cost) then new_dexpr else dexpr
          end
-   end
+      end
+   in 
+   let rewritten_dexpr = rcr dexpr in
+   begin
+      Debug.print "LOG-ANNOTM3-OPT" (fun () ->
+         "Optimizing expr (END): "^(string_of_expr rewritten_dexpr) 
+      );
+      rewritten_dexpr
+   end 
 
 (**
    An annotated M3 program
