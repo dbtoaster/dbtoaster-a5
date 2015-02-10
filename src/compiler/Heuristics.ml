@@ -562,14 +562,62 @@ let rec materialize ?(scope:var_t list = [])
       | Some(ev) -> ListAsSet.union scope (Schema.event_vars ev)
       | None -> scope
    in
-
+   let rec merge_aggsums terms = match terms with
+      | [] -> []
+      | head::tail ->
+         let (merged, tail_terms) = 
+            List.fold_left (fun (merged, terms) term ->
+               if (merged) then (merged, terms @ [term]) 
+               else match (head, term) with 
+                  | (CalcRing.Val(AggSum(gb1, e1)), 
+                     CalcRing.Val(AggSum(gb2, e2))) 
+                     when (ListAsSet.seteq gb1 gb2) &&
+                          (ListAsSet.seteq (snd (schema_of_expr e1)) 
+                                           (snd (schema_of_expr e2))) -> 
+                     (true, 
+                      terms @ [C.mk_aggsum gb1 (CalcRing.mk_sum [ e1; e2 ])])
+                  | (CalcRing.Prod(CalcRing.Val(AggSum(gb1, e1)) :: 
+                                   [CalcRing.Val(Value(v))]), 
+                     CalcRing.Val(AggSum(gb2, e2))) 
+                     when (ListAsSet.seteq gb1 gb2) && 
+                          (Arithmetic.value_is_const v) &&
+                          (ListAsSet.seteq (snd (schema_of_expr e1)) 
+                                           (snd (schema_of_expr e2))) -> 
+                     let new_e1 = CalcRing.mk_prod [ e1; C.mk_value(v) ] in
+                     (true, 
+                      terms @ [C.mk_aggsum gb1 (CalcRing.mk_sum [new_e1; e2])])
+                  | (CalcRing.Val(AggSum(gb1, e1)), 
+                     CalcRing.Prod(CalcRing.Val(AggSum(gb2, e2)) :: 
+                                   [ CalcRing.Val(Value(v)) ]))
+                     when (ListAsSet.seteq gb1 gb2) && 
+                          (Arithmetic.value_is_const v) &&
+                          (ListAsSet.seteq (snd (schema_of_expr e1)) 
+                                           (snd (schema_of_expr e2))) ->
+                     let new_e2 = CalcRing.mk_prod [ e2; C.mk_value(v) ] in
+                     (true, 
+                      terms @ [C.mk_aggsum gb1 (CalcRing.mk_sum [e1; new_e2])])
+                  | _ -> (false, terms @ [term])
+            ) (false, []) (merge_aggsums tail)
+         in 
+            if (merged) then tail_terms else (head :: tail_terms)
+   in
    let (todos, mat_expr) = 
       decompose_and_fold 
             expr_scope 
             ([], CalcRing.zero) 
             ([], CalcRing.one)
             (fun (todos, mat_expr) (new_todos, new_mat_expr) -> 
-               (todos @ new_todos, CalcRing.mk_sum [mat_expr; new_mat_expr]))
+               (todos @ new_todos, 
+                if (Debug.active "HEURISTICS-MERGE-AGGSUMS") then
+                (* merge_aggsums - a hack that allows bringing compatible
+                   subexpressions back under the same AggSum to enable
+                   factorization of materialized expressions (it's the 
+                   opposite of CalculusTransform.nesting_rewrites); ideally,
+                   the materializer shouldn't use polynomial decomposition *)  
+                   let terms = CalcRing.sum_list mat_expr in
+                   let new_terms = CalcRing.sum_list new_mat_expr in
+                   CalcRing.mk_sum (merge_aggsums (terms @ new_terms))
+                else CalcRing.mk_sum [mat_expr; new_mat_expr]))
             (fun (todos, mat_expr) (new_todos, new_mat_expr) -> 
                (todos @ new_todos, CalcRing.mk_prod [mat_expr; new_mat_expr]))
             (fun prefix schema expr -> 

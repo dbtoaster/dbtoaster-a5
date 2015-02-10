@@ -374,8 +374,8 @@ test ~opt_out:true "Nested Exists" (BatchUpdate("R"))
   (AggSum([], 
      ((X ^=
         (AggSum([A], (R(A, B) * B)) + AggSum([A], ((DELTA R)(A, B) * B)))) *
-       {X > 100} *
-       EXISTS( (AggSum([A], R(A, B)) + AggSum([A], (DELTA R)(A, B))))
+       EXISTS( (AggSum([A], R(A, B)) + AggSum([A], (DELTA R)(A, B)))) *
+       {X > 100}
        )) +
     (AggSum([], 
        ((X ^= AggSum([A], (R(A, B) * B))) * EXISTS( AggSum([A], R(A, B))) *

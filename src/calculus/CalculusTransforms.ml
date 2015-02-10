@@ -2355,8 +2355,7 @@ let optimize_expr ?(optimizations = default_optimizations)
             in Hashtbl.replace private_time_hash o tot; 
                result
          in include_opt_base o timed_fn
-   in      
-      include_opt OptFactorizePolynomial     (factorize_polynomial scope);
+   in            
       include_opt OptAdvanceLifts            (advance_lifts scope);
       include_opt OptUnifyLifts              (unify_lifts scope schema);
       include_opt OptLiftEqualities          (lift_equalities scope);
@@ -2365,6 +2364,7 @@ let optimize_expr ?(optimizations = default_optimizations)
       include_opt OptExtractDomains          (extract_domains scope);
       include_opt OptCancelTerms             (cancel_terms);
       include_opt OptNestingRewrites         (nesting_rewrites);
+      include_opt OptFactorizePolynomial     (factorize_polynomial scope);
       include_opt OptCombineValues           (combine_values);
       include_opt OptNormalize               (normalize);
       

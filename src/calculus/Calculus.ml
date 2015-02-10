@@ -958,7 +958,7 @@ let mk_fresh_var = FreshVariable.declare_class "calculus/Calculus" ""
 
 (** Erase AggSums from the given expression, while renaming 
     any new variables that might get introduced. The method 
-    descends only into AggSums. *)
+    descends only into AggSums. Assumes expr is monomial. *)
 let rec erase_aggsums ?(scope = []) (expr: expr_t) : expr_t = 
    let map_var (vname, vtype) =
       ((vname, vtype), (mk_fresh_var ~inline:vname (), vtype)) 

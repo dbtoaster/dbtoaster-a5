@@ -900,7 +900,7 @@ in
             )
          )
       )"
-      "(B ^= dB) * (A ^= dA) * (
+      "(A ^= dA) * (B ^= dB) * (
          ((ALPHA ^= R(dA, dB)) * (BETA ^= R(dA,dB)) * {-1})
             + 
          ((BETA ^= R(dA,dB) + 1) * (ALPHA ^= R(dA, dB) + 1))
