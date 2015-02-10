@@ -454,10 +454,8 @@ let rec lift (part_table: part_table_t) (expr: C.expr_t): dist_expr_t =
             | Some(Distributed(pkeys)) 
                when not (ListAsSet.subset pkeys expr_vars) -> 
                (* The case when we have partial sums, but not 
-                  partitioning information -->  gather singleton 
-                  results, otherwise, repartition. *)
-               if gb_vars = [] then mk_gather new_dexpr
-               else mk_repartition [] new_dexpr
+                  partitioning information -->  gather results. *)
+               mk_gather new_dexpr
             | _ -> new_dexpr
          end
 

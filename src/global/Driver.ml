@@ -1046,6 +1046,18 @@ if stage_is_active StageM3ToAnnotM3 then (
          ("AVG_YEARLYLINEITEM5_DELTA",           Some([0])); (* PK *)
       ]
    in
+   let tpch17a_part_table = 
+      create_hashtbl [ 
+         ("QUERY17",                               None); 
+         ("QUERY17PART1_DELTA",               Some([0])); (* PK *)
+         ("QUERY17LINEITEM1_DOMAIN1_1_DELTA", Some([0])); (* PK *)
+         ("QUERY17LINEITEM1_P_1",             Some([0])); (* PK *)
+         ("QUERY17LINEITEM1_P_2",             Some([0])); (* PK *)
+         ("QUERY17LINEITEM1_L1_1",            Some([0])); (* PK *)
+         ("QUERY17LINEITEM1_L1_3_DELTA",      Some([0])); (* PK *)
+         ("QUERY17LINEITEM2_DELTA",           Some([0])); (* PK *)
+      ]
+   in   
    let tpch18_part_table = 
       create_hashtbl [ 
          ("QUERY18",                          Some([2])); (* OK *) (* 1:CK *)
@@ -1194,6 +1206,7 @@ if stage_is_active StageM3ToAnnotM3 then (
          ("test/queries/tpch/query15.sql", tpch15_part_table);
          ("test/queries/tpch/query16.sql", tpch16_part_table);
          ("test/queries/tpch/query17.sql", tpch17_part_table);
+         ("test/queries/tpch/query17a.sql", tpch17a_part_table);
          ("test/queries/tpch/query18.sql", tpch18_part_table);
          ("test/queries/tpch/query19.sql", tpch19_part_table);
          ("test/queries/tpch/query20.sql", tpch20_part_table);
