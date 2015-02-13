@@ -2362,10 +2362,10 @@ let optimize_expr ?(optimizations = default_optimizations)
       include_opt OptSimplifyDomains         (simplify_domains);
       include_opt OptNestingRewrites         (nesting_rewrites);
       include_opt OptExtractDomains          (extract_domains scope);
-      include_opt OptCancelTerms             (cancel_terms);
       include_opt OptNestingRewrites         (nesting_rewrites);
       include_opt OptFactorizePolynomial     (factorize_polynomial scope);
       include_opt OptCombineValues           (combine_values);
+      include_opt OptCancelTerms             (cancel_terms);
       include_opt OptNormalize               (normalize);
       
    if Debug.active "LOG-CALCOPT-STEPS" then Fixpoint.build fp_1 

@@ -808,16 +808,16 @@ in
                       (AggSum([],((QTY2 ^= dQTY) * QTY2)))) -
            (nested ^= AggSum([PK], L(PK, QTY2) * QTY2))
        )))"
-    "(P(dPK) *
+    (* "(P(dPK) *
       (((nested ^= (AggSum([dPK], (L(dPK, QTY2) * QTY2)) + dQTY)) *
          (L(dPK, QTY) + (QTY ^= dQTY))) +
-      ((nested ^= AggSum([dPK], (L(dPK, QTY2) * QTY2))) * L(dPK, QTY) * {-1})))"; 
-    (* "(P(dPK) * 
+      ((nested ^= AggSum([dPK], (L(dPK, QTY2) * QTY2))) * L(dPK, QTY) * {-1})))";  *)
+     "(P(dPK) * 
         ((L(dPK, QTY) *
           ((nested ^= (AggSum([dPK], (L(dPK, QTY2) * QTY2)) + dQTY)) +
           ((nested ^= AggSum([dPK], (L(dPK, QTY2) * QTY2))) * {-1}))) +
         ((nested ^= (AggSum([dPK], (L(dPK, QTY2) * QTY2)) + dQTY)) *
-          (QTY ^= dQTY))))";  *)
+          (QTY ^= dQTY))))";
 
     test "SumNestedInTarget Delta" ["dA"; "dB"] []
       "AggSum([], 

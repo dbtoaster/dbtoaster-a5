@@ -86,30 +86,112 @@ let get_part_info (dexpr: dist_expr_t): part_info_t option =
 let  sum_list e = match e with  Sum(_, l) -> l | _ -> [e]
 let prod_list e = match e with Prod(_, l) -> l | _ -> [e]
 
+let string_of_part_info (part_info: part_info_t option): string = 
+   if not (Debug.active "PRINT-PARTITION-INFO") then "" else
+   match part_info with
+      | Some(Local) -> "<Local>"
+      | Some(Distributed(pkeys)) -> 
+         "<" ^ (ListExtras.string_of_list ~sep:", " string_of_var pkeys) ^ ">"
+      | None -> ""
+
+let rec string_of_expr (dexpr: dist_expr_t): string = 
+   let (sum_op, prod_op, neg_op) = 
+      if Debug.active "PRINT-RINGS" then (" U ", " |><| ", "(<>:-1)*")
+                                    else (" + ", " * ", "NEG * ")
+   in
+   match dexpr with
+      | Sum(meta, sl) -> 
+         "(" ^ String.concat sum_op (List.map string_of_expr sl) ^")" ^
+         (string_of_part_info meta.part_info)
+
+      | Prod(meta, pl) -> 
+         "(" ^ String.concat prod_op (List.map string_of_expr pl) ^")" ^
+         (string_of_part_info meta.part_info)
+
+      | Neg(meta, el) -> 
+         "(" ^ neg_op ^ (string_of_expr el) ^")" ^
+         (string_of_part_info meta.part_info)
+
+      | Value(meta, v) -> 
+         "{" ^ (Arithmetic.string_of_value v) ^ "}" ^
+         (string_of_part_info meta.part_info)
+
+      | Cmp(meta, op, v1, v2) -> 
+         "{" ^ (string_of_value v1) ^ 
+         " " ^ (string_of_cmp op) ^
+         " " ^ (string_of_value v2) ^ "}" ^
+         (string_of_part_info meta.part_info)
+      | Rel(meta, rname, rvars) ->
+         rname ^
+         "(" ^ (ListExtras.string_of_list ~sep:", " string_of_var rvars) ^ ")" ^
+         (string_of_part_info meta.part_info)
+
+      | DeltaRel(meta, rname, rvars) ->
+         "(DELTA " ^ rname ^ ")" ^          
+         "(" ^ (ListExtras.string_of_list ~sep:", " string_of_var rvars) ^ ")" ^
+         (string_of_part_info meta.part_info)
+
+      | External(meta, (ename, eins, eouts, etype, emeta)) ->
+         ename ^
+         "(" ^ (string_of_type etype) ^ ")[" ^
+         (ListExtras.string_of_list ~sep:", " string_of_var eins) ^ "][" ^
+         (ListExtras.string_of_list ~sep:", " string_of_var eouts) ^ "]" ^
+         (match emeta with | None -> ""
+                           | Some(s) -> ":(" ^ (string_of_expr s) ^ ")") ^
+         (string_of_part_info meta.part_info)
+
+      | AggSum(meta, gb_vars, subexp) ->
+         "AggSum([" ^ 
+         (ListExtras.string_of_list ~sep:", " string_of_var gb_vars) ^"],(" ^ 
+         (string_of_expr subexp) ^ "))" ^
+         (string_of_part_info meta.part_info)
+      
+      | DomainDelta(meta, subexp) -> 
+         "DOMAIN(" ^ (string_of_expr subexp) ^ ")" ^
+         (string_of_part_info meta.part_info)
+
+      | Lift(meta, target, subexp)    ->
+         "(" ^ (string_of_var target) ^ " ^= " ^ (string_of_expr subexp) ^ ")" ^
+         (string_of_part_info meta.part_info)
+
+(***** BEGIN EXISTS HACK *****)
+      | Exists(meta, subexp) ->
+         "Exists(" ^ (string_of_expr subexp) ^ ")" ^
+         (string_of_part_info meta.part_info)
+(***** END EXISTS HACK *****)
+
+      | Gather(meta, subexp) ->          
+         if not (Debug.active "PRINT-ANNOTATED-M3") then 
+            string_of_expr subexp
+         else
+            "Gather(" ^ (string_of_expr subexp) ^ ")" ^
+            (string_of_part_info meta.part_info)
+      | Repartition(meta, subexp, pkeys) -> 
+         if not (Debug.active "PRINT-ANNOTATED-M3") then 
+            string_of_expr subexp
+         else
+            "Repartition([" ^ 
+            (ListExtras.string_of_list ~sep:", " string_of_var pkeys) ^"], (" ^
+            (string_of_expr subexp) ^ "))" ^
+            (string_of_part_info meta.part_info)
+
 (* Construction Helpers *)
-let mk_gather (dexpr: dist_expr_t): dist_expr_t = 
-   let dexpr_meta = get_meta_info dexpr in
-   match dexpr_meta.part_info with
-      | Some(Local) -> dexpr
-      | Some(Distributed(_)) -> 
-         let meta_info = { 
-            part_info = Some(Local);
-            ivars = dexpr_meta.ivars;
-            ovars = dexpr_meta.ovars
-         } in
-            Gather(meta_info, dexpr)
-      | None -> dexpr
-  
 let rec mk_repartition (pkeys: var_t list) (dexpr: dist_expr_t): dist_expr_t =
    let meta_info = get_meta_info dexpr in
    let dexpr_vars = ListAsSet.union meta_info.ivars meta_info.ovars in
 
    (* Check if partitioning is possible, otherwise replicate *)
    let trunc_pkeys = if ListAsSet.subset pkeys dexpr_vars then pkeys else [] in
-
+   let rcr = mk_repartition trunc_pkeys in
    match dexpr with 
-      | Repartition(_, subexp, _) -> mk_repartition trunc_pkeys subexp
+      | Gather(_, subexp)         -> rcr subexp
+      | Repartition(_, subexp, _) -> rcr subexp
+      | Lift(_, v, subexp) ->
+         let new_subexp = rcr subexp in
+         let meta_info = get_meta_info new_subexp in
+            Lift(meta_info, v, new_subexp)
       | _ ->
+         if (meta_info.ivars == []) then 
          begin match meta_info.part_info with
             (* Check if already partitioned by trunc_pkeys *)
             | Some(Distributed(pkeys2)) when pkeys2 = trunc_pkeys -> dexpr
@@ -123,9 +205,93 @@ let rec mk_repartition (pkeys: var_t list) (dexpr: dist_expr_t): dist_expr_t =
                Repartition(new_meta_info, dexpr, trunc_pkeys)
             | None -> dexpr
          end
-   
-let rec mk_sum (dexpr_list: dist_expr_t list): dist_expr_t =
-   match dexpr_list with
+         else begin match dexpr with 
+            | Sum(_, sl) -> mk_sum (List.map rcr sl)
+            | Prod(_, pl) -> mk_prod (List.map rcr pl)
+            | Neg(_, subexp) ->
+               let new_subexp = rcr subexp in
+               let meta_info = get_meta_info new_subexp in
+                  Neg(meta_info, new_subexp) 
+            | Lift(_, v, subexp) -> 
+               let new_subexp = rcr subexp in
+               let meta_info = get_meta_info new_subexp in
+                  Lift(meta_info, v, new_subexp)                       
+            | Exists(_, subexp) -> 
+               let new_subexp = rcr subexp in
+               let meta_info = get_meta_info new_subexp in
+                  Exists(meta_info, new_subexp)
+            | DomainDelta(_, subexp) -> 
+               let new_subexp = rcr subexp in
+               let meta_info = get_meta_info new_subexp in
+                  DomainDelta(meta_info, new_subexp)
+            | AggSum(_, gb_vars, subexp) ->
+               let new_subexp = rcr subexp in
+               let meta_info = get_meta_info new_subexp in
+                  AggSum(meta_info, gb_vars, new_subexp)
+            | Value(m, _) | Cmp(m, _, _, _) -> dexpr
+            | Rel _ 
+            | DeltaRel _ 
+            | External _ 
+            | Gather _ 
+            | Repartition _ -> failwith "Not possible to happen"
+         end
+
+and mk_gather (dexpr: dist_expr_t): dist_expr_t = 
+   let meta_info = get_meta_info dexpr in
+   let rcr = mk_gather in
+   match dexpr with 
+      | Gather(_, subexp)         -> rcr subexp
+      | Repartition(_, subexp, _) -> rcr subexp
+      | Lift(_, v, subexp) ->
+         let new_subexp = rcr subexp in
+         let meta_info = get_meta_info new_subexp in
+            Lift(meta_info, v, new_subexp)
+      | _ -> 
+         if (meta_info.ivars == []) then 
+         begin match meta_info.part_info with
+            | Some(Local) -> dexpr
+            | Some(Distributed(_)) -> 
+               let new_meta_info = { 
+                  part_info = Some(Local);
+                  ivars = meta_info.ivars;
+                  ovars = meta_info.ovars
+               } in
+                  Gather(new_meta_info, dexpr)
+            | None -> dexpr
+         end
+         else begin match dexpr with 
+            | Sum(_, sl) -> mk_sum (List.map rcr sl)               
+            | Prod(_, pl) -> mk_prod (List.map rcr pl)
+            | Neg(_, subexp) ->
+               let new_subexp = rcr subexp in
+               let meta_info = get_meta_info new_subexp in
+                  Neg(meta_info, new_subexp) 
+            | Lift(_, v, subexp) -> 
+               let new_subexp = rcr subexp in
+               let meta_info = get_meta_info new_subexp in
+                  Lift(meta_info, v, new_subexp)                       
+            | Exists(_, subexp) -> 
+               let new_subexp = rcr subexp in
+               let meta_info = get_meta_info new_subexp in
+                  Exists(meta_info, new_subexp)
+            | DomainDelta(_, subexp) -> 
+               let new_subexp = rcr subexp in
+               let meta_info = get_meta_info new_subexp in
+                  DomainDelta(meta_info, new_subexp)
+            | AggSum(_, gb_vars, subexp) ->
+               let new_subexp = rcr subexp in
+               let meta_info = get_meta_info new_subexp in
+                  AggSum(meta_info, gb_vars, new_subexp)
+            | Value(m, _) | Cmp(m, _, _, _) -> dexpr
+            | Rel _ 
+            | DeltaRel _ 
+            | External _ 
+            | Gather _ 
+            | Repartition _ -> failwith "Not possible to happen"            
+         end
+
+and mk_sum (dexpr_list: dist_expr_t list): dist_expr_t =
+   let rec rcr expr_list = match  expr_list with
       | [] -> failwith "Empty sum list in DistCalculus.Sum"
       | [x] -> x
       | hd1::(hd2::tl) ->
@@ -248,10 +414,12 @@ let rec mk_sum (dexpr_list: dist_expr_t list): dist_expr_t =
                   } in
                      Sum(meta_info, (sum_list hd1) @ (sum_list hd2))
          in
-            mk_sum (merged_hd :: tl)
+            rcr (merged_hd :: tl)
+   in
+      rcr (List.flatten (List.map sum_list dexpr_list))
 
-let rec mk_prod (dexpr_list: dist_expr_t list): dist_expr_t =
-   match dexpr_list with
+and mk_prod (dexpr_list: dist_expr_t list): dist_expr_t =
+   let rec rcr expr_list = match expr_list with
       | [] -> failwith "Empty prod list in DistCalculus.Prod"
       | [x] -> x
       | hd1::(hd2::tl) ->
@@ -346,7 +514,9 @@ let rec mk_prod (dexpr_list: dist_expr_t list): dist_expr_t =
                   } in
                      Prod(meta_info, (prod_list hd1) @ (prod_list hd2))
          in
-            mk_prod (merged_hd :: tl)
+            rcr (merged_hd :: tl)
+   in
+     rcr (List.flatten (List.map prod_list dexpr_list))
 
 
 let rec lift (part_table: part_table_t) (expr: C.expr_t): dist_expr_t = 
@@ -456,8 +626,6 @@ let rec lift (part_table: part_table_t) (expr: C.expr_t): dist_expr_t =
                (* The case when we have partial sums, but not 
                   partitioning information -->  gather results. *)
                mk_gather new_dexpr
-               (* if gb_vars = [] then mk_gather new_dexpr
-               else mk_repartition [] new_dexpr *)
             | _ -> new_dexpr
          end
 
@@ -479,95 +647,6 @@ let rec lift (part_table: part_table_t) (expr: C.expr_t): dist_expr_t =
          let dsubexp = rcr subexp in
             Exists(get_meta_info dsubexp, dsubexp)
 
-
-let string_of_part_info (part_info: part_info_t option): string = 
-   if not (Debug.active "PRINT-PARTITION-INFO") then "" else
-   match part_info with
-      | Some(Local) -> "<Local>"
-      | Some(Distributed(pkeys)) -> 
-         "<" ^ (ListExtras.string_of_list ~sep:", " string_of_var pkeys) ^ ">"
-      | None -> ""
-
-let rec string_of_expr (dexpr: dist_expr_t): string = 
-   let (sum_op, prod_op, neg_op) = 
-      if Debug.active "PRINT-RINGS" then (" U ", " |><| ", "(<>:-1)*")
-                                    else (" + ", " * ", "NEG * ")
-   in
-   match dexpr with
-      | Sum(meta, sl) -> 
-         "(" ^ String.concat sum_op (List.map string_of_expr sl) ^")" ^
-         (string_of_part_info meta.part_info)
-
-      | Prod(meta, pl) -> 
-         "(" ^ String.concat prod_op (List.map string_of_expr pl) ^")" ^
-         (string_of_part_info meta.part_info)
-
-      | Neg(meta, el) -> 
-         "(" ^ neg_op ^ (string_of_expr el) ^")" ^
-         (string_of_part_info meta.part_info)
-
-      | Value(meta, v) -> 
-         "{" ^ (Arithmetic.string_of_value v) ^ "}" ^
-         (string_of_part_info meta.part_info)
-
-      | Cmp(meta, op, v1, v2) -> 
-         "{" ^ (string_of_value v1) ^ 
-         " " ^ (string_of_cmp op) ^
-         " " ^ (string_of_value v2) ^ "}" ^
-         (string_of_part_info meta.part_info)
-      | Rel(meta, rname, rvars) ->
-         rname ^
-         "(" ^ (ListExtras.string_of_list ~sep:", " string_of_var rvars) ^ ")" ^
-         (string_of_part_info meta.part_info)
-
-      | DeltaRel(meta, rname, rvars) ->
-         "(DELTA " ^ rname ^ ")" ^          
-         "(" ^ (ListExtras.string_of_list ~sep:", " string_of_var rvars) ^ ")" ^
-         (string_of_part_info meta.part_info)
-
-      | External(meta, (ename, eins, eouts, etype, emeta)) ->
-         ename ^
-         "(" ^ (string_of_type etype) ^ ")[" ^
-         (ListExtras.string_of_list ~sep:", " string_of_var eins) ^ "][" ^
-         (ListExtras.string_of_list ~sep:", " string_of_var eouts) ^ "]" ^
-         (match emeta with | None -> ""
-                           | Some(s) -> ":(" ^ (string_of_expr s) ^ ")") ^
-         (string_of_part_info meta.part_info)
-
-      | AggSum(meta, gb_vars, subexp) ->
-         "AggSum([" ^ 
-         (ListExtras.string_of_list ~sep:", " string_of_var gb_vars) ^"],(" ^ 
-         (string_of_expr subexp) ^ "))" ^
-         (string_of_part_info meta.part_info)
-      
-      | DomainDelta(meta, subexp) -> 
-         "DOMAIN(" ^ (string_of_expr subexp) ^ ")" ^
-         (string_of_part_info meta.part_info)
-
-      | Lift(meta, target, subexp)    ->
-         "(" ^ (string_of_var target) ^ " ^= " ^ (string_of_expr subexp) ^ ")" ^
-         (string_of_part_info meta.part_info)
-
-(***** BEGIN EXISTS HACK *****)
-      | Exists(meta, subexp) ->
-         "Exists(" ^ (string_of_expr subexp) ^ ")" ^
-         (string_of_part_info meta.part_info)
-(***** END EXISTS HACK *****)
-
-      | Gather(meta, subexp) ->          
-         if not (Debug.active "PRINT-ANNOTATED-M3") then 
-            string_of_expr subexp
-         else
-            "Gather(" ^ (string_of_expr subexp) ^ ")" ^
-            (string_of_part_info meta.part_info)
-      | Repartition(meta, subexp, pkeys) -> 
-         if not (Debug.active "PRINT-ANNOTATED-M3") then 
-            string_of_expr subexp
-         else
-            "Repartition([" ^ 
-            (ListExtras.string_of_list ~sep:", " string_of_var pkeys) ^"], (" ^
-            (string_of_expr subexp) ^ "))" ^
-            (string_of_part_info meta.part_info)
 
 let rec cost_of_expr (dexpr: dist_expr_t): int =
    match dexpr with
@@ -635,10 +714,52 @@ let optimize_expr (dexpr: dist_expr_t): dist_expr_t =
       | Lift(meta, v, subexp) -> Lift(meta, v, rcr subexp)   
       | Exists(meta, subexp) -> Exists(meta, rcr subexp)
       | Gather(meta, subexp) -> 
-         let new_subexp = rcr subexp in
+         (* let new_subexp = rcr subexp in
          begin match new_subexp with
             | Repartition(_, subexp2, _) -> mk_gather subexp2
             | _ -> mk_gather new_subexp
+         end *)
+         (* Try pushing Gather down the tree and compare the costs *)
+         let new_dexpr = 
+            (* let mk_rep_opt e = optimize_expr (mk_gather e) in *)
+            let new_meta = {
+               part_info = Some(Local);
+               ivars = meta.ivars;
+               ovars = meta.ovars;
+            } in
+            begin match subexp with
+               | Sum(meta, sum_list) -> 
+                  rcr (Sum(new_meta, List.map mk_gather sum_list))
+               | Prod(meta, prod_list) -> 
+                  rcr (Prod(new_meta, List.map mk_gather prod_list))
+               | Neg(meta, subexp) -> 
+                  rcr (Neg(new_meta, mk_gather subexp))
+               | Value _ | Cmp _ | Rel _ | DeltaRel _ -> mk_gather dexpr
+               | External(meta, (en, ei, eo, et, eivc)) -> 
+                  begin match eivc with  
+                     | Some(subexp) -> 
+                        mk_gather (External(new_meta, (en, ei, eo, et, 
+                                            Some(rcr (mk_gather subexp)))))
+                     | None -> mk_gather dexpr
+                  end
+               | AggSum(meta, gb_vars, subexp) -> 
+                  AggSum(new_meta, gb_vars, rcr (mk_gather subexp))
+               | DomainDelta(meta, subexp) -> 
+                  DomainDelta(new_meta, rcr (mk_gather subexp))
+               | Lift(meta, v, subexp) -> 
+                  Lift(new_meta, v, rcr (mk_gather subexp))
+               | Exists(meta, subexp) -> 
+                  Exists(new_meta, rcr (mk_gather subexp))
+               | Gather(meta, subexp) -> 
+                  rcr (mk_gather subexp)
+               | Repartition(meta, subexp, pkeys) -> 
+                  rcr (mk_gather subexp)
+            end
+         in
+         begin
+            let old_cost = cost_of_expr dexpr in
+            let new_cost = cost_of_expr new_dexpr in
+            if (new_cost < old_cost) then new_dexpr else dexpr
          end
       | Repartition(meta, subexp, pkeys) -> 
          (* Try pushing Repartition down the tree and compare the costs *)
@@ -662,7 +783,7 @@ let optimize_expr (dexpr: dist_expr_t): dist_expr_t =
                   begin match eivc with  
                      | Some(subexp) -> 
                         mk_rep (External(new_meta, (en, ei, eo, et, 
-                                                   Some(rcr (mk_rep subexp)))))
+                                         Some(rcr (mk_rep subexp)))))
                      | None -> mk_rep dexpr
                   end
                | AggSum(meta, gb_vars, subexp) -> 
@@ -793,7 +914,7 @@ let string_of_map (part_table: part_table_t)
             in
             begin match (Hashtbl.find part_table name) with
               | Some(indexes) -> 
-                 let ovars = snd (schema_of_expr view.ds_definition) in
+                 let ovars = snd (schema_of_expr view.ds_name) in
                  let pkeys = List.map (List.nth ovars) indexes in
                  (" PARTITIONED BY ["^
                   ListExtras.string_of_list ~sep:", "
