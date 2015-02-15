@@ -777,7 +777,7 @@ if stage_is_active StageM3ToAnnotM3 then (
          ("REVENUESUPPLIER1_P_2LINEITEM1CUSTOMER1", Some([0])); (* OK *)
          ("REVENUESUPPLIER1_P_2ORDERS1_P_1",        Some([0])); (* CK *)
          ("REVENUESUPPLIER1_P_2ORDERS1_P_2",        Some([0])); (* OK *)
-         ("REVENUESUPPLIER1_P_2CUSTOMER1",          Some([1])); (* SK *)
+         ("REVENUESUPPLIER1_P_2CUSTOMER1",          Some([0])); (* CK *)
          ("REVENUELINEITEM1_DELTA",                 Some([0])); (* OK *)
          ("REVENUELINEITEM1",                       Some([0])); (* OK *)
          ("REVENUELINEITEM1ORDERS1",                Some([0])); (* CK *)

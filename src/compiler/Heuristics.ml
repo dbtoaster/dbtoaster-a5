@@ -736,12 +736,13 @@ and materialize_expr (heuristic_options:heuristic_options_t)
    let (todo_deltas, mat_delta_expr) = 
       (* Extend the schema with the input variables of other expressions *) 
       let schema_delta = 
+         let (_, dom_ovars) = schema_of_expr mat_domain_expr in
          let rest_expr = CalcRing.mk_prod [ 
             rel_expr; lift_expr; value_expr ] in
          let (rest_ivars, rest_ovars) = schema_of_expr rest_expr in
          ListAsSet.inter 
             delta_expr_ovars
-            (ListAsSet.multiunion [ schema; scope_delta; 
+            (ListAsSet.multiunion [ schema; scope_delta; dom_ovars;
                                     rest_ivars; rest_ovars ])
       in      
          if Debug.active "HEURISTICS-NO-DELTA-MAPS" 

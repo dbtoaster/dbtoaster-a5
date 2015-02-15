@@ -982,3 +982,8 @@ in
       {L_COMMITDATE < L_RECEIPTDATE} * {L_RECEIPTDATE >= DATE('1994-1-1')} *
       {L_RECEIPTDATE < DATE('1995-1-1')})))";
 
+  test "Eliminate domain" []["R1_A"; "R1_B"; "R2_B"]
+    "(DOMAIN(AggSum([R1_A], (DELTA R)(R1_A, R2_B))) * (DELTA R)(R1_A, R2_B) * 
+      R(R1_A, R1_B))"
+    "((DELTA R)(R1_A, R2_B) * R(R1_A, R1_B))";
+
