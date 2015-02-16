@@ -1364,7 +1364,7 @@ let unique_domains expr =
   Create DomainDelta terms and pull them out of AggSums. 
   
   DomainDelta terms serve only to restrict the domain of computation, one can 
-  ignore them but at the price of iterating more. Domain terms are initally
+  ignore them but at the price of iterating more. Domain terms are initially
   created out of Delta terms and lifts whose subexpressions are values 
   containing only input (trigger) variables. Later on, these domains are 
   expanded to include more restrictions and pushed outside AggSums.
@@ -1455,7 +1455,7 @@ let extract_domains (big_scope:var_t list) (big_expr:C.expr_t) =
                );
                CalcRing.mk_prod (List.map C.mk_domain lhs @ [rhs])
          )
-         (fun (_, schema) pl -> 
+         (fun (local_scope, schema) pl -> 
             (* Create DomainDelta terms that can be pulled out of AggSums.*)
             (* 1. Collect domain subexpressions. *)
             let (domain_terms, rest_terms) =
@@ -1474,9 +1474,12 @@ let extract_domains (big_scope:var_t list) (big_expr:C.expr_t) =
 
             (* Sanity check - DeltaDomain terms might have input variables 
                that are bound only from the outside, not by any term in pl *)
-            if not (ListAsSet.subset dom_ivars big_scope) then (
-               print_endline ("Event scope: " ^ 
+            if not (ListAsSet.subset dom_ivars big_scope) && 
+               not (ListAsSet.subset dom_ivars local_scope) then (
+               print_endline ("Event big scope: " ^ 
                   ListExtras.ocaml_of_list string_of_var big_scope);
+               print_endline ("Event local scope: " ^ 
+                  ListExtras.ocaml_of_list string_of_var local_scope);
                bail_out (CalcRing.mk_prod pl) "Domain with unexpected inputvars"
             )
             else
@@ -1553,20 +1556,23 @@ let extract_domains (big_scope:var_t list) (big_expr:C.expr_t) =
                      | CalcRing.Val(DomainDelta(subterm)) ->
                         (* Compute domain gb_vars *)
                         let dom_gb_vars = 
-                           ListAsSet.inter 
-                              (ListAsSet.union raw_ivars gb_vars)
-                              (snd (schema_of_expr subterm)) 
-                        in
-                        if dom_gb_vars = [] 
-                        then (lhs, CalcRing.mk_prod [rhs; term])
-                        else let extracted_domain = 
-                           C.mk_domain (C.mk_aggsum dom_gb_vars subterm)
-                        in
-                           (CalcRing.mk_prod [ lhs; extracted_domain], rhs)
+                           ListAsSet.inter (ListAsSet.union raw_ivars gb_vars)
+                                           (snd (schema_of_expr subterm)) 
+                        in                        
+                        if (dom_gb_vars <> [] && 
+                            ( ListAsSet.seteq dom_gb_vars gb_vars || 
+                              C.expr_has_binary_multiplicity subterm )) then
+                            (* Aggregating further over domain subterm is
+                               allowed only for singletons *)
+                          let extracted_domain = 
+                             C.mk_domain (C.mk_aggsum dom_gb_vars subterm)
+                          in
+                             (CalcRing.mk_prod [ lhs; extracted_domain], rhs)  
+                        else (lhs, CalcRing.mk_prod [rhs; term])
                      | _ -> (lhs, CalcRing.mk_prod [rhs; term])
                   ) (CalcRing.one, CalcRing.one) (CalcRing.prod_list subexp) 
                in
-                  CalcRing.mk_prod [ unnested; C.mk_aggsum gb_vars nested ]            
+                  CalcRing.mk_prod [ unnested; C.mk_aggsum gb_vars nested ]
 
             | DeltaRel _ -> 
                let delta_term = CalcRing.mk_val lf in
