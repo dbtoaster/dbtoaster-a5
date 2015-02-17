@@ -1559,11 +1559,10 @@ let extract_domains (big_scope:var_t list) (big_expr:C.expr_t) =
                            ListAsSet.inter (ListAsSet.union raw_ivars gb_vars)
                                            (snd (schema_of_expr subterm)) 
                         in                        
-                        if (dom_gb_vars <> [] && 
-                            ( ListAsSet.seteq dom_gb_vars gb_vars || 
-                              C.expr_has_binary_multiplicity subterm )) then
-                            (* Aggregating further over domain subterm is
-                               allowed only for singletons *)
+                        if (dom_gb_vars <> []) then
+                            (* We allow aggregation over extracted domains --
+                               The materializer ensures that delta rels have 
+                               binary multiplicities *)  
                           let extracted_domain = 
                              C.mk_domain (C.mk_aggsum dom_gb_vars subterm)
                           in

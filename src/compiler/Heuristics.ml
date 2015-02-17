@@ -707,21 +707,30 @@ and materialize_expr (heuristic_options:heuristic_options_t)
                   if rels_of_expr subexp = [] && deltarels_of_expr subexp = []
                   then ([], subexp)   
                   else
-
-                  let (sub_ivars, sub_ovars) = schema_of_expr subexp in
+                  let rewritten_subexp = 
+                    C.rewrite_leaves
+                      (fun _ lf -> match lf with 
+                        | DeltaRel(rn, rv) -> C.mk_exists (C.mk_deltarel rn rv)
+                        | Rel(rn, rv) -> (* C.mk_exists (C.mk_rel rn rv) *)
+                            failwith "Domains with relations are unsupported"
+                        | _ -> CalcRing.mk_val lf)
+                      (fun _ _ -> true)
+                      subexp
+                  in
+                  let (sub_ivars, sub_ovars) = schema_of_expr rewritten_subexp in
                   let scope_domain = ListAsSet.inter acc_scope
                      (ListAsSet.union sub_ivars sub_ovars)
                   in
-                     materialize ~scope:scope_domain
-                                 heuristic_options db_schema history 
-                                 (prefix^"_DOMAIN"^(string_of_int j)^"_")  
-                                 event subexp
+                     materialize_as_external ~check_ivc:false
+                        heuristic_options db_schema history 
+                        (prefix^"_DOMAIN"^(string_of_int j))  
+                        event scope_domain sub_ovars rewritten_subexp
                in
-               let mat_exists = Calculus.mk_exists mat_subexp in
+               let mat_domain = C.mk_exists mat_subexp in 
                (
-                  (todos @ todo, CalcRing.mk_prod [ mats; mat_exists ]), 
+                  (todos @ todo, CalcRing.mk_prod [ mats; mat_domain ]), 
                   (j + 1, ListAsSet.union acc_scope 
-                                          (snd (schema_of_expr mat_exists)))
+                                          (snd (schema_of_expr mat_domain)))
                ) 
             | _ -> bail_out term "Not a domain expression"
          ) 
@@ -922,7 +931,8 @@ and extract_relations ?(minimal_maps = Debug.active "HEURISTICS-MINIMAL-MAPS")
    into an external map. This step also looks for the expression in 
    the history of previously materialized expressions. If not found,
    a new map is created. *)
-and materialize_as_external (heuristic_options:heuristic_options_t)
+and materialize_as_external ?(check_ivc = true)
+                            (heuristic_options:heuristic_options_t)
                             (db_schema:Schema.t) (history:ds_history_t) 
                             (prefix:string) (event:Schema.event_t option)
                             (scope:var_t list) (schema: var_t list)
@@ -974,7 +984,8 @@ and materialize_as_external (heuristic_options:heuristic_options_t)
                                  history (prefix^"_IVC") event agg_expr
                   in 
                     (todos, Some(mats))
-               else if (IVC.needs_runtime_ivc (Schema.table_rels db_schema) 
+               else if (check_ivc && 
+                        IVC.needs_runtime_ivc (Schema.table_rels db_schema) 
                                               agg_expr)
                then
                   (bail_out agg_expr

@@ -715,9 +715,10 @@ if stage_is_active StageM3ToAnnotM3 then (
          ("SUM_CHARGE",                       None);
          ("SUM_CHARGELINEITEM1_DELTA",        None);
          ("AVG_QTY",                          None);
-         ("AVG_QTYLINEITEM1_DOMAIN1_1_DELTA", None);
+         ("AVG_QTYLINEITEM1_DOMAIN1",         None);
          ("AVG_QTYLINEITEM1",                 None);
          ("AVG_QTYLINEITEM1_L1_1",            None);
+         ("AVG_QTYLINEITEM1_L1_2_DELTA",      None);
          ("AVG_PRICE",                        None);
          ("AVG_PRICELINEITEM1",               None);
          ("AVG_DISC",                         None);
@@ -729,20 +730,20 @@ if stage_is_active StageM3ToAnnotM3 then (
    let tpch2_part_table = 
       create_hashtbl [ 
          ("COUNT",                              Some([3]));  (* PK *)
-         ("COUNTPARTSUPP1_DOMAIN1_1_DELTA",     Some([0]));  (* PK *)
+         ("COUNTPARTSUPP1_DOMAIN1",             Some([0]));  (* PK *)
          ("COUNTPARTSUPP1_P_1",                 Some([0]));  (* PK *)
-         ("COUNTPARTSUPP1_L2_2_DELTA",          Some([0]));  (* PK *) (* 1:SK *)
+         ("COUNTPARTSUPP1_L2_2_DELTA",          Some([0]));  (* PK *)
          ("COUNTPARTSUPP1_L2_2",                Some([0]));  (* SK *)
-         ("COUNTPARTSUPP1_L2_2SUPPLIER1_DELTA", Some([0]));  (* SK *) 
-         ("COUNTPARTSUPP1_L2_2SUPPLIER1",       Some([]));   (* N,R *)
-         ("COUNTPARTSUPP4_P_2",                 Some([0]));  (* SK *)
+         ("COUNTPARTSUPP1_L2_2SUPPLIER1_DELTA", Some([0]));  (* SK *)
+         ("COUNTPARTSUPP1_L2_2SUPPLIER1",       Some([]));   (*    *)
+         ("COUNTPARTSUPP4_P_2",                 Some([0]));  (* SK *) 
          ("COUNTPARTSUPP4_P_2SUPPLIER1_DELTA",  Some([0]));  (* SK *)
-         ("COUNTPARTSUPP4_P_2SUPPLIER1",        Some([]));   (* N,R *)
+         ("COUNTPARTSUPP4_P_2SUPPLIER1",        Some([]));   (*    *)
          ("COUNTSUPPLIER1",                     Some([0]));  (* PK *)
          ("COUNTSUPPLIER1SUPPLIER1_P_1",        Some([0]));  (* PK *) (* 2:SK *)
          ("COUNTSUPPLIER1SUPPLIER1_P_1PART1",   Some([0]));  (* PK *) (* 1:SK *)
          ("COUNTPART1_DELTA",                   Some([0]));  (* PK *)
-         ("COUNTPART1",                         Some([5]));  (* PK *)
+         ("COUNTPART1",                         Some([5]));  (* PK *)          
          ("COUNTPART1_L2_1",                    Some([0]));  (* PK *)
       ]
    in 
@@ -762,8 +763,9 @@ if stage_is_active StageM3ToAnnotM3 then (
    let tpch4_part_table = 
       create_hashtbl [
          ("ORDER_COUNT",                               None);
-         ("ORDER_COUNTLINEITEM1_DOMAIN1_1_DELTA", Some([0]));  (* OK *)
+         ("ORDER_COUNTLINEITEM1_DOMAIN1",         Some([0]));  (* OK *)
          ("ORDER_COUNTLINEITEM1",                 Some([0]));  (* OK *)
+         ("ORDER_COUNTLINEITEM1_E1_2_DELTA",      Some([0]));  (* OK *)
          ("ORDER_COUNTORDERS1_DELTA",             Some([0]));  (* OK *)
          ("ORDER_COUNTORDERS1_E1_1",              Some([0]));  (* OK *)
       ]
@@ -812,7 +814,7 @@ if stage_is_active StageM3ToAnnotM3 then (
          ("REVENUEORDERS1",                       Some([0])); (* OK *)
          ("REVENUEORDERS1LINEITEM1",              Some([1])); (* CK *) (* 0:SK *)
          ("REVENUEORDERS1SUPPLIER1_P_2",          Some([0])); (* CK *)
-         ("REVENUELINEITEM1_DOMAIN1_1_DELTA",     Some([]));  (* ** *)
+         ("REVENUELINEITEM1_DOMAIN1",             Some([]));  (* ** *)
          ("REVENUELINEITEM1_DELTA",               Some([0])); (* OK *)
          ("REVENUELINEITEM1",                     Some([1])); (* OK *)
          ("REVENUELINEITEM1SUPPLIER1",            Some([0])); (* OK *)
@@ -822,9 +824,9 @@ if stage_is_active StageM3ToAnnotM3 then (
    in
    let tpch8_part_table = 
       create_hashtbl [ 
-         ("MKT_SHARE",                                       None); 
-         ("MKT_SHAREORDERS1_DOMAIN1_1_DELTA",                None);  
-         ("MKT_SHAREORDERS1",                                None);
+         ("MKT_SHARE",                                        None); 
+         ("MKT_SHAREORDERS1_DOMAIN1",                         None);  
+         ("MKT_SHAREORDERS1",                                 None);
          ("MKT_SHAREORDERS1CUSTOMER1_DELTA",             Some([0])); (* CK *)
          ("MKT_SHAREORDERS1CUSTOMER1_P_1",               Some([]));  (* ** *) 
          ("MKT_SHAREORDERS1CUSTOMER1_P_2",               Some([0])); (* CK *)
@@ -856,14 +858,14 @@ if stage_is_active StageM3ToAnnotM3 then (
          ("MKT_SHAREPART1",                                   None);
          ("MKT_SHAREPART1CUSTOMER1_P_2",                 Some([0])); (* CK *)
          ("MKT_SHAREPART1CUSTOMER1_P_2LINEITEM1_P_3",    Some([0])); (* OK *)
-         ("MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2",    Some([1])); (* CK *)
-         ("MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1", Some([2])); (* CK *) (* 0:PK *)
+         ("MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2",    Some([1])); (* CK *) (* 0:SK *) 
+         ("MKT_SHAREPART1CUSTOMER1_P_2SUPPLIER1_P_2PART1", Some([2])); (* CK *)  (* 0:PK *)
          ("MKT_SHAREPART1CUSTOMER1_P_2PART1",            Some([1])); (* CK *) (* 0:PK *)
          ("MKT_SHAREPART1LINEITEM1_P_1",                 Some([0])); (* OK *)
          ("MKT_SHAREPART1SUPPLIER1_P_1",                 Some([0])); (* SK *)
          ("MKT_SHAREPART1SUPPLIER1_P_1PART1",            Some([0])); (* PK *)
          ("MKT_SHAREPART1PART1",                         Some([0])); (* PK *)
-         ("MKT_SHAREPART1_L2_1_L1_1",                         None); 
+         ("MKT_SHAREPART1_L2_1_L1_1",                         None);
          ("MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2",       Some([0])); (* CK *)
          ("MKT_SHAREPART1_L2_1_L1_1CUSTOMER1_P_2PART1",  Some([1])); (* CK *) (* 0:PK *)
          ("MKT_SHAREPART1_L2_1_L1_1PART1",               Some([0])); (* PK *)
@@ -872,7 +874,7 @@ if stage_is_active StageM3ToAnnotM3 then (
    let tpch9_part_table = 
       create_hashtbl [ 
          ("SUM_PROFIT",                           None); 
-         ("SUM_PROFITORDERS11_DOMAIN1_1_DELTA",   None); 
+         ("SUM_PROFITORDERS11_DOMAIN1",           None); 
          ("SUM_PROFITORDERS11_DELTA",             Some([0])); (* OK *)
          ("SUM_PROFITORDERS11",                   Some([0])); (* OK *)
          ("SUM_PROFITORDERS11PARTSUPP1_P_3",      Some([0])); (* OK *)
@@ -956,11 +958,11 @@ if stage_is_active StageM3ToAnnotM3 then (
    let tpch13_part_table =   (* There is a problem in the frontend that generates two CKs *)
       create_hashtbl [ 
          ("CUSTDIST",                                 None); 
-         ("CUSTDISTORDERS1_DOMAIN1_1_DELTA",     Some([0])); (* CK *)
+         ("CUSTDISTORDERS1_DOMAIN1",             Some([0])); (* CK *)
          ("CUSTDISTORDERS3_L1_2_DELTA",          Some([0])); (* CK *)
          ("CUSTDISTORDERS3_L1_2",                Some([0])); (* CK *)
          ("CUSTDISTORDERS3_L1_2CUSTOMER1_DELTA", Some([0])); (* CK *)
-         ("CUSTDISTCUSTOMER1_DOMAIN1_1_DELTA",   Some([0])); (* CK *)
+         ("CUSTDISTCUSTOMER1_DOMAIN1",           Some([0])); (* CK *)
          ("CUSTDISTCUSTOMER1_L1_1",              Some([0])); (* CK *)
          ("CUSTDISTCUSTOMER3_L1_2_DELTA",        Some([0])); (* CK *)
          ("CUSTDISTCUSTOMER3_L1_2",              Some([0])); (* CK *)
@@ -998,13 +1000,14 @@ if stage_is_active StageM3ToAnnotM3 then (
    let tpch16_part_table = 
       create_hashtbl [ 
          ("SUPPLIER_CNT",                                None); 
-         ("SUPPLIER_CNTSUPPLIER1_DOMAIN1_1_DELTA",  Some([0])); (* SK *)
-         ("SUPPLIER_CNTPART1_DOMAIN1_1_DELTA",           None); 
+         ("SUPPLIER_CNTSUPPLIER1_DOMAIN1",          Some([0])); (* SK *)
+         ("SUPPLIER_CNTSUPPLIER1_E1_2_L2_2_DELTA",  Some([0])); (* SK *)
+         ("SUPPLIER_CNTPART1_DOMAIN1",                   None); 
          ("SUPPLIER_CNTPART1_E1_1",                 Some([0])); (* SK *)
          ("SUPPLIER_CNTPART1_E1_1PARTSUPP1",        Some([0])); (* PK *)
          ("SUPPLIER_CNTPART1_E1_33_DELTA",          Some([0])); (* PK *)
          ("SUPPLIER_CNTPART1_E1_33",                Some([0])); (* PK *) (* 1:SK *)
-         ("SUPPLIER_CNTPARTSUPP1_DOMAIN1_1_DELTA",  Some([0])); (* SK *)
+         ("SUPPLIER_CNTPARTSUPP1_DOMAIN1",          Some([0])); (* SK *)
          ("SUPPLIER_CNTPARTSUPP1_E1_1_L2_1",        Some([0])); (* SK *)
          ("SUPPLIER_CNTPARTSUPP1_E1_2",             Some([0])); (* SK *)
          ("SUPPLIER_CNTPARTSUPP1_E1_2PART1_DELTA",  Some([0])); (* PK *)
@@ -1037,11 +1040,11 @@ if stage_is_active StageM3ToAnnotM3 then (
       create_hashtbl [ 
          ("AVG_YEARLY",                               None); 
          ("AVG_YEARLYPART1_DELTA",               Some([0])); (* PK *)
-         ("AVG_YEARLYLINEITEM1_DOMAIN1_3_DELTA", Some([0])); (* PK *)
          ("AVG_YEARLYLINEITEM1_P_3",             Some([0])); (* PK *)
          ("AVG_YEARLYLINEITEM1_P_3PART1_DELTA",  Some([0])); (* PK *)
          ("AVG_YEARLYLINEITEM1_P_4",             Some([0])); (* PK *)
          ("AVG_YEARLYLINEITEM1_L1_1_L1_1",       Some([0])); (* PK *)
+         ("AVG_YEARLYLINEITEM1_L1_1_L1_2_DELTA", Some([0])); (* PK *)
          ("AVG_YEARLYLINEITEM1_L1_2",            Some([0])); (* PK *)
          ("AVG_YEARLYLINEITEM1_L1_4_DELTA",      Some([0])); (* PK *)
          ("AVG_YEARLYLINEITEM5_DELTA",           Some([0])); (* PK *)
@@ -1051,7 +1054,7 @@ if stage_is_active StageM3ToAnnotM3 then (
       create_hashtbl [ 
          ("QUERY17",                               None); 
          ("QUERY17PART1_DELTA",               Some([0])); (* PK *)
-         ("QUERY17LINEITEM1_DOMAIN1_1_DELTA", Some([0])); (* PK *)
+         ("QUERY17LINEITEM1_DOMAIN1",         Some([0])); (* PK *)
          ("QUERY17LINEITEM1_P_1",             Some([0])); (* PK *)
          ("QUERY17LINEITEM1_P_2",             Some([0])); (* PK *)
          ("QUERY17LINEITEM1_L1_1",            Some([0])); (* PK *)
@@ -1062,7 +1065,7 @@ if stage_is_active StageM3ToAnnotM3 then (
    let tpch18_part_table = 
       create_hashtbl [ 
          ("QUERY18",                          Some([2])); (* OK *) (* 1:CK *)
-         ("QUERY18LINEITEM1_DOMAIN1_1_DELTA", Some([0])); (* OK *)
+         ("QUERY18LINEITEM1_DOMAIN1",         Some([0])); (* OK *)
          ("QUERY18LINEITEM1_P_1",             Some([2])); (* OK *) (* 1:CK *)
          ("QUERY18LINEITEM1_P_1CUSTOMER1",    Some([0])); (* OK *) (* 1:CK *)
          ("QUERY18LINEITEM1_L1_2_DELTA",      Some([0])); (* OK *)
@@ -1106,16 +1109,16 @@ if stage_is_active StageM3ToAnnotM3 then (
          ("NUMWAITORDERS1_DELTA",              Some([0])); (* OK *)
          ("NUMWAITORDERS1",                    Some([2])); (* OK *) (* 0:SK *)
          ("NUMWAITORDERS1LINEITEM1",           Some([0])); (* SK *)
-         ("NUMWAITLINEITEM1_DOMAIN1_3_DELTA",  Some([0])); (* OK *)
          ("NUMWAITLINEITEM1_P_3",              Some([2])); (* OK *) (* 0:SK *)
          ("NUMWAITLINEITEM1_P_3SUPPLIER1_P_2", Some([]));  (* ** *)
          ("NUMWAITLINEITEM1_P_4",              Some([0])); (* OK *)
          ("NUMWAITLINEITEM1_P_4ORDERS1_DELTA", Some([0])); (* OK *)
          ("NUMWAITLINEITEM1_E3_2_DELTA",       Some([0])); (* OK *) (* 1:SK *)
-         ("NUMWAITLINEITEM4_DOMAIN2_1_DELTA",  Some([0])); (* OK *) 
+         ("NUMWAITLINEITEM4_DOMAIN2",          Some([0])); (* OK *) 
          ("NUMWAITLINEITEM4_L2_2_DELTA",       Some([0])); (* OK *) (* 1:SK *)
          ("NUMWAITLINEITEM7_P_3",              Some([0])); (* SK *) 
-         ("NUMWAITLINEITEM11_DOMAIN3_1_DELTA", Some([0])); (* OK *) (* 0:PK 1:SK *)
+         ("NUMWAITLINEITEM11_DOMAIN3",         Some([0])); (* OK *) (* 1:PK 2:SK *)
+         ("NUMWAITLINEITEM11_DELTA",           Some([0])); (* OK *) (* 1:PK 2:SK *)
          ("NUMWAITSUPPLIER1_DELTA",            Some([0])); (* SK *)
          ("NUMWAITSUPPLIER1_P_1",              Some([]));  (* ** *)
          ("NUMWAITSUPPLIER1_P_2",              Some([0])); (* OK *) (* 1:SK *)
@@ -1127,7 +1130,8 @@ if stage_is_active StageM3ToAnnotM3 then (
    let tpch22_part_table = 
       create_hashtbl [ 
          ("NUMCUST",                                   None); 
-         ("NUMCUSTORDERS1_DOMAIN1_1_DELTA",       Some([0])); (* CK *)
+         ("NUMCUSTORDERS1_DOMAIN1",               Some([0])); (* CK *)
+         ("NUMCUSTORDERS1_L2_2_DELTA",            Some([0])); (* CK *)
          ("NUMCUSTCUSTOMER1",                     Some([0])); (* CK *)
          ("NUMCUSTCUSTOMER1CUSTOMER1_DELTA",      Some([0])); (* CK *)
          ("NUMCUSTCUSTOMER1_L2_1_L1_1",                None); 
