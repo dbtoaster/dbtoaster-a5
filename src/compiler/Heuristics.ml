@@ -30,6 +30,7 @@ type heuristic_option_t =
    | NoIVC
    | NoInputVariables
    | ExtractRelationMaps
+   | ForceExpMaterialization
 
 type heuristic_options_t = heuristic_option_t list
 
@@ -721,8 +722,9 @@ and materialize_expr (heuristic_options:heuristic_options_t)
                   let scope_domain = ListAsSet.inter acc_scope
                      (ListAsSet.union sub_ivars sub_ovars)
                   in
-                     materialize_as_external ~check_ivc:false
-                        heuristic_options db_schema history 
+                     materialize_as_external 
+                        (ForceExpMaterialization :: heuristic_options) 
+                        db_schema history 
                         (prefix^"_DOMAIN"^(string_of_int j))  
                         event scope_domain sub_ovars rewritten_subexp
                in
@@ -931,8 +933,7 @@ and extract_relations ?(minimal_maps = Debug.active "HEURISTICS-MINIMAL-MAPS")
    into an external map. This step also looks for the expression in 
    the history of previously materialized expressions. If not found,
    a new map is created. *)
-and materialize_as_external ?(check_ivc = true)
-                            (heuristic_options:heuristic_options_t)
+and materialize_as_external (heuristic_options:heuristic_options_t)
                             (db_schema:Schema.t) (history:ds_history_t) 
                             (prefix:string) (event:Schema.event_t option)
                             (scope:var_t list) (schema: var_t list)
@@ -947,18 +948,20 @@ and materialize_as_external ?(check_ivc = true)
       "Materialize as external: "^(string_of_expr agg_expr)
    );     
    
+   let force = List.mem ForceExpMaterialization heuristic_options in
+
    (* Check if expr can be further decomposed     *)
    (* e.g. R(A) * S(C) * (E ^= (R(C) * S(A)))     *)   
    let (_, components) = decompose_graph scope (schema, expr) in
    
-   if List.length components > 1 then
+   if (not force && List.length components > 1) then
       materialize ~scope:scope
                   heuristic_options db_schema history 
                   (prefix^"_P_") event agg_expr
    else
 
       (*** HERE COMES THE ACTUAL MATERIALIZATION ***)   
-       if List.mem ExtractRelationMaps heuristic_options then
+       if (not force && List.mem ExtractRelationMaps heuristic_options) then
          extract_relations db_schema history prefix
                            scope schema expr
        else   
@@ -976,23 +979,20 @@ and materialize_as_external ?(check_ivc = true)
             (* Compute the IVC expression *) 
             let expr_ivars = fst(schema_of_expr expr) in
             let (todo_ivc, ivc_expr) =
-               if expr_ivars <> [] 
-               then
+               if force then ([], None)
+               else if expr_ivars <> [] then
                   let (todos, mats) = 
                      materialize ~scope:scope 
                                  [ NoIVC; NoInputVariables ] db_schema 
                                  history (prefix^"_IVC") event agg_expr
                   in 
                     (todos, Some(mats))
-               else if (check_ivc && 
-                        IVC.needs_runtime_ivc (Schema.table_rels db_schema) 
-                                              agg_expr)
-               then
+               else if (IVC.needs_runtime_ivc (Schema.table_rels db_schema) 
+                                              agg_expr) then
                   (bail_out agg_expr
                       ("Unsupported query. " ^
                        "Cannot materialize IVC inline (yet)."))
-               else
-                  ([], None)
+               else ([], None)
             in
                                     
             Debug.print "LOG-HEURISTICS-DETAIL" (fun () ->

@@ -1040,6 +1040,7 @@ if stage_is_active StageM3ToAnnotM3 then (
       create_hashtbl [ 
          ("AVG_YEARLY",                               None); 
          ("AVG_YEARLYPART1_DELTA",               Some([0])); (* PK *)
+         ("AVG_YEARLYLINEITEM1_DOMAIN1",         Some([0])); (* PK *)
          ("AVG_YEARLYLINEITEM1_P_3",             Some([0])); (* PK *)
          ("AVG_YEARLYLINEITEM1_P_3PART1_DELTA",  Some([0])); (* PK *)
          ("AVG_YEARLYLINEITEM1_P_4",             Some([0])); (* PK *)
@@ -1089,9 +1090,9 @@ if stage_is_active StageM3ToAnnotM3 then (
       create_hashtbl [ 
          ("COUNT",                                    None); (* Alternative: 0:S_NAME   1:S_ADDRESS *) 
          ("COUNTPART1",                          Some([0])); (* SK *)
-         ("COUNTLINEITEM1_DOMAIN1_2_DELTA",      Some([0])); (* SK *)
+         ("COUNTLINEITEM1_DOMAIN1",              Some([1])); (* SK *)
          ("COUNTLINEITEM1_E1_1_L1_3_DELTA",      Some([0])); (* PK *) (* 1:SK *)
-         ("COUNTPARTSUPP1_DOMAIN1_2_DELTA",      Some([0])); (* SK *)
+         ("COUNTPARTSUPP1_DOMAIN1",              Some([1])); (* SK *)
          ("COUNTPARTSUPP1_P_2",                  Some([0])); (* SK *)
          ("COUNTPARTSUPP1_P_2SUPPLIER1",         Some([])); (* ** *)
          ("COUNTPARTSUPP1_E1_2_DELTA",           Some([0])); (* PK *) (* 1: SK *)
@@ -1109,6 +1110,7 @@ if stage_is_active StageM3ToAnnotM3 then (
          ("NUMWAITORDERS1_DELTA",              Some([0])); (* OK *)
          ("NUMWAITORDERS1",                    Some([2])); (* OK *) (* 0:SK *)
          ("NUMWAITORDERS1LINEITEM1",           Some([0])); (* SK *)
+         ("NUMWAITLINEITEM1_DOMAIN1",          Some([2])); (* OK *)
          ("NUMWAITLINEITEM1_P_3",              Some([2])); (* OK *) (* 0:SK *)
          ("NUMWAITLINEITEM1_P_3SUPPLIER1_P_2", Some([]));  (* ** *)
          ("NUMWAITLINEITEM1_P_4",              Some([0])); (* OK *)
