@@ -681,7 +681,28 @@ let optimize_expr (dexpr: dist_expr_t): dist_expr_t =
                      List.partition (fun grp -> match (hd, grp) with
                         | (Repartition(_, _, p1), Repartition(_, _, p2)) 
                            when p1 = p2 -> true
+                        | (Prod(_, Repartition(_, _, p1) :: tl), 
+                           Repartition(_, _, p2)) 
+                           when p1 = p2 &&
+                                get_part_info (mk_prod tl) = None -> true
+                        | (Repartition(_, _, p1), 
+                           Prod(_, Repartition(_, _, p2) :: tl)) 
+                           when p1 = p2 &&
+                                get_part_info (mk_prod tl) = None -> true
+                        | (Prod(_, Repartition(_, _, p1) :: tl1), 
+                           Prod(_, Repartition(_, _, p2) :: tl2)) 
+                           when p1 = p2 &&
+                                get_part_info (mk_prod tl1) = None &&
+                                get_part_info (mk_prod tl2) = None -> true
                         | (Gather _, Gather _) -> true
+                        | (Prod(_, Gather(_, _) :: tl), Gather _) 
+                           when get_part_info (mk_prod tl) = None -> true
+                        | (Gather _, Prod(_, Gather(_, _) :: tl))  
+                           when get_part_info (mk_prod tl) = None -> true
+                        | (Prod(_, Gather(_, _) :: tl1), 
+                           Prod(_, Gather(_, _) :: tl2))  
+                           when get_part_info (mk_prod tl1) = None && 
+                                get_part_info (mk_prod tl2) = None -> true
                         | _ -> false
                      ) grouped_tl
                   in
@@ -692,8 +713,42 @@ let optimize_expr (dexpr: dist_expr_t): dist_expr_t =
                      | (Repartition(_, s1, p1), Repartition(_, s2, p2))
                         when p1 = p2 -> 
                         (mk_repartition p1 (mk_sum [s1; s2]) :: rhs)
+                     | (Prod(_, Repartition(_, s1, p1) :: tl), 
+                        Repartition(_, s2, p2))
+                        when p1 = p2 && 
+                             get_part_info (mk_prod tl) = None ->
+                        (mk_repartition p1 
+                           (mk_sum [mk_prod (s1 :: tl); s2]) :: rhs)
+                     | (Repartition(_, s1, p1), 
+                        Prod(_, Repartition(_, s2, p2) :: tl))
+                        when p1 = p2 && 
+                             get_part_info (mk_prod tl) = None ->
+                        (mk_repartition p1 
+                           (mk_sum [s1; mk_prod (s2 :: tl)]) :: rhs)
+                     | (Prod(_, Repartition(_, s1, p1) :: tl1), 
+                        Prod(_, Repartition(_, s2, p2) :: tl2))
+                        when p1 = p2 && 
+                             get_part_info (mk_prod tl1) = None &&
+                             get_part_info (mk_prod tl2) = None ->
+                        (mk_repartition p1 
+                           (mk_sum [mk_prod (s1 :: tl1); 
+                                    mk_prod (s2 :: tl2)]) :: rhs)
+
                      | (Gather(_, s1), Gather(_, s2)) -> 
                         (mk_gather (mk_sum [s1; s2]) :: rhs)
+                     | (Prod(_, Gather(_, s1) :: tl), Gather(_, s2)) 
+                        when get_part_info (mk_prod tl) = None ->
+                        (mk_gather (mk_sum [mk_prod (s1 :: tl); s2]) :: rhs)
+                     | (Gather(_, s1), Prod(_, Gather(_, s2) :: tl)) 
+                        when get_part_info (mk_prod tl) = None ->
+                        (mk_gather (mk_sum [s1; mk_prod (s2 :: tl)]) :: rhs)
+                     | (Prod(_, Gather(_, s1) :: tl1), 
+                        Prod(_, Gather(_, s2) :: tl2)) 
+                        when get_part_info (mk_prod tl1) = None && 
+                             get_part_info (mk_prod tl2) = None ->
+                        (mk_gather (mk_sum [mk_prod (s1 :: tl1);
+                                            mk_prod (s2 :: tl2)]) :: rhs)
+
                      | _ -> failwith "Impossible"
 
                with Not_found -> (hd :: grouped_tl)
