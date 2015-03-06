@@ -1378,8 +1378,6 @@ let extract_domains (big_scope:var_t list) (big_expr:C.expr_t) =
       let (scope, schema) = C.schema_of_expr expr in
       C.fold ~scope:scope ~schema:schema
          (fun _ sl ->  
-            (* CalcRing.mk_sum sl *)
-
             (* Extract domain subexpressions *)
             let partition_domain term_list = 
                List.fold_left (fun (lhs,rhs) term -> match term with 
@@ -1484,8 +1482,9 @@ let extract_domains (big_scope:var_t list) (big_expr:C.expr_t) =
             )
             else
 
-            (* 2. Extend dom_terms with: 1) values covered by dom_vars and
-                  2) (A ^= B) where B is value covered by dom_vars; *)
+            (* 2. Extend dom_terms with: 
+                  1) values covered by dom_vars and
+                  2) (A ^= B) where B is value covered by dom_vars *)
             let extended_domain_terms = snd (
                List.fold_left (fun (scope, dl) term -> 
                   match term with
@@ -1595,6 +1594,27 @@ let extract_domains (big_scope:var_t list) (big_expr:C.expr_t) =
       (CalculusPrinter.string_of_expr rewritten_expr) 
    ); rewritten_expr
 ;;
+
+
+(** Remove domain subexpressions that do not restrict iteration domains *)
+let dead_domain_elimination (expr: C.expr_t) = 
+   Debug.print "LOG-DEAD-DOMAINS" (fun () ->
+      "Dead domains (START): "^(CalculusPrinter.string_of_expr expr) 
+   );
+   let rewritten_expr = 
+      C.rewrite_leaves 
+         (fun (scope, _) lf -> match lf with
+            | DomainDelta(subexp) when 
+              (ListAsSet.subset (snd (C.schema_of_expr subexp)) 
+                                scope) -> CalcRing.one
+            | _ -> CalcRing.mk_val lf)
+         (fun _ _ -> true)
+         expr
+   in
+      Debug.print "LOG-DEAD-DOMAINS" (fun () ->
+         "Dead domains (END): "^
+         (CalculusPrinter.string_of_expr rewritten_expr) 
+      ); rewritten_expr
 
 
 (**
@@ -1709,7 +1729,9 @@ let simplify_domains (big_expr:C.expr_t) =
          end
       end
    in
-      let rewritten_expr = eliminate_duplicates (rcr big_expr) in
+   let rewritten_expr = 
+      dead_domain_elimination (eliminate_duplicates (rcr big_expr)) 
+   in
       Debug.print "LOG-SIMPLIFY-DOMAINS" (fun () ->
          "Simplify domains (END): "^
          (CalculusPrinter.string_of_expr rewritten_expr) 
