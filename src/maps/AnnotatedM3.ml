@@ -52,6 +52,28 @@ type dist_expr_t =
    | Repartition of meta_info_t * dist_expr_t * var_t list
 
 
+(* A list of maps involving delta relations; used in the cost optimizer *)
+let delta_maps: string list ref = ref [];;
+
+let rec expr_has_deltas (dexpr: dist_expr_t): bool = 
+   match dexpr with
+      | Sum(_, sl)  -> List.fold_left (||) false (List.map expr_has_deltas sl)
+      | Prod(_, pl) -> List.fold_left (||) false (List.map expr_has_deltas pl)
+      | Neg(_, e)   -> expr_has_deltas e
+      | Value _ 
+      | Rel _ 
+      | DeltaRel _ 
+      | Cmp _ -> false
+      | AggSum(_, _, subexp)
+      | Lift(_, _, subexp) 
+      | Exists(_, subexp) 
+      | DomainDelta(_, subexp) 
+      | Gather(_, subexp)
+      | Repartition(_, subexp, _) -> expr_has_deltas subexp
+      | External(_, (en, _, _, _, _))  -> 
+         List.fold_left (fun found n -> (found || (en == n))) false !delta_maps
+
+
 (*** Utility ***)
 (** A generic exception pertaining to DistCalculus. The first parameter is 
     the DistCalculus expression that triggered the failure *)
@@ -94,22 +116,22 @@ let string_of_part_info (part_info: part_info_t option): string =
          "<" ^ (ListExtras.string_of_list ~sep:", " string_of_var pkeys) ^ ">"
       | None -> ""
 
-let rec string_of_expr (dexpr: dist_expr_t): string = 
+let string_of_expr (dexpr: dist_expr_t): string = 
    let (sum_op, prod_op, neg_op) = 
       if Debug.active "PRINT-RINGS" then (" U ", " |><| ", "(<>:-1)*")
                                     else (" + ", " * ", "NEG * ")
    in
-   match dexpr with
+   let rec rcr ind dexpr = match dexpr with
       | Sum(meta, sl) -> 
-         "(" ^ String.concat sum_op (List.map string_of_expr sl) ^")" ^
-         (string_of_part_info meta.part_info)
+         "(" ^ String.concat sum_op (List.map (rcr (ind + 2)) sl) ^")" ^
+         (string_of_part_info meta.part_info) 
 
       | Prod(meta, pl) -> 
-         "(" ^ String.concat prod_op (List.map string_of_expr pl) ^")" ^
+         "(" ^ String.concat prod_op (List.map (rcr ind) pl) ^")" ^
          (string_of_part_info meta.part_info)
 
       | Neg(meta, el) -> 
-         "(" ^ neg_op ^ (string_of_expr el) ^")" ^
+         "(" ^ neg_op ^ (rcr ind el) ^")" ^ 
          (string_of_part_info meta.part_info)
 
       | Value(meta, v) -> 
@@ -137,43 +159,43 @@ let rec string_of_expr (dexpr: dist_expr_t): string =
          (ListExtras.string_of_list ~sep:", " string_of_var eins) ^ "][" ^
          (ListExtras.string_of_list ~sep:", " string_of_var eouts) ^ "]" ^
          (match emeta with | None -> ""
-                           | Some(s) -> ":(" ^ (string_of_expr s) ^ ")") ^
+                           | Some(s) -> ":(" ^ (rcr ind s) ^ ")") ^
          (string_of_part_info meta.part_info)
 
       | AggSum(meta, gb_vars, subexp) ->
-         "AggSum([" ^ 
+         "AggSum([" ^          
          (ListExtras.string_of_list ~sep:", " string_of_var gb_vars) ^"],(" ^ 
-         (string_of_expr subexp) ^ "))" ^
-         (string_of_part_info meta.part_info)
+         (rcr ind subexp) ^ "))" ^ (string_of_part_info meta.part_info)
       
       | DomainDelta(meta, subexp) -> 
-         "DOMAIN(" ^ (string_of_expr subexp) ^ ")" ^
+         "DOMAIN(" ^ (rcr ind subexp) ^ ")" ^ 
          (string_of_part_info meta.part_info)
 
       | Lift(meta, target, subexp)    ->
-         "(" ^ (string_of_var target) ^ " ^= " ^ (string_of_expr subexp) ^ ")" ^
+         "(" ^ (string_of_var target) ^ " ^= " ^ (rcr ind subexp) ^ ")" ^
          (string_of_part_info meta.part_info)
 
 (***** BEGIN EXISTS HACK *****)
       | Exists(meta, subexp) ->
-         "Exists(" ^ (string_of_expr subexp) ^ ")" ^
+         "Exists(" ^ (rcr ind subexp) ^ ")" ^ 
          (string_of_part_info meta.part_info)
 (***** END EXISTS HACK *****)
 
       | Gather(meta, subexp) ->          
-         if not (Debug.active "PRINT-ANNOTATED-M3") then 
-            string_of_expr subexp
-         else
-            "Gather(" ^ (string_of_expr subexp) ^ ")" ^
-            (string_of_part_info meta.part_info)
+         if not (Debug.active "PRINT-ANNOTATED-M3") then rcr (ind + 2) subexp
+         else 
+            "\n" ^ String.make ind ' ' ^ "Gather(" ^
+            (rcr (ind + 2) subexp) ^ ")" ^ (string_of_part_info meta.part_info)
+
       | Repartition(meta, subexp, pkeys) -> 
-         if not (Debug.active "PRINT-ANNOTATED-M3") then 
-            string_of_expr subexp
+         if not (Debug.active "PRINT-ANNOTATED-M3") then rcr (ind + 2) subexp
          else
-            "Repartition([" ^ 
+            "\n" ^ String.make ind ' ' ^ "Repartition([" ^ 
             (ListExtras.string_of_list ~sep:", " string_of_var pkeys) ^"], (" ^
-            (string_of_expr subexp) ^ "))" ^
+            (rcr (ind + 2) subexp) ^ "))" ^ 
             (string_of_part_info meta.part_info)
+   in
+      rcr 4 dexpr
 
 (* Construction Helpers *)
 let rec mk_repartition (pkeys: var_t list) (dexpr: dist_expr_t): dist_expr_t =
@@ -647,22 +669,30 @@ let rec lift (part_table: part_table_t) (expr: C.expr_t): dist_expr_t =
          let dsubexp = rcr subexp in
             Exists(get_meta_info dsubexp, dsubexp)
 
-
-let rec cost_of_expr (dexpr: dist_expr_t): int =
-   match dexpr with
-      | Sum(_, sl) -> List.fold_left (+) 0 (List.map cost_of_expr sl)
-      | Prod(_, pl) -> List.fold_left (+) 0 (List.map cost_of_expr pl)
-      | Neg(_, el) -> cost_of_expr el
-      | Value _ | Cmp _ | Rel _ | DeltaRel _ -> 0
-      | External(_, (_, _, _, _, eivc)) ->
-         begin match eivc with  
-            | Some(subexp) -> cost_of_expr subexp 
-            | None -> 0
-         end
+let cost_of_expr (dexpr: dist_expr_t): (int * int * int) =
+   let add (a1,b1,c1) (a2,b2,c2) = (a1 + a2, b1 + b2, c1 + c2) in
+   let rec rcr expr =  match expr with
+      | Sum(_, sl) -> List.fold_left add (0,0,0) (List.map rcr sl)
+      | Prod(_, pl) -> List.fold_left add (0,0,0) (List.map rcr pl)
+      | Neg(_, el) -> rcr el
+      | Value _ | Cmp _ | Rel _ | DeltaRel _ -> (0,0,0)
+      | External(_, (_, _, _, _, eivc)) -> begin match eivc with  
+                                             | Some(subexp) -> rcr subexp 
+                                             | None -> (0,0,0)
+                                           end
       | AggSum(_, _, subexp) | DomainDelta(_, subexp) 
-      | Lift(_, _, subexp)   | Exists(_, subexp) -> cost_of_expr subexp      
-      | Gather(_, subexp)
-      | Repartition(_, subexp, _) -> cost_of_expr subexp + 1
+      | Lift(_, _, subexp)   | Exists(_, subexp) -> rcr subexp
+      | Gather(m, subexp) ->           
+         (* Penalize gathers of non-delta expressions *)
+         add ((if (expr_has_deltas subexp) then 1 else 10), 
+              0, List.length m.ovars) (rcr subexp) 
+      | Repartition(m, subexp, _) -> 
+         add (0,
+              (* Penalize repartitions of non-delta expressions *)
+              (if (expr_has_deltas subexp) then 1 else 2), 
+              List.length m.ovars) (rcr subexp)
+   in
+      rcr dexpr
 
 
 let optimize_expr (dexpr: dist_expr_t): dist_expr_t = 
@@ -676,82 +706,79 @@ let optimize_expr (dexpr: dist_expr_t): dist_expr_t =
             | [x] -> [x]
             | hd::tl ->                
                let grouped_tl = group tl in
-               try
-                  let (lhs, rhs) =                   
-                     List.partition (fun grp -> match (hd, grp) with
-                        | (Repartition(_, _, p1), Repartition(_, _, p2)) 
-                           when p1 = p2 -> true
-                        | (Prod(_, Repartition(_, _, p1) :: tl), 
-                           Repartition(_, _, p2)) 
-                           when p1 = p2 &&
-                                get_part_info (mk_prod tl) = None -> true
-                        | (Repartition(_, _, p1), 
-                           Prod(_, Repartition(_, _, p2) :: tl)) 
-                           when p1 = p2 &&
-                                get_part_info (mk_prod tl) = None -> true
-                        | (Prod(_, Repartition(_, _, p1) :: tl1), 
-                           Prod(_, Repartition(_, _, p2) :: tl2)) 
-                           when p1 = p2 &&
-                                get_part_info (mk_prod tl1) = None &&
-                                get_part_info (mk_prod tl2) = None -> true
-                        | (Gather _, Gather _) -> true
-                        | (Prod(_, Gather(_, _) :: tl), Gather _) 
-                           when get_part_info (mk_prod tl) = None -> true
-                        | (Gather _, Prod(_, Gather(_, _) :: tl))  
-                           when get_part_info (mk_prod tl) = None -> true
-                        | (Prod(_, Gather(_, _) :: tl1), 
-                           Prod(_, Gather(_, _) :: tl2))  
-                           when get_part_info (mk_prod tl1) = None && 
-                                get_part_info (mk_prod tl2) = None -> true
-                        | _ -> false
-                     ) grouped_tl
-                  in
-                  if (List.length lhs = 0) then hd::rhs
-                  else if (List.length lhs > 1) then
-                     failwith "Redundant expressions not being optimized"
-                  else match (hd, List.hd lhs) with
-                     | (Repartition(_, s1, p1), Repartition(_, s2, p2))
-                        when p1 = p2 -> 
-                        (mk_repartition p1 (mk_sum [s1; s2]) :: rhs)
-                     | (Prod(_, Repartition(_, s1, p1) :: tl), 
-                        Repartition(_, s2, p2))
-                        when p1 = p2 && 
-                             get_part_info (mk_prod tl) = None ->
-                        (mk_repartition p1 
-                           (mk_sum [mk_prod (s1 :: tl); s2]) :: rhs)
-                     | (Repartition(_, s1, p1), 
-                        Prod(_, Repartition(_, s2, p2) :: tl))
-                        when p1 = p2 && 
-                             get_part_info (mk_prod tl) = None ->
-                        (mk_repartition p1 
-                           (mk_sum [s1; mk_prod (s2 :: tl)]) :: rhs)
-                     | (Prod(_, Repartition(_, s1, p1) :: tl1), 
-                        Prod(_, Repartition(_, s2, p2) :: tl2))
-                        when p1 = p2 && 
+               let (lhs, rhs) =                   
+                  List.partition (fun grp -> match (hd, grp) with
+                     | (Repartition(_, _, p1), Repartition(_, _, p2)) 
+                        when p1 = p2 -> true
+                     | (Prod(_, Repartition(_, _, p1) :: tl), 
+                        Repartition(_, _, p2)) 
+                        when p1 = p2 &&
+                             get_part_info (mk_prod tl) = None -> true
+                     | (Repartition(_, _, p1), 
+                        Prod(_, Repartition(_, _, p2) :: tl)) 
+                        when p1 = p2 &&
+                             get_part_info (mk_prod tl) = None -> true
+                     | (Prod(_, Repartition(_, _, p1) :: tl1), 
+                        Prod(_, Repartition(_, _, p2) :: tl2)) 
+                        when p1 = p2 &&
                              get_part_info (mk_prod tl1) = None &&
-                             get_part_info (mk_prod tl2) = None ->
-                        (mk_repartition p1 
-                           (mk_sum [mk_prod (s1 :: tl1); 
-                                    mk_prod (s2 :: tl2)]) :: rhs)
-
-                     | (Gather(_, s1), Gather(_, s2)) -> 
-                        (mk_gather (mk_sum [s1; s2]) :: rhs)
-                     | (Prod(_, Gather(_, s1) :: tl), Gather(_, s2)) 
-                        when get_part_info (mk_prod tl) = None ->
-                        (mk_gather (mk_sum [mk_prod (s1 :: tl); s2]) :: rhs)
-                     | (Gather(_, s1), Prod(_, Gather(_, s2) :: tl)) 
-                        when get_part_info (mk_prod tl) = None ->
-                        (mk_gather (mk_sum [s1; mk_prod (s2 :: tl)]) :: rhs)
-                     | (Prod(_, Gather(_, s1) :: tl1), 
-                        Prod(_, Gather(_, s2) :: tl2)) 
+                             get_part_info (mk_prod tl2) = None -> true
+                     | (Gather _, Gather _) -> true
+                     | (Prod(_, Gather(_, _) :: tl), Gather _) 
+                        when get_part_info (mk_prod tl) = None -> true
+                     | (Gather _, Prod(_, Gather(_, _) :: tl))  
+                        when get_part_info (mk_prod tl) = None -> true
+                     | (Prod(_, Gather(_, _) :: tl1), 
+                        Prod(_, Gather(_, _) :: tl2))  
                         when get_part_info (mk_prod tl1) = None && 
-                             get_part_info (mk_prod tl2) = None ->
-                        (mk_gather (mk_sum [mk_prod (s1 :: tl1);
-                                            mk_prod (s2 :: tl2)]) :: rhs)
+                             get_part_info (mk_prod tl2) = None -> true
+                     | _ -> false
+                  ) grouped_tl
+               in
+               if (List.length lhs = 0) then hd::rhs
+               else if (List.length lhs > 1) then
+                  failwith "Redundant expressions not being optimized"
+               else match (hd, List.hd lhs) with
+                  | (Repartition(_, s1, p1), Repartition(_, s2, p2))
+                     when p1 = p2 -> 
+                     (mk_repartition p1 (mk_sum [s1; s2]) :: rhs)
+                  | (Prod(_, Repartition(_, s1, p1) :: tl), 
+                     Repartition(_, s2, p2))
+                     when p1 = p2 && 
+                          get_part_info (mk_prod tl) = None ->
+                     (mk_repartition p1 
+                        (mk_sum [mk_prod (s1 :: tl); s2]) :: rhs)
+                  | (Repartition(_, s1, p1), 
+                     Prod(_, Repartition(_, s2, p2) :: tl))
+                     when p1 = p2 && 
+                          get_part_info (mk_prod tl) = None ->
+                     (mk_repartition p1 
+                        (mk_sum [s1; mk_prod (s2 :: tl)]) :: rhs)
+                  | (Prod(_, Repartition(_, s1, p1) :: tl1), 
+                     Prod(_, Repartition(_, s2, p2) :: tl2))
+                     when p1 = p2 && 
+                          get_part_info (mk_prod tl1) = None &&
+                          get_part_info (mk_prod tl2) = None ->
+                     (mk_repartition p1 
+                        (mk_sum [mk_prod (s1 :: tl1); 
+                                 mk_prod (s2 :: tl2)]) :: rhs)
 
-                     | _ -> failwith "Impossible"
+                  | (Gather(_, s1), Gather(_, s2)) -> 
+                     (mk_gather (mk_sum [s1; s2]) :: rhs)
+                  | (Prod(_, Gather(_, s1) :: tl), Gather(_, s2)) 
+                     when get_part_info (mk_prod tl) = None ->
+                     (mk_gather (mk_sum [mk_prod (s1 :: tl); s2]) :: rhs)
+                  | (Gather(_, s1), Prod(_, Gather(_, s2) :: tl)) 
+                     when get_part_info (mk_prod tl) = None ->
+                     (mk_gather (mk_sum [s1; mk_prod (s2 :: tl)]) :: rhs)
+                  | (Prod(_, Gather(_, s1) :: tl1), 
+                     Prod(_, Gather(_, s2) :: tl2)) 
+                     when get_part_info (mk_prod tl1) = None && 
+                          get_part_info (mk_prod tl2) = None ->
+                     (mk_gather (mk_sum [mk_prod (s1 :: tl1);
+                                         mk_prod (s2 :: tl2)]) :: rhs)
 
-               with Not_found -> (hd :: grouped_tl)
+                  | _ -> failwith "Impossible"
          in
             mk_sum (group (List.map rcr sum_list))
 
@@ -769,11 +796,6 @@ let optimize_expr (dexpr: dist_expr_t): dist_expr_t =
       | Lift(meta, v, subexp) -> Lift(meta, v, rcr subexp)   
       | Exists(meta, subexp) -> Exists(meta, rcr subexp)
       | Gather(meta, subexp) -> 
-         (* let new_subexp = rcr subexp in
-         begin match new_subexp with
-            | Repartition(_, subexp2, _) -> mk_gather subexp2
-            | _ -> mk_gather new_subexp
-         end *)
          (* Try pushing Gather down the tree and compare the costs *)
          let new_dexpr = 
             (* let mk_rep_opt e = optimize_expr (mk_gather e) in *)
@@ -798,7 +820,12 @@ let optimize_expr (dexpr: dist_expr_t): dist_expr_t =
                      | None -> mk_gather dexpr
                   end
                | AggSum(meta, gb_vars, subexp) -> 
-                  AggSum(new_meta, gb_vars, rcr (mk_gather subexp))
+                  begin match rcr (mk_gather subexp) with 
+                     | Gather(_, new_subexp) -> 
+                        let new_meta = get_meta_info new_subexp in
+                        mk_gather (AggSum(new_meta, gb_vars, new_subexp))
+                     | new_subexp -> AggSum(new_meta, gb_vars, new_subexp)
+                  end
                | DomainDelta(meta, subexp) -> 
                   DomainDelta(new_meta, rcr (mk_gather subexp))
                | Lift(meta, v, subexp) -> 
@@ -812,9 +839,16 @@ let optimize_expr (dexpr: dist_expr_t): dist_expr_t =
             end
          in
          begin
-            let old_cost = cost_of_expr dexpr in
-            let new_cost = cost_of_expr new_dexpr in
-            if (new_cost < old_cost) then new_dexpr else dexpr
+            let (old_g, old_r, old_numvars) = cost_of_expr dexpr in
+            let (new_g, new_r, new_numvars) = cost_of_expr new_dexpr in
+            let old_cost = old_g + old_r in
+            let new_cost = new_g + new_r in
+            if ((new_cost < old_cost) || 
+                (new_cost == old_cost && new_g < old_g) || 
+                (new_cost == old_cost && new_g == old_g && 
+                 new_numvars < old_numvars))
+            then new_dexpr 
+            else dexpr
          end
       | Repartition(meta, subexp, pkeys) -> 
          (* Try pushing Repartition down the tree and compare the costs *)
@@ -842,7 +876,13 @@ let optimize_expr (dexpr: dist_expr_t): dist_expr_t =
                      | None -> mk_rep dexpr
                   end
                | AggSum(meta, gb_vars, subexp) -> 
-                  AggSum(new_meta, gb_vars, rcr (mk_rep subexp))
+                  begin match rcr (mk_rep subexp) with 
+                     | Repartition(_, new_subexp, pkeys2) 
+                        when ListAsSet.seteq pkeys pkeys2 -> 
+                        let new_meta = get_meta_info new_subexp in
+                        mk_rep (AggSum(new_meta, gb_vars, new_subexp))
+                     | new_subexp -> AggSum(new_meta, gb_vars, new_subexp)
+                  end
                | DomainDelta(meta, subexp) -> 
                   DomainDelta(new_meta, rcr (mk_rep subexp))
                | Lift(meta, v, subexp) -> 
@@ -856,9 +896,16 @@ let optimize_expr (dexpr: dist_expr_t): dist_expr_t =
             end
          in
          begin
-            let old_cost = cost_of_expr dexpr in
-            let new_cost = cost_of_expr new_dexpr in
-            if (new_cost < old_cost) then new_dexpr else dexpr
+            let (old_g, old_r, old_numvars) = cost_of_expr dexpr in
+            let (new_g, new_r, new_numvars) = cost_of_expr new_dexpr in
+            let old_cost = old_g + old_r in
+            let new_cost = new_g + new_r in
+            if ((new_cost < old_cost) || 
+                (new_cost == old_cost && new_g < old_g) || 
+                (new_cost == old_cost && new_g == old_g && 
+                 new_numvars < old_numvars))
+            then new_dexpr 
+            else dexpr
          end
       end
    in 
@@ -895,16 +942,31 @@ let lift_trigger (part_table: part_table_t)
       statements = ref (List.map (lift_statement part_table) 
                                  !(trigger.statements))  }
 
-let lift_prog (part_table: part_table_t) (prog: prog_t): dist_prog_t = 
+let lift_prog (part_table: part_table_t) (prog: prog_t): dist_prog_t =    
+   List.iter (fun map -> match map with
+      | DSView(view) -> 
+         begin match view.ds_name with 
+            | CalcRing.Val(External(ename, _, _, _, _)) 
+              when (C.deltarels_of_expr view.ds_definition <> [] &&
+                    C.rels_of_expr view.ds_definition == []) ->
+                 delta_maps := ename :: !delta_maps
+            | _ -> ()
+         end         
+      | _ -> ()
+   ) !(prog.maps); 
    {  queries  = ref !(prog.queries);
       maps     = ref !(prog.maps);
       triggers = ref (List.map (lift_trigger part_table) 
                                !(prog.triggers));
       db       = prog.db   }
 
+
 (** Stringify a statement.  This string conforms to the grammar of 
     Calculusparser *)
 let string_of_statement (dstmt: dist_stmt_t): string = 
+   let string_of_cost (a,b,c) = 
+      "(" ^ ListExtras.string_of_list ~sep:", " string_of_int [a; b; c] ^ ")" 
+   in
    let (lhs, rhs) =    
       match ( get_part_info dstmt.target_map,
               get_part_info dstmt.update_expr ) with
@@ -930,7 +992,7 @@ let string_of_statement (dstmt: dist_stmt_t): string =
    (if String.contains expr_string '\n' then "\n  " else "")^
    expr_string ^
    (if (Debug.active "PRINT-ANNOTATED-M3-COSTS") then 
-       (" @Cost = " ^ string_of_int (cost_of_expr optimized_rhs))
+       (" @Cost = " ^ string_of_cost (cost_of_expr optimized_rhs))
     else "")
 
 (**
