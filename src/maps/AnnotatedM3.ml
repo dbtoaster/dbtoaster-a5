@@ -699,6 +699,20 @@ let cost_of_expr (dexpr: dist_expr_t): (int * int * int) =
    in
       rcr dexpr
 
+let decompose_graph ((schema, expr_list): (var_t list * dist_expr_t list)):
+                    var_t list * (var_t list * dist_expr_t) list =
+   let get_vars term = 
+      let meta = get_meta_info term in
+         ListAsSet.union meta.ivars meta.ovars
+   in
+      (  schema, 
+         List.map (fun term_list ->
+            let term = mk_prod term_list in
+            let term_schema = (get_meta_info term).ovars in
+               ( ListAsSet.inter schema term_schema, term )
+         ) (HyperGraph.connected_components get_vars expr_list)
+      )
+
 let optimize_expr (dexpr: dist_expr_t): dist_expr_t = 
    Debug.print "LOG-ANNOTM3-OPT" (fun () ->
       "Optimizing expr (START): "^(string_of_expr dexpr) 
@@ -830,8 +844,13 @@ let optimize_expr (dexpr: dist_expr_t): dist_expr_t =
             begin match subexp with
                | Sum(_, sum_list) -> 
                   rcr (Sum(new_meta, List.map mk_gather sum_list))
-               | Prod(_, prod_list) -> 
-                  rcr (Prod(new_meta, List.map mk_gather prod_list))
+               | Prod(m, prod_list) -> 
+                  let (_, comps) = decompose_graph (m.ovars, prod_list) in
+                  if (List.length comps == 1) then
+                     rcr (Prod(new_meta, List.map mk_gather prod_list))
+                  else 
+                     let fn_g = (fun c -> mk_gather (snd c)) in
+                     rcr (Prod(new_meta, List.map fn_g comps))
                | Neg(_, subexp) -> 
                   rcr (Neg(new_meta, mk_gather subexp))
                | Value _ | Cmp _ | Rel _ | DeltaRel _ -> mk_gather dexpr
@@ -892,8 +911,13 @@ let optimize_expr (dexpr: dist_expr_t): dist_expr_t =
             begin match subexp with
                | Sum(_, sum_list) -> 
                   rcr (Sum(new_meta, List.map mk_rep sum_list))
-               | Prod(_, prod_list) -> 
-                  rcr (Prod(new_meta, List.map mk_rep prod_list))
+               | Prod(m, prod_list) -> 
+                  let (_, comps) = decompose_graph (m.ovars, prod_list) in
+                  if (List.length comps == 1) then
+                     rcr (Prod(new_meta, List.map mk_rep prod_list))
+                  else 
+                     let fn_rep = (fun c -> mk_rep (snd c)) in
+                     rcr (Prod(new_meta, List.map fn_rep comps))               
                | Neg(_, subexp) -> 
                   rcr (Neg(new_meta, mk_rep subexp))
                | Value _ | Cmp _ | Rel _ | DeltaRel _ -> mk_rep dexpr
