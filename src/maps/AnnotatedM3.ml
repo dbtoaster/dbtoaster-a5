@@ -197,6 +197,7 @@ let string_of_expr (dexpr: dist_expr_t): string =
    in
       rcr 4 dexpr
 
+
 (* Construction Helpers *)
 let rec mk_repartition (pkeys: var_t list) (dexpr: dist_expr_t): dist_expr_t =
    let meta_info = get_meta_info dexpr in
@@ -217,7 +218,6 @@ let rec mk_repartition (pkeys: var_t list) (dexpr: dist_expr_t): dist_expr_t =
          begin match meta_info.part_info with
             (* Check if already partitioned by trunc_pkeys *)
             | Some(Distributed(pkeys2)) when pkeys2 = trunc_pkeys -> dexpr
-            (* Repartition if not None *)
             | Some(Distributed(_)) | Some(Local) ->
                let new_meta_info = {
                   part_info = Some(Distributed(trunc_pkeys));
@@ -343,13 +343,6 @@ and mk_sum (dexpr_list: dist_expr_t list): dist_expr_t =
                         ovars = hd_ovars;
                      } in
                      Sum(meta_info, (sum_list hd1) @ (sum_list hd2))
-                     (* begin match (hd1, hd2) with
-                        | (Repartition(m1, e1, p1), Repartition(m2, e2, p2)) ->
-                           mk_repartition p1 (
-                              Sum(meta_info, (sum_list e1) @ (sum_list e2))
-                           ) 
-                        | _ -> Sum(meta_info, (sum_list hd1) @ (sum_list hd2))
-                     end *)
                   (* If hd1 is replicated, then repartition hd1 *)
                   else if p1 = [] then
                      let repartitioned_hd1 = mk_repartition p2 hd1 in
@@ -420,13 +413,6 @@ and mk_sum (dexpr_list: dist_expr_t list): dist_expr_t =
                      ovars = hd_ovars;
                   } in
                   Sum(meta_info, (sum_list hd1) @ (sum_list hd2))
-                  (* begin match (hd1, hd2) with
-                     | (Gather(m1, e1), Gather(m2, e2)) ->
-                        mk_gather (
-                           Sum(meta_info, (sum_list e1) @ (sum_list e2))
-                        ) 
-                     | _ -> Sum(meta_info, (sum_list hd1) @ (sum_list hd2))
-                  end *)
 
                | (None, pinfo) | (pinfo, None)-> 
                   let meta_info = {
@@ -500,15 +486,34 @@ and mk_prod (dexpr_list: dist_expr_t list): dist_expr_t =
                         Prod(meta_info, (prod_list repartitioned_hd1) @ 
                                         (prod_list hd2))
 
-               | (Some(Distributed(p1)), Some(Local)) -> 
-                  let repartitioned_hd2 = mk_repartition p1 hd2 in
+               | (Some(Distributed([])), Some(Local)) -> 
+                  let gather_hd1 = mk_gather hd1 in
                   let meta_info = {
-                     part_info = Some(Distributed(p1));
+                     part_info = Some(Local);
+                     ivars = hd_ivars;
+                     ovars = hd_ovars;
+                  } in
+                     Prod(meta_info, (prod_list gather_hd1) @
+                                     (prod_list hd2))
+               | (Some(Distributed(p1)), Some(Local)) -> 
+                     let repartitioned_hd2 = mk_repartition p1 hd2 in
+                     let meta_info = {
+                        part_info = Some(Distributed(p1));
+                        ivars = hd_ivars;
+                        ovars = hd_ovars;
+                     } in
+                        Prod(meta_info, (prod_list hd1) @
+                                        (prod_list repartitioned_hd2))
+
+               | (Some(Local), Some(Distributed([]))) -> 
+                  let gather_hd2 = mk_gather hd2 in
+                  let meta_info = {
+                     part_info = Some(Local);
                      ivars = hd_ivars;
                      ovars = hd_ovars;
                   } in
                      Prod(meta_info, (prod_list hd1) @
-                                     (prod_list repartitioned_hd2))
+                                     (prod_list gather_hd2))
 
                | (Some(Local), Some(Distributed(p2))) ->
                   let repartitioned_hd1 = mk_repartition p2 hd1 in
@@ -694,7 +699,6 @@ let cost_of_expr (dexpr: dist_expr_t): (int * int * int) =
    in
       rcr dexpr
 
-
 let optimize_expr (dexpr: dist_expr_t): dist_expr_t = 
    Debug.print "LOG-ANNOTM3-OPT" (fun () ->
       "Optimizing expr (START): "^(string_of_expr dexpr) 
@@ -791,91 +795,116 @@ let optimize_expr (dexpr: dist_expr_t): dist_expr_t =
                External(meta, (en, ei, eo, et, Some(rcr subexp)))
             | None -> dexpr
          end
-      | AggSum(meta, gb_vars, subexp) -> AggSum(meta, gb_vars, rcr subexp)
+      | AggSum(meta, gb_vars, subexp) -> 
+         begin match rcr subexp with 
+            | Repartition(_, new_subexp, pkeys) -> 
+               let new_meta = get_meta_info new_subexp in
+               mk_repartition pkeys (AggSum(new_meta, gb_vars, new_subexp))
+            | Gather(_, new_subexp) -> 
+               let new_meta = get_meta_info new_subexp in
+               mk_gather (AggSum(new_meta, gb_vars, new_subexp))
+            | new_subexp -> AggSum(meta, gb_vars, new_subexp)
+         end
       | DomainDelta(meta, subexp) -> DomainDelta(meta, rcr subexp)      
-      | Lift(meta, v, subexp) -> Lift(meta, v, rcr subexp)   
-      | Exists(meta, subexp) -> Exists(meta, rcr subexp)
+      | Lift(meta, v, subexp) -> Lift(meta, v, rcr subexp)         
+      | Exists(meta, subexp) -> 
+         begin match rcr subexp with 
+            | Repartition(_, new_subexp, pkeys) ->
+               let new_meta = get_meta_info new_subexp in
+               mk_repartition pkeys (Exists(new_meta, new_subexp))
+            | Gather(_, new_subexp) -> 
+               let new_meta = get_meta_info new_subexp in
+               mk_gather (Exists(new_meta, new_subexp))
+            | new_subexp -> Exists(meta, new_subexp)
+         end 
       | Gather(meta, subexp) -> 
+         let new_dexpr_1 = mk_gather (rcr subexp) in
+
          (* Try pushing Gather down the tree and compare the costs *)
-         let new_dexpr = 
-            (* let mk_rep_opt e = optimize_expr (mk_gather e) in *)
+         let new_dexpr_2 = 
             let new_meta = {
                part_info = Some(Local);
                ivars = meta.ivars;
                ovars = meta.ovars;
             } in
             begin match subexp with
-               | Sum(meta, sum_list) -> 
+               | Sum(_, sum_list) -> 
                   rcr (Sum(new_meta, List.map mk_gather sum_list))
-               | Prod(meta, prod_list) -> 
+               | Prod(_, prod_list) -> 
                   rcr (Prod(new_meta, List.map mk_gather prod_list))
-               | Neg(meta, subexp) -> 
+               | Neg(_, subexp) -> 
                   rcr (Neg(new_meta, mk_gather subexp))
                | Value _ | Cmp _ | Rel _ | DeltaRel _ -> mk_gather dexpr
-               | External(meta, (en, ei, eo, et, eivc)) -> 
+               | External(_, (en, ei, eo, et, eivc)) -> 
                   begin match eivc with  
                      | Some(subexp) -> 
                         mk_gather (External(new_meta, (en, ei, eo, et, 
                                             Some(rcr (mk_gather subexp)))))
                      | None -> mk_gather dexpr
                   end
-               | AggSum(meta, gb_vars, subexp) -> 
+               | AggSum(_, gb_vars, subexp) -> 
                   begin match rcr (mk_gather subexp) with 
                      | Gather(_, new_subexp) -> 
                         let new_meta = get_meta_info new_subexp in
                         mk_gather (AggSum(new_meta, gb_vars, new_subexp))
                      | new_subexp -> AggSum(new_meta, gb_vars, new_subexp)
                   end
-               | DomainDelta(meta, subexp) -> 
+               | DomainDelta(_, subexp) -> 
                   DomainDelta(new_meta, rcr (mk_gather subexp))
-               | Lift(meta, v, subexp) -> 
+               | Lift(_, v, subexp) -> 
                   Lift(new_meta, v, rcr (mk_gather subexp))
-               | Exists(meta, subexp) -> 
-                  Exists(new_meta, rcr (mk_gather subexp))
-               | Gather(meta, subexp) -> 
+               | Exists(_, subexp) -> 
+                  begin match rcr (mk_gather subexp) with 
+                     | Gather(_, new_subexp) -> 
+                        let new_meta = get_meta_info new_subexp in
+                        mk_gather (Exists(new_meta, new_subexp))
+                     | new_subexp -> Exists(new_meta, new_subexp)
+                  end
+               | Gather(_, subexp) -> 
                   rcr (mk_gather subexp)
-               | Repartition(meta, subexp, pkeys) -> 
+               | Repartition(_, subexp, pkeys) -> 
                   rcr (mk_gather subexp)
             end
          in
          begin
-            let (old_g, old_r, old_numvars) = cost_of_expr dexpr in
-            let (new_g, new_r, new_numvars) = cost_of_expr new_dexpr in
+            let (old_g, old_r, old_numvars) = cost_of_expr new_dexpr_1 in
+            let (new_g, new_r, new_numvars) = cost_of_expr new_dexpr_2 in
             let old_cost = old_g + old_r in
             let new_cost = new_g + new_r in
             if ((new_cost < old_cost) || 
                 (new_cost == old_cost && new_g < old_g) || 
                 (new_cost == old_cost && new_g == old_g && 
                  new_numvars < old_numvars))
-            then new_dexpr 
-            else dexpr
+            then new_dexpr_2 
+            else new_dexpr_1
          end
       | Repartition(meta, subexp, pkeys) -> 
+         let new_dexpr_1 = mk_repartition pkeys (rcr subexp) in
+
          (* Try pushing Repartition down the tree and compare the costs *)
-         let new_dexpr = 
+         let new_dexpr_2 = 
             let mk_rep = mk_repartition pkeys in
-            (* let mk_rep_opt e = optimize_expr (mk_rep e) in *)
             let new_meta = {
                part_info = Some(Distributed(pkeys));
                ivars = meta.ivars;
                ovars = meta.ovars;
             } in
             begin match subexp with
-               | Sum(meta, sum_list) -> 
+               | Sum(_, sum_list) -> 
                   rcr (Sum(new_meta, List.map mk_rep sum_list))
-               | Prod(meta, prod_list) -> 
+               | Prod(_, prod_list) -> 
                   rcr (Prod(new_meta, List.map mk_rep prod_list))
-               | Neg(meta, subexp) -> 
+               | Neg(_, subexp) -> 
                   rcr (Neg(new_meta, mk_rep subexp))
                | Value _ | Cmp _ | Rel _ | DeltaRel _ -> mk_rep dexpr
-               | External(meta, (en, ei, eo, et, eivc)) -> 
+               | External(_, (en, ei, eo, et, eivc)) -> 
                   begin match eivc with  
                      | Some(subexp) -> 
                         mk_rep (External(new_meta, (en, ei, eo, et, 
                                          Some(rcr (mk_rep subexp)))))
                      | None -> mk_rep dexpr
                   end
-               | AggSum(meta, gb_vars, subexp) -> 
+               | AggSum(_, gb_vars, subexp) -> 
                   begin match rcr (mk_rep subexp) with 
                      | Repartition(_, new_subexp, pkeys2) 
                         when ListAsSet.seteq pkeys pkeys2 -> 
@@ -883,29 +912,35 @@ let optimize_expr (dexpr: dist_expr_t): dist_expr_t =
                         mk_rep (AggSum(new_meta, gb_vars, new_subexp))
                      | new_subexp -> AggSum(new_meta, gb_vars, new_subexp)
                   end
-               | DomainDelta(meta, subexp) -> 
+               | DomainDelta(_, subexp) -> 
                   DomainDelta(new_meta, rcr (mk_rep subexp))
-               | Lift(meta, v, subexp) -> 
+               | Lift(_, v, subexp) -> 
                   Lift(new_meta, v, rcr (mk_rep subexp))
-               | Exists(meta, subexp) -> 
-                  Exists(new_meta, rcr (mk_rep subexp))
-               | Gather(meta, subexp) -> 
+               | Exists(_, subexp) -> 
+                  begin match rcr (mk_rep subexp) with 
+                     | Repartition(_, new_subexp, pkeys2) 
+                        when ListAsSet.seteq pkeys pkeys2 -> 
+                        let new_meta = get_meta_info new_subexp in
+                        mk_rep (Exists(new_meta, new_subexp))
+                     | new_subexp -> Exists(new_meta, new_subexp)
+                  end
+               | Gather(_, subexp) -> 
                   rcr (mk_rep subexp)
-               | Repartition(meta, subexp, pkeys) -> 
+               | Repartition(_, subexp, pkeys) -> 
                   rcr (mk_rep subexp)
             end
          in
          begin
-            let (old_g, old_r, old_numvars) = cost_of_expr dexpr in
-            let (new_g, new_r, new_numvars) = cost_of_expr new_dexpr in
+            let (old_g, old_r, old_numvars) = cost_of_expr new_dexpr_1 in
+            let (new_g, new_r, new_numvars) = cost_of_expr new_dexpr_2 in
             let old_cost = old_g + old_r in
             let new_cost = new_g + new_r in
             if ((new_cost < old_cost) || 
                 (new_cost == old_cost && new_g < old_g) || 
                 (new_cost == old_cost && new_g == old_g && 
                  new_numvars < old_numvars))
-            then new_dexpr 
-            else dexpr
+            then new_dexpr_2 
+            else new_dexpr_1
          end
       end
    in 
