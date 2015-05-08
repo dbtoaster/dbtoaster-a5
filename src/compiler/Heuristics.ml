@@ -949,7 +949,7 @@ and materialize_as_external (heuristic_options:heuristic_options_t)
    );     
    
    let force = List.mem ForceExpMaterialization heuristic_options in
-
+   
    (* Check if expr can be further decomposed     *)
    (* e.g. R(A) * S(C) * (E ^= (R(C) * S(A)))     *)   
    let (_, components) = decompose_graph scope (schema, expr) in
@@ -958,6 +958,59 @@ and materialize_as_external (heuristic_options:heuristic_options_t)
       materialize ~scope:scope
                   heuristic_options db_schema history 
                   (prefix^"_P_") event agg_expr
+   else
+
+   (* A problem might appear when we materialize expressions joining 
+      three or more relations with N-1 and 1-N relationships, which 
+      yields a potentially huge N x N result (e.g., observe the joins 
+      around NATION in the M3 programs of TPCH5 and TPCH7). 
+
+      To prevent that, we provide the HEURISTICS-DECOMPOSE-OVER-TABLES 
+      flag that decomposes expressions in which one static table joins 
+      with two or more streams. The rationale is that static tables are 
+      often small, dimension tables referenced through foreign keys of 
+      the stream tables. Joining one such static table with two or more 
+      streams often results in a quadratic number of output tuples. *)
+   let table_vars = 
+      if not (Debug.active "HEURISTICS-DECOMPOSE-OVER-TABLES") then [] else 
+      (* Extract names and variables of static tables *)
+      let table_names = 
+         List.map Schema.name_of_rel (Schema.table_rels db_schema) 
+      in
+      let table_vars = 
+         ListAsSet.multiunion (List.map (function
+            | CalcRing.Val(Rel(rn,rv)) when List.mem rn table_names -> rv
+            | _ -> []) (CalcRing.prod_list expr))
+      in      
+      let table_scope = ListAsSet.union scope table_vars in
+      (* Decompose the given expression by excluding all table variables. *)
+      let (_, components) = decompose_graph table_scope (schema, expr) in
+      (* Extract only components containing stream relations *)
+      let rvars_components = 
+         List.flatten 
+            (List.map (fun (sch, cexpr) ->
+               let rels = rels_of_expr cexpr in
+               if (List.length rels == 0 || 
+                   List.exists (fun r -> List.mem r table_names) rels) 
+               then []
+               else [snd (schema_of_expr cexpr)]
+            ) components)
+      in
+      (* TODO: merge rvars components if sharing some variables (can happen 
+         only with table_vars); doesn't happen with TPCH queries. *)
+      let merged_rvars_components = rvars_components in
+      (* If there are more than two components, we should decompose and 
+         partially materialize the expression. Consider only relevant 
+         table variables.  *)
+      if (List.length merged_rvars_components < 2) then []
+      else ListAsSet.multiunion 
+              (List.map (fun rvars -> ListAsSet.inter table_vars rvars) 
+                        merged_rvars_components)
+   in
+   if (not force && table_vars <> []) then
+      materialize ~scope:(ListAsSet.union scope table_vars)
+                  heuristic_options db_schema history 
+                  (prefix^"_T_") event agg_expr
    else
 
       (*** HERE COMES THE ACTUAL MATERIALIZATION ***)   
