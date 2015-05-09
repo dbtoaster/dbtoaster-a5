@@ -771,27 +771,46 @@ if stage_is_active StageM3ToAnnotM3 then (
       ]
    in
    let tpch5_part_table = 
-      create_hashtbl [
-         ("REVENUE",                                None);
-         ("REVENUESUPPLIER1_DELTA",                 None);
-         ("REVENUESUPPLIER1_P_2",                   Some([1])); (* SK *)
-         ("REVENUESUPPLIER1_P_2LINEITEM1",          Some([1])); (* OK *)
-         ("REVENUESUPPLIER1_P_2LINEITEM1CUSTOMER1", Some([0])); (* OK *)
-         ("REVENUESUPPLIER1_P_2ORDERS1_P_1",        Some([0])); (* CK *)
-         ("REVENUESUPPLIER1_P_2ORDERS1_P_2",        Some([0])); (* OK *)
-         ("REVENUESUPPLIER1_P_2CUSTOMER1",          Some([0])); (* CK *)
-         ("REVENUELINEITEM1_DELTA",                 None);
-         ("REVENUELINEITEM1",                       Some([0])); (* OK *)
-         ("REVENUELINEITEM1ORDERS1",                Some([0])); (* CK *)
-         ("REVENUELINEITEM1CUSTOMER1_P_3",          Some([0])); (* SK *)
-         ("REVENUEORDERS1_DELTA",                   None);
-         ("REVENUEORDERS1",                         Some([1])); (* OK *)
-         ("REVENUEORDERS1CUSTOMER1_P_2",            Some([0])); (* OK *)
-         ("REVENUECUSTOMER1_DELTA",                 None);
-         ("REVENUECUSTOMER1_P_1",                   Some([]));  (* ** *)
-         ("REVENUECUSTOMER1_P_2",                   Some([0])); (* CK *)
+      if (Debug.active "HEURISTICS-DECOMPOSE-OVER-TABLES") then      
+         create_hashtbl [
+            ("REVENUE",                                None);
+            ("REVENUESUPPLIER1_DELTA",                 None);
+            ("REVENUESUPPLIER1_P_2",                   Some([1])); (* SK *)
+            ("REVENUESUPPLIER1_P_2ORDERS1_P_2",        Some([0])); (* OK *)
+            ("REVENUESUPPLIER1_P_2CUSTOMER1",          Some([0])); (* CK *)
+            ("REVENUESUPPLIER1_P_2CUSTOMER1LINEITEM1", Some([0])); (* OK *)
+            ("REVENUELINEITEM1_DELTA",                 None);
+            ("REVENUELINEITEM1_T_2",                   Some([1])); (* OK *)
+            ("REVENUELINEITEM1_T_3",                   Some([0])); (* SK *)
+            ("REVENUEORDERS1_DELTA",                   None);
+            ("REVENUEORDERS1_T_2",                     Some([0])); (* CK *)
+            ("REVENUEORDERS1_T_3",                     Some([0])); (* OK *)
+            ("REVENUECUSTOMER1_DELTA",                 None);
+            ("REVENUECUSTOMER1_P_1",                   Some([]));  (* ** *)
+            ("REVENUECUSTOMER1_P_2",                   Some([0])); (* CK *)
+         ]      
+      else
+         create_hashtbl [
+            ("REVENUE",                                None);
+            ("REVENUESUPPLIER1_DELTA",                 None);
+            ("REVENUESUPPLIER1_P_2",                   Some([1])); (* SK *)
+            ("REVENUESUPPLIER1_P_2LINEITEM1",          Some([1])); (* OK *)
+            ("REVENUESUPPLIER1_P_2LINEITEM1CUSTOMER1", Some([0])); (* OK *)
+            ("REVENUESUPPLIER1_P_2ORDERS1_P_1",        Some([0])); (* CK *)
+            ("REVENUESUPPLIER1_P_2ORDERS1_P_2",        Some([0])); (* OK *)
+            ("REVENUESUPPLIER1_P_2CUSTOMER1",          Some([0])); (* CK *)
+            ("REVENUELINEITEM1_DELTA",                 None);
+            ("REVENUELINEITEM1",                       Some([0])); (* OK *)
+            ("REVENUELINEITEM1ORDERS1",                Some([0])); (* CK *)
+            ("REVENUELINEITEM1CUSTOMER1_P_3",          Some([0])); (* SK *)
+            ("REVENUEORDERS1_DELTA",                   None);
+            ("REVENUEORDERS1",                         Some([1])); (* OK *)
+            ("REVENUEORDERS1CUSTOMER1_P_2",            Some([0])); (* OK *)
+            ("REVENUECUSTOMER1_DELTA",                 None);
+            ("REVENUECUSTOMER1_P_1",                   Some([]));  (* ** *)
+            ("REVENUECUSTOMER1_P_2",                   Some([0])); (* CK *)
 
-      ]
+         ]
    in
    let tpch6_part_table = 
       create_hashtbl [ 
@@ -800,27 +819,51 @@ if stage_is_active StageM3ToAnnotM3 then (
       ]
    in
    let tpch7_part_table = 
-      create_hashtbl [ 
-         ("REVENUE",                              None); 
-         ("REVENUECUSTOMER1_DELTA",               None);
-         ("REVENUECUSTOMER1",                     Some([0])); (* CK *) 
-         ("REVENUECUSTOMER1ORDERS1",              Some([0])); (* OK *)
-         ("REVENUECUSTOMER1ORDERS1SUPPLIER1_P_1", Some([0])); (* OK *)
-         ("REVENUECUSTOMER1LINEITEM1_P_1",        Some([0])); (* SK *) 
-         ("REVENUECUSTOMER1LINEITEM1_P_2",        Some([0])); (* OK *)
-         ("REVENUECUSTOMER1SUPPLIER1_P_1",        Some([1])); (* CK *)
-         ("REVENUECUSTOMER1SUPPLIER1_P_2",        Some([]));  (* ** *)
-         ("REVENUEORDERS1_DELTA",                 None);
-         ("REVENUEORDERS1",                       Some([0])); (* OK *)
-         ("REVENUEORDERS1LINEITEM1",              Some([1])); (* CK *) (* 0:SK *)
-         ("REVENUEORDERS1SUPPLIER1_P_2",          Some([0])); (* CK *)
-         ("REVENUELINEITEM1_DOMAIN1",             None);
-         ("REVENUELINEITEM1_DELTA",               None);
-         ("REVENUELINEITEM1",                     Some([1])); (* OK *)
-         ("REVENUELINEITEM1SUPPLIER1",            Some([0])); (* OK *)
-         ("REVENUESUPPLIER1_DELTA",               None);
-         ("REVENUESUPPLIER1",                     Some([0])); (* SK *)
-      ]
+      if (Debug.active "HEURISTICS-DECOMPOSE-OVER-TABLES") then      
+         create_hashtbl [ 
+            ("REVENUE",                              None); 
+            ("REVENUECUSTOMER1_DELTA",               None);
+            ("REVENUECUSTOMER1",                     Some([0])); (* CK *) 
+            ("REVENUECUSTOMER1ORDERS1",              Some([0])); (* OK *)
+            ("REVENUECUSTOMER1ORDERS1SUPPLIER1_P_1", Some([0])); (* OK *)
+            ("REVENUECUSTOMER1LINEITEM1_P_1",        Some([0])); (* SK *) 
+            ("REVENUECUSTOMER1LINEITEM1_P_2",        Some([0])); (* OK *)
+            ("REVENUECUSTOMER1SUPPLIER1_P_1",        Some([1])); (* CK *)
+            ("REVENUEORDERS1_DELTA",                 None);
+            ("REVENUEORDERS1_T_1",                   Some([1])); (* OK *)
+            ("REVENUEORDERS1_T_2",                   Some([0])); (* CK *)
+            ("REVENUELINEITEM1_DOMAIN1",             None);
+            ("REVENUELINEITEM1_DELTA",               None);
+            ("REVENUELINEITEM1_T_1",                 Some([0])); (* SK *)
+            ("REVENUELINEITEM1_T_2",                 Some([0])); (* OK *)
+            ("REVENUELINEITEM1_T_3",                 Some([]));  (* ** *)
+            ("REVENUESUPPLIER1_DELTA",               None);
+            ("REVENUESUPPLIER1",                     Some([0])); (* SK *)
+            ("REVENUESUPPLIER1ORDERS1_P_2",          Some([0])); (* CK *)
+            ("REVENUESUPPLIER1LINEITEM1",            Some([0])); (* OK *)
+         ]
+   else   
+         create_hashtbl [ 
+            ("REVENUE",                              None); 
+            ("REVENUECUSTOMER1_DELTA",               None);
+            ("REVENUECUSTOMER1",                     Some([0])); (* CK *) 
+            ("REVENUECUSTOMER1ORDERS1",              Some([0])); (* OK *)
+            ("REVENUECUSTOMER1ORDERS1SUPPLIER1_P_1", Some([0])); (* OK *)
+            ("REVENUECUSTOMER1LINEITEM1_P_1",        Some([0])); (* SK *) 
+            ("REVENUECUSTOMER1LINEITEM1_P_2",        Some([0])); (* OK *)
+            ("REVENUECUSTOMER1SUPPLIER1_P_1",        Some([1])); (* CK *)
+            ("REVENUECUSTOMER1SUPPLIER1_P_2",        Some([]));  (* ** *)
+            ("REVENUEORDERS1_DELTA",                 None);
+            ("REVENUEORDERS1",                       Some([0])); (* OK *)
+            ("REVENUEORDERS1LINEITEM1",              Some([1])); (* CK *) (* 0:SK *)
+            ("REVENUEORDERS1SUPPLIER1_P_2",          Some([0])); (* CK *)
+            ("REVENUELINEITEM1_DOMAIN1",             None);
+            ("REVENUELINEITEM1_DELTA",               None);
+            ("REVENUELINEITEM1",                     Some([1])); (* OK *)
+            ("REVENUELINEITEM1SUPPLIER1",            Some([0])); (* OK *)
+            ("REVENUESUPPLIER1_DELTA",               None);
+            ("REVENUESUPPLIER1",                     Some([0])); (* SK *)
+         ]
    in
    let tpch8_part_table = 
       create_hashtbl [ 
