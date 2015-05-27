@@ -1023,7 +1023,8 @@ and materialize_as_external (heuristic_options:heuristic_options_t)
       let (found_ds, mapping_if_found) = 
          List.fold_left (fun result i ->
             if (snd result) <> None then result 
-            else (i, (cmp_exprs i.ds_definition agg_expr))
+            else (i, (cmp_exprs ~cmp_opts:CalcRing.full_cmp_opts 
+                                i.ds_definition agg_expr))
          ) ( { ds_name = CalcRing.one; 
                ds_definition = CalcRing.one }, None ) !history
       in         
