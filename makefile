@@ -45,7 +45,7 @@ FILES=\
 	src/imperative/Imperative\
 	src/imperative/K3ToImperative\
 	src/imperative/ImperativeCompiler\
-        src/lib/Sources\
+	src/lib/Sources\
 	src/lib/StandardFunctions\
 	src/lib/StandardAdaptors\
 	src/lib/SliceableMap\
@@ -53,6 +53,7 @@ FILES=\
 	src/lib/Database\
 	src/lib/DBChecker\
 	src/lib/Runtime\
+	src/lib/Partitioner\
 	src/functional/K3Codegen\
 	src/codegen/K3Interpreter\
 	src/codegen/K3Scalagen\
