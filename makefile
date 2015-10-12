@@ -15,6 +15,7 @@ FILES=\
 	src/global/Constants\
 	src/global/Schema\
 	src/global/Functions\
+	src/global/Partitioner\
 	src/sql/Sql\
 	src/sql/SqlClient\
 	src/ring/Ring\
@@ -53,7 +54,6 @@ FILES=\
 	src/lib/Database\
 	src/lib/DBChecker\
 	src/lib/Runtime\
-	src/lib/Partitioner\
 	src/functional/K3Codegen\
 	src/codegen/K3Interpreter\
 	src/codegen/K3Scalagen\

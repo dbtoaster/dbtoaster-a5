@@ -4,20 +4,19 @@ open Calculus
 open Constants
 open Plan
 open M3
+open Partitioner
 (* open UnitTest *)
 
 module C = Calculus
 
-type part_table_t = (string, (int list) option) Hashtbl.t
+type part_info_t = (var_t) Partitioner.gen_part_info_t
 
-type part_info_t = 
-   | Local
-   | Distributed of var_t list
+type part_table_t = (int) Partitioner.gen_part_table_t
 
 type meta_info_t = {
-   part_info  : part_info_t option;        (** Partitioning information *)
-   ivars      : var_t list;                (** Input variables *)
-   ovars      : var_t list;                (** Output variables *)
+   part_info  : part_info_t option;       (** Partitioning information *)
+   ivars      : var_t list;               (** Input variables *)
+   ovars      : var_t list;               (** Output variables *)
 }
  
 type dist_expr_t = 
@@ -50,28 +49,6 @@ type dist_expr_t =
    | Gather      of meta_info_t * dist_expr_t
    (** Repartition expression by given partition keys. *)
    | Repartition of meta_info_t * dist_expr_t * var_t list
-
-
-(* A list of maps involving delta relations; used in the cost optimizer *)
-let delta_maps: string list ref = ref [];;
-
-let rec expr_has_deltas (dexpr: dist_expr_t): bool = 
-   match dexpr with
-      | Sum(_, sl)  -> List.fold_left (||) false (List.map expr_has_deltas sl)
-      | Prod(_, pl) -> List.fold_left (||) false (List.map expr_has_deltas pl)
-      | Neg(_, e)   -> expr_has_deltas e
-      | Value _ 
-      | Rel _ 
-      | DeltaRel _ 
-      | Cmp _ -> false
-      | AggSum(_, _, subexp)
-      | Lift(_, _, subexp) 
-      | Exists(_, subexp) 
-      | DomainDelta(_, subexp) 
-      | Gather(_, subexp)
-      | Repartition(_, subexp, _) -> expr_has_deltas subexp
-      | External(_, (en, _, _, _, _))  -> 
-         List.fold_left (fun found n -> (found || (en == n))) false !delta_maps
 
 
 (*** Utility ***)
@@ -108,12 +85,12 @@ let get_part_info (dexpr: dist_expr_t): part_info_t option =
 let  sum_list e = match e with  Sum(_, l) -> l | _ -> [e]
 let prod_list e = match e with Prod(_, l) -> l | _ -> [e]
 
-let string_of_part_info (part_info: part_info_t option): string = 
-   if not (Debug.active "PRINT-PARTITION-INFO") then "" else
+
+
+
+let string_of_part_info (part_info: part_info_t option) = 
    match part_info with
-      | Some(Local) -> "<Local>"
-      | Some(Distributed(pkeys)) -> 
-         "<" ^ (ListExtras.string_of_list ~sep:", " string_of_var pkeys) ^ ">"
+      | Some(pinfo) -> Partitioner.string_of_part_info pinfo string_of_var
       | None -> ""
 
 let string_of_expr (dexpr: dist_expr_t): string = 
@@ -198,7 +175,11 @@ let string_of_expr (dexpr: dist_expr_t): string =
       rcr 4 dexpr
 
 
-(* Construction Helpers *)
+
+
+
+(** Construction Helpers **)
+
 let rec mk_repartition (pkeys: var_t list) (dexpr: dist_expr_t): dist_expr_t =
    let meta_info = get_meta_info dexpr in
    let dexpr_vars = ListAsSet.union meta_info.ivars meta_info.ovars in
@@ -206,6 +187,8 @@ let rec mk_repartition (pkeys: var_t list) (dexpr: dist_expr_t): dist_expr_t =
    (* Check if partitioning is possible, otherwise replicate *)
    let trunc_pkeys = if ListAsSet.subset pkeys dexpr_vars then pkeys else [] in
    let rcr = mk_repartition trunc_pkeys in
+
+   (* Match expression and apply simplifications *)
    match dexpr with 
       | Gather(_, subexp)         -> rcr subexp
       | Repartition(_, subexp, _) -> rcr subexp
@@ -214,53 +197,58 @@ let rec mk_repartition (pkeys: var_t list) (dexpr: dist_expr_t): dist_expr_t =
          let meta_info = get_meta_info new_subexp in
             Lift(meta_info, v, new_subexp)
       | _ ->
-         if (meta_info.ivars == []) then 
-         begin match meta_info.part_info with
-            (* Check if already partitioned by trunc_pkeys *)
-            | Some(Distributed(pkeys2)) when pkeys2 = trunc_pkeys -> dexpr
-            | Some(Distributed(_)) | Some(Local) ->
-               let new_meta_info = {
-                  part_info = Some(Distributed(trunc_pkeys));
-                  ivars = meta_info.ivars;
-                  ovars = meta_info.ovars
-               } in
-               Repartition(new_meta_info, dexpr, trunc_pkeys)
-            | None -> dexpr
-         end
-         else begin match dexpr with 
-            | Sum(_, sl) -> mk_sum (List.map rcr sl)
-            | Prod(_, pl) -> mk_prod (List.map rcr pl)
-            | Neg(_, subexp) ->
-               let new_subexp = rcr subexp in
-               let meta_info = get_meta_info new_subexp in
-                  Neg(meta_info, new_subexp) 
-            | Lift(_, v, subexp) -> 
-               let new_subexp = rcr subexp in
-               let meta_info = get_meta_info new_subexp in
-                  Lift(meta_info, v, new_subexp)                       
-            | Exists(_, subexp) -> 
-               let new_subexp = rcr subexp in
-               let meta_info = get_meta_info new_subexp in
-                  Exists(meta_info, new_subexp)
-            | DomainDelta(_, subexp) -> 
-               let new_subexp = rcr subexp in
-               let meta_info = get_meta_info new_subexp in
-                  DomainDelta(meta_info, new_subexp)
-            | AggSum(_, gb_vars, subexp) ->
-               let new_subexp = rcr subexp in
-               let meta_info = get_meta_info new_subexp in
-                  AggSum(meta_info, gb_vars, new_subexp)
-            | Value(m, _) | Cmp(m, _, _, _) -> dexpr
-            | Rel _ 
-            | DeltaRel _ 
-            | External _ 
-            | Gather _ 
-            | Repartition _ -> failwith "Not possible to happen"
-         end
+         (* If no input variables, repartition whole expression; else recur *)
+         if (meta_info.ivars = []) then 
+            begin match meta_info.part_info with
+               (* Check if already partitioned by trunc_pkeys *)
+               | Some(DistributedByKey(pkeys2)) when pkeys2 = trunc_pkeys -> 
+                  dexpr
+               | Some(_) ->
+                  let new_meta_info = {
+                     part_info = Some(DistributedByKey(trunc_pkeys));
+                     ivars = meta_info.ivars;
+                     ovars = meta_info.ovars
+                  } 
+                  in
+                     Repartition(new_meta_info, dexpr, trunc_pkeys)
+               | None -> dexpr
+            end
+         else 
+            begin match dexpr with 
+               | Sum(_, sl)  -> mk_sum (List.map rcr sl)
+               | Prod(_, pl) -> mk_prod (List.map rcr pl)
+               | Neg(_, subexp) ->
+                  let new_subexp = rcr subexp in
+                  let meta_info = get_meta_info new_subexp in
+                     Neg(meta_info, new_subexp) 
+               | Lift(_, v, subexp) -> 
+                  let new_subexp = rcr subexp in
+                  let meta_info = get_meta_info new_subexp in
+                     Lift(meta_info, v, new_subexp)                       
+               | Exists(_, subexp) -> 
+                  let new_subexp = rcr subexp in
+                  let meta_info = get_meta_info new_subexp in
+                     Exists(meta_info, new_subexp)
+               | DomainDelta(_, subexp) -> 
+                  let new_subexp = rcr subexp in
+                  let meta_info = get_meta_info new_subexp in
+                     DomainDelta(meta_info, new_subexp)
+               | AggSum(_, gb_vars, subexp) ->
+                  let new_subexp = rcr subexp in
+                  let meta_info = get_meta_info new_subexp in
+                     AggSum(meta_info, gb_vars, new_subexp)
+               | Value(m, _) | Cmp(m, _, _, _) -> dexpr
+               | Rel _ 
+               | DeltaRel _ 
+               | External _ 
+               | Gather _ 
+               | Repartition _ -> failwith "Impossible to happen"
+            end
 
 and mk_gather (dexpr: dist_expr_t): dist_expr_t = 
    let meta_info = get_meta_info dexpr in
    let rcr = mk_gather in
+
    match dexpr with 
       | Gather(_, subexp)         -> rcr subexp
       | Repartition(_, subexp, _) -> rcr subexp
@@ -269,48 +257,50 @@ and mk_gather (dexpr: dist_expr_t): dist_expr_t =
          let meta_info = get_meta_info new_subexp in
             Lift(meta_info, v, new_subexp)
       | _ -> 
-         if (meta_info.ivars == []) then 
-         begin match meta_info.part_info with
-            | Some(Local) -> dexpr
-            | Some(Distributed(_)) -> 
-               let new_meta_info = { 
-                  part_info = Some(Local);
-                  ivars = meta_info.ivars;
-                  ovars = meta_info.ovars
-               } in
-                  Gather(new_meta_info, dexpr)
-            | None -> dexpr
-         end
-         else begin match dexpr with 
-            | Sum(_, sl) -> mk_sum (List.map rcr sl)               
-            | Prod(_, pl) -> mk_prod (List.map rcr pl)
-            | Neg(_, subexp) ->
-               let new_subexp = rcr subexp in
-               let meta_info = get_meta_info new_subexp in
-                  Neg(meta_info, new_subexp) 
-            | Lift(_, v, subexp) -> 
-               let new_subexp = rcr subexp in
-               let meta_info = get_meta_info new_subexp in
-                  Lift(meta_info, v, new_subexp)                       
-            | Exists(_, subexp) -> 
-               let new_subexp = rcr subexp in
-               let meta_info = get_meta_info new_subexp in
-                  Exists(meta_info, new_subexp)
-            | DomainDelta(_, subexp) -> 
-               let new_subexp = rcr subexp in
-               let meta_info = get_meta_info new_subexp in
-                  DomainDelta(meta_info, new_subexp)
-            | AggSum(_, gb_vars, subexp) ->
-               let new_subexp = rcr subexp in
-               let meta_info = get_meta_info new_subexp in
-                  AggSum(meta_info, gb_vars, new_subexp)
-            | Value(m, _) | Cmp(m, _, _, _) -> dexpr
-            | Rel _ 
-            | DeltaRel _ 
-            | External _ 
-            | Gather _ 
-            | Repartition _ -> failwith "Not possible to happen"            
-         end
+         (* If no input variables, gather whole expression; else recur *)      
+         if (meta_info.ivars = []) then 
+            begin match meta_info.part_info with
+               | Some(Local) -> dexpr
+               | Some(_) ->
+                  let new_meta_info = { 
+                     part_info = Some(Local);
+                     ivars = meta_info.ivars;
+                     ovars = meta_info.ovars
+                  } in
+                     Gather(new_meta_info, dexpr)
+               | None -> dexpr
+            end
+         else 
+            begin match dexpr with 
+               | Sum(_, sl)  -> mk_sum (List.map rcr sl)               
+               | Prod(_, pl) -> mk_prod (List.map rcr pl)
+               | Neg(_, subexp) ->
+                  let new_subexp = rcr subexp in
+                  let meta_info = get_meta_info new_subexp in
+                     Neg(meta_info, new_subexp) 
+               | Lift(_, v, subexp) -> 
+                  let new_subexp = rcr subexp in
+                  let meta_info = get_meta_info new_subexp in
+                     Lift(meta_info, v, new_subexp)                       
+               | Exists(_, subexp) -> 
+                  let new_subexp = rcr subexp in
+                  let meta_info = get_meta_info new_subexp in
+                     Exists(meta_info, new_subexp)
+               | DomainDelta(_, subexp) -> 
+                  let new_subexp = rcr subexp in
+                  let meta_info = get_meta_info new_subexp in
+                     DomainDelta(meta_info, new_subexp)
+               | AggSum(_, gb_vars, subexp) ->
+                  let new_subexp = rcr subexp in
+                  let meta_info = get_meta_info new_subexp in
+                     AggSum(meta_info, gb_vars, new_subexp)
+               | Value(m, _) | Cmp(m, _, _, _) -> dexpr
+               | Rel _ 
+               | DeltaRel _ 
+               | External _ 
+               | Gather _ 
+               | Repartition _ -> failwith "Impossible to happen"            
+            end
 
 and mk_sum (dexpr_list: dist_expr_t list): dist_expr_t =
    let rec rcr expr_list = match  expr_list with
@@ -333,86 +323,216 @@ and mk_sum (dexpr_list: dist_expr_t list): dist_expr_t =
          in
          let merged_hd = 
             match (meta_hd1.part_info, meta_hd2.part_info) with
-               | (Some(Distributed(p1)), Some(Distributed(p2))) ->
-                  (* If hd1 and hd2 are partitioned identically, 
-                     then do nothing *)
+
+               | (Some(DistributedByKey(p1)), Some(DistributedByKey(p2))) ->
+
+                  (* If hd1 and hd2 are partitioned equally, then do nothing *)
                   if p1 = p2 then
                      let meta_info = {
-                        part_info = Some(Distributed(p1));
+                        part_info = Some(DistributedByKey(p1));
                         ivars = hd_ivars;
                         ovars = hd_ovars;
                      } in
                      Sum(meta_info, (sum_list hd1) @ (sum_list hd2))
+
                   (* If hd1 is replicated, then repartition hd1 *)
-                  else if p1 = [] then
-                     let repartitioned_hd1 = mk_repartition p2 hd1 in
-                     let meta_info = {
-                        part_info = Some(Distributed(p2));
-                        ivars = hd_ivars;
-                        ovars = hd_ovars;
-                     } in
-                        Sum(meta_info, (sum_list repartitioned_hd1) @ 
-                                       (sum_list hd2))                     
+                  else if p1 = [] then 
+                     let repartitioned_hd1 = mk_repartition p2 hd1 in                     
+                     begin match (get_part_info repartitioned_hd1) with 
+                        | Some(DistributedByKey(pk)) when p2 = pk -> 
+                           let meta_info = {
+                              part_info = Some(DistributedByKey(p2));
+                              ivars = hd_ivars;
+                              ovars = hd_ovars;
+                           } in
+                              Sum(meta_info, (sum_list repartitioned_hd1) @ 
+                                             (sum_list hd2))          
+                        | _ -> 
+                           (* failwith "Repartitioned keys do not match" *)
+                           
+                           (* Default to local operations *)
+                           let gathered_hd1 = mk_gather hd1 in
+                           let gathered_hd2 = mk_gather hd2 in
+                           let meta_info = {
+                              part_info = Some(Local);
+                              ivars = hd_ivars;
+                              ovars = hd_ovars;
+                           } in
+                              Sum(meta_info, (sum_list gathered_hd1) @ 
+                                             (sum_list gathered_hd2))                        
+                     end
+
                   (* If hd2 is replicated, then repartition hd2 *)
                   else if p2 = [] then
                      let repartitioned_hd2 = mk_repartition p1 hd2 in
-                     let meta_info = {
-                        part_info = Some(Distributed(p1));
-                        ivars = hd_ivars;
-                        ovars = hd_ovars;
-                     } in
-                        Sum(meta_info, (sum_list hd1) @
-                                       (sum_list repartitioned_hd2))
+                     begin match (get_part_info repartitioned_hd2) with 
+                        | Some(DistributedByKey(pk)) when p1 = pk ->
+                           let meta_info = {
+                              part_info = Some(DistributedByKey(p1));
+                              ivars = hd_ivars;
+                              ovars = hd_ovars;
+                           } in
+                              Sum(meta_info, (sum_list hd1) @
+                                             (sum_list repartitioned_hd2))
+                        | _ -> 
+                           (* failwith "Repartitioned keys do not match" *)
+
+                           (* Default to local operations *)
+                           let gathered_hd1 = mk_gather hd1 in
+                           let gathered_hd2 = mk_gather hd2 in
+                           let meta_info = {
+                              part_info = Some(Local);
+                              ivars = hd_ivars;
+                              ovars = hd_ovars;
+                           } in
+                              Sum(meta_info, (sum_list gathered_hd1) @ 
+                                             (sum_list gathered_hd2))                           
+                     end
+
                   (* If hd1 is partitioned by a subset of common variables,
                      then repartition hd2 *)
                   else if ListAsSet.subset p1 common_vars then
                      let repartitioned_hd2 = mk_repartition p1 hd2 in
-                     let meta_info = {
-                        part_info = Some(Distributed(p1));
-                        ivars = hd_ivars;
-                        ovars = hd_ovars;
-                     } in
-                        Sum(meta_info, (sum_list hd1) @
-                                       (sum_list repartitioned_hd2))
+                     begin match (get_part_info repartitioned_hd2) with
+                        | Some(DistributedByKey(pk)) when p1 = pk ->
+                           let meta_info = {
+                              part_info = Some(DistributedByKey(p1));
+                              ivars = hd_ivars;
+                              ovars = hd_ovars;
+                           } in
+                              Sum(meta_info, (sum_list hd1) @
+                                             (sum_list repartitioned_hd2))
+                        | _ -> 
+                           (* failwith "Repartitioned keys do not match" *)
+
+                           (* Default to local operations *)
+                           let gathered_hd1 = mk_gather hd1 in
+                           let gathered_hd2 = mk_gather hd2 in
+                           let meta_info = {
+                              part_info = Some(Local);
+                              ivars = hd_ivars;
+                              ovars = hd_ovars;
+                           } in
+                              Sum(meta_info, (sum_list gathered_hd1) @ 
+                                             (sum_list gathered_hd2))                           
+                     end      
+
                   (* Default to partitioning hd1 *)
                   else 
                      let repartitioned_hd1 = mk_repartition p2 hd1 in
-                     let meta_info = {
-                        part_info = Some(Distributed(p2));
-                        ivars = hd_ivars;
-                        ovars = hd_ovars;
-                     } in
-                        Sum(meta_info, (sum_list repartitioned_hd1) @ 
-                                       (sum_list hd2))
+                     begin match (get_part_info repartitioned_hd1) with
+                        | Some(DistributedByKey(pk)) when p2 = pk ->
+                           let meta_info = {
+                              part_info = Some(DistributedByKey(p2));
+                              ivars = hd_ivars;
+                              ovars = hd_ovars;
+                           } in
+                              Sum(meta_info, (sum_list repartitioned_hd1) @ 
+                                             (sum_list hd2))
+                        | _ -> 
+                           (* failwith "Repartitioned keys do not match"  *)
 
+                           (* Default to local operations *)
+                           let gathered_hd1 = mk_gather hd1 in
+                           let gathered_hd2 = mk_gather hd2 in
+                           let meta_info = {
+                              part_info = Some(Local);
+                              ivars = hd_ivars;
+                              ovars = hd_ovars;
+                           } in
+                              Sum(meta_info, (sum_list gathered_hd1) @ 
+                                             (sum_list gathered_hd2))                           
+                     end
 
-               | (Some(Distributed(p1)), Some(Local)) -> 
+               | (Some(DistributedByKey(p1)), Some(DistributedRandom)) 
+               | (Some(DistributedByKey(p1)), Some(Local)) -> 
                   let repartitioned_hd2 = mk_repartition p1 hd2 in
-                  let meta_info = {
-                     part_info = Some(Distributed(p1));
-                     ivars = hd_ivars;
-                     ovars = hd_ovars;
-                  } in
-                     Sum(meta_info, (sum_list hd1) @
-                                    (sum_list repartitioned_hd2))
+                  begin match (get_part_info repartitioned_hd2) with
+                     | Some(DistributedByKey(pk)) when p1 = pk ->
+                        let meta_info = {
+                           part_info = Some(DistributedByKey(p1));
+                           ivars = hd_ivars;
+                           ovars = hd_ovars;
+                        } in
+                           Sum(meta_info, (sum_list hd1) @
+                                          (sum_list repartitioned_hd2))
+                     | _ -> 
+                        (* failwith "Repartitioned keys do not match" *)
 
-               | (Some(Local), Some(Distributed(p2))) ->
+                        (* Default to local operations *)
+                        let gathered_hd1 = mk_gather hd1 in
+                        let gathered_hd2 = mk_gather hd2 in
+                        let meta_info = {
+                           part_info = Some(Local);
+                           ivars = hd_ivars;
+                           ovars = hd_ovars;
+                        } in
+                           Sum(meta_info, (sum_list gathered_hd1) @ 
+                                          (sum_list gathered_hd2))                        
+                  end
+
+               | (Some(DistributedRandom), Some(DistributedByKey(p2)))
+               | (Some(Local), Some(DistributedByKey(p2))) ->
                   let repartitioned_hd1 = mk_repartition p2 hd1 in
+                  begin match (get_part_info repartitioned_hd1) with
+                     | Some(DistributedByKey(pk)) when p2 = pk ->
+                        let meta_info = {
+                           part_info = Some(DistributedByKey(p2));
+                           ivars = hd_ivars;
+                           ovars = hd_ovars;
+                        } in
+                           Sum(meta_info, (sum_list repartitioned_hd1) @ 
+                                          (sum_list hd2))
+                     | _ -> 
+                        (* failwith "Repartitioned keys do not match" *)
+
+                        (* Default to local operations *)
+                        let gathered_hd1 = mk_gather hd1 in
+                        let gathered_hd2 = mk_gather hd2 in
+                        let meta_info = {
+                           part_info = Some(Local);
+                           ivars = hd_ivars;
+                           ovars = hd_ovars;
+                        } in
+                           Sum(meta_info, (sum_list gathered_hd1) @ 
+                                          (sum_list gathered_hd2))                        
+                  end
+
+               | (Some(DistributedRandom), Some(DistributedRandom)) ->      
                   let meta_info = {
-                     part_info = Some(Distributed(p2));
+                     part_info = Some(DistributedRandom);
                      ivars = hd_ivars;
                      ovars = hd_ovars;
                   } in
-                     Sum(meta_info, (sum_list repartitioned_hd1) @ 
-                                    (sum_list hd2))
-                     
+                     Sum(meta_info, (sum_list hd1) @ (sum_list hd2))
+
                | (Some(Local), Some(Local)) ->
                   let meta_info = {
                      part_info = Some(Local);
                      ivars = hd_ivars;
                      ovars = hd_ovars;
                   } in
-                  Sum(meta_info, (sum_list hd1) @ (sum_list hd2))
+                     Sum(meta_info, (sum_list hd1) @ (sum_list hd2))
+               
+               | (Some(Local), Some(DistributedRandom)) ->
+                  let gathered_hd2 = mk_gather hd2 in
+                  let meta_info = {
+                     part_info = Some(Local);
+                     ivars = hd_ivars;
+                     ovars = hd_ovars;
+                  } in
+                     Sum(meta_info, (sum_list hd1) @ 
+                                    (sum_list gathered_hd2))               
+
+               | (Some(DistributedRandom), Some(Local)) ->
+                  let gathered_hd1 = mk_gather hd1 in
+                  let meta_info = {
+                     part_info = Some(Local);
+                     ivars = hd_ivars;
+                     ovars = hd_ovars;
+                  } in
+                     Sum(meta_info, (sum_list gathered_hd1) @ 
+                                    (sum_list hd2))                              
 
                | (None, pinfo) | (pinfo, None)-> 
                   let meta_info = {
@@ -446,47 +566,52 @@ and mk_prod (dexpr_list: dist_expr_t list): dist_expr_t =
          in
          let merged_hd = 
             match (meta_hd1.part_info, meta_hd2.part_info) with
-               | (Some(Distributed(p1)), Some(Distributed(p2))) ->
-                  (* If hd1 and hd2 are partitioned identically or 
+
+               | (Some(DistributedByKey(p1)), Some(DistributedByKey(p2))) ->
+                  
+                  (* If hd1 and hd2 are partitioned equally or 
                      hd2 is replicated, then do nothing *)
                   if p1 = p2 || p2 = [] then
                      let meta_info = {
-                        part_info = Some(Distributed(p1));
+                        part_info = Some(DistributedByKey(p1));
                         ivars = hd_ivars;
                         ovars = hd_ovars;
                      } in
                         Prod(meta_info, (prod_list hd1) @ (prod_list hd2))
+
                   (* If hd1 is replicated, then do nothing *)
                   else if p1 = [] then
                      let meta_info = {
-                        part_info = Some(Distributed(p2));
+                        part_info = Some(DistributedByKey(p2));
                         ivars = hd_ivars;
                         ovars = hd_ovars;
                      } in
                         Prod(meta_info, (prod_list hd1) @ (prod_list hd2))
+
                   (* If hd1 is partitioned by a subset of common variables,
                      then repartition hd2 *)
                   else if ListAsSet.subset p1 common_vars then
                      let repartitioned_hd2 = mk_repartition p1 hd2 in
                      let meta_info = {
-                        part_info = Some(Distributed(p1));
+                        part_info = Some(DistributedByKey(p1));
                         ivars = hd_ivars;
                         ovars = hd_ovars;
                      } in
                         Prod(meta_info, (prod_list hd1) @
                                         (prod_list repartitioned_hd2))
+
                   (* Default to partitioning hd1 *)
                   else 
                      let repartitioned_hd1 = mk_repartition p2 hd1 in
                      let meta_info = {
-                        part_info = Some(Distributed(p2));
+                        part_info = Some(DistributedByKey(p2));
                         ivars = hd_ivars;
                         ovars = hd_ovars;
                      } in
                         Prod(meta_info, (prod_list repartitioned_hd1) @ 
                                         (prod_list hd2))
 
-               | (Some(Distributed([])), Some(Local)) -> 
+               | (Some(DistributedByKey([])), Some(Local)) -> 
                   let gather_hd1 = mk_gather hd1 in
                   let meta_info = {
                      part_info = Some(Local);
@@ -495,17 +620,19 @@ and mk_prod (dexpr_list: dist_expr_t list): dist_expr_t =
                   } in
                      Prod(meta_info, (prod_list gather_hd1) @
                                      (prod_list hd2))
-               | (Some(Distributed(p1)), Some(Local)) -> 
-                     let repartitioned_hd2 = mk_repartition p1 hd2 in
-                     let meta_info = {
-                        part_info = Some(Distributed(p1));
-                        ivars = hd_ivars;
-                        ovars = hd_ovars;
-                     } in
-                        Prod(meta_info, (prod_list hd1) @
-                                        (prod_list repartitioned_hd2))
 
-               | (Some(Local), Some(Distributed([]))) -> 
+               | (Some(DistributedByKey(p1)), Some(DistributedRandom)) 
+               | (Some(DistributedByKey(p1)), Some(Local)) -> 
+                  let repartitioned_hd2 = mk_repartition p1 hd2 in
+                  let meta_info = {
+                     part_info = Some(DistributedByKey(p1));
+                     ivars = hd_ivars;
+                     ovars = hd_ovars;
+                  } in
+                     Prod(meta_info, (prod_list hd1) @
+                                     (prod_list repartitioned_hd2))
+
+               | (Some(Local), Some(DistributedByKey([]))) -> 
                   let gather_hd2 = mk_gather hd2 in
                   let meta_info = {
                      part_info = Some(Local);
@@ -515,16 +642,61 @@ and mk_prod (dexpr_list: dist_expr_t list): dist_expr_t =
                      Prod(meta_info, (prod_list hd1) @
                                      (prod_list gather_hd2))
 
-               | (Some(Local), Some(Distributed(p2))) ->
+               | (Some(DistributedRandom), Some(DistributedByKey(p2))) 
+               | (Some(Local), Some(DistributedByKey(p2))) ->
                   let repartitioned_hd1 = mk_repartition p2 hd1 in
                   let meta_info = {
-                     part_info = Some(Distributed(p2));
+                     part_info = Some(DistributedByKey(p2));
                      ivars = hd_ivars;
                      ovars = hd_ovars;
                   } in
                      Prod(meta_info, (prod_list repartitioned_hd1) @ 
                                      (prod_list hd2))
-                     
+
+               | (Some(Local), Some(DistributedRandom))
+               | (Some(DistributedRandom), Some(Local))
+               | (Some(DistributedRandom), Some(DistributedRandom)) ->
+                  if (common_vars = []) then
+                     let gathered_hd1 = mk_gather hd1 in
+                     let gathered_hd2 = mk_gather hd2 in
+                     let meta_info = {
+                        part_info = Some(Local);
+                        ivars = hd_ivars;
+                        ovars = hd_ovars;
+                     }
+                     in
+                        Prod(meta_info, (prod_list gathered_hd1) @
+                                        (prod_list gathered_hd2))
+                  else
+                     let repartitioned_hd1 = mk_repartition common_vars hd1 in
+                     let repartitioned_hd2 = mk_repartition common_vars hd2 in
+                     begin match (get_part_info repartitioned_hd1,
+                                  get_part_info repartitioned_hd2) with
+                        | (Some(DistributedByKey(pk1)), 
+                           Some(DistributedByKey(pk2))) when pk1 = pk2 ->
+                           let meta_info = {
+                              part_info = Some(DistributedByKey(pk1));
+                              ivars = hd_ivars;
+                              ovars = hd_ovars;                              
+                           }
+                           in 
+                              Prod(meta_info, (prod_list repartitioned_hd1) @
+                                              (prod_list repartitioned_hd2))
+                        | _ -> 
+                           (* failwith "Repartitioned keys do not match" *)
+
+                           (* Default to local operations *)
+                           let gathered_hd1 = mk_gather hd1 in
+                           let gathered_hd2 = mk_gather hd2 in
+                           let meta_info = {
+                              part_info = Some(Local);
+                              ivars = hd_ivars;
+                              ovars = hd_ovars;
+                           } in
+                              Prod(meta_info, (prod_list gathered_hd1) @ 
+                                              (prod_list gathered_hd2))                           
+                     end
+
                | (Some(Local), Some(Local)) ->
                   let meta_info = {
                      part_info = Some(Local);
@@ -578,12 +750,14 @@ let rec lift (part_table: part_table_t) (expr: C.expr_t): dist_expr_t =
          let part_info = 
             try
                begin match (Hashtbl.find part_table rname) with
-                  | Some(indexes) ->                     
+                  | DistributedByKey(indexes) ->
                      let pkeys = List.map (List.nth rvars) indexes in
-                     Some(Distributed(pkeys))
-                  | None -> Some(Local)
+                     Some(DistributedByKey(pkeys))
+                  | DistributedRandom -> Some(DistributedRandom)
+                  | Local -> Some(Local)
                end
-            with Not_found -> Some(Local)
+            with Not_found -> 
+               failwith ("Partitioning information not found for " ^ rname)
          in
          let meta_info = { 
             part_info = part_info;
@@ -594,14 +768,17 @@ let rec lift (part_table: part_table_t) (expr: C.expr_t): dist_expr_t =
 
       | CalcRing.Val(DeltaRel(rname, rvars)) ->
          let part_info = 
+            let dname = "DELTA_" ^ rname in
             try
-               begin match (Hashtbl.find part_table ("DELTA_" ^ rname)) with
-                  | Some(indexes) ->
+               begin match (Hashtbl.find part_table dname) with
+                  | DistributedByKey(indexes) ->
                      let pkeys = List.map (List.nth rvars) indexes in
-                     Some(Distributed(pkeys))
-                  | None -> Some(Local)
+                     Some(DistributedByKey(pkeys))
+                  | DistributedRandom -> Some(DistributedRandom)
+                  | Local -> Some(Local)
                end
-            with Not_found -> Some(Local)
+            with Not_found -> 
+               failwith ("Missing partitioning information for " ^ dname)
          in
          let meta_info = { 
             part_info = part_info;
@@ -611,7 +788,6 @@ let rec lift (part_table: part_table_t) (expr: C.expr_t): dist_expr_t =
             DeltaRel(meta_info, rname, rvars)
 
       | CalcRing.Val(External(ename, eivars, eovars, etype, eivc)) -> 
-         (* TODO: Think about the IVC case *)
          let dsubexp = match eivc with
             | Some(subexp) -> Some(rcr subexp)
             | None -> None          
@@ -619,15 +795,14 @@ let rec lift (part_table: part_table_t) (expr: C.expr_t): dist_expr_t =
          let part_info = 
             try
                begin match (Hashtbl.find part_table ename) with
-                  | Some(indexes) ->
+                  | DistributedByKey(indexes) ->
                      let pkeys = List.map (List.nth eovars) indexes in
-                     Some(Distributed(pkeys))
-                  | None -> Some(Local)
+                     Some(DistributedByKey(pkeys))
+                  | DistributedRandom -> Some(DistributedRandom)
+                  | Local -> Some(Local)
                end
             with Not_found -> 
-               if (Hashtbl.length part_table > 0) 
-               then failwith ("Missing partitioning information for " ^ ename)
-               else Some(Local)
+               failwith ("Missing partitioning information for " ^ ename)
          in
          let meta_info = { 
             part_info = part_info;
@@ -637,24 +812,24 @@ let rec lift (part_table: part_table_t) (expr: C.expr_t): dist_expr_t =
             External(meta_info, (ename, eivars, eovars, etype, dsubexp))
 
       | CalcRing.Val(AggSum(gb_vars, subexp)) ->
-         let dsubexp = rcr subexp in
-         let submeta = get_meta_info dsubexp in
+         let dsubexp = rcr subexp in         
+         let part_info = 
+            let expr_vars = ListAsSet.union ivars ovars in
+            begin match (get_part_info dsubexp) with
+               | Some(DistributedByKey(pkeys)) 
+                  when not (ListAsSet.subset pkeys expr_vars) -> 
+               (* The case when we have partial sums, but not 
+                  partitioning info -->  mark as distributed randomly. *)                  
+                  Some(DistributedRandom)
+               | pinfo -> pinfo
+            end
+         in
          let meta_info = {
-            part_info = submeta.part_info;
+            part_info = part_info;
             ivars = ivars;
             ovars = ovars
-         }
-         in
-         let expr_vars = ListAsSet.union ivars ovars in
-         let new_dexpr = AggSum(meta_info, gb_vars, dsubexp)in
-         begin match submeta.part_info with
-            | Some(Distributed(pkeys)) 
-               when not (ListAsSet.subset pkeys expr_vars) -> 
-               (* The case when we have partial sums, but not 
-                  partitioning information -->  gather results. *)
-               mk_gather new_dexpr
-            | _ -> new_dexpr
-         end
+         } in
+            AggSum(meta_info, gb_vars, dsubexp)
 
       | CalcRing.Val(DomainDelta(subexp)) -> 
          let dsubexp = rcr subexp in
@@ -674,6 +849,32 @@ let rec lift (part_table: part_table_t) (expr: C.expr_t): dist_expr_t =
          let dsubexp = rcr subexp in
             Exists(get_meta_info dsubexp, dsubexp)
 
+
+(* A list of maps involving delta relations; used in the cost optimizer *)
+let delta_maps: string list ref = ref [];;
+
+let is_delta_map (name: string) = 
+   List.fold_left (fun found n -> (found || (name = n))) false !delta_maps
+
+let rec expr_has_delta_maps (dexpr: dist_expr_t): bool = 
+   match dexpr with
+      | Sum(_, sl)  -> List.fold_left (||) false 
+                                      (List.map expr_has_delta_maps sl)
+      | Prod(_, pl) -> List.fold_left (||) false 
+                                      (List.map expr_has_delta_maps pl)
+      | Neg(_, e)   -> expr_has_delta_maps e
+      | Value _ 
+      | Rel _ 
+      | DeltaRel _ 
+      | Cmp _ -> false
+      | AggSum(_, _, subexp)
+      | Lift(_, _, subexp) 
+      | Exists(_, subexp) 
+      | DomainDelta(_, subexp) 
+      | Gather(_, subexp)
+      | Repartition(_, subexp, _) -> expr_has_delta_maps subexp
+      | External(_, (en, _, _, _, _))  -> is_delta_map en         
+
 let cost_of_expr (dexpr: dist_expr_t): (int * int * int) =
    let add (a1,b1,c1) (a2,b2,c2) = (a1 + a2, b1 + b2, c1 + c2) in
    let rec rcr expr =  match expr with
@@ -689,12 +890,12 @@ let cost_of_expr (dexpr: dist_expr_t): (int * int * int) =
       | Lift(_, _, subexp)   | Exists(_, subexp) -> rcr subexp
       | Gather(m, subexp) ->           
          (* Penalize gathers of non-delta expressions *)
-         add ((if (expr_has_deltas subexp) then 1 else 10), 
+         add ((if (expr_has_delta_maps subexp) then 1 else 10), 
               0, List.length m.ovars) (rcr subexp) 
       | Repartition(m, subexp, _) -> 
          add (0,
               (* Penalize repartitions of non-delta expressions *)
-              (if (expr_has_deltas subexp) then 1 else 2), 
+              (if (expr_has_delta_maps subexp) then 1 else 2), 
               List.length m.ovars) (rcr subexp)
    in
       rcr dexpr
@@ -904,7 +1105,7 @@ let optimize_expr (dexpr: dist_expr_t): dist_expr_t =
          let new_dexpr_2 = 
             let mk_rep = mk_repartition pkeys in
             let new_meta = {
-               part_info = Some(Distributed(pkeys));
+               part_info = Some(DistributedByKey(pkeys));
                ivars = meta.ivars;
                ovars = meta.ovars;
             } in
@@ -991,9 +1192,35 @@ type dist_prog_t = {
 }
 
 let lift_statement (part_table: part_table_t) (stmt: stmt_t): dist_stmt_t =
-   {  target_map  = lift part_table stmt.target_map;
+   let lhs_raw = lift part_table stmt.target_map in
+   let lhs_name = match lhs_raw with 
+      | External(_, (ename, _, _, _, _)) -> ename
+      | _ -> failwith "LHS expression not External"
+   in
+   let lhs = match lhs_raw with 
+      | External(meta, (en, ei, eo, et, Some(eivc_raw))) ->
+         let eivc = 
+            begin match ( get_part_info lhs_raw ) with
+               | Some(DistributedByKey(p1)) -> mk_repartition p1 eivc_raw
+               | Some(Local) -> mk_gather eivc_raw
+               | Some(DistributedRandom) when is_delta_map lhs_name -> eivc_raw
+               | _ -> failwith "Wrong partitioning info for LHS target map"
+            end
+         in 
+            External(meta, (en, ei, eo, et, Some(optimize_expr eivc)))
+      | _ -> lhs_raw
+   in
+   let rhs_raw = lift part_table stmt.update_expr in
+   let rhs = 
+      match ( get_part_info lhs_raw ) with
+         | Some(DistributedByKey(p1)) -> mk_repartition p1 rhs_raw
+         | Some(Local) -> mk_gather rhs_raw
+         | Some(DistributedRandom) when is_delta_map lhs_name -> rhs_raw
+         | _ -> failwith "Wrong partitioning info for LHS target map"
+   in
+   {  target_map  = lhs;
       update_type = stmt.update_type;
-      update_expr = lift part_table stmt.update_expr  }
+      update_expr = optimize_expr rhs; }
 
 let lift_trigger (part_table: part_table_t) 
                  (trigger: trigger_t): dist_trigger_t =
@@ -1002,12 +1229,13 @@ let lift_trigger (part_table: part_table_t)
                                  !(trigger.statements))  }
 
 let lift_prog (part_table: part_table_t) (prog: prog_t): dist_prog_t =    
+   (* Extract maps in program that reference only input deltas  *)
    List.iter (fun map -> match map with
       | DSView(view) -> 
          begin match view.ds_name with 
             | CalcRing.Val(External(ename, _, _, _, _)) 
               when (C.deltarels_of_expr view.ds_definition <> [] &&
-                    C.rels_of_expr view.ds_definition == []) ->
+                    C.rels_of_expr view.ds_definition = []) ->
                  delta_maps := ename :: !delta_maps
             | _ -> ()
          end         
@@ -1020,39 +1248,21 @@ let lift_prog (part_table: part_table_t) (prog: prog_t): dist_prog_t =
       db       = prog.db   }
 
 
-(** Stringify a statement.  This string conforms to the grammar of 
-    Calculusparser *)
+
+(** STRINGIFICATION OPERATIONS *)
+
+(** Stringify a statement.  Conforms to the grammar of Calculusparser *)
 let string_of_statement (dstmt: dist_stmt_t): string = 
    let string_of_cost (a,b,c) = 
       "(" ^ ListExtras.string_of_list ~sep:", " string_of_int [a; b; c] ^ ")" 
    in
-   let (lhs, rhs) =    
-      match ( get_part_info dstmt.target_map,
-              get_part_info dstmt.update_expr ) with
-         | (Some(Distributed(p1)), Some(Distributed(p2))) when p1 = p2 -> 
-            (dstmt.target_map, dstmt.update_expr)
-
-         | (Some(Distributed(p1)), Some(_)) ->
-            (dstmt.target_map, mk_repartition p1 dstmt.update_expr)
-
-         | (Some(Local), Some(Distributed(_))) ->
-            (dstmt.target_map, mk_gather dstmt.update_expr)
-
-         | (Some(Local), Some(Local))
-         | (Some(_), None) ->
-            (dstmt.target_map, dstmt.update_expr)
-
-         | (None, _) -> failwith "No partitioning info for LHS target map"
-   in
-   let optimized_rhs = optimize_expr rhs in
-   let expr_string = string_of_expr optimized_rhs in
-   (string_of_expr lhs)^
-   (if dstmt.update_type = UpdateStmt then " += " else " := ")^
-   (if String.contains expr_string '\n' then "\n  " else "")^
-   expr_string ^
-   (if (Debug.active "PRINT-ANNOTATED-M3-COSTS") then 
-       (" @Cost = " ^ string_of_cost (cost_of_expr optimized_rhs))
-    else "")
+   let rhs_string = string_of_expr dstmt.update_expr in
+      (string_of_expr dstmt.target_map)^
+      (if dstmt.update_type = UpdateStmt then " += " else " := ")^
+      (if String.contains rhs_string '\n' then "\n  " else "")^
+      rhs_string ^
+      (if not(Debug.active "PRINT-ANNOTATED-M3-COSTS") then ""
+       else (" @Cost = " ^ string_of_cost (cost_of_expr dstmt.update_expr)))
 
 (**
    [string_of_trigger trigger]
@@ -1083,21 +1293,22 @@ let string_of_map (part_table: part_table_t)
       (CalculusPrinter.string_of_expr ~show_type:true view.ds_name)^
       " := \n"^
       (CalculusPrinter.string_of_expr view.ds_definition)^
-      (  try
-            let name = match view.ds_name with
-               | CalcRing.Val(External(name, _, _, _, _)) -> name
-               | _ -> failwith "LHS map is not of external type." 
-            in
-            begin match (Hashtbl.find part_table name) with
-              | Some(indexes) -> 
-                 let ovars = snd (schema_of_expr view.ds_name) in
-                 let pkeys = List.map (List.nth ovars) indexes in
-                 (" PARTITIONED BY ["^
+      (  
+         (* Stringify partitioning information *)
+         let name = match view.ds_name with
+            | CalcRing.Val(External(name, _, _, _, _)) -> name
+            | _ -> failwith "LHS map is not of external type." 
+         in         
+         begin match (Hashtbl.find part_table name) with
+           | Local -> ""
+           | DistributedRandom -> " PARTITIONED RANDOMLY"
+           | DistributedByKey(indexes) -> 
+              let ovars = snd (schema_of_expr view.ds_name) in
+              let pkeys = List.map (List.nth ovars) indexes in
+              (" PARTITIONED BY [" ^
                   ListExtras.string_of_list ~sep:", "
                      (string_of_var ~verbose:true) pkeys ^ "]")
-              | None -> ""
-            end
-         with Not_found -> ""
+         end
       )^";"
    | DSTable(rel) -> Schema.code_of_rel rel
    end

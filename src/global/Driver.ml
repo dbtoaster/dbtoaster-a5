@@ -699,12 +699,8 @@ if stage_is_active StageM3ToAnnotM3 then (
    Debug.print "LOG-DRIVER" (fun () -> "Running Stage: M3ToAnnotM3");  
    Debug.activate("PRINT-ANNOTATED-M3");
 
-   let part_table = 
-      Partitioner.get_partitioning_info (List.hd !files) 
-   in
-   let annotated_m3_program = 
-      AnnotatedM3.lift_prog part_table (!m3_program) 
-   in
+   let part_table = Partitioner.get_part_table (List.hd !files) in
+   let annotated_m3_program = AnnotatedM3.lift_prog part_table (!m3_program) in
       output_endline (
          AnnotatedM3.string_of_prog part_table annotated_m3_program)
 )
