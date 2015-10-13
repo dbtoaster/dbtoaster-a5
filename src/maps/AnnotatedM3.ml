@@ -1286,32 +1286,57 @@ let string_of_trigger (dtrigger: dist_trigger_t): string =
    @param map      A map
    @return         The (Calculusparser-compatible) declaration for [map]
 *)
-let string_of_map (part_table: part_table_t) 
-                  (map:map_t): string = begin match map with
-   | DSView(view) -> 
-      "DECLARE MAP "^
-      (CalculusPrinter.string_of_expr ~show_type:true view.ds_name)^
-      " := \n"^
-      (CalculusPrinter.string_of_expr view.ds_definition)^
-      (  
-         (* Stringify partitioning information *)
-         let name = match view.ds_name with
-            | CalcRing.Val(External(name, _, _, _, _)) -> name
-            | _ -> failwith "LHS map is not of external type." 
-         in         
-         begin match (Hashtbl.find part_table name) with
-           | Local -> ""
-           | DistributedRandom -> " PARTITIONED RANDOMLY"
-           | DistributedByKey(indexes) -> 
-              let ovars = snd (schema_of_expr view.ds_name) in
-              let pkeys = List.map (List.nth ovars) indexes in
-              (" PARTITIONED BY [" ^
-                  ListExtras.string_of_list ~sep:", "
-                     (string_of_var ~verbose:true) pkeys ^ "]")
-         end
-      )^";"
-   | DSTable(rel) -> Schema.code_of_rel rel
+let string_of_map (part_table: part_table_t) (map:map_t): string = 
+   begin match map with
+      | DSView(view) -> 
+         "DECLARE MAP "^
+         (CalculusPrinter.string_of_expr ~show_type:true view.ds_name)^
+         " := \n"^
+         (CalculusPrinter.string_of_expr view.ds_definition)^
+         (  
+            (* Stringify partitioning information *)
+            let name = match view.ds_name with
+               | CalcRing.Val(External(name, _, _, _, _)) -> name
+               | _ -> failwith "LHS map is not of external type." 
+            in         
+            begin match (Hashtbl.find part_table name) with
+              | Local -> ""
+              | DistributedRandom -> " PARTITIONED RANDOMLY"
+              | DistributedByKey(indexes) -> 
+                 let ovars = snd (schema_of_expr view.ds_name) in
+                 let pkeys = List.map (List.nth ovars) indexes in
+                 (" PARTITIONED BY [" ^
+                     ListExtras.string_of_list ~sep:", "
+                        (string_of_var ~verbose:true) pkeys ^ "]")
+            end
+         )^";"
+      | DSTable(rel) -> Schema.code_of_rel rel
    end
+
+let code_of_schema (part_table: part_table_t) (sch: Schema.t): string =
+   ListExtras.string_of_list ~sep:"\n\n" (fun (source, rels) ->
+      let source_string = Schema.code_of_source source in
+         ListExtras.string_of_list ~sep:"\n\n" (fun (adaptor,rel) ->
+            (Schema.code_of_rel rel)^"\n  "^source_string^"\n  "^
+            (Schema.code_of_adaptor adaptor)^
+            (  
+               (* Stringify partitioning information *)               
+               let (name, ovars) = match rel with  
+                  | (name, ovars, Schema.StreamRel) -> ("DELTA_" ^ name, ovars)
+                  | (name, ovars, Schema.TableRel) -> (name, ovars)
+               in
+               begin match (Hashtbl.find part_table name) with
+                 | Local -> ""
+                 | DistributedRandom -> " PARTITIONED RANDOMLY"
+                 | DistributedByKey(indexes) -> 
+                    let pkeys = List.map (List.nth ovars) indexes in
+                    (" PARTITIONED BY [" ^
+                        ListExtras.string_of_list ~sep:", "
+                           (string_of_var ~verbose:true) pkeys ^ "]")
+               end
+            )^";"
+         ) rels
+   ) !sch
 
 (**
    [string_of_prog prog]
@@ -1323,7 +1348,7 @@ let string_of_map (part_table: part_table_t)
 *)
 let string_of_prog (part_table: part_table_t) (dprog: dist_prog_t): string = 
    "-------------------- SOURCES --------------------\n"^
-   (Schema.code_of_schema dprog.db)^"\n\n"^
+   (code_of_schema part_table dprog.db)^"\n\n"^
    "--------------------- MAPS ----------------------\n"^
    (* Skip Table maps -- these are already printed above in the schema *)
    (ListExtras.string_of_list ~sep:"\n\n" (string_of_map part_table) 
