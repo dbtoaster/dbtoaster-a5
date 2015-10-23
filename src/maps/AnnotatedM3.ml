@@ -203,14 +203,21 @@ let rec mk_repartition (pkeys: var_t list) (dexpr: dist_expr_t): dist_expr_t =
                (* Check if already partitioned by trunc_pkeys *)
                | Some(DistributedByKey(pkeys2)) when pkeys2 = trunc_pkeys -> 
                   dexpr
-               | Some(_) ->
-                  let new_meta_info = {
-                     part_info = Some(DistributedByKey(trunc_pkeys));
-                     ivars = meta_info.ivars;
-                     ovars = meta_info.ovars
-                  } 
-                  in
-                     Repartition(new_meta_info, dexpr, trunc_pkeys)
+               | Some(loc) ->
+                  begin match dexpr with 
+                     | Exists(_, subexp) when (loc == DistributedRandom) ->
+                        let new_subexp = rcr subexp in
+                        let meta_info = get_meta_info new_subexp in
+                          Exists(meta_info, new_subexp)
+                     | _ -> 
+                        let new_meta_info = {
+                           part_info = Some(DistributedByKey(trunc_pkeys));
+                           ivars = meta_info.ivars;
+                           ovars = meta_info.ovars
+                        } 
+                        in 
+                           Repartition(new_meta_info, dexpr, trunc_pkeys)
+                  end
                | None -> dexpr
             end
          else 
@@ -261,13 +268,20 @@ and mk_gather (dexpr: dist_expr_t): dist_expr_t =
          if (meta_info.ivars = []) then 
             begin match meta_info.part_info with
                | Some(Local) -> dexpr
-               | Some(_) ->
-                  let new_meta_info = { 
-                     part_info = Some(Local);
-                     ivars = meta_info.ivars;
-                     ovars = meta_info.ovars
-                  } in
-                     Gather(new_meta_info, dexpr)
+               | Some(loc) ->
+                  begin match dexpr with 
+                     | Exists(_, subexp) when (loc == DistributedRandom) ->
+                        let new_subexp = rcr subexp in
+                        let meta_info = get_meta_info new_subexp in
+                          Exists(meta_info, new_subexp)
+                     | _ -> 
+                        let new_meta_info = { 
+                           part_info = Some(Local);
+                           ivars = meta_info.ivars;
+                           ovars = meta_info.ovars
+                        } in
+                           Gather(new_meta_info, dexpr)
+                  end
                | None -> dexpr
             end
          else 
