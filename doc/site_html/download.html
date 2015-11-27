@@ -95,7 +95,22 @@
 <h3>1. Benchmarking and Experimentation</h3>
 <p>You are invited to perform and report on benchmark results and experimental comparisons of your system against DBToaster, but we ask you for fairness and to run DBToaster with settings that allow it to perform at its best. Specifically, the DBToaster interpreter is provided for your convenience and is not to be used for timing purposes. For the purpose of comparison with other data management systems, please use the C++ rather than the Scala backend. Please contact us if you have questions about how to optimize the performance of DBToaster.</p>
 
-<a name="changelog"><h3>2. DBToaster Changelog</h3></a><H4 style="border-bottom:thin double;">Release 2.1 (revision 3346) - 2014/11/06</H4>
+<a name="changelog"><h3>2. DBToaster Changelog</h3></a><H4 style="border-bottom:thin double;">Release 2.2 (revision 3387) - 2015/11/27</H4>
+<ul>
+<li>Added support for batch updates via flags <tt>--batch</tt> and <tt>--xbs &lt;BATCH_SIZE&gt;</tt>.</li>
+<li>Added flag <tt>HEURISTICS-DECOMPOSE-OVER-TABLES</tt> that decomposes expressions in which one static table joins with two or more streams.</li>
+<li>Duplicate view elimination uses deep expression comparison.</li>
+<li>Fixed context handling for AggSum in C++ and Scala codegen.</li>
+<li>Improved variable renaming in C++ codegen.</li>
+<li>Fixed C++ runtime option parsing.</li>
+<li>Fixed bugs with del, add, and resize in C++ MultiHashMap.</li>
+<li>Fixed memory leaks in C++ MultiHashMap, strings, and regexp handling.</li>
+<li>Double zero approximation is now optional in C++.</li>
+<li>Added new input reading modes in Scala -- 3 (parallel mode reading txt files), 4 (parallel mode reading bin files).</li>
+</ul>
+
+
+<H4 style="border-bottom:thin double;">Release 2.1 (revision 3346) - 2014/11/06</H4>
 <ul>
 <li>Fixed the clear function in the object pool used in the C++ libraries.
 </li><li>Fixed a bug in translating SQL queries with OR operators in the WHERE clause.

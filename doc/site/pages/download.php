@@ -1,8 +1,62 @@
 <?php if(!isset($now_building_distro)) { ?>
-<a name="latest"><h4>DBToaster Release 2.1</h4></a>
+<a name="latest"><h4>DBToaster Release 2.2</h4></a>
 <table class="table">
 <thead>
   <th width="30%" align="right">Binaries</th>
+  <th width="20%" align="left">Revision</th>
+  <th width="20%" align="left">Date</th>
+  <th width="20%" align="left">Download</th>  
+</thead>
+<tr>
+  <td align="left"> &nbsp;&nbsp; Mac OS X 10.6.8 (or above)</td>
+  <td>3387</td>
+  <td>2015-Nov-27</td>
+  <td align="left">
+    <a class="btn btn-primary" href="dist/dbtoaster_darwin_3387.tgz">&nbsp;&nbsp;Tarball&nbsp;&nbsp;</a></td>
+</tr>
+<tr>
+  <td align="left"> &nbsp;&nbsp; Ubuntu 14.04 (x86-64)</td>
+  <td>3387</td>
+  <td>2015-Nov-27</td>
+  <td align="left">
+    <a class="btn btn-primary" href="dist/dbtoaster_ubuntu14.04_x86_64_3387.tgz">&nbsp;&nbsp;Tarball&nbsp;&nbsp;</a></td>
+</tr>
+<tr>
+  <td align="left"> &nbsp;&nbsp; RHEL 6.6 (x86-64)</td>
+  <td>3387</td>
+  <td>2015-Nov-27</td>
+  <td align="left">
+    <a class="btn btn-primary" href="dist/dbtoaster_rhel6.6_x86_64_3387.tgz">&nbsp;&nbsp;Tarball&nbsp;&nbsp;</a></td>
+</tr>
+<!--tr>
+  <td align="left">&nbsp;&nbsp; Windows (Cygwin)</td>
+  <td>3387</td>
+  <td>2015-Nov-27</td>
+  <td align="left">
+    <a class="btn btn-primary" href="dist/dbtoaster_cygwin_3346.tgz">&nbsp;&nbsp;Tarball&nbsp;&nbsp; </a></td>
+</tr-->
+<tr>
+  <td align="left"><b>Documentation</b></td>
+  <td>3387</td>
+  <td>2015-Nov-27</td>
+  <td align="left">
+    <?= mk_link("&nbsp;&nbsp;Online&nbsp;&nbsp;", "docs", null, "", " class=\"btn btn-primary\""); ?>
+  </td>
+</tr>
+<tr>
+  <td align="left"><b>Examples</b></td>
+  <td>3387</td>
+  <td>2015-Nov-27</td>
+  <td align="left">
+    <?= mk_link("&nbsp;&nbsp;Online&nbsp;&nbsp;", "samples", null, "", " class=\"btn btn-primary\""); ?>
+  </td>
+</tr>
+</table>
+
+<a name="older"><h4>Older releases</h4></a>
+<table class="table">
+<thead>
+  <th width="30%" align="right">Binaries (Release 2.1)</th>
   <th width="20%" align="left">Revision</th>
   <th width="20%" align="left">Date</th>
   <th width="20%" align="left">Download</th>  
@@ -52,8 +106,6 @@
   </td>
 </tr>
 </table>
-
-<a name="older"><h4>Older releases</h4></a>
 <table class="table">
 <thead>
   <th width="30%" align="right">Binaries (Release 2.0)</th>
@@ -191,6 +243,21 @@
 <p>You are invited to perform and report on benchmark results and experimental comparisons of your system against DBToaster, but we ask you for fairness and to run DBToaster with settings that allow it to perform at its best. Specifically, the DBToaster interpreter is provided for your convenience and is not to be used for timing purposes. For the purpose of comparison with other data management systems, please use the C++ rather than the Scala backend. Please contact us if you have questions about how to optimize the performance of DBToaster.</p>
 
 <?= chapter("DBToaster Changelog", "changelog") ?>
+<H4 style="border-bottom:thin double;">Release 2.2 (revision 3387) - 2015/11/27</H4>
+<ul>
+<li>Added support for batch updates via flags <tt>--batch</tt> and <tt>--xbs &lt;BATCH_SIZE&gt;</tt>.</li>
+<li>Added flag <tt>HEURISTICS-DECOMPOSE-OVER-TABLES</tt> that decomposes expressions in which one static table joins with two or more streams.</li>
+<li>Duplicate view elimination uses deep expression comparison.</li>
+<li>Fixed context handling for AggSum in C++ and Scala codegen.</li>
+<li>Improved variable renaming in C++ codegen.</li>
+<li>Fixed C++ runtime option parsing.</li>
+<li>Fixed bugs with del, add, and resize in C++ MultiHashMap.</li>
+<li>Fixed memory leaks in C++ MultiHashMap, strings, and regexp handling.</li>
+<li>Double zero approximation is now optional in C++.</li>
+<li>Added new input reading modes in Scala -- 3 (parallel mode reading txt files), 4 (parallel mode reading bin files).</li>
+</ul>
+
+
 <H4 style="border-bottom:thin double;">Release 2.1 (revision 3346) - 2014/11/06</H4>
 <ul>
 <li>Fixed the clear function in the object pool used in the C++ libraries.
