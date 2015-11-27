@@ -1,6 +1,19 @@
 DBToaster Changelog
 ===============================================================================
 
+Release 2.2 (revision 3387) - 2015/11/27
+
+- Added support for batch updates via flags '--batch' and '--xbs <BATCH_SIZE>'.
+- Added flag HEURISTICS-DECOMPOSE-OVER-TABLES that decomposes expressions in which one static table joins with two or more streams.
+- Duplicate view elimination uses deep expression comparison.
+- Fixed context handling for AggSum in C++ and Scala codegen.
+- Improved variable renaming in C++ codegen.
+- Fixed C++ runtime option parsing.
+- Fixed bugs with del, add, and resize in C++ MultiHashMap.
+- Fixed memory leaks in MultiHashMap, strings, and regexp handling.
+- Double zero approximation is now optional in C++.
+- Added support for new input reading modes in Scala -- 3 (parallel mode reading txt files), 4 (parallel mode reading bin files).
+
 
 Release 2.1 (revision 3346) - 2014/11/06
 ----------------------------------------
