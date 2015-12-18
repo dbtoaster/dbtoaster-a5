@@ -47,8 +47,8 @@ import scala.concurrent.duration.FiniteDuration;
 import java.util.concurrent.TimeUnit;
 
 class ExampleApp {
-   public static final int TUPLE_DELETE = 0x00;
-   public static final int TUPLE_INSERT = 0x01;
+   public static final byte TUPLE_DELETE = 0x00;
+   public static final byte TUPLE_INSERT = 0x01;
    private static final FiniteDuration DEFAULT_TIMEOUT = Duration.create(1L << 23, TimeUnit.SECONDS);
    private static final List EMPTY_LIST = List$.MODULE$.empty();
    public static List&lt;Object&gt; tuple(Object ... ts) {
@@ -68,20 +68,20 @@ class ExampleApp {
       // Send events
       Tuple2 result;
       System.out.println("Insert a tuple into R.");
-      q.tell(new TupleEvent(0, TUPLE_INSERT, "R", tuple(5L, 2L)), null);
+      q.tell(new TupleEvent(TUPLE_INSERT, "R", tuple(5L, 2L)), null);
 
       System.out.println("Insert a tuple into S.");
-      q.tell(new TupleEvent(1, TUPLE_INSERT, "S", tuple(2L, 3L)), null);
+      q.tell(new TupleEvent(TUPLE_INSERT, "S", tuple(2L, 3L)), null);
 
       System.out.println("Insert a tuple into T.");
-      q.tell(new TupleEvent(2, TUPLE_INSERT, "T", tuple(3L, 4L)), null);
+      q.tell(new TupleEvent(TUPLE_INSERT, "T", tuple(3L, 4L)), null);
 
       inbox.send(q, new GetSnapshot(new $colon$colon(1, EMPTY_LIST)));
       result = (Tuple2) (inbox.receive(DEFAULT_TIMEOUT));
       System.out.println("Result after this step: " + result._2().toString());
 
       System.out.println("Insert another tuple into T.");
-      q.tell(new TupleEvent(3, TUPLE_INSERT, "T", tuple(3L, 5L)), null);
+      q.tell(new TupleEvent(TUPLE_INSERT, "T", tuple(3L, 5L)), null);
 
       // Retrieve result
       inbox.send(q, EndOfStream$.MODULE$);
@@ -103,13 +103,13 @@ class ExampleApp {
       <th>Argument</th>
       <th>Comment</th>
    </tr>
-   <tr>
+   <!--tr>
       <td class="code">ord : int</td>
       <td>Order number of the event.</td>
-   </tr>
+   </tr-->
    <tr>
-      <td class="code">op : int</td>
-      <td><tt>TUPLE_INSERT</tt> for insertion, <tt>TUPLE_DELETE</tt> for deletion.</td>
+      <td class="code">op : byte</td>
+      <td><tt>0x01</tt> for insertion, <tt>0x00</tt> for deletion.</td>
    </tr>
    <tr>
       <td class="code">stream : String</td>

@@ -81,19 +81,19 @@ object ExampleApp {
 
     // Send events
     println("Insert a tuple into R.")
-    q ! TupleEvent(0, TupleInsert, "R", List(5L, 2L))
+    q ! TupleEvent(TupleInsert, "R", List(5L, 2L))
 
     println("Insert a tuple into S.")
-    q ! TupleEvent(1, TupleInsert, "S", List(2L, 3L))
+    q ! TupleEvent(TupleInsert, "S", List(2L, 3L))
 
     println("Insert a tuple into T.")
-    q ! TupleEvent(2, TupleInsert, "T", List(3L, 4L))
+    q ! TupleEvent(TupleInsert, "T", List(3L, 4L))
 
     result = scala.concurrent.Await.result(akka.pattern.ask(q, GetSnapshot(List(1)))(DEFAULT_TIMEOUT), DEFAULT_TIMEOUT.duration).asInstanceOf[(StreamStat,List[Any])]
     println("Result after this step: " + result._2(0))
 
     println("Insert another tuple into T.");
-    q ! TupleEvent(3, TupleInsert, "T", List(3L, 5L))
+    q ! TupleEvent(TupleInsert, "T", List(3L, 5L))
 
     // Retrieve result
     result = scala.concurrent.Await.result(akka.pattern.ask(q, EndOfStream)(DEFAULT_TIMEOUT), DEFAULT_TIMEOUT.duration).asInstanceOf[(StreamStat,List[Any])]
@@ -115,10 +115,10 @@ object ExampleApp {
       <th>Argument</th>
       <th>Comment</th>
    </tr>
-   <tr>
+   <!--tr>
       <td class="code">ord : Int</td>
       <td>Order number of the event.</td>
-   </tr>
+   </tr-->
    <tr>
       <td class="code">op : TupleOp</td>
       <td><tt>TupleInsert</tt> for insertion, <tt>TupleDelete</tt> for deletion.</td>
@@ -174,8 +174,7 @@ Final Result: 45
 <a name="generatedcode"/></a>
 <?=chapter("Generated Code Reference")?>
 <p>
-   The Scala code generator generates a single file containing an object and an actor for a query.
-   Both of them are called <tt>Query</tt> by default if no other name has been specified using the <tt>-n <name></tt> switch.
+   The Scala code generator generates a single file containing an object, a base class containing trigger functions, and an actor class for the query. The base name is derived from the query name unless the <tt>-n <name></tt> flag is used.
 </p>
 
 <p>
@@ -188,7 +187,7 @@ import ddbt.lib._
 ...
 
 // Query object used for standalone binaries
-object Query {
+object Rst {
   import Helper._
   def execute(args:Array[String],f:List[Any]=>Unit) = ...
 
@@ -199,9 +198,9 @@ object Query {
   }
 }
 
-// Query actor
-class Query extends Actor {
-  import ddbt.lib.Messages._
+// Base class 
+class RstBase {
+  import Rst._
   import ddbt.lib.Functions._
 
   // Maps/singletons that hold intermediate results
@@ -222,14 +221,19 @@ class Query extends Actor {
   def onDelR(r_a:Long, r_b:Long) { ... }
   ...
   def onDelT(t_c:Long, t_d:Long) { ... }
-  def onSystemReady() { }
+  def onSystemReady() { }  
+}
 
-  ...
+// Query actor
+class Rst extends RstBase with Actor {
+  import Rst._
+  import ddbt.lib.Messages._
+
   def receive = {
-    case TupleEvent(ord,TupleInsert,"R",List(v0:Long,v1:Long)) => if (t1>0 && (tN&127)==0) { val t=System.nanoTime; if (t>t1) { t1=t; tS=1; context.become(receive_skip) } else tN+=1 } else tN+=1; onAddR(v0,v1)
+    case TupleEvent(TupleInsert,"R",List(v0:Long,v1:Long)) => { ... } onAddR(v0,v1)
     ...
-    case StreamInit(timeout) => onSystemReady(); t0=System.nanoTime; if (timeout>0) t1=t0+timeout*1000000L
-    case EndOfStream | GetSnapshot(_) => t1=System.nanoTime;  sender ! (StreamStat(t1-t0,tN,tS),List(ATIMESD))
+    case StreamInit(timeout) => onSystemReady(); { ... }
+    case EndOfStream | GetSnapshot(_) => { ... }  sender ! (StreamStat(t1-t0,tN,tS),List(ATIMESD))
   }
 }
 </div>
@@ -241,19 +245,22 @@ class Query extends Actor {
    The <tt>main</tt> method calls execute and prints the result when all tuples have been processed.
 </p>
 
-<?=section("The query actor")?>
+<?=section("The query base class")?>
 <p>
-   The actual query processor lives in the query actor.
-   Events like tuple insertions and deletions are communicated to the actor using actor messages as described previously.
-   The <tt>receive</tt> method routes events to the appropriate trigger method.
+   The actual query processor lives in the query base class.
    For every stream <tt>R</tt>, there is an insertion <tt>onAddR</tt> and a deletion trigger <tt>onDelR</tt>.
-   These trigger methods are responsible of updating the intermediate result.
-   The map and singleton data structures at the top of the actor hold the intermediate result.
+   These trigger methods are responsible for updating the intermediate result.
+   The map and singleton data structures at the top of the base class hold the intermediate result.
 </p>
-
 <p>
    The <tt>onSystemReady</tt> trigger is responsible of loading static information (<tt>CREATE TABLE</tt> statements in the query file) before the actual processing begins.
 </p>
+
+<?=section("The query actor")?>
+<p>
+   The query actor class dispatches events like tuple insertions and deletions to the base class using the <tt>receive</tt> method.   
+</p>
+
 
 <p>
    The <tt>EndOfStream</tt> message is sent from the event source when it is exhausted. The query actor replies to this message with the current processing statistics (processing time, number of tuples processed, number of tuples skipped) and one or multiple query results.
@@ -267,7 +274,8 @@ class Query extends Actor {
    The whole process is guarded by a timeout. If the timeout is reached, the actor will stop to process tuples.
 </p>
 
-<?=section("Partial materialization")?>
+
+<!--?=section("Partial materialization")?>
 
 <p>
    Some of the work involved in maintaining the results of a query can be saved by performing partial materialization and only materialize the result when requested (i.e. when all tuples have been processed).
@@ -275,7 +283,7 @@ class Query extends Actor {
 </p>
 
 <p>
-   Below is an example of a query where partial materialization is indeed beneficial (this query can be found as <tt>examples/queries/simple/r_lif_of_count.sql</tt> in the DBToaster download).
+   Below is an example of a query where partial materialization is indeed beneficial (this query can be found as <tt>examples/queries/simple/r_lift_of_count.sql</tt> in the DBToaster download).
 </p>
 
 <div class="codeblock">
@@ -306,4 +314,4 @@ def COUNT() = {
 
    mCOUNT
 }
-</div>
+</div-->
