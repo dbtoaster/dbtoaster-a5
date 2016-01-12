@@ -64,3 +64,12 @@ let decompose_graph (scope:var_t list) ((schema,expr):(var_t list * C.expr_t)):
          ) (HyperGraph.connected_components get_vars (CalcRing.prod_list expr))
       )
    
+(**
+   Decompose a graph into a cyclic subgraph.
+*)
+let cyclic_graph (terms: C.expr_t list): C.expr_t list =
+   let get_vars term = 
+      let i,o = C.schema_of_expr term 
+      in ListAsSet.union i o
+   in
+      HyperGraph.gyo_reduction get_vars terms

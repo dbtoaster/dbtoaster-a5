@@ -81,3 +81,36 @@ let connected_components (get_nodes: 'edge_t -> 'node_t list)
          (snd (List.fold_right 
             (fun x (i,old) -> (i+1, (i, x)::old)) hypergraph (0,[])))
       )
+;;
+
+(**
+   [gyo_reduction terms]
+   
+   GYO reduction of a hypergraph. 
+
+   @param get_nodes  A function for obtaining the nodes that each edge is 
+                     connected to
+   @param hypergraph The list of edges in the hypergraph
+   @return           A list of edges forming a cyclic hypergraph.
+*)
+let rec gyo_reduction (get_nodes: 'edge_t -> 'node_t list)
+                      (hypergraph: 'edge_t list): ('edge_t list) =
+   let is_ear curr rest =   
+      let curr_nodes = get_nodes curr in
+      let rest_nodes = List.map get_nodes rest in
+      let common_nodes = 
+         ListAsSet.inter (ListAsSet.multiunion rest_nodes) curr_nodes 
+      in
+         ( common_nodes == [] ||
+           List.exists (ListAsSet.subset common_nodes) rest_nodes )
+   in 
+   let rec remove_ear prev curr_next = match curr_next with 
+      | [] -> prev
+      | curr::next -> 
+         let rest = prev @ next in
+         if (is_ear curr rest) then rest else remove_ear (prev@[curr]) next
+   in 
+   let reduced_graph = remove_ear [] hypergraph 
+   in
+      if (reduced_graph = hypergraph) then hypergraph
+      else gyo_reduction get_nodes reduced_graph 

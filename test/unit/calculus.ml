@@ -329,3 +329,30 @@ in
   test_decomposition "Erasing AggSums -- changing scope"
      "(AggSum([], (DELTA R)(R1_A, R1_B)) * AggSum([], (DELTA R)(R1_A, R1_B)))"
      ["((DELTA R)(R1_A, R1_B) * (DELTA R)(R1_A_4, R1_B_5))"];
+
+  ;;
+
+  let test_gyo_reduction msg input output = 
+    let input_calc = parse_calc input in 
+    log_test ("GYO reduction ( "^msg^" )")
+      (function true -> "TRUE" | false -> "FALSE")
+      (CalculusDecomposition.is_cyclic input_calc)
+      output      
+  ;;
+
+  test_gyo_reduction "Cyclic" 
+    "R(A, B) * R(B, C) * R(C, A)" true;
+  test_gyo_reduction "Acyclic" 
+    "R(A, B) * R(B, C)" false;
+  test_gyo_reduction "Acyclic 2" 
+    "A(X, Y, Z) * B(Z, U, V) * C(X, W, V) * D(X, Z, V)" false;
+  test_gyo_reduction "Cyclic test slide 1" 
+    "R(A, B) * S(B, C) * T(C, D) * U(D, A)" true;
+  test_gyo_reduction "Cyclic test slide 2" 
+    "R(A, B, C, D) * S(B, B2) * T(A, C, D, E) * U(E, E2)" false;
+  test_gyo_reduction "Cyclic test slide 3" 
+    "R(A, B, C) * S(A, C, D) * T(B, D, E)" true;
+  test_gyo_reduction "Cyclic test slide 4" 
+    "R(A, B, C) * S(A, C, D) * T(B, E) * U(E, D)" true;
+  test_gyo_reduction "Cyclic test slide 5" 
+    "R(A, B, C) * S(A, C, D) * T(B, E) * U(E, D) * W(A, B, C, D, E)" false;  

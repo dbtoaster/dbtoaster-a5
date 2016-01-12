@@ -358,9 +358,8 @@ let partition_expr (heuristic_options:heuristic_options_t) (scope:var_t list)
 
 let materializer_opts =
    ListAsSet.diff 
-      CalculusTransforms.default_optimizations
-      [ CalculusTransforms.OptExtractDomains; 
-        CalculusTransforms.OptSimplifyDomains ]
+      CalculusTransforms.default_optimizations 
+      [ CalculusTransforms.OptExtractDomains ]
 
 let rec decompose_and_fold (scope:var_t list) 
                            (zero_value:'a) (one_value: 'a) 
@@ -745,6 +744,7 @@ and materialize_expr (heuristic_options:heuristic_options_t)
 
    (**** MATERIALIZE DELTA_EXPR ****)
    let (todo_deltas, mat_delta_expr) = 
+      if (delta_expr = CalcRing.one) then ([], CalcRing.one) else   
       (* Extend the schema with the input variables of other expressions *) 
       let schema_delta = 
          let (_, dom_ovars) = schema_of_expr mat_domain_expr in
@@ -770,6 +770,7 @@ and materialize_expr (heuristic_options:heuristic_options_t)
    
    (**** MATERIALIZE REL_EXPR ****)
    let (todo_rels, mat_rel_expr) = 
+      if (rel_expr = CalcRing.one) then ([], CalcRing.one) else
       (* Extend the schema with the input variables of other expressions *) 
       let schema_rel = 
          let rest_expr = CalcRing.mk_prod [ lift_expr; value_expr ] in
@@ -778,11 +779,54 @@ and materialize_expr (heuristic_options:heuristic_options_t)
             rel_expr_ovars
             (ListAsSet.multiunion [ schema; scope_rel; 
                                     rest_ivars; rest_ovars ])
-      in   
+      in
+      if (Debug.active "HEURISTICS-ONLY-CYCLIC-MAPS") then 
+      begin
+         let (cyclic, acyclic) = 
+            let terms = CalcRing.prod_list rel_expr in
+            let c = CalculusDecomposition.cyclic_graph terms in
+            let a = List.filter (fun x -> not (List.mem x c)) terms 
+            in (c, a)
+         in
+         let cyclic_expr = CalcRing.mk_prod cyclic in 
+         let acyclic_expr = CalcRing.mk_prod acyclic in 
+         let (cyclic_ivars, cyclic_ovars) = schema_of_expr cyclic_expr in
+         let (acyclic_ivars, acyclic_ovars) = schema_of_expr acyclic_expr in
+
+         let (todo_cyclic, mat_cyclic) =
+            if (cyclic_expr = CalcRing.one) then ([], CalcRing.one) else
+            let schema_cyclic = 
+               ListAsSet.inter 
+                  cyclic_ovars 
+                  (ListAsSet.multiunion 
+                     [schema_rel; acyclic_ivars; acyclic_ovars])
+            in
+               materialize_as_external heuristic_options db_schema 
+                                       history prefix event 
+                                       scope_rel schema_cyclic cyclic_expr
+         in
+         let (todo_acyclic, mat_acyclic) = 
+            if (acyclic_expr = CalcRing.one) then ([], CalcRing.one) else
+            let scope_acyclic = ListAsSet.union scope_rel cyclic_ovars in
+            let schema_acyclic = 
+               ListAsSet.inter
+                  acyclic_ovars
+                  (ListAsSet.multiunion [schema_rel; scope_acyclic])
+            in            
+               materialize_as_external 
+                     (ExtractRelationMaps :: heuristic_options) 
+                     db_schema history prefix event 
+                     scope_acyclic schema_acyclic acyclic_expr
+         in
+            (todo_cyclic @ todo_acyclic, 
+             CalcRing.mk_prod [mat_cyclic; mat_acyclic])
+      end
+      else
          materialize_as_external heuristic_options db_schema 
                                  history prefix event 
                                  scope_rel schema_rel rel_expr
-   in
+   in 
+
    let scope_lift = 
       ListAsSet.union scope_rel (snd (schema_of_expr mat_rel_expr))
    in
@@ -912,8 +956,9 @@ and extract_relations ?(minimal_maps = Debug.active "HEURISTICS-MINIMAL-MAPS")
                then (ListAsSet.inter rv (ListAsSet.union scope schema))
                else rv
             in
-               materialize_expr [] db_schema history (next_prefix rname)
-                                None scope rel_schema (CalcRing.mk_val leaf)
+               materialize_as_external [] db_schema history 
+                                       (next_prefix rname) None 
+                                       scope rel_schema (CalcRing.mk_val leaf)
          | DomainDelta(subexp) -> rcr_wrap (fun x->DomainDelta(x)) 
                                            scope schema subexp
          | Exists(subexp)      -> rcr_wrap (fun x->Exists(x     )) 
@@ -1014,10 +1059,10 @@ and materialize_as_external (heuristic_options:heuristic_options_t)
    else
 
       (*** HERE COMES THE ACTUAL MATERIALIZATION ***)   
-       if (not force && List.mem ExtractRelationMaps heuristic_options) then
+      if (not force && List.mem ExtractRelationMaps heuristic_options) then
          extract_relations db_schema history prefix
                            scope schema expr
-       else   
+      else   
 
       (* Try to found an already existing map *)
       let (found_ds, mapping_if_found) = 
