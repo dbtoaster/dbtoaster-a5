@@ -336,7 +336,8 @@ in
     let input_calc = parse_calc input in 
     log_test ("GYO reduction ( "^msg^" )")
       (function true -> "TRUE" | false -> "FALSE")
-      (CalculusDecomposition.is_cyclic input_calc)
+      (CalculusDecomposition.cyclic_graph 
+          (CalcRing.prod_list input_calc) <> [])
       output      
   ;;
 
