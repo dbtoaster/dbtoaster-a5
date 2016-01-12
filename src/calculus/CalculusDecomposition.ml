@@ -73,3 +73,13 @@ let cyclic_graph (terms: C.expr_t list): C.expr_t list =
       in ListAsSet.union i o
    in
       HyperGraph.gyo_reduction get_vars terms
+
+(**
+   Decompose a graph into cyclic subgraphs.
+*)
+let rec cyclic_graphs (terms: C.expr_t list): C.expr_t list list =
+   let reduced_graph = cyclic_graph terms in
+   if (reduced_graph == []) then [] 
+   else  ListExtras.scan_fold (fun acc lhs curr rhs ->
+            ListAsSet.uniq (acc @ cyclic_graphs (lhs @ rhs))
+         ) [reduced_graph] reduced_graph

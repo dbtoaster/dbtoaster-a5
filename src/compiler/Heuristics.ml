@@ -780,16 +780,61 @@ and materialize_expr (heuristic_options:heuristic_options_t)
             (ListAsSet.multiunion [ schema; scope_rel; 
                                     rest_ivars; rest_ovars ])
       in
-      if (Debug.active "HEURISTICS-ONLY-CYCLIC-MAPS") then 
-      begin
-         let (cyclic, acyclic) = 
-            let terms = CalcRing.prod_list rel_expr in
-            let c = CalculusDecomposition.cyclic_graph terms in
-            let a = List.filter (fun x -> not (List.mem x c)) terms 
-            in (c, a)
+
+      if not (Debug.active "HEURISTICS-ONLY-CYCLIC-MAPS") then
+         materialize_as_external heuristic_options db_schema 
+                                 history prefix event 
+                                 scope_rel schema_rel rel_expr
+      else begin
+         (* Materialize only cyclic queries *)
+
+         let terms = CalcRing.prod_list rel_expr in
+         let cyclic_terms = 
+            if not ( Debug.active "HEURISTICS-CYCLIC-MAPS-MAX-DEGREE-3" ||
+                     Debug.active "HEURISTICS-CYCLIC-MAPS-MAX-DEGREE-4" ||
+                     Debug.active "HEURISTICS-CYCLIC-MAPS-MAX-DEGREE-5" )
+            then 
+               CalculusDecomposition.cyclic_graph terms
+            else 
+               let degree = 
+                  if Debug.active "HEURISTICS-CYCLIC-MAPS-MAX-DEGREE-3" then 3
+                  else if Debug.active "HEURISTICS-CYCLIC-MAPS-MAX-DEGREE-4" then 4 
+                  else if Debug.active "HEURISTICS-CYCLIC-MAPS-MAX-DEGREE-5" then 5
+                  else failwith "Unknown cyclic map degree"
+               in
+               (* Create a list of ((#nodes, #edges), terms) *)
+               let nodes_edges = 
+                  let get_vars term = 
+                     let i,o = C.schema_of_expr term 
+                     in ListAsSet.union i o
+                  in
+                     List.map (fun terms -> 
+                        let nodes = List.length (
+                           ListAsSet.multiunion (List.map get_vars terms)) in
+                        let edges = List.length terms 
+                        in 
+                           ((nodes, edges), terms)
+                     ) (CalculusDecomposition.cyclic_graphs terms)
+               in
+               let sorted_nodes_edges = 
+                  List.sort (fun ((n1, e1), t1) ((n2, e2), t2) ->
+                     if (n1 > n2) then -1 else if (n1 < n2) then 1
+                     else if (e1 > e2) then -1 else if (e1 < e2) then 1 
+                     else 0
+                  ) nodes_edges
+               in
+               let filt_nodes_edges =
+                  List.filter (fun ((n, _), _) -> n <= degree) sorted_nodes_edges
+               in
+                  if (filt_nodes_edges == []) then []
+                  else snd (List.hd filt_nodes_edges)
          in
-         let cyclic_expr = CalcRing.mk_prod cyclic in 
-         let acyclic_expr = CalcRing.mk_prod acyclic in 
+         let acyclic_terms = 
+            List.filter (fun x -> not (List.mem x cyclic_terms)) terms 
+         in
+
+         let cyclic_expr = CalcRing.mk_prod cyclic_terms in 
+         let acyclic_expr = CalcRing.mk_prod acyclic_terms in 
          let (cyclic_ivars, cyclic_ovars) = schema_of_expr cyclic_expr in
          let (acyclic_ivars, acyclic_ovars) = schema_of_expr acyclic_expr in
 
@@ -801,10 +846,12 @@ and materialize_expr (heuristic_options:heuristic_options_t)
                   (ListAsSet.multiunion 
                      [schema_rel; acyclic_ivars; acyclic_ovars])
             in
-               materialize_as_external heuristic_options db_schema 
-                                       history prefix event 
-                                       scope_rel schema_cyclic cyclic_expr
+               materialize_as_external 
+                     (ForceExpMaterialization :: heuristic_options)
+                     db_schema history prefix event 
+                     scope_rel schema_cyclic cyclic_expr
          in
+
          let (todo_acyclic, mat_acyclic) = 
             if (acyclic_expr = CalcRing.one) then ([], CalcRing.one) else
             let scope_acyclic = ListAsSet.union scope_rel cyclic_ovars in
@@ -821,10 +868,6 @@ and materialize_expr (heuristic_options:heuristic_options_t)
             (todo_cyclic @ todo_acyclic, 
              CalcRing.mk_prod [mat_cyclic; mat_acyclic])
       end
-      else
-         materialize_as_external heuristic_options db_schema 
-                                 history prefix event 
-                                 scope_rel schema_rel rel_expr
    in 
 
    let scope_lift = 
