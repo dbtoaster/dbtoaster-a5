@@ -178,6 +178,7 @@ let rec delta_of_expr (delta_event:Schema.event_t) (expr:C.expr_t): C.expr_t =
                      substitute the (now) constant dB in for deltaVar. *)
                   (* Extract lifts containing Value subexpressions *)
                   let scope = Schema.event_vars delta_event in
+                  (* FIXME: scope should be the running scope *)
                   let (delta_lhs, delta_rhs) = 
                     extract_domains scope delta_term 
                   in                  
@@ -196,6 +197,7 @@ let rec delta_of_expr (delta_event:Schema.event_t) (expr:C.expr_t): C.expr_t =
                if delta_term = CalcRing.zero then CalcRing.zero else (
                   (* We do the same thing here as for lifts *)
                   let scope = Schema.event_vars delta_event in
+                  (* FIXME: scope should be the running scope *)
                   let (delta_lhs, delta_rhs) = 
                     extract_domains scope delta_term 
                   in

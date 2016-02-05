@@ -100,7 +100,7 @@ in
       "M1(int)[][A]";
    test "Aggregation with an input variable"
        "(C ^= 0) * S(A) * (L ^= (AggSum([A], R(A,B) * {A < C})))"
-       "(C ^= 0) * M1(int)[][A] * (L ^= (M1_L2_1(int)[][A] * {A < C}))";
+       "(C ^= 0) * M1(int)[][A] * (L ^= ({A < C} * M1_L2_2(int)[][A]))";
    test "Extending output schema due to an input variable"
       "(C ^= 0) * S(A) * (L ^= (AggSum([A], R(A,B) * {B < C})))"
       "(C ^= 0) * M1(int)[][A] * (L ^= (AggSum([A], M1_L2_1(int)[][A,B] * 

@@ -100,6 +100,7 @@ let optimizations_by_level =
       (** -O3 **) [
          "AGGRESSIVE-FACTORIZE";
          "AGGRESSIVE-UNIFICATION";
+         "AGGRESSIVE-REORDERING";
          "DELETE-ON-ZERO";
          "OPTIMIZE-PATTERNS";
       ];

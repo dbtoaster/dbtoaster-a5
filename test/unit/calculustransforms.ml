@@ -979,8 +979,8 @@ in
                         L_QUANTITY, L_EXTENDEDPRICE, L_DISCOUNT, L_TAX,
                         L_RETURNFLAG, L_LINESTATUS, L_SHIPDATE, L_COMMITDATE,
                         L_RECEIPTDATE, L_SHIPINSTRUCT, L_SHIPMODE, L_COMMENT) *
-      {L_COMMITDATE < L_RECEIPTDATE} * {L_RECEIPTDATE >= DATE('1994-1-1')} *
-      {L_RECEIPTDATE < DATE('1995-1-1')})))";
+      {L_RECEIPTDATE < DATE('1995-1-1')} * {L_RECEIPTDATE >= DATE('1994-1-1')} *
+      {L_COMMITDATE < L_RECEIPTDATE})))";
 
   test "Eliminate domain" []["R1_A"; "R1_B"; "R2_B"]
     "(DOMAIN(AggSum([R1_A], (DELTA R)(R1_A, R2_B))) * (DELTA R)(R1_A, R2_B) * 

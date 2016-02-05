@@ -776,7 +776,8 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
                C.mk_aggsum new_gb_vars subexp
          | Rel(rn, rv) ->           
             let new_rv = map_vars " relation var" rv in
-            if ListAsSet.has_no_duplicates new_rv
+            if (ListAsSet.has_no_duplicates new_rv || 
+                Debug.active "ENABLE-DUPLICATE-MAP-ENTRIES")
             then C.mk_rel rn new_rv
             else 
                (* In order to prevent expressions of the form R(dA,dA), *)
@@ -785,7 +786,8 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
                                   make_cmp " relation var" ]
          | DeltaRel(rn, rv) ->           
             let new_rv = map_vars " delta relation var" rv in
-            if ListAsSet.has_no_duplicates new_rv
+            if (ListAsSet.has_no_duplicates new_rv ||
+                Debug.active "ENABLE-DUPLICATE-MAP-ENTRIES")
             then C.mk_deltarel rn new_rv
             else 
                (* In order to prevent expressions of the form R(dA,dA), *)
@@ -797,11 +799,11 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
             (* The metadata is already rewritten *)
             let new_eiv = map_vars "n external input var" eiv in
             let new_eov = map_vars "n external output var" eov in
-            if ListAsSet.has_no_duplicates new_eiv &&
-               ListAsSet.has_no_duplicates new_eov
+            if ((ListAsSet.has_no_duplicates new_eiv &&
+                 ListAsSet.has_no_duplicates new_eov) ||
+                Debug.active "ENABLE-DUPLICATE-MAP-ENTRIES")
             then C.mk_external en new_eiv new_eov et em
             else
-            
             (* In order to prevent expressions of the form M[][dA,dA], *)
             (* we transform (B^=dA)*M[][dA,B] into M[][dA,B]*(B=dA).   *)
             CalcRing.mk_prod [ 
@@ -1047,44 +1049,84 @@ let advance_lifts scope expr =
              (ListExtras.ocaml_of_list string_of_var scope)
           );
 
-          (* Extract DomainDelta and DeltaRel terms and pull them upfront.
-             Note that DeltaRel terms don't have input variables. DomainDelta
-             terms might have input variables -- however, when they do these
-             are always bound from outside, so it's safe to push them upfront.*)
-          let (domains, deltas, others) = 
-             List.fold_left (fun (domains, deltas, others) term -> 
-                match term with
-                   | CalcRing.Val(DomainDelta _) ->
-                      (domains @ [term], deltas, others)
-                   | CalcRing.Val(DeltaRel _) -> 
-                      (domains, deltas @ [term], others)
-                   | _ -> (domains, deltas, others @ [term])
-             ) ([], [], []) pl
-          in
-
-          CalcRing.mk_prod (List.fold_left (fun curr_ret curr_term -> 
-             begin match curr_term with
-                | CalcRing.Val(Lift(_,_)) -> 
-                   begin match ( 
+          let advance_terms match_term_fn terms = 
+             List.fold_left (fun curr_ret curr_term ->
+                if (match_term_fn curr_term) then 
+                   begin match (
                       ListExtras.scan_fold (fun ret_term lhs rhs_hd rhs_tl ->
                          if ret_term <> None then ret_term else
-                         let local_scope = 
+                         let local_scope =
                             ListAsSet.union scope
                                (snd (C.schema_of_expr (CalcRing.mk_prod lhs)))
                          in
                          let rhs = rhs_hd::rhs_tl in
-                         if C.commutes ~scope:local_scope 
+                         if C.commutes ~scope:local_scope
                                (CalcRing.mk_prod rhs) curr_term
                          then Some(lhs@[curr_term]@rhs)
                          else None
-                      ) None curr_ret
+                      ) None curr_ret   
                    ) with
-                      |  Some(s) -> s
-                      |  None    -> curr_ret @ [curr_term]
+                      | Some(s) -> s
+                      | None -> curr_ret @ [curr_term]
                    end
-                | _ -> curr_ret @ [curr_term]
-             end
-          ) [] (domains @ deltas @ others))
+                else curr_ret @ [curr_term]
+             ) [] terms 
+          in
+
+          let input_terms = 
+             if not (Debug.active "AGGRESSIVE-REORDERING") then pl else
+             (* Advance (partially) bounded maps to avoid foreach iterations. *)
+             let relations_advanced =
+                advance_terms (fun term -> 
+                    ListAsSet.inter scope (snd(schema_of_expr term)) <> []) pl
+             in
+
+             (* Advance materialization to avoid recomputing temp maps 
+                during foreach and slice operations, when applicable  *)
+             let temp_maps_advanced = 
+                advance_terms (fun term -> match term with
+                   | CalcRing.Val(AggSum _) | CalcRing.Sum _ ->
+                     let (i, o) = schema_of_expr term in
+                     ListAsSet.inter scope (ListAsSet.union i o) <> []
+                   | _ -> false) relations_advanced
+             in
+
+             let singletons_advanced =
+                advance_terms (fun term -> match term with
+                   | CalcRing.Val(Value _) -> false
+                   | _ -> C.expr_is_singleton ~scope:scope term) temp_maps_advanced
+             in
+                singletons_advanced
+          in
+
+          (* Extract DomainDelta and DeltaRel terms and pull them upfront.
+             Note that DeltaRel terms don't have input variables. DomainDelta
+             terms might have input variables -- however, when they do these
+             are always bound from outside, so it's safe to push them upfront.*)
+          let deltas_advanced = 
+             advance_terms (function 
+                | CalcRing.Val(DeltaRel _) -> true
+                | _ -> false) input_terms 
+          in
+   
+          let domains_advanced = 
+             advance_terms (function
+                | CalcRing.Val(DomainDelta _) -> true
+                | _ -> false) deltas_advanced
+          in
+
+          let lifts_advanced = 
+             advance_terms (function
+                | CalcRing.Val(Lift _) -> true 
+                | _ -> false) domains_advanced
+          in
+
+          let cmp_advanced = 
+             advance_terms (function
+                | CalcRing.Val(Cmp _) -> true 
+                | _ -> false) lifts_advanced
+          in
+             CalcRing.mk_prod cmp_advanced
       )
       (fun _ x -> CalcRing.mk_neg x)
       (fun _ x ->
@@ -1341,10 +1383,15 @@ let unique_domains expr =
       else
 
       let expr_noaggs = C.erase_aggsums unique_expr in 
+      let (ivars, ovars) = C.schema_of_expr unique_expr in   
+      let (noaggs_ivars, noaggs_ovars) = C.schema_of_expr expr_noaggs in
+
+      (* Erasing AggSums in union can introduce input variables. Play safe. *)
+      if (not (ListAsSet.seteq ivars noaggs_ivars)) then unique_expr else
+
       let sum_terms_noaggs = CalcRing.sum_list expr_noaggs in
       if (List.length sum_terms_noaggs > 1) then unique_expr else
 
-      let (ivars, ovars) = C.schema_of_expr unique_expr in
       C.mk_aggsum ovars (
          let mapped_terms = 
             map_relations ovars (CalcRing.prod_list expr_noaggs)
@@ -1505,20 +1552,23 @@ let extract_domains (big_scope:var_t list) (big_expr:C.expr_t) =
                unique_domains (CalcRing.mk_prod extended_domain_terms)
             in
 
+            (* We care about domains that can restrict variables *)
+            let extended_schema = 
+               ListAsSet.multiunion [scope; schema; rest_vars] 
+            in
+
             (* 4. Graph decomposition of unique_domain_terms *)
             let domain_components = snd (
                CalculusDecomposition.decompose_graph 
-                  dom_ivars (schema, unique_domain_expr))
+                  dom_ivars (extended_schema, unique_domain_expr))
             in
-
+ 
             (* 5. Eliminate domains that do not intersect with schema 
                   (as they cannot be pulled out of AggSums) and also are 
                   irrelevant for the rest of the expression *)
             let filtered_domain_components = 
                List.filter (fun (local_schema, _) -> 
-                  ListAsSet.inter local_schema 
-                                  (ListAsSet.union schema big_scope) <> [] ||
-                  ListAsSet.inter local_schema rest_vars <> []
+                  ListAsSet.inter local_schema extended_schema <> [] 
                ) domain_components
             in            
                Debug.print "LOG-EXTRACT-DOMAINS-DETAIL" (fun () ->
@@ -2287,6 +2337,42 @@ let cancel_terms (big_expr: C.expr_t): C.expr_t =
    in
       Debug.print "LOG-CANCEL-TERMS" (fun () ->
          "Cancel terms (END): "^(CalculusPrinter.string_of_expr rewritten_expr) 
+      ); rewritten_expr
+;;
+
+
+(**
+   [reorder_terms expr]
+
+   Apply heuristics to reorder product terms for efficient execution. 
+
+   @param expr The processing expression
+*)
+let reorder_terms(big_expr: C.expr_t): C.expr_t =
+   Debug.print "LOG-REORDER-TERMS" (fun () ->
+      "Reorder terms (START): "^(CalculusPrinter.string_of_expr big_expr)
+   );
+   let reorder (scope, schema) prod_list = 
+(*
+      let (singletons, nonsingletons) = 
+         List.fold_left (fun ((sl, nl, acc_scope), term) ->
+            (sl, nl, acc_scope)
+         ) ([], [], scope) prod_list
+      in
+*)
+         prod_list
+   in 
+   let rewritten_expr =
+      C.rewrite
+         (fun _ -> CalcRing.mk_sum)
+         (fun (scope, schema) pl -> CalcRing.mk_prod (reorder (scope, schema) pl))
+         (fun _ -> CalcRing.mk_neg)
+         (fun _ -> CalcRing.mk_val)
+         (fun _ _ -> true)
+         big_expr
+   in
+      Debug.print "LOG-REORDER-TERMS" (fun () ->
+         "Reorder terms (END): "^(CalculusPrinter.string_of_expr rewritten_expr)
       ); rewritten_expr
 ;;
 
