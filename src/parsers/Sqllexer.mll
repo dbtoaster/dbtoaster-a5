@@ -72,7 +72,7 @@ let keywords =
         "INTEGER", TYPE(TInt);
         "FLOAT",   TYPE(TFloat);
         "DOUBLE",  TYPE(TFloat);
-        "DECIMAL", TYPE(TFloat);
+        "DECIMAL", DECIMAL;
         "STRING",  TYPE(TString);
         "CHAR",    CHAR;
         "VARCHAR", VARCHAR;

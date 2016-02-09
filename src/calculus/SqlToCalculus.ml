@@ -822,9 +822,19 @@ and calc_of_sql_expr ?(tgt_var = None)
                | None -> []
                | Some(t) -> [t]
             in
+
+            let args_list = 
+              let args_expr = 
+                CalcRing.mk_prod (List.map snd (agg_args @ non_agg_args)) 
+              in 
+                (* Allow external functions to return types than cannot be escalated later on; e.g., SUBSTRING(x,3,4) = '3' is valid, 
+                but (1 * SUBSTRING(x,3,4)) = '3' is not valid. *)
+                if (args_expr = CalcRing.one) then [] 
+                else CalcRing.prod_list args_expr
+            in
                C.mk_aggsum (agg_res @ (List.flatten gb_vars)) 
                   (CalcRing.mk_prod 
-                     ((List.map snd (agg_args @ non_agg_args)) @
+                     ( args_list @ 
                       [
                         let calc = C.mk_value (Arithmetic.mk_fn impl_name lifted_args impl_type) in
                         if agg_res = [] then calc else C.mk_lift (List.hd agg_res) calc 

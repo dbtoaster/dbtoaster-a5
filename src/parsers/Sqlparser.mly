@@ -85,6 +85,7 @@ let bind_select_vars q =
 %token DATE
 %token CHAR
 %token VARCHAR
+%token DECIMAL
 %token TRUE FALSE
 %token EQ NE LT LE GT GE
 %token SUM MINUS
@@ -194,10 +195,12 @@ sourceStmt:
 typeDefn:
 | TYPE                      { $1 }
 | CHAR LPAREN INT RPAREN    { TString }
+| CHAR                      { TString }
 | VARCHAR LPAREN INT RPAREN { TString }
 | VARCHAR                   { TString }
-| CHAR                      { TString }
-| DATE                      { TDate    }
+| DECIMAL LPAREN INT COMMA INT RPAREN { TFloat }
+| DECIMAL                   { TFloat }
+| DATE                      { TDate }
 | error {
       bail "Invalid type declaration"
    } 
