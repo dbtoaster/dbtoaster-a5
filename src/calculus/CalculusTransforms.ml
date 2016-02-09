@@ -1094,7 +1094,9 @@ let advance_lifts scope expr =
              let singletons_advanced =
                 advance_terms (fun term -> match term with
                    | CalcRing.Val(Value _) -> false
-                   | _ -> C.expr_is_singleton ~scope:scope term) temp_maps_advanced
+                   | CalcRing.Val(Rel _) | CalcRing.Val(DeltaRel _) | CalcRing.Val(External _) ->
+                      C.expr_is_singleton ~scope:scope term 
+                   | _ -> false) temp_maps_advanced
              in
                 singletons_advanced
           in
@@ -1298,6 +1300,7 @@ let cmp_domain_exprs expr1 expr2 =
     relevant variables appearing in the schema. For example, given a schema 
     [A], expression R(A,B) * R(A,C) * C is transformed into R(A,B) * B. *)
 let unique_domains expr = 
+   if (expr = CalcRing.one) then CalcRing.one else begin
    Debug.print "LOG-UNIQUE-DOMAINS" (fun () ->
       "Unique domains (START): "^ (CalculusPrinter.string_of_expr expr) 
    );
@@ -1306,11 +1309,6 @@ let unique_domains expr =
       | CalcRing.Val(DeltaRel _)
       | CalcRing.Val(External _) -> true
       | _ -> false
-   in
-   let merge_mappings mapping1 mapping2 = 
-      match (ListAsFunction.merge mapping1 mapping2) with
-         | Some(mapping) -> mapping
-         | None -> failwith "Incompatible mappings"
    in
    let rec map_relations schema term_list = match term_list with 
       | [] -> []
@@ -1332,7 +1330,10 @@ let unique_domains expr =
                                        mapping
                      in
                      if ListAsFunction.is_identity schema_mapping then
-                        merge_mappings curr_mapping rest_mapping
+                        match (ListAsFunction.merge curr_mapping 
+                                                     rest_mapping) with
+                           | Some(mapping) -> mapping
+                           | None -> curr_mapping
                      else
 
                      (* Map tail_term onto head *)
@@ -1341,7 +1342,10 @@ let unique_domains expr =
                            (List.map (fun (a,b) -> (b,a)) mapping)
                      in
                      if ListAsFunction.is_identity schema_mapping2 then
-                        merge_mappings curr_mapping rest_mapping2
+                        match (ListAsFunction.merge curr_mapping
+                                                    rest_mapping2) with
+                           | Some(mapping) -> mapping
+                           | None -> curr_mapping
                      else curr_mapping
 
                   | None -> curr_mapping
@@ -1367,7 +1371,7 @@ let unique_domains expr =
     ) term_list  
    in 
 
-   let rewritten_expr = 
+   let rewritten_expr =  
       let sum_terms = CalcRing.sum_list expr in
       if (List.length sum_terms > 1) then expr else
 
@@ -1404,6 +1408,7 @@ let unique_domains expr =
          "Unique domains (END): "^
          (CalculusPrinter.string_of_expr rewritten_expr) 
       ); rewritten_expr
+   end
 
 (**
   [extract_domains expr]
