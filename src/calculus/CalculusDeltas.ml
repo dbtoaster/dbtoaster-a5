@@ -157,6 +157,8 @@ let rec delta_of_expr (delta_event:Schema.event_t) (expr:C.expr_t): C.expr_t =
          (*****************************************)
             | Cmp(_,_,_) -> CalcRing.zero
          (*****************************************)
+            | CmpOrList(_,_) -> CalcRing.zero
+         (*****************************************)
             | Lift(v, sub_t) ->
                let delta_term = rcr sub_t in
                if delta_term = CalcRing.zero then CalcRing.zero else (

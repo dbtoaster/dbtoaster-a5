@@ -48,6 +48,9 @@ type ('term_t) calc_leaf_t =
    | External of 'term_t external_leaf_t     (** An external (map) *)
    | Cmp      of cmp_t * value_t * value_t   (** A comparison between two 
                                                  values *)
+(** BEGIN OR LIST HACK **)
+   | CmpOrList of value_t * const_t list     (** An OR list comparison *)
+(** END OR LIST HACK **)   
    | Lift     of var_t * 'term_t             (** A Lift expression.  The nested
                                                  sub-term's value is lifted
                                                  into the indicated variable *)
@@ -117,6 +120,7 @@ module CalcRing = struct
             | Cmp(_,_,_)              -> TInt (* Since we're not using truth, but
                                                  rather truthiness: the # of
                                                  truths encountered thus far *)
+            | CmpOrList(_,_)          -> TInt
             | Lift(_,_)               -> TInt
 (***** BEGIN EXISTS HACK *****)
             | Exists(_)               -> TInt
@@ -191,6 +195,9 @@ let rec string_of_leaf (leaf:CalcRing.leaf_t): string =
          "{"^(string_of_value subexp1)^" "^
              (string_of_cmp op)^
          " "^(string_of_value subexp2)^"}"
+      | CmpOrList(subexp, consts) ->   
+         "{"^(string_of_value subexp)^" IN "^
+         ListExtras.ocaml_of_list string_of_const consts^"}"
       | Lift(target, subexp)    ->
          "("^(string_of_var target)^" ^= "^(string_of_expr subexp)^")"
 (***** BEGIN EXISTS HACK *****)
@@ -284,6 +291,7 @@ let rec schema_of_expr ?(lift_group_by_vars_are_inputs =
          | DomainDelta(subexp) -> rcr subexp
          | Cmp(_,v1,v2) ->
             (ListAsSet.union (vars_of_value v1) (vars_of_value v2), [])
+         | CmpOrList(v,_) -> (vars_of_value v, [])
          | Lift(target, subexp) ->
             let ivars, ovars = rcr subexp in
                if lift_group_by_vars_are_inputs then
@@ -325,6 +333,7 @@ let rec rels_of_expr (expr:expr_t): string list =
             | DeltaRel(rn,_)      -> []
             | DomainDelta(subexp) -> rcr subexp
             | Cmp(_,_,_)          -> []
+            | CmpOrList(_,_)      -> []
             | Lift(_,subexp)      -> rcr subexp
 (***** BEGIN EXISTS HACK *****)
             | Exists(subexp)      -> rcr subexp
@@ -353,6 +362,7 @@ let rec deltarels_of_expr (expr:expr_t): string list =
             | DeltaRel(rn,_)      -> [rn]
             | DomainDelta(subexp) -> rcr subexp
             | Cmp(_,_,_)          -> []
+            | CmpOrList(_,_)      -> []
             | Lift(_,subexp)      -> rcr subexp
 (***** BEGIN EXISTS HACK *****)
             | Exists(subexp)      -> rcr subexp
@@ -381,6 +391,7 @@ let rec externals_of_expr (expr:expr_t): string list =
             | DeltaRel(_,_)       -> []
             | DomainDelta(subexp) -> rcr subexp
             | Cmp(_,_,_)          -> []
+            | CmpOrList(_,_)    -> []
             | Lift(_,subexp)      -> rcr subexp
 (***** BEGIN EXISTS HACK *****)
             | Exists(subexp)      -> rcr subexp
@@ -408,6 +419,7 @@ let rec degree_of_expr (expr:expr_t): int =
             | DeltaRel(rn,_)      -> 1
             | DomainDelta(subexp) -> rcr subexp
             | Cmp(_,_,_)          -> 0
+            | CmpOrList(_,_)      -> 0
             | Lift(_,subexp)      -> rcr subexp
 (***** BEGIN EXISTS HACK *****)
             | Exists(subexp)      -> rcr subexp
@@ -607,6 +619,7 @@ let rec all_vars (expr:expr_t): var_t list =
          | DomainDelta(subexp) -> all_vars subexp
          | Cmp(_,v1,v2) -> ListAsSet.uniq ((Arithmetic.vars_of_value v1) @
                                            (Arithmetic.vars_of_value v2))
+         | CmpOrList(v,_) -> Arithmetic.vars_of_value v
          | Lift(var,subexp) -> ListAsSet.union [var] (all_vars subexp)
 (***** BEGIN EXISTS HACK *****)
          | Exists(subexp) -> all_vars subexp
@@ -676,6 +689,7 @@ let rename_vars (mapping:(var_t,var_t)ListAsFunction.table_fn_t)
          | DomainDelta(subexp)        -> DomainDelta(subexp)
          | Cmp(op,v1,v2)              -> Cmp(op, remap_value v1, 
                                                  remap_value v2)
+         | CmpOrList(v,cl)            -> CmpOrList(remap_value v, cl)
          | Lift(var,subexp)           -> Lift(remap_one var, subexp)
 (***** BEGIN EXISTS HACK *****)
          | Exists(subexp)             -> Exists(subexp)
@@ -701,7 +715,7 @@ let rec expr_has_deltarels expr =
       | CalcRing.Neg(e) -> rcr e
       | CalcRing.Val(lf) -> 
          begin match lf with
-            | Value _ | Cmp _ | Rel _ -> false
+            | Value _ | Cmp _ | CmpOrList _ | Rel _ -> false
             | DeltaRel _ -> true
             | External(ename,_,_,_,_) -> (contains ename "DELTA" || 
                                           contains ename "DOMAIN")
@@ -872,6 +886,10 @@ let rec cmp_exprs ?(cmp_opts:CalcRing.cmp_opt_t list =
                   ListAsFunction.merge mappings1 mappings2
                | _ -> None
             end
+
+         | ((CmpOrList(v1,l1)), (CmpOrList(v2,l2))) ->   
+            if (ListAsSet.seteq l1 l2) then Arithmetic.cmp_values v1 v2 
+            else None
             
          | ((Lift(v1,sub1)), (Lift(v2,sub2))) ->
             begin match rcr sub1 sub2 with
@@ -946,6 +964,7 @@ let rec expr_has_binary_multiplicity ?(scope = []) expr =
          | DeltaRel _ -> false
          | DomainDelta _ -> true
          | Cmp _ -> true
+         | CmpOrList _ -> true
          | Lift _ -> true
 (***** BEGIN EXISTS HACK *****)
          | Exists _ -> true
@@ -1025,6 +1044,10 @@ let mk_external (name: string) (ivars: var_t list) (ovars: var_t list)
 let mk_cmp (op: cmp_t) (lhs: value_t) (rhs: value_t) : expr_t = 
    CalcRing.mk_val (Cmp(op, lhs, rhs))
    
+(** Create a CmpOrList expression *)
+let mk_cmp_or_list (v: value_t) (consts: const_t list) : expr_t = 
+   CalcRing.mk_val (CmpOrList(v, consts))
+
 (** Create a Lift expression *)   
 let mk_lift (var: var_t) (expr: expr_t) : expr_t =
    CalcRing.mk_val (Lift(var, expr))

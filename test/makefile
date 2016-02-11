@@ -4,7 +4,7 @@ include ../makefile.local
 DBTOASTER_TOP=../bin/dbtoaster_unit
 UNIT_TEST=sh -c 'echo ==== $$1 ====; $(DBTOASTER_TOP) $$1' --
 
-QUERY_TEST := scripts/query_test.rb $(QUERY_TEST_FLAGS)
+QUERY_TEST := scripts/query_test.rb -d SQL-INLIST-AS-DISJUNCTION $(QUERY_TEST_FLAGS)
 
 ifneq (,$(findstring CYGWIN,$(shell uname)))
 	QUERY_TEST += --path-delim \;

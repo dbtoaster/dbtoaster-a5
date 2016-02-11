@@ -89,7 +89,9 @@ let group_terms_by_type (expr:expr_t) : (term_list * term_list * term_list *
          | Exists _
 (***** END EXISTS HACK *****) 
          | Lift _ -> (domains, deltas, rels, term :: lifts, vals)
-         | Value _ | Cmp _ -> (domains, deltas, rels, lifts, term :: vals)
+         | Value _ 
+         | Cmp _ 
+         | CmpOrList _ -> (domains, deltas, rels, lifts, term :: vals)
          | AggSum _ -> bail_out expr 
             ("[group_terms_by_type] AggSums are supposed to be removed.")
    ) (CalcRing.prod_list expr) ([], [], [], [], []) 
@@ -165,7 +167,7 @@ let partition_expr (heuristic_options:heuristic_options_t) (scope:var_t list)
                      then (term, MaterializeUnknown)
                      else (term, MaterializeAsNewMap)
 
-            | Value _ | Cmp _ -> (term, MaterializeUnknown)
+            | Value _ | Cmp _ | CmpOrList _ -> (term, MaterializeUnknown)
 
             | _ -> failwith "Not a valid term (lift, exists, or value)"
       ) terms 
@@ -281,7 +283,8 @@ let partition_expr (heuristic_options:heuristic_options_t) (scope:var_t list)
                   with Not_found -> failwith "The lift term cannot be found."
                end
             | CalcRing.Val(Value _) 
-            | CalcRing.Val(Cmp _) ->
+            | CalcRing.Val(Cmp _) 
+            | CalcRing.Val(CmpOrList _) ->
                if option_pull_out_values 
                then (lhs_terms, rhs_lifts, rhs_vals @ [term]) 
                else
@@ -1011,7 +1014,7 @@ and extract_relations ?(minimal_maps = Debug.active "HEURISTICS-MINIMAL-MAPS")
          | Lift  (v,subexp)    -> rcr_wrap (fun x->Lift  (v,x   )) 
                                            scope [] subexp
             
-         | Rel _ | DeltaRel _ | External _ | Cmp _ | Value _ -> 
+         | Rel _ | DeltaRel _ | External _ | Cmp _ | CmpOrList _ | Value _ -> 
             ([], CalcRing.mk_val leaf)
 
       )

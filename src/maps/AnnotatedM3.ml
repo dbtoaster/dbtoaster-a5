@@ -31,6 +31,8 @@ type dist_expr_t =
    | DeltaRel of meta_info_t * string * var_t list
    (** A comparison between two values *)
    | Cmp      of meta_info_t * cmp_t * value_t * value_t
+   (** An OR list comparison *)
+   | CmpOrList of meta_info_t * value_t * const_t list
    (** An external (map) *)
    | External of meta_info_t * dist_expr_t external_leaf_t
    (** A sum aggregate, consisting of group-by variables and 
@@ -71,6 +73,7 @@ let get_meta_info (dexpr: dist_expr_t): meta_info_t =
       | Rel(m, _, _) 
       | DeltaRel(m, _, _)
       | Cmp(m, _, _, _) 
+      | CmpOrList(m, _, _)
       | External(m, _) 
       | AggSum(m, _, _)
       | Lift(m, _, _) 
@@ -120,6 +123,12 @@ let string_of_expr (dexpr: dist_expr_t): string =
          " " ^ (string_of_cmp op) ^
          " " ^ (string_of_value v2) ^ "}" ^
          (string_of_part_info meta.part_info)
+
+      | CmpOrList(meta, v, cl) -> 
+         "{" ^ (string_of_value v) ^ " IN [" ^ 
+         ListExtras.string_of_list ~sep:", " string_of_const cl ^ "]}" ^
+         (string_of_part_info meta.part_info)
+
       | Rel(meta, rname, rvars) ->
          rname ^
          "(" ^ (ListExtras.string_of_list ~sep:", " string_of_var rvars) ^ ")" ^
@@ -244,7 +253,7 @@ let rec mk_repartition (pkeys: var_t list) (dexpr: dist_expr_t): dist_expr_t =
                   let new_subexp = rcr subexp in
                   let meta_info = get_meta_info new_subexp in
                      AggSum(meta_info, gb_vars, new_subexp)
-               | Value(m, _) | Cmp(m, _, _, _) -> dexpr
+               | Value _ | Cmp _ | CmpOrList _ -> dexpr
                | Rel _ 
                | DeltaRel _ 
                | External _ 
@@ -308,7 +317,7 @@ and mk_gather (dexpr: dist_expr_t): dist_expr_t =
                   let new_subexp = rcr subexp in
                   let meta_info = get_meta_info new_subexp in
                      AggSum(meta_info, gb_vars, new_subexp)
-               | Value(m, _) | Cmp(m, _, _, _) -> dexpr
+               | Value _ | Cmp _ | CmpOrList _ -> dexpr
                | Rel _ 
                | DeltaRel _ 
                | External _ 
@@ -760,6 +769,14 @@ let rec lift (part_table: part_table_t) (expr: C.expr_t): dist_expr_t =
          } in 
             Cmp(meta_info, op, v1, v2)
 
+      | CalcRing.Val(CmpOrList(v, consts)) -> 
+         let meta_info = { 
+            part_info = None;
+            ivars = ivars;
+            ovars = ovars
+         } in 
+            CmpOrList(meta_info, v, consts)
+
       | CalcRing.Val(Rel(rname, rvars)) ->
          let part_info = 
             try
@@ -877,10 +894,7 @@ let rec expr_has_delta_maps (dexpr: dist_expr_t): bool =
       | Prod(_, pl) -> List.fold_left (||) false 
                                       (List.map expr_has_delta_maps pl)
       | Neg(_, e)   -> expr_has_delta_maps e
-      | Value _ 
-      | Rel _ 
-      | DeltaRel _ 
-      | Cmp _ -> false
+      | Value _ | Rel _ | DeltaRel _ | Cmp _ | CmpOrList _ -> false
       | AggSum(_, _, subexp)
       | Lift(_, _, subexp) 
       | Exists(_, subexp) 
@@ -895,7 +909,7 @@ let cost_of_expr (dexpr: dist_expr_t): (int * int * int) =
       | Sum(_, sl) -> List.fold_left add (0,0,0) (List.map rcr sl)
       | Prod(_, pl) -> List.fold_left add (0,0,0) (List.map rcr pl)
       | Neg(_, el) -> rcr el
-      | Value _ | Cmp _ | Rel _ | DeltaRel _ -> (0,0,0)
+      | Value _ | Cmp _ | CmpOrList _ | Rel _ | DeltaRel _ -> (0,0,0)
       | External(_, (_, _, _, _, eivc)) -> begin match eivc with  
                                              | Some(subexp) -> rcr subexp 
                                              | None -> (0,0,0)
@@ -1017,7 +1031,7 @@ let optimize_expr (dexpr: dist_expr_t): dist_expr_t =
 
       | Prod(meta, prod_list) -> Prod(meta, List.map rcr prod_list)
       | Neg(meta, subexp) -> Neg(meta, rcr subexp)
-      | Value _ | Cmp _ | Rel _ | DeltaRel _ -> dexpr
+      | Value _ | Cmp _ | CmpOrList _ | Rel _ | DeltaRel _ -> dexpr
       | External(meta, (en, ei, eo, et, eivc)) ->
          begin match eivc with  
             | Some(subexp) -> 
@@ -1068,7 +1082,8 @@ let optimize_expr (dexpr: dist_expr_t): dist_expr_t =
                      rcr (Prod(new_meta, List.map fn_g comps))
                | Neg(_, subexp) -> 
                   rcr (Neg(new_meta, mk_gather subexp))
-               | Value _ | Cmp _ | Rel _ | DeltaRel _ -> mk_gather dexpr
+               | Value _ | Cmp _ | CmpOrList _ | Rel _ | DeltaRel _ -> 
+                  mk_gather dexpr
                | External(_, (en, ei, eo, et, eivc)) -> 
                   begin match eivc with  
                      | Some(subexp) -> 
@@ -1135,7 +1150,8 @@ let optimize_expr (dexpr: dist_expr_t): dist_expr_t =
                      rcr (Prod(new_meta, List.map fn_rep comps))               
                | Neg(_, subexp) -> 
                   rcr (Neg(new_meta, mk_rep subexp))
-               | Value _ | Cmp _ | Rel _ | DeltaRel _ -> mk_rep dexpr
+               | Value _ | Cmp _ | CmpOrList _ | Rel _ | DeltaRel _ -> 
+                  mk_rep dexpr
                | External(_, (en, ei, eo, et, eivc)) -> 
                   begin match eivc with  
                      | Some(subexp) -> 

@@ -9,6 +9,7 @@ open Type
 open Arithmetic
 open Calculus
 open Format
+open Constants
 ;;
 
 
@@ -205,6 +206,14 @@ let rec format_expr ?(show_type = false) (expr:expr_t) =
          !fmt.space ();
          format_value rhs;
          !fmt.string "}";
+
+      | CalcRing.Val(CmpOrList(v, consts)) ->
+         !fmt.string "{";
+         format_value v;
+         !fmt.string " IN [";
+         format_list (dump string_of_value) "," 
+            (List.map (Arithmetic.mk_const) consts);
+         !fmt.string "]}";
          
       | CalcRing.Val(Lift(v, subexp)) ->
          !fmt.string "(";

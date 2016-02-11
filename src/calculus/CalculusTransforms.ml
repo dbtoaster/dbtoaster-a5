@@ -307,7 +307,18 @@ let rec combine_values ?(aggressive=false) ?(peer_groups=[])
                      (C.string_of_expr ret)
                   ); ret
             end)
-         
+
+         | CmpOrList(v,consts) -> 
+          ([],
+            begin match Arithmetic.eval_partial v with
+              | (ValueRing.Val(AConst(v_const))) -> 
+                if (List.mem v_const consts) then CalcRing.one 
+                else if Debug.active "CALC-DONT-CREATE-ZEROES" 
+                then C.mk_cmp_or_list (Arithmetic.mk_const v_const) consts
+                else CalcRing.zero
+              | v_val -> C.mk_cmp_or_list v_val consts
+            end)
+
          | Value(v) -> ([], C.mk_value (Arithmetic.eval_partial v))
          | Rel(_,_) 
          | DeltaRel(_,_) 
@@ -611,6 +622,7 @@ let lift_equalities (global_scope:var_t list) (big_expr:C.expr_t): C.expr_t =
             );
             ([UnidirectionalLift(y, x)], CalcRing.one)
          | CalcRing.Val(Cmp _) 
+         | CalcRing.Val(CmpOrList _)
          | CalcRing.Val(External _)
          | CalcRing.Val(Rel _)
          | CalcRing.Val(DeltaRel _)
@@ -825,6 +837,14 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
 
          | Cmp(op, lhs, rhs) -> C.mk_cmp op lhs rhs
 
+         | CmpOrList(lhs, consts) when 
+            (List.mem lift_v (Arithmetic.vars_of_value lhs)) -> 
+            let new_lhs = Arithmetic.eval_partial
+                     ~scope:[lift_v, val_sub " cmp expression"] lhs 
+            in
+              C.mk_cmp_or_list new_lhs consts
+
+         | CmpOrList(lhs, consts) -> C.mk_cmp_or_list lhs consts
 
 (***** BEGIN EXISTS HACK *****)
          | Exists(subexp) -> C.mk_exists subexp
@@ -840,7 +860,8 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
                   an output variable. For example (simplified TPCH Q8 and Q19): 
                      (X ^= 42) * AggSum([X], R(A,B) * (X ^= 42)) 
                   would get transformed into a wrong expression
-                     (X ^= 42) * AggSum([], R(A,B)) *)
+                     (X ^= 42) * AggSum([], R(A,B))
+                  MN: Why is this wrong? *)
             CalcRing.one
          | Lift(v, subexp) when (v = lift_v) && (not force) ->
             (* If the subexpressions aren't equivalent, then we should turn this
@@ -881,7 +902,8 @@ let unify_lifts (big_scope:var_t list) (big_schema:var_t list)
       | CalcRing.Val(Rel(_,_)) 
       | CalcRing.Val(DeltaRel(_,_))
       | CalcRing.Val(External(_)) 
-      | CalcRing.Val(Cmp(_,_,_)) -> expr
+      | CalcRing.Val(Cmp(_,_,_)) 
+      | CalcRing.Val(CmpOrList(_,_)) -> expr
       
       | CalcRing.Val(DomainDelta(subexp)) ->
          let (expr_ivars, expr_ovars) = C.schema_of_expr expr in
@@ -1125,7 +1147,8 @@ let advance_lifts scope expr =
 
           let cmp_advanced = 
              advance_terms (function
-                | CalcRing.Val(Cmp _) -> true 
+                | CalcRing.Val(Cmp _)
+                | CalcRing.Val(CmpOrList _) -> true 
                 | _ -> false) lifts_advanced
           in
              CalcRing.mk_prod cmp_advanced
@@ -1540,10 +1563,10 @@ let extract_domains (big_scope:var_t list) (big_expr:C.expr_t) =
             let extended_domain_terms = snd (
                List.fold_left (fun (scope, dl) term -> 
                   match term with
-                    | CalcRing.Val(Cmp _)
+                    | CalcRing.Val(Cmp _) | CalcRing.Val(CmpOrList _)
                       when ListAsSet.subset (fst (C.schema_of_expr term)) 
                                             scope -> 
-                        (scope, dl @ [term])     
+                        (scope, dl @ [term])
                     | CalcRing.Val(Lift(v1,CalcRing.Val(Value(v2)))) 
                       when ListAsSet.subset (Arithmetic.vars_of_value v2) scope ->
                          (ListAsSet.union scope [v1], dl @ [term]) 

@@ -22,6 +22,7 @@ let rec maintain (formula: Calculus.expr_t) : Calculus.expr_t =
          | DeltaRel _
          | DomainDelta _
          | Cmp _
+         | CmpOrList _
          | Lift _ -> CalcRing.mk_val lf
 (***** BEGIN EXISTS HACK *****)
          | Exists(subexp) -> Calculus.mk_exists subexp

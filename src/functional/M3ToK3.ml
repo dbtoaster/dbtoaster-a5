@@ -746,7 +746,9 @@ let rec calc_to_k3_expr meta ?(generate_init = false) theta_vars_el calc :
          | Cmp( T.Gt, c1, c2 ) -> cmp_fn ( fun e1 e2 -> K.Lt  (e1,e2) ) c2 c1
          | Cmp( T.Gte,c1, c2 ) -> cmp_fn ( fun e1 e2 -> K.Leq (e1,e2) ) c2 c1
          | Cmp( T.Neq,c1, c2 ) -> cmp_fn ( fun e1 e2 -> K.Neq (e1,e2) ) c1 c2
-         
+
+         | CmpOrList _ -> failwith "M3ToK3 does not support CmpOrList yet"
+
          | Rel(reln, rel_schema) -> 
             let rel_outs_el, rel_ret_ve, expr = 
                   map_access_to_expr reln [] rel_schema 

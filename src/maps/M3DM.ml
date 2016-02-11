@@ -190,6 +190,7 @@ let rec simplify_formula (event_input: Schema.event_t)
                      else (e, true)
 *)
                | Cmp(op,subexp1,subexp2) -> (e, true)
+               | CmpOrList _ -> failwith "M3DM does not support CmpOrList yet"
                | Lift(target, subexp)    -> (e, true)
 (***** BEGIN EXISTS HACK *****)
                | Exists(subexp) -> (e, true)
@@ -296,6 +297,7 @@ let rec maintain (context: Calculus.expr_t)
                then let right_context = formula in
                        ([], CalcRing.mk_prod ([context; right_context]))
                else ([], context)
+            | CmpOrList _ -> failwith "M3DM does not support CmpOrList yet"
 (***** BEGIN EXISTS HACK *****)
             | Exists(subexp) -> 
                let (trlist, _) = maintain(context)(subexp) in

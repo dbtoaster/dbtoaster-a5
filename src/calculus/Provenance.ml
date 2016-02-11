@@ -109,6 +109,11 @@ let rec provenance_of_expr ?(in_scope=[]) ?(inline_vars=[]) (expr:expr_t):
                                     (Arithmetic.vars_of_value v1) 
                                     (Arithmetic.vars_of_value v1))]
             )
+
+      | CalcRing.Val(CmpOrList(v,_)) ->
+            ( [], join [inline_source; var_provenance 
+                                          (Arithmetic.vars_of_value v)]
+            )
       
       | CalcRing.Val(Rel(rn,rv)) ->
             (  List.map (fun v -> (v, rel_source rn)) rv,

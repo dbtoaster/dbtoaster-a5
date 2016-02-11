@@ -308,6 +308,8 @@ let rec extract_from_calc (theta_vars: Type.var_t list)
       begin match lf_calc with
          | Calculus.Value _ 
          | Calculus.Cmp   _ -> empty_pattern_map()
+         | Calculus.CmpOrList _ -> 
+            failwith "M3Patterns does not support CmpOrList yet"
          | Calculus.AggSum( gb_vars, agg_calc ) -> 
             extract_from_calc tvars agg_calc
          | Calculus.Lift( v, lift_calc ) ->
