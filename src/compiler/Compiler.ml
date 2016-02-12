@@ -208,8 +208,8 @@ let compile_map (compute_delta:bool)
 (*            then failwith "TODO: Implement IVC for maps with ivars."*)
 (*            else                                                    *)
             if (todo_ovars <> [])
-            then if IVC.naive_needs_runtime_ivc (Schema.table_rels db_schema)
-                                                todo.ds_definition
+            then if IVC.needs_runtime_ivc (Schema.table_rels db_schema)
+                                          todo.ds_definition
                  then
                      let (schema_matched_ivc) = 
                         Calculus.rename_vars delta_renamings todo.ds_definition
