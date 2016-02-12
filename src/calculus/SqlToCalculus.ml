@@ -571,19 +571,29 @@ and calc_of_condition (tables:Sql.table_t list)
                   (extract_ors inner_c1)@(extract_ors inner_c2)
                | c -> [c]
             ) in
-            let (or_val,or_calc) = lift_if_necessary ~t:"or" (
-               CalcRing.mk_sum (
-                  List.map rcr_c ((extract_ors c1) @ (extract_ors c2))
-               )
+
+            let sum_calc = CalcRing.mk_sum (
+               List.map rcr_c ((extract_ors c1) @ (extract_ors c2))
             ) in
-               (* A little hackery is needed here to handle the case where
-                  both c1 and c2 are true; To deal with this, we explicitly 
-                  check to see if c1 and c2 are both greater than 0 *)
-               C.mk_aggsum [] 
-                  (CalcRing.mk_prod [or_calc; 
-                                     C.mk_cmp Gt 
-                                              or_val 
-                                              (Arithmetic.mk_int 0)])
+            let factorized = 
+               CalculusTransforms.factorize_polynomial
+                  (fst (C.schema_of_expr sum_calc)) sum_calc
+            in
+              CalcRing.mk_prod ( List.map (function 
+                 | CalcRing.Sum(sl) ->
+                    let (or_val,or_calc) = 
+                       lift_if_necessary ~t:"or" (CalcRing.Sum(sl)) in
+                    (* A little hackery is needed here to handle the case where
+                     both c1 and c2 are true; To deal with this, we explicitly 
+                     check to see if c1 and c2 are both greater than 0 *)
+                    C.mk_aggsum [] 
+                       (CalcRing.mk_prod [or_calc; 
+                                          C.mk_cmp Gt 
+                                                   or_val 
+                                                   (Arithmetic.mk_int 0)])
+                 | e -> e) (CalcRing.prod_list factorized)
+              )
+
          | Sql.Not(Sql.Exists(q)) ->
             (* The exists operator is only bound for elements in the domain.  
                Since we're explicitly looking for cases that are not in the 
