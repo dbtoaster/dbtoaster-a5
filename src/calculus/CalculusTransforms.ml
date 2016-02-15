@@ -1627,13 +1627,20 @@ let extract_domains (big_scope:var_t list) (big_expr:C.expr_t) =
             | AggSum(gb_vars, raw_subexp) -> 
                let (raw_ivars, _) = C.schema_of_expr raw_subexp in
                let subexp = rcr raw_subexp in               
+
+               (* Rewriting raw_subexp can turn input vars into output vars *)
+               let (subexp_ivars, subexp_ovars) = C.schema_of_expr subexp in
+               let new_gb_vars = 
+                  ListAsSet.inter subexp_ovars 
+                                  (ListAsSet.union raw_ivars gb_vars) in
+
                (* Unnest DomainDelta terms *)
                let (unnested, nested) = 
                   List.fold_left (fun (lhs, rhs) term -> match term with
                      | CalcRing.Val(DomainDelta(subterm)) ->
                         (* Compute domain gb_vars *)
                         let dom_gb_vars = 
-                           ListAsSet.inter (ListAsSet.union raw_ivars gb_vars)
+                           ListAsSet.inter new_gb_vars
                                            (snd (schema_of_expr subterm)) 
                         in                        
                         if (dom_gb_vars <> []) then
@@ -1645,10 +1652,12 @@ let extract_domains (big_scope:var_t list) (big_expr:C.expr_t) =
                           in
                              (CalcRing.mk_prod [ lhs; extracted_domain], rhs)  
                         else (lhs, CalcRing.mk_prod [rhs; term])
+
                      | _ -> (lhs, CalcRing.mk_prod [rhs; term])
+
                   ) (CalcRing.one, CalcRing.one) (CalcRing.prod_list subexp) 
                in
-                  CalcRing.mk_prod [ unnested; C.mk_aggsum gb_vars nested ]
+                  CalcRing.mk_prod [ unnested; C.mk_aggsum new_gb_vars nested ]
 
             | DeltaRel _ -> 
                let delta_term = CalcRing.mk_val lf in
