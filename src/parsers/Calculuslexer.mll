@@ -64,6 +64,7 @@ let keywords =
       "DOMAIN",     DOMAIN;
       "DELTA",      DELTA;
       "NEG",        NEG;
+      "IN",         IN;
     ]
 let _ = hashtbl_of_pair_list keyword_table keywords
 

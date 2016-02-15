@@ -37,7 +37,7 @@ type map_metadata =
 %token FILE SOCKET FIXEDWIDTH LINE DELIMITED
 %token AGGSUM
 %token LIFT SETVALUE INCREMENT EXISTS DOMAIN DELTA
-%token CORRECT WITH FOR NEG
+%token CORRECT WITH FOR NEG IN
 
 // start
 %start statementList calculusExpr mapProgram mapTriggerStmt
@@ -162,6 +162,8 @@ ivcCalculusExpr:
                                     Calculus.mk_external en iv ov et em }
 | LBRACE valueExpr comparison valueExpr RBRACE
                                   { Calculus.mk_cmp $3 $2 $4 }
+| LBRACE valueExpr IN LBRACKET constantList RBRACKET RBRACE 
+                                  { Calculus.mk_cmp_or_list $2 $5 }
 | LPAREN variable LIFT ivcCalculusExpr RPAREN
   { let (var_n, var_t) = $2 in 
    let (e_type) = 
@@ -209,6 +211,10 @@ constant:
 | FLOAT     { CFloat($1) }
 | STRING    { CString($1) }
 | DATE LPAREN STRING RPAREN     { Constants.parse_date $3 }
+
+constantList:
+| constant                    { [$1] }
+| constant COMMA constantList { $1::$3 }
 
 emptyVariableList:
 |                             { [] }
