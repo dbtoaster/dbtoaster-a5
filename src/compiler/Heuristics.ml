@@ -47,10 +47,13 @@ let event_is_relevant (event:Schema.event_t option) (expr:expr_t): bool =
 
 (** Obtain the human-readable representation of the optional event parameter. 
     It calls Schema.string_of_event if the event is passed. *) 
-let string_of_event (event:Schema.event_t option) : string =
-   match event with
+let string_of_event (event:Schema.event_t option) : string = match event with
       | Some(evt) -> Schema.string_of_event evt
       | _  -> "<None>" 
+
+let event_vars (event:Schema.event_t option): var_t list = match event with
+      | Some(ev) -> Schema.event_vars ev
+      | None -> []
 
 let string_of_expr = CalculusPrinter.string_of_expr
 let string_of_vars = ListExtras.string_of_list string_of_var
@@ -364,7 +367,7 @@ let materializer_opts =
       CalculusTransforms.default_optimizations 
       [ CalculusTransforms.OptExtractDomains ]
 
-let rec decompose_and_fold (scope:var_t list) 
+let rec decompose_and_fold (scope:var_t list) (event:Schema.event_t option)
                            (zero_value:'a) (one_value: 'a) 
                            (sum_values_fn:('a -> 'a -> 'a)) 
                            (prod_values_fn:('a -> 'a -> 'a)) 
@@ -372,7 +375,7 @@ let rec decompose_and_fold (scope:var_t list)
                            (prefix:string) 
                            (expr:expr_t): 'a =
 
-   let rcr = decompose_and_fold scope zero_value one_value sum_values_fn 
+   let rcr = decompose_and_fold scope event zero_value one_value sum_values_fn 
                                 prod_values_fn monomial_fn in
    let contains_aggsum = 
       CalcRing.fold (List.fold_left (||) false) 
@@ -380,7 +383,10 @@ let rec decompose_and_fold (scope:var_t list)
                     (fun x -> x)
                     (function AggSum _ -> true | _ -> false)
    in
-
+   let graph_scope = if Debug.active "HEURISTICS-WEAK-GRAPH-DECOMPOSITION" 
+                     then event_vars event
+                     else scope 
+   in
    (* Polynomial decomposition *)
    fst (List.fold_left (fun (ret_value, i) (schema, term) ->
 
@@ -409,13 +415,13 @@ let rec decompose_and_fold (scope:var_t list)
                if (not (CalcRing.try_cast_to_monomial term_opt)) ||
                   (* A sanity check that the optimizer has not broken    *)
                   (* the assumption of having an aggsum-free expression. *)
-                  (contains_aggsum term_opt)                  
+                  (contains_aggsum term_opt)
                then rcr term_name (Calculus.mk_aggsum schema term_opt)
                else monomial_fn term_name schema term_opt
             in
                (prod_values_fn ret_value new_value, j + 1)
          ) 
-         (one_value, i) (snd (decompose_graph scope (schema, term_opt)))
+         (one_value, i) (snd (decompose_graph graph_scope (schema, term_opt)))
       in
          (sum_values_fn ret_value new_value, k)           
    ) 
@@ -474,7 +480,7 @@ let should_update ?(scope:var_t list = [])
 
    let final_state = 
       decompose_and_fold 
-        expr_scope Unknown Unknown get_next_state get_next_state
+        expr_scope (Some(event)) Unknown Unknown get_next_state get_next_state
         (fun _ schema expr -> fst (
            List.fold_left (fun (local_state, local_scope) term ->
               (* We are only interested in Lift/Exists expressions *)
@@ -561,10 +567,8 @@ let rec materialize ?(scope:var_t list = [])
    );
    
    (* Extend the scope with the trigger variables *)
-   let expr_scope = match event with
-      | Some(ev) -> ListAsSet.union scope (Schema.event_vars ev)
-      | None -> scope
-   in
+   let expr_scope = ListAsSet.union scope (event_vars event) in
+
    let rec merge_aggsums terms = match terms with
       | [] -> []
       | head::tail ->
@@ -607,6 +611,7 @@ let rec materialize ?(scope:var_t list = [])
    let (todos, mat_expr) = 
       decompose_and_fold 
             expr_scope 
+            event
             ([], CalcRing.zero) 
             ([], CalcRing.one)
             (fun (todos, mat_expr) (new_todos, new_mat_expr) -> 
@@ -663,6 +668,11 @@ and materialize_expr (heuristic_options:heuristic_options_t)
       "\n\t Schema: ["^(string_of_vars schema)^"]"
    );
 
+   if (List.mem ForceExpMaterialization heuristic_options)
+   then materialize_as_external heuristic_options db_schema history 
+                                prefix event scope schema expr
+   else           
+
    (* Divide the expression into four parts *)
    let (domain_expr, delta_expr, rel_expr, lift_expr, value_expr) = 
       partition_expr heuristic_options scope event expr
@@ -707,8 +717,8 @@ and materialize_expr (heuristic_options:heuristic_options_t)
          match term with
             | CalcRing.Val(DomainDelta(subexp)) ->
                let (todo, mat_subexp) =
-                  if rels_of_expr subexp = [] && deltarels_of_expr subexp = []
-                  then ([], subexp)   
+                  if (rels_of_expr subexp = [] && 
+                      deltarels_of_expr subexp = []) then ([], subexp)   
                   else
                   let rewritten_subexp = 
                     C.rewrite_leaves
@@ -720,15 +730,18 @@ and materialize_expr (heuristic_options:heuristic_options_t)
                       (fun _ _ -> true)
                       subexp
                   in
-                  let (sub_ivars, sub_ovars) = schema_of_expr rewritten_subexp in
+                  let sub_ovars = snd (schema_of_expr rewritten_subexp) in
+                  let opt_subexp = 
+                    optimize_expr (acc_scope, sub_ovars) rewritten_subexp in 
+                  let (opt_ivars, opt_ovars) = schema_of_expr opt_subexp in  
                   let scope_domain = ListAsSet.inter acc_scope
-                     (ListAsSet.union sub_ivars sub_ovars)
+                     (ListAsSet.union opt_ivars opt_ovars)
                   in
                      materialize_as_external 
                         (ForceExpMaterialization :: heuristic_options) 
                         db_schema history 
                         (prefix^"_DOMAIN"^(string_of_int j))  
-                        event scope_domain sub_ovars rewritten_subexp
+                        event scope_domain sub_ovars opt_subexp
                in
                let mat_domain = C.mk_exists mat_subexp in 
                (
@@ -1038,19 +1051,26 @@ and materialize_as_external (heuristic_options:heuristic_options_t)
    Debug.print "LOG-HEURISTICS-DETAIL" (fun () -> 
       "Materialize as external: "^(string_of_expr agg_expr)
    );     
-   
-   let force = List.mem ForceExpMaterialization heuristic_options in
-   
+      
    (* Check if expr can be further decomposed     *)
    (* e.g. R(A) * S(C) * (E ^= (R(C) * S(A)))     *)   
-   let (_, components) = decompose_graph scope (schema, expr) in
+   let graph_scope = 
+      (* Weak graph decomposition keeps values/cmps together with relations.
+         For example, see the batch version of TPC-H Q16. *)
+      if Debug.active "HEURISTICS-WEAK-GRAPH-DECOMPOSITION" 
+      then event_vars event 
+      else scope 
+   in
+   let (_, components) = decompose_graph graph_scope (schema, expr) in
    
-   if (not force && List.length components > 1) then
+   if List.length components > 1 then
       materialize ~scope:scope
                   heuristic_options db_schema history 
                   (prefix^"_P_") event agg_expr
    else
 
+   let force = List.mem ForceExpMaterialization heuristic_options in
+   
    (* A problem might appear when we materialize expressions joining 
       three or more relations with N-1 and 1-N relationships, which 
       yields a potentially huge N x N result (e.g., observe the joins 
@@ -1073,7 +1093,7 @@ and materialize_as_external (heuristic_options:heuristic_options_t)
             | CalcRing.Val(Rel(rn,rv)) when List.mem rn table_names -> rv
             | _ -> []) (CalcRing.prod_list expr))
       in      
-      let table_scope = ListAsSet.union scope table_vars in
+      let table_scope = ListAsSet.union graph_scope table_vars in
       (* Decompose the given expression by excluding all table variables. *)
       let (_, components) = decompose_graph table_scope (schema, expr) in
       (* Extract only components containing stream relations *)
