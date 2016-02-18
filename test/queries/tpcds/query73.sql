@@ -23,7 +23,7 @@ FROM (
             THEN household_demographics.hd_dep_count / household_demographics.hd_vehicle_count 
             ELSE 0 END) > 1
        AND date_dim.d_year IN LIST (1998,1999,2000)
-       AND store.s_county IN LIST ('Williamson County','Franklin Parish','Barrow County','Luce County')
+       AND store.s_county IN LIST ('Daviess County','Franklin Parish','Barrow County','Luce County')
     GROUP BY ss_ticket_number, ss_customer_sk
   ) AS dj, customer
 WHERE ss_customer_sk = c_customer_sk AND cnt BETWEEN 1 AND 5

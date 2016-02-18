@@ -1,4 +1,4 @@
--- GENERATED FOR 1GB SCALE
+-- GENERATED FOR 100GB SCALE
 
 -- Unsupported features for this query
 --   ORDER BY (ignored)
@@ -19,10 +19,10 @@ FROM (
         AND store_sales.ss_hdemo_sk = household_demographics.hd_demo_sk
         AND store_sales.ss_addr_sk = customer_address.ca_address_sk
         AND date_dim.d_dom BETWEEN 1 AND 2 
-        AND (household_demographics.hd_dep_count = 5 OR
+        AND (household_demographics.hd_dep_count = 6 OR
              household_demographics.hd_vehicle_count= 3)
         AND date_dim.d_year IN LIST (1999,2000,2001)
-        AND store.s_city IN LIST ('Midway','Fairview')
+        AND store.s_city IN LIST ('Oakland','Riverside')
    GROUP BY ss_ticket_number, ss_customer_sk, ss_addr_sk, customer_address.ca_city
   ) AS dn, customer, customer_address AS current_addr
 WHERE ss_customer_sk = c_customer_sk

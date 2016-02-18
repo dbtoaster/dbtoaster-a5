@@ -1,4 +1,4 @@
--- GENERATED FOR 1GB SCALE
+-- GENERATED FOR 100GB SCALE
 
 -- Unsupported features for this query
 --   ORDER BY (ignored)
@@ -17,6 +17,6 @@ SELECT s_store_name, s_store_id,
   FROM date_dim, store_sales, store
  WHERE d_date_sk = ss_sold_date_sk 
    AND s_store_sk = ss_store_sk 
-   AND s_gmt_offset = -5 
+   AND s_gmt_offset = -6 
    AND d_year = 1998 
  GROUP BY s_store_name, s_store_id;

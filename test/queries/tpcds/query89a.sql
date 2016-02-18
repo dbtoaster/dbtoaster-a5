@@ -1,4 +1,4 @@
--- GENERATED FOR 1GB SCALE
+-- GENERATED FOR 100GB SCALE
 
 -- Unsupported features for this query
 --   AVG OVER (OVER ignored)

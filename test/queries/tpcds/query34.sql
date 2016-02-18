@@ -23,6 +23,6 @@ SELECT c_last_name, c_first_name, c_salutation, c_preferred_cust_flag, ss_ticket
             THEN household_demographics.hd_dep_count / household_demographics.hd_vehicle_count 
             ELSE 0 END)  > 1.2
        AND date_dim.d_year IN LIST (1999,2000,2001)
-       AND store.s_county IN LIST ('Williamson County','Franklin Parish','Barrow County','Luce County', 'Fairfield County','Richland County','Ziebach County','Walker County')
+       AND store.s_county IN LIST ('Daviess County','Franklin Parish','Barrow County','Luce County', 'Fairfield County','Richland County','Ziebach County','Walker County')
     GROUP BY ss_ticket_number,ss_customer_sk) dn, customer
 WHERE ss_customer_sk = c_customer_sk AND cnt BETWEEN 15 AND 20
