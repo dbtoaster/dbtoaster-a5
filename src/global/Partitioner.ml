@@ -845,8 +845,9 @@ let dist_part_table_by_file() =
             ("NATION",                         Local);
             ("REGION",                         Local);
          ]         
-      else
-         failwith "Running Q5 without HEURISTICS-DECOMPOSE-OVER-TABLES is not supported."
+      else 
+         create_hash_table [ ] 
+      
 (*          
          create_hash_table [
             ("REVENUE",                        Local);
@@ -913,8 +914,9 @@ let dist_part_table_by_file() =
             ("DELTA_SUPPLIER",                 DistributedRandom);
             ("NATION",                         Local);            
          ]
-      else   
-         failwith "Running Q7 without HEURISTICS-DECOMPOSE-OVER-TABLES is not supported."   
+      else 
+         create_hash_table [  ]
+         
       (* 
          create_hash_table [ 
             ("REVENUE",                        Local); 
