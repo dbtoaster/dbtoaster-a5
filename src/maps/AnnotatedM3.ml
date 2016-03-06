@@ -126,7 +126,8 @@ let string_of_expr (dexpr: dist_expr_t): string =
 
       | CmpOrList(meta, v, cl) -> 
          "{" ^ (string_of_value v) ^ " IN [" ^ 
-         ListExtras.string_of_list ~sep:", " string_of_const cl ^ "]}" ^
+         ListExtras.string_of_list ~sep:", " string_of_value 
+            (List.map Arithmetic.mk_const cl) ^ "]}" ^
          (string_of_part_info meta.part_info)
 
       | Rel(meta, rname, rvars) ->
