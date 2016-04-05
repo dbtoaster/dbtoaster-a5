@@ -679,8 +679,13 @@ and mk_prod (dexpr_list: dist_expr_t list): dist_expr_t =
 
                | (Some(Local), Some(DistributedRandom))
                | (Some(DistributedRandom), Some(Local))
-               | (Some(DistributedRandom), Some(DistributedRandom)) ->
-                  if (common_vars = []) then
+               | (Some(DistributedRandom), Some(DistributedRandom)) ->                                 
+                  if (List.length common_vars = 0 ||
+                     (* Currently, we support only single-column repartitioning. 
+                        In case there are more common variables, we decide to 
+                        gather the operands first on the master node. *)
+                      List.length common_vars > 1) then
+
                      let gathered_hd1 = mk_gather hd1 in
                      let gathered_hd2 = mk_gather hd2 in
                      let meta_info = {
