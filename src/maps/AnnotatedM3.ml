@@ -200,8 +200,10 @@ let rec mk_repartition (pkeys: var_t list) (dexpr: dist_expr_t): dist_expr_t =
 
    (* Match expression and apply simplifications *)
    match dexpr with 
-      | Gather(_, subexp)         -> rcr subexp
-      | Repartition(_, subexp, _) -> rcr subexp
+(* BEGIN COMMENT NAIVE OPTIMIZATION *) 
+      | Gather(_, subexp)         -> rcr subexp 
+      | Repartition(_, subexp, _) -> rcr subexp 
+(* END COMMENT NAIVE OPTIMIZATION *) 
       | Lift(_, v, subexp) ->
          let new_subexp = rcr subexp in
          let meta_info = get_meta_info new_subexp in
@@ -211,8 +213,10 @@ let rec mk_repartition (pkeys: var_t list) (dexpr: dist_expr_t): dist_expr_t =
          if (meta_info.ivars = []) then 
             begin match meta_info.part_info with
                (* Check if already partitioned by trunc_pkeys *)
+(* BEGIN COMMENT NAIVE OPTIMIZATION *) 
                | Some(DistributedByKey(pkeys2)) when pkeys2 = trunc_pkeys -> 
-                  dexpr
+                  dexpr 
+(* END COMMENT NAIVE OPTIMIZATION *) 
                | Some(loc) ->
                   begin match dexpr with 
                      | Exists(_, subexp) when (loc == DistributedRandom) ->
@@ -267,8 +271,10 @@ and mk_gather (dexpr: dist_expr_t): dist_expr_t =
    let rcr = mk_gather in
 
    match dexpr with 
+(* BEGIN COMMENT NAIVE OPTIMIZATION *) 
       | Gather(_, subexp)         -> rcr subexp
-      | Repartition(_, subexp, _) -> rcr subexp
+      | Repartition(_, subexp, _) -> rcr subexp 
+(* END COMMENT NAIVE OPTIMIZATION *) 
       | Lift(_, v, subexp) ->
          let new_subexp = rcr subexp in
          let meta_info = get_meta_info new_subexp in
@@ -349,7 +355,7 @@ and mk_sum (dexpr_list: dist_expr_t list): dist_expr_t =
             match (meta_hd1.part_info, meta_hd2.part_info) with
 
                | (Some(DistributedByKey(p1)), Some(DistributedByKey(p2))) ->
-
+(* BEGIN COMMENT NAIVE OPTIMIZATION *) 
                   (* If hd1 and hd2 are partitioned equally, then do nothing *)
                   if p1 = p2 then
                      let meta_info = {
@@ -442,7 +448,8 @@ and mk_sum (dexpr_list: dist_expr_t list): dist_expr_t =
                      end      
 
                   (* Default to partitioning hd1 *)
-                  else 
+                  else  
+(* END COMMENT NAIVE OPTIMIZATION *) 
                      let repartitioned_hd1 = mk_repartition p2 hd1 in
                      begin match (get_part_info repartitioned_hd1) with
                         | Some(DistributedByKey(pk)) when p2 = pk ->
@@ -587,12 +594,13 @@ and mk_prod (dexpr_list: dist_expr_t list): dist_expr_t =
          let common_vars = 
             ListAsSet.inter (ListAsSet.union meta_hd1.ivars meta_hd1.ovars) 
                             (ListAsSet.union meta_hd2.ivars meta_hd2.ovars)
-         in
+         in         
          let merged_hd = 
             match (meta_hd1.part_info, meta_hd2.part_info) with
 
                | (Some(DistributedByKey(p1)), Some(DistributedByKey(p2))) ->
-                  
+
+(* BEGIN COMMENT NAIVE OPTIMIZATION *) 
                   (* If hd1 and hd2 are partitioned equally or 
                      hd2 is replicated, then do nothing *)
                   if p1 = p2 || p2 = [] then
@@ -625,7 +633,8 @@ and mk_prod (dexpr_list: dist_expr_t list): dist_expr_t =
                                         (prod_list repartitioned_hd2))
 
                   (* Default to partitioning hd1 *)
-                  else 
+                  else  
+(* END COMMENT NAIVE OPTIMIZATION *)
                      let repartitioned_hd1 = mk_repartition p2 hd1 in
                      let meta_info = {
                         part_info = Some(DistributedByKey(p2));
@@ -1243,7 +1252,9 @@ let lift_statement (part_table: part_table_t) (stmt: stmt_t): dist_stmt_t =
                | _ -> failwith "Wrong partitioning info for LHS target map"
             end
          in 
+(* BEGIN COMMENT NAIVE OPTIMIZATION -- disable optimize_expr *)
             External(meta, (en, ei, eo, et, Some(optimize_expr eivc)))
+(* END COMMENT NAIVE OPTIMIZATION *)    
       | _ -> lhs_raw
    in
    let rhs_raw = lift part_table stmt.update_expr in
@@ -1256,7 +1267,9 @@ let lift_statement (part_table: part_table_t) (stmt: stmt_t): dist_stmt_t =
    in
    {  target_map  = lhs;
       update_type = stmt.update_type;
+(* BEGIN COMMENT NAIVE OPTIMIZATION -- disable optimize_expr *)      
       update_expr = optimize_expr rhs; }
+(* END COMMENT NAIVE OPTIMIZATION *)      
 
 let lift_trigger (part_table: part_table_t) 
                  (trigger: trigger_t): dist_trigger_t =
