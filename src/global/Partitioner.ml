@@ -753,7 +753,7 @@ let dist_part_table_by_file() =
             ("COUNTPARTSUPP4_P_2SUPPLIER1_DELTA",  DistributedRandom);
             ("COUNTPARTSUPP4_P_2SUPPLIER1",      DistributedByKey([]));   (*    *)
             ("COUNTSUPPLIER1",                   DistributedByKey([0]));  (* PK *)
-            ("COUNTSUPPLIER1SUPPLIER1_P_1",      DistributedByKey([0]));  (* PK *)   (* Alternative: SK *)
+            ("COUNTSUPPLIER1SUPPLIER1_P_1",      DistributedByKey([1]));  (* SK *)   (* Alternative: PK *)
             ("COUNTSUPPLIER1SUPPLIER1_P_1PART1", DistributedByKey([0]));  (* PK *)   (* Alternative: SK *)
             ("COUNTPART1_DELTA",                 DistributedRandom);
             ("COUNTPART1",                       DistributedByKey([5]));  (* PK *)
@@ -777,7 +777,7 @@ let dist_part_table_by_file() =
             ("COUNTPARTSUPP4_P_2SUPPLIER1_DELTA",  DistributedRandom);
             ("COUNTPARTSUPP4_P_2SUPPLIER1",      DistributedByKey([]));   (*    *)
             ("COUNTSUPPLIER1",                   DistributedByKey([0]));  (* PK *)
-            ("COUNTSUPPLIER1SUPPLIER1_P_1",      DistributedByKey([0]));  (* PK *)   (* Alternative: SK *)
+            ("COUNTSUPPLIER1SUPPLIER1_P_1",      DistributedByKey([1]));  (* SK *)   (* Alternative: PK *)
             ("COUNTSUPPLIER1SUPPLIER1_P_1PART1", DistributedByKey([0]));  (* PK *)   (* Alternative: SK *)
             ("COUNTPART1_DELTA",                 DistributedRandom);
             ("COUNTPART1",                       DistributedByKey([5]));  (* PK *)
@@ -1161,7 +1161,7 @@ let dist_part_table_by_file() =
       if Debug.active "HEURISTICS-WEAK-GRAPH-DECOMPOSITION" 
       then
          create_hash_table [ 
-            ("SUPPLIER_CNT",                           Local); 
+            ("SUPPLIER_CNT",                           DistributedByKey([0])); 
             ("SUPPLIER_CNTSUPPLIER1_DOMAIN1",          DistributedRandom);
             ("SUPPLIER_CNTSUPPLIER1_E1_1_L1_2_DELTA",  DistributedRandom);
             ("SUPPLIER_CNTPART1_DOMAIN1",              DistributedRandom); 
@@ -1178,7 +1178,7 @@ let dist_part_table_by_file() =
          ]      
       else
          create_hash_table [ 
-            ("SUPPLIER_CNT",                           Local); 
+            ("SUPPLIER_CNT",                           DistributedByKey([0]));
             ("SUPPLIER_CNTSUPPLIER1_DOMAIN1",          DistributedRandom);
             ("SUPPLIER_CNTSUPPLIER1_E1_1_L1_2_DELTA",  DistributedRandom);
             ("SUPPLIER_CNTPART1_DOMAIN1",              DistributedRandom); 
