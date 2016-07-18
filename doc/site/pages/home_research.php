@@ -11,7 +11,7 @@ Proc. PODS 2016, San Francisco, California.
 <li><a href="http://www.dbtoaster.org/papers/sigmod2016-dbtoaster-batching_divm.pdf">
 How to Win a Hot Dog Eating Contest: Distributed Incremental View Maintenance with Batch Updates. </a><br/>
 Milos Nikolic, Mohammad Dashti, and Christoph Koch<br/>
-Proc. PODS 2016, San Francisco, California. 
+Proc. SIGMOD 2016, San Francisco, California. 
 </li>
 
 <!--li><a href="http://arxiv.org/pdf/1412.4320v1">
@@ -54,6 +54,7 @@ Proc. VLDB 2009, Demo paper.
 <a name="presentations"></a>
 <h3>Presentations</h3>
 <ul>
+<li><b>Milos</b> at SIGMOD 2016: <a href="http://www.dbtoaster.org/papers/sigmod2016-dbtoaster-batching_divm-slides.pdf">How to Win a Hot Dog Eating Contest.</a></li>
 <li><b>Milos</b> at EcoCloud 2013: <a href="http://www.dbtoaster.org/papers/ecocloud2013-dbtoaster-mn.pdf">DBToaster: Do It Fast, Do It Incrementally.</a></li>
 <li><b>Oliver</b> at VLDB 2012: <a href="http://www.dbtoaster.org/papers/pvldb2012-dbtoaster-oak.pdf">Higher-Order Delta Processing for Dynamic, Frequently Fresh Views.</a></li>
 <li><b>Yanif</b> at CIDR 2011: <a href="http://www.dbtoaster.org/papers/cidr2011-dbtoaster-yna.pptx">Agile Views in a Dynamic Data Management System.</a></li>
