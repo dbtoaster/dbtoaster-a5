@@ -2,11 +2,23 @@
 <h3>Publications</h3>
 <ul>
 
-<li><a href="http://arxiv.org/pdf/1412.4320v1">
+<li><a href="http://www.dbtoaster.org/papers/pods2016-ivmcp.pdf">
+Incremental View Maintenance for Collection Programming. </a><br/>
+Christoph Koch, Daniel Lupei, and Val Tannen<br/>
+Proc. PODS 2016, San Francisco, California. 
+</li>
+
+<li><a href="http://www.dbtoaster.org/papers/sigmod2016-dbtoaster-batching_divm.pdf">
+How to Win a Hot Dog Eating Contest: Distributed Incremental View Maintenance with Batch Updates. </a><br/>
+Milos Nikolic, Mohammad Dashti, and Christoph Koch<br/>
+Proc. PODS 2016, San Francisco, California. 
+</li>
+
+<!--li><a href="http://arxiv.org/pdf/1412.4320v1">
 Incremental View Maintenance for Nested-Relational Databases. </a><br/>
 Daniel Lupei, Christoph Koch, and Val Tannen<br/>
 Under submission, 2014. 
-</li>
+</li-->
 
 <li><a href="http://www.dbtoaster.org/papers/2013-dbtoaster-report.pdf">DBToaster: Higher-order Delta Processing for Dynamic, Frequently Fresh Views. </a><br/>
 Christoph Koch, Yanif Ahmad, Oliver Kennedy, Milos Nikolic, Andres N&ouml;tzli, Daniel Lupei, and Amir Shaikhha<br/>
