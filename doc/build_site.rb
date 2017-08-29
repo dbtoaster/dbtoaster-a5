@@ -22,8 +22,8 @@ def copy_dir(d, tgt)
       map { |e| "#{d}/#{e}" }
   copy_files(entries, "#{tgt}/#{File.basename d}")
 end
-def build_php(script, target_dir)
-  
+
+def build_php(script, target_dir) 
   old_dir    = Dir.getwd;
   script_dir = File.dirname script;
   
@@ -59,17 +59,19 @@ def build_php(script, target_dir)
   page_data.each do |dest_file, script_data|
     File.open("#{target_dir}/#{dest_file}", "w") { |f| f.puts script_data }
   end
+
+
 end
 
 copy_files(["site/favicon.ico",
             "site/9.jpg",
-            "site/style.css",
             "site/bakeoff.png",
             "site/bluetab.gif",
             "site/bluetabactive.gif",
             "site/dbtoaster-logo.gif",
             "site/schematic.png",
-            "site/internal_arch.png"], "site_html");
+            "site/internal_arch.png",
+            "site/perf.png"], "site_html");
 copy_files(["site/css/bootstrap-theme.min.css",
             "site/css/bootstrap.min.css",
             "site/css/style.css"], "site_html/css");

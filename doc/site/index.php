@@ -7,7 +7,7 @@ $pages = array(
     "home_research"    => "For Researchers",
     "home_contact"     => "Contact",
     "home_people"      => "The Team",
-  "download"         => (isset($now_building_distro) ? "License" : "Downloads"),
+  "download"         => "Downloads",
   "docs"             => "Installation",
     "docs_start"     => "Getting Started",
     "docs_architecture"=> "Architecture",
@@ -128,7 +128,8 @@ function chain_link_docs() {
 <link rel="stylesheet" type="text/css" href="css/bootstrap-theme.min.css" />
 <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
 <link rel="icon" href="favicon.ico" type="image/x-icon">
-<link href="//netdna.bootstrapcdn.com/font-awesome/4.0.1/css/font-awesome.css" rel="stylesheet">
+<link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
+<link rel="stylesheet" href="http://fortawesome.github.io/Font-Awesome/assets/font-awesome/css/font-awesome.css">   
 
 <?php if(!isset($now_building_distro)) { ?>
   <script type="text/javascript">
@@ -177,15 +178,15 @@ function chain_link_docs() {
             </ul>
           </li>
           <li class="dropdown">
-            <?php if(!isset($now_building_distro)) { ?>
+            <!--?php if(!isset($now_building_distro)) { ?-->
             <a href="#" class="dropdown-toggle" data-toggle="dropdown">Downloads <b class="caret"></b></a>
-            <?php } else { ?>
-            <a href="#" class="dropdown-toggle" data-toggle="dropdown">License <b class="caret"></b></a>
-            <?php } ?>
+            <!--?php } else { ?-->
+            <!--a href="#" class="dropdown-toggle" data-toggle="dropdown">License <b class="caret"></b></a-->
+            <!--?php } ?-->
             <ul class="dropdown-menu">
-              <?php if(!isset($now_building_distro)) { ?>
+              <!--?php if(!isset($now_building_distro)) { ?-->
               <li><?= mk_link(null, "download", null); ?></li>
-              <?php } ?>
+              <!--?php } ?-->
               <li><?= mk_link("License", "download", null, "#license"); ?></li>
               <li><?= mk_link("Changelog", "download", null, "#changelog"); ?></li>
             </ul>

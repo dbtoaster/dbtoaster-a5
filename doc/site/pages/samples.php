@@ -71,6 +71,7 @@ function zeusConv($n)
       $query_color = $query_group_color[$query_group];
     }
   }
+
   if(!$is_query_selected) {
 ?>
 
@@ -145,6 +146,7 @@ window.onload = function() {
     </td>
   </tr>
 </table>
+
 <script type="text/javascript">
 window.onload = function() {
   $( ".titlebox" ).append(": <?=$query_code ?>").prepend("<div onclick=\"location.href='index.php?page=samples';\" style=\"margin-bottom:-40px;margin-top:0px;\" class=\"sbutton <?=$query_color ?> center\">Back</div> ")

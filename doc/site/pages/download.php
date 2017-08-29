@@ -1,4 +1,4 @@
-<?php if(!isset($now_building_distro)) { ?>
+<!--?php if(!isset($now_building_distro)) { ?-->
 <a name="latest"><h4>DBToaster Release 2.2</h4></a>
 <table class="table">
 <thead>
@@ -8,33 +8,26 @@
   <th width="20%" align="left">Download</th>  
 </thead>
 <tr>
-  <td align="left"> &nbsp;&nbsp; Mac OS X 10.6.8 (or above)</td>
+  <td align="left"> &nbsp;&nbsp; Mac OS X 10.6 (or above)</td>
   <td>3387</td>
   <td>2015-Nov-27</td>
   <td align="left">
     <a class="btn btn-primary" href="dist/dbtoaster_darwin_3387.tgz">&nbsp;&nbsp;Tarball&nbsp;&nbsp;</a></td>
 </tr>
 <tr>
-  <td align="left"> &nbsp;&nbsp; Ubuntu 14.04 (x86-64)</td>
+  <td align="left"> &nbsp;&nbsp; Linux (x86-64)</td>
   <td>3387</td>
   <td>2015-Nov-27</td>
   <td align="left">
-    <a class="btn btn-primary" href="dist/dbtoaster_ubuntu14.04_x86_64_3387.tgz">&nbsp;&nbsp;Tarball&nbsp;&nbsp;</a></td>
+    <a class="btn btn-primary" href="dist/dbtoaster_linux_3387.tgz">&nbsp;&nbsp;Tarball&nbsp;&nbsp;</a></td>
 </tr>
 <tr>
-  <td align="left"> &nbsp;&nbsp; RHEL 6.6 (x86-64)</td>
-  <td>3387</td>
-  <td>2015-Nov-27</td>
-  <td align="left">
-    <a class="btn btn-primary" href="dist/dbtoaster_rhel6.6_x86_64_3387.tgz">&nbsp;&nbsp;Tarball&nbsp;&nbsp;</a></td>
-</tr>
-<!--tr>
   <td align="left">&nbsp;&nbsp; Windows (Cygwin)</td>
   <td>3387</td>
   <td>2015-Nov-27</td>
   <td align="left">
-    <a class="btn btn-primary" href="dist/dbtoaster_cygwin_3346.tgz">&nbsp;&nbsp;Tarball&nbsp;&nbsp; </a></td>
-</tr-->
+    <a class="btn btn-primary" href="dist/dbtoaster_cygwin_3387.tgz">&nbsp;&nbsp;Tarball&nbsp;&nbsp; </a></td>
+</tr>
 <tr>
   <td align="left"><b>Documentation</b></td>
   <td>3387</td>
@@ -62,25 +55,18 @@
   <th width="20%" align="left">Download</th>  
 </thead>
 <tr>
-  <td align="left"> &nbsp;&nbsp; Mac OS X 10.6.8 (or above)</td>
+  <td align="left"> &nbsp;&nbsp; Mac OS X 10.6 (or above)</td>
   <td>3346</td>
   <td>2014-Nov-06</td>
   <td align="left">
     <a class="btn btn-primary" href="dist/dbtoaster_darwin_3346.tgz">&nbsp;&nbsp;Tarball&nbsp;&nbsp;</a></td>
 </tr>
 <tr>
-  <td align="left"> &nbsp;&nbsp; Ubuntu 12.04 (x86-64)</td>
+  <td align="left"> &nbsp;&nbsp; Linux (x86-64)</td>
   <td>3346</td>
   <td>2014-Nov-06</td>
   <td align="left">
-    <a class="btn btn-primary" href="dist/dbtoaster_ubuntu12.04_x86_64_3346.tgz">&nbsp;&nbsp;Tarball&nbsp;&nbsp;</a></td>
-</tr>
-<tr>
-  <td align="left"> &nbsp;&nbsp; RHEL 6.5 (x86-64)</td>
-  <td>3346</td>
-  <td>2014-Nov-06</td>
-  <td align="left">
-    <a class="btn btn-primary" href="dist/dbtoaster_rhel6.5_x86_64_3346.tgz">&nbsp;&nbsp;Tarball&nbsp;&nbsp;</a></td>
+    <a class="btn btn-primary" href="dist/dbtoaster_linux_3346.tgz">&nbsp;&nbsp;Tarball&nbsp;&nbsp;</a></td>
 </tr>
 <tr>
   <td align="left">&nbsp;&nbsp; Windows (Cygwin)</td>
@@ -89,7 +75,7 @@
   <td align="left">
     <a class="btn btn-primary" href="dist/dbtoaster_cygwin_3346.tgz">&nbsp;&nbsp;Tarball&nbsp;&nbsp; </a></td>
 </tr>
-<tr>
+<!--tr>
   <td align="left"><b>Documentation</b></td>
   <td>3346</td>
   <td>2014-Nov-06</td>
@@ -104,7 +90,7 @@
   <td align="left">
     <?= mk_link("&nbsp;&nbsp;Online&nbsp;&nbsp;", "samples", null, "", " class=\"btn btn-primary\""); ?>
   </td>
-</tr>
+</tr-->
 </table>
 <table class="table">
 <thead>
@@ -114,25 +100,18 @@
   <th width="20%" align="left">Download</th>  
 </thead>
 <tr>
-  <td align="left"> &nbsp;&nbsp; Mac OS X 10.6.8 (or above)</td>
+  <td align="left"> &nbsp;&nbsp; Mac OS X 10.6 (or above)</td>
   <td>3263</td>
   <td>2014-Aug-01</td>
   <td align="left">
     <a class="btn btn-primary" href="dist/dbtoaster_darwin_3263.tgz">&nbsp;&nbsp;Tarball&nbsp;&nbsp;</a></td>
 </tr>
 <tr>
-  <td align="left"> &nbsp;&nbsp; Ubuntu 12.04 (x86-64)</td>
+  <td align="left"> &nbsp;&nbsp; Linux (x86-64)</td>
   <td>3263</td>
   <td>2014-Aug-01</td>
   <td align="left">
-    <a class="btn btn-primary" href="dist/dbtoaster_ubuntu12.04_x86_64_3263.tgz">&nbsp;&nbsp;Tarball&nbsp;&nbsp;</a></td>
-</tr>
-<tr>
-  <td align="left"> &nbsp;&nbsp; RHEL 6.5 (x86-64)</td>
-  <td>3263</td>
-  <td>2014-Aug-01</td>
-  <td align="left">
-    <a class="btn btn-primary" href="dist/dbtoaster_rhel6.5_x86_64_3263.tgz">&nbsp;&nbsp;Tarball&nbsp;&nbsp;</a></td>
+    <a class="btn btn-primary" href="dist/dbtoaster_linux_3263.tgz">&nbsp;&nbsp;Tarball&nbsp;&nbsp;</a></td>
 </tr>
 <tr>
   <td align="left">&nbsp;&nbsp; Windows (Cygwin)</td>
@@ -141,18 +120,18 @@
   <td align="left">
     <a class="btn btn-primary" href="dist/dbtoaster_cygwin_3263.tgz">&nbsp;&nbsp;Tarball&nbsp;&nbsp; </a></td>
 </tr>
-<tr>
+<!--tr>
   <td align="left"><b>Documentation</b></td>
   <td>3263</td>
   <td>2014-Aug-01</td>
   <td align="left">
     <?= mk_link("&nbsp;&nbsp;Online&nbsp;&nbsp;", "docs", null, "", " class=\"btn btn-primary\""); ?>
   </td>
-</tr>
+</tr-->
 </table>
 <table class="table">
 <thead>
-  <th width="30%" align="right">Binaries (Release 1)</th>
+  <th width="30%" align="right">Binaries (Release 1.0)</th>
   <th width="20%" align="left">Revision</th>
   <th width="20%" align="left">Date</th>
   <th width="20%" align="left">Download</th>  
@@ -165,18 +144,18 @@
     <a class="btn btn-primary" href="dist/dbtoaster_darwin_2827.tgz">&nbsp;&nbsp;Tarball&nbsp;&nbsp;</a></td>
 </tr>
 <tr>
-  <td align="left"> &nbsp;&nbsp; Ubuntu 12.04 (x86-64)</td>
+  <td align="left"> &nbsp;&nbsp; Linux (x86-64)</td>
   <td>2827</td>
   <td>2013-Feb-11</td>
   <td align="left">
-    <a class="btn btn-primary" href="dist/dbtoaster_ubuntu12.04_x86_64_2827.tgz">&nbsp;&nbsp;Tarball&nbsp;&nbsp;</a></td>
+    <a class="btn btn-primary" href="dist/dbtoaster_linux_2827.tgz">&nbsp;&nbsp;Tarball&nbsp;&nbsp;</a></td>
 </tr>
 <tr>
   <td align="left">&nbsp;&nbsp; Windows (Cygwin)</td>
   <td>2827</td>
   <td>2013-Feb-11</td>
   <td align="left">
-    <a class="btn btn-primary" href="dist/dbtoaster_cygwin_nt-6.1-wow64_2827.tgz">&nbsp;&nbsp;Tarball&nbsp;&nbsp;</a></td>
+    <a class="btn btn-primary" href="dist/dbtoaster_cygwin_2827.tgz">&nbsp;&nbsp;Tarball&nbsp;&nbsp;</a></td>
 </tr>
 <tr>
   <td align="left"><b>Documentation</b></td>
@@ -188,7 +167,7 @@
 </table>
 <table class="table">
 <thead>
-  <th width="30%" align="right">Binaries (Public Beta for Release 1)</th>
+  <th width="30%" align="right">Binaries (Public Beta for Release 1.0)</th>
   <th width="20%" align="left">Revision</th>
   <th width="20%" align="left">Date</th>
   <th width="20%" align="left">Download</th>
@@ -201,30 +180,23 @@
     <a class="btn btn-primary" href="dist/dbtoaster_darwin_2525.tgz">&nbsp;&nbsp;Tarball&nbsp;&nbsp;</a></td>
 </tr>
 <tr>
-  <td align="left">&nbsp;&nbsp; Red Hat Fedora 17 (x86-64)</td>
+  <td align="left">&nbsp;&nbsp; Linux (x86-64)</td>
   <td>2525</td>
   <td>2012-Jul-09</td>
   <td align="left">
-    <a class="btn btn-primary" href="dist/dbtoaster_fedora17_x86_64_2525.tgz">&nbsp;&nbsp;Tarball&nbsp;&nbsp;</a></td>
-</tr>
-<tr>
-  <td align="left">&nbsp;&nbsp; Ubuntu 12.04 (x86-64)</td>
-  <td>2525</td>
-  <td>2012-Jul-09</td>
-  <td align="left">
-    <a class="btn btn-primary" href="dist/dbtoaster_ubuntu12.04_x86_64_2525.tgz">&nbsp;&nbsp;Tarball&nbsp;&nbsp;</a></td>
+    <a class="btn btn-primary" href="dist/dbtoaster_linux_2525.tgz">&nbsp;&nbsp;Tarball&nbsp;&nbsp;</a></td>
 </tr>
 <tr>
   <td align="left">&nbsp;&nbsp; Windows (Cygwin)</td>
   <td>2576</td>
   <td>2012-Jul-09</td>
   <td align="left">
-    <a class="btn btn-primary" href="dist/dbtoaster_cygwin_nt-6.1-wow64_2576.tgz">&nbsp;&nbsp;Tarball&nbsp;&nbsp;</a></td>
+    <a class="btn btn-primary" href="dist/dbtoaster_cygwin_2525.tgz">&nbsp;&nbsp;Tarball&nbsp;&nbsp;</a></td>
 </tr>
 </table>
 
 <?= chapter("License", "license") ?>
-<?php } ?>
+<!--?php } ?-->
 <p>The DBToaster technology is protected by pending US and international patents.</p>
 
 <p>The DBToaster software is provided free of charge for evaluation, teaching, learning, and research purposes. If you would like to use DBToaster in any other form, contact us at</p>
@@ -325,7 +297,7 @@
 </li>
 </ul>
 
-<H4 style="border-bottom:thin double;">Release 1 (revision 2827) - 2013/02/11</H4>
+<H4 style="border-bottom:thin double;">Release 1.0 (revision 2827) - 2013/02/11</H4>
 
 <ul>
 <li>Added support for more SQL features:
@@ -408,5 +380,5 @@
 </li>
 </ul>
 
-<H4 style="border-bottom:thin double;">Beta for Release 1 (revision 2525) - 2012/07/19</H4>
+<H4 style="border-bottom:thin double;">Beta for Release 1.0 (revision 2525) - 2012/07/09</H4>
 The initial release of DBToaster.

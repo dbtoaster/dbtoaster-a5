@@ -5,7 +5,8 @@
 <link rel="stylesheet" type="text/css" href="css/bootstrap-theme.min.css" />
 <link rel="shortcut icon" href="favicon.ico" type="image/x-icon">
 <link rel="icon" href="favicon.ico" type="image/x-icon">
-<link href="//netdna.bootstrapcdn.com/font-awesome/4.0.1/css/font-awesome.css" rel="stylesheet">
+<link rel="stylesheet" href="http://maxcdn.bootstrapcdn.com/font-awesome/4.3.0/css/font-awesome.min.css">
+<link rel="stylesheet" href="http://fortawesome.github.io/Font-Awesome/assets/font-awesome/css/font-awesome.css">   
 
 
 </head> <body>
@@ -38,9 +39,16 @@
             </ul>
           </li>
           <li class="dropdown">
-                        <a href="#" class="dropdown-toggle" data-toggle="dropdown">License <b class="caret"></b></a>
-                        <ul class="dropdown-menu">
-                            <li><a href="download.html#license" >License</a></li>
+            <!--?php if(!isset($now_building_distro)) { ?-->
+            <a href="#" class="dropdown-toggle" data-toggle="dropdown">Downloads <b class="caret"></b></a>
+            <!--?php } else { ?-->
+            <!--a href="#" class="dropdown-toggle" data-toggle="dropdown">License <b class="caret"></b></a-->
+            <!--?php } ?-->
+            <ul class="dropdown-menu">
+              <!--?php if(!isset($now_building_distro)) { ?-->
+              <li><a href="download.html" >Downloads</a></li>
+              <!--?php } ?-->
+              <li><a href="download.html#license" >License</a></li>
               <li><a href="download.html#changelog" >Changelog</a></li>
             </ul>
           </li>
@@ -83,11 +91,23 @@
 <h3>Publications</h3>
 <ul>
 
-<li><a href="http://arxiv.org/pdf/1412.4320v1">
+<li><a href="http://www.dbtoaster.org/papers/pods2016-ivmcp.pdf">
+Incremental View Maintenance for Collection Programming. </a><br/>
+Christoph Koch, Daniel Lupei, and Val Tannen<br/>
+Proc. PODS 2016, San Francisco, California. 
+</li>
+
+<li><a href="http://www.dbtoaster.org/papers/sigmod2016-dbtoaster-batching_divm.pdf">
+How to Win a Hot Dog Eating Contest: Distributed Incremental View Maintenance with Batch Updates. </a><br/>
+Milos Nikolic, Mohammad Dashti, and Christoph Koch<br/>
+Proc. SIGMOD 2016, San Francisco, California. 
+</li>
+
+<!--li><a href="http://arxiv.org/pdf/1412.4320v1">
 Incremental View Maintenance for Nested-Relational Databases. </a><br/>
 Daniel Lupei, Christoph Koch, and Val Tannen<br/>
 Under submission, 2014. 
-</li>
+</li-->
 
 <li><a href="http://www.dbtoaster.org/papers/2013-dbtoaster-report.pdf">DBToaster: Higher-order Delta Processing for Dynamic, Frequently Fresh Views. </a><br/>
 Christoph Koch, Yanif Ahmad, Oliver Kennedy, Milos Nikolic, Andres N&ouml;tzli, Daniel Lupei, and Amir Shaikhha<br/>
@@ -123,6 +143,7 @@ Proc. VLDB 2009, Demo paper.
 <a name="presentations"></a>
 <h3>Presentations</h3>
 <ul>
+<li><b>Milos</b> at SIGMOD 2016: <a href="http://www.dbtoaster.org/papers/sigmod2016-dbtoaster-batching_divm-slides.pdf">How to Win a Hot Dog Eating Contest.</a></li>
 <li><b>Milos</b> at EcoCloud 2013: <a href="http://www.dbtoaster.org/papers/ecocloud2013-dbtoaster-mn.pdf">DBToaster: Do It Fast, Do It Incrementally.</a></li>
 <li><b>Oliver</b> at VLDB 2012: <a href="http://www.dbtoaster.org/papers/pvldb2012-dbtoaster-oak.pdf">Higher-Order Delta Processing for Dynamic, Frequently Fresh Views.</a></li>
 <li><b>Yanif</b> at CIDR 2011: <a href="http://www.dbtoaster.org/papers/cidr2011-dbtoaster-yna.pptx">Agile Views in a Dynamic Data Management System.</a></li>

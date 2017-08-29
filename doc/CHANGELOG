@@ -151,6 +151,6 @@ Release 1 (revision 2827) - 2013/02/11
   + Fixed warning about floating numbers not having a trailing 0.
   + Fixed the name collision problem of raw relations.
 
-Beta for Release 1 (revision 2525) - 2012/07/19
+Beta for Release 1 (revision 2525) - 2012/07/09
 -----------------------------------
 The initial release of DBToaster.
