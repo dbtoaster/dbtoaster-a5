@@ -1,0 +1,38 @@
+<!-- HTML generated using hilite.me --><div style="background: #ffffff; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;"><table><tr><td><pre style="margin: 0; line-height: 125%"> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19</pre></td><td><pre style="margin: 0; line-height: 125%"><span style="color: #888888">-- Unsupported features for this query</span>
+<span style="color: #888888">--   INTERVAL (inlined)</span>
+<span style="color: #888888">--   ORDER BY (ignored)</span>
+<span style="color: #888888">--   LIMIT    (ignored)</span>
+
+INCLUDE <span style="background-color: #fff0f0">&#39;examples/queries/tpch/schemas.sql&#39;</span>;
+
+<span style="color: #008800; font-weight: bold">SELECT</span> returnflag, linestatus, 
+  <span style="color: #008800; font-weight: bold">SUM</span>(quantity) <span style="color: #008800; font-weight: bold">AS</span> sum_qty,
+  <span style="color: #008800; font-weight: bold">SUM</span>(extendedprice) <span style="color: #008800; font-weight: bold">AS</span> sum_base_price,
+  <span style="color: #008800; font-weight: bold">SUM</span>(extendedprice <span style="color: #333333">*</span> (<span style="color: #0000DD; font-weight: bold">1</span><span style="color: #333333">-</span>discount)) <span style="color: #008800; font-weight: bold">AS</span> sum_disc_price,
+  <span style="color: #008800; font-weight: bold">SUM</span>(extendedprice <span style="color: #333333">*</span> (<span style="color: #0000DD; font-weight: bold">1</span><span style="color: #333333">-</span>discount)<span style="color: #333333">*</span>(<span style="color: #0000DD; font-weight: bold">1</span><span style="color: #333333">+</span>tax)) <span style="color: #008800; font-weight: bold">AS</span> sum_charge,
+  <span style="color: #008800; font-weight: bold">AVG</span>(quantity) <span style="color: #008800; font-weight: bold">AS</span> avg_qty,
+  <span style="color: #008800; font-weight: bold">AVG</span>(extendedprice) <span style="color: #008800; font-weight: bold">AS</span> avg_price,
+  <span style="color: #008800; font-weight: bold">AVG</span>(discount) <span style="color: #008800; font-weight: bold">AS</span> avg_disc,
+  <span style="color: #008800; font-weight: bold">COUNT</span>(<span style="color: #333333">*</span>) <span style="color: #008800; font-weight: bold">AS</span> count_order
+<span style="color: #008800; font-weight: bold">FROM</span> lineitem
+<span style="color: #008800; font-weight: bold">WHERE</span> shipdate <span style="color: #333333">&lt;=</span> <span style="color: #007020">DATE</span>(<span style="background-color: #fff0f0">&#39;1997-09-01&#39;</span>)
+<span style="color: #008800; font-weight: bold">GROUP</span> <span style="color: #008800; font-weight: bold">BY</span> returnflag, linestatus;  
+</pre></td></tr></table></div>

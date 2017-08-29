@@ -1,0 +1,16 @@
+<!-- HTML generated using hilite.me --><div style="background: #ffffff; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;"><table><tr><td><pre style="margin: 0; line-height: 125%">1
+2
+3
+4
+5
+6
+7
+8</pre></td><td><pre style="margin: 0; line-height: 125%">INCLUDE <span style="background-color: #fff0f0">&#39;test/queries/tpch/schemas.sql&#39;</span>;
+
+<span style="color: #008800; font-weight: bold">SELECT</span> <span style="color: #333333">*</span>
+<span style="color: #008800; font-weight: bold">FROM</span> (
+<span style="color: #008800; font-weight: bold">SELECT</span> <span style="color: #008800; font-weight: bold">c</span>.custkey <span style="color: #008800; font-weight: bold">AS</span> c_custkey, <span style="color: #008800; font-weight: bold">COUNT</span>(<span style="color: #333333">*</span>) <span style="color: #008800; font-weight: bold">AS</span> c_count
+<span style="color: #008800; font-weight: bold">FROM</span> customer <span style="color: #008800; font-weight: bold">c</span>
+<span style="color: #008800; font-weight: bold">GROUP</span> <span style="color: #008800; font-weight: bold">BY</span> <span style="color: #008800; font-weight: bold">c</span>.custkey
+) s;
+</pre></td></tr></table></div>

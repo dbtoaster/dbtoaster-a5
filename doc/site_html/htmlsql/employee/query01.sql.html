@@ -1,0 +1,38 @@
+<!-- HTML generated using hilite.me --><div style="background: #ffffff; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;"><table><tr><td><pre style="margin: 0; line-height: 125%"> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15
+16
+17
+18
+19</pre></td><td><pre style="margin: 0; line-height: 125%"><span style="color: #888888">--  List all the employee details</span>
+
+<span style="color: #008800; font-weight: bold">CREATE</span> STREAM EMPLOYEE(
+    employee_id     <span style="color: #007020">INT</span>, 
+    last_name       <span style="color: #007020">VARCHAR</span>(<span style="color: #0000DD; font-weight: bold">30</span>),
+    first_name      <span style="color: #007020">VARCHAR</span>(<span style="color: #0000DD; font-weight: bold">20</span>),
+    middle_name     <span style="color: #007020">CHAR</span>(<span style="color: #0000DD; font-weight: bold">1</span>),
+    job_id          <span style="color: #007020">INT</span>,
+    manager_id      <span style="color: #007020">INT</span>,
+    hire_date       <span style="color: #007020">DATE</span>,
+    salary          <span style="color: #007020">FLOAT</span>,
+    commission      <span style="color: #007020">FLOAT</span>,
+    department_id   <span style="color: #007020">INT</span>
+    ) 
+  <span style="color: #008800; font-weight: bold">FROM</span> FILE <span style="background-color: #fff0f0">&#39;examples/data/employee/employee.dat&#39;</span> LINE DELIMITED
+  CSV ();
+
+<span style="color: #008800; font-weight: bold">SELECT</span> <span style="color: #333333">*</span> 
+<span style="color: #008800; font-weight: bold">FROM</span> employee;
+</pre></td></tr></table></div>

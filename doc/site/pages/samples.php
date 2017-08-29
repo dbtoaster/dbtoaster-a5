@@ -75,12 +75,21 @@ function zeusConv($n)
   if(!$is_query_selected) {
 ?>
 
+<?php if(!isset($now_building_distro)) { ?>
 <script type="text/javascript">
 window.onload = function() {
   $( ".sbutton" ).on( "click", function() {
     location.href='index.php?page=samples&q='+$( this ).text();
   });
 };
+<?php } else { ?>
+<script type="text/javascript">
+window.onload = function() {
+  $( ".sbutton" ).on( "click", function() {
+    location.href='samples_'+ $( this ).attr("data-id") + '_' + $( this ).text() + '.html';
+  });
+};
+<?php } ?>
 </script>
 
 <p>In this page, you will find a list of sample queries which we used DBToaster for generating IVM programs in both C++ and Scala. </p>
@@ -89,32 +98,33 @@ window.onload = function() {
 
 <?= chapter("TPC-H queries") ?>
 <?php foreach ($tpch as $q) { ?>
-<div class="sbutton dark center"><?=$q ?></div>
+
+<div class="sbutton dark center", data-id="tpch"><?=$q ?></div>
 <?php } ?>
 
 <?= chapter("Finance queries") ?>
 <?php foreach ($finance as $q) { ?>
-<div class="sbutton blue center"><?=$q ?></div>
+<div class="sbutton blue center", data-id="finance"><?=$q ?></div>
 <?php } ?>
 
 <?= chapter("Simple queries") ?>
 <?php foreach ($simple as $q) { ?>
-<div class="sbutton red center"><?=$q ?></div>
+<div class="sbutton red center", data-id="simple"><?=$q ?></div>
 <?php } ?>
 
 <?= chapter("Employee queries") ?>
 <?php foreach ($employee as $q) { ?>
-<div class="sbutton light center"><?=$q ?></div>
+<div class="sbutton light center", data-id="employee"><?=$q ?></div>
 <?php } ?>
 
 <?= chapter("MDDB queries") ?>
 <?php foreach ($mddb as $q) { ?>
-<div class="sbutton green center"><?=$q ?></div>
+<div class="sbutton green center", data-id="mddb"><?=$q ?></div>
 <?php } ?>
 
 <?= chapter("Zeus queries") ?>
 <?php foreach ($zeus as $q) { ?>
-<div class="sbutton red center"><?=$q ?></div>
+<div class="sbutton red center", data-id="zeus"><?=$q ?></div>
 <?php } ?>
 
 <?php } else { ?>
@@ -147,6 +157,7 @@ window.onload = function() {
   </tr>
 </table>
 
+<?php if(!isset($now_building_distro)) { ?>
 <script type="text/javascript">
 window.onload = function() {
   $( ".titlebox" ).append(": <?=$query_code ?>").prepend("<div onclick=\"location.href='index.php?page=samples';\" style=\"margin-bottom:-40px;margin-top:0px;\" class=\"sbutton <?=$query_color ?> center\">Back</div> ")
@@ -156,4 +167,16 @@ window.onload = function() {
   footer.appendTo("#pageEndElem");
 };
 </script>
+<?php } else { ?>
+<script type="text/javascript">
+window.onload = function() {
+  $( ".titlebox" ).append(": <?=$query_code ?>").prepend("<div onclick=\"location.href='samples.html';\" style=\"margin-bottom:-40px;margin-top:0px;\" class=\"sbutton <?=$query_color ?> center\">Back</div> ")
+  $( ".pagebody" ).css("margin-bottom","0")
+  var footer = $( ".footer" ).detach();
+  $( "#samplesTbl" ).detach().appendTo("#pageEndElem");
+  footer.appendTo("#pageEndElem");
+};
+</script>
+<?php } ?>
+
 <?php } ?>

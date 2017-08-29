@@ -1,0 +1,782 @@
+<!-- HTML generated using hilite.me --><div style="background: #ffffff; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;"><table><tr><td><pre style="margin: 0; line-height: 125%">  1
+  2
+  3
+  4
+  5
+  6
+  7
+  8
+  9
+ 10
+ 11
+ 12
+ 13
+ 14
+ 15
+ 16
+ 17
+ 18
+ 19
+ 20
+ 21
+ 22
+ 23
+ 24
+ 25
+ 26
+ 27
+ 28
+ 29
+ 30
+ 31
+ 32
+ 33
+ 34
+ 35
+ 36
+ 37
+ 38
+ 39
+ 40
+ 41
+ 42
+ 43
+ 44
+ 45
+ 46
+ 47
+ 48
+ 49
+ 50
+ 51
+ 52
+ 53
+ 54
+ 55
+ 56
+ 57
+ 58
+ 59
+ 60
+ 61
+ 62
+ 63
+ 64
+ 65
+ 66
+ 67
+ 68
+ 69
+ 70
+ 71
+ 72
+ 73
+ 74
+ 75
+ 76
+ 77
+ 78
+ 79
+ 80
+ 81
+ 82
+ 83
+ 84
+ 85
+ 86
+ 87
+ 88
+ 89
+ 90
+ 91
+ 92
+ 93
+ 94
+ 95
+ 96
+ 97
+ 98
+ 99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+369
+370
+371
+372
+373
+374
+375
+376
+377
+378
+379
+380
+381
+382
+383
+384
+385
+386
+387
+388
+389
+390
+391</pre></td><td><pre style="margin: 0; line-height: 125%"><span style="color: #557799">#include &quot;program_base.hpp&quot;</span>
+<span style="color: #557799">#include &quot;hpds/KDouble.hpp&quot;</span>
+<span style="color: #557799">#include &quot;hash.hpp&quot;</span>
+<span style="color: #557799">#include &quot;mmap/mmap.hpp&quot;</span>
+<span style="color: #557799">#include &quot;hpds/pstring.hpp&quot;</span>
+<span style="color: #557799">#include &quot;hpds/pstringops.hpp&quot;</span>
+<span style="color: #557799">#define ELEM_SEPARATOR &quot;\n\t\t\t&quot;</span>
+
+<span style="color: #008800; font-weight: bold">namespace</span> dbtoaster {
+  
+  <span style="color: #888888">/* Definitions of auxiliary maps for storing materialized views. */</span>
+  <span style="color: #008800; font-weight: bold">struct</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1_entry {
+    <span style="color: #333399; font-weight: bold">long</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPARTPART_PARTKEY; DOUBLE_TYPE __av;  PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1_entry<span style="color: #333333">*</span> nxt; PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1_entry<span style="color: #333333">*</span> prv;
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPARTPART_PARTKEY = 0L; __av = 0.0; */</span> }
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1_entry</span>(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c1) { PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPARTPART_PARTKEY <span style="color: #333333">=</span> c0; __av <span style="color: #333333">=</span> c1; }
+    PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1_entry(<span style="color: #008800; font-weight: bold">const</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPARTPART_PARTKEY( other.PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPARTPART_PARTKEY ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
+    FORCE_INLINE PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0) { PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPARTPART_PARTKEY <span style="color: #333333">=</span> c0;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
+    <span style="color: #008800; font-weight: bold">template</span><span style="color: #333333">&lt;</span><span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Archive</span><span style="color: #333333">&gt;</span>
+    <span style="color: #333399; font-weight: bold">void</span> serialize(Archive<span style="color: #333333">&amp;</span> ar, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">unsigned</span> <span style="color: #333399; font-weight: bold">int</span> version) <span style="color: #008800; font-weight: bold">const</span> 
+    {
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPARTPART_PARTKEY);
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, __av);
+    }
+  };
+  <span style="color: #008800; font-weight: bold">struct</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1_mapkey0_idxfn {
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1_entry<span style="color: #333333">&amp;</span> e) {
+      <span style="color: #333399; font-weight: bold">size_t</span> h <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>;
+      hash_combine(h, e.PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPARTPART_PARTKEY);
+      <span style="color: #008800; font-weight: bold">return</span> h;
+    }
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1_entry<span style="color: #333333">&amp;</span> y) {
+      <span style="color: #008800; font-weight: bold">return</span> x.PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPARTPART_PARTKEY <span style="color: #333333">==</span> y.PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPARTPART_PARTKEY;
+    }
+  };
+  
+  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1_entry,DOUBLE_TYPE,
+    HashIndex<span style="color: #333333">&lt;</span>PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1_entry,DOUBLE_TYPE,PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>
+  <span style="color: #333333">&gt;</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1_map;
+  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1_entry,DOUBLE_TYPE,PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1_map_0;
+  
+  <span style="color: #008800; font-weight: bold">struct</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3_entry {
+    <span style="color: #333399; font-weight: bold">long</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEMLINEITEM_PARTKEY; <span style="color: #333399; font-weight: bold">long</span> __av;  PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3_entry<span style="color: #333333">*</span> nxt; PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3_entry<span style="color: #333333">*</span> prv;
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEMLINEITEM_PARTKEY = 0L; __av = 0L; */</span> }
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3_entry</span>(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1) { PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEMLINEITEM_PARTKEY <span style="color: #333333">=</span> c0; __av <span style="color: #333333">=</span> c1; }
+    PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3_entry(<span style="color: #008800; font-weight: bold">const</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEMLINEITEM_PARTKEY( other.PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEMLINEITEM_PARTKEY ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
+    FORCE_INLINE PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0) { PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEMLINEITEM_PARTKEY <span style="color: #333333">=</span> c0;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
+    <span style="color: #008800; font-weight: bold">template</span><span style="color: #333333">&lt;</span><span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Archive</span><span style="color: #333333">&gt;</span>
+    <span style="color: #333399; font-weight: bold">void</span> serialize(Archive<span style="color: #333333">&amp;</span> ar, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">unsigned</span> <span style="color: #333399; font-weight: bold">int</span> version) <span style="color: #008800; font-weight: bold">const</span> 
+    {
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEMLINEITEM_PARTKEY);
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, __av);
+    }
+  };
+  <span style="color: #008800; font-weight: bold">struct</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3_mapkey0_idxfn {
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3_entry<span style="color: #333333">&amp;</span> e) {
+      <span style="color: #333399; font-weight: bold">size_t</span> h <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>;
+      hash_combine(h, e.PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEMLINEITEM_PARTKEY);
+      <span style="color: #008800; font-weight: bold">return</span> h;
+    }
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3_entry<span style="color: #333333">&amp;</span> y) {
+      <span style="color: #008800; font-weight: bold">return</span> x.PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEMLINEITEM_PARTKEY <span style="color: #333333">==</span> y.PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEMLINEITEM_PARTKEY;
+    }
+  };
+  
+  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3_entry,<span style="color: #333399; font-weight: bold">long</span>,
+    HashIndex<span style="color: #333333">&lt;</span>PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3_entry,<span style="color: #333399; font-weight: bold">long</span>,PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>
+  <span style="color: #333333">&gt;</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3_map;
+  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3_entry,<span style="color: #333399; font-weight: bold">long</span>,PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3_map_0;
+  
+  <span style="color: #008800; font-weight: bold">struct</span> PROMO_REVENUE_mLINEITEM2_mLINEITEM3_entry {
+    <span style="color: #333399; font-weight: bold">long</span> PROMO_REVENUE_mLINEITEM2_mLINEITEMLINEITEM_PARTKEY; <span style="color: #333399; font-weight: bold">long</span> __av;  PROMO_REVENUE_mLINEITEM2_mLINEITEM3_entry<span style="color: #333333">*</span> nxt; PROMO_REVENUE_mLINEITEM2_mLINEITEM3_entry<span style="color: #333333">*</span> prv;
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">PROMO_REVENUE_mLINEITEM2_mLINEITEM3_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*PROMO_REVENUE_mLINEITEM2_mLINEITEMLINEITEM_PARTKEY = 0L; __av = 0L; */</span> }
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">PROMO_REVENUE_mLINEITEM2_mLINEITEM3_entry</span>(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1) { PROMO_REVENUE_mLINEITEM2_mLINEITEMLINEITEM_PARTKEY <span style="color: #333333">=</span> c0; __av <span style="color: #333333">=</span> c1; }
+    PROMO_REVENUE_mLINEITEM2_mLINEITEM3_entry(<span style="color: #008800; font-weight: bold">const</span> PROMO_REVENUE_mLINEITEM2_mLINEITEM3_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> PROMO_REVENUE_mLINEITEM2_mLINEITEMLINEITEM_PARTKEY( other.PROMO_REVENUE_mLINEITEM2_mLINEITEMLINEITEM_PARTKEY ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
+    FORCE_INLINE PROMO_REVENUE_mLINEITEM2_mLINEITEM3_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0) { PROMO_REVENUE_mLINEITEM2_mLINEITEMLINEITEM_PARTKEY <span style="color: #333333">=</span> c0;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
+    <span style="color: #008800; font-weight: bold">template</span><span style="color: #333333">&lt;</span><span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Archive</span><span style="color: #333333">&gt;</span>
+    <span style="color: #333399; font-weight: bold">void</span> serialize(Archive<span style="color: #333333">&amp;</span> ar, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">unsigned</span> <span style="color: #333399; font-weight: bold">int</span> version) <span style="color: #008800; font-weight: bold">const</span> 
+    {
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, PROMO_REVENUE_mLINEITEM2_mLINEITEMLINEITEM_PARTKEY);
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, __av);
+    }
+  };
+  <span style="color: #008800; font-weight: bold">struct</span> PROMO_REVENUE_mLINEITEM2_mLINEITEM3_mapkey0_idxfn {
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> PROMO_REVENUE_mLINEITEM2_mLINEITEM3_entry<span style="color: #333333">&amp;</span> e) {
+      <span style="color: #333399; font-weight: bold">size_t</span> h <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>;
+      hash_combine(h, e.PROMO_REVENUE_mLINEITEM2_mLINEITEMLINEITEM_PARTKEY);
+      <span style="color: #008800; font-weight: bold">return</span> h;
+    }
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> PROMO_REVENUE_mLINEITEM2_mLINEITEM3_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> PROMO_REVENUE_mLINEITEM2_mLINEITEM3_entry<span style="color: #333333">&amp;</span> y) {
+      <span style="color: #008800; font-weight: bold">return</span> x.PROMO_REVENUE_mLINEITEM2_mLINEITEMLINEITEM_PARTKEY <span style="color: #333333">==</span> y.PROMO_REVENUE_mLINEITEM2_mLINEITEMLINEITEM_PARTKEY;
+    }
+  };
+  
+  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>PROMO_REVENUE_mLINEITEM2_mLINEITEM3_entry,<span style="color: #333399; font-weight: bold">long</span>,
+    HashIndex<span style="color: #333333">&lt;</span>PROMO_REVENUE_mLINEITEM2_mLINEITEM3_entry,<span style="color: #333399; font-weight: bold">long</span>,PROMO_REVENUE_mLINEITEM2_mLINEITEM3_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>
+  <span style="color: #333333">&gt;</span> PROMO_REVENUE_mLINEITEM2_mLINEITEM3_map;
+  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>PROMO_REVENUE_mLINEITEM2_mLINEITEM3_entry,<span style="color: #333399; font-weight: bold">long</span>,PROMO_REVENUE_mLINEITEM2_mLINEITEM3_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_PROMO_REVENUE_mLINEITEM2_mLINEITEM3_map_0;
+  
+  
+  
+  <span style="color: #888888">/* Type definition providing a way to access the results of the sql program */</span>
+  <span style="color: #008800; font-weight: bold">struct</span> <span style="color: #333399; font-weight: bold">tlq_t</span>{
+    <span style="color: #008800; font-weight: bold">struct</span> timeval t0,t; <span style="color: #333399; font-weight: bold">long</span> tT,tN,tS;
+    <span style="color: #333399; font-weight: bold">tlq_t</span>()<span style="color: #333333">:</span> tN(<span style="color: #0000DD; font-weight: bold">0</span>), tS(<span style="color: #0000DD; font-weight: bold">0</span>), PROMO_REVENUE(<span style="color: #6600EE; font-weight: bold">0.0</span>) { gettimeofday(<span style="color: #333333">&amp;</span>t0,<span style="color: #007020">NULL</span>); }
+  
+  <span style="color: #888888">/* Serialization Code */</span>
+    <span style="color: #008800; font-weight: bold">template</span><span style="color: #333333">&lt;</span><span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Archive</span><span style="color: #333333">&gt;</span>
+    <span style="color: #333399; font-weight: bold">void</span> serialize(Archive<span style="color: #333333">&amp;</span> ar, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">unsigned</span> <span style="color: #333399; font-weight: bold">int</span> version) <span style="color: #008800; font-weight: bold">const</span> {
+  
+      ar <span style="color: #333333">&lt;&lt;</span> <span style="background-color: #fff0f0">&quot;</span><span style="color: #666666; font-weight: bold; background-color: #fff0f0">\n</span><span style="background-color: #fff0f0">&quot;</span>;
+      <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE _PROMO_REVENUE <span style="color: #333333">=</span> get_PROMO_REVENUE();
+      dbtoaster<span style="color: #333333">::</span>serialize_nvp_tabbed(ar, STRING(PROMO_REVENUE), _PROMO_REVENUE, <span style="background-color: #fff0f0">&quot;</span><span style="color: #666666; font-weight: bold; background-color: #fff0f0">\t</span><span style="background-color: #fff0f0">&quot;</span>);
+  
+    }
+  
+    <span style="color: #888888">/* Functions returning / computing the results of top level queries */</span>
+    <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE get_PROMO_REVENUE() <span style="color: #008800; font-weight: bold">const</span> {
+      <span style="color: #008800; font-weight: bold">return</span> PROMO_REVENUE;
+    
+    }
+  
+  <span style="color: #997700; font-weight: bold">protected:</span>
+  
+    <span style="color: #888888">/* Data structures used for storing / computing top level queries */</span>
+    DOUBLE_TYPE PROMO_REVENUE;
+  
+  };
+  
+  <span style="color: #888888">/* Type definition providing a way to incrementally maintain the results of the sql program */</span>
+  <span style="color: #008800; font-weight: bold">struct</span> <span style="color: #333399; font-weight: bold">data_t</span> <span style="color: #333333">:</span> <span style="color: #333399; font-weight: bold">tlq_t</span>{
+    <span style="color: #333399; font-weight: bold">data_t</span>()<span style="color: #333333">:</span> <span style="color: #333399; font-weight: bold">tlq_t</span>(), PROMO_REVENUE_mLINEITEM1_L1_1_L1_1(<span style="color: #6600EE; font-weight: bold">0.0</span>), PROMO_REVENUE_mLINEITEM2(<span style="color: #6600EE; font-weight: bold">0.0</span>) {
+      c1 <span style="color: #333333">=</span> Udate(STRING_TYPE(<span style="background-color: #fff0f0">&quot;1995-9-1&quot;</span>));
+      c2 <span style="color: #333333">=</span> Udate(STRING_TYPE(<span style="background-color: #fff0f0">&quot;1995-10-1&quot;</span>));
+      <span style="color: #888888">/* regex_t init */</span>
+      <span style="color: #008800; font-weight: bold">if</span>(regcomp(<span style="color: #333333">&amp;</span>preg1, <span style="background-color: #fff0f0">&quot;^PROMO.*$&quot;</span>, REG_EXTENDED <span style="color: #333333">|</span> REG_NOSUB)){
+        cerr <span style="color: #333333">&lt;&lt;</span> <span style="background-color: #fff0f0">&quot;Error compiling regular expression: /^PROMO.*$/&quot;</span> <span style="color: #333333">&lt;&lt;</span> endl;
+        exit(<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1</span>);
+      }
+    }
+  
+    <span style="color: #FF0000; background-color: #FFAAAA">#</span>ifdef DBT_PROFILE
+    std<span style="color: #333333">::</span>shared_ptr<span style="color: #333333">&lt;</span>dbtoaster<span style="color: #333333">::</span>statistics<span style="color: #333333">::</span>trigger_exec_stats<span style="color: #333333">&gt;</span> exec_stats;
+    std<span style="color: #333333">::</span>shared_ptr<span style="color: #333333">&lt;</span>dbtoaster<span style="color: #333333">::</span>statistics<span style="color: #333333">::</span>trigger_exec_stats<span style="color: #333333">&gt;</span> ivc_stats;
+    <span style="color: #FF0000; background-color: #FFAAAA">#</span>endif
+  
+    <span style="color: #888888">/* Registering relations and trigger functions */</span>
+    <span style="color: #333399; font-weight: bold">void</span> register_data(ProgramBase<span style="color: #333333">&amp;</span> pb) {
+  
+      pb.add_map<span style="color: #333333">&lt;</span>DOUBLE_TYPE<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;PROMO_REVENUE&quot;</span>, PROMO_REVENUE );
+      pb.add_map<span style="color: #333333">&lt;</span>DOUBLE_TYPE<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;PROMO_REVENUE_mLINEITEM1_L1_1_L1_1&quot;</span>, PROMO_REVENUE_mLINEITEM1_L1_1_L1_1 );
+      pb.add_map<span style="color: #333333">&lt;</span>PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1&quot;</span>, PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1 );
+      pb.add_map<span style="color: #333333">&lt;</span>PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3&quot;</span>, PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3 );
+      pb.add_map<span style="color: #333333">&lt;</span>DOUBLE_TYPE<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;PROMO_REVENUE_mLINEITEM2&quot;</span>, PROMO_REVENUE_mLINEITEM2 );
+      pb.add_map<span style="color: #333333">&lt;</span>PROMO_REVENUE_mLINEITEM2_mLINEITEM3_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;PROMO_REVENUE_mLINEITEM2_mLINEITEM3&quot;</span>, PROMO_REVENUE_mLINEITEM2_mLINEITEM3 );
+  
+      pb.add_relation(<span style="background-color: #fff0f0">&quot;LINEITEM&quot;</span>);
+      pb.add_relation(<span style="background-color: #fff0f0">&quot;PART&quot;</span>);
+  
+      
+  
+      pb.add_trigger(<span style="background-color: #fff0f0">&quot;LINEITEM&quot;</span>, insert_tuple, std<span style="color: #333333">::</span>bind(<span style="color: #333333">&amp;</span><span style="color: #333399; font-weight: bold">data_t</span><span style="color: #333333">::</span>unwrap_insert_LINEITEM, <span style="color: #008800; font-weight: bold">this</span>, std<span style="color: #333333">::</span>placeholders<span style="color: #333333">::</span>_1));
+      pb.add_trigger(<span style="background-color: #fff0f0">&quot;LINEITEM&quot;</span>, delete_tuple, std<span style="color: #333333">::</span>bind(<span style="color: #333333">&amp;</span><span style="color: #333399; font-weight: bold">data_t</span><span style="color: #333333">::</span>unwrap_delete_LINEITEM, <span style="color: #008800; font-weight: bold">this</span>, std<span style="color: #333333">::</span>placeholders<span style="color: #333333">::</span>_1));
+      pb.add_trigger(<span style="background-color: #fff0f0">&quot;PART&quot;</span>, insert_tuple, std<span style="color: #333333">::</span>bind(<span style="color: #333333">&amp;</span><span style="color: #333399; font-weight: bold">data_t</span><span style="color: #333333">::</span>unwrap_insert_PART, <span style="color: #008800; font-weight: bold">this</span>, std<span style="color: #333333">::</span>placeholders<span style="color: #333333">::</span>_1));
+      pb.add_trigger(<span style="background-color: #fff0f0">&quot;PART&quot;</span>, delete_tuple, std<span style="color: #333333">::</span>bind(<span style="color: #333333">&amp;</span><span style="color: #333399; font-weight: bold">data_t</span><span style="color: #333333">::</span>unwrap_delete_PART, <span style="color: #008800; font-weight: bold">this</span>, std<span style="color: #333333">::</span>placeholders<span style="color: #333333">::</span>_1));
+  
+      <span style="color: #FF0000; background-color: #FFAAAA">#</span>ifdef DBT_PROFILE
+      exec_stats <span style="color: #333333">=</span> pb.exec_stats;
+      ivc_stats <span style="color: #333333">=</span> pb.ivc_stats;
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">0</span>, <span style="background-color: #fff0f0">&quot;insert_LINEITEM_s0&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">1</span>, <span style="background-color: #fff0f0">&quot;insert_LINEITEM_s1&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">2</span>, <span style="background-color: #fff0f0">&quot;insert_LINEITEM_s2&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">3</span>, <span style="background-color: #fff0f0">&quot;insert_LINEITEM_s3&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">4</span>, <span style="background-color: #fff0f0">&quot;delete_LINEITEM_s0&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">5</span>, <span style="background-color: #fff0f0">&quot;delete_LINEITEM_s1&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">6</span>, <span style="background-color: #fff0f0">&quot;delete_LINEITEM_s2&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">7</span>, <span style="background-color: #fff0f0">&quot;delete_LINEITEM_s3&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">8</span>, <span style="background-color: #fff0f0">&quot;insert_PART_s0&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">9</span>, <span style="background-color: #fff0f0">&quot;insert_PART_s1&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">10</span>, <span style="background-color: #fff0f0">&quot;insert_PART_s2&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">11</span>, <span style="background-color: #fff0f0">&quot;insert_PART_s3&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">12</span>, <span style="background-color: #fff0f0">&quot;insert_PART_s4&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">13</span>, <span style="background-color: #fff0f0">&quot;delete_PART_s0&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">14</span>, <span style="background-color: #fff0f0">&quot;delete_PART_s1&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">15</span>, <span style="background-color: #fff0f0">&quot;delete_PART_s2&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">16</span>, <span style="background-color: #fff0f0">&quot;delete_PART_s3&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">17</span>, <span style="background-color: #fff0f0">&quot;delete_PART_s4&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">18</span>, <span style="background-color: #fff0f0">&quot;system_ready_s0&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">19</span>, <span style="background-color: #fff0f0">&quot;system_ready_s1&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">20</span>, <span style="background-color: #fff0f0">&quot;system_ready_s2&quot;</span>);
+      <span style="color: #FF0000; background-color: #FFAAAA">#</span>endif <span style="color: #888888">// DBT_PROFILE</span>
+  
+    }
+  
+    <span style="color: #888888">/* Trigger functions for table relations */</span>
+    
+    
+    <span style="color: #888888">/* Trigger functions for stream relations */</span>
+    <span style="color: #333399; font-weight: bold">void</span> on_insert_LINEITEM(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> lineitem_orderkey, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> lineitem_partkey, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> lineitem_suppkey, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> lineitem_linenumber, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE lineitem_quantity, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE lineitem_extendedprice, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE lineitem_discount, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE lineitem_tax, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_returnflag, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_linestatus, <span style="color: #008800; font-weight: bold">const</span> date lineitem_shipdate, <span style="color: #008800; font-weight: bold">const</span> date lineitem_commitdate, <span style="color: #008800; font-weight: bold">const</span> date lineitem_receiptdate, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_shipinstruct, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_shipmode, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_comment) {
+      BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_LINEITEM&quot;</span>)
+      BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_LINEITEM&quot;</span>)
+      {  <span style="color: #333333">++</span>tN;
+        (<span style="color: #888888">/*if */</span>(lineitem_shipdate <span style="color: #333333">&gt;=</span> c1 <span style="color: #333333">&amp;&amp;</span> c2 <span style="color: #333333">&gt;</span> lineitem_shipdate) <span style="color: #333333">?</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_1 <span style="color: #333333">+=</span> (PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3.getValueOrDefault(se2.modify(lineitem_partkey)) <span style="color: #333333">*</span> (lineitem_extendedprice <span style="color: #333333">*</span> (<span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> lineitem_discount)))) <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
+        (<span style="color: #888888">/*if */</span>(lineitem_shipdate <span style="color: #333333">&gt;=</span> c1 <span style="color: #333333">&amp;&amp;</span> c2 <span style="color: #333333">&gt;</span> lineitem_shipdate) <span style="color: #333333">?</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1.addOrDelOnZero(se3.modify(lineitem_partkey),(lineitem_extendedprice <span style="color: #333333">*</span> (<span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> lineitem_discount)))) <span style="color: #333333">:</span> voidFunc());
+        (<span style="color: #888888">/*if */</span>(lineitem_shipdate <span style="color: #333333">&gt;=</span> c1 <span style="color: #333333">&amp;&amp;</span> c2 <span style="color: #333333">&gt;</span> lineitem_shipdate) <span style="color: #333333">?</span> PROMO_REVENUE_mLINEITEM2 <span style="color: #333333">+=</span> (PROMO_REVENUE_mLINEITEM2_mLINEITEM3.getValueOrDefault(se5.modify(lineitem_partkey)) <span style="color: #333333">*</span> (lineitem_extendedprice <span style="color: #333333">*</span> (<span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> lineitem_discount)))) <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
+        DOUBLE_TYPE agg1 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
+        DOUBLE_TYPE agg2 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
+        DOUBLE_TYPE l2 <span style="color: #333333">=</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_1;
+        agg2 <span style="color: #333333">+=</span> Ulistmax(<span style="color: #0000DD; font-weight: bold">1L</span>,l2);
+        DOUBLE_TYPE l1 <span style="color: #333333">=</span> agg2;
+        agg1 <span style="color: #333333">+=</span> Udiv(l1);
+        PROMO_REVENUE <span style="color: #333333">=</span> (agg1 <span style="color: #333333">*</span> (PROMO_REVENUE_mLINEITEM2 <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">100.0</span>));
+      }
+      END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_LINEITEM&quot;</span>)
+      END_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_LINEITEM&quot;</span>)
+    }
+    <span style="color: #333399; font-weight: bold">void</span> unwrap_insert_LINEITEM(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">event_args_t</span><span style="color: #333333">&amp;</span> ea) {
+      on_insert_LINEITEM(<span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span><span style="color: #333399; font-weight: bold">long</span><span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">0</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span><span style="color: #333399; font-weight: bold">long</span><span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">1</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span><span style="color: #333399; font-weight: bold">long</span><span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">2</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span><span style="color: #333399; font-weight: bold">long</span><span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">3</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span>DOUBLE_TYPE<span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">4</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span>DOUBLE_TYPE<span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">5</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span>DOUBLE_TYPE<span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">6</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span>DOUBLE_TYPE<span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">7</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span>STRING_TYPE<span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">8</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span>STRING_TYPE<span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">9</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span>date<span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">10</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span>date<span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">11</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span>date<span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">12</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span>STRING_TYPE<span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">13</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span>STRING_TYPE<span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">14</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span>STRING_TYPE<span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">15</span>])));
+    }
+    
+    <span style="color: #333399; font-weight: bold">void</span> on_delete_LINEITEM(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> lineitem_orderkey, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> lineitem_partkey, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> lineitem_suppkey, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> lineitem_linenumber, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE lineitem_quantity, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE lineitem_extendedprice, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE lineitem_discount, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE lineitem_tax, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_returnflag, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_linestatus, <span style="color: #008800; font-weight: bold">const</span> date lineitem_shipdate, <span style="color: #008800; font-weight: bold">const</span> date lineitem_commitdate, <span style="color: #008800; font-weight: bold">const</span> date lineitem_receiptdate, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_shipinstruct, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_shipmode, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> lineitem_comment) {
+      BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_LINEITEM&quot;</span>)
+      BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_LINEITEM&quot;</span>)
+      {  <span style="color: #333333">++</span>tN;
+        (<span style="color: #888888">/*if */</span>(lineitem_shipdate <span style="color: #333333">&gt;=</span> c1 <span style="color: #333333">&amp;&amp;</span> c2 <span style="color: #333333">&gt;</span> lineitem_shipdate) <span style="color: #333333">?</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_1 <span style="color: #333333">+=</span> (PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3.getValueOrDefault(se8.modify(lineitem_partkey)) <span style="color: #333333">*</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> (lineitem_extendedprice <span style="color: #333333">*</span> (<span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> lineitem_discount))))) <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
+        (<span style="color: #888888">/*if */</span>(lineitem_shipdate <span style="color: #333333">&gt;=</span> c1 <span style="color: #333333">&amp;&amp;</span> c2 <span style="color: #333333">&gt;</span> lineitem_shipdate) <span style="color: #333333">?</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1.addOrDelOnZero(se9.modify(lineitem_partkey),(<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> (lineitem_extendedprice <span style="color: #333333">*</span> (<span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> lineitem_discount))))) <span style="color: #333333">:</span> voidFunc());
+        (<span style="color: #888888">/*if */</span>(lineitem_shipdate <span style="color: #333333">&gt;=</span> c1 <span style="color: #333333">&amp;&amp;</span> c2 <span style="color: #333333">&gt;</span> lineitem_shipdate) <span style="color: #333333">?</span> PROMO_REVENUE_mLINEITEM2 <span style="color: #333333">+=</span> (PROMO_REVENUE_mLINEITEM2_mLINEITEM3.getValueOrDefault(se11.modify(lineitem_partkey)) <span style="color: #333333">*</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> (lineitem_extendedprice <span style="color: #333333">*</span> (<span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> lineitem_discount))))) <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
+        DOUBLE_TYPE agg3 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
+        DOUBLE_TYPE agg4 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
+        DOUBLE_TYPE l4 <span style="color: #333333">=</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_1;
+        agg4 <span style="color: #333333">+=</span> Ulistmax(<span style="color: #0000DD; font-weight: bold">1L</span>,l4);
+        DOUBLE_TYPE l3 <span style="color: #333333">=</span> agg4;
+        agg3 <span style="color: #333333">+=</span> Udiv(l3);
+        PROMO_REVENUE <span style="color: #333333">=</span> (agg3 <span style="color: #333333">*</span> (PROMO_REVENUE_mLINEITEM2 <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">100.0</span>));
+      }
+      END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_LINEITEM&quot;</span>)
+      END_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_LINEITEM&quot;</span>)
+    }
+    <span style="color: #333399; font-weight: bold">void</span> unwrap_delete_LINEITEM(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">event_args_t</span><span style="color: #333333">&amp;</span> ea) {
+      on_delete_LINEITEM(<span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span><span style="color: #333399; font-weight: bold">long</span><span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">0</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span><span style="color: #333399; font-weight: bold">long</span><span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">1</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span><span style="color: #333399; font-weight: bold">long</span><span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">2</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span><span style="color: #333399; font-weight: bold">long</span><span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">3</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span>DOUBLE_TYPE<span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">4</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span>DOUBLE_TYPE<span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">5</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span>DOUBLE_TYPE<span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">6</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span>DOUBLE_TYPE<span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">7</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span>STRING_TYPE<span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">8</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span>STRING_TYPE<span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">9</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span>date<span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">10</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span>date<span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">11</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span>date<span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">12</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span>STRING_TYPE<span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">13</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span>STRING_TYPE<span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">14</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span>STRING_TYPE<span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">15</span>])));
+    }
+    
+    <span style="color: #333399; font-weight: bold">void</span> on_insert_PART(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> part_partkey, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_name, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_mfgr, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_brand, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_type, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> part_size, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_container, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE part_retailprice, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_comment) {
+      BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_PART&quot;</span>)
+      BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_PART&quot;</span>)
+      {  <span style="color: #333333">++</span>tN;
+        PROMO_REVENUE_mLINEITEM1_L1_1_L1_1 <span style="color: #333333">+=</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1.getValueOrDefault(se14.modify(part_partkey));
+        PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3.addOrDelOnZero(se15.modify(part_partkey),<span style="color: #0000DD; font-weight: bold">1L</span>);
+        (<span style="color: #888888">/*if */</span>(<span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">!=</span> Upreg_match(preg1,part_type)) <span style="color: #333333">?</span> PROMO_REVENUE_mLINEITEM2 <span style="color: #333333">+=</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1.getValueOrDefault(se17.modify(part_partkey)) <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
+        (<span style="color: #888888">/*if */</span>(<span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">!=</span> Upreg_match(preg1,part_type)) <span style="color: #333333">?</span> PROMO_REVENUE_mLINEITEM2_mLINEITEM3.addOrDelOnZero(se18.modify(part_partkey),<span style="color: #0000DD; font-weight: bold">1L</span>) <span style="color: #333333">:</span> voidFunc());
+        DOUBLE_TYPE agg5 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
+        DOUBLE_TYPE agg6 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
+        DOUBLE_TYPE l6 <span style="color: #333333">=</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_1;
+        agg6 <span style="color: #333333">+=</span> Ulistmax(<span style="color: #0000DD; font-weight: bold">1L</span>,l6);
+        DOUBLE_TYPE l5 <span style="color: #333333">=</span> agg6;
+        agg5 <span style="color: #333333">+=</span> Udiv(l5);
+        PROMO_REVENUE <span style="color: #333333">=</span> (agg5 <span style="color: #333333">*</span> (PROMO_REVENUE_mLINEITEM2 <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">100.0</span>));
+      }
+      END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_PART&quot;</span>)
+      END_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_PART&quot;</span>)
+    }
+    <span style="color: #333399; font-weight: bold">void</span> unwrap_insert_PART(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">event_args_t</span><span style="color: #333333">&amp;</span> ea) {
+      on_insert_PART(<span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span><span style="color: #333399; font-weight: bold">long</span><span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">0</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span>STRING_TYPE<span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">1</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span>STRING_TYPE<span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">2</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span>STRING_TYPE<span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">3</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span>STRING_TYPE<span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">4</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span><span style="color: #333399; font-weight: bold">long</span><span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">5</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span>STRING_TYPE<span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">6</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span>DOUBLE_TYPE<span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">7</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span>STRING_TYPE<span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">8</span>])));
+    }
+    
+    <span style="color: #333399; font-weight: bold">void</span> on_delete_PART(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> part_partkey, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_name, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_mfgr, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_brand, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_type, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> part_size, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_container, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE part_retailprice, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> part_comment) {
+      BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_PART&quot;</span>)
+      BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_PART&quot;</span>)
+      {  <span style="color: #333333">++</span>tN;
+        PROMO_REVENUE_mLINEITEM1_L1_1_L1_1 <span style="color: #333333">+=</span> (PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1.getValueOrDefault(se21.modify(part_partkey)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>);
+        PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3.addOrDelOnZero(se22.modify(part_partkey),<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>);
+        (<span style="color: #888888">/*if */</span>(<span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">!=</span> Upreg_match(preg1,part_type)) <span style="color: #333333">?</span> PROMO_REVENUE_mLINEITEM2 <span style="color: #333333">+=</span> (PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1.getValueOrDefault(se24.modify(part_partkey)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>) <span style="color: #333333">:</span> <span style="color: #0000DD; font-weight: bold">0L</span>);
+        (<span style="color: #888888">/*if */</span>(<span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">!=</span> Upreg_match(preg1,part_type)) <span style="color: #333333">?</span> PROMO_REVENUE_mLINEITEM2_mLINEITEM3.addOrDelOnZero(se25.modify(part_partkey),<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>) <span style="color: #333333">:</span> voidFunc());
+        DOUBLE_TYPE agg7 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
+        DOUBLE_TYPE agg8 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
+        DOUBLE_TYPE l8 <span style="color: #333333">=</span> PROMO_REVENUE_mLINEITEM1_L1_1_L1_1;
+        agg8 <span style="color: #333333">+=</span> Ulistmax(<span style="color: #0000DD; font-weight: bold">1L</span>,l8);
+        DOUBLE_TYPE l7 <span style="color: #333333">=</span> agg8;
+        agg7 <span style="color: #333333">+=</span> Udiv(l7);
+        PROMO_REVENUE <span style="color: #333333">=</span> (agg7 <span style="color: #333333">*</span> (PROMO_REVENUE_mLINEITEM2 <span style="color: #333333">*</span> <span style="color: #6600EE; font-weight: bold">100.0</span>));
+      }
+      END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_PART&quot;</span>)
+      END_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_PART&quot;</span>)
+    }
+    <span style="color: #333399; font-weight: bold">void</span> unwrap_delete_PART(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">event_args_t</span><span style="color: #333333">&amp;</span> ea) {
+      on_delete_PART(<span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span><span style="color: #333399; font-weight: bold">long</span><span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">0</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span>STRING_TYPE<span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">1</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span>STRING_TYPE<span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">2</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span>STRING_TYPE<span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">3</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span>STRING_TYPE<span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">4</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span><span style="color: #333399; font-weight: bold">long</span><span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">5</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span>STRING_TYPE<span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">6</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span>DOUBLE_TYPE<span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">7</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span>STRING_TYPE<span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">8</span>])));
+    }
+    
+    <span style="color: #333399; font-weight: bold">void</span> on_system_ready_event() {
+      BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
+      BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
+      {  
+        PROMO_REVENUE <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
+        PROMO_REVENUE_mLINEITEM1_L1_1_L1_1 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
+        PROMO_REVENUE_mLINEITEM2 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
+      }
+      END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
+      END_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
+    }
+  
+  <span style="color: #997700; font-weight: bold">private:</span>
+  
+    <span style="color: #888888">/* Sample entries for avoiding recreation of temporary objects */</span>
+    PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3_entry se2;
+    PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1_entry se3;
+    PROMO_REVENUE_mLINEITEM2_mLINEITEM3_entry se5;
+    PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3_entry se8;
+    PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1_entry se9;
+    PROMO_REVENUE_mLINEITEM2_mLINEITEM3_entry se11;
+    PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1_entry se14;
+    PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3_entry se15;
+    PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1_entry se17;
+    PROMO_REVENUE_mLINEITEM2_mLINEITEM3_entry se18;
+    PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1_entry se21;
+    PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3_entry se22;
+    PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1_entry se24;
+    PROMO_REVENUE_mLINEITEM2_mLINEITEM3_entry se25;
+    <span style="color: #888888">/* regex_t temporary objects */</span>
+    <span style="color: #333399; font-weight: bold">regex_t</span> preg1;
+  
+    <span style="color: #888888">/* Data structures used for storing materialized views */</span>
+    DOUBLE_TYPE PROMO_REVENUE_mLINEITEM1_L1_1_L1_1;
+    PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1_map PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mPART1;
+    PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3_map PROMO_REVENUE_mLINEITEM1_L1_1_L1_1_mLINEITEM3;
+    DOUBLE_TYPE PROMO_REVENUE_mLINEITEM2;
+    PROMO_REVENUE_mLINEITEM2_mLINEITEM3_map PROMO_REVENUE_mLINEITEM2_mLINEITEM3;
+    
+    <span style="color: #888888">/*const static*/</span> date c1;
+    <span style="color: #888888">/*const static*/</span> date c2;
+    <span style="color: #888888">/*const static*/</span> STRING_TYPE c4;
+    <span style="color: #888888">/*const static*/</span> STRING_TYPE c3;
+  
+  };
+  
+  <span style="color: #888888">/* Type definition providing a way to execute the sql program */</span>
+  <span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Program</span> <span style="color: #333333">:</span> <span style="color: #008800; font-weight: bold">public</span> ProgramBase
+  {
+    <span style="color: #997700; font-weight: bold">public:</span>
+      Program(<span style="color: #333399; font-weight: bold">int</span> argc <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>, <span style="color: #333399; font-weight: bold">char</span><span style="color: #333333">*</span> argv[] <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>) <span style="color: #333333">:</span> ProgramBase(argc,argv) {
+        data.register_data(<span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>);
+        
+        <span style="color: #888888">/* Specifying data sources */</span>
+        
+        
+        pair<span style="color: #333333">&lt;</span>string,string<span style="color: #333333">&gt;</span> source1_adaptor_params[] <span style="color: #333333">=</span> { make_pair(<span style="background-color: #fff0f0">&quot;delimiter&quot;</span>,<span style="background-color: #fff0f0">&quot;|&quot;</span>), make_pair(<span style="background-color: #fff0f0">&quot;schema&quot;</span>,<span style="background-color: #fff0f0">&quot;long,long,long,long,double,double,double,double,string,string,date,date,date,string,string,string&quot;</span>) };
+        std<span style="color: #333333">::</span>shared_ptr<span style="color: #333333">&lt;</span>csv_adaptor<span style="color: #333333">&gt;</span> source1_adaptor(<span style="color: #008800; font-weight: bold">new</span> csv_adaptor(get_relation_id(<span style="background-color: #fff0f0">&quot;LINEITEM&quot;</span>),<span style="color: #0000DD; font-weight: bold">2</span>,source1_adaptor_params));
+        frame_descriptor <span style="color: #0066BB; font-weight: bold">source1_fd</span>(<span style="background-color: #fff0f0">&quot;</span><span style="color: #666666; font-weight: bold; background-color: #fff0f0">\n</span><span style="background-color: #fff0f0">&quot;</span>);
+        std<span style="color: #333333">::</span>shared_ptr<span style="color: #333333">&lt;</span>dbt_file_source<span style="color: #333333">&gt;</span> source1_file(<span style="color: #008800; font-weight: bold">new</span> dbt_file_source(<span style="background-color: #fff0f0">&quot;/Users/dashti/Documents/MyWorkspaces/DATASRC/dbtoaster/experiments/data/tpch/standard/lineitem.csv&quot;</span>,source1_fd,source1_adaptor));
+        add_source(source1_file);
+        
+        pair<span style="color: #333333">&lt;</span>string,string<span style="color: #333333">&gt;</span> source2_adaptor_params[] <span style="color: #333333">=</span> { make_pair(<span style="background-color: #fff0f0">&quot;delimiter&quot;</span>,<span style="background-color: #fff0f0">&quot;|&quot;</span>), make_pair(<span style="background-color: #fff0f0">&quot;schema&quot;</span>,<span style="background-color: #fff0f0">&quot;long,string,string,string,string,long,string,double,string&quot;</span>) };
+        std<span style="color: #333333">::</span>shared_ptr<span style="color: #333333">&lt;</span>csv_adaptor<span style="color: #333333">&gt;</span> source2_adaptor(<span style="color: #008800; font-weight: bold">new</span> csv_adaptor(get_relation_id(<span style="background-color: #fff0f0">&quot;PART&quot;</span>),<span style="color: #0000DD; font-weight: bold">2</span>,source2_adaptor_params));
+        frame_descriptor <span style="color: #0066BB; font-weight: bold">source2_fd</span>(<span style="background-color: #fff0f0">&quot;</span><span style="color: #666666; font-weight: bold; background-color: #fff0f0">\n</span><span style="background-color: #fff0f0">&quot;</span>);
+        std<span style="color: #333333">::</span>shared_ptr<span style="color: #333333">&lt;</span>dbt_file_source<span style="color: #333333">&gt;</span> source2_file(<span style="color: #008800; font-weight: bold">new</span> dbt_file_source(<span style="background-color: #fff0f0">&quot;/Users/dashti/Documents/MyWorkspaces/DATASRC/dbtoaster/experiments/data/tpch/standard/part.csv&quot;</span>,source2_fd,source2_adaptor));
+        add_source(source2_file);
+  
+      }
+  
+      <span style="color: #888888">/* Imports data for static tables and performs view initialization based on it. */</span>
+      <span style="color: #333399; font-weight: bold">void</span> init() {
+          <span style="color: #888888">//P0_PLACE_HOLDER</span>
+          table_multiplexer.init_source(run_opts<span style="color: #333333">-&gt;</span>batch_size, run_opts<span style="color: #333333">-&gt;</span>parallel, <span style="color: #007020">true</span>);
+          stream_multiplexer.init_source(run_opts<span style="color: #333333">-&gt;</span>batch_size, run_opts<span style="color: #333333">-&gt;</span>parallel, <span style="color: #007020">false</span>);
+          process_tables();
+          data.on_system_ready_event();
+          <span style="color: #888888">//P2_PLACE_HOLDER</span>
+      }
+  
+      <span style="color: #888888">/* Saves a snapshot of the data required to obtain the results of top level queries. */</span>
+      <span style="color: #333399; font-weight: bold">snapshot_t</span> take_snapshot(){
+          <span style="color: #333399; font-weight: bold">tlq_t</span><span style="color: #333333">*</span> d <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">new</span> <span style="color: #333399; font-weight: bold">tlq_t</span>((<span style="color: #333399; font-weight: bold">tlq_t</span><span style="color: #333333">&amp;</span>)data);
+          <span style="color: #008800; font-weight: bold">if</span> (d<span style="color: #333333">-&gt;</span>tS<span style="color: #333333">==</span><span style="color: #0000DD; font-weight: bold">0</span>) { gettimeofday(<span style="color: #333333">&amp;</span>(d<span style="color: #333333">-&gt;</span>t),<span style="color: #007020">NULL</span>); d<span style="color: #333333">-&gt;</span>tT<span style="color: #333333">=</span>((d<span style="color: #333333">-&gt;</span>t).tv_sec<span style="color: #333333">-</span>(d<span style="color: #333333">-&gt;</span>t0).tv_sec)<span style="color: #333333">*</span><span style="color: #0000DD; font-weight: bold">1000000L</span><span style="color: #333333">+</span>((d<span style="color: #333333">-&gt;</span>t).tv_usec<span style="color: #333333">-</span>(d<span style="color: #333333">-&gt;</span>t0).tv_usec); } printf(<span style="background-color: #fff0f0">&quot;SAMPLE=standard,%ld,%ld,%ld</span><span style="color: #666666; font-weight: bold; background-color: #fff0f0">\n</span><span style="background-color: #fff0f0">&quot;</span>,d<span style="color: #333333">-&gt;</span>tT,d<span style="color: #333333">-&gt;</span>tN,d<span style="color: #333333">-&gt;</span>tS);
+          <span style="color: #008800; font-weight: bold">return</span> <span style="color: #0066BB; font-weight: bold">snapshot_t</span>( d );
+      }
+  
+    <span style="color: #997700; font-weight: bold">protected:</span>
+      <span style="color: #333399; font-weight: bold">data_t</span> data;
+  };
+  <span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Tpch14</span> <span style="color: #333333">:</span> <span style="color: #008800; font-weight: bold">public</span> Program
+  {
+    <span style="color: #997700; font-weight: bold">public:</span>
+      Tpch14(<span style="color: #333399; font-weight: bold">int</span> argc <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>, <span style="color: #333399; font-weight: bold">char</span><span style="color: #333333">*</span> argv[] <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>) <span style="color: #333333">:</span> Program(argc,argv) {
+      }
+  };
+
+}
+</pre></td></tr></table></div>

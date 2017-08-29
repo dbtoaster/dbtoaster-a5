@@ -1,0 +1,30 @@
+<!-- HTML generated using hilite.me --><div style="background: #ffffff; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;"><table><tr><td><pre style="margin: 0; line-height: 125%"> 1
+ 2
+ 3
+ 4
+ 5
+ 6
+ 7
+ 8
+ 9
+10
+11
+12
+13
+14
+15</pre></td><td><pre style="margin: 0; line-height: 125%"><span style="color: #888888">/* Result:</span>
+<span style="color: #888888">    sum    </span>
+<span style="color: #888888">-----------</span>
+<span style="color: #888888"> 898778.73</span>
+<span style="color: #888888">(1 row)</span>
+<span style="color: #888888"> */</span>
+
+INCLUDE <span style="background-color: #fff0f0">&#39;examples/queries/tpch/schemas.sql&#39;</span>;
+
+<span style="color: #008800; font-weight: bold">SELECT</span> <span style="color: #008800; font-weight: bold">sum</span>(l.extendedprice) <span style="color: #008800; font-weight: bold">AS</span> query17
+<span style="color: #008800; font-weight: bold">FROM</span>   lineitem l, part p
+<span style="color: #008800; font-weight: bold">WHERE</span>  p.partkey <span style="color: #333333">=</span> l.partkey
+<span style="color: #008800; font-weight: bold">AND</span>    l.quantity <span style="color: #333333">&lt;</span> <span style="color: #0000DD; font-weight: bold">0</span>.<span style="color: #0000DD; font-weight: bold">005</span> <span style="color: #333333">*</span>
+       (<span style="color: #008800; font-weight: bold">SELECT</span> <span style="color: #008800; font-weight: bold">sum</span>(l2.quantity)
+        <span style="color: #008800; font-weight: bold">FROM</span> lineitem l2 <span style="color: #008800; font-weight: bold">WHERE</span> l2.partkey <span style="color: #333333">=</span> p.partkey);
+</pre></td></tr></table></div>

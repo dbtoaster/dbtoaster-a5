@@ -1,0 +1,242 @@
+<!-- HTML generated using hilite.me --><div style="background: #ffffff; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;"><table><tr><td><pre style="margin: 0; line-height: 125%">  1
+  2
+  3
+  4
+  5
+  6
+  7
+  8
+  9
+ 10
+ 11
+ 12
+ 13
+ 14
+ 15
+ 16
+ 17
+ 18
+ 19
+ 20
+ 21
+ 22
+ 23
+ 24
+ 25
+ 26
+ 27
+ 28
+ 29
+ 30
+ 31
+ 32
+ 33
+ 34
+ 35
+ 36
+ 37
+ 38
+ 39
+ 40
+ 41
+ 42
+ 43
+ 44
+ 45
+ 46
+ 47
+ 48
+ 49
+ 50
+ 51
+ 52
+ 53
+ 54
+ 55
+ 56
+ 57
+ 58
+ 59
+ 60
+ 61
+ 62
+ 63
+ 64
+ 65
+ 66
+ 67
+ 68
+ 69
+ 70
+ 71
+ 72
+ 73
+ 74
+ 75
+ 76
+ 77
+ 78
+ 79
+ 80
+ 81
+ 82
+ 83
+ 84
+ 85
+ 86
+ 87
+ 88
+ 89
+ 90
+ 91
+ 92
+ 93
+ 94
+ 95
+ 96
+ 97
+ 98
+ 99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121</pre></td><td><pre style="margin: 0; line-height: 125%"><span style="color: #888888">-- Simplified MDDB schema and example workload for benchmarking DBToaster.</span>
+
+<span style="color: #888888">-- The main &quot;streaming&quot; table of molecular trajectories</span>
+<span style="color: #888888">-- which is populated by long-running MD simulations.</span>
+<span style="color: #888888">-- A table of raw trajectories, defining (x,y,z)- positions of </span>
+<span style="color: #888888">-- the atoms comprising a protein.</span>
+<span style="color: #008800; font-weight: bold">create</span> stream AtomPositions (
+    trj_id  <span style="color: #007020">int</span>,
+    t       <span style="color: #007020">int</span>,
+    atom_id <span style="color: #007020">int</span>,
+    x       <span style="color: #007020">float</span>,
+    y       <span style="color: #007020">float</span>,
+    z       <span style="color: #007020">float</span>
+)   <span style="color: #008800; font-weight: bold">FROM</span> FILE <span style="background-color: #fff0f0">&#39;examples/data/mddb/standard/atompositions.csv&#39;</span>
+  LINE DELIMITED CSV;
+
+<span style="color: #888888">-- Static tables</span>
+<span style="color: #888888">-- These will be preloaded prior to trajectory ingestion.</span>
+
+<span style="color: #888888">-- Chemical information about an atom.</span>
+<span style="color: #008800; font-weight: bold">create</span> <span style="color: #008800; font-weight: bold">table</span> AtomMeta (
+    protein_id   <span style="color: #007020">int</span>,
+    atom_id      <span style="color: #007020">int</span>,
+    atom_type    <span style="color: #007020">varchar</span>(<span style="color: #0000DD; font-weight: bold">100</span>),
+    atom_name    <span style="color: #007020">varchar</span>(<span style="color: #0000DD; font-weight: bold">100</span>),
+    residue_id   <span style="color: #007020">int</span>,
+    residue_name <span style="color: #007020">varchar</span>(<span style="color: #0000DD; font-weight: bold">100</span>),
+    segment_name <span style="color: #007020">varchar</span>(<span style="color: #0000DD; font-weight: bold">100</span>)
+)   <span style="color: #008800; font-weight: bold">FROM</span> FILE <span style="background-color: #fff0f0">&#39;examples/data/mddb/standard/atommeta.csv&#39;</span>
+  LINE DELIMITED CSV;
+
+<span style="color: #888888">-- Protein structure information, as bonded atom pairs, triples and dihedrals</span>
+<span style="color: #008800; font-weight: bold">create</span> <span style="color: #008800; font-weight: bold">table</span> Bonds (
+    protein_id   <span style="color: #007020">int</span>,
+    atom_id1     <span style="color: #007020">int</span>,
+    atom_id2     <span style="color: #007020">int</span>,
+    bond_const   <span style="color: #007020">float</span>,
+    bond_length  <span style="color: #007020">float</span>
+)   <span style="color: #008800; font-weight: bold">FROM</span> FILE <span style="background-color: #fff0f0">&#39;examples/data/mddb/standard/bonds.csv&#39;</span>
+  LINE DELIMITED CSV;
+
+<span style="color: #008800; font-weight: bold">create</span> <span style="color: #008800; font-weight: bold">table</span> Angles (
+    protein_id  <span style="color: #007020">int</span>,
+    atom_id1    <span style="color: #007020">int</span>,
+    atom_id2    <span style="color: #007020">int</span>,
+    atom_id3    <span style="color: #007020">int</span>,
+    angle_const <span style="color: #007020">float</span>,
+    angle       <span style="color: #007020">float</span>
+)   <span style="color: #008800; font-weight: bold">FROM</span> FILE <span style="background-color: #fff0f0">&#39;examples/data/mddb/standard/angles.csv&#39;</span>
+  LINE DELIMITED CSV;
+
+<span style="color: #008800; font-weight: bold">create</span> <span style="color: #008800; font-weight: bold">table</span> Dihedrals (
+    protein_id  <span style="color: #007020">int</span>,
+    atom_id1    <span style="color: #007020">int</span>,
+    atom_id2    <span style="color: #007020">int</span>,
+    atom_id3    <span style="color: #007020">int</span>,
+    atom_id4    <span style="color: #007020">int</span>,
+    force_const <span style="color: #007020">float</span>,
+    n           <span style="color: #007020">float</span>,
+    delta       <span style="color: #007020">float</span>
+)   <span style="color: #008800; font-weight: bold">FROM</span> FILE <span style="background-color: #fff0f0">&#39;examples/data/mddb/standard/dihedrals.csv&#39;</span>
+  LINE DELIMITED CSV;
+
+<span style="color: #008800; font-weight: bold">create</span> <span style="color: #008800; font-weight: bold">table</span> ImproperDihedrals (
+    protein_id  <span style="color: #007020">int</span>,
+    atom_id1    <span style="color: #007020">int</span>,
+    atom_id2    <span style="color: #007020">int</span>,
+    atom_id3    <span style="color: #007020">int</span>,
+    atom_id4    <span style="color: #007020">int</span>,
+    force_const <span style="color: #007020">float</span>,
+    delta       <span style="color: #007020">float</span>
+)   <span style="color: #008800; font-weight: bold">FROM</span> FILE <span style="background-color: #fff0f0">&#39;examples/data/mddb/standard/improperdihedrals.csv&#39;</span>
+  LINE DELIMITED CSV;
+
+<span style="color: #008800; font-weight: bold">create</span> <span style="color: #008800; font-weight: bold">table</span> NonBonded (
+    protein_id  <span style="color: #007020">int</span>,
+    atom_id1    <span style="color: #007020">int</span>,
+    atom_id2    <span style="color: #007020">int</span>,
+    atom_ty1    <span style="color: #007020">varchar</span>(<span style="color: #0000DD; font-weight: bold">100</span>),
+    atom_ty2    <span style="color: #007020">varchar</span>(<span style="color: #0000DD; font-weight: bold">100</span>),
+    rmin        <span style="color: #007020">float</span>,
+    eps         <span style="color: #007020">float</span>,
+    acoef       <span style="color: #007020">float</span>,
+    bcoef       <span style="color: #007020">float</span>,
+    charge1     <span style="color: #007020">float</span>,
+    charge2     <span style="color: #007020">float</span>
+)   <span style="color: #008800; font-weight: bold">FROM</span> FILE <span style="background-color: #fff0f0">&#39;examples/data/mddb/standard/nonbonded.csv&#39;</span>
+  LINE DELIMITED CSV;
+
+<span style="color: #888888">-- A helper table to automatically generate unique ids for conformations</span>
+<span style="color: #008800; font-weight: bold">create</span> <span style="color: #008800; font-weight: bold">table</span> ConformationPoints (
+  trj_id        <span style="color: #007020">int</span>,
+  t             <span style="color: #007020">int</span>,
+  point_id      <span style="color: #007020">int</span>
+) <span style="color: #008800; font-weight: bold">FROM</span> FILE <span style="background-color: #fff0f0">&#39;examples/data/mddb/standard/conformationpoints.csv&#39;</span>
+  LINE DELIMITED CSV;
+
+<span style="color: #888888">-- A helper table for conformation features, to ensure equivalence of</span>
+<span style="color: #888888">-- features over whole trajectories.</span>
+<span style="color: #008800; font-weight: bold">create</span> <span style="color: #008800; font-weight: bold">table</span> Dimensions (
+    atom_id1    <span style="color: #007020">int</span>,
+    atom_id2    <span style="color: #007020">int</span>,
+    atom_id3    <span style="color: #007020">int</span>,
+    atom_id4    <span style="color: #007020">int</span>,
+    dim_id      <span style="color: #007020">int</span>
+) <span style="color: #008800; font-weight: bold">FROM</span> FILE <span style="background-color: #fff0f0">&#39;examples/data/mddb/standard/dimensions.csv&#39;</span>
+  LINE DELIMITED CSV;
+  
+<span style="color: #888888">---create index Dimensions_idIndex on Dimensions (dim_id);</span>
+
+<span style="color: #888888">-- An n-dimensional histogram specification.</span>
+<span style="color: #008800; font-weight: bold">create</span> <span style="color: #008800; font-weight: bold">table</span> Buckets (
+  dim_id          <span style="color: #007020">int</span>,
+  bucket_id       <span style="color: #007020">int</span>,
+  bucket_start    <span style="color: #007020">float</span>,
+  bucket_end      <span style="color: #007020">float</span>  
+) <span style="color: #008800; font-weight: bold">FROM</span> FILE <span style="background-color: #fff0f0">&#39;examples/data/mddb/standard/buckets.csv&#39;</span>
+  LINE DELIMITED CSV;
+
+
+<span style="color: #888888">-- Utility functions.</span>
+</pre></td></tr></table></div>

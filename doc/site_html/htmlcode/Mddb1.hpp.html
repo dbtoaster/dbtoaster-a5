@@ -1,0 +1,1692 @@
+<!-- HTML generated using hilite.me --><div style="background: #ffffff; overflow:auto;width:auto;border:solid gray;border-width:.1em .1em .1em .8em;padding:.2em .6em;"><table><tr><td><pre style="margin: 0; line-height: 125%">  1
+  2
+  3
+  4
+  5
+  6
+  7
+  8
+  9
+ 10
+ 11
+ 12
+ 13
+ 14
+ 15
+ 16
+ 17
+ 18
+ 19
+ 20
+ 21
+ 22
+ 23
+ 24
+ 25
+ 26
+ 27
+ 28
+ 29
+ 30
+ 31
+ 32
+ 33
+ 34
+ 35
+ 36
+ 37
+ 38
+ 39
+ 40
+ 41
+ 42
+ 43
+ 44
+ 45
+ 46
+ 47
+ 48
+ 49
+ 50
+ 51
+ 52
+ 53
+ 54
+ 55
+ 56
+ 57
+ 58
+ 59
+ 60
+ 61
+ 62
+ 63
+ 64
+ 65
+ 66
+ 67
+ 68
+ 69
+ 70
+ 71
+ 72
+ 73
+ 74
+ 75
+ 76
+ 77
+ 78
+ 79
+ 80
+ 81
+ 82
+ 83
+ 84
+ 85
+ 86
+ 87
+ 88
+ 89
+ 90
+ 91
+ 92
+ 93
+ 94
+ 95
+ 96
+ 97
+ 98
+ 99
+100
+101
+102
+103
+104
+105
+106
+107
+108
+109
+110
+111
+112
+113
+114
+115
+116
+117
+118
+119
+120
+121
+122
+123
+124
+125
+126
+127
+128
+129
+130
+131
+132
+133
+134
+135
+136
+137
+138
+139
+140
+141
+142
+143
+144
+145
+146
+147
+148
+149
+150
+151
+152
+153
+154
+155
+156
+157
+158
+159
+160
+161
+162
+163
+164
+165
+166
+167
+168
+169
+170
+171
+172
+173
+174
+175
+176
+177
+178
+179
+180
+181
+182
+183
+184
+185
+186
+187
+188
+189
+190
+191
+192
+193
+194
+195
+196
+197
+198
+199
+200
+201
+202
+203
+204
+205
+206
+207
+208
+209
+210
+211
+212
+213
+214
+215
+216
+217
+218
+219
+220
+221
+222
+223
+224
+225
+226
+227
+228
+229
+230
+231
+232
+233
+234
+235
+236
+237
+238
+239
+240
+241
+242
+243
+244
+245
+246
+247
+248
+249
+250
+251
+252
+253
+254
+255
+256
+257
+258
+259
+260
+261
+262
+263
+264
+265
+266
+267
+268
+269
+270
+271
+272
+273
+274
+275
+276
+277
+278
+279
+280
+281
+282
+283
+284
+285
+286
+287
+288
+289
+290
+291
+292
+293
+294
+295
+296
+297
+298
+299
+300
+301
+302
+303
+304
+305
+306
+307
+308
+309
+310
+311
+312
+313
+314
+315
+316
+317
+318
+319
+320
+321
+322
+323
+324
+325
+326
+327
+328
+329
+330
+331
+332
+333
+334
+335
+336
+337
+338
+339
+340
+341
+342
+343
+344
+345
+346
+347
+348
+349
+350
+351
+352
+353
+354
+355
+356
+357
+358
+359
+360
+361
+362
+363
+364
+365
+366
+367
+368
+369
+370
+371
+372
+373
+374
+375
+376
+377
+378
+379
+380
+381
+382
+383
+384
+385
+386
+387
+388
+389
+390
+391
+392
+393
+394
+395
+396
+397
+398
+399
+400
+401
+402
+403
+404
+405
+406
+407
+408
+409
+410
+411
+412
+413
+414
+415
+416
+417
+418
+419
+420
+421
+422
+423
+424
+425
+426
+427
+428
+429
+430
+431
+432
+433
+434
+435
+436
+437
+438
+439
+440
+441
+442
+443
+444
+445
+446
+447
+448
+449
+450
+451
+452
+453
+454
+455
+456
+457
+458
+459
+460
+461
+462
+463
+464
+465
+466
+467
+468
+469
+470
+471
+472
+473
+474
+475
+476
+477
+478
+479
+480
+481
+482
+483
+484
+485
+486
+487
+488
+489
+490
+491
+492
+493
+494
+495
+496
+497
+498
+499
+500
+501
+502
+503
+504
+505
+506
+507
+508
+509
+510
+511
+512
+513
+514
+515
+516
+517
+518
+519
+520
+521
+522
+523
+524
+525
+526
+527
+528
+529
+530
+531
+532
+533
+534
+535
+536
+537
+538
+539
+540
+541
+542
+543
+544
+545
+546
+547
+548
+549
+550
+551
+552
+553
+554
+555
+556
+557
+558
+559
+560
+561
+562
+563
+564
+565
+566
+567
+568
+569
+570
+571
+572
+573
+574
+575
+576
+577
+578
+579
+580
+581
+582
+583
+584
+585
+586
+587
+588
+589
+590
+591
+592
+593
+594
+595
+596
+597
+598
+599
+600
+601
+602
+603
+604
+605
+606
+607
+608
+609
+610
+611
+612
+613
+614
+615
+616
+617
+618
+619
+620
+621
+622
+623
+624
+625
+626
+627
+628
+629
+630
+631
+632
+633
+634
+635
+636
+637
+638
+639
+640
+641
+642
+643
+644
+645
+646
+647
+648
+649
+650
+651
+652
+653
+654
+655
+656
+657
+658
+659
+660
+661
+662
+663
+664
+665
+666
+667
+668
+669
+670
+671
+672
+673
+674
+675
+676
+677
+678
+679
+680
+681
+682
+683
+684
+685
+686
+687
+688
+689
+690
+691
+692
+693
+694
+695
+696
+697
+698
+699
+700
+701
+702
+703
+704
+705
+706
+707
+708
+709
+710
+711
+712
+713
+714
+715
+716
+717
+718
+719
+720
+721
+722
+723
+724
+725
+726
+727
+728
+729
+730
+731
+732
+733
+734
+735
+736
+737
+738
+739
+740
+741
+742
+743
+744
+745
+746
+747
+748
+749
+750
+751
+752
+753
+754
+755
+756
+757
+758
+759
+760
+761
+762
+763
+764
+765
+766
+767
+768
+769
+770
+771
+772
+773
+774
+775
+776
+777
+778
+779
+780
+781
+782
+783
+784
+785
+786
+787
+788
+789
+790
+791
+792
+793
+794
+795
+796
+797
+798
+799
+800
+801
+802
+803
+804
+805
+806
+807
+808
+809
+810
+811
+812
+813
+814
+815
+816
+817
+818
+819
+820
+821
+822
+823
+824
+825
+826
+827
+828
+829
+830
+831
+832
+833
+834
+835
+836
+837
+838
+839
+840
+841
+842
+843
+844
+845
+846</pre></td><td><pre style="margin: 0; line-height: 125%"><span style="color: #557799">#include &quot;program_base.hpp&quot;</span>
+<span style="color: #557799">#include &quot;hpds/KDouble.hpp&quot;</span>
+<span style="color: #557799">#include &quot;hash.hpp&quot;</span>
+<span style="color: #557799">#include &quot;mmap/mmap.hpp&quot;</span>
+<span style="color: #557799">#include &quot;hpds/pstring.hpp&quot;</span>
+<span style="color: #557799">#include &quot;hpds/pstringops.hpp&quot;</span>
+<span style="color: #557799">#define ELEM_SEPARATOR &quot;\n\t\t\t&quot;</span>
+
+<span style="color: #008800; font-weight: bold">namespace</span> dbtoaster {
+  
+  <span style="color: #888888">/* Definitions of auxiliary maps for storing materialized views. */</span>
+  <span style="color: #008800; font-weight: bold">struct</span> ATOMMETA_entry {
+    <span style="color: #333399; font-weight: bold">long</span> ATOMMETA_PROTEIN_ID; <span style="color: #333399; font-weight: bold">long</span> ATOMMETA_ATOM_ID; STRING_TYPE ATOMMETA_ATOM_TYPE; STRING_TYPE ATOMMETA_ATOM_NAME; <span style="color: #333399; font-weight: bold">long</span> ATOMMETA_RESIDUE_ID; STRING_TYPE ATOMMETA_RESIDUE_NAME; STRING_TYPE ATOMMETA_SEGMENT_NAME; <span style="color: #333399; font-weight: bold">long</span> __av;  ATOMMETA_entry<span style="color: #333333">*</span> nxt; ATOMMETA_entry<span style="color: #333333">*</span> prv;
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">ATOMMETA_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*ATOMMETA_PROTEIN_ID = 0L; ATOMMETA_ATOM_ID = 0L; ATOMMETA_ATOM_TYPE = &quot;&quot;; ATOMMETA_ATOM_NAME = &quot;&quot;; ATOMMETA_RESIDUE_ID = 0L; ATOMMETA_RESIDUE_NAME = &quot;&quot;; ATOMMETA_SEGMENT_NAME = &quot;&quot;; __av = 0L; */</span> }
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">ATOMMETA_entry</span>(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> c2, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> c3, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c4, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> c5, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> c6, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c7) { ATOMMETA_PROTEIN_ID <span style="color: #333333">=</span> c0; ATOMMETA_ATOM_ID <span style="color: #333333">=</span> c1; ATOMMETA_ATOM_TYPE <span style="color: #333333">=</span> c2; ATOMMETA_ATOM_NAME <span style="color: #333333">=</span> c3; ATOMMETA_RESIDUE_ID <span style="color: #333333">=</span> c4; ATOMMETA_RESIDUE_NAME <span style="color: #333333">=</span> c5; ATOMMETA_SEGMENT_NAME <span style="color: #333333">=</span> c6; __av <span style="color: #333333">=</span> c7; }
+    ATOMMETA_entry(<span style="color: #008800; font-weight: bold">const</span> ATOMMETA_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> ATOMMETA_PROTEIN_ID( other.ATOMMETA_PROTEIN_ID ), ATOMMETA_ATOM_ID( other.ATOMMETA_ATOM_ID ), ATOMMETA_ATOM_TYPE( other.ATOMMETA_ATOM_TYPE ), ATOMMETA_ATOM_NAME( other.ATOMMETA_ATOM_NAME ), ATOMMETA_RESIDUE_ID( other.ATOMMETA_RESIDUE_ID ), ATOMMETA_RESIDUE_NAME( other.ATOMMETA_RESIDUE_NAME ), ATOMMETA_SEGMENT_NAME( other.ATOMMETA_SEGMENT_NAME ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
+    FORCE_INLINE ATOMMETA_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> c2, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> c3, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c4, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> c5, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> c6) { ATOMMETA_PROTEIN_ID <span style="color: #333333">=</span> c0; ATOMMETA_ATOM_ID <span style="color: #333333">=</span> c1; ATOMMETA_ATOM_TYPE <span style="color: #333333">=</span> c2; ATOMMETA_ATOM_NAME <span style="color: #333333">=</span> c3; ATOMMETA_RESIDUE_ID <span style="color: #333333">=</span> c4; ATOMMETA_RESIDUE_NAME <span style="color: #333333">=</span> c5; ATOMMETA_SEGMENT_NAME <span style="color: #333333">=</span> c6;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
+    FORCE_INLINE ATOMMETA_entry<span style="color: #333333">&amp;</span> modify35(<span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> c3, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE<span style="color: #333333">&amp;</span> c5) { ATOMMETA_ATOM_NAME <span style="color: #333333">=</span> c3; ATOMMETA_RESIDUE_NAME <span style="color: #333333">=</span> c5;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
+    <span style="color: #008800; font-weight: bold">template</span><span style="color: #333333">&lt;</span><span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Archive</span><span style="color: #333333">&gt;</span>
+    <span style="color: #333399; font-weight: bold">void</span> serialize(Archive<span style="color: #333333">&amp;</span> ar, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">unsigned</span> <span style="color: #333399; font-weight: bold">int</span> version) <span style="color: #008800; font-weight: bold">const</span> 
+    {
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, ATOMMETA_PROTEIN_ID);
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, ATOMMETA_ATOM_ID);
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, ATOMMETA_ATOM_TYPE);
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, ATOMMETA_ATOM_NAME);
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, ATOMMETA_RESIDUE_ID);
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, ATOMMETA_RESIDUE_NAME);
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, ATOMMETA_SEGMENT_NAME);
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, __av);
+    }
+  };
+  <span style="color: #008800; font-weight: bold">struct</span> ATOMMETA_mapkey0123456_idxfn {
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> ATOMMETA_entry<span style="color: #333333">&amp;</span> e) {
+      <span style="color: #333399; font-weight: bold">size_t</span> h <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>;
+      hash_combine(h, e.ATOMMETA_PROTEIN_ID);
+      hash_combine(h, e.ATOMMETA_ATOM_ID);
+      hash_combine(h, e.ATOMMETA_ATOM_TYPE);
+      hash_combine(h, e.ATOMMETA_ATOM_NAME);
+      hash_combine(h, e.ATOMMETA_RESIDUE_ID);
+      hash_combine(h, e.ATOMMETA_RESIDUE_NAME);
+      hash_combine(h, e.ATOMMETA_SEGMENT_NAME);
+      <span style="color: #008800; font-weight: bold">return</span> h;
+    }
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> ATOMMETA_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> ATOMMETA_entry<span style="color: #333333">&amp;</span> y) {
+      <span style="color: #008800; font-weight: bold">return</span> x.ATOMMETA_PROTEIN_ID <span style="color: #333333">==</span> y.ATOMMETA_PROTEIN_ID <span style="color: #333333">&amp;&amp;</span> x.ATOMMETA_ATOM_ID <span style="color: #333333">==</span> y.ATOMMETA_ATOM_ID <span style="color: #333333">&amp;&amp;</span> x.ATOMMETA_ATOM_TYPE <span style="color: #333333">==</span> y.ATOMMETA_ATOM_TYPE <span style="color: #333333">&amp;&amp;</span> x.ATOMMETA_ATOM_NAME <span style="color: #333333">==</span> y.ATOMMETA_ATOM_NAME <span style="color: #333333">&amp;&amp;</span> x.ATOMMETA_RESIDUE_ID <span style="color: #333333">==</span> y.ATOMMETA_RESIDUE_ID <span style="color: #333333">&amp;&amp;</span> x.ATOMMETA_RESIDUE_NAME <span style="color: #333333">==</span> y.ATOMMETA_RESIDUE_NAME <span style="color: #333333">&amp;&amp;</span> x.ATOMMETA_SEGMENT_NAME <span style="color: #333333">==</span> y.ATOMMETA_SEGMENT_NAME;
+    }
+  };
+  
+  <span style="color: #008800; font-weight: bold">struct</span> ATOMMETA_mapkey35_idxfn {
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> ATOMMETA_entry<span style="color: #333333">&amp;</span> e) {
+      <span style="color: #333399; font-weight: bold">size_t</span> h <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>;
+      hash_combine(h, e.ATOMMETA_ATOM_NAME);
+      hash_combine(h, e.ATOMMETA_RESIDUE_NAME);
+      <span style="color: #008800; font-weight: bold">return</span> h;
+    }
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> ATOMMETA_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> ATOMMETA_entry<span style="color: #333333">&amp;</span> y) {
+      <span style="color: #008800; font-weight: bold">return</span> x.ATOMMETA_ATOM_NAME <span style="color: #333333">==</span> y.ATOMMETA_ATOM_NAME <span style="color: #333333">&amp;&amp;</span> x.ATOMMETA_RESIDUE_NAME <span style="color: #333333">==</span> y.ATOMMETA_RESIDUE_NAME;
+    }
+  };
+  
+  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>ATOMMETA_entry,<span style="color: #333399; font-weight: bold">long</span>,
+    HashIndex<span style="color: #333333">&lt;</span>ATOMMETA_entry,<span style="color: #333399; font-weight: bold">long</span>,ATOMMETA_mapkey0123456_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>,
+    HashIndex<span style="color: #333333">&lt;</span>ATOMMETA_entry,<span style="color: #333399; font-weight: bold">long</span>,ATOMMETA_mapkey35_idxfn,<span style="color: #007020">false</span><span style="color: #333333">&gt;</span>
+  <span style="color: #333333">&gt;</span> ATOMMETA_map;
+  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>ATOMMETA_entry,<span style="color: #333399; font-weight: bold">long</span>,ATOMMETA_mapkey0123456_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_ATOMMETA_map_0123456;
+  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>ATOMMETA_entry,<span style="color: #333399; font-weight: bold">long</span>,ATOMMETA_mapkey35_idxfn,<span style="color: #007020">false</span><span style="color: #333333">&gt;</span> HashIndex_ATOMMETA_map_35;
+  
+  <span style="color: #008800; font-weight: bold">struct</span> RDF_entry {
+    <span style="color: #333399; font-weight: bold">long</span> P_TRJ_ID; <span style="color: #333399; font-weight: bold">long</span> P_T; DOUBLE_TYPE __av;  RDF_entry<span style="color: #333333">*</span> nxt; RDF_entry<span style="color: #333333">*</span> prv;
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">RDF_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*P_TRJ_ID = 0L; P_T = 0L; __av = 0.0; */</span> }
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">RDF_entry</span>(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c2) { P_TRJ_ID <span style="color: #333333">=</span> c0; P_T <span style="color: #333333">=</span> c1; __av <span style="color: #333333">=</span> c2; }
+    RDF_entry(<span style="color: #008800; font-weight: bold">const</span> RDF_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> P_TRJ_ID( other.P_TRJ_ID ), P_T( other.P_T ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
+    FORCE_INLINE RDF_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1) { P_TRJ_ID <span style="color: #333333">=</span> c0; P_T <span style="color: #333333">=</span> c1;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
+    <span style="color: #008800; font-weight: bold">template</span><span style="color: #333333">&lt;</span><span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Archive</span><span style="color: #333333">&gt;</span>
+    <span style="color: #333399; font-weight: bold">void</span> serialize(Archive<span style="color: #333333">&amp;</span> ar, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">unsigned</span> <span style="color: #333399; font-weight: bold">int</span> version) <span style="color: #008800; font-weight: bold">const</span> 
+    {
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, P_TRJ_ID);
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, P_T);
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, __av);
+    }
+  };
+  <span style="color: #008800; font-weight: bold">struct</span> RDF_mapkey01_idxfn {
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> RDF_entry<span style="color: #333333">&amp;</span> e) {
+      <span style="color: #333399; font-weight: bold">size_t</span> h <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>;
+      hash_combine(h, e.P_TRJ_ID);
+      hash_combine(h, e.P_T);
+      <span style="color: #008800; font-weight: bold">return</span> h;
+    }
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> RDF_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> RDF_entry<span style="color: #333333">&amp;</span> y) {
+      <span style="color: #008800; font-weight: bold">return</span> x.P_TRJ_ID <span style="color: #333333">==</span> y.P_TRJ_ID <span style="color: #333333">&amp;&amp;</span> x.P_T <span style="color: #333333">==</span> y.P_T;
+    }
+  };
+  
+  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>RDF_entry,DOUBLE_TYPE,
+    HashIndex<span style="color: #333333">&lt;</span>RDF_entry,DOUBLE_TYPE,RDF_mapkey01_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>
+  <span style="color: #333333">&gt;</span> RDF_map;
+  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>RDF_entry,DOUBLE_TYPE,RDF_mapkey01_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_RDF_map_01;
+  
+  <span style="color: #008800; font-weight: bold">struct</span> RDF_mATOMPOSITIONS1_L1_1_entry {
+    <span style="color: #333399; font-weight: bold">long</span> RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID; <span style="color: #333399; font-weight: bold">long</span> RDF_mATOMPOSITIONSATOMPOSITIONS_T; <span style="color: #333399; font-weight: bold">long</span> __av;  RDF_mATOMPOSITIONS1_L1_1_entry<span style="color: #333333">*</span> nxt; RDF_mATOMPOSITIONS1_L1_1_entry<span style="color: #333333">*</span> prv;
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">RDF_mATOMPOSITIONS1_L1_1_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID = 0L; RDF_mATOMPOSITIONSATOMPOSITIONS_T = 0L; __av = 0L; */</span> }
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">RDF_mATOMPOSITIONS1_L1_1_entry</span>(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c2) { RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID <span style="color: #333333">=</span> c0; RDF_mATOMPOSITIONSATOMPOSITIONS_T <span style="color: #333333">=</span> c1; __av <span style="color: #333333">=</span> c2; }
+    RDF_mATOMPOSITIONS1_L1_1_entry(<span style="color: #008800; font-weight: bold">const</span> RDF_mATOMPOSITIONS1_L1_1_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID( other.RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID ), RDF_mATOMPOSITIONSATOMPOSITIONS_T( other.RDF_mATOMPOSITIONSATOMPOSITIONS_T ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
+    FORCE_INLINE RDF_mATOMPOSITIONS1_L1_1_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1) { RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID <span style="color: #333333">=</span> c0; RDF_mATOMPOSITIONSATOMPOSITIONS_T <span style="color: #333333">=</span> c1;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
+    <span style="color: #008800; font-weight: bold">template</span><span style="color: #333333">&lt;</span><span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Archive</span><span style="color: #333333">&gt;</span>
+    <span style="color: #333399; font-weight: bold">void</span> serialize(Archive<span style="color: #333333">&amp;</span> ar, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">unsigned</span> <span style="color: #333399; font-weight: bold">int</span> version) <span style="color: #008800; font-weight: bold">const</span> 
+    {
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID);
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, RDF_mATOMPOSITIONSATOMPOSITIONS_T);
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, __av);
+    }
+  };
+  <span style="color: #008800; font-weight: bold">struct</span> RDF_mATOMPOSITIONS1_L1_1_mapkey01_idxfn {
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> RDF_mATOMPOSITIONS1_L1_1_entry<span style="color: #333333">&amp;</span> e) {
+      <span style="color: #333399; font-weight: bold">size_t</span> h <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>;
+      hash_combine(h, e.RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID);
+      hash_combine(h, e.RDF_mATOMPOSITIONSATOMPOSITIONS_T);
+      <span style="color: #008800; font-weight: bold">return</span> h;
+    }
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> RDF_mATOMPOSITIONS1_L1_1_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> RDF_mATOMPOSITIONS1_L1_1_entry<span style="color: #333333">&amp;</span> y) {
+      <span style="color: #008800; font-weight: bold">return</span> x.RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID <span style="color: #333333">==</span> y.RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID <span style="color: #333333">&amp;&amp;</span> x.RDF_mATOMPOSITIONSATOMPOSITIONS_T <span style="color: #333333">==</span> y.RDF_mATOMPOSITIONSATOMPOSITIONS_T;
+    }
+  };
+  
+  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>RDF_mATOMPOSITIONS1_L1_1_entry,<span style="color: #333399; font-weight: bold">long</span>,
+    HashIndex<span style="color: #333333">&lt;</span>RDF_mATOMPOSITIONS1_L1_1_entry,<span style="color: #333399; font-weight: bold">long</span>,RDF_mATOMPOSITIONS1_L1_1_mapkey01_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>
+  <span style="color: #333333">&gt;</span> RDF_mATOMPOSITIONS1_L1_1_map;
+  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>RDF_mATOMPOSITIONS1_L1_1_entry,<span style="color: #333399; font-weight: bold">long</span>,RDF_mATOMPOSITIONS1_L1_1_mapkey01_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_RDF_mATOMPOSITIONS1_L1_1_map_01;
+  
+  <span style="color: #008800; font-weight: bold">struct</span> RDF_mATOMPOSITIONS1_L1_2_entry {
+    <span style="color: #333399; font-weight: bold">long</span> RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID; <span style="color: #333399; font-weight: bold">long</span> RDF_mATOMPOSITIONSATOMPOSITIONS_T; <span style="color: #333399; font-weight: bold">long</span> __av;  RDF_mATOMPOSITIONS1_L1_2_entry<span style="color: #333333">*</span> nxt; RDF_mATOMPOSITIONS1_L1_2_entry<span style="color: #333333">*</span> prv;
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">RDF_mATOMPOSITIONS1_L1_2_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID = 0L; RDF_mATOMPOSITIONSATOMPOSITIONS_T = 0L; __av = 0L; */</span> }
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">RDF_mATOMPOSITIONS1_L1_2_entry</span>(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c2) { RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID <span style="color: #333333">=</span> c0; RDF_mATOMPOSITIONSATOMPOSITIONS_T <span style="color: #333333">=</span> c1; __av <span style="color: #333333">=</span> c2; }
+    RDF_mATOMPOSITIONS1_L1_2_entry(<span style="color: #008800; font-weight: bold">const</span> RDF_mATOMPOSITIONS1_L1_2_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID( other.RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID ), RDF_mATOMPOSITIONSATOMPOSITIONS_T( other.RDF_mATOMPOSITIONSATOMPOSITIONS_T ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
+    FORCE_INLINE RDF_mATOMPOSITIONS1_L1_2_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1) { RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID <span style="color: #333333">=</span> c0; RDF_mATOMPOSITIONSATOMPOSITIONS_T <span style="color: #333333">=</span> c1;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
+    <span style="color: #008800; font-weight: bold">template</span><span style="color: #333333">&lt;</span><span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Archive</span><span style="color: #333333">&gt;</span>
+    <span style="color: #333399; font-weight: bold">void</span> serialize(Archive<span style="color: #333333">&amp;</span> ar, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">unsigned</span> <span style="color: #333399; font-weight: bold">int</span> version) <span style="color: #008800; font-weight: bold">const</span> 
+    {
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID);
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, RDF_mATOMPOSITIONSATOMPOSITIONS_T);
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, __av);
+    }
+  };
+  <span style="color: #008800; font-weight: bold">struct</span> RDF_mATOMPOSITIONS1_L1_2_mapkey01_idxfn {
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> RDF_mATOMPOSITIONS1_L1_2_entry<span style="color: #333333">&amp;</span> e) {
+      <span style="color: #333399; font-weight: bold">size_t</span> h <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>;
+      hash_combine(h, e.RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID);
+      hash_combine(h, e.RDF_mATOMPOSITIONSATOMPOSITIONS_T);
+      <span style="color: #008800; font-weight: bold">return</span> h;
+    }
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> RDF_mATOMPOSITIONS1_L1_2_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> RDF_mATOMPOSITIONS1_L1_2_entry<span style="color: #333333">&amp;</span> y) {
+      <span style="color: #008800; font-weight: bold">return</span> x.RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID <span style="color: #333333">==</span> y.RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID <span style="color: #333333">&amp;&amp;</span> x.RDF_mATOMPOSITIONSATOMPOSITIONS_T <span style="color: #333333">==</span> y.RDF_mATOMPOSITIONSATOMPOSITIONS_T;
+    }
+  };
+  
+  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>RDF_mATOMPOSITIONS1_L1_2_entry,<span style="color: #333399; font-weight: bold">long</span>,
+    HashIndex<span style="color: #333333">&lt;</span>RDF_mATOMPOSITIONS1_L1_2_entry,<span style="color: #333399; font-weight: bold">long</span>,RDF_mATOMPOSITIONS1_L1_2_mapkey01_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>
+  <span style="color: #333333">&gt;</span> RDF_mATOMPOSITIONS1_L1_2_map;
+  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>RDF_mATOMPOSITIONS1_L1_2_entry,<span style="color: #333399; font-weight: bold">long</span>,RDF_mATOMPOSITIONS1_L1_2_mapkey01_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_RDF_mATOMPOSITIONS1_L1_2_map_01;
+  
+  <span style="color: #008800; font-weight: bold">struct</span> RDF_mATOMPOSITIONS2_entry {
+    <span style="color: #333399; font-weight: bold">long</span> RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID; <span style="color: #333399; font-weight: bold">long</span> RDF_mATOMPOSITIONSATOMPOSITIONS_T; DOUBLE_TYPE __av;  RDF_mATOMPOSITIONS2_entry<span style="color: #333333">*</span> nxt; RDF_mATOMPOSITIONS2_entry<span style="color: #333333">*</span> prv;
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">RDF_mATOMPOSITIONS2_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID = 0L; RDF_mATOMPOSITIONSATOMPOSITIONS_T = 0L; __av = 0.0; */</span> }
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">RDF_mATOMPOSITIONS2_entry</span>(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c2) { RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID <span style="color: #333333">=</span> c0; RDF_mATOMPOSITIONSATOMPOSITIONS_T <span style="color: #333333">=</span> c1; __av <span style="color: #333333">=</span> c2; }
+    RDF_mATOMPOSITIONS2_entry(<span style="color: #008800; font-weight: bold">const</span> RDF_mATOMPOSITIONS2_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID( other.RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID ), RDF_mATOMPOSITIONSATOMPOSITIONS_T( other.RDF_mATOMPOSITIONSATOMPOSITIONS_T ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
+    FORCE_INLINE RDF_mATOMPOSITIONS2_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1) { RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID <span style="color: #333333">=</span> c0; RDF_mATOMPOSITIONSATOMPOSITIONS_T <span style="color: #333333">=</span> c1;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
+    <span style="color: #008800; font-weight: bold">template</span><span style="color: #333333">&lt;</span><span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Archive</span><span style="color: #333333">&gt;</span>
+    <span style="color: #333399; font-weight: bold">void</span> serialize(Archive<span style="color: #333333">&amp;</span> ar, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">unsigned</span> <span style="color: #333399; font-weight: bold">int</span> version) <span style="color: #008800; font-weight: bold">const</span> 
+    {
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID);
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, RDF_mATOMPOSITIONSATOMPOSITIONS_T);
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, __av);
+    }
+  };
+  <span style="color: #008800; font-weight: bold">struct</span> RDF_mATOMPOSITIONS2_mapkey01_idxfn {
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> RDF_mATOMPOSITIONS2_entry<span style="color: #333333">&amp;</span> e) {
+      <span style="color: #333399; font-weight: bold">size_t</span> h <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>;
+      hash_combine(h, e.RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID);
+      hash_combine(h, e.RDF_mATOMPOSITIONSATOMPOSITIONS_T);
+      <span style="color: #008800; font-weight: bold">return</span> h;
+    }
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> RDF_mATOMPOSITIONS2_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> RDF_mATOMPOSITIONS2_entry<span style="color: #333333">&amp;</span> y) {
+      <span style="color: #008800; font-weight: bold">return</span> x.RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID <span style="color: #333333">==</span> y.RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID <span style="color: #333333">&amp;&amp;</span> x.RDF_mATOMPOSITIONSATOMPOSITIONS_T <span style="color: #333333">==</span> y.RDF_mATOMPOSITIONSATOMPOSITIONS_T;
+    }
+  };
+  
+  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>RDF_mATOMPOSITIONS2_entry,DOUBLE_TYPE,
+    HashIndex<span style="color: #333333">&lt;</span>RDF_mATOMPOSITIONS2_entry,DOUBLE_TYPE,RDF_mATOMPOSITIONS2_mapkey01_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>
+  <span style="color: #333333">&gt;</span> RDF_mATOMPOSITIONS2_map;
+  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>RDF_mATOMPOSITIONS2_entry,DOUBLE_TYPE,RDF_mATOMPOSITIONS2_mapkey01_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_RDF_mATOMPOSITIONS2_map_01;
+  
+  <span style="color: #008800; font-weight: bold">struct</span> RDF_mATOMPOSITIONS4_L1_4_entry {
+    <span style="color: #333399; font-weight: bold">long</span> RDF_mATOMPOSITIONSATOMPOSITIONS_ATOM_ID; <span style="color: #333399; font-weight: bold">long</span> __av;  RDF_mATOMPOSITIONS4_L1_4_entry<span style="color: #333333">*</span> nxt; RDF_mATOMPOSITIONS4_L1_4_entry<span style="color: #333333">*</span> prv;
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">RDF_mATOMPOSITIONS4_L1_4_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*RDF_mATOMPOSITIONSATOMPOSITIONS_ATOM_ID = 0L; __av = 0L; */</span> }
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">RDF_mATOMPOSITIONS4_L1_4_entry</span>(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1) { RDF_mATOMPOSITIONSATOMPOSITIONS_ATOM_ID <span style="color: #333333">=</span> c0; __av <span style="color: #333333">=</span> c1; }
+    RDF_mATOMPOSITIONS4_L1_4_entry(<span style="color: #008800; font-weight: bold">const</span> RDF_mATOMPOSITIONS4_L1_4_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> RDF_mATOMPOSITIONSATOMPOSITIONS_ATOM_ID( other.RDF_mATOMPOSITIONSATOMPOSITIONS_ATOM_ID ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
+    FORCE_INLINE RDF_mATOMPOSITIONS4_L1_4_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0) { RDF_mATOMPOSITIONSATOMPOSITIONS_ATOM_ID <span style="color: #333333">=</span> c0;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
+    <span style="color: #008800; font-weight: bold">template</span><span style="color: #333333">&lt;</span><span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Archive</span><span style="color: #333333">&gt;</span>
+    <span style="color: #333399; font-weight: bold">void</span> serialize(Archive<span style="color: #333333">&amp;</span> ar, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">unsigned</span> <span style="color: #333399; font-weight: bold">int</span> version) <span style="color: #008800; font-weight: bold">const</span> 
+    {
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, RDF_mATOMPOSITIONSATOMPOSITIONS_ATOM_ID);
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, __av);
+    }
+  };
+  <span style="color: #008800; font-weight: bold">struct</span> RDF_mATOMPOSITIONS4_L1_4_mapkey0_idxfn {
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> RDF_mATOMPOSITIONS4_L1_4_entry<span style="color: #333333">&amp;</span> e) {
+      <span style="color: #333399; font-weight: bold">size_t</span> h <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>;
+      hash_combine(h, e.RDF_mATOMPOSITIONSATOMPOSITIONS_ATOM_ID);
+      <span style="color: #008800; font-weight: bold">return</span> h;
+    }
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> RDF_mATOMPOSITIONS4_L1_4_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> RDF_mATOMPOSITIONS4_L1_4_entry<span style="color: #333333">&amp;</span> y) {
+      <span style="color: #008800; font-weight: bold">return</span> x.RDF_mATOMPOSITIONSATOMPOSITIONS_ATOM_ID <span style="color: #333333">==</span> y.RDF_mATOMPOSITIONSATOMPOSITIONS_ATOM_ID;
+    }
+  };
+  
+  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>RDF_mATOMPOSITIONS4_L1_4_entry,<span style="color: #333399; font-weight: bold">long</span>,
+    HashIndex<span style="color: #333333">&lt;</span>RDF_mATOMPOSITIONS4_L1_4_entry,<span style="color: #333399; font-weight: bold">long</span>,RDF_mATOMPOSITIONS4_L1_4_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>
+  <span style="color: #333333">&gt;</span> RDF_mATOMPOSITIONS4_L1_4_map;
+  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>RDF_mATOMPOSITIONS4_L1_4_entry,<span style="color: #333399; font-weight: bold">long</span>,RDF_mATOMPOSITIONS4_L1_4_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_RDF_mATOMPOSITIONS4_L1_4_map_0;
+  
+  <span style="color: #008800; font-weight: bold">struct</span> RDF_mATOMPOSITIONS4_L1_6_entry {
+    <span style="color: #333399; font-weight: bold">long</span> RDF_mATOMPOSITIONSATOMPOSITIONS_ATOM_ID; <span style="color: #333399; font-weight: bold">long</span> __av;  RDF_mATOMPOSITIONS4_L1_6_entry<span style="color: #333333">*</span> nxt; RDF_mATOMPOSITIONS4_L1_6_entry<span style="color: #333333">*</span> prv;
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">RDF_mATOMPOSITIONS4_L1_6_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*RDF_mATOMPOSITIONSATOMPOSITIONS_ATOM_ID = 0L; __av = 0L; */</span> }
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">RDF_mATOMPOSITIONS4_L1_6_entry</span>(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1) { RDF_mATOMPOSITIONSATOMPOSITIONS_ATOM_ID <span style="color: #333333">=</span> c0; __av <span style="color: #333333">=</span> c1; }
+    RDF_mATOMPOSITIONS4_L1_6_entry(<span style="color: #008800; font-weight: bold">const</span> RDF_mATOMPOSITIONS4_L1_6_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> RDF_mATOMPOSITIONSATOMPOSITIONS_ATOM_ID( other.RDF_mATOMPOSITIONSATOMPOSITIONS_ATOM_ID ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
+    FORCE_INLINE RDF_mATOMPOSITIONS4_L1_6_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0) { RDF_mATOMPOSITIONSATOMPOSITIONS_ATOM_ID <span style="color: #333333">=</span> c0;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
+    <span style="color: #008800; font-weight: bold">template</span><span style="color: #333333">&lt;</span><span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Archive</span><span style="color: #333333">&gt;</span>
+    <span style="color: #333399; font-weight: bold">void</span> serialize(Archive<span style="color: #333333">&amp;</span> ar, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">unsigned</span> <span style="color: #333399; font-weight: bold">int</span> version) <span style="color: #008800; font-weight: bold">const</span> 
+    {
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, RDF_mATOMPOSITIONSATOMPOSITIONS_ATOM_ID);
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, __av);
+    }
+  };
+  <span style="color: #008800; font-weight: bold">struct</span> RDF_mATOMPOSITIONS4_L1_6_mapkey0_idxfn {
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> RDF_mATOMPOSITIONS4_L1_6_entry<span style="color: #333333">&amp;</span> e) {
+      <span style="color: #333399; font-weight: bold">size_t</span> h <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>;
+      hash_combine(h, e.RDF_mATOMPOSITIONSATOMPOSITIONS_ATOM_ID);
+      <span style="color: #008800; font-weight: bold">return</span> h;
+    }
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> RDF_mATOMPOSITIONS4_L1_6_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> RDF_mATOMPOSITIONS4_L1_6_entry<span style="color: #333333">&amp;</span> y) {
+      <span style="color: #008800; font-weight: bold">return</span> x.RDF_mATOMPOSITIONSATOMPOSITIONS_ATOM_ID <span style="color: #333333">==</span> y.RDF_mATOMPOSITIONSATOMPOSITIONS_ATOM_ID;
+    }
+  };
+  
+  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>RDF_mATOMPOSITIONS4_L1_6_entry,<span style="color: #333399; font-weight: bold">long</span>,
+    HashIndex<span style="color: #333333">&lt;</span>RDF_mATOMPOSITIONS4_L1_6_entry,<span style="color: #333399; font-weight: bold">long</span>,RDF_mATOMPOSITIONS4_L1_6_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>
+  <span style="color: #333333">&gt;</span> RDF_mATOMPOSITIONS4_L1_6_map;
+  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>RDF_mATOMPOSITIONS4_L1_6_entry,<span style="color: #333399; font-weight: bold">long</span>,RDF_mATOMPOSITIONS4_L1_6_mapkey0_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_RDF_mATOMPOSITIONS4_L1_6_map_0;
+  
+  <span style="color: #008800; font-weight: bold">struct</span> RDF_mATOMPOSITIONS6_entry {
+    <span style="color: #333399; font-weight: bold">long</span> RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID; <span style="color: #333399; font-weight: bold">long</span> RDF_mATOMPOSITIONSATOMPOSITIONS_T; DOUBLE_TYPE P2_X; DOUBLE_TYPE P2_Y; DOUBLE_TYPE P2_Z; <span style="color: #333399; font-weight: bold">long</span> __av;  RDF_mATOMPOSITIONS6_entry<span style="color: #333333">*</span> nxt; RDF_mATOMPOSITIONS6_entry<span style="color: #333333">*</span> prv;
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">RDF_mATOMPOSITIONS6_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID = 0L; RDF_mATOMPOSITIONSATOMPOSITIONS_T = 0L; P2_X = 0.0; P2_Y = 0.0; P2_Z = 0.0; __av = 0L; */</span> }
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">RDF_mATOMPOSITIONS6_entry</span>(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c2, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c3, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c4, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c5) { RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID <span style="color: #333333">=</span> c0; RDF_mATOMPOSITIONSATOMPOSITIONS_T <span style="color: #333333">=</span> c1; P2_X <span style="color: #333333">=</span> c2; P2_Y <span style="color: #333333">=</span> c3; P2_Z <span style="color: #333333">=</span> c4; __av <span style="color: #333333">=</span> c5; }
+    RDF_mATOMPOSITIONS6_entry(<span style="color: #008800; font-weight: bold">const</span> RDF_mATOMPOSITIONS6_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID( other.RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID ), RDF_mATOMPOSITIONSATOMPOSITIONS_T( other.RDF_mATOMPOSITIONSATOMPOSITIONS_T ), P2_X( other.P2_X ), P2_Y( other.P2_Y ), P2_Z( other.P2_Z ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
+    FORCE_INLINE RDF_mATOMPOSITIONS6_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c2, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c3, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c4) { RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID <span style="color: #333333">=</span> c0; RDF_mATOMPOSITIONSATOMPOSITIONS_T <span style="color: #333333">=</span> c1; P2_X <span style="color: #333333">=</span> c2; P2_Y <span style="color: #333333">=</span> c3; P2_Z <span style="color: #333333">=</span> c4;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
+    FORCE_INLINE RDF_mATOMPOSITIONS6_entry<span style="color: #333333">&amp;</span> modify01(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1) { RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID <span style="color: #333333">=</span> c0; RDF_mATOMPOSITIONSATOMPOSITIONS_T <span style="color: #333333">=</span> c1;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
+    <span style="color: #008800; font-weight: bold">template</span><span style="color: #333333">&lt;</span><span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Archive</span><span style="color: #333333">&gt;</span>
+    <span style="color: #333399; font-weight: bold">void</span> serialize(Archive<span style="color: #333333">&amp;</span> ar, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">unsigned</span> <span style="color: #333399; font-weight: bold">int</span> version) <span style="color: #008800; font-weight: bold">const</span> 
+    {
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID);
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, RDF_mATOMPOSITIONSATOMPOSITIONS_T);
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, P2_X);
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, P2_Y);
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, P2_Z);
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, __av);
+    }
+  };
+  <span style="color: #008800; font-weight: bold">struct</span> RDF_mATOMPOSITIONS6_mapkey01234_idxfn {
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> RDF_mATOMPOSITIONS6_entry<span style="color: #333333">&amp;</span> e) {
+      <span style="color: #333399; font-weight: bold">size_t</span> h <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>;
+      hash_combine(h, e.RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID);
+      hash_combine(h, e.RDF_mATOMPOSITIONSATOMPOSITIONS_T);
+      hash_combine(h, e.P2_X);
+      hash_combine(h, e.P2_Y);
+      hash_combine(h, e.P2_Z);
+      <span style="color: #008800; font-weight: bold">return</span> h;
+    }
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> RDF_mATOMPOSITIONS6_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> RDF_mATOMPOSITIONS6_entry<span style="color: #333333">&amp;</span> y) {
+      <span style="color: #008800; font-weight: bold">return</span> x.RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID <span style="color: #333333">==</span> y.RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID <span style="color: #333333">&amp;&amp;</span> x.RDF_mATOMPOSITIONSATOMPOSITIONS_T <span style="color: #333333">==</span> y.RDF_mATOMPOSITIONSATOMPOSITIONS_T <span style="color: #333333">&amp;&amp;</span> x.P2_X <span style="color: #333333">==</span> y.P2_X <span style="color: #333333">&amp;&amp;</span> x.P2_Y <span style="color: #333333">==</span> y.P2_Y <span style="color: #333333">&amp;&amp;</span> x.P2_Z <span style="color: #333333">==</span> y.P2_Z;
+    }
+  };
+  
+  <span style="color: #008800; font-weight: bold">struct</span> RDF_mATOMPOSITIONS6_mapkey01_idxfn {
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> RDF_mATOMPOSITIONS6_entry<span style="color: #333333">&amp;</span> e) {
+      <span style="color: #333399; font-weight: bold">size_t</span> h <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>;
+      hash_combine(h, e.RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID);
+      hash_combine(h, e.RDF_mATOMPOSITIONSATOMPOSITIONS_T);
+      <span style="color: #008800; font-weight: bold">return</span> h;
+    }
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> RDF_mATOMPOSITIONS6_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> RDF_mATOMPOSITIONS6_entry<span style="color: #333333">&amp;</span> y) {
+      <span style="color: #008800; font-weight: bold">return</span> x.RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID <span style="color: #333333">==</span> y.RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID <span style="color: #333333">&amp;&amp;</span> x.RDF_mATOMPOSITIONSATOMPOSITIONS_T <span style="color: #333333">==</span> y.RDF_mATOMPOSITIONSATOMPOSITIONS_T;
+    }
+  };
+  
+  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>RDF_mATOMPOSITIONS6_entry,<span style="color: #333399; font-weight: bold">long</span>,
+    HashIndex<span style="color: #333333">&lt;</span>RDF_mATOMPOSITIONS6_entry,<span style="color: #333399; font-weight: bold">long</span>,RDF_mATOMPOSITIONS6_mapkey01234_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>,
+    HashIndex<span style="color: #333333">&lt;</span>RDF_mATOMPOSITIONS6_entry,<span style="color: #333399; font-weight: bold">long</span>,RDF_mATOMPOSITIONS6_mapkey01_idxfn,<span style="color: #007020">false</span><span style="color: #333333">&gt;</span>
+  <span style="color: #333333">&gt;</span> RDF_mATOMPOSITIONS6_map;
+  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>RDF_mATOMPOSITIONS6_entry,<span style="color: #333399; font-weight: bold">long</span>,RDF_mATOMPOSITIONS6_mapkey01234_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_RDF_mATOMPOSITIONS6_map_01234;
+  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>RDF_mATOMPOSITIONS6_entry,<span style="color: #333399; font-weight: bold">long</span>,RDF_mATOMPOSITIONS6_mapkey01_idxfn,<span style="color: #007020">false</span><span style="color: #333333">&gt;</span> HashIndex_RDF_mATOMPOSITIONS6_map_01;
+  
+  <span style="color: #008800; font-weight: bold">struct</span> RDF_mATOMPOSITIONS9_entry {
+    <span style="color: #333399; font-weight: bold">long</span> RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID; <span style="color: #333399; font-weight: bold">long</span> RDF_mATOMPOSITIONSATOMPOSITIONS_T; DOUBLE_TYPE P_X; DOUBLE_TYPE P_Y; DOUBLE_TYPE P_Z; <span style="color: #333399; font-weight: bold">long</span> __av;  RDF_mATOMPOSITIONS9_entry<span style="color: #333333">*</span> nxt; RDF_mATOMPOSITIONS9_entry<span style="color: #333333">*</span> prv;
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">RDF_mATOMPOSITIONS9_entry</span>() <span style="color: #333333">:</span> nxt(nullptr), prv(nullptr) { <span style="color: #888888">/*RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID = 0L; RDF_mATOMPOSITIONSATOMPOSITIONS_T = 0L; P_X = 0.0; P_Y = 0.0; P_Z = 0.0; __av = 0L; */</span> }
+    <span style="color: #008800; font-weight: bold">explicit</span> <span style="color: #0066BB; font-weight: bold">RDF_mATOMPOSITIONS9_entry</span>(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c2, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c3, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c4, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c5) { RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID <span style="color: #333333">=</span> c0; RDF_mATOMPOSITIONSATOMPOSITIONS_T <span style="color: #333333">=</span> c1; P_X <span style="color: #333333">=</span> c2; P_Y <span style="color: #333333">=</span> c3; P_Z <span style="color: #333333">=</span> c4; __av <span style="color: #333333">=</span> c5; }
+    RDF_mATOMPOSITIONS9_entry(<span style="color: #008800; font-weight: bold">const</span> RDF_mATOMPOSITIONS9_entry<span style="color: #333333">&amp;</span> other) <span style="color: #333333">:</span> RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID( other.RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID ), RDF_mATOMPOSITIONSATOMPOSITIONS_T( other.RDF_mATOMPOSITIONSATOMPOSITIONS_T ), P_X( other.P_X ), P_Y( other.P_Y ), P_Z( other.P_Z ), __av( other.__av ), nxt( nullptr ), prv( nullptr ) {}
+    FORCE_INLINE RDF_mATOMPOSITIONS9_entry<span style="color: #333333">&amp;</span> modify(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c2, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c3, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE c4) { RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID <span style="color: #333333">=</span> c0; RDF_mATOMPOSITIONSATOMPOSITIONS_T <span style="color: #333333">=</span> c1; P_X <span style="color: #333333">=</span> c2; P_Y <span style="color: #333333">=</span> c3; P_Z <span style="color: #333333">=</span> c4;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
+    FORCE_INLINE RDF_mATOMPOSITIONS9_entry<span style="color: #333333">&amp;</span> modify01(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c0, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> c1) { RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID <span style="color: #333333">=</span> c0; RDF_mATOMPOSITIONSATOMPOSITIONS_T <span style="color: #333333">=</span> c1;  <span style="color: #008800; font-weight: bold">return</span> <span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>; }
+    <span style="color: #008800; font-weight: bold">template</span><span style="color: #333333">&lt;</span><span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Archive</span><span style="color: #333333">&gt;</span>
+    <span style="color: #333399; font-weight: bold">void</span> serialize(Archive<span style="color: #333333">&amp;</span> ar, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">unsigned</span> <span style="color: #333399; font-weight: bold">int</span> version) <span style="color: #008800; font-weight: bold">const</span> 
+    {
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID);
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, RDF_mATOMPOSITIONSATOMPOSITIONS_T);
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, P_X);
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, P_Y);
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, P_Z);
+      ar <span style="color: #333333">&lt;&lt;</span> ELEM_SEPARATOR;
+      DBT_SERIALIZATION_NVP(ar, __av);
+    }
+  };
+  <span style="color: #008800; font-weight: bold">struct</span> RDF_mATOMPOSITIONS9_mapkey01234_idxfn {
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> RDF_mATOMPOSITIONS9_entry<span style="color: #333333">&amp;</span> e) {
+      <span style="color: #333399; font-weight: bold">size_t</span> h <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>;
+      hash_combine(h, e.RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID);
+      hash_combine(h, e.RDF_mATOMPOSITIONSATOMPOSITIONS_T);
+      hash_combine(h, e.P_X);
+      hash_combine(h, e.P_Y);
+      hash_combine(h, e.P_Z);
+      <span style="color: #008800; font-weight: bold">return</span> h;
+    }
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> RDF_mATOMPOSITIONS9_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> RDF_mATOMPOSITIONS9_entry<span style="color: #333333">&amp;</span> y) {
+      <span style="color: #008800; font-weight: bold">return</span> x.RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID <span style="color: #333333">==</span> y.RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID <span style="color: #333333">&amp;&amp;</span> x.RDF_mATOMPOSITIONSATOMPOSITIONS_T <span style="color: #333333">==</span> y.RDF_mATOMPOSITIONSATOMPOSITIONS_T <span style="color: #333333">&amp;&amp;</span> x.P_X <span style="color: #333333">==</span> y.P_X <span style="color: #333333">&amp;&amp;</span> x.P_Y <span style="color: #333333">==</span> y.P_Y <span style="color: #333333">&amp;&amp;</span> x.P_Z <span style="color: #333333">==</span> y.P_Z;
+    }
+  };
+  
+  <span style="color: #008800; font-weight: bold">struct</span> RDF_mATOMPOSITIONS9_mapkey01_idxfn {
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">size_t</span> hash(<span style="color: #008800; font-weight: bold">const</span> RDF_mATOMPOSITIONS9_entry<span style="color: #333333">&amp;</span> e) {
+      <span style="color: #333399; font-weight: bold">size_t</span> h <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>;
+      hash_combine(h, e.RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID);
+      hash_combine(h, e.RDF_mATOMPOSITIONSATOMPOSITIONS_T);
+      <span style="color: #008800; font-weight: bold">return</span> h;
+    }
+    FORCE_INLINE <span style="color: #008800; font-weight: bold">static</span> <span style="color: #333399; font-weight: bold">bool</span> equals(<span style="color: #008800; font-weight: bold">const</span> RDF_mATOMPOSITIONS9_entry<span style="color: #333333">&amp;</span> x, <span style="color: #008800; font-weight: bold">const</span> RDF_mATOMPOSITIONS9_entry<span style="color: #333333">&amp;</span> y) {
+      <span style="color: #008800; font-weight: bold">return</span> x.RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID <span style="color: #333333">==</span> y.RDF_mATOMPOSITIONSATOMPOSITIONS_TRJ_ID <span style="color: #333333">&amp;&amp;</span> x.RDF_mATOMPOSITIONSATOMPOSITIONS_T <span style="color: #333333">==</span> y.RDF_mATOMPOSITIONSATOMPOSITIONS_T;
+    }
+  };
+  
+  <span style="color: #008800; font-weight: bold">typedef</span> MultiHashMap<span style="color: #333333">&lt;</span>RDF_mATOMPOSITIONS9_entry,<span style="color: #333399; font-weight: bold">long</span>,
+    HashIndex<span style="color: #333333">&lt;</span>RDF_mATOMPOSITIONS9_entry,<span style="color: #333399; font-weight: bold">long</span>,RDF_mATOMPOSITIONS9_mapkey01234_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span>,
+    HashIndex<span style="color: #333333">&lt;</span>RDF_mATOMPOSITIONS9_entry,<span style="color: #333399; font-weight: bold">long</span>,RDF_mATOMPOSITIONS9_mapkey01_idxfn,<span style="color: #007020">false</span><span style="color: #333333">&gt;</span>
+  <span style="color: #333333">&gt;</span> RDF_mATOMPOSITIONS9_map;
+  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>RDF_mATOMPOSITIONS9_entry,<span style="color: #333399; font-weight: bold">long</span>,RDF_mATOMPOSITIONS9_mapkey01234_idxfn,<span style="color: #007020">true</span><span style="color: #333333">&gt;</span> HashIndex_RDF_mATOMPOSITIONS9_map_01234;
+  <span style="color: #008800; font-weight: bold">typedef</span> HashIndex<span style="color: #333333">&lt;</span>RDF_mATOMPOSITIONS9_entry,<span style="color: #333399; font-weight: bold">long</span>,RDF_mATOMPOSITIONS9_mapkey01_idxfn,<span style="color: #007020">false</span><span style="color: #333333">&gt;</span> HashIndex_RDF_mATOMPOSITIONS9_map_01;
+  
+  
+  
+  <span style="color: #888888">/* Type definition providing a way to access the results of the sql program */</span>
+  <span style="color: #008800; font-weight: bold">struct</span> <span style="color: #333399; font-weight: bold">tlq_t</span>{
+    <span style="color: #008800; font-weight: bold">struct</span> timeval t0,t; <span style="color: #333399; font-weight: bold">long</span> tT,tN,tS;
+    <span style="color: #333399; font-weight: bold">tlq_t</span>()<span style="color: #333333">:</span> tN(<span style="color: #0000DD; font-weight: bold">0</span>), tS(<span style="color: #0000DD; font-weight: bold">0</span>) { gettimeofday(<span style="color: #333333">&amp;</span>t0,<span style="color: #007020">NULL</span>); }
+  
+  <span style="color: #888888">/* Serialization Code */</span>
+    <span style="color: #008800; font-weight: bold">template</span><span style="color: #333333">&lt;</span><span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Archive</span><span style="color: #333333">&gt;</span>
+    <span style="color: #333399; font-weight: bold">void</span> serialize(Archive<span style="color: #333333">&amp;</span> ar, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">unsigned</span> <span style="color: #333399; font-weight: bold">int</span> version) <span style="color: #008800; font-weight: bold">const</span> {
+  
+      ar <span style="color: #333333">&lt;&lt;</span> <span style="background-color: #fff0f0">&quot;</span><span style="color: #666666; font-weight: bold; background-color: #fff0f0">\n</span><span style="background-color: #fff0f0">&quot;</span>;
+      <span style="color: #008800; font-weight: bold">const</span> RDF_map<span style="color: #333333">&amp;</span> _RDF <span style="color: #333333">=</span> get_RDF();
+      dbtoaster<span style="color: #333333">::</span>serialize_nvp_tabbed(ar, STRING(RDF), _RDF, <span style="background-color: #fff0f0">&quot;</span><span style="color: #666666; font-weight: bold; background-color: #fff0f0">\t</span><span style="background-color: #fff0f0">&quot;</span>);
+  
+    }
+  
+    <span style="color: #888888">/* Functions returning / computing the results of top level queries */</span>
+    <span style="color: #008800; font-weight: bold">const</span> RDF_map<span style="color: #333333">&amp;</span> get_RDF() <span style="color: #008800; font-weight: bold">const</span> {
+      <span style="color: #008800; font-weight: bold">return</span> RDF;
+    
+    }
+  
+  <span style="color: #997700; font-weight: bold">protected:</span>
+  
+    <span style="color: #888888">/* Data structures used for storing / computing top level queries */</span>
+    RDF_map RDF;
+  
+  };
+  
+  <span style="color: #888888">/* Type definition providing a way to incrementally maintain the results of the sql program */</span>
+  <span style="color: #008800; font-weight: bold">struct</span> <span style="color: #333399; font-weight: bold">data_t</span> <span style="color: #333333">:</span> <span style="color: #333399; font-weight: bold">tlq_t</span>{
+    <span style="color: #333399; font-weight: bold">data_t</span>()<span style="color: #333333">:</span> <span style="color: #333399; font-weight: bold">tlq_t</span>() {
+      c4 <span style="color: #333333">=</span> STRING_TYPE(<span style="background-color: #fff0f0">&quot;TIP3&quot;</span>);
+      c3 <span style="color: #333333">=</span> STRING_TYPE(<span style="background-color: #fff0f0">&quot;OH2&quot;</span>);
+      c2 <span style="color: #333333">=</span> STRING_TYPE(<span style="background-color: #fff0f0">&quot;LYS&quot;</span>);
+      c1 <span style="color: #333333">=</span> STRING_TYPE(<span style="background-color: #fff0f0">&quot;NZ&quot;</span>);
+    }
+  
+    <span style="color: #FF0000; background-color: #FFAAAA">#</span>ifdef DBT_PROFILE
+    std<span style="color: #333333">::</span>shared_ptr<span style="color: #333333">&lt;</span>dbtoaster<span style="color: #333333">::</span>statistics<span style="color: #333333">::</span>trigger_exec_stats<span style="color: #333333">&gt;</span> exec_stats;
+    std<span style="color: #333333">::</span>shared_ptr<span style="color: #333333">&lt;</span>dbtoaster<span style="color: #333333">::</span>statistics<span style="color: #333333">::</span>trigger_exec_stats<span style="color: #333333">&gt;</span> ivc_stats;
+    <span style="color: #FF0000; background-color: #FFAAAA">#</span>endif
+  
+    <span style="color: #888888">/* Registering relations and trigger functions */</span>
+    <span style="color: #333399; font-weight: bold">void</span> register_data(ProgramBase<span style="color: #333333">&amp;</span> pb) {
+  
+      pb.add_map<span style="color: #333333">&lt;</span>ATOMMETA_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;ATOMMETA&quot;</span>, ATOMMETA );
+      pb.add_map<span style="color: #333333">&lt;</span>RDF_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;RDF&quot;</span>, RDF );
+      pb.add_map<span style="color: #333333">&lt;</span>RDF_mATOMPOSITIONS1_L1_1_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;RDF_mATOMPOSITIONS1_L1_1&quot;</span>, RDF_mATOMPOSITIONS1_L1_1 );
+      pb.add_map<span style="color: #333333">&lt;</span>RDF_mATOMPOSITIONS1_L1_2_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;RDF_mATOMPOSITIONS1_L1_2&quot;</span>, RDF_mATOMPOSITIONS1_L1_2 );
+      pb.add_map<span style="color: #333333">&lt;</span>RDF_mATOMPOSITIONS2_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;RDF_mATOMPOSITIONS2&quot;</span>, RDF_mATOMPOSITIONS2 );
+      pb.add_map<span style="color: #333333">&lt;</span>RDF_mATOMPOSITIONS4_L1_4_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;RDF_mATOMPOSITIONS4_L1_4&quot;</span>, RDF_mATOMPOSITIONS4_L1_4 );
+      pb.add_map<span style="color: #333333">&lt;</span>RDF_mATOMPOSITIONS4_L1_6_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;RDF_mATOMPOSITIONS4_L1_6&quot;</span>, RDF_mATOMPOSITIONS4_L1_6 );
+      pb.add_map<span style="color: #333333">&lt;</span>RDF_mATOMPOSITIONS6_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;RDF_mATOMPOSITIONS6&quot;</span>, RDF_mATOMPOSITIONS6 );
+      pb.add_map<span style="color: #333333">&lt;</span>RDF_mATOMPOSITIONS9_map<span style="color: #333333">&gt;</span>( <span style="background-color: #fff0f0">&quot;RDF_mATOMPOSITIONS9&quot;</span>, RDF_mATOMPOSITIONS9 );
+  
+      pb.add_relation(<span style="background-color: #fff0f0">&quot;ATOMPOSITIONS&quot;</span>);
+      pb.add_relation(<span style="background-color: #fff0f0">&quot;ATOMMETA&quot;</span>, <span style="color: #007020">true</span>);
+  
+      pb.add_trigger(<span style="background-color: #fff0f0">&quot;ATOMMETA&quot;</span>, insert_tuple, std<span style="color: #333333">::</span>bind(<span style="color: #333333">&amp;</span><span style="color: #333399; font-weight: bold">data_t</span><span style="color: #333333">::</span>unwrap_insert_ATOMMETA, <span style="color: #008800; font-weight: bold">this</span>, std<span style="color: #333333">::</span>placeholders<span style="color: #333333">::</span>_1));
+  
+      pb.add_trigger(<span style="background-color: #fff0f0">&quot;ATOMPOSITIONS&quot;</span>, insert_tuple, std<span style="color: #333333">::</span>bind(<span style="color: #333333">&amp;</span><span style="color: #333399; font-weight: bold">data_t</span><span style="color: #333333">::</span>unwrap_insert_ATOMPOSITIONS, <span style="color: #008800; font-weight: bold">this</span>, std<span style="color: #333333">::</span>placeholders<span style="color: #333333">::</span>_1));
+      pb.add_trigger(<span style="background-color: #fff0f0">&quot;ATOMPOSITIONS&quot;</span>, delete_tuple, std<span style="color: #333333">::</span>bind(<span style="color: #333333">&amp;</span><span style="color: #333399; font-weight: bold">data_t</span><span style="color: #333333">::</span>unwrap_delete_ATOMPOSITIONS, <span style="color: #008800; font-weight: bold">this</span>, std<span style="color: #333333">::</span>placeholders<span style="color: #333333">::</span>_1));
+  
+      <span style="color: #FF0000; background-color: #FFAAAA">#</span>ifdef DBT_PROFILE
+      exec_stats <span style="color: #333333">=</span> pb.exec_stats;
+      ivc_stats <span style="color: #333333">=</span> pb.ivc_stats;
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">0</span>, <span style="background-color: #fff0f0">&quot;insert_ATOMPOSITIONS_s0&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">1</span>, <span style="background-color: #fff0f0">&quot;insert_ATOMPOSITIONS_s1&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">2</span>, <span style="background-color: #fff0f0">&quot;insert_ATOMPOSITIONS_s2&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">3</span>, <span style="background-color: #fff0f0">&quot;insert_ATOMPOSITIONS_s3&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">4</span>, <span style="background-color: #fff0f0">&quot;insert_ATOMPOSITIONS_s4&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">5</span>, <span style="background-color: #fff0f0">&quot;insert_ATOMPOSITIONS_s5&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">6</span>, <span style="background-color: #fff0f0">&quot;delete_ATOMPOSITIONS_s0&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">7</span>, <span style="background-color: #fff0f0">&quot;delete_ATOMPOSITIONS_s1&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">8</span>, <span style="background-color: #fff0f0">&quot;delete_ATOMPOSITIONS_s2&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">9</span>, <span style="background-color: #fff0f0">&quot;delete_ATOMPOSITIONS_s3&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">10</span>, <span style="background-color: #fff0f0">&quot;delete_ATOMPOSITIONS_s4&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">11</span>, <span style="background-color: #fff0f0">&quot;delete_ATOMPOSITIONS_s5&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">12</span>, <span style="background-color: #fff0f0">&quot;system_ready_s0&quot;</span>);
+      exec_stats<span style="color: #333333">-&gt;</span>register_probe(<span style="color: #0000DD; font-weight: bold">13</span>, <span style="background-color: #fff0f0">&quot;system_ready_s1&quot;</span>);
+      <span style="color: #FF0000; background-color: #FFAAAA">#</span>endif <span style="color: #888888">// DBT_PROFILE</span>
+  
+    }
+  
+    <span style="color: #888888">/* Trigger functions for table relations */</span>
+    <span style="color: #333399; font-weight: bold">void</span> on_insert_ATOMMETA(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> atommeta_protein_id, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> atommeta_atom_id, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE atommeta_atom_type, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE atommeta_atom_name, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> atommeta_residue_id, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE atommeta_residue_name, <span style="color: #008800; font-weight: bold">const</span> STRING_TYPE atommeta_segment_name) {
+      ATOMMETA_entry e(atommeta_protein_id, atommeta_atom_id, atommeta_atom_type, atommeta_atom_name, atommeta_residue_id, atommeta_residue_name, atommeta_segment_name, <span style="color: #0000DD; font-weight: bold">1L</span>);
+      ATOMMETA.addOrDelOnZero(e,<span style="color: #0000DD; font-weight: bold">1L</span>);
+    }
+    
+    <span style="color: #333399; font-weight: bold">void</span> unwrap_insert_ATOMMETA(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">event_args_t</span><span style="color: #333333">&amp;</span> ea) {
+      on_insert_ATOMMETA(<span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span><span style="color: #333399; font-weight: bold">long</span><span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">0</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span><span style="color: #333399; font-weight: bold">long</span><span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">1</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span>STRING_TYPE<span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">2</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span>STRING_TYPE<span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">3</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span><span style="color: #333399; font-weight: bold">long</span><span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">4</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span>STRING_TYPE<span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">5</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span>STRING_TYPE<span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">6</span>])));
+    }
+    
+    
+    
+    <span style="color: #888888">/* Trigger functions for stream relations */</span>
+    <span style="color: #333399; font-weight: bold">void</span> on_insert_ATOMPOSITIONS(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> atompositions_trj_id, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> <span style="color: #333399; font-weight: bold">atompositions_t</span>, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> atompositions_atom_id, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE atompositions_x, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE atompositions_y, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE atompositions_z) {
+      BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_ATOMPOSITIONS&quot;</span>)
+      BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_ATOMPOSITIONS&quot;</span>)
+      {  <span style="color: #333333">++</span>tN;
+        DOUBLE_TYPE agg1 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
+        <span style="color: #333399; font-weight: bold">long</span> l1 <span style="color: #333333">=</span> ((RDF_mATOMPOSITIONS1_L1_2.getValueOrDefault(se2.modify(atompositions_trj_id,<span style="color: #333399; font-weight: bold">atompositions_t</span>)) <span style="color: #333333">+</span> RDF_mATOMPOSITIONS4_L1_6.getValueOrDefault(se3.modify(atompositions_atom_id))) <span style="color: #333333">*</span> (RDF_mATOMPOSITIONS1_L1_1.getValueOrDefault(se4.modify(atompositions_trj_id,<span style="color: #333399; font-weight: bold">atompositions_t</span>)) <span style="color: #333333">+</span> RDF_mATOMPOSITIONS4_L1_4.getValueOrDefault(se5.modify(atompositions_atom_id))));
+        (<span style="color: #888888">/*if */</span>(<span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">!=</span> l1) <span style="color: #333333">?</span> agg1 <span style="color: #333333">+=</span> Udiv(Ulistmax(<span style="color: #0000DD; font-weight: bold">1L</span>,l1)) <span style="color: #333333">:</span> <span style="color: #6600EE; font-weight: bold">0.0</span>);
+        DOUBLE_TYPE agg2 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
+        { <span style="color: #888888">//slice</span>
+          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h1 <span style="color: #333333">=</span> RDF_mATOMPOSITIONS6_mapkey01_idxfn<span style="color: #333333">::</span>hash(se7.modify01(atompositions_trj_id, <span style="color: #333399; font-weight: bold">atompositions_t</span>));
+          <span style="color: #008800; font-weight: bold">const</span> HashIndex_RDF_mATOMPOSITIONS6_map_01<span style="color: #333333">*</span> i1 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_RDF_mATOMPOSITIONS6_map_01<span style="color: #333333">*&gt;</span>(RDF_mATOMPOSITIONS6.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
+          HashIndex_RDF_mATOMPOSITIONS6_map_01<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n1 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i1<span style="color: #333333">-&gt;</span>buckets_[h1 <span style="color: #333333">%</span> i1<span style="color: #333333">-&gt;</span>size_]);
+          RDF_mATOMPOSITIONS6_entry<span style="color: #333333">*</span> e1;
+          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e1<span style="color: #333333">=</span>n1<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h1 <span style="color: #333333">==</span> n1<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> RDF_mATOMPOSITIONS6_mapkey01_idxfn<span style="color: #333333">::</span>equals(se7, <span style="color: #333333">*</span>e1)) {
+            DOUBLE_TYPE p2_x <span style="color: #333333">=</span> e1<span style="color: #333333">-&gt;</span>P2_X;
+            DOUBLE_TYPE p2_y <span style="color: #333333">=</span> e1<span style="color: #333333">-&gt;</span>P2_Y;
+            DOUBLE_TYPE p2_z <span style="color: #333333">=</span> e1<span style="color: #333333">-&gt;</span>P2_Z;
+            <span style="color: #333399; font-weight: bold">long</span> v1 <span style="color: #333333">=</span> e1<span style="color: #333333">-&gt;</span>__av;
+            agg2 <span style="color: #333333">+=</span> (v1 <span style="color: #333333">*</span> Uvec_length((atompositions_x <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> p2_x)),(atompositions_y <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> p2_y)),(atompositions_z <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> p2_z))));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n1<span style="color: #333333">=</span>n1<span style="color: #333333">-&gt;</span>nxt));
+        }
+        DOUBLE_TYPE agg3 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
+        { <span style="color: #888888">//slice</span>
+          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h2 <span style="color: #333333">=</span> RDF_mATOMPOSITIONS9_mapkey01_idxfn<span style="color: #333333">::</span>hash(se11.modify01(atompositions_trj_id, <span style="color: #333399; font-weight: bold">atompositions_t</span>));
+          <span style="color: #008800; font-weight: bold">const</span> HashIndex_RDF_mATOMPOSITIONS9_map_01<span style="color: #333333">*</span> i2 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_RDF_mATOMPOSITIONS9_map_01<span style="color: #333333">*&gt;</span>(RDF_mATOMPOSITIONS9.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
+          HashIndex_RDF_mATOMPOSITIONS9_map_01<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n2 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i2<span style="color: #333333">-&gt;</span>buckets_[h2 <span style="color: #333333">%</span> i2<span style="color: #333333">-&gt;</span>size_]);
+          RDF_mATOMPOSITIONS9_entry<span style="color: #333333">*</span> e2;
+          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e2<span style="color: #333333">=</span>n2<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h2 <span style="color: #333333">==</span> n2<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> RDF_mATOMPOSITIONS9_mapkey01_idxfn<span style="color: #333333">::</span>equals(se11, <span style="color: #333333">*</span>e2)) {
+            DOUBLE_TYPE p_x <span style="color: #333333">=</span> e2<span style="color: #333333">-&gt;</span>P_X;
+            DOUBLE_TYPE p_y <span style="color: #333333">=</span> e2<span style="color: #333333">-&gt;</span>P_Y;
+            DOUBLE_TYPE p_z <span style="color: #333333">=</span> e2<span style="color: #333333">-&gt;</span>P_Z;
+            <span style="color: #333399; font-weight: bold">long</span> v2 <span style="color: #333333">=</span> e2<span style="color: #333333">-&gt;</span>__av;
+            agg3 <span style="color: #333333">+=</span> (v2 <span style="color: #333333">*</span> Uvec_length((p_x <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> atompositions_x)),(p_y <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> atompositions_y)),(p_z <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> atompositions_z))));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n2<span style="color: #333333">=</span>n2<span style="color: #333333">-&gt;</span>nxt));
+        }
+        DOUBLE_TYPE agg4 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
+        <span style="color: #333399; font-weight: bold">long</span> l2 <span style="color: #333333">=</span> (RDF_mATOMPOSITIONS1_L1_2.getValueOrDefault(se12.modify(atompositions_trj_id,<span style="color: #333399; font-weight: bold">atompositions_t</span>)) <span style="color: #333333">*</span> RDF_mATOMPOSITIONS1_L1_1.getValueOrDefault(se13.modify(atompositions_trj_id,<span style="color: #333399; font-weight: bold">atompositions_t</span>)));
+        (<span style="color: #888888">/*if */</span>(<span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">!=</span> l2) <span style="color: #333333">?</span> agg4 <span style="color: #333333">+=</span> Udiv(Ulistmax(<span style="color: #0000DD; font-weight: bold">1L</span>,l2)) <span style="color: #333333">:</span> <span style="color: #6600EE; font-weight: bold">0.0</span>);
+        RDF.addOrDelOnZero(se1.modify(atompositions_trj_id,<span style="color: #333399; font-weight: bold">atompositions_t</span>),((agg1 <span style="color: #333333">*</span> ((RDF_mATOMPOSITIONS4_L1_4.getValueOrDefault(se6.modify(atompositions_atom_id)) <span style="color: #333333">*</span> (agg2 <span style="color: #333333">+</span> (RDF_mATOMPOSITIONS4_L1_6.getValueOrDefault(se8.modify(atompositions_atom_id)) <span style="color: #333333">*</span> Uvec_length((atompositions_x <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> atompositions_x)),(atompositions_y <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> atompositions_y)),(atompositions_z <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> atompositions_z)))))) <span style="color: #333333">+</span> (RDF_mATOMPOSITIONS2.getValueOrDefault(se9.modify(atompositions_trj_id,<span style="color: #333399; font-weight: bold">atompositions_t</span>)) <span style="color: #333333">+</span> (RDF_mATOMPOSITIONS4_L1_6.getValueOrDefault(se10.modify(atompositions_atom_id)) <span style="color: #333333">*</span> agg3)))) <span style="color: #333333">+</span> (agg4 <span style="color: #333333">*</span> (RDF_mATOMPOSITIONS2.getValueOrDefault(se14.modify(atompositions_trj_id,<span style="color: #333399; font-weight: bold">atompositions_t</span>)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>))));
+        RDF_mATOMPOSITIONS1_L1_1.addOrDelOnZero(se15.modify(atompositions_trj_id,<span style="color: #333399; font-weight: bold">atompositions_t</span>),RDF_mATOMPOSITIONS4_L1_4.getValueOrDefault(se16.modify(atompositions_atom_id)));
+        RDF_mATOMPOSITIONS1_L1_2.addOrDelOnZero(se17.modify(atompositions_trj_id,<span style="color: #333399; font-weight: bold">atompositions_t</span>),RDF_mATOMPOSITIONS4_L1_6.getValueOrDefault(se18.modify(atompositions_atom_id)));
+        DOUBLE_TYPE agg5 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
+        { <span style="color: #888888">//slice</span>
+          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h3 <span style="color: #333333">=</span> RDF_mATOMPOSITIONS6_mapkey01_idxfn<span style="color: #333333">::</span>hash(se21.modify01(atompositions_trj_id, <span style="color: #333399; font-weight: bold">atompositions_t</span>));
+          <span style="color: #008800; font-weight: bold">const</span> HashIndex_RDF_mATOMPOSITIONS6_map_01<span style="color: #333333">*</span> i3 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_RDF_mATOMPOSITIONS6_map_01<span style="color: #333333">*&gt;</span>(RDF_mATOMPOSITIONS6.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
+          HashIndex_RDF_mATOMPOSITIONS6_map_01<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n3 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i3<span style="color: #333333">-&gt;</span>buckets_[h3 <span style="color: #333333">%</span> i3<span style="color: #333333">-&gt;</span>size_]);
+          RDF_mATOMPOSITIONS6_entry<span style="color: #333333">*</span> e3;
+          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e3<span style="color: #333333">=</span>n3<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h3 <span style="color: #333333">==</span> n3<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> RDF_mATOMPOSITIONS6_mapkey01_idxfn<span style="color: #333333">::</span>equals(se21, <span style="color: #333333">*</span>e3)) {
+            DOUBLE_TYPE p2_x <span style="color: #333333">=</span> e3<span style="color: #333333">-&gt;</span>P2_X;
+            DOUBLE_TYPE p2_y <span style="color: #333333">=</span> e3<span style="color: #333333">-&gt;</span>P2_Y;
+            DOUBLE_TYPE p2_z <span style="color: #333333">=</span> e3<span style="color: #333333">-&gt;</span>P2_Z;
+            <span style="color: #333399; font-weight: bold">long</span> v3 <span style="color: #333333">=</span> e3<span style="color: #333333">-&gt;</span>__av;
+            agg5 <span style="color: #333333">+=</span> (v3 <span style="color: #333333">*</span> Uvec_length((atompositions_x <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> p2_x)),(atompositions_y <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> p2_y)),(atompositions_z <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> p2_z))));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n3<span style="color: #333333">=</span>n3<span style="color: #333333">-&gt;</span>nxt));
+        }
+        DOUBLE_TYPE agg6 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
+        { <span style="color: #888888">//slice</span>
+          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h4 <span style="color: #333333">=</span> RDF_mATOMPOSITIONS9_mapkey01_idxfn<span style="color: #333333">::</span>hash(se23.modify01(atompositions_trj_id, <span style="color: #333399; font-weight: bold">atompositions_t</span>));
+          <span style="color: #008800; font-weight: bold">const</span> HashIndex_RDF_mATOMPOSITIONS9_map_01<span style="color: #333333">*</span> i4 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_RDF_mATOMPOSITIONS9_map_01<span style="color: #333333">*&gt;</span>(RDF_mATOMPOSITIONS9.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
+          HashIndex_RDF_mATOMPOSITIONS9_map_01<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n4 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i4<span style="color: #333333">-&gt;</span>buckets_[h4 <span style="color: #333333">%</span> i4<span style="color: #333333">-&gt;</span>size_]);
+          RDF_mATOMPOSITIONS9_entry<span style="color: #333333">*</span> e4;
+          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e4<span style="color: #333333">=</span>n4<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h4 <span style="color: #333333">==</span> n4<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> RDF_mATOMPOSITIONS9_mapkey01_idxfn<span style="color: #333333">::</span>equals(se23, <span style="color: #333333">*</span>e4)) {
+            DOUBLE_TYPE p_x <span style="color: #333333">=</span> e4<span style="color: #333333">-&gt;</span>P_X;
+            DOUBLE_TYPE p_y <span style="color: #333333">=</span> e4<span style="color: #333333">-&gt;</span>P_Y;
+            DOUBLE_TYPE p_z <span style="color: #333333">=</span> e4<span style="color: #333333">-&gt;</span>P_Z;
+            <span style="color: #333399; font-weight: bold">long</span> v4 <span style="color: #333333">=</span> e4<span style="color: #333333">-&gt;</span>__av;
+            agg6 <span style="color: #333333">+=</span> (v4 <span style="color: #333333">*</span> Uvec_length((p_x <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> atompositions_x)),(p_y <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> atompositions_y)),(p_z <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> atompositions_z))));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n4<span style="color: #333333">=</span>n4<span style="color: #333333">-&gt;</span>nxt));
+        }
+        RDF_mATOMPOSITIONS2.addOrDelOnZero(se19.modify(atompositions_trj_id,<span style="color: #333399; font-weight: bold">atompositions_t</span>),((RDF_mATOMPOSITIONS4_L1_4.getValueOrDefault(se20.modify(atompositions_atom_id)) <span style="color: #333333">*</span> (agg5 <span style="color: #333333">+</span> (RDF_mATOMPOSITIONS4_L1_6.getValueOrDefault(se22.modify(atompositions_atom_id)) <span style="color: #333333">*</span> Uvec_length((atompositions_x <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> atompositions_x)),(atompositions_y <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> atompositions_y)),(atompositions_z <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> atompositions_z)))))) <span style="color: #333333">+</span> (agg6 <span style="color: #333333">*</span> RDF_mATOMPOSITIONS4_L1_6.getValueOrDefault(se24.modify(atompositions_atom_id)))));
+        RDF_mATOMPOSITIONS6.addOrDelOnZero(se25.modify(atompositions_trj_id,<span style="color: #333399; font-weight: bold">atompositions_t</span>,atompositions_x,atompositions_y,atompositions_z),RDF_mATOMPOSITIONS4_L1_6.getValueOrDefault(se26.modify(atompositions_atom_id)));
+        RDF_mATOMPOSITIONS9.addOrDelOnZero(se27.modify(atompositions_trj_id,<span style="color: #333399; font-weight: bold">atompositions_t</span>,atompositions_x,atompositions_y,atompositions_z),RDF_mATOMPOSITIONS4_L1_4.getValueOrDefault(se28.modify(atompositions_atom_id)));
+      }
+      END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;insert_ATOMPOSITIONS&quot;</span>)
+      END_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;insert_ATOMPOSITIONS&quot;</span>)
+    }
+    <span style="color: #333399; font-weight: bold">void</span> unwrap_insert_ATOMPOSITIONS(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">event_args_t</span><span style="color: #333333">&amp;</span> ea) {
+      on_insert_ATOMPOSITIONS(<span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span><span style="color: #333399; font-weight: bold">long</span><span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">0</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span><span style="color: #333399; font-weight: bold">long</span><span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">1</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span><span style="color: #333399; font-weight: bold">long</span><span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">2</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span>DOUBLE_TYPE<span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">3</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span>DOUBLE_TYPE<span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">4</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span>DOUBLE_TYPE<span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">5</span>])));
+    }
+    
+    <span style="color: #333399; font-weight: bold">void</span> on_delete_ATOMPOSITIONS(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> atompositions_trj_id, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> <span style="color: #333399; font-weight: bold">atompositions_t</span>, <span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">long</span> atompositions_atom_id, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE atompositions_x, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE atompositions_y, <span style="color: #008800; font-weight: bold">const</span> DOUBLE_TYPE atompositions_z) {
+      BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_ATOMPOSITIONS&quot;</span>)
+      BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_ATOMPOSITIONS&quot;</span>)
+      {  <span style="color: #333333">++</span>tN;
+        DOUBLE_TYPE agg7 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
+        <span style="color: #333399; font-weight: bold">long</span> l3 <span style="color: #333333">=</span> ((RDF_mATOMPOSITIONS1_L1_1.getValueOrDefault(se30.modify(atompositions_trj_id,<span style="color: #333399; font-weight: bold">atompositions_t</span>)) <span style="color: #333333">*</span> (RDF_mATOMPOSITIONS1_L1_2.getValueOrDefault(se31.modify(atompositions_trj_id,<span style="color: #333399; font-weight: bold">atompositions_t</span>)) <span style="color: #333333">+</span> (RDF_mATOMPOSITIONS4_L1_6.getValueOrDefault(se32.modify(atompositions_atom_id)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>))) <span style="color: #333333">+</span> (RDF_mATOMPOSITIONS4_L1_4.getValueOrDefault(se33.modify(atompositions_atom_id)) <span style="color: #333333">*</span> ((RDF_mATOMPOSITIONS1_L1_2.getValueOrDefault(se34.modify(atompositions_trj_id,<span style="color: #333399; font-weight: bold">atompositions_t</span>)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>) <span style="color: #333333">+</span> RDF_mATOMPOSITIONS4_L1_6.getValueOrDefault(se35.modify(atompositions_atom_id)))));
+        (<span style="color: #888888">/*if */</span>(<span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">!=</span> l3) <span style="color: #333333">?</span> agg7 <span style="color: #333333">+=</span> Udiv(Ulistmax(<span style="color: #0000DD; font-weight: bold">1L</span>,l3)) <span style="color: #333333">:</span> <span style="color: #6600EE; font-weight: bold">0.0</span>);
+        DOUBLE_TYPE agg8 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
+        { <span style="color: #888888">//slice</span>
+          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h5 <span style="color: #333333">=</span> RDF_mATOMPOSITIONS6_mapkey01_idxfn<span style="color: #333333">::</span>hash(se37.modify01(atompositions_trj_id, <span style="color: #333399; font-weight: bold">atompositions_t</span>));
+          <span style="color: #008800; font-weight: bold">const</span> HashIndex_RDF_mATOMPOSITIONS6_map_01<span style="color: #333333">*</span> i5 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_RDF_mATOMPOSITIONS6_map_01<span style="color: #333333">*&gt;</span>(RDF_mATOMPOSITIONS6.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
+          HashIndex_RDF_mATOMPOSITIONS6_map_01<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n5 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i5<span style="color: #333333">-&gt;</span>buckets_[h5 <span style="color: #333333">%</span> i5<span style="color: #333333">-&gt;</span>size_]);
+          RDF_mATOMPOSITIONS6_entry<span style="color: #333333">*</span> e5;
+          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e5<span style="color: #333333">=</span>n5<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h5 <span style="color: #333333">==</span> n5<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> RDF_mATOMPOSITIONS6_mapkey01_idxfn<span style="color: #333333">::</span>equals(se37, <span style="color: #333333">*</span>e5)) {
+            DOUBLE_TYPE p2_x <span style="color: #333333">=</span> e5<span style="color: #333333">-&gt;</span>P2_X;
+            DOUBLE_TYPE p2_y <span style="color: #333333">=</span> e5<span style="color: #333333">-&gt;</span>P2_Y;
+            DOUBLE_TYPE p2_z <span style="color: #333333">=</span> e5<span style="color: #333333">-&gt;</span>P2_Z;
+            <span style="color: #333399; font-weight: bold">long</span> v5 <span style="color: #333333">=</span> e5<span style="color: #333333">-&gt;</span>__av;
+            agg8 <span style="color: #333333">+=</span> (v5 <span style="color: #333333">*</span> Uvec_length((atompositions_x <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> p2_x)),(atompositions_y <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> p2_y)),(atompositions_z <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> p2_z))));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n5<span style="color: #333333">=</span>n5<span style="color: #333333">-&gt;</span>nxt));
+        }
+        DOUBLE_TYPE agg9 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
+        { <span style="color: #888888">//slice</span>
+          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h6 <span style="color: #333333">=</span> RDF_mATOMPOSITIONS9_mapkey01_idxfn<span style="color: #333333">::</span>hash(se38.modify01(atompositions_trj_id, <span style="color: #333399; font-weight: bold">atompositions_t</span>));
+          <span style="color: #008800; font-weight: bold">const</span> HashIndex_RDF_mATOMPOSITIONS9_map_01<span style="color: #333333">*</span> i6 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_RDF_mATOMPOSITIONS9_map_01<span style="color: #333333">*&gt;</span>(RDF_mATOMPOSITIONS9.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
+          HashIndex_RDF_mATOMPOSITIONS9_map_01<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n6 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i6<span style="color: #333333">-&gt;</span>buckets_[h6 <span style="color: #333333">%</span> i6<span style="color: #333333">-&gt;</span>size_]);
+          RDF_mATOMPOSITIONS9_entry<span style="color: #333333">*</span> e6;
+          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e6<span style="color: #333333">=</span>n6<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h6 <span style="color: #333333">==</span> n6<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> RDF_mATOMPOSITIONS9_mapkey01_idxfn<span style="color: #333333">::</span>equals(se38, <span style="color: #333333">*</span>e6)) {
+            DOUBLE_TYPE p_x <span style="color: #333333">=</span> e6<span style="color: #333333">-&gt;</span>P_X;
+            DOUBLE_TYPE p_y <span style="color: #333333">=</span> e6<span style="color: #333333">-&gt;</span>P_Y;
+            DOUBLE_TYPE p_z <span style="color: #333333">=</span> e6<span style="color: #333333">-&gt;</span>P_Z;
+            <span style="color: #333399; font-weight: bold">long</span> v6 <span style="color: #333333">=</span> e6<span style="color: #333333">-&gt;</span>__av;
+            agg9 <span style="color: #333333">+=</span> (v6 <span style="color: #333333">*</span> Uvec_length((p_x <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> atompositions_x)),(p_y <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> atompositions_y)),(p_z <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> atompositions_z))));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n6<span style="color: #333333">=</span>n6<span style="color: #333333">-&gt;</span>nxt));
+        }
+        DOUBLE_TYPE agg10 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
+        <span style="color: #333399; font-weight: bold">long</span> l4 <span style="color: #333333">=</span> (RDF_mATOMPOSITIONS1_L1_1.getValueOrDefault(se40.modify(atompositions_trj_id,<span style="color: #333399; font-weight: bold">atompositions_t</span>)) <span style="color: #333333">*</span> RDF_mATOMPOSITIONS1_L1_2.getValueOrDefault(se41.modify(atompositions_trj_id,<span style="color: #333399; font-weight: bold">atompositions_t</span>)));
+        (<span style="color: #888888">/*if */</span>(<span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">!=</span> l4) <span style="color: #333333">?</span> agg10 <span style="color: #333333">+=</span> Udiv(Ulistmax(<span style="color: #0000DD; font-weight: bold">1L</span>,l4)) <span style="color: #333333">:</span> <span style="color: #6600EE; font-weight: bold">0.0</span>);
+        DOUBLE_TYPE agg11 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
+        <span style="color: #333399; font-weight: bold">long</span> l5 <span style="color: #333333">=</span> ((RDF_mATOMPOSITIONS1_L1_1.getValueOrDefault(se43.modify(atompositions_trj_id,<span style="color: #333399; font-weight: bold">atompositions_t</span>)) <span style="color: #333333">*</span> (RDF_mATOMPOSITIONS1_L1_2.getValueOrDefault(se44.modify(atompositions_trj_id,<span style="color: #333399; font-weight: bold">atompositions_t</span>)) <span style="color: #333333">+</span> (RDF_mATOMPOSITIONS4_L1_6.getValueOrDefault(se45.modify(atompositions_atom_id)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>))) <span style="color: #333333">+</span> (RDF_mATOMPOSITIONS4_L1_4.getValueOrDefault(se46.modify(atompositions_atom_id)) <span style="color: #333333">*</span> ((RDF_mATOMPOSITIONS1_L1_2.getValueOrDefault(se47.modify(atompositions_trj_id,<span style="color: #333399; font-weight: bold">atompositions_t</span>)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>) <span style="color: #333333">+</span> RDF_mATOMPOSITIONS4_L1_6.getValueOrDefault(se48.modify(atompositions_atom_id)))));
+        (<span style="color: #888888">/*if */</span>(<span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">!=</span> l5) <span style="color: #333333">?</span> agg11 <span style="color: #333333">+=</span> Udiv(Ulistmax(<span style="color: #0000DD; font-weight: bold">1L</span>,l5)) <span style="color: #333333">:</span> <span style="color: #6600EE; font-weight: bold">0.0</span>);
+        DOUBLE_TYPE agg12 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
+        <span style="color: #333399; font-weight: bold">long</span> l6 <span style="color: #333333">=</span> ((RDF_mATOMPOSITIONS1_L1_2.getValueOrDefault(se51.modify(atompositions_trj_id,<span style="color: #333399; font-weight: bold">atompositions_t</span>)) <span style="color: #333333">*</span> (RDF_mATOMPOSITIONS1_L1_1.getValueOrDefault(se52.modify(atompositions_trj_id,<span style="color: #333399; font-weight: bold">atompositions_t</span>)) <span style="color: #333333">+</span> (RDF_mATOMPOSITIONS4_L1_4.getValueOrDefault(se53.modify(atompositions_atom_id)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>))) <span style="color: #333333">+</span> (RDF_mATOMPOSITIONS4_L1_6.getValueOrDefault(se54.modify(atompositions_atom_id)) <span style="color: #333333">*</span> ((RDF_mATOMPOSITIONS1_L1_1.getValueOrDefault(se55.modify(atompositions_trj_id,<span style="color: #333399; font-weight: bold">atompositions_t</span>)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>) <span style="color: #333333">+</span> RDF_mATOMPOSITIONS4_L1_4.getValueOrDefault(se56.modify(atompositions_atom_id)))));
+        (<span style="color: #888888">/*if */</span>(<span style="color: #0000DD; font-weight: bold">0L</span> <span style="color: #333333">!=</span> l6) <span style="color: #333333">?</span> agg12 <span style="color: #333333">+=</span> Udiv(Ulistmax(<span style="color: #0000DD; font-weight: bold">1L</span>,l6)) <span style="color: #333333">:</span> <span style="color: #6600EE; font-weight: bold">0.0</span>);
+        RDF.addOrDelOnZero(se29.modify(atompositions_trj_id,<span style="color: #333399; font-weight: bold">atompositions_t</span>),((((agg7 <span style="color: #333333">*</span> ((RDF_mATOMPOSITIONS4_L1_4.getValueOrDefault(se36.modify(atompositions_atom_id)) <span style="color: #333333">*</span> agg8) <span style="color: #333333">+</span> (agg9 <span style="color: #333333">*</span> RDF_mATOMPOSITIONS4_L1_6.getValueOrDefault(se39.modify(atompositions_atom_id))))) <span style="color: #333333">+</span> (agg10 <span style="color: #333333">*</span> RDF_mATOMPOSITIONS2.getValueOrDefault(se42.modify(atompositions_trj_id,<span style="color: #333399; font-weight: bold">atompositions_t</span>)))) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>) <span style="color: #333333">+</span> ((agg11 <span style="color: #333333">*</span> (RDF_mATOMPOSITIONS4_L1_4.getValueOrDefault(se49.modify(atompositions_atom_id)) <span style="color: #333333">*</span> (RDF_mATOMPOSITIONS4_L1_6.getValueOrDefault(se50.modify(atompositions_atom_id)) <span style="color: #333333">*</span> Uvec_length((atompositions_x <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> atompositions_x)),(atompositions_y <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> atompositions_y)),(atompositions_z <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> atompositions_z)))))) <span style="color: #333333">+</span> (agg12 <span style="color: #333333">*</span> RDF_mATOMPOSITIONS2.getValueOrDefault(se57.modify(atompositions_trj_id,<span style="color: #333399; font-weight: bold">atompositions_t</span>))))));
+        RDF_mATOMPOSITIONS1_L1_1.addOrDelOnZero(se58.modify(atompositions_trj_id,<span style="color: #333399; font-weight: bold">atompositions_t</span>),(RDF_mATOMPOSITIONS4_L1_4.getValueOrDefault(se59.modify(atompositions_atom_id)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
+        RDF_mATOMPOSITIONS1_L1_2.addOrDelOnZero(se60.modify(atompositions_trj_id,<span style="color: #333399; font-weight: bold">atompositions_t</span>),(RDF_mATOMPOSITIONS4_L1_6.getValueOrDefault(se61.modify(atompositions_atom_id)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
+        DOUBLE_TYPE agg13 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
+        { <span style="color: #888888">//slice</span>
+          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h7 <span style="color: #333333">=</span> RDF_mATOMPOSITIONS6_mapkey01_idxfn<span style="color: #333333">::</span>hash(se64.modify01(atompositions_trj_id, <span style="color: #333399; font-weight: bold">atompositions_t</span>));
+          <span style="color: #008800; font-weight: bold">const</span> HashIndex_RDF_mATOMPOSITIONS6_map_01<span style="color: #333333">*</span> i7 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_RDF_mATOMPOSITIONS6_map_01<span style="color: #333333">*&gt;</span>(RDF_mATOMPOSITIONS6.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
+          HashIndex_RDF_mATOMPOSITIONS6_map_01<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n7 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i7<span style="color: #333333">-&gt;</span>buckets_[h7 <span style="color: #333333">%</span> i7<span style="color: #333333">-&gt;</span>size_]);
+          RDF_mATOMPOSITIONS6_entry<span style="color: #333333">*</span> e7;
+          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e7<span style="color: #333333">=</span>n7<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h7 <span style="color: #333333">==</span> n7<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> RDF_mATOMPOSITIONS6_mapkey01_idxfn<span style="color: #333333">::</span>equals(se64, <span style="color: #333333">*</span>e7)) {
+            DOUBLE_TYPE p2_x <span style="color: #333333">=</span> e7<span style="color: #333333">-&gt;</span>P2_X;
+            DOUBLE_TYPE p2_y <span style="color: #333333">=</span> e7<span style="color: #333333">-&gt;</span>P2_Y;
+            DOUBLE_TYPE p2_z <span style="color: #333333">=</span> e7<span style="color: #333333">-&gt;</span>P2_Z;
+            <span style="color: #333399; font-weight: bold">long</span> v7 <span style="color: #333333">=</span> e7<span style="color: #333333">-&gt;</span>__av;
+            agg13 <span style="color: #333333">+=</span> (v7 <span style="color: #333333">*</span> Uvec_length((atompositions_x <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> p2_x)),(atompositions_y <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> p2_y)),(atompositions_z <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> p2_z))));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n7<span style="color: #333333">=</span>n7<span style="color: #333333">-&gt;</span>nxt));
+        }
+        DOUBLE_TYPE agg14 <span style="color: #333333">=</span> <span style="color: #6600EE; font-weight: bold">0.0</span>;
+        { <span style="color: #888888">//slice</span>
+          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h8 <span style="color: #333333">=</span> RDF_mATOMPOSITIONS9_mapkey01_idxfn<span style="color: #333333">::</span>hash(se67.modify01(atompositions_trj_id, <span style="color: #333399; font-weight: bold">atompositions_t</span>));
+          <span style="color: #008800; font-weight: bold">const</span> HashIndex_RDF_mATOMPOSITIONS9_map_01<span style="color: #333333">*</span> i8 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_RDF_mATOMPOSITIONS9_map_01<span style="color: #333333">*&gt;</span>(RDF_mATOMPOSITIONS9.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
+          HashIndex_RDF_mATOMPOSITIONS9_map_01<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n8 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i8<span style="color: #333333">-&gt;</span>buckets_[h8 <span style="color: #333333">%</span> i8<span style="color: #333333">-&gt;</span>size_]);
+          RDF_mATOMPOSITIONS9_entry<span style="color: #333333">*</span> e8;
+          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e8<span style="color: #333333">=</span>n8<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h8 <span style="color: #333333">==</span> n8<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> RDF_mATOMPOSITIONS9_mapkey01_idxfn<span style="color: #333333">::</span>equals(se67, <span style="color: #333333">*</span>e8)) {
+            DOUBLE_TYPE p_x <span style="color: #333333">=</span> e8<span style="color: #333333">-&gt;</span>P_X;
+            DOUBLE_TYPE p_y <span style="color: #333333">=</span> e8<span style="color: #333333">-&gt;</span>P_Y;
+            DOUBLE_TYPE p_z <span style="color: #333333">=</span> e8<span style="color: #333333">-&gt;</span>P_Z;
+            <span style="color: #333399; font-weight: bold">long</span> v8 <span style="color: #333333">=</span> e8<span style="color: #333333">-&gt;</span>__av;
+            agg14 <span style="color: #333333">+=</span> (v8 <span style="color: #333333">*</span> Uvec_length((p_x <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> atompositions_x)),(p_y <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> atompositions_y)),(p_z <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> atompositions_z))));
+          } <span style="color: #008800; font-weight: bold">while</span> ((n8<span style="color: #333333">=</span>n8<span style="color: #333333">-&gt;</span>nxt));
+        }
+        RDF_mATOMPOSITIONS2.addOrDelOnZero(se62.modify(atompositions_trj_id,<span style="color: #333399; font-weight: bold">atompositions_t</span>),((RDF_mATOMPOSITIONS4_L1_4.getValueOrDefault(se63.modify(atompositions_atom_id)) <span style="color: #333333">*</span> ((agg13 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>) <span style="color: #333333">+</span> (RDF_mATOMPOSITIONS4_L1_6.getValueOrDefault(se65.modify(atompositions_atom_id)) <span style="color: #333333">*</span> Uvec_length((atompositions_x <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> atompositions_x)),(atompositions_y <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> atompositions_y)),(atompositions_z <span style="color: #333333">+</span> (<span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span> <span style="color: #333333">*</span> atompositions_z)))))) <span style="color: #333333">+</span> (RDF_mATOMPOSITIONS4_L1_6.getValueOrDefault(se66.modify(atompositions_atom_id)) <span style="color: #333333">*</span> (agg14 <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>))));
+        RDF_mATOMPOSITIONS6.addOrDelOnZero(se68.modify(atompositions_trj_id,<span style="color: #333399; font-weight: bold">atompositions_t</span>,atompositions_x,atompositions_y,atompositions_z),(RDF_mATOMPOSITIONS4_L1_6.getValueOrDefault(se69.modify(atompositions_atom_id)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
+        RDF_mATOMPOSITIONS9.addOrDelOnZero(se70.modify(atompositions_trj_id,<span style="color: #333399; font-weight: bold">atompositions_t</span>,atompositions_x,atompositions_y,atompositions_z),(RDF_mATOMPOSITIONS4_L1_4.getValueOrDefault(se71.modify(atompositions_atom_id)) <span style="color: #333333">*</span> <span style="color: #333333">-</span><span style="color: #0000DD; font-weight: bold">1L</span>));
+      }
+      END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;delete_ATOMPOSITIONS&quot;</span>)
+      END_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;delete_ATOMPOSITIONS&quot;</span>)
+    }
+    <span style="color: #333399; font-weight: bold">void</span> unwrap_delete_ATOMPOSITIONS(<span style="color: #008800; font-weight: bold">const</span> <span style="color: #333399; font-weight: bold">event_args_t</span><span style="color: #333333">&amp;</span> ea) {
+      on_delete_ATOMPOSITIONS(<span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span><span style="color: #333399; font-weight: bold">long</span><span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">0</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span><span style="color: #333399; font-weight: bold">long</span><span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">1</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span><span style="color: #333399; font-weight: bold">long</span><span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">2</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span>DOUBLE_TYPE<span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">3</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span>DOUBLE_TYPE<span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">4</span>])), <span style="color: #333333">*</span>(<span style="color: #008800; font-weight: bold">reinterpret_cast</span><span style="color: #333333">&lt;</span>DOUBLE_TYPE<span style="color: #333333">*&gt;</span>(ea[<span style="color: #0000DD; font-weight: bold">5</span>])));
+    }
+    
+    <span style="color: #333399; font-weight: bold">void</span> on_system_ready_event() {
+      BEGIN_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
+      BEGIN_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
+      {  
+        RDF_mATOMPOSITIONS4_L1_4.clear();
+        STRING_TYPE l7 <span style="color: #333333">=</span> c1;
+        STRING_TYPE l8 <span style="color: #333333">=</span> c2;
+        { <span style="color: #888888">//slice</span>
+          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h9 <span style="color: #333333">=</span> ATOMMETA_mapkey35_idxfn<span style="color: #333333">::</span>hash(se73.modify35(l7, l8));
+          <span style="color: #008800; font-weight: bold">const</span> HashIndex_ATOMMETA_map_35<span style="color: #333333">*</span> i9 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_ATOMMETA_map_35<span style="color: #333333">*&gt;</span>(ATOMMETA.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
+          HashIndex_ATOMMETA_map_35<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n9 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i9<span style="color: #333333">-&gt;</span>buckets_[h9 <span style="color: #333333">%</span> i9<span style="color: #333333">-&gt;</span>size_]);
+          ATOMMETA_entry<span style="color: #333333">*</span> e9;
+          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e9<span style="color: #333333">=</span>n9<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h9 <span style="color: #333333">==</span> n9<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> ATOMMETA_mapkey35_idxfn<span style="color: #333333">::</span>equals(se73, <span style="color: #333333">*</span>e9)) {
+            <span style="color: #333399; font-weight: bold">long</span> m_protein_id <span style="color: #333333">=</span> e9<span style="color: #333333">-&gt;</span>ATOMMETA_PROTEIN_ID;
+            <span style="color: #333399; font-weight: bold">long</span> rdf_matompositionsatompositions_atom_id <span style="color: #333333">=</span> e9<span style="color: #333333">-&gt;</span>ATOMMETA_ATOM_ID;
+            STRING_TYPE m_atom_type <span style="color: #333333">=</span> e9<span style="color: #333333">-&gt;</span>ATOMMETA_ATOM_TYPE;
+            <span style="color: #333399; font-weight: bold">long</span> m_residue_id <span style="color: #333333">=</span> e9<span style="color: #333333">-&gt;</span>ATOMMETA_RESIDUE_ID;
+            STRING_TYPE m_segment_name <span style="color: #333333">=</span> e9<span style="color: #333333">-&gt;</span>ATOMMETA_SEGMENT_NAME;
+            <span style="color: #333399; font-weight: bold">long</span> v9 <span style="color: #333333">=</span> e9<span style="color: #333333">-&gt;</span>__av;
+            RDF_mATOMPOSITIONS4_L1_4.addOrDelOnZero(se72.modify(rdf_matompositionsatompositions_atom_id),v9);
+          } <span style="color: #008800; font-weight: bold">while</span> ((n9<span style="color: #333333">=</span>n9<span style="color: #333333">-&gt;</span>nxt));
+        }
+        RDF_mATOMPOSITIONS4_L1_6.clear();
+        STRING_TYPE l9 <span style="color: #333333">=</span> c3;
+        STRING_TYPE l10 <span style="color: #333333">=</span> c4;
+        { <span style="color: #888888">//slice</span>
+          <span style="color: #008800; font-weight: bold">const</span> HASH_RES_t h10 <span style="color: #333333">=</span> ATOMMETA_mapkey35_idxfn<span style="color: #333333">::</span>hash(se75.modify35(l9, l10));
+          <span style="color: #008800; font-weight: bold">const</span> HashIndex_ATOMMETA_map_35<span style="color: #333333">*</span> i10 <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">static_cast</span><span style="color: #333333">&lt;</span>HashIndex_ATOMMETA_map_35<span style="color: #333333">*&gt;</span>(ATOMMETA.index[<span style="color: #0000DD; font-weight: bold">1</span>]);
+          HashIndex_ATOMMETA_map_35<span style="color: #333333">::</span>IdxNode<span style="color: #333333">*</span> n10 <span style="color: #333333">=</span> <span style="color: #333333">&amp;</span>(i10<span style="color: #333333">-&gt;</span>buckets_[h10 <span style="color: #333333">%</span> i10<span style="color: #333333">-&gt;</span>size_]);
+          ATOMMETA_entry<span style="color: #333333">*</span> e10;
+          <span style="color: #008800; font-weight: bold">do</span> <span style="color: #0066BB; font-weight: bold">if</span> ((e10<span style="color: #333333">=</span>n10<span style="color: #333333">-&gt;</span>obj) <span style="color: #333333">&amp;&amp;</span> h10 <span style="color: #333333">==</span> n10<span style="color: #333333">-&gt;</span>hash <span style="color: #333333">&amp;&amp;</span> ATOMMETA_mapkey35_idxfn<span style="color: #333333">::</span>equals(se75, <span style="color: #333333">*</span>e10)) {
+            <span style="color: #333399; font-weight: bold">long</span> m2_protein_id <span style="color: #333333">=</span> e10<span style="color: #333333">-&gt;</span>ATOMMETA_PROTEIN_ID;
+            <span style="color: #333399; font-weight: bold">long</span> rdf_matompositionsatompositions_atom_id <span style="color: #333333">=</span> e10<span style="color: #333333">-&gt;</span>ATOMMETA_ATOM_ID;
+            STRING_TYPE m2_atom_type <span style="color: #333333">=</span> e10<span style="color: #333333">-&gt;</span>ATOMMETA_ATOM_TYPE;
+            <span style="color: #333399; font-weight: bold">long</span> m2_residue_id <span style="color: #333333">=</span> e10<span style="color: #333333">-&gt;</span>ATOMMETA_RESIDUE_ID;
+            STRING_TYPE m2_segment_name <span style="color: #333333">=</span> e10<span style="color: #333333">-&gt;</span>ATOMMETA_SEGMENT_NAME;
+            <span style="color: #333399; font-weight: bold">long</span> v10 <span style="color: #333333">=</span> e10<span style="color: #333333">-&gt;</span>__av;
+            RDF_mATOMPOSITIONS4_L1_6.addOrDelOnZero(se74.modify(rdf_matompositionsatompositions_atom_id),v10);
+          } <span style="color: #008800; font-weight: bold">while</span> ((n10<span style="color: #333333">=</span>n10<span style="color: #333333">-&gt;</span>nxt));
+        }
+      }
+      END_TRIGGER(exec_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
+      END_TRIGGER(ivc_stats,<span style="background-color: #fff0f0">&quot;system_ready_event&quot;</span>)
+    }
+  
+  <span style="color: #997700; font-weight: bold">private:</span>
+  
+    <span style="color: #888888">/* Sample entries for avoiding recreation of temporary objects */</span>
+    RDF_entry se1;
+    RDF_mATOMPOSITIONS1_L1_2_entry se2;
+    RDF_mATOMPOSITIONS4_L1_6_entry se3;
+    RDF_mATOMPOSITIONS1_L1_1_entry se4;
+    RDF_mATOMPOSITIONS4_L1_4_entry se5;
+    RDF_mATOMPOSITIONS4_L1_4_entry se6;
+    RDF_mATOMPOSITIONS6_entry se7;
+    RDF_mATOMPOSITIONS4_L1_6_entry se8;
+    RDF_mATOMPOSITIONS2_entry se9;
+    RDF_mATOMPOSITIONS4_L1_6_entry se10;
+    RDF_mATOMPOSITIONS9_entry se11;
+    RDF_mATOMPOSITIONS1_L1_2_entry se12;
+    RDF_mATOMPOSITIONS1_L1_1_entry se13;
+    RDF_mATOMPOSITIONS2_entry se14;
+    RDF_mATOMPOSITIONS1_L1_1_entry se15;
+    RDF_mATOMPOSITIONS4_L1_4_entry se16;
+    RDF_mATOMPOSITIONS1_L1_2_entry se17;
+    RDF_mATOMPOSITIONS4_L1_6_entry se18;
+    RDF_mATOMPOSITIONS2_entry se19;
+    RDF_mATOMPOSITIONS4_L1_4_entry se20;
+    RDF_mATOMPOSITIONS6_entry se21;
+    RDF_mATOMPOSITIONS4_L1_6_entry se22;
+    RDF_mATOMPOSITIONS9_entry se23;
+    RDF_mATOMPOSITIONS4_L1_6_entry se24;
+    RDF_mATOMPOSITIONS6_entry se25;
+    RDF_mATOMPOSITIONS4_L1_6_entry se26;
+    RDF_mATOMPOSITIONS9_entry se27;
+    RDF_mATOMPOSITIONS4_L1_4_entry se28;
+    RDF_entry se29;
+    RDF_mATOMPOSITIONS1_L1_1_entry se30;
+    RDF_mATOMPOSITIONS1_L1_2_entry se31;
+    RDF_mATOMPOSITIONS4_L1_6_entry se32;
+    RDF_mATOMPOSITIONS4_L1_4_entry se33;
+    RDF_mATOMPOSITIONS1_L1_2_entry se34;
+    RDF_mATOMPOSITIONS4_L1_6_entry se35;
+    RDF_mATOMPOSITIONS4_L1_4_entry se36;
+    RDF_mATOMPOSITIONS6_entry se37;
+    RDF_mATOMPOSITIONS9_entry se38;
+    RDF_mATOMPOSITIONS4_L1_6_entry se39;
+    RDF_mATOMPOSITIONS1_L1_1_entry se40;
+    RDF_mATOMPOSITIONS1_L1_2_entry se41;
+    RDF_mATOMPOSITIONS2_entry se42;
+    RDF_mATOMPOSITIONS1_L1_1_entry se43;
+    RDF_mATOMPOSITIONS1_L1_2_entry se44;
+    RDF_mATOMPOSITIONS4_L1_6_entry se45;
+    RDF_mATOMPOSITIONS4_L1_4_entry se46;
+    RDF_mATOMPOSITIONS1_L1_2_entry se47;
+    RDF_mATOMPOSITIONS4_L1_6_entry se48;
+    RDF_mATOMPOSITIONS4_L1_4_entry se49;
+    RDF_mATOMPOSITIONS4_L1_6_entry se50;
+    RDF_mATOMPOSITIONS1_L1_2_entry se51;
+    RDF_mATOMPOSITIONS1_L1_1_entry se52;
+    RDF_mATOMPOSITIONS4_L1_4_entry se53;
+    RDF_mATOMPOSITIONS4_L1_6_entry se54;
+    RDF_mATOMPOSITIONS1_L1_1_entry se55;
+    RDF_mATOMPOSITIONS4_L1_4_entry se56;
+    RDF_mATOMPOSITIONS2_entry se57;
+    RDF_mATOMPOSITIONS1_L1_1_entry se58;
+    RDF_mATOMPOSITIONS4_L1_4_entry se59;
+    RDF_mATOMPOSITIONS1_L1_2_entry se60;
+    RDF_mATOMPOSITIONS4_L1_6_entry se61;
+    RDF_mATOMPOSITIONS2_entry se62;
+    RDF_mATOMPOSITIONS4_L1_4_entry se63;
+    RDF_mATOMPOSITIONS6_entry se64;
+    RDF_mATOMPOSITIONS4_L1_6_entry se65;
+    RDF_mATOMPOSITIONS4_L1_6_entry se66;
+    RDF_mATOMPOSITIONS9_entry se67;
+    RDF_mATOMPOSITIONS6_entry se68;
+    RDF_mATOMPOSITIONS4_L1_6_entry se69;
+    RDF_mATOMPOSITIONS9_entry se70;
+    RDF_mATOMPOSITIONS4_L1_4_entry se71;
+    RDF_mATOMPOSITIONS4_L1_4_entry se72;
+    ATOMMETA_entry se73;
+    RDF_mATOMPOSITIONS4_L1_6_entry se74;
+    ATOMMETA_entry se75;
+  
+    <span style="color: #888888">/* Data structures used for storing materialized views */</span>
+    ATOMMETA_map ATOMMETA;
+    RDF_mATOMPOSITIONS1_L1_1_map RDF_mATOMPOSITIONS1_L1_1;
+    RDF_mATOMPOSITIONS1_L1_2_map RDF_mATOMPOSITIONS1_L1_2;
+    RDF_mATOMPOSITIONS2_map RDF_mATOMPOSITIONS2;
+    RDF_mATOMPOSITIONS4_L1_4_map RDF_mATOMPOSITIONS4_L1_4;
+    RDF_mATOMPOSITIONS4_L1_6_map RDF_mATOMPOSITIONS4_L1_6;
+    RDF_mATOMPOSITIONS6_map RDF_mATOMPOSITIONS6;
+    RDF_mATOMPOSITIONS9_map RDF_mATOMPOSITIONS9;
+    
+    <span style="color: #888888">/*const static*/</span> STRING_TYPE c4;
+    <span style="color: #888888">/*const static*/</span> STRING_TYPE c3;
+    <span style="color: #888888">/*const static*/</span> STRING_TYPE c2;
+    <span style="color: #888888">/*const static*/</span> STRING_TYPE c1;
+  
+  };
+  
+  <span style="color: #888888">/* Type definition providing a way to execute the sql program */</span>
+  <span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Program</span> <span style="color: #333333">:</span> <span style="color: #008800; font-weight: bold">public</span> ProgramBase
+  {
+    <span style="color: #997700; font-weight: bold">public:</span>
+      Program(<span style="color: #333399; font-weight: bold">int</span> argc <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>, <span style="color: #333399; font-weight: bold">char</span><span style="color: #333333">*</span> argv[] <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>) <span style="color: #333333">:</span> ProgramBase(argc,argv) {
+        data.register_data(<span style="color: #333333">*</span><span style="color: #008800; font-weight: bold">this</span>);
+        
+        <span style="color: #888888">/* Specifying data sources */</span>
+        
+        pair<span style="color: #333333">&lt;</span>string,string<span style="color: #333333">&gt;</span> source1_adaptor_params[] <span style="color: #333333">=</span> { make_pair(<span style="background-color: #fff0f0">&quot;schema&quot;</span>,<span style="background-color: #fff0f0">&quot;long,long,string,string,long,string,string&quot;</span>) };
+        std<span style="color: #333333">::</span>shared_ptr<span style="color: #333333">&lt;</span>csv_adaptor<span style="color: #333333">&gt;</span> source1_adaptor(<span style="color: #008800; font-weight: bold">new</span> csv_adaptor(get_relation_id(<span style="background-color: #fff0f0">&quot;ATOMMETA&quot;</span>),<span style="color: #0000DD; font-weight: bold">1</span>,source1_adaptor_params));
+        frame_descriptor <span style="color: #0066BB; font-weight: bold">source1_fd</span>(<span style="background-color: #fff0f0">&quot;</span><span style="color: #666666; font-weight: bold; background-color: #fff0f0">\n</span><span style="background-color: #fff0f0">&quot;</span>);
+        std<span style="color: #333333">::</span>shared_ptr<span style="color: #333333">&lt;</span>dbt_file_source<span style="color: #333333">&gt;</span> source1_file(<span style="color: #008800; font-weight: bold">new</span> dbt_file_source(<span style="background-color: #fff0f0">&quot;/Users/dashti/Documents/MyWorkspaces/DATASRC/dbtoaster/experiments/data/mddb/standard/atommeta.csv&quot;</span>,source1_fd,source1_adaptor));
+        add_source(source1_file, <span style="color: #007020">true</span>);
+        
+        pair<span style="color: #333333">&lt;</span>string,string<span style="color: #333333">&gt;</span> source2_adaptor_params[] <span style="color: #333333">=</span> { make_pair(<span style="background-color: #fff0f0">&quot;schema&quot;</span>,<span style="background-color: #fff0f0">&quot;long,long,long,double,double,double&quot;</span>) };
+        std<span style="color: #333333">::</span>shared_ptr<span style="color: #333333">&lt;</span>csv_adaptor<span style="color: #333333">&gt;</span> source2_adaptor(<span style="color: #008800; font-weight: bold">new</span> csv_adaptor(get_relation_id(<span style="background-color: #fff0f0">&quot;ATOMPOSITIONS&quot;</span>),<span style="color: #0000DD; font-weight: bold">1</span>,source2_adaptor_params));
+        frame_descriptor <span style="color: #0066BB; font-weight: bold">source2_fd</span>(<span style="background-color: #fff0f0">&quot;</span><span style="color: #666666; font-weight: bold; background-color: #fff0f0">\n</span><span style="background-color: #fff0f0">&quot;</span>);
+        std<span style="color: #333333">::</span>shared_ptr<span style="color: #333333">&lt;</span>dbt_file_source<span style="color: #333333">&gt;</span> source2_file(<span style="color: #008800; font-weight: bold">new</span> dbt_file_source(<span style="background-color: #fff0f0">&quot;/Users/dashti/Documents/MyWorkspaces/DATASRC/dbtoaster/experiments/data/mddb/standard/atompositions.csv&quot;</span>,source2_fd,source2_adaptor));
+        add_source(source2_file);
+  
+      }
+  
+      <span style="color: #888888">/* Imports data for static tables and performs view initialization based on it. */</span>
+      <span style="color: #333399; font-weight: bold">void</span> init() {
+          <span style="color: #888888">//P0_PLACE_HOLDER</span>
+          table_multiplexer.init_source(run_opts<span style="color: #333333">-&gt;</span>batch_size, run_opts<span style="color: #333333">-&gt;</span>parallel, <span style="color: #007020">true</span>);
+          stream_multiplexer.init_source(run_opts<span style="color: #333333">-&gt;</span>batch_size, run_opts<span style="color: #333333">-&gt;</span>parallel, <span style="color: #007020">false</span>);
+          process_tables();
+          data.on_system_ready_event();
+          <span style="color: #888888">//P2_PLACE_HOLDER</span>
+      }
+  
+      <span style="color: #888888">/* Saves a snapshot of the data required to obtain the results of top level queries. */</span>
+      <span style="color: #333399; font-weight: bold">snapshot_t</span> take_snapshot(){
+          <span style="color: #333399; font-weight: bold">tlq_t</span><span style="color: #333333">*</span> d <span style="color: #333333">=</span> <span style="color: #008800; font-weight: bold">new</span> <span style="color: #333399; font-weight: bold">tlq_t</span>((<span style="color: #333399; font-weight: bold">tlq_t</span><span style="color: #333333">&amp;</span>)data);
+          <span style="color: #008800; font-weight: bold">if</span> (d<span style="color: #333333">-&gt;</span>tS<span style="color: #333333">==</span><span style="color: #0000DD; font-weight: bold">0</span>) { gettimeofday(<span style="color: #333333">&amp;</span>(d<span style="color: #333333">-&gt;</span>t),<span style="color: #007020">NULL</span>); d<span style="color: #333333">-&gt;</span>tT<span style="color: #333333">=</span>((d<span style="color: #333333">-&gt;</span>t).tv_sec<span style="color: #333333">-</span>(d<span style="color: #333333">-&gt;</span>t0).tv_sec)<span style="color: #333333">*</span><span style="color: #0000DD; font-weight: bold">1000000L</span><span style="color: #333333">+</span>((d<span style="color: #333333">-&gt;</span>t).tv_usec<span style="color: #333333">-</span>(d<span style="color: #333333">-&gt;</span>t0).tv_usec); } printf(<span style="background-color: #fff0f0">&quot;SAMPLE=standard,%ld,%ld,%ld</span><span style="color: #666666; font-weight: bold; background-color: #fff0f0">\n</span><span style="background-color: #fff0f0">&quot;</span>,d<span style="color: #333333">-&gt;</span>tT,d<span style="color: #333333">-&gt;</span>tN,d<span style="color: #333333">-&gt;</span>tS);
+          <span style="color: #008800; font-weight: bold">return</span> <span style="color: #0066BB; font-weight: bold">snapshot_t</span>( d );
+      }
+  
+    <span style="color: #997700; font-weight: bold">protected:</span>
+      <span style="color: #333399; font-weight: bold">data_t</span> data;
+  };
+  <span style="color: #008800; font-weight: bold">class</span> <span style="color: #BB0066; font-weight: bold">Mddb1</span> <span style="color: #333333">:</span> <span style="color: #008800; font-weight: bold">public</span> Program
+  {
+    <span style="color: #997700; font-weight: bold">public:</span>
+      Mddb1(<span style="color: #333399; font-weight: bold">int</span> argc <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>, <span style="color: #333399; font-weight: bold">char</span><span style="color: #333333">*</span> argv[] <span style="color: #333333">=</span> <span style="color: #0000DD; font-weight: bold">0</span>) <span style="color: #333333">:</span> Program(argc,argv) {
+      }
+  };
+
+}
+</pre></td></tr></table></div>
