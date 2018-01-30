@@ -1,4 +1,4 @@
--- How many employees who are joined in 1985.
+-- How many employees joined each month in 1985.
 
 CREATE STREAM EMPLOYEE(
     employee_id     INT, 
@@ -15,7 +15,7 @@ CREATE STREAM EMPLOYEE(
   FROM FILE '../../experiments/data/employee/employee.dat' LINE DELIMITED
   CSV ();
 
-SELECT DATE_PART('year', hire_date), count(*) 
+SELECT DATE_PART('year', hire_date) AS hire_year, DATE_PART('month', hire_date) AS hire_month, count(*) AS no_of_employees
 FROM employee 
-GROUP BY DATE_PART('year', hire_date) 
-HAVING DATE_PART('year', hire_date) = 1985
+WHERE DATE_PART('year', hire_date) = 1985 
+GROUP BY hire_year, hire_month

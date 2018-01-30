@@ -1,4 +1,4 @@
--- How many employees who are joined in 1985.
+-- List out the no.of employees joined in every month in ascending order.
 
 CREATE STREAM EMPLOYEE(
     employee_id     INT, 
@@ -15,7 +15,6 @@ CREATE STREAM EMPLOYEE(
   FROM FILE '../../experiments/data/employee/employee.dat' LINE DELIMITED
   CSV ();
 
-SELECT DATE_PART('year', hire_date), count(*) 
+SELECT DATE_PART('month', hire_date) AS hire_month, count(*) 
 FROM employee 
-GROUP BY DATE_PART('year', hire_date) 
-HAVING DATE_PART('year', hire_date) = 1985
+GROUP BY hire_month

@@ -23,7 +23,7 @@ CREATE STREAM JOB(
   CSV ();
 
 SELECT * 
-FROM employee 
-WHERE job_id IN (SELECT job_id 
-                 FROM job 
-                 WHERE job_function='CLERK')
+FROM employee E
+WHERE E.job_id IN (SELECT J.job_id 
+                   FROM job J
+                   WHERE J.job_function = 'CLERK')

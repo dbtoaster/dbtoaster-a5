@@ -17,6 +17,6 @@ CREATE STREAM EMPLOYEE(
 
 SELECT department_id, count(*) AS no_of_employees
 FROM employee 
-WHERE year(hire_date)=1985 month(hire_date)=4 
-GROUP BY year(hire_date), month(hire_date), department_id 
-HAVING count(*)>=3
+WHERE DATE_PART('year', hire_date) = 1985 AND DATE_PART('month', hire_date) = 4 
+GROUP BY DATE_PART('year', hire_date), DATE_PART('month', hire_date), department_id 
+HAVING count(*) >= 3

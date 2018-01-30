@@ -24,8 +24,8 @@ CREATE STREAM DEPARTMENT(
   CSV ();
 
 SELECT * 
-FROM employee 
-WHERE department_id IN (
-    SELECT department_id 
-    FROM department 
-    WHERE name='SALES')
+FROM employee E
+WHERE E.department_id IN (
+    SELECT D.department_id 
+    FROM department D
+    WHERE D.name = 'SALES')

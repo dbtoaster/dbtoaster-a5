@@ -24,8 +24,8 @@ CREATE STREAM JOB(
 
 
 SELECT * 
-FROM (SELECT DISTINCT job_id 
-      FROM job 
-      WHERE job_function='CLERK') j 
+FROM (SELECT DISTINCT J.job_id 
+      FROM job J
+      WHERE J.job_function = 'CLERK') j 
 JOIN employee e 
 ON j.job_id = e.job_id 

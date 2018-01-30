@@ -15,7 +15,7 @@ CREATE STREAM EMPLOYEE(
   FROM FILE '../../experiments/data/employee/employee.dat' LINE DELIMITED
   CSV ();
 
-SELECT month(hire_date), count(*) 
+SELECT DATE_PART('month', hire_date), count(*) 
 FROM employee 
-GROUP BY month(hire_date) 
+GROUP BY DATE_PART('month', hire_date)
 ORDER BY month

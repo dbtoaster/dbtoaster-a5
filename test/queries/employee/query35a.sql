@@ -24,8 +24,8 @@ CREATE STREAM DEPARTMENT(
   CSV ();
 
 SELECT * 
-FROM (SELECT DISTINCT department_id 
-      FROM department 
-      WHERE name='SALES') d 
+FROM (SELECT DISTINCT D.department_id 
+      FROM department D
+      WHERE D.name = 'SALES') d 
 JOIN employee e 
 ON d.department_id = e.department_id 
