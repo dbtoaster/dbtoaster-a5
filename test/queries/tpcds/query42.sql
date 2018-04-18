@@ -4,7 +4,7 @@
 --   ORDER BY (ignored)
 --   LIMIT    (ignored)
 
-INCLUDE '../alpha5/test/queries/tpcds/schemas.sql';
+INCLUDE './test/queries/tpcds/schemas.sql';
 
 SELECT dt.d_year, item.i_category_id, item.i_category, sum(ss_ext_sales_price)
 FROM date_dim AS dt, store_sales, item

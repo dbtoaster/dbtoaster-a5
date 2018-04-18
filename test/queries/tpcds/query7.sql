@@ -4,7 +4,7 @@
 --   ORDER BY (ignored)
 --   LIMIT    (ignored)
 
-INCLUDE '../alpha5/test/queries/tpcds/schemas.sql';
+INCLUDE './test/queries/tpcds/schemas.sql';
 
 SELECT i_item_id, 
        avg(ss_quantity) AS agg1, 

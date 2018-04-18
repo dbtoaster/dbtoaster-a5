@@ -4,7 +4,7 @@
 --   ORDER BY (ignored)
 --   LIMIT    (ignored)
 
-INCLUDE '../alpha5/test/queries/tpcds/schemas.sql';
+INCLUDE './test/queries/tpcds/schemas.sql';
 
 SELECT i_brand_id AS brand_id, i_brand AS brand, 
        sum(ss_ext_sales_price) AS ext_price

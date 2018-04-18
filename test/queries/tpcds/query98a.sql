@@ -4,7 +4,7 @@
 --   ORDER BY (ignored)
 --   LIMIT    (ignored)
 
-INCLUDE '../alpha5/test/queries/tpcds/schemas.sql';
+INCLUDE './test/queries/tpcds/schemas.sql';
 
 SELECT i_item_desc, i_category, i_class, i_current_price, 
        sum(ss_ext_sales_price) AS itemrevenue 

@@ -3,7 +3,7 @@
 --   ORDER BY (ignored)
 --   LIMIT    (ignored)
 
-INCLUDE '../alpha5/test/queries/tpch/schemas.sql';
+INCLUDE './test/queries/tpch/schemas.sql';
 
 SELECT returnflag, linestatus, 
   SUM(quantity) AS sum_qty,

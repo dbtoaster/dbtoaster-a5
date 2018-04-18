@@ -5,7 +5,7 @@
 --   LIMIT    (ignored)
 --   LIST VALUES (inlined)
 
-INCLUDE '../alpha5/test/queries/tpcds/schemas.sql';
+INCLUDE './test/queries/tpcds/schemas.sql';
 
 SELECT c_last_name, c_first_name, c_salutation, c_preferred_cust_flag, ss_ticket_number, cnt
 FROM (

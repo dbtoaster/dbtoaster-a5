@@ -1,4 +1,4 @@
-INCLUDE '../alpha5/test/queries/tpch/schemas.sql';
+INCLUDE './test/queries/tpch/schemas.sql';
 
  SELECT sn.regionkey, 
         cn.regionkey,

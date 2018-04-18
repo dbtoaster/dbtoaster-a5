@@ -4,7 +4,7 @@
 --   ORDER BY (ignored)
 --   LIMIT    (ignored)
 
-INCLUDE '../alpha5/test/queries/tpcds/schemas.sql';
+INCLUDE './test/queries/tpcds/schemas.sql';
 
 SELECT s_store_name, s_store_id,
        sum(case when (d_day_name='Sunday') then ss_sales_price else 0 end) AS sun_sales,

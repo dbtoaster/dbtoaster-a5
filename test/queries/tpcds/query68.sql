@@ -5,7 +5,7 @@
 --   LIMIT    (ignored)
 --   LIST VALUES (inlined)
 
-INCLUDE '../alpha5/test/queries/tpcds/schemas.sql';
+INCLUDE './test/queries/tpcds/schemas.sql';
 
 SELECT c_last_name, c_first_name, current_addr.ca_city, bought_city, ss_ticket_number, extended_price, extended_tax, list_price
 FROM (

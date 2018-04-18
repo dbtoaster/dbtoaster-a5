@@ -7,7 +7,7 @@
 --   LIMIT    (ignored)
 --   LIST VALUES (inlined)
 
-INCLUDE '../alpha5/test/queries/tpcds/schemas.sql';
+INCLUDE './test/queries/tpcds/schemas.sql';
 
 SELECT *
 FROM (
