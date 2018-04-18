@@ -94,7 +94,7 @@ let string_of_type (ty: type_t): string =
    begin match ty with
       | TAny             -> "?"
       | TBool            -> "bool"
-      | TInt             -> "int"
+      | TInt             -> "long"
       | TFloat           -> "float"
       | TString          -> "string"
       | TDate            -> "date"
