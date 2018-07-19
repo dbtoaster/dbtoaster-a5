@@ -61,7 +61,7 @@ let max_of_list (arglist:const_t list) (ftype:type_t) =
 let date_part (arglist:const_t list) (ftype:type_t) =
    match arglist with
       | [CString(part);  CDate(y,m,d)] -> 
-         begin match String.uppercase part with
+         begin match String.uppercase_ascii part with
             | "YEAR"  -> CInt(y)
             | "MONTH" -> CInt(m)
             | "DAY"   -> CInt(d)

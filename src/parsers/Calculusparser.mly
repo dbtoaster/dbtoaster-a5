@@ -60,9 +60,9 @@ statement:
 
 relStatement:
 | CREATE tableOrStream ID LPAREN emptyFieldList RPAREN
-   { (String.uppercase $3, $5, $2, Schema.NoSource, ("",[])) }
+   { (String.uppercase_ascii $3, $5, $2, Schema.NoSource, ("",[])) }
 | CREATE tableOrStream ID LPAREN emptyFieldList RPAREN FROM sourceStmt
-   { (String.uppercase $3, $5, $2, fst $8, snd $8) }
+   { (String.uppercase_ascii $3, $5, $2, fst $8, snd $8) }
 
 tableOrStream:
 | TABLE  { Schema.TableRel  }
@@ -93,13 +93,13 @@ framingStmt:
 |   STRING DELIMITED                { Schema.Delimited($1) }
 
 adaptorStmt:
-|   ID LPAREN RPAREN               { (String.lowercase $1, []) }
-|   ID LPAREN adaptorParams RPAREN { (String.lowercase $1, $3) }
-|   ID                             { (String.lowercase $1, []) }
+|   ID LPAREN RPAREN               { (String.lowercase_ascii $1, []) }
+|   ID LPAREN adaptorParams RPAREN { (String.lowercase_ascii $1, $3) }
+|   ID                             { (String.lowercase_ascii $1, []) }
 
 adaptorParams:
-|   ID SETVALUE STRING                     { [(String.lowercase $1,$3)] }
-|   ID SETVALUE STRING COMMA adaptorParams { (String.lowercase $1,$3)::$5 }
+|   ID SETVALUE STRING                     { [(String.lowercase_ascii $1,$3)] }
+|   ID SETVALUE STRING COMMA adaptorParams { (String.lowercase_ascii $1,$3)::$5 }
 
 dbtType:
 | TYPE                      { $1 }

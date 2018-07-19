@@ -72,9 +72,9 @@ let declare_std_function (name:string)
                          (fn:const_t list -> type_t -> const_t)
                          (typing_rule:type_t list -> type_t): unit =
    standard_functions := 
-      StringMap.add (String.uppercase name) fn !standard_functions;
+      StringMap.add (String.uppercase_ascii name) fn !standard_functions;
    function_definitions := 
-      StringMap.add (String.uppercase name) (
+      StringMap.add (String.uppercase_ascii name) (
          (fun (tl:type_t list) -> {
             ret_type = typing_rule tl;
             implementation = name
@@ -87,7 +87,7 @@ let declare_std_function (name:string)
 *)
 let declare_usr_function (name:string) (arg_types:type_t list) 
                          (ret_type:type_t) (implementation:string): unit =
-   let upper_name = String.uppercase name in
+   let upper_name = String.uppercase_ascii name in
    standard_functions := 
       StringMap.remove upper_name !standard_functions;
    function_definitions := StringMap.add upper_name (
@@ -122,16 +122,16 @@ let invalid_args (fn:string) (arglist:const_t list) (ftype:type_t): const_t =
    Invoke an arithmetic function
 *)
 let invoke (fn:string) (arglist:const_t list) (ftype:type_t) =
-   if not (function_is_defined (String.uppercase fn)) then
+   if not (function_is_defined (String.uppercase_ascii fn)) then
       raise (InvalidInvocation("Undefined function: "^fn))
    else
-      (StringMap.find (String.uppercase fn) !standard_functions) arglist ftype
+      (StringMap.find (String.uppercase_ascii fn) !standard_functions) arglist ftype
 
 (**
    Find a function declaration
 *)
 let declaration (fn:string) (argtypes:type_t list):decl_t =
-   (StringMap.find (String.uppercase fn) !function_definitions) argtypes
+   (StringMap.find (String.uppercase_ascii fn) !function_definitions) argtypes
 
 (**
    Compute the type of a function

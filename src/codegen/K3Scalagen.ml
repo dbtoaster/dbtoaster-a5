@@ -740,7 +740,7 @@ struct
          "{ val " ^ (string_of_argn ~prefix:"_" argsn) ^ str_type ^ " = " ^ 
          arg ^ ";" ^ (implicit_conversions argsn argt argst) ^ fn ^ "}"
       | ExtFn(n, a, _) -> 
-         let lower_n = String.lowercase n in
+         let lower_n = String.lowercase_ascii n in
          let n_a = List.length (flatten_tuple a) in
          if n_a = 1 then
             "(" ^ lower_n ^ "(" ^ arg ^ "))" 

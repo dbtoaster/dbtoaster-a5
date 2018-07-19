@@ -8,7 +8,7 @@ dependencies:
 runtimelibs: 
 	@make -C dbt_ocaml
 	#@make -C dbt_c++
-	@make -C dbt_scala 
+	#@make -C dbt_scala 
 	
 clean:
 	make -C dbt_ocaml clean

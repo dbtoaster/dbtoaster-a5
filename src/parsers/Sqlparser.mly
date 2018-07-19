@@ -167,13 +167,13 @@ framingStmt:
 
 
 adaptorParams:
-|   ID SETVALUE STRING                     { [(String.lowercase $1,$3)] }
-|   ID SETVALUE STRING COMMA adaptorParams { (String.lowercase $1,$3)::$5 }
+|   ID SETVALUE STRING                     { [(String.lowercase_ascii $1,$3)] }
+|   ID SETVALUE STRING COMMA adaptorParams { (String.lowercase_ascii $1,$3)::$5 }
 
 adaptorStmt:
-|   ID LPAREN RPAREN               { (String.lowercase $1, []) }
-|   ID LPAREN adaptorParams RPAREN { (String.lowercase $1, $3) }
-|   ID                             { (String.lowercase $1, []) }
+|   ID LPAREN RPAREN               { (String.lowercase_ascii $1, []) }
+|   ID LPAREN adaptorParams RPAREN { (String.lowercase_ascii $1, $3) }
+|   ID                             { (String.lowercase_ascii $1, []) }
 | error {
       bail "Not a valid adaptor declaration"
    }
@@ -206,8 +206,8 @@ typeDefn:
    } 
 
 fieldList:
-| ID typeDefn                    { [None, String.uppercase $1, $2] }
-| ID typeDefn COMMA fieldList    { (None, String.uppercase $1, $2)::$4 }
+| ID typeDefn                    { [None, String.uppercase_ascii $1, $2] }
+| ID typeDefn COMMA fieldList    { (None, String.uppercase_ascii $1, $2)::$4 }
 
 tableOrStream:
 | TABLE               { Schema.TableRel }
@@ -215,10 +215,10 @@ tableOrStream:
 
 createTableStmt:
 |   CREATE tableOrStream ID LPAREN fieldList RPAREN { 
-      mk_tbl (String.uppercase $3, $5, $2, (Schema.NoSource, ("",[])))
+      mk_tbl (String.uppercase_ascii $3, $5, $2, (Schema.NoSource, ("",[])))
     }
 |   CREATE tableOrStream ID LPAREN fieldList RPAREN FROM sourceStmt { 
-      mk_tbl (String.uppercase $3, $5, $2, $8)
+      mk_tbl (String.uppercase_ascii $3, $5, $2, $8)
     }
 | error {
       bail "Invalid CREATE TABLE statement"
@@ -229,8 +229,8 @@ createTableStmt:
 // Select statements
 
 targetItem:
-| expression       { (String.uppercase (Sql.name_of_expr $1), $1) }
-| expression AS ID { (String.uppercase $3, $1) }
+| expression       { (String.uppercase_ascii (Sql.name_of_expr $1), $1) }
+| expression AS ID { (String.uppercase_ascii $3, $1) }
 | error {
       bail "Invalid output column declaration"
    }
@@ -243,18 +243,18 @@ targetList:
    }
 
 fromItem: // ((source, name), schema)
-| ID        { ((String.uppercase $1, (Sql.Table(String.uppercase $1))), 
-               get_schema (String.uppercase $1) (String.uppercase $1)) }
-| ID ID     { ((String.uppercase $2, (Sql.Table(String.uppercase $1))), 
-               get_schema (String.uppercase $1) (String.uppercase $2)) }
-| ID AS ID  { ((String.uppercase $3, (Sql.Table(String.uppercase $1))), 
-               get_schema (String.uppercase $1) (String.uppercase $3)) }
+| ID        { ((String.uppercase_ascii $1, (Sql.Table(String.uppercase_ascii $1))), 
+               get_schema (String.uppercase_ascii $1) (String.uppercase_ascii $1)) }
+| ID ID     { ((String.uppercase_ascii $2, (Sql.Table(String.uppercase_ascii $1))), 
+               get_schema (String.uppercase_ascii $1) (String.uppercase_ascii $2)) }
+| ID AS ID  { ((String.uppercase_ascii $3, (Sql.Table(String.uppercase_ascii $1))), 
+               get_schema (String.uppercase_ascii $1) (String.uppercase_ascii $3)) }
 | LPAREN selectStmt RPAREN ID
-            { ((String.uppercase $4, (Sql.SubQ($2))), 
-               select_schema (String.uppercase $4) $2) }
+            { ((String.uppercase_ascii $4, (Sql.SubQ($2))), 
+               select_schema (String.uppercase_ascii $4) $2) }
 | LPAREN selectStmt RPAREN AS ID
-            { ((String.uppercase $5, (Sql.SubQ($2))), 
-               select_schema (String.uppercase $5) $2) }
+            { ((String.uppercase_ascii $5, (Sql.SubQ($2))), 
+               select_schema (String.uppercase_ascii $5) $2) }
 | error {
       bail "Invalid source declaration in a FROM clause"
    }
@@ -353,8 +353,8 @@ optionalDistinct:
 // Expressions
 
 variable:
-| ID              { (None, String.uppercase $1, TAny) }
-| ID PERIOD ID    { ((Some(String.uppercase $1)),String.uppercase $3, TAny) }
+| ID              { (None, String.uppercase_ascii $1, TAny) }
+| ID PERIOD ID    { ((Some(String.uppercase_ascii $1)),String.uppercase_ascii $3, TAny) }
 
 variableList:
 | variable COMMA variableList  { $1 :: $3 }
@@ -370,11 +370,11 @@ op:
 expression:
 | LPAREN expression RPAREN { $2 }
 | constant                 { Sql.Const($1) }
-| ID           { Sql.Var(None, String.uppercase $1, TAny) }
-| ID PERIOD ID { Sql.Var(Some(String.uppercase $1), String.uppercase $3, TAny) }
+| ID           { Sql.Var(None, String.uppercase_ascii $1, TAny) }
+| ID PERIOD ID { Sql.Var(Some(String.uppercase_ascii $1), String.uppercase_ascii $3, TAny) }
 | PRODUCT      { Sql.Var(None, "*", TAny) }
 | PRODUCT PERIOD PRODUCT { Sql.Var(None, "*", TAny) }
-| ID PERIOD PRODUCT      { Sql.Var(Some(String.uppercase $1), "*", TAny) }
+| ID PERIOD PRODUCT      { Sql.Var(Some(String.uppercase_ascii $1), "*", TAny) }
 | expression op expression      { Sql.SQLArith($1, $2, $3) }
 | MINUS expression %prec UMINUS { Sql.Negation($2) }
 | LPAREN selectStmt RPAREN      { Sql.NestedQ($2) }
@@ -387,7 +387,7 @@ expression:
 | ID LPAREN  RPAREN                   { Sql.ExternalFn($1,[]) }
 | ID LPAREN functionParameters RPAREN { Sql.ExternalFn($1,$3) }
 | EXTRACT LPAREN ID FROM variable RPAREN {
-      let field = String.uppercase $3 in
+      let field = String.uppercase_ascii $3 in
       match field with
          | "YEAR" | "MONTH" | "DAY" -> 
             Sql.ExternalFn("date_part", [Sql.Const(CString(field)); 
@@ -482,8 +482,8 @@ constant:
 | STRING                        { CString($1) }
 | DATE LPAREN STRING RPAREN     { Constants.parse_date $3 }
 | INTERVAL STRING ID { 
-      Constants.parse_interval (String.uppercase $3) $2 None
+      Constants.parse_interval (String.uppercase_ascii $3) $2 None
    }
 | INTERVAL STRING ID LPAREN INT RPAREN { 
-      Constants.parse_interval (String.uppercase $3) $2 (Some($5))
+      Constants.parse_interval (String.uppercase_ascii $3) $2 (Some($5))
    }

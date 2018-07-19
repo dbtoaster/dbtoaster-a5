@@ -126,7 +126,7 @@ rule tokenize = parse
                 }
 | identifier    { 
                   let keyword_str = lexeme lexbuf in
-                  let keyword_str_uc = String.uppercase keyword_str in
+                  let keyword_str_uc = String.uppercase_ascii keyword_str in
                       try Hashtbl.find keyword_table keyword_str_uc
                       with Not_found -> ID(keyword_str)
                 }

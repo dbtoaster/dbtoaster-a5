@@ -1785,7 +1785,7 @@ end (* Typing *)
             failwith "invalid external function application"
             
         else 
-        let id = String.lowercase inline_id in
+        let id = String.lowercase_ascii inline_id in
         begin match id with
             | "/" ->
               let arg = ssc (source_code_of_expr (List.hd nargs)) in 
@@ -1822,7 +1822,7 @@ end (* Typing *)
             | "date_part" ->
                begin match nargs with 
                | [Tuple(ft_l, [Const(_, CString(part)); d_arg])] ->
-                  let lower_part = String.lowercase part in
+                  let lower_part = String.lowercase_ascii part in
                   if (lower_part <> "year") && (lower_part <> "month") && 
                      (lower_part <> "day")
                   then failwith ("invalid call to date_part on : "^part)
@@ -1855,20 +1855,20 @@ end (* Typing *)
             | "regexp_match" ->
               begin match nargs with
                 | [Tuple(ft_l, f)] ->
-                  result ci (Fn(ty, Ext(Apply(String.lowercase id)), f))
+                  result ci (Fn(ty, Ext(Apply(String.lowercase_ascii id)), f))
                 | [Var (_,(v,Host(TTuple([TBase(_); TBase(_)]))))] ->                  
                   let arg = ssc (source_code_of_expr (List.hd nargs)) in
-                  result ci (Fn(ty, Ext(Apply(String.lowercase id)),
+                  result ci (Fn(ty, Ext(Apply(String.lowercase_ascii id)),
                      [ Fn(ty, Ext(Inline("at_c<0>(" ^ arg ^ ").c_str()")), []);
                        Fn(ty, Ext(Inline("at_c<1>(" ^ arg ^ ")")), []) ]))
-                | _ -> result ci (Fn(ty, Ext(Apply(String.lowercase id)), 
+                | _ -> result ci (Fn(ty, Ext(Apply(String.lowercase_ascii id)), 
                                      nargs))
               end                                           
             | _ -> 
               begin match nargs with
                 | [Tuple(ft_l, f)] ->
-                  result ci (Fn(ty, Ext(Apply(String.lowercase id)), f))
-                | _ -> result ci (Fn(ty, Ext(Apply(String.lowercase id)), 
+                  result ci (Fn(ty, Ext(Apply(String.lowercase_ascii id)), f))
+                | _ -> result ci (Fn(ty, Ext(Apply(String.lowercase_ascii id)), 
                                      nargs))
               end
         end

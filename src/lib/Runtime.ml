@@ -97,7 +97,7 @@ let synch_main
     if Debug.active "SINGLE-LINE-MAP-OUTPUT" then (";",": ") else (";\n",":\n")
   in
   let db_access_f = List.map (fun (q_name,q_access_f) ->
-         (String.lowercase q_name, (fun () -> 
+         (String.lowercase_ascii q_name, (fun () -> 
            let v_str = (K3Value.string_of_value ~sep:output_separator
                                                 (q_access_f db))
            in
@@ -121,7 +121,7 @@ let synch_main
     | None -> (fun chan -> ())
     | Some(x) -> 
       let output_endline c s = output_string c (s^"\n") in
-      let y = String.lowercase x in
+      let y = String.lowercase_ascii x in
       if y = "db" then
          (fun chan -> output_endline chan ("db: "^(DB.db_to_string db)))
       else if y = "tlqs" then

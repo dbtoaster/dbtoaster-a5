@@ -34,9 +34,9 @@ let input_language  = ref Auto
 let output_language = ref Auto
 
 let parse_language lang = 
-   if List.mem_assoc (String.uppercase lang) languages then
+   if List.mem_assoc (String.uppercase_ascii lang) languages then
       let (l,_,_) = 
-         (List.assoc (String.uppercase lang) languages)
+         (List.assoc (String.uppercase_ascii lang) languages)
       in l
    else 
       raise (Arg.Bad("Unknown language "^lang))
@@ -132,7 +132,7 @@ let specs:(Arg.key * Arg.spec * Arg.doc) list  = Arg.align [
       (Arg.String(fun x -> input_language := parse_language x)),
       "lang   Set the compiler's input language to lang"); *)
    (  "-d",
-      (Arg.String(fun x -> Debug.activate (String.uppercase x))),
+      (Arg.String(fun x -> Debug.activate (String.uppercase_ascii x))),
       "mode   Activate indicated debugging output mode");
    (  "-o",
       (Arg.Set_string(output_file)),
@@ -237,7 +237,7 @@ let suffix_regexp = Str.regexp ".*\\.\\([^.]*\\)$" in
       if Str.string_match suffix_regexp first_file 0 then 
          input_language := (
             let suffix = (Str.matched_group 1 first_file) in
-            match String.lowercase suffix with
+            match String.lowercase_ascii suffix with
                | "sql" -> SQL
                | "m3"  -> M3
                | "k3"  -> K3

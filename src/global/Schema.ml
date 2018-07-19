@@ -313,7 +313,7 @@ let code_of_source (source:source_t):string = begin match source with
                    constructor)
 *)
 let code_of_adaptor ((aname, aparams):adaptor_t):string = 
-   (String.uppercase aname)^(
+   (String.uppercase_ascii aname)^(
       if aparams = [] then (if aname <> "" then "()" else "")
       else "("^(ListExtras.string_of_list ~sep:", " (fun (k,v) ->
          k^" := '"^v^"'") aparams)^")")

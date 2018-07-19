@@ -339,7 +339,7 @@ let name_of_expr (expr:expr_t): string =
       | Negation(_)         -> arbitrary "expression"
       | NestedQ(_)          -> arbitrary "nested_query"
       | Aggregate(a,_)      -> arbitrary (
-                                    (String.lowercase (string_of_agg a))^
+                                    (String.lowercase_ascii (string_of_agg a))^
                                     "_aggregate"
                                )
    end
