@@ -1,4 +1,4 @@
-0(*
+(*
  * Terminology:
  * -- adaptor: a function to create structured tuples from raw input data
  * -- generator: a function to create an adaptor, in essence compiling
@@ -58,8 +58,8 @@ let preproject param_val =
 (* param_val: "upper" | "lower" *)
 let change_case param_val =
    match param_val with
-    | "upper" -> (fun fields -> List.map String.uppercase fields)
-    | "lower" -> (fun fields -> List.map String.lowercase fields)
+    | "upper" -> (fun fields -> List.map String.uppercase_ascii fields)
+    | "lower" -> (fun fields -> List.map String.lowercase_ascii fields)
     | _ -> (fun fields -> fields)
 
 (* param_val: (field, offset, len) list
@@ -130,10 +130,10 @@ let build_tuple (reln,relv,_) param_val support_sch =
    let build_fns = 
      try 
        List.map2 (fun t (vn,vt) -> match t with
-        | "int" -> assert_type vn vt t TInt;
+        | "int" | "long" -> assert_type vn vt t TInt;
                    (fun x -> try CInt(int_of_string x) with 
                     Failure(_) -> failwith ("Could not convert int: '"^x^"'"))
-        | "float" -> assert_type vn vt t TFloat;
+        | "float" | "double" -> assert_type vn vt t TFloat;
                    (fun x -> try CFloat(float_of_string x) with
                     Failure(_) -> failwith ("Could not convert float: '"^x^"'"))
         | "date" -> 
@@ -146,7 +146,7 @@ let build_tuple (reln,relv,_) param_val support_sch =
            assert_type vn vt t TInt;
            (fun x -> CInt(Hashtbl.hash x))
         | _ -> failwith ("invalid const_t type "^t)) types full_sch 
-     with | Invalid_argument("List.map2") ->
+     with | Invalid_argument(_) ->
                failwith ("Schema mismatch: Adaptor got ["^param_val^"]; while "^
                          "expecting schema: "^
                          (ListExtras.ocaml_of_list Type.string_of_var relv))
@@ -350,13 +350,13 @@ let orderbook_generator rel_sch params =
    
    let deterministic_broker = 
       if List.mem_assoc "deterministic" params then
-         (String.lowercase (List.assoc "deterministic" params)) = "yes"
+         (String.lowercase_ascii (List.assoc "deterministic" params)) = "yes"
       else false
    in
    
    let insert_only = 
       if List.mem_assoc "insert-only" params then
-         bool_of_string (String.lowercase (List.assoc "insert-only" params))
+         bool_of_string (String.lowercase_ascii (List.assoc "insert-only" params))
       else false
    in
 
