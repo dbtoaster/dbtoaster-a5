@@ -95,7 +95,7 @@ let string_of_type (ty: type_t): string =
       | TAny             -> "?"
       | TBool            -> "bool"
       | TInt             -> "long"
-      | TFloat           -> "float"
+      | TFloat           -> "double"
       | TString          -> "string"
       | TDate            -> "date"
       | TInterval(TYearMonth) -> 
