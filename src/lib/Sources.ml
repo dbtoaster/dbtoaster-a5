@@ -112,7 +112,8 @@ struct
          begin try match fr with
             | FixedSize(len) ->
                let buf = Bytes.create len in
-               really_input inc buf 0 len; (Some(fr,inc), buf)
+                  really_input inc buf 0 len;
+               (Some(fr,inc), Bytes.to_string buf)
             | Delimited(s) ->
                (* TODO: handle \n\r *)
                if s = "\n" then (Some(fr, inc), input_line inc) else
@@ -120,15 +121,15 @@ struct
                let tok = Bytes.create delim_len in
                let buf = ref (Bytes.create 1024) in
                let pos = ref 0 in
-                  while (really_input inc tok 0 delim_len; tok <> s) do
-                     if ( (!pos) + delim_len >= (String.length (!buf)) ) then
-                        buf := (!buf)^(Bytes.create 1024);
+                  while (really_input inc tok 0 delim_len; tok <> Bytes.of_string s) do
+                     if ( (!pos) + delim_len >= (Bytes.length (!buf)) ) then
+                        buf := Bytes.extend (!buf) 0 1024;
                      for i = 0 to delim_len do 
-                        Bytes.set (!buf) ((!pos)+i) tok.[i]
+                        Bytes.set (!buf) ((!pos)+i) (Bytes.get tok i)
                      done;
                      pos := (!pos) + delim_len;
                   done;
-                  (Some(fr,inc), !buf)
+                  (Some(fr,inc), Bytes.to_string !buf)
          with End_of_file -> (close_in inc; (None, ""))
          end 
 
