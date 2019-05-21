@@ -15,7 +15,6 @@ FILES=\
 	src/global/Constants\
 	src/global/Schema\
 	src/global/Functions\
-	src/global/Partitioner\
 	src/sql/Sql\
 	src/sql/SqlClient\
 	src/ring/Ring\
@@ -34,6 +33,7 @@ FILES=\
 	src/compiler/Compiler\
 	src/maps/M3\
 	src/maps/DistributedM3\
+	src/global/Partitioner\
 	src/maps/AnnotatedM3\
 	src/maps/M3DM\
 	src/maps/Patterns\

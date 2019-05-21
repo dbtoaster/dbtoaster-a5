@@ -416,3 +416,29 @@ let toposort graph =
    List.fold_right (fun (node, _) visited -> 
       toposort_from_node graph visited node) graph [] 
                                                             
+(** 
+   Compute transitive closure of a given set of edges. 
+   Example:
+        
+   {[ transitive_closure [ (1,2); (2,3); (3,4) ] = 
+               [(1, 2); (2, 3); (3, 4); (1, 3); (2, 4); (1, 4)]
+    ]}
+        
+   @param edges      A list of edges
+   @return           A transitive closure of the given set of edges 
+*)
+let transitive_closure (edges: ('k * 'k) list): ('k * 'k) list =
+   let rec set_transitive_closure (s: ('k * 'k) list): ('k * 'k) list =
+      let expand_closure (ss: ('k * 'k) list): ('k * 'k) list =
+         ListAsSet.uniq (ListAsSet.union ss
+            (List.flatten (List.map (fun (x1, y1) ->
+                  List.flatten (List.map (fun (x2, y2) ->
+                     if y1 = x2 then [(x1, y2)] else []
+                  ) ss)
+               ) ss 
+         )))
+      in
+      let t = expand_closure(s) in
+      if ListAsSet.seteq t s then t else set_transitive_closure(t)
+   in
+      set_transitive_closure (ListAsSet.uniq edges)
