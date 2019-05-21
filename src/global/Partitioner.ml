@@ -77,8 +77,8 @@ let tpch_stream_part: (string * (int) gen_part_info_t) list =
 
 let tpch_table_part: (string * (int) gen_part_info_t) list =
    [
-      ("NATION", DistributedByKey([]));
-      ("REGION", DistributedByKey([]));
+      ("NATION", Local);
+      ("REGION", Local);
    ]
 
 let ht_part_options: (int * int) gen_part_table_t =
