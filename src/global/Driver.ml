@@ -103,6 +103,8 @@ let optimizations_by_level =
          "AGGRESSIVE-REORDERING";
          "DELETE-ON-ZERO";
          "OPTIMIZE-PATTERNS";
+         (* This prevents materializing cyclic TPCH queries, Q5 and Q7 *)
+         "HEURISTICS-DECOMPOSE-OVER-TABLES";
       ];
       (** -O4 **) [
          "K3-NO-OPTIMIZE";
