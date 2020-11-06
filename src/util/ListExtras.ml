@@ -247,24 +247,24 @@ let assoc_fold (fn: 'a -> 'b -> 'c -> 'c) (init:'c) (l:('a * 'b) list): 'c =
    List.fold_left (fun c (a, b) -> fn a b c) init l
 
 (**
-   Compute the maximal element of a list (according to [Pervasives.max]).
+   Compute the maximal element of a list (according to [Stdlib.max]).
    
    @param l   The list
    @return    The maximal element of [l]
 *)
 let max (l:'a list):'a = 
    if l = [] then raise Not_found
-   else List.fold_left Pervasives.max (List.hd l) (List.tl l)
+   else List.fold_left Stdlib.max (List.hd l) (List.tl l)
 
 (**
-   Compute the minimal element of a list (according to [Pervasives.min]).
+   Compute the minimal element of a list (according to [Stdlib.min]).
    
    @param l   The list
    @return    The minimal element of [l]
 *)
 let min (l:'a list):'a = 
    if l = [] then raise Not_found
-   else List.fold_left Pervasives.min (List.hd l) (List.tl l)
+   else List.fold_left Stdlib.min (List.hd l) (List.tl l)
 
 (**
    Compute the sum of the elements of a list of integers.
@@ -305,7 +305,7 @@ let rec k_tuples k (src: 'a list) : 'a list list =
 (** 
    Computes all subsets of r that have exactly k elements.
    does not produce duplicate sets if r does not have duplicates.
-   sorting -- e.g. (List.sort Pervasives.compare l) --
+   sorting -- e.g. (List.sort Stdlib.compare l) --
    improves readability of the result. 
    @param k  The size of each returned list set
    @param r  The superset of all of the returned subsets 

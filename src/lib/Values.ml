@@ -164,7 +164,7 @@ struct
 
     let zero = BaseValue(CFloat(0.0))
     let zero_of_type zt = BaseValue(Constants.zero_of_type zt)
-    let compare = Pervasives.compare
+    let compare = Stdlib.compare
 
     let rec key_to_string k = ListExtras.ocaml_of_list string_of_value k
     and string_of_vmap ?(sep = ";\n") sm = 

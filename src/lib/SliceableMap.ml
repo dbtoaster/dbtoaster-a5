@@ -77,8 +77,8 @@ struct
    type partial_key    = key_elt list
    type pattern        = int list
    
-   module PK  = struct type t = partial_key let compare = Pervasives.compare end
-   module Pat = struct type t = pattern let compare = Pervasives.compare end
+   module PK  = struct type t = partial_key let compare = Stdlib.compare end
+   module Pat = struct type t = pattern let compare = Stdlib.compare end
    module SecondaryIndex  = Map.Make(PK)
    module IndexMap        = Map.Make(Pat)
 

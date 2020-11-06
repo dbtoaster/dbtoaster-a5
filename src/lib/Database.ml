@@ -63,7 +63,7 @@ struct
    type t = string
    let to_string x = x
    let of_string x = x
-   let compare = Pervasives.compare
+   let compare = Stdlib.compare
 end
 
 module RefMap =
@@ -71,7 +71,7 @@ struct
    type t = int
    let to_string = string_of_int
    let of_string = Hashtbl.hash 
-   let compare = Pervasives.compare
+   let compare = Stdlib.compare
 end
 
 
