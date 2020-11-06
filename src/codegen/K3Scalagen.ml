@@ -38,6 +38,7 @@ struct
    | Float
    | Bool
    | Int
+   | Char
    | String
    | Date
    | Any
@@ -156,6 +157,7 @@ struct
       | Float -> "Double"
       | Bool -> "Boolean"
       | Int -> if Debug.active "BIG-INT" then "BigInt" else "Long"
+      | Char -> "Char"
       | String -> "String"
       | Date -> "Date"
       | Any -> "Any"
@@ -181,6 +183,7 @@ struct
       | Float -> "Rep[Double]"
       | Bool -> "Rep[Boolean]"
       | Int -> if Debug.active "BIG-INT" then "Rep[BigInt]" else "Rep[Long]"
+      | Char -> "Rep[Char]"
       | String -> "Rep[String]"
       | Date -> "Rep[Date]"
       | Any -> "Rep[Any]"
@@ -220,6 +223,7 @@ struct
       | TBool -> Bool
       | TInt -> Int
       | TFloat -> Float
+      | TChar -> Char
       | TString -> String
       | TDate -> Date
       | TAny -> Any
@@ -449,7 +453,8 @@ struct
    (* K3, we can also fix it here as well as in 'cmp_op'. *)
    let c_op op = (fun a b -> 
       match (a, b) with
-      | (Float, Float) | (String, String) | (Bool, Bool) | (Int, Int) -> ((cmp_op op), Bool, None)
+      | (Float, Float) | (Char, Char) | (String, String) 
+      | (Bool, Bool) | (Int, Int) -> ((cmp_op op), Bool, None)
       | (Int, Float) -> ((cmp_op op ~conva:int_to_double), Bool, None)
       | (Float, Int) -> ((cmp_op op ~convb:int_to_double), Bool, None)
       (* Sometimes there is K3 code that compares booleans to floats, so code
@@ -493,6 +498,7 @@ struct
       | CBool(y) -> (constant_value(string_of_bool y), Bool)
       | CInt(y) -> (constant_value((string_of_int y) ^ "L"), Int)
       | CFloat(y) -> (constant_value((string_of_float y) ^ "0"), Float)
+      | CChar(y) -> (constant_value(String.make 1 y), Char)
       | CString(y) -> (constant_value("\"" ^ y ^ "\""), String)
       | CDate(y,m,d) ->
          let v = 
@@ -1076,6 +1082,7 @@ struct
             | TBool -> "BoolColumn"
             | TInt -> "IntColumn"
             | TFloat -> "FloatColumn"
+            | TChar -> "CharColumn"
             | TString -> "StringColumn"
             | TDate -> "DateColumn"
             | _ -> debugfail None "Unsupported type in adaptor"

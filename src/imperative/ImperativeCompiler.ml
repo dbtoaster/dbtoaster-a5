@@ -1138,6 +1138,7 @@ end (* Typing *)
          
          | CInt x -> "static_cast<"^(cpp_of_type TInt)^">("^(string_of_int x)^")"
          
+         | CChar c -> "static_cast<"^(cpp_of_type TChar)^">("^(String.make 1 c)^")"
          | CString s ->
             if Debug.active "HASH-STRINGS"
             then "static_cast<"^(cpp_of_type TInt)^">(string_hash(\""^(String.escaped s)^"\"))"

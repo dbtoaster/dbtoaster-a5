@@ -194,8 +194,8 @@ sourceStmt:
 
 typeDefn:
 | TYPE                      { $1 }
-| CHAR LPAREN INT RPAREN    { TString }
-| CHAR                      { TString }
+| CHAR LPAREN INT RPAREN    { if ($3 = 1) then TChar else TString }
+| CHAR                      { TChar }
 | VARCHAR LPAREN INT RPAREN { TString }
 | VARCHAR                   { TString }
 | DECIMAL LPAREN INT COMMA INT RPAREN { TFloat }

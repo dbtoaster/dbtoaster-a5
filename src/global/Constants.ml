@@ -14,6 +14,7 @@ type const_t =
    | CBool         of bool              (** Boolean  *)
    | CInt          of int               (** Integer *)
    | CFloat        of float             (** Float *)
+   | CChar         of char              (** Character *)
    | CString       of string            (** String *)
    | CDate         of int * int * int   (** Date *)
    | CInterval     of interval_t        (** Interval *)
@@ -29,7 +30,8 @@ let type_of_const (a:const_t): type_t =
       | CBool(_)     -> TBool
       | CInt(_)      -> TInt
       | CFloat(_)    -> TFloat
-      | CString(s)   -> TString
+      | CChar(_)     -> TChar
+      | CString(_)   -> TString
       | CDate _      -> TDate
       | CInterval(CYearMonth _) -> TInterval(TYearMonth)
       | CInterval(CDay _)       -> TInterval(TDay)
@@ -48,6 +50,7 @@ let int_of_const (a:const_t): int =
       | CBool(false) -> 0
       | CInt(av)     -> av
       | CFloat(av)   -> int_of_float av
+      | CChar(av)    -> int_of_char av
       | CString(av)  -> int_of_string av
       | CDate _      -> failwith ("Cannot produce integer of date")
       | CInterval _  -> failwith ("Cannot produce integer of interval")
@@ -66,6 +69,7 @@ let float_of_const (a:const_t): float =
       | CBool(false) -> 0.
       | CInt(av)     -> float_of_int av
       | CFloat(av)   -> av
+      | CChar(av)    -> float_of_int (int_of_char av)
       | CString(av)  -> float_of_string av
       | CDate _      -> failwith ("Cannot produce float of date")
       | CInterval _  -> failwith ("Cannot produce float of interval")
@@ -131,6 +135,7 @@ let string_of_const (a: const_t): string =
       | CBool(false) -> "false"
       | CInt(av)     -> string_of_int av
       | CFloat(av)   -> string_of_float av
+      | CChar(av)    -> String.make 1 av
       | CString(av)  -> av
       | CDate(y,m,d) -> (string_of_int y) ^ "-" ^
                         (string_of_int m) ^ "-" ^
@@ -153,6 +158,7 @@ let ocaml_of_const ?(prefix=false) (a: const_t): string =
       | CBool(false) -> str_pfx ^ "CBool(false)"
       | CInt(i)      -> str_pfx ^ "CInt("^(string_of_int i)^")"
       | CFloat(f)    -> str_pfx ^ "CInt("^(string_of_float f)^")"
+      | CChar(c)     -> str_pfx ^ "CChar("^(String.make 1 c)^")"
       | CString(s)   -> str_pfx ^ "CString(\""^s^"\")"
       | CDate(y,m,d) -> str_pfx ^ "CDate(" ^ (string_of_int y) ^ "," ^
                                              (string_of_int m) ^ "," ^
@@ -176,6 +182,7 @@ let sql_of_const (a: const_t): string =
       | CBool(false) -> "FALSE"
       | CInt(i)      -> (string_of_int i)
       | CFloat(f)    -> (string_of_float f)
+      | CChar(c)     -> "'"^(String.make 1 c)^"'"
       | CString(s)   -> "'"^s^"'"
       | CDate(y,m,d) -> "DATE('"^(string_of_const a)^"')"
       | CInterval(CYearMonth(y,m)) -> 
@@ -446,6 +453,8 @@ module Math = struct
       CBool(begin match (a,b) with
          | (CBool(av), CBool(bv))        -> av = bv
          | (CBool(_), _)  | (_,CBool(_)) -> failwith "= of boolean and other"
+         | (CChar(av), CChar(bv))        -> av = bv
+         | (CChar(_), _) | (_,CChar(_))  -> failwith "= of char and other"
          | (CString(av), CString(bv))    -> av = bv
          | (CString(_), _) | (_,CString(_))-> failwith "= of string and other"
          | (CDate(y1,m1,d1), CDate(y2,m2,d2))-> y1=y2 && m1=m2 && d1=d2

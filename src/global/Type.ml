@@ -23,6 +23,7 @@ type type_t =
    | TBool                 (** Boolean *)
    | TInt                  (** Integer *)
    | TFloat                (** Floating point number *)
+   | TChar                 (** Character *)
    | TString               (** A string of bounded length n (0 is infinite) *)
    | TDate                 (** Date *)
    | TInterval of interval_type_t   (** Year-Month Interval *)
@@ -75,6 +76,7 @@ let ocaml_of_type (ty: type_t): string =
       | TBool            -> "TBool"
       | TInt             -> "TInt"
       | TFloat           -> "TFloat"
+      | TChar            -> "TChar"
       | TString          -> "TString"
       | TDate            -> "TDate"
       | TInterval(TYearMonth) -> 
@@ -96,6 +98,7 @@ let string_of_type (ty: type_t): string =
       | TBool            -> "bool"
       | TInt             -> "long"
       | TFloat           -> "double"
+      | TChar            -> "char"
       | TString          -> "string"
       | TDate            -> "date"
       | TInterval(TYearMonth) -> 
@@ -117,6 +120,7 @@ let cpp_of_type (ty: type_t): string =
       | TBool            -> "bool"
       | TInt             -> "long"
       | TFloat           -> "double"
+      | TChar            -> "char"
       | TString          -> "string"
       | TDate            -> "date"
       | TInterval(TYearMonth) -> 
@@ -176,6 +180,7 @@ let escalate_type ?(opname="<op>") (a:type_t) (b:type_t): type_t =
       | (TDate,TInterval _) | (TInterval _, TDate) -> TDate
       | (TInterval(it), TInt) | (TInt, TInterval(it)) -> TInterval(it)
       | (TInterval(it), TFloat) | (TFloat, TInterval(it)) -> TInterval(it)
+      | (TChar, TString) | (TString, TChar) -> TString
       | _ -> failwith ("Can not compute type of "^(string_of_type a)^" "^
                        opname^" "^(string_of_type b))
    end

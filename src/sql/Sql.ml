@@ -355,7 +355,8 @@ let string_of_const (const:Constants.const_t):string =
      | CBool(false) -> "0"
      | CInt(av) -> string_of_int av
      | CFloat(av) -> string_of_float av
-     | CString(av) -> "'"^av^"'"   
+     | CChar(av)   -> "'"^(String.make 1 av)^"'"
+     | CString(av) -> "'"^av^"'"
      | CDate _     -> Constants.sql_of_const const
      | CInterval _ -> Constants.sql_of_const const
 

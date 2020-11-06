@@ -55,6 +55,7 @@ module Postgres : Interface = struct
                | TBool   -> "int"
                | TInt    -> "bigint"
                | TFloat  -> "float"
+               | TChar   -> "char(1)"
                | TString -> "varchar(1000)"
                | TDate   -> "date"
                | TInterval _ -> "interval"
@@ -80,6 +81,11 @@ module Postgres : Interface = struct
             end
          | TInt  -> CInt(int_of_string (trim str))
          | TFloat -> CFloat(float_of_string (trim str))
+         | TChar -> 
+            if ((String.length str) = 1) then   
+               CChar(String.get str 0)
+            else
+               failwith "Invalid character"
          | TString -> 
             let rec find_non_space s i incr_op = 
                if String.get s i <> ' ' then i
