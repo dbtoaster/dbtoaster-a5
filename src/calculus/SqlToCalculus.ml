@@ -820,6 +820,9 @@ and calc_of_sql_expr ?(tgt_var = None)
                | Some(mq) -> (mq agg (rcr_e ~is_agg:true expr))
                | None -> failwith "Unexpected aggregation operator (2)"
             end, false
+         | Sql.ExternalFn("SUBSTRING", [e; Sql.Const(CInt(0)); Sql.Const(CInt(1))])
+              when (Sql.expr_type e tables sources) = TChar ->
+            rcr_e e, false
          | Sql.ExternalFn(fn, fargs) ->
             let (lifted_args_and_gb_vars, arg_calc) = 
                List.split (List.map (fun arg ->

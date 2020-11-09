@@ -94,9 +94,12 @@ let substring (arglist:const_t list) (ftype:type_t) =
    match arglist with
       | [CString(str); CInt(start); CInt(len)] ->
             CString(String.sub str start len)
+      | [CChar(c); CInt(0); CInt(1)] -> 
+            CChar(c)
       | _ -> invalid_args "substring" arglist ftype
 ;; declare_std_function "substring" substring
-         (function [TString; TInt; TInt] -> TString | _-> inference_error ()) ;;
+         (function [TString; TInt; TInt] -> TString |
+             [TChar; TInt; TInt] -> TChar | _-> inference_error ()) ;;
 
 (* Vector operations *)
 
