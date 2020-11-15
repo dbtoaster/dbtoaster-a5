@@ -201,6 +201,7 @@ typeDefn:
 | DECIMAL LPAREN INT COMMA INT RPAREN { TFloat }
 | DECIMAL                   { TFloat }
 | DATE                      { TDate }
+| ID                        { TExternal($1) }
 | error {
       bail "Invalid type declaration"
    } 
@@ -382,8 +383,8 @@ expression:
 | AVGAGG LPAREN expression RPAREN { Sql.Aggregate(Sql.AvgAgg, $3) }
 | COUNTAGG LPAREN countAggParam RPAREN { Sql.Aggregate(Sql.CountAgg($3), 
                                                      Sql.Const(CInt(1))) }
-| MAXAGG LPAREN expression RPAREN { bail "MAX is not (yet) supported" }
-| MINAGG LPAREN expression RPAREN { bail "MIN is not (yet) supported" }
+| MINAGG LPAREN expression RPAREN { Sql.Aggregate(Sql.MinAgg, $3) }
+| MAXAGG LPAREN expression RPAREN { Sql.Aggregate(Sql.MaxAgg, $3) }
 | ID LPAREN  RPAREN                   { Sql.ExternalFn($1,[]) }
 | ID LPAREN functionParameters RPAREN { Sql.ExternalFn($1,$3) }
 | EXTRACT LPAREN ID FROM variable RPAREN {

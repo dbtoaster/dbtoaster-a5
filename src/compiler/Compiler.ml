@@ -113,7 +113,7 @@ let compile_map (compute_delta:bool)
    in
    let todo_type = 
       begin match todo_base_type with
-         | TInt | TFloat -> todo_base_type
+         | TInt | TFloat | TRing(_) -> todo_base_type
          | TBool -> TInt
          | _ -> failwith "Error: Compiling map with unsupported type"
       end

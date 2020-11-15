@@ -28,6 +28,7 @@ type type_t =
    | TDate                 (** Date *)
    | TInterval of interval_type_t   (** Year-Month Interval *)
    | TAny                  (** An unspecified type *)
+   | TRing of string       (** An externally defined ring type *)
    | TExternal of string   (** An externally defined type *)
 
 (** Basic (typed) variables *)
@@ -83,6 +84,7 @@ let ocaml_of_type (ty: type_t): string =
          "TInterval(TYearMonth)"
       | TInterval(TDay) ->
          "TInterval(TDay)" 
+      | TRing(etype) -> "TRing(\""^etype^"\")"
       | TExternal(etype) -> "TExternal(\""^etype^"\")"
    end
 
@@ -105,6 +107,7 @@ let string_of_type (ty: type_t): string =
          "year_month_interval"
       | TInterval(TDay) -> 
          "day_interval"
+      | TRing(etype) -> etype
       | TExternal(etype) -> etype
    end
 
@@ -127,6 +130,7 @@ let cpp_of_type (ty: type_t): string =
          "year_month_interval"
       | TInterval(TDay) -> 
          "day_interval"
+      | TRing(etype) -> etype
       | TExternal(etype) -> etype
    end
 
@@ -181,7 +185,9 @@ let escalate_type ?(opname="<op>") (a:type_t) (b:type_t): type_t =
       | (TInterval(it), TInt) | (TInt, TInterval(it)) -> TInterval(it)
       | (TInterval(it), TFloat) | (TFloat, TInterval(it)) -> TInterval(it)
       | (TChar, TString) | (TString, TChar) -> TString
-      | _ -> failwith ("Can not compute type of "^(string_of_type a)^" "^
+      | (TRing(n), TInt) | (TInt, TRing(n)) -> TRing(n)
+      | _ ->
+       failwith ("Cannot compute type of "^(string_of_type a)^" "^
                        opname^" "^(string_of_type b))
    end
 

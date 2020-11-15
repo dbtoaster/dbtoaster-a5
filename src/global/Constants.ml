@@ -226,6 +226,7 @@ let zero_of_type zt : const_t =
       | TBool -> CBool(false)
       | TInt  -> CInt(0)
       | TFloat -> CFloat(0.)
+      | TRing(_) -> CInt(0)
       | _ -> failwith ("Cannot produce zero of type '"^(string_of_type zt)^"'")
    end
 
@@ -240,6 +241,7 @@ let zero_of_type_opt zt : const_t option =
       | TBool -> Some(CBool(false))
       | TInt  -> Some(CInt(0))
       | TFloat -> Some(CFloat(0.))
+      | TRing(_) -> Some(CInt(0))
       | _ -> None
    end
 
@@ -256,6 +258,7 @@ let one_of_type ot : const_t =
       | TBool -> CBool(true)
       | TInt  -> CInt(1)
       | TFloat -> CFloat(1.)
+      | TRing(_) -> CInt(1)
       | _ -> failwith ("Cannot produce one of type '"^(string_of_type ot)^"'")
    end
 
@@ -270,6 +273,7 @@ let one_of_type_opt ot : const_t option =
       | TBool -> Some(CBool(true))
       | TInt  -> Some(CInt(1))
       | TFloat -> Some(CFloat(1.))
+      | TRing(_) -> Some(CInt(1))
       | _ -> None
    end
 

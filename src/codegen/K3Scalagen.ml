@@ -204,7 +204,8 @@ struct
          (string_of_type_noLMS val_t) ^ "]]"
       | Trigger(event_t) -> "Rep[Trigger]"
 
-   let rec string_of_type t : string = if useLMS then string_of_type_withLMS t else string_of_type_noLMS t
+   let rec string_of_type t : string =
+      if useLMS then string_of_type_withLMS t else string_of_type_noLMS t
 
    let debug_string ((x, t):code_t) : string =
       (string_of_type t) ^ ": " ^ x
@@ -228,6 +229,9 @@ struct
       | TDate -> Date
       | TAny -> Any
       | TExternal(s) -> External(s)
+      | TRing(_) ->
+         failwith ("Ring types at runtime are not " ^ 
+                   "supported by the Scala backend")
       | TInterval _ -> 
          failwith ("Intervals at runtime are not " ^ 
                    "supported by the Scala backend")

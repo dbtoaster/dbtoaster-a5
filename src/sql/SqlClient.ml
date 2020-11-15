@@ -50,7 +50,7 @@ module Postgres : Interface = struct
          (ListExtras.string_of_list ~sep:", " (fun (vn,vt) ->  
             vn ^ " " ^ 
             (match vt with 
-               | TAny | TExternal(_) -> 
+               | TAny | TRing(_) | TExternal(_) -> 
                   failwith "Unsupported type in Sql client"
                | TBool   -> "int"
                | TInt    -> "bigint"
@@ -117,7 +117,7 @@ module Postgres : Interface = struct
          | TInterval _ -> 
             failwith ("Converting string to interval currently not " ^
                       "supported in Sql client")
-         | TAny | TExternal(_) -> failwith "Unsupported type in Sql client"
+         | TAny | TRing(_) | TExternal(_) -> failwith "Unsupported type in Sql client"
 
    let convert_field = (function x -> Constants.sql_of_const x)
  

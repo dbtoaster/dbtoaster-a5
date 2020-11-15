@@ -67,7 +67,7 @@ type arith_t = Sum | Prod | Sub | Div
 (**
    Sql aggregate types
 *)
-type agg_t = SumAgg | CountAgg of sql_var_t list option | AvgAgg
+type agg_t = SumAgg | CountAgg of sql_var_t list option | AvgAgg | MinAgg | MaxAgg
 
 type select_option_t = 
    | Select_Distinct
@@ -306,6 +306,8 @@ let string_of_agg (agg:agg_t): string =
    match agg with SumAgg   -> "SUM"
                 | CountAgg(fields) -> "COUNT"
                 | AvgAgg   -> "AVG"
+                | MinAgg   -> "MIN"
+                | MaxAgg   -> "MAX"
 
 (**
    Produce the (Sqlparser-compatible) fully qualified (if possible) name of the
@@ -516,7 +518,8 @@ let rec expr_type ?(strict = true) (expr:expr_t) (tables:table_t list)
          | Aggregate(agg,subexp) -> 
             begin match agg with
                (* Sum takes its type from the nested expression *)
-               | SumAgg -> return_if_numeric (rcr subexp) "Aggregate of "
+               | SumAgg | MinAgg | MaxAgg ->
+                  return_if_numeric (rcr subexp) "Aggregate of "
                (* Count ignores the nested expression *)
                | CountAgg _ -> TInt
                (* Average must have numeric inputs but always returns float*)

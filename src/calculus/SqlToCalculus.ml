@@ -114,7 +114,7 @@ let rec cast_query_to_aggregate (tables:Sql.table_t list)
             if gb_vars <> [] then (
                Sql.error "Non-aggregate query with group-by variables";
             );
-            (  targets @ ["COUNT", Sql.Aggregate(  
+            (  targets @ ["COUNT", Sql.Aggregate(
                         Sql.CountAgg(if List.mem Sql.Select_Distinct opts
                                      then Some([]) else None), 
                         (Sql.Const(CInt(1))))],
@@ -167,14 +167,14 @@ let rec normalize_agg_target_expr ?(vars_bound = false) gb_vars expr =
    let rcr ?(b = vars_bound) e =
       normalize_agg_target_expr ~vars_bound:b gb_vars e
    in
-   begin match expr with 
+   begin match expr with
      | Sql.Const(_) -> expr
      | Sql.Aggregate(_,_) -> expr
          
      | Sql.Var(v)   -> 
          if not (List.mem v gb_vars) then (
-            Sql.error ("Non Group-by Variable "^(Sql.string_of_var v)^
-                       " used outside of an aggregate expression (gb vars:"^
+            Sql.error ("Non group-by variable "^(Sql.string_of_var v)^
+                       " used outside of an aggregate expression (gb vars: "^
                        (ListExtras.ocaml_of_list Sql.string_of_var gb_vars)^")")
          ) else expr
          
@@ -331,7 +331,7 @@ and calc_of_select ?(query_name = None)
          (Sql.string_of_expr tgt_expr)
       );
       match tgt_expr with
-         | Sql.Var((vs,vn,vt) as v) 
+         | Sql.Var((vs,vn,vt) as v)
             when ((query_name = None) && (vn = tgt_name))
               || ((fst (var_of_sql_var v)) = tgt_name)   ->
                Debug.print "LOG-SQL-TO-CALC" (fun () -> 
@@ -389,12 +389,23 @@ and calc_of_select ?(query_name = None)
                Note that all of this must match the construction of noagg_calc 
                above.
             *)
-            let ret = 
+            let transform_using_rings fn tp =
+              let (lifted_agg_val, lifted_agg_calc) =
+                lift_if_necessary ~t:fn (agg_calc) in
+              let lift_fn = 
+                C.mk_value(Arithmetic.mk_fn fn [lifted_agg_val] (TRing(tp))) in
+              C.mk_aggsum new_gb_vars
+                (CalcRing.mk_prod [ source_calc; cond_calc; 
+                                    lifted_agg_calc; lift_fn; noagg_calc ])
+            in
+            let ret =
             begin match agg_type with
+               | Sql.SumAgg when Debug.active "SQL-USE-RING-STRUCTS" ->
+                    transform_using_rings "SumFn" "SumRing"
                | Sql.SumAgg -> 
-                  C.mk_aggsum new_gb_vars
-                        (CalcRing.mk_prod 
-                            [source_calc; cond_calc; agg_calc; noagg_calc])
+                    C.mk_aggsum new_gb_vars
+                          (CalcRing.mk_prod
+                              [source_calc; cond_calc; agg_calc; noagg_calc])
                | Sql.CountAgg(None) -> (* COUNT( * ) *)
                   C.mk_aggsum new_gb_vars 
                      (CalcRing.mk_prod [source_calc; cond_calc; noagg_calc])
@@ -411,37 +422,48 @@ and calc_of_select ?(query_name = None)
                                  new_gb_vars (List.map var_of_sql_var fields))
                              (CalcRing.mk_prod 
                                  [source_calc; cond_calc; noagg_calc])))
+               | Sql.AvgAgg when Debug.active "SQL-USE-RING-STRUCTS" ->
+                    transform_using_rings "AvgFn" "AvgRing"
                | Sql.AvgAgg -> 
-                  let count_var = tmp_var "average_count" TInt in
-                  C.mk_aggsum new_gb_vars
-                     (CalcRing.mk_prod [
-                         (** The value being averaged *)
-                         C.mk_aggsum new_gb_vars
-                            (CalcRing.mk_prod 
-                                [source_calc; cond_calc; agg_calc; noagg_calc]
-                            );
-                         (* The (lifted) count of the value being averaged *)
-                         C.mk_lift count_var 
-                            (C.mk_aggsum new_gb_vars
-                                (CalcRing.mk_prod 
-                                    [source_calc; cond_calc; noagg_calc]));
-                         (* 1/COUNT *)
-                         CalcRing.mk_prod [
-                            C.mk_value (
-                               Arithmetic.mk_fn "/" [
-                                  (* Hack to ensure that we don't ever get NAN:
-                                     make sure that the count is always >= 1 *)
-                                  Arithmetic.mk_fn "listmax" [
-                                     Arithmetic.mk_int 1;
-                                     Arithmetic.mk_var count_var
-                                  ] TInt
-                               ] TFloat
-                            );
-                            C.mk_cmp Neq 
-                               (Arithmetic.mk_int 0) 
-                               (Arithmetic.mk_var count_var)
-                         ]
-                      ])
+                    let count_var = tmp_var "average_count" TInt in
+                    C.mk_aggsum new_gb_vars
+                       (CalcRing.mk_prod [
+                           (** The value being averaged *)
+                           C.mk_aggsum new_gb_vars
+                              (CalcRing.mk_prod
+                                  [source_calc; cond_calc; agg_calc; noagg_calc]
+                              );
+                           (* The (lifted) count of the value being averaged *)
+                           C.mk_lift count_var
+                              (C.mk_aggsum new_gb_vars
+                                  (CalcRing.mk_prod
+                                      [source_calc; cond_calc; noagg_calc]));
+                           (* 1/COUNT *)
+                           CalcRing.mk_prod [
+                              C.mk_value (
+                                 Arithmetic.mk_fn "/" [
+                                    (* Hack to ensure that we don't ever get NAN:
+                                       make sure that the count is always >= 1 *)
+                                    Arithmetic.mk_fn "listmax" [
+                                       Arithmetic.mk_int 1;
+                                       Arithmetic.mk_var count_var
+                                    ] TInt
+                                 ] TFloat
+                              );
+                              C.mk_cmp Neq
+                                 (Arithmetic.mk_int 0)
+                                 (Arithmetic.mk_var count_var)
+                           ]
+                        ])
+               | Sql.MinAgg when Debug.active "SQL-USE-RING-STRUCTS" ->
+                    transform_using_rings "MinFn" "MinRing"
+               | Sql.MinAgg ->
+                    failwith "MIN is not (yet) supported"
+               | Sql.MaxAgg when Debug.active "SQL-USE-RING-STRUCTS" ->
+                    transform_using_rings "MaxFn" "MaxRing"
+               | Sql.MaxAgg ->
+                    failwith "MAX is not (yet) supported"
+
             end in Debug.print "LOG-SQL-TO-CALC" (fun () ->
                "Generated Calculus: \n"^
                (CalculusPrinter.string_of_expr ret)^"\n"
@@ -531,7 +553,18 @@ and calc_of_condition (tables:Sql.table_t list)
                       (cond:Sql.cond_t):
                       C.expr_t =
    let rcr_et tgt_var e = calc_of_sql_expr ~tgt_var:tgt_var tables sources e in
-   let rcr_e e = calc_of_sql_expr tables sources e in
+   let rcr_e e =
+      calc_of_sql_expr tables sources e 
+      (* let ret = calc_of_sql_expr tables sources e in
+      if not (Debug.active "SQL-USE-RING-STRUCTS") ret
+      else match C.type_of_expr ret with 
+        | TRing(_) -> 
+          let (e_val, e_calc) = lift_if_necessary ~t:"lower" ret in
+            let lower_fn =
+              C.mk_value (Arithmetic.mk_fn "cast_as_value" [ e_val ] TFloat) in
+            CalcRing.mk_prod [e_calc; lower_fn ]
+        | _ -> ret *)
+   in
    let rcr_c c = calc_of_condition tables sources c in
    let calc_of_like wrapper expr like = 
       let like_regexp = "^"^(Str.global_replace (Str.regexp "%") ".*"
