@@ -127,6 +127,21 @@ let rec delta_of_expr (delta_event:Schema.event_t) (expr:C.expr_t): C.expr_t =
    Debug.print "LOG-DELTA-DETAIL" (fun () ->
       (Schema.name_of_event delta_event)^" of "^(C.string_of_expr expr) 
    );
+   (* From a given expression, extract conditions covered by the scope  *)
+   let try_extract_conditions expr scope =
+      let (_, schema) = C.schema_of_expr expr in
+      let opt_expr = CalculusTransforms.optimize_expr (scope, schema) expr in
+      let (cond, rest) =
+        List.partition (function
+          | CalcRing.Val(Cmp(_,_,_))
+          | CalcRing.Val(CmpOrList(_,_)) as e ->
+              ListAsSet.subset (fst (C.schema_of_expr e)) scope
+          | _ -> false
+        ) (CalcRing.prod_list opt_expr)
+      in
+      if cond = [] then (CalcRing.one, expr)
+      else (CalcRing.mk_prod cond, CalcRing.mk_prod rest)
+   in
    CalcRing.delta
       (fun lf ->
          match lf with
@@ -177,15 +192,21 @@ let rec delta_of_expr (delta_event:Schema.event_t) (expr:C.expr_t): C.expr_t =
                      cases, dB will consist only of constants and lift 
                      statements.  In this case, the optimizations (specifically 
                      unify_lifts) will unnest the lift statements, and 
-                     substitute the (now) constant dB in for deltaVar. *)
+                     substitute the (now) constant dB in for deltaVar.
+
+                     This rewriting is realised via extract_domains. Additionally,
+                     any comparison appearing in dB and is covered by the scope is
+                     pulled out outside the delta expression.
+                  *)
                   (* Extract lifts containing Value subexpressions *)
                   let scope = Schema.event_vars delta_event in
                   (* FIXME: scope should be the running scope *)
-                  let (delta_lhs, delta_rhs) = 
-                    extract_domains scope delta_term 
+                  let (cond, rest) = try_extract_conditions delta_term scope in
+                  let (delta_lhs, delta_rhs) =
+                    extract_domains scope rest
                   in                  
                     CalcRing.mk_prod [
-                      delta_lhs;
+                      cond; delta_lhs;
                       CalcRing.mk_sum [
                         Calculus.mk_lift v (CalcRing.mk_sum [sub_t; delta_rhs]);
                         CalcRing.mk_neg (Calculus.mk_lift v sub_t)
@@ -195,16 +216,17 @@ let rec delta_of_expr (delta_event:Schema.event_t) (expr:C.expr_t): C.expr_t =
          (*****************************************) 
 (***** BEGIN EXISTS HACK *****)
             | Exists(sub_t) ->
-               let delta_term = rcr sub_t in
-               if delta_term = CalcRing.zero then CalcRing.zero else (
+                let delta_term = rcr sub_t in
+                if delta_term = CalcRing.zero then CalcRing.zero else (
                   (* We do the same thing here as for lifts *)
                   let scope = Schema.event_vars delta_event in
                   (* FIXME: scope should be the running scope *)
-                  let (delta_lhs, delta_rhs) = 
-                    extract_domains scope delta_term 
+                  let (cond, rest) = try_extract_conditions delta_term scope in
+                  let (delta_lhs, delta_rhs) =
+                    extract_domains scope rest
                   in
                     CalcRing.mk_prod [
-                      delta_lhs;
+                      cond; delta_lhs;
                       CalcRing.mk_sum [
                         Calculus.mk_exists (CalcRing.mk_sum [sub_t; delta_rhs]);
                         CalcRing.mk_neg (Calculus.mk_exists sub_t)

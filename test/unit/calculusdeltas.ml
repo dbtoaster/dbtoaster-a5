@@ -176,22 +176,18 @@ test "Employee37 dEmployee"
              LOCATION(D_LOCATION_ID, L_REGIONAL_GROUP:string)))) *
       DEPARTMENT(COUNT_DID, D_NAME, D_LOCATION_ID) *
       {__sql_inline_agg_1 > 0}))"
-   "AggSum([COUNT_DID, D_LOCATION_ID], 
-      ((D_LOCATION_ID ^= dLID) *
-       ((__sql_inline_agg_1 ^=
-          (AggSum([D_LOCATION_ID], 
-             ((L_REGIONAL_GROUP:string ^= 'CHICAGO') *
-              LOCATION(D_LOCATION_ID, L_REGIONAL_GROUP:string))) + 
-          (AggSum([],
-             (L_REGIONAL_GROUP:string ^= dRG:string) * 
-             (L_REGIONAL_GROUP:string ^= 'CHICAGO'))))) +
-        (-1 *
-         (__sql_inline_agg_1 ^=
-            AggSum([D_LOCATION_ID], 
-               ((L_REGIONAL_GROUP:string ^= 'CHICAGO') *
-                LOCATION(D_LOCATION_ID, L_REGIONAL_GROUP:string)))))) *
-       DEPARTMENT(COUNT_DID, D_NAME, D_LOCATION_ID) * 
-       {__sql_inline_agg_1 > 0}))"
+  "AggSum([COUNT_DID, D_LOCATION_ID],
+    ({dRG:string = 'CHICAGO'} * (D_LOCATION_ID ^= dLID) *
+      ((__sql_inline_agg_1 ^=
+         (AggSum([D_LOCATION_ID],
+            ((L_REGIONAL_GROUP:string ^= 'CHICAGO') *
+              LOCATION(D_LOCATION_ID, L_REGIONAL_GROUP:string))) +
+           1)) +
+        (NEG * (__sql_inline_agg_1 ^=
+                 AggSum([D_LOCATION_ID],
+                   ((L_REGIONAL_GROUP:string ^= 'CHICAGO') *
+                     LOCATION(D_LOCATION_ID, L_REGIONAL_GROUP:string)))))) *
+      DEPARTMENT(COUNT_DID, D_NAME, D_LOCATION_ID) * {__sql_inline_agg_1 > 0}))"
 ;; 
 
 test "SumADivB"
@@ -234,6 +230,13 @@ test "Lift range restriction"
        (-1 * (nested ^= (AggSum([PK], L(PK, QTY2) * QTY2))))))"
 ;; 
 
+test "LiftConditionsInExists"
+    (InsertEvent(schema_rel "R" ["dA"; "dB"; "dC"]))
+    "EXISTS(AggSum([R_A], R(R_A, R_B, R_C) * { R_B > 10 }))"
+    "{ dB > 10 } * (R_A ^= dA) *
+      EXISTS(AggSum([R_A], R(R_A, R_B, R_C) * { R_B > 10 }) + 1) +
+      (-1 * EXISTS(AggSum([R_A], R(R_A, R_B, R_C) * { R_B > 10 })))"
+;;
 
 (* Debug.activate "LOG-CANCEL-TERMS"; *)
 (* Needs smart cancel_terms *)

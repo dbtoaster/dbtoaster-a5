@@ -168,7 +168,7 @@ class Array
     Math.sqrt((avg ** 2 - (map{|i| i.to_f ** 2}.avg)).abs)
   end
   
-  def reduce(&reducer)
+  def reduce2(&reducer)
     ret = Hash.new;
     each do |k,v|
       ret[k] = Array.new unless ret.has_key? k;

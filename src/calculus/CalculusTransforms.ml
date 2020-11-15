@@ -1665,8 +1665,8 @@ let extract_domains (big_scope:var_t list) (big_expr:C.expr_t) =
             | Lift(v1,CalcRing.Val(Value(v2)))
               when ListAsSet.subset (Arithmetic.vars_of_value v2) 
                                     big_scope -> 
-                 let delta_term = CalcRing.mk_val lf in
-                 CalcRing.mk_prod [ C.mk_domain delta_term; delta_term ]
+                 let lift_term = CalcRing.mk_val lf in
+                 CalcRing.mk_prod [ C.mk_domain lift_term; lift_term ]
             | Lift(v,raw_subexp) -> C.mk_lift v (rcr raw_subexp)
    (***** BEGIN EXISTS HACK *****)         
             | Exists(raw_subexp) -> C.mk_exists (rcr raw_subexp)
