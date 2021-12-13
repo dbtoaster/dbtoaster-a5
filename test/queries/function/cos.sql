@@ -1,5 +1,5 @@
 CREATE STREAM RadialMeasurements ( angle double, distance double )
-  FROM FILE '../../experiments/data/simple/standard/r.dat' LINE DELIMITED CSV;
+  FROM FILE '../dbtoaster-experiments-data/simple/standard/r.dat' LINE DELIMITED CSV;
 
 
 CREATE FUNCTION cos ( x double ) RETURNS int AS EXTERNAL 'cos';

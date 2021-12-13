@@ -5,7 +5,7 @@ CREATE STREAM DEPARTMENT(
     name            VARCHAR(20),
     location_id     INT
     ) 
-  FROM FILE '../../experiments/data/employee/department.dat' LINE DELIMITED
+  FROM FILE '../dbtoaster-experiments-data/employee/department.dat' LINE DELIMITED
   CSV ();
 
 SELECT department_id, name, location_id 

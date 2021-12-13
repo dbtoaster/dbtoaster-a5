@@ -12,7 +12,7 @@ CREATE STREAM EMPLOYEE(
     commission      FLOAT,
     department_id   INT
     ) 
-  FROM FILE '../../experiments/data/employee/employee.dat' LINE DELIMITED
+  FROM FILE '../dbtoaster-experiments-data/employee/employee.dat' LINE DELIMITED
   CSV ();
 
 SELECT e.last_name AS emp_name, m.last_name AS mgr_name

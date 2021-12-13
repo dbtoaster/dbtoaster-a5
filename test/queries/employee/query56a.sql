@@ -12,7 +12,7 @@ CREATE STREAM EMPLOYEE(
     commission      FLOAT,
     department_id   INT
     ) 
-  FROM FILE '../../experiments/data/employee/employee.dat' LINE DELIMITED
+  FROM FILE '../dbtoaster-experiments-data/employee/employee.dat' LINE DELIMITED
   CSV ();
 
 CREATE STREAM SALARY_GRADE(
@@ -20,7 +20,7 @@ CREATE STREAM SALARY_GRADE(
     lower_bound  FLOAT,
     upper_bound  FLOAT
     ) 
-  FROM FILE '../../experiments/data/employee/salary_grade.dat' LINE DELIMITED
+  FROM FILE '../dbtoaster-experiments-data/employee/salary_grade.dat' LINE DELIMITED
   CSV ();
 
 SELECT employee_id, last_name, grade_id 

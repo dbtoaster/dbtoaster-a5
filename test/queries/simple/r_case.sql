@@ -1,5 +1,5 @@
 CREATE STREAM R(A int, B int) 
-  FROM FILE '../../experiments/data/simple/tiny/r.dat' LINE DELIMITED csv;
+  FROM FILE '../dbtoaster-experiments-data/simple/tiny/r.dat' LINE DELIMITED csv;
 
 SELECT total.YEAR, SUM(CASE total.NAME WHEN 3 THEN total.VOLUME ELSE 0 END) / 
          LISTMAX(1, SUM(total.VOLUME)) AS mkt_share_1

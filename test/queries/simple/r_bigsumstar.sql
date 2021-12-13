@@ -6,7 +6,7 @@
 -- 5 -> 256
 
 CREATE STREAM R(A int, B int) 
-  FROM FILE '../../experiments/data/simple/tiny/r.dat' LINE DELIMITED csv;
+  FROM FILE '../dbtoaster-experiments-data/simple/tiny/r.dat' LINE DELIMITED csv;
 
 SELECT r1.A, SUM(r1.B + r2.B + r3.B + r4.B)
 FROM R r1, R r2, R r3, R r4

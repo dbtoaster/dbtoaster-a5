@@ -385,15 +385,15 @@ $global_rels = [
   Relation.new("R", [
     RelationField.new("A", :int),
     RelationField.new("B", :int)
-  ], "../../experiments/data/tiny_r.dat", true),
+  ], "../dbtoaster-experiments-data/tiny_r.dat", true),
   Relation.new("S", [
     RelationField.new("B", :int),
     RelationField.new("C", :int)
-  ], "../../experiments/data/tiny_s.dat", true),
+  ], "../dbtoaster-experiments-data/tiny_s.dat", true),
   Relation.new("T", [
     RelationField.new("C", :int),
     RelationField.new("D", :int)
-  ], "../../experiments/data/tiny_t.dat", true)
+  ], "../dbtoaster-experiments-data/tiny_t.dat", true)
 ];
 
 

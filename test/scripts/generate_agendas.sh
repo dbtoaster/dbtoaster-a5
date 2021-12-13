@@ -119,7 +119,7 @@ MDDB_QUERIES="mddb/query1.sql \
 TPCH_QUERIES="tpch/query3.sql"
 
 AGENDAS_INPUT_DIR=test/agendas
-AGENDAS_OUTPUT_DIR=../../experiments/data/agendas
+AGENDAS_OUTPUT_DIR=../dbtoaster-experiments-data/agendas
 
   
 generate_financial_agendas() {

@@ -1,4 +1,4 @@
-﻿DROP SCHEMA IF EXISTS "TPCH_@@DATASET@@" CASCADE;
+DROP SCHEMA IF EXISTS "TPCH_@@DATASET@@" CASCADE;
 
 CREATE SCHEMA "TPCH_@@DATASET@@"
   AUTHORIZATION postgres;
@@ -108,12 +108,12 @@ DELETE FROM "TPCH_@@DATASET@@".CUSTOMER;
 DELETE FROM "TPCH_@@DATASET@@".NATION;
 DELETE FROM "TPCH_@@DATASET@@".REGION;
 
-COPY "TPCH_@@DATASET@@".REGION   FROM '@@DBT_DIR@@/../../experiments/data/tpch/@@DATASET@@/region@@FILE_SUFFIX@@.csv' WITH DELIMITER AS '|'; 
-COPY "TPCH_@@DATASET@@".NATION   FROM '@@DBT_DIR@@/../../experiments/data/tpch/@@DATASET@@/nation@@FILE_SUFFIX@@.csv' WITH DELIMITER AS '|'; 
-COPY "TPCH_@@DATASET@@".CUSTOMER FROM '@@DBT_DIR@@/../../experiments/data/tpch/@@DATASET@@/customer@@FILE_SUFFIX@@.csv' WITH DELIMITER AS '|'; 
-COPY "TPCH_@@DATASET@@".SUPPLIER FROM '@@DBT_DIR@@/../../experiments/data/tpch/@@DATASET@@/supplier@@FILE_SUFFIX@@.csv' WITH DELIMITER AS '|'; 
-COPY "TPCH_@@DATASET@@".PART     FROM '@@DBT_DIR@@/../../experiments/data/tpch/@@DATASET@@/part@@FILE_SUFFIX@@.csv' WITH DELIMITER AS '|'; 
-COPY "TPCH_@@DATASET@@".PARTSUPP FROM '@@DBT_DIR@@/../../experiments/data/tpch/@@DATASET@@/partsupp@@FILE_SUFFIX@@.csv' WITH DELIMITER AS '|'; 
-COPY "TPCH_@@DATASET@@".ORDERS   FROM '@@DBT_DIR@@/../../experiments/data/tpch/@@DATASET@@/orders@@FILE_SUFFIX@@.csv' WITH DELIMITER AS '|'; 
-COPY "TPCH_@@DATASET@@".LINEITEM FROM '@@DBT_DIR@@/../../experiments/data/tpch/@@DATASET@@/lineitem@@FILE_SUFFIX@@.csv' WITH DELIMITER AS '|'; 
+COPY "TPCH_@@DATASET@@".REGION   FROM '@@DBT_DIR@@/../dbtoaster-experiments-data/tpch/@@DATASET@@/region@@FILE_SUFFIX@@.csv' WITH DELIMITER AS '|'; 
+COPY "TPCH_@@DATASET@@".NATION   FROM '@@DBT_DIR@@/../dbtoaster-experiments-data/tpch/@@DATASET@@/nation@@FILE_SUFFIX@@.csv' WITH DELIMITER AS '|'; 
+COPY "TPCH_@@DATASET@@".CUSTOMER FROM '@@DBT_DIR@@/../dbtoaster-experiments-data/tpch/@@DATASET@@/customer@@FILE_SUFFIX@@.csv' WITH DELIMITER AS '|'; 
+COPY "TPCH_@@DATASET@@".SUPPLIER FROM '@@DBT_DIR@@/../dbtoaster-experiments-data/tpch/@@DATASET@@/supplier@@FILE_SUFFIX@@.csv' WITH DELIMITER AS '|'; 
+COPY "TPCH_@@DATASET@@".PART     FROM '@@DBT_DIR@@/../dbtoaster-experiments-data/tpch/@@DATASET@@/part@@FILE_SUFFIX@@.csv' WITH DELIMITER AS '|'; 
+COPY "TPCH_@@DATASET@@".PARTSUPP FROM '@@DBT_DIR@@/../dbtoaster-experiments-data/tpch/@@DATASET@@/partsupp@@FILE_SUFFIX@@.csv' WITH DELIMITER AS '|'; 
+COPY "TPCH_@@DATASET@@".ORDERS   FROM '@@DBT_DIR@@/../dbtoaster-experiments-data/tpch/@@DATASET@@/orders@@FILE_SUFFIX@@.csv' WITH DELIMITER AS '|'; 
+COPY "TPCH_@@DATASET@@".LINEITEM FROM '@@DBT_DIR@@/../dbtoaster-experiments-data/tpch/@@DATASET@@/lineitem@@FILE_SUFFIX@@.csv' WITH DELIMITER AS '|'; 
 

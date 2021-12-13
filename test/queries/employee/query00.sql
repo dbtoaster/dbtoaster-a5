@@ -5,7 +5,7 @@ CREATE STREAM SALARY_GRADE(
     lower_bound  FLOAT,
     upper_bound  FLOAT
     ) 
-  FROM FILE '../../experiments/data/employee/salary_grade.dat' LINE DELIMITED
+  FROM FILE '../dbtoaster-experiments-data/employee/salary_grade.dat' LINE DELIMITED
   CSV ();
 
 SELECT * 

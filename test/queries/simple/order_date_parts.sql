@@ -9,7 +9,7 @@ CREATE STREAM ORDERS (
         shippriority   INT,
         comment        VARCHAR(79)
     )
-  FROM FILE '../../experiments/data/tpch/tiny/orders.csv'
+  FROM FILE '../dbtoaster-experiments-data/tpch/tiny/orders.csv'
   LINE DELIMITED CSV (delimiter := '|');
 
 SELECT EXTRACT(year FROM orderdate) AS Y,

@@ -1,8 +1,8 @@
 CREATE STREAM R(A int, B int) 
-  FROM FILE '../../experiments/data/simple/tiny/r.dat' LINE DELIMITED csv;
+  FROM FILE '../dbtoaster-experiments-data/simple/tiny/r.dat' LINE DELIMITED csv;
   
 CREATE STREAM S(B int, C int) 
-  FROM FILE '../../experiments/data/simple/tiny/s.dat' LINE DELIMITED csv;
+  FROM FILE '../dbtoaster-experiments-data/simple/tiny/s.dat' LINE DELIMITED csv;
 
 SELECT R.B, (X.S / X.C) AS avg_a FROM R, (SELECT Y.B, COUNT(*) AS C, SUM(Y.A) AS S FROM R AS Y GROUP BY Y.B) AS X WHERE R.B = X.B;
 

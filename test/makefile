@@ -29,8 +29,8 @@ endif
 FAST_QUERY_TEST=$(QUERY_TEST) -d weak-expr-equiv
 ERROR_TEST=scripts/error_test.sh
 DATA_FILES=$(shell echo \
-	../../../experiments/data/employee/*.dat\
-	../../../experiments/data/tpch/tiny/*.csv\
+	../../dbtoaster-experiments-data/employee/*.dat\
+	../../dbtoaster-experiments-data/tpch/tiny/*.csv\
 	| sort)
 
 all: unit query err
@@ -40,8 +40,8 @@ datahash:
 
 testdatahash:
 #	@if [ $(shell basename $(shell which md5)) = md5 ] ; then \
-#	  if [ $(shell cat ../../../experiments/data/employee/*.dat \
-#	                   ../../../experiments/data/tpch/tiny/*.csv \
+#	  if [ $(shell cat ../../dbtoaster-experiments-data/employee/*.dat \
+#	                   ../../dbtoaster-experiments-data/tpch/tiny/*.csv \
 #	                    | md5) != 4aafddbcd29e2e52a053651761605ea4 ] ; then \
 #	echo "Your test data is out of date, update your experiments directory";\
 #	exit -1; fi;\

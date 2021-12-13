@@ -19,11 +19,11 @@
 
 
 CREATE STREAM R(A int, B string) 
-  FROM FILE '../../experiments/data/simple/tiny/r.dat' LINE DELIMITED
+  FROM FILE '../dbtoaster-experiments-data/simple/tiny/r.dat' LINE DELIMITED
   CSV ();
 
 CREATE STREAM S(B string, C int) 
-  FROM FILE '../../experiments/data/simple/tiny/s.dat' LINE DELIMITED
+  FROM FILE '../dbtoaster-experiments-data/simple/tiny/s.dat' LINE DELIMITED
   CSV ();
 
 SELECT r.A, SUM(s.C)

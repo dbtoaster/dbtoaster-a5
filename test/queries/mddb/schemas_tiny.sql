@@ -11,7 +11,7 @@ create stream AtomPositions (
     x       float,
     y       float,
     z       float
-)   FROM FILE '../../experiments/data/mddb/tiny/atompositions.csv'
+)   FROM FILE '../dbtoaster-experiments-data/mddb/tiny/atompositions.csv'
   LINE DELIMITED CSV;
 
 -- Static tables
@@ -26,7 +26,7 @@ create table AtomMeta (
     residue_id   int,
     residue_name varchar(100),
     segment_name varchar(100)
-)   FROM FILE '../../experiments/data/mddb/tiny/atommeta.csv'
+)   FROM FILE '../dbtoaster-experiments-data/mddb/tiny/atommeta.csv'
   LINE DELIMITED CSV;
 
 -- Protein structure information, as bonded atom pairs, triples and dihedrals
@@ -36,7 +36,7 @@ create table Bonds (
     atom_id2     int,
     bond_const   float,
     bond_length  float
-)   FROM FILE '../../experiments/data/mddb/tiny/bonds.csv'
+)   FROM FILE '../dbtoaster-experiments-data/mddb/tiny/bonds.csv'
   LINE DELIMITED CSV;
 
 create table Angles (
@@ -46,7 +46,7 @@ create table Angles (
     atom_id3    int,
     angle_const float,
     angle       float
-)   FROM FILE '../../experiments/data/mddb/tiny/angles.csv'
+)   FROM FILE '../dbtoaster-experiments-data/mddb/tiny/angles.csv'
   LINE DELIMITED CSV;
 
 create table Dihedrals (
@@ -58,7 +58,7 @@ create table Dihedrals (
     force_const float,
     n           float,
     delta       float
-)   FROM FILE '../../experiments/data/mddb/tiny/dihedrals.csv'
+)   FROM FILE '../dbtoaster-experiments-data/mddb/tiny/dihedrals.csv'
   LINE DELIMITED CSV;
 
 create table ImproperDihedrals (
@@ -69,7 +69,7 @@ create table ImproperDihedrals (
     atom_id4    int,
     force_const float,
     delta       float
-)   FROM FILE '../../experiments/data/mddb/tiny/improperdihedrals.csv'
+)   FROM FILE '../dbtoaster-experiments-data/mddb/tiny/improperdihedrals.csv'
   LINE DELIMITED CSV;
 
 create table NonBonded (
@@ -84,7 +84,7 @@ create table NonBonded (
     bcoef       float,
     charge1     float,
     charge2     float
-)   FROM FILE '../../experiments/data/mddb/tiny/nonbonded.csv'
+)   FROM FILE '../dbtoaster-experiments-data/mddb/tiny/nonbonded.csv'
   LINE DELIMITED CSV;
 
 -- A helper table to automatically generate unique ids for conformations
@@ -92,7 +92,7 @@ create table ConformationPoints (
   trj_id        int,
   t             int,
   point_id      int
-) FROM FILE '../../experiments/data/mddb/tiny/conformationpoints.csv'
+) FROM FILE '../dbtoaster-experiments-data/mddb/tiny/conformationpoints.csv'
   LINE DELIMITED CSV;
 
 -- A helper table for conformation features, to ensure equivalence of
@@ -103,7 +103,7 @@ create table Dimensions (
     atom_id3    int,
     atom_id4    int,
     dim_id      int
-) FROM FILE '../../experiments/data/mddb/tiny/dimensions.csv'
+) FROM FILE '../dbtoaster-experiments-data/mddb/tiny/dimensions.csv'
   LINE DELIMITED CSV;
   
 ---create index Dimensions_idIndex on Dimensions (dim_id);
@@ -114,7 +114,7 @@ create table Buckets (
   bucket_id       int,
   bucket_start    float,
   bucket_end      float  
-) FROM FILE '../../experiments/data/mddb/tiny/buckets.csv'
+) FROM FILE '../dbtoaster-experiments-data/mddb/tiny/buckets.csv'
   LINE DELIMITED CSV;
 
 

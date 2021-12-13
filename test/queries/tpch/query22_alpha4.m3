@@ -9,7 +9,7 @@ CREATE STREAM ORDERS (
         shippriority   INT,
         comment        VARCHAR(79)
     )
-  FROM FILE '../../experiments/data/tpch/big/orders.csv'
+  FROM FILE '../dbtoaster-experiments-data/tpch/big/orders.csv'
   LINE DELIMITED CSV (delimiter := '|');
 
 CREATE STREAM CUSTOMER (
@@ -22,7 +22,7 @@ CREATE STREAM CUSTOMER (
         mktsegment   CHAR(10),
         comment      VARCHAR(117)
     )
-  FROM FILE '../../experiments/data/tpch/big/customer.csv'
+  FROM FILE '../dbtoaster-experiments-data/tpch/big/customer.csv'
   LINE DELIMITED CSV (delimiter := '|');
 
 DECLARE MAP QUERY_1_1(float)[][ C1_NATIONKEY:int ] := AggSum([C1_NATIONKEY:int], 

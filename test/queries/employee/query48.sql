@@ -12,7 +12,7 @@ CREATE STREAM EMPLOYEE(
     commission      FLOAT,
     department_id   INT
     ) 
-  FROM FILE '../../experiments/data/employee/employee.dat' LINE DELIMITED
+  FROM FILE '../dbtoaster-experiments-data/employee/employee.dat' LINE DELIMITED
   CSV ();
 
 CREATE STREAM DEPARTMENT(
@@ -20,7 +20,7 @@ CREATE STREAM DEPARTMENT(
     name            VARCHAR(20),
     location_id     INT
     ) 
-  FROM FILE '../../experiments/data/employee/department.dat' LINE DELIMITED
+  FROM FILE '../dbtoaster-experiments-data/employee/department.dat' LINE DELIMITED
   CSV ();
 
 SELECT employee_id, last_name, name 

@@ -12,7 +12,7 @@ CREATE STREAM EMPLOYEE(
     commission      FLOAT,
     department_id   INT
     ) 
-  FROM FILE '../../experiments/data/employee/employee.dat' LINE DELIMITED
+  FROM FILE '../dbtoaster-experiments-data/employee/employee.dat' LINE DELIMITED
   CSV ();
 
 SELECT DATE_PART('year', hire_date), DATE_PART('month', hire_date), count(*) AS no_of_employees

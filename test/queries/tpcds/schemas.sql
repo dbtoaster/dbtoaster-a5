@@ -30,7 +30,7 @@ CREATE TABLE date_dim
     d_current_quarter         char(1),
     d_current_year            char(1)
 )
-FROM FILE '../../experiments/data/tpcds/standard/data_dim.dat'
+FROM FILE '../dbtoaster-experiments-data/tpcds/standard/data_dim.dat'
 LINE DELIMITED CSV (delimiter := '|');
 
 
@@ -60,7 +60,7 @@ CREATE STREAM store_sales
     ss_net_paid_inc_tax       decimal(7,2),
     ss_net_profit             decimal(7,2)
 )
-FROM FILE '../../experiments/data/tpcds/standard/store_sales.dat'
+FROM FILE '../dbtoaster-experiments-data/tpcds/standard/store_sales.dat'
 LINE DELIMITED CSV (delimiter := '|');
 
 
@@ -89,7 +89,7 @@ CREATE STREAM item
     i_manager_id              integer,
     i_product_name            char(50)
 )
-FROM FILE '../../experiments/data/tpcds/standard/item.dat'
+FROM FILE '../dbtoaster-experiments-data/tpcds/standard/item.dat'
 LINE DELIMITED CSV (delimiter := '|');
 
 
@@ -114,7 +114,7 @@ CREATE STREAM customer
     c_email_address           char(50),
     c_last_review_date        char(10)
 )
-FROM FILE '../../experiments/data/tpcds/standard/customer.dat'
+FROM FILE '../dbtoaster-experiments-data/tpcds/standard/customer.dat'
 LINE DELIMITED CSV (delimiter := '|');
 
 
@@ -134,7 +134,7 @@ CREATE STREAM customer_address
     ca_gmt_offset             decimal(5,2),
     ca_location_type          char(20)
 )
-FROM FILE '../../experiments/data/tpcds/standard/customer_address.dat'
+FROM FILE '../dbtoaster-experiments-data/tpcds/standard/customer_address.dat'
 LINE DELIMITED CSV (delimiter := '|');
 
 
@@ -170,7 +170,7 @@ CREATE STREAM store
     s_gmt_offset              decimal(5,2),
     s_tax_precentage          decimal(5,2)
 )
-FROM FILE '../../experiments/data/tpcds/standard/store.dat'
+FROM FILE '../dbtoaster-experiments-data/tpcds/standard/store.dat'
 LINE DELIMITED CSV (delimiter := '|');
 
 
@@ -182,7 +182,7 @@ CREATE TABLE household_demographics
     hd_dep_count              integer,
     hd_vehicle_count          integer
 )
-FROM FILE '../../experiments/data/tpcds/standard/household_demographics.dat'
+FROM FILE '../dbtoaster-experiments-data/tpcds/standard/household_demographics.dat'
 LINE DELIMITED CSV (delimiter := '|');
 
 
@@ -198,7 +198,7 @@ CREATE TABLE customer_demographics
     cd_dep_employed_count     integer,
     cd_dep_college_count      integer
 )
-FROM FILE '../../experiments/data/tpcds/standard/customer_demographics.dat'
+FROM FILE '../dbtoaster-experiments-data/tpcds/standard/customer_demographics.dat'
 LINE DELIMITED CSV (delimiter := '|');
 
 
@@ -224,6 +224,6 @@ CREATE TABLE promotion
     p_purpose                 char(15),
     p_discount_active         char(1)
 )
-FROM FILE '../../experiments/data/tpcds/standard/promotion.dat'
+FROM FILE '../dbtoaster-experiments-data/tpcds/standard/promotion.dat'
 LINE DELIMITED CSV (delimiter := '|');
 

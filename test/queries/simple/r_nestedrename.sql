@@ -1,5 +1,5 @@
 CREATE STREAM R(A int, B int) 
-  FROM FILE '../../experiments/data/simple/standard/r.dat' LINE DELIMITED csv;
+  FROM FILE '../dbtoaster-experiments-data/simple/standard/r.dat' LINE DELIMITED csv;
 
 SELECT foo 
 FROM (SELECT R.A AS foo, COUNT(*) FROM R GROUP BY foo) q;

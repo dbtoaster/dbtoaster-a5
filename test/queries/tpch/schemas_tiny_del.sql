@@ -16,7 +16,7 @@ CREATE STREAM LINEITEM (
         shipmode       CHAR(10),
         comment        VARCHAR(44)
     )
-  FROM FILE '../../experiments/data/tpch/tiny_del/lineitem.csv'
+  FROM FILE '../dbtoaster-experiments-data/tpch/tiny_del/lineitem.csv'
   LINE DELIMITED CSV (delimiter := '|', deletions := 'true');
 
 
@@ -31,7 +31,7 @@ CREATE STREAM ORDERS (
         shippriority   INT,
         comment        VARCHAR(79)
     )
-  FROM FILE '../../experiments/data/tpch/tiny_del/orders.csv'
+  FROM FILE '../dbtoaster-experiments-data/tpch/tiny_del/orders.csv'
   LINE DELIMITED CSV (delimiter := '|', deletions := 'true');
 
 CREATE STREAM PART (
@@ -45,7 +45,7 @@ CREATE STREAM PART (
         retailprice  DECIMAL,
         comment      VARCHAR(23)
     )
-  FROM FILE '../../experiments/data/tpch/tiny_del/part.csv'
+  FROM FILE '../dbtoaster-experiments-data/tpch/tiny_del/part.csv'
   LINE DELIMITED CSV (delimiter := '|', deletions := 'true');
 
 
@@ -59,7 +59,7 @@ CREATE STREAM CUSTOMER (
         mktsegment   CHAR(10),
         comment      VARCHAR(117)
     )
-  FROM FILE '../../experiments/data/tpch/tiny_del/customer.csv'
+  FROM FILE '../dbtoaster-experiments-data/tpch/tiny_del/customer.csv'
   LINE DELIMITED CSV (delimiter := '|', deletions := 'true');
 
 CREATE STREAM SUPPLIER (
@@ -71,7 +71,7 @@ CREATE STREAM SUPPLIER (
         acctbal      DECIMAL,
         comment      VARCHAR(101)
     )
-  FROM FILE '../../experiments/data/tpch/tiny_del/supplier.csv'
+  FROM FILE '../dbtoaster-experiments-data/tpch/tiny_del/supplier.csv'
   LINE DELIMITED CSV (delimiter := '|', deletions := 'true');
 
 CREATE STREAM PARTSUPP (
@@ -81,7 +81,7 @@ CREATE STREAM PARTSUPP (
         supplycost   DECIMAL,
         comment      VARCHAR(199)
     )
-  FROM FILE '../../experiments/data/tpch/tiny_del/partsupp.csv'
+  FROM FILE '../dbtoaster-experiments-data/tpch/tiny_del/partsupp.csv'
   LINE DELIMITED CSV (delimiter := '|', deletions := 'true');
 
 CREATE TABLE NATION (
@@ -90,7 +90,7 @@ CREATE TABLE NATION (
         regionkey    INT,
         comment      VARCHAR(152)
     )
-  FROM FILE '../../experiments/data/tpch/tiny_del/nation.csv'
+  FROM FILE '../dbtoaster-experiments-data/tpch/tiny_del/nation.csv'
   LINE DELIMITED CSV (delimiter := '|', deletions := 'true');
 
 CREATE TABLE REGION (
@@ -98,6 +98,6 @@ CREATE TABLE REGION (
         name         CHAR(25),
         comment      VARCHAR(152)
     )
-  FROM FILE '../../experiments/data/tpch/tiny_del/region.csv'
+  FROM FILE '../dbtoaster-experiments-data/tpch/tiny_del/region.csv'
   LINE DELIMITED CSV (delimiter := '|', deletions := 'true');
 
