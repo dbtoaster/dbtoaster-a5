@@ -99,6 +99,8 @@ let compatible_types t1 t2 = begin match t1, t2 with
    | K.TBase(T.TBool), K.TBase(T.TFloat) -> true
    | K.TBase(T.TInt), K.TBase(T.TFloat) -> true
    | K.TBase(T.TFloat), K.TBase(T.TInt) -> true
+   | K.TBase(T.TString), K.TBase(T.TChar) -> true
+   | K.TBase(T.TChar), K.TBase(T.TString) -> true
    | _,_ -> (t1 = t2)
    end
 

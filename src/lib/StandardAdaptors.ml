@@ -142,6 +142,10 @@ let build_tuple (reln,relv,_) param_val support_sch =
         | "string" -> 
            assert_type vn vt t TString;
            (fun x -> CString(x))
+        | "char" ->
+           assert_type vn vt t TChar;
+           (fun x -> try CChar(x.[0]) with
+            Failure(_) -> failwith ("Could not convert char: '"^x^"'"))
         | "hash" -> 
            assert_type vn vt t TInt;
            (fun x -> CInt(Hashtbl.hash x))
