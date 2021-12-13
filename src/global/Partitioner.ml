@@ -33,17 +33,24 @@ let string_of_part_info (part_info: ('key_t) gen_part_info_t)
             (ListExtras.string_of_list ~sep:", " string_fn pkeys) ^ ")>"
 
 (*
-   TPC-H specific partitioning information:
+   For each relation, keeps *possible* partitioning attributes
+   together with their approx. cardinalities
 
-   tpch_part_options - for each TPCH relation, keeps possible partitioning
-                       attributes together with their approx. cardinalities
-                       (higher cardinality means higher priority)
+   higher cardinality => higher chances to partition on that attribute
 
-   tpch_stream_part - initial partitioning of streams
+   Example:
+      LINEITEM can be key-partitioned on the 0th attribute (orderkey),
+      1st attribute (partkey), or 2nd attribute (suppkey), see below.
+      The associated cardinalities serve to guide the partitioning strategy
+      for other maps built over LINEITEM -- in such cases, the attribute
+      with the max estimated cardinality is used as the key for partitioning.
 
-   tpch_table_part - initial partitioning of tables
+      DELTA_LINEITEM can be either a distributed collection with
+      no partitioning key (DistributedRandom) or a local collection (Local).
+
+      All delta relations must be either all distributed or all local.
 *)
-let tpch_part_options: (string * (int * int) gen_part_info_t) list =
+let relation_part_options: (string * (int * int) gen_part_info_t) list =
    [
       ("LINEITEM", DistributedByKey([(0, 1500000); (1, 200000); (2, 10000)]));
       ("ORDERS", DistributedByKey([(0, 1500000); (1, 150000)]));
@@ -59,45 +66,26 @@ let tpch_part_options: (string * (int * int) gen_part_info_t) list =
       ("DELTA_PART", DistributedRandom);
       ("DELTA_SUPPLIER", DistributedRandom);
       ("DELTA_PARTSUPP", DistributedRandom);
-      ("DELTA_NATION", DistributedByKey([]));
-      ("DELTA_REGION", DistributedByKey([]));
-   ]
 
-let tpch_stream_part: (string * (int) gen_part_info_t) list =
-   [
-      ("DELTA_LINEITEM", DistributedRandom);
-      ("DELTA_ORDERS", DistributedRandom);
-      ("DELTA_CUSTOMER", DistributedRandom);
-      ("DELTA_PART", DistributedRandom);
-      ("DELTA_SUPPLIER", DistributedRandom);
-      ("DELTA_PARTSUPP", DistributedRandom);
-      ("DELTA_NATION", DistributedByKey([]));
-      ("DELTA_REGION", DistributedByKey([]));
-   ]
+      ("R", DistributedByKey([(1, 200)]));
+      ("S", DistributedByKey([(1, 2000)]));
+      ("T", DistributedByKey([(0, 100)]));
+      ("DELTA_R", DistributedRandom);
+      ("DELTA_S", DistributedRandom);
+      ("DELTA_T", DistributedRandom);
 
-let tpch_table_part: (string * (int) gen_part_info_t) list =
-   [
-      ("NATION", Local);
-      ("REGION", Local);
+      (* ("DELTA_R", Local); *)
+      (* ("DELTA_S", Local); *)
+      (* ("DELTA_T", Local); *)
+
+      ("EMPLOYEE", DistributedByKey([(0, 1000)]));
+      ("DELTA_EMPLOYEE", DistributedRandom);
    ]
 
 let ht_part_options: (int * int) gen_part_table_t =
    let hash_table = Hashtbl.create 20 in
-   List.iter (fun (k, v) -> Hashtbl.add hash_table k v) tpch_part_options;
+   List.iter (fun (k, v) -> Hashtbl.add hash_table k v) relation_part_options;
    hash_table
-
-let ht_stream_part: (int) gen_part_table_t =
-   let hash_table = Hashtbl.create 20 in
-   List.iter (fun (k, v) -> Hashtbl.add hash_table k v) tpch_stream_part;
-   hash_table
-
-let ht_table_part: (int) gen_part_table_t =
-   let hash_table = Hashtbl.create 20 in
-   List.iter (fun (k, v) -> Hashtbl.add hash_table k v) tpch_table_part;
-   hash_table
-
-(* END - TPC-H specific partitioning information *)
-
 
 let rec compute_card_part_info (expr: expr_t): card_part_info_t option =
    let sum_fn (p1: card_part_info_t option) (p2: card_part_info_t option): card_part_info_t option =
@@ -201,8 +189,12 @@ let rec compute_card_part_info (expr: expr_t): card_part_info_t option =
                            ) gb_vars)
                         ) ks)
                   in
-                     if (List.length common_options = 0) then Some(Local)
-                     else Some(DistributedByKey(common_options))
+                     if (List.length common_options > 0) then
+                        Some(DistributedByKey(common_options))
+                     else if (List.length gb_vars > 0) then
+                        Some(DistributedRandom)
+                     else
+                        Some(Local)
             end
          | Rel(n, vars) -> rel_fn n vars
          | DeltaRel(n, vars) -> rel_fn ("DELTA_" ^ n) vars
@@ -232,6 +224,17 @@ let get_part_table (prog: prog_t) =
    in
    let ht_maps_part = Hashtbl.create (List.length !(prog.maps)) in
    begin
+      Hashtbl.iter (fun k v ->
+         begin match v with
+            | Local ->
+               Hashtbl.add ht_maps_part k Local
+            | DistributedRandom ->
+               Hashtbl.add ht_maps_part k DistributedRandom
+            | DistributedByKey(pk) ->
+               Hashtbl.add ht_maps_part k (DistributedByKey(List.map (fst) pk))
+         end
+      ) ht_part_options;
+
       List.iter (function
          | DSView(view) ->
             let (name, ovars) = match view.ds_name with
@@ -254,7 +257,5 @@ let get_part_table (prog: prog_t) =
          | DSTable(rel) -> ()
       ) !(prog.maps);
 
-      Hashtbl.iter (fun k v -> Hashtbl.add ht_maps_part k v) ht_stream_part;
-      Hashtbl.iter (fun k v -> Hashtbl.add ht_maps_part k v) ht_table_part;
       ht_maps_part
    end

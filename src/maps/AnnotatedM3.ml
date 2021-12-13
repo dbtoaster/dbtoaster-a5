@@ -1238,7 +1238,8 @@ let lift_statement (part_table: part_table_t) (stmt: stmt_t): dist_stmt_t =
                | Some(DistributedByKey(p1)) -> mk_repartition p1 eivc_raw
                | Some(Local) -> mk_gather eivc_raw
                | Some(DistributedRandom) when is_delta_map lhs_name -> eivc_raw
-               | _ -> failwith "Wrong partitioning info for LHS target map"
+               | Some(DistributedRandom) -> eivc_raw
+               | _ -> failwith ("Wrong partitioning info for LHS target map "^(string_of_expr lhs_raw))
             end
          in
 (* BEGIN COMMENT NAIVE OPTIMIZATION -- disable optimize_expr *)
@@ -1252,7 +1253,8 @@ let lift_statement (part_table: part_table_t) (stmt: stmt_t): dist_stmt_t =
          | Some(DistributedByKey(p1)) -> mk_repartition p1 rhs_raw
          | Some(Local) -> mk_gather rhs_raw
          | Some(DistributedRandom) when is_delta_map lhs_name -> rhs_raw
-         | _ -> failwith "Wrong partitioning info for LHS target map"
+         | Some(DistributedRandom) -> rhs_raw
+         | _ -> failwith ("Wrong partitioning info for LHS target map "^(string_of_expr lhs_raw))
    in
    {  target_map  = lhs;
       update_type = stmt.update_type;
