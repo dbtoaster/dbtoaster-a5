@@ -1,6 +1,6 @@
 open UnitTest
 open Database
-open Patterns
+open M3Patterns
 open K3
 open K3Compiler
 open Values.K3Value

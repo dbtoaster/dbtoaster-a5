@@ -52,10 +52,10 @@
    
    let create_map coll = List.hd (get_expr_map_schema coll)
 
-   let patterns:(Patterns.pattern_map ref) = ref []
+   let patterns:(M3Patterns.pattern_map ref) = ref []
 
-   let add_pattern name (new_pattern: Patterns.pattern) = 
-      patterns := Patterns.add_pattern !patterns (name, new_pattern)
+   let add_pattern name (new_pattern: M3Patterns.pattern) = 
+      patterns := M3Patterns.add_pattern !patterns (name, new_pattern)
 
    let tl_queries: (toplevel_query_t list ref) = ref []
 
@@ -82,8 +82,8 @@
             let var_list = get_vars var_bind_list in
             let in_filt = ListAsSet.inter in_vars var_list in
             let out_filt = ListAsSet.inter out_vars var_list in
-            let in_pattern = Patterns.make_in_pattern in_vars in_filt in
-            let out_pattern = Patterns.make_out_pattern out_vars out_filt in
+            let in_pattern = M3Patterns.make_in_pattern in_vars in_filt in
+            let out_pattern = M3Patterns.make_out_pattern out_vars out_filt in
             if in_filt <> [] then (add_pattern map_name in_pattern) else ();
             if out_filt <> [] then (add_pattern map_name out_pattern) else ()
          end
@@ -215,8 +215,8 @@ patternList:
 | patternItem                                               { [$1] }
 
 patternItem:
-| OUT LBRACE patternElementList RBRACE                      { Patterns.Out($3) }
-| IN LBRACE patternElementList RBRACE                       { Patterns.In($3) }
+| OUT LBRACE patternElementList RBRACE                      { M3Patterns.Out($3) }
+| IN LBRACE patternElementList RBRACE                       { M3Patterns.In($3) }
 
 patternElementList:
 | patternElementItem COMMA patternElementList               

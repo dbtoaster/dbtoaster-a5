@@ -6,7 +6,7 @@ open Database
 open Format
 open Type
 open Constants
-open Patterns
+open M3Patterns
 
 exception K3SException of string
 ;;
@@ -1197,10 +1197,10 @@ struct
 
                      in 
                      match pat with 
-                     | Patterns.In(([],[])) -> agg
-                     | Patterns.Out(([],[])) -> agg 
-                     | Patterns.In(p) -> (map_pattern p) :: agg
-                     | Patterns.Out(p) -> (map_pattern p) :: agg
+                     | M3Patterns.In(([],[])) -> agg
+                     | M3Patterns.Out(([],[])) -> agg 
+                     | M3Patterns.In(p) -> (map_pattern p) :: agg
+                     | M3Patterns.Out(p) -> (map_pattern p) :: agg
                   ) [] map_patterns 
                in
                match idxs with

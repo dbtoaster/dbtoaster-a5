@@ -1823,7 +1823,7 @@ let dm_optimize ?(optimizations=[]) trigger_vars expr =
 (**** Datastructure optimization ****)
 
 type ds_trig_decl = Schema.event_t * id_t * id_t list 
-type ds_map_decls = map_t list * Patterns.pattern_map 
+type ds_map_decls = map_t list * M3Patterns.pattern_map 
 
 type ds_statement = ds_map_decls * K3.expr_t list
 type ds_trigger = ds_trig_decl * ds_statement list
@@ -1936,7 +1936,7 @@ let create_datastructure arg partial_key e =
       let schema_ids = List.map fst schema in
       let p = List.split
         (List.map (fun ((id,_),_) -> id, index id schema_ids) partial_key)
-      in Patterns.singleton_pattern_map (ds_id, Patterns.Out p)
+      in M3Patterns.singleton_pattern_map (ds_id, M3Patterns.Out p)
     in
     let out_tl = oute_l (* List.map (fun e -> match e with 
       | Var(id,ty) -> m3_type_of_k3_type ty 
@@ -2007,12 +2007,12 @@ let datastructure_statement (schema, patterns) (pm, rel, args) stmt =
                  merged_probe_key)
               in
               let existing_patterns = 
-                 Patterns.get_out_patterns !r_pats c_name 
+                 M3Patterns.get_out_patterns !r_pats c_name 
               in
               let has_pattern = List.mem (snd key_pat) existing_patterns in 
               if not(probe_key = [] || has_pattern) then 
-                r_pats := Patterns.add_pattern !r_pats
-                            (c_name, Patterns.Out(key_pat));
+                r_pats := M3Patterns.add_pattern !r_pats
+                            (c_name, M3Patterns.Out(key_pat));
               None,
               Map(Lambda(narg, rest_b), slice_expr)
             end
@@ -2068,9 +2068,9 @@ let datastructure_statement (schema, patterns) (pm, rel, args) stmt =
   let decls, patterns = 
     let d, p_l = List.split (filter_opts decl_opts) in
     let p = match p_l with
-      | [] -> Patterns.empty_pattern_map()
+      | [] -> M3Patterns.empty_pattern_map()
       | [pm] -> pm
-      | _ -> List.fold_left Patterns.merge_pattern_maps (List.hd p_l) 
+      | _ -> List.fold_left M3Patterns.merge_pattern_maps (List.hd p_l) 
                                                         (List.tl p_l)
     in d, p
   in (!r_sch, !r_pats), ((decls, patterns), [new_stmt])

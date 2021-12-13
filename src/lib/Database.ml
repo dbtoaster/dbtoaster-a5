@@ -268,7 +268,7 @@ end
  *)
 module DBCommon(N : MapName)(S : M3MapSpec) =
 struct
-   module M3CP         = Patterns
+   module M3CP         = M3Patterns
    module DBM          = SliceableMap.Make(N)
    
    type value_t        = S.value_t
@@ -280,7 +280,7 @@ struct
    type dom_t          = value_t list
    type schema_t       = K3.map_t list
    type pattern_t      = S.pattern_t
-   type patterns_t     = Patterns.pattern_map
+   type patterns_t     = M3Patterns.pattern_map
 
    type single_map_t   = S.single_map_t
    type map_t          = S.map_t
@@ -330,7 +330,7 @@ sig
    type dom_t          = value_t list
    type schema_t       = K3.map_t list
    type pattern_t      = int list
-   type patterns_t     = Patterns.pattern_map
+   type patterns_t     = M3Patterns.pattern_map
 
    type list_smap      = (key_t * value_t) list
    type list_map       = (key_t * list_smap) list
@@ -439,7 +439,7 @@ struct
    let get_out_patterns mapn (_,pats) =
       M3CP.get_out_patterns pats (map_name_to_string mapn)
 
-   let make_empty_db (schema:K3.map_t list) (patterns:Patterns.pattern_map):
+   let make_empty_db (schema:K3.map_t list) (patterns:M3Patterns.pattern_map):
                      db_t =
        let f (mapn, itypes, otypes, mapt) =
           let (in_pat, out_pat) = get_patterns patterns mapn in

@@ -1,6 +1,6 @@
 open Type
 open Constants
-open Patterns
+open M3Patterns
 
 module type CG =
 sig

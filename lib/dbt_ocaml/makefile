@@ -12,7 +12,7 @@ FILES := $(patsubst %,../../src/%,\
 	calculus/Calculus\
 	compiler/Plan\
 	maps/M3\
-	maps/Patterns\
+	maps/M3Patterns\
 	functional/K3\
 	lib/SliceableMap\
 	lib/Values\

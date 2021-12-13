@@ -27,8 +27,8 @@ let maps = [
 ;;
 
 let patterns = [
-   "R", [Patterns.Out(["X"], [0]); Patterns.Out(["Y"], [1])];
-   "W", [Patterns.Out(["Z"], [0]); Patterns.Out(["ZZ"], [1])];
+   "R", [M3Patterns.Out(["X"], [0]); M3Patterns.Out(["Y"], [1])];
+   "W", [M3Patterns.Out(["Z"], [0]); M3Patterns.Out(["ZZ"], [1])];
 ]
 ;;
 

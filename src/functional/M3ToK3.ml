@@ -1408,10 +1408,10 @@ let m3_to_k3 ?(generate_init = false) (m3_program : M3.prog_t) : (K.prog_t) =
    let k3_prog_schema = List.map m3_map_to_k3_map !m3_prog_schema in
    let patterns_map = 
       List.fold_left (fun patterns_map (_,tlq) ->
-         Patterns.merge_pattern_maps 
+         M3Patterns.merge_pattern_maps 
             patterns_map
-            (Patterns.extract_from_calc [] tlq)
-      ) (Patterns.extract_patterns !m3_prog_trigs) (!m3_prog_tlqs)
+            (M3Patterns.extract_from_calc [] tlq)
+      ) (M3Patterns.extract_patterns !m3_prog_trigs) (!m3_prog_tlqs)
    in
    let k3_prog_trigs, (_,sum_maps) = 
       List.fold_left

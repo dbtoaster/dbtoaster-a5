@@ -94,7 +94,7 @@ struct
 
   type imp_prog_t =
     (  K3.map_t list *              (* Schema *)
-       Patterns.pattern_map *       (* Schema patterns *)
+       M3Patterns.pattern_map *     (* Schema patterns *)
        (  (  source_code_t list *   (* ?? *)
              compiler_trig_t        (* Trigger code *)
           ) list *                  (* List of all triggers =^ *)
@@ -107,7 +107,7 @@ struct
       ((string * string) * source_code_t) list )
 
   let empty_prog ():imp_prog_t = 
-    (([], Patterns.empty_pattern_map (), ([], ([], []))), 
+    (([], M3Patterns.empty_pattern_map (), ([], ([], []))), 
      Schema.empty_db (), ([],[]))
 
 
@@ -593,8 +593,8 @@ struct
           else (List.assoc id patterns) in
         let it_of_idx l idxl = List.combine idxl (List.map (List.nth l) idxl) in
         let r = List.fold_left (fun (in_acc, out_acc) p -> match p with
-            | Patterns.In(v,i) -> in_acc@[it_of_idx in_vl i], out_acc
-            | Patterns.Out(v,i) -> in_acc, out_acc@[it_of_idx out_vl i])
+            | M3Patterns.In(v,i) -> in_acc@[it_of_idx in_vl i], out_acc
+            | M3Patterns.Out(v,i) -> in_acc, out_acc@[it_of_idx out_vl i])
           ([], []) id_pats
         in unique (List.filter (fun x -> x <> []) (fst r)),
            unique (List.filter (fun x -> x <> []) (snd r))
@@ -2885,7 +2885,7 @@ struct
   let compile_k3_expr (opts:compiler_options) 
                       (arg_types:(string * ext_type type_t) list) 
                       (schema:K3.map_t list) 
-                      (patterns:Patterns.pattern_map) 
+                      (patterns:M3Patterns.pattern_map) 
                       (expr:K3.expr_t) =
     let var_env = var_env_of_declarations arg_types schema patterns in
     let ir = ir_of_expr expr in
@@ -2931,7 +2931,7 @@ struct
    let compile_k3_stmt (opts:compiler_options) 
                       (arg_types:(string * ext_type type_t) list) 
                       (schema:K3.map_t list) 
-                      (patterns:Patterns.pattern_map) 
+                      (patterns:M3Patterns.pattern_map) 
                       (stmt:K3.expr_t) =
       let var_env = var_env_of_declarations arg_types schema patterns in
       let untyped_imp =
@@ -2950,7 +2950,7 @@ struct
   let compile_k3_trigger (opts:compiler_options) 
                          (dbschema:Schema.rel_t list)
                          (schema:K3.map_t list)
-                         (patterns:Patterns.pattern_map)
+                         (patterns:M3Patterns.pattern_map)
                          (counter:int) 
                          (ivc_counters:(int * (string * int list) list))
                          (event:Schema.event_t) 
@@ -3099,7 +3099,7 @@ struct
           if not(List.mem_assoc stmt stmt_decls) then schema, patterns, []
           else
             let ls,lp,_,ld = List.assoc stmt stmt_decls
-            in schema@ls, (Patterns.merge_pattern_maps patterns lp), [ld]
+            in schema@ls, (M3Patterns.merge_pattern_maps patterns lp), [ld]
         in
         let ds_type_decls = List.map (fun (_,s) ->
           let _,_,td,_ = List.assoc s stmt_decls in td) ds_stmts in

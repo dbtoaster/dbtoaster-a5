@@ -974,7 +974,7 @@ struct
     let db_checker : DBCheck.db_session_t option ref = ref None;;
        
     let main (schema:K3.map_t list) 
-             (patterns:Patterns.pattern_map)
+             (patterns:M3Patterns.pattern_map)
              (table_sources:(source_impl_t * code_t option * code_t option) 
                                        list)
              (stream_sources:(source_impl_t * code_t option * code_t option) 

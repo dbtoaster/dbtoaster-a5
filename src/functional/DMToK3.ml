@@ -571,7 +571,7 @@ let m3dm_to_k3 (m3tok3_program : K.prog_t)
    let patterns_map = (if (with_m3) 
                        then old_patterns_map 
                        else []) @ 
-                      Patterns.extract_patterns !(m3dm_prog.M3DM.triggers) 
+                      M3Patterns.extract_patterns !(m3dm_prog.M3DM.triggers) 
    in
    let k3_prog_trigs, (_,sum_maps) = 
       let dynamic_triggers, metas = 

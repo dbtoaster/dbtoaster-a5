@@ -479,7 +479,7 @@ let k3_program:(K3.prog_t ref) = ref (Schema.empty_db (), ([],[]),[],[]);;
    k3 program that generated this so that we can properly initialize the 
    database *)
 let interpreter_program:
-   (K3.map_t list * Patterns.pattern_map * K3Interpreter.K3CG.code_t) ref = 
+   (K3.map_t list * M3Patterns.pattern_map * K3Interpreter.K3CG.code_t) ref = 
       ref ([], [], K3Interpreter.K3CG.const(Constants.CInt(0)));;
 
 (**If we're compiling to an imperative language, we have one final stage before
@@ -737,7 +737,7 @@ if stage_is_active StageM3ToK3 then (
       k3_program := M3ToK3.m3_to_k3 ~generate_init:gen_init !m3_program; 
       let (_,(_, pats), _, _) = !k3_program in
          Debug.print "LOG-PATTERNS" 
-            (fun () -> Patterns.patterns_to_nice_string pats)
+            (fun () -> M3Patterns.patterns_to_nice_string pats)
    with 
       | Calculus.CalculusException(calc, msg) ->
          bug ~exc:true ~detail:(fun () -> CalculusPrinter.string_of_expr calc)
@@ -782,7 +782,7 @@ if stage_is_active StageParseK3 then (
       let (_,(_, pats), _, _) = !k3_program
       in
          Debug.print "LOG-PATTERNS" (fun () -> 
-            Patterns.patterns_to_nice_string pats)
+            M3Patterns.patterns_to_nice_string pats)
 )
 ;;
 if (stage_is_active StageOptimizeK3) then (

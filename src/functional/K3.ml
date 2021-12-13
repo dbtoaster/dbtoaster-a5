@@ -1085,7 +1085,7 @@ let collection_of_float_list (l : float list) =
 
 (* Incremental section *)
 type map_t = string * (Type.var_t list) * (Type.var_t list) * Type.type_t
-type schema_t = (map_t list * Patterns.pattern_map)
+type schema_t = (map_t list * M3Patterns.pattern_map)
 type statement_t = expr_t
 type trigger_t = Schema.event_t * statement_t list
 (** [Query name] x [Query expr] *)
@@ -1148,7 +1148,7 @@ let nice_code_of_prog ((db_schema, (maps,patts),
          ""
       else
          "/*"
-   )^(Patterns.patterns_to_nice_string patts)^"\n"^
+   )^(M3Patterns.patterns_to_nice_string patts)^"\n"^
    (
       if Debug.active "USE-PATTERNS" then
          ""
@@ -1447,14 +1447,14 @@ let annotate_collections e =
   else fst (_annotate_collections e VarMap.empty)
 
 exception ExtractionException of expr_t option * type_t option * string
-let rec extract_patterns_from_k3 e : Patterns.pattern_map =
+let rec extract_patterns_from_k3 e : M3Patterns.pattern_map =
    let bail ?(t = None) ?(exp = None) msg =
       raise (ExtractionException(exp, t, msg))
    in
-   let extract_patterns_from_expr_list e_l : Patterns.pattern_map =
-      List.fold_left (fun pmap expr -> Patterns.merge_pattern_maps 
+   let extract_patterns_from_expr_list e_l : M3Patterns.pattern_map =
+      List.fold_left (fun pmap expr -> M3Patterns.merge_pattern_maps 
                                           (extract_patterns_from_k3 expr) pmap) 
-         (Patterns.empty_pattern_map()) e_l
+         (M3Patterns.empty_pattern_map()) e_l
    in
    match e with
    | Tuple e_l -> extract_patterns_from_expr_list e_l
@@ -1483,10 +1483,10 @@ let rec extract_patterns_from_k3 e : Patterns.pattern_map =
    | Slice(OutPC(id, _, _), schema, pattern) ->
       let ids, exprs = List.split pattern in
       let schema_ids, _ = List.split schema in 
-      Patterns.merge_pattern_maps 
+      M3Patterns.merge_pattern_maps 
          (extract_patterns_from_expr_list exprs) 
-            (Patterns.singleton_pattern_map 
-               (id, Patterns.make_out_pattern schema_ids ids))
+            (M3Patterns.singleton_pattern_map 
+               (id, M3Patterns.make_out_pattern schema_ids ids))
    | PCUpdate(e1,e_l,e2) -> extract_patterns_from_expr_list (e1 :: e2 :: e_l)
    | PCValueUpdate(e1,e_l1,e_l2,e2) -> 
       extract_patterns_from_expr_list (e1 :: e2 :: e_l1 @ e_l2)
@@ -1494,7 +1494,7 @@ let rec extract_patterns_from_k3 e : Patterns.pattern_map =
       extract_patterns_from_expr_list (e :: e_l1 @ e_l2)
    | LookupOrElse(e1,e_l,e2) -> 
       extract_patterns_from_expr_list (e1 :: e2 :: e_l)
-   | _ -> Patterns.empty_pattern_map()
+   | _ -> M3Patterns.empty_pattern_map()
 
 let mk_var_name = 
    FreshVariable.declare_class "functional/K3" "unique_vars" 
