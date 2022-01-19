@@ -245,7 +245,14 @@ let get_part_table (prog: prog_t) =
                | Some(p) ->
                   begin match max_card_variable p with
                      | Local -> Local
-                     | DistributedRandom -> DistributedRandom
+                     | DistributedRandom -> 
+                        (* When the RHS expression has locality DistRandom,
+                           the LHS must have either Local or DistByKey;
+                           otherwise, the += operator cannot be applied.
+                           We opt for Local locality here.
+                         *)
+                        Local
+
                      | DistributedByKey(ks) ->
                         let ks_idx =
                            List.map (fun v -> ListExtras.index_of v ovars) ks
