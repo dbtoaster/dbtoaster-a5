@@ -208,6 +208,16 @@ let rec compute_card_part_info (expr: expr_t): card_part_info_t option =
       end)
       expr
 
+let is_incrementally_maintained (map_name: string) (prog: prog_t): bool =
+   List.exists (fun trigger ->
+      List.exists (fun (stmt: Plan.stmt_t) ->
+         match stmt.target_map with
+            | CalcRing.Val(External(n, _, _, _, _)) -> 
+                (map_name = n) && (stmt.update_type = UpdateStmt)
+            | _ -> false
+      ) !(trigger.statements)
+   ) !(prog.triggers)
+
 let get_part_table (prog: prog_t) =
    let max_card_variable (p: card_part_info_t): part_info_t = match p with
       | Local -> Local
@@ -246,12 +256,16 @@ let get_part_table (prog: prog_t) =
                   begin match max_card_variable p with
                      | Local -> Local
                      | DistributedRandom -> 
-                        (* When the RHS expression has locality DistRandom,
-                           the LHS must have either Local or DistByKey;
-                           otherwise, the += operator cannot be applied.
-                           We opt for Local locality here.
+                        (* When RHS has locality DistRandom and LHS is incrementally 
+                           maintained, then LHS must have either Local or DistByKey;
+                           otherwise, the += operator cannot be applied. We opt for 
+                           Local locality here.
+
+                           Otherwise, the locality can remain DistributedRandom.
                          *)
-                        Local
+                        if (is_incrementally_maintained name prog)
+                        then Local 
+                        else DistributedRandom
 
                      | DistributedByKey(ks) ->
                         let ks_idx =
